@@ -5,17 +5,28 @@
   gap: var(--space-md);
   padding: var(--space-lg) var(--space-sm);
   color: var(--text-secondary);
+  min-height: 100%;
 }
 
 .Header__utilities {
   display: flex;
-  justify-content: flex-end;
-  /* No gap: this wrapper has a single child, unlike the sibling wrappers
-     below which each restate .Header's gap because they intercepted
-     multiple children. */
+  align-items: center;
+  gap: var(--space-xs);
 }
 
-.Header__consoleButton {
+.Header__utilitiesRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  /* Pins this group to the trailing edge of the row. A two-sided
+     justification would also need to own the tour button's position on the
+     other end, which is not this group's job -- an inline-start auto margin
+     is the chosen mechanism instead. */
+  margin-inline-start: auto;
+}
+
+.Header__consoleButton,
+.Header__utilityButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -25,14 +36,22 @@
   cursor: pointer;
 }
 
-.Header__consoleButton:hover {
+.Header__utilityButton {
+  background: none;
+  border: none;
+}
+
+.Header__consoleButton:hover,
+.Header__utilityButton:hover {
   background-color: var(--navbar-active-background);
 }
 
 /* Focus indicator, shape copied from NavItem/index.scss (quick 260926-acw).
    INSET because this control lives inside the scroll-clipped tier-2 column. */
 .Header__consoleButton:focus-visible,
-.Header__consoleButton:focus:is(body.controllerLayout *) {
+.Header__consoleButton:focus:is(body.controllerLayout *),
+.Header__utilityButton:focus-visible,
+.Header__utilityButton:focus:is(body.controllerLayout *) {
   outline: var(--focus-ring-width, 3px) solid
     var(--focus-ring-color, var(--accent, #0080ff));
   outline-offset: calc(-1 * var(--focus-ring-width, 3px));
@@ -41,8 +60,22 @@
   background: var(--focus-ring-fill);
 }
 
+.Header__sortRow {
+  /* Single child (one segmented FormControl) -- no gap to restate, same
+     reasoning the leading utilities row used to record for itself. */
+  display: flex;
+}
+
 .Header__search {
-  flex-grow: 1;
+  /*
+   * Deliberately NOT flex-grow: 1. `.Header` gains a definite min-height
+   * (bottom-justification) and the footer below is pinned to it with its own
+   * auto top margin. Flexbox resolves flex-grow BEFORE auto-margin space
+   * absorption, so a growing search row would consume the column's free
+   * space first and leave nothing for the footer's margin to pull against --
+   * silently defeating the bottom pin. The search bar is a fixed-height
+   * control; it does not need the extra space anyway.
+   */
 }
 
 .Header__search .FormControl {
@@ -59,4 +92,51 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.Header__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: auto;
+}
+
+.Header__footerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.numberOfgames {
+  font-size: var(--text-md);
+  font-weight: var(--regular);
+  background: var(--input-background);
+  padding: var(--space-xs);
+  margin-inline-start: var(--space-sm, 4px);
+  border-radius: var(--space-3xs);
+}
+
+/*
+ * 260815-opt. Deliberately NO colour change: `.numberOfgames` above already
+ * paints `var(--input-background)` behind inherited text, and recolouring
+ * the foreground would introduce a new foreground/background contrast pair
+ * to validate across all 11 themes -- for no informational gain, since the
+ * string "42 of 318" is itself the signal. `tabular-nums` is the whole
+ * point: without it the pill resizes as the numerator's digits change while
+ * the user types in the search box.
+ */
+.numberOfgames--filtered {
+  font-variant-numeric: tabular-nums;
+}
+
+.steamSyncSpinner {
+  color: var(--text-secondary);
+  animation: refreshing 1.5s infinite;
+}
+
+.steamStaleIndicator {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  padding-block-start: var(--space-3xs);
 }

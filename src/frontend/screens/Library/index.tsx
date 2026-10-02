@@ -22,7 +22,6 @@ import ContextProvider from 'frontend/state/ContextProvider'
 import GamesList from './components/GamesList'
 import { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
 import ErrorComponent from 'frontend/components/UI/ErrorComponent'
-import LibraryHeader from './components/LibraryHeader'
 import { countUnfilteredGames, findSilentlyExcludedGames } from './gameCount'
 import { normalizeTitle } from 'frontend/helpers/library'
 import RecentlyPlayed from './components/RecentlyPlayed'
@@ -1182,7 +1181,12 @@ export default React.memo(function Library(): JSX.Element {
         countForRunnability
       }}
     >
-      {tier2PortalTarget ? createPortal(<Header />, tier2PortalTarget) : null}
+      {tier2PortalTarget
+        ? createPortal(
+            <Header list={libraryToShow} totalGames={unfilteredGameCount} />,
+            tier2PortalTarget
+          )
+        : null}
       <LibraryTour />
 
       <div className="listing">
@@ -1191,7 +1195,7 @@ export default React.memo(function Library(): JSX.Element {
         {/*
           Quick task 260815-qf0: the active-filter chips render FIRST inside
           `.listing`, the scrolling container. They used to sit fifth (after
-          this lane, the Favourites lane, LibraryHeader and AlphabetFilter),
+          this lane, the Favourites lane, the panel's top line and AlphabetFilter),
           which put them below the fold on relaunch with filters persisted --
           the library looked short and nothing on screen said why. The
           governing rule is `Skill("sketch-findings-gamelib")` ->
@@ -1233,8 +1237,6 @@ export default React.memo(function Library(): JSX.Element {
           </>
         )}
 
-        <LibraryHeader list={libraryToShow} totalGames={unfilteredGameCount} />
-
         {showAlphabetFilter && <AlphabetFilter />}
 
         {refreshing && !refreshingInTheBackground && <UpdateComponent />}
@@ -1259,6 +1261,11 @@ export default React.memo(function Library(): JSX.Element {
               library={libraryToShow}
               layout={layout}
               handleGameCardClick={handleModal}
+              ariaLabel={
+                showFavourites
+                  ? t('favourites', 'Favourites')
+                  : t('title.allGames', 'All Games')
+              }
             />
           )}
       </div>

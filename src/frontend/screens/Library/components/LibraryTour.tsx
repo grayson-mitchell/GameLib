@@ -6,6 +6,21 @@ import ContextProvider from 'frontend/state/ContextProvider'
 
 export const LIBRARY_TOUR_ID = 'library-tour'
 
+// 261002-hx0: the tour's anchors now live inside the scroll-clipped tier-2
+// panel (the former sidebar column), not the always-visible main content
+// area -- an anchor below the panel's current scroll position would
+// otherwise sit off-screen when intro.js tries to position its tooltip
+// against it. `scrollToElement: true` (intro.js's own default is already
+// true, but it is restated here so this is not silently reverted by an
+// options object replacing it) brings each step's target into view inside
+// its own scrollable ancestor before positioning; `scrollPadding` keeps the
+// anchor from being scrolled flush against the panel's edge, which would
+// otherwise sit under the panel's own sticky top/bottom chrome.
+const TOUR_OPTIONS = {
+  scrollToElement: true,
+  scrollPadding: 20
+}
+
 const LibraryTour: React.FC = () => {
   const { t } = useTranslation()
   const { isTourActive } = useTour()
@@ -145,6 +160,7 @@ const LibraryTour: React.FC = () => {
       tourId={LIBRARY_TOUR_ID}
       steps={steps}
       enabled={isTourActive(LIBRARY_TOUR_ID)}
+      options={TOUR_OPTIONS}
     />
   )
 }

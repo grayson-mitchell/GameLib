@@ -2,7 +2,7 @@
  * Gates for the library header's filtered-vs-total count (quick task
  * 260815-opt Task 3).
  *
- * The problem: `LibraryHeader` renders `numberOfGames` -- the size of the
+ * The problem: `Header` (formerly `LibraryHeader`) renders `numberOfGames` -- the size of the
  * ALREADY-FILTERED list -- beside a title that always reads "All Games". A
  * bare `42` there is indistinguishable from a 42-game library, so the header
  * cannot answer "why am I looking at 6 games instead of 214?". The
@@ -16,7 +16,7 @@
  *      `DEFAULT_FILTER_ENGINE_STATE` and `countGamesExcludingDlc`. These are
  *      real behavioural tests: they run the code.
  *
- *   2. COMMENT-STRIPPED SOURCE GATES for `LibraryHeader/index.tsx` and
+ *   2. COMMENT-STRIPPED SOURCE GATES for `Header/index.tsx` and
  *      `Library/index.tsx`. Neither can be invoked here -- their transitive
  *      import graphs pull in ContextProvider, the whole game-list stack and
  *      colocated CSS. This is the `downloadsRingStyles.test.ts` idiom.
@@ -222,11 +222,14 @@ describe('countUnfilteredGames -- the denominator', () => {
   })
 })
 
-const LIBRARY_HEADER_PATH = join(
+const HEADER_PATH = join(
   __dirname,
   '..',
+  '..',
+  '..',
   'components',
-  'LibraryHeader',
+  'UI',
+  'Header',
   'index.tsx'
 )
 const LIBRARY_INDEX_PATH = join(__dirname, '..', 'index.tsx')
@@ -271,8 +274,8 @@ describe('source-gate stripper integrity', () => {
   })
 })
 
-describe('LibraryHeader source gate -- filtered-vs-total count', () => {
-  const source = readGated(LIBRARY_HEADER_PATH)
+describe('Header source gate -- filtered-vs-total count', () => {
+  const source = readGated(HEADER_PATH)
 
   it('reads activeFilterCount off LibraryContext', () => {
     expect(source).toContain('LibraryContext')
@@ -319,13 +322,13 @@ describe('LibraryHeader source gate -- filtered-vs-total count', () => {
 describe('Library/index.tsx source gate -- denominator wiring', () => {
   const source = readGated(LIBRARY_INDEX_PATH)
 
-  it('passes totalGames to LibraryHeader', () => {
-    expect(source).toMatch(/<LibraryHeader[\s\S]{0,200}?totalGames=/)
+  it('passes totalGames to Header', () => {
+    expect(source).toMatch(/<Header[\s\S]{0,200}?totalGames=/)
   })
 
   it('SANITY: the totalGames wiring assertion fires against the call site it replaced', () => {
-    expect(gateSource('<LibraryHeader list={libraryToShow} />')).not.toMatch(
-      /<LibraryHeader[\s\S]{0,200}?totalGames=/
+    expect(gateSource('<Header list={libraryToShow} />')).not.toMatch(
+      /<Header[\s\S]{0,200}?totalGames=/
     )
   })
 
@@ -336,7 +339,7 @@ describe('Library/index.tsx source gate -- denominator wiring', () => {
 
   it('SANITY: the denominator-source assertion fires against the naive alternative', () => {
     const knownBad = gateSource(
-      '<LibraryHeader list={libraryToShow} totalGames={libraryUnion.length} />'
+      '<Header list={libraryToShow} totalGames={libraryUnion.length} />'
     )
 
     expect(knownBad).not.toContain(

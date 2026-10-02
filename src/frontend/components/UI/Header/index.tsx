@@ -1,7 +1,28 @@
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTv } from '@fortawesome/free-solid-svg-icons'
+import {
+  faTv,
+  faSyncAlt,
+  faBorderAll,
+  faList,
+  faArrowDownAZ,
+  faArrowDownZA,
+  faHardDrive as hardDriveSolid,
+  faFilter,
+  faFilterCircleXmark
+} from '@fortawesome/free-solid-svg-icons'
+import { faHardDrive as hardDriveLight } from '@fortawesome/free-regular-svg-icons'
+import classNames from 'classnames'
+import { GameInfo } from 'common/types'
+import LibraryContext from 'frontend/screens/Library/LibraryContext'
+import ContextProvider from 'frontend/state/ContextProvider'
+import { countGamesExcludingDlc } from 'frontend/screens/Library/gameCount'
+import { LIBRARY_TOUR_ID } from 'frontend/screens/Library/components/LibraryTour'
+import TourButton from 'frontend/components/Tour/TourButton'
+import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
+import FormControl from '../FormControl'
 import LibrarySearchBar from '../LibrarySearchBar'
 import FilterViewList from '../NavShell/components/FilterViewList'
 import FilterCollectionList from '../NavShell/components/FilterCollectionList'
@@ -10,21 +31,208 @@ import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFace
 import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
 import './index.css'
 
-export default function Header() {
+type Props = {
+  list: GameInfo[]
+  /**
+   * How many games would show with every filter cleared (260815-opt, D5).
+   *
+   * REQUIRED, not optional. An optional prop would let a future call site
+   * omit it and render "42 of undefined" with nothing failing -- and there
+   * is exactly one call site (`screens/Library/index.tsx`), so requiring it
+   * costs nothing.
+   *
+   * Accepted nuance (D8): the alphabet filter is applied AFTER the engine
+   * and contributes no `ActiveFilterDescriptor`. With only a letter picked,
+   * `activeFilterCount` is 0 and today's rendering is preserved exactly.
+   * With a letter AND a facet, the numerator is letter-narrowed while this
+   * denominator is not. That is the correct reading of "showing N of your M
+   * games" and is deliberate -- do not "fix" it.
+   */
+  totalGames: number
+}
+
+function formatRelativeTime(ms: number): string {
+  const minutes = Math.floor(ms / 60000)
+  if (minutes < 60) {
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
+  }
+  const hours = Math.floor(ms / 3600000)
+  if (hours < 24) {
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+  }
+  const days = Math.floor(ms / 86400000)
+  return `${days} ${days === 1 ? 'day' : 'days'} ago`
+}
+
+export default function Header({ list, totalGames }: Props) {
   const { t } = useTranslation()
+  // Dual hook, the same pattern `FilterChipRow` already uses: the shared
+  // 'translation' namespace for this panel's pre-existing copy, 'gamelib'
+  // for the fork's own strings.
+  const { t: tGamelib } = useTranslation('gamelib')
   const consoleModeLabel = t('sidebar.console', 'Console Mode')
+
+  const {
+    activeFilterCount,
+    layout,
+    handleLayout,
+    sortDescending,
+    setSortDescending,
+    sortInstalled,
+    setSortInstalled,
+    showAlphabetFilter,
+    onToggleAlphabetFilter
+  } = useContext(LibraryContext)
+  const {
+    refreshLibrary,
+    refreshing,
+    refreshingInTheBackground,
+    refreshingByRunner,
+    steamMetadataSyncing,
+    connectivity
+  } = useContext(ContextProvider)
+
+  const [syncedAt, setSyncedAt] = useState<number | null>(null)
+
+  useEffect(() => {
+    window.api.getSteamSyncedAt().then((ts) => setSyncedAt(ts))
+  }, [])
+
+  useEffect(() => {
+    window.api.getSteamSyncedAt().then((ts) => setSyncedAt(ts))
+  }, [connectivity.status])
+
+  // The DLC-exclusion rule moved verbatim into `gameCount.ts` so the
+  // denominator below applies the identical predicate -- two copies could
+  // disagree and print `42 of 41` (D6).
+  const numberOfGames = useMemo(() => countGamesExcludingDlc(list), [list])
+
+  // Show the spinner both during the library-list refresh AND while per-game
+  // metadata/art is still streaming in the background (the long tail on a cold
+  // cache) — otherwise the art appears to load with no sign anything's happening.
+  //
+  // debug/login-logout-wipes-library: a single-runner refresh (login/logout
+  // of ONE platform) no longer flips the two GLOBAL flags above at all — it
+  // writes `refreshingByRunner` instead (see GlobalState.tsx's
+  // `refreshLibrary`/`refresh`). Without this OR clause, that scoped case
+  // would silently lose this spinner entirely (a real, if pre-existing and
+  // mislabeled, feedback regression) — checking whether ANY runner is mid
+  // scoped-refresh preserves the exact same "something is syncing" signal.
+  const isSteamSyncing =
+    (refreshing && refreshingInTheBackground) ||
+    steamMetadataSyncing ||
+    Object.values(refreshingByRunner).some(Boolean)
+
+  const showStaleIndicator =
+    connectivity.status !== 'online' && syncedAt !== null
+
+  const staleTime =
+    syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
 
   return (
     <div className="Header">
       <div className="Header__utilities">
-        <Link
-          to="/console"
-          className="Header__consoleButton"
-          aria-label={consoleModeLabel}
-          title={consoleModeLabel}
-        >
-          <FontAwesomeIcon icon={faTv} />
-        </Link>
+        <TourButton tourId={LIBRARY_TOUR_ID} className="library-tour-button" />
+        <div className="Header__utilitiesRight">
+          <Link
+            to="/console"
+            className="Header__consoleButton"
+            aria-label={consoleModeLabel}
+            title={consoleModeLabel}
+          >
+            <FontAwesomeIcon icon={faTv} />
+          </Link>
+          {layout === 'grid' ? (
+            <button
+              className="Header__utilityButton"
+              title={t('library.toggleLayout.list', 'Toggle to a list layout')}
+              onClick={() => handleLayout('list')}
+            >
+              <FontAwesomeIcon icon={faList} data-tour="library-view-toggle" />
+            </button>
+          ) : (
+            <button
+              className="Header__utilityButton"
+              title={t('library.toggleLayout.grid', 'Toggle to a grid layout')}
+              onClick={() => handleLayout('grid')}
+            >
+              <FontAwesomeIcon
+                icon={faBorderAll}
+                data-tour="library-view-toggle"
+              />
+            </button>
+          )}
+          <button
+            className={classNames('Header__utilityButton', {
+              active: refreshing
+            })}
+            title={t('generic.library.refresh', 'Refresh Library')}
+            onClick={async () =>
+              refreshLibrary({
+                checkForUpdates: true,
+                origin: 'action-icons-refresh-button'
+              })
+            }
+          >
+            <FontAwesomeIcon
+              className={classNames({ ['fa-spin']: refreshing })}
+              data-tour="library-refresh"
+              icon={faSyncAlt}
+            />
+          </button>
+          {isSteamSyncing && (
+            <FontAwesomeIcon
+              icon={faSyncAlt}
+              className="steamSyncSpinner"
+              title={t('steam.syncing', 'Syncing Steam library…')}
+              style={{ fontSize: '14px' }}
+            />
+          )}
+        </div>
+      </div>
+      <div className="Header__sortRow">
+        <FormControl segmented small>
+          <button
+            className="FormControl__button"
+            title={
+              sortDescending
+                ? t('library.sortDescending', 'Sort Descending')
+                : t('library.sortAscending', 'Sort Ascending')
+            }
+            onClick={() => setSortDescending(!sortDescending)}
+          >
+            <FontAwesomeIcon
+              className="FormControl__segmentedFaIcon"
+              icon={sortDescending ? faArrowDownZA : faArrowDownAZ}
+              data-tour="library-sort-az"
+            />
+          </button>
+          <button
+            className="FormControl__button"
+            title={t('library.sortByStatus', 'Sort by Status')}
+            onClick={() => setSortInstalled(!sortInstalled)}
+          >
+            <FontAwesomeIcon
+              className="FormControl__segmentedFaIcon"
+              icon={sortInstalled ? hardDriveSolid : hardDriveLight}
+              data-tour="library-sort-installed"
+            />
+          </button>
+          <button
+            className="FormControl__button"
+            title={
+              showAlphabetFilter
+                ? t('library.hideAlphabetFilter', 'Hide Alphabet Filter')
+                : t('library.showAlphabetFilter', 'Show Alphabet Filter')
+            }
+            onClick={onToggleAlphabetFilter}
+          >
+            <FontAwesomeIcon
+              className="FormControl__segmentedFaIcon"
+              icon={showAlphabetFilter ? faFilterCircleXmark : faFilter}
+            />
+          </button>
+        </FormControl>
       </div>
       <div className="Header__search">
         <LibrarySearchBar />
@@ -40,6 +248,45 @@ export default function Header() {
         <FilterStoreFacet />
         <FilterRunnabilityFacet />
         <FilterMoreGroup />
+      </div>
+      <div className="Header__footer">
+        <div className="Header__footerRow">
+          {/*
+            With nothing active this is BYTE-IDENTICAL to what shipped
+            before: same element, same class, same content. The bare count is
+            correct there -- an unfiltered library's shown count IS its
+            total, and "318 of 318" would be noise.
+
+            With something active the bare count is actively misleading: it
+            is the size of the ALREADY-FILTERED list sitting beside a title
+            that still reads "All Games", so `6` is indistinguishable from a
+            six-game library. The denominator is the discriminator.
+
+            Interpolated on `shown` / `total`. The name `count` is reserved by
+            i18next and would trigger plural key resolution (`_one`/`_other`),
+            neither of which exists in the catalog. Literal key AND literal
+            default, because i18next-parser resolves nothing else.
+          */}
+          {activeFilterCount > 0 ? (
+            <span className="numberOfgames numberOfgames--filtered">
+              {tGamelib(
+                'gamelib:library.header.filteredOfTotal',
+                '{{shown}} of {{total}}',
+                { shown: numberOfGames, total: totalGames }
+              )}
+            </span>
+          ) : (
+            <span className="numberOfgames">{numberOfGames}</span>
+          )}
+          <AddGameButton />
+        </div>
+        {showStaleIndicator && (
+          <span className="steamStaleIndicator">
+            {t('steam.lastSynced', 'Steam library last synced {{time}} ago', {
+              time: staleTime
+            })}
+          </span>
+        )}
       </div>
     </div>
   )

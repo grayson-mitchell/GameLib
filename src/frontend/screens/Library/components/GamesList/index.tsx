@@ -17,6 +17,7 @@ interface Props {
   onlyInstalled?: boolean
   isRecent?: boolean
   isFavourite?: boolean
+  ariaLabel?: string
 }
 
 // When a card is focused in the library, keep it in view during controller
@@ -84,7 +85,8 @@ const GamesList = ({
   isFirstLane = false,
   onlyInstalled = false,
   isRecent = false,
-  isFavourite = false
+  isFavourite = false,
+  ariaLabel
 }: Props): JSX.Element => {
   const { gameUpdates, allTilesInColor, titlesAlwaysVisible } =
     useContext(ContextProvider)
@@ -108,6 +110,12 @@ const GamesList = ({
     return () => ({})
   }, [listRef.current, activeController])
 
+  // `role="group"` plus `aria-label` is deliberate, not a landmark upgrade:
+  // `aria-label` alone on a roleless generic `<div>` is not reliably exposed
+  // as an accessible name, and `group` is the minimal role that accepts a
+  // name while requiring no owned children and adding no landmark. Only set
+  // when a caller passes one, so the Favourites and Recently-Played mounts
+  // stay byte-identical to before.
   return (
     <div
       style={!library.length ? { backgroundColor: 'transparent' } : {}}
@@ -119,6 +127,7 @@ const GamesList = ({
         titlesAlwaysVisible
       })}
       ref={listRef}
+      {...(ariaLabel ? { role: 'group', 'aria-label': ariaLabel } : {})}
     >
       {layout === 'list' && (
         <div className="gameListHeader">
