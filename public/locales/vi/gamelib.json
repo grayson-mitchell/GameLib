@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Chơi gần đây",
             "wontRun": "Không thể chạy",
             "chipNoStorePageHidden": "Đang ẩn các trò chơi không có trang cửa hàng",
+            "focusRow": "Hàng nổi bật",
+            "focusRowNext": "Hiện thêm trò chơi",
+            "focusRowPrevious": "Hiện trò chơi trước",
+            "focusRowViewsGroup": "Chế độ xem",
             "groupSelectedCount_one": "Đã chọn {{count}}",
             "groupSelectedCount_other": "Đã chọn {{count}}"
         },

@@ -213,6 +213,10 @@
             "viewRecentlyPlayed": "Jugats recentment",
             "wontRun": "No s'executarà",
             "chipNoStorePageHidden": "S'amaguen els jocs sense pàgina a la botiga",
+            "focusRow": "Fila destacada",
+            "focusRowNext": "Mostra més jocs",
+            "focusRowPrevious": "Mostra els jocs anteriors",
+            "focusRowViewsGroup": "Vistes",
             "groupSelectedCount_one": "{{count}} seleccionat",
             "groupSelectedCount_many": "{{count}} seleccionats",
             "groupSelectedCount_other": "{{count}} seleccionats"

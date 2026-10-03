@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Nyligen spelade",
             "wontRun": "Kommer inte att köras",
             "chipNoStorePageHidden": "Döljer spel utan butikssida",
+            "focusRow": "Fokusrad",
+            "focusRowNext": "Visa fler spel",
+            "focusRowPrevious": "Visa tidigare spel",
+            "focusRowViewsGroup": "Vyer",
             "groupSelectedCount_one": "{{count}} vald",
             "groupSelectedCount_other": "{{count}} valda"
         },

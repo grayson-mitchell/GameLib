@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "最近プレイした",
             "wontRun": "実行不可",
             "chipNoStorePageHidden": "ストアページのないゲームを非表示にしています",
+            "focusRow": "フォーカス行",
+            "focusRowNext": "ゲームをさらに表示",
+            "focusRowPrevious": "前のゲームを表示",
+            "focusRowViewsGroup": "表示",
             "groupSelectedCount_one": "{{count}} 件選択中",
             "groupSelectedCount_other": "{{count}} 件選択中"
         },

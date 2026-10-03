@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Äskettäin pelattu",
             "wontRun": "Ei toimi",
             "chipNoStorePageHidden": "Piilotetaan pelit ilman kauppasivua",
+            "focusRow": "Fokusrivi",
+            "focusRowNext": "Näytä lisää pelejä",
+            "focusRowPrevious": "Näytä edelliset pelit",
+            "focusRowViewsGroup": "Näkymät",
             "groupSelectedCount_one": "{{count}} valittu",
             "groupSelectedCount_other": "{{count}} valittu"
         },

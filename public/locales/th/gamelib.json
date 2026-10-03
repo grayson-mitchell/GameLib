@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "เล่นล่าสุด",
             "wontRun": "ไม่สามารถรันได้",
             "chipNoStorePageHidden": "กำลังซ่อนเกมที่ไม่มีหน้าร้านค้า",
+            "focusRow": "แถวโฟกัส",
+            "focusRowNext": "แสดงเกมเพิ่มเติม",
+            "focusRowPrevious": "แสดงเกมก่อนหน้า",
+            "focusRowViewsGroup": "มุมมอง",
             "groupSelectedCount_one": "เลือกแล้ว {{count}} รายการ",
             "groupSelectedCount_other": "เลือกแล้ว {{count}} รายการ"
         },

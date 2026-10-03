@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Baru dimainkan",
             "wontRun": "Tidak dapat berjalan",
             "chipNoStorePageHidden": "Menyembunyikan game tanpa halaman toko",
+            "focusRow": "Baris fokus",
+            "focusRowNext": "Tampilkan lebih banyak gim",
+            "focusRowPrevious": "Tampilkan gim sebelumnya",
+            "focusRowViewsGroup": "Tampilan",
             "groupSelectedCount_one": "{{count}} dipilih",
             "groupSelectedCount_other": "{{count}} dipilih"
         },

@@ -213,6 +213,10 @@
             "viewRecentlyPlayed": "נוגן לאחרונה",
             "wontRun": "לא יפעל",
             "chipNoStorePageHidden": "הסתרת משחקים ללא עמוד חנות",
+            "focusRow": "שורת מוקד",
+            "focusRowNext": "הצג עוד משחקים",
+            "focusRowPrevious": "הצג משחקים קודמים",
+            "focusRowViewsGroup": "תצוגות",
             "groupSelectedCount_one": "{{count}} נבחר",
             "groupSelectedCount_two": "{{count}} נבחרו",
             "groupSelectedCount_other": "{{count}} נבחרו"

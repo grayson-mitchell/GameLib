@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Hiljuti mängitud",
             "wontRun": "Ei käivitu",
             "chipNoStorePageHidden": "Poeleheta mänge peidetakse",
+            "focusRow": "Fookusrida",
+            "focusRowNext": "Näita rohkem mänge",
+            "focusRowPrevious": "Näita eelmisi mänge",
+            "focusRowViewsGroup": "Vaated",
             "groupSelectedCount_one": "{{count}} valitud",
             "groupSelectedCount_other": "{{count}} valitud"
         },

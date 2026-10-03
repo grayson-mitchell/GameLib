@@ -160,6 +160,10 @@
             "emptyAlphabetLetter": "Commençant par \"{{letter}}\"",
             "emptyAlphabetNumber": "Commençant par un chiffre",
             "chipNoStorePageHidden": "Masquage des jeux sans page boutique",
+            "focusRow": "Rangée en vedette",
+            "focusRowNext": "Afficher plus de jeux",
+            "focusRowPrevious": "Afficher les jeux précédents",
+            "focusRowViewsGroup": "Vues",
             "groupSelectedCount_one": "{{count}} sélectionné",
             "groupSelectedCount_many": "{{count}} sélectionnés",
             "groupSelectedCount_other": "{{count}} sélectionnés"

@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Yaqinda o'ynalgan",
             "wontRun": "Ishlamaydi",
             "chipNoStorePageHidden": "Do'kon sahifasiga ega bo'lmagan o'yinlar yashirilmoqda",
+            "focusRow": "Fokus qatori",
+            "focusRowNext": "Ko'proq o'yinlarni ko'rsatish",
+            "focusRowPrevious": "Oldingi o'yinlarni ko'rsatish",
+            "focusRowViewsGroup": "Ko'rinishlar",
             "groupSelectedCount_one": "{{count}} tanlangan",
             "groupSelectedCount_other": "{{count}} tanlangan"
         },

@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Duela gutxi jokatutakoak",
             "wontRun": "Ez da exekutatuko",
             "chipNoStorePageHidden": "Denda-orririk ez duten jokoak ezkutatzen",
+            "focusRow": "Fokuratutako errenkada",
+            "focusRowNext": "Erakutsi joko gehiago",
+            "focusRowPrevious": "Erakutsi aurreko jokoak",
+            "focusRowViewsGroup": "Ikuspegiak",
             "groupSelectedCount_one": "{{count}} hautatuta",
             "groupSelectedCount_other": "{{count}} hautatuta"
         },

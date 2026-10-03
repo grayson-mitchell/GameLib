@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "به‌تازگی بازی شده",
             "wontRun": "اجرا نمی‌شود",
             "chipNoStorePageHidden": "مخفی کردن بازی‌های بدون صفحه فروشگاه",
+            "focusRow": "ردیف تمرکز",
+            "focusRowNext": "نمایش بازی‌های بیشتر",
+            "focusRowPrevious": "نمایش بازی‌های قبلی",
+            "focusRowViewsGroup": "نماها",
             "groupSelectedCount_one": "{{count}} مورد انتخاب شده",
             "groupSelectedCount_other": "{{count}} مورد انتخاب شده"
         },

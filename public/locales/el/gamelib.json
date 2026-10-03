@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Πρόσφατα παιγμένα",
             "wontRun": "Δεν εκτελείται",
             "chipNoStorePageHidden": "Απόκρυψη παιχνιδιών χωρίς σελίδα καταστήματος",
+            "focusRow": "Σειρά εστίασης",
+            "focusRowNext": "Εμφάνιση περισσότερων παιχνιδιών",
+            "focusRowPrevious": "Εμφάνιση προηγούμενων παιχνιδιών",
+            "focusRowViewsGroup": "Προβολές",
             "groupSelectedCount_one": "{{count}} επιλεγμένο",
             "groupSelectedCount_other": "{{count}} επιλεγμένα"
         },

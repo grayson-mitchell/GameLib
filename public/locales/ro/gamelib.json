@@ -213,6 +213,10 @@
             "viewRecentlyPlayed": "Jucate recent",
             "wontRun": "Nu va rula",
             "chipNoStorePageHidden": "Se ascund jocurile fără pagină de magazin",
+            "focusRow": "Rând evidențiat",
+            "focusRowNext": "Afișează mai multe jocuri",
+            "focusRowPrevious": "Afișează jocurile anterioare",
+            "focusRowViewsGroup": "Vizualizări",
             "groupSelectedCount_one": "{{count}} selectat",
             "groupSelectedCount_few": "{{count}} selectate",
             "groupSelectedCount_other": "{{count}} selectate"

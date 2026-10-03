@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Xogados recentemente",
             "wontRun": "Non se executará",
             "chipNoStorePageHidden": "Ocultando xogos sen páxina na tenda",
+            "focusRow": "Fila destacada",
+            "focusRowNext": "Mostrar máis xogos",
+            "focusRowPrevious": "Mostrar xogos anteriores",
+            "focusRowViewsGroup": "Vistas",
             "groupSelectedCount_one": "{{count}} seleccionado",
             "groupSelectedCount_other": "{{count}} seleccionados"
         },

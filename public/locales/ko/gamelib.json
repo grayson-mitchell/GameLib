@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "최근 플레이",
             "wontRun": "실행되지 않음",
             "chipNoStorePageHidden": "스토어 페이지가 없는 게임 숨김",
+            "focusRow": "포커스 행",
+            "focusRowNext": "게임 더 보기",
+            "focusRowPrevious": "이전 게임 보기",
+            "focusRowViewsGroup": "보기",
             "groupSelectedCount_one": "{{count}}개 선택됨",
             "groupSelectedCount_other": "{{count}}개 선택됨"
         },

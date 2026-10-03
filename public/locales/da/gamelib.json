@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Senest spillet",
             "wontRun": "Kører ikke",
             "chipNoStorePageHidden": "Skjuler spil uden en butikside",
+            "focusRow": "Fokusrække",
+            "focusRowNext": "Vis flere spil",
+            "focusRowPrevious": "Vis tidligere spil",
+            "focusRowViewsGroup": "Visninger",
             "groupSelectedCount_one": "{{count}} valgt",
             "groupSelectedCount_other": "{{count}} valgt"
         },

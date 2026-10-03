@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Son oynananlar",
             "wontRun": "Çalışmayacak",
             "chipNoStorePageHidden": "Mağaza sayfası olmayan oyunlar gizleniyor",
+            "focusRow": "Odak sırası",
+            "focusRowNext": "Daha fazla oyun göster",
+            "focusRowPrevious": "Önceki oyunları göster",
+            "focusRowViewsGroup": "Görünümler",
             "groupSelectedCount_one": "{{count}} seçildi",
             "groupSelectedCount_other": "{{count}} seçildi"
         },

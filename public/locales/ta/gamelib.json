@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "சமீபத்தில் விளையாடியவை",
             "wontRun": "இயங்காது",
             "chipNoStorePageHidden": "கடை பக்கம் இல்லாத விளையாட்டுகளை மறைக்கிறது",
+            "focusRow": "கவன வரிசை",
+            "focusRowNext": "மேலும் விளையாட்டுகளைக் காட்டு",
+            "focusRowPrevious": "முந்தைய விளையாட்டுகளைக் காட்டு",
+            "focusRowViewsGroup": "காட்சிகள்",
             "groupSelectedCount_one": "{{count}} தேர்ந்தெடுக்கப்பட்டது",
             "groupSelectedCount_other": "{{count}} தேர்ந்தெடுக்கப்பட்டன"
         },

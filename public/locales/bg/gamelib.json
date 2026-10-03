@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Наскоро играни",
             "wontRun": "Няма да работи",
             "chipNoStorePageHidden": "Скриване на игри без страница в магазин",
+            "focusRow": "Фокусен ред",
+            "focusRowNext": "Покажи повече игри",
+            "focusRowPrevious": "Покажи предишните игри",
+            "focusRowViewsGroup": "Изгледи",
             "groupSelectedCount_one": "{{count}} избран",
             "groupSelectedCount_other": "{{count}} избрани"
         },

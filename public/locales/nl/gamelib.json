@@ -206,6 +206,10 @@
             "viewRecentlyPlayed": "Onlangs gespeeld",
             "wontRun": "Werkt niet",
             "chipNoStorePageHidden": "Spellen zonder winkelpagina worden verborgen",
+            "focusRow": "Focusrij",
+            "focusRowNext": "Meer games tonen",
+            "focusRowPrevious": "Vorige games tonen",
+            "focusRowViewsGroup": "Weergaven",
             "groupSelectedCount_one": "{{count}} geselecteerd",
             "groupSelectedCount_other": "{{count}} geselecteerd",
             "viewFavourites": "Favourites"

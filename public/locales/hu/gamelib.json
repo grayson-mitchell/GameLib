@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "Nemrég játszott",
             "wontRun": "Nem fut",
             "chipNoStorePageHidden": "Áruházi oldal nélküli játékok elrejtve",
+            "focusRow": "Fókuszsor",
+            "focusRowNext": "Több játék megjelenítése",
+            "focusRowPrevious": "Korábbi játékok megjelenítése",
+            "focusRowViewsGroup": "Nézetek",
             "groupSelectedCount_one": "{{count}} kiválasztva",
             "groupSelectedCount_other": "{{count}} kiválasztva"
         },

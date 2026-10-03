@@ -213,6 +213,10 @@
             "viewRecentlyPlayed": "Nedavno igrano",
             "wontRun": "Neće raditi",
             "chipNoStorePageHidden": "Skrivanje igara bez stranice u prodavnici",
+            "focusRow": "Fokusirani red",
+            "focusRowNext": "Prikaži više igara",
+            "focusRowPrevious": "Prikaži prethodne igre",
+            "focusRowViewsGroup": "Prikazi",
             "groupSelectedCount_one": "{{count}} odabrana",
             "groupSelectedCount_few": "{{count}} odabrane",
             "groupSelectedCount_other": "{{count}} odabranih"

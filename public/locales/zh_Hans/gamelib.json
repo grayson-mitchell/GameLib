@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "最近玩过",
             "wontRun": "无法运行",
             "chipNoStorePageHidden": "正在隐藏没有商店页面的游戏",
+            "focusRow": "焦点行",
+            "focusRowNext": "显示更多游戏",
+            "focusRowPrevious": "显示以前的游戏",
+            "focusRowViewsGroup": "视图",
             "groupSelectedCount_one": "已选择 {{count}} 个",
             "groupSelectedCount_other": "已选择 {{count}} 个"
         },

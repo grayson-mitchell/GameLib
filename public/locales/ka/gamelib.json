@@ -207,6 +207,10 @@
             "viewRecentlyPlayed": "ბოლოს ნათამაშები",
             "wontRun": "არ გაეშვება",
             "chipNoStorePageHidden": "იმალება თამაშები მაღაზიის გვერდის გარეშე",
+            "focusRow": "ფოკუსის მწკრივი",
+            "focusRowNext": "მეტი თამაშის ჩვენება",
+            "focusRowPrevious": "წინა თამაშების ჩვენება",
+            "focusRowViewsGroup": "ხედები",
             "groupSelectedCount_one": "არჩეულია {{count}}",
             "groupSelectedCount_other": "არჩეულია {{count}}"
         },

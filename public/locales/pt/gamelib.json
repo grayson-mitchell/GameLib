@@ -213,6 +213,10 @@
             "viewRecentlyPlayed": "Jogados recentemente",
             "wontRun": "Não executa",
             "chipNoStorePageHidden": "A ocultar jogos sem página na loja",
+            "focusRow": "Linha em destaque",
+            "focusRowNext": "Mostrar mais jogos",
+            "focusRowPrevious": "Mostrar jogos anteriores",
+            "focusRowViewsGroup": "Vistas",
             "groupSelectedCount_one": "{{count}} selecionado",
             "groupSelectedCount_many": "{{count}} selecionados",
             "groupSelectedCount_other": "{{count}} selecionados"
