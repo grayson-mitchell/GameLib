@@ -362,19 +362,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Oasis Cibernético",
-        "cyberSpaceOasisAlt": "Oasis Cibernético Clásico",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Oscuro",
         "highContrast": "Alto Contraste",
         "marine": "Marino",
-        "marineClassic": "Marino Clásico",
         "midnightMirage": "Espejismo de Medianoche",
         "nordDark": "Nord Oscuro",
         "nordLight": "Nord Claro",
-        "oldSchool": "GameLib Old School",
         "sweet": "Dulce",
-        "zombie": "Zombi",
-        "zombieClassic": "Zombi Clásico"
+        "zombie": "Zombi"
     },
     "webview": {
         "login": {

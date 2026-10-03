@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "சைபர்ஸ்பேஸ் ஓயசிஸ்",
-        "cyberSpaceOasisAlt": "சைபர்ஸ்பேஸ் ஓயசிஸ் கிளாசிக்",
         "dracula": "டிராகுலா",
         "gruvboxDark": "க்ரூவ்பாக்ஸ் டார்க்",
         "highContrast": "அதிக மாறுபாடு",
         "marine": "மரைன்",
-        "marineClassic": "மரைன் கிளாசிக்",
         "midnightMirage": "மிட்நைட் மிராஜ்",
         "nordDark": "நோர்டு டார்க்",
         "nordLight": "நோர்டு லைட்",
-        "oldSchool": "ஓல்ட் ஸ்கூல் GameLib",
         "sweet": "ஸ்வீட்",
-        "zombie": "சாம்பி",
-        "zombieClassic": "சாம்பி கிளாசிக்"
+        "zombie": "சாம்பி"
     },
     "webview": {
         "login": {

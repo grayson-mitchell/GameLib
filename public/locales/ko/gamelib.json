@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "사이버스페이스 오아시스",
-        "cyberSpaceOasisAlt": "사이버스페이스 오아시스 클래식",
         "dracula": "드라큘라",
         "gruvboxDark": "그루브박스 다크",
         "highContrast": "고대비",
         "marine": "마린",
-        "marineClassic": "마린 클래식",
         "midnightMirage": "미드나이트 미라지",
         "nordDark": "노르드 다크",
         "nordLight": "노르드 라이트",
-        "oldSchool": "올드 스쿨 GameLib",
         "sweet": "스위트",
-        "zombie": "좀비",
-        "zombieClassic": "좀비 클래식"
+        "zombie": "좀비"
     },
     "webview": {
         "login": {

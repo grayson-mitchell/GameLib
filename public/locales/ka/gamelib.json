@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "კიბერსივრცის ოაზისი",
-        "cyberSpaceOasisAlt": "კიბერსივრცის ოაზისი კლასიკური",
         "dracula": "დრაკულა",
         "gruvboxDark": "Gruvbox მუქი",
         "highContrast": "მაღალი კონტრასტი",
         "marine": "საზღვაო",
-        "marineClassic": "საზღვაო კლასიკური",
         "midnightMirage": "შუაღამის მირაჟი",
         "nordDark": "Nord მუქი",
         "nordLight": "Nord ღია",
-        "oldSchool": "ძველებური GameLib",
         "sweet": "ტკბილი",
-        "zombie": "ზომბი",
-        "zombieClassic": "ზომბი კლასიკური"
+        "zombie": "ზომბი"
     },
     "webview": {
         "login": {

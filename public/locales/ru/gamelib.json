@@ -369,19 +369,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Кибероазис",
-        "cyberSpaceOasisAlt": "Кибероазис (классика)",
         "dracula": "Дракула",
         "gruvboxDark": "Gruvbox Dark",
         "highContrast": "Высокая контрастность",
         "marine": "Морская",
-        "marineClassic": "Морская (классика)",
         "midnightMirage": "Полночный мираж",
         "nordDark": "Nord Dark",
         "nordLight": "Nord Light",
-        "oldSchool": "Старая школа GameLib",
         "sweet": "Sweet",
-        "zombie": "Зомби",
-        "zombieClassic": "Зомби (классика)"
+        "zombie": "Зомби"
     },
     "webview": {
         "login": {

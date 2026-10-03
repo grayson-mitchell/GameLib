@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "സൈബർസ്പേസ് ഒയാസിസ്",
-        "cyberSpaceOasisAlt": "സൈബർസ്പേസ് ഒയാസിസ് ക്ലാസിക്",
         "dracula": "ഡ്രാക്കുള",
         "gruvboxDark": "ഗ്രുവ്ബോക്സ് ഡാർക്ക്",
         "highContrast": "ഹൈ കോൺട്രാസ്റ്റ്",
         "marine": "മറൈൻ",
-        "marineClassic": "മറൈൻ ക്ലാസിക്",
         "midnightMirage": "മിഡ്നൈറ്റ് മിറാഷ്",
         "nordDark": "നോർഡ് ഡാർക്ക്",
         "nordLight": "നോർഡ് ലൈറ്റ്",
-        "oldSchool": "ഓൾഡ് സ്കൂൾ GameLib",
         "sweet": "സ്വീറ്റ്",
-        "zombie": "സോംബി",
-        "zombieClassic": "സോംബി ക്ലാസിക്"
+        "zombie": "സോംബി"
     },
     "webview": {
         "login": {

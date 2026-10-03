@@ -376,19 +376,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Ósais Cibearspáis",
-        "cyberSpaceOasisAlt": "Ósais Cibearspáis Clasaiceach",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Dorcha",
         "highContrast": "Ard-Chodarsnacht",
         "marine": "Muirí",
-        "marineClassic": "Muirí Clasaiceach",
         "midnightMirage": "Meititreoir Meán Oíche",
         "nordDark": "Nord Dorcha",
         "nordLight": "Nord Éadrom",
-        "oldSchool": "Seanscoil GameLib",
         "sweet": "Milis",
-        "zombie": "Zombaí",
-        "zombieClassic": "Zombaí Clasaiceach"
+        "zombie": "Zombaí"
     },
     "webview": {
         "login": {

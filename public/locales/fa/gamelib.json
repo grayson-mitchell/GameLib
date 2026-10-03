@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "واحه سایبراسپیس",
-        "cyberSpaceOasisAlt": "واحه سایبراسپیس کلاسیک",
         "dracula": "دراکولا",
         "gruvboxDark": "گراوباکس تاریک",
         "highContrast": "کنتراست بالا",
         "marine": "مارین",
-        "marineClassic": "مارین کلاسیک",
         "midnightMirage": "سراب نیمه‌شب",
         "nordDark": "نورد تاریک",
         "nordLight": "نورد روشن",
-        "oldSchool": "GameLib قدیمی",
         "sweet": "شیرین",
-        "zombie": "زامبی",
-        "zombieClassic": "زامبی کلاسیک"
+        "zombie": "زامبی"
     },
     "webview": {
         "login": {

@@ -369,19 +369,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Cyberspace Oasis",
-        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Dark",
         "highContrast": "Didelis kontrastas",
         "marine": "Marine",
-        "marineClassic": "Marine Classic",
         "midnightMirage": "Midnight Mirage",
         "nordDark": "Nord Dark",
         "nordLight": "Nord Light",
-        "oldSchool": "Senoji mokykla GameLib",
         "sweet": "Sweet",
-        "zombie": "Zombie",
-        "zombieClassic": "Zombie Classic"
+        "zombie": "Zombie"
     },
     "webview": {
         "login": {

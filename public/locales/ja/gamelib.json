@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "サイバースペース・オアシス",
-        "cyberSpaceOasisAlt": "サイバースペース・オアシス クラシック",
         "dracula": "ドラキュラ",
         "gruvboxDark": "Gruvbox ダーク",
         "highContrast": "ハイコントラスト",
         "marine": "マリン",
-        "marineClassic": "マリン クラシック",
         "midnightMirage": "ミッドナイト・ミラージュ",
         "nordDark": "Nord ダーク",
         "nordLight": "Nord ライト",
-        "oldSchool": "オールドスクール GameLib",
         "sweet": "スウィート",
-        "zombie": "ゾンビ",
-        "zombieClassic": "ゾンビ クラシック"
+        "zombie": "ゾンビ"
     },
     "webview": {
         "login": {

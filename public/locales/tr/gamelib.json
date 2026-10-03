@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Siber Uzay Vahası",
-        "cyberSpaceOasisAlt": "Siber Uzay Vahası Klasik",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Koyu",
         "highContrast": "Yüksek Kontrast",
         "marine": "Marine",
-        "marineClassic": "Marine Klasik",
         "midnightMirage": "Gece Yarısı Serabı",
         "nordDark": "Nord Koyu",
         "nordLight": "Nord Açık",
-        "oldSchool": "Eski Usul GameLib",
         "sweet": "Tatlı",
-        "zombie": "Zombi",
-        "zombieClassic": "Zombi Klasik"
+        "zombie": "Zombi"
     },
     "webview": {
         "login": {

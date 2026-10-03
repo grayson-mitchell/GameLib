@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "赛博空间绿洲",
-        "cyberSpaceOasisAlt": "赛博空间绿洲经典版",
         "dracula": "德古拉",
         "gruvboxDark": "Gruvbox 暗色",
         "highContrast": "高对比度",
         "marine": "海洋",
-        "marineClassic": "海洋经典版",
         "midnightMirage": "午夜幻影",
         "nordDark": "北欧暗色",
         "nordLight": "北欧亮色",
-        "oldSchool": "复古 GameLib",
         "sweet": "甜美",
-        "zombie": "僵尸",
-        "zombieClassic": "僵尸经典版"
+        "zombie": "僵尸"
     },
     "webview": {
         "login": {

@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Cyberspace Oasis",
-        "cyberSpaceOasisAlt": "Cyberspace Oasis คลาสสิก",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Dark",
         "highContrast": "คอนทราสต์สูง",
         "marine": "Marine",
-        "marineClassic": "Marine คลาสสิก",
         "midnightMirage": "Midnight Mirage",
         "nordDark": "Nord Dark",
         "nordLight": "Nord Light",
-        "oldSchool": "Old School GameLib",
         "sweet": "Sweet",
-        "zombie": "Zombie",
-        "zombieClassic": "Zombie คลาสสิก"
+        "zombie": "Zombie"
     },
     "webview": {
         "login": {

@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Κυβερνο-Όαση",
-        "cyberSpaceOasisAlt": "Κυβερνο-Όαση Κλασική",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Dark",
         "highContrast": "Υψηλή Αντίθεση",
         "marine": "Marine",
-        "marineClassic": "Marine Κλασικό",
         "midnightMirage": "Μεσονύχτιος Αντικατοπτρισμός",
         "nordDark": "Nord Dark",
         "nordLight": "Nord Light",
-        "oldSchool": "Παλιάς Σχολής GameLib",
         "sweet": "Γλυκό",
-        "zombie": "Zombie",
-        "zombieClassic": "Zombie Κλασικό"
+        "zombie": "Zombie"
     },
     "webview": {
         "login": {

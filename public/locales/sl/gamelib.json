@@ -369,19 +369,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Kibernetska oaza",
-        "cyberSpaceOasisAlt": "Kibernetska oaza - klasična",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Dark",
         "highContrast": "Visok kontrast",
         "marine": "Marine",
-        "marineClassic": "Marine Classic",
         "midnightMirage": "Polnočna prikazen",
         "nordDark": "Nord Dark",
         "nordLight": "Nord Light",
-        "oldSchool": "Old School GameLib",
         "sweet": "Sweet",
-        "zombie": "Zombie",
-        "zombieClassic": "Zombie Classic"
+        "zombie": "Zombie"
     },
     "webview": {
         "login": {

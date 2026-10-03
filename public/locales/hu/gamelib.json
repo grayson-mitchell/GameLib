@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Cyberspace Oázis",
-        "cyberSpaceOasisAlt": "Cyberspace Oázis Klasszikus",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Sötét",
         "highContrast": "Nagy Kontraszt",
         "marine": "Tengerész",
-        "marineClassic": "Tengerész Klasszikus",
         "midnightMirage": "Éjféli Délibáb",
         "nordDark": "Nord Sötét",
         "nordLight": "Nord Világos",
         "sweet": "Édes",
-        "zombie": "Zombi",
-        "zombieClassic": "Zombi Klasszikus",
-        "oldSchool": "Retro GameLib"
+        "zombie": "Zombi"
     },
     "webview": {
         "login": {

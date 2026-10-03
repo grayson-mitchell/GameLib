@@ -355,19 +355,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "賽博綠洲",
-        "cyberSpaceOasisAlt": "賽博綠洲經典版",
         "dracula": "德古拉",
         "gruvboxDark": "Gruvbox 深色",
         "highContrast": "高對比度",
         "marine": "海洋",
-        "marineClassic": "海洋經典版",
         "midnightMirage": "午夜幻影",
         "nordDark": "Nord 深色",
         "nordLight": "Nord 淺色",
-        "oldSchool": "復古 GameLib",
         "sweet": "甜蜜",
-        "zombie": "殭屍",
-        "zombieClassic": "殭屍經典版"
+        "zombie": "殭屍"
     },
     "webview": {
         "login": {

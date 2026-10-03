@@ -352,19 +352,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Cyberspace Oaas",
-        "cyberSpaceOasisAlt": "Cyberspace Oaas Klassikaline",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Dark",
         "highContrast": "Suur kontrastsus",
         "marine": "Marine",
-        "marineClassic": "Marine Klassikaline",
         "midnightMirage": "Midnight Mirage",
         "nordDark": "Nord Dark",
         "nordLight": "Nord Light",
-        "oldSchool": "Vana Kooli GameLib",
         "sweet": "Sweet",
-        "zombie": "Zombie",
-        "zombieClassic": "Zombie Klassikaline"
+        "zombie": "Zombie"
     },
     "webview": {
         "login": {

@@ -362,19 +362,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "נווה מדבר קיברנטי",
-        "cyberSpaceOasisAlt": "נווה מדבר קיברנטי קלאסי",
         "dracula": "דרקולה",
         "gruvboxDark": "Gruvbox כהה",
         "highContrast": "ניגודיות גבוהה",
         "marine": "ימי",
-        "marineClassic": "ימי קלאסי",
         "midnightMirage": "מיראז' חצות",
         "nordDark": "נורדי כהה",
         "nordLight": "נורדי בהיר",
-        "oldSchool": "GameLib קלאסי",
         "sweet": "מתוק",
-        "zombie": "זומבי",
-        "zombieClassic": "זומבי קלאסי"
+        "zombie": "זומבי"
     },
     "webview": {
         "login": {

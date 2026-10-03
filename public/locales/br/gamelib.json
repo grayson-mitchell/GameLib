@@ -376,19 +376,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Oaz Sistr-Egor",
-        "cyberSpaceOasisAlt": "Oaz Sistr-Egor Klasel",
         "dracula": "Dracula",
         "gruvboxDark": "Gruvbox Teñval",
         "highContrast": "Kehidad Uhel",
         "marine": "Morel",
-        "marineClassic": "Morel Klasel",
         "midnightMirage": "Skeud-arvor Hanternoz",
         "nordDark": "Norzh Teñval",
         "nordLight": "Norzh Sklaer",
-        "oldSchool": "GameLib Skol Gozh",
         "sweet": "Dous",
-        "zombie": "Zombi",
-        "zombieClassic": "Zombi Klasel"
+        "zombie": "Zombi"
     },
     "webview": {
         "login": {

@@ -383,19 +383,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "واحة الفضاء السيبراني",
-        "cyberSpaceOasisAlt": "واحة الفضاء السيبراني الكلاسيكية",
         "dracula": "دراكولا",
         "gruvboxDark": "Gruvbox Dark",
         "highContrast": "تباين عالٍ",
         "marine": "بحري",
-        "marineClassic": "بحري كلاسيكي",
         "midnightMirage": "سراب منتصف الليل",
         "nordDark": "Nord Dark",
         "nordLight": "Nord Light",
-        "oldSchool": "GameLib الكلاسيكي",
         "sweet": "حلو",
-        "zombie": "زومبي",
-        "zombieClassic": "زومبي كلاسيكي"
+        "zombie": "زومبي"
     },
     "webview": {
         "login": {

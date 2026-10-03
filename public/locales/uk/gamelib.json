@@ -369,19 +369,15 @@
     },
     "themeSelector": {
         "cyberSpaceOasis": "Кіберпростір Оазис",
-        "cyberSpaceOasisAlt": "Кіберпростір Оазис Класична",
         "dracula": "Дракула",
         "gruvboxDark": "Gruvbox Темна",
         "highContrast": "Висока контрастність",
         "marine": "Морська",
-        "marineClassic": "Морська Класична",
         "midnightMirage": "Опівнічний Міраж",
         "nordDark": "Nord Темна",
         "nordLight": "Nord Світла",
-        "oldSchool": "Старошкільна GameLib",
         "sweet": "Солодка",
-        "zombie": "Зомбі",
-        "zombieClassic": "Зомбі Класична"
+        "zombie": "Зомбі"
     },
     "webview": {
         "login": {
