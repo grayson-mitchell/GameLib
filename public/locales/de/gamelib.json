@@ -155,6 +155,10 @@
             "emptyAlphabetLetter": "Beginnt mit \"{{letter}}\"",
             "emptyAlphabetNumber": "Beginnt mit einer Zahl",
             "chipNoStorePageHidden": "Spiele ohne Store-Seite werden ausgeblendet",
+            "focusRow": "Fokusreihe",
+            "focusRowNext": "Mehr Spiele anzeigen",
+            "focusRowPrevious": "Vorherige Spiele anzeigen",
+            "focusRowViewsGroup": "Ansichten",
             "groupSelectedCount_one": "{{count}} ausgewählt",
             "groupSelectedCount_other": "{{count}} ausgewählt"
         },
