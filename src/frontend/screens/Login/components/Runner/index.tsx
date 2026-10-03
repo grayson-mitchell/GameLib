@@ -34,6 +34,14 @@ interface RunnerProps {
   // with its unit tests, because "on hold" is not "cancelled" -- if a sign-in path is ever
   // scheduled for deletion again, re-marking it is one prop.
   deprecatedTile?: 'primary' | 'alternative'
+  // Quick task 261003-u48 (D-3/D-4): a sign-in for THIS tile is currently in
+  // flight. Derived by the host PER TILE from its own overlay identity
+  // (`openOverlay === '<this tile's overlay id>'`) -- never from the host's
+  // screen-wide `loginInFlight` flag, which would spin every tile at once.
+  // Purely visual: it gates no behavior, guards nothing, and must not be
+  // consulted in handleLogin(). Optional so the Zoom call site (which cannot
+  // type-check this comparison at all, D-2) stays byte-identical.
+  busy?: boolean
 }
 
 export default function Runner(props: RunnerProps) {
@@ -137,11 +145,16 @@ export default function Runner(props: RunnerProps) {
         <div className="runnerButtons">
           {!props.isLoggedIn ? (
             <div
-              className={`runnerLogin${primaryDeprecated ? ' deprecated' : ''}`}
+              className={`runnerLogin${primaryDeprecated ? ' deprecated' : ''}${
+                props.busy ? ' busy' : ''
+              }`}
               onClick={() => handleLogin()}
               title={primaryDeprecated ? deprecatedHint : undefined}
             >
               {props.buttonText}
+              {props.busy && (
+                <div className="runnerBusySpinner" aria-hidden="true" />
+              )}
             </div>
           ) : isLoggingOut ? (
             <div className="runnerLogin logged">

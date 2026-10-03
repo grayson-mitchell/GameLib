@@ -365,6 +365,7 @@ export default React.memo(function NewLogin() {
               logoutAction={gog.logout}
               primaryLoginAction={() => openLoginOverlay('gog')}
               disabled={oldMac || loginInFlight}
+              busy={openOverlay === 'gog'}
             />
             <Runner
               class="nile"

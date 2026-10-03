@@ -437,3 +437,96 @@ describe('Runner: connected-state label (quick 260815-kt0)', () => {
     expect(stripped).not.toMatch(/>Connected</)
   })
 })
+
+/**
+ * Quick task 261003-u48: the `busy` prop (D-3/D-4). These are REAL element-tree
+ * assertions against the object graph `Runner(props)` returns -- this file's
+ * module-level mocks let it be invoked directly without a DOM -- not source
+ * greps. What they still cannot see: no CSS cascade (the `busy`/`.runnerLogin`
+ * modifier rule and the `@keyframes` are never applied here), no pixels, and no
+ * animation clock -- whether the ring actually rotates is exactly what the
+ * plan's macOS `<human-check>` live gate exists to answer; this suite cannot.
+ */
+function findBusySpinners(tree: ReactNode) {
+  return collectElements(tree).filter((el) => {
+    const className = (el.props as Record<string, unknown> | undefined)
+      ?.className
+    return (
+      typeof className === 'string' &&
+      className.split(' ').includes('runnerBusySpinner')
+    )
+  })
+}
+
+describe('Runner: busy prop (quick task 261003-u48, D-3/D-4)', () => {
+  afterEach(() => {
+    mockNavigate.mockClear()
+  })
+
+  it('busy: true, isLoggedIn: false -- exactly one element in the tree carries the spinner class as a whitespace-separated class part', () => {
+    const tree = mount(makeProps({ busy: true }))
+
+    expect(findBusySpinners(tree)).toHaveLength(1)
+  })
+
+  it('busy omitted entirely (the Zoom / status-quo shape) -- zero spinner elements, proving the prop is genuinely optional and additive', () => {
+    const tree = mount(makeProps())
+
+    expect(findBusySpinners(tree)).toHaveLength(0)
+  })
+
+  it('busy: false -- zero spinner elements', () => {
+    const tree = mount(makeProps({ busy: false }))
+
+    expect(findBusySpinners(tree)).toHaveLength(0)
+  })
+
+  it('busy: true -- the primary clickable tile still invokes primaryLoginAction exactly once on click, and still does not navigate', () => {
+    const primaryLoginAction = jest.fn()
+    const tree = mount(makeProps({ busy: true, primaryLoginAction }))
+    const primary = findClickablePrimary(tree)!
+    ;(primary.props as unknown as { onClick: () => void }).onClick()
+
+    expect(primaryLoginAction).toHaveBeenCalledTimes(1)
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('busy: true, isLoggedIn: true -- zero spinner elements: a logout tile is not a sign-in in flight, the spinner belongs to the not-logged-in branch only', () => {
+    const tree = mount(makeProps({ busy: true, isLoggedIn: true }))
+
+    expect(findBusySpinners(tree)).toHaveLength(0)
+  })
+
+  it("busy: true -- the tile's own buttonText is still present in the rendered text content: D-5 keeps the label as the anchor, the spinner joins it rather than replacing it", () => {
+    const tree = mount(makeProps({ busy: true, buttonText: 'GOG Login' }))
+
+    expect(collectTextContent(tree).join('')).toContain('GOG Login')
+  })
+
+  it('busy: true -- the spinner element carries aria-hidden set true and carries no aria-label and no title (D-5: zero new strings)', () => {
+    const tree = mount(makeProps({ busy: true }))
+    const spinner = findBusySpinners(tree)[0]!
+    const spinnerProps = spinner.props as unknown as Record<string, unknown>
+
+    expect(spinnerProps['aria-hidden']).toBe('true')
+    expect(spinnerProps['aria-label']).toBeUndefined()
+    expect(spinnerProps.title).toBeUndefined()
+  })
+
+  it('SOURCE GATE (ABSENCE, restated locally) -- the comment-stripped Runner/index.tsx still contains zero tabIndex, zero <button and zero <a -- the constraint loginInFlightUiReachability.test.tsx already pins, restated here so a spinner rebuilt as a button fails in the suite that owns the spinner', () => {
+    const fs = jest.requireActual<typeof import('fs')>('fs')
+    const path = jest.requireActual<typeof import('path')>('path')
+    const source = fs.readFileSync(
+      path.join(__dirname, '../index.tsx'),
+      'utf-8'
+    )
+    const stripped = source
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .join('\n')
+
+    expect((stripped.match(/\btabIndex\b/g) ?? []).length).toBe(0)
+    expect((stripped.match(/<button/g) ?? []).length).toBe(0)
+    expect((stripped.match(/<a\s/g) ?? []).length).toBe(0)
+  })
+})

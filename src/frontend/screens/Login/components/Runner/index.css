@@ -112,3 +112,49 @@
   outline: 1px solid var(--danger);
   outline-offset: -1px;
 }
+
+/* Quick task 261003-u48 (D-6): minimal CSS blast radius. `.runnerLogin` is a
+   block div shared by all six primary tiles AND the alternative tile --
+   turning IT into a flex container would relayout every one of them. The
+   flex layout needed to seat the spinner lives only on this modifier class,
+   applied only to the one tile that is actually busy. */
+.runnerLogin.busy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+/* Quick task 261003-u48 (D-4): a CSS ring copied from the measured-working
+   precedent at WebView/index.css's `.WebView__unavailablePanel-spinner` /
+   `@keyframes gamelibFinalizingSpin`, scaled down for this 60px-tall tile,
+   rather than the repo's dominant FontAwesome `fa-spin-pulse` idiom -- no
+   FontAwesome stylesheet import exists anywhere under `src/`, so that
+   idiom's animation could not be verified at the desk. Colours are the same
+   pair the proven rule uses: `--text-default` for the ring, `--accent` for
+   the leading edge. `--border-color` is deliberately avoided -- it resolves
+   to an invisible grey (1.08:1) in 10 of 13 themes despite its own comment
+   calling itself universal. */
+.runnerBusySpinner {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--text-default);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: gamelibRunnerBusySpin 0.8s linear infinite;
+}
+
+/* Keyframes names are GLOBAL and unscoped (WebView/index.css:37 records this
+   lesson in situ). Census taken at planning time: `fading`,
+   `gamelibFinalizingSpin`, `SteamSyncNotice-spin`, `fade-in`, `consoleEnter`,
+   `titleFade`, `overlayFade`, `spin`, `refreshing` -- nine names, none of
+   which is this one. */
+@keyframes gamelibRunnerBusySpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
