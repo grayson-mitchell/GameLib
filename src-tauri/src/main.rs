@@ -7402,7 +7402,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // reveal/clear windows, which have no title bar for a title to matter on
                 // (T-34.4.1-82).
                 builder = builder.title(login_window_title(&origin, None));
-                builder = builder.inner_size(900.0, 700.0);
+                // Quick task 261003-nsk (D-3): narrowed from 900 to 572. Measured, not a
+                // taste call -- `CGWindowListCopyWindowInfo([.optionOnScreenOnly])` against
+                // the live `gamelib-shell` pid on 2026-10-03 returned exactly one on-screen
+                // login window, w=572 h=700. `open_pristine_epic_login_window`'s own
+                // `.inner_size(900.0, 700.0)` is a DIFFERENT form layout and stays 900 (D-3) --
+                // see that function's own call site, untouched by this task.
+                builder = builder.inner_size(572.0, 700.0);
                 // CR-01 fix (continued): `.center()`/`.focused(true)` are AppKit-owned
                 // concerns once this window becomes a sheet -- `beginSheet:` positions the
                 // sheet under the parent's title bar and gives it key status itself, so

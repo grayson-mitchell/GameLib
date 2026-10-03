@@ -1301,6 +1301,70 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
       2
     )
   })
+
+  // Quick task 261003-nsk, Task 2 (D-3): the visible Humble sheet narrows from 900 to 572;
+  // the pristine Epic window (a DIFFERENT form layout, out of scope by D-3) stays 900. Two
+  // helpers mirroring the file's existing find-start-then-find-end slicing idiom (identical
+  // in shape to the sibling copies already defined in other describe blocks in this file).
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  function extractPristineLoginFnBody(code: string): string {
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  test("Guard 1 (D-3): humble_login_open's if-visible block carries the narrowed 572-wide sizing call and no longer carries the former 900-wide one", () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
+    expect(visibleBlock).toContain('.inner_size(572.0, 700.0)')
+    // Scoped to this block only -- a file-wide negative would red on Epic's own legitimate
+    // 900 at a different call site, which D-3 requires to stay (see Guard 2 below).
+    expect(visibleBlock).not.toContain('.inner_size(900.0, 700.0)')
+  })
+
+  test("Guard 1 self-test (RED proof): a synthetic visible block still carrying the pre-fix 900-wide call fails this guard's positive clause", () => {
+    const synthetic = [
+      '"humble_login_open" => {',
+      '  if visible {',
+      '    builder = builder.inner_size(900.0, 700.0);',
+      '  }',
+      '}',
+      '"humble_login_cookies" => {}'
+    ].join('\n')
+    const code = loadMainRsCode(synthetic)
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
+    expect(visibleBlock).not.toContain('.inner_size(572.0, 700.0)')
+  })
+
+  test('Guard 2 (D-3 scope guard): open_pristine_epic_login_window keeps its own 900-wide sizing call, unaffected by the narrowed Humble sheet', () => {
+    const code = loadMainRsCode()
+    const pristineBody = extractPristineLoginFnBody(code)
+    expect(pristineBody).toContain('.inner_size(900.0, 700.0)')
+  })
+
+  test("Guard 2 self-test (RED proof): a synthetic pristine body narrowed to 572 fails this guard's positive clause", () => {
+    const synthetic = [
+      'fn open_pristine_epic_login_window(',
+      ') {',
+      '  window_builder = window_builder.inner_size(572.0, 700.0);',
+      '}',
+      '#[cfg(target_os = "macos")]'
+    ].join('\n')
+    const code = loadMainRsCode(synthetic)
+    const pristineBody = extractPristineLoginFnBody(code)
+    expect(pristineBody).not.toContain('.inner_size(900.0, 700.0)')
+  })
 })
 
 // Phase 34.5 Plan 27 (F-34.5-G6-04, T-34.5-G6-22/23/39): the login window shows no
