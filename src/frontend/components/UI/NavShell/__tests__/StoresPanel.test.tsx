@@ -113,12 +113,12 @@ describe('StoresPanel', () => {
     const labels = labelsOf(tree)
 
     expect(labels).toEqual([
+      'Store Search',
+      'Amazon Luna',
+      'Epic Store',
       'GOG Store',
       'Steam Store',
-      'Epic Store',
-      'Amazon Luna',
       'Deals',
-      'Store Search',
       'Humble Keys',
       'Redeem a Steam key'
     ])

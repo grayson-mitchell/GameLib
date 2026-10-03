@@ -34,19 +34,19 @@ export default function StoresPanel() {
 
   return (
     <div className="NavShell__tier2List">
-      <NavItem url="/store/gog" label={t('gog-store', 'GOG Store')} />
-      <NavItem url="/store/steam" label={t('steam-store', 'Steam Store')} />
-      <NavItem url="/store/epic" label={t('store', 'Epic Store')} />
-      <NavItem url="/store/amazon" label={t('amazon-luna', 'Amazon Luna')} />
-      <NavItem
-        url="/discounts"
-        icon={faTags}
-        label={t('discounts.sidebar', 'Deals')}
-      />
       <NavItem
         url="/store-search"
         icon={faMagnifyingGlassDollar}
         label={t('storeSearch.sidebar', 'Store Search')}
+      />
+      <NavItem url="/store/amazon" label={t('amazon-luna', 'Amazon Luna')} />
+      <NavItem url="/store/epic" label={t('store', 'Epic Store')} />
+      <NavItem url="/store/gog" label={t('gog-store', 'GOG Store')} />
+      <NavItem url="/store/steam" label={t('steam-store', 'Steam Store')} />
+      <NavItem
+        url="/discounts"
+        icon={faTags}
+        label={t('discounts.sidebar', 'Deals')}
       />
       {humble?.isLoggedIn && (
         <NavItem
