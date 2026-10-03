@@ -218,3 +218,49 @@ describe('261003-s04 Task 2: the Epic and Amazon tiles join GOG on the overlay, 
     expect(zoomBlock).toMatch(/loginUrl=\{zoomLoginPath\}/)
   })
 })
+
+describe('261003-u48 Task 2: five tiles carry the per-tile busy derivation, Zoom carries none', () => {
+  it.each([
+    ['epic', 'legendary'],
+    ['gog', 'gog'],
+    ['nile', 'nile'],
+    ['steam', 'steam'],
+    ['humble', 'humble']
+  ])(
+    "SOURCE GATE (PRESENCE, per-tile) -- the %s tile carries busy={openOverlay === '%s'}, derived per tile from the overlay identity -- never the screen-wide loginInFlight flag (D-3)",
+    (className, overlayId) => {
+      const source = read(LOGIN_TSX)
+      const block = runnerBlock(source, className)
+
+      expect(block).toContain(`busy={openOverlay === '${overlayId}'}`)
+    }
+  )
+
+  it('SOURCE GATE (ABSENCE, per-tile, D-2) -- the Zoom tile slice carries NO occurrence of the busy prop at all: the comparison does not type-check against LoginOverlay, and would be permanently false regardless since Zoom navigates away and unmounts before anything could spin', () => {
+    const source = read(LOGIN_TSX)
+    const zoomBlock = runnerBlock(source, 'zoom')
+
+    expect((zoomBlock.match(/\bbusy=/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (PRESENCE, count) -- the comment-stripped Login/index.tsx contains exactly five busy= occurrences (epic, gog, nile, steam, humble), proving the Zoom exclusion without a region-scoped negative grep whose own subject appears throughout the file -- a sixth tile wired by mistake goes red wherever it is written', () => {
+    const source = read(LOGIN_TSX)
+
+    expect((source.match(/\bbusy=/g) ?? []).length).toBe(5)
+  })
+
+  it('SOURCE GATE (ABSENCE, D-3) -- zero occurrences of the busy prop assigned the screen-wide loginInFlight flag: busy must always compare openOverlay against a specific runner id, never read the screen-wide flag directly', () => {
+    const source = read(LOGIN_TSX)
+
+    expect((source.match(/\bbusy=\{loginInFlight\}/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (PRESENCE, positive control re-stated locally) -- the file\'s disabled= expressions still number six and still reduce to one distinct string, so a future "simplification" that folds the visual busy flag into the concurrency guard fails in the suite that introduced the visual flag', () => {
+    const source = read(LOGIN_TSX)
+    const disabledExpressions = source.match(/disabled=\{[^}]*\}/g) ?? []
+
+    expect(disabledExpressions.length).toBe(6)
+    expect(new Set(disabledExpressions).size).toBe(1)
+    expect(disabledExpressions[0]).toBe('disabled={oldMac || loginInFlight}')
+  })
+})

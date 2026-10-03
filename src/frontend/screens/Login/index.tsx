@@ -355,6 +355,7 @@ export default React.memo(function NewLogin() {
               alternativeLoginAction={() => setShowSidLogin(true)}
               primaryLoginAction={() => openLoginOverlay('legendary')}
               disabled={oldMac || loginInFlight}
+              busy={openOverlay === 'legendary'}
             />
             <Runner
               class="gog"
@@ -376,6 +377,7 @@ export default React.memo(function NewLogin() {
               logoutAction={amazon.logout}
               primaryLoginAction={() => openLoginOverlay('nile')}
               disabled={oldMac || loginInFlight}
+              busy={openOverlay === 'nile'}
             />
             {zoom.enabled && (
               <Runner
@@ -404,6 +406,7 @@ export default React.memo(function NewLogin() {
               logoutAction={steam?.logout ?? (() => Promise.resolve())}
               primaryLoginAction={() => openLoginOverlay('steam')}
               disabled={oldMac || loginInFlight}
+              busy={openOverlay === 'steam'}
             />
             <Runner
               class="humble"
@@ -418,6 +421,7 @@ export default React.memo(function NewLogin() {
               logoutAction={humble?.logout ?? (() => Promise.resolve())}
               primaryLoginAction={() => openLoginOverlay('humble')}
               disabled={oldMac || loginInFlight}
+              busy={openOverlay === 'humble'}
             />
           </div>
           {humble?.encryptionDegraded && (
