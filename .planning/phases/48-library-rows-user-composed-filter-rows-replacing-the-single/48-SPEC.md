@@ -1,186 +1,190 @@
-# Phase 48: Library rows — user-composed filter rows in the tiles panel — Specification
+# Phase 48: Focus row — move the library top section into the panel and widen what it can show — Specification
 
 **Created:** 2026-10-03
-**Ambiguity score:** 0.16 (gate: ≤ 0.20)
-**Requirements:** 8 locked
+**Revised:** 2026-10-03 — scope reduced from N rows to ONE focus row (operator decision, see Interview Log round 4)
+**Ambiguity score:** 0.12 (gate: ≤ 0.20)
+**Requirements:** 7 locked
 
 ## Goal
 
-The Games library renders **up to 10 user-chosen horizontal rows inserted above the games
-grid**, each row being one value picked from a list (a view, a collection, a store or a
-runnability value), persisted across restart, independent of the active filter state, and
-composed from a `ROWS` section in the Games tier-2 panel — replacing the single lane chosen from
-the `libraryTopSection` Settings dropdown.
+The single lane above the games grid stops being a four-option dropdown buried in Settings and
+becomes a **focus row** chosen from the Games tier-2 panel, pickable from **any view,
+collection, store or runnability value**, rendered as a horizontal strip that fills the
+available width — with the `Recent Games to Show` number setting removed and the row sized by
+what fits instead.
 
 ## Background
 
 Measured against the codebase on 2026-10-03.
 
-**Exactly one lane can exist today, ever.** `showRecentGames` requires
-`libraryTopSection.startsWith('recently_played')` (`Library/index.tsx:577`) and `showFavourites`
-requires `libraryTopSection === 'favourites'` (`:596`), so the two are mutually exclusive. The
-choice lives in a four-option Settings dropdown — `recently_played`,
-`recently_played_installed`, `favourites`, `disabled` (`Settings/components/LibraryTopSection.tsx:30-46`).
+**The feature already half-exists, and that is the starting point, not a problem.** The operator
+found it in Settings mid-spec. `libraryTopSection` is a four-option `SelectField` —
+`recently_played`, `recently_played_installed`, `favourites`, `disabled`
+(`Settings/components/LibraryTopSection.tsx:30-47`) — and it is a real GlobalConfig setting, not
+frontend-only state: `LibraryTopSectionOptions` is declared in `common/types.ts:170` and
+defaulted in the backend at `config.ts:349`. It reaches **9 non-test files**: both `types.ts`,
+`ContextProvider.tsx`, `GlobalState.tsx` (3 sites), its Settings component,
+`Library/index.tsx` (4 sites), an `engineWiring.ts:175` doc comment that asserts its
+`'disabled'` default, and `config.ts`.
 
-**Lanes are not horizontal.** `.gameList` is
+**Exactly one lane can exist today, which is why the single-row model is a small change rather
+than a rewrite.** `showRecentGames` needs `libraryTopSection.startsWith('recently_played')`
+(`Library/index.tsx:577`); `showFavourites` needs `=== 'favourites'` (`:596`). They are mutually
+exclusive by construction.
+
+**The lane is not horizontal.** `.gameList` is
 `display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr))`
-(`Library/index.css:1-8`), a full-width wrapping grid. `.gameList.firstLane` changes **padding
+(`Library/index.css:1-8`), a full-width wrapping grid; `.gameList.firstLane` changes **padding
 only** (`:10-12`). Nothing in this codebase scrolls games sideways. **The horizontal strip is
-net-new work** — the composition half of this phase is a generalisation of shipped code, the
-rendering half is not.
+the one genuinely net-new piece of this phase.**
 
-**The header shape already exists.** The favourites lane pairs a `library-section-header` +
-`h3.libraryHeader` with a `GamesList` (`Library/index.tsx:1228-1236`), and `GamesList` already
-takes `isFirstLane` / `isRecent` / `isFavourite`. `filterEngine.ts` already exports
-`passesHiddenLaneFilter`, which exists specifically so lanes honour the hidden-games setting.
+**The header shape already exists** — `library-section-header` + `h3.libraryHeader` wrapping a
+`GamesList` (`Library/index.tsx:1228-1236`) — and `GamesList` already takes `isFirstLane` /
+`isRecent` / `isFavourite`.
 
-**Row definitions do not exist in any form.** The nearest persistence analog is
-`customCategories` as `Record<string, string[]>` under `configStore` key
-`games.customCategories` (`GlobalState.tsx:505,698`) — manual per-game membership, not a filter.
+**The number selector has a second, backend consumer.** `MaxRecentGames.tsx` ("Recent Games to
+Show", default 5) is read by the lane at `RecentlyPlayed/index.tsx:52`, but `recent_games.ts:15`
+*also* does `games.slice(0, await maxRecentGames())` — so it bounds what is **stored** in
+`games.recent`, not only what is displayed. "Fill the available width" is viewport-dependent and
+cannot drive a storage bound, so removing the control requires choosing a fixed one.
+`recent_games.ts:61-63` already carries a `ts-prune` / `find-deadcode` note naming
+`MaxRecentGames.tsx`'s local `useSetting`, which goes stale on removal.
 
 **Lane-versus-filter behaviour is already a deliberate decision.** `Library/index.tsx:1205-1212`
-is labelled *"KNOWN NUANCE -- do not 'correct' this back"*: the lane receives `showHidden` and
-`onlyInstalled` but **not** the store or runnability facets, the operator was told this and chose
-it, and making the lane honour the remaining facets is recorded as explicitly out of scope. This
-phase does not scale that inconsistency — it rules rows fully independent of filter state, which
-turns the nuance into the intended design.
+is labelled *"KNOWN NUANCE -- do not 'correct' this back"*: the lane honours `showHidden` and
+`onlyInstalled` but **not** store or runnability facets; the operator was told this and chose it;
+making the lane honour the rest is recorded as explicitly out of scope. This phase rules the
+focus row fully independent of filter state, which turns that nuance into the intended design.
 
 ## Requirements
 
-1. **Row definition persistence**: An ordered list of row definitions survives app restart.
-   - Current: No row definitions exist. `libraryTopSection` is a single enum string in Settings; `games.customCategories` holds manual membership, not filters.
-   - Target: A new `configStore` key holds an ordered list of row definitions, each `{ kind, value }` where `kind` is one of view / collection / store / runnability.
-   - Acceptance: Add two rows, quit, relaunch — both rows are present in the same order.
+1. **Single persisted focus-row selection**: One selection, or off, persists across restart.
+   - Current: `libraryTopSection` persists one of four hardcoded enum values in GlobalConfig; the value space cannot express a store, a collection or a runnability value.
+   - Target: A single focus-row selection of `{ kind, value }` — where `kind` is view / collection / store / runnability — or off, persisted in GlobalConfig.
+   - Acceptance: Select a collection as the focus row, quit, relaunch — the same collection is still the focus row.
 
-2. **ROWS section with a pick-list `+`**: The Games tier-2 panel gains a `ROWS` section listing current rows, with a `+` that opens a pick list.
-   - Current: No `ROWS` section exists. Lane choice is a `MenuItem` dropdown in Settings, not in the library panel.
-   - Target: `ROWS` section renders in the Games tier-2 panel below the existing filter groups. `+` opens a pick list grouped as VIEWS, COLLECTIONS, STORES, RUNNABILITY. Picking one value adds exactly one row, auto-named from the pick.
-   - Acceptance: `+` lists every view, every existing collection, every store and every runnability value; picking one adds exactly one row whose visible name equals the picked value's existing label.
+2. **FOCUS ROW section in the tier-2 panel**: Single-select, clearable, replacing the Settings dropdown as the place the choice is made.
+   - Current: The choice is a `SelectField` in Settings → General. Nothing in the library panel controls it.
+   - Target: A `FOCUS ROW` section in the Games tier-2 panel single-selects from every view, every collection, every store and every runnability value. Re-clicking the active entry clears it to off — the clearable single-select behaviour `FilterCollectionList` already implements.
+   - Acceptance: The section lists every view, every existing collection, every store and every runnability value; picking one makes it the focus row; re-clicking the same entry clears the row.
 
-3. **Rows render as horizontal strips above the grid**: Each row is one row tall with horizontal overflow, inserted above the grid, leaving the grid unchanged.
-   - Current: A lane is a full-width wrapping grid (`.gameList`, `auto-fill minmax(156px, 1fr)`); at most one exists; `.firstLane` alters padding only.
-   - Target: Each row renders as a single-row horizontal strip with a `library-section-header`-style header, inserted at the existing lane position (`Library/index.tsx:1218-1238`). The grid below renders identically to today.
-   - Acceptance: With 3 rows configured, each strip renders exactly one card tall and overflows horizontally rather than wrapping; the grid's rendered output is unchanged against a pre-phase baseline for the same filter state.
+3. **The focus row renders as one horizontal strip**: One row tall, filling the available width, above an unchanged grid.
+   - Current: The lane is a full-width wrapping grid capped at `maxRecentGames` items; at most one lane exists; `.firstLane` alters padding only.
+   - Target: The focus row renders as a single-row horizontal strip with the existing header treatment, inserted at the current lane position (`Library/index.tsx:1218-1238`), showing as many cards as fit the available width. The grid below renders identically to today.
+   - Acceptance: The strip renders exactly one card tall; narrowing the window reduces the visible card count without wrapping to a second row; the grid's output is unchanged against a pre-phase baseline for the same filter state.
 
-4. **Rows are independent of filter state**: No filter affects row contents; hidden-games visibility is the sole exception.
-   - Current: The one lane honours `showHidden` and `onlyInstalled` but ignores store and runnability facets — a deliberate, documented asymmetry (`Library/index.tsx:1205-1212`).
-   - Target: No view, collection, store facet, runnability facet, search term or alphabet letter changes any row's contents. Rows call `passesHiddenLaneFilter` so a hidden game never appears.
-   - Acceptance: With Store = GOG active, rows still contain non-GOG games while the grid contains GOG only; a game hidden via its context menu appears in no row.
+4. **The focus row is independent of filter state**: Hidden-games visibility is the sole exception.
+   - Current: The lane honours `showHidden` and `onlyInstalled` but ignores store and runnability facets — a deliberate, documented asymmetry (`Library/index.tsx:1205-1212`).
+   - Target: No view, collection, store facet, runnability facet, search term or alphabet letter changes the focus row's contents. It calls `passesHiddenLaneFilter`, so a hidden game never appears.
+   - Acceptance: With Store = GOG active, the focus row still contains non-GOG games while the grid contains GOG only; a game hidden via its context menu appears in no focus row.
 
-5. **Per-row ordering**: Natural order for the pick, title order otherwise.
-   - Current: The recently-played lane uses the insertion order of `configStore` `games.recent` (`RecentlyPlayed/index.tsx:21-33`); the favourites lane uses favourites-list order.
-   - Target: A recently-played row orders by recency. Every other row orders by title using the existing leading-`The `-stripped `localeCompare` (`Library/index.tsx:916-922`).
-   - Acceptance: A GOG row is alphabetical by title; a recently-played row's first card is the most recently played game.
+5. **Focus-row ordering**: Natural order for the pick, title order otherwise.
+   - Current: The recently-played lane uses insertion order of `configStore` `games.recent` (`RecentlyPlayed/index.tsx:21-33`); the favourites lane uses favourites-list order.
+   - Target: A recently-played focus row orders by recency. Every other pick orders by title using the existing leading-`The `-stripped `localeCompare` (`Library/index.tsx:916-922`).
+   - Acceptance: A GOG focus row is alphabetical by title; a recently-played focus row leads with the most recently played game.
 
-6. **Row cap of 10**: At most 10 rows exist, and exceeding it is prevented, not silently truncated in storage.
-   - Current: No cap exists because no rows exist.
-   - Target: The `+` control is unavailable once 10 rows exist, with a visible reason. A persisted list already holding more than 10 renders the first 10 and never deletes the excess.
-   - Acceptance: With 10 rows, `+` is unavailable and states why; with a hand-written 12-row config, 10 strips render and the stored list still holds 12 after a restart.
+6. **`Recent Games to Show` removed, stored history bounded in code**: The user-facing number control goes; the storage bound becomes a source constant.
+   - Current: `MaxRecentGames.tsx` exposes the count; `recent_games.ts:15` slices the stored list by it, so the setting silently governs retained history as well as display.
+   - Target: The Settings control and its barrel export are removed. `recent_games.ts` bounds the stored list by a fixed constant of **20**. Display count is whatever fits the strip width.
+   - Acceptance: No `Recent Games to Show` control appears in Settings; playing a 21st distinct game evicts the oldest from `games.recent`; a profile whose stored list already holds more than 20 entries does not lose entries on upgrade.
 
-7. **Row removal**: Each row can be removed, and removal persists.
-   - Current: No rows, no removal affordance.
-   - Target: Each entry in the `ROWS` section can be removed. Removal persists across restart and preserves the order of the remaining rows.
-   - Acceptance: Remove the middle of 3 rows — the other two render in their original relative order, and still do after relaunch.
-
-8. **Migration from `libraryTopSection`**: The existing setting seeds the initial row set once.
-   - Current: `libraryTopSection` drives the single lane directly at render time; there is no row list to seed.
-   - Target: On first run after upgrade, `recently_played` seeds one Recently-played row; `recently_played_installed` seeds one Recently-played row carrying installed-only semantics; `favourites` seeds one Favourites row; `disabled` seeds none. Seeding runs once, guarded by presence of the new key.
-   - Acceptance: A profile set to `favourites` shows exactly one Favourites row on first launch after upgrade; removing that row and relaunching does not bring it back.
+7. **`Library Top Section` removed from Settings and migrated once**: The old dropdown's value seeds the new selection and the control disappears.
+   - Current: The `SelectField` is rendered in Settings → General; `libraryTopSection` is read directly at render time in `Library/index.tsx` at 4 sites.
+   - Target: The Settings control is removed. On first run after upgrade, `recently_played` → a Recently-played focus row; `recently_played_installed` → a Recently-played focus row with installed-only semantics; `favourites` → a Favourites focus row; `disabled` → off. Seeding runs once, guarded by presence of the new key.
+   - Acceptance: No `Library Top Section` control appears in Settings; a profile set to `favourites` shows a Favourites focus row on first upgraded launch; clearing the focus row and relaunching does not restore it.
 
 ## Boundaries
 
 **In scope:**
 
-- A persisted, ordered list of up to 10 row definitions (`{ kind, value }`)
-- A `ROWS` section in the Games tier-2 panel, listing rows, with a pick-list `+` and per-row removal
-- Horizontal single-row strip rendering with a header, inserted above the grid
-- Per-row ordering: recency for recently-played, title for everything else
-- One-time migration seeding from the four existing `libraryTopSection` values
-- Row self-suppression when a row's pick matches zero games
+- One persisted focus-row selection (`{ kind, value }` or off) in GlobalConfig
+- A `FOCUS ROW` single-select, clearable section in the Games tier-2 panel
+- Widening the value space from 4 hardcoded options to views + collections + stores + runnability
+- Horizontal single-row strip rendering that fills the available width
+- Removing both Settings controls (`LibraryTopSection`, `MaxRecentGames`) and the barrel export
+- A fixed stored-history bound in `recent_games.ts`
+- One-time migration from the four existing `libraryTopSection` values
 
 **Out of scope:**
 
-- **Arbitrary saved filter states as rows** — the `+` is a pick list, one value per row. Saving a composed multi-facet filter as a row is a possible follow-up, deliberately not this phase.
-- **A `Recently added` / `Date purchased` row** — acquisition date does not exist for Epic, Amazon or sideloaded, is license-grant-not-purchase for Steam, and is clean only for GOG. Keeping it out keeps the cross-store data-coverage problem entirely outside this phase. It stays owned by the `library-sorting-is-title-only` todo.
-- **Drag-to-reorder rows** — operator decision: "reorder later". New rows append.
-- **Any change to the games grid** — the grid's filtering, layout and sort behave exactly as today. Rows are an insertion above it.
-- **Making rows honour facets** — ruled independent. This also means `Library/index.tsx:1205-1212`'s KNOWN NUANCE is not revisited.
-- **A global sort-field menu** — superseded in intent by per-row natural ordering; the todo it came from is rewritten down to the data-coverage decision, not closed.
-- **Duplicate prevention across rows** — `Installed` and `Steam` legitimately overlap. The cap of 10 is the control on vertical space, not a duplicate rule.
-- **Sketch 005 variant D implementation** — the Views segmented control is a separate, already-sketched change. Rows being an insertion means D is unaffected and no longer blocked, but it is not this phase's deliverable.
+- **Multiple rows.** Operator decision round 4: ship one focus row, *"can always consider adding more rows later if required."* No `+`, no cap, no row list, no reordering, no duplicate policy. The N-row model is a possible follow-up phase and nothing here should preclude it.
+- **A `Recently added` / `Date purchased` pick** — acquisition date does not exist for Epic, Amazon or sideloaded, is license-grant-not-purchase for Steam, and is clean only for GOG. This keeps the cross-store data-coverage problem wholly outside this phase; it stays owned by the `library-sorting-is-title-only` todo.
+- **Arbitrary saved filter states as the pick** — the section is a single-select over existing single values, not a filter builder.
+- **Any change to the games grid** — filtering, layout and sort behave exactly as today. The focus row is an insertion above it.
+- **Making the focus row honour facets** — ruled independent, so `Library/index.tsx:1205-1212`'s KNOWN NUANCE is not revisited.
+- **A global sort-field menu** — superseded in intent by natural per-pick ordering; the todo it came from is rewritten down to the data-coverage decision, not closed.
+- **Sketch 005 variant D implementation** — the Views segmented control is a separate, already-sketched change. The focus row being an insertion means D is unaffected.
+- **Removing the orphaned locale keys** — see Constraints; key removal has measured traps and is a discuss-phase decision, not a spec requirement.
 
 ## Constraints
 
-- **`.libraryHeader` is `position: sticky; top: 0; z-index: 9`** (`Library/index.css:42-50`). N row headers will all try to stick to the same offset and collide. The planner must resolve this; it is a known mechanical consequence, not an open question.
+- **Removing a locale key has three measured traps in this repo** (affected-locale count is not what it appears, `da`/`id`/`nl` behave differently, and `_one` plural suffixes are load-bearing). The strings being orphaned — `setting.library_top_section`, `setting.library_top_option.*`, `setting.maxRecentGames` — live in `public/locales/en/translation.json`. Whether to remove them or leave them orphaned is a **discuss-phase decision**; this phase must not remove them casually as part of deleting the components.
+- **New strings go in `public/locales/en/gamelib.json` via `pnpm i18n`**, never `translation.json`, and the l10n fill across the shipped locales is part of the work.
+- **Collection names are user data** and render as-is. Only the section label and the four view names are translatable.
+- **`.libraryHeader` is `position: sticky; top: 0; z-index: 9`** (`Library/index.css:42-50`). With one focus row this is benign — noted because the N-row follow-up would make it a collision.
 - **`.gameList.firstLane > div:has(.justPlayed) { grid-column: span 2 }`** (`Library/index.css:14-16`) is a grid-only emphasis rule with no meaning in a horizontal strip. Decide its fate explicitly rather than carrying it forward dead.
-- **Rows must reuse `GamesList`** rather than forking a card renderer — it already carries `isFirstLane` / `isRecent` / `isFavourite` and the `GameCard` wiring.
-- **Row names are user-facing strings.** New copy goes in `public/locales/en/gamelib.json` via `pnpm i18n`, never `translation.json`, and the l10n fill is part of the work.
-- **Collection names are user data** and must render as-is; only the group label and the four view names are translatable.
-- Vertical space is the scarce resource: 10 rows plus a chip row plus a grid must still leave the grid reachable. The cap is the agreed control.
+- **The focus row must reuse `GamesList`** rather than forking a card renderer — it already carries `isFirstLane` / `isRecent` / `isFavourite` and the `GameCard` wiring.
+- **`engineWiring.ts:175` asserts `libraryTopSection` defaults to `'disabled'`** in a doc comment. That comment goes stale on migration and must be updated, not left to mislead.
+- **No gate pins either setting by name** — a census of `meta/` and `src/**/__tests__/` returned no reference. Deleting a frontend file has previously reddened only the Meta jest project in this repo, so run that project explicitly after the deletion rather than assuming the absence of a name reference means the absence of a gate.
 
 ## Acceptance Criteria
 
-- [ ] Two added rows persist across quit and relaunch, in the same order
-- [ ] `+` lists every view, every existing collection, every store and every runnability value
-- [ ] Picking one pick-list value adds exactly one row, named with that value's existing label
-- [ ] A pick already present as a row is marked already-added and cannot be added twice
-- [ ] Zero configured rows renders no strips, and the grid is identical to today
-- [ ] With no collections, the pick list omits the COLLECTIONS group
-- [ ] Each strip renders exactly one card tall and overflows horizontally rather than wrapping
-- [ ] A strip whose content fits the viewport shows no overflow affordance
-- [ ] Strips render in row-definition order
-- [ ] A row whose pick matches zero games self-suppresses
-- [ ] With Store = GOG active, rows contain non-GOG games and the grid contains GOG only
-- [ ] A filter state yielding zero grid results still renders the rows; `FilterZeroResult` governs the grid only
-- [ ] A GOG row is alphabetical by title; a recently-played row leads with the most recently played game
+- [ ] A collection selected as the focus row is still the focus row after quit and relaunch
+- [ ] The `FOCUS ROW` section lists every view, every existing collection, every store and every runnability value
+- [ ] Picking an entry makes it the focus row; re-clicking the same entry clears the row to off
+- [ ] With no collections, the section omits the collections group
+- [ ] The section's groups render in a fixed order
+- [ ] The strip renders exactly one card tall
+- [ ] Narrowing the window reduces the visible card count without wrapping to a second row
+- [ ] Strip content narrower than the available width shows no overflow affordance
+- [ ] A pick matching zero games renders no strip at all
+- [ ] A persisted selection naming a deleted collection renders no strip and does not crash
+- [ ] The grid's output is unchanged against a pre-phase baseline for the same filter state
+- [ ] With Store = GOG active, the focus row contains non-GOG games and the grid contains GOG only
+- [ ] A filter state yielding zero grid results still renders the focus row
+- [ ] A GOG focus row is alphabetical by title; a recently-played focus row leads with the most recently played game
 - [ ] Two games with identical titles order stably, tie-broken on `app_name`
-- [ ] With 10 rows, `+` is unavailable and states why
-- [ ] A hand-written 12-row config renders 10 strips and still holds 12 entries after relaunch
-- [ ] Removing the middle of 3 rows preserves the other two in relative order, across relaunch
-- [ ] Removing the last remaining row returns the screen to grid-only
-- [ ] `libraryTopSection: favourites` seeds exactly one Favourites row on first upgraded launch
-- [ ] `libraryTopSection: recently_played_installed` seeds one Recently-played row with installed-only semantics
-- [ ] `libraryTopSection: disabled` seeds zero rows
-- [ ] Migration does not re-seed on subsequent launches after a row is removed
-- [ ] **MUST NOT**: no row renders a hidden game
-- [ ] **MUST NOT**: row definitions beyond the cap are never deleted from storage
-- [ ] **MUST NOT**: `games.customCategories` is not written by any rows code path
-- [ ] **MUST NOT**: no row's visible name is a raw i18n key
+- [ ] No `Recent Games to Show` control appears in Settings
+- [ ] Playing a 21st distinct game evicts the oldest entry from `games.recent`
+- [ ] A profile whose `games.recent` already holds more than 20 entries loses none on upgrade
+- [ ] The stored recent-games list preserves recency order
+- [ ] No `Library Top Section` control appears in Settings
+- [ ] `libraryTopSection: favourites` yields a Favourites focus row on first upgraded launch
+- [ ] `libraryTopSection: recently_played_installed` yields a Recently-played focus row with installed-only semantics
+- [ ] `libraryTopSection: disabled` yields no focus row
+- [ ] Clearing the focus row and relaunching does not restore it from the old setting
+- [ ] **MUST NOT**: the focus row never renders a hidden game
+- [ ] **MUST NOT**: removing the number setting never deletes already-stored `games.recent` entries
+- [ ] **MUST NOT**: `games.customCategories` is not written by any focus-row code path
+- [ ] **MUST NOT**: the focus row's visible name is never a raw i18n key
 
 ## Edge Coverage
 
-**Coverage:** 20/28 applicable edges resolved (18 explicit + 2 backstop) · 0 unresolved · 8 dismissed
+**Coverage:** 16/21 applicable edges resolved (14 explicit + 2 backstop) · 0 unresolved · 5 dismissed
 
 | Category | Requirement | Status | Resolution / Reason |
 |----------|-------------|--------|---------------------|
-| adjacency | R1 | ✅ covered (explicit) | Pick already present is marked already-added, cannot be added twice |
-| empty | R1 | ✅ covered (explicit) | Zero rows → no strips, grid identical to today |
-| ordering | R1 | ✅ covered (explicit) | Row list is insertion-ordered and stable |
-| idempotency | R1 | ✅ covered (explicit) | Migration seeds once, guarded by presence of the new key |
-| concurrency | R1 | ⛔ dismissed | Single-instance app (Phase 46 owns that guard) and `configStore` writes are synchronous |
-| adjacency | R2 | ✅ covered (explicit) | Same already-added criterion as R1 |
-| empty | R2 | ✅ covered (explicit) | No collections → COLLECTIONS group omitted, per `FilterCollectionList__empty` precedent |
-| ordering | R2 | ✅ covered (explicit) | Pick-list groups render in fixed order: views, collections, stores, runnability |
-| idempotency | R2 | ⛔ dismissed | Opening a menu twice is a no-op by construction |
-| concurrency | R2 | ⛔ dismissed | Same as R1 concurrency |
-| adjacency | R3 | ✅ covered (explicit) | Content that exactly fits shows no overflow affordance |
-| empty | R3 | ✅ covered (explicit) | Row matching zero games self-suppresses, matching the shipped `showFavourites && !!favouriteGamesList.length` rule |
-| ordering | R3 | ✅ covered (explicit) | Strips render in definition order |
-| adjacency | R4 | 🧪 backstop | Held-out test: no filter combination alters row contents |
-| empty | R4 | ✅ covered (explicit) | Zero grid results still renders rows; `FilterZeroResult` governs the grid only |
+| unclassified | R1 | ✅ covered (explicit) | Probe matched no shape cue; reviewed manually — a selection naming a deleted collection or signed-out store renders no strip and does not crash |
+| adjacency | R2 | ✅ covered (explicit) | Re-clicking the active entry clears to off, per `FilterCollectionList`'s shipped behaviour |
+| empty | R2 | ✅ covered (explicit) | No collections → collections group omitted, per the `FilterCollectionList__empty` precedent |
+| ordering | R2 | ✅ covered (explicit) | Section groups render in a fixed order |
+| idempotency | R2 | ✅ covered (explicit) | Selecting the active value twice is clear-then-set, the same criterion as R2 adjacency |
+| concurrency | R2 | ⛔ dismissed | Single-instance app (Phase 46 owns that guard); GlobalConfig writes are synchronous |
+| unclassified | R3 | ✅ covered (explicit) | Reviewed manually — zero-match pick renders no strip; content narrower than the viewport shows no overflow affordance |
+| adjacency | R4 | 🧪 backstop | Held-out test: no filter combination alters focus-row contents |
+| empty | R4 | ✅ covered (explicit) | Zero grid results still renders the focus row; `FilterZeroResult` governs the grid only |
 | ordering | R4 | ⛔ dismissed | The requirement is a negative — nothing is ordered by it |
 | idempotency | R4 | ⛔ dismissed | The requirement is a negative — nothing is applied by it |
-| concurrency | R4 | ⛔ dismissed | Same as R1 concurrency |
+| concurrency | R4 | ⛔ dismissed | Same as R2 concurrency |
 | adjacency | R5 | ✅ covered (explicit) | Identical titles tie-break stably on `app_name` |
 | empty | R5 | 🧪 backstop | Held-out test: 0-game and 1-game rows order without error |
 | ordering | R5 | ✅ covered (explicit) | Same tie-break criterion as R5 adjacency |
-| unclassified | R6 | ✅ covered (explicit) | Probe matched no shape cue; reviewed manually — a config already holding >10 rows renders 10 and deletes nothing |
-| adjacency | R7 | ✅ covered (explicit) | Removing the last row returns to grid-only |
-| empty | R7 | ⛔ dismissed | Unreachable — no remove control exists when there are no rows |
-| ordering | R7 | ✅ covered (explicit) | Removal preserves the relative order of remaining rows |
-| adjacency | R8 | ✅ covered (explicit) | `recently_played_installed` seeds one Recently-played row with installed-only semantics |
-| empty | R8 | ✅ covered (explicit) | `disabled` seeds zero rows |
-| ordering | R8 | ⛔ dismissed | Migration seeds at most one row — nothing to order |
+| boundary | R6 | ✅ covered (explicit) | The bound is 20; the 21st distinct game evicts the oldest |
+| adjacency | R6 | ✅ covered (explicit) | A stored list already longer than 20 loses no entries on upgrade — the bound applies to new writes |
+| empty | R6 | ✅ covered (explicit) | No recent games → no strip, same criterion as R3 |
+| ordering | R6 | ✅ covered (explicit) | Recency order preserved across the bound change |
+| precision | R6 | ⛔ dismissed | The bound is an integer literal in source, not user input — there is no precision surface |
+| unclassified | R7 | ✅ covered (explicit) | Reviewed manually — migration runs once, guarded by presence of the new key; clearing the row and relaunching does not restore it |
 
 Backstop rows (R4 adjacency, R5 empty) must be carried into plan-phase `must_haves`.
 
@@ -190,27 +194,27 @@ Backstop rows (R4 adjacency, R5 empty) must be carried into plan-phase `must_hav
 
 | Prohibition (must-NOT statement) | Requirement | Status | Verification / Reason |
 |----------------------------------|-------------|--------|------------------------|
-| MUST NOT render a hidden game in any row | R4 | resolved | test — a game you explicitly hid reappearing in a shelf is a trust break, not an independence feature |
-| MUST NOT delete persisted row definitions above the cap | R6 | resolved | test — truncation is display-only; silently discarding user config is data loss |
-| MUST NOT mutate `games.customCategories` | R2 | resolved | test — rows READ collections; writing that shared key would corrupt CategoriesManager state |
-| MUST NOT ship a raw i18n key as a row's visible name | R2 | resolved | test — this repo has a whole phase (41) on i18n gate honesty; a visible `gamelib:…` key is a shipped defect |
+| MUST NOT render a hidden game in the focus row | R4 | resolved | test — a game you explicitly hid reappearing in a shelf is a trust break, not an independence feature |
+| MUST NOT delete already-stored `games.recent` entries when removing the number setting | R6 | resolved | test — the setting currently governs retained history as well as display, so a careless removal silently destroys play history |
+| MUST NOT mutate `games.customCategories` | R2 | resolved | test — the section READS collections; writing that shared key would corrupt CategoriesManager state |
+| MUST NOT ship a raw i18n key as the focus row's visible name | R2 | resolved | test — this repo has a whole phase (41) on i18n gate honesty; a visible `gamelib:…` key is a shipped defect |
 
 **Dropped at Stage 2 as routine engineering** (owned by the edge probe or code review): must not throw
-on malformed persisted row data; must not mutate its input list; must not make grid behaviour depend
-on rows.
+on a malformed persisted selection; must not mutate its input list; must not make grid behaviour
+depend on the focus row.
 
-**Canon-referral breadcrumb:** *"must not send row definitions off-device"* is canon privacy and has
+**Canon-referral breadcrumb:** *"must not send the selection off-device"* is canon privacy and has
 no network path in this feature — not minted here.
 
 ## Ambiguity Report
 
-| Dimension          | Score | Min  | Status | Notes                                                        |
-|--------------------|-------|------|--------|--------------------------------------------------------------|
-| Goal Clarity       | 0.92  | 0.75 | ✓      | Insertion model settled in round 1; pick-list in round 3     |
-| Boundary Clarity   | 0.88  | 0.70 | ✓      | 8 explicit out-of-scope items, each with a reason            |
-| Constraint Clarity | 0.75  | 0.65 | ✓      | Sticky-header collision and the `justPlayed` span named      |
-| Acceptance Criteria| 0.75  | 0.70 | ✓      | 22 positive + 4 negative pass/fail criteria                  |
-| **Ambiguity**      | 0.16  | ≤0.20| ✓      |                                                              |
+| Dimension          | Score | Min  | Status | Notes                                                              |
+|--------------------|-------|------|--------|--------------------------------------------------------------------|
+| Goal Clarity       | 0.94  | 0.75 | ✓      | Single-row model removes the cap/duplicate/reorder question space  |
+| Boundary Clarity   | 0.90  | 0.70 | ✓      | 8 explicit out-of-scope items; N-rows deferred by operator decision |
+| Constraint Clarity | 0.82  | 0.65 | ✓      | `maxRecentGames`'s backend consumer and the locale-key trap named   |
+| Acceptance Criteria| 0.82  | 0.70 | ✓      | 24 positive + 4 negative pass/fail criteria                        |
+| **Ambiguity**      | 0.12  | ≤0.20| ✓      |                                                                    |
 
 Status: ✓ = met minimum, ⚠ = below minimum (planner treats as assumption)
 
@@ -218,19 +222,28 @@ Status: ✓ = met minimum, ⚠ = below minimum (planner treats as assumption)
 
 | Round | Perspective | Question summary | Decision locked |
 |-------|-------------|------------------|-----------------|
-| 0 | Researcher (scout) | What exists today? | Exactly 1 lane max; lanes are wrapping grids not strips; header shape already exists; no row definitions anywhere |
-| 1 | Researcher | Rows vs the grid vs Views? | **Rows are INSERTED above the grid; the grid behaves as it does now.** None of the three offered options — it maps 1:1 onto the existing lane insertion point |
-| 2 | Researcher | Do rows honour active filters? | **Rows ignore filters entirely — independent.** Turns the KNOWN NUANCE at `Library/index.tsx:1205` into intended design rather than a scaled inconsistency |
-| 3 | Simplifier | Hidden games under "independent"? | **Keep hidden hidden** — rows call `passesHiddenLaneFilter` like today's lanes |
-| 3 | Simplifier | What does `+` offer — compose or pick? | **A pick list.** One row = one picked value, auto-named, cannot be empty by construction |
-| 3 | Boundary Keeper | Row order, cap, reordering? | **Natural order per pick, title otherwise. Cap 10. Reorder later.** Implies no `Recently added` row, which keeps the acquisition-date problem out of this phase |
+| 0 | Researcher (scout) | What exists today? | Exactly 1 lane max; lanes are wrapping grids not strips; header shape exists; no row definitions anywhere |
+| 1 | Researcher | Rows vs the grid vs Views? | **Rows are INSERTED above the grid; the grid behaves as it does now.** None of the three options offered — it maps 1:1 onto the existing lane insertion point |
+| 2 | Researcher | Do rows honour active filters? | **Independent — filters are ignored.** Turns `Library/index.tsx:1205`'s KNOWN NUANCE into intended design |
+| 3 | Simplifier | Hidden games under "independent"? | **Keep hidden hidden** via `passesHiddenLaneFilter` |
+| 3 | Boundary Keeper | Order, cap, reordering? | **Natural order per pick, title otherwise.** Implies no `Recently added` pick, keeping acquisition-date coverage out of this phase |
+| 4 | Simplifier | Operator found `libraryTopSection` in Settings. Rename to "Focus row" — one row or N? | **ONE focus row.** *"Simpler change, can always consider adding more rows later if required."* Cap, duplicates, reordering and the `+` all leave scope; R1/R2/R6/R7 rewritten |
+| 4 | Failure Analyst | Dropping the number selector — consequences? | `maxRecentGames` has a **second, backend consumer** bounding stored history (`recent_games.ts:15`). Display becomes width-driven; storage gains a fixed bound of 20, and existing longer lists must not be truncated |
 
-**Operator corrections to the interviewer, recorded:** round 1's three-option menu missed the
-actual answer (insertion), and the `Depends on`/phase-number reasoning that preceded this spec was
-wrong on both counts — see the ROADMAP entry and the STATE Roadmap Evolution note for Phase 48.
+**Scope reduction recorded, not hidden.** This SPEC was first written for N rows with a cap of 10
+(commit `c6e294020`). The operator then found the shipped `libraryTopSection` feature and chose the
+single-row model. The `+`-adds-many model was the interviewer's inference from *"you can add + and
+select a row filter list"*, not a stated requirement — the N-row framing originated here, not with
+the operator.
+
+**Interviewer corrections also recorded:** round 1's three-option menu missed the actual answer
+(insertion); the phase-number and `Depends on` reasoning preceding this spec was wrong on both
+counts (see the ROADMAP entry and STATE Roadmap Evolution note); and the first Edge Coverage header
+in `c6e294020` reported `16/28 · 12 dismissed` from a hand count against a table that actually held
+`18 + 2 + 8`.
 
 ---
 
 *Phase: 48-library-rows-user-composed-filter-rows-replacing-the-single*
-*Spec created: 2026-10-03*
-*Next step: /gsd-discuss-phase 48 — implementation decisions (strip scroll mechanism, sticky-header resolution, persistence shape, pick-list component reuse)*
+*Spec created: 2026-10-03 · revised 2026-10-03 (N rows → one focus row)*
+*Next step: /gsd-discuss-phase 48 — implementation decisions (strip sizing mechanism, whether the FOCUS ROW section reuses `FilterFacetGroup`, persistence shape for `{kind,value}`, and whether the orphaned locale keys are removed or left)*

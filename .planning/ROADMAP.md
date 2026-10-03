@@ -5609,61 +5609,58 @@ Plans:
 
 - [ ] TBD (run /gsd-plan-phase 47 to break down)
 
-### Phase 48: Library rows — user-composed filter rows in the tiles panel
+### Phase 48: Focus row — move the library top section into the panel and widen it
 
-**Goal:** Generalise the single, Settings-configured library lane into **N user-composed rows**.
-Each row is a saved filter rendered as a horizontal strip with a small header in the tiles panel —
-the shelf model from Steam, Netflix and Apple TV. Rows are composed from a `ROWS` section in the
-Games tier-2 panel with a `+` to add one, not from Settings.
+**Goal:** The single lane above the games grid stops being a four-option dropdown buried in
+Settings and becomes a **focus row** chosen from the Games tier-2 panel, pickable from any view,
+collection, store or runnability value, rendered as a horizontal strip that fills the available
+width — with the `Recent Games to Show` number setting removed and the row sized by what fits.
 
-**This is a generalisation of shipped code, not a greenfield feature.** `libraryTopSection`
-(`Settings/components/LibraryTopSection.tsx:30-46`) is already a four-option dropdown —
-`recently_played`, `recently_played_installed`, `favourites`, `disabled` — rendering one lane via
-`RecentlyPlayed/index.tsx` → `GamesList`. The lane concept is already load-bearing in the code:
-`GamesList` takes `isFirstLane` / `isRecent` / `isFavourite`, there is a `firstLane` CSS class, and
-`filterEngine.ts` exports `passesHiddenLaneFilter`. Those four existing values are the migration
-seed for the default row set.
+**Requirements**: **7, LOCKED — see `48-SPEC.md`** (ambiguity 0.12, gate ≤ 0.20). That file is
+the contract; this entry is a pointer, not a second copy to keep in sync.
 
-**Requirements**: TBD — but see the three open scope questions below, which must be settled in
-`/gsd-spec-phase 48` before planning. They are scope-determining, not detail.
+**Depends on:** Phase 34.11 (the tier-2 panel and `filterEngine.ts` the section sits in and picks
+over). **Not** Phase 47, which `phase.add` defaulted to by positional guess.
 
-**Depends on:** Phase 34.11 (the filter engine each row is defined over — `filterEngine.ts`,
-`FilterViewList`, `FilterFacetGroup`). **Not** Phase 47, which `phase.add` defaulted to; the
-IsThereAnyDeal migration is unrelated. Also gated on the data-coverage decision in the
-`library-sorting-is-title-only` todo — see Supersedes below.
+**SCOPE REDUCED 2026-10-03, mid-spec.** This phase was filed as *N user-composed rows with a `+`
+and a cap of 10*. During `/gsd-spec-phase` the operator found the already-shipped
+`libraryTopSection` feature in Settings and chose the single-row model instead: *"simpler change,
+can always consider adding more rows later if required."* The N-row framing was the interviewer's
+inference from "add + and select a row filter list", not a stated requirement. Multiple rows, the
+`+`, the cap, duplicate policy and reordering are all **out of scope** and left to a possible
+follow-up phase; nothing here precludes it.
 
-**Supersedes — PARTIALLY, read this carefully.** This phase supersedes the *sort-field-menu UI*
-proposed in `.planning/todos/pending/2026-10-03-library-sorting-is-title-only-add-a-sort-field-menu-playnite.md`.
-A "Recently Added" row answers the common case better than a global sort does. It does **not**
-supersede that todo's actual blocker, which is why the todo is `ready: human`: *"The open question
-is not how to sort but what to do about partial cross-store coverage."*
+**This is mostly a move, not a build.** `libraryTopSection` already persists a single choice in
+GlobalConfig (`common/types.ts:170`, `config.ts:349`) and reaches 9 non-test files; the lane
+header shape already exists (`Library/index.tsx:1228-1236`); `GamesList` already carries
+`isFirstLane`/`isRecent`/`isFavourite`. **The one genuinely net-new piece is the horizontal
+strip** — `.gameList` is a wrapping `auto-fill` grid and `.firstLane` changes padding only, so
+nothing in this codebase scrolls games sideways today.
 
-Rows inherit that hole unchanged, and arguably make it worse. Acquisition date does not exist for
-Epic, Amazon or sideloaded; it is license-grant-not-purchase for Steam; it is clean only for GOG,
-where it is already fetched and discarded. A **sort** can place unknowns last where the user sees
-them. A **row** silently omits three stores' worth of games with nothing on screen saying the row
-is incomplete — a false claim on a launcher whose whole pitch is one unified library. The todo
-should therefore be **rewritten down to the data-coverage decision, not closed**; its measured
-per-store inventory (2026-10-03) is the expensive part and this phase needs it verbatim.
+**Two traps the SPEC carries, both measured:**
 
-**Open scope questions — settle in `/gsd-spec-phase 48`:**
+1. **`maxRecentGames` has a second, BACKEND consumer.** `recent_games.ts:15` does
+   `games.slice(0, await maxRecentGames())`, so the number setting bounds what is **stored** in
+   `games.recent`, not just what is displayed. "Fill the available width" is viewport-dependent
+   and cannot drive a storage bound — removing the control requires a fixed one (SPEC: 20), and
+   must not truncate a profile whose list is already longer.
+2. **Removing the orphaned locale keys is a separate decision with known traps.**
+   `setting.library_top_section`, `setting.library_top_option.*` and `setting.maxRecentGames`
+   live in `public/locales/en/translation.json`; key removal in this repo has three measured
+   traps. The SPEC puts this to discuss-phase rather than letting component deletion sweep the
+   keys out casually.
 
-1. **Is Rows a fifth view, or does it replace the grid?** Either Rows joins
-   `All games / Installed / Recently played / Favourites` as a single-select view that swaps the
-   grid for shelves, or it replaces the grid outright and Views becomes a filter applied *within*
-   every row. This determines whether sketch 005's variant D ships as drawn or gets revisited —
-   under the second model Views stops meaning "which slice am I looking at" and D's "you are here"
-   premise weakens. **Load-bearing; do not start planning without it.**
-2. **Row cap and duplicate policy.** Steam and Netflix rows are platform-curated. User-composed
-   rows over a 400-game library can put one game in six rows with nothing above the fold. Decide a
-   cap and whether a game may appear in more than one row.
-3. **Each row needs an internal order** — and "Recently Added" is a row *whose definition is a
-   sort*. This is how the data-coverage problem in question 1 of the superseded todo walks back in
-   through the side door. Do not treat row ordering as a detail.
+**Supersedes — PARTIALLY.** It supersedes the *sort-field-menu UI* in
+`.planning/todos/pending/2026-10-03-library-sorting-is-title-only-add-a-sort-field-menu-playnite.md`,
+not that todo's blocker. The operator's "natural order per pick, title otherwise" ruling means
+there is **no `Recently added` pick**, which keeps cross-store acquisition-date coverage wholly
+outside this phase — no date for Epic/Amazon/sideloaded, license-grant-not-purchase for Steam,
+clean only for GOG. **Rewrite that todo down to the data-coverage decision; do not close it** —
+its measured per-store inventory (2026-10-03) is the expensive part.
 
-**Design input available:** sketch `005-views-section-distinction` (winner: variant D) settled how
-the tier-2 Views section reads as a distinct kind of control. Its implementation is deliberately
-**held** pending question 1 above. Sketch 004 variant C is the panel this builds on.
+**Design input:** sketch `005-views-section-distinction` (winner: variant D). The focus row being
+an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
+separate change, not this phase's deliverable.
 
 **Plans:** 0 plans
 
