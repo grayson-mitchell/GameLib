@@ -25,28 +25,55 @@ interface Props {
   dismiss: () => void
 }
 
-// D-3 (operator-decided, 2026-10-03): the discriminator for whether this
-// overlay renders a Dialog is "is a native sign-in window on screen?", NOT
-// "is the phase terminal?". A Dialog renders only for the two windowless
-// waits -- Amazon-only `preparing` (~12.8s nile-auth subprocess spawn,
-// quick task 260806-teb) and every runner's `finalizing` (5-27s token
-// exchange, quick task 260803-eee) -- plus the three failure phases
-// (`blocked`, `error`, `timeout`), which also have no window up. `idle` and
-// the phase where a native window IS on screen render nothing: an in-app
-// panel behind that window is noise (it mounts underneath it, and flashes
-// back on screen for Dialog's own 500ms Slide exit on teardown) -- exactly
-// the regression commit `bede817fd` removed for Humble.
+// D-3 (operator-decided, 2026-10-03; AMENDS quick task 261003-s04's own D-3
+// below rather than predating it): the discriminator for whether this
+// overlay renders a Dialog is now NARROWER than "is a native sign-in window
+// on screen?" -- it is "is a native sign-in window on screen, OR is the
+// wait long enough that a 500ms-transition Dialog is worth the screen space
+// it takes?". The post-window token-exchange phase (`finalizing`) moved out
+// of the Dialog set because of DURATION, not because a window is up: the
+// operator measured it at ~1-2s for GOG and ~4-5s for Amazon on this
+// machine on 2026-10-03, against a `Dialog` whose own `transitionDuration`
+// is 500ms -- so for that phase the modal spent most of its mounted life
+// sliding in and back out, not holding still with content visible. The
+// superseded "5-27s" figure the original D-3 cited for this phase appears
+// exactly once in the whole repo, is attributed to quick task 260803-eee,
+// and names no runner; it does not describe GOG or Amazon specifically, and
+// the operator's own fresh measurement supersedes it here. The feedback for
+// this now-silenced wait does not disappear -- it moves to a spinner on the
+// clicked tile on the Accounts screen (`Runner/index.tsx`, quick task
+// 261003-u48), driven per tile off `openOverlay` so only the tile actually
+// signing in spins.
 //
-// This plan's FIRST draft used "terminal vs non-terminal" as the
-// discriminator and put the two windowless waits in the silent set even
-// though neither has a window to defer to -- that was wrong, and the
-// operator's correction is why this is a positive membership test (listing
-// the five Dialog phases) rather than a chain of negations: a phase added
-// to the hook's union later fails CLOSED (renders nothing) instead of
+// `preparing` is DELIBERATELY left alone and stays in the Dialog set: it IS
+// measured, at ~12.8s, and is Amazon-only (the nile-auth subprocess spawn,
+// quick task 260806-teb) -- long enough, unlike `finalizing`, that the
+// modal's content is genuinely visible rather than mostly transitioning.
+//
+// The `/loginweb/<runner>` route is untouched by this amendment: it still mounts
+// `TauriLoginPanel` directly (not through this overlay) and still renders
+// that component's `finalizing` branch in full, so no copy and no
+// catalogue key died -- this task only stopped THIS overlay from wrapping
+// that branch in a Dialog.
+//
+// Original D-3 (2026-10-03, quick task 261003-s04, now AMENDED above): the
+// discriminator was "is a native sign-in window on screen?", NOT "is the
+// phase terminal?". A Dialog rendered for the two windowless waits --
+// Amazon-only `preparing` and every runner's `finalizing` -- plus the three
+// failure phases (`blocked`, `error`, `timeout`), which also have no window
+// up. `idle` and the phase where a native window IS on screen rendered
+// nothing: an in-app panel behind that window is noise (it mounts
+// underneath it, and flashes back on screen for Dialog's own 500ms Slide
+// exit on teardown) -- exactly the regression commit `bede817fd` removed
+// for Humble. That plan's FIRST draft used "terminal vs non-terminal" as
+// the discriminator and put the two windowless waits in the silent set even
+// though neither had a window to defer to -- that was wrong, and the
+// operator's correction is why this is (and remains) a positive membership
+// test listing the Dialog phases, rather than a chain of negations: a phase
+// added to the hook's union later fails CLOSED (renders nothing) instead of
 // silently falling into the Dialog branch.
 const DIALOG_PHASES: ReadonlySet<TauriOAuthLoginState['phase']> = new Set([
   'preparing',
-  'finalizing',
   'blocked',
   'error',
   'timeout'
@@ -84,6 +111,14 @@ const DIALOG_PHASES: ReadonlySet<TauriOAuthLoginState['phase']> = new Set([
  * matching the already-shipped Humble overlay. This component adds no
  * second retry affordance -- the panel cannot be stopped from rendering its
  * own Retry without editing it, and it is out of scope here.
+ *
+ * D-3 (phase split, amended 2026-10-03 by quick task 261003-u48 -- see the
+ * block comment directly above `DIALOG_PHASES` for the full reasoning): a
+ * Dialog mounts for the two still-windowless waits that are long enough to
+ * justify one -- Amazon-only `preparing` (~12.8s) -- plus the three failure
+ * phases (`blocked`, `error`, `timeout`). The post-window token-exchange
+ * phase no longer mounts a Dialog here; that wait's feedback now lives on
+ * the clicked Accounts-screen tile instead (`Runner/index.tsx`).
  */
 export default function OAuthLogin({ runner, dismiss }: Props) {
   const { completeOAuthLogin } = useContext(ContextProvider)

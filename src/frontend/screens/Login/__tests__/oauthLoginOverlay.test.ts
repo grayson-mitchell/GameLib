@@ -69,7 +69,7 @@ describe('261003-s04 Task 1: OAuthLogin renders the Dialog only behind the phase
     expect(source).toMatch(/useTauriOAuthLogin\(/)
   })
 
-  it("SOURCE GATE (PRESENCE) -- exactly one <Dialog, mounted ONLY behind all five Dialog-rendering phase literals ('preparing', 'finalizing', 'blocked', 'error', 'timeout'), never hoisted above any of them", () => {
+  it("SOURCE GATE (PRESENCE) -- exactly one <Dialog, mounted ONLY behind all four Dialog-rendering phase literals ('preparing', 'blocked', 'error', 'timeout'), never hoisted above any of them", () => {
     const source = read(OAUTH_LOGIN_TSX)
 
     // Breaks if: a second <Dialog is added, or the phase-literal membership
@@ -79,23 +79,36 @@ describe('261003-s04 Task 1: OAuthLogin renders the Dialog only behind the phase
     expect(dialogIndex).toBeGreaterThan(-1)
     expect((source.match(/<Dialog[\s>]/g) ?? []).length).toBe(1)
 
-    for (const phase of [
-      'preparing',
-      'finalizing',
-      'blocked',
-      'error',
-      'timeout'
-    ]) {
+    for (const phase of ['preparing', 'blocked', 'error', 'timeout']) {
       const phaseIndex = source.indexOf(`'${phase}'`)
       expect(phaseIndex).toBeGreaterThan(-1)
       expect(dialogIndex).toBeGreaterThan(phaseIndex)
     }
   })
 
-  it("SOURCE GATE (ABSENCE) -- zero occurrences of the 'awaiting' literal: a native sign-in window is on screen during that phase, so a panel behind it is the bede817fd regression D-3 forbids ('idle' is deliberately not gated this way -- it is the hook's own initial/post-success value and may legitimately be named in a guard)", () => {
+  it('SOURCE GATE (PRESENCE, region) -- the DIALOG_PHASES set body holds exactly four quoted literals, and they are exactly the four expected -- without this, re-adding a fifth phase only reorders the index comparisons above and could stay green (quick task 261003-u48)', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    const setStart = source.indexOf('new Set([')
+    expect(setStart).toBeGreaterThan(-1)
+    const setEnd = source.indexOf('])', setStart)
+    expect(setEnd).toBeGreaterThan(setStart)
+    const setBody = source.slice(setStart, setEnd)
+
+    const literals = setBody.match(/'[a-z]+'/g) ?? []
+    expect(literals).toEqual([
+      "'preparing'",
+      "'blocked'",
+      "'error'",
+      "'timeout'"
+    ])
+  })
+
+  it("SOURCE GATE (ABSENCE) -- zero occurrences of the 'awaiting' literal and zero occurrences of the 'finalizing' literal: a native sign-in window is on screen during 'awaiting', so a panel behind it is the bede817fd regression D-3 forbids; 'finalizing' was moved out of the Dialog set by quick task 261003-u48's amendment to D-3, on duration grounds ('idle' is deliberately not gated this way -- it is the hook's own initial/post-success value and may legitimately be named in a guard)", () => {
     const source = read(OAUTH_LOGIN_TSX)
 
     expect((source.match(/'awaiting'/g) ?? []).length).toBe(0)
+    expect((source.match(/'finalizing'/g) ?? []).length).toBe(0)
   })
 
   it('SOURCE GATE (PRESENCE) -- useSuppressStoreEmbed() is called directly, because the Dialog (which acquires suppression by mounting) is absent for most of the overlay life', () => {
