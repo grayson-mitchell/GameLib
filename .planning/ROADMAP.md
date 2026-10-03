@@ -5662,10 +5662,36 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 0 plans
+**Plans:** 6 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 48 to break down)
+- [ ] 48-01-PLAN.md — land the 4 new `gamelib:` focus-row keys across all 49 locale catalogues (R2, R3)
+- [ ] 48-02-PLAN.md — TRACER: one view pick wired end to end — persistence, panel section, horizontal strip, lane replacement (R1, R3, R4, R5)
+- [ ] 48-03-PLAN.md — the remaining three pick kinds: collections, stores, runnability, each omitted when empty (R2)
+- [ ] 48-04-PLAN.md — forward/back overflow controls and horizontal gamepad scroll-into-view (R3)
+- [ ] 48-05-PLAN.md — retire the `Library Top Section` dropdown and seed `focusRow` from it once (R7)
+- [ ] 48-06-PLAN.md — remove `Recent Games to Show` and its dead code; no storage bound (R6)
+
+**Waves:** 1 → `01` · 2 → `02` · 3 → `03`, `04`, `05` (parallel, zero `files_modified` overlap) ·
+4 → `06`. `48-05` is `autonomous: false` — one `checkpoint:decision` gates the one-way migration
+write into a user's existing `config.json`.
+
+**R6 SCOPE REDUCED 2026-10-03 by operator ruling, after planning measured the SPEC wrong.** SPEC R6
+cites `recent_games.ts:15` (a path that does not exist) and states that `maxRecentGames` "bounds what
+is **stored** in `games.recent`". It does not: the slice is on a *return* value inside an
+`if (options?.limited)` branch with **zero callers** (`git grep -nE 'getRecentGames\(\s*\{' -- src/`
+→ 0), so the stored list is unbounded today and the setting had no live backend consumer at all. The
+20-entry storage bound R6 asked for would therefore have been **net-new eviction on persisted play
+history**, not the relocation of an existing bound — and the operator declined it: a phase that is
+"mostly a move, not a build" is the wrong place for an irreversible policy on play history. **R6 is
+now a pure removal.** The struck acceptance criteria and Edge Coverage rows, and the surviving ones,
+are itemised in `48-06-PLAN.md`'s `<operator_ruling_on_r6>`. **R3's 20-card display cap is
+unaffected and still shipping** — the two 20s are different numbers.
+
+**No `48-RESEARCH.md` and no `48-VALIDATION.md`** — research deliberately skipped (SPEC locked at
+ambiguity 0.12, phase is mostly a move). Nyquist Dimension 8 validation is consequently unavailable
+for this phase: a known, accepted gap. `48-PATTERNS.md` plus direct measurement stood in, and
+corrected four upstream claims — see `48-01-PLAN.md`'s `<source_audit>`.
 
 ---
 

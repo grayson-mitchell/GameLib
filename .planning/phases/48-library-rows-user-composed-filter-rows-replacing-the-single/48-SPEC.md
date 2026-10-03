@@ -2,6 +2,7 @@
 
 **Created:** 2026-10-03
 **Revised:** 2026-10-03 — scope reduced from N rows to ONE focus row (operator decision, see Interview Log round 4)
+**Revised:** 2026-10-04 — R6's stored-history bound dropped (operator ruling at plan-phase) after the Background claim that justified it was measured false; see the CORRECTED note in Background and the Amended note on R6
 **Ambiguity score:** 0.12 (gate: ≤ 0.20)
 **Requirements:** 7 locked
 
@@ -42,13 +43,31 @@ the one genuinely net-new piece of this phase.**
 `GamesList` (`Library/index.tsx:1228-1236`) — and `GamesList` already takes `isFirstLane` /
 `isRecent` / `isFavourite`.
 
-**The number selector has a second, backend consumer.** `MaxRecentGames.tsx` ("Recent Games to
-Show", default 5) is read by the lane at `RecentlyPlayed/index.tsx:52`, but `recent_games.ts:15`
-*also* does `games.slice(0, await maxRecentGames())` — so it bounds what is **stored** in
-`games.recent`, not only what is displayed. "Fill the available width" is viewport-dependent and
-cannot drive a storage bound, so removing the control requires choosing a fixed one.
-`recent_games.ts:61-63` already carries a `ts-prune` / `find-deadcode` note naming
-`MaxRecentGames.tsx`'s local `useSetting`, which goes stale on removal.
+**CORRECTED 2026-10-04 (plan-phase). The paragraph this replaces was wrong, and it was wrong in
+the direction that invents work.** It read: *"The number selector has a second, backend
+consumer … `recent_games.ts:15` also does `games.slice(0, await maxRecentGames())` — so it bounds
+what is **stored** in `games.recent`, not only what is displayed."* Both halves are false, and the
+path it cited does not exist. Measured on the tree at plan time:
+
+- **The file is `src/backend/recent_games/recent_games.ts`**, not `src/backend/recent_games.ts`.
+  `git ls-files | grep recent_games` returns exactly that path and `ipc_handler.ts`.
+- **`maxRecentGames` does not bound stored history.** The slice sits in
+  `getRecentGames(options?: { limited: boolean })` (~:12-19) behind `if (options?.limited)`, and it
+  slices a value it *returns*; it never writes back. The only writer, `setRecentGames` (~:21-28),
+  does a bare `configStore.set('games.recent', recentGames)` with no slice. `addRecentGame`
+  (~:30-50) calls `getRecentGames()` with **no arguments**, so the branch is skipped and it
+  operates on the full list. **`games.recent` is unbounded today.**
+- **That branch is dead.** `git grep -nE 'getRecentGames\(\s*\{' -- src/` and
+  `git grep -nE '\blimited\s*:' -- src/` both return zero hits — nothing passes `{ limited: true }`.
+  `maxRecentGames()` (~:7-9) is reachable only from it, so it has **no live backend consumer at
+  all**. The `ts-prune` / `find-deadcode` note at ~:61-66 already records it as used-in-module only.
+- **The live cap is frontend-only.** `RecentlyPlayed/index.tsx` declares its own local
+  `getRecentGames(libraries, limit, onlyInstalled)` at `:16` — a different binding sharing the name
+  — reading `configStore.get('games.recent', [])` directly, with `limit` from
+  `await window.api.requestAppSettings()` at `:52`.
+
+The consequence is recorded against R6 below: what this SPEC framed as relocating an existing
+storage bound would in fact have **introduced** an eviction policy on persisted play history.
 
 **Lane-versus-filter behaviour is already a deliberate decision.** `Library/index.tsx:1205-1212`
 is labelled *"KNOWN NUANCE -- do not 'correct' this back"*: the lane honours `showHidden` and
@@ -84,10 +103,11 @@ focus row fully independent of filter state, which turns that nuance into the in
    - Target: A recently-played focus row orders by recency. Every other pick orders by title using the existing leading-`The `-stripped `localeCompare` (`Library/index.tsx:916-922`).
    - Acceptance: A GOG focus row is alphabetical by title; a recently-played focus row leads with the most recently played game.
 
-6. **`Recent Games to Show` removed, stored history bounded in code**: The user-facing number control goes; the storage bound becomes a source constant.
-   - Current: `MaxRecentGames.tsx` exposes the count; `recent_games.ts:15` slices the stored list by it, so the setting silently governs retained history as well as display.
-   - Target: The Settings control and its barrel export are removed. `recent_games.ts` bounds the stored list by a fixed constant of **20**. Display count is whatever fits the strip width.
-   - Acceptance: No `Recent Games to Show` control appears in Settings; playing a 21st distinct game evicts the oldest from `games.recent`; a profile whose stored list already holds more than 20 entries does not lose entries on upgrade.
+6. **`Recent Games to Show` removed**: The user-facing number control goes, along with the dead backend code behind it.
+   - Current: `MaxRecentGames.tsx` exposes the count and the lane reads it at `RecentlyPlayed/index.tsx:52`. On the backend, `maxRecentGames()` and the `options?.limited` branch in `recent_games/recent_games.ts` are both dead — zero callers. Nothing bounds `games.recent`.
+   - Target: The Settings control and its barrel export are removed, the `maxRecentGames` field leaves `common/types.ts` and its default leaves `config.ts`, and the three dead backend things come out: `maxRecentGames()` (~:7-9), the `if (options?.limited)` branch (~:14-16), and the then-unused `options?: { limited: boolean }` parameter. Display count is whatever fits the strip width, capped by R3's 20-**card** strip cap.
+   - Acceptance: No `Recent Games to Show` control appears in Settings; `grep -r maxRecentGames src/` returns zero hits; `getRecentGames` takes no parameters.
+   - **Amended 2026-10-04 (plan-phase), operator ruling.** As filed, this requirement also bounded stored history at a fixed **20**. That was justified by the Background claim corrected above — that the setting already governed retained history — and with that claim false, the bound was not a relocation but a **net-new irreversible eviction policy on persisted user data**. The operator ruled it out: *a phase whose own ROADMAP entry says "this is mostly a move, not a build" is the wrong place to introduce one, and the only argument for it was a misreading of the code.* A bound on `games.recent`, if ever wanted, is a standalone change judged on its own merits. **Beware the two 20s this phase now carries:** R3's 20 is a display cap on strip *cards* and survives; R6's 20 was a storage cap on persisted *entries* and is gone. They must not share a constant.
 
 7. **`Library Top Section` removed from Settings and migrated once**: The old dropdown's value seeds the new selection and the control disappears.
    - Current: The `SelectField` is rendered in Settings → General; `libraryTopSection` is read directly at render time in `Library/index.tsx` at 4 sites.
@@ -103,7 +123,7 @@ focus row fully independent of filter state, which turns that nuance into the in
 - Widening the value space from 4 hardcoded options to views + collections + stores + runnability
 - Horizontal single-row strip rendering that fills the available width
 - Removing both Settings controls (`LibraryTopSection`, `MaxRecentGames`) and the barrel export
-- A fixed stored-history bound in `recent_games.ts`
+- Removal of the dead `maxRecentGames()` helper and dead `options?.limited` branch in `recent_games/recent_games.ts`
 - One-time migration from the four existing `libraryTopSection` values
 
 **Out of scope:**
@@ -150,8 +170,9 @@ focus row fully independent of filter state, which turns that nuance into the in
 - [ ] A GOG focus row is alphabetical by title; a recently-played focus row leads with the most recently played game
 - [ ] Two games with identical titles order stably, tie-broken on `app_name`
 - [ ] No `Recent Games to Show` control appears in Settings
-- [ ] Playing a 21st distinct game evicts the oldest entry from `games.recent`
-- [ ] A profile whose `games.recent` already holds more than 20 entries loses none on upgrade
+- [ ] ~~Playing a 21st distinct game evicts the oldest entry from `games.recent`~~ — **struck 2026-10-04**, R6 amendment: no storage bound is introduced
+- [ ] ~~A profile whose `games.recent` already holds more than 20 entries loses none on upgrade~~ — **struck 2026-10-04**, R6 amendment: nothing in this phase writes to `games.recent`
+- [ ] `grep -r maxRecentGames src/` returns zero hits and `getRecentGames` takes no parameters
 - [ ] The stored recent-games list preserves recency order
 - [ ] No `Library Top Section` control appears in Settings
 - [ ] `libraryTopSection: favourites` yields a Favourites focus row on first upgraded launch
@@ -165,7 +186,7 @@ focus row fully independent of filter state, which turns that nuance into the in
 
 ## Edge Coverage
 
-**Coverage:** 16/21 applicable edges resolved (14 explicit + 2 backstop) · 0 unresolved · 5 dismissed
+**Coverage:** 14/21 rows resolved (12 explicit + 2 backstop) · 0 unresolved · 5 dismissed · 2 struck 2026-10-04 (both R6, see the amendment)
 
 | Category | Requirement | Status | Resolution / Reason |
 |----------|-------------|--------|---------------------|
@@ -184,10 +205,10 @@ focus row fully independent of filter state, which turns that nuance into the in
 | adjacency | R5 | ✅ covered (explicit) | Identical titles tie-break stably on `app_name` |
 | empty | R5 | 🧪 backstop | Held-out test: 0-game and 1-game rows order without error |
 | ordering | R5 | ✅ covered (explicit) | Same tie-break criterion as R5 adjacency |
-| boundary | R6 | ✅ covered (explicit) | The bound is 20; the 21st distinct game evicts the oldest |
-| adjacency | R6 | ✅ covered (explicit) | A stored list already longer than 20 loses no entries on upgrade — the bound applies to new writes |
+| boundary | R6 | ⛔ struck 2026-10-04 | Described the storage bound the R6 amendment drops — there is no boundary left to cover |
+| adjacency | R6 | ⛔ struck 2026-10-04 | Described the same dropped bound; with no writer, no stored list can be truncated |
 | empty | R6 | ✅ covered (explicit) | No recent games → no strip, same criterion as R3 |
-| ordering | R6 | ✅ covered (explicit) | Recency order preserved across the bound change |
+| ordering | R6 | ✅ covered (explicit) | Recency order preserved — nothing in this phase now alters the stored list |
 | precision | R6 | ⛔ dismissed | The bound is an integer literal in source, not user input — there is no precision surface |
 | unclassified | R7 | ✅ covered (explicit) | Reviewed manually — migration runs once, guarded by presence of the new key; clearing the row and relaunching does not restore it |
 
@@ -200,7 +221,7 @@ Backstop rows (R4 adjacency, R5 empty) must be carried into plan-phase `must_hav
 | Prohibition (must-NOT statement) | Requirement | Status | Verification / Reason |
 |----------------------------------|-------------|--------|------------------------|
 | MUST NOT render a hidden game in the focus row | R4 | resolved | test — a game you explicitly hid reappearing in a shelf is a trust break, not an independence feature |
-| MUST NOT delete already-stored `games.recent` entries when removing the number setting | R6 | resolved | test — the setting currently governs retained history as well as display, so a careless removal silently destroys play history |
+| MUST NOT delete already-stored `games.recent` entries when removing the number setting | R6 | resolved | **structural, not test** (revised 2026-10-04) — the original rationale was inverted: the setting never governed retained history, so its removal cannot destroy play history. The prohibition is KEPT because it still correctly constrains the phase, and after the R6 amendment no task writes to `games.recent` at all, so no code path exists that could delete an entry. Verified by the absence of a writer, not by a behavioural test |
 | MUST NOT mutate `games.customCategories` | R2 | resolved | test — the section READS collections; writing that shared key would corrupt CategoriesManager state |
 | MUST NOT ship a raw i18n key as the focus row's visible name | R2 | resolved | test — this repo has a whole phase (41) on i18n gate honesty; a visible `gamelib:…` key is a shipped defect |
 
