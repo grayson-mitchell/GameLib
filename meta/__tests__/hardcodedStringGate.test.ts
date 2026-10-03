@@ -233,6 +233,47 @@ describe('hardcodedStringGate', () => {
         attribute: 'title'
       })
     })
+
+    // Fast task 261003-c2m. The two real shapes from
+    // `components/UI/Header/index.tsx`'s hidden-probe scrollbar measurement
+    // (shipped in `20f7c2153`, which turned this gate red): a `cssText`
+    // string assignment and a `style.width` assignment whose value is a
+    // ternary over a template literal. Both are CSS declaration values
+    // reached through the imperative `CSSStyleDeclaration` API rather than
+    // React's `style={{}}` attribute, which is all that separates them from
+    // the plan-05 case directly above.
+    it('never flags a CSS value assigned through the imperative style API — real Header/index.tsx scrollbar probe (fast task 261003-c2m)', () => {
+      const source = `
+        function applyScrollbarGutterCorrection(correction: number) {
+          const probe = document.createElement('div')
+          probe.style.cssText =
+            'position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;overflow:scroll;'
+          const header = document.body
+          header.style.width = correction > 0 ? \`calc(100% + \${correction}px)\` : ''
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    // Paired negative, per this file's convention: the exemption is gated on
+    // the assignment TARGET being `<expr>.style.<prop>`, so it must not have
+    // become a blanket "any assigned string literal" hole. Prose assigned to
+    // a non-`style` property of the very same element still has to be caught.
+    it('still flags prose assigned to a non-style property of the same element — the imperative style exemption is scoped to the assignment target', () => {
+      const source = `
+        function run() {
+          const el = document.body
+          el.style.width = '100px'
+          el.title = 'Repair failed. See the log.'
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(1)
+      expect(result.violations[0].text).toBe('Repair failed. See the log.')
+    })
   })
 
   // Phase 40 GAP-B. `TECHNICAL_DOM_API_METHOD_NAMES` already exempts

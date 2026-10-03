@@ -490,6 +490,82 @@ function isNestedInExcludedJsxAttribute(node: Node): boolean {
 }
 
 /**
+ * Fast task 261003-c2m: a string/template literal assigned to a property of an
+ * element's inline `style` is a CSS declaration value, never rendered prose --
+ * `probe.style.cssText = 'position:absolute;...'` (`components/UI/Header/index.tsx`
+ * :180) and `header.style.width = correction > 0 ? `calc(100% + ${correction}px)`
+ * : ''` (same file, :188), the hidden-probe scrollbar measurement shipped in
+ * `20f7c2153`.
+ *
+ * This RESTORES an exemption this gate already owns rather than widening it --
+ * the same argument `isStorageKeyBuilderBody` below makes for its own rule.
+ * `isStyleAttributeValue` above already classifies CSS declaration values as
+ * structural non-candidates, and its comment states the rationale outright:
+ * "CSS declaration values (`'2em'`, `'var(--text-lg)'`, `'8px'`) are not
+ * user-facing prose". But that check is gated on React's `style={{}}`
+ * ATTRIBUTE, so the identical category written through the imperative
+ * `CSSStyleDeclaration` API instead falls through to the generic `argument`
+ * classification meant for real prose. The category did not change; only the
+ * syntax reaching it did -- precisely how the `StorageKey` rule below came to
+ * be needed when plan 40-09 moved a storage key out of its argument position.
+ *
+ * Vocabulary measured before writing this, per the recorded
+ * `measure-a-gates-vocabulary-before-building-it` lesson: a grep for
+ * `\.style(\.<prop>)?\s*\+?=` over all of `src/` excluding `__tests__`
+ * returns exactly FOUR assignment sites, all four inside the 173-file blocking
+ * scope and all four genuine CSS values. This rule therefore exempts those four
+ * and cannot reach past them:
+ *   1. `Header/index.tsx:175`  `header.style.width = ''` -- empty, not a
+ *      candidate today
+ *   2. `Header/index.tsx:180`  `probe.style.cssText = '...'`
+ *   3. `Header/index.tsx:188`  `header.style.width = ... ? `calc(...)` : ''`
+ *   4. `Library/index.tsx:540` `btn.style.visibility = ... ? 'visible' :
+ *      'hidden'` -- CSS keywords, not flagged today either
+ *
+ * `GlobalState.tsx:583`/`:591`'s
+ * `document.documentElement.style.setProperty('--x', ...)` are CALLS, not
+ * assignments, and are deliberately NOT covered here: adding `setProperty` to
+ * `TECHNICAL_DOM_API_METHOD_NAMES` would be a separate decision owing its own
+ * census, and nothing needs it today.
+ *
+ * Shape-gated on the assignment TARGET, mirroring `isConfigStoreKeyArgument`'s
+ * name-gating precedent rather than any content-shape regex over the value: a
+ * content-shape rule would exempt CSS-looking text ANYWHERE in the blocking
+ * scope, whereas this cannot reach outside the right-hand side of an
+ * `<expr>.style.<prop> =` assignment. Prose assigned to any non-`style`
+ * property of the same element -- `el.title = 'Repair failed. See the log.'` --
+ * stays flagged, pinned by this gate's paired negative fixture.
+ */
+function isInlineStyleAssignmentValue(node: Node): boolean {
+  // Walks the ternary at `Header/index.tsx:188` out to its assignment. A direct
+  // string right-hand side (`:180`) yields `current === node` with the `=`
+  // expression already its parent, which is accepted -- unlike
+  // `isComposedTCallArgument`, this rule does not require a composing wrapper.
+  const { current, parent } = walkUpThroughComposingWrappers(node)
+
+  if (
+    !parent ||
+    !Node.isBinaryExpression(parent) ||
+    parent.getOperatorToken().getText() !== '=' ||
+    parent.getRight() !== current
+  ) {
+    return false
+  }
+
+  const target = parent.getLeft()
+  if (!Node.isPropertyAccessExpression(target)) return false
+
+  // `<expr>.style.<prop>`: the assigned property's OWN object must be the
+  // `.style` access, so neither a bare `foo.style = x` nor an unrelated
+  // `config.style` can match.
+  const styleAccess = target.getExpression()
+  return (
+    Node.isPropertyAccessExpression(styleAccess) &&
+    styleAccess.getName() === 'style'
+  )
+}
+
+/**
  * Plan 06 (34.8-06): a string literal compared against a DOM `KeyboardEvent`'s
  * `.key` property (`e.key === 'Escape'`) or matched in a `switch (e.key) { case
  * 'Escape': }` is a technical key-name constant, never rendered prose — this
@@ -944,6 +1020,7 @@ function isStructuralNonCandidate(
   if (isElementAccessKey(node)) return true
   if (isStyleAttributeValue(node)) return true
   if (isNestedInExcludedJsxAttribute(node)) return true
+  if (isInlineStyleAssignmentValue(node)) return true
   if (isKeyboardEventKeyComparison(node)) return true
   if (isWithinTransComponentChildren(node)) return true
   if (isInfoBoxTextKeyProp(node)) return true
