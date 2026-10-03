@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -8,6 +9,22 @@ import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
 interface Props {
   onDone: () => void
   onCancelled: () => void
+  /**
+   * Optional chrome override: receives the live watch state and decides what
+   * -- if anything -- to render for it. Omitting it keeps the unconditional
+   * `TauriLoginPanel` below, which is what the `/loginweb/humble` route
+   * (`WebView/index.tsx`) wants: there the panel IS the page.
+   *
+   * The Login screen's `HumbleLogin` overlay passes one so it can render NO
+   * chrome at all for the idle/awaiting phases -- a native sign-in window is
+   * doing the work and an in-app panel behind it is pure noise. This is a
+   * render prop rather than a `phase` callback deliberately: this component
+   * owns the watch, so it must stay mounted at a STABLE position in the
+   * element tree while the overlay's Dialog mounts and unmounts inside it.
+   * Hoisting the conditional into the host would remount the surface on
+   * every phase change and restart the login watch with it.
+   */
+  renderState?: (state: TauriOAuthLoginState) => ReactNode
 }
 
 /**
@@ -30,7 +47,11 @@ interface Props {
  * re-censused separately in plan 40-03 alongside D-11's
  * `humbleLoginNavigated`, since a native login path may still need it).
  */
-export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
+export default function HumbleLoginSurface({
+  onDone,
+  onCancelled,
+  renderState
+}: Props) {
   const { t: tGamelib } = useTranslation('gamelib')
   const { humble } = useContext(ContextProvider)
 
@@ -110,6 +131,10 @@ export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
     // `humble` context update would restart the login watch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  if (renderState) {
+    return <>{renderState(humbleLoginState)}</>
+  }
 
   return <TauriLoginPanel runner="humble" state={humbleLoginState} />
 }

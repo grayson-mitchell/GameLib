@@ -40,6 +40,10 @@ const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..')
 const LOGIN_TSX = 'src/frontend/screens/Login/index.tsx'
 const LOGIN_SCSS = 'src/frontend/screens/Login/index.scss'
 const DIALOG_TSX = 'src/frontend/components/UI/Dialog/components/Dialog.tsx'
+const HUMBLE_LOGIN_TSX =
+  'src/frontend/screens/Login/components/HumbleLogin/index.tsx'
+const HUMBLE_SURFACE_TSX =
+  'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx'
 
 const readRaw = (relPath: string) =>
   readFileSync(join(REPO_ROOT, relPath), 'utf8')
@@ -157,5 +161,61 @@ describe('36-01 Task 5: the login panel crossfades against the co-mounted Steam 
     )
     expect((source.match(/navigate\(humbleLoginPath\)/g) ?? []).length).toBe(0)
     expect(source).toMatch(/mountedOverlay === 'humble'/)
+  })
+})
+
+describe('261003: the Humble overlay renders no in-app chrome while the native sign-in window is open', () => {
+  it("SOURCE GATE (PRESENCE + ABSENCE) -- the loginFlowOpen crossfade class is driven by overlayRendersChrome (openOverlay === 'steam'), never by loginInFlight, so opening the Humble overlay no longer slides the whole login screen away to reveal nothing", () => {
+    const source = read(LOGIN_TSX)
+
+    // Breaks if: the crossfade class goes back to being driven by
+    // `loginInFlight` (which is true for Humble too, and slid the screen
+    // away for 500ms to reveal an empty background, then slid it back when
+    // the native window closed -- the reported "superfluous banner under
+    // the login window that flashes again on close"), or the
+    // overlayRendersChrome derivation stops being the Steam-only check.
+    expect(source).toMatch(
+      /const overlayRendersChrome = openOverlay === 'steam'/
+    )
+    expect(source).toMatch(/loginFlowOpen: overlayRendersChrome/)
+    expect((source.match(/loginFlowOpen/g) ?? []).length).toBe(1)
+    expect((source.match(/loginFlowOpen: loginInFlight/g) ?? []).length).toBe(0)
+  })
+
+  it("SOURCE GATE (PRESENCE) -- HumbleLogin mounts a Dialog ONLY behind the 'error'/'timeout' phase check (F-34.4.2-19's Retry surface survives), and acquires store-embed suppression itself rather than inheriting it from a permanently-mounted Dialog", () => {
+    const source = read(HUMBLE_LOGIN_TSX)
+
+    // Breaks if: the Dialog is hoisted back out of the phase check (the
+    // whole defect -- an interaction-free panel rendered for the entire
+    // watch), a second Dialog appears, the phase gate stops naming both
+    // failure phases, or the useSuppressStoreEmbed() call that replaces
+    // the Dialog's own mount-time acquisition is dropped.
+    const errorIndex = source.indexOf("state.phase === 'error'")
+    const timeoutIndex = source.indexOf("state.phase === 'timeout'")
+    const dialogIndex = source.indexOf('<Dialog')
+
+    expect(errorIndex).toBeGreaterThan(-1)
+    expect(timeoutIndex).toBeGreaterThan(-1)
+    expect(dialogIndex).toBeGreaterThan(timeoutIndex)
+    expect((source.match(/<Dialog[\s>]/g) ?? []).length).toBe(1)
+    expect(source).toMatch(/useSuppressStoreEmbed\(\)/)
+    expect(source).toMatch(/renderState=\{/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- HumbleLoginSurface still starts the watch on mount and still falls back to the unconditional TauriLoginPanel when no renderState is supplied, so the /loginweb/humble route keeps its in-progress copy', () => {
+    const source = read(HUMBLE_SURFACE_TSX)
+
+    // Breaks if: the renderState escape hatch stops being optional (the
+    // route-hosted surface at WebView/index.tsx passes none and must keep
+    // rendering the panel), the render-prop stops being handed the live
+    // watch state, or either watch entry point is dropped -- the overlay
+    // renders nothing now, so the watch is the ONLY thing it still does.
+    expect(source).toMatch(/renderState\?:/)
+    expect(source).toMatch(/renderState\(humbleLoginState\)/)
+    expect(source).toMatch(
+      /<TauriLoginPanel runner="humble" state=\{humbleLoginState\} \/>/
+    )
+    expect(source).toMatch(/window\.api\.humbleStartLogin\(\)/)
+    expect(source).toMatch(/window\.api\.humbleReconnect\(\)/)
   })
 })
