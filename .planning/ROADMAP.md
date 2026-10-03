@@ -5609,6 +5609,67 @@ Plans:
 
 - [ ] TBD (run /gsd-plan-phase 47 to break down)
 
+### Phase 48: Library rows — user-composed filter rows in the tiles panel
+
+**Goal:** Generalise the single, Settings-configured library lane into **N user-composed rows**.
+Each row is a saved filter rendered as a horizontal strip with a small header in the tiles panel —
+the shelf model from Steam, Netflix and Apple TV. Rows are composed from a `ROWS` section in the
+Games tier-2 panel with a `+` to add one, not from Settings.
+
+**This is a generalisation of shipped code, not a greenfield feature.** `libraryTopSection`
+(`Settings/components/LibraryTopSection.tsx:30-46`) is already a four-option dropdown —
+`recently_played`, `recently_played_installed`, `favourites`, `disabled` — rendering one lane via
+`RecentlyPlayed/index.tsx` → `GamesList`. The lane concept is already load-bearing in the code:
+`GamesList` takes `isFirstLane` / `isRecent` / `isFavourite`, there is a `firstLane` CSS class, and
+`filterEngine.ts` exports `passesHiddenLaneFilter`. Those four existing values are the migration
+seed for the default row set.
+
+**Requirements**: TBD — but see the three open scope questions below, which must be settled in
+`/gsd-spec-phase 48` before planning. They are scope-determining, not detail.
+
+**Depends on:** Phase 34.11 (the filter engine each row is defined over — `filterEngine.ts`,
+`FilterViewList`, `FilterFacetGroup`). **Not** Phase 47, which `phase.add` defaulted to; the
+IsThereAnyDeal migration is unrelated. Also gated on the data-coverage decision in the
+`library-sorting-is-title-only` todo — see Supersedes below.
+
+**Supersedes — PARTIALLY, read this carefully.** This phase supersedes the *sort-field-menu UI*
+proposed in `.planning/todos/pending/2026-10-03-library-sorting-is-title-only-add-a-sort-field-menu-playnite.md`.
+A "Recently Added" row answers the common case better than a global sort does. It does **not**
+supersede that todo's actual blocker, which is why the todo is `ready: human`: *"The open question
+is not how to sort but what to do about partial cross-store coverage."*
+
+Rows inherit that hole unchanged, and arguably make it worse. Acquisition date does not exist for
+Epic, Amazon or sideloaded; it is license-grant-not-purchase for Steam; it is clean only for GOG,
+where it is already fetched and discarded. A **sort** can place unknowns last where the user sees
+them. A **row** silently omits three stores' worth of games with nothing on screen saying the row
+is incomplete — a false claim on a launcher whose whole pitch is one unified library. The todo
+should therefore be **rewritten down to the data-coverage decision, not closed**; its measured
+per-store inventory (2026-10-03) is the expensive part and this phase needs it verbatim.
+
+**Open scope questions — settle in `/gsd-spec-phase 48`:**
+
+1. **Is Rows a fifth view, or does it replace the grid?** Either Rows joins
+   `All games / Installed / Recently played / Favourites` as a single-select view that swaps the
+   grid for shelves, or it replaces the grid outright and Views becomes a filter applied *within*
+   every row. This determines whether sketch 005's variant D ships as drawn or gets revisited —
+   under the second model Views stops meaning "which slice am I looking at" and D's "you are here"
+   premise weakens. **Load-bearing; do not start planning without it.**
+2. **Row cap and duplicate policy.** Steam and Netflix rows are platform-curated. User-composed
+   rows over a 400-game library can put one game in six rows with nothing above the fold. Decide a
+   cap and whether a game may appear in more than one row.
+3. **Each row needs an internal order** — and "Recently Added" is a row *whose definition is a
+   sort*. This is how the data-coverage problem in question 1 of the superseded todo walks back in
+   through the side door. Do not treat row ordering as a detail.
+
+**Design input available:** sketch `005-views-section-distinction` (winner: variant D) settled how
+the tier-2 Views section reads as a distinct kind of control. Its implementation is deliberately
+**held** pending question 1 above. Sketch 004 variant C is the panel this builds on.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 48 to break down)
+
 ---
 
 ## Parked / Superseded Phases
