@@ -3,7 +3,14 @@
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-md);
-  padding: var(--space-lg) var(--space-sm);
+  /* Bottom inset matches the inline inset on purpose (--space-sm, not the
+     --space-lg the top keeps). `.Header__footer` is `margin-top: auto` and
+     neither `.NavShell__tier2` nor `.NavShell__tier2Portal` adds block
+     padding, so this one declaration IS the whole gap under the footer row's
+     icon-only AddGameButton -- at --space-lg that button floated 1.5em off
+     the panel floor while sitting 0.75em off its left wall. Three-value form
+     so the top padding is untouched. */
+  padding: var(--space-lg) var(--space-sm) var(--space-sm);
   color: var(--text-secondary);
   min-height: 100%;
 }
