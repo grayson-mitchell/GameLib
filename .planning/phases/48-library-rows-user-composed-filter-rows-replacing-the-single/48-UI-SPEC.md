@@ -215,7 +215,7 @@ the strip itself (always visible above the grid, per D-12) is where the active p
   to the *management* surface for collections; `FOCUS ROW` is a picker over whatever already
   exists, and a picker with one empty option group should look like a picker with three groups,
   not like a feature asking the user to go create something. Mirrors `FilterStoreFacet`'s own
-  `connectedStores.length === 0 → return null` convention (`FilterStoreFacet/index.tsx:29-31`) at
+  `connectedStores.length === 0 → return null` convention (`FilterStoreFacet/index.tsx:39-41`) at
   the sub-group level.
 - **Store rows render store name text only, no logo.** Default/discretion call: `StoresPanel`
   elsewhere uses `NavItem`'s `iconElement` slot for store SVG logos, but `FOCUS ROW`'s rows match
@@ -354,6 +354,78 @@ fallback if `color-mix` support is a concern — this project's `--focus-ring-fi
 
 Not applicable — `Tool: none`, no shadcn registry of any kind is in use by this project or this
 phase.
+
+---
+
+## UI Considerations
+
+State-coverage axis, produced by the ui-phase step 9.5 probe
+(`gsd-core/bin/lib/ui-consideration-probe.cjs`) — 7 described surfaces × 8 taxonomy categories =
+**56 applicable considerations, 0 unclassified**, 2026-10-04. E4 and E7 carry an authored
+`elements: ["list-collection", "static-content"]` override: the prose classifier gave them
+`list-collection` only, which does not raise `long-text`, and a game title inside a card pinned to
+156px is exactly a long-text concern. Resolutions below are `explicit` unless marked otherwise.
+
+Empty/error/loading **copy** lives in `## Copywriting Contract` above and is referenced here, not
+restated.
+
+### Phase-wide — covers all 7 surfaces
+
+- Nothing in this phase has a loading state: the focus row's source data (library arrays, `games.recent`, `customCategories`) is already in context by the time Library renders, there is no network fetch and no spinner — see `## Copywriting Contract` → Loading state.
+- Nothing in this phase has an error state: an invalid persisted selection (deleted collection, signed-out store) degrades silently to no strip, never to a banner or toast — see `## Copywriting Contract` → Error state.
+
+### E1 — `FOCUS ROW` panel section
+
+- The section can never render empty: the Views sub-group is ungated and always contributes its 4 rows, while only Collections and Store are conditionally omitted.
+- A sub-group whose source list is empty is omitted wholesale including its divider label, mirroring `FilterStoreFacet/index.tsx:39-41`'s `return null` convention — not shown with an empty-state message.
+- The populated shape is the 4 fixed-order sub-groups Views, Collections, Store, Runnability, rendered as one `FilterFacetGroup` disclosure collapsed by default, with no selection-count badge.
+- A partially-populated section (for example collections present, no store connected) renders the surviving sub-groups only, with no gap or placeholder where an omitted one would have been.
+- Section height needs no new treatment: a long section lengthens the tier-2 column, which already scrolls via `overflow-y: auto` at `NavShell/index.scss:517`, exactly as it does for every existing group.
+- Zero / one / many collections are handled by the omit-when-empty rule plus the scrolling column; no count threshold changes the section's shape.
+- Long row labels ellipse rather than wrap — see E2.
+
+### E2 — `FOCUS ROW` entry rows
+
+- Rows are `NavItem` in its button branch with the `active` prop, not `FilterFacetRow`: selection is single-value-or-off, not a checkbox.
+- Exactly one row is active at a time across all four sub-groups; re-clicking the active row clears the selection to off, reusing `FilterCollectionList/index.tsx:58-60`'s handler shape.
+- A long row label is constrained to one line with `overflow: hidden; text-overflow: ellipsis`, scoped to the `FOCUS ROW` section, overriding `NavItem/index.scss:116`'s `white-space: break-spaces` locally. This is deliberate: without it a long collection name wraps to several lines directly below sibling facet rows that ellipse at `FilterFacetGroup/index.scss:153-154`, and the one panel would use two different overflow treatments.
+
+### E3 — Sub-group divider labels
+
+- Divider labels are non-interactive text, not buttons and not a second `FilterFacetGroup` — the section is already one disclosure and nesting a second would bury the content two clicks deep.
+- A divider label is omitted together with its sub-group, never rendered above an empty list.
+- The four labels are short fixed strings; a longer translation inherits the same one-line ellipsis treatment specified for E2 rows.
+
+### E4 — The focus-row strip / track
+
+- A pick matching zero games, or naming a deleted collection or signed-out store, renders no strip at all — no header, no message, no placeholder — see `## Copywriting Contract` → Empty state.
+- The populated track is `display: flex` with `gap: 1.5rem` and children at `flex: 0 0 156px`, and never wraps to a second row.
+- The track is capped at 20 cards however many the pick matches, which is what keeps it a preview rather than a second grid.
+- Overflow is handled by the forward/back controls (E6) over a horizontally scrolling track with the native scrollbar hidden; `scrollbar-gutter: stable` is specifically NOT used, because it reserves the platform scrollbar width (~17px on macOS) regardless of this bar's own width and would shift every card right for no visual benefit.
+- Zero / one / many: no strip at zero; at counts that fit the visible width no overflow affordance renders at all; past that the controls mount.
+- { statement: A long game title in the 156px-pinned track inherits `GameCard`'s existing clip behaviour unchanged — verified visually that no title overflows its card bounds or overlaps a neighbour at the narrowest supported window width, verification: backstop }
+
+### E5 — Strip header
+
+- The header renders nothing when no strip renders; it is part of the strip, not a separate surface that survives an empty pick.
+- The header echoes the selected pick by rendering that pick's already-translated string verbatim, introducing no new i18n key and no second casing convention — see `## Copywriting Contract` → Strip header.
+- The header is constrained to a single line with `overflow: hidden; text-overflow: ellipsis`, with the untruncated value exposed via `title`. This is new CSS on top of `.libraryHeader` (`Library/index.css:42-50`), which today has no overflow handling of any kind: that was safe while the header held only short constant labels, but D-12 makes it render arbitrary user-supplied collection names, and the element is `position: sticky`, so an unconstrained long name would wrap the sticky header to many lines above the strip.
+- The one-line-plus-ellipsis treatment matches `FilterFacetGroup/index.scss:153-154`'s existing long-row handling rather than introducing a new pattern.
+
+### E6 — Forward / back overflow controls
+
+- Neither control renders at all when the track's content fits its visible width — not even disabled.
+- Once scrolling is possible both render; the control at the end of its travel renders with the native `disabled` attribute, out of tab order, dimmed with the `opacity: 0.38` convention already used by `.FilterFacetRow--zero` at `FilterFacetGroup/index.scss:286-288` rather than a new opacity value.
+- Activating a control scrolls the track by one page — the number of fully-visible cards at the current width — with `scroll-behavior: smooth`, not by a single card.
+- Each control is a real focusable `<button>` with an i18n'd `aria-label`, carrying the `body.controllerLayout` gamepad-focus arm from `NavItem/index.scss:84-92` because Tauri gamepad focus is a scripted `.focus()` call that `:focus-visible` alone can miss.
+- The controls carry no visible text, so a long translation affects the accessible name only and cannot alter layout.
+
+### E7 — Game cards inside the strip
+
+- Cards reuse `GameCard` unchanged at a fixed 156px container width; only the container is new, not the card.
+- `.gameList.firstLane > div:has(.justPlayed) { grid-column: span 2 }` (`Library/index.css:14-16`) is not carried forward — structurally inapplicable rather than dropped by choice, because the track is flex and has no grid-column axis. `GameCard`'s own just-played overlay is unaffected and still renders.
+- Gamepad focus moving to a card past the track's visible edge scrolls the track's own `scrollLeft` to bring it fully into view. This is net-new code, not a prop change: the existing `scrollCardIntoView` at `GamesList/index.tsx:47-49` is wired to `main.content`'s vertical `scrollTop`.
+- { statement: A long game title on a card pinned to 156px inherits `GameCard`'s existing clip behaviour — `overflow: hidden` with no ellipsis, nowrap or line-clamp — and this phase adds no override, verified visually against the longest title in the test library, verification: backstop }
 
 ---
 
