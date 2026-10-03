@@ -225,7 +225,8 @@
             "groupSelectedCount_other": "Vybráno {{count}}"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} z {{total}}"
+            "filteredOfTotal": "{{shown}} z {{total}} her",
+            "totalGames": "{{total}} her"
         },
         "no_no_store_page_games": "Ve vaší knihovně nejsou žádné hry bez stránky v obchodě",
         "noStorePage": "Bez stránky v obchodě",

@@ -218,7 +218,8 @@
             "groupSelectedCount_other": "{{count}} נבחרו"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} מתוך {{total}}"
+            "filteredOfTotal": "{{shown}} מתוך {{total}} משחקים",
+            "totalGames": "{{total}} משחקים"
         },
         "no_no_store_page_games": "אין משחקים ללא עמוד חנות בספרייה שלך",
         "noStorePage": "ללא עמוד חנות",

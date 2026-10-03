@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} seçildi"
         },
         "header": {
-            "filteredOfTotal": "{{total}} içinden {{shown}}"
+            "filteredOfTotal": "{{total}} oyun içinden {{shown}}",
+            "totalGames": "{{total}} oyun"
         },
         "no_no_store_page_games": "Kitaplığınızda mağaza sayfası olmayan oyun yok",
         "noStorePage": "Mağaza sayfası yok",

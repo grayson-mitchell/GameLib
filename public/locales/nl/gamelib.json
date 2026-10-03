@@ -211,7 +211,8 @@
             "viewFavourites": "Favourites"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} van {{total}}"
+            "filteredOfTotal": "{{shown}} van {{total}} spellen",
+            "totalGames": "{{total}} spellen"
         },
         "no_no_store_page_games": "Geen spellen zonder winkelpagina in je bibliotheek",
         "noStorePage": "Geen winkelpagina",

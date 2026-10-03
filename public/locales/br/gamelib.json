@@ -232,7 +232,8 @@
             "groupSelectedCount_other": "{{count}} dibabet"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} eus {{total}}"
+            "filteredOfTotal": "{{shown}} eus {{total}} c'hoarioù",
+            "totalGames": "{{total}} c'hoarioù"
         },
         "no_no_store_page_games": "C'hoari ebet hep pajenn stal en ho levraoueg",
         "noStorePage": "Pajenn stal ebet",

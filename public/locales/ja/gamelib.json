@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} 件選択中"
         },
         "header": {
-            "filteredOfTotal": "{{total}}件中{{shown}}件"
+            "filteredOfTotal": "{{total}}件中{{shown}}件のゲーム",
+            "totalGames": "{{total}}件のゲーム"
         },
         "no_no_store_page_games": "ライブラリにストアページのないゲームはありません",
         "noStorePage": "ストアページなし",

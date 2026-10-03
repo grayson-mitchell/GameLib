@@ -232,7 +232,8 @@
             "groupSelectedCount_other": "{{count}} roghnaithe"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} as {{total}}"
+            "filteredOfTotal": "{{shown}} as {{total}} cluiche",
+            "totalGames": "{{total}} cluiche"
         },
         "no_no_store_page_games": "Níl aon chluiche gan leathanach siopa i do leabharlann",
         "noStorePage": "Gan leathanach siopa",

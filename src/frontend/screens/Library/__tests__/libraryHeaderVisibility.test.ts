@@ -283,7 +283,7 @@ describe('Header source gate -- filtered-vs-total count', () => {
     expect(source).toContain('activeFilterCount')
   })
 
-  it('gates the new form on activeFilterCount > 0, so an unfiltered library renders exactly what it renders today', () => {
+  it('gates the "shown of total" form on activeFilterCount > 0, so an unfiltered library takes the totalGames branch instead', () => {
     expect(source).toContain('activeFilterCount > 0')
   })
 
@@ -293,7 +293,16 @@ describe('Header source gate -- filtered-vs-total count', () => {
 
   it('carries a LITERAL key and a LITERAL default for the new string (i18next-parser resolves nothing else)', () => {
     expect(source).toContain("'gamelib:library.header.filteredOfTotal'")
-    expect(source).toContain("'{{shown}} of {{total}}'")
+    expect(source).toContain("'{{shown}} of {{total}} games'")
+  })
+
+  // 261003-i4t (D-05): the unfiltered branch now also resolves through
+  // tGamelib on its own literal key/default, instead of rendering a bare
+  // `{numberOfGames}` with no t() call at all -- re-pointed, not deleted,
+  // because the string this gate used to pin no longer exists verbatim.
+  it('carries a LITERAL key and a LITERAL default for the unfiltered count too (D-05)', () => {
+    expect(source).toContain("'gamelib:library.header.totalGames'")
+    expect(source).toContain("'{{total}} games'")
   })
 
   it('never uses {{count}} -- reserved by i18next for plural key resolution (C6)', () => {

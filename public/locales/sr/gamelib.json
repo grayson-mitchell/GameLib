@@ -218,7 +218,8 @@
             "groupSelectedCount_other": "{{count}} изабрано"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} од {{total}}"
+            "filteredOfTotal": "{{shown}} од {{total}} игара",
+            "totalGames": "{{total}} игара"
         },
         "no_no_store_page_games": "Нема игара без странице продавнице у вашој библиотеци",
         "noStorePage": "Без странице продавнице",

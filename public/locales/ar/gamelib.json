@@ -239,7 +239,8 @@
             "groupSelectedCount_other": "تم تحديد {{count}} عنصر"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} من {{total}}"
+            "filteredOfTotal": "{{shown}} من {{total}} ألعاب",
+            "totalGames": "{{total}} ألعاب"
         },
         "no_no_store_page_games": "لا توجد ألعاب بلا صفحة متجر في مكتبتك",
         "noStorePage": "بلا صفحة متجر",

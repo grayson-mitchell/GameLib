@@ -225,7 +225,8 @@
             "groupSelectedCount_other": "Вибрано {{count}}"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} із {{total}}"
+            "filteredOfTotal": "{{shown}} із {{total}} ігор",
+            "totalGames": "{{total}} ігор"
         },
         "no_no_store_page_games": "У вашій бібліотеці немає ігор без сторінки крамниці",
         "noStorePage": "Немає сторінки крамниці",

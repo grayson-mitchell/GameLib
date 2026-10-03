@@ -159,7 +159,8 @@
             "groupSelectedCount_other": "{{count}} ausgewählt"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} von {{total}}"
+            "filteredOfTotal": "{{shown}} von {{total}} Spiele",
+            "totalGames": "{{total}} Spiele"
         },
         "noStorePage": "Keine Store-Seite",
         "no_no_store_page_games": "Keine Spiele ohne Store-Seite in deiner Bibliothek",

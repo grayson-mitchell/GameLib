@@ -232,10 +232,14 @@ export default function Header({ list, totalGames }: Props) {
       <div className="Header__footer">
         <div className="Header__footerRow">
           {/*
-            With nothing active this is BYTE-IDENTICAL to what shipped
-            before: same element, same class, same content. The bare count is
-            correct there -- an unfiltered library's shown count IS its
-            total, and "318 of 318" would be noise.
+            Both branches now carry a key (261003-i4t, D-05): the unfiltered
+            reading used to be a bare `{numberOfGames}` with no t() call at
+            all, and now appends "games" the same way the filtered branch
+            does, so a growing digit count never shuffles the word sideways
+            inconsistently between the two states (see `tabular-nums` below).
+
+            With nothing active an unfiltered library's shown count IS its
+            total, so "394 games" is correct, not "394 of 394 games" noise.
 
             With something active the bare count is actively misleading: it
             is the size of the ALREADY-FILTERED list sitting beside a title
@@ -245,19 +249,27 @@ export default function Header({ list, totalGames }: Props) {
             Interpolated on `shown` / `total`. The name `count` is reserved by
             i18next and would trigger plural key resolution (`_one`/`_other`),
             neither of which exists in the catalog. Literal key AND literal
-            default, because i18next-parser resolves nothing else.
+            default on both, because i18next-parser resolves nothing else.
           */}
           <AddGameButton iconOnly />
           {activeFilterCount > 0 ? (
             <span className="numberOfgames numberOfgames--filtered">
               {tGamelib(
                 'gamelib:library.header.filteredOfTotal',
-                '{{shown}} of {{total}}',
+                '{{shown}} of {{total}} games',
                 { shown: numberOfGames, total: totalGames }
               )}
             </span>
           ) : (
-            <span className="numberOfgames">{numberOfGames}</span>
+            <span className="numberOfgames">
+              {tGamelib(
+                'gamelib:library.header.totalGames',
+                '{{total}} games',
+                {
+                  total: numberOfGames
+                }
+              )}
+            </span>
           )}
           <button
             className={classNames('Header__utilityButton', {

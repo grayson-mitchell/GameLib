@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} valittu"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} / {{total}}"
+            "filteredOfTotal": "{{shown}} / {{total}} peliä",
+            "totalGames": "{{total}} peliä"
         },
         "no_no_store_page_games": "Kirjastossasi ei ole pelejä ilman kauppasivua",
         "noStorePage": "Ei kauppasivua",

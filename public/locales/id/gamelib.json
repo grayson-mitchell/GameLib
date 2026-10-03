@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} dipilih"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} dari {{total}}"
+            "filteredOfTotal": "{{shown}} dari {{total}} gim",
+            "totalGames": "{{total}} gim"
         },
         "no_no_store_page_games": "Tidak ada gim tanpa halaman toko di perpustakaan Anda",
         "noStorePage": "Tanpa halaman toko",

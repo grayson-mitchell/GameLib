@@ -225,7 +225,8 @@
             "groupSelectedCount_other": "Pasirinkta {{count}}"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} iš {{total}}"
+            "filteredOfTotal": "{{shown}} iš {{total}} žaidimų",
+            "totalGames": "{{total}} žaidimų"
         },
         "no_no_store_page_games": "Jūsų bibliotekoje nėra žaidimų be parduotuvės puslapio",
         "noStorePage": "Be parduotuvės puslapio",

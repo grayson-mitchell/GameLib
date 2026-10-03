@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} επιλεγμένα"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} από {{total}}"
+            "filteredOfTotal": "{{shown}} από {{total}} παιχνίδια",
+            "totalGames": "{{total}} παιχνίδια"
         },
         "no_no_store_page_games": "Δεν υπάρχουν παιχνίδια χωρίς σελίδα καταστήματος στη βιβλιοθήκη σας",
         "noStorePage": "Χωρίς σελίδα καταστήματος",

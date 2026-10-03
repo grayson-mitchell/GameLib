@@ -218,7 +218,8 @@
             "wontRun": "Won't run"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} of {{total}}"
+            "filteredOfTotal": "{{shown}} of {{total}} games",
+            "totalGames": "{{total}} games"
         },
         "no_no_store_page_games": "No games without a store page in your library",
         "noStorePage": "No store page",

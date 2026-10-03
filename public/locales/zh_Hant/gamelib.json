@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "已選取 {{count}} 個"
         },
         "header": {
-            "filteredOfTotal": "{{total}} 中的 {{shown}}"
+            "filteredOfTotal": "{{total}} 款遊戲中的 {{shown}} 款",
+            "totalGames": "{{total}} 款遊戲"
         },
         "no_no_store_page_games": "您的庫中沒有無商店頁面的遊戲",
         "noStorePage": "無商店頁面",

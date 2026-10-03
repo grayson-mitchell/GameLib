@@ -211,7 +211,8 @@
             "viewFavourites": "Favourites"
         },
         "header": {
-            "filteredOfTotal": "{{total}}-ൽ {{shown}}"
+            "filteredOfTotal": "{{total}}-ൽ {{shown}} കളികൾ",
+            "totalGames": "{{total}} കളികൾ"
         },
         "no_no_store_page_games": "നിങ്ങളുടെ ലൈബ്രറിയിൽ സ്റ്റോർ പേജ് ഇല്ലാത്ത കളികളൊന്നുമില്ല",
         "noStorePage": "സ്റ്റോർ പേജ് ഇല്ല",

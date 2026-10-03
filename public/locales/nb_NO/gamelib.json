@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} valgt"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} av {{total}}"
+            "filteredOfTotal": "{{shown}} av {{total}} spill",
+            "totalGames": "{{total}} spill"
         },
         "no_no_store_page_games": "Ingen spill uten butikkside i biblioteket ditt",
         "noStorePage": "Ingen butikkside",

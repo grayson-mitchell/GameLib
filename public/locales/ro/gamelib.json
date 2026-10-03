@@ -218,7 +218,8 @@
             "groupSelectedCount_other": "{{count}} selectate"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} din {{total}}"
+            "filteredOfTotal": "{{shown}} din {{total}} jocuri",
+            "totalGames": "{{total}} jocuri"
         },
         "no_no_store_page_games": "Nu există jocuri fără pagină de magazin în biblioteca ta",
         "noStorePage": "Fără pagină de magazin",

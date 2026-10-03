@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "เลือกแล้ว {{count}} รายการ"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} จาก {{total}}"
+            "filteredOfTotal": "{{shown}} จาก {{total}} เกม",
+            "totalGames": "{{total}} เกม"
         },
         "no_no_store_page_games": "ไม่มีเกมที่ไม่มีหน้าร้านค้าในไลบรารีของคุณ",
         "noStorePage": "ไม่มีหน้าร้านค้า",

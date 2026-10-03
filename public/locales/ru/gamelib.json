@@ -225,7 +225,8 @@
             "groupSelectedCount_other": "Выбрано {{count}}"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} из {{total}}"
+            "filteredOfTotal": "{{shown}} из {{total}} игр",
+            "totalGames": "{{total}} игр"
         },
         "no_no_store_page_games": "В вашей библиотеке нет игр без страницы магазина",
         "noStorePage": "Нет страницы магазина",

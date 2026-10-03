@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "არჩეულია {{count}}"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} / {{total}}"
+            "filteredOfTotal": "{{shown}} / {{total}} თამაში",
+            "totalGames": "{{total}} თამაში"
         },
         "no_no_store_page_games": "თქვენს ბიბლიოთეკაში მაღაზიის გვერდის გარეშე თამაშები არ არის",
         "noStorePage": "მაღაზიის გვერდის გარეშე",

@@ -225,7 +225,8 @@
             "groupSelectedCount_other": "{{count}} izbranih"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} od {{total}}"
+            "filteredOfTotal": "{{shown}} od {{total}} iger",
+            "totalGames": "{{total}} iger"
         },
         "no_no_store_page_games": "V vaši knjižnici ni iger brez trgovinske strani",
         "noStorePage": "Brez trgovinske strani",

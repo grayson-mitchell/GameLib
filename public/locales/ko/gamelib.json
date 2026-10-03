@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}}개 선택됨"
         },
         "header": {
-            "filteredOfTotal": "{{total}} 중 {{shown}}개"
+            "filteredOfTotal": "게임 {{total}} 중 {{shown}}개",
+            "totalGames": "게임 {{total}}개"
         },
         "no_no_store_page_games": "라이브러리에 스토어 페이지가 없는 게임이 없습니다",
         "noStorePage": "스토어 페이지 없음",

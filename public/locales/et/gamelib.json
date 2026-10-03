@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} valitud"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} / {{total}}"
+            "filteredOfTotal": "{{shown}} / {{total}} mängu",
+            "totalGames": "{{total}} mängu"
         },
         "no_no_store_page_games": "Sinu teegis pole ühtegi mängu ilma poeleheta",
         "noStorePage": "Poeleht puudub",

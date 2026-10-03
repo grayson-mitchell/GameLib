@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} kiválasztva"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} / {{total}}"
+            "filteredOfTotal": "{{shown}} / {{total}} játék",
+            "totalGames": "{{total}} játék"
         },
         "no_no_store_page_games": "Nincs áruházi oldal nélküli játék a könyvtáradban",
         "noStorePage": "Nincs áruházi oldal",

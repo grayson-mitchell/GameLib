@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} தேர்ந்தெடுக்கப்பட்டன"
         },
         "header": {
-            "filteredOfTotal": "{{total}} இல் {{shown}}"
+            "filteredOfTotal": "{{total}} இல் {{shown}} விளையாட்டுகள்",
+            "totalGames": "{{total}} விளையாட்டுகள்"
         },
         "no_no_store_page_games": "உங்கள் நூலகத்தில் கடைப் பக்கம் இல்லாத விளையாட்டுகள் இல்லை",
         "noStorePage": "கடைப் பக்கம் இல்லை",
