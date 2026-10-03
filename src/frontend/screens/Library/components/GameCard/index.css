@@ -4,7 +4,34 @@
   width: 100%;
   overflow: hidden;
   position: relative;
-  transition-duration: 0.1s;
+  /* Resting outline is PRESENT but transparent, and carries the same
+     -1px offset the hover rule uses. That is what makes the hover edge
+     animate instead of flickering: from `outline-style: none` there is no
+     interpolable start value for `outline-color`, so the browser snapped
+     the edge in and the old `all` transition below painted one frame at
+     the wrong offset -- the single flicker the operator reported. An
+     outline never affects layout, so declaring it at rest costs nothing.
+
+     This mirrors ConsoleMode/index.scss, whose edges ARE smooth precisely
+     because the border exists at rest and only its colour animates
+     (`:110-113`, `background/border-color/color 140ms ease`). */
+  outline: 2px solid transparent;
+  outline-offset: -1px;
+  /* Explicit property list, NOT the bare `transition-duration: 0.1s` this
+     replaces -- with no `transition-property` that resolved to `all`, so
+     100ms was applied to `outline-offset` and alongside a `z-index` jump.
+     140ms matches console mode's figure, which is the "slower, smoother"
+     feel being copied here.
+
+     outline-WIDTH and outline-OFFSET are deliberately absent and must stay
+     absent. `:focus-within` below is a louder ring (3px at +2px offset,
+     plus a two-tone halo) and that hover/focus split is a documented
+     accessibility decision (quick 260926-acw). Animating width or offset
+     would make focus visibly crawl out of hover and blur the distinction.
+     Colour and shadow animate; geometry snaps. */
+  transition:
+    outline-color 140ms ease,
+    box-shadow 140ms ease;
   box-shadow: 0px 0px 12px 4px #00000055;
   display: flex;
   flex-direction: column;

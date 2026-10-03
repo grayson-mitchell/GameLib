@@ -14,6 +14,15 @@
   gap: var(--space-xs);
 }
 
+/* Tour sits hard right, with the other five left-packed. `auto` on the
+   inline-start margin rather than `justify-content: space-between`, which
+   tier2Portal.test.ts:105-107 forbids anywhere in this file (and :102
+   forbids `position: sticky`). The auto margin absorbs the row's free
+   space and leaves the `gap` above intact between the five that stay. */
+.Header__utilities .library-tour-button {
+  margin-inline-start: auto;
+}
+
 .Header__consoleButton,
 .Header__utilityButton {
   display: inline-flex;
@@ -113,6 +122,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+}
+
+/* Refresh sits hard right; the plus button and the count stay left-packed.
+   Scoped to the footer row on purpose -- `.Header__utilityButton` is also
+   the idiom for four of row 1's six controls, so an unscoped rule would
+   push those too. Same `auto` margin reasoning as the tour button above:
+   `space-between` is forbidden in this file. */
+.Header__footerRow .Header__utilityButton {
+  margin-inline-start: auto;
 }
 
 /*

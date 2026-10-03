@@ -289,7 +289,28 @@ export default function Header({ list, totalGames }: Props) {
               icon={faSyncAlt}
             />
           </button>
-          {isSteamSyncing && (
+          {/*
+            `!refreshing` is load-bearing, not a tidy-up. This spinner and
+            the refresh button above render the SAME faSyncAlt glyph, and
+            `isSteamSyncing`'s first arm is `refreshing && refreshingInThe-
+            Background`, so a refresh click lit both and the operator saw
+            two identical icons spinning side by side.
+
+            All three signals survive the gate -- exactly one spinner in
+            every state, and none lost:
+              - global refresh          -> the BUTTON spins (this hidden)
+              - background metadata sync, no foreground refresh -> this one
+              - scoped per-runner refresh                       -> this one
+
+            That last case is why `isSteamSyncing` itself must NOT be
+            simplified and none of its three OR arms removed: a
+            single-runner login/logout refresh never flips the two global
+            flags, it writes `refreshingByRunner` (see the comment on the
+            definition above, and debug/login-logout-wipes-library). Gating
+            the RENDER is safe; narrowing the CONDITION would silently drop
+            that feedback again.
+          */}
+          {isSteamSyncing && !refreshing && (
             <FontAwesomeIcon
               icon={faSyncAlt}
               className="steamSyncSpinner"
