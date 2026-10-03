@@ -3153,6 +3153,91 @@ fn login_origin_banner_update_script(origin: &str) -> String {
 }
 
 /// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
+/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block), macOS-gated like
+/// its two neighbours above and for the same reason: it exists only to serve the in-page title
+/// bar those two render, and that bar exists only because an AppKit sheet has no title bar.
+///
+/// WHY THIS EXISTS (operator report, 2026-10-03): with `AppleShowScrollBars = Always` -- a
+/// CLASSIC, space-taking scrollbar, not an overlay one -- the document scrollbar runs the full
+/// height of the scrollport starting at y=0, so it carves a notch out of the right end of the
+/// title bar and sits beside the cancel glyph. The operator's words: the scrollbar needs to
+/// appear BELOW the title bar.
+///
+/// MEASURED, NOT REASONED (WKWebView probes, 2026-10-03, captured with `screencapture -l`
+/// against an offscreen `WKWebView`; note `takeSnapshot` does NOT paint scrollbars, so a probe
+/// built on it measures nothing and will mislead you):
+/// - Widening the bar to `width: 100vw` **DOES NOT WORK**, refuted twice (probe A, and again in
+///   probe C with the track already inset). A classic scrollbar paints ABOVE page content and a
+///   `position: fixed` element cannot paint into the scrollbar gutter at all. This is the
+///   obvious fix and it is wrong; do not reinstate it.
+/// - `::-webkit-scrollbar-track { margin-top }` DOES inset the track, so the thumb starts below
+///   the bar (probe B) -- but it leaves the gutter above the track showing the PAGE background,
+///   i.e. a white notch where the scrollbar notch used to be.
+/// - Giving `::-webkit-scrollbar` ITSELF the bar's background colour fills that inset region, so
+///   the bar reads as continuous to the window edge (probe D).
+///
+/// SCOPED TO `html` ON PURPOSE (probe E). An unscoped `::-webkit-scrollbar` rule applies to
+/// EVERY scrollable element in the document, which would give each of Humble's inner scrollers a
+/// 32px dead zone at its top. Probe E rendered an inner `overflow-y: scroll` box alongside the
+/// document scroller and confirmed the inner one keeps a normal, unstyled scrollbar while the
+/// document scroller gets the inset.
+///
+/// The `32px` track inset MUST equal the bar height the other two scripts set. A `#[cfg(test)]`
+/// test below extracts all three literals and asserts they agree, so the three cannot drift.
+///
+/// Mirrors its neighbours' conventions exactly: top-frame-only guard as the FIRST statement
+/// inside the try; idempotence flag set before any DOM work; `textContent` only (a `<style>`
+/// element's text is set the same safe way, never an HTML-fragment-write API); NO
+/// `addEventListener` of any kind -- the loading arm uses `document.onreadystatechange`, a
+/// property assignment, so this script is provably inert w.r.t. REQ-34.4.2-06 (Cmd+V into the
+/// password field) by construction; self-re-appending via the same debounced `MutationObserver`;
+/// exactly ONE top-level `try { } catch (e) { }`. Takes no argument and interpolates nothing, so
+/// the `serde_json`/`@@TOKEN@@` discipline does not apply -- there is no caller input to escape.
+/// Every JS string literal below is single-quoted, keeping an EVEN raw `"`-count per source line
+/// (`longRunningChannels.test.ts`'s WR-08 stripper-integrity guard). Pure: no inputs, so the same
+/// output every call.
+#[cfg(target_os = "macos")]
+fn login_scrollbar_inset_script() -> String {
+    concat!(
+        "(function() { ",
+        "try { ",
+        "if (window.top !== window) { return; } ",
+        "if (window.__GAMELIB_LOGIN_SCROLLBAR_INSET__) { return; } ",
+        "window.__GAMELIB_LOGIN_SCROLLBAR_INSET__ = true; ",
+        "var ID = '__gamelib_login_scrollbar_inset__'; ",
+        "var CSS = 'html::-webkit-scrollbar { width: 14px; background: #161c1e; } ",
+        "html::-webkit-scrollbar-track { margin-top: 32px; background: #272f31; } ",
+        "html::-webkit-scrollbar-thumb { background: #4a585c; border-radius: 7px; } ",
+        "html::-webkit-scrollbar-corner { background: #161c1e; }'; ",
+        "function build() { ",
+        "var buildRoot = document.head || document.documentElement; ",
+        "if (!buildRoot) { return; } ",
+        "var style = document.createElement('style'); ",
+        "style.id = ID; ",
+        "style.textContent = CSS; ",
+        "buildRoot.appendChild(style); ",
+        "} ",
+        "function ensure() { ",
+        "if (!document.getElementById(ID)) { build(); } ",
+        "} ",
+        "if (document.readyState === 'loading') { ",
+        "document.onreadystatechange = function() { ensure(); }; ",
+        "} ",
+        "var debounceTimer = null; ",
+        "function scheduleEnsure() { ",
+        "if (debounceTimer) { return; } ",
+        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
+        "} ",
+        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
+        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
+        "ensure(); ",
+        "} catch (e) { } ",
+        "})();"
+    )
+    .to_string()
+}
+
+/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
 /// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block) -- but, unlike
 /// its two neighbours above, deliberately WITHOUT a `#[cfg(target_os = "macos")]` gate (D-2,
 /// quick task 260822-di1). `login_cancel_strip_script`/`login_origin_banner_script` substitute
@@ -7510,6 +7595,15 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     builder = builder.initialization_script(&login_origin_banner_script(&origin));
                     eprintln!(
                         "[shell] humble_login_open: login origin banner injected for '{label}'"
+                    );
+                    // Scrollbar inset (2026-10-03). Same macOS gate and the same block as the
+                    // two controls above, because it exists only to serve the bar they render:
+                    // with a CLASSIC scrollbar the document scrollbar starts at y=0 and carves a
+                    // notch out of the bar's right end. See the function's own doc comment for
+                    // the WKWebView probe results, including the two refutations of `100vw`.
+                    builder = builder.initialization_script(&login_scrollbar_inset_script());
+                    eprintln!(
+                        "[shell] humble_login_open: login scrollbar inset injected for '{label}'"
                     );
                 }
                 // Login-chrome CSS injection (quick task 260822-di1, D-2). Deliberately NOT
@@ -14828,6 +14922,126 @@ mod tests {
     // reasoned prediction.
 
     #[test]
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_inset_script_scopes_every_rule_to_html_so_inner_scrollers_keep_their_own() {
+        let script = login_scrollbar_inset_script();
+
+        // Breaks if: any rule loses its `html` prefix. Probe E (2026-10-03) rendered an inner
+        // `overflow-y: scroll` box alongside the document scroller: scoped to `html`, the inner
+        // box keeps a normal scrollbar; UNSCOPED, every inner scroller on Humble's login page
+        // would inherit the 32px top dead zone meant only for the document scroller.
+        for selector in [
+            "html::-webkit-scrollbar {",
+            "html::-webkit-scrollbar-track {",
+            "html::-webkit-scrollbar-thumb {",
+        ] {
+            assert!(script.contains(selector), "missing scoped rule: {selector}");
+        }
+        assert_eq!(
+            script.matches("::-webkit-scrollbar").count(),
+            script.matches("html::-webkit-scrollbar").count()
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_track_inset_equals_the_bar_height_both_other_scripts_set() {
+        // The three literals must agree or the scrollbar starts above or below the bar's edge
+        // instead of flush with it. Extracted and compared against each other rather than
+        // asserted as three separate `== 32`, so a deliberate future move to a different bar
+        // height stays green as long as all three move together.
+        let inset = login_scrollbar_inset_script();
+        let banner = login_origin_banner_script("https://example.invalid");
+        let strip = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+
+        let track_margin = inset
+            .split("margin-top: ")
+            .nth(1)
+            .and_then(|rest| rest.split("px").next())
+            .expect("track margin-top literal");
+        let banner_height = banner
+            .split("banner.style.height = '")
+            .nth(1)
+            .and_then(|rest| rest.split("px").next())
+            .expect("banner height literal");
+        let strip_height = strip
+            .split("strip.style.height = '")
+            .nth(1)
+            .and_then(|rest| rest.split("px").next())
+            .expect("strip height literal");
+
+        assert_eq!(track_margin, banner_height);
+        assert_eq!(banner_height, strip_height);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_inset_script_paints_the_gutter_the_same_colour_as_the_bar() {
+        // Probe D (2026-10-03): the track `margin-top` alone leaves the inset region showing the
+        // PAGE background -- a white notch where the scrollbar notch used to be. The gutter only
+        // reads as part of the bar when the scrollbar element ITSELF carries the bar's colour.
+        let inset = login_scrollbar_inset_script();
+        let banner = login_origin_banner_script("https://example.invalid");
+
+        let bar_bg = banner
+            .split("banner.style.background = '")
+            .nth(1)
+            .and_then(|rest| rest.split('\'').next())
+            .expect("banner background literal");
+        assert!(
+            inset.contains(&format!("html::-webkit-scrollbar {{ width: 14px; background: {bar_bg}; }}")),
+            "scrollbar gutter must carry the bar's own background {bar_bg}"
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_chrome_never_widens_the_bar_to_100vw() {
+        // REFUTED TWICE by measurement (probes A and C, 2026-10-03): a classic scrollbar paints
+        // ABOVE page content and a `position: fixed` element cannot paint into the scrollbar
+        // gutter, so `100vw` does not close the notch -- it is the obvious fix and it is wrong.
+        // Guards all three scripts, because `100vw` is what a future reader will reach for.
+        let inset = login_scrollbar_inset_script();
+        let banner = login_origin_banner_script("https://example.invalid");
+        let strip = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        for script in [&inset, &banner, &strip] {
+            assert!(!script.contains("100vw"));
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_inset_script_follows_the_house_injection_contract() {
+        let script = login_scrollbar_inset_script();
+
+        let try_at = script.find("try { ").expect("try");
+        let top_frame_at = script
+            .find("if (window.top !== window) { return; }")
+            .expect("guard");
+        let flag_at = script
+            .find("__GAMELIB_LOGIN_SCROLLBAR_INSET__")
+            .expect("flag");
+        assert!(try_at < top_frame_at);
+        assert!(top_frame_at < flag_at);
+
+        assert_eq!(script.matches("try {").count(), 1);
+        assert_eq!(script.matches("catch (e) { }").count(), 1);
+        assert!(!script.contains("innerHTML"));
+        assert!(!script.contains("insertAdjacentHTML"));
+        assert!(!script.contains("addEventListener"));
+        assert!(!script.contains("keydown"));
+        assert!(!script.contains("keyup"));
+        assert!(!script.contains("keypress"));
+        assert!(script.contains("style.textContent = CSS;"));
+        assert!(script.contains("new MutationObserver"));
+        assert!(script.contains(
+            "observer.observe(document.documentElement, { childList: true, subtree: true })"
+        ));
+
+        assert_eq!(script, login_scrollbar_inset_script());
+    }
+
     fn login_chrome_css_script_hides_the_footer_and_navbar_leaving_the_four_protected_selectors_untouched(
     ) {
         let script = login_chrome_css_script();
