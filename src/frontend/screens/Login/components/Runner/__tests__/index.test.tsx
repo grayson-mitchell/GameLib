@@ -505,7 +505,7 @@ describe('Runner: busy prop (quick task 261003-u48, D-3/D-4)', () => {
 
   it('busy: true -- the spinner element carries aria-hidden set true and carries no aria-label and no title (D-5: zero new strings)', () => {
     const tree = mount(makeProps({ busy: true }))
-    const spinner = findBusySpinners(tree)[0]!
+    const spinner = findBusySpinners(tree)[0]
     const spinnerProps = spinner.props as unknown as Record<string, unknown>
 
     expect(spinnerProps['aria-hidden']).toBe('true')
