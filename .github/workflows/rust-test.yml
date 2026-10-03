@@ -30,8 +30,19 @@ concurrency:
 # .planning/todos/completed/2026-09-22-windows-rust-tests-not-run-in-ci.md).
 #
 # Measured baseline: `cd src-tauri && cargo test --bin gamelib-shell` on this Windows machine,
-# 2026-09-23 -- 234 passed; 0 failed; 2 ignored. The break the todo describes is already fixed, so
-# this job lands green on day one, not red.
+# 2026-09-23 -- 234 passed; 0 failed; 2 ignored (315 passed as of 2026-10-03). The compile break
+# the todo describes is indeed fixed.
+#
+# CORRECTION, 2026-10-03: the line that used to sit here -- "this job lands green on day one, not
+# red" -- was WRONG, and it misled a later reader into believing the remaining red was a
+# platform-specific quirk. This job had never passed on ANY run: red on both legs, every time,
+# going back at least to 2026-09-30. The baseline above was measured on a developer machine, which
+# has a built sidecar sitting in `src-tauri/binaries/` from earlier `pnpm tauri:dev` runs; CI
+# checkouts never do, because that path is gitignored as a build artifact. `tauri_build::build()`
+# validates `bundle.externalBin` unconditionally, so the build script aborted before a single test
+# compiled. Fixed by the placeholder step below. The lesson generalises: a baseline measured in a
+# populated working tree does not predict a clean checkout, so do not write "lands green" from a
+# local run alone.
 #
 # Why the vite build is a real step and not overhead: src-tauri/src/main.rs calls
 # `tauri::generate_context!()`, which embeds `frontendDist` (`../build/renderer` per
@@ -85,6 +96,66 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+      # `tauri_build::build()` (tauri-build 2.6.3, src/lib.rs:545) copies every
+      # `bundle.externalBin` entry UNCONDITIONALLY -- not gated on profile, feature, or whether
+      # this is `tauri build` -- and aborts the build script when one is missing. This crate
+      # declares `binaries/gamelib-sidecar`, which `src-tauri/binaries/.gitignore` deliberately
+      # keeps out of the repo as a CI-built artifact, so it is absent in every checkout and no
+      # test ever got to compile.
+      #
+      # A PLACEHOLDER IS SUFFICIENT HERE, AND THIS IS MEASURED, NOT ASSUMED -- read this before
+      # concluding it contradicts the "stub was considered and rejected" note above, because the
+      # two cases differ in exactly the way that matters:
+      #   * `frontendDist` is EMBEDDED at compile time by `tauri::generate_context!()`. A fake
+      #     there would let a real asset/codegen break sail through and only surface at release.
+      #     That is why it is built for real, and that decision stands.
+      #   * `externalBin` is never embedded, never read by the compiler, and never executed by
+      #     these tests -- `tauri_build` only COPIES the file to the target dir. Measured
+      #     2026-10-03: with the real 169911968-byte sidecar moved aside and replaced by a
+      #     17-byte `#!/bin/sh` stub, `cargo test --bin gamelib-shell` gives 315 passed / 0
+      #     failed in 0.06s; with no file at all it reproduces CI's error byte for byte. The
+      #     content is irrelevant to this job, so a placeholder removes an unrelated
+      #     precondition without weakening anything the job asserts.
+      #
+      # Building the real sidecar (`pnpm build:sidecar-sea`) was considered and REJECTED: it adds
+      # minutes per OS and couples a Rust-compile gate to the SEA pipeline's health (which has its
+      # own recorded hazards -- a decode hang and a liblzma version mismatch), letting this job go
+      # red for reasons that have nothing to do with Rust. Real sidecar bundling stays
+      # release-tauri.yml's job.
+      #
+      # What this step therefore does NOT buy, stated plainly per this repo's standing rule about
+      # gates that look broader than they are: it does not verify that the sidecar BUILDS, nor
+      # that `externalBin` resolves to a working binary, on any platform.
+      #
+      # The name is DERIVED from tauri.conf.json plus `rustc`'s own host triple rather than
+      # hardcoded, so renaming the externalBin entry still produces the right placeholder instead
+      # of silently stubbing a stale name -- and the step fails loudly if the entry disappears
+      # altogether, rather than becoming a quiet no-op.
+      - name: Placeholder for externalBin (existence precondition only)
+        shell: bash
+        working-directory: src-tauri
+        run: |
+          triple=$(rustc -vV | sed -n 's/^host: //p')
+          test -n "$triple" || { echo "could not read host triple from rustc -vV" >&2; exit 1; }
+          node -e '
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const triple = process.argv[1];
+            const ext = triple.includes("windows") ? ".exe" : "";
+            const conf = JSON.parse(fs.readFileSync("tauri.conf.json", "utf-8"));
+            const entries = conf.bundle?.externalBin ?? [];
+            if (entries.length === 0) {
+              throw new Error(
+                "tauri.conf.json declares no bundle.externalBin -- this step is stale; delete it rather than letting it silently no-op"
+              );
+            }
+            for (const entry of entries) {
+              const target = entry + "-" + triple + ext;
+              fs.mkdirSync(path.dirname(target), { recursive: true });
+              fs.writeFileSync(target, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+              console.log("placeholder created: " + target);
+            }
+          ' "$triple"
       - name: cargo test (Tauri shell crate)
         shell: bash
         working-directory: src-tauri
