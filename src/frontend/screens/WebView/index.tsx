@@ -522,10 +522,29 @@ export default function WebView() {
   // the embed on EVERY platform, including macOS, even though nothing upstream of this point
   // (`urls` map, `useStoreEmbedHost`, `storeEmbedOrigins.ts`'s `embeddable: false` flag -- that
   // flag is consulted only by the deep-link/restore path above, never by this direct route) ever
-  // stopped `/store/epic` from reaching the live embed render below. A Tauri-managed child
-  // webview (`Window::add_child`) still inherits the injected globals that are the confirmed,
-  // root-caused Talon fingerprint (2026-08-03); embedding Epic here would reproduce the exact
-  // failure the pristine-WKWebView escape hatch exists to avoid. The Epic tile stays (D-08,
+  // stopped `/store/epic` from reaching the live embed render below -- this one guard is the
+  // whole mechanism. Spike 024 measured why, across five runs, and closed the question
+  // (`.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`): the gate is a
+  // Cloudflare Turnstile challenge, not a bare 403. The injected globals (`isTauri`, `__TAURI__`,
+  // `__TAURI_INTERNALS__`, `ipc`, `__TAURI_IIFE__`), read from inside the loaded Epic page, were
+  // present in all three unattended runs INCLUDING the one that rendered fine -- the same
+  // fingerprint both passed and failed, so the 2026-08-03 Talon login-endpoint mechanism is
+  // REFUTED; it does not explain the store gate. Unattended runs 1-3 (2026-09-05): run 1, a fresh
+  // container and this IP's first contact, rendered the store fully (`bodyLen=89181`); runs 2
+  // and 3 hit the interstitial (`bodyLen=18450`, empty text), and run 3 used a brand-new
+  // container, which falsifies the cookie/container-state explanation. Steam's positive control
+  // rendered in all three, so no run is a dead harness. Interactive run 5 (2026-09-15, quick
+  // `260915-hza`), at a pixel-verified 986x630: a human clicked the verify box and the challenge
+  // was RE-ISSUED rather than cleared, twice; run 4 is discarded -- a harness defect squeezed the
+  // embed to 969x58. The scope-out is PERMANENT, not "for now" -- the follow-up todo closed
+  // WONTFIX on 2026-09-15; what would reopen it is a change in Epic's posture, not a change in
+  // our code. Three honest limits survive the measurement: run 1 rendered, so this is not a
+  // capability question -- the store CAN render in a Tauri-managed child webview; all five runs
+  // share one residential IP, so "the Tauri webview is blocked" cannot be separated from "this
+  // IP's reputation is spent" here, and testing that needs a different network, not a product
+  // decision, since the gate cannot be conditional on a user's IP; and anything behind sign-in
+  // was deliberately untouched (D-07). None of this is a flat accusation that Epic blocks
+  // in-app browsing, and the mechanism is not fully explained. The Epic tile stays (D-08,
   // `NavShell/components/StoresPanel/index.tsx`) -- it now lands on the panel instead.
   if (store === 'epic') {
     window.api.logInfo(
