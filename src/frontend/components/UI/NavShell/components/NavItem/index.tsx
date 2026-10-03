@@ -34,6 +34,16 @@ interface NavItemProps {
   labelElement?: ReactNode
   url?: string
   icon?: FontAwesomeIconProps['icon']
+  /**
+   * Pre-rendered icon node, for rows whose glyph is not a FontAwesome icon
+   * definition (quick 261003-uu8). The four storefront rows in `StoresPanel`
+   * use `StoreLogos`, because `@fortawesome/free-brands-svg-icons` is not a
+   * dependency of this project -- passing `faSteam` renders blank, which is
+   * the bug quick 260628-kzf fixed by switching to the inline SVG asset.
+   *
+   * Takes precedence over `icon` when both are supplied.
+   */
+  iconElement?: ReactNode
   isActiveFallback?: boolean
   onClick?: MouseEventHandler
   className?: string
@@ -44,6 +54,7 @@ interface NavItemProps {
 
 export default function NavItem({
   icon,
+  iconElement,
   label,
   labelElement,
   url = '',
@@ -54,13 +65,12 @@ export default function NavItem({
   active,
   'data-tour': dataTour
 }: NavItemProps) {
+  const renderedIcon =
+    iconElement ?? (icon ? <FontAwesomeIcon icon={icon} title={label} /> : null)
+
   const itemContent = (
     <>
-      {icon && (
-        <div className="NavItem__icon">
-          <FontAwesomeIcon icon={icon} title={label} />
-        </div>
-      )}
+      {renderedIcon && <div className="NavItem__icon">{renderedIcon}</div>}
       <span>{labelElement ?? label}</span>
     </>
   )

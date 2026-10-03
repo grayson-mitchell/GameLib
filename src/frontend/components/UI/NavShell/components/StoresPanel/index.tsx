@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
+import StoreLogos from 'frontend/components/UI/StoreLogos'
 import NavItem from '../NavItem'
 
 /**
@@ -39,10 +40,32 @@ export default function StoresPanel() {
         icon={faMagnifyingGlassDollar}
         label={t('storeSearch.sidebar', 'Store Search')}
       />
-      <NavItem url="/store/amazon" label={t('amazon-luna', 'Amazon Luna')} />
-      <NavItem url="/store/epic" label={t('store', 'Epic Store')} />
-      <NavItem url="/store/gog" label={t('gog-store', 'GOG Store')} />
-      <NavItem url="/store/steam" label={t('steam-store', 'Steam Store')} />
+      <NavItem
+        url="/store/amazon"
+        iconElement={
+          <StoreLogos runner="nile" className="NavItem__storeLogo" />
+        }
+        label={t('amazon-luna', 'Amazon Luna')}
+      />
+      <NavItem
+        url="/store/epic"
+        iconElement={
+          <StoreLogos runner="legendary" className="NavItem__storeLogo" />
+        }
+        label={t('store', 'Epic Store')}
+      />
+      <NavItem
+        url="/store/gog"
+        iconElement={<StoreLogos runner="gog" className="NavItem__storeLogo" />}
+        label={t('gog-store', 'GOG Store')}
+      />
+      <NavItem
+        url="/store/steam"
+        iconElement={
+          <StoreLogos runner="steam" className="NavItem__storeLogo" />
+        }
+        label={t('steam-store', 'Steam Store')}
+      />
       <NavItem
         url="/discounts"
         icon={faTags}

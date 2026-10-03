@@ -37,6 +37,14 @@ function makeContextValue(
 
 let contextValue: MockContextValue = makeContextValue()
 
+// `StoresPanel` pulls in `StoreLogos` for the four storefront rows (quick
+// 261003-uu8), which imports this `.png` alongside its `.svg?react` logos.
+// Only the PNG needs stubbing: `?react` SVG imports are module-mapped by this
+// jest project, whereas no transform handles binary assets, so the raw PNG
+// bytes reach the script compiler as `SyntaxError: Invalid or unexpected
+// token`. Same stub, same reason, as `destinationCoverage.test.tsx`.
+jest.mock('frontend/assets/gamelib-icon.png', () => 'mock-icon.png')
+
 jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
   useContext: () => contextValue

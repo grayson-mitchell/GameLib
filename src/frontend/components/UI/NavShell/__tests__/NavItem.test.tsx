@@ -160,6 +160,54 @@ describe('NavItem', () => {
     expect(found).toBeUndefined()
   })
 
+  // iconElement (quick 261003-uu8) -- the storefront rows' escape hatch for a
+  // glyph that is not a FontAwesome icon definition. See the prop's docstring
+  // for why `faSteam` is not available to this project.
+  it('iconElement renders inside the NavItem__icon wrapper', () => {
+    const element = NavItem({
+      label: 'Steam Store',
+      url: '/store/steam',
+      iconElement: <span data-testid="store-logo" />
+    }) as AnyElement
+
+    const wrapper = collectElements(element.props.children).find(
+      (el) => el.props?.className === 'NavItem__icon'
+    )
+    expect(wrapper).toBeDefined()
+
+    const logo = collectElements(wrapper?.props.children).find(
+      (el) => el.props?.['data-testid'] === 'store-logo'
+    )
+    expect(logo).toBeDefined()
+  })
+
+  it('iconElement suppresses the FontAwesome branch when both are supplied', () => {
+    const element = NavItem({
+      label: 'Steam Store',
+      url: '/store/steam',
+      icon: ['fas', 'gamepad'],
+      iconElement: <span data-testid="store-logo" />
+    }) as AnyElement
+
+    const children = collectElements(element.props.children)
+    expect(children.find((el) => el.type === FontAwesomeIcon)).toBeUndefined()
+    expect(
+      children.find((el) => el.props?.['data-testid'] === 'store-logo')
+    ).toBeDefined()
+  })
+
+  it('no icon wrapper is rendered when neither icon nor iconElement is supplied', () => {
+    const element = NavItem({
+      label: 'Games',
+      url: '/library'
+    }) as AnyElement
+
+    const wrapper = collectElements(element.props.children).find(
+      (el) => el.props?.className === 'NavItem__icon'
+    )
+    expect(wrapper).toBeUndefined()
+  })
+
   it('button branch renders the selected state (REQ-34.11-11)', () => {
     const element = NavItem({
       label: 'Recently Played',

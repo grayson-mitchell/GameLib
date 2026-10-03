@@ -52,6 +52,25 @@
       justify-content: center;
     }
 
+    // Storefront logo rows (quick 261003-uu8). Deliberately scoped to this one
+    // class rather than written as a `.NavItem__icon > svg` rule:
+    // `FontAwesomeIcon` also renders an `svg` inside that wrapper, so a generic
+    // descendant rule would resize the glyph on every other NavItem in the app.
+    //
+    // `fill` is the load-bearing declaration. The four `?react` store SVGs
+    // (`StoreLogos`) carry no `fill` attribute of their own, and the `color`
+    // declarations in this file -- including `color: currentColor` on `.active`
+    // below -- do NOT drive SVG `fill`. Without this they would paint
+    // SVG-default black and disappear on every dark theme. Binding to
+    // `currentColor` instead ties the logo to whatever inactive/active/hover
+    // colour each theme already sets for the row, so all 13 themes are covered
+    // by construction rather than by per-theme overrides.
+    .NavItem__storeLogo {
+      width: 1em;
+      height: 1em;
+      fill: currentColor;
+    }
+
     // Focus indicator (quick 260926-acw). Was `outline: 2px solid
     // var(--navitem-hover-color)`, i.e. `var(--text-hover)` -- undefined in
     // gruvbox_dark and dracula (see FilterFacetGroup/index.scss's header
