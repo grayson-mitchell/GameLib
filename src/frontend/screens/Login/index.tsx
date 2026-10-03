@@ -21,6 +21,7 @@ import { FlagPosition } from '../../components/UI/LanguageSelector'
 import SIDLogin from './components/SIDLogin'
 import SteamLogin from './components/SteamLogin'
 import HumbleLogin from './components/HumbleLogin'
+import OAuthLogin, { type OAuthOverlayRunner } from './components/OAuthLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
@@ -45,7 +46,22 @@ export const humbleLoginPath = '/loginweb/humble'
 // (Dialog.tsx's own literal, Login/index.scss's transition duration) agree.
 const LOGIN_DIALOG_EXIT_MS = 500
 
-type LoginOverlay = 'steam' | 'humble'
+// Quick task 261003-s04: the three OAuth-capture runners (GOG, Epic/legendary
+// and Amazon/nile) share one overlay component (`OAuthLogin`) instead of each
+// routing to the loginweb path for its runner, matching the Steam/Humble
+// pattern above. Named as a tuple (not inlined into the type) so
+// `isOAuthOverlayRunner` below can derive its membership check from the SAME
+// list this file renders tiles for -- a runner added to one and not the
+// other is a type error, not a silent gap.
+const OAUTH_OVERLAY_RUNNERS = ['legendary', 'gog', 'nile'] as const
+
+type LoginOverlay = 'steam' | 'humble' | OAuthOverlayRunner
+
+function isOAuthOverlayRunner(
+  overlay: LoginOverlay
+): overlay is OAuthOverlayRunner {
+  return (OAUTH_OVERLAY_RUNNERS as readonly string[]).includes(overlay)
+}
 
 export default React.memo(function NewLogin() {
   const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
@@ -287,6 +303,13 @@ export default React.memo(function NewLogin() {
           )}
         />
       )}
+      {mountedOverlay !== null && isOAuthOverlayRunner(mountedOverlay) && (
+        <OAuthLogin
+          key={overlayMountKey}
+          runner={mountedOverlay}
+          dismiss={dismissLoginOverlay}
+        />
+      )}
 
       {/* T-34.4.2-39/-41: `inert` is the React-18 string-empty form (boolean
           `inert` is React-19-only; this project pins react@^18.3.1). No
@@ -339,6 +362,7 @@ export default React.memo(function NewLogin() {
               loginUrl={gogLoginPath}
               isLoggedIn={isGogLoggedIn}
               logoutAction={gog.logout}
+              primaryLoginAction={() => openLoginOverlay('gog')}
               disabled={oldMac || loginInFlight}
             />
             <Runner

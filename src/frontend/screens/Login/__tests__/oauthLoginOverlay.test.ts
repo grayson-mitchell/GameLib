@@ -1,0 +1,170 @@
+/**
+ * Quick task 261003-s04: pins the shared `OAuthLogin` overlay (GOG, Epic
+ * (legendary) and Amazon (nile) all mount the SAME component, parameterised
+ * by `runner`) and its wiring into `Login/index.tsx`, mirroring the
+ * already-shipped Steam/Humble overlay pattern instead of routing to the
+ * loginweb path for its runner.
+ *
+ * SOURCE GATE, NOT A RENDER TEST. This jest project
+ * (`src/frontend/jest.config.js`) is `testEnvironment: 'node'` -- there is no
+ * browser DOM environment and no component-mounting harness available here.
+ * Every assertion below reads a source file with `readFileSync`, strips
+ * comments with `stripSourceComments`, and matches text against the result.
+ * These prove the SOURCE SHAPE below has the wiring described -- not
+ * anything about a rendered document tree, a real `useTauriOAuthLogin`
+ * state transition, a real native sign-in window, or what an operator
+ * actually sees. That is exactly what Task 2's eleven-question live gate
+ * exists to confirm; this file cannot see any of it.
+ *
+ * FALSIFIABILITY (recorded per assertion in 261003-s04-SUMMARY.md): every
+ * assertion below was confirmed, by a temporary local mutation of the file
+ * it guards and then a revert, to actually fail against the mutated shape.
+ * Restoration was verified via a SHA-256 checksum of the pristine file taken
+ * before each mutation and compared after each revert -- NOT
+ * `git diff --quiet`, which this repo has a documented false-negative trap
+ * against.
+ *
+ * Each test is labelled PRESENCE (a specific token must exist) or ABSENCE (a
+ * token/shape must NOT exist).
+ */
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..')
+
+const OAUTH_LOGIN_TSX =
+  'src/frontend/screens/Login/components/OAuthLogin/index.tsx'
+const LOGIN_TSX = 'src/frontend/screens/Login/index.tsx'
+const WEBVIEW_INDEX_TSX = 'src/frontend/screens/WebView/index.tsx'
+
+const readRaw = (relPath: string) =>
+  readFileSync(join(REPO_ROOT, relPath), 'utf8')
+
+const read = (relPath: string) => stripSourceComments(readRaw(relPath))
+
+// Mirrors Login/__tests__/index.test.tsx's `epicRunnerBlock()`: slice a
+// runner's tile props from its `class="<name>"` marker to the next
+// `<Runner`, so an assertion about one tile's props cannot pass by matching
+// a sibling tile that happens to carry the same prop.
+function runnerBlock(source: string, className: string): string {
+  const startMarker = `class="${className}"`
+  const start = source.indexOf(startMarker)
+  expect(start).toBeGreaterThan(-1)
+  const rest = source.slice(start)
+  const nextRunner = rest.indexOf('<Runner', 1)
+  return nextRunner === -1 ? rest : rest.slice(0, nextRunner)
+}
+
+describe('261003-s04 Task 1: OAuthLogin renders the Dialog only behind the phase gate', () => {
+  it('FILLED-SPECIMEN GUARD (raw, unstripped) -- OAuthLogin/index.tsx actually contains the literal "useTauriOAuthLogin" token, so a broken comment stripper turns every other assertion in this file RED rather than vacuously green', () => {
+    const raw = readRaw(OAUTH_LOGIN_TSX)
+    expect(raw).toMatch(/useTauriOAuthLogin/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- useTauriOAuthLogin( is called in OAuthLogin/index.tsx', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    // Breaks if: the hook call is removed or renamed.
+    expect(source).toMatch(/useTauriOAuthLogin\(/)
+  })
+
+  it("SOURCE GATE (PRESENCE) -- exactly one <Dialog, mounted ONLY behind all five Dialog-rendering phase literals ('preparing', 'finalizing', 'blocked', 'error', 'timeout'), never hoisted above any of them", () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    // Breaks if: a second <Dialog is added, or the phase-literal membership
+    // set is declared (or referenced) AFTER the <Dialog JSX -- which would
+    // mean the Dialog no longer sits strictly behind the phase gate.
+    const dialogIndex = source.indexOf('<Dialog')
+    expect(dialogIndex).toBeGreaterThan(-1)
+    expect((source.match(/<Dialog[\s>]/g) ?? []).length).toBe(1)
+
+    for (const phase of [
+      'preparing',
+      'finalizing',
+      'blocked',
+      'error',
+      'timeout'
+    ]) {
+      const phaseIndex = source.indexOf(`'${phase}'`)
+      expect(phaseIndex).toBeGreaterThan(-1)
+      expect(dialogIndex).toBeGreaterThan(phaseIndex)
+    }
+  })
+
+  it("SOURCE GATE (ABSENCE) -- zero occurrences of the 'awaiting' literal: a native sign-in window is on screen during that phase, so a panel behind it is the bede817fd regression D-3 forbids ('idle' is deliberately not gated this way -- it is the hook's own initial/post-success value and may legitimately be named in a guard)", () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    expect((source.match(/'awaiting'/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- useSuppressStoreEmbed() is called directly, because the Dialog (which acquires suppression by mounting) is absent for most of the overlay life', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    expect(source).toMatch(/useSuppressStoreEmbed\(\)/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- TauriLoginPanel is rendered with the live hook state', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    expect(source).toMatch(
+      /<TauriLoginPanel runner=\{runner\} state=\{state\} \/>/
+    )
+  })
+
+  it('SOURCE GATE (PRESENCE, D-2) -- the success and cancel handlers are built with useCallback closing on an EMPTY dependency array, reading the latest dismiss (and completion payload handling) from a ref -- a future "cleanup" that inlines either handler re-runs the capture effect mid-login and burns a single-use OAuth code', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    // Breaks if: EITHER useCallback gains a non-empty dependency array -- the
+    // empty-array count is required to equal the total useCallback count (2),
+    // not just "at least one", so mutating only the success handler's array
+    // (leaving the cancel handler's alone) still goes red -- or the
+    // dismissRef identifier is removed in favour of closing over `dismiss`
+    // directly.
+    const totalUseCallbacks = (source.match(/useCallback\(/g) ?? []).length
+    expect(totalUseCallbacks).toBe(2)
+    const emptyDepUseCallbacks = (
+      source.match(
+        /useCallback\(\s*\([^)]*\)\s*=>\s*\{[\s\S]*?\},\s*\[\]\s*\)/g
+      ) ?? []
+    ).length
+    expect(emptyDepUseCallbacks).toBe(totalUseCallbacks)
+    expect(source).toMatch(/dismissRef/)
+    expect(source).toMatch(/dismissRef\.current = dismiss/)
+  })
+
+  it('SOURCE GATE (ABSENCE, D-5) -- zero router-navigation calls and zero page-reload calls: dismiss is the only exit, and Retry stays single-sourced in TauriLoginPanel', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    expect((source.match(/useNavigate\(/g) ?? []).length).toBe(0)
+    expect((source.match(/navigate\(/g) ?? []).length).toBe(0)
+    expect((source.match(/location\.reload\(/g) ?? []).length).toBe(0)
+  })
+
+  it("SOURCE GATE (PRESENCE) -- OAUTH_OVERLAY_RUNNERS exists in Login/index.tsx and contains 'gog'", () => {
+    const source = read(LOGIN_TSX)
+
+    const tupleMatch = source.match(/OAUTH_OVERLAY_RUNNERS = \[([^\]]*)\]/)
+    expect(tupleMatch).not.toBeNull()
+    expect(tupleMatch?.[1]).toMatch(/'gog'/)
+  })
+
+  it("SOURCE GATE (PRESENCE, per-tile) -- the GOG tile carries BOTH primaryLoginAction={() => openLoginOverlay('gog')} and loginUrl={gogLoginPath} (the loginUrl half is load-bearing: LoginWarning and Humble/Keys still navigate to that route)", () => {
+    const source = read(LOGIN_TSX)
+    const gogBlock = runnerBlock(source, 'gog')
+
+    expect(gogBlock).toMatch(
+      /primaryLoginAction=\{\(\) => openLoginOverlay\('gog'\)\}/
+    )
+    expect(gogBlock).toMatch(/loginUrl=\{gogLoginPath\}/)
+  })
+
+  it('SOURCE GATE (PRESENCE, regression guard, read-only file) -- the login-pathname arm of WebView/index.tsx still returns TauriLoginPanel with runner and oauthLoginState, so a later edit cannot blank the loginweb routes', () => {
+    const source = read(WEBVIEW_INDEX_TSX)
+
+    expect(source).toMatch(/isLoginPathname\(pathname\)/)
+    expect(source).toMatch(
+      /<TauriLoginPanel runner=\{runner\} state=\{oauthLoginState\} \/>/
+    )
+  })
+})

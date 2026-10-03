@@ -1,0 +1,11 @@
+.oauthLoginBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  // Deliberately no fixed width here, mirroring .humbleLoginBody: this body
+  // only ever renders TauriLoginPanel's in-progress/error copy (there is no
+  // embedded webview on this surface), and MuiDialog's Paper shrink-wraps to
+  // whichever child ends up widest. `margin-inline: auto` self-corrects to
+  // whatever free space exists on either side (quick task 261003-s04).
+  margin-inline: auto;
+}
