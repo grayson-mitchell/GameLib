@@ -1,4 +1,11 @@
-import { useContext, useEffect, useMemo, useState } from 'react'
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -128,8 +135,68 @@ export default function Header({ list, totalGames }: Props) {
   const staleTime =
     syncedAt !== null ? formatRelativeTime(Date.now() - syncedAt) : ''
 
+  // debug/tier2-right-edge-shifts-with-scrollbar (2026-10-03): the parent
+  // `.NavShell__tier2Portal`'s `scrollbar-gutter: stable` reserves a
+  // WKWebView PLATFORM-DEFAULT width (~17px) for its as-yet-absent
+  // scrollbar instead of this page's real one (live-measured 10px) -- so
+  // the portal's `clientWidth` is 7px NARROWER while idle than once the
+  // scrollbar actually appears, where the real 10px reservation is already
+  // correct (both measure clientWidth=246 there). Right-justified
+  // descendants of this component (the search bar's right edge, the filter
+  // caret, the selected-filter highlight) track that content box's right
+  // edge, so they visibly jump RIGHT by 7px the instant a scrollbar
+  // appears -- backwards from `stable`'s own promise of "same width
+  // scrolled or not", confirmed by live measurement in both states.
+  //
+  // This cannot be fixed with CSS alone: the needed correction is 0px once
+  // the real scrollbar is present and exactly the idle shortfall otherwise
+  // -- precisely the distinction `scrollbar-gutter` is supposed to compute
+  // and gets wrong in this engine. Measure the TRUE native scrollbar width
+  // with a hidden off-screen probe (the same technique `antd`'s
+  // `getScrollBarSize()` uses) and widen this root element by the idle
+  // shortfall, so its right edge sits at the SAME absolute position
+  // regardless of scrollbar state. Untestable under this project's jest
+  // (`testEnvironment: 'node'`, no jsdom) -- verified live instead; see the
+  // resolved debug session for the measured numbers.
+  const headerRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const header = headerRef.current
+    const portal = header?.parentElement
+    if (!header || !portal) {
+      return
+    }
+
+    const applyScrollbarGutterCorrection = () => {
+      const overflowing = portal.scrollHeight > portal.clientHeight
+      if (overflowing) {
+        // The real scrollbar is present and already correctly sized --
+        // no correction needed.
+        header.style.width = ''
+        return
+      }
+
+      const probe = document.createElement('div')
+      probe.style.cssText =
+        'position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;overflow:scroll;'
+      document.body.appendChild(probe)
+      const trueScrollbarWidth = probe.offsetWidth - probe.clientWidth
+      document.body.removeChild(probe)
+
+      const target = portal.offsetWidth - trueScrollbarWidth
+      const correction = target - portal.clientWidth
+      header.style.width = correction > 0 ? `calc(100% + ${correction}px)` : ''
+    }
+
+    applyScrollbarGutterCorrection()
+
+    const observer = new ResizeObserver(applyScrollbarGutterCorrection)
+    observer.observe(portal)
+    return () => observer.disconnect()
+  }, [])
+
   return (
-    <div className="Header">
+    <div className="Header" ref={headerRef}>
       <div className="Header__utilities">
         <Link
           to="/console"

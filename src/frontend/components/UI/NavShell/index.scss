@@ -525,13 +525,29 @@ body.dracula-classic .NavShell__tier2::after {
   // threshold: 204 - 16 - 16 = 172px of text width, ~145px of label, and the
   // ~15px the bar claims dropped it under.
   //
-  // `stable` reserves that track unconditionally, so the content box is the
-  // same width scrolled or not and NOTHING can reflow on the transition.
-  // That reservation is not free -- it is paid for by
-  // `--tier2-row-padding-inline` dropping 16px -> 12px (NavItem/index.scss),
-  // which is why the two changes are one edit and not two. Reserving without
-  // paying would have made the wrap PERMANENT rather than intermittent, i.e.
-  // strictly worse than the reported defect.
+  // `stable` is SUPPOSED to reserve that track unconditionally, so the
+  // content box is the same width scrolled or not. That reservation is not
+  // free -- it is paid for by `--tier2-row-padding-inline` dropping
+  // 16px -> 12px (NavItem/index.scss), which is why the two changes are one
+  // edit and not two. Reserving without paying would have made the wrap
+  // PERMANENT rather than intermittent, i.e. strictly worse than the
+  // reported defect.
+  //
+  // CORRECTED 2026-10-03 (debug/tier2-right-edge-shifts-with-scrollbar):
+  // the "same width scrolled or not" claim above is FALSE in this
+  // WKWebView engine, confirmed by live measurement. `stable` reserves a
+  // platform-DEFAULT width (~17px) while idle instead of this page's real
+  // scrollbar width (10px, live-measured via a hidden-probe technique and
+  // cross-checked against the active-state clientWidth itself) -- the
+  // reservation is only correct once the scrollbar actually appears. Net
+  // effect: the content box is 7px NARROWER while idle than while
+  // scrolling, so right-justified descendants jump RIGHT by 7px the
+  // instant the scrollbar appears -- the opposite of what this declaration
+  // promises, and a known WKWebView quirk (see GitHub tagrex/tagrex#375
+  // for the identical phenomenon elsewhere). A runtime correction for this
+  // lives in `Header/index.tsx` (the portal's only child) rather than
+  // here, because the fix needs the page's actual measured scrollbar
+  // width, which CSS alone cannot obtain.
   //
   // No-op where the platform draws overlay scrollbars (the macOS default --
   // per spec `scrollbar-gutter` only applies to classic scrollbars), which

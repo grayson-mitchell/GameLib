@@ -25,7 +25,10 @@
  *
  * 261002-hx0 gave `Header` real hook usage of its own (`useContext` against
  * BOTH `LibraryContext` and `ContextProvider`, plus `useState`/`useEffect`/
- * `useMemo`) that its two dissolved predecessors previously carried. Calling
+ * `useMemo`) that its two dissolved predecessors previously carried, and
+ * 261003 tier2-right-edge-shifts-with-scrollbar added `useRef`/
+ * `useLayoutEffect` (the scrollbar-gutter correction) -- both stubbed below
+ * the same way. Calling
  * a function component directly, outside of any renderer, means there is no
  * hook dispatcher -- a real `useContext`/`useState`/etc. call would throw
  * "Invalid hook call". `react` is therefore partially mocked below, the same
@@ -131,7 +134,18 @@ jest.mock('react', () => {
       jest.fn()
     ],
     useEffect: jest.fn(),
-    useMemo: (fn: () => unknown) => fn()
+    useMemo: (fn: () => unknown) => fn(),
+    // 261003 tier2-right-edge-shifts-with-scrollbar added a real `useRef` +
+    // `useLayoutEffect` pair to `Header` (the scrollbar-gutter correction).
+    // Same reason as every other stub in this factory: calling `Header`
+    // directly, outside of any renderer, means there is no hook dispatcher,
+    // and the real implementations would throw "Invalid hook call". Neither
+    // stub needs to DO anything here -- there is no real DOM/jsdom in this
+    // project's jest environment for the effect body to measure against,
+    // and the correction logic itself is verified live instead (see the
+    // resolved debug session).
+    useRef: (initial: unknown) => ({ current: initial }),
+    useLayoutEffect: jest.fn()
   }
 })
 
