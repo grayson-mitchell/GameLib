@@ -72,6 +72,26 @@
   --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.55);
 
+  /* Tier-2 nav row tokens — verbatim from themes.scss's body.midnightMirage
+     block, added for sketch 005. These are what the SHIPPED Views rows
+     actually consume via NavItem/index.scss, so a selection treatment has to
+     be judged against these values and not against --color-primary.
+
+     --navbar-active-background is a color-mix() here; it is a flat hex in the
+     other 10 theme blocks. --navbar-active resolves --text-secondary ->
+     --brand-text-02. --accent is NOT declared by this theme block at all and
+     falls through to the global base in styles/_colors.scss:46. */
+  --navbar-accent: var(--brand-text-01); /* inactive row text  #caf3fd */
+  --navbar-active: var(--brand-text-02); /* active row text    #a5edfd */
+  --navbar-active-background: color-mix(
+    in srgb,
+    var(--neutral-03),
+    var(--neutral-04) 35%
+  );
+  --accent: #8bffff; /* styles/_colors.scss:46 — global, not per-theme */
+  /* --accent-overlay is undeclared in this theme; left unset deliberately so
+     the var() fallback chains in the sketch behave exactly as they ship. */
+
   /* macOS traffic-light inset — hard constraint for any top-mounted bar
      under Tauri when the titlebar is transparent/overlay. */
   --traffic-light-inset: 78px;

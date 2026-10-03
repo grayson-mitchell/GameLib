@@ -33,6 +33,7 @@ a usable tab style.
 | 002 | sidebar-overflow-strategy | Where do the other ~9 destinations go? | **B, adapted** — 2nd level vertical, not horizontal | navigation, information-architecture, shell |
 | 003 | two-tier-card-nav | How does a vertical tier 2 behave under card tabs? | **Synthesis** | navigation, information-architecture, shell |
 | 004 | games-filter-panel | What goes in the Games tier-2 panel? | **C — hybrid** | navigation, filtering, library |
+| 005 | views-section-distinction | How does Views read as a different *kind* of control from the facet groups below it? | **D — synthesis**: C's segmented block + A's `VIEWS` header | library, filtering, tier-2, selection-state, theme-survival |
 
 ## Outcome — Phases 34.10 and 34.11
 
