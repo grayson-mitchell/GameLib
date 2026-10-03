@@ -36,6 +36,7 @@ import { initShortcuts } from './helpers/shortcuts'
 import { configStore } from './helpers/electronStores'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
 import { defaultThemes } from './components/UI/ThemeSelector'
+import { migrateThemeKey } from './components/UI/ThemeSelector/themeLabels'
 import Loading from './screens/Loading'
 import { hydrateStoreSnapshot } from '../preload/tauriTransport'
 import { applyFramelessDecorations } from '../preload/api/tauriWindowChrome'
@@ -258,7 +259,18 @@ window.setTheme = async (themeClass: string) => {
   }
 }
 
-const themeClass = configStore.get('theme', DEFAULT_THEME)
+// Quick task 261004-bz3: a stored `theme` value may still be one of the
+// four theme keys retired from `defaultThemes` in this same change. Route
+// it through the migration once at boot and persist the result, so this is
+// a one-time rewrite rather than a translation performed on every launch.
+// A genuinely custom theme filename is not a retired key and passes
+// through `migrateThemeKey` unchanged, so it still reaches `setTheme`'s
+// custom-theme branch below untouched.
+const storedThemeClass = configStore.get('theme', DEFAULT_THEME)
+const themeClass = migrateThemeKey(storedThemeClass)
+if (themeClass !== storedThemeClass) {
+  configStore.set('theme', themeClass)
+}
 window.setTheme(themeClass)
 
 // helper function to generate images for steam

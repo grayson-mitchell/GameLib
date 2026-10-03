@@ -19,7 +19,11 @@
  */
 import { TFunction } from 'i18next'
 
-import { defaultThemes, resolveThemeLabel } from '../themeLabels'
+import {
+  defaultThemes,
+  migrateThemeKey,
+  resolveThemeLabel
+} from '../themeLabels'
 
 // Copy-preserving proof: a `t` that returns its own second (English
 // default) argument unchanged.
@@ -35,14 +39,10 @@ const sentinelT = ((_key: string, _defaultValue: string) =>
 const expectedLabels: Record<string, string> = {
   midnightMirage: 'Midnight Mirage',
   cyberSpaceOasis: 'Cyberspace Oasis',
-  cyberSpaceOasisAlt: 'Cyberspace Oasis Classic',
   'high-contrast': 'High Contrast',
-  'old-school': 'Old School GameLib',
   dracula: 'Dracula',
   marine: 'Marine',
-  'marine-classic': 'Marine Classic',
   zombie: 'Zombie',
-  'zombie-classic': 'Zombie Classic',
   'nord-light': 'Nord Light',
   'nord-dark': 'Nord Dark',
   gruvbox_dark: 'Gruvbox Dark',
@@ -50,11 +50,11 @@ const expectedLabels: Record<string, string> = {
 }
 
 describe('resolveThemeLabel', () => {
-  it('covers exactly the 14 known theme keys (guards against silent drift from defaultThemes)', () => {
+  it('covers exactly the 10 known theme keys (guards against silent drift from defaultThemes)', () => {
     expect(Object.keys(defaultThemes).sort()).toEqual(
       Object.keys(expectedLabels).sort()
     )
-    expect(Object.keys(defaultThemes)).toHaveLength(14)
+    expect(Object.keys(defaultThemes)).toHaveLength(10)
   })
 
   it.each(Object.entries(expectedLabels))(
@@ -76,5 +76,22 @@ describe('resolveThemeLabel', () => {
     expect(resolveThemeLabel('my-custom-theme', sentinelT)).toBe(
       'my-custom-theme'
     )
+  })
+})
+
+describe('migrateThemeKey', () => {
+  it('maps each of the 4 retired theme keys to its surviving replacement', () => {
+    expect(migrateThemeKey('cyberSpaceOasisAlt')).toBe('cyberSpaceOasis')
+    expect(migrateThemeKey('marine-classic')).toBe('marine')
+    expect(migrateThemeKey('zombie-classic')).toBe('zombie')
+    expect(migrateThemeKey('old-school')).toBe('zombie')
+  })
+
+  it('returns a surviving key unchanged', () => {
+    expect(migrateThemeKey('marine')).toBe('marine')
+  })
+
+  it('passes a non-retired, non-defaultThemes key through unchanged (custom theme CSS filename)', () => {
+    expect(migrateThemeKey('my-custom-theme.css')).toBe('my-custom-theme.css')
   })
 })

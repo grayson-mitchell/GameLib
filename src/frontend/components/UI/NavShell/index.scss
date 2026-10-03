@@ -107,9 +107,9 @@
   // one half alone paints no visible error, it just quietly stops erasing.
   //
   // ORIGINALLY WRITTEN as `var(--divider)` and WRONG: `--divider` is a
-  // no-fallback custom property declared in only 2 of `themes.scss`'s 11
-  // theme blocks (`body.midnightMirage` line 97, `body.classic /
-  // .cyberSpaceOasis* / .cyberSpaceOasisAlt` line 145 -- grep
+  // no-fallback custom property declared in only 2 of `themes.scss`'s 10
+  // theme blocks (`body.midnightMirage` line 95, `body.cyberSpaceOasis`
+  // line 183 -- grep
   // `^\s*--divider:` in `src/frontend/themes.scss` to re-verify). Per the
   // CSS custom-properties spec, `var(--divider)` with no fallback and an
   // undefined property is invalid at computed-value time, which drops the
@@ -122,16 +122,17 @@
   // var(--divider)` painted in midnightMirage (`--divider` defined) and
   // measured `box-shadow: none` in dracula (`--divider` undefined) in
   // `34.10-F04-DIAGNOSIS.md`'s own live capture. The run-3 live gate sweeps
-  // midnightMirage, gruvbox_dark, dracula, and a dracula-classic spot-check
-  // (34.10-VERIFICATION.md) -- three of those four have no `--divider`, so
-  // the original fix was invisible in 3/4 gate themes despite every unit
-  // gate passing.
+  // midnightMirage, gruvbox_dark, and dracula (34.10-VERIFICATION.md --
+  // its near-duplicate dracula spot-check was retired in quick task
+  // 261004-bz3 along with the theme itself) -- two of those three have no
+  // `--divider`, so the original fix was invisible in 2/3 gate themes
+  // despite every unit gate passing.
   //
-  // FIXED to `var(--body-background)`: this token is declared in all 11
+  // FIXED to `var(--body-background)`: this token is declared in all 10
   // theme blocks in `themes.scss` (grep `^\s*--body-background:`,
   // confirmed against a structural per-block parse, not string counting --
   // every occurrence outside the base `body {}` and component-scoped
-  // sub-selectors like `.sid-input` lands inside exactly one of the 11 real
+  // sub-selectors like `.sid-input` lands inside exactly one of the 10 real
   // theme blocks). It is also a STRONGER erasure guarantee than the
   // original relational-but-distinct `--divider` would have given even in
   // the 2 themes where `--divider` DID resolve: the active tab's own
@@ -250,16 +251,16 @@
   // defect class (see the `.NavShell__navbar` border-bottom comment above,
   // which recorded this exact line as "KNOWN, OUT-OF-SCOPE" at the time).
   // `--divider` is a no-fallback custom property declared in only 2 of
-  // `themes.scss`'s 11 theme blocks (`themes.scss:97`, `:145`) -- an
+  // `themes.scss`'s 10 theme blocks (`themes.scss:95`, `:183`) -- an
   // undefined no-fallback custom property is invalid at computed-value time
   // per the CSS Custom Properties spec, which drops the ENTIRE
   // `border-inline-end` shorthand, not just the colour. The symptom in
   // `gruvbox_dark` and `dracula` (both mandatory stress-test themes, and
-  // both among the 9 that never define `--divider`) was therefore a MISSING
+  // both among the 8 that never define `--divider`) was therefore a MISSING
   // divider, not a wrong-coloured one.
   //
   // SECOND ATTEMPT, ALSO WRONG (34.11-03, superseded here): substituted
-  // `var(--body-background)`, reasoning that it resolves in all 11 theme
+  // `var(--body-background)`, reasoning that it resolves in all 10 theme
   // blocks so at least the declaration would never drop. That reasoning
   // addressed resolution, not visibility, and missed the actual construction
   // of this border: `.NavShell__tier2` (this selector) sits on the LEFT of
@@ -377,8 +378,9 @@
   // three failed sweep cycles on results that looked fine on paper. Rather
   // than ship a token with directly-observed failure in one of the three
   // mandatory themes -- repeating this exact defect class one theme later
-  // -- dracula (and dracula-classic, which shares the same
-  // `--navbar-background`, themes.scss:280-281) got a scoped override
+  // -- dracula got a scoped override (its retired near-duplicate variant
+  // shared the same `--navbar-background` and the same override, until it
+  // was removed in quick task 261004-bz3)
   // (superseded below, not deleted from this history: the mechanism it
   // targeted is gone, the exception it encodes is not) falling back to the
   // already-proven `--neutral-05`. This meant the divider was not
@@ -471,8 +473,7 @@
 // including `background` -- not exist, regardless of this selector's
 // higher specificity. A property CANNOT win a cascade fight for a box that
 // was never generated.
-body.dracula .NavShell__tier2::after,
-body.dracula-classic .NavShell__tier2::after {
+body.dracula .NavShell__tier2::after {
   background: var(--neutral-05);
 }
 

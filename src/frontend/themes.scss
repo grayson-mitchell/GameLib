@@ -39,9 +39,9 @@ body {
      is declared in only two theme blocks while --neutral-03 is declared in
      only one plus styles/_colors.scss's #272f31 -- so nearly every theme
      landed on #272f31 against its own dark chrome. MEASURED, outline over
-     --navbar-background: 1.04:1 on gruvbox_dark, 1.07:1 on zombie/
-     zombie-classic and old-school, 1.09:1 nord-dark, 1.26:1 midnightMirage.
-     Only classic/cyberSpaceOasis were ever visible, at 4.11:1.
+     --navbar-background: 1.04:1 on gruvbox_dark, 1.07:1 on zombie,
+     1.09:1 nord-dark, 1.26:1 midnightMirage.
+     Only cyberSpaceOasis was ever visible, at 4.11:1.
 
      --accent is the right token precisely because every theme defines one and
      designs it to carry against that theme's chrome: worst case over
@@ -193,9 +193,7 @@ body.midnightMirage {
   --secondary: var(--brand-secondary);
 }
 
-body.classic,
-body.cyberSpaceOasis,
-body.cyberSpaceOasisAlt {
+body.cyberSpaceOasis {
   --background: #151f3d;
   --background-darker: #0d0f1c;
   --background-darker-80: #0d0f1ce0;
@@ -366,8 +364,7 @@ body.high-contrast {
   }
 }
 
-body.dracula,
-body.dracula-classic {
+body.dracula {
   --accent: #bd93f9;
   --accent-overlay: #d5b8ff;
   --navbar-accent: #eae8e5;
@@ -604,8 +601,7 @@ body.nord-dark {
   --secondary-button: #a5dceb;
 }
 
-body.marine,
-body.marine-classic {
+body.marine {
   --accent: #d39f37;
   --accent-overlay: #d39f37;
   --background: #031b22;
@@ -638,8 +634,7 @@ body.marine-classic {
   --icons-background: #134c5c;
 }
 
-body.zombie,
-body.zombie-classic {
+body.zombie {
   --accent: #59c627;
   --accent-overlay: #83da5b;
   --navbar-accent: var(--accent);
@@ -672,64 +667,12 @@ body.zombie-classic {
   --icons-background: #323232;
 }
 
-body.zombie .alphabet-filter-button--active,
-body.zombie-classic .alphabet-filter-button--active {
+body.zombie .alphabet-filter-button--active {
   --alphabet-filter-accent-color: var(--primary-button);
   --alphabet-filter-accent-hover: var(--primary-button);
 }
 
-body.old-school {
-  --accent: #ffa800;
-  --accent-overlay: #ffc44f;
-  --navbar-accent: #eae8e5;
-  --background: #1d1f1f;
-  --body-background: #1d1f1f;
-  --background-darker: #1d1f1f;
-  --current-background: var(--body-background);
-  --navbar-background: #323232;
-  --navbar-active-background: #515151; /* lighter than --navbar-background, so the active row stands out */
-  --gradient-body-background: linear-gradient(
-    90deg,
-    var(--background-darker) -32px,
-    var(--body-background) 64px,
-    var(--body-background) 100%
-  );
-  --input-background: #323232;
-  --modal-background: var(--body-background);
-  --modal-border: var(--body-background);
-  --success: #0bd48c;
-  --success-hover: #28f028;
-  --osk-background: var(--body-background);
-  --osk-button-background: var(--input-background);
-  --osk-button-border: #434343;
-  --action-icon: var(--text-default);
-  --action-icon-hover: var(--accent);
-  --action-icon-active: var(--accent);
-  --primary-button: var(--status-success);
-  --success-button: #0bd48c;
-  --secondary-button: #ffa800;
-  --icons-background: #323232;
-}
-body.classic .sid-input,
-body.old-school .sid-input {
-  background: var(--background);
-}
-
-body.old-school .alphabet-filter-button--active {
-  --alphabet-filter-accent-color: var(--status-success);
-  --alphabet-filter-accent-hover: var(--status-success-hover);
-}
-
-body.classic,
-body.cyberSpaceOasisAlt,
-body.dracula-classic,
-body.marine-classic,
-body.zombie-classic {
-  --navbar-accent: var(--text-default);
-}
-
-body.sweet,
-body.sweet-dark {
+body.sweet {
   --accent: #ff9af7;
   --accent-overlay: #eea6e8;
   --navbar-accent: #d4c2d6;
