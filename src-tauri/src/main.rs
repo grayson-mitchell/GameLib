@@ -2869,10 +2869,20 @@ fn is_login_cancel_request(url: &tauri::Url) -> bool {
 /// - Idempotent via `window.__GAMELIB_LOGIN_CANCEL_STRIP__`, set before any further DOM work.
 /// - Renders exactly ONE control, appended to `document.body || document.documentElement`
 ///   (resolved into a local first; if neither exists yet, the append is skipped rather than
-///   thrown -- WR-04, below), `position:fixed`, pinned to the top-right inset, `z-index` >=
-///   2147483000, visible label text "Cancel sign-in", `role="button"`, `aria-label="Cancel
+///   thrown -- WR-04, below), `position:fixed`, pinned flush to the bar's top-right corner
+///   (`top:0`, `right:0`), `z-index` >= 2147483000, `role="button"`, `aria-label="Cancel
 ///   sign-in"`, and enough contrast to be legible on a light or dark page (styling is
 ///   executor discretion).
+/// - **Quick task 261003-nsk (D-1/D-2): the glyph's own corner of ONE bar, not a floating
+///   pill.** The visible text is now a bare multiplication-sign glyph (`×`), written as
+///   the Rust-escaped sequence so the surrounding source line stays ASCII and greppable --
+///   never the character literally. The accessible name is UNCHANGED (`aria-label`/
+///   `aria-keyshortcuts` still carry "Cancel sign-in"/"Escape"): a differing visible-
+///   text/accessible-name pair is the accepted icon-button pattern here, not an oversight.
+///   The glyph box keeps its OWN opaque background (matching the bar's, so the two read as
+///   one surface) rather than a transparent one -- if the bar's own `build()` ever throws or
+///   the page deletes it, this is still the only exit from a parent-blocking sheet, and its
+///   legibility must not depend on the bar's survival (T-nsk-01).
 /// - **Pointer control, not a keyboard-activatable one (IN-02, `34.4.2-REVIEW.md`).** No
 ///   `tabindex` is set -- REQ-34.4.2-06 forbids key listeners, so this control can only ever
 ///   activate on `click`, and advertising `tabindex="0"` would promise Enter/Space activation
@@ -2938,20 +2948,23 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
         "strip.setAttribute('role', 'button'); ",
         "strip.setAttribute('aria-label', 'Cancel sign-in'); ",
         "strip.setAttribute('aria-keyshortcuts', 'Escape'); ",
-        "strip.textContent = 'Cancel sign-in'; ",
+        "strip.textContent = '\\u00d7'; ",
         "strip.style.position = 'fixed'; ",
-        "strip.style.top = '8px'; ",
-        "strip.style.right = '8px'; ",
+        "strip.style.top = '0'; ",
+        "strip.style.right = '0'; ",
+        "strip.style.width = '32px'; ",
+        "strip.style.height = '32px'; ",
+        "strip.style.boxSizing = 'border-box'; ",
+        "strip.style.lineHeight = '31px'; ",
+        "strip.style.textAlign = 'center'; ",
+        "strip.style.fontSize = '18px'; ",
         "strip.style.zIndex = '2147483000'; ",
-        "strip.style.padding = '6px 12px'; ",
-        "strip.style.borderRadius = '4px'; ",
-        "strip.style.background = '#1a1a1a'; ",
-        "strip.style.color = '#ffffff'; ",
+        "strip.style.background = '#161c1e'; ",
+        "strip.style.color = '#caf3fd'; ",
         "strip.style.fontFamily = 'sans-serif'; ",
-        "strip.style.fontSize = '13px'; ",
+        "strip.style.borderBottom = '1px solid #272f31'; ",
         "strip.style.cursor = 'pointer'; ",
         "strip.style.userSelect = 'none'; ",
-        "strip.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'; ",
         "strip.addEventListener('click', function(evt) { ",
         "evt.preventDefault(); ",
         "deliver(); ",
@@ -3004,11 +3017,30 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
 ///   re-running this whole script.
 /// - Renders exactly ONE element, id `'__gamelib_login_origin_banner__'`, appended to
 ///   `document.body || document.documentElement` (null-root-safe, mirrors the cancel strip's
-///   WR-04 fix), `position: fixed`, pinned to the **top-LEFT** inset (`top: 8px`, `left: 8px`)
-///   -- the opposite corner from the cancel strip's top-right, so the two controls can never
-///   overlap (T-34.5-C7-05).
-/// - `z-index: '2147482999'` -- strictly BELOW the cancel strip's `'2147483000'`, so the banner
-///   can never paint over the sheet's only exit affordance (T-34.5-C7-05).
+///   WR-04 fix), `position: fixed`.
+/// - **Quick task 261003-nsk (D-1/D-2): ONE full-width bar, not a top-left pill.** `top`,
+///   `left` and `right` are all `'0'`; `textAlign` is `'center'`. The former "opposite
+///   corners, so the two controls can never overlap" claim (T-34.5-C7-05) is now FALSE -- the
+///   bar spans the full width, including under the cancel glyph's corner -- and is retired
+///   rather than left standing as a description of geometry that no longer exists. It is
+///   replaced by three weaker-but-real invariants, each gated:
+///   1. `z-index: '2147482999'` stays strictly BELOW the cancel strip's `'2147483000'`, so the
+///      banner can never paint over the sheet's only exit affordance (unchanged from before,
+///      re-gated by `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`).
+///   2. `pointerEvents: 'none'` (unchanged, see below) is now LOAD-BEARING rather than merely
+///      polite: a 32px-tall full-width element with pointer events enabled would intercept
+///      every click across the top of a page GameLib does not control, including the glyph's
+///      own click -- gated by the retained `login_origin_banner_script_pointer_events_are_disabled`.
+///   3. Horizontal `padding` is kept >= the glyph box's `width`, so the centred origin text
+///      truncates (`textOverflow: 'ellipsis'`) before it can run under the glyph, rather than
+///      being visually clipped into a different-looking hostname -- gated by the new
+///      `login_origin_banner_script_reserves_horizontal_room_for_the_close_glyph` (numeric
+///      comparison, not substring presence).
+///   `height` matches the cancel strip's own `height` literal exactly (gated by
+///   `login_origin_banner_and_cancel_strip_agree_on_one_bar_height`) so the two elements read
+///   as ONE bar, not two. This is a floating overlay per D-2: no body offset or page-layout
+///   rule of any kind is injected anywhere in this script -- page content stays exactly where
+///   Humble put it.
 /// - `pointerEvents: 'none'`, `userSelect: 'none'`. Registers NO event listener of any kind --
 ///   no `click`, no `keydown`/`keyup`/`keypress`, and (unlike the cancel strip, which needs
 ///   `DOMContentLoaded` for its own click-armed control) no `addEventListener` call anywhere in
@@ -3052,15 +3084,23 @@ fn login_origin_banner_script(origin: &str) -> String {
         "banner.id = ID; ",
         "banner.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; ",
         "banner.style.position = 'fixed'; ",
-        "banner.style.top = '8px'; ",
-        "banner.style.left = '8px'; ",
+        "banner.style.top = '0'; ",
+        "banner.style.left = '0'; ",
+        "banner.style.right = '0'; ",
+        "banner.style.height = '32px'; ",
+        "banner.style.boxSizing = 'border-box'; ",
+        "banner.style.lineHeight = '31px'; ",
+        "banner.style.textAlign = 'center'; ",
         "banner.style.zIndex = '2147482999'; ",
-        "banner.style.padding = '6px 12px'; ",
-        "banner.style.borderRadius = '4px'; ",
-        "banner.style.background = '#1a1a1a'; ",
-        "banner.style.color = '#ffffff'; ",
+        "banner.style.padding = '0 36px'; ",
+        "banner.style.whiteSpace = 'nowrap'; ",
+        "banner.style.overflow = 'hidden'; ",
+        "banner.style.textOverflow = 'ellipsis'; ",
+        "banner.style.background = '#161c1e'; ",
+        "banner.style.color = '#caf3fd'; ",
         "banner.style.fontFamily = 'sans-serif'; ",
-        "banner.style.fontSize = '13px'; ",
+        "banner.style.fontSize = '12px'; ",
+        "banner.style.borderBottom = '1px solid #272f31'; ",
         "banner.style.pointerEvents = 'none'; ",
         "banner.style.userSelect = 'none'; ",
         "banner.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'; ",
@@ -14650,6 +14690,94 @@ mod tests {
         let a = login_origin_banner_script(TEST_LOGIN_ORIGIN);
         let b = login_origin_banner_script(TEST_LOGIN_ORIGIN);
         assert_eq!(a, b);
+    }
+
+    // ---- Quick task 261003-nsk additions: one bar across the sheet's top edge, both
+    // injected scripts restyled (D-1/D-2/D-3, T-nsk-01..06). RED direction observed against
+    // the pre-edit source (recorded verbatim in `261003-nsk-SUMMARY.md`): every one of these
+    // five failed before the production edit landed -- `login_origin_banner_script` set
+    // neither `right` nor `height` nor a padding literal at all, and `login_cancel_strip_script`
+    // still wrote the visible phrase into `textContent` with 8px insets on both axes.
+
+    #[test]
+    fn login_origin_banner_script_spans_the_full_width_and_centres_its_text() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        assert!(script.contains("banner.style.left = '0'"));
+        assert!(script.contains("banner.style.right = '0'"));
+        assert!(script.contains("banner.style.top = '0'"));
+        assert!(script.contains("banner.style.textAlign = 'center'"));
+        assert!(!script.contains("banner.style.top = '8px'"));
+        assert!(!script.contains("banner.style.left = '8px'"));
+    }
+
+    #[test]
+    fn login_origin_banner_script_reserves_horizontal_room_for_the_close_glyph() {
+        // Numeric comparison, not substring presence (mirrors
+        // `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`'s own
+        // discipline): the bar's horizontal padding must be at least the glyph box's width,
+        // so a centred origin can never run under the glyph (T-nsk-06).
+        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let padding_horizontal: i64 = banner_script
+            .split("banner.style.padding = '0 ")
+            .nth(1)
+            .and_then(|s| s.split("px'").next())
+            .expect("banner script must set a horizontal padding")
+            .parse()
+            .expect("banner padding must parse as an integer");
+        let glyph_width: i64 = strip_script
+            .split("strip.style.width = '")
+            .nth(1)
+            .and_then(|s| s.split("px'").next())
+            .expect("strip script must set width")
+            .parse()
+            .expect("strip width must parse as an integer");
+        assert!(padding_horizontal >= glyph_width);
+    }
+
+    #[test]
+    fn login_origin_banner_and_cancel_strip_agree_on_one_bar_height() {
+        // The "reads as ONE bar" invariant: both elements' height literals must be equal.
+        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let banner_height: &str = banner_script
+            .split("banner.style.height = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("banner script must set height");
+        let strip_height: &str = strip_script
+            .split("strip.style.height = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("strip script must set height");
+        assert_eq!(banner_height, strip_height);
+    }
+
+    #[test]
+    fn login_cancel_strip_script_shows_a_bare_glyph_and_keeps_its_accessible_name() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("strip.setAttribute('aria-label', 'Cancel sign-in')"));
+        assert!(script.contains("strip.setAttribute('aria-keyshortcuts', 'Escape')"));
+        assert!(!script.contains("strip.textContent = 'Cancel sign-in'"));
+        assert!(script.contains("strip.textContent = '\\u00d7'"));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_glyph_box_is_flush_with_the_bar_corner() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("strip.style.top = '0'"));
+        assert!(script.contains("strip.style.right = '0'"));
+        let width: &str = script
+            .split("strip.style.width = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("strip script must set width");
+        let height: &str = script
+            .split("strip.style.height = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("strip script must set height");
+        assert_eq!(width, height);
     }
 
     #[test]
