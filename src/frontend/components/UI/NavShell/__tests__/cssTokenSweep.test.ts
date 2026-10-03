@@ -68,7 +68,7 @@
  *      still rendered nothing, because `--border-color` is
  *      `var(--divider, var(--neutral-03))` and both arms are near-universally
  *      undeclared, landing on `_colors.scss`'s #272f31 -- measured at 1.07:1
- *      against `--navbar-background` on zombie-classic. Name-scope checking
+ *      against `--navbar-background` on zombie. Name-scope checking
  *      cannot see that either; only measuring the rendered pair can. The
  *      blind spot is
  *      unchanged and still real; only this illustration of it is spent. It

@@ -22,7 +22,7 @@
  *   .planning/todos/pending/2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live.md
  *   .planning/todos/pending/2026-09-11-humble-key-row-separator-is-invisible-in-light-themes.md
  *
- * `--divider` itself is deliberately declared in only 2 of the 11 theme
+ * `--divider` itself is deliberately declared in only 2 of the 10 theme
  * blocks in `themes.scss` -- universalising it is actively forbidden by two
  * existing NavShell gates, so a theme-side fix is not available here and
  * this file must not attempt one:

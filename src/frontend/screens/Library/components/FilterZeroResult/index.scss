@@ -8,8 +8,8 @@
 // value in gruvbox_dark or dracula.
 .FilterZeroResult {
   // CR-03 (34.11 code review): `--navbar-active` is declared in only 4 of
-  // the 11 theme blocks, so the bare `var(--navbar-active)` the Clear-all
-  // action used to carry was invalid at computed-value time in the other 7
+  // the 10 theme blocks, so the bare `var(--navbar-active)` the Clear-all
+  // action used to carry was invalid at computed-value time in the other 6
   // and dropped the whole `color` declaration -- the only affordance
   // marking this as a button rather than body text (its underline appears
   // on hover only). Resolved through the same fallback chain

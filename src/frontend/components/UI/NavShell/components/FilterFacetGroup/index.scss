@@ -18,14 +18,14 @@
 //     NavItem/index.scss:19).
 //   --text-hover -> --accent
 //     --text-hover has no value in gruvbox_dark or dracula either (only
-//     midnightMirage, classic/cyberSpaceOasis, high-contrast and
+//     midnightMirage, cyberSpaceOasis, high-contrast and
 //     nord-light define it); --accent resolves in every theme block.
 //   --navbar-active -> var(--navbar-active, var(--accent-overlay, var(--accent)))
 //     ADDED BY THE 34.11 CODE REVIEW (CR-03). The two substitutions above
 //     were made for exactly this reason and then this token -- the one this
 //     stylesheet leans on hardest -- was left bare. `--navbar-active` is
-//     declared in only 4 of the 11 theme blocks (midnightMirage,
-//     gruvbox_dark, dracula-classic, nord-light), so in the other 7 every
+//     declared in only 4 of the 10 theme blocks (midnightMirage,
+//     gruvbox_dark, dracula, nord-light), so in the other 6 every
 //     declaration below that consumed it bare was invalid at
 //     computed-value time and dropped ENTIRELY. The worst case was
 //     `.FilterFacetRow--checked .FilterFacetRow__box`, which lost BOTH
@@ -58,7 +58,7 @@
   // beveled border) and `styles/_buttons.scss:7`'s global `button` rule painted
   // `color: #161616` on top of it -- so the Store, Runnability and More-filters
   // headers rendered as OS push-buttons inside a themed dark panel, identically
-  // in all 11 themes. That theme-invariance is the tell: this was a missing
+  // in all 10 themes. That theme-invariance is the tell: this was a missing
   // declaration, not a token that failed to resolve.
   //
   // The reset below is deliberately paired with `color:` in the same rule --
@@ -164,10 +164,10 @@
   //
   // Coloured TEXT, deliberately NOT a filled pill. A filled accent pill
   // needs a legible foreground ON the accent fill, i.e. a NEW
-  // foreground/background contrast pair to validate across all 11 themes --
+  // foreground/background contrast pair to validate across all 10 themes --
   // the exact defect class CR-03 (see this file's header comment) already
   // produced here once, when the checked-checkbox fill silently stopped
-  // painting in 7 of 11 themes. Bold accent-coloured text on the panel
+  // painting in 6 of 10 themes. Bold accent-coloured text on the panel
   // background instead reuses `.FilterFacetRow--checked`'s already-shipped,
   // already-live-swept `color: var(--filter-active-color)` relationship
   // verbatim, so it introduces zero new contrast pairs.

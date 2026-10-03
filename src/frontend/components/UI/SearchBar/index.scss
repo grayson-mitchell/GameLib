@@ -27,7 +27,7 @@
   // comment above is protecting.
   //
   // A QUIETER VERSION OF THE FOCUS RING, not a separate grey. Operator report
-  // on zombie-classic 2026-10-02: focus looked right, rest "blends into the
+  // on zombie 2026-10-02: focus looked right, rest "blends into the
   // background". It did -- the previous `var(--border-color)` chain resolved
   // to #272f31 in nearly every theme and measured 1.07:1 there against
   // --navbar-background (1.04:1 at worst, on gruvbox_dark). --search-bar-border

@@ -245,15 +245,15 @@
       background: var(--body-background);
       // CR-01 (34.10-REVIEW.md), residual half closed by quick task
       // `260823-w2f`. This read `var(--navbar-active)` bare. That token is
-      // declared in only 4 of themes.scss's 11 theme blocks, and an undefined
+      // declared in only 4 of themes.scss's 10 theme blocks, and an undefined
       // custom property with no fallback is invalid at computed-value time --
       // for an inherited property like `color` the browser does NOT fall back
       // to `.MuiTab-root`'s own rule, it takes the INHERITED value, so in the
-      // other 7 themes this label rendered in an unstyled colour against the
+      // other 6 themes this label rendered in an unstyled colour against the
       // `--body-background` fill painted directly above. The fallback chain is
       // the one `NavItem/index.scss:20-23` established for this exact token and
       // that `themeTokens.test.ts` requires of every guarded consumer; it
-      // resolves to `--accent-overlay` in those 7 (measured 7.42:1-13.92:1).
+      // resolves to `--accent-overlay` in those 6 (measured 7.42:1-13.92:1).
       color: var(--navbar-active, var(--accent-overlay, var(--accent)));
 
       // CR-01 residual, SECOND defect -- found by measurement, not by the
@@ -292,21 +292,24 @@
       }
       // HANDOFF FROM 34.10-18 (34.10-18-SUMMARY.md "Findings"): this line
       // originally read `border-color: var(--divider)`. `--divider` has no
-      // CSS fallback and is declared in only 2 of themes.scss's 11 real
+      // CSS fallback and is declared in only 2 of themes.scss's 10 real
       // theme blocks (`grep -n "^\s*--divider:" src/frontend/themes.scss`
       // to re-verify) -- per the CSS custom-properties spec, `var()` with an
       // undefined property and no fallback is invalid at computed-value
       // time, which drops the entire `border-color` declaration, not just
       // its value, so the cascade fell back to `.MuiTab-root`'s own
-      // `border: 1px solid transparent` in the other 9 themes -- including 3
-      // of the 4 themes the live gate sweeps (gruvbox_dark, dracula,
-      // dracula-classic). The active tab's top/side "card" framing was
+      // `border: 1px solid transparent` in the other 8 themes -- including 2
+      // of the 3 themes the live gate sweeps (gruvbox_dark, dracula; quick
+      // task 261004-bz3 retired dracula's near-duplicate variant, which
+      // shared this same CSS block verbatim and so was never a distinct
+      // data point). The
+      // active tab's top/side "card" framing was
       // fully transparent (invisible) there, even though the core merge
       // illusion (this rule's own `background` + `border-bottom` below)
       // still worked. Fixed to `var(--body-background)` -- the SAME token
       // this rule already uses for `background` and `border-bottom` below,
       // verified (structurally, via `appShellLayout.test.ts`'s
-      // `tokenResolvesInEveryTheme` scan) to resolve in all 11 real theme
+      // `tokenResolvesInEveryTheme` scan) to resolve in all 10 real theme
       // blocks. One token for the tab's entire border (top/side/bottom) and
       // its fill keeps the "this card is made of content-surface material"
       // reading uniform on every edge, not just the bottom, and needs no

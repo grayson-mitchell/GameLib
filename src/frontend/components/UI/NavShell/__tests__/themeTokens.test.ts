@@ -35,34 +35,36 @@ const NAV_SHELL_SCSS = 'src/frontend/components/UI/NavShell/index.scss'
 const HEADER_CSS = 'src/frontend/components/UI/Header/index.css'
 
 /**
- * The 11 real theme root selectors in themes.scss, one representative
- * selector per theme (the last comma-separated selector in a grouped theme,
- * since cssBlock's indexOf(`${selector} {`) needs a literal "selector {"
- * substring and grouped themes only close with `{` on their final selector
- * line). Verified by hand against `grep -n '^body\.' src/frontend/themes.scss`:
- *   midnightMirage; classic/cyberSpaceOasis/cyberSpaceOasisAlt;
- *   gruvbox_dark; high-contrast; dracula/dracula-classic; nord-light;
- *   nord-dark; marine/marine-classic; zombie/zombie-classic;
- *   old-school; sweet/sweet-dark.
+ * The 10 real theme root selectors in themes.scss. Quick task 261004-bz3
+ * trimmed the theme set from 14 selectable names to 10, deleting four
+ * near-duplicate/recoloured variants that were reachable through
+ * `defaultThemes` and three CSS-only blocks that were never reachable
+ * through it at all (see that quick task's SUMMARY for the full retired-key
+ * list). Every surviving theme is now a single-selector block -- no
+ * comma-joined theme selector remains in themes.scss at all -- so this list
+ * is simply the 10 plain selectors, not "one representative per group"
+ * picked for a comma-join quirk. Verified by hand against
+ * `grep -n '^body\.' src/frontend/themes.scss`:
+ *   midnightMirage; cyberSpaceOasis; gruvbox_dark; high-contrast; dracula;
+ *   nord-light; nord-dark; marine; zombie; sweet.
  * cssBlock() throws if any of these no longer resolves to a real block, so a
  * renamed/removed theme fails loudly instead of a count silently drifting.
  *
  * Hoisted to module scope by the 34.11 code-review fix (WR-13) so the
- * `--navbar-active` census below uses the SAME 11 selectors the `--divider`
+ * `--navbar-active` census below uses the SAME 10 selectors the `--divider`
  * census does, rather than a second hand-maintained list.
  */
 const themeSelectors = [
   'body.midnightMirage',
-  'body.cyberSpaceOasisAlt',
+  'body.cyberSpaceOasis',
   'body.gruvbox_dark',
   'body.high-contrast',
-  'body.dracula-classic',
+  'body.dracula',
   'body.nord-light',
   'body.nord-dark',
-  'body.marine-classic',
-  'body.zombie-classic',
-  'body.old-school',
-  'body.sweet-dark'
+  'body.marine',
+  'body.zombie',
+  'body.sweet'
 ]
 
 /**
@@ -155,10 +157,10 @@ describe('gruvbox_dark theme tokens (CR-01, D-31)', () => {
 /**
  * WR-13 (34.11 code review). The gate above -- `it('declares its own
  * --navbar-active')` against `body.gruvbox_dark` alone -- read as broad
- * theme coverage while checking exactly one of eleven themes. It stayed
+ * theme coverage while checking exactly one of ten themes. It stayed
  * green while CR-03 shipped: `--navbar-active` is declared in only 4 of the
- * 11 theme blocks, and four new stylesheets consumed it with NO fallback,
- * so in the other 7 themes an undefined custom property made the whole
+ * 10 theme blocks, and four new stylesheets consumed it with NO fallback,
+ * so in the other 6 themes an undefined custom property made the whole
  * declaration invalid at computed-value time and dropped it. Worst case,
  * `.FilterFacetRow--checked .FilterFacetRow__box` lost BOTH `background` and
  * `border-color` and the checked-checkbox indicator did not render at all.
@@ -167,7 +169,7 @@ describe('gruvbox_dark theme tokens (CR-01, D-31)', () => {
  * `--divider`, applied to the token that actually needed it. It was proven
  * to FAIL against the pre-fix stylesheets before being accepted.
  */
-describe('--navbar-active survives in all 11 themes (WR-13, CR-03)', () => {
+describe('--navbar-active survives in all 10 themes (WR-13, CR-03)', () => {
   const themesScss = read(THEMES_SCSS)
 
   it('census: --navbar-active is declared in strictly fewer theme blocks than the file defines -- which is WHY every consumer needs a fallback', () => {
@@ -235,7 +237,7 @@ describe('tier2 divider (--divider finding, 34.11-09 FIFTH fix -- pseudo-element
   it('.NavShell__tier2 no longer declares any border-inline-end -- the divider moved to a pseudo-element entirely', () => {
     // History (each superseded for a DIFFERENT, measured reason -- see this
     // declaration's own header comment for the full account): var(--divider)
-    // (undefined in 9/11 themes) -> var(--body-background) (colour-identical
+    // (undefined in 8/10 themes) -> var(--body-background) (colour-identical
     // to the grid side by construction) -> 1px var(--neutral-05) (resolved,
     // real contrast, still reported absent -- Chromium repro ruled out
     // colour/occlusion, pointing at WKWebView's `1fr`-fractional grid-track
@@ -287,7 +289,7 @@ describe('tier2 divider (--divider finding, 34.11-09 FIFTH fix -- pseudo-element
 
     // `themeSelectors` is now declared at module scope (hoisted by WR-13's
     // fix) so this census and the `--navbar-active` census above provably
-    // iterate the SAME 11 theme blocks rather than two hand-maintained
+    // iterate the SAME 10 theme blocks rather than two hand-maintained
     // lists that could drift apart.
     const dividerDeclaringCount = themeSelectors.filter((selector) =>
       /--divider:/.test(cssBlock(themesScss, selector))
@@ -306,7 +308,7 @@ describe('tier2 divider (--divider finding, 34.11-09 FIFTH fix -- pseudo-element
 describe('dracula-only divider override (34.11-09 FIFTH fix, --neutral-04 collision, retargeted at the pseudo-element)', () => {
   const navShellScss = read(NAV_SHELL_SCSS)
 
-  it('body.dracula and body.dracula-classic override .NavShell__tier2::after background to var(--neutral-05)', () => {
+  it('body.dracula overrides .NavShell__tier2::after background to var(--neutral-05)', () => {
     // `--navbar-background` (#44475a, dracula's panel colour) and
     // `--neutral-04` (#51595a) share an identical blue channel (90 = 90) --
     // measured at ~1.28:1 against dracula's panel side, and a pixel-level
@@ -320,7 +322,7 @@ describe('dracula-only divider override (34.11-09 FIFTH fix, --neutral-04 collis
     // same two RGB values adjacent to each other -- so the exception carries
     // forward unchanged, just retargeted at `::after`.
     const dracula = navShellScss.match(
-      /body\.dracula \.NavShell__tier2::after,\s*\n?body\.dracula-classic \.NavShell__tier2::after\s*\{([^}]*)\}/
+      /body\.dracula \.NavShell__tier2::after\s*\{([^}]*)\}/
     )
     expect(dracula).not.toBeNull()
     expect(dracula?.[1]).toMatch(/background:\s*var\(--neutral-05\)/)
@@ -455,15 +457,18 @@ const globalTokens = (): Map<string, string> => {
 }
 
 /**
- * Every block matching `selector`, merged last-wins. `body.zombie-classic` is
- * declared TWICE in themes.scss (the second block re-points `--navbar-accent`),
- * so taking only the first block would resolve a stale value.
+ * Every block matching `selector`, merged last-wins. Re-verified 2026-10-04
+ * (quick task 261004-bz3, after collapsing the comma-joined groups to single
+ * selectors): none of the 10 surviving themes is declared twice in
+ * themes.scss -- each `body.<theme> {` now appears exactly once. The merge
+ * (rather than a single-match lookup) is kept anyway as a defensive measure
+ * against a future theme block being accidentally split across two rules,
+ * not because any live duplicate exists today.
  */
 const allBlocksFor = (source: string, selector: string): string[] => {
-  // Matching the literal `selector {` is what excludes descendant rules such as
-  // `body.old-school .sid-input {`, and what makes the LAST selector of a comma
-  // group the one to search for -- the same reason `themeSelectors` above lists
-  // `body.cyberSpaceOasisAlt` rather than `body.classic`.
+  // Matching the literal `selector {` is what excludes descendant rules such
+  // as `body.zombie .alphabet-filter-button--active {`, which would otherwise
+  // false-match a prefix search for `body.zombie`.
   const needle = `${selector} {`
   const out: string[] = []
   let from = 0

@@ -47,31 +47,34 @@ const NAVITEM_SCSS = join(
 )
 const THEMES_SCSS = join(FRONTEND_ROOT, 'themes.scss')
 
-// The 11 real theme block selectors in themes.scss, as they exist at time of
+// The 10 real theme block selectors in themes.scss, as they exist at time of
 // writing -- grepped directly (`grep -n "^body\\." src/frontend/themes.scss`)
-// and cross-checked with a structural nested-brace parse, not assumed. This
-// list deliberately EXCLUDES `body {}` (the shared base, not a theme),
-// `body.alphabet-filter-button--active` (a cross-theme STATE modifier, not a
-// theme), and descendant-combinator sub-selectors like
-// `body.zombie .alphabet-filter-button--active` or `body.classic .sid-input`
-// (component-scoped overrides nested a theme, not themes themselves) --
-// none of those three kinds of block reliably define surface tokens like
-// `--body-background`, so folding them into a "must define" scan would
-// produce false failures unrelated to actual theme coverage. If a new theme
-// is added to `themes.scss`, this list -- and only this list -- needs a new
-// entry; the intentional exclusions above do not change.
+// and cross-checked with a structural nested-brace parse, not assumed.
+// Quick task 261004-bz3 collapsed every comma-joined group to a single
+// selector and deleted one whole retired-theme block outright (4 retired
+// selectable themes + 3 dead CSS-only blocks removed; see that quick
+// task's SUMMARY for the full retired-key list).
+// This list deliberately EXCLUDES `body {}` (the shared base, not a theme)
+// and `body.alphabet-filter-button--active` (a cross-theme STATE modifier,
+// not a theme) and descendant-combinator sub-selectors like
+// `body.zombie .alphabet-filter-button--active` (a component-scoped override
+// nested under a theme, not a theme itself) -- none of those kinds of block
+// reliably define surface tokens like `--body-background`, so folding them
+// into a "must define" scan would produce false failures unrelated to
+// actual theme coverage. If a new theme is added to `themes.scss`, this
+// list -- and only this list -- needs a new entry; the intentional
+// exclusions above do not change.
 const REAL_THEME_BLOCK_PATTERNS = [
   /^body\.midnightMirage\s*\{/m,
-  /^body\.classic,\s*\n?body\.cyberSpaceOasis,\s*\n?body\.cyberSpaceOasisAlt\s*\{/m,
+  /^body\.cyberSpaceOasis\s*\{/m,
   /^body\.gruvbox_dark\s*\{/m,
   /^body\.high-contrast\s*\{/m,
-  /^body\.dracula,\s*\n?body\.dracula-classic\s*\{/m,
+  /^body\.dracula\s*\{/m,
   /^body\.nord-light\s*\{/m,
   /^body\.nord-dark\s*\{/m,
-  /^body\.marine,\s*\n?body\.marine-classic\s*\{/m,
-  /^body\.zombie,\s*\n?body\.zombie-classic\s*\{/m,
-  /^body\.old-school\s*\{/m,
-  /^body\.sweet,\s*\n?body\.sweet-dark\s*\{/m
+  /^body\.marine\s*\{/m,
+  /^body\.zombie\s*\{/m,
+  /^body\.sweet\s*\{/m
 ]
 const LIBRARY_TSX = join(FRONTEND_ROOT, 'screens/Library/index.tsx')
 const GAMES_LIST_TSX = join(
@@ -226,12 +229,12 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
 
   it('F-34.10-03 navbar half: .NavShell__navbar declares border-bottom: 1px solid var(--body-background)', () => {
     // CORRECTED post-review: the original declaration used `var(--divider)`,
-    // a no-fallback custom property defined in only 2 of 11 real theme
+    // a no-fallback custom property defined in only 2 of 10 real theme
     // blocks in themes.scss. `var()` with an undefined property and no
     // fallback is invalid at computed-value time -- the WHOLE
     // `border-bottom` shorthand drops, not just its colour, so no border
-    // painted at all in the other 9 themes. `--body-background` (asserted
-    // below, gate 3a, to actually resolve in all 11) is what this must be.
+    // painted at all in the other 8 themes. `--body-background` (asserted
+    // below, gate 3a, to actually resolve in all 10) is what this must be.
     const navbarBlock = extractBlock(
       readStripped(NAVSHELL_SCSS),
       /^\.NavShell__navbar\s*\{/m
@@ -274,7 +277,7 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
     // proves universality by scanning themes.scss's actual structure
     // (REAL_THEME_BLOCK_PATTERNS, grepped and cross-checked at authoring
     // time), not by asserting a belief about the token's relational-ness.
-    // `--divider` fails this exact check (defined in only 2 of 11 blocks);
+    // `--divider` fails this exact check (defined in only 2 of 10 blocks);
     // `--body-background` is asserted to pass it.
     expect(tokenResolvesInEveryTheme('body-background')).toBe(true)
   })

@@ -36,13 +36,13 @@ import { createTheme, Theme } from '@mui/material/styles'
  * `src/frontend/themes.scss` (line 3) and overridden per-theme (including
  * `nord-light`, a LIGHT theme, at line 384), so it resolves in every theme
  * with no fallback needed. `--text-tertiary` was considered and rejected --
- * it is #101111 (near-black) in the `classic` theme, which would reproduce
- * this exact bug.
+ * it is #101111 (near-black) in the `cyberSpaceOasis` theme, which would
+ * reproduce this exact bug.
  *
  * Why `--icon-disabled` has a `var(..., var(--text-secondary))` fallback:
  * it is a theme-authored disabled colour, but only `midnightMirage`,
- * `classic`/`cyberSpaceOasis`(Alt) and `gruvbox_dark` define it -- the
- * fallback covers every other theme.
+ * `cyberSpaceOasis` and `gruvbox_dark` define it (still three, now of 10
+ * themes rather than of 14) -- the fallback covers every other theme.
  *
  * Why no `palette.mode`: `nord-light` is a light theme; the rest are dark.
  * A single hard-coded mode would be wrong for at least one theme, and MUI's

@@ -185,7 +185,7 @@
      measured as delta 2 against a light background (237 +
      0.08*(255-237) = 238.4; measured seam [238,240,245] vs background
      [237,239,244]) against the required >=3 -- effectively invisible.
-     `--divider` itself is declared in only 2 of 11 `themes.scss` blocks
+     `--divider` itself is declared in only 2 of 10 `themes.scss` blocks
      on purpose (NavShell/__tests__/themeTokens.test.ts's census forbids
      universalising it; NavShell/__tests__/appShellLayout.test.ts has a
      SANITY test asserting the token does NOT resolve in every theme),
@@ -438,7 +438,13 @@
    every theme resolves for on-background text (`body.midnightMirage`,
    the default theme, declares it in terms of the raw token, in
    `themes.scss`, but nord-light overrides it independently; measured
-   7.35:1 against nord-light, 8.53:1 against the old-school theme). This is
+   7.35:1 against nord-light, 11.02:1 against zombie -- re-measured
+   2026-10-04 at quick task 261004-bz3 after the theme this figure was
+   originally measured against (cited here at 8.53:1) was retired; zombie
+   is that retired theme's nearest surviving replacement per that quick
+   task's migration map, but the two were NOT token-identical for
+   `--success`, so this is a genuine re-measurement, not a relabelled
+   figure). This is
    the one `Keys/index.css` site that renders text on the screen's own
    background;
    the badge/fill sites (`.humbleKeyStateBadge--REDEEMED`;

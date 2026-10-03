@@ -8,7 +8,7 @@
 // Token-survival fallback chains (CR-01/CR-03). An undefined custom
 // property with no fallback drops the ENTIRE declaration at computed-value
 // time, silently, in whichever theme block lacks it -- `--navbar-active` is
-// declared in only 4 of 11 theme blocks. Declared FILE-LOCALLY below (not
+// declared in only 4 of 10 theme blocks. Declared FILE-LOCALLY below (not
 // imported) so a census gate can assert every consumer's copy matches, per
 // `FilterFacetGroup/index.scss`'s own header comment. Chains copied
 // verbatim from that file / `NavItem/index.scss`, not invented:
@@ -94,7 +94,7 @@
     //
     // The chain is the house divider pattern, copied verbatim from the three
     // existing call sites rather than invented -- `--divider` is declared in
-    // only 2 of 11 theme blocks (themes.scss:16's own comment records this),
+    // only 2 of 10 theme blocks (themes.scss:16's own comment records this),
     // so the `currentColor` fallback is what makes it survive everywhere, and
     // it adapts per theme for free: `currentColor` on this row is
     // `--winetricks-inactive-color` -> `--text-default`, which by definition

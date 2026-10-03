@@ -9,7 +9,7 @@
 // at computed-value time, silently, in whichever theme lacks it):
 //   --text-hover -> --accent
 //     --text-hover has no value in gruvbox_dark or dracula (only
-//     midnightMirage, classic/cyberSpaceOasis, high-contrast and
+//     midnightMirage, cyberSpaceOasis, high-contrast and
 //     nord-light define it -- confirmed against src/frontend/themes.scss);
 //     --accent resolves in every theme block. This is the exact
 //     substitution 34.11-07's FilterFacetGroup/index.scss already made for
@@ -18,9 +18,9 @@
 //     phase's own mandatory stress-test themes.
 .FilterChipRow {
   // CR-03 (34.11 code review): `--navbar-active` is declared in only 4 of
-  // the 11 theme blocks, so the bare `var(--navbar-active)` the Clear-all
+  // the 10 theme blocks, so the bare `var(--navbar-active)` the Clear-all
   // hover state used to carry was invalid at computed-value time in the
-  // other 7 -- dropping BOTH `color` and `border-color`, leaving Clear all
+  // other 6 -- dropping BOTH `color` and `border-color`, leaving Clear all
   // with no hover affordance distinguishing it from a removal chip.
   // Resolved through the same fallback chain NavItem/index.scss:21-24
   // already uses for this token. Declared locally in this file so it does

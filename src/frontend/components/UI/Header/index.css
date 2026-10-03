@@ -70,7 +70,7 @@
    D-07), so this renders a solid drive icon plus a smaller faCircleXmark
    absolutely positioned at its bottom-right corner, visible only while
    sortInstalled is true. The badge punches out with --navbar-background --
-   declared in all 11 theme blocks and the literal background
+   declared in all 10 theme blocks and the literal background
    .NavShell__tier2 paints on itself, so the halo matches the panel exactly
    in every theme by construction. The x itself takes color: inherit, so it
    carries the same foreground as the glyph it sits on rather than a new
@@ -144,7 +144,7 @@
  * 260815-opt, extended 261003-i4t. Deliberately NO colour change:
  * `.numberOfgames` already paints `var(--input-background)` behind
  * inherited text, and recolouring the foreground would introduce a new
- * foreground/background contrast pair to validate across all 11 themes --
+ * foreground/background contrast pair to validate across all 10 themes --
  * for no informational gain, since the string itself is the signal.
  * `tabular-nums` now applies to the base (not just `--filtered`): D-05 made
  * the unfiltered reading a number followed by a word too ("394 games"), so
