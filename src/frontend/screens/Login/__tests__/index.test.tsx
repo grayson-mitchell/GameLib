@@ -215,15 +215,20 @@ describe('Epic login tiles: embedded login is PRIMARY, SIDLogin is the alternati
     return source.slice(start, end)
   }
 
-  it('SOURCE GATE — the Epic PRIMARY tile is the embedded web login: labelled login.epic and navigating to epicLoginPath, with NO primaryLoginAction to divert it', () => {
+  it("SOURCE GATE — the Epic PRIMARY tile is labelled login.epic, keeps loginUrl={epicLoginPath} for LoginWarning/Humble>Keys, and its primaryLoginAction opens the shared OAuth overlay for 'legendary' -- NOT a SIDLogin diversion (quick task 261003-s04 moved the primary action from a loginweb route onto the overlay; D-8 narrows this gate rather than deleting it, since the embedded-login-is-primary invariant 260822-r3g restored still holds)", () => {
     const block = epicRunnerBlock()
     expect(block).toMatch(
       /buttonText=\{t\('login\.epic', 'Epic Games Login'\)\}/
     )
     expect(block).toMatch(/loginUrl=\{epicLoginPath\}/)
-    // Breaks the moment anything is wired to hijack the primary tile away from
-    // `navigate(loginUrl)` -- which is precisely what the reverted pivot did.
-    expect(block).not.toMatch(/primaryLoginAction/)
+    // Breaks if: the primary action is removed, or rewired to anything other
+    // than opening the overlay for 'legendary' -- in particular, it must NOT
+    // divert to SIDLogin (setShowSidLogin), which is precisely what the
+    // reverted pivot did.
+    expect(block).toMatch(
+      /primaryLoginAction=\{\(\) => openLoginOverlay\('legendary'\)\}/
+    )
+    expect(block).not.toMatch(/primaryLoginAction=\{\(\) => setShowSidLogin/)
   })
 
   it('SOURCE GATE — SIDLogin is the ALTERNATIVE tile, unconditionally, in both shells', () => {

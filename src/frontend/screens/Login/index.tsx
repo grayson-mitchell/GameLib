@@ -353,6 +353,7 @@ export default React.memo(function NewLogin() {
               // this screen is scheduled for deletion. (`Runner` still SUPPORTS both props;
               // only this call site stopped passing them.)
               alternativeLoginAction={() => setShowSidLogin(true)}
+              primaryLoginAction={() => openLoginOverlay('legendary')}
               disabled={oldMac || loginInFlight}
             />
             <Runner
@@ -372,6 +373,7 @@ export default React.memo(function NewLogin() {
               loginUrl={amazonLoginPath}
               isLoggedIn={isAmazonLoggedIn}
               logoutAction={amazon.logout}
+              primaryLoginAction={() => openLoginOverlay('nile')}
               disabled={oldMac || loginInFlight}
             />
             {zoom.enabled && (

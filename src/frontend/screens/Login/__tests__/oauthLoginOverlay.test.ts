@@ -168,3 +168,53 @@ describe('261003-s04 Task 1: OAuthLogin renders the Dialog only behind the phase
     )
   })
 })
+
+describe('261003-s04 Task 2: the Epic and Amazon tiles join GOG on the overlay, and Zoom stays excluded', () => {
+  it("SOURCE GATE (PRESENCE + ABSENCE) -- OAUTH_OVERLAY_RUNNERS contains exactly the three OAuth overlay runner ids (legendary, gog, nile) and does NOT carry the Zoom, Steam or Humble ids -- D-7's Zoom exclusion is a decision, so a silent widening must go red", () => {
+    const source = read(LOGIN_TSX)
+
+    const tupleMatch = source.match(/OAUTH_OVERLAY_RUNNERS = \[([^\]]*)\]/)
+    expect(tupleMatch).not.toBeNull()
+    const tupleBody = tupleMatch?.[1] ?? ''
+
+    expect(tupleBody).toMatch(/'legendary'/)
+    expect(tupleBody).toMatch(/'gog'/)
+    expect(tupleBody).toMatch(/'nile'/)
+    expect(tupleBody).not.toMatch(/'zoom'/)
+    expect(tupleBody).not.toMatch(/'steam'/)
+    expect(tupleBody).not.toMatch(/'humble'/)
+  })
+
+  it("SOURCE GATE (PRESENCE, per-tile) -- the Epic tile carries BOTH primaryLoginAction={() => openLoginOverlay('legendary')} and loginUrl={epicLoginPath}", () => {
+    const source = read(LOGIN_TSX)
+    const epicBlock = runnerBlock(source, 'epic')
+
+    expect(epicBlock).toMatch(
+      /primaryLoginAction=\{\(\) => openLoginOverlay\('legendary'\)\}/
+    )
+    expect(epicBlock).toMatch(/loginUrl=\{epicLoginPath\}/)
+  })
+
+  it("SOURCE GATE (PRESENCE, per-tile) -- the Amazon tile carries BOTH primaryLoginAction={() => openLoginOverlay('nile')} and loginUrl={amazonLoginPath}", () => {
+    const source = read(LOGIN_TSX)
+    const amazonBlock = runnerBlock(source, 'nile')
+
+    expect(amazonBlock).toMatch(
+      /primaryLoginAction=\{\(\) => openLoginOverlay\('nile'\)\}/
+    )
+    expect(amazonBlock).toMatch(/loginUrl=\{amazonLoginPath\}/)
+  })
+
+  it('SOURCE GATE (PRESENCE, count) -- the comment-stripped Login/index.tsx contains exactly five primaryLoginAction= occurrences (epic, gog, nile, steam, humble), proving the Zoom exclusion without a region-scoped negative grep whose own subject appears throughout the file', () => {
+    const source = read(LOGIN_TSX)
+
+    expect((source.match(/primaryLoginAction=/g) ?? []).length).toBe(5)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the Zoom tile slice still carries loginUrl={zoomLoginPath} (D-7: Zoom stays on its route)', () => {
+    const source = read(LOGIN_TSX)
+    const zoomBlock = runnerBlock(source, 'zoom')
+
+    expect(zoomBlock).toMatch(/loginUrl=\{zoomLoginPath\}/)
+  })
+})

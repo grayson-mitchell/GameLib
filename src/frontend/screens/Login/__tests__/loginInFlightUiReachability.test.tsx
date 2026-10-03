@@ -8,14 +8,19 @@
  * SAME guard to Humble. This file now pins BOTH mechanisms as they
  * currently coexist:
  *
- *   - Amazon/GOG/Zoom (no `primaryLoginAction`) still navigate away via
- *     `Runner.handleLogin()` -> `navigate(props.loginUrl)`, still unmounting
- *     the whole `runnerGroup` (assertions 1, 3, 4).
- *   - Steam AND Humble (and Epic-under-Tauri via SIDLogin, out of scope here
- *     per F-36-01) use `primaryLoginAction`, which returns BEFORE the
- *     navigate call -- no navigation, no unmount. Their tiles' disable comes
- *     from the shared `oldMac || loginInFlight` expression now fed to ALL
- *     SIX tiles uniformly (assertion 2), not from unmounting.
+ *   - Zoom (no `primaryLoginAction`) is now the ONLY tile that still
+ *     navigates away via `Runner.handleLogin()` -> `navigate(props.loginUrl)`,
+ *     still unmounting the whole `runnerGroup` (assertions 1, 3, 4). Amazon
+ *     and GOG used to share this camp; quick task 261003-s04 moved GOG, Epic
+ *     (legendary) and Amazon (nile) onto its own `OAuthLogin` overlay, so all
+ *     three now reach the overlay the same `primaryLoginAction` way
+ *     Steam/Humble already did.
+ *   - Steam, Humble, GOG, Epic (legendary) and Amazon (nile) (and
+ *     Epic-under-Tauri via SIDLogin, out of scope here per F-36-01) use
+ *     `primaryLoginAction`, which returns BEFORE the navigate call -- no
+ *     navigation, no unmount. Their tiles' disable comes from the shared
+ *     `oldMac || loginInFlight` expression now fed to ALL SIX tiles
+ *     uniformly (assertion 2), not from unmounting.
  *
  * F-36-01 (accept, DEFERRED): Epic-under-Tauri's SIDLogin path also uses
  * `primaryLoginAction` but is NOT wired into `loginInFlight` -- every
