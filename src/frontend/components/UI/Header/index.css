@@ -14,17 +14,6 @@
   gap: var(--space-xs);
 }
 
-.Header__utilitiesRight {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  /* Pins this group to the trailing edge of the row. A two-sided
-     justification would also need to own the tour button's position on the
-     other end, which is not this group's job -- an inline-start auto margin
-     is the chosen mechanism instead. */
-  margin-inline-start: auto;
-}
-
 .Header__consoleButton,
 .Header__utilityButton {
   display: inline-flex;
@@ -60,10 +49,29 @@
   background: var(--focus-ring-fill);
 }
 
-.Header__sortRow {
-  /* Single child (one segmented FormControl) -- no gap to restate, same
-     reasoning the leading utilities row used to record for itself. */
-  display: flex;
+/* D-07/D-08: composed badge for the sort-by-status glyph. No x-marked or
+   slashed drive glyph exists in either installed FontAwesome set (measured,
+   D-07), so this renders a solid drive icon plus a smaller faCircleXmark
+   absolutely positioned at its bottom-right corner, visible only while
+   sortInstalled is true. The badge punches out with --navbar-background --
+   declared in all 11 theme blocks and the literal background
+   .NavShell__tier2 paints on itself, so the halo matches the panel exactly
+   in every theme by construction. The x itself takes color: inherit, so it
+   carries the same foreground as the glyph it sits on rather than a new
+   foreground/background pair. */
+.Header__statusGlyph {
+  position: relative;
+  display: inline-flex;
+}
+
+.Header__statusGlyphBadge {
+  position: absolute;
+  right: -0.25em;
+  bottom: -0.25em;
+  font-size: 0.625em;
+  color: inherit;
+  background: var(--navbar-background);
+  border-radius: 50%;
 }
 
 .Header__search {

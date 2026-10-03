@@ -9,11 +9,11 @@ import {
   faList,
   faArrowDownAZ,
   faArrowDownZA,
-  faHardDrive as hardDriveSolid,
+  faHardDrive,
+  faCircleXmark,
   faFilter,
   faFilterCircleXmark
 } from '@fortawesome/free-solid-svg-icons'
-import { faHardDrive as hardDriveLight } from '@fortawesome/free-regular-svg-icons'
 import classNames from 'classnames'
 import { GameInfo } from 'common/types'
 import LibraryContext from 'frontend/screens/Library/LibraryContext'
@@ -22,7 +22,6 @@ import { countGamesExcludingDlc } from 'frontend/screens/Library/gameCount'
 import { LIBRARY_TOUR_ID } from 'frontend/screens/Library/components/LibraryTour'
 import TourButton from 'frontend/components/Tour/TourButton'
 import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
-import FormControl from '../FormControl'
 import LibrarySearchBar from '../LibrarySearchBar'
 import FilterViewList from '../NavShell/components/FilterViewList'
 import FilterCollectionList from '../NavShell/components/FilterCollectionList'
@@ -132,124 +131,88 @@ export default function Header({ list, totalGames }: Props) {
   return (
     <div className="Header">
       <div className="Header__utilities">
-        <TourButton tourId={LIBRARY_TOUR_ID} className="library-tour-button" />
-        <div className="Header__utilitiesRight">
-          <Link
-            to="/console"
-            className="Header__consoleButton"
-            aria-label={consoleModeLabel}
-            title={consoleModeLabel}
+        <Link
+          to="/console"
+          className="Header__consoleButton"
+          aria-label={consoleModeLabel}
+          title={consoleModeLabel}
+        >
+          <FontAwesomeIcon icon={faTv} />
+        </Link>
+        {layout === 'grid' ? (
+          <button
+            className="Header__utilityButton"
+            title={t('library.toggleLayout.list', 'Toggle to a list layout')}
+            onClick={() => handleLayout('list')}
           >
-            <FontAwesomeIcon icon={faTv} />
-          </Link>
-          {layout === 'grid' ? (
-            <button
-              className="Header__utilityButton"
-              title={t('library.toggleLayout.list', 'Toggle to a list layout')}
-              onClick={() => handleLayout('list')}
-            >
-              <FontAwesomeIcon icon={faList} data-tour="library-view-toggle" />
-            </button>
-          ) : (
-            <button
-              className="Header__utilityButton"
-              title={t('library.toggleLayout.grid', 'Toggle to a grid layout')}
-              onClick={() => handleLayout('grid')}
-            >
+            <FontAwesomeIcon icon={faList} data-tour="library-view-toggle" />
+          </button>
+        ) : (
+          <button
+            className="Header__utilityButton"
+            title={t('library.toggleLayout.grid', 'Toggle to a grid layout')}
+            onClick={() => handleLayout('grid')}
+          >
+            <FontAwesomeIcon
+              icon={faBorderAll}
+              data-tour="library-view-toggle"
+            />
+          </button>
+        )}
+        <button
+          className="Header__utilityButton"
+          title={
+            sortDescending
+              ? t('library.sortDescending', 'Sort Descending')
+              : t('library.sortAscending', 'Sort Ascending')
+          }
+          onClick={() => setSortDescending(!sortDescending)}
+        >
+          <FontAwesomeIcon
+            icon={sortDescending ? faArrowDownZA : faArrowDownAZ}
+            data-tour="library-sort-az"
+          />
+        </button>
+        <button
+          className="Header__utilityButton"
+          // The state cue is now the small-x badge rendered on the glyph
+          // below (D-02/D-07) plus aria-pressed, not a latched tile fill --
+          // the fill's only consumer was this button, and D-10 reverts the
+          // shared FormControl rule now that it has none. The title stays
+          // STATELESS: an accessible name should name the control, not
+          // narrate its state, and a stateful pair would cost 96 new
+          // catalogue strings (D-09).
+          aria-pressed={sortInstalled}
+          title={t('library.sortByStatus', 'Sort by Status')}
+          onClick={() => setSortInstalled(!sortInstalled)}
+        >
+          <span
+            className="Header__statusGlyph"
+            data-tour="library-sort-installed"
+          >
+            <FontAwesomeIcon icon={faHardDrive} />
+            {sortInstalled && (
               <FontAwesomeIcon
-                icon={faBorderAll}
-                data-tour="library-view-toggle"
+                icon={faCircleXmark}
+                className="Header__statusGlyphBadge"
               />
-            </button>
-          )}
-          <button
-            className={classNames('Header__utilityButton', {
-              active: refreshing
-            })}
-            title={t('generic.library.refresh', 'Refresh Library')}
-            onClick={async () =>
-              refreshLibrary({
-                checkForUpdates: true,
-                origin: 'action-icons-refresh-button'
-              })
-            }
-          >
-            <FontAwesomeIcon
-              className={classNames({ ['fa-spin']: refreshing })}
-              data-tour="library-refresh"
-              icon={faSyncAlt}
-            />
-          </button>
-          {isSteamSyncing && (
-            <FontAwesomeIcon
-              icon={faSyncAlt}
-              className="steamSyncSpinner"
-              title={t('steam.syncing', 'Syncing Steam library…')}
-              style={{ fontSize: '14px' }}
-            />
-          )}
-        </div>
-      </div>
-      <div className="Header__sortRow">
-        <FormControl segmented small>
-          <button
-            className="FormControl__button"
-            title={
-              sortDescending
-                ? t('library.sortDescending', 'Sort Descending')
-                : t('library.sortAscending', 'Sort Ascending')
-            }
-            onClick={() => setSortDescending(!sortDescending)}
-          >
-            <FontAwesomeIcon
-              className="FormControl__segmentedFaIcon"
-              icon={sortDescending ? faArrowDownZA : faArrowDownAZ}
-              data-tour="library-sort-az"
-            />
-          </button>
-          <button
-            className={classNames('FormControl__button', {
-              active: sortInstalled
-            })}
-            // This button is ON by default (`sortInstalled` initialises to
-            // true, Library/index.tsx:486), so without aria-pressed its state
-            // was exposed to assistive tech not at all, and visually only as
-            // the solid-vs-regular weight of a 16px glyph.
-            //
-            // The title stays STATELESS on purpose, unlike the two buttons
-            // either side of it. A stateful one needs a new catalogue string,
-            // and `meta/i18nCatalogPresenceBaseline.json` records 0 missing
-            // pairs with its own reason saying the file is "a known gap, not
-            // permission to grow it" -- so a new key means filling all 49
-            // locales, which is its own task. aria-pressed plus the latched
-            // `.active` fill already carry the state to both sighted and
-            // assistive users, which a tooltip does less well anyway: an
-            // accessible name should name the control, not narrate its state.
-            aria-pressed={sortInstalled}
-            title={t('library.sortByStatus', 'Sort by Status')}
-            onClick={() => setSortInstalled(!sortInstalled)}
-          >
-            <FontAwesomeIcon
-              className="FormControl__segmentedFaIcon"
-              icon={sortInstalled ? hardDriveSolid : hardDriveLight}
-              data-tour="library-sort-installed"
-            />
-          </button>
-          <button
-            className="FormControl__button"
-            title={
-              showAlphabetFilter
-                ? t('library.hideAlphabetFilter', 'Hide Alphabet Filter')
-                : t('library.showAlphabetFilter', 'Show Alphabet Filter')
-            }
-            onClick={onToggleAlphabetFilter}
-          >
-            <FontAwesomeIcon
-              className="FormControl__segmentedFaIcon"
-              icon={showAlphabetFilter ? faFilterCircleXmark : faFilter}
-            />
-          </button>
-        </FormControl>
+            )}
+          </span>
+        </button>
+        <button
+          className="Header__utilityButton"
+          title={
+            showAlphabetFilter
+              ? t('library.hideAlphabetFilter', 'Hide Alphabet Filter')
+              : t('library.showAlphabetFilter', 'Show Alphabet Filter')
+          }
+          onClick={onToggleAlphabetFilter}
+        >
+          <FontAwesomeIcon
+            icon={showAlphabetFilter ? faFilterCircleXmark : faFilter}
+          />
+        </button>
+        <TourButton tourId={LIBRARY_TOUR_ID} className="library-tour-button" />
       </div>
       <div className="Header__search">
         <LibrarySearchBar />
@@ -294,6 +257,32 @@ export default function Header({ list, totalGames }: Props) {
             </span>
           ) : (
             <span className="numberOfgames">{numberOfGames}</span>
+          )}
+          <button
+            className={classNames('Header__utilityButton', {
+              active: refreshing
+            })}
+            title={t('generic.library.refresh', 'Refresh Library')}
+            onClick={async () =>
+              refreshLibrary({
+                checkForUpdates: true,
+                origin: 'action-icons-refresh-button'
+              })
+            }
+          >
+            <FontAwesomeIcon
+              className={classNames({ ['fa-spin']: refreshing })}
+              data-tour="library-refresh"
+              icon={faSyncAlt}
+            />
+          </button>
+          {isSteamSyncing && (
+            <FontAwesomeIcon
+              icon={faSyncAlt}
+              className="steamSyncSpinner"
+              title={t('steam.syncing', 'Syncing Steam library…')}
+              style={{ fontSize: '14px' }}
+            />
           )}
           <AddGameButton />
         </div>

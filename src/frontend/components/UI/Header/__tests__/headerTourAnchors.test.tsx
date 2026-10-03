@@ -1,15 +1,15 @@
 /**
  * Structural tests for `Header`, the Games tier-2 filter panel's top-level
- * layout (34.12-02 Task 1, D-09; extended by quick 260815-opt and quick
- * 261002-hx0) -- proves the two `data-tour` wrapper divs
- * (`library-views-collections`, `library-facets`) carry the right children by
- * IDENTITY, that `.Header` now returns SIX direct children in the locked
- * panel order (`Header__utilities`, `Header__sortRow`, `Header__search`,
+ * layout (34.12-02 Task 1, D-09; extended by quick 260815-opt, quick
+ * 261002-hx0, and quick 261003-i4t) -- proves the two `data-tour` wrapper
+ * divs (`library-views-collections`, `library-facets`) carry the right
+ * children by IDENTITY, that `.Header` now returns FIVE direct children in
+ * the locked panel order (`Header__utilities`, `Header__search`,
  * `Header__categoriesGroup`, `Header__filtersGroup`, `Header__footer`) --
- * The former per-panel heading component and the former hand-rolled
- * icon-button row were dissolved into this single
- * component by 261002-hx0, which is why `Header` now also carries a sort
- * row and a bottom-pinned footer that neither predecessor owned -- and that
+ * 261003-i4t collapsed the former two-row `Header__utilities` /
+ * `Header__sortRow` pair into one flat `Header__utilities` row of six
+ * controls (D-01), dissolving the `FormControl` segmented group and the
+ * `Header__sortRow` wrapper it lived in -- and that
  * all of `.Header`'s CSS-gated wrappers restate the `.Header` gap they
  * intercepted -- without this CSS gate the vertical spacing between Views
  * and Collections, and between the three facet groups, silently collapses
@@ -255,6 +255,7 @@ import FilterRunnabilityFacet from '../../NavShell/components/FilterRunnabilityF
 import FilterMoreGroup from '../../NavShell/components/FilterMoreGroup'
 import FormControl from '../../FormControl'
 import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
+import TourButton from 'frontend/components/Tour/TourButton'
 import Header from '../index'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
@@ -361,33 +362,45 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(childTypes).toContain(FilterMoreGroup)
   })
 
-  it('.Header has exactly six direct children in the locked panel order', () => {
+  it('.Header has exactly five direct children in the locked panel order', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    expect(children).toHaveLength(6)
+    expect(children).toHaveLength(5)
     expect(children[0].props?.className).toBe('Header__utilities')
-    expect(children[1].props?.className).toBe('Header__sortRow')
-    expect(children[2].props?.className).toBe('Header__search')
-    expect(children[3].props?.className).toBe('Header__categoriesGroup')
-    expect(children[4].props?.className).toBe('Header__filtersGroup')
-    expect(children[5].props?.className).toBe('Header__footer')
+    expect(children[1].props?.className).toBe('Header__search')
+    expect(children[2].props?.className).toBe('Header__categoriesGroup')
+    expect(children[3].props?.className).toBe('Header__filtersGroup')
+    expect(children[4].props?.className).toBe('Header__footer')
   })
 
-  it('Header__sortRow wraps a single segmented FormControl, by identity', () => {
+  it('Header__utilities holds exactly six controls in the locked D-01 order, and no FormControl element survives anywhere in the tree', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const sortRow = children[1]
+    const utilities = children[0]
 
-    const formControlEls = collectElements(sortRow.props.children).filter(
+    const controls = collectElements(utilities.props.children).filter(
+      (el) => el.type === Link || el.type === 'button' || el.type === TourButton
+    )
+    expect(controls).toHaveLength(6)
+    // D-01's order: console mode, layout toggle, sort A-Z, sort by status,
+    // alphabet filter, tour.
+    expect(controls[0].type).toBe(Link)
+    expect(controls[1].type).toBe('button')
+    expect(controls[2].type).toBe('button')
+    expect(controls[3].type).toBe('button')
+    expect(controls[4].type).toBe('button')
+    expect(controls[5].type).toBe(TourButton)
+
+    const formControlEls = collectElements(tree).filter(
       (el) => el.type === FormControl
     )
-    expect(formControlEls).toHaveLength(1)
+    expect(formControlEls).toHaveLength(0)
   })
 
   it('Header__footer renders AddGameButton, by identity', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const footer = children[5]
+    const footer = children[4]
 
     const addGameButtonEls = collectElements(footer.props.children).filter(
       (el) => el.type === AddGameButton
@@ -441,9 +454,9 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(filtersBlock).toMatch(/gap:\s*var\(--space-md\)/)
   })
 
-  it('Header__utilitiesRight restates a gap, so the console/view-toggle/refresh cluster does not collapse', () => {
+  it('Header__utilities declares a gap, so the merged six-control row does not collapse', () => {
     const source = read(HEADER_CSS_PATH)
-    const block = cssBlock(source, '.Header__utilitiesRight')
+    const block = cssBlock(source, '.Header__utilities')
     expect(block).toMatch(/display:\s*flex/)
     expect(block).toMatch(/gap:\s*var\(--space-xs\)/)
   })
