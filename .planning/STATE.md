@@ -1123,8 +1123,10 @@ Recent decisions affecting current work:
 - [2026-09-14] [build] 'Windows releases ship UNSIGNED — no Windows code-signing cert is enrolled, so SmartScreen warns on every d… — [todo file](.planning/todos/pending/2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md)
 - [2026-09-15] [webview/store-embed] 'Epic''s in-embed "Sign in" button has no decided behaviour — intercept and hand off, fail visi… — [todo file](.planning/todos/pending/2026-09-15-epic-in-embed-sign-in-button-has-no-decided-behaviour.md)
 - [2026-09-17] [build] "Packaged .app renders blank — FIXED: the data router rendered its initial-load state as nothing; empty-ro… — [todo file](.planning/todos/pending/2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md)
-- [2026-09-21] [test] 'Confirm on the next pull_request run that the five guarded/parameterised suites (shortcutsExistsFa… — [todo file](.planning/todos/pending/2026-09-21-confirm-the-five-guarded-suites-run-green-on-the-linux-ci-runner.md)
 - [2026-10-01] [ui] Library game tiles stretch with window width — consider a fixed or user-selectable tile size — [todo file](.planning/todos/pending/2026-10-01-library-tiles-stretch-with-window-width-consider-a-set-size.md)
+- [2026-10-02] [ui] "--border-color resolves to #272f31 and measures 1.08-1.48:1 in 10 of 13 theme selectors, so all 7 of its con… — [todo file](.planning/todos/pending/2026-10-02-border-color-resolves-to-an-invisible-grey-in-ten-themes.md)
+- [2026-10-02] [i18n] "genI18nGateScope is RED on 10 pre-existing drifted files — committed i18nForkTouchedFiles.json is 214, the LIVE der… — [todo file](.planning/todos/pending/2026-10-02-i18n-fork-touched-snapshot-drifted-by-ten-files.md)
+- [2026-10-03] [ui] Library sorting is title-only — add a sort-field menu, with Playnite's sort list as the reference set — [todo file](.planning/todos/pending/2026-10-03-library-sorting-is-title-only-add-a-sort-field-menu-playnite.md)
 
 ### Blockers/Concerns
 
