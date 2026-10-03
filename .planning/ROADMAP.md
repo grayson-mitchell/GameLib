@@ -5665,12 +5665,22 @@ separate change, not this phase's deliverable.
 **Plans:** 6 plans
 
 Plans:
+**Wave 1**
 - [ ] 48-01-PLAN.md — land the 4 new `gamelib:` focus-row keys across all 49 locale catalogues (R2, R3)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 48-02-PLAN.md — TRACER: one view pick wired end to end — persistence, panel section, horizontal strip, lane replacement (R1, R3, R4, R5)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 48-03-PLAN.md — the remaining three pick kinds: collections, stores, runnability, each omitted when empty (R2)
 - [ ] 48-04-PLAN.md — forward/back overflow controls and horizontal gamepad scroll-into-view (R3)
 - [ ] 48-05-PLAN.md — retire the `Library Top Section` dropdown and seed `focusRow` from it once (R7)
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 48-06-PLAN.md — remove `Recent Games to Show` and its dead code; no storage bound (R6)
+
+**Cross-cutting constraints:**
+- Strip content narrower than the available width shows no overflow affordance (SPEC Edge Coverage, R3 unclassified, explicit).
 
 **Waves:** 1 → `01` · 2 → `02` · 3 → `03`, `04`, `05` (parallel, zero `files_modified` overlap) ·
 4 → `06`. `48-05` is `autonomous: false` — one `checkpoint:decision` gates the one-way migration
