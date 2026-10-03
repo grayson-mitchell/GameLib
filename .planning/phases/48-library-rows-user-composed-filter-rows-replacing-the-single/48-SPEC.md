@@ -70,8 +70,9 @@ focus row fully independent of filter state, which turns that nuance into the in
 
 3. **The focus row renders as one horizontal strip**: One row tall, filling the available width, above an unchanged grid.
    - Current: The lane is a full-width wrapping grid capped at `maxRecentGames` items; at most one lane exists; `.firstLane` alters padding only.
-   - Target: The focus row renders as a single-row horizontal strip with the existing header treatment, inserted at the current lane position (`Library/index.tsx:1218-1238`), showing as many cards as fit the available width. The grid below renders identically to today.
-   - Acceptance: The strip renders exactly one card tall; narrowing the window reduces the visible card count without wrapping to a second row; the grid's output is unchanged against a pre-phase baseline for the same filter state.
+   - Target: The focus row renders as a single-row horizontal strip with the existing header treatment, inserted at the current lane position (`Library/index.tsx:1218-1238`), at a **fixed 156px card width**, holding **at most 20 games**, with forward/back controls revealing any that do not fit. The grid below renders identically to today.
+   - Acceptance: The strip renders exactly one card tall; it holds at most 20 cards however many the pick matches; with more cards than fit, a forward control is present and reveals the remainder; the grid's output is unchanged against a pre-phase baseline for the same filter state.
+   - **Amended 2026-10-03 (discuss-phase):** the 20-item cap, the fixed 156px width and the scroll controls were added during `/gsd-discuss-phase`. The cap makes the row a **preview**, not a second grid — uncapped, a `GOG` row on a large library would be a worse browse surface than the grid it sits above.
 
 4. **The focus row is independent of filter state**: Hidden-games visibility is the sole exception.
    - Current: The lane honours `showHidden` and `onlyInstalled` but ignores store and runnability facets — a deliberate, documented asymmetry (`Library/index.tsx:1205-1212`).
@@ -137,6 +138,10 @@ focus row fully independent of filter state, which turns that nuance into the in
 - [ ] The strip renders exactly one card tall
 - [ ] Narrowing the window reduces the visible card count without wrapping to a second row
 - [ ] Strip content narrower than the available width shows no overflow affordance
+- [ ] The strip holds at most 20 cards however many games the pick matches
+- [ ] With more cards than fit, a forward control is present and reveals the remainder
+- [ ] Gamepad focus moving past the last visible card scrolls that card into view
+- [ ] Strip cards are a fixed 156px wide and do not change size as the window resizes
 - [ ] A pick matching zero games renders no strip at all
 - [ ] A persisted selection naming a deleted collection renders no strip and does not crash
 - [ ] The grid's output is unchanged against a pre-phase baseline for the same filter state
