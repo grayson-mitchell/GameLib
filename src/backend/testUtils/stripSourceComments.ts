@@ -142,3 +142,51 @@ export function stripTrailingLineCommentTs(line: string): string {
   }
   return line
 }
+
+/**
+ * Collapses every run of whitespace to a single space, so a source-text
+ * assertion can name a Rust construct WITHOUT also pinning the formatter's
+ * line-breaking decisions about it.
+ *
+ * Why this exists (fast task 261003-t8r): `tauriShellSource.test.ts`'s
+ * T-34.1-22 gate asserts that the colour dark/light tray fallback appears
+ * textually AFTER the macOS template block, and it did so by searching for
+ * the literal `TRAY_ICON_DARK } else { TRAY_ICON_LIGHT`. That text only
+ * exists while `main.rs` keeps the selection on ONE line. `main.rs` had
+ * never been run through `cargo fmt`, which expands the same expression
+ * across five lines (`let bytes = if dark {` / `TRAY_ICON_DARK` /
+ * `} else {` / `TRAY_ICON_LIGHT` / `};`) and turns the `indexOf` into `-1`.
+ * So the gate silently depended on the file's HAND formatting, and the repo
+ * punished an entirely standard command: `cargo fmt` produced one failing
+ * assertion with nothing in its output pointing at formatting as the cause.
+ * Normalising here removes that dependency, rather than re-pinning the gate
+ * to rustfmt's current output -- which would move the trap instead of
+ * closing it, and would re-arm on the next rustfmt release that rewraps
+ * anything.
+ *
+ * Both spellings collapse to the SAME text, which is the whole property
+ * that lets one literal match either:
+ *   `if dark { TRAY_ICON_DARK } else { TRAY_ICON_LIGHT };`
+ *
+ * Apply it to BOTH sides of a comparison. A gate that normalises the
+ * haystack but keeps a multi-line needle is still formatting-coupled, just
+ * in the other direction.
+ *
+ * Scope, stated rather than implied, and it bites specifically on ORDERING
+ * gates: normalising changes offsets, so an index taken from normalised
+ * text must never be compared against one taken from raw text. The
+ * T-34.1-22 gate compares two indices and therefore derives BOTH from the
+ * normalised body. By the same token a gate that asserts on indentation or
+ * on line structure must NOT use this -- there is nothing left to assert
+ * against once it has run.
+ *
+ * Deliberately NOT a comment stripper: run `stripSourceComments` first when
+ * the input may contain comments. Collapsing whitespace does not remove a
+ * line- or block-comment marker, so a comment that merely NAMES a forbidden
+ * pattern would satisfy a gate built to detect real occurrences of it --
+ * exactly the vacuous-gate defect this module's leading doc comment already
+ * records for the line-prefix-only case.
+ */
+export function normalizeSourceWhitespace(source: string): string {
+  return source.replace(/\s+/g, ' ')
+}

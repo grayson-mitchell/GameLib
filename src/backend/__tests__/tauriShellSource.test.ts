@@ -17,6 +17,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
+  normalizeSourceWhitespace,
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
@@ -246,10 +247,26 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
     expect(fnIdx).toBeGreaterThan(-1)
     const bodyEnd = code.indexOf('\n}', fnIdx)
     const body = code.slice(fnIdx, bodyEnd)
+    // The slice above relies on `\n}` -- a close brace at COLUMN 0 -- marking the end of the
+    // function. rustfmt indents every brace it emits inside a body (`    } else {`, `    };`),
+    // so that stays true across a reformat. Asserted rather than assumed, because a truncated
+    // body would make the fallback search below fail for a reason that has nothing to do with
+    // what this test is about (fast task 261003-t8r).
+    expect(bodyEnd).toBeGreaterThan(fnIdx)
+    expect(body).not.toMatch(/\n\}/)
     // The macOS block must not be the only path -- TRAY_ICON_DARK/LIGHT selection must still
     // appear textually after it as the fallback for both platforms.
-    const macBlockIdx = body.indexOf('TRAY_ICON_TEMPLATE')
-    const fallbackIdx = body.indexOf('TRAY_ICON_DARK } else { TRAY_ICON_LIGHT')
+    //
+    // Matched against WHITESPACE-NORMALISED text (fast task 261003-t8r). This gate used to
+    // search the raw body for `TRAY_ICON_DARK } else { TRAY_ICON_LIGHT`, which exists only
+    // while `main.rs` keeps that selection on one line; `cargo fmt` expands it across five
+    // lines and the `indexOf` became -1. The assertion's INTENT is unchanged -- it is still an
+    // ordering claim, fallback strictly after the macOS block -- but it no longer doubles as a
+    // pin on the file's hand formatting. BOTH indices are derived from `flat`: an offset taken
+    // from normalised text is not comparable with one taken from raw text.
+    const flat = normalizeSourceWhitespace(body)
+    const macBlockIdx = flat.indexOf('TRAY_ICON_TEMPLATE')
+    const fallbackIdx = flat.indexOf('TRAY_ICON_DARK } else { TRAY_ICON_LIGHT')
     expect(macBlockIdx).toBeGreaterThan(-1)
     expect(fallbackIdx).toBeGreaterThan(macBlockIdx)
   })
