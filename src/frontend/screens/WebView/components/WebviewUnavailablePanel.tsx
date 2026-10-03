@@ -23,25 +23,33 @@ interface Props {
  * into two distinct, honest reasons for `/store/*`, `/wiki` and
  * `store-page?store-url=` routes under Tauri:
  *
- * - `reason="platform"` (D-02): the live embed (Phase 40) is macOS-only.
- *   Windows and Linux name the platform as the reason, not "this build" --
- *   every spike behind the embed (016/017/018) is macOS-only and none of
- *   that evidence transfers to the Windows/Linux wry backends (filed as
- *   Phase 38 ledger items, D-04).
+ * - `reason="platform"` (D-02): the live embed ships on macOS and Linux (the
+ *   Linux arm per the positioning todo's 2026-09-28 decision (a): a real
+ *   GTK-box-native embed rather than none). Windows alone now reaches this
+ *   panel. The claim that the only embed evidence is Mac-restricted is
+ *   stale: 025/026 validated a native Linux `add_child` and its GtkBox
+ *   lever, and 028/029 then measured the GtkFixed reparent lever at
+ *   100/100 allocation reliability; 027 cross-checked Windows and got a
+ *   live Windows 11 PASS on 2026-09-30, discharging `38-E01` -- but that
+ *   run was a HARNESS, not the shipped app, so Windows embedding remains
+ *   unbuilt (filed as Phase 38 ledger items, D-04; the macOS evidence is
+ *   still 016/017/018).
  * - `reason="epic"` (D-05/D-08): `/store/epic` is scoped out of the embed on
- *   EVERY platform, including macOS, because a Tauri-managed child webview
- *   (`Window::add_child`) still inherits the injected globals that are the
- *   confirmed, root-caused Talon fingerprint (2026-08-03) -- the
- *   pristine-WKWebView escape hatch that defeated Talon was a separate
- *   window with no wry webview at all, which `add_child` cannot produce.
- *   This is a PREDICTED failure with a known mechanism, not a proven one for
- *   store pages specifically (the confirmed 403 is on a login endpoint) --
- *   so the copy is deliberately provisional, never an accusation that Epic
- *   blocks in-app browsing. The Epic tile stays in
+ *   EVERY platform, including macOS. Spike 024 measured why, across five
+ *   runs, and closed the question
+ *   (`.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`):
+ *   the gate is a Cloudflare Turnstile challenge. The injected globals, read
+ *   from inside the loaded Epic page, were present in the run that rendered
+ *   fine as well as in the runs that were challenged, so the 2026-08-03
+ *   Talon login-endpoint mechanism is REFUTED, not confirmed -- it does not
+ *   explain the store gate. This is measured and permanent, not predicted:
+ *   the follow-up todo closed WONTFIX on 2026-09-15. The copy stays
+ *   restrained, never an accusation that Epic blocks in-app browsing -- run
+ *   1 rendered the store fully and all five runs share one residential IP,
+ *   leaving reputation-vs-webview unseparated; this edit does not change
+ *   the user-facing copy. The Epic tile stays in
  *   `NavShell/components/StoresPanel/index.tsx` (D-08): a tile leading to a
- *   working open-in-browser escape hatch beats no tile. The spike that will
- *   settle the open question runs alongside Phase 40 and blocks nothing
- *   (`.planning/spikes/MANIFEST.md`).
+ *   working open-in-browser escape hatch beats no tile.
  *
  * Until Phase 34.4.1 plan 05, this panel also covered the LOGIN case
  * (Humble/Epic/GOG/Amazon) with the same blanket "not available on this
