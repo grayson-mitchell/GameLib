@@ -1358,7 +1358,8 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     )
   })
 
-  // Quick task 261003-nsk, Task 2 (D-3): the visible Humble sheet narrows from 900 to 572;
+  // Quick task 261003-nsk, Task 2 (D-3): the visible Humble sheet narrows from 900 to 572,
+  // and narrowed again to 464x592 on 2026-10-03 (same CGWindowList measurement method);
   // the pristine Epic window (a DIFFERENT form layout, out of scope by D-3) stays 900. Two
   // helpers mirroring the file's existing find-start-then-find-end slicing idiom (identical
   // in shape to the sibling copies already defined in other describe blocks in this file).
@@ -1378,11 +1379,11 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     return code.slice(start, end)
   }
 
-  test("Guard 1 (D-3): humble_login_open's if-visible block carries the narrowed 572-wide sizing call and no longer carries the former 900-wide one", () => {
+  test("Guard 1 (D-3): humble_login_open's if-visible block carries the narrowed 464-wide sizing call and no longer carries the former 900-wide one", () => {
     const code = loadMainRsCode()
     const armBody = extractHumbleLoginOpenArmBody(code)
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
-    expect(visibleBlock).toContain('.inner_size(572.0, 700.0)')
+    expect(visibleBlock).toContain('.inner_size(464.0, 592.0)')
     // Scoped to this block only -- a file-wide negative would red on Epic's own legitimate
     // 900 at a different call site, which D-3 requires to stay (see Guard 2 below).
     expect(visibleBlock).not.toContain('.inner_size(900.0, 700.0)')
@@ -1400,7 +1401,7 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     const code = loadMainRsCode(synthetic)
     const armBody = extractHumbleLoginOpenArmBody(code)
     const visibleBlock = extractBracedBlock(armBody, 'if visible {')
-    expect(visibleBlock).not.toContain('.inner_size(572.0, 700.0)')
+    expect(visibleBlock).not.toContain('.inner_size(464.0, 592.0)')
   })
 
   test('Guard 2 (D-3 scope guard): open_pristine_epic_login_window keeps its own 900-wide sizing call, unaffected by the narrowed Humble sheet', () => {
