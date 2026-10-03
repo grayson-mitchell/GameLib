@@ -123,20 +123,20 @@ const LibraryTour: React.FC = () => {
         position: 'left'
       },
       {
-        element: '[data-tour="library-refresh"]',
-        intro: t(
-          'tour.library.refresh',
-          'Refresh your library to check for new games or updates.'
-        ),
-        position: 'bottom'
-      },
-      {
         element: '[data-tour="library-add-game"]',
         intro: t(
           'tour.library.addGame',
           'Add your own games or apps to the library by clicking here. They can be basically anything, even Browser URLs.'
         ),
         position: 'left'
+      },
+      {
+        element: '[data-tour="library-refresh"]',
+        intro: t(
+          'tour.library.refresh',
+          'Refresh your library to check for new games or updates.'
+        ),
+        position: 'bottom'
       }
     ]
 

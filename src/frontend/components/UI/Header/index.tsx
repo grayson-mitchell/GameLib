@@ -247,6 +247,7 @@ export default function Header({ list, totalGames }: Props) {
             neither of which exists in the catalog. Literal key AND literal
             default, because i18next-parser resolves nothing else.
           */}
+          <AddGameButton iconOnly />
           {activeFilterCount > 0 ? (
             <span className="numberOfgames numberOfgames--filtered">
               {tGamelib(
@@ -284,7 +285,6 @@ export default function Header({ list, totalGames }: Props) {
               style={{ fontSize: '14px' }}
             />
           )}
-          <AddGameButton />
         </div>
         {showStaleIndicator && (
           <span className="steamStaleIndicator">

@@ -475,4 +475,18 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(block).toMatch(/display:\s*flex/)
     expect(block).toMatch(/gap:\s*var\(--space-xs\)/)
   })
+
+  it('Header__footerRow renders the plus button, count pill, then refresh button in D-04/D-06 order', () => {
+    const tree = renderHeader()
+    const children = topLevelChildren(tree)
+    const footer = children[4]
+    const footerRow = topLevelChildren(footer)[0]
+    expect(footerRow.props?.className).toBe('Header__footerRow')
+
+    const rowChildren = topLevelChildren(footerRow)
+    expect(rowChildren[0].type).toBe(AddGameButton)
+    expect(rowChildren[0].props?.iconOnly).toBe(true)
+    expect(rowChildren[1].props?.className).toMatch(/numberOfgames/)
+    expect(rowChildren[2].type).toBe('button')
+  })
 })

@@ -115,25 +115,29 @@
   gap: var(--space-xs);
 }
 
+/*
+ * 260815-opt, extended 261003-i4t. Deliberately NO colour change:
+ * `.numberOfgames` already paints `var(--input-background)` behind
+ * inherited text, and recolouring the foreground would introduce a new
+ * foreground/background contrast pair to validate across all 11 themes --
+ * for no informational gain, since the string itself is the signal.
+ * `tabular-nums` now applies to the base (not just `--filtered`): D-05 made
+ * the unfiltered reading a number followed by a word too ("394 games"), so
+ * digit-width jitter there would shuffle the word sideways -- the same
+ * defect the modifier already guarded against in the filtered state.
+ *
+ * `margin-inline-start` removed (261003-i4t, D-04): it was written for a
+ * count that sat first in the footer row. The icon-only AddGameButton now
+ * sits ahead of it, and `.Header__footerRow`'s own `gap` spaces all three
+ * items evenly -- restating a start margin here would double-space the
+ * pill against that gap.
+ */
 .numberOfgames {
   font-size: var(--text-md);
   font-weight: var(--regular);
   background: var(--input-background);
   padding: var(--space-xs);
-  margin-inline-start: var(--space-sm, 4px);
   border-radius: var(--space-3xs);
-}
-
-/*
- * 260815-opt. Deliberately NO colour change: `.numberOfgames` above already
- * paints `var(--input-background)` behind inherited text, and recolouring
- * the foreground would introduce a new foreground/background contrast pair
- * to validate across all 11 themes -- for no informational gain, since the
- * string "42 of 318" is itself the signal. `tabular-nums` is the whole
- * point: without it the pill resizes as the numerator's digits change while
- * the user types in the search box.
- */
-.numberOfgames--filtered {
   font-variant-numeric: tabular-nums;
 }
 

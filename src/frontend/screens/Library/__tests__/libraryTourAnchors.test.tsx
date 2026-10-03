@@ -79,6 +79,13 @@ function renderedSteps(): TourStepLike[] {
 // contextValue above), so the conditional `library-game-card` step is
 // absent; a future edit that silently drops or reorders a working step is
 // caught by comparing the full ordered list against this exact array.
+//
+// 261003-i4t (D-11): `library-add-game` and `library-refresh` are swapped
+// from their original order so the tour walks the panel footer
+// left-to-right, matching D-04 (plus button at the left) and D-06 (refresh
+// to the right of the count). No `element` selector, title, or body
+// changed -- only the two step objects' positions, so the anchor manifest
+// itself is unchanged (`navTourAnchorCensus.test.ts` stays green).
 const EXPECTED_ELEMENTS = [
   undefined, // welcome.intro
   undefined, // welcome.intro2
@@ -88,8 +95,8 @@ const EXPECTED_ELEMENTS = [
   '[data-tour="library-view-toggle"]',
   '[data-tour="library-sort-az"]',
   '[data-tour="library-sort-installed"]',
-  '[data-tour="library-refresh"]',
   '[data-tour="library-add-game"]',
+  '[data-tour="library-refresh"]',
   undefined // end.intro
 ]
 

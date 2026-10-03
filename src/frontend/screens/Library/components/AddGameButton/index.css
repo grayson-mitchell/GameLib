@@ -22,3 +22,19 @@
   background: var(--primary-button, var(--accent-overlay));
   box-shadow: 0px 0px 0px 3px var(--button-stroke, var(--text-default));
 }
+
+/* D-03/D-04: icon-only variant for the library panel's footer row, matching
+   the tile idiom's visual weight (GameCard/index.css:565-569,
+   `height: clamp(28px, 1vw, 36px); aspect-ratio: 1`) rather than that exact
+   declaration -- this button sits in a narrow panel footer row, not on a
+   card. Additive only: the text-bearing base block above is untouched and
+   still renders unmodified for EmptyLibrary's in-sentence usage. */
+.sideloadGameButton--iconOnly {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: clamp(28px, 1vw, 36px);
+  aspect-ratio: 1;
+  padding: 0;
+  text-transform: none;
+}
