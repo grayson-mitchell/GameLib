@@ -109,6 +109,25 @@ export default function FilterFocusRow() {
     }
   ]
 
+  // Divider labels are literal call sites, hoisted so each one can also ride
+  // on the divider's `title` -- same reachability affordance as the rows.
+  const viewsGroupLabel = tGamelib(
+    'gamelib:library.filterPanel.focusRowViewsGroup',
+    'Views'
+  )
+  const collectionsGroupLabel = tGamelib(
+    'gamelib:library.filterPanel.collections',
+    'Collections'
+  )
+  const storeGroupLabel = tGamelib(
+    'gamelib:library.filterPanel.storeGroup',
+    'Store'
+  )
+  const runnabilityGroupLabel = tGamelib(
+    'gamelib:library.filterPanel.runnabilityGroup',
+    'Runnability'
+  )
+
   // `value === 'sideload'` is special-cased BEFORE the brand map is consulted:
   // `RunnerToStore` deliberately has no `sideload` entry (facetLabels.ts), and
   // copying `FilterStoreFacet`'s split keeps both surfaces on one label source.
@@ -138,14 +157,17 @@ export default function FilterFocusRow() {
       title={tGamelib('gamelib:library.filterPanel.focusRow', 'Focus row')}
       className="FilterFocusRow"
     >
-      <span className="FilterFocusRow__divider">
-        {tGamelib('gamelib:library.filterPanel.focusRowViewsGroup', 'Views')}
+      <span className="FilterFocusRow__divider" title={viewsGroupLabel}>
+        {viewsGroupLabel}
       </span>
       {viewRows.map((view) => row('view', view.value, view.label))}
       {categories.length > 0 && (
         <>
-          <span className="FilterFocusRow__divider">
-            {tGamelib('gamelib:library.filterPanel.collections', 'Collections')}
+          <span
+            className="FilterFocusRow__divider"
+            title={collectionsGroupLabel}
+          >
+            {collectionsGroupLabel}
           </span>
           {categories.map((category) => row('collection', category, category))}
           {row(
@@ -159,8 +181,8 @@ export default function FilterFocusRow() {
       )}
       {connectedStores.length > 0 && (
         <>
-          <span className="FilterFocusRow__divider">
-            {tGamelib('gamelib:library.filterPanel.storeGroup', 'Store')}
+          <span className="FilterFocusRow__divider" title={storeGroupLabel}>
+            {storeGroupLabel}
           </span>
           {connectedStores.map((store: StoreFacetValue) =>
             row('store', store, storeLabel(store))
@@ -169,11 +191,11 @@ export default function FilterFocusRow() {
       )}
       {runnabilityRows.length > 0 && (
         <>
-          <span className="FilterFocusRow__divider">
-            {tGamelib(
-              'gamelib:library.filterPanel.runnabilityGroup',
-              'Runnability'
-            )}
+          <span
+            className="FilterFocusRow__divider"
+            title={runnabilityGroupLabel}
+          >
+            {runnabilityGroupLabel}
           </span>
           {runnabilityRows.map((tier: RunnabilityTier) =>
             row('runnability', tier, runnabilityLabel(tier, tGamelib))

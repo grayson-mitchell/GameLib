@@ -371,3 +371,86 @@ describe('FilterFocusRow is read-only over collections (T-48-07)', () => {
     expect(source).not.toMatch(/dangerouslySetInnerHTML/)
   })
 })
+
+describe('FilterFocusRow long-label containment (48-03 Task 2, UI-SPEC E2/E3)', () => {
+  beforeEach(() => {
+    setContexts({
+      categories: ['A collection name long enough to wrap several lines'],
+      stores: ['gog'],
+      runnability: ['native']
+    })
+  })
+
+  it('puts the full untruncated label on a title attribute of every row', () => {
+    const tree = render()
+    const rows = collectElements(tree).filter(isRow)
+    expect(rows.length).toBeGreaterThan(4)
+    rows.forEach((row) => {
+      const inner = row.props.labelElement as AnyElement
+      expect(inner.props.title).toBe(row.props.label)
+    })
+  })
+
+  it('puts a title equal to the rendered label on every divider', () => {
+    const dividers = collectElements(render()).filter(isDivider)
+    expect(dividers).toHaveLength(4)
+    dividers.forEach((el) => {
+      expect(el.props.title).toBe(el.props.children)
+    })
+  })
+
+  describe('stylesheet source gate', () => {
+    const scss = stripSourceComments(
+      readFileSync(join(__dirname, '..', 'index.scss'), 'utf8')
+    )
+    const navItemTsx = stripSourceComments(
+      readFileSync(join(__dirname, '..', '..', 'NavItem', 'index.tsx'), 'utf8')
+    )
+
+    // Brace-counted block extractor (copied from `tier2Portal.test.ts`'s
+    // `cssBlock` idiom), restricted to a selector's declaration body.
+    function cssBlock(source: string, selector: string): string {
+      const start = source.indexOf(`${selector} {`)
+      if (start === -1) throw new Error(`selector ${selector} not found`)
+      let depth = 0
+      for (let i = source.indexOf('{', start); i < source.length; i++) {
+        if (source[i] === '{') depth++
+        if (source[i] === '}') {
+          depth--
+          if (depth === 0)
+            return source.slice(source.indexOf('{', start) + 1, i)
+        }
+      }
+      throw new Error(`unterminated block for ${selector}`)
+    }
+
+    it('clamps the CHILD span of the row -- the element NavItem puts the label text in', () => {
+      // NavItem wraps its label in a bare `<span>` that is a direct child of
+      // the `<button>`; the clamp must name that span, not an ancestor.
+      expect(navItemTsx).toMatch(/<span>\{labelElement \?\? label\}<\/span>/)
+      const block = cssBlock(scss, '.FilterFocusRow__row > span')
+      expect(block).toMatch(/overflow:\s*hidden/)
+      expect(block).toMatch(/text-overflow:\s*ellipsis/)
+      expect(block).toMatch(/white-space:\s*nowrap/)
+      expect(block).toMatch(/min-width:\s*0/)
+    })
+
+    it('gives the row and the divider the flex-item min-width escape', () => {
+      expect(cssBlock(scss, '.FilterFocusRow__row')).toMatch(/min-width:\s*0/)
+      const divider = cssBlock(scss, '.FilterFocusRow__divider')
+      expect(divider).toMatch(/min-width:\s*0/)
+      expect(divider).toMatch(/text-overflow:\s*ellipsis/)
+    })
+
+    it('is scoped under .NavShell__tier2Portal', () => {
+      expect(scss).toMatch(/^\.NavShell__tier2Portal \{/m)
+      const top = scss.match(/^\S[^{]*\{/gm) ?? []
+      expect(top).toEqual(['.NavShell__tier2Portal {'])
+    })
+
+    it('references neither --navbar-active nor --border-color', () => {
+      expect(scss).not.toMatch(/--navbar-active(?!-background)/)
+      expect(scss).not.toMatch(/--border-color/)
+    })
+  })
+})
