@@ -20,11 +20,11 @@ import Fuse from 'fuse.js'
 import ContextProvider from 'frontend/state/ContextProvider'
 
 import GamesList from './components/GamesList'
-import { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
+import { GameInfo, Runner } from 'common/types'
 import ErrorComponent from 'frontend/components/UI/ErrorComponent'
 import { countUnfilteredGames, findSilentlyExcludedGames } from './gameCount'
 import { normalizeTitle } from 'frontend/helpers/library'
-import RecentlyPlayed from './components/RecentlyPlayed'
+import FocusRowStrip from './components/FocusRowStrip'
 import LibraryContext from './LibraryContext'
 import {
   FilterEngineDeps,
@@ -98,12 +98,12 @@ export default React.memo(function Library(): JSX.Element {
     steam,
     sideloadedLibrary,
     favouriteGames,
-    libraryTopSection,
     platform,
     customCategories,
     hiddenGames,
     gameUpdates,
-    steamSyncStatus
+    steamSyncStatus,
+    focusRow
   } = useContext(ContextProvider)
 
   hasHelp(
@@ -573,79 +573,16 @@ export default React.memo(function Library(): JSX.Element {
     [libraryStatus]
   )
 
-  // top section
-  const showRecentGames = libraryTopSection.startsWith('recently_played')
-
-  const favouriteGamesList = useMemo(() => {
-    // 08.1 review IN-02: `!== 'off'` folded 'only' in with 'show' and returned
-    // the unfiltered list, so this lane contradicted the main grid's "only
-    // hidden games" selection sitting directly below it. Same shared rule as
-    // the RecentlyPlayed lane.
-    const hiddenAppNames = hiddenGames.list.map(
-      (hidden: HiddenGame) => hidden.appName
-    )
-
-    return favouriteGames.list.filter((game) =>
-      filterEngine.passesHiddenLaneFilter(
-        hiddenAppNames.includes(game.appName),
-        showHidden
-      )
-    )
-  }, [favouriteGames, showHidden, hiddenGames])
-
-  const showFavourites =
-    libraryTopSection === 'favourites' && !!favouriteGamesList.length
-
-  const favourites = useMemo(() => {
-    const tempArray: GameInfo[] = []
-    if (showFavourites || showFavouritesLibrary) {
-      const favouriteAppNames = favouriteGamesList.map(
-        (favourite: FavouriteGame) => favourite.appName
-      )
-      epic.library.forEach((game) => {
-        if (favouriteAppNames.includes(game.app_name)) tempArray.push(game)
-      })
-      gog.library.forEach((game) => {
-        if (favouriteAppNames.includes(game.app_name)) tempArray.push(game)
-      })
-      sideloadedLibrary.forEach((game) => {
-        if (favouriteAppNames.includes(game.app_name)) tempArray.push(game)
-      })
-      amazon.library.forEach((game) => {
-        if (favouriteAppNames.includes(game.app_name)) tempArray.push(game)
-      })
-      zoom.library.forEach((game) => {
-        if (favouriteAppNames.includes(game.app_name)) tempArray.push(game)
-      })
-      steam?.library?.forEach((game) => {
-        if (favouriteAppNames.includes(game.app_name)) tempArray.push(game)
-      })
-    }
-    return tempArray.sort((a, b) => {
-      const gameA = a.title.toUpperCase().replace('THE ', '')
-      const gameB = b.title.toUpperCase().replace('THE ', '')
-      return gameA.localeCompare(gameB)
-    })
-  }, [
-    showFavourites,
-    showFavouritesLibrary,
-    favouriteGamesList,
-    epic,
-    gog,
-    amazon,
-    sideloadedLibrary,
-    zoom,
-    steam
-  ])
-
-  // NOTE (CR-02): there is deliberately no `favouritesIds` memo here any
-  // more. `engineDeps.favouriteKeys` used to be derived from `favourites`
-  // above -- a DISPLAY memo that only populates when `showFavourites ||
-  // showFavouritesLibrary`, both of which are off on a default install. That
-  // made the Favourites VIEW return zero games for everyone. The engine now
-  // reads `favouriteGames.list` directly (see the engineDeps memo below);
-  // `favourites` survives solely to feed the top-section Favourites lane in
-  // the JSX, which is what it was always for.
+  // NOTE (CR-02, extended Phase 48 Plan 02 Task 3): there is deliberately no
+  // `favouritesIds` memo here any more. `engineDeps.favouriteKeys` used to be
+  // derived from a `favourites` display memo that only populated when a
+  // lane-visibility flag was on -- making the Favourites VIEW return zero
+  // games for everyone. The engine now reads `favouriteGames.list` directly
+  // (see the engineDeps memo below). The `showRecentGames`/`favouriteGamesList`/
+  // `showFavourites`/`favourites` locals that used to feed the top-section
+  // RecentlyPlayed and Favourites lanes are gone entirely -- both lanes are
+  // replaced below by the single `FocusRowStrip`, which reads the persisted
+  // `focusRow` pick through `selectFocusRowGames` instead of either lane flag.
 
   // --- 34.11 Plan 04/05 (+ CR-01 code-review fix): the filter engine's
   // assembled inputs, computed ONCE here and reused by the grid, the
@@ -1209,33 +1146,23 @@ export default React.memo(function Library(): JSX.Element {
           anyway; visibility above the fold is the point. Making the recent
           lane honour the remaining facets is NOT the fix and is explicitly
           out of scope. The row self-suppresses at `activeFilterCount === 0`,
-          so an unfiltered library's tree is unchanged.
+          so an unfiltered library's tree is unchanged. Phase 48 Plan 02
+          replaced that lane (and the Favourites lane) with `FocusRowStrip`,
+          which SPEC R4 deliberately makes independent of every facet except
+          `showHidden` -- the asymmetry this paragraph describes is the
+          intended design, not a residual gap to close.
 
           Locked by `__tests__/filterChipRowPlacement.test.ts`.
         */}
         <FilterChipRow />
 
-        {showRecentGames && (
-          <RecentlyPlayed
-            handleModal={handleModal}
-            onlyInstalled={libraryTopSection.endsWith('installed')}
-            showHidden={showHidden}
-          />
-        )}
-
-        {showFavourites && !showFavouritesLibrary && (
-          <>
-            <div className="library-section-header">
-              <h3 className="libraryHeader">{t('favourites', 'Favourites')}</h3>
-            </div>
-            <GamesList
-              library={favourites}
-              handleGameCardClick={handleModal}
-              isFavourite
-              isFirstLane
-            />
-          </>
-        )}
+        <FocusRowStrip
+          focusRow={focusRow}
+          libraryUnion={libraryUnion}
+          deps={engineDeps}
+          showHidden={showHidden}
+          handleModal={handleModal}
+        />
 
         {showAlphabetFilter && <AlphabetFilter />}
 
@@ -1262,7 +1189,7 @@ export default React.memo(function Library(): JSX.Element {
               layout={layout}
               handleGameCardClick={handleModal}
               ariaLabel={
-                showFavourites
+                showFavouritesLibrary
                   ? t('favourites', 'Favourites')
                   : t('title.allGames', 'All Games')
               }

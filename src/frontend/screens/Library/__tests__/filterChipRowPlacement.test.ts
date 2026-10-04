@@ -1,6 +1,8 @@
 /**
  * Render-order gate for `FilterChipRow` inside `.listing` (quick task
- * 260815-qf0).
+ * 260815-qf0, repointed Phase 48 Plan 02 Task 3 from `RecentlyPlayed` to
+ * `FocusRowStrip` -- the element below the chips changed, the defect this
+ * gate locks did not).
  *
  * The defect this locks shut: `.listing` is the scrolling container, and the
  * chip row used to render FIFTH inside it -- after `RecentlyPlayed`, the
@@ -19,10 +21,9 @@
  * `libraryHeaderVisibility.test.ts`), not a fallback.
  *
  * WHAT THIS FILE DOES NOT AND CANNOT PROVE: that the chips render, what they
- * look like, whether they are adequately separated from the "Played Recently"
- * heading, or that an unfiltered library opens no gap at the top. Nothing is
- * mounted here and no CSS is evaluated. Those observations are owed to the
- * live human gate.
+ * look like, whether they are adequately separated from the focus row, or
+ * that an unfiltered library opens no gap at the top. Nothing is mounted here
+ * and no CSS is evaluated. Those observations are owed to the live human gate.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -34,7 +35,7 @@ import {
 const LIBRARY_INDEX_PATH = join(__dirname, '..', 'index.tsx')
 
 const CHIP_ROW_TOKEN = '<FilterChipRow'
-const RECENTLY_PLAYED_TOKEN = '<RecentlyPlayed'
+const FOCUS_ROW_TOKEN = '<FocusRowStrip'
 const TOP_ANCHOR_TOKEN = '<span id="top" />'
 
 function gateSource(source: string): string {
@@ -54,30 +55,31 @@ function readGated(path: string): string {
  * hand-rebuilt copy of the assertion is a replica, and a replica drifts
  * silently away from the thing it claims to guard.
  */
-function chipRowPrecedesRecentlyPlayed(gatedSource: string): boolean {
+function chipRowPrecedesFocusRowStrip(gatedSource: string): boolean {
   const chipRowIndex = gatedSource.indexOf(CHIP_ROW_TOKEN)
-  const recentlyPlayedIndex = gatedSource.indexOf(RECENTLY_PLAYED_TOKEN)
+  const focusRowIndex = gatedSource.indexOf(FOCUS_ROW_TOKEN)
 
-  if (chipRowIndex === -1 || recentlyPlayedIndex === -1) {
+  if (chipRowIndex === -1 || focusRowIndex === -1) {
     return false
   }
 
-  return chipRowIndex < recentlyPlayedIndex
+  return chipRowIndex < focusRowIndex
 }
 
 /**
- * The OLD, shipped-until-this-task order, reproduced verbatim in structure.
+ * The OLD, shipped-until-260815-qf0 order, reproduced verbatim in structure.
  * This is the permanent RED proof: if someone later moves the chip row back
- * below `RecentlyPlayed`, the real-source spec fails for exactly the reason
- * this specimen fails here.
+ * below the focus row, the real-source spec fails for exactly the reason
+ * this specimen fails here. The element name is `FocusRowStrip` rather than
+ * the historical `RecentlyPlayed` because the predicate is driven by
+ * `FOCUS_ROW_TOKEN` now -- the ordering defect being guarded is unchanged.
  */
 const OLD_ORDER_SPECIMEN = [
   '<div className="listing">',
   '  <span id="top" />',
   '  {showRecentGames && (',
-  '    <RecentlyPlayed',
+  '    <FocusRowStrip',
   '      handleModal={handleModal}',
-  '      onlyInstalled={libraryTopSection.endsWith("installed")}',
   '      showHidden={showHidden}',
   '    />',
   '  )}',
@@ -97,7 +99,7 @@ const NEW_ORDER_SPECIMEN = [
   '  <span id="top" />',
   '  <FilterChipRow />',
   '  {showRecentGames && (',
-  '    <RecentlyPlayed',
+  '    <FocusRowStrip',
   '      handleModal={handleModal}',
   '      showHidden={showHidden}',
   '    />',
@@ -108,7 +110,7 @@ const NEW_ORDER_SPECIMEN = [
 /**
  * Proves the stripper is load-bearing BEFORE any gate leans on it. Without
  * this, the ordering gate could be satisfied by a source file that merely
- * NAMES the tag in a comment above `RecentlyPlayed` -- which is precisely the
+ * NAMES the tag in a comment above `FocusRowStrip` -- which is precisely the
  * defect class `stripSourceComments` was extracted to close.
  */
 describe('source-gate stripper integrity', () => {
@@ -119,20 +121,20 @@ describe('source-gate stripper integrity', () => {
     '*/',
     '/* <FilterChipRow /> */',
     'const real = 1',
-    '<RecentlyPlayed showHidden={showHidden} />'
+    '<FocusRowStrip showHidden={showHidden} />'
   ].join('\n')
 
-  it('carries the chip-row tag before the RecentlyPlayed tag BEFORE stripping', () => {
+  it('carries the chip-row tag before the FocusRowStrip tag BEFORE stripping', () => {
     expect(COMMENT_ONLY_SPECIMEN.indexOf(CHIP_ROW_TOKEN)).toBeGreaterThan(-1)
     expect(COMMENT_ONLY_SPECIMEN.indexOf(CHIP_ROW_TOKEN)).toBeLessThan(
-      COMMENT_ONLY_SPECIMEN.indexOf(RECENTLY_PLAYED_TOKEN)
+      COMMENT_ONLY_SPECIMEN.indexOf(FOCUS_ROW_TOKEN)
     )
   })
 
   it('a tag appearing ONLY inside line and block comments does not satisfy the ordering predicate', () => {
     expect(gateSource(COMMENT_ONLY_SPECIMEN)).not.toContain(CHIP_ROW_TOKEN)
     expect(
-      chipRowPrecedesRecentlyPlayed(gateSource(COMMENT_ONLY_SPECIMEN))
+      chipRowPrecedesFocusRowStrip(gateSource(COMMENT_ONLY_SPECIMEN))
     ).toBe(false)
   })
 
@@ -140,41 +142,41 @@ describe('source-gate stripper integrity', () => {
     const stripped = gateSource(COMMENT_ONLY_SPECIMEN)
 
     expect(stripped).toContain('const real = 1')
-    expect(stripped).toContain(RECENTLY_PLAYED_TOKEN)
+    expect(stripped).toContain(FOCUS_ROW_TOKEN)
   })
 })
 
 describe('predicate non-vacuity -- known-bad and known-good specimens', () => {
   it('SANITY: the OLD shipped order (chips last) does NOT satisfy the predicate', () => {
-    expect(chipRowPrecedesRecentlyPlayed(gateSource(OLD_ORDER_SPECIMEN))).toBe(
+    expect(chipRowPrecedesFocusRowStrip(gateSource(OLD_ORDER_SPECIMEN))).toBe(
       false
     )
   })
 
   it('SANITY: the NEW order (chips first) DOES satisfy the predicate -- so it is not false unconditionally', () => {
-    expect(chipRowPrecedesRecentlyPlayed(gateSource(NEW_ORDER_SPECIMEN))).toBe(
+    expect(chipRowPrecedesFocusRowStrip(gateSource(NEW_ORDER_SPECIMEN))).toBe(
       true
     )
   })
 
   it('SANITY: a source naming neither tag is false rather than throwing', () => {
-    expect(chipRowPrecedesRecentlyPlayed(gateSource('const x = 1'))).toBe(false)
+    expect(chipRowPrecedesFocusRowStrip(gateSource('const x = 1'))).toBe(false)
   })
 })
 
-describe('Library/index.tsx -- FilterChipRow renders above RecentlyPlayed', () => {
+describe('Library/index.tsx -- FilterChipRow renders above FocusRowStrip', () => {
   const source = readGated(LIBRARY_INDEX_PATH)
 
-  it('renders both the chip row and the RecentlyPlayed lane, with the chip row FIRST', () => {
+  it('renders both the chip row and the FocusRowStrip, with the chip row FIRST', () => {
     expect(source.indexOf(CHIP_ROW_TOKEN)).toBeGreaterThan(-1)
-    expect(source.indexOf(RECENTLY_PLAYED_TOKEN)).toBeGreaterThan(-1)
+    expect(source.indexOf(FOCUS_ROW_TOKEN)).toBeGreaterThan(-1)
     expect(source.indexOf(CHIP_ROW_TOKEN)).toBeLessThan(
-      source.indexOf(RECENTLY_PLAYED_TOKEN)
+      source.indexOf(FOCUS_ROW_TOKEN)
     )
   })
 
   it('satisfies the SAME predicate the known-bad specimen fails', () => {
-    expect(chipRowPrecedesRecentlyPlayed(source)).toBe(true)
+    expect(chipRowPrecedesFocusRowStrip(source)).toBe(true)
   })
 
   /**

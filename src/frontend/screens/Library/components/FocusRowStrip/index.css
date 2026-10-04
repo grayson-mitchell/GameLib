@@ -1,0 +1,35 @@
+.focusRowStrip {
+  padding: 0 var(--space-md-fixed) var(--space-md-fixed);
+}
+
+.focusRowStrip__viewport {
+  position: relative;
+}
+
+.focusRowTrack {
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.focusRowTrack::-webkit-scrollbar {
+  display: none;
+}
+
+/* No scrollbar-gutter: stable here -- it reserves the PLATFORM scrollbar width (~17px on macOS) regardless of this bar's own width, widening the box and shifting content. Measured in this repo; every desk theory about it predicted the wrong direction. scrollbar-width: none above already removes the gutter the platform would otherwise reserve. */
+.focusRowTrack .gameList {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1.5rem;
+  padding: 0;
+}
+
+.focusRowTrack .gameList > * {
+  flex: 0 0 156px;
+}
+
+.focusRowStrip .libraryHeader {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
