@@ -51,6 +51,8 @@ const initialContext: ContextType = {
   libraryStatus: [],
   libraryTopSection: 'disabled',
   handleLibraryTopSection: () => null,
+  focusRow: null,
+  handleFocusRow: () => null,
   platform: 'unknown',
   refresh: async () => Promise.resolve(),
   refreshLibrary: async () => Promise.resolve(),

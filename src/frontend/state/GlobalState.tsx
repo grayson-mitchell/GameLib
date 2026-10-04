@@ -9,6 +9,7 @@ import {
   RefreshOptions,
   Runner,
   WineVersionInfo,
+  FocusRowSelection,
   LibraryTopSectionOptions,
   ExperimentalFeatures,
   Status
@@ -114,6 +115,7 @@ interface StateProps {
   }
   wineVersions: WineVersionInfo[]
   error: boolean
+  focusRow: FocusRowSelection
   gameUpdates: string[]
   language: string
   libraryStatus: GameStatus[]
@@ -487,6 +489,7 @@ class GlobalState extends PureComponent<Props> {
     // by the shipped code) and is the <select>'s value. Unconverted, the four
     // underscore-named locales would show a raw `nb-NO` label with no option
     // selected.
+    focusRow: globalSettings?.focusRow ?? null,
     language: toShippedLanguage(this.props.i18n.language),
     libraryStatus: [],
     libraryTopSection: globalSettings?.libraryTopSection || 'disabled',
@@ -797,6 +800,18 @@ class GlobalState extends PureComponent<Props> {
 
   handleLibraryTopSection = (value: LibraryTopSectionOptions) => {
     this.setState({ libraryTopSection: value })
+  }
+
+  // 48-02: unlike `handleLibraryTopSection` above, this setter owns BOTH
+  // halves -- state and persistence. `handleLibraryTopSection` can get away
+  // with only `setState` because the Settings screen's `useSetting` hook
+  // persists it instead; `useSetting` needs `SettingsContext`, which does
+  // not exist outside the Settings screen, so a focus-row pick made from
+  // the Library screen has no other writer available. One writer, no
+  // split-brain.
+  handleFocusRow = (value: FocusRowSelection) => {
+    this.setState({ focusRow: value })
+    window.api.setSetting({ appName: 'default', key: 'focusRow', value })
   }
 
   handleExperimentalFeatures = (value: ExperimentalFeatures) => {
@@ -1959,6 +1974,7 @@ class GlobalState extends PureComponent<Props> {
             renameCategory: this.renameCustomCategory
           },
           handleLibraryTopSection: this.handleLibraryTopSection,
+          handleFocusRow: this.handleFocusRow,
           handleExperimentalFeatures: this.handleExperimentalFeatures,
           setTheme: this.setTheme,
           setZoomPercent: this.setZoomPercent,

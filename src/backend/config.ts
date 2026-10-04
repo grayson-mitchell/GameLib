@@ -346,6 +346,7 @@ class GlobalConfigV0 extends GlobalConfig {
       autoUpdateGames: false,
       customWinePaths: [],
       defaultInstallPath: heroicInstallPath,
+      focusRow: null,
       libraryTopSection: 'disabled',
       trayIconVariant: 'auto',
       defaultSteamPath: getSteamCompatFolder(),

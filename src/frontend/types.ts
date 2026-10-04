@@ -6,6 +6,7 @@ import {
   ConnectivityStatus,
   DialogType,
   ButtonOptions,
+  FocusRowSelection,
   LibraryTopSectionOptions,
   DMQueueElement,
   DownloadManagerState,
@@ -41,6 +42,8 @@ export interface ContextType {
   libraryStatus: GameStatus[]
   libraryTopSection: string
   handleLibraryTopSection: (value: LibraryTopSectionOptions) => void
+  focusRow: FocusRowSelection
+  handleFocusRow: (value: FocusRowSelection) => void
   platform: NodeJS.Platform | 'unknown'
   refresh: (library: Runner, checkUpdates?: boolean) => Promise<void>
   refreshLibrary: (options: RefreshOptions) => Promise<void>

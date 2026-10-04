@@ -152,6 +152,7 @@ export interface AppSettings extends GameSettings {
   noTrayIcon: boolean
   experimentalFeatures?: ExperimentalFeatures
   framelessWindow: boolean
+  focusRow: FocusRowSelection
   hideChangelogsOnStartup: boolean
   hideWindowOnProtocolLaunch: boolean
   libraryTopSection: LibraryTopSectionOptions
@@ -172,6 +173,14 @@ export type LibraryTopSectionOptions =
   | 'recently_played'
   | 'recently_played_installed'
   | 'favourites'
+
+// 48-02: the persisted focus-row pick. `kind` scopes which facet the `value`
+// belongs to; `value` is validated at the selector boundary
+// (`isValidFocusRowSelection` in FocusRowStrip/focusRowSelectors.ts), not
+// here -- this type alone cannot express "a non-empty string" or "one of
+// the four kind literals" over an untrusted persisted value.
+export type FocusRowKind = 'view' | 'collection' | 'store' | 'runnability'
+export type FocusRowSelection = { kind: FocusRowKind; value: string } | null
 
 export type ExecResult = {
   stderr: string
