@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v0.8
 milestone_name: Phase Details
 current_phase: 48
-current_phase_name: Focus row — move the library top section into the panel and widen it
+current_phase_name: Focus row — move library top section into panel widen it
 status: executing
-stopped_at: Completed 48-02-PLAN.md
-last_updated: "2026-10-04T01:53:56.377Z"
-last_activity: 2026-10-04
+stopped_at: Completed 48-03-PLAN.md
+last_updated: "2026-10-04T23:55:20.788Z"
+last_activity: 2026-10-05
 last_activity_desc: Phase 48 execution started
-state_head: e3336b2e9f153d30ffc84e03c54d31110535e71b
+state_head: 1ba49081831f4556b89845bb67dfdab5b19b5752
 progress:
   total_phases: 43
   completed_phases: 36
   total_plans: 512
-  completed_plans: 499
+  completed_plans: 500
   percent: 84
 ---
 
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 48 — Focus row — move the library top section into the panel and widen it
+**Current focus:** Phase 48 — Focus row — move library top section into panel widen it
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 3 of 6
+Phase: 48 (Focus row — move library top section into panel widen it) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-10-04 — Phase 48 execution started
+Last activity: 2026-10-05 — Phase 48 execution started
 
 Previous activity: 2026-10-01 -- Completed quick task 261001-93f: built and self-proved a macOS pixel/geometry measurement instrument for Phase 38's two open items (38-E03(a), 38-E04(a)), pre-registered both items' pass/fail criteria before any live measurement, and wrote an operator run-sheet -- scores NEITHER gate, only the operator's drag-resize gesture and System Settings scale-factor change can.
 
@@ -501,6 +501,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 260929-qth P01 | ~16min | 3 tasks | 5 files |
 | Phase 48 P01 | 11min | 3 tasks | 97 files |
 | Phase 48 P02 | 52min | 3 tasks | 21 files |
+| Phase 48 P03 | 25 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1124,6 +1125,7 @@ Recent decisions affecting current work:
 - [Phase 48]: focusRow is a new, additive GlobalConfig key (not a widened libraryTopSection), so plan 48-05's seed-once-guarded-by-key-presence is expressible
 - [Phase 48]: Focus-row engine state sets showHidden: 'show' so passesHiddenLaneFilter is the sole hidden-games authority, never passesMore
 - [Phase 48]: Focus-row state keeps showNonAvailable/noStorePage/showSupportOfflineOnly/showThirdPartyManagedOnly/showUpdatesOnly at engine defaults for R4 independence
+- [Phase 48]: 48-03: per-row title carried by an inner span via NavItem labelElement, not a new NavItem prop (keeps change inside the plan's files); divider labels hoisted to consts that stay literal tGamelib call sites
 
 ### Pending Todos
 
@@ -1727,8 +1729,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-04T01:53:54.307Z
-Stopped at: Completed 48-02-PLAN.md
+Last session: 2026-10-04T23:55:18.696Z
+Stopped at: Completed 48-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

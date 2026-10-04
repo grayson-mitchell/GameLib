@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 2/6 plans executed
+**Plans:** 3/6 plans executed
 
 Plans:
 **Wave 1**
@@ -5672,7 +5672,7 @@ Plans:
 - [x] 48-02-PLAN.md — TRACER: one view pick wired end to end — persistence, panel section, horizontal strip, lane replacement (R1, R3, R4, R5)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 48-03-PLAN.md — the remaining three pick kinds: collections, stores, runnability, each omitted when empty (R2)
+- [x] 48-03-PLAN.md — the remaining three pick kinds: collections, stores, runnability, each omitted when empty (R2)
 - [ ] 48-04-PLAN.md — forward/back overflow controls and horizontal gamepad scroll-into-view (R3)
 - [ ] 48-05-PLAN.md — retire the `Library Top Section` dropdown and seed `focusRow` from it once (R7)
 
