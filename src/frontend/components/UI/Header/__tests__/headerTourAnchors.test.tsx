@@ -203,6 +203,14 @@ jest.mock('../../NavShell/components/FilterCollectionList', () => ({
   })
 }))
 
+jest.mock('../../NavShell/components/FilterFocusRow', () => ({
+  __esModule: true,
+  default: (props: Record<string, unknown>) => ({
+    type: 'mock-filterfocusrow',
+    props
+  })
+}))
+
 jest.mock('../../NavShell/components/FilterStoreFacet', () => ({
   __esModule: true,
   default: (props: Record<string, unknown>) => ({
@@ -264,6 +272,7 @@ import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import FilterViewList from '../../NavShell/components/FilterViewList'
 import FilterCollectionList from '../../NavShell/components/FilterCollectionList'
+import FilterFocusRow from '../../NavShell/components/FilterFocusRow'
 import FilterStoreFacet from '../../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../../NavShell/components/FilterMoreGroup'
@@ -376,15 +385,27 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(childTypes).toContain(FilterMoreGroup)
   })
 
-  it('.Header has exactly five direct children in the locked panel order', () => {
+  it('exactly one element carries data-tour="library-focus-row", wrapping FilterFocusRow by identity', () => {
+    const tree = renderHeader()
+    const matches = findByDataTour(tree, 'library-focus-row')
+    expect(matches).toHaveLength(1)
+
+    const childTypes = collectElements(matches[0].props.children).map(
+      (el) => el.type
+    )
+    expect(childTypes).toContain(FilterFocusRow)
+  })
+
+  it('.Header has exactly six direct children in the locked panel order', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    expect(children).toHaveLength(5)
+    expect(children).toHaveLength(6)
     expect(children[0].props?.className).toBe('Header__utilities')
     expect(children[1].props?.className).toBe('Header__search')
     expect(children[2].props?.className).toBe('Header__categoriesGroup')
-    expect(children[3].props?.className).toBe('Header__filtersGroup')
-    expect(children[4].props?.className).toBe('Header__footer')
+    expect(children[3].props?.className).toBe('Header__focusRowGroup')
+    expect(children[4].props?.className).toBe('Header__filtersGroup')
+    expect(children[5].props?.className).toBe('Header__footer')
   })
 
   it('Header__utilities holds exactly six controls in the locked D-01 order, and no FormControl element survives anywhere in the tree', () => {
@@ -414,7 +435,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('Header__footer renders AddGameButton, by identity', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const footer = children[4]
+    const footer = children[5]
 
     const addGameButtonEls = collectElements(footer.props.children).filter(
       (el) => el.type === AddGameButton
@@ -462,6 +483,11 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
     expect(categoriesBlock).toMatch(/flex-direction:\s*column/)
     expect(categoriesBlock).toMatch(/gap:\s*var\(--space-md\)/)
 
+    const focusRowBlock = cssBlock(source, '.Header__focusRowGroup')
+    expect(focusRowBlock).toMatch(/display:\s*flex/)
+    expect(focusRowBlock).toMatch(/flex-direction:\s*column/)
+    expect(focusRowBlock).toMatch(/gap:\s*var\(--space-md\)/)
+
     const filtersBlock = cssBlock(source, '.Header__filtersGroup')
     expect(filtersBlock).toMatch(/display:\s*flex/)
     expect(filtersBlock).toMatch(/flex-direction:\s*column/)
@@ -493,7 +519,7 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
   it('Header__footerRow renders the plus button, count pill, then refresh button in D-04/D-06 order', () => {
     const tree = renderHeader()
     const children = topLevelChildren(tree)
-    const footer = children[4]
+    const footer = children[5]
     const footerRow = topLevelChildren(footer)[0]
     expect(footerRow.props?.className).toBe('Header__footerRow')
 

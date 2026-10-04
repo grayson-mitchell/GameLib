@@ -1,0 +1,46 @@
+// FOCUS ROW panel section (48-02 Task 2). Everything here is nested under
+// `.NavShell__tier2Portal` -- an unscoped generic class name leaked 8px
+// app-wide once (34.10 postmortem, `.MuiTabs-root`), and `.FilterFocusRow`,
+// `.FilterFocusRow__row` and `.FilterFocusRow__divider` are generic enough
+// to collide the same way outside this scope.
+//
+// Deliberately NO reference to `--navbar-active` anywhere in this file.
+// `NAVBAR_ACTIVE_CONSUMERS` in `themeTokens.test.ts` is a hand-enumerated
+// list a new consumer would have to join, and the active-row treatment
+// already comes from `.NavShell__tier2 .NavItem.active` in
+// `NavItem/index.scss` -- there is nothing to add here. This file also
+// introduces no new custom property, keeping `cssTokenSweep.test.ts` green.
+.NavShell__tier2Portal {
+  // (0,4,0) -- restores NavItem's own tier-2 values verbatim, taking back
+  // what `Dropdown/index.scss` steals (CONTEXT D-09; see
+  // `FilterFacetGroup/index.scss:203-220`'s full account of the cascade).
+  // Copied from `FilterCollectionList/index.scss:53-58`, not re-derived.
+  .FilterFocusRow .dropdown .NavItem {
+    margin-inline-start: 0;
+    align-self: stretch;
+    font-size: var(--text-md);
+    padding: var(--space-xs) var(--tier2-row-padding-inline);
+  }
+
+  // One-line clamp on the row label, matching
+  // `FilterFacetGroup/index.scss:153-154`'s existing long-row treatment
+  // (UI-SPEC E2) -- so the panel does not use two overflow treatments.
+  .FilterFocusRow__row span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Deliberately lighter weight than the group's own `--bold` title, so the
+  // split reads as sub-structure rather than as four more group headers
+  // (UI-SPEC Typography).
+  .FilterFocusRow__divider {
+    font-size: var(--text-xs);
+    font-weight: var(--regular);
+    color: var(--text-secondary);
+    padding: var(--space-2xs) var(--tier2-row-padding-inline);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

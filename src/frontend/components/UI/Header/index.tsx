@@ -32,6 +32,7 @@ import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
 import LibrarySearchBar from '../LibrarySearchBar'
 import FilterViewList from '../NavShell/components/FilterViewList'
 import FilterCollectionList from '../NavShell/components/FilterCollectionList'
+import FilterFocusRow from '../NavShell/components/FilterFocusRow'
 import FilterStoreFacet from '../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
@@ -290,6 +291,9 @@ export default function Header({ list, totalGames }: Props) {
       >
         <FilterViewList />
         <FilterCollectionList />
+      </div>
+      <div className="Header__focusRowGroup" data-tour="library-focus-row">
+        <FilterFocusRow />
       </div>
       <div className="Header__filtersGroup" data-tour="library-facets">
         <FilterStoreFacet />

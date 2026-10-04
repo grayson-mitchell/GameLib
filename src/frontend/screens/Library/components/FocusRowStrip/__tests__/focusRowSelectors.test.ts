@@ -12,7 +12,7 @@
  * per-test-file factory convention in this codebase.
  */
 import { FocusRowSelection, GameInfo } from 'common/types'
-import { FilterEngineDeps, FilterMode } from 'frontend/types'
+import { FilterEngineDeps } from 'frontend/types'
 import {
   FOCUS_ROW_MAX_CARDS,
   focusRowTitleComparator,
