@@ -1,21 +1,47 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FocusRowKind } from 'common/types'
-import type { LibraryView } from 'frontend/types'
+import type {
+  LibraryView,
+  RunnabilityTier,
+  StoreFacetValue
+} from 'frontend/types'
 import ContextProvider from 'frontend/state/ContextProvider'
+import LibraryContext from 'frontend/screens/Library/LibraryContext'
+import { PRESET_UNCATEGORIZED } from 'frontend/screens/Library/filterEngine'
+import { RunnerToStore } from 'frontend/screens/Library/facetLabels'
 import FilterFacetGroup from '../FilterFacetGroup'
+import { runnabilityLabel } from '../FilterRunnabilityFacet'
 import NavItem from '../NavItem'
 import './index.scss'
 
 /**
- * FOCUS ROW panel section (48-02 Task 2) -- Views sub-group only.
- * Collections/stores/runnability picks are plan 48-03; the overflow controls
- * are plan 48-04.
+ * FOCUS ROW panel section (48-02 Task 2, widened by 48-03 Task 1) -- four
+ * fixed-order sub-groups: Views, Collections, Store, Runnability (the same
+ * top-to-bottom order the panel itself uses above this section). The overflow
+ * controls are plan 48-04.
  *
- * Reads `focusRow` / `handleFocusRow` from `ContextProvider` (Task 1's new
- * pair), NOT `LibraryContext` -- the focus row is a persisted, cross-view
- * pick, independent of the live `libraryView` / `currentCollection` filter
- * state `LibraryContext` carries (SPEC R4).
+ * Views is ungated and always contributes its four rows, so the section can
+ * never render empty. Collections, Store and Runnability are each omitted
+ * wholesale -- divider label included -- when their source list is empty, the
+ * convention `FilterStoreFacet`'s `return null` applies one level up. No
+ * empty-state message is ported from `FilterCollectionList`: that message
+ * belongs to the collection MANAGEMENT surface, not to a picker.
+ *
+ * Reads `focusRow` / `handleFocusRow` and the collection list from
+ * `ContextProvider`, NOT `LibraryContext` -- the focus row is a persisted,
+ * cross-view pick, independent of the live `libraryView` /
+ * `currentCollection` filter state `LibraryContext` carries (SPEC R4). The
+ * store and runnability lists ARE read from `LibraryContext`, as
+ * `FilterStoreFacet` / `FilterRunnabilityFacet` already do from this same
+ * portalled position. `runnabilityRows` is empty on a Windows host by
+ * design, so that sub-group uses the same omit-when-empty rule as Store.
+ *
+ * Collections are READ ONLY here: the category-listing accessor is the only
+ * access to `customCategories`. `games.customCategories` has one writer
+ * (`CategoriesManager`) and a second one would corrupt its state silently.
+ * Collection names are user data, rendered as a text child and a `title`
+ * attribute only, never translated and never used as a `t()` key.
  *
  * `title` only on `FilterFacetGroup` -- no `selectedCount` /
  * `selectedCountLabel` -- following `FilterCollectionList/index.tsx`'s
@@ -42,8 +68,13 @@ import './index.scss'
  * handler shape.
  */
 export default function FilterFocusRow() {
-  const { focusRow, handleFocusRow } = useContext(ContextProvider)
+  const { focusRow, handleFocusRow, customCategories } =
+    useContext(ContextProvider)
+  const { connectedStores, runnabilityRows } = useContext(LibraryContext)
   const { t: tGamelib } = useTranslation('gamelib')
+  const { t } = useTranslation()
+
+  const categories = customCategories.listCategories()
 
   const selectFocusRow = (kind: FocusRowKind, value: string) => {
     handleFocusRow(
@@ -78,6 +109,30 @@ export default function FilterFocusRow() {
     }
   ]
 
+  // `value === 'sideload'` is special-cased BEFORE the brand map is consulted:
+  // `RunnerToStore` deliberately has no `sideload` entry (facetLabels.ts), and
+  // copying `FilterStoreFacet`'s split keeps both surfaces on one label source.
+  const storeLabel = (value: StoreFacetValue) =>
+    value === 'sideload'
+      ? tGamelib('gamelib:library.storeOther', 'Other')
+      : RunnerToStore[value]
+
+  const row = (kind: FocusRowKind, value: string, label: string) => (
+    <NavItem
+      key={`${kind}:${value}`}
+      elementType="button"
+      className="FilterFocusRow__row"
+      label={label}
+      // `NavItem` takes no `title` prop and wraps its label in a bare
+      // `<span>`, so the full, untruncated label rides on an inner span: a
+      // one-line ellipsis that hides a user-authored collection name with no
+      // way to read it is worse than a wrap.
+      labelElement={<span title={label}>{label}</span>}
+      active={focusRow?.kind === kind && focusRow.value === value}
+      onClick={() => selectFocusRow(kind, value)}
+    />
+  )
+
   return (
     <FilterFacetGroup
       title={tGamelib('gamelib:library.filterPanel.focusRow', 'Focus row')}
@@ -86,16 +141,45 @@ export default function FilterFocusRow() {
       <span className="FilterFocusRow__divider">
         {tGamelib('gamelib:library.filterPanel.focusRowViewsGroup', 'Views')}
       </span>
-      {viewRows.map((row) => (
-        <NavItem
-          key={row.value}
-          elementType="button"
-          className="FilterFocusRow__row"
-          label={row.label}
-          active={focusRow?.kind === 'view' && focusRow.value === row.value}
-          onClick={() => selectFocusRow('view', row.value)}
-        />
-      ))}
+      {viewRows.map((view) => row('view', view.value, view.label))}
+      {categories.length > 0 && (
+        <>
+          <span className="FilterFocusRow__divider">
+            {tGamelib('gamelib:library.filterPanel.collections', 'Collections')}
+          </span>
+          {categories.map((category) => row('collection', category, category))}
+          {row(
+            'collection',
+            PRESET_UNCATEGORIZED,
+            // Literal call site: keeps `header.uncategorized` reachable by the
+            // static extractor, which `chipLabels.ts` depends on.
+            t('header.uncategorized', 'Uncategorized')
+          )}
+        </>
+      )}
+      {connectedStores.length > 0 && (
+        <>
+          <span className="FilterFocusRow__divider">
+            {tGamelib('gamelib:library.filterPanel.storeGroup', 'Store')}
+          </span>
+          {connectedStores.map((store: StoreFacetValue) =>
+            row('store', store, storeLabel(store))
+          )}
+        </>
+      )}
+      {runnabilityRows.length > 0 && (
+        <>
+          <span className="FilterFocusRow__divider">
+            {tGamelib(
+              'gamelib:library.filterPanel.runnabilityGroup',
+              'Runnability'
+            )}
+          </span>
+          {runnabilityRows.map((tier: RunnabilityTier) =>
+            row('runnability', tier, runnabilityLabel(tier, tGamelib))
+          )}
+        </>
+      )}
     </FilterFacetGroup>
   )
 }

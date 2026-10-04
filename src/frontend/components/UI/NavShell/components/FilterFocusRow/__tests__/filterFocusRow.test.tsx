@@ -14,7 +14,7 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import type { ReactElement, ReactNode } from 'react'
+import { Fragment, type ReactElement, type ReactNode } from 'react'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 type FocusRowStub = { kind: string; value: string } | null
@@ -158,6 +158,8 @@ const rowByLabel = (tree: ReactNode, label: string) => {
   return row
 }
 
+const click = (el: AnyElement) => (el.props.onClick as () => void)()
+
 const VIEW_LABELS = ['All games', 'Installed', 'Recently played', 'Favourites']
 
 describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
@@ -226,7 +228,10 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
     const tree = render()
     expect(dividerLabels(tree)).toEqual(['Views', 'Collections', 'Runnability'])
     const nodes = collectElements(tree.props.children)
-    expect(nodes.every((el) => isDivider(el) || isRow(el))).toBe(true)
+    // A fragment is structure, not a placeholder: it renders no DOM node.
+    expect(
+      nodes.every((el) => isDivider(el) || isRow(el) || el.type === Fragment)
+    ).toBe(true)
   })
 
   it('renders Uncategorized last in the Collections sub-group, after the user collections', () => {
@@ -291,7 +296,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
 
     it('sets the pick when the row is not active', () => {
       setContexts(populated)
-      rowByLabel(render(), label).props.onClick?.()
+      click(rowByLabel(render(), label))
       expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith({
         kind,
         value
@@ -300,7 +305,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
 
     it('clears the pick to null when the active row is clicked again', () => {
       setContexts({ ...populated, focusRow: { kind, value } })
-      rowByLabel(render(), label).props.onClick?.()
+      click(rowByLabel(render(), label))
       expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith(null)
     })
 
@@ -309,7 +314,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
         ...populated,
         focusRow: { kind: 'view', value: 'all' }
       })
-      rowByLabel(render(), label).props.onClick?.()
+      click(rowByLabel(render(), label))
       expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith({
         kind,
         value
@@ -319,7 +324,7 @@ describe('FilterFocusRow sub-groups (48-03 Task 1, SPEC R2)', () => {
 
   it('selects Uncategorized as a collection pick with the PRESET sentinel value', () => {
     setContexts({ categories: ['RPGs'] })
-    rowByLabel(render(), 'Uncategorized').props.onClick?.()
+    click(rowByLabel(render(), 'Uncategorized'))
     expect(contextProviderValue.handleFocusRow).toHaveBeenCalledWith({
       kind: 'collection',
       value: 'preset_uncategorized'
