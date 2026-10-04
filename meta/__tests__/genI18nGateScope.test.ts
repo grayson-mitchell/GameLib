@@ -343,7 +343,14 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Settings/sections/SyncSaves/legendary.tsx',
   'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx',
   'src/frontend/state/InstallProgress.ts',
-  'src/frontend/state/TourContext.tsx'
+  'src/frontend/state/TourContext.tsx',
+  // 2026-10-07 (rebase of the phase-48 branch onto main): the branch's own
+  // quick task 261003-s04 created `OAuthLogin/index.tsx` (the GOG tile moved
+  // onto the in-app OAuth overlay). Fork-touched 229 -> 230. Measured, not
+  // assumed: t()=0, <Trans>=0, useTranslation=0, so it carries no translatable
+  // surface for the blocking gate to scan and is parked here rather than
+  // promoted into `meta/i18nGateScope.json`.
+  'src/frontend/screens/Login/components/OAuthLogin/index.tsx'
 ]
 
 /**
@@ -1005,10 +1012,24 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 186-file hand-curated snapshot, the committed fork-touched snapshot is 229, and the FRESH live derivation is pinned at 229', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 186-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 230-file fork-touched set verbatim', () => {
     expect(scopeSnapshot.files.length).toBe(186)
-    expect(forkTouchedSnapshot.files.length).toBe(229)
-    expect(freshSnapshot().files.length).toBe(229)
+    expect(forkTouchedSnapshot.files.length).toBe(230)
+    // `freshSnapshot()` is a FIXTURE built from the committed artifact
+    // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
+    // despite what this assertion used to claim. The live derivation is
+    // `freshSnapshotFiles()` in the staleness-guard block, and A-17 is what
+    // checks it against the committed artifact.
+    //
+    // 386e935d4 split one pin into two, re-pinned only the first, and left
+    // `.toBe(215)` on a value STRUCTURALLY EQUAL to the 214 immediately above
+    // it -- unsatisfiable for any data whatsoever, which is why A0/A3/A4 sat
+    // red rather than merely stale (fixed on the phase-48 branch as
+    // d8f0e97af, 2026-10-04; the counts in that fix were superseded by the
+    // 2026-10-05 refreshes above when the branch was rebased onto main).
+    // Assert the identity the fixture actually has, so the two sides can
+    // never silently drift apart again.
+    expect(freshSnapshot().files).toEqual(forkTouchedSnapshot.files)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -1034,7 +1055,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 186 -> 229 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 186 -> 230 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1057,7 +1078,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 229', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 230', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1070,12 +1091,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(229)
+    expect(rewritten.files.length).toBe(230)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 229 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 230 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1088,7 +1109,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(229)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(230)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

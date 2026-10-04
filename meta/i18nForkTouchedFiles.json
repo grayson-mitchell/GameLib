@@ -165,6 +165,7 @@
     "src/frontend/screens/Library/steamLibraryVisibility.ts",
     "src/frontend/screens/Login/components/HumbleLogin/index.tsx",
     "src/frontend/screens/Login/components/LoginWarning/index.tsx",
+    "src/frontend/screens/Login/components/OAuthLogin/index.tsx",
     "src/frontend/screens/Login/components/Runner/index.tsx",
     "src/frontend/screens/Login/components/SIDLogin/index.tsx",
     "src/frontend/screens/Login/index.tsx",
