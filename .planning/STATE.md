@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-01-PLAN.md
-last_updated: "2026-10-03T23:59:01.368Z"
+stopped_at: Completed 48-02-PLAN.md
+last_updated: "2026-10-04T01:53:56.377Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 48 execution started
-state_head: 44d8c8a274023ab2a4279bdb2cf11d91d6e6e48b
+state_head: e3336b2e9f153d30ffc84e03c54d31110535e71b
 progress:
   total_phases: 43
   completed_phases: 36
   total_plans: 512
-  completed_plans: 498
+  completed_plans: 499
   percent: 84
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 48 execution started
 
@@ -500,6 +500,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 |------|----------|-------|-------|
 | Phase 260929-qth P01 | ~16min | 3 tasks | 5 files |
 | Phase 48 P01 | 11min | 3 tasks | 97 files |
+| Phase 48 P02 | 52min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -1120,6 +1121,9 @@ Recent decisions affecting current work:
 - [Phase 48]: Skipped pnpm machine-fill-gamelib (hard-codes api.anthropic.com, 401s deterministically here); authored all 46 remaining locales in-session instead
 - [Phase 48]: Validated all 46 locale translations via validateTranslation() plus a sabotage control in a scratch jest run, deleted before commit
 - [Phase 48]: R2 and R3 requirements left open — shared with sibling plans 48-02/48-03/48-04 not yet executed (requirements.ready-ids confirms blocked)
+- [Phase 48]: focusRow is a new, additive GlobalConfig key (not a widened libraryTopSection), so plan 48-05's seed-once-guarded-by-key-presence is expressible
+- [Phase 48]: Focus-row engine state sets showHidden: 'show' so passesHiddenLaneFilter is the sole hidden-games authority, never passesMore
+- [Phase 48]: Focus-row state keeps showNonAvailable/noStorePage/showSupportOfflineOnly/showThirdPartyManagedOnly/showUpdatesOnly at engine defaults for R4 independence
 
 ### Pending Todos
 
@@ -1723,8 +1727,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-03T23:58:58.706Z
-Stopped at: Completed 48-01-PLAN.md
+Last session: 2026-10-04T01:53:54.307Z
+Stopped at: Completed 48-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

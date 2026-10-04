@@ -5662,14 +5662,14 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 **Wave 1**
 - [x] 48-01-PLAN.md — land the 4 new `gamelib:` focus-row keys across all 49 locale catalogues (R2, R3)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 48-02-PLAN.md — TRACER: one view pick wired end to end — persistence, panel section, horizontal strip, lane replacement (R1, R3, R4, R5)
+- [x] 48-02-PLAN.md — TRACER: one view pick wired end to end — persistence, panel section, horizontal strip, lane replacement (R1, R3, R4, R5)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 48-03-PLAN.md — the remaining three pick kinds: collections, stores, runnability, each omitted when empty (R2)
