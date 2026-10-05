@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "همه",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImageها",
             "apps": "برنامه‌ها",
             "executables": "فایل‌های اجرایی",

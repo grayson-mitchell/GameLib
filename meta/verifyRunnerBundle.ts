@@ -32,7 +32,7 @@
  * Scope: exactly the three onedir runners. comet, win32, linux and the
  * sidecar are never inspected by this tool.
  *
- * Run with `pnpm verify:runner-bundle <root> [--arch=<x64|arm64>] [--json]`.
+ * Run with `pnpm verify:runner-bundle <root> [--arch=arm64] [--json]`.
  */
 
 import { spawnSync } from 'node:child_process'
@@ -374,8 +374,9 @@ export interface Summary {
 
 // ---------------------------------------------------------------------------
 // Locating the tree -- SEARCHED for, never assumed at a fixed prefix
-// (T-34.9-27). Inside a packaged Electron `.app` it sits under
-// `Contents/Resources/app.asar.unpacked/build/bin/${arch}/darwin`.
+// (T-34.9-27). Inside the packaged Tauri `.app` it sits under
+// `Contents/Resources/build/bin/arm64/darwin` (src-tauri/tauri.macos.conf.json's
+// `bundle.macOS.files`).
 // ---------------------------------------------------------------------------
 
 export function findDarwinBinRoot(root: string, arch: string): string {
@@ -795,7 +796,7 @@ function parseCliArgs(argv: string[]): {
   const positional = argv.find((a) => !a.startsWith('--'))
   if (!positional) {
     throw new Error(
-      'Usage: verify-runner-bundle <root> [--arch=<x64|arm64>] [--json] ' +
+      'Usage: verify-runner-bundle <root> [--arch=arm64] [--json] ' +
         '[--expect-files=N --expect-symlinks=N --expect-bytes=N]'
     )
   }

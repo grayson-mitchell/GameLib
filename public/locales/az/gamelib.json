@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Hamısı",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage-lər",
             "apps": "Tətbiqlər",
             "executables": "İcra edilə bilənlər",

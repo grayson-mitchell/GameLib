@@ -23,23 +23,29 @@ const TOUR_OPTIONS = {
 
 const LibraryTour: React.FC = () => {
   const { t } = useTranslation()
+  // New copy lives in the fork-owned gamelib namespace (phase 34.12 D-07:
+  // mint a key rather than edit a default an existing catalogue overrides).
+  const { t: tGamelib } = useTranslation('gamelib')
   const { isTourActive } = useTour()
   // Import context to check if there are any games in the library
-  const { epic, gog, amazon, sideloadedLibrary } = useContext(ContextProvider)
+  const { epic, gog, amazon, steam, zoom, sideloadedLibrary } =
+    useContext(ContextProvider)
 
   // Check if there are any games in the library
   const hasGames = Boolean(
     epic.library.length ||
     gog.library.length ||
     amazon.library.length ||
+    steam.library.length ||
+    zoom.library.length ||
     sideloadedLibrary.length
   )
 
-  // FIX (introjs-tooltip-not-rendering): intro.js-react's componentDidUpdate
-  // compares `steps` BY REFERENCE. This array was rebuilt fresh on every
-  // render, so the guard was always-true and re-triggered intro.js's
-  // show-step path continuously, starving the tooltip's opacity restore.
-  // Memoized on the actual inputs used to build it below.
+  // Hygiene, not the blank-tooltip fix (debug introjs-tooltip-not-rendering,
+  // "RECORD CORRECTION" -- the real fix is in Tour.scss): intro.js-react's
+  // componentDidUpdate compares `steps` BY REFERENCE, and this array was
+  // rebuilt fresh on every render, so intro.js re-ran its step setup on
+  // every render. Memoized on the actual inputs used to build it below.
   const steps: TourStep[] = useMemo(() => {
     // Create intro steps first
     const introSteps: TourStep[] = [
@@ -51,9 +57,9 @@ const LibraryTour: React.FC = () => {
         title: t('tour.library.welcome.title', 'Welcome to GameLib!')
       },
       {
-        intro: t(
-          'tour.library.welcome.intro2',
-          'If the library is empty, make sure to login with your accounts using the Manage accounts on the sidebar or add your own games using the Add Game button above.'
+        intro: tGamelib(
+          'gamelib:tour.library.welcome.intro2',
+          'If the library is empty, sign in to your stores from the Accounts tab, or add your own games with the Add Game button.'
         ),
         title: t('tour.library.welcome.title2', 'Managing the library!')
       }
@@ -153,7 +159,7 @@ const LibraryTour: React.FC = () => {
 
     // Combine all steps
     return [...introSteps, ...gameCardStep, ...uiSteps, ...finalStep]
-  }, [t, hasGames])
+  }, [t, tGamelib, hasGames])
 
   return (
     <Tour

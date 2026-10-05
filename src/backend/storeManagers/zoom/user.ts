@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import {
+  chmodSync,
   existsSync,
   unlinkSync,
   writeFileSync,
@@ -26,7 +27,10 @@ export class ZoomUser {
       return { status: 'error' }
     }
     try {
-      writeFileSync(tokenPath, token, { encoding: 'utf-8' })
+      // Owner-only, like fileStore.ts's stores. `mode` only applies when the
+      // file is created, so chmod too in case an older build left it 0644.
+      writeFileSync(tokenPath, token, { encoding: 'utf-8', mode: 0o600 })
+      chmodSync(tokenPath, 0o600)
       logInfo('Zoom token saved successfully', LogPrefix.Zoom)
       configStore.set('isLoggedIn', true)
       return { status: 'done' }

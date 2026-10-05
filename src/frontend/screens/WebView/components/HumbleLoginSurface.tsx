@@ -121,7 +121,21 @@ export default function HumbleLoginSurface({
       }
     }
 
-    void runHumbleLoginWatch()
+    // A REJECTION (not a resolved `{ status: 'error' }`) used to float away
+    // here: `humbleStartLogin` rejects on a sidecar disconnect (this channel is
+    // exempt from the 60s invoke timeout), and `humble.login(result)` can
+    // throw. State stayed 'idle', neither callback ran, and the Login screen's
+    // overlay -- which renders nothing while idle -- left an inert surface
+    // with no close button. Route it into the same 'error' phase, carrying the
+    // error's own message the way `useTauriOAuthLogin`'s catches do.
+    runHumbleLoginWatch().catch((error: unknown) => {
+      if (!mounted) return
+      const message = error instanceof Error ? error.message : String(error)
+      window.api.logInfo(
+        `[WebView] runner=humble phase=error (login watch rejected: ${message})`
+      )
+      setHumbleLoginState({ phase: 'error', message })
+    })
 
     return () => {
       mounted = false

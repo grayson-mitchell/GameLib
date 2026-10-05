@@ -359,15 +359,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 function sleepAbortable(ms: number, signal?: AbortSignal): Promise<void> {
   if (!signal) return sleep(ms) as Promise<void>
   return new Promise((resolvePromise) => {
-    const timer = setTimeout(resolvePromise, ms)
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer)
-        resolvePromise()
-      },
-      { once: true }
-    )
+    const onAbort = () => {
+      clearTimeout(timer)
+      resolvePromise()
+    }
+    // 2026-10-05: the timer path removes the listener too — `once` only
+    // removes it if the signal fires, so every completed backoff otherwise
+    // left a closure on the run-wide signal.
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolvePromise()
+    }, ms)
+    signal.addEventListener('abort', onAbort, { once: true })
   })
 }
 
@@ -981,6 +984,9 @@ export async function fetchChunk(
     : String(chunk.sha)
   const seed = chunk.attemptSeed ?? 0
   let lastErr: Error | undefined
+  // 2026-10-05: the host the previous attempt went to, so a retry never
+  // returns straight to it — see HostHealthTracker.pickHost's `previousHost`.
+  let previousHost: string | undefined
 
   for (let i = 0; i < attempts; i++) {
     // debug/steam-cancel-abort-thread-a: checked at the TOP of every
@@ -994,8 +1000,9 @@ export async function fetchChunk(
       throw new ChunkFetchAbortedError()
     }
     const host = hostHealth
-      ? hostHealth.pickHost(hosts, seed, i, workerSlot)
+      ? hostHealth.pickHost(hosts, seed, i, workerSlot, previousHost)
       : hosts[(seed + i) % hosts.length]
+    previousHost = host
     const meta = hostMeta?.get(host)
     // Debug/steam-install-slow-start (cycle 7): EXACT steam-user URL-scheme
     // parity — only an explicit https_support === 'mandatory' selects
@@ -1010,11 +1017,16 @@ export async function fetchChunk(
     // a timeout aborts the in-flight request, which surfaces as a normal
     // AbortError and falls into the same catch/backoff/host-rotation path
     // any other transient failure already takes.
+    //
+    // 2026-10-05 (limiter wait counted against the per-attempt timeout): the
+    // timer is ARMED only once the request is about to go out — right after
+    // `limiter.acquire()` below — not here. Armed here, it also ran through
+    // the token fetch and the FIFO limiter wait (up to 128 chunk workers
+    // share 32 slots), so on a slow link a queued attempt reached `fetch`
+    // with an already-aborted signal and was recorded as a host 'timeout'
+    // for a host it never contacted.
     const controller = new AbortController()
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      CHUNK_FETCH_TIMEOUT_MS
-    )
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
     // debug/steam-cancel-abort-thread-a: forwards an external cancel into
     // THIS attempt's own fetch() call immediately, instead of waiting for it
     // to finish/time out naturally — previously `controller` was
@@ -1022,7 +1034,9 @@ export async function fetchChunk(
     // deaf to any external signal.
     const onExternalAbort = () => controller.abort()
     signal?.addEventListener('abort', onExternalAbort, { once: true })
-    const attemptStart = Date.now()
+    // Reset right before the request goes out (below), so the latency
+    // hostHealth.record and onAttempt see is the host's, never queue time.
+    let attemptStart = Date.now()
     // Debug/steam-install-slow-start (cycle 15): hoisted out of the try block
     // so the catch below can access the raw (pre-decrypt) response for the
     // raw-response-metadata diagnostic — `encrypted` is only ever assigned
@@ -1098,6 +1112,11 @@ export async function fetchChunk(
         await limiter.acquire()
         heldSlot = true
       }
+      // 2026-10-05: the attempt's clock and its CHUNK_FETCH_TIMEOUT_MS bound
+      // start HERE, at the request itself — see `timeoutId` above. Bounded
+      // and cleared in the `finally` below, like before.
+      attemptStart = Date.now()
+      timeoutId = setTimeout(() => controller.abort(), CHUNK_FETCH_TIMEOUT_MS)
       res = await fetch(
         `${scheme}${host}/depot/${depotId}/chunk/${sha}${token}`,
         {
@@ -1121,6 +1140,10 @@ export async function fetchChunk(
         ) {
           cdnAuth.invalidate(depotId, host)
         }
+        // 2026-10-05: cancel the unread body so the connection is released
+        // now rather than at GC. Best-effort — a cancel failure must not
+        // replace the HTTP error this attempt is about to report.
+        await res.body?.cancel().catch(() => undefined)
         throw new ChunkHttpError(res.status, res.statusText)
       }
 

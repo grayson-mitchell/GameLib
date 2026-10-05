@@ -301,8 +301,6 @@
     "sideload": {
         "filter": {
             "all": "Toate",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Aplicații",
             "executables": "Executabile",

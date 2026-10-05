@@ -72,7 +72,17 @@ const EXPECTED_LONG_RUNNING_CHANNELS = [
   // per this list's own precedent (`35-AB-RETEST.md` item 3): a 65s picker session on the Tauri
   // leg produced `response for unknown/timed-out id=4465 (dropped)` and no backend work, while
   // the same wait under Electron reached rsync.
-  'openDialog'
+  'openDialog',
+  // Todo `2026-10-05-long-running-wine-and-sync-channels-hit-the-60s-invoke-timeout`: each of
+  // these awaits a child process or a network transfer with no wall-clock ceiling of its own --
+  // a Wine installer run with `wait: true`, the winetricks GUI until the user closes it, a
+  // multi-hundred-MB Wine/Proton download, a runtime download+extract, and a cloud-save sync.
+  'runWineCommand',
+  'callTool',
+  'installWineVersion',
+  'downloadRuntime',
+  'syncSaves',
+  'syncGOGSaves'
 ]
 
 /**
@@ -498,6 +508,24 @@ describe('REQ-34.2-12 main.rs LONG_RUNNING_CHANNELS exemption list (D-10)', () =
     expect(channels).toContain('oauthCaptureLogin')
     expect(channels).toContain('humbleStartLogin')
     expect(channels).toContain('humbleReconnect')
+  })
+
+  test.each([
+    'runWineCommand',
+    'callTool',
+    'installWineVersion',
+    'downloadRuntime',
+    'syncSaves',
+    'syncGOGSaves'
+  ])(
+    '2026-10-05 %s is a member -- it awaits a process or transfer with no ceiling of its own',
+    (channel) => {
+      expect(extractLongRunningChannels()).toContain(channel)
+    }
+  )
+
+  test('2026-10-05 addToSteam is NOT exempted -- it is a wiki lookup plus a handful of small artwork downloads; a rejection is handled at the call site instead', () => {
+    expect(extractLongRunningChannels()).not.toContain('addToSteam')
   })
 })
 

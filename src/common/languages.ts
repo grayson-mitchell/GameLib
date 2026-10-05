@@ -111,6 +111,31 @@ export function toShippedLanguage(
   return code === undefined ? undefined : (SHIPPED_BY_TAG.get(code) ?? code)
 }
 
+const SHIPPED_LANGUAGES = new Set<string>(supportedLanguages)
+const NAMESPACE_SHAPE = /^[A-Za-z0-9_-]+$/
+
+/**
+ * The `[languageDir, fileName]` pair a filesystem i18n backend should read.
+ *
+ * Unlike {@link toShippedLanguage}, an unrecognised language falls back to `en`
+ * and a namespace that is not a bare identifier falls back to `translation`, so
+ * neither value can ever carry a path separator or `..` into a filesystem path.
+ * i18next-fs-backend's own traversal check only covers its `{{lng}}`/`{{ns}}`
+ * placeholder form, not a function `loadPath`, and `supportedLngs` filtering is
+ * the only other thing standing between a renderer-settable language and the
+ * path (todo 2026-10-05 sidecar-i18n-loadpath-trusts-the-language-code).
+ */
+export function localeFileSegments(
+  language: string,
+  namespace: string
+): [string, string] {
+  const shipped = toShippedLanguage(language)
+  return [
+    SHIPPED_LANGUAGES.has(shipped) ? shipped : 'en',
+    `${NAMESPACE_SHAPE.test(namespace) ? namespace : 'translation'}.json`
+  ]
+}
+
 /**
  * `supportedLngs` for both i18next init sites.
  *

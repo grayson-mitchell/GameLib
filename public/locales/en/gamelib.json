@@ -25,6 +25,17 @@
                 "title": "Could not open the file picker"
             }
         },
+        "protocol": {
+            "launch": {
+                "accept": "Launch",
+                "arguments": "Arguments",
+                "confirmMessage": "A link wants to launch this game with the executable and arguments below. Only continue if you trust where the link came from.",
+                "decline": "Don't launch",
+                "defaultExecutable": "(the game's usual executable)",
+                "executable": "Executable",
+                "noArguments": "(none)"
+            }
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstall via CrossOver",
@@ -69,6 +80,12 @@
         "extraInfoErrorTitle": "Couldn't load extra info",
         "extraInfoRetry": "Retry",
         "extraInfoStaleBody": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+        "steamShortcut": {
+            "failed": "Updating the Steam shortcut failed."
+        },
+        "syncSaves": {
+            "failed": "Syncing saves failed."
+        },
         "tabsAriaLabel": "gameinfo tabs",
         "wineLabel": "Wine:"
     },
@@ -276,6 +293,9 @@
         }
     },
     "settings": {
+        "eacRuntime": {
+            "installFailed": "The EAC Runtime could not be installed."
+        },
         "egsSyncDisabledTitle": "EGS Sync Disabled",
         "egsSyncEnabledTitle": "EGS Sync Enabled",
         "eosOverlayInstallConfirmBody": "Install the EOS Overlay now?",
@@ -309,8 +329,6 @@
     "sideload": {
         "filter": {
             "all": "All",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Apps",
             "executables": "Executables",
@@ -386,6 +404,17 @@
         "zombie": "Zombie",
         "zombieClassic": "Zombie Classic"
     },
+    "tour": {
+        "library": {
+            "welcome": {
+                "intro2": "If the library is empty, sign in to your stores from the Accounts tab, or add your own games with the Add Game button."
+            }
+        },
+        "nav": {
+            "accounts": "Manage your connected store accounts and sign in to new stores.",
+            "stores": "Browse and shop for games in the Epic, GOG, Steam and Amazon stores."
+        }
+    },
     "webview": {
         "embedPlaceholder": {
             "message": "Paused while a window is open"
@@ -458,6 +487,10 @@
                 "heading": "In-app store and wiki browsing isn't available on this platform yet"
             }
         }
+    },
+    "wineExplanation": {
+        "wine-crossover": "Wine-Crossover is based on the Crossover OpenSource Wine project and is recommended for DX11 or older games.",
+        "wine-staging-macos": "Wine-Staging-macOS is based on the mainline Wine project and is recommended for DX11 or older games, especially when paired with the DXMT tool."
     },
     "winetricks": {
         "unavailable": "Winetricks component management is unavailable on this build",

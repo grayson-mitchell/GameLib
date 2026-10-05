@@ -252,8 +252,21 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
     // so that stays true across a reformat. Asserted rather than assumed, because a truncated
     // body would make the fallback search below fail for a reason that has nothing to do with
     // what this test is about (fast task 261003-t8r).
+    //
+    // The check is a BRACE BALANCE, not "no `\n}` in body": `body` is cut at the first `\n}`,
+    // so it can never contain one and that check could not fail (todo 2026-10-05). If the cut
+    // brace really closes the function, every `{` in the body is matched except the fn's own
+    // opener -- balance exactly 1. An earlier column-0 `}` leaves nested blocks open and the
+    // balance above 1. String literals are blanked first (`{dark}` in a format string).
+    // Proven by moving the `if let Ok(img) = Image::from_bytes(bytes) {` block's closing
+    // brace to column 0 in main.rs: the old check and the ordering check below both passed on
+    // that truncated body; this one fails.
     expect(bodyEnd).toBeGreaterThan(fnIdx)
-    expect(body).not.toMatch(/\n\}/)
+    const bodyNoStrings = body.replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    const braceBalance =
+      (bodyNoStrings.match(/\{/g) ?? []).length -
+      (bodyNoStrings.match(/\}/g) ?? []).length
+    expect(braceBalance).toBe(1)
     // The macOS block must not be the only path -- TRAY_ICON_DARK/LIGHT selection must still
     // appear textually after it as the fallback for both platforms.
     //
@@ -622,6 +635,32 @@ describe('main.rs exitToTray is decided at close time (Phase 35 Plan 06 task 3, 
     // written to catch.
     const code = loadMainRsCode()
     expect(code).not.toContain('tray_settings.exit_to_tray')
+  })
+})
+
+describe('main.rs tray Quit routes through the sidecar handleExit (todo 2026-10-05 tray-quit-bypasses-the-pending-operations-confirm)', () => {
+  // The defect: `"quit" => app_handle.exit(0)` skipped the sidecar's `handleExit()`, so tray
+  // Quit with a download running killed it with no "pending operations" confirm. The routing
+  // POLICY (probe, then send, else exit) is covered by main.rs's own #[cfg(test)] mod
+  // (`tray_quit_*`); this gate pins that the tray arm actually uses it.
+  test('the tray "quit" arm does not exit directly', () => {
+    const code = loadMainRsCode()
+    const armMatch = code.match(/^\s*"quit" =>[^\n]*$/m)
+    expect(armMatch).not.toBeNull()
+    const arm = armMatch ? armMatch[0] : ''
+    expect(arm).not.toContain('.exit(')
+    expect(arm).toContain('quit_from_tray(app_handle)')
+  })
+
+  test('quit_from_tray sends the sidecar quit channel and keeps exit(0) only as a fallback', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn quit_from_tray(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
+    expect(body).toContain('SIDECAR_QUIT_CHANNEL')
+    expect(body).toContain('tray_quit_via_sidecar(')
+    expect(body).toContain('.exit(0)')
+    expect(code).toMatch(/const SIDECAR_QUIT_CHANNEL: &str = "quit";/)
   })
 })
 
@@ -4311,5 +4350,21 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
     expect(props.hasSendPtrShim).toBe(false)
     expect(props.hasRawNsWindowCast).toBe(false)
     expect(props.hasRetainedResolver).toBe(true)
+  })
+})
+
+describe('main.rs sidecar_send does not write the pipe on the main thread (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect 2)', () => {
+  // A non-async `#[tauri::command]` runs on the main thread in Tauri v2. `sidecar_send` used to
+  // take the stdin mutex and do a blocking `write_all`/`flush` there, so a busy sidecar with a
+  // full pipe froze the UI. It now only enqueues onto a single FIFO writer thread (order across
+  // sends is preserved, which an `async` + `spawn_blocking` pool would not guarantee). The
+  // queue's behaviour is covered by main.rs's own `send_writer_*` tests.
+  test('the sidecar_send body enqueues and never calls write_frame itself', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn sidecar_send(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
+    expect(body).not.toContain('write_frame(')
+    expect(body).toContain('SidecarSendQueue')
   })
 })

@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Всички",
-            "appExtension": "Приложение",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Приложения",
             "executables": "Изпълними файлове",

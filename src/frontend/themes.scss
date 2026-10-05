@@ -7,13 +7,26 @@ body {
   --cancel-button: var(--status-warning);
   --cancel-button-overlay: var(--status-warning-hover);
   --background-darker-80: var(--eighty-percent-black);
-  /* 7 consumers across 4 components used --border-color as if it were a
-     shared token; `git log -S "--border-color:" --all` shows it was never
-     declared in any revision, so all 7 rendered NO border at all. --divider
-     is the repo's divider token but is declared in only 2 of 11 theme
-     blocks, so --neutral-03 (the value themes.scss:97 itself uses) makes it
-     universal. Themes may now override. */
-  --border-color: var(--divider, var(--neutral-03));
+  /* Structural edge for 7 consumers across 4 components (WineManager table
+     and rows, the Popover frame, the SteamGridDB picker header). It was never
+     declared until 2026-10-02 (so all 7 rendered NO border), and then
+     declared as `var(--divider, var(--neutral-03))` -- which RESOLVED in
+     every theme and was VISIBLE in almost none: --divider is declared in
+     only 2 theme blocks (one of them as --neutral-03 itself) and
+     --neutral-03 in only nord-light plus _colors.scss's #272f31, so most
+     themes painted #272f31 on their own dark surface. MEASURED against
+     --body-background: 1.04:1 dracula, 1.08:1 gruvbox_dark, 1.19:1
+     high-contrast, 1.45:1 midnightMirage, and nord-light's blue only 2.63:1.
+     Resolving everywhere is not the same as being seen.
+
+     `gray` is the value the three themes that WERE visible already used (via
+     their --divider), and it clears the 3:1 non-text floor on every theme's
+     body and modal surface: worst 3.43:1 (nord-light), 3.61:1 (dracula),
+     3.73:1 (gruvbox_dark). Deliberately NOT routed through --divider, whose
+     own value is midnightMirage's invisible --neutral-03. A theme may still
+     override this, but re-measure: themeTokens.test.ts holds every theme to
+     3:1 against --body-background and --modal-background. */
+  --border-color: gray;
 
   /* The search bar's RESTING outline. Deliberately the theme's own --accent,
      which is what the focus ring already spends -- UI/SearchBar/index.scss
@@ -22,7 +35,7 @@ body {
 
      It was `var(--border-color)` for a few hours on 2026-10-02 and that was
      WRONG, in a way that resolved perfectly and rendered nothing. The chain
-     is --border-color -> `var(--divider, var(--neutral-03))`, and --divider
+     then was --border-color -> `var(--divider, var(--neutral-03))`, and --divider
      is declared in only two theme blocks while --neutral-03 is declared in
      only one plus styles/_colors.scss's #272f31 -- so nearly every theme
      landed on #272f31 against its own dark chrome. MEASURED, outline over

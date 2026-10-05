@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "ทั้งหมด",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "แอป",
             "executables": "ไฟล์สั่งทำงาน",

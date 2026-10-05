@@ -69,7 +69,9 @@ export default class SideloadLibraryManager implements LibraryManager {
       current[gameIndex] = { ...current[gameIndex], ...game }
     } else {
       current.push(game)
-      addShortcuts(new SideloadGame(app_name))
+      void addShortcuts(new SideloadGame(app_name)).catch((error) =>
+        logWarning(['Could not add shortcuts for', app_name, error])
+      )
     }
 
     libraryStore.set('games', current)

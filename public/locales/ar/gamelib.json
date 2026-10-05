@@ -322,8 +322,6 @@
     "sideload": {
         "filter": {
             "all": "الكل",
-            "appExtension": "تطبيق",
-            "appImageExtension": "AppImage",
             "appImages": "ملفات AppImage",
             "apps": "التطبيقات",
             "executables": "الملفات التنفيذية",

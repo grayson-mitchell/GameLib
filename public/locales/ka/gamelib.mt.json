@@ -208,8 +208,6 @@
     "settings.wineFlatpakPath",
     "sidebar.redeemSteamKey",
     "sideload.filter.all",
-    "sideload.filter.appExtension",
-    "sideload.filter.appImageExtension",
     "sideload.filter.appImages",
     "sideload.filter.apps",
     "sideload.filter.executables",

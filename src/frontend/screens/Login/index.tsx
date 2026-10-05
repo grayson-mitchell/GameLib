@@ -26,6 +26,7 @@ import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import { steamConfigStore } from 'frontend/helpers/electronStores'
 import { isSteamConnected } from './steamTileState'
+import { bindOverlayDismiss } from './overlayDismiss'
 
 export const epicLoginPath = '/loginweb/legendary'
 export const gogLoginPath = '/loginweb/gog'
@@ -79,6 +80,10 @@ export default React.memo(function NewLogin() {
   )
   const [openOverlay, setOpenOverlay] = useState<LoginOverlay | null>(null)
   const [overlayMountKey, setOverlayMountKey] = useState(0)
+  // Mirrors `overlayMountKey` synchronously so a late `dismiss` from a
+  // replaced overlay can be told apart from the current one's (see
+  // bindOverlayDismiss).
+  const overlayMountKeyRef = useRef(0)
   const overlayUnmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   )
@@ -212,7 +217,8 @@ export default React.memo(function NewLogin() {
       clearTimeout(overlayUnmountTimerRef.current)
       overlayUnmountTimerRef.current = null
     }
-    setOverlayMountKey((key) => key + 1)
+    overlayMountKeyRef.current += 1
+    setOverlayMountKey(overlayMountKeyRef.current)
     setMountedOverlay(which)
     setOpenOverlay(which)
   }
@@ -262,10 +268,24 @@ export default React.memo(function NewLogin() {
         }
       ></div>
       {mountedOverlay === 'steam' && (
-        <SteamLogin key={overlayMountKey} dismiss={dismissLoginOverlay} />
+        <SteamLogin
+          key={overlayMountKey}
+          dismiss={bindOverlayDismiss(
+            overlayMountKey,
+            overlayMountKeyRef,
+            dismissLoginOverlay
+          )}
+        />
       )}
       {mountedOverlay === 'humble' && (
-        <HumbleLogin key={overlayMountKey} dismiss={dismissLoginOverlay} />
+        <HumbleLogin
+          key={overlayMountKey}
+          dismiss={bindOverlayDismiss(
+            overlayMountKey,
+            overlayMountKeyRef,
+            dismissLoginOverlay
+          )}
+        />
       )}
 
       {/* T-34.4.2-39/-41: `inert` is the React-18 string-empty form (boolean

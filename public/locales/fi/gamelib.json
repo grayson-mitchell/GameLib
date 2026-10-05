@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Kaikki",
-            "appExtension": "Sovellus",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage-tiedostot",
             "apps": "Sovellukset",
             "executables": "Suoritettavat tiedostot",

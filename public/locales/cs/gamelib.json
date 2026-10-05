@@ -308,8 +308,6 @@
     "sideload": {
         "filter": {
             "all": "Vše",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "Soubory AppImage",
             "apps": "Aplikace",
             "executables": "Spustitelné soubory",

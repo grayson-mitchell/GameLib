@@ -28,7 +28,9 @@ import {
   logWarning,
   logDebug
 } from 'backend/logger'
-import { basename, dirname, join, normalize } from 'path'
+import { basename, dirname, join, normalize, relative } from 'path'
+import { homedir } from 'os'
+import { assertContainedPath } from './sidecar/rendererPathGuard'
 import {
   gameInfoStore,
   installStore,
@@ -286,9 +288,11 @@ async function handleExit() {
       // cancelId evaluates to 1 here -- so ANY transport error or timeout on the
       // newly-sidecar-reachable `quit` path returned the DESTRUCTIVE answer. Declaring
       // cancelId: 0 restores the stub's documented fail-safe-to-decline property for
-      // this caller. Electron's own dialog also honours cancelId (it is the response
-      // returned when the dialog is dismissed without a button press), so this is
-      // correct on both paths.
+      // this caller. cancelId is ALSO the response for a dismissal (Esc / window close,
+      // no button pressed) -- Electron's semantics, which the Tauri path only matches
+      // since `dialog_message` began returning null for a dismissal (todo 2026-10-05
+      // dialog-dismiss). Before that, a dismissal on Windows/Linux came back as
+      // buttons[1], so Esc here meant "Yes, kill everything and quit".
       cancelId: 0,
       message: tOrFallback(
         'box.quit.message',
@@ -419,7 +423,9 @@ function removeSpecialcharacters(text: string): string {
 }
 
 async function openUrlOrFile(url: string): Promise<string | void> {
-  if (url.startsWith('http')) {
+  // A real http(s) scheme, not merely a leading "http" (`httpfoo:` used to
+  // reach the shell's `openExternal` frame arm).
+  if (/^https?:\/\//i.test(url)) {
     return shell.openExternal(url)
   }
   return shell.openPath(url)
@@ -976,8 +982,47 @@ async function shutdownWine(gameSettings: GameSettings) {
   }
 }
 
-const getShellPath = async (path: string): Promise<string> =>
-  normalize((await execAsync(`echo ${path}`)).stdout.trim())
+/**
+ * Expands the variables `echo` used to expand, without a shell: on Windows
+ * `%VAR%` (unknown names stay literal, as cmd left them), elsewhere `$VAR`,
+ * `${VAR}` (unset expands to '', as sh did) and a leading `~` / `~/`.
+ * Nothing else is interpreted, so `$(...)`, backticks, `;`, `&` and `|` stay
+ * literal — the input can be a GOG remote-config save location or come from
+ * the renderer via the `getShellPath` invoke channel.
+ */
+function expandPathVariables(
+  path: string,
+  windows: boolean,
+  env: NodeJS.ProcessEnv,
+  home: string
+): string {
+  if (windows) {
+    const lookup = (name: string) => {
+      const key = Object.keys(env).find(
+        (k) => k.toUpperCase() === name.toUpperCase()
+      )
+      return key === undefined ? undefined : env[key]
+    }
+    return path.replace(
+      /%([^%]+)%/g,
+      (match, name: string) => lookup(name) ?? match
+    )
+  }
+  const expanded = path.replace(
+    /\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/g,
+    (_match, braced?: string, bare?: string) => env[braced ?? bare ?? ''] ?? ''
+  )
+  return expanded.replace(/^~(?=\/|$)/, home)
+}
+
+// Still returns a Promise: the `getShellPath` invoke channel and save_sync.ts
+// await it, and its old shell-backed body was async.
+const getShellPath = (path: string): Promise<string> =>
+  Promise.resolve(
+    normalize(
+      expandPathVariables(path, isWindows, process.env, homedir()).trim()
+    )
+  )
 
 export const spawnAsync = async (
   command: string,
@@ -1406,11 +1451,38 @@ const memoryLog = (limit = 50) => {
   }
 }
 
+/**
+ * Resolves `${root}/${folderName}` for a recursive delete, or returns
+ * undefined when `folderName` is empty, `.`, or escapes `root` (`..`, an
+ * absolute path) — either would make the delete hit `root` itself or
+ * something outside it. Both values can arrive from the renderer through
+ * the `removeFolder` send channel.
+ */
+function resolveFolderToRemove(
+  root: string,
+  folderName: string
+): string | undefined {
+  if (!root || !folderName) return undefined
+  try {
+    const folderToDelete = assertContainedPath(root, folderName, 'removeFolder')
+    return relative(root, folderToDelete) ? folderToDelete : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function removeFolder(path: string, folderName: string) {
   if (path === 'default') {
     const { defaultInstallPath } = GlobalConfig.get().getSettings()
     const path = defaultInstallPath.replaceAll("'", '')
-    const folderToDelete = `${path}/${folderName}`
+    const folderToDelete = resolveFolderToRemove(path, folderName)
+    if (!folderToDelete) {
+      logWarning(
+        [`removeFolder: refusing folder name "${folderName}"`],
+        LogPrefix.Backend
+      )
+      return
+    }
     if (existsSync(folderToDelete)) {
       return setTimeout(() => {
         rmSync(folderToDelete, { recursive: true })
@@ -1419,7 +1491,17 @@ function removeFolder(path: string, folderName: string) {
     return
   }
 
-  const folderToDelete = `${path}/${folderName}`.replaceAll("'", '')
+  const folderToDelete = resolveFolderToRemove(
+    path.replaceAll("'", ''),
+    folderName.replaceAll("'", '')
+  )
+  if (!folderToDelete) {
+    logWarning(
+      [`removeFolder: refusing folder name "${folderName}"`],
+      LogPrefix.Backend
+    )
+    return
+  }
   if (existsSync(folderToDelete)) {
     return setTimeout(() => {
       rmSync(folderToDelete, { recursive: true })
@@ -1864,5 +1946,6 @@ export {
 // Exported only for testing purpose
 // ts-prune-ignore-next
 export const testingExportsUtils = {
-  semverGt
+  semverGt,
+  expandPathVariables
 }

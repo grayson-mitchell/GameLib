@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Alla",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Appar",
             "executables": "Körbara filer",

@@ -39,11 +39,15 @@ jest.mock('react', () => ({
   useMemo: <T,>(factory: () => T) => factory()
 }))
 
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, defaultValue: string): string => defaultValue
-  })
-}))
+jest.mock('react-i18next', () => {
+  // Resolves against the shipped en catalogues, not the inline default: the
+  // tour-copy cases below are about what users actually SEE, and an existing
+  // key's catalogue value wins over its t() default (phase 34.12 D-07).
+  const { faithfulReactI18next } = jest.requireActual<
+    typeof import('frontend/screens/Game/GamePage/components/__tests__/faithfulTranslate')
+  >('frontend/screens/Game/GamePage/components/__tests__/faithfulTranslate')
+  return faithfulReactI18next()
+})
 
 jest.mock('frontend/state/TourContext', () => ({
   useTour: () => ({
@@ -169,4 +173,26 @@ describe('NavShellTour (34.12-04 Task 3)', () => {
     isTourActiveReturn = false
     expect(renderTour().props.enabled).toBe(false)
   })
+})
+
+// Tour copy must describe the tab layout (no sidebar exists since phase
+// 34.10) and, wherever it lists stores, include Steam -- GameLib's reason to
+// exist. Shared by both tour suites' copy cases.
+function staleCopyIn(steps: { intro?: string; title?: string }[]): string[] {
+  return steps
+    .flatMap((step) => [step.intro ?? '', step.title ?? ''])
+    .filter(
+      (text) =>
+        /sidebar/i.test(text) || (/\bGOG\b/.test(text) && !/Steam/.test(text))
+    )
+}
+
+describe('NavShellTour copy', () => {
+  it.each(['linux', 'win32'])(
+    'no rendered step names the retired sidebar or lists stores without Steam (%s)',
+    (platform) => {
+      contextValue = { platform, isRTL: false }
+      expect(staleCopyIn(renderTour().props.steps)).toEqual([])
+    }
+  )
 })

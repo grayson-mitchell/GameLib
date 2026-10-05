@@ -308,8 +308,6 @@
     "sideload": {
         "filter": {
             "all": "Все",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage-файлы",
             "apps": "Приложения",
             "executables": "Исполняемые файлы",

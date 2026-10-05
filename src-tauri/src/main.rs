@@ -43,7 +43,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_deep_link::DeepLinkExt;
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
@@ -1058,6 +1058,82 @@ fn open_about_window_from_tray(app: &AppHandle) {
     }
 }
 
+/// The sidecar `send` channel whose listener runs `handleExit()` (`appShellFlowRegistration.ts`
+/// `ipcMain.on('quit', ...)`) -- the same path the in-app quit takes.
+const SIDECAR_QUIT_CHANNEL: &str = "quit";
+
+/// The sidecar `invoke` channel answered by `ipcMain.handle('health', async () => 'ok')`
+/// (`sidecar/handlers.ts`). Used only to prove the sidecar's JS thread is answering before tray
+/// Quit hands the decision to it.
+const SIDECAR_HEALTH_CHANNEL: &str = "health";
+
+/// How long tray Quit waits for the health probe before falling back to `exit(0)`. Bounds only
+/// the PROBE: once the sidecar has answered, `handleExit()` may show the "pending operations"
+/// confirm, which waits on a human and must not be cut short by any clock.
+const TRAY_QUIT_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// The tray-Quit routing policy (todo 2026-10-05 tray-quit-bypasses-the-pending-operations-
+/// confirm), with the two sidecar operations injected so `#[cfg(test)]` can drive it.
+///
+/// `Ok(())` means the quit was handed to the sidecar's `handleExit()`, which either exits via
+/// `app_exit` or -- the user answered "No" to the pending-operations confirm -- does nothing.
+/// `Err` means the sidecar is dead or not answering, and the caller must exit directly: the
+/// pre-fix behaviour, kept as the fallback so tray Quit can never become a no-op.
+///
+/// The probe runs on its own thread and is waited on with `recv_timeout`, so the bound also
+/// covers a probe stuck behind the stdin mutex on a full pipe, not only a slow answer.
+fn tray_quit_via_sidecar<P, S>(probe: P, bound: Duration, send_quit: S) -> Result<(), String>
+where
+    P: FnOnce() -> Result<Value, String> + Send + 'static,
+    S: FnOnce() -> Result<(), String>,
+{
+    let (tx, rx) = mpsc_channel::<Result<Value, String>>();
+    thread::spawn(move || {
+        let _ = tx.send(probe());
+    });
+    match rx.recv_timeout(bound) {
+        Ok(Ok(_)) => send_quit(),
+        Ok(Err(e)) => Err(format!("sidecar health probe failed: {e}")),
+        Err(_) => Err(format!(
+            "sidecar did not answer the health probe within {}ms",
+            bound.as_millis()
+        )),
+    }
+}
+
+/// Tray Quit. Routes through the sidecar's `handleExit()` so a running download gets the same
+/// "pending operations" confirm as the in-app quit (Electron routed tray Quit there too), and
+/// falls back to `exit(0)` when there is no live sidecar to ask. Runs off the main thread: the
+/// probe blocks for up to `TRAY_QUIT_PROBE_TIMEOUT`.
+fn quit_from_tray(app_handle: &AppHandle) {
+    let Some(state) = app_handle.try_state::<Arc<SidecarState>>() else {
+        eprintln!("[shell] tray Quit: no sidecar state -- exiting directly");
+        app_handle.exit(0);
+        return;
+    };
+    let state = state.inner().clone();
+    let app_handle = app_handle.clone();
+    thread::spawn(move || {
+        let probe_state = state.clone();
+        let routed = tray_quit_via_sidecar(
+            move || probe_state.invoke(SIDECAR_HEALTH_CHANNEL.to_string(), Vec::new()),
+            TRAY_QUIT_PROBE_TIMEOUT,
+            || {
+                state.write_frame(&SidecarRpcRequest {
+                    id: state.next_id(),
+                    kind: "send",
+                    channel: SIDECAR_QUIT_CHANNEL.to_string(),
+                    args: Vec::new(),
+                })
+            },
+        );
+        if let Err(e) = routed {
+            eprintln!("[shell] WARN: tray Quit: {e} -- exiting directly");
+            app_handle.exit(0);
+        }
+    });
+}
+
 /// Dispatch a recent-game launch to the sidecar, in-process.
 ///
 /// One hop when the cached entry carries a runner, two when it does not — both on a spawned
@@ -1145,8 +1221,10 @@ const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
 ///
 /// The guardrail is not lost for the rest of the surface: every OTHER channel keeps the 60s
 /// bound, and a genuinely wedged long-running invoke now surfaces as a never-settling promise
-/// rather than a wrong answer — the honest failure mode. The sidecar dying closes the channel,
-/// which wakes `rx.recv()` with a disconnect error, so a crashed sidecar still fails fast.
+/// rather than a wrong answer — the honest failure mode. A crashed sidecar still fails fast, but
+/// only because the reader thread calls `drain_pending_invokes` when the sidecar's stdout ends:
+/// the `Sender`s live in `SidecarState::pending`, so the process dying does not by itself close
+/// any channel or wake `rx.recv()`.
 ///
 /// Membership is not free and is not granted on reasoning: `getWikiGameInfo` was MEASURED and
 /// deliberately left on the 60s bound (three cold-cache calls at 1190/957/702ms — the full
@@ -1223,6 +1301,21 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // 60-second transport bound caused it. A misdirecting error is arguably worse for diagnosis
     // than silence, so "dies silently" should not be repeated as the symptom.
     "openDialog",
+    // Todo 2026-10-05 (long-running Wine and sync channels): each awaits a child process or a
+    // network transfer that has no wall-clock ceiling of its own -- runWineCommand with
+    // `wait: true` (the sideload "Run Installer First" installer), callTool's winetricks branch
+    // (the GUI until the user closes it), installWineVersion (a multi-hundred-MB Wine/Proton
+    // download + extract), downloadRuntime (EAC/BattlEye download + extract) and the two
+    // cloud-save syncs (legendary sync-saves / gogdl save-sync). Bounded at 60s, the renderer
+    // saw a rejection mid-run and re-enabled its controls while the work continued.
+    // addToSteam was reviewed and deliberately left bounded: a wiki lookup plus a few small
+    // artwork downloads, with its rejection now handled at the call site.
+    "runWineCommand",
+    "callTool",
+    "installWineVersion",
+    "downloadRuntime",
+    "syncSaves",
+    "syncGOGSaves",
 ];
 
 /// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.
@@ -1263,6 +1356,44 @@ fn abandoned_channel_for(ring: &VecDeque<(String, String)>, id: &str) -> String 
         .find(|(recorded, _)| recorded == id)
         .map(|(_, channel)| channel.clone())
         .unwrap_or_else(|| ABANDONED_CHANNEL_UNRECORDED.to_string())
+}
+
+/// The one-shot sender `SidecarState::pending` holds for each in-flight invoke.
+type InvokeSender = Sender<Result<Value, String>>;
+
+/// Fail every still-pending invoke at once. The reader thread calls this when the sidecar's
+/// stdout ends (EOF or a read error): no response can arrive after that, but the `Sender`s in
+/// `pending` would otherwise stay alive in the map, so a long-running invoke's `rx.recv()` would
+/// never wake and a bounded one would wait out its full `INVOKE_TIMEOUT`.
+///
+/// Each waiter is SENT an `Err` rather than having its sender dropped: a dropped sender wakes a
+/// bounded `recv_timeout` with `Disconnected`, which its arm reports as a timeout — the wrong
+/// story. The text matches the long-running arm's own disconnect `Err`, so a consumer sees one
+/// message for "the sidecar went away" whichever arm it was waiting in. Each id is also recorded
+/// in `abandoned`, matching the other two abandonment paths.
+///
+/// Takes the two fields rather than `&SidecarState` so it is reachable from `#[cfg(test)] mod
+/// tests` without a live `Child`/`ChildStdin`. A poisoned lock is recovered, not skipped: this
+/// runs exactly once, on the path whose whole job is to unblock waiters. Returns the drained
+/// `(id, channel)` pairs so the caller can log them.
+fn drain_pending_invokes(
+    pending: &Mutex<HashMap<String, (String, InvokeSender)>>,
+    abandoned: &Mutex<VecDeque<(String, String)>>,
+) -> Vec<(String, String)> {
+    let drained: Vec<_> = pending
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .drain()
+        .collect();
+    let mut ring = abandoned.lock().unwrap_or_else(|e| e.into_inner());
+    drained
+        .into_iter()
+        .map(|(id, (channel, tx))| {
+            let _ = tx.send(Err("sidecar closed before responding".into()));
+            push_abandoned(&mut ring, &id, &channel);
+            (id, channel)
+        })
+        .collect()
 }
 
 /// The `Err` a bounded invoke rejects with when its channel does not answer in time.
@@ -1582,9 +1713,10 @@ impl SidecarState {
                     Err(invoke_timeout_message(&channel))
                 }
             },
-            // Long-running channel: block until the sidecar answers. `recv()` still returns
-            // Err when the sender is dropped (sidecar died / pending entry removed), so this
-            // cannot hang forever on a dead sidecar.
+            // Long-running channel: block until the sidecar answers. A dead sidecar does not
+            // wake this by itself -- the sender lives in `pending`, not in the child. It wakes
+            // because the reader thread's `drain_pending_invokes` sends an `Err` to every
+            // waiter once stdout ends; this `Err(_)` arm covers a sender dropped any other way.
             None => match rx.recv() {
                 Ok(result) => result,
                 Err(_) => {
@@ -1689,11 +1821,21 @@ fn send_trace_enabled() -> bool {
 ///
 /// T-34.6-16-02: the channel NAME only, never `args` — token material travels in those fields
 /// (the same constraint `sidecarRpc.ts`'s unrecognized-frame branch carries as T-28-04).
+///
+/// MAIN THREAD (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect 2): a non-`async`
+/// command runs on the main thread in Tauri v2, and this one used to take the stdin mutex and
+/// do a blocking `write_all`/`flush` there -- with the sidecar's JS thread busy and a pipe
+/// buffer of frames queued, the UI froze until the write completed. It now only ENQUEUES onto
+/// `SidecarSendQueue`'s single writer thread, which preserves send order (an `async` +
+/// `spawn_blocking` pool would not). The always-on `write_frame` failure line moved there with
+/// the write; an IO failure no longer reaches the renderer as a rejection, which -- per the
+/// paragraph above -- was the path where it got lost anyway.
 #[tauri::command]
 fn sidecar_send(
     channel: String,
     args: Vec<Value>,
     state: State<'_, Arc<SidecarState>>,
+    queue: State<'_, SidecarSendQueue>,
 ) -> Result<(), String> {
     let req = SidecarRpcRequest {
         id: state.next_id(),
@@ -1701,23 +1843,46 @@ fn sidecar_send(
         channel,
         args,
     };
-    // Read the name off the frame rather than cloning `channel` before the move: `write_frame`
-    // only borrows `req`, so the name is still available for the failure line below at zero
-    // allocation cost on this hot path.
     if send_trace_enabled() {
         eprintln!(
             "[shell] send-trace: sidecar_send entered for '{}'",
             req.channel
         );
     }
-    let result = state.write_frame(&req);
-    if let Err(ref e) = result {
-        eprintln!(
-            "[shell] send-trace: write_frame FAILED for '{}': {e}",
-            req.channel
+    queue.0.send(req).map_err(|rejected| {
+        let message = format!(
+            "send writer thread is gone; frame for '{}' not written",
+            rejected.0.channel
         );
-    }
-    result
+        eprintln!("[shell] send-trace: {message}");
+        message
+    })
+}
+
+/// The FIFO hand-off between `sidecar_send` (main thread) and the one thread that writes its
+/// frames to the sidecar's stdin. See `sidecar_send`'s MAIN THREAD paragraph.
+struct SidecarSendQueue(Sender<SidecarRpcRequest>);
+
+/// Spawn the `sidecar_send` writer thread over `write` and return its queue. Generic over the
+/// write so `#[cfg(test)]` can prove ordering and non-blocking enqueue without a child process.
+/// The thread ends when every `Sender` is dropped; in the app the managed queue lives for the
+/// process, and a parked std thread does not hold the process open.
+fn spawn_send_writer<W>(write: W) -> Sender<SidecarRpcRequest>
+where
+    W: Fn(&SidecarRpcRequest) -> Result<(), String> + Send + 'static,
+{
+    let (tx, rx) = mpsc_channel::<SidecarRpcRequest>();
+    thread::spawn(move || {
+        for req in rx {
+            if let Err(e) = write(&req) {
+                eprintln!(
+                    "[shell] send-trace: write_frame FAILED for '{}': {e}",
+                    req.channel
+                );
+            }
+        }
+    });
+    tx
 }
 
 /// The only schemes the renderer may ask the shell to hand to the OS (CR-01,
@@ -5904,8 +6069,22 @@ enum StoreEmbedNavigationDecision {
 /// a `Webview`. The caller (the `on_navigation` closure in `store_embed_open` below) is
 /// responsible for the one side effect the `Handoff` variant implies -- calling the existing
 /// `open_external` command function directly, never a second, duplicated opener call.
+///
+/// `steam:` HAND-OFF IS GATED ON THE TOP-LEVEL PAGE, NOT ON THE FRAME (todo 2026-10-05
+/// store-embed-hands-off-steam-urls-and-popups-from-any-frame). The ask was "main-frame `steam:`
+/// navigations only", but `on_navigation` cannot tell frames apart: tauri 2.11.5's hook is
+/// `Fn(&Url) -> bool` and wry 0.55.1's `navigation_handler` is `Fn(String) -> bool` -- no frame,
+/// no gesture, no initiator. So the safe behaviour available is: hand `steam:` off only while the
+/// embed's top-level page (`top_level_host`, recorded from the main-frame-only `on_page_load`) is
+/// a Valve host, where the store's own install/launch buttons live; block it everywhere else,
+/// including the default when no page has loaded yet. An iframe embedded IN a Valve page can still
+/// trigger a hand-off -- the caller's `STORE_EMBED_STEAM_THROTTLE` caps that at one per
+/// `STORE_EMBED_HANDOFF_MIN_GAP`.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecision {
+fn store_embed_navigation_policy(
+    url: &tauri::Url,
+    top_level_host: Option<&str>,
+) -> StoreEmbedNavigationDecision {
     let scheme = url.scheme();
     if scheme == "gamelib" {
         // The sharpest edge in the phase (T-40-04-02): a store page driving the app's own deep
@@ -5921,13 +6100,81 @@ fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecisi
         return StoreEmbedNavigationDecision::Allow;
     }
     if scheme == "steam" {
-        return StoreEmbedNavigationDecision::Handoff;
+        if top_level_host.is_some_and(store_embed_is_valve_host) {
+            return StoreEmbedNavigationDecision::Handoff;
+        }
+        // Scheme-only in the log, as above -- never the steam: URL itself.
+        eprintln!(
+            "[shell] store_embed: blocked steam: hand-off -- the top-level page is not a Valve \
+             host"
+        );
+        return StoreEmbedNavigationDecision::Block;
     }
     // Default-deny (T-40-04-03): any scheme outside the enumerated set above, not an allowlist
     // of known-bad schemes. A future store/wiki origin registering some other custom scheme
     // falls here automatically rather than needing a new arm added reactively.
     eprintln!("[shell] store_embed: blocked in-embed navigation to unrecognized scheme '{scheme}'");
     StoreEmbedNavigationDecision::Block
+}
+
+/// Whether `host` is Valve's store or community site (or a subdomain of either) -- the pages
+/// whose own buttons legitimately produce `steam:` links. Exact apex or a `.`-prefixed suffix,
+/// so `evilsteampowered.com` does not match.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn store_embed_is_valve_host(host: &str) -> bool {
+    ["steampowered.com", "steamcommunity.com"]
+        .iter()
+        .any(|apex| host == *apex || host.ends_with(&format!(".{apex}")))
+}
+
+/// Minimum gap between two hand-offs of the same kind out of the store embed (a `steam:` URL to
+/// the Steam client, or a `window.open` popup to the system browser). Neither hook carries a user
+/// gesture, so a page -- or an ad frame inside it -- could otherwise fire them in a loop.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const STORE_EMBED_HANDOFF_MIN_GAP: Duration = Duration::from_secs(2);
+
+/// Admits at most one hand-off per `min_gap`. Pure apart from its own `last` field, so the
+/// rate-limit decision is unit-testable with constructed `Instant`s.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[derive(Debug, Default)]
+struct HandoffThrottle {
+    last: Option<std::time::Instant>,
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+impl HandoffThrottle {
+    fn admit(&mut self, now: std::time::Instant, min_gap: Duration) -> bool {
+        if let Some(last) = self.last {
+            if now.saturating_duration_since(last) < min_gap {
+                return false;
+            }
+        }
+        self.last = Some(now);
+        true
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_STEAM_THROTTLE: Mutex<HandoffThrottle> =
+    Mutex::new(HandoffThrottle { last: None });
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_POPUP_THROTTLE: Mutex<HandoffThrottle> =
+    Mutex::new(HandoffThrottle { last: None });
+
+/// The embed's current top-level host, recorded from `on_page_load` (main frame only) and read
+/// by the `on_navigation` closure for `store_embed_navigation_policy`'s `steam:` gate.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_TOP_LEVEL_HOST: Mutex<Option<String>> = Mutex::new(None);
+
+/// Take one admission from `throttle`, failing CLOSED on a poisoned lock: a refused hand-off is
+/// the safe direction for a gate whose job is to stop unrequested ones.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn store_embed_handoff_admitted(throttle: &Mutex<HandoffThrottle>) -> bool {
+    match throttle.lock() {
+        Ok(mut guard) => guard.admit(std::time::Instant::now(), STORE_EMBED_HANDOFF_MIN_GAP),
+        Err(_) => false,
+    }
 }
 
 /// Create (or, if already open, navigate) the store/wiki embed child webview on `main`
@@ -5978,6 +6225,12 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // D-22: on_page_load, never on_navigation, per the 013-015 rule that carries over
         // unchanged -- main-frame-only per `40-EMBED-API-VERIFICATION.md` Q4.
         .on_page_load(|_webview, payload| {
+            // Main frame only (see above), so this is the TOP-LEVEL host the `steam:` gate in
+            // `store_embed_navigation_policy` needs. Recorded on `Started` too, so a page that
+            // has begun replacing a Valve page is not still judged by the Valve host.
+            if let Ok(mut host) = STORE_EMBED_TOP_LEVEL_HOST.lock() {
+                *host = payload.url().host_str().map(str::to_string);
+            }
             if payload.event() == tauri::webview::PageLoadEvent::Finished {
                 if let Ok(mut state) = store_embed_state().lock() {
                     state.push(payload.url().to_string());
@@ -5993,28 +6246,50 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // not `on_page_load`, is correct here.
         .on_navigation({
             let app_handle = app.clone();
-            move |url| match store_embed_navigation_policy(url) {
-                StoreEmbedNavigationDecision::Allow => true,
-                StoreEmbedNavigationDecision::Block => false,
-                StoreEmbedNavigationDecision::Handoff => {
-                    // Reuses the existing `open_external` command function directly -- never a
-                    // second, duplicated `app.opener()` call site (D-28).
-                    if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
-                        eprintln!(
-                            "[shell] store_embed: on_navigation handoff to open_external \
+            move |url| {
+                // Fail closed on a poisoned lock: no known top-level host means no hand-off.
+                let top_level_host = STORE_EMBED_TOP_LEVEL_HOST
+                    .lock()
+                    .ok()
+                    .and_then(|host| host.clone());
+                match store_embed_navigation_policy(url, top_level_host.as_deref()) {
+                    StoreEmbedNavigationDecision::Allow => true,
+                    StoreEmbedNavigationDecision::Block => false,
+                    StoreEmbedNavigationDecision::Handoff => {
+                        if !store_embed_handoff_admitted(&STORE_EMBED_STEAM_THROTTLE) {
+                            eprintln!(
+                                "[shell] store_embed: steam: hand-off rate-limited -- dropped"
+                            );
+                            return false;
+                        }
+                        // Reuses the existing `open_external` command function directly -- never a
+                        // second, duplicated `app.opener()` call site (D-28).
+                        if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
+                            eprintln!(
+                                "[shell] store_embed: on_navigation handoff to open_external \
                              failed: {e}"
-                        );
+                            );
+                        }
+                        false
                     }
-                    false
                 }
             }
         })
         // D-28: a store page's `window.open()` popup is denied inside the embed's own frame
         // and routed to the system browser instead, where the URL bar and the user's password
         // manager both work -- neither exists inside an in-app child webview (T-40-04-05).
+        // Rate-limited (todo 2026-10-05): the hook carries no user gesture, so without a cap
+        // any frame could open system-browser tabs in a loop.
         .on_new_window({
             let app_handle = app.clone();
             move |url, _features| {
+                if !store_embed_handoff_admitted(&STORE_EMBED_POPUP_THROTTLE) {
+                    eprintln!(
+                        "[shell] store_embed: denied window.open request, rate-limited -- not \
+                         routed to the system browser"
+                    );
+                    return tauri::webview::NewWindowResponse::Deny;
+                }
                 eprintln!(
                     "[shell] store_embed: denied window.open request, routing to system \
                      browser (D-28)"
@@ -6673,6 +6948,23 @@ fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Value, String
     Ok(json)
 }
 
+/// Which button of a two-button `dialog_message` was chosen: `Some(0)`, `Some(1)`, or `None`
+/// when the dialog was dismissed (Esc / window close) without one. See the `dialog_message`
+/// arm for why this reads rfd's raw result rather than the dialog plugin's.
+///
+/// rfd reports a click on an `OkCancelCustom` button as `Custom(<its label>)` on every desktop
+/// backend; `Ok` is also accepted as buttons[0] in case a backend reports the first button
+/// generically. Everything else -- `Cancel` above all, which is what a dismissal yields -- is
+/// `None`, so the caller falls back to its declared `cancelId` instead of guessing a button.
+fn two_button_choice(result: &rfd::MessageDialogResult, label0: &str, label1: &str) -> Option<u8> {
+    match result {
+        rfd::MessageDialogResult::Custom(s) if s == label0 => Some(0),
+        rfd::MessageDialogResult::Custom(s) if s == label1 => Some(1),
+        rfd::MessageDialogResult::Ok => Some(0),
+        _ => None,
+    }
+}
+
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
@@ -6961,19 +7253,31 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
         }
         // Native message/error dialog (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05): backs both
-        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Maps
-        // `blocking_show()`'s bool onto `Value::Bool` — electronStub maps `true`->response:0,
-        // `false`->response:1. Default kind is Info when unspecified; the showErrorBox caller
-        // always sends `kind:"error"`. Runs on the existing spawned worker thread (same
+        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Default
+        // kind is Info when unspecified; the showErrorBox caller always sends `kind:"error"`.
+        // Runs on the existing spawned worker thread (same
         // modal-dialog-must-not-block-the-reader-thread reasoning as `dialog_open` above).
         //
-        // Phase 33 Plan 03 (D-06): extended to read an optional 2-element `buttons` array and
-        // wire it to `MessageDialogButtons::OkCancelCustom` — a real multi-button confirm
-        // instead of the OK-only default. `blocking_show()`'s bool keeps the same meaning:
-        // `true` -> buttons[0] clicked -> electronStub response:0, `false` -> buttons[1]
-        // clicked -> electronStub response:1. Single-button (no `buttons` / not length 2)
-        // behavior is unchanged (still OK-only, always true). Data-shape change only, no new
-        // match arm/channel (33-RESEARCH confirmed).
+        // Phase 33 Plan 03 (D-06): an optional 2-element `buttons` array renders a real
+        // two-button confirm (`OkCancelCustom`) instead of the OK-only default.
+        //
+        // Returns the chosen button's index (`0` / `1`), or `null` when the dialog was
+        // DISMISSED (Esc / window close) without a button -- electronStub maps `null` to the
+        // caller's `cancelId`, Electron's own dismissal semantics. Todo 2026-10-05
+        // dialog-dismiss: this used to return `blocking_show()`'s bool, which is `false` for a
+        // dismissal AND for buttons[1], so Esc on Windows/Linux resolved as buttons[1] -- the
+        // destructive "Yes" for `askForceUninstall` and `handleExit`.
+        //
+        // The two-button case calls `rfd` directly, NOT the plugin's
+        // `blocking_show_with_result()`: tauri-plugin-dialog 2.7.2's
+        // `desktop::show_message_dialog` unconditionally remaps rfd's `Cancel` to
+        // `Custom(<second label>)` for `OkCancelCustom` (a workaround for GTK), so through the
+        // plugin a dismissal is indistinguishable from buttons[1] on every API it offers. rfd
+        // 0.16.0 itself reports `Custom(label)` for a click and `Cancel` for a dismissal on all
+        // three desktop backends (gtk3, win_cid, macos). The dialog is shown the way the plugin
+        // shows it: built and `show()`n on the main thread, awaited on a spawned thread, with
+        // the plugin's default title (the package name). Single-button / no-`buttons` calls
+        // keep the plugin's OK-only dialog.
         "dialog_message" => {
             let message = args
                 .first()
@@ -6991,27 +7295,51 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     _ => MessageDialogKind::Info,
                 })
                 .unwrap_or(MessageDialogKind::Info);
-            let mut builder = app.dialog().message(message).kind(kind);
-            if let Some(title) = args
+            let title = args
                 .first()
                 .and_then(|v| v.get("title"))
                 .and_then(|v| v.as_str())
-            {
-                builder = builder.title(title);
-            }
+                .map(str::to_string);
             let buttons = args
                 .first()
                 .and_then(|v| v.get("buttons"))
                 .and_then(|v| v.as_array());
             if let Some(btns) = buttons.filter(|b| b.len() == 2) {
-                let label0 = btns[0].as_str().unwrap_or("");
-                let label1 = btns[1].as_str().unwrap_or("");
-                builder = builder.buttons(MessageDialogButtons::OkCancelCustom(
-                    label0.into(),
-                    label1.into(),
-                ));
+                let label0 = btns[0].as_str().unwrap_or("").to_string();
+                let label1 = btns[1].as_str().unwrap_or("").to_string();
+                let title = title.unwrap_or_else(|| app.package_info().name.clone());
+                // The plugin's own `From<MessageDialogKind> for rfd::MessageLevel`, so the
+                // level matches what the OK-only path below renders.
+                let level: rfd::MessageLevel = kind.into();
+                let buttons = rfd::MessageButtons::OkCancelCustom(label0.clone(), label1.clone());
+                let (tx, rx) = mpsc_channel::<rfd::MessageDialogResult>();
+                app.run_on_main_thread(move || {
+                    let shown = rfd::AsyncMessageDialog::new()
+                        .set_title(&title)
+                        .set_description(&message)
+                        .set_level(level)
+                        .set_buttons(buttons)
+                        .show();
+                    thread::spawn(move || {
+                        let _ = tx.send(tauri::async_runtime::block_on(shown));
+                    });
+                })
+                .map_err(|e| e.to_string())?;
+                let result = rx.recv().map_err(|e| e.to_string())?;
+                return Ok(
+                    two_button_choice(&result, &label0, &label1).map_or(Value::Null, Value::from)
+                );
             }
-            Ok(Value::Bool(builder.blocking_show()))
+            let mut builder = app.dialog().message(message).kind(kind);
+            if let Some(title) = title {
+                builder = builder.title(title);
+            }
+            // OK-only: `true` is its one button; anything else is a dismissal.
+            Ok(if builder.blocking_show() {
+                Value::from(0)
+            } else {
+                Value::Null
+            })
         }
         // Real OS notification (Phase 33 Plan 04, D-05) via `tauri-plugin-notification`. Backs
         // `electronStub.ts`'s `Notification.show()`. Mirrors `dialog_message`'s args-parse idiom
@@ -11402,8 +11730,14 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
                     .and_then(|a| a.first())
                     .and_then(|v| v.as_str())
                 {
-                    if let Err(e) = app.opener().open_url(url, None::<&str>) {
-                        eprintln!("[shell] openExternal failed: {e}");
+                    // Same allow-list as the `open_external` command: any line that reaches
+                    // the sidecar's stdout can forge this frame (todo
+                    // `sidecar-log-output-shares-the-rpc-stdout-pipe`). The check logs the
+                    // rejected scheme itself, never the URL.
+                    if open_external_scheme_check(url).is_ok() {
+                        if let Err(e) = app.opener().open_url(url, None::<&str>) {
+                            eprintln!("[shell] openExternal failed: {e}");
+                        }
                     }
                 } else {
                     eprintln!("[shell] openExternal frame missing a string URL in args[0]");
@@ -11416,6 +11750,12 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
             // cannot recur unnoticed.
             let id = value.get("id").and_then(|v| v.as_str());
             eprintln!("[shell] unrecognized sidecar frame kind: {kind:?} id={id:?}");
+        }
+
+        // stdout has ended (EOF, or a read error such as a non-UTF-8 line), so no response can
+        // arrive any more. Fail every invoke still waiting instead of leaving it parked forever.
+        for (id, channel) in drain_pending_invokes(&state.pending, &state.abandoned) {
+            shell_diag(&invoke_abandoned_message("sidecar exited", &id, &channel));
         }
     });
 }
@@ -12147,6 +12487,10 @@ fn main() {
             #[cfg(windows)]
             repair_windows_gamelib_protocol_registration(&app.config().identifier);
 
+            let send_state = state.clone();
+            app.manage(SidecarSendQueue(spawn_send_writer(move |req| {
+                send_state.write_frame(req)
+            })));
             app.manage(state);
 
             // Real Tauri tray (Phase 34.1 Plan 06, D-11; EXTENDED by Phase 35 Plan 06,
@@ -12377,7 +12721,7 @@ fn main() {
                                         }
                                     }
                                     "about" => open_about_window_from_tray(app_handle),
-                                    "quit" => app_handle.exit(0),
+                                    "quit" => quit_from_tray(app_handle),
                                     // T-35-20: the appName reaching a launch is PARSED back out
                                     // of the menu id through the same allow-list that built it,
                                     // never taken from the id verbatim. A malformed id is
@@ -13051,6 +13395,136 @@ mod tests {
         }
     }
 
+    fn send_frame(channel: &str) -> SidecarRpcRequest {
+        SidecarRpcRequest {
+            id: channel.to_string(),
+            kind: "send",
+            channel: channel.to_string(),
+            args: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn send_writer_enqueue_does_not_wait_for_a_blocked_write() {
+        // The defect: `sidecar_send` wrote on the main thread, so a write stuck on a full pipe
+        // froze the UI. Enqueueing must return while the writer is blocked.
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let release_rx = Mutex::new(release_rx);
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = release_rx.lock().unwrap().recv();
+            let _ = done_tx.send(req.channel.clone());
+            Ok(())
+        });
+        let started = std::time::Instant::now();
+        for channel in ["a", "b", "c"] {
+            queue.send(send_frame(channel)).unwrap();
+        }
+        assert!(
+            started.elapsed() < Duration::from_millis(500),
+            "enqueue must not block on the write"
+        );
+        for _ in 0..3 {
+            release_tx.send(()).unwrap();
+        }
+        let written: Vec<String> = (0..3)
+            .map(|_| done_rx.recv_timeout(Duration::from_secs(5)).unwrap())
+            .collect();
+        assert_eq!(written, ["a", "b", "c"], "frames are written in send order");
+    }
+
+    #[test]
+    fn send_writer_keeps_going_after_a_failed_write() {
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = done_tx.send(req.channel.clone());
+            if req.channel == "broken" {
+                Err("broken pipe".into())
+            } else {
+                Ok(())
+            }
+        });
+        queue.send(send_frame("broken")).unwrap();
+        queue.send(send_frame("after")).unwrap();
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "broken"
+        );
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "after"
+        );
+    }
+
+    #[test]
+    fn tray_quit_hands_off_to_the_sidecar_when_the_probe_answers() {
+        let sent = std::cell::Cell::new(false);
+        let routed = tray_quit_via_sidecar(
+            || Ok(Value::String("ok".into())),
+            Duration::from_secs(5),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert_eq!(routed, Ok(()));
+        assert!(
+            sent.get(),
+            "the quit frame must be sent once the probe answers"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_probe_fails_without_sending() {
+        let sent = std::cell::Cell::new(false);
+        let routed = tray_quit_via_sidecar(
+            || Err("sidecar closed before responding".into()),
+            Duration::from_secs(5),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert!(routed.is_err());
+        assert!(
+            !sent.get(),
+            "a dead sidecar must not be sent the quit frame"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_probe_does_not_answer_in_time() {
+        let sent = std::cell::Cell::new(false);
+        let started = std::time::Instant::now();
+        let routed = tray_quit_via_sidecar(
+            || {
+                thread::sleep(Duration::from_secs(2));
+                Ok(Value::Null)
+            },
+            Duration::from_millis(100),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert!(routed.is_err());
+        assert!(!sent.get());
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "the fallback must not wait for a hung probe"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_quit_frame_cannot_be_written() {
+        let routed = tray_quit_via_sidecar(
+            || Ok(Value::Null),
+            Duration::from_secs(5),
+            || Err("broken pipe".into()),
+        );
+        assert_eq!(routed, Err("broken pipe".to_string()));
+    }
+
     #[test]
     fn recent_menu_id_rejects_a_malformed_id() {
         // Missing prefix -- the non-recent menu ids the same handler also sees.
@@ -13506,6 +13980,73 @@ mod tests {
         assert_eq!(abandoned_channel_for(&ring, "1575"), "getCookies");
         assert_eq!(abandoned_channel_for(&ring, "1576"), "openDialog");
         assert_eq!(abandoned_channel_for(&ring, "1577"), "keyring_get");
+    }
+
+    #[test]
+    fn sidecar_exit_fails_every_pending_invoke_at_once() {
+        // Todo 2026-10-05 sidecar-death: nothing used to drain `pending`, so a waiter on a dead
+        // sidecar never woke (long-running) or waited the full 60s (bounded). Each waiter must
+        // receive an Err immediately -- `try_recv`, not a wait, is the assertion.
+        let pending = Mutex::new(HashMap::new());
+        let abandoned = Mutex::new(VecDeque::new());
+        let (tx_install, rx_install) = mpsc_channel::<Result<Value, String>>();
+        let (tx_cookies, rx_cookies) = mpsc_channel::<Result<Value, String>>();
+        {
+            let mut map = pending.lock().unwrap();
+            map.insert("7".to_string(), ("install".to_string(), tx_install));
+            map.insert("8".to_string(), ("getCookies".to_string(), tx_cookies));
+        }
+
+        let mut drained = drain_pending_invokes(&pending, &abandoned);
+        drained.sort();
+
+        assert_eq!(
+            drained,
+            vec![
+                ("7".to_string(), "install".to_string()),
+                ("8".to_string(), "getCookies".to_string()),
+            ]
+        );
+        for rx in [rx_install, rx_cookies] {
+            assert_eq!(
+                rx.try_recv(),
+                Ok(Err("sidecar closed before responding".to_string()))
+            );
+        }
+        assert!(pending.lock().unwrap().is_empty());
+        let ring = abandoned.lock().unwrap();
+        assert_eq!(abandoned_channel_for(&ring, "7"), "install");
+        assert_eq!(abandoned_channel_for(&ring, "8"), "getCookies");
+    }
+
+    #[test]
+    fn two_button_dialog_dismissal_is_not_a_button() {
+        // Todo 2026-10-05 dialog-dismiss: Esc / window close yields rfd `Cancel`, which must
+        // NOT read as buttons[1] (the destructive "Yes" in askForceUninstall/handleExit).
+        use rfd::MessageDialogResult as R;
+        assert_eq!(
+            two_button_choice(&R::Custom("No".into()), "No", "Yes"),
+            Some(0)
+        );
+        assert_eq!(
+            two_button_choice(&R::Custom("Yes".into()), "No", "Yes"),
+            Some(1)
+        );
+        assert_eq!(two_button_choice(&R::Cancel, "No", "Yes"), None);
+        assert_eq!(two_button_choice(&R::Ok, "No", "Yes"), Some(0));
+        assert_eq!(two_button_choice(&R::No, "No", "Yes"), None);
+        assert_eq!(
+            two_button_choice(&R::Custom("Other".into()), "No", "Yes"),
+            None
+        );
+    }
+
+    #[test]
+    fn draining_an_empty_pending_table_is_a_no_op() {
+        let pending = Mutex::new(HashMap::new());
+        let abandoned = Mutex::new(VecDeque::new());
+        assert!(drain_pending_invokes(&pending, &abandoned).is_empty());
+        assert!(abandoned.lock().unwrap().is_empty());
     }
 
     #[test]
@@ -17514,7 +18055,7 @@ mod tests {
         // the app's own deep link from inside the embed.
         let url = tauri::Url::parse("gamelib://launch?appName=1207659037&runner=gog").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Block
         );
     }
@@ -17531,7 +18072,7 @@ mod tests {
         ] {
             let url = tauri::Url::parse(candidate).unwrap();
             assert_eq!(
-                store_embed_navigation_policy(&url),
+                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
                 StoreEmbedNavigationDecision::Allow,
                 "expected free https navigation to `{candidate}` under D-28"
             );
@@ -17543,7 +18084,7 @@ mod tests {
     fn store_embed_navigation_policy_allows_http_freely() {
         let url = tauri::Url::parse("http://example.com/").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Allow
         );
     }
@@ -17556,9 +18097,86 @@ mod tests {
         // `open_external` path instead (D-28/D-29).
         let url = tauri::Url::parse("steam://rungameid/440").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Handoff
         );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn store_embed_navigation_policy_blocks_steam_unless_the_top_level_page_is_valve() {
+        // todo 2026-10-05: `on_navigation` cannot tell an ad iframe from the main frame, so a
+        // `steam:` hand-off is gated on the top-level page. Off a Valve page -- or before any
+        // page has loaded -- it is blocked, not handed to the Steam client.
+        let url = tauri::Url::parse("steam://run/570").unwrap();
+        for top in [
+            None,
+            Some("store.gog.com"),
+            Some("www.amazon.com"),
+            Some("evilsteampowered.com"),
+            Some("steampowered.com.example"),
+        ] {
+            assert_eq!(
+                store_embed_navigation_policy(&url, top),
+                StoreEmbedNavigationDecision::Block,
+                "expected steam: to be blocked with top-level host {top:?}"
+            );
+        }
+        for top in [
+            "store.steampowered.com",
+            "steamcommunity.com",
+            "help.steampowered.com",
+        ] {
+            assert_eq!(
+                store_embed_navigation_policy(&url, Some(top)),
+                StoreEmbedNavigationDecision::Handoff,
+                "expected steam: to be handed off from `{top}`"
+            );
+        }
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn store_embed_navigation_policy_https_is_unaffected_by_the_top_level_host() {
+        // The steam: gate must not leak into D-28's free https navigation.
+        let url = tauri::Url::parse("https://checkout.stripe.com/pay/cs_test_abc").unwrap();
+        assert_eq!(
+            store_embed_navigation_policy(&url, None),
+            StoreEmbedNavigationDecision::Allow
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn handoff_throttle_admits_one_per_gap() {
+        let gap = Duration::from_secs(2);
+        let t0 = std::time::Instant::now();
+        let mut throttle = HandoffThrottle::default();
+        assert!(throttle.admit(t0, gap), "the first hand-off is admitted");
+        assert!(
+            !throttle.admit(t0, gap),
+            "a burst at the same instant is refused"
+        );
+        assert!(!throttle.admit(t0 + Duration::from_millis(1999), gap));
+        assert!(
+            throttle.admit(t0 + gap, gap),
+            "admitted again once the gap has passed"
+        );
+        assert!(!throttle.admit(t0 + gap + Duration::from_millis(1), gap));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn handoff_throttle_refusals_do_not_extend_the_window() {
+        // A page spamming refused requests must not lock out the next legitimate one forever.
+        let gap = Duration::from_secs(2);
+        let t0 = std::time::Instant::now();
+        let mut throttle = HandoffThrottle::default();
+        assert!(throttle.admit(t0, gap));
+        for ms in (100..2000).step_by(100) {
+            assert!(!throttle.admit(t0 + Duration::from_millis(ms), gap));
+        }
+        assert!(throttle.admit(t0 + gap, gap));
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -17574,7 +18192,7 @@ mod tests {
         ] {
             let url = tauri::Url::parse(candidate).unwrap();
             assert_eq!(
-                store_embed_navigation_policy(&url),
+                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
                 StoreEmbedNavigationDecision::Block,
                 "expected `{candidate}` to be default-denied"
             );
