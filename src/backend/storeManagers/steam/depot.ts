@@ -1381,10 +1381,29 @@ export async function downloadFileChunks(
   const queue = [...file.chunks]
   const workerCount = Math.min(CHUNK_CONCURRENCY, queue.length)
 
-  await Promise.all(
-    Array.from({ length: workerCount }, async (_, chunkWorkerSlot) => {
+  // 2026-10-05 (sibling chunk workers outlived a failed file): this file's
+  // OWN cancel scope. It follows the run's `signal`, and is also aborted the
+  // moment any one of this file's chunk workers throws, so the siblings stop
+  // — their in-flight fetchChunk is interrupted, and none of them writes or
+  // picks up another chunk. Before this, `Promise.all` rejected on the first
+  // throw, downloadSingleFile's `finally` closed `fd`, and the siblings kept
+  // fetching, failing `fd.write` on the closed handle, and re-queuing — for
+  // as long as other files kept the stall clock fresh, and past the end of
+  // the run (in-flight work outliving its owner: half 2 of the sidecar exit
+  // contract). `Promise.allSettled` below then waits for every sibling to
+  // settle before this function returns, so the caller never closes `fd`
+  // under a live worker.
+  const fileAbort = new AbortController()
+  const onRunAbort = () => fileAbort.abort()
+  if (signal?.aborted) fileAbort.abort()
+  else signal?.addEventListener('abort', onRunAbort, { once: true })
+  const fileSignal = fileAbort.signal
+
+  const workers = Array.from(
+    { length: workerCount },
+    async (_, chunkWorkerSlot) => {
       while (queue.length) {
-        if (signal?.aborted) return
+        if (fileSignal.aborted) return
         const chunk = queue.shift()!
         const depotChunk: DepotChunk = {
           sha: chunk.sha,
@@ -1399,6 +1418,7 @@ export async function downloadFileChunks(
         // netBytes = compressed bytes actually fetched over the wire (for the
         // download rate); data.length = decompressed bytes written to disk.
         let netBytes = 0
+        let data: Buffer
         try {
           // Quick 260817-ihr (IHR-02), corrected by
           // debug/humankind-depot-full-stall (2026-08-17): `limiter` is now
@@ -1415,7 +1435,7 @@ export async function downloadFileChunks(
           // writeup. Omitting `limiter` (every pre-260817-ihr caller/test)
           // makes fetchChunk's internal acquire()/release() calls no-ops,
           // byte-for-byte unchanged.
-          const data = await fetchChunk(
+          data = await fetchChunk(
             hosts,
             depotId,
             depotChunk,
@@ -1436,7 +1456,9 @@ export async function downloadFileChunks(
             // fetchChunk, never while it was mid-retry — the ~62s hardware
             // hang) so a cancel interrupts an in-flight attempt immediately
             // instead of waiting for it to naturally exhaust or succeed.
-            signal,
+            // 2026-10-05: this FILE's scope (follows `signal`, and also
+            // fires when a sibling chunk worker fails) — see `fileAbort`.
+            fileSignal,
             // Phase 25 (multi-host fan-out): combines this file's own
             // FILE_CONCURRENCY-pool slot with this chunk worker's own
             // CHUNK_CONCURRENCY-pool index so every concurrently-running
@@ -1458,18 +1480,8 @@ export async function downloadFileChunks(
             chunkWorkerSlot * FILE_CONCURRENCY + fileWorkerSlot,
             limiter
           )
-          if (signal?.aborted) return
-
-          await fd.write(data, 0, data.length, Number(chunk.offset))
-          onBytes(data.length, netBytes)
-          // Debug/steam-install-slow-start (cycle 7): resets the WHOLE-RUN
-          // stall clock — this file's forward progress counts as forward
-          // progress for every OTHER file/worker in this download run too
-          // (host health, like forward progress, is a property of the run,
-          // never of a single file).
-          stallTracker?.recordProgress()
         } catch (err) {
-          if (signal?.aborted) return
+          if (fileSignal.aborted) return
           // Debug/steam-install-slow-start (cycle 17, retry-storm
           // resilience): a decode-stage failure — fetchChunk exhausted its
           // whole CHUNK_FETCH_ATTEMPTS/host-rotation budget with a
@@ -1518,9 +1530,39 @@ export async function downloadFileChunks(
           }
           throw err
         }
+        if (fileSignal.aborted) return
+
+        // 2026-10-05: the write sits OUTSIDE the fetch try/catch above, so a
+        // write failure (closed handle, ENOSPC, EIO) is fatal for this file
+        // instead of being re-queued as if it were a transient network
+        // failure — re-downloading the chunk can never fix a disk error.
+        await fd.write(data, 0, data.length, Number(chunk.offset))
+        onBytes(data.length, netBytes)
+        // Debug/steam-install-slow-start (cycle 7): resets the WHOLE-RUN
+        // stall clock — this file's forward progress counts as forward
+        // progress for every OTHER file/worker in this download run too
+        // (host health, like forward progress, is a property of the run,
+        // never of a single file).
+        stallTracker?.recordProgress()
       }
+    }
+  ).map((worker) =>
+    worker.catch((err: unknown) => {
+      fileAbort.abort()
+      throw err
     })
   )
+
+  let results: PromiseSettledResult<void>[]
+  try {
+    results = await Promise.allSettled(workers)
+  } finally {
+    signal?.removeEventListener('abort', onRunAbort)
+  }
+  const failed = results.find(
+    (r): r is PromiseRejectedResult => r.status === 'rejected'
+  )
+  if (failed) throw failed.reason
 }
 
 /**

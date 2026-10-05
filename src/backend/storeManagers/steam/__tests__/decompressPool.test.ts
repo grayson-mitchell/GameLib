@@ -499,6 +499,46 @@ describe('DecompressPool', () => {
     }
   }, 15000)
 
+  // 2026-10-05 todo steam-depot-sibling-chunk-workers-outlive-a-failed-file:
+  // shutdown() cleared pending timers and dropped queued tasks WITHOUT
+  // settling them, so a decode() still outstanding at shutdown never
+  // resolved or rejected -- its caller hung forever.
+  it('shutdown() rejects every outstanding task -- in flight and queued -- with decompress_pool_shutdown, never leaves one pending', async () => {
+    const pool = new DecompressPool({
+      size: 1,
+      workerPath: POOL_TEST_WORKER_PATH
+    })
+    await pool.init()
+    const settle = (p: Promise<Buffer>) =>
+      p.then(
+        () => 'resolved',
+        (err: Error & { code?: string }) => err
+      )
+    // In flight on the only worker (never answered), plus one queued behind it.
+    const inFlight = settle(
+      pool.decode(Buffer.from('irrelevant'), key, '__TEST_HANG__', 0)
+    )
+    const queued = settle(
+      pool.decode(Buffer.from('irrelevant'), key, '__TEST_HANG__', 0)
+    )
+
+    await pool.shutdown()
+    const pending = new Promise<string>((resolve) =>
+      setTimeout(() => resolve('still pending'), 500)
+    )
+    const outcomes = await Promise.all([
+      Promise.race([inFlight, pending]),
+      Promise.race([queued, pending])
+    ])
+
+    for (const outcome of outcomes) {
+      expect(outcome).toBeInstanceOf(Error)
+      expect((outcome as Error & { code?: string }).code).toBe(
+        'decompress_pool_shutdown'
+      )
+    }
+  }, 15000)
+
   it('when init() is forced to fail (bad worker path), decode() falls back to inline decodeChunk and still returns correct bytes', async () => {
     const data = Buffer.from('inline fallback fixture', 'utf8')
     const { encrypted, expectedSha } = await buildEncrypted(data)

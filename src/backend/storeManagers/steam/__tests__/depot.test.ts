@@ -3469,7 +3469,23 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
   // trailing `workerSlot` after it).
   it('forwards its own `signal` parameter through to every fetchChunk call (Thread A wiring fix)', async () => {
     const controller = new AbortController()
-    jest.mocked(fetchChunk).mockResolvedValue(Buffer.alloc(10))
+    // 2026-10-05: what is forwarded is now this FILE's own cancel scope,
+    // which follows the run's `signal` (and also fires when a sibling chunk
+    // worker fails) -- so the wiring is proven by behavior, not identity: a
+    // run cancel issued WHILE fetchChunk is running must reach the signal it
+    // was handed.
+    const observed: Array<{ before: boolean; after: boolean }> = []
+    jest.mocked(fetchChunk).mockImplementation((...callArgs) => {
+      // signal is now the 3rd-from-last positional arg — workerSlot and the
+      // new trailing `limiter` param (debug/humankind-depot-full-stall)
+      // follow it.
+      const forwarded = callArgs[callArgs.length - 3] as AbortSignal
+      expect(forwarded).toBeInstanceOf(AbortSignal)
+      const before = forwarded.aborted
+      controller.abort()
+      observed.push({ before, after: forwarded.aborted })
+      return Promise.resolve(Buffer.alloc(10))
+    })
 
     const fd = await open(filePath, 'r+')
     try {
@@ -3490,12 +3506,7 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
     }
 
     expect(fetchChunk).toHaveBeenCalled()
-    for (const callArgs of jest.mocked(fetchChunk).mock.calls) {
-      // signal is now the 3rd-from-last positional arg — workerSlot and the
-      // new trailing `limiter` param (debug/humankind-depot-full-stall)
-      // follow it.
-      expect(callArgs[callArgs.length - 3]).toBe(controller.signal)
-    }
+    expect(observed[0]).toEqual({ before: false, after: true })
   })
 })
 
@@ -3584,6 +3595,160 @@ describe('downloadFileChunks: first-attempt host fan-out for single-chunk files'
       expect([...firstAttemptHosts].sort()).toEqual([...hosts].sort())
     }
   )
+})
+
+// 2026-10-05 todo steam-depot-sibling-chunk-workers-outlive-a-failed-file:
+// when one chunk worker threw, `Promise.all` rejected at once and
+// downloadSingleFile's `finally` closed the fd while the sibling workers kept
+// going -- each fetched its next chunk, failed `fd.write` on the closed
+// handle, and (that error not being decode-stage) re-queued the chunk, for as
+// long as other files kept the stall clock fresh.
+describe('downloadFileChunks: a failed file stops its own sibling chunk workers', () => {
+  let dir: string
+  let filePath: string
+  const CHUNKS = 8
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-depot-siblings-test-'))
+    filePath = join(dir, 'out.bin')
+    writeFileSync(filePath, Buffer.alloc(CHUNKS * 10))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  function makeFile(): DepotPlanFile {
+    return {
+      filename: 'out.bin',
+      size: CHUNKS * 10,
+      sha_content: 'unused-in-this-suite',
+      chunks: Array.from({ length: CHUNKS }, (_, i) => ({
+        sha: `sha-${i}`,
+        cb_original: 10,
+        offset: i * 10
+      }))
+    }
+  }
+
+  const sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+  it('rejects only once every sibling has settled, and no sibling fetches again after the file has failed', async () => {
+    // Safety net for the unfixed tree: stops orphaned workers after the
+    // assertions' window so they cannot outlive this test.
+    const run = new AbortController()
+    let inFlight = 0
+    let calls = 0
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, chunk) => {
+        calls++
+        if (chunk.sha === 'sha-0') {
+          const err = new Error(
+            `chunk sha-0 failed after ${CHUNK_FETCH_ATTEMPTS} attempts: unknown chunk container`
+          ) as Error & { code?: string }
+          err.code = 'unknown_container'
+          throw err
+        }
+        inFlight++
+        try {
+          await sleep(20)
+          return Buffer.alloc(10, 'x')
+        } finally {
+          inFlight--
+        }
+      })
+
+    const fd = await open(filePath, 'r+')
+    let rejection: unknown
+    let inFlightAtReject = -1
+    let callsAtReject = -1
+    try {
+      await downloadFileChunks(
+        fd,
+        '111',
+        Buffer.from('key'),
+        ['cdn1.example.com'],
+        undefined as unknown as LzmaModule,
+        makeFile(),
+        0,
+        run.signal,
+        () => {},
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        new StallTracker(60 * 60 * 1000)
+      ).catch((err: unknown) => {
+        rejection = err
+        inFlightAtReject = inFlight
+        callsAtReject = calls
+      })
+    } finally {
+      // What downloadSingleFile's `finally` does the moment this rejects.
+      await fd.close()
+    }
+    await sleep(150)
+    const callsAfterReject = calls - callsAtReject
+    run.abort()
+    await sleep(50)
+
+    expect((rejection as Error)?.message).toMatch(/unknown chunk container/)
+    expect(inFlightAtReject).toBe(0)
+    expect(callsAfterReject).toBe(0)
+  })
+
+  it('a failed disk write is fatal for the file, never re-queued for another download', async () => {
+    const run = new AbortController()
+    let calls = 0
+    jest.mocked(fetchChunk).mockImplementation(async () => {
+      calls++
+      // Yields a macrotask per fetch, so an endless re-queue loop on the
+      // unfixed tree still lets the race below observe it.
+      await sleep(1)
+      return Buffer.alloc(10, 'x')
+    })
+
+    // A handle that is already closed: every write fails (EBADF), exactly
+    // what an orphaned sibling used to hit.
+    const fd = await open(filePath, 'r+')
+    await fd.close()
+
+    const settled = downloadFileChunks(
+      fd,
+      '111',
+      Buffer.from('key'),
+      ['cdn1.example.com'],
+      undefined as unknown as LzmaModule,
+      makeFile(),
+      0,
+      run.signal,
+      () => {},
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      new StallTracker(60 * 60 * 1000)
+    ).then(
+      () => 'resolved',
+      (err: unknown) => err
+    )
+    const outcome = await Promise.race([
+      settled,
+      sleep(200).then(() => 'still running')
+    ])
+    run.abort()
+    await settled
+
+    // fs errors come from Node's realm, so match on shape, not instanceof.
+    expect(outcome).toMatchObject({ code: 'EBADF' })
+    // Each chunk is fetched at most once -- a write failure is not a
+    // transient network failure to retry against another host.
+    expect(calls).toBeLessThanOrEqual(CHUNKS)
+  })
 })
 
 describe('classifyDepotError', () => {
