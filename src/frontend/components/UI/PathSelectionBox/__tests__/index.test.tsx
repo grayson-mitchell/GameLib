@@ -224,6 +224,7 @@ describe('PathSelectionBox', () => {
     props.onKeyDown({
       key: 'Enter',
       repeat: false,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/tmp/foo' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
 
@@ -248,6 +249,7 @@ describe('PathSelectionBox', () => {
     props.onKeyDown?.({
       key: 'a',
       repeat: false,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/tmp/par' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
 
@@ -267,6 +269,7 @@ describe('PathSelectionBox', () => {
     props.onKeyDown({
       key: 'Enter',
       repeat: true,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/tmp/foo' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
 
@@ -286,6 +289,7 @@ describe('PathSelectionBox', () => {
     props.onKeyDown({
       key: 'Enter',
       repeat: false,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/tmp/foo' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
     props.onBlur({
@@ -311,6 +315,7 @@ describe('PathSelectionBox', () => {
     props.onKeyDown({
       key: 'Enter',
       repeat: false,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/tmp/foo' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
     props.onBlur({
@@ -358,6 +363,7 @@ describe('PathSelectionBox', () => {
     props.onKeyDown({
       key: 'Enter',
       repeat: false,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/same' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
     expect(onPathChange).not.toHaveBeenCalled()
@@ -381,16 +387,64 @@ describe('PathSelectionBox', () => {
     props.onKeyDown({
       key: 'Enter',
       repeat: false,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/tmp/foo' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
     props.onKeyDown({
       key: 'Enter',
       repeat: false,
+      nativeEvent: { isComposing: false },
       currentTarget: { value: '/tmp/foo' }
     } as unknown as ReactKeyboardEvent<HTMLInputElement>)
 
     expect(onPathChange).toHaveBeenCalledTimes(2)
     expect(onPathChange).toHaveBeenNthCalledWith(1, '/tmp/foo')
     expect(onPathChange).toHaveBeenNthCalledWith(2, '/tmp/foo')
+  })
+
+  // IME: in WebKit (the Tauri webviews) compositionend fires before keydown,
+  // so the Enter that confirms a candidate arrives as key === 'Enter' with
+  // isComposing set (or keyCode 229 on engines that report it that way).
+  // Committing there saves a half-typed path.
+  it('does not commit on the Enter that confirms an IME candidate (isComposing)', () => {
+    const onPathChange = jest.fn()
+    const props = mountField({
+      htmlId: 'test-path',
+      type: 'directory',
+      onPathChange,
+      path: '',
+      pathDialogTitle: 'Choose'
+    }) as unknown as FieldHandlers
+
+    props.onKeyDown({
+      key: 'Enter',
+      repeat: false,
+      keyCode: 13,
+      nativeEvent: { isComposing: true },
+      currentTarget: { value: '/home/user/ge' }
+    } as unknown as ReactKeyboardEvent<HTMLInputElement>)
+
+    expect(onPathChange).not.toHaveBeenCalled()
+  })
+
+  it('does not commit on the Enter that confirms an IME candidate (keyCode 229)', () => {
+    const onPathChange = jest.fn()
+    const props = mountField({
+      htmlId: 'test-path',
+      type: 'directory',
+      onPathChange,
+      path: '',
+      pathDialogTitle: 'Choose'
+    }) as unknown as FieldHandlers
+
+    props.onKeyDown({
+      key: 'Enter',
+      repeat: false,
+      keyCode: 229,
+      nativeEvent: { isComposing: false },
+      currentTarget: { value: '/home/user/ge' }
+    } as unknown as ReactKeyboardEvent<HTMLInputElement>)
+
+    expect(onPathChange).not.toHaveBeenCalled()
   })
 })

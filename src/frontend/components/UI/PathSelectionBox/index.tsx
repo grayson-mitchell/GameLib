@@ -187,11 +187,24 @@ const PathSelectionBox = ({
       onChange={(newVal) => setTmpPath(newVal)}
       onBlur={(e) => commitFromBlur(e.target.value)}
       onKeyDown={(e) => {
-        if (e.key !== 'Enter' || e.repeat) return
+        if (
+          e.key !== 'Enter' ||
+          e.repeat ||
+          e.nativeEvent.isComposing ||
+          e.keyCode === 229
+        ) {
+          return
+        }
         // Bail on auto-repeat: a held Enter key auto-repeats at roughly
         // 30ms intervals, and at EgsSettings each repeat would be a real
         // egsSync IPC that G1 cannot suppress (path is stale for the whole
         // duration of the commit).
+        //
+        // Bail on IME composition: in WebKit (both Tauri webviews)
+        // compositionend fires before keydown, so the Enter that confirms
+        // a candidate arrives here as key === 'Enter' with isComposing set
+        // (keyCode 229 on engines that report it that way instead).
+        // Committing it would save a half-typed path.
         //
         // Read e.currentTarget.value, not tmpPath: this mirrors what
         // onBlur already does with e.target.value and reads the live DOM
