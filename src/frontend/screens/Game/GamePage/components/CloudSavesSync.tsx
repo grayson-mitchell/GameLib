@@ -18,6 +18,7 @@ interface Props {
 const CloudSavesSync = ({ gameInfo }: Props) => {
   const { t } = useTranslation('gamepage')
   const { t: tCommon } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { gameSettings, is } = useContext(GameContext)
   const { showDialogModal } = useContext(ContextProvider)
 
@@ -95,36 +96,48 @@ const CloudSavesSync = ({ gameInfo }: Props) => {
   const executeSync = async (syncType: SyncType) => {
     setIsSyncing(true)
 
-    if (gameInfo.runner === 'gog') {
-      let locations = gogSaves
-      if (!locations.length) {
-        locations = (await window.api.getDefaultSavePath(
-          gameInfo.app_name,
-          'gog',
-          []
-        )) as GOGCloudSavesLocation[]
-      }
+    try {
+      if (gameInfo.runner === 'gog') {
+        let locations = gogSaves
+        if (!locations.length) {
+          locations = (await window.api.getDefaultSavePath(
+            gameInfo.app_name,
+            'gog',
+            []
+          )) as GOGCloudSavesLocation[]
+        }
 
-      await window.api
-        .syncGOGSaves(locations, gameInfo.app_name, syncType)
-        .then((stderr) => {
-          window.api.logError(stderr)
-        })
-    } else {
-      let path = savesPath
-      if (!path) {
-        path = (await window.api.getDefaultSavePath(
-          gameInfo.app_name,
-          'legendary',
-          []
-        )) as string
-      }
+        await window.api
+          .syncGOGSaves(locations, gameInfo.app_name, syncType)
+          .then((stderr) => {
+            window.api.logError(stderr)
+          })
+      } else {
+        let path = savesPath
+        if (!path) {
+          path = (await window.api.getDefaultSavePath(
+            gameInfo.app_name,
+            'legendary',
+            []
+          )) as string
+        }
 
-      await syncSaves(path, gameInfo.app_name, gameInfo.runner, syncType)
+        await syncSaves(path, gameInfo.app_name, gameInfo.runner, syncType)
+      }
+    } catch (error) {
+      showDialogModal({
+        showDialog: true,
+        type: 'ERROR',
+        title: tCommon('box.error.title', 'Error'),
+        message: `${tGamelib(
+          'gamepage.syncSaves.failed',
+          'Syncing saves failed.'
+        )}\n${String(error)}`
+      })
+    } finally {
+      setIsSyncing(false)
+      handleClose()
     }
-
-    setIsSyncing(false)
-    handleClose()
   }
 
   const handleOpenFolder = () => {
