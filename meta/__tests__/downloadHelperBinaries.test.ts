@@ -274,6 +274,12 @@ describe('downloadOnedirAsset', () => {
       expect(thrown?.message).toContain('PENDING-CI-PUBLISH')
       expect(thrown?.message).toContain('pin:runner-digests')
       expect(thrown?.message).toContain('34.18')
+      // Todo 2026-10-05: the dispatch instruction must name the ref the
+      // workflow will actually run from -- the one carrying the
+      // meta/releaseTags.ts being pinned -- not an unqualified "default
+      // branch" that the workflow's old ref guard refused outright.
+      expect(thrown?.message).toContain('build-runners-onedir-macos.yml')
+      expect(thrown?.message).toContain('meta/releaseTags.ts')
       expect(mockedFetch).not.toHaveBeenCalled()
       expect(mockedSpawn).not.toHaveBeenCalled()
     })

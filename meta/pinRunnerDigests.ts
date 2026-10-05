@@ -180,28 +180,35 @@ function assertNonNullRunId(manifest: BuildManifest): string {
 
 /**
  * A manifest `tag` disagreeing with the live `RELEASE_TAGS` value for that
- * runner is a provenance signal, not a second failure mode to debug --
- * `console.warn`s naming the runner, both values and the run id, then
- * continues.
+ * runner throws, naming every drifted runner, both values and the run id.
+ * This was once a `console.warn` that still wrote; that let a run built from
+ * a ref with different RELEASE_TAGS be pinned, shipping macOS runners that
+ * silently disagree with meta/releaseTags.ts (todo 2026-10-05). The fix for
+ * a drift is to re-dispatch from the ref being pinned, never to pin anyway.
  */
-function warnOnTagDrift(
+function assertNoTagDrift(
   arch: Arch,
   manifest: BuildManifest,
   runId: string
 ): void {
   const liveTags = RELEASE_TAGS as Record<string, string>
+  const drifts: string[] = []
   for (const [runner, value] of Object.entries(manifest)) {
     if (runner === 'runId') continue
-    const entry = value as { tag?: unknown }
+    const tag = (value as { tag?: unknown } | null)?.tag
     const liveTag = liveTags[runner]
-    if (liveTag !== undefined && entry.tag !== liveTag) {
-      console.warn(
-        `BUILD-MANIFEST-${arch}.json's "${runner}" tag ("${String(entry.tag)}") ` +
-          `does not match the live RELEASE_TAGS value ("${liveTag}") for run ` +
-          `${runId} -- meta/releaseTags.ts may have moved since this run was ` +
-          `dispatched`
-      )
+    if (liveTag !== undefined && tag !== liveTag) {
+      drifts.push(`"${runner}" ("${String(tag)}" vs live "${liveTag}")`)
     }
+  }
+  if (drifts.length > 0) {
+    throw new Error(
+      `BUILD-MANIFEST-${arch}.json for run ${runId} was built with runner ` +
+        `tags that do not match the live RELEASE_TAGS: ${drifts.join(', ')}. ` +
+        `Refusing to pin archives of the wrong runner versions -- dispatch ` +
+        `build-runners-onedir-macos.yml from the ref whose meta/releaseTags.ts ` +
+        `you are pinning against, then re-run pin:runner-digests.`
+    )
   }
 }
 
@@ -244,7 +251,7 @@ export async function main(): Promise<void> {
   const manifestArm64 = JSON.parse(manifestArm64Text) as BuildManifest
   const runId = assertNonNullRunId(manifestArm64)
 
-  warnOnTagDrift('arm64', manifestArm64, runId)
+  assertNoTagDrift('arm64', manifestArm64, runId)
 
   const digests: Record<string, string> = {}
   for (const { filename, digest } of allParsed) {

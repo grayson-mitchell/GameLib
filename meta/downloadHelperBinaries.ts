@@ -253,9 +253,10 @@ export async function downloadOnedirAsset(
       `Digest for "${filename}" is still the placeholder sentinel ` +
         `"${DIGEST_SENTINEL}" -- Phase 34.18 retired the macOS x64 leg, so ` +
         `only three arm64 digests exist now. Dispatch ` +
-        `.github/workflows/build-runners-onedir-macos.yml on the default ` +
-        `branch, then run pnpm pin:runner-digests to fill this in with the ` +
-        `real sha256 before this archive can be verified and extracted.`
+        `.github/workflows/build-runners-onedir-macos.yml from the ref whose ` +
+        `meta/releaseTags.ts you intend to ship (normally main), then run ` +
+        `pnpm pin:runner-digests from that same ref to fill this in with ` +
+        `the real sha256 before this archive can be verified and extracted.`
     )
   }
 
