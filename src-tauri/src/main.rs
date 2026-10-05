@@ -11402,8 +11402,14 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
                     .and_then(|a| a.first())
                     .and_then(|v| v.as_str())
                 {
-                    if let Err(e) = app.opener().open_url(url, None::<&str>) {
-                        eprintln!("[shell] openExternal failed: {e}");
+                    // Same allow-list as the `open_external` command: any line that reaches
+                    // the sidecar's stdout can forge this frame (todo
+                    // `sidecar-log-output-shares-the-rpc-stdout-pipe`). The check logs the
+                    // rejected scheme itself, never the URL.
+                    if open_external_scheme_check(url).is_ok() {
+                        if let Err(e) = app.opener().open_url(url, None::<&str>) {
+                            eprintln!("[shell] openExternal failed: {e}");
+                        }
                     }
                 } else {
                     eprintln!("[shell] openExternal frame missing a string URL in args[0]");

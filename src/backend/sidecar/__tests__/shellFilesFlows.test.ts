@@ -377,6 +377,19 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     expect((pushed?.args as unknown[])?.[0]).toBe(synthetic)
   })
 
+  it('openExternalUrl (send) does not treat a non-http scheme that merely starts with "http" as a URL', async () => {
+    // Todo `sidecar-log-output-shares-the-rpc-stdout-pipe`: `openUrlOrFile`
+    // used `startsWith('http')`, so `httpfoo:` reached the shell's
+    // `openExternal` frame arm.
+    const { input, frames } = startSidecar()
+    writeSend(input, 'open-external-url-2', 'openExternalUrl', [
+      'httpfoo:synthetic'
+    ])
+    await flush()
+
+    expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
+  })
+
   // ── REQ-34.3-01: showConfigFileInFolder — the two-branch body, reaching
   // shell.openPath -> RUST_SHELL_OPEN_PATH (configPath/gamesConfigPath are
   // filesystem paths, not http URLs, so openUrlOrFile takes its openPath
