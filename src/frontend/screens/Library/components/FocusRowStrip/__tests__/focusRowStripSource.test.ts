@@ -139,8 +139,12 @@ describe('FocusRowStrip/index.tsx -- overflow controls (Plan 48-04)', () => {
   })
 
   it('renders the controls inside a condition on canScroll* -- a mount decision, not a style', () => {
-    expect(source).toMatch(/canScrollForward\([^)]*\)\s*\|\|\s*canScrollBack\(/)
-    expect(source).toMatch(/showControls\s*&&/)
+    expect(source).toMatch(/forwardEnabled\s*=\s*canScrollForward\(/)
+    expect(source).toMatch(/backEnabled\s*=\s*canScrollBack\(/)
+    expect(source).toMatch(
+      /showControls\s*=\s*forwardEnabled\s*\|\|\s*backEnabled/
+    )
+    expect(source.split('{showControls &&').length - 1).toBe(2)
   })
 
   it('renders exactly two type="button" controls', () => {
@@ -207,5 +211,11 @@ describe('FocusRowStrip/index.tsx -- overflow controls (Plan 48-04)', () => {
     expect(source).toMatch(/pageScrollDelta\(/)
     expect(source).toMatch(/scrollBy\(/)
     expect(source).toMatch(/behavior:\s*'smooth'/)
+  })
+})
+
+describe('FocusRowStrip/index.tsx -- loads its own stylesheet', () => {
+  it("imports './index.css' -- nothing else in the tree does, so without it every FocusRowStrip rule is dead", () => {
+    expect(read(FOCUS_ROW_TSX_PATH)).toMatch(/import\s+'\.\/index\.css'/)
   })
 })

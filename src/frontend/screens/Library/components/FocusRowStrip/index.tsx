@@ -1,12 +1,34 @@
-import React, { useMemo, useRef } from 'react'
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { useTranslation } from 'react-i18next'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faChevronLeft,
+  faChevronRight
+} from '@fortawesome/free-solid-svg-icons'
 import { FocusRowSelection, GameInfo, Runner } from 'common/types'
 import { FilterEngineDeps, FilterMode } from 'frontend/types'
+import ContextProvider from 'frontend/state/ContextProvider'
 import { runnabilityLabel } from 'frontend/components/UI/NavShell/components/FilterRunnabilityFacet'
 import GamesList from '../GamesList'
 import { PRESET_UNCATEGORIZED } from '../../filterEngine'
 import { RunnerToStore } from '../../facetLabels'
 import { selectFocusRowGames } from './focusRowSelectors'
+import {
+  TrackMeasurement,
+  canScrollBack,
+  canScrollForward,
+  measureCardPitch,
+  pageScrollDelta,
+  scrollFocusedCardIntoViewHorizontally
+} from './focusRowOverflow'
+import './index.css'
 
 interface Props {
   focusRow: FocusRowSelection
@@ -41,13 +63,102 @@ function FocusRowStrip({
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
   const trackRef = useRef<HTMLDivElement | null>(null)
+  const { activeController } = useContext(ContextProvider)
+  const [measure, setMeasure] = useState<TrackMeasurement>({
+    clientWidth: 0,
+    scrollWidth: 0,
+    scrollLeft: 0
+  })
 
   const games = useMemo(
     () => selectFocusRowGames(libraryUnion, focusRow, showHidden, deps),
     [libraryUnion, focusRow, showHidden, deps]
   )
+  const hasGames = games.length > 0
 
-  if (!games.length) {
+  const readMeasurement = useCallback(() => {
+    const track = trackRef.current
+    if (!track) {
+      return
+    }
+    const next = {
+      clientWidth: track.clientWidth,
+      scrollWidth: track.scrollWidth,
+      scrollLeft: track.scrollLeft
+    }
+    setMeasure((prev) =>
+      prev.clientWidth === next.clientWidth &&
+      prev.scrollWidth === next.scrollWidth &&
+      prev.scrollLeft === next.scrollLeft
+        ? prev
+        : next
+    )
+  }, [])
+
+  // Keep `measure` current: on resize of the track or of its content, and
+  // on every scroll. The track only exists while the pick resolves to games,
+  // so the effect re-arms when that flips.
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track) {
+      return
+    }
+    readMeasurement()
+    track.addEventListener('scroll', readMeasurement, { passive: true })
+    let observer: ResizeObserver | undefined
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(readMeasurement)
+      observer.observe(track)
+      if (track.firstElementChild) {
+        observer.observe(track.firstElementChild)
+      }
+    }
+    return () => {
+      track.removeEventListener('scroll', readMeasurement)
+      observer?.disconnect()
+    }
+  }, [hasGames, games, readMeasurement])
+
+  // Gamepad focus is a scripted `.focus()` onto a card; bring it fully into
+  // view along the track's own `scrollLeft`. Gated on `activeController` the
+  // same way `GamesList`'s vertical handler is, so it does not fight pointer
+  // or keyboard focus.
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track || !activeController) {
+      return
+    }
+    track.addEventListener('focus', scrollFocusedCardIntoViewHorizontally, {
+      capture: true
+    })
+    return () => {
+      track.removeEventListener(
+        'focus',
+        scrollFocusedCardIntoViewHorizontally,
+        {
+          capture: true
+        }
+      )
+    }
+  }, [hasGames, activeController])
+
+  const page = (direction: 1 | -1) => {
+    const track = trackRef.current
+    if (!track) {
+      return
+    }
+    const m = {
+      clientWidth: track.clientWidth,
+      scrollWidth: track.scrollWidth,
+      scrollLeft: track.scrollLeft
+    }
+    track.scrollBy({
+      left: direction * pageScrollDelta(m, measureCardPitch(track)),
+      behavior: 'smooth'
+    })
+  }
+
+  if (!hasGames) {
     return null
   }
 
@@ -105,6 +216,13 @@ function FocusRowStrip({
   const isFavouriteView =
     focusRow?.kind === 'view' && focusRow.value === 'favourites'
 
+  // Neither control mounts when the content fits -- not even disabled. Once
+  // scrolling is possible in either direction both mount, and the one at the
+  // end of its travel is natively `disabled`.
+  const forwardEnabled = canScrollForward(measure)
+  const backEnabled = canScrollBack(measure)
+  const showControls = forwardEnabled || backEnabled
+
   return (
     <div className="focusRowStrip">
       <div className="library-section-header">
@@ -113,9 +231,20 @@ function FocusRowStrip({
         </h3>
       </div>
       <div className="focusRowStrip__viewport">
-        {/* Declared now and left otherwise unused in this plan -- plan 48-04
-            attaches the overflow controls and the horizontal gamepad
-            handler to it. */}
+        {showControls && (
+          <button
+            type="button"
+            className="focusRowStrip__control focusRowStrip__control--back"
+            aria-label={tGamelib(
+              'gamelib:library.filterPanel.focusRowPrevious',
+              'Show previous games'
+            )}
+            disabled={!backEnabled}
+            onClick={() => page(-1)}
+          >
+            <FontAwesomeIcon icon={faChevronLeft} />
+          </button>
+        )}
         <div className="focusRowTrack" ref={trackRef}>
           <GamesList
             library={games}
@@ -124,6 +253,20 @@ function FocusRowStrip({
             isFavourite={isFavouriteView}
           />
         </div>
+        {showControls && (
+          <button
+            type="button"
+            className="focusRowStrip__control focusRowStrip__control--forward"
+            aria-label={tGamelib(
+              'gamelib:library.filterPanel.focusRowNext',
+              'Show more games'
+            )}
+            disabled={!forwardEnabled}
+            onClick={() => page(1)}
+          >
+            <FontAwesomeIcon icon={faChevronRight} />
+          </button>
+        )}
       </div>
     </div>
   )
