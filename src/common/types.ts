@@ -156,7 +156,6 @@ export interface AppSettings extends GameSettings {
   hideChangelogsOnStartup: boolean
   hideWindowOnProtocolLaunch: boolean
   libraryTopSection: LibraryTopSectionOptions
-  maxRecentGames: number
   maxWorkers: number
   minimizeOnLaunch: boolean
   startInConsoleMode: boolean

@@ -82,7 +82,7 @@
  * `removeRecent` imports ONLY `removeRecentGame` from
  * `recent_games/recent_games.ts` — that module's single `export {}`
  * statement also names `getRecentGames`, `addRecentGame` and
- * `maxRecentGames`, none of which this channel needs (curated-import
+ * `removeRecentGame`, of which this channel needs only the last (curated-import
  * discipline, D-04).
  *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
@@ -233,8 +233,7 @@ export function registerEnrichmentFlows(): void {
   )
 
   // Imports ONLY removeRecentGame from recent_games.ts — not
-  // getRecentGames/addRecentGame/maxRecentGames (curated-import
-  // discipline, D-04).
+  // getRecentGames/addRecentGame (curated-import discipline, D-04).
   ipcMain.handle('removeRecent', async (_event: unknown, ...args: unknown[]) =>
     removeRecentGame(args[0] as string)
   )

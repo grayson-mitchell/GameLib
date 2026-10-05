@@ -24,8 +24,8 @@ import {
 } from '../../filterEngine'
 
 // SPEC R3's amended cap, CONTEXT D-04: a fixed 20-card ceiling, independent
-// of the user's `maxRecentGames` setting (which the old RecentlyPlayed lane
-// used instead -- deliberately not carried forward here).
+// of any user setting (the old RecentlyPlayed lane used a user-chosen count
+// instead -- deliberately not carried forward here, and since removed).
 export const FOCUS_ROW_MAX_CARDS = 20
 
 // Re-exported from the one definition in `common/focusRowMigration.ts` (48-05):

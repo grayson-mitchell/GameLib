@@ -12,7 +12,6 @@ import {
   EnableSteamNativeInstall,
   HideChangelogOnStartup,
   LoginBackground,
-  MaxRecentGames,
   MaxWorkers,
   MinimizeOnGameLaunch,
   Shortcuts,
@@ -73,8 +72,6 @@ export default function GeneralSettings() {
       <NotifyHumbleExpirations />
 
       <DisableController />
-
-      <MaxRecentGames />
 
       <MaxWorkers />
     </div>

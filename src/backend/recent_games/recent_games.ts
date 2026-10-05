@@ -1,22 +1,9 @@
 import { GameInfo, RecentGame } from 'common/types'
 import { backendEvents } from '../backend_events'
 import { sendFrontendMessage } from '../ipc'
-import { GlobalConfig } from '../config'
 import { configStore } from 'backend/constants/key_value_stores'
 
-const maxRecentGames = async () => {
-  const { maxRecentGames } = GlobalConfig.get().getSettings()
-  return maxRecentGames || 5
-}
-
-const getRecentGames = async (options?: { limited: boolean }) => {
-  const games = configStore.get('games.recent', [])
-  if (options?.limited) {
-    return games.slice(0, await maxRecentGames())
-  } else {
-    return games
-  }
-}
+const getRecentGames = async () => configStore.get('games.recent', [])
 
 const setRecentGames = (recentGames: RecentGame[]) => {
   // store
@@ -58,12 +45,22 @@ const removeRecentGame = async (appName: string) => {
   }
 }
 
-// `maxRecentGames` dropped from this list: ts-prune / `pnpm find-deadcode`
-// flagged it as a used-in-module finding. Its only cross-file namesake is
-// `MaxRecentGames.tsx`'s own local `useSetting('maxRecentGames', 5)`
-// destructure -- a separate binding sharing this name plus a string-literal
-// settings key, never an import of this function -- so there is no external
-// consumer to preserve.
+// Phase 48 plan 06 removed the recent-games count setting together with
+// three constructs that only existed to serve it: a limit helper, a
+// `limited` branch inside `getRecentGames`, and the optional parameter that
+// switched the branch on. Zero callers existed, so this was dead-code removal
+// and not a behaviour change (`git grep -nE 'getRecentGames\(\s*\{' -- src/`
+// and `git grep -nE '\blimited\s*:' -- src/` both returned no hits). That
+// limit only ever trimmed a value this module RETURNED; it never touched what
+// `setRecentGames` stores, so the stored list was unbounded before and is
+// unbounded now.
+//
+// A cap on the STORED list was considered for that phase and declined by
+// operator ruling: evicting persisted play history is irreversible and
+// belongs in its own change judged on its own merits. If you are looking for
+// where the recent-games cap went, it is the focus row's card ceiling in
+// `FocusRowStrip/focusRowSelectors.ts`, which governs what is DISPLAYED and
+// is deliberately not shared with this storage path.
 export { getRecentGames, addRecentGame, removeRecentGame }
 
 // Exported only for testing purpose
