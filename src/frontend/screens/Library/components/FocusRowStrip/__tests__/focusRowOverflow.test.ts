@@ -7,6 +7,7 @@
 import {
   canScrollBack,
   canScrollForward,
+  measureCardPitch,
   pageScrollDelta,
   scrollFocusedCardIntoViewHorizontally
 } from '../focusRowOverflow'
@@ -201,5 +202,38 @@ describe('scrollFocusedCardIntoViewHorizontally', () => {
     )
     scrollFocusedCardIntoViewHorizontally(ev)
     expect(scrollTo).toHaveBeenCalledWith({ left: -20, behavior: 'smooth' })
+  })
+})
+
+describe('measureCardPitch', () => {
+  const makeTrack = (cardWidth: number) => ({
+    firstElementChild: {
+      firstElementChild: {
+        getBoundingClientRect: () => ({ width: cardWidth })
+      }
+    }
+  })
+
+  it('adds the list gap (from computed style) to the measured card width', () => {
+    const pitch = measureCardPitch(
+      makeTrack(156) as unknown as Element,
+      () => ({ columnGap: '24px' })
+    )
+    expect(pitch).toBe(180)
+  })
+
+  it('falls back to 156 + 24 for an empty track', () => {
+    expect(measureCardPitch(null, () => ({ columnGap: '24px' }))).toBe(180)
+    expect(
+      measureCardPitch({ firstElementChild: null } as unknown as Element)
+    ).toBe(180)
+  })
+
+  it('falls back per-measurement when only the gap is unreadable', () => {
+    const pitch = measureCardPitch(
+      makeTrack(200) as unknown as Element,
+      () => ({ columnGap: 'normal' })
+    )
+    expect(pitch).toBe(224)
   })
 })

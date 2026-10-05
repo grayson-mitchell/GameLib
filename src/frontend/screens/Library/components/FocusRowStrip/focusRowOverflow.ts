@@ -1,18 +1,130 @@
-/** RED-phase stub: signatures only, no behaviour yet. */
+/**
+ * Overflow arithmetic for the focus-row strip (Phase 48 Plan 04).
+ *
+ * Everything here takes a plain `{ clientWidth, scrollWidth, scrollLeft }`
+ * measurement or a real `FocusEvent`, never a `RefObject`, so the arithmetic
+ * is unit-testable in the Frontend jest project (`testEnvironment: 'node'`,
+ * no jsdom) with hand-built stubs.
+ *
+ * This module is about pixels and viewport width. It deliberately shares no
+ * constant with `FOCUS_ROW_MAX_CARDS`, which is R3's display cap on cards.
+ */
+
 export interface TrackMeasurement {
   clientWidth: number
   scrollWidth: number
   scrollLeft: number
 }
 
-export const pageScrollDelta = (
-  _m: TrackMeasurement,
-  _cardPitch: number
-): number => 0
+// Layout can be fractional. Anything under a pixel of travel is not travel a
+// control can usefully offer -- a permanently-enabled control that scrolls
+// nothing is worse than a disabled one.
+const SUBPIXEL_EPSILON = 1
 
-export const canScrollForward = (_m: TrackMeasurement): boolean => false
+// Fallbacks for `measureCardPitch` only when a measurement is unavailable.
+const FALLBACK_CARD_WIDTH = 156
+const FALLBACK_CARD_GAP = 24
 
-export const canScrollBack = (_m: TrackMeasurement): boolean => false
+const isFiniteMeasurement = (m: TrackMeasurement): boolean =>
+  Number.isFinite(m.clientWidth) &&
+  Number.isFinite(m.scrollWidth) &&
+  Number.isFinite(m.scrollLeft)
 
-export const scrollFocusedCardIntoViewHorizontally = (_ev: FocusEvent): void =>
-  undefined
+const maxScrollLeft = (m: TrackMeasurement): number =>
+  m.scrollWidth - m.clientWidth
+
+/**
+ * One page of travel in pixels: the number of whole cards that fit at the
+ * current width times the card pitch. Positive; the caller negates it for
+ * the back direction. Floored to one card so a control can never be a
+ * live-looking no-op, and always finite.
+ */
+export function pageScrollDelta(
+  m: TrackMeasurement,
+  cardPitch: number
+): number {
+  if (!Number.isFinite(cardPitch) || cardPitch <= 0) {
+    return 0
+  }
+  if (!Number.isFinite(m.clientWidth) || m.clientWidth <= 0) {
+    return cardPitch
+  }
+  return Math.max(1, Math.floor(m.clientWidth / cardPitch)) * cardPitch
+}
+
+export function canScrollForward(m: TrackMeasurement): boolean {
+  if (!isFiniteMeasurement(m)) {
+    return false
+  }
+  const max = maxScrollLeft(m)
+  return max > SUBPIXEL_EPSILON && max - m.scrollLeft > SUBPIXEL_EPSILON
+}
+
+export function canScrollBack(m: TrackMeasurement): boolean {
+  if (!isFiniteMeasurement(m)) {
+    return false
+  }
+  return maxScrollLeft(m) > SUBPIXEL_EPSILON && m.scrollLeft > SUBPIXEL_EPSILON
+}
+
+/**
+ * Card pitch (card width + inter-card gap), read from the live track rather
+ * than restated: `track.firstElementChild` is the `.gameList`, whose first
+ * child is a card wrapper. The gap comes from the list's computed style so
+ * the CSS stays the one place the value is written.
+ */
+export function measureCardPitch(
+  track: Element | null,
+  getStyle: (el: Element) => { columnGap: string } = (el) =>
+    typeof getComputedStyle === 'function'
+      ? getComputedStyle(el)
+      : { columnGap: '' }
+): number {
+  const list = track?.firstElementChild ?? null
+  const card = list?.firstElementChild ?? null
+  const measured = card ? card.getBoundingClientRect().width : NaN
+  const gap = list ? parseFloat(getStyle(list).columnGap) : NaN
+  return (
+    (Number.isFinite(measured) && measured > 0
+      ? measured
+      : FALLBACK_CARD_WIDTH) + (Number.isFinite(gap) ? gap : FALLBACK_CARD_GAP)
+  )
+}
+
+/**
+ * Horizontal analogue of `GamesList`'s vertical `scrollCardIntoView`, and
+ * net-new rather than a parameterisation of it: that one is wired to
+ * `main.content`'s `scrollTop`.
+ *
+ * The container is resolved AT CALL TIME from the event target, and the
+ * handler returns silently when there is none, so a focus event from
+ * anywhere else is a no-op rather than a throw in a capture-phase listener.
+ * Both destinations are `track.scrollLeft + (card edge - track edge)`, both
+ * measured from `getBoundingClientRect()` -- never an `offsetParent` offset,
+ * which would turn a silent no-op into a silent wrong-offset scroll.
+ */
+export function scrollFocusedCardIntoViewHorizontally(ev: FocusEvent): void {
+  const target = ev.target as HTMLElement | null
+  if (!target || typeof target.closest !== 'function') {
+    return
+  }
+  const track = target.closest<HTMLElement>('.focusRowTrack')
+  if (!track) {
+    return
+  }
+
+  const rect = target.getBoundingClientRect()
+  const trackRect = track.getBoundingClientRect()
+
+  if (rect.left < trackRect.left) {
+    track.scrollTo({
+      left: track.scrollLeft + (rect.left - trackRect.left),
+      behavior: 'smooth'
+    })
+  } else if (rect.right > trackRect.right) {
+    track.scrollTo({
+      left: track.scrollLeft + (rect.right - trackRect.right),
+      behavior: 'smooth'
+    })
+  }
+}
