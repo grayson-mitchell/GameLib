@@ -556,7 +556,15 @@ export const Winetricks = {
     appName: string,
     args: string[],
     returnOutput = false,
-    envOverrides?: Record<string, string>
+    envOverrides?: Record<string, string>,
+    // The verb this run installs, or '' for every other run (GUI, list-all).
+    // Passed explicitly rather than read from the module-global
+    // `installingComponent`: that global names whichever install is running
+    // RIGHT NOW, so a GUI or list run started mid-install used to tag its own
+    // progress/Done events with the installing verb -- a false Done that
+    // ended the install's in-flight state in the UI, and its stderr " err"
+    // lines attributed to a verb they had nothing to do with.
+    component = ''
   ) => {
     // Imported lazily to break a circular dependency (tools/index.ts <->
     // storeManagers/index.ts) — see the load-bearing comment in
@@ -652,15 +660,16 @@ export const Winetricks = {
         executeMessages.push(message)
         progressUpdated = true
       }
-      const sendProgress = setInterval(() => {
+      const flushProgress = () => {
         if (progressUpdated) {
           sendFrontendMessage('progressOfWinetricks', {
             messages: executeMessages,
-            installingComponent
+            installingComponent: component
           })
           progressUpdated = false
         }
-      }, 1000)
+      }
+      const sendProgress = setInterval(flushProgress, 1000)
 
       Winetricks.checkDependencies(envs, appendMessage)
 
@@ -702,12 +711,26 @@ export const Winetricks = {
         resolve(returnOutput ? output : null)
       })
 
-      child.on('exit', () => {
+      child.on('exit', (code) => {
+        // Lines buffered since the last 1s tick -- usually winetricks' own
+        // abort message -- are flushed BEFORE Done, or they were dropped with
+        // the interval and the failure never reached the log or the row.
+        // `failed` carries the exit code itself (a signal exit reports
+        // `code === null`, also a failure), so attribution no longer rests on
+        // the " err" substring test alone.
+        clearInterval(sendProgress)
+        flushProgress()
+        if (code !== 0) {
+          logWarning(
+            `Winetricks exited with code ${code}`,
+            LogPrefix.WineTricks
+          )
+        }
         sendFrontendMessage('progressOfWinetricks', {
           messages: ['Done'],
-          installingComponent
+          installingComponent: component,
+          failed: code !== 0
         })
-        clearInterval(sendProgress)
         resolve(returnOutput ? output : null)
       })
 
@@ -760,10 +783,29 @@ export const Winetricks = {
     }
   },
   install: async (runner: Runner, appName: string, component: string) => {
+    // Single-flight: two `winetricks -q` processes racing on one Wine prefix
+    // is never wanted, and the first to finish would clear
+    // `installingComponent` to '' while the other still runs. A refused call
+    // sends nothing -- the running install's own '' event still arrives and
+    // clears any optimistic in-flight state the dialog set for this one.
+    if (installingComponent !== '') {
+      logWarning(
+        `Not installing ${component}: ${installingComponent} is already installing`,
+        LogPrefix.WineTricks
+      )
+      return
+    }
+    installingComponent = component
     sendFrontendMessage('installing-winetricks-component', component)
     try {
-      installingComponent = component
-      await Winetricks.runWithArgs(runner, appName, ['-q', component])
+      await Winetricks.runWithArgs(
+        runner,
+        appName,
+        ['-q', component],
+        false,
+        undefined,
+        component
+      )
     } finally {
       installingComponent = ''
       sendFrontendMessage('installing-winetricks-component', '')

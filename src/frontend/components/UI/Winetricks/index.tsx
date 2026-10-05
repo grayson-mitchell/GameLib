@@ -117,6 +117,14 @@ export default function Winetricks({ onClose, runner }: Props) {
   const WINETRICKS_DECLINED_GUARD = declined
   function install(component: string) {
     if (WINETRICKS_DECLINED_GUARD) return
+    if (installing) return
+    // Optimistic in-flight state (2026-10-05 todo): every row must leave
+    // `available` the moment this is called, not at the first progress tick
+    // up to a second (or a first-run winetricks download) later -- that
+    // window let a double-click start a second install on the same prefix.
+    // The backend refuses a concurrent install too; this closes the gesture.
+    setInstalling(true)
+    setInstallingComponent(component)
     setHasAttemptedInstall(true)
     // UI-SPEC Errored row state: clears back to Available the moment a new
     // install attempt starts on that verb.
@@ -126,22 +134,32 @@ export default function Winetricks({ onClose, runner }: Props) {
 
   useEffect(() => {
     async function onInstallingChange(e: IpcRendererEvent, component: string) {
+      // Only '' means "finished". The backend also sends the verb itself as
+      // an install starts; treating that as "not installing" cleared the
+      // in-flight state `install()` had just set.
       if (component === '') {
         listInstalled()
+        setInstalling(false)
+        return
       }
-      setInstalling(false)
+      setInstalling(true)
+      setInstallingComponent(component)
     }
 
     async function onWinetricksProgress(
       e: IpcRendererEvent,
-      payload: { messages: string[]; installingComponent: string }
+      payload: {
+        messages: string[]
+        installingComponent: string
+        failed?: boolean
+      }
     ) {
       // this conditionals help to show the correct state if the dialog
-      // is closed during an installation and then re-opened
+      // is closed during an installation and then re-opened. An untagged
+      // event ('') comes from a GUI or list-all run, never an install, so it
+      // must not touch either piece of install state.
       if (payload.installingComponent.length) {
         setInstalling(payload.messages[0] !== 'Done')
-      }
-      if (installingComponent !== payload.installingComponent) {
         setInstallingComponent(payload.installingComponent)
       }
       setLogs((currentLogs) => [...currentLogs, ...payload.messages])
@@ -168,6 +186,9 @@ export default function Winetricks({ onClose, runner }: Props) {
 
   const [guiOpen, setGuiOpen] = useState<boolean>(false)
   function launchWinetricks() {
+    // The footer button is `disabled={installing}` and so is every per-row
+    // GUI button; this guards the callback itself as well.
+    if (installing) return
     setGuiOpen(true)
     window.api
       .callTool({
