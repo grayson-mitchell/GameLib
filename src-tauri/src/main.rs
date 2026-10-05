@@ -1058,6 +1058,82 @@ fn open_about_window_from_tray(app: &AppHandle) {
     }
 }
 
+/// The sidecar `send` channel whose listener runs `handleExit()` (`appShellFlowRegistration.ts`
+/// `ipcMain.on('quit', ...)`) -- the same path the in-app quit takes.
+const SIDECAR_QUIT_CHANNEL: &str = "quit";
+
+/// The sidecar `invoke` channel answered by `ipcMain.handle('health', async () => 'ok')`
+/// (`sidecar/handlers.ts`). Used only to prove the sidecar's JS thread is answering before tray
+/// Quit hands the decision to it.
+const SIDECAR_HEALTH_CHANNEL: &str = "health";
+
+/// How long tray Quit waits for the health probe before falling back to `exit(0)`. Bounds only
+/// the PROBE: once the sidecar has answered, `handleExit()` may show the "pending operations"
+/// confirm, which waits on a human and must not be cut short by any clock.
+const TRAY_QUIT_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// The tray-Quit routing policy (todo 2026-10-05 tray-quit-bypasses-the-pending-operations-
+/// confirm), with the two sidecar operations injected so `#[cfg(test)]` can drive it.
+///
+/// `Ok(())` means the quit was handed to the sidecar's `handleExit()`, which either exits via
+/// `app_exit` or -- the user answered "No" to the pending-operations confirm -- does nothing.
+/// `Err` means the sidecar is dead or not answering, and the caller must exit directly: the
+/// pre-fix behaviour, kept as the fallback so tray Quit can never become a no-op.
+///
+/// The probe runs on its own thread and is waited on with `recv_timeout`, so the bound also
+/// covers a probe stuck behind the stdin mutex on a full pipe, not only a slow answer.
+fn tray_quit_via_sidecar<P, S>(probe: P, bound: Duration, send_quit: S) -> Result<(), String>
+where
+    P: FnOnce() -> Result<Value, String> + Send + 'static,
+    S: FnOnce() -> Result<(), String>,
+{
+    let (tx, rx) = mpsc_channel::<Result<Value, String>>();
+    thread::spawn(move || {
+        let _ = tx.send(probe());
+    });
+    match rx.recv_timeout(bound) {
+        Ok(Ok(_)) => send_quit(),
+        Ok(Err(e)) => Err(format!("sidecar health probe failed: {e}")),
+        Err(_) => Err(format!(
+            "sidecar did not answer the health probe within {}ms",
+            bound.as_millis()
+        )),
+    }
+}
+
+/// Tray Quit. Routes through the sidecar's `handleExit()` so a running download gets the same
+/// "pending operations" confirm as the in-app quit (Electron routed tray Quit there too), and
+/// falls back to `exit(0)` when there is no live sidecar to ask. Runs off the main thread: the
+/// probe blocks for up to `TRAY_QUIT_PROBE_TIMEOUT`.
+fn quit_from_tray(app_handle: &AppHandle) {
+    let Some(state) = app_handle.try_state::<Arc<SidecarState>>() else {
+        eprintln!("[shell] tray Quit: no sidecar state -- exiting directly");
+        app_handle.exit(0);
+        return;
+    };
+    let state = state.inner().clone();
+    let app_handle = app_handle.clone();
+    thread::spawn(move || {
+        let probe_state = state.clone();
+        let routed = tray_quit_via_sidecar(
+            move || probe_state.invoke(SIDECAR_HEALTH_CHANNEL.to_string(), Vec::new()),
+            TRAY_QUIT_PROBE_TIMEOUT,
+            || {
+                state.write_frame(&SidecarRpcRequest {
+                    id: state.next_id(),
+                    kind: "send",
+                    channel: SIDECAR_QUIT_CHANNEL.to_string(),
+                    args: Vec::new(),
+                })
+            },
+        );
+        if let Err(e) = routed {
+            eprintln!("[shell] WARN: tray Quit: {e} -- exiting directly");
+            app_handle.exit(0);
+        }
+    });
+}
+
 /// Dispatch a recent-game launch to the sidecar, in-process.
 ///
 /// One hop when the cached entry carries a runner, two when it does not — both on a spawned
@@ -12483,7 +12559,7 @@ fn main() {
                                         }
                                     }
                                     "about" => open_about_window_from_tray(app_handle),
-                                    "quit" => app_handle.exit(0),
+                                    "quit" => quit_from_tray(app_handle),
                                     // T-35-20: the appName reaching a launch is PARSED back out
                                     // of the menu id through the same allow-list that built it,
                                     // never taken from the id verbatim. A malformed id is
@@ -13155,6 +13231,75 @@ mod tests {
             let id = id.unwrap_or_default();
             assert_eq!(tray_recent_app_name(&id), Some(app_name));
         }
+    }
+
+    #[test]
+    fn tray_quit_hands_off_to_the_sidecar_when_the_probe_answers() {
+        let sent = std::cell::Cell::new(false);
+        let routed = tray_quit_via_sidecar(
+            || Ok(Value::String("ok".into())),
+            Duration::from_secs(5),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert_eq!(routed, Ok(()));
+        assert!(
+            sent.get(),
+            "the quit frame must be sent once the probe answers"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_probe_fails_without_sending() {
+        let sent = std::cell::Cell::new(false);
+        let routed = tray_quit_via_sidecar(
+            || Err("sidecar closed before responding".into()),
+            Duration::from_secs(5),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert!(routed.is_err());
+        assert!(
+            !sent.get(),
+            "a dead sidecar must not be sent the quit frame"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_probe_does_not_answer_in_time() {
+        let sent = std::cell::Cell::new(false);
+        let started = std::time::Instant::now();
+        let routed = tray_quit_via_sidecar(
+            || {
+                thread::sleep(Duration::from_secs(2));
+                Ok(Value::Null)
+            },
+            Duration::from_millis(100),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert!(routed.is_err());
+        assert!(!sent.get());
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "the fallback must not wait for a hung probe"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_quit_frame_cannot_be_written() {
+        let routed = tray_quit_via_sidecar(
+            || Ok(Value::Null),
+            Duration::from_secs(5),
+            || Err("broken pipe".into()),
+        );
+        assert_eq!(routed, Err("broken pipe".to_string()));
     }
 
     #[test]

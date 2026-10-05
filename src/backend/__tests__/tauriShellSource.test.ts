@@ -638,6 +638,32 @@ describe('main.rs exitToTray is decided at close time (Phase 35 Plan 06 task 3, 
   })
 })
 
+describe('main.rs tray Quit routes through the sidecar handleExit (todo 2026-10-05 tray-quit-bypasses-the-pending-operations-confirm)', () => {
+  // The defect: `"quit" => app_handle.exit(0)` skipped the sidecar's `handleExit()`, so tray
+  // Quit with a download running killed it with no "pending operations" confirm. The routing
+  // POLICY (probe, then send, else exit) is covered by main.rs's own #[cfg(test)] mod
+  // (`tray_quit_*`); this gate pins that the tray arm actually uses it.
+  test('the tray "quit" arm does not exit directly', () => {
+    const code = loadMainRsCode()
+    const armMatch = code.match(/^\s*"quit" =>[^\n]*$/m)
+    expect(armMatch).not.toBeNull()
+    const arm = armMatch ? armMatch[0] : ''
+    expect(arm).not.toContain('.exit(')
+    expect(arm).toContain('quit_from_tray(app_handle)')
+  })
+
+  test('quit_from_tray sends the sidecar quit channel and keeps exit(0) only as a fallback', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn quit_from_tray(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
+    expect(body).toContain('SIDECAR_QUIT_CHANNEL')
+    expect(body).toContain('tray_quit_via_sidecar(')
+    expect(body).toContain('.exit(0)')
+    expect(code).toMatch(/const SIDECAR_QUIT_CHANNEL: &str = "quit";/)
+  })
+})
+
 describe('main.rs tray scope boundary (Phase 34.1 Plan 06 D-11, NARROWED by Phase 35 Plan 06 D-06)', () => {
   // This gate pinned all five of 34.1's declared tray exclusions. Phase 35 Plan 06
   // (D-06/REQ-35-04) deliberately DISCHARGED two of them: the recent-games submenu and
