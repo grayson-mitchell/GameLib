@@ -34,3 +34,19 @@ an i18next behaviour change), a renderer-settable language such as `../../x` mak
 In `loadPath`, only accept a language whose shipped name is in `supportedLanguages` (or matches
 `^[A-Za-z]{2,3}([_-][A-Za-z0-9]+)*$`) and fall back to `en` otherwise; same check for `namespace`
 against the known namespace list. Unit-test with a traversal-shaped code.
+
+## Resolution (2026-10-05)
+
+Added `localeFileSegments(language, namespace)` to `src/common/languages.ts` and used it in the
+sidecar's `loadPath` (`src/backend/sidecar/bootstrap.ts`). An unsupported or traversal-shaped
+language falls back to `en`; a namespace that is not a bare identifier falls back to
+`translation`, so neither can put a separator or `..` into the path.
+
+- **RED:** on the old code `toShippedLanguage('../../etc')` returned `'../../etc'` unchanged,
+  which `loadPath` joined straight into the path.
+- **GREEN:** new `src/common/__tests__/localeFileSegments.test.ts` (traversal language, unknown
+  language, `cimode`, traversal namespace, and the `pt-BR` → `pt_BR` mapping) passes with
+  `languages.realI18next` and `gamelibNamespaceLoad` (28/28). `pnpm codecheck`, eslint (0
+  errors), prettier, and `find-deadcode` pass.
+- **Not verified:** no live sidecar run. `appShellFlows`'s detectVCRedist/initQueue test fails
+  with or without this change (filed separately as a flaky test).

@@ -4,7 +4,7 @@ title: "--border-color resolves to #272f31 and measures 1.08-1.48:1 in 10 of 13 
 area: ui
 severity: medium
 platform: any
-ready: code
+ready: live-gate
 found_by: "Quick task tail, 2026-10-02 — found while fixing the search bar's resting outline, which had the identical defect and was fixed in 5a847e830"
 files:
   - src/frontend/themes.scss
