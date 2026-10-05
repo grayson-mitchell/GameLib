@@ -308,8 +308,6 @@
     "sideload": {
         "filter": {
             "all": "Vse",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "Datoteke AppImage",
             "apps": "Aplikacije",
             "executables": "Izvedljive datoteke",

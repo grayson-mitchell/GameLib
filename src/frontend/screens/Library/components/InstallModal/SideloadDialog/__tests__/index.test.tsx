@@ -90,7 +90,7 @@ describe('fileFilters', () => {
     }
   )
 
-  it('routes every name and every stringly-typed extension through t -- sentinel proof', () => {
+  it('routes every filter name through t -- sentinel proof', () => {
     const platformsWithEntries: InstallPlatform[] = ['Windows', 'linux', 'osx']
     for (const platform of platformsWithEntries) {
       const filters = fileFilters(platform, sentinelT)
@@ -99,13 +99,25 @@ describe('fileFilters', () => {
         expect(filter.name).toBe('SENTINEL')
       }
     }
+  })
 
-    // linux/osx also route their single stringly-typed extension
-    // ('AppImage'/'App') through t.
-    const linuxFilters = fileFilters('linux', sentinelT)
-    expect(linuxFilters?.[0].extensions).toEqual(['SENTINEL'])
-    const macFilters = fileFilters('osx', sentinelT)
-    expect(macFilters?.[0].extensions).toEqual(['SENTINEL'])
+  it('never routes an extension matcher through t -- a translated value would hide the files', () => {
+    // An extension is a filename matcher, not copy: a locale that translates
+    // 'App' to 'Aplicación' makes the macOS picker filter `*.Aplicación` and
+    // hide every .app bundle (same for AppImage on Linux). Under a t that
+    // returns SENTINEL for everything, every extension must stay literal.
+    for (const platform of ['Windows', 'linux', 'osx'] as InstallPlatform[]) {
+      for (const filter of fileFilters(platform, sentinelT) ?? []) {
+        expect(filter.extensions).not.toContain('SENTINEL')
+      }
+    }
+    expect(fileFilters('linux', sentinelT)?.[0].extensions).toEqual([
+      'AppImage'
+    ])
+    expect(fileFilters('osx', sentinelT)?.[0].extensions).toEqual(['App'])
+    for (const filter of localImageFilters(sentinelT)) {
+      expect(filter.extensions).not.toContain('SENTINEL')
+    }
   })
 
   it('reuses ONE key across all three "All" sites and ONE key across both "Other Binaries" sites', () => {

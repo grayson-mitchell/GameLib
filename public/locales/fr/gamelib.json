@@ -225,8 +225,6 @@
     "sideload": {
         "filter": {
             "all": "Tout",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Applications",
             "executables": "Exécutables",

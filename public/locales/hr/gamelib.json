@@ -301,8 +301,6 @@
     "sideload": {
         "filter": {
             "all": "Sve",
-            "appExtension": "Aplikacija",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage datoteke",
             "apps": "Aplikacije",
             "executables": "Izvršne datoteke",

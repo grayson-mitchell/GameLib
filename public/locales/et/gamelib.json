@@ -291,8 +291,6 @@
     "sideload": {
         "filter": {
             "all": "Kõik",
-            "appExtension": "Rakendus",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage failid",
             "apps": "Rakendused",
             "executables": "Käivitatavad failid",

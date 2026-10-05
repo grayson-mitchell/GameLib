@@ -308,8 +308,6 @@
     "sideload": {
         "filter": {
             "all": "Visi/-as/-os/-us",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage failai",
             "apps": "Programos",
             "executables": "Vykdomieji failai",

@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Tất cả",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Ứng dụng",
             "executables": "Tệp thực thi",

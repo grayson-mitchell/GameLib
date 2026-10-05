@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "ყველა",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage ფაილები",
             "apps": "აპლიკაციები",
             "executables": "გამშვები ფაილები",
