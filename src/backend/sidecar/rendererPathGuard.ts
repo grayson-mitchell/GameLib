@@ -30,10 +30,10 @@
  * directory that shares a string prefix with the root, e.g. `Games-evil`
  * against a `Games` root, would wrongly pass a `startsWith` check but is
  * correctly rejected by `relative()` diverging at the first path segment).
- * It now has ZERO production call sites (`runWineCommandForGame` uses
- * `assertCommandParts`, not this primitive) — retained deliberately as the
- * shared containment primitive, not left behind by omission. It has no
- * named future consumer: the design question that once named it as a
+ * Its one production call site is `protocol.ts`'s deep-link launch, which
+ * contains a link-supplied `altExe` to the game's own install path
+ * (`runWineCommandForGame` uses `assertCommandParts`, not this primitive).
+ * The design question that once named it as a
  * future consumer ("what containment root is correct for a Wine prefix")
  * has been closed and answered NO-GATE-HERE — the identical setting is
  * reachable unchecked via the typed `setSetting`/`writeConfig` route, so
