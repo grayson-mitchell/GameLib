@@ -981,6 +981,9 @@ export async function fetchChunk(
     : String(chunk.sha)
   const seed = chunk.attemptSeed ?? 0
   let lastErr: Error | undefined
+  // 2026-10-05: the host the previous attempt went to, so a retry never
+  // returns straight to it — see HostHealthTracker.pickHost's `previousHost`.
+  let previousHost: string | undefined
 
   for (let i = 0; i < attempts; i++) {
     // debug/steam-cancel-abort-thread-a: checked at the TOP of every
@@ -994,8 +997,9 @@ export async function fetchChunk(
       throw new ChunkFetchAbortedError()
     }
     const host = hostHealth
-      ? hostHealth.pickHost(hosts, seed, i, workerSlot)
+      ? hostHealth.pickHost(hosts, seed, i, workerSlot, previousHost)
       : hosts[(seed + i) % hosts.length]
+    previousHost = host
     const meta = hostMeta?.get(host)
     // Debug/steam-install-slow-start (cycle 7): EXACT steam-user URL-scheme
     // parity — only an explicit https_support === 'mandatory' selects

@@ -859,6 +859,75 @@ describe('decompress', () => {
         expect(attempt0Hosts).toHaveLength(3)
         expect(new Set(attempt0Hosts).size).toBeGreaterThan(1)
       })
+
+      // 2026-10-05 todo steam-depot-retry-often-returns-to-the-host-that-just-failed:
+      // attempt 0 fans out by `healthy[workerSlot % N]`, but retries used
+      // `ordered[attemptIndex % len]` with no memory of attempt 0. A worker
+      // whose slot landed on the rank-1 host retried `ordered[1]` -- the same
+      // host, whenever one failure did not knock it below rank 1 (with two
+      // hosts, always). That spends a second CHUNK_FETCH_TIMEOUT_MS plus
+      // backoff on the host that just failed.
+      it.each([
+        {
+          label: 'two hosts (certain)',
+          latencies: [50, 150],
+          samples: 6
+        },
+        {
+          label: 'three hosts, well-established rank-1 host',
+          latencies: [50, 1000, 5000],
+          samples: 100
+        }
+      ])(
+        'a retry never returns to the host attempt 0 just failed on -- $label',
+        async ({ latencies, samples }) => {
+          const data = Buffer.from('retried on a different host', 'utf8')
+          const poolHosts = hosts.slice(0, latencies.length)
+          const hostHealth = new HostHealthTracker()
+          poolHosts.forEach((host, i) => {
+            for (let n = 0; n < samples; n++) {
+              hostHealth.record(host, 'success', latencies[i])
+            }
+          })
+          // workerSlot 1 -> attempt 0 goes to the rank-1 host.
+          const failingHost = poolHosts[1]
+          const requestedHosts: string[] = []
+
+          global.fetch = jest.fn((url: unknown) => {
+            const host = String(url).split('/')[2]
+            requestedHosts.push(host)
+            if (host === failingHost) {
+              return Promise.reject(new Error('ECONNRESET'))
+            }
+            return Promise.resolve({
+              ok: true,
+              arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
+            } as Response)
+          }) as unknown as typeof fetch
+
+          const out = await fetchChunk(
+            poolHosts,
+            depotId,
+            { sha: 'deadbeef', cb_original: data.length, attemptSeed: 0 },
+            key,
+            lzma,
+            2,
+            () => Promise.resolve(data),
+            undefined,
+            undefined,
+            hostHealth,
+            undefined,
+            undefined,
+            undefined,
+            1
+          )
+
+          expect(out.equals(data)).toBe(true)
+          expect(requestedHosts).toHaveLength(2)
+          expect(requestedHosts[0]).toBe(failingHost)
+          expect(requestedHosts[1]).not.toBe(failingHost)
+        }
+      )
     })
 
     // Debug/steam-install-slow-start (diagnostic re-open, cycle 9): each

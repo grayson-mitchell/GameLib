@@ -394,6 +394,36 @@ describe('HostHealthTracker', () => {
       expect(tracker.pickHost(hosts, 0, 3)).toBe('host-d')
       expect(tracker.pickHost(hosts, 2, 0)).toBe('host-c')
     })
+
+    // 2026-10-05: a retry excludes the host the previous attempt went to.
+    it('a retry given previousHost never returns that host while another exists, and rotates through the rest in ordered rank', () => {
+      const tracker = new HostHealthTracker()
+      for (let i = 0; i < 6; i++) tracker.record('host-a', 'success', 50)
+      for (let i = 0; i < 6; i++) tracker.record('host-b', 'success', 150)
+      for (let i = 0; i < 6; i++) tracker.record('host-c', 'success', 300)
+      for (let i = 0; i < 6; i++) tracker.record('host-d', 'success', 450)
+
+      // Attempt 0 from slot 1 lands on rank-1 host-b; walk four retries,
+      // each told where the attempt before it went.
+      let previous = tracker.pickHost(hosts, 0, 0, 1)
+      expect(previous).toBe('host-b')
+      const retries: string[] = []
+      for (let attemptIndex = 1; attemptIndex <= 4; attemptIndex++) {
+        const pick = tracker.pickHost(hosts, 0, attemptIndex, 1, previous)
+        expect(pick).not.toBe(previous)
+        retries.push(pick)
+        previous = pick
+      }
+      expect(retries).toEqual(['host-a', 'host-c', 'host-d', 'host-a'])
+
+      // Two hosts: a retry always alternates to the other one.
+      const pair = ['host-a', 'host-b']
+      expect(tracker.pickHost(pair, 0, 1, 1, 'host-b')).toBe('host-a')
+      expect(tracker.pickHost(pair, 0, 2, 1, 'host-a')).toBe('host-b')
+
+      // A single-host pool has nothing to exclude: it still answers.
+      expect(tracker.pickHost(['host-a'], 0, 1, 0, 'host-a')).toBe('host-a')
+    })
   })
 
   // Quick 260817-ihr (IHR-01): bounded probe-based recovery for a demoted
