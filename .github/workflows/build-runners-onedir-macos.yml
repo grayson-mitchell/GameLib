@@ -29,12 +29,24 @@ on:
 permissions:
   contents: write # required to create/update the rolling release and upload assets
 
+# Every run writes the same fixed-name assets (the three archives plus
+# SHA256SUMS-arm64 / BUILD-MANIFEST-arm64.json) to one rolling release with
+# `--clobber`. Two overlapping dispatches could interleave those uploads and
+# leave one run's archives beside the other run's digests, which
+# pin:runner-digests would then pin. Workflow-level, so the whole
+# prepare-release -> build chain is serialised; queued, never cancelled, so
+# an in-flight upload is never killed half-way through.
+concurrency:
+  group: runners-onedir-macos
+  cancel-in-progress: false
+
 jobs:
   # Release creation is isolated in its own job so a re-dispatched build leg
   # cannot race a duplicate `gh release create` (T-34.9-17). Historically this
   # guarded two concurrent matrix legs; Phase 34.18 retired the Intel leg,
-  # leaving one, but the isolation still guards against overlapping dispatches
-  # of the same workflow.
+  # leaving one. The isolation only makes the create step idempotent -- it
+  # does NOT stop overlapping dispatches interleaving their uploads; the
+  # workflow-level `concurrency:` group above is what serialises those.
   prepare-release:
     runs-on: ubuntu-latest
     steps:

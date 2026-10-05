@@ -73,6 +73,7 @@ interface WorkflowMatrixLeg {
 
 interface ParsedWorkflow {
   on?: unknown
+  concurrency?: unknown
   permissions?: Record<string, string>
   jobs: Record<
     string,
@@ -152,6 +153,22 @@ describe('build-runners-onedir-macos.yml permissions', () => {
   test('never references secrets. -- the default github.token suffices', () => {
     const stripped = loadStrippedWorkflow()
     expect(stripped).not.toContain('secrets.')
+  })
+})
+
+// Overlapping dispatches would interleave their `gh release upload --clobber`
+// calls, leaving the release holding one run's archives beside another run's
+// SHA256SUMS/BUILD-MANIFEST -- pin:runner-digests would then pin digests that
+// match no published archive. Workflow-level (not per-job) so the whole
+// prepare-release -> build chain is serialised, and queued rather than
+// cancelled so an in-flight upload is never killed half-way through.
+describe('build-runners-onedir-macos.yml concurrency', () => {
+  test('declares a workflow-level concurrency group that queues, never cancels', () => {
+    const parsed = parseWorkflow()
+    expect(parsed.concurrency).toEqual({
+      group: 'runners-onedir-macos',
+      'cancel-in-progress': false
+    })
   })
 })
 
