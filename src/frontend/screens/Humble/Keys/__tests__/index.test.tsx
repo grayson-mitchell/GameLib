@@ -122,8 +122,18 @@ jest.mock('frontend/components/UI/ToggleSwitch', () => ({
 // form `t(key, { count, defaultValue, defaultValue_one, ...interp })` that
 // `humbleKeys.cooldown`/`humbleKeys.syncing` now use (260925-88h) -- picks
 // `defaultValue_one` when `count === 1`, else `defaultValue`.
+// The UI language `useTranslation().i18n.language` reports. The "Last synced"
+// duration is formatted in it (todo 2026-10-05 humble-last-synced), so a test
+// has to be able to set it; `mock`-prefixed so the factory may close over it.
+let mockUiLanguage = 'en'
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
+    i18n: {
+      get language() {
+        return mockUiLanguage
+      }
+    },
     t: (
       _key: string,
       defaultValueOrOptions?: string | Record<string, unknown>,
@@ -438,12 +448,28 @@ function defaultContext(keys: HumbleKey[] = []): MockContextValue {
 
 describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
   beforeEach(() => {
+    mockUiLanguage = 'en'
     contextValue = defaultContext()
     mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
     mockApi.humbleGetOwnershipOverrides.mockResolvedValue({})
     mockApi.humbleGetGiftedAt.mockResolvedValue({})
     mockApi.humbleGetSyncState.mockResolvedValue({ cooldownUntil: undefined })
     mockApi.handleHumbleSyncProgress.mockReturnValue(() => {})
+  })
+
+  // todo 2026-10-05 humble-last-synced: the duration is interpolated into a
+  // translated sentence, so its unit words must be in the UI language too.
+  describe('"Last synced" indicator', () => {
+    it('interpolates the duration in the UI language, never English unit words', () => {
+      mockUiLanguage = 'de'
+      contextValue.humble.syncedAt = Date.now() - 5 * 60_000 - 1_000
+
+      const indicator = findByClassName(mount(), 'humbleKeysSyncIndicator')
+      expect(indicator).toBeDefined()
+      const text = textContent(indicator).replace(/\s/g, ' ')
+      expect(text).toContain('5 Minuten')
+      expect(text).not.toMatch(/minutes?\b/)
+    })
   })
 
   // ── Ported from Waiting/__tests__/index.test.tsx (13 tests) ──────────────
