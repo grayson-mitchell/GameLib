@@ -63,11 +63,11 @@ export function readXdgUserDir(
   return parseUserDirs(content, homedir())[key]
 }
 
-export const USER_SHELL_FOLDERS_KEY =
+const USER_SHELL_FOLDERS_KEY =
   'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders'
 
 /** `reg.exe` value names: Documents is stored as `Personal`. */
-export type WindowsShellFolder = 'Desktop' | 'Personal'
+type WindowsShellFolder = 'Desktop' | 'Personal'
 
 /** Pulls `valueName`'s data out of `reg query <key> /v <valueName>` output. */
 export function parseRegQueryValue(
