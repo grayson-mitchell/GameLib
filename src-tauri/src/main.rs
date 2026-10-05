@@ -1225,6 +1225,21 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // 60-second transport bound caused it. A misdirecting error is arguably worse for diagnosis
     // than silence, so "dies silently" should not be repeated as the symptom.
     "openDialog",
+    // Todo 2026-10-05 (long-running Wine and sync channels): each awaits a child process or a
+    // network transfer that has no wall-clock ceiling of its own -- runWineCommand with
+    // `wait: true` (the sideload "Run Installer First" installer), callTool's winetricks branch
+    // (the GUI until the user closes it), installWineVersion (a multi-hundred-MB Wine/Proton
+    // download + extract), downloadRuntime (EAC/BattlEye download + extract) and the two
+    // cloud-save syncs (legendary sync-saves / gogdl save-sync). Bounded at 60s, the renderer
+    // saw a rejection mid-run and re-enabled its controls while the work continued.
+    // addToSteam was reviewed and deliberately left bounded: a wiki lookup plus a few small
+    // artwork downloads, with its rejection now handled at the call site.
+    "runWineCommand",
+    "callTool",
+    "installWineVersion",
+    "downloadRuntime",
+    "syncSaves",
+    "syncGOGSaves",
 ];
 
 /// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.

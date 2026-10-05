@@ -257,9 +257,13 @@ export default function SideloadDialog({
             wineVersion: wineVersion || gameSettings.wineVersion
           }
         })
-        setRunningSetup(false)
       } catch (error) {
-        console.log('finished with error', error)
+        window.api.logError(
+          `Sideload: running the installer failed: ${String(error)}`
+        )
+      } finally {
+        // Also covers the missing-settings early return above, which used to
+        // leave the button disabled.
         setRunningSetup(false)
       }
     }

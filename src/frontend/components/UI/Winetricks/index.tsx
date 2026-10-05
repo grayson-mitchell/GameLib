@@ -196,6 +196,12 @@ export default function Winetricks({ onClose, runner }: Props) {
         appName,
         runner
       })
+      .catch((error) => {
+        // Surface the failure in the dialog's own log pane rather than as an
+        // unhandled rejection.
+        setLogs((currentLogs) => [...currentLogs, `${error}`])
+        window.api.logError(`Winetricks GUI failed: ${error}`)
+      })
       .finally(() => setGuiOpen(false))
   }
 
