@@ -34,13 +34,14 @@ const Tour: React.FC<TourProps> = ({
 
   const isActive = enabled || isTourActive(tourId)
 
-  // FIX (introjs-tooltip-not-rendering): intro.js-react's Steps.componentDidUpdate
-  // re-runs configureIntroJs()+renderSteps() (which re-enters intro.js's show-step
-  // path, resetting the tooltip's opacity) whenever `options` changes BY REFERENCE.
-  // Without memoization this object was a fresh literal on every render, so the
-  // guard was always-true and the tooltip's debounced 350ms opacity restore was
-  // starved by any render faster than that. Memoized here so identity is stable
-  // across renders that don't actually change the translated labels.
+  // Hygiene, not the blank-tooltip fix (debug introjs-tooltip-not-rendering,
+  // "RECORD CORRECTION"): intro.js-react's Steps.componentDidUpdate re-runs
+  // configureIntroJs()+renderSteps() whenever `options` changes BY REFERENCE,
+  // and this object was a fresh literal on every render, so that work re-ran
+  // on every render. Memoizing removes the waste. It did NOT cause the blank
+  // tooltip -- that was WebKit not painting a visible child of a
+  // `visibility: hidden` ancestor, fixed in Tour.scss
+  // (`.introjs-tooltipReferenceLayer { visibility: visible }`).
   const defaultOptions = React.useMemo(
     () => ({
       nextLabel: t('tour.next', 'Next'),

@@ -397,6 +397,17 @@
         "zombie": "Zombie",
         "zombieClassic": "Zombie Classic"
     },
+    "tour": {
+        "library": {
+            "welcome": {
+                "intro2": "If the library is empty, sign in to your stores from the Accounts tab, or add your own games with the Add Game button."
+            }
+        },
+        "nav": {
+            "accounts": "Manage your connected store accounts and sign in to new stores.",
+            "stores": "Browse and shop for games in the Epic, GOG, Steam and Amazon stores."
+        }
+    },
     "webview": {
         "embedPlaceholder": {
             "message": "Paused while a window is open"
