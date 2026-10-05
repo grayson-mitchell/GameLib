@@ -776,11 +776,22 @@ export class DecompressPool {
   async shutdown(): Promise<void> {
     this.shuttingDown = true
 
+    // 2026-10-05: every outstanding task is REJECTED, not just dropped.
+    // Clearing them silently left each caller's decode() promise pending
+    // forever — a chunk worker awaiting it could never settle.
+    const shutdownError = () =>
+      taggedPoolError(
+        'DecompressPool shut down with this task outstanding',
+        'decompress_pool_shutdown'
+      )
     for (const task of this.pending.values()) {
       clearTimeout(task.timer)
+      task.reject(shutdownError())
     }
     this.pending.clear()
-    this.queue = []
+    for (const task of this.queue.splice(0)) {
+      task.reject(shutdownError())
+    }
 
     await Promise.all([...this.inFlightReplacements])
 

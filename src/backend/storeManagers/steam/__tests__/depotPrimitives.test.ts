@@ -25,6 +25,7 @@ import {
   CHUNK_FETCH_HEADERS
 } from '../depot/decompress'
 import { HostHealthTracker } from '../depot/hostHealth'
+import { InflightLimiter } from '../depot/inflightLimiter'
 import {
   CdnAuthTokenCache,
   CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS,
@@ -790,8 +791,8 @@ describe('decompress', () => {
       // Phase 25 (multi-host fan-out, MHOST-02/03): proves the depot.ts
       // wiring this plan lands actually reaches pickHost -- concurrently-
       // running chunk workers, each supplying its own distinct workerSlot
-      // (mirroring depot.ts's `fileWorkerSlot * CHUNK_CONCURRENCY +
-      // chunkWorkerSlot` combination), spread their attempt-0 requests
+      // (mirroring depot.ts's `chunkWorkerSlot * FILE_CONCURRENCY +
+      // fileWorkerSlot` combination), spread their attempt-0 requests
       // across MORE THAN ONE healthy host instead of every worker
       // converging on the single top-scored one (`ordered[0]`, the
       // pre-Phase-25 behavior still exercised by the
@@ -858,6 +859,142 @@ describe('decompress', () => {
 
         expect(attempt0Hosts).toHaveLength(3)
         expect(new Set(attempt0Hosts).size).toBeGreaterThan(1)
+      })
+
+      // 2026-10-05 todo steam-depot-retry-often-returns-to-the-host-that-just-failed:
+      // attempt 0 fans out by `healthy[workerSlot % N]`, but retries used
+      // `ordered[attemptIndex % len]` with no memory of attempt 0. A worker
+      // whose slot landed on the rank-1 host retried `ordered[1]` -- the same
+      // host, whenever one failure did not knock it below rank 1 (with two
+      // hosts, always). That spends a second CHUNK_FETCH_TIMEOUT_MS plus
+      // backoff on the host that just failed.
+      it.each([
+        {
+          label: 'two hosts (certain)',
+          latencies: [50, 150],
+          samples: 6
+        },
+        {
+          label: 'three hosts, well-established rank-1 host',
+          latencies: [50, 1000, 5000],
+          samples: 100
+        }
+      ])(
+        'a retry never returns to the host attempt 0 just failed on -- $label',
+        async ({ latencies, samples }) => {
+          const data = Buffer.from('retried on a different host', 'utf8')
+          const poolHosts = hosts.slice(0, latencies.length)
+          const hostHealth = new HostHealthTracker()
+          poolHosts.forEach((host, i) => {
+            for (let n = 0; n < samples; n++) {
+              hostHealth.record(host, 'success', latencies[i])
+            }
+          })
+          // workerSlot 1 -> attempt 0 goes to the rank-1 host.
+          const failingHost = poolHosts[1]
+          const requestedHosts: string[] = []
+
+          global.fetch = jest.fn((url: unknown) => {
+            const host = String(url).split('/')[2]
+            requestedHosts.push(host)
+            if (host === failingHost) {
+              return Promise.reject(new Error('ECONNRESET'))
+            }
+            return Promise.resolve({
+              ok: true,
+              arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
+            } as Response)
+          }) as unknown as typeof fetch
+
+          const out = await fetchChunk(
+            poolHosts,
+            depotId,
+            { sha: 'deadbeef', cb_original: data.length, attemptSeed: 0 },
+            key,
+            lzma,
+            2,
+            () => Promise.resolve(data),
+            undefined,
+            undefined,
+            hostHealth,
+            undefined,
+            undefined,
+            undefined,
+            1
+          )
+
+          expect(out.equals(data)).toBe(true)
+          expect(requestedHosts).toHaveLength(2)
+          expect(requestedHosts[0]).toBe(failingHost)
+          expect(requestedHosts[1]).not.toBe(failingHost)
+        }
+      )
+
+      // 2026-10-05 todo steam-depot-limiter-wait-counts-against-per-attempt-timeout:
+      // CHUNK_FETCH_TIMEOUT_MS used to be armed (and the attempt's clock
+      // started) BEFORE `await limiter.acquire()`. Up to 128 chunk workers
+      // share 32 slots, so on a slow link the FIFO wait alone passes 15s;
+      // `fetch` was then handed an already-aborted signal, failed at once
+      // with AbortError, and the never-contacted host was recorded as a
+      // 'timeout' -- five of those demote a healthy host.
+      it('time queued on the InflightLimiter neither burns the per-attempt timeout nor counts as host latency', async () => {
+        jest.useFakeTimers()
+        try {
+          const data = Buffer.from('queued behind the limiter', 'utf8')
+          const limiter = new InflightLimiter(1)
+          // Another chunk worker's fetch holds the only slot.
+          await limiter.acquire()
+          const hostHealth = new HostHealthTracker()
+          const events: Array<{ outcome: string; ms: number }> = []
+
+          global.fetch = jest.fn(
+            (_url: unknown, opts?: { signal?: AbortSignal }) => {
+              // Real fetch() rejects at once on an already-aborted signal.
+              if (opts?.signal?.aborted) {
+                const err = new Error('This operation was aborted')
+                err.name = 'AbortError'
+                return Promise.reject(err)
+              }
+              return Promise.resolve({
+                ok: true,
+                arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
+              } as Response)
+            }
+          ) as unknown as typeof fetch
+
+          const pending = fetchChunk(
+            hosts,
+            depotId,
+            { sha: 'deadbeef', cb_original: data.length, attemptSeed: 0 },
+            key,
+            lzma,
+            1,
+            () => Promise.resolve(data),
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, ms: ev.ms }),
+            hostHealth,
+            undefined,
+            undefined,
+            undefined,
+            0,
+            limiter
+          )
+          pending.catch(() => {})
+
+          // Queued well past the per-attempt timeout before a slot frees.
+          await jest.advanceTimersByTimeAsync(CHUNK_FETCH_TIMEOUT_MS + 5000)
+          expect(global.fetch).not.toHaveBeenCalled()
+          limiter.release()
+
+          const out = await pending
+          expect(out.equals(data)).toBe(true)
+          expect(events).toEqual([{ outcome: 'success', ms: 0 }])
+          const snap = hostHealth.snapshot(hosts[0])
+          expect(snap.consecutiveFailures).toBe(0)
+          expect(snap.avgMs).toBe(0)
+        } finally {
+          jest.useRealTimers()
+        }
       })
     })
 
