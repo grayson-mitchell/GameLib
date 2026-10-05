@@ -350,49 +350,53 @@ async function installWineVersion(
 }
 
 async function removeWineVersion(release: WineVersionInfo): Promise<boolean> {
-  // remove folder if exist
-  if (release.installDir !== undefined && existsSync(release.installDir)) {
-    try {
-      rmSync(release.installDir, { recursive: true })
-      backendEvents.emit('wineVersionUninstalled', release)
-    } catch (error) {
-      logError(error, LogPrefix.WineDownloader)
-      logWarning(
-        `Couldn't remove folder ${release.installDir}! Still mark wine version ${release.version} as not installed!`,
-        LogPrefix.WineDownloader
-      )
-    }
-  }
-
-  // update tool information
-  if (wineDownloaderInfoStore.has('wine-releases')) {
-    const releases = wineDownloaderInfoStore.get('wine-releases', [])
-
-    const index = releases.findIndex((storedRelease) => {
-      return release.version === storedRelease.version
-    })
-
-    if (index === -1) {
-      logError(
-        `Can't find ${release.version} in electron-store -> wine-downloader-info.json!`,
-        LogPrefix.WineDownloader
-      )
-      return false
-    }
-
-    releases[index].isInstalled = false
-    releases[index].installDir = ''
-    releases[index].disksize = 0
-    releases[index].hasUpdate = false
-
-    wineDownloaderInfoStore.set('wine-releases', releases)
-  } else {
+  if (!wineDownloaderInfoStore.has('wine-releases')) {
     logError(
       `Couldn't find a wine-releases entry in electron-store -> wine-downloader-info.json. Release ${release.version} couldn't be removed!`,
       LogPrefix.WineDownloader
     )
     return false
   }
+
+  const releases = wineDownloaderInfoStore.get('wine-releases', [])
+  const index = releases.findIndex((storedRelease) => {
+    return release.version === storedRelease.version
+  })
+
+  if (index === -1) {
+    logError(
+      `Can't find ${release.version} in electron-store -> wine-downloader-info.json!`,
+      LogPrefix.WineDownloader
+    )
+    return false
+  }
+
+  // `release` arrives from the renderer over IPC, so its `installDir` is untrusted: only ever
+  // remove the directory this backend itself recorded for the version when it installed it.
+  const installDir = releases[index].installDir
+
+  // remove folder if exist
+  if (installDir && existsSync(installDir)) {
+    try {
+      rmSync(installDir, { recursive: true })
+      // A copy: the stored entry's installDir is cleared below, and the DXMT listener reads it.
+      backendEvents.emit('wineVersionUninstalled', { ...releases[index] })
+    } catch (error) {
+      logError(error, LogPrefix.WineDownloader)
+      logWarning(
+        `Couldn't remove folder ${installDir}! Still mark wine version ${release.version} as not installed!`,
+        LogPrefix.WineDownloader
+      )
+    }
+  }
+
+  // update tool information
+  releases[index].isInstalled = false
+  releases[index].installDir = ''
+  releases[index].disksize = 0
+  releases[index].hasUpdate = false
+
+  wineDownloaderInfoStore.set('wine-releases', releases)
 
   logInfo(
     `Removed wine version ${release.version} succesfully.`,
