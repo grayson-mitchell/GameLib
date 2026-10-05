@@ -68,6 +68,18 @@ jobs:
       - name: Build renderer web assets (vite)
         shell: bash
         run: pnpm exec vite build
+      # tauri-build checks every `externalBin` at COMPILE time, so without
+      # `src-tauri/binaries/gamelib-sidecar-<host-triple>[.exe]` the crate fails in
+      # its build script ("resource path ... doesn't exist") before a single test
+      # runs -- which is how this job sat red on both legs from at least
+      # 2026-10-01. Built for real, not touched as a placeholder, for the same
+      # reason the vite step above is real: a fake input would let a genuine
+      # sidecar build break pass this gate and surface only at release time. The
+      # host triple is the right one here (no cross-compile), so unlike
+      # release-tauri.yml no GAMELIB_SIDECAR_TARGET_TRIPLE is set.
+      - name: Build self-contained sidecar (Node SEA) for tauri-build's externalBin check
+        shell: bash
+        run: pnpm build:sidecar-sea
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
