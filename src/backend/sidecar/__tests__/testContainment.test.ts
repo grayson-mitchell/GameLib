@@ -898,6 +898,13 @@ const IN_SCOPE_SUITES = [
  * file to an explicit `mkdtemp` path, and declares no `os`/`pathShim` mock. A `readdirSync`
  * recount at this task's execution time puts the directory at 67 `*.test.ts` files: 4
  * `IN_SCOPE_SUITES` + 63 below.
+ *
+ * `sidecarRpcFraming.test.ts` (todo `tauri-rpc-transport-minor-defects`, 2026-10-05) is
+ * classified as structurally contained on the same basis as `outputStreamBinding.test.ts`: it
+ * declares no `jest.mock(...)`, requires only `../sidecarRpc` and the `../../platform` registry
+ * `sidecarRpc` already imports, and drives the transport over in-memory `PassThrough` streams
+ * with no store, no filesystem and no `homedir()` use. 68 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 64 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -950,6 +957,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',
   'shortcutsFlows.test.ts',
+  'sidecarRpcFraming.test.ts',
   'sidecarStdoutFramesOnly.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',

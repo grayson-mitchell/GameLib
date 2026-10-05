@@ -159,6 +159,22 @@ const hydrated = new Set<string>()
 /** D-03: de-dupes concurrent `hydrateStore()` calls for the same store (T-29-22). */
 const inflight = new Map<string, Promise<void>>()
 
+/**
+ * Per-store invalidation counter (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect
+ * 1). A fetch records the value it started under; if an `invalidated` push bumps it before
+ * the fetch resolves, that result may predate the bulk change and is discarded.
+ */
+const invalidationEpoch = new Map<string, number>()
+
+/**
+ * Field changes pushed while a store's fetch is in flight, replayed over its result in
+ * arrival order. A push and a fetch result take different routes from the shell with no
+ * ordering guarantee, so a change can land BEFORE the older fetch that would otherwise
+ * replace it away. Replaying a change the fetch already contains is harmless: the last
+ * write for a key still wins.
+ */
+const changesDuringFetch = new Map<string, StoreChangedPayload[]>()
+
 /** D-04: warn at most once per store+key pair, so a hot render loop cannot flood the console. */
 const lazyMissWarned = new Set<string>()
 
@@ -185,7 +201,7 @@ function ensureChangeListenerAttached(): void {
   listen(STORE_CHANGED_CHANNEL, (...args: unknown[]) => {
     const payload = args[0] as StoreChangedPayload | undefined
     if (!payload) return
-    const { store, key, value, deleted, invalidated } = payload
+    const { store, invalidated } = payload
     if (!snapshot[store]) snapshot[store] = {}
 
     // A whole-store change (`store.clear()`, or a `CacheStore.commit()` replacing the
@@ -198,21 +214,35 @@ function ensureChangeListenerAttached(): void {
     // This is the ONLY place `hydrated` is removed from. Without it the set is
     // append-only, which is precisely how a hydrated store became permanently frozen
     // against sidecar writes (see .planning/debug/gog-login-ui-never-updates.md).
+    //
+    // A fetch already in flight began BEFORE this invalidation, so it is not reused: the
+    // epoch bump makes it discard its result, and a fresh fetch starts once it settles.
     if (invalidated) {
       hydrated.delete(store)
-      void hydrateStore(store)
+      invalidationEpoch.set(store, (invalidationEpoch.get(store) ?? 0) + 1)
+      const running = inflight.get(store)
+      if (running) {
+        void running.then(() => hydrateStore(store))
+      } else {
+        void hydrateStore(store)
+      }
       return
     }
 
-    // CR-03: the echo must patch the snapshot through the SAME nested path helpers
-    // the read side uses, otherwise it re-creates the flat/nested mismatch it exists
-    // to repair.
-    if (deleted) {
-      deleteAtPath(snapshot[store], key)
-    } else {
-      setAtPath(snapshot[store], key, value)
-    }
+    applyFieldChange(snapshot[store], payload)
+    changesDuringFetch.get(store)?.push(payload)
   })
+}
+
+function applyFieldChange(target: Record<string, unknown>, change: StoreChangedPayload): void {
+  // CR-03: the echo must patch the snapshot through the SAME nested path helpers
+  // the read side uses, otherwise it re-creates the flat/nested mismatch it exists
+  // to repair.
+  if (change.deleted) {
+    deleteAtPath(target, change.key)
+  } else {
+    setAtPath(target, change.key, change.value)
+  }
 }
 
 /**
@@ -265,9 +295,18 @@ async function hydrateStore(storeName: string): Promise<void> {
   const existing = inflight.get(storeName)
   if (existing) return existing
 
+  const epoch = invalidationEpoch.get(storeName) ?? 0
+  const buffered: StoreChangedPayload[] = []
+  changesDuringFetch.set(storeName, buffered)
+
   const task = (async () => {
     try {
       const result = await invoke<Record<string, unknown>>(STORE_FETCH_CHANNEL, [storeName])
+      if ((invalidationEpoch.get(storeName) ?? 0) !== epoch) {
+        // Invalidated while in flight: this result may predate the bulk change. The
+        // invalidation handler has queued a fresh fetch behind this one.
+        return
+      }
       // WR-07 (Phase 29 code review): REPLACE the store's snapshot wholesale rather
       // than merging into it. Merging meant a key removed on disk -- by the backend, a
       // migration, or `store.clear()` -- stayed in the renderer's copy for the life of
@@ -275,22 +314,23 @@ async function hydrateStore(storeName: string): Promise<void> {
       // the caller's default. That also defeated the self-heal the D-06 change listener
       // is supposed to guarantee for backend-side deletions. The sidecar's filtered
       // payload is authoritative for the store it names.
-      snapshot[storeName] = { ...(result ?? {}) }
+      const fresh = { ...(result ?? {}) }
+      for (const change of buffered) applyFieldChange(fresh, change)
+      snapshot[storeName] = fresh
       hydrated.add(storeName)
     } catch (error) {
       console.error(
         `hydrateStore: fetch of "${storeName}" failed; leaving the snapshot degraded ` + 'for this store',
         error
       )
+    } finally {
+      changesDuringFetch.delete(storeName)
+      inflight.delete(storeName)
     }
   })()
 
   inflight.set(storeName, task)
-  try {
-    await task
-  } finally {
-    inflight.delete(storeName)
-  }
+  return task
 }
 
 function getAtPath(obj: Record<string, unknown> | undefined, key: string): unknown {
