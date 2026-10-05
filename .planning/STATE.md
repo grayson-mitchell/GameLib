@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move library top section into panel widen it
 status: executing
-stopped_at: Completed 48-05-PLAN.md
-last_updated: "2026-10-05T04:37:46.068Z"
+stopped_at: Completed 48-06-PLAN.md
+last_updated: "2026-10-05T04:48:21.100Z"
 last_activity: 2026-10-05
 last_activity_desc: Phase 48 execution started
-state_head: 57746988bb80fe5b388cd9ea951188c04169f41c
+state_head: 9699642563a5cbb8338d116ab097c91d35eb186a
 progress:
   total_phases: 43
   completed_phases: 36
   total_plans: 512
-  completed_plans: 502
+  completed_plans: 503
   percent: 84
 ---
 
@@ -75,8 +75,8 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move library top section into panel widen it) — EXECUTING
-Plan: 4 of 6
-Status: Ready to execute
+Plan: 6 of 6
+Status: All plans executed — ready for phase verification
 Last activity: 2026-10-05 — Phase 48 execution started
 
 Previous activity: 2026-10-01 -- Completed quick task 261001-93f: built and self-proved a macOS pixel/geometry measurement instrument for Phase 38's two open items (38-E03(a), 38-E04(a)), pre-registered both items' pass/fail criteria before any live measurement, and wrote an operator run-sheet -- scores NEITHER gate, only the operator's drag-resize gesture and System Settings scale-factor change can.
@@ -504,6 +504,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P03 | 25 min | 2 tasks | 3 files |
 | Phase 48 P04 | 72 min | 3 tasks | 8 files |
 | Phase 48 P05 | 9 min | 3 tasks | 14 files |
+| Phase 48 P06 | 5 min | 1 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -1131,6 +1132,7 @@ Recent decisions affecting current work:
 - [Phase 48]: 48-04: focus-row overflow controls mount only when the track can scroll; the end-of-travel control is natively disabled at opacity 0.38; paging is by whole visible cards with sub-pixel residue (<1px) treated as no travel
 - [Phase 48]: Task 1 ruling recency: recently_played_installed migrates to the recentlyPlayed view, recency kept and the installed-only qualifier dropped, because FocusRowSelection has no modifier slot and installed-only stays reachable through the grid Installed view
 - [Phase 48]: Presence guard on the focusRow key, not its value, so a deliberate clear (a present null) permanently disarms the legacy seed; the seed reads the raw on-disk object as the last property of the getSettings merge
+- [Phase 48]: No storage bound on games.recent (operator ruling on R6): setRecentGames unchanged; display cap is the focus-row card ceiling only — The removed setting never governed storage; the stored list was unbounded before and after
 
 ### Pending Todos
 
@@ -1734,8 +1736,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-05T04:37:32.717Z
-Stopped at: Completed 48-05-PLAN.md
+Last session: 2026-10-05T04:48:04.294Z
+Stopped at: Completed 48-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

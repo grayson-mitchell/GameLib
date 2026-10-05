@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed
 
 Plans:
 **Wave 1**
@@ -5677,7 +5677,7 @@ Plans:
 - [x] 48-05-PLAN.md — retire the `Library Top Section` dropdown and seed `focusRow` from it once (R7)
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 48-06-PLAN.md — remove `Recent Games to Show` and its dead code; no storage bound (R6)
+- [x] 48-06-PLAN.md — remove `Recent Games to Show` and its dead code; no storage bound (R6)
 
 **Cross-cutting constraints:**
 - Strip content narrower than the available width shows no overflow affordance (SPEC Edge Coverage, R3 unclassified, explicit).
