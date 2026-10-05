@@ -580,6 +580,38 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
       expect(existsSync(join(parentDir, folderName))).toBe(true)
       rmSync(parentDir, { recursive: true, force: true })
     })
+
+    // Todo 2026-10-05-security-hardening-minors-from-trust-boundary-review
+    // (2): a folderName that is empty, `.` or climbs out of `path` must not
+    // turn into a recursive delete of the parent or of a sibling.
+    it.each([
+      ['../sibling', 'sibling'],
+      ['..', 'root'],
+      ['', 'root'],
+      ['.', 'root']
+    ])(
+      'removeFolder refuses folderName %p and leaves the %s directory in place',
+      async (folderName, survivor) => {
+        const outer = mkdtempSync(
+          join(tmpdir(), 'gamelib-shellfilesflows-remove-escape-')
+        )
+        const root = join(outer, 'root')
+        mkdirSync(join(root, 'game'), { recursive: true })
+        mkdirSync(join(outer, 'sibling'))
+        const survivorPath = survivor === 'root' ? root : join(outer, survivor)
+
+        const { input } = startSidecar()
+        writeSend(input, `remove-escape-${survivor}`, 'removeFolder', [
+          [root, folderName]
+        ])
+        await flush()
+        jest.advanceTimersByTime(2100)
+
+        expect(existsSync(survivorPath)).toBe(true)
+        expect(existsSync(outer)).toBe(true)
+        rmSync(outer, { recursive: true, force: true })
+      }
+    )
   })
 
   // ── REQ-34.3-05 / REQ-34.3-06 cache and reset channels (Phase 34.3 Plan 02) ─

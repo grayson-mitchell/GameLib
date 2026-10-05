@@ -28,8 +28,9 @@ import {
   logWarning,
   logDebug
 } from 'backend/logger'
-import { basename, dirname, join, normalize } from 'path'
+import { basename, dirname, join, normalize, relative } from 'path'
 import { homedir } from 'os'
+import { assertContainedPath } from './sidecar/rendererPathGuard'
 import {
   gameInfoStore,
   installStore,
@@ -1450,11 +1451,38 @@ const memoryLog = (limit = 50) => {
   }
 }
 
+/**
+ * Resolves `${root}/${folderName}` for a recursive delete, or returns
+ * undefined when `folderName` is empty, `.`, or escapes `root` (`..`, an
+ * absolute path) — either would make the delete hit `root` itself or
+ * something outside it. Both values can arrive from the renderer through
+ * the `removeFolder` send channel.
+ */
+function resolveFolderToRemove(
+  root: string,
+  folderName: string
+): string | undefined {
+  if (!root || !folderName) return undefined
+  try {
+    const folderToDelete = assertContainedPath(root, folderName, 'removeFolder')
+    return relative(root, folderToDelete) ? folderToDelete : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function removeFolder(path: string, folderName: string) {
   if (path === 'default') {
     const { defaultInstallPath } = GlobalConfig.get().getSettings()
     const path = defaultInstallPath.replaceAll("'", '')
-    const folderToDelete = `${path}/${folderName}`
+    const folderToDelete = resolveFolderToRemove(path, folderName)
+    if (!folderToDelete) {
+      logWarning(
+        [`removeFolder: refusing folder name "${folderName}"`],
+        LogPrefix.Backend
+      )
+      return
+    }
     if (existsSync(folderToDelete)) {
       return setTimeout(() => {
         rmSync(folderToDelete, { recursive: true })
@@ -1463,7 +1491,17 @@ function removeFolder(path: string, folderName: string) {
     return
   }
 
-  const folderToDelete = `${path}/${folderName}`.replaceAll("'", '')
+  const folderToDelete = resolveFolderToRemove(
+    path.replaceAll("'", ''),
+    folderName.replaceAll("'", '')
+  )
+  if (!folderToDelete) {
+    logWarning(
+      [`removeFolder: refusing folder name "${folderName}"`],
+      LogPrefix.Backend
+    )
+    return
+  }
   if (existsSync(folderToDelete)) {
     return setTimeout(() => {
       rmSync(folderToDelete, { recursive: true })
