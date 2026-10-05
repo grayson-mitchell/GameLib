@@ -33,3 +33,55 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Overflow controls (Phase 48 Plan 04). 36px circular overlays at the track's
+   vertical centre -- a named, flagged exception to the 44px icon-only
+   touch-target default: 44px here would collide with the card's own corner
+   radius and hover outline at 156px card width. Positioned against
+   .focusRowStrip__viewport, so the centre is the track's, not header-plus-track's. */
+.focusRowStrip__control {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--accent);
+  /* Fallback FIRST: a webview without color-mix drops the second declaration
+     and keeps this one. The two-declaration order is what makes it apply. */
+  background: rgba(0, 0, 0, 0.55);
+  background: color-mix(in srgb, var(--body-background) 55%, transparent);
+}
+
+/* Logical properties: this app ships RTL locales (ar, fa, he). */
+.focusRowStrip__control--back {
+  inset-inline-start: 0;
+}
+
+.focusRowStrip__control--forward {
+  inset-inline-end: 0;
+}
+
+/* Outset ring, not the panel's inset recipe: these are not inside the
+   scroll-clipped tier-2 column. The controllerLayout arm is not optional --
+   Tauri gamepad focus is a scripted .focus() call that :focus-visible alone
+   can miss (NavItem/index.scss). */
+.focusRowStrip__control:focus-visible,
+.focusRowStrip__control:focus:is(body.controllerLayout *) {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--accent, #0080ff));
+  outline-offset: 2px;
+}
+
+/* Same value .FilterFacetRow--zero uses; no second disabled opacity. A native
+   disabled button is already out of tab order. */
+.focusRowStrip__control:disabled {
+  opacity: 0.38;
+  cursor: default;
+}

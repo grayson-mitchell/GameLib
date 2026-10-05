@@ -219,3 +219,69 @@ describe('FocusRowStrip/index.tsx -- loads its own stylesheet', () => {
     expect(read(FOCUS_ROW_TSX_PATH)).toMatch(/import\s+'\.\/index\.css'/)
   })
 })
+
+describe('FocusRowStrip/index.css -- overflow controls (Plan 48-04)', () => {
+  const css = read(FOCUS_ROW_CSS_PATH)
+  const control = cssBlock(css, '.focusRowStrip__control')
+
+  it('is a 36px circular overlay centred on the track', () => {
+    expect(control).toMatch(/position:\s*absolute/)
+    expect(control).toMatch(/top:\s*50%/)
+    expect(control).toMatch(/translateY\(-50%\)/)
+    expect(control).toMatch(/width:\s*36px/)
+    expect(control).toMatch(/height:\s*36px/)
+    expect(control).toMatch(/border-radius:\s*50%/)
+  })
+
+  it('places the edges with logical properties, not left/right', () => {
+    expect(cssBlock(css, '.focusRowStrip__control--back')).toMatch(
+      /inset-inline-start:\s*0/
+    )
+    expect(cssBlock(css, '.focusRowStrip__control--forward')).toMatch(
+      /inset-inline-end:\s*0/
+    )
+    expect(cssBlock(css, '.focusRowStrip__control--back')).not.toMatch(
+      /\bleft:/
+    )
+    expect(cssBlock(css, '.focusRowStrip__control--forward')).not.toMatch(
+      /\bright:/
+    )
+  })
+
+  it('declares the rgba fallback BEFORE the color-mix scrim', () => {
+    const fallback = control.indexOf('rgba(0, 0, 0, 0.55)')
+    const mixed = control.indexOf('color-mix(')
+    expect(fallback).toBeGreaterThan(-1)
+    expect(mixed).toBeGreaterThan(fallback)
+  })
+
+  it('colours the icon with --accent, never --border-color or --navbar-active', () => {
+    expect(control).toMatch(/color:\s*var\(--accent\)/)
+    expect(css).not.toMatch(/--border-color/)
+    expect(css).not.toMatch(/--navbar-active(?!-background)/)
+  })
+
+  it('carries both focus arms with a positive outset outline-offset', () => {
+    const block = cssBlock(
+      css,
+      '.focusRowStrip__control:focus-visible,\n.focusRowStrip__control:focus:is(body.controllerLayout *)'
+    )
+    expect(block).toMatch(/outline-offset:\s*2px/)
+    expect(block).not.toMatch(/outline-offset:\s*-|calc\(-1/)
+  })
+
+  it('dims the disabled control at the existing 0.38 and nowhere else', () => {
+    expect(cssBlock(css, '.focusRowStrip__control:disabled')).toMatch(
+      /opacity:\s*0\.38/
+    )
+    expect(css.match(/opacity:/g)).toHaveLength(1)
+  })
+
+  it('never hides the controls by style -- absence is a mount decision', () => {
+    expect(css).not.toMatch(/visibility:\s*hidden/)
+  })
+
+  it('does not reintroduce scrollbar-gutter anywhere in the stylesheet', () => {
+    expect(css).not.toMatch(/scrollbar-gutter/)
+  })
+})
