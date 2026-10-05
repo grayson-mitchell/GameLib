@@ -1444,7 +1444,18 @@ export async function downloadFileChunks(
             // — see RESEARCH.md Assumptions Log A2. Both operands are plain
             // `number` (default-param / Array.from index), so the raw
             // arithmetic needs no `?? 0` coalesce under strict mode.
-            fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot,
+            //
+            // 2026-10-05 (host fan-out for single-chunk files): the FILE
+            // slot is the low-order term. It used to be
+            // `fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot`, which
+            // made every single-chunk file's slot (chunkWorkerSlot is always
+            // 0 there) a multiple of 4 — pickHost's `healthy[slot % N]` then
+            // reached only host 0 at N=2 or N=4 and {0, 2, 4} at N=6. With
+            // the file slot in the low-order position the 32 file workers
+            // cover every residue mod any N <= TOP_N_FANOUT, and every
+            // (file, chunk) pair still maps to a distinct integer because
+            // fileWorkerSlot < FILE_CONCURRENCY.
+            chunkWorkerSlot * FILE_CONCURRENCY + fileWorkerSlot,
             limiter
           )
           if (signal?.aborted) return

@@ -790,8 +790,8 @@ describe('decompress', () => {
       // Phase 25 (multi-host fan-out, MHOST-02/03): proves the depot.ts
       // wiring this plan lands actually reaches pickHost -- concurrently-
       // running chunk workers, each supplying its own distinct workerSlot
-      // (mirroring depot.ts's `fileWorkerSlot * CHUNK_CONCURRENCY +
-      // chunkWorkerSlot` combination), spread their attempt-0 requests
+      // (mirroring depot.ts's `chunkWorkerSlot * FILE_CONCURRENCY +
+      // fileWorkerSlot` combination), spread their attempt-0 requests
       // across MORE THAN ONE healthy host instead of every worker
       // converging on the single top-scored one (`ordered[0]`, the
       // pre-Phase-25 behavior still exercised by the

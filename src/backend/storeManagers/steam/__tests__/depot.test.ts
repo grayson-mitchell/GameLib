@@ -75,6 +75,7 @@ import {
 } from '../depot/decompress'
 import { CdnAuthTokenCache } from '../depot/cdnAuth'
 import { StallTracker } from '../depot/stallTracker'
+import { HostHealthTracker } from '../depot/hostHealth'
 import { sendFrontendMessage } from '../../../ipc'
 import { sendProgressUpdate } from 'backend/utils'
 import { classifyDepotError, isNonRetryableDepotError } from '../depotErrors'
@@ -3496,6 +3497,93 @@ describe('downloadFileChunks (cycle 7): completion robustness via StallTracker',
       expect(callArgs[callArgs.length - 3]).toBe(controller.signal)
     }
   })
+})
+
+// 2026-10-05 todo steam-depot-host-fanout-collapses-for-single-chunk-files:
+// the first-attempt slot depot.ts forwards into fetchChunk was
+// `fileWorkerSlot * CHUNK_CONCURRENCY + chunkWorkerSlot`. A single-chunk file
+// runs one chunk worker (chunkWorkerSlot = 0), so every slot was a multiple
+// of 4 and `healthy[slot % N]` reached only {0} at N=2 or N=4 and {0, 2, 4}
+// at N=6 -- the very concentration Phase 25 set out to remove, on the file
+// shape this module's own comments call the overwhelming majority.
+describe('downloadFileChunks: first-attempt host fan-out for single-chunk files', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-depot-fanout-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it.each([2, 4, 6])(
+    "with %i healthy, score-differentiated hosts, the file pool's concurrent single-chunk files reach every host on attempt 0",
+    async (hostCount) => {
+      const hosts = Array.from({ length: hostCount }, (_, i) => `host-${i}`)
+      const tracker = new HostHealthTracker()
+      // Warm, all-healthy, distinct scores: the composite sort now discards
+      // the seed rotation, so `workerSlot` alone decides attempt 0's host.
+      hosts.forEach((host, i) => {
+        for (let n = 0; n < 6; n++)
+          tracker.record(host, 'success', 50 + i * 100)
+      })
+
+      const firstAttemptHosts = new Set<string>()
+      jest.mocked(fetchChunk).mockImplementation((...args) => {
+        const [callHosts, , chunk] = args
+        const workerSlot = args[13] as number
+        firstAttemptHosts.add(
+          tracker.pickHost(callHosts, chunk.attemptSeed ?? 0, 0, workerSlot)
+        )
+        return Promise.resolve(Buffer.alloc(10))
+      })
+
+      // One single-chunk file per file-pool slot, as many concurrent files
+      // as there are hosts -- enough that a distinct-slot mapping must cover
+      // every host.
+      for (
+        let fileWorkerSlot = 0;
+        fileWorkerSlot < hostCount;
+        fileWorkerSlot++
+      ) {
+        const filePath = join(dir, `f${fileWorkerSlot}.bin`)
+        writeFileSync(filePath, Buffer.alloc(10))
+        const fd = await open(filePath, 'r+')
+        try {
+          await downloadFileChunks(
+            fd,
+            '111',
+            Buffer.from('key'),
+            hosts,
+            undefined as unknown as LzmaModule,
+            {
+              filename: `f${fileWorkerSlot}.bin`,
+              size: 10,
+              sha_content: 'unused-in-this-suite',
+              chunks: [
+                { sha: `sha-${fileWorkerSlot}`, cb_original: 10, offset: 0 }
+              ]
+            },
+            fileWorkerSlot,
+            undefined,
+            () => {},
+            undefined,
+            undefined,
+            tracker,
+            undefined,
+            undefined,
+            undefined,
+            fileWorkerSlot
+          )
+        } finally {
+          await fd.close()
+        }
+      }
+
+      expect([...firstAttemptHosts].sort()).toEqual([...hosts].sort())
+    }
+  )
 })
 
 describe('classifyDepotError', () => {
