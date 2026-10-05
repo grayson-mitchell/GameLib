@@ -125,3 +125,87 @@ describe('FocusRowStrip/index.tsx -- purity', () => {
     expect(source).not.toMatch(/customCategories/)
   })
 })
+
+describe('FocusRowStrip/index.tsx -- overflow controls (Plan 48-04)', () => {
+  const source = read(FOCUS_ROW_TSX_PATH)
+
+  it('imports canScrollForward and canScrollBack from ./focusRowOverflow', () => {
+    expect(source).toMatch(
+      /import\s*{[^}]*\bcanScrollForward\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
+    )
+    expect(source).toMatch(
+      /import\s*{[^}]*\bcanScrollBack\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
+    )
+  })
+
+  it('renders the controls inside a condition on canScroll* -- a mount decision, not a style', () => {
+    expect(source).toMatch(/canScrollForward\([^)]*\)\s*\|\|\s*canScrollBack\(/)
+    expect(source).toMatch(/showControls\s*&&/)
+  })
+
+  it('renders exactly two type="button" controls', () => {
+    expect(source.split('<button').length - 1).toBe(2)
+    expect(source.split('type="button"').length - 1).toBe(2)
+  })
+
+  it('labels each control from a literal tGamelib call', () => {
+    expect(source).toMatch(
+      /tGamelib\(\s*'gamelib:library\.filterPanel\.focusRowNext',\s*'Show more games'\s*\)/
+    )
+    expect(source).toMatch(
+      /tGamelib\(\s*'gamelib:library\.filterPanel\.focusRowPrevious',\s*'Show previous games'\s*\)/
+    )
+  })
+
+  it('gives each control an aria-label', () => {
+    expect(source.split('aria-label=').length - 1).toBe(2)
+  })
+
+  it('imports faChevronLeft and faChevronRight from @fortawesome/free-solid-svg-icons', () => {
+    expect(source).toMatch(
+      /import\s*{[^}]*\bfaChevronLeft\b[^}]*}\s*from\s*'@fortawesome\/free-solid-svg-icons'/
+    )
+    expect(source).toMatch(
+      /import\s*{[^}]*\bfaChevronRight\b[^}]*}\s*from\s*'@fortawesome\/free-solid-svg-icons'/
+    )
+  })
+
+  it('has no text child in either control -- only a FontAwesomeIcon', () => {
+    const buttons = source.match(/<button[\s\S]*?<\/button>/g) ?? []
+    expect(buttons).toHaveLength(2)
+    for (const button of buttons) {
+      // Nothing but whitespace between the opening tag's closing `>` and the
+      // icon, and nothing between the icon and the closing tag.
+      expect(button).toMatch(/>\s*<FontAwesomeIcon[^>]*\/>\s*<\/button>$/)
+    }
+  })
+
+  it('binds a disabled attribute on each control', () => {
+    expect(source.split('disabled={').length - 1).toBe(2)
+  })
+
+  it('has no onWheel handler -- native overflow-x scrolling is not re-implemented', () => {
+    expect(source).not.toMatch(/onWheel/)
+  })
+
+  it('attaches the horizontal scroll-into-view as a capture-phase focus listener gated on activeController', () => {
+    expect(source).toMatch(/activeController/)
+    expect(source).toMatch(
+      /addEventListener\(\s*'focus',\s*scrollFocusedCardIntoViewHorizontally,\s*{\s*capture:\s*true\s*}/
+    )
+    expect(source).toMatch(
+      /removeEventListener\(\s*'focus',\s*scrollFocusedCardIntoViewHorizontally,\s*{\s*capture:\s*true\s*}/
+    )
+  })
+
+  it('observes the track with a ResizeObserver and disconnects it', () => {
+    expect(source).toMatch(/new ResizeObserver\(/)
+    expect(source).toMatch(/\.disconnect\(\)/)
+  })
+
+  it('pages with scrollBy over pageScrollDelta, smooth', () => {
+    expect(source).toMatch(/pageScrollDelta\(/)
+    expect(source).toMatch(/scrollBy\(/)
+    expect(source).toMatch(/behavior:\s*'smooth'/)
+  })
+})
