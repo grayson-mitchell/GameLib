@@ -448,3 +448,64 @@ describe('PathSelectionBox', () => {
     expect(onPathChange).not.toHaveBeenCalled()
   })
 })
+
+// The "Saved" pulse must reflect the consumer accepting the value, not merely
+// onPathChange having been called: EgsSettings commits asynchronously and can
+// reject it (egsSync resolves 'Error' and egsPath is reset to '').
+describe('PathSelectionBox commit hint', () => {
+  function hintText(tree: unknown): unknown {
+    const field = findByType(tree, TextInputWithIconField)
+    if (!field) throw new Error('TextInputWithIconField not found')
+    const status = collectElements(field.props.afterInput).find(
+      (el) => el.props?.role === 'status'
+    )
+    if (!status) throw new Error('commit-hint status span not found')
+    return status.props.children
+  }
+
+  // A re-render of the SAME mount (no slot reset). Called twice per case:
+  // this harness runs effects eagerly inside the render, so state an effect
+  // sets is only visible to the render after it.
+  function rerender(props: MountProps): ReactElement {
+    harness().__beginRender()
+    return PathSelectionBox(props) as ReactElement
+  }
+
+  function pressEnter(props: MountProps, value: string): void {
+    const field = findByType(mount(props), TextInputWithIconField)
+    if (!field) throw new Error('TextInputWithIconField not found')
+    ;(field.props as unknown as FieldHandlers).onKeyDown({
+      key: 'Enter',
+      repeat: false,
+      nativeEvent: { isComposing: false },
+      currentTarget: { value }
+    } as unknown as ReactKeyboardEvent<HTMLInputElement>)
+  }
+
+  const base: MountProps = {
+    htmlId: 'test-path',
+    type: 'directory',
+    onPathChange: () => undefined,
+    path: '/old',
+    pathDialogTitle: 'Choose'
+  }
+
+  it('does not show "Saved" when the consumer leaves the path unchanged (rejected commit)', () => {
+    pressEnter(base, '/bad')
+    rerender(base)
+    expect(hintText(rerender(base))).not.toBe('Saved')
+  })
+
+  it('does not show "Saved" when the consumer resets the path to something else (rejected commit)', () => {
+    pressEnter(base, '/bad')
+    // EgsSettings's error branch: setEgsPath('').
+    rerender({ ...base, path: '' })
+    expect(hintText(rerender({ ...base, path: '' }))).not.toBe('Saved')
+  })
+
+  it('shows "Saved" once the path prop arrives carrying the committed value', () => {
+    pressEnter(base, '/good')
+    rerender({ ...base, path: '/good' })
+    expect(hintText(rerender({ ...base, path: '/good' }))).toBe('Saved')
+  })
+})

@@ -60,9 +60,10 @@ const PathSelectionBox = ({
 
   useEffect(() => setTmpPath(path), [path])
 
-  // REQ-34.17-03: true for ~2000ms immediately after a commit that actually
-  // fired onPathChange (never after a commit suppressed by guard G1 --
-  // nothing was saved, so nothing should flash a confirmation).
+  // REQ-34.17-03: true for ~2000ms once the `path` prop arrives carrying a
+  // value this box committed (never after a commit suppressed by guard G1,
+  // nor after one the consumer rejected -- nothing was saved, so nothing
+  // should flash a confirmation).
   const [justSaved, setJustSaved] = useState(false)
 
   // Self-clearing pulse. The early return when `justSaved` is false is
@@ -75,6 +76,19 @@ const PathSelectionBox = ({
     const timer = setTimeout(() => setJustSaved(false), 2000)
     return () => clearTimeout(timer)
   }, [justSaved])
+
+  // The value most recently handed to onPathChange, until the `path` prop
+  // comes back carrying it. Calling onPathChange is not the same as saving:
+  // EgsSettings commits asynchronously and can reject the value (egsSync
+  // resolves 'Error' and egsPath is reset to ''), so the pulse waits for the
+  // consumer to actually adopt the value rather than starting on the call.
+  const pendingCommitRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (pendingCommitRef.current === null) return
+    if (path === pendingCommitRef.current) setJustSaved(true)
+    pendingCommitRef.current = null
+  }, [path])
 
   // Derived, not stored: the edit buffer diverges from the committed path.
   const isUnsaved = tmpPath !== path
@@ -108,10 +122,11 @@ const PathSelectionBox = ({
       // Guard G1
       return
     }
+    // REQ-34.17-03: only this branch can save anything, so only this branch
+    // arms the "Saved" pulse -- which then starts in the [path] effect above
+    // once the consumer has actually adopted `next`.
+    pendingCommitRef.current = next
     onPathChange(next)
-    // REQ-34.17-03: only this branch actually saved anything, so only this
-    // branch may start the "Saved" pulse.
-    setJustSaved(true)
   }
 
   function commitFromEnter(next: string) {
@@ -163,10 +178,10 @@ const PathSelectionBox = ({
     })
   }
 
-  // REQ-34.17-03: `justSaved` wins over `isUnsaved` for the one render
-  // between a commit firing and the parent's `path` prop actually arriving
-  // -- during that window tmpPath still differs from the (stale) `path`
-  // prop, which would otherwise flash "unsaved" for a value that just saved.
+  // REQ-34.17-03: `justSaved` wins over `isUnsaved`. It only ever starts
+  // once `path` equals the committed value, so the two cannot honestly
+  // disagree; between a commit firing and the consumer adopting it, the
+  // value is genuinely not saved yet and the "unsaved" hint says so.
   const hintClassName = justSaved
     ? 'pathSelectionBoxCommitHint pathSelectionBoxCommitHint--saved'
     : isUnsaved
