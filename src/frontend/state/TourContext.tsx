@@ -135,15 +135,14 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     localStorage.setItem('heroic-tour-state', JSON.stringify(persisted))
   }, [tourState])
 
-  // FIX (introjs-tooltip-not-rendering): this was a fresh object literal on
-  // every TourProvider render, so every useTour() consumer (every mounted
-  // <Tour>, i.e. NavShellTour + LibraryTour) re-rendered whenever ANY tour
-  // state changed anywhere in the app. That alone doesn't blank the tooltip
-  // (componentDidUpdate's !isVisible guard no-ops the start()/goToStepNumber()
-  // call while a tour is already visible), but combined with the always-true
-  // options/steps reference guards this WAS one of the re-render sources
-  // feeding the churn -- so it's fixed here too, necessary but (as documented
-  // in the debug session) not sufficient on its own.
+  // Hygiene, not the blank-tooltip fix (debug introjs-tooltip-not-rendering,
+  // "RECORD CORRECTION"): this was a fresh object literal on every
+  // TourProvider render, so every useTour() consumer (every mounted <Tour>,
+  // i.e. NavShellTour + LibraryTour) re-rendered whenever ANY tour state
+  // changed anywhere in the app -- a real re-render source, removed here. It
+  // did not cause the blank tooltip; that was WebKit not painting a visible
+  // child of a `visibility: hidden` ancestor, fixed in Tour.scss
+  // (`.introjs-tooltipReferenceLayer { visibility: visible }`).
   //
   // startTour/endTour/resetTour use the functional setState form already, so
   // they don't close over `tourState` and can have a stable identity forever

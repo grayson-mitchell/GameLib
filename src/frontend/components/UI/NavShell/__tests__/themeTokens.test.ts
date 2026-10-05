@@ -518,7 +518,9 @@ const resolveValue = (
 
 const NAMED_COLOURS: Record<string, string> = {
   white: '#ffffff',
-  black: '#000000'
+  black: '#000000',
+  // CSS `gray` -- what --border-color and three themes' --divider resolve to.
+  gray: '#808080'
 }
 
 const toRgb = (colour: string): [number, number, number] | null => {
@@ -611,6 +613,44 @@ describe('selected NavTab label contrast in every theme (CR-01 residual)', () =>
       expect(contrastRatio(fg as string, bg as string)).toBeGreaterThanOrEqual(
         4.5
       )
+    }
+  )
+})
+
+/**
+ * `--border-color` is a STRUCTURAL edge (WineManager rows and table, the
+ * Popover frame, the SteamGridDB picker's header rule) and must be visible on
+ * the surfaces those consumers sit on. Todo 2026-10-02
+ * (border-color-resolves-to-an-invisible-grey-in-ten-themes): the old
+ * declaration `var(--divider, var(--neutral-03))` resolved in every theme --
+ * nothing broke -- to `#272f31` in most of them, measured 1.04:1 (dracula) to
+ * 1.48:1 (sweet) against `--body-background`. Resolution is not visibility,
+ * so this census measures the resolved PAIR, through the same var() chain the
+ * browser follows, against WCAG 1.4.11's 3:1 non-text floor. It cannot see a
+ * pixel (no CSS engine here); a live look across midnightMirage /
+ * gruvbox_dark / dracula is still what adjudicates appearance.
+ */
+describe('--border-color is visible in every theme (3:1 non-text floor)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const globals = globalTokens()
+
+  it.each(themeSelectors)(
+    '%s paints --border-color at >= 3:1 against --body-background and --modal-background',
+    (selector) => {
+      const scope = themeTokens(themesScss, selector)
+      const border = resolveValue('var(--border-color)', scope, globals)
+      expect(border).not.toBeNull()
+      for (const surface of ['--body-background', '--modal-background']) {
+        const bg = resolveValue(`var(${surface})`, scope, globals)
+        expect(bg).not.toBeNull()
+        const ratio = contrastRatio(border as string, bg as string)
+        // Object form so a failure names the surface and the measured ratio.
+        expect({ surface, ratio, passes: ratio >= 3 }).toEqual({
+          surface,
+          ratio,
+          passes: true
+        })
+      }
     }
   )
 })

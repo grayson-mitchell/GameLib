@@ -79,3 +79,44 @@ not a copy:
 
 A visual check across `midnightMirage` / `gruvbox_dark` / `dracula` is required at the end —
 nothing in this repo renders a pixel (`testEnvironment: 'node'`, no jsdom, no CSS engine).
+
+## Progress (2026-10-05)
+
+**Code side done; the required visual check is NOT done, so this stays pending.** It should move
+to `ready: live-gate` once someone can look; the frontmatter was left alone so the triage vocabulary
+is only changed by whoever does that.
+
+**Re-measured first (fresh scripted cascade walk over all 17 theme classes, now deleted; the
+committed census below repeats it for the 11 representative selectors).** The table above is
+right for the 10 themes it lists, but it missed three more: `dracula` / `dracula-classic`
+**1.04:1** and `high-contrast` **1.19:1** (body) / 1.37:1 (modal) also failed. And `nord-light` is
+**not** fine: its `#429ec5` measures **2.63:1** against its `#eceff4` body, so it is below the
+floor too. Only `classic` / `cyberSpaceOasis` / `cyberSpaceOasisAlt` (`--divider: gray`, 4.49:1)
+passed.
+
+**Changed.** `src/frontend/themes.scss` — `--border-color: gray` (was
+`var(--divider, var(--neutral-03))`), with the comment rewritten so "resolves everywhere" no longer
+reads as "fine". Not done via a base `--divider` (suggested fix 1): `--divider` has ~10 other
+consumers (Dropdown, DownloadManagerItem, Discounts, Winetricks, Humble Keys, StoreSearch), and
+midnightMirage declares `--divider: var(--neutral-03)` itself, so a base `--divider` would have
+changed those consumers and still left midnightMirage at 1.45:1. Decoupling touches only the 7
+consumers this todo is about. `gray` is the value the three visible themes already used. Measured
+after (body / modal): worst nord-light 3.43, dracula 3.61, gruvbox_dark 3.73, high-contrast
+4.13/4.74, classic group 4.49, midnightMirage 5.03, sweet 5.13. Nord-light changes hue (blue to
+grey) and gains contrast.
+
+**RED.** New census in `src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts`
+(`--border-color is visible in every theme`): resolves `--border-color`, `--body-background` and
+`--modal-background` through the file's existing var()-chain resolver and asserts >= 3:1. On the
+old declaration 10 of 11 failed (1.04 to 2.63); only cyberSpaceOasisAlt passed. (`NAMED_COLOURS`
+gained `gray`.)
+
+**GREEN.** themeTokens 61/61; NavShell + SearchBar suites 433/433; prettier `--check` clean on
+`themes.scss` and the test; eslint clean on the test.
+
+**What remains.** The visual check the todo requires, across midnightMirage, gruvbox_dark and
+dracula (plus nord-light, since its hue changed). A plain mid-grey edge on midnightMirage at 5:1
+may read louder than intended next to the rest of the chrome; if it does, a dimmer value still has
+to clear 3:1 on dracula and gruvbox_dark (e.g. `#757575` measured 3.09 / 3.20, with nord-light at
+4.0). Separate finding, out of scope here: midnightMirage's own `--divider: var(--neutral-03)`
+measures 1.45:1, so the `--divider` consumers listed above are invisible in the default theme.

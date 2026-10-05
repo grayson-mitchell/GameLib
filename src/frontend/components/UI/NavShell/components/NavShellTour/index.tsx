@@ -29,15 +29,19 @@ import ContextProvider from 'frontend/state/ContextProvider'
 
 export const NAV_TOUR_ID = 'nav-tour'
 
-// FIX (introjs-tooltip-not-rendering): `options` reaches Tour.tsx's
-// `<Steps options={...}>` and intro.js-react's componentDidUpdate compares
-// this prop BY REFERENCE. A module-level constant never changes identity, so
-// (combined with Tour.tsx's own options memoization) this no longer forces a
-// re-run of intro.js's show-step path on every NavShellTour render.
+// Hygiene, not the blank-tooltip fix (debug introjs-tooltip-not-rendering,
+// "RECORD CORRECTION" -- the real fix is in Tour.scss): `options` reaches
+// Tour.tsx's `<Steps options={...}>` and intro.js-react's componentDidUpdate
+// compares this prop BY REFERENCE. A module-level constant never changes
+// identity, so (with Tour.tsx's own options memoization) intro.js is no
+// longer reconfigured on every NavShellTour render.
 const NAV_TOUR_OPTIONS = { disableInteraction: true }
 
 const NavShellTour: React.FC = () => {
   const { t } = useTranslation()
+  // Rewritten copy lives in the fork-owned gamelib namespace (D-07: mint a
+  // key rather than edit a default an existing catalogue value overrides).
+  const { t: tGamelib } = useTranslation('gamelib')
   const { isTourActive } = useTour()
   const { platform, isRTL } = useContext(ContextProvider)
 
@@ -46,11 +50,11 @@ const NavShellTour: React.FC = () => {
   // Set position based on RTL
   const position = isRTL ? 'left' : 'right'
 
-  // FIX (introjs-tooltip-not-rendering): intro.js-react's componentDidUpdate
-  // compares `steps` BY REFERENCE. This array was rebuilt fresh on every
-  // render, so the guard was always-true and re-triggered intro.js's
-  // show-step path continuously, starving the tooltip's opacity restore.
-  // Memoized on the actual inputs used to build it below.
+  // Hygiene, not the blank-tooltip fix (debug introjs-tooltip-not-rendering,
+  // "RECORD CORRECTION" -- the real fix is in Tour.scss): intro.js-react's
+  // componentDidUpdate compares `steps` BY REFERENCE, and this array was
+  // rebuilt fresh on every render, so intro.js re-ran its step setup on
+  // every render. Memoized on the actual inputs used to build it below.
   const steps: TourStep[] = useMemo(() => {
     // Create base steps first
     const baseSteps: TourStep[] = [
@@ -72,9 +76,9 @@ const NavShellTour: React.FC = () => {
       },
       {
         element: '[data-tour="nav-stores"]',
-        intro: t(
-          'tour.sidebar.stores',
-          'Browse and shop for games in different stores including Epic, GOG, Amazon, and Zoom.'
+        intro: tGamelib(
+          'gamelib:tour.nav.stores',
+          'Browse and shop for games in the Epic, GOG, Steam and Amazon stores.'
         ),
         position
       },
@@ -110,8 +114,8 @@ const NavShellTour: React.FC = () => {
 
     baseSteps.push({
       element: '[data-tour="nav-manage-accounts"]',
-      intro: t(
-        'tour.sidebar.accounts',
+      intro: tGamelib(
+        'gamelib:tour.nav.accounts',
         'Manage your connected store accounts and sign in to new stores.'
       ),
       position
@@ -157,7 +161,7 @@ const NavShellTour: React.FC = () => {
 
     // Combine the base steps with the remaining steps
     return [...baseSteps, ...remainingSteps]
-  }, [t, isWin, position])
+  }, [t, tGamelib, isWin, position])
 
   return (
     <Tour

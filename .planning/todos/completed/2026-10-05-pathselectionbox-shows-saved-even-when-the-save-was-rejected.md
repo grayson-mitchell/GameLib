@@ -31,3 +31,25 @@ in a ref and set `justSaved` in the `[path]` effect when they match.
 ## Provenance
 
 Found by reading the code; no test was run (the review container had no `node_modules`). Not independently re-checked by the orchestrating session — confirm the mechanism before fixing. Line numbers are as of `5927806` on `main`.
+
+## Resolution (2026-10-05)
+
+Confirmed by reading: `commitPath` called `setJustSaved(true)` straight after `onPathChange`.
+
+**Changed.** `src/frontend/components/UI/PathSelectionBox/index.tsx` — `commitPath` now records the
+committed value in `pendingCommitRef` instead of starting the pulse. A `[path]` effect starts the
+pulse only when the `path` prop arrives equal to that value, and disarms the ref on any path
+change. Consequence, deliberate: between a commit and the consumer adopting it (e.g. while
+`egsSync` is in flight) the hint reads "Not saved yet — press Enter", which is true at that moment;
+the old comment claiming `justSaved` must mask that window was rewritten.
+
+**RED.** New `PathSelectionBox commit hint` cases in `__tests__/index.test.tsx`: Enter `/bad`, then
+re-render with `path` unchanged (`/old`) or reset to `''` (EgsSettings's error branch) — both
+showed "Saved" on the unfixed component. A third case (path arrives as the committed value →
+"Saved") is the control and passes before and after.
+
+**GREEN.** PathSelectionBox suite 13/13; `pnpm codecheck` exit 0; eslint 0 errors (1 pre-existing
+warning); prettier `--check` clean.
+
+**Not verified.** No live app run of EgsSettings's reject path; no DOM renderer in this project, so
+the effect ordering is exercised through the suite's eager-effect `react` mock, not real React.
