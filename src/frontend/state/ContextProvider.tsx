@@ -49,8 +49,6 @@ const initialContext: ContextType = {
   error: false,
   gameUpdates: [],
   libraryStatus: [],
-  libraryTopSection: 'disabled',
-  handleLibraryTopSection: () => null,
   focusRow: null,
   handleFocusRow: () => null,
   platform: 'unknown',

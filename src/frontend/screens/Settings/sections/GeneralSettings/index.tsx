@@ -11,7 +11,6 @@ import {
   EgsSettings,
   EnableSteamNativeInstall,
   HideChangelogOnStartup,
-  LibraryTopSection,
   LoginBackground,
   MaxRecentGames,
   MaxWorkers,
@@ -74,8 +73,6 @@ export default function GeneralSettings() {
       <NotifyHumbleExpirations />
 
       <DisableController />
-
-      <LibraryTopSection />
 
       <MaxRecentGames />
 

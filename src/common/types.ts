@@ -168,7 +168,11 @@ export interface AppSettings extends GameSettings {
   steamGridDbApiKey: string
 }
 
-export type LibraryTopSectionOptions =
+// 48-05: retired setting, kept declared only so `AppSettings.libraryTopSection`
+// still types a legacy on-disk value for the one-time focus-row migration
+// (`common/focusRowMigration.ts`). Nothing imports it any more, so it is no
+// longer exported.
+type LibraryTopSectionOptions =
   | 'disabled'
   | 'recently_played'
   | 'recently_played_installed'

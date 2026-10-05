@@ -7,7 +7,6 @@ import {
   DialogType,
   ButtonOptions,
   FocusRowSelection,
-  LibraryTopSectionOptions,
   DMQueueElement,
   DownloadManagerState,
   ExperimentalFeatures,
@@ -40,8 +39,6 @@ export interface ContextType {
   language: string
   setLanguage: (newLanguage: string) => void
   libraryStatus: GameStatus[]
-  libraryTopSection: string
-  handleLibraryTopSection: (value: LibraryTopSectionOptions) => void
   focusRow: FocusRowSelection
   handleFocusRow: (value: FocusRowSelection) => void
   platform: NodeJS.Platform | 'unknown'

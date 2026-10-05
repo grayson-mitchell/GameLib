@@ -172,7 +172,8 @@ function parseNonAvailableAppNames(raw: string | null): string[] {
  * `favouriteKeys` comes from `favouriteGames` DIRECTLY. It must not be
  * derived from the Library screen's `favourites` memo: that memo only
  * populates `if (showFavourites || showFavouritesLibrary)`, and both of
- * those are off by default (`libraryTopSection` defaults to `'disabled'`;
+ * those are off by default (the focus row's default is `focusRow: null`, i.e.
+ * no focus row, so nothing on a default install populates that memo;
  * `localStorage['show_favorites']` defaults to `'false'` and its only UI was
  * deleted in 34.11-09). Deriving the engine's key set from a DISPLAY memo
  * made the `Favourites` view return zero games on every default install.

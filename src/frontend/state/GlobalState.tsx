@@ -10,7 +10,6 @@ import {
   Runner,
   WineVersionInfo,
   FocusRowSelection,
-  LibraryTopSectionOptions,
   ExperimentalFeatures,
   Status
 } from 'common/types'
@@ -119,7 +118,6 @@ interface StateProps {
   gameUpdates: string[]
   language: string
   libraryStatus: GameStatus[]
-  libraryTopSection: string
   platform: NodeJS.Platform
   refreshing: boolean
   refreshingInTheBackground: boolean
@@ -492,7 +490,6 @@ class GlobalState extends PureComponent<Props> {
     focusRow: globalSettings?.focusRow ?? null,
     language: toShippedLanguage(this.props.i18n.language),
     libraryStatus: [],
-    libraryTopSection: globalSettings?.libraryTopSection || 'disabled',
     platform: window.platform,
     refreshing: false,
     refreshingInTheBackground: true,
@@ -798,17 +795,12 @@ class GlobalState extends PureComponent<Props> {
     this.setState({ showRedeemKeyDialog: show })
   }
 
-  handleLibraryTopSection = (value: LibraryTopSectionOptions) => {
-    this.setState({ libraryTopSection: value })
-  }
-
-  // 48-02: unlike `handleLibraryTopSection` above, this setter owns BOTH
-  // halves -- state and persistence. `handleLibraryTopSection` can get away
-  // with only `setState` because the Settings screen's `useSetting` hook
-  // persists it instead; `useSetting` needs `SettingsContext`, which does
-  // not exist outside the Settings screen, so a focus-row pick made from
-  // the Library screen has no other writer available. One writer, no
-  // split-brain.
+  // 48-02: this setter owns BOTH halves -- state and persistence. The
+  // Settings screen's `useSetting` hook needs `SettingsContext`, which does
+  // not exist outside the Settings screen, so a focus-row pick made from the
+  // Library screen has no other writer available. One writer, no
+  // split-brain. Clearing writes `focusRow: null`, which makes the key
+  // present and permanently disarms the one-time legacy seed (48-05).
   handleFocusRow = (value: FocusRowSelection) => {
     this.setState({ focusRow: value })
     window.api.setSetting({ appName: 'default', key: 'focusRow', value })
@@ -1973,7 +1965,6 @@ class GlobalState extends PureComponent<Props> {
             removeCategory: this.removeCustomCategory,
             renameCategory: this.renameCustomCategory
           },
-          handleLibraryTopSection: this.handleLibraryTopSection,
           handleFocusRow: this.handleFocusRow,
           handleExperimentalFeatures: this.handleExperimentalFeatures,
           setTheme: this.setTheme,

@@ -200,8 +200,8 @@ describe('buildGridPipeline: counts are computed over the fuzzy-matched set (REQ
  * `favourites` DISPLAY memo, which only populates when
  * `showFavourites || showFavouritesLibrary`.
  *
- * Both of those are off on a default install -- `libraryTopSection`
- * defaults to `'disabled'` (`src/backend/config.ts`, `GlobalState.tsx`) and
+ * Both of those are off on a default install -- the focus row defaults to
+ * `focusRow: null`, i.e. no focus row (`src/backend/config.ts`), and
  * `localStorage['show_favorites']` defaults to `'false'` with its only UI
  * (`LibraryFilters`) deleted by 34.11-09 -- so `favouriteKeys` was an empty
  * Set and `passesView(game, 'favourites', deps)` was false for EVERY game.
@@ -238,9 +238,9 @@ describe('buildEngineDeps: the Favourites view works on a default install (CR-02
     makeGame({ app_name: 's1', runner: 'steam', title: 'Steam One' })
   ]
 
-  it('the Favourites view returns the favourited games with libraryTopSection disabled and show_favorites false', () => {
+  it('the Favourites view returns the favourited games with no focus row and show_favorites false', () => {
     // The default-install configuration exactly: NOTHING about the
-    // top-section display setting or the deleted show_favorites toggle is an
+    // focus-row setting or the deleted show_favorites toggle is an
     // input to this function any more, which is the fix. Before it, this
     // same configuration produced an empty Set and an empty grid.
     const deps = buildEngineDeps(
