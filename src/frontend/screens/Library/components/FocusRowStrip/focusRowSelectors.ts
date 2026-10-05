@@ -8,6 +8,7 @@
  * absent from this function's parameter list, which is what makes the row
  * independent of them (SPEC R4).
  */
+import { isValidFocusRowSelection } from 'common/focusRowMigration'
 import { FocusRowSelection, GameInfo } from 'common/types'
 import {
   FilterEngineDeps,
@@ -27,40 +28,11 @@ import {
 // used instead -- deliberately not carried forward here).
 export const FOCUS_ROW_MAX_CARDS = 20
 
-/**
- * A real shape guard over an untrusted persisted value -- the mitigation for
- * T-48-03. Precedent: `engineWiring.ts`'s WR-04 note, where a malformed
- * localStorage value threw out of a memo and blanked the whole Library
- * screen. Checks shape only (object, non-null, `kind` one of the four
- * literals, `value` a non-empty string) -- it does not validate that
- * `value` is itself a legitimate view/collection/store/runnability member;
- * an unrecognised `value` simply selects no games (or, for `kind: 'view'`,
- * falls through `passesView`'s existing default arm), never throws.
- */
-export function isValidFocusRowSelection(
-  value: unknown
-): value is NonNullable<FocusRowSelection> {
-  if (value === null || value === undefined) {
-    return false
-  }
-  if (typeof value !== 'object') {
-    return false
-  }
-  const candidate = value as Record<string, unknown>
-  const { kind, value: pickValue } = candidate
-  if (
-    kind !== 'view' &&
-    kind !== 'collection' &&
-    kind !== 'store' &&
-    kind !== 'runnability'
-  ) {
-    return false
-  }
-  if (typeof pickValue !== 'string' || pickValue.length === 0) {
-    return false
-  }
-  return true
-}
+// Re-exported from the one definition in `common/focusRowMigration.ts` (48-05):
+// a `src/common` module cannot import from `src/frontend`, so the guard lives
+// there and this file re-exports it rather than carrying a second copy that
+// could drift. It remains load-bearing against T-48-03 on the renderer side.
+export { isValidFocusRowSelection }
 
 /**
  * The grid's own comparator (`Library/index.tsx:916-922`), reused so the

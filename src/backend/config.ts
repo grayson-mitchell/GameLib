@@ -6,6 +6,7 @@ import {
   WineInstallation
 } from 'common/types'
 import { currentGlobalConfigVersion } from 'backend/constants/others'
+import { migrateFocusRowSelection } from 'common/focusRowMigration'
 import { migrateTrayIconVariant } from 'common/trayIconVariant'
 
 import { logError, logInfo, LogPrefix } from './logger'
@@ -316,12 +317,19 @@ class GlobalConfigV0 extends GlobalConfig {
       ...this.getFactoryDefaults(),
       ...defaultSettings,
       winePrefix,
-      // Backwards-compat fix-up, same pattern as `defaultWinePrefixDir` above: derive the
-      // tri-state tray glyph from the RAW on-disk `defaultSettings` (legacy `darkTrayIcon`
-      // true -> 'dark', false -> 'light', neither -> 'auto'). It must be the LAST property and
-      // must read the raw object, never the merge: the factory default is 'auto', so migrating
-      // the merged object would always return that and discard a legacy `darkTrayIcon: true`.
-      trayIconVariant: migrateTrayIconVariant(defaultSettings)
+      // Backwards-compat fix-ups, same pattern as `defaultWinePrefixDir` above. Two derived
+      // properties, one rule: each is derived from the RAW on-disk `defaultSettings`, must come
+      // AFTER the merge spreads, and must never read the merge itself.
+      // - `trayIconVariant`: legacy `darkTrayIcon` true -> 'dark', false -> 'light', neither ->
+      //   'auto'. The factory default is 'auto', so migrating the merged object would always
+      //   return that and discard a legacy `darkTrayIcon: true`.
+      // - `focusRow`: seeded once from legacy `libraryTopSection`, guarded by the PRESENCE of the
+      //   `focusRow` key (a present `null` is a deliberate clear). The factory default is
+      //   `focusRow: null`, which is indistinguishable from a deliberate clear, so migrating the
+      //   merged object would always short-circuit on the presence guard and silently discard
+      //   every legacy `libraryTopSection`. It is the LAST property.
+      trayIconVariant: migrateTrayIconVariant(defaultSettings),
+      focusRow: migrateFocusRowSelection(defaultSettings)
     } as AppSettings
 
     return settings
