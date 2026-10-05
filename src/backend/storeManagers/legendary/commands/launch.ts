@@ -5,6 +5,11 @@ interface LaunchCommand {
   subcommand: 'launch'
   appName: LegendaryAppName
   extraArguments?: string
+  /**
+   * Passthrough game args. `commandToArgsArray` emits them LAST, after a `--`, so legendary's
+   * `parse_known_args()` can never read them as its own options (`--wrapper`, ...).
+   */
+  gameArguments?: string
   '--offline'?: true
   '--skip-version-check'?: true
   '--override-username'?: NonEmptyString

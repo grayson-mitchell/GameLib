@@ -47,6 +47,7 @@ import { join } from 'path'
 import { gameInfoStore } from './electronStores'
 import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
+import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
 import { t } from 'i18next'
 import { isOnline } from '../../online_monitor'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -997,9 +998,11 @@ export default class LegendaryGame implements Game {
     const command: LegendaryCommand = {
       subcommand: 'launch',
       appName: LegendaryAppName.parse(appNameToLaunch),
-      extraArguments: [...args, launchArgumentArgs, gameSettings.launcherArgs]
-        .filter(Boolean)
-        .join(' '),
+      ...legendaryLaunchArgumentFields({
+        args,
+        launchArgumentArgs,
+        launcherArgs: gameSettings.launcherArgs
+      }),
       ...wineFlags
     }
     if (skipVersionCheck) command['--skip-version-check'] = true

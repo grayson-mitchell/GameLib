@@ -34,6 +34,7 @@ import {
   isUmuSupported
 } from 'backend/utils/compatibility_layers'
 import shlex from 'shlex'
+import { nileLaunchCommandParts } from '../runnerLaunchArgv'
 import {
   killPattern,
   moveOnUnix,
@@ -394,15 +395,14 @@ export default class NileGameManager implements Game {
         ? launchArguments.parameters
         : ''
 
-    const commandParts = [
-      'launch',
-      ...exeOverrideFlag, // Check if this works
-      ...wineFlag,
-      ...shlex.split(launchArgumentsArgs),
-      ...shlex.split(gameSettings.launcherArgs ?? ''),
-      this.id,
-      ...args
-    ]
+    const commandParts = nileLaunchCommandParts({
+      exeOverrideFlag,
+      wineFlag,
+      launchArgumentArgs: launchArgumentsArgs,
+      launcherArgs: gameSettings.launcherArgs,
+      id: this.id,
+      args
+    })
 
     sendGameStatusUpdate({
       appName: this.id,

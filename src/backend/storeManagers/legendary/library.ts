@@ -882,6 +882,11 @@ export default class LegendaryLibraryManager implements LibraryManager {
       else commandParts.push(parameter, value.toString())
     }
 
+    // Passthrough game args go last, behind `--`, so none of them can be parsed as one of
+    // legendary's own options (see `runnerLaunchArgv.ts`).
+    if (command.subcommand === 'launch' && command.gameArguments)
+      commandParts.push('--', ...shlex.split(command.gameArguments))
+
     return commandParts
   }
 
