@@ -315,8 +315,6 @@
     "sideload": {
         "filter": {
             "all": "Gach",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Aipeanna",
             "executables": "Inrite",

@@ -1,7 +1,6 @@
 import './index.css'
 
 import { useContext, useEffect, useMemo, useState } from 'react'
-import { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -38,25 +37,7 @@ import {
 } from 'common/humble/keyTypePresentation'
 import HumbleKeyRow from './components/HumbleKeyRow'
 import HumbleClaimWizard from './components/HumbleClaimWizard'
-
-// Local formatRelativeTime (mirrors components/UI/Header/index.tsx's, returns the bare
-// duration phrase — the "ago"/"showing data from" wrapper lives in the
-// caller's i18n string). 4 buckets: <1 minute / minutes / hours / days.
-function formatRelativeTime(ms: number, t: TFunction): string {
-  const minutes = Math.floor(ms / 60000)
-  if (minutes < 1) {
-    return t('gamelib:humble.lessThanAMinute', 'less than a minute')
-  }
-  if (minutes < 60) {
-    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`
-  }
-  const hours = Math.floor(ms / 3600000)
-  if (hours < 24) {
-    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`
-  }
-  const days = Math.floor(ms / 86400000)
-  return `${days} ${days === 1 ? 'day' : 'days'}`
-}
+import { formatSyncAge } from './syncAge'
 
 type SortOption = 'expiring' | 'alphabetical'
 
@@ -137,7 +118,7 @@ function loginPathForStore(store: HumbleGameLibLoginStore): string {
 // tab's weaker mount-only variant.
 export default function HumbleKeys() {
   const { t } = useTranslation()
-  const { t: tGamelib } = useTranslation('gamelib')
+  const { t: tGamelib, i18n } = useTranslation('gamelib')
   const { humble, steam, gog, epic, showDialogModal } =
     useContext(ContextProvider)
   const navigate = useNavigate()
@@ -539,7 +520,9 @@ export default function HumbleKeys() {
   const now = Date.now()
   const syncedAt = humble.syncedAt ?? null
   const relativeTime =
-    syncedAt !== null ? formatRelativeTime(now - syncedAt, tGamelib) : null
+    syncedAt !== null
+      ? formatSyncAge(now - syncedAt, tGamelib, i18n.language)
+      : null
 
   const inCooldown =
     humble.syncError === 'denied' && !!cooldownUntil && cooldownUntil > now

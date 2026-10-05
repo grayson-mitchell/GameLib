@@ -285,13 +285,29 @@ const FIXTURE_DIFF_LINES = [
  * `Winetricks/WinetricksBrowse/Row/index.tsx` -- do NOT enter this array;
  * they are promoted straight into scope instead (see the dated entry in the
  * `--rewrite-scope guard` header below for the measurement backing that).
+ *
+ * 2026-10-05 (todo `2026-10-02-i18n-fork-touched-snapshot-drifted-by-ten-
+ * files`): unscanned debt 41 -> 43; the other nine newly-surfaced files went
+ * into scope. `LanguageSelector/translationIssue.ts`: its one audit-mode
+ * violation is `TRANSLATION_ISSUE_TEMPLATE = 'translation_problem.yaml'`, the
+ * GitHub issue-template FILENAME sent as a `template=` query value -- an
+ * identifier, never rendered. Promoting it would have meant editing product
+ * code to quiet a false positive, so it is declared instead.
+ * `blankRenderProbe.ts`: scans 0, but it carries a whole-file
+ * `i18n-gate-exempt:` marker, and promoting it turns hardcodedStringGate's
+ * T-34.8-30 "exactly one file is comment-exempted" pin red (measured) -- a
+ * second full-file exemption inside scope is that pin's decision to make,
+ * not a side effect of a snapshot refresh. Full per-file record in the
+ * `--rewrite-scope guard` ledger.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
+  'src/frontend/blankRenderProbe.ts',
   'src/frontend/components/Tour/Tour.tsx',
   'src/frontend/components/UI/Dialog/components/Dialog.tsx',
   'src/frontend/components/UI/DialogHandler/index.tsx',
   'src/frontend/components/UI/LanguageSelector/index.tsx',
+  'src/frontend/components/UI/LanguageSelector/translationIssue.ts',
   'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts',
   'src/frontend/components/UI/PathSelectionBox/index.tsx',
   'src/frontend/components/UI/ProgressDialog/index.tsx',
@@ -907,6 +923,38 @@ describe('--rewrite-scope guard', () => {
    * COUNT holds at 41 while the SET grows by one -- same mechanism as
    * `260902-wbd` and `2026-09-21 continued` above.
    *
+   * 2026-10-05 (todo `2026-10-02-i18n-fork-touched-snapshot-drifted-by-ten-
+   * files`): fork-touched 214 -> 225, scope 173 -> 182, unscanned debt
+   * 41 -> 43. The pins below had read 215 against a committed 214 since
+   * 261002-hx0 folded `LibraryHeader` away (the snapshot moved, the pins did
+   * not), and ten files had become fork-touched without either artifact
+   * moving, plus one created the same session (`Humble/Keys/syncAge.ts`).
+   * The live derivation was made reachable with a depth-1 fetch of
+   * `<baseCommit>` from origin (the worktree was a shallow clone, so the
+   * live A-17 block had been `describe.skip`ping), then
+   * `pnpm gen-i18n-gate-scope`; `generatedAt` and the `purpose` line were
+   * restored to the original bytes (this generator run DID re-escape
+   * `purpose`'s `\u2014` to a raw em dash, unlike the 260921-saw
+   * measurement), so only `files` moved: 11 additions, 0 removals.
+   * Audit-mode `scanScope({ extraFiles: [all 11] })` BEFORE any promotion:
+   * 1 violation, in one file. Per file:
+   *   - SCOPE, 0 violations, user-facing settings surfaces (the todo's two
+   *     named likely-scope files): `Settings/components/AlternativeExe.tsx`,
+   *     `WineManager/components/WineManagerSettingsModal.tsx`.
+   *   - SCOPE, 0 violations, label/visibility helpers feeding rendered UI:
+   *     `InstallModal/diskSpaceLabels.ts`, `GameCard/cardVisibility.ts`,
+   *     `Library/steamLibraryVisibility.ts`, `ConsoleMode/hooks.ts`,
+   *     `Humble/Keys/syncAge.ts` (new; renders the "Last synced" duration).
+   *   - SCOPE, 0 violations, no translatable surface today but free to keep
+   *     honest: `muiTheme.ts`, `helpers/gamepadHoverSeed.ts`.
+   *   - DEBT: `LanguageSelector/translationIssue.ts` (1 violation, a
+   *     template filename) and `blankRenderProbe.ts` (0 violations, but a
+   *     second whole-file exemption in scope trips T-34.8-30, measured on a
+   *     first attempt that promoted it) -- see the dated note above
+   *     `DECLARED_UNSCANNED_DEBT`.
+   * After promotion the whole-scope gate test scans the 182 files with 0
+   * violations outside the allowlist.
+   *
    * Built from the committed artifacts rather than invented numbers,
    * so the specs below assert the REAL 174 -> 215 delta this task exists to
    * prevent.
@@ -934,10 +982,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 173-file hand-curated snapshot, the committed fork-touched snapshot is 214, and the FRESH live derivation is pinned at 215', () => {
-    expect(scopeSnapshot.files.length).toBe(173)
-    expect(forkTouchedSnapshot.files.length).toBe(214)
-    expect(freshSnapshot().files.length).toBe(215)
+  it('A0 fixture sanity: the seeded scope is the REAL 182-file hand-curated snapshot, the committed fork-touched snapshot is 225, and the FRESH live derivation is pinned at 225', () => {
+    expect(scopeSnapshot.files.length).toBe(182)
+    expect(forkTouchedSnapshot.files.length).toBe(225)
+    expect(freshSnapshot().files.length).toBe(225)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -963,7 +1011,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 174 -> 215 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 182 -> 225 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -986,7 +1034,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 215', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 225', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -999,12 +1047,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(215)
+    expect(rewritten.files.length).toBe(225)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 215 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 225 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1017,7 +1065,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(215)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(225)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

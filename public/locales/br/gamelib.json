@@ -315,8 +315,6 @@
     "sideload": {
         "filter": {
             "all": "An holl",
-            "appExtension": "Arload",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Arloadoù",
             "executables": "Restroù erounit",

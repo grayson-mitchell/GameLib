@@ -294,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "全部",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "應用程式",
             "executables": "執行檔",

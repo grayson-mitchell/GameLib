@@ -301,8 +301,6 @@
     "sideload": {
         "filter": {
             "all": "הכל",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "קובצי AppImage",
             "apps": "אפליקציות",
             "executables": "קבצי הפעלה",

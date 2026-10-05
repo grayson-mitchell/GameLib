@@ -23,6 +23,15 @@ jobs:
       - name: Checkout repository.
         uses: actions/checkout@v6
       - uses: ./.github/actions/install-deps
+      # The D-05 i18n churn guard (meta/i18nCatalogChurnGuard.ts) checks what a PARSER RUN changed
+      # under public/locales/. On a fresh checkout nothing has run the parser, so until this step
+      # existed the guard -- and its `live tree` test inside test:ci -- passed vacuously on every
+      # pipeline (todo 2026-10-05-i18n-catalog-churn-guard-cannot-fail-in-ci). Measured clean on
+      # 2026-10-05: `pnpm i18n` on a clean tree changes nothing, so this cannot go red by itself.
+      - name: Run the i18n parser
+        run: pnpm i18n
+      - name: i18n catalogue churn guard
+        run: pnpm i18n-churn-guard
       - name: Test CI
         run: pnpm test:ci
       # Phase 35 (D-35-10-01 follow-up, 2026-08-29). This gate existed but ran NOWHERE -- not in
