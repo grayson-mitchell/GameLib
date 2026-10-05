@@ -133,6 +133,7 @@
     "src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts",
     "src/frontend/screens/Library/components/FilterChipRow/index.tsx",
     "src/frontend/screens/Library/components/FilterZeroResult/index.tsx",
+    "src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts",
     "src/frontend/screens/Library/components/FocusRowStrip/focusRowSelectors.ts",
     "src/frontend/screens/Library/components/FocusRowStrip/index.tsx",
     "src/frontend/screens/Library/components/GameCard/CrossoverBadge.tsx",
