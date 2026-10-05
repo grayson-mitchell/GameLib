@@ -955,6 +955,29 @@ describe('--rewrite-scope guard', () => {
    * After promotion the whole-scope gate test scans the 182 files with 0
    * violations outside the allowlist.
    *
+   * 2026-10-05 (later the same day): fork-touched 225 -> 229, scope
+   * 182 -> 186, unscanned debt holds at 43. Branches merged after the entry
+   * above made four more files fork-touched: `b695556` (the 60s invoke-bound
+   * exemption for long-running Wine and sync channels) touched
+   * `GamePage/components/CloudSavesSync.tsx`,
+   * `Settings/components/EacRuntime.tsx` and
+   * `WineManager/components/WineItem/index.tsx`; `a4c9579` (per-mount login
+   * overlay dismiss) created `Login/overlayDismiss.ts`. Same procedure:
+   * `pnpm gen-i18n-gate-scope`, `generatedAt` and the `purpose` line
+   * restored to the original bytes (the run re-escaped `\u2014` to a raw em
+   * dash again), so only `files` moved: 4 additions, 0 removals.
+   * Audit-mode `scanScope({ extraFiles: [all 4] })` BEFORE any promotion:
+   * 186 files scanned, 0 violations, and the `fileExempt` list unchanged at
+   * `bootErrorSurface.ts` alone (none of the four carries an
+   * `i18n-gate-exempt:` marker, so T-34.8-30 is untouched). Per file:
+   *   - SCOPE, 0 violations, user-facing surfaces already routed through
+   *     `t()`: `CloudSavesSync.tsx`, `EacRuntime.tsx`, `WineItem/index.tsx`.
+   *   - SCOPE, 0 violations, no translatable surface today (a pure dismiss
+   *     binder) but free to keep honest: `Login/overlayDismiss.ts`.
+   *   - DEBT: none.
+   * After promotion the whole-scope gate test scans the 186 files with 0
+   * violations outside the allowlist.
+   *
    * Built from the committed artifacts rather than invented numbers,
    * so the specs below assert the REAL 174 -> 215 delta this task exists to
    * prevent.
@@ -982,10 +1005,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 182-file hand-curated snapshot, the committed fork-touched snapshot is 225, and the FRESH live derivation is pinned at 225', () => {
-    expect(scopeSnapshot.files.length).toBe(182)
-    expect(forkTouchedSnapshot.files.length).toBe(225)
-    expect(freshSnapshot().files.length).toBe(225)
+  it('A0 fixture sanity: the seeded scope is the REAL 186-file hand-curated snapshot, the committed fork-touched snapshot is 229, and the FRESH live derivation is pinned at 229', () => {
+    expect(scopeSnapshot.files.length).toBe(186)
+    expect(forkTouchedSnapshot.files.length).toBe(229)
+    expect(freshSnapshot().files.length).toBe(229)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -1011,7 +1034,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 182 -> 225 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 186 -> 229 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1034,7 +1057,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 225', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 229', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1047,12 +1070,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(225)
+    expect(rewritten.files.length).toBe(229)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 225 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 229 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1065,7 +1088,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(225)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(229)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
