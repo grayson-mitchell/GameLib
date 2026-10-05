@@ -1806,11 +1806,21 @@ fn send_trace_enabled() -> bool {
 ///
 /// T-34.6-16-02: the channel NAME only, never `args` — token material travels in those fields
 /// (the same constraint `sidecarRpc.ts`'s unrecognized-frame branch carries as T-28-04).
+///
+/// MAIN THREAD (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect 2): a non-`async`
+/// command runs on the main thread in Tauri v2, and this one used to take the stdin mutex and
+/// do a blocking `write_all`/`flush` there -- with the sidecar's JS thread busy and a pipe
+/// buffer of frames queued, the UI froze until the write completed. It now only ENQUEUES onto
+/// `SidecarSendQueue`'s single writer thread, which preserves send order (an `async` +
+/// `spawn_blocking` pool would not). The always-on `write_frame` failure line moved there with
+/// the write; an IO failure no longer reaches the renderer as a rejection, which -- per the
+/// paragraph above -- was the path where it got lost anyway.
 #[tauri::command]
 fn sidecar_send(
     channel: String,
     args: Vec<Value>,
     state: State<'_, Arc<SidecarState>>,
+    queue: State<'_, SidecarSendQueue>,
 ) -> Result<(), String> {
     let req = SidecarRpcRequest {
         id: state.next_id(),
@@ -1818,23 +1828,46 @@ fn sidecar_send(
         channel,
         args,
     };
-    // Read the name off the frame rather than cloning `channel` before the move: `write_frame`
-    // only borrows `req`, so the name is still available for the failure line below at zero
-    // allocation cost on this hot path.
     if send_trace_enabled() {
         eprintln!(
             "[shell] send-trace: sidecar_send entered for '{}'",
             req.channel
         );
     }
-    let result = state.write_frame(&req);
-    if let Err(ref e) = result {
-        eprintln!(
-            "[shell] send-trace: write_frame FAILED for '{}': {e}",
-            req.channel
+    queue.0.send(req).map_err(|rejected| {
+        let message = format!(
+            "send writer thread is gone; frame for '{}' not written",
+            rejected.0.channel
         );
-    }
-    result
+        eprintln!("[shell] send-trace: {message}");
+        message
+    })
+}
+
+/// The FIFO hand-off between `sidecar_send` (main thread) and the one thread that writes its
+/// frames to the sidecar's stdin. See `sidecar_send`'s MAIN THREAD paragraph.
+struct SidecarSendQueue(Sender<SidecarRpcRequest>);
+
+/// Spawn the `sidecar_send` writer thread over `write` and return its queue. Generic over the
+/// write so `#[cfg(test)]` can prove ordering and non-blocking enqueue without a child process.
+/// The thread ends when every `Sender` is dropped; in the app the managed queue lives for the
+/// process, and a parked std thread does not hold the process open.
+fn spawn_send_writer<W>(write: W) -> Sender<SidecarRpcRequest>
+where
+    W: Fn(&SidecarRpcRequest) -> Result<(), String> + Send + 'static,
+{
+    let (tx, rx) = mpsc_channel::<SidecarRpcRequest>();
+    thread::spawn(move || {
+        for req in rx {
+            if let Err(e) = write(&req) {
+                eprintln!(
+                    "[shell] send-trace: write_frame FAILED for '{}': {e}",
+                    req.channel
+                );
+            }
+        }
+    });
+    tx
 }
 
 /// The only schemes the renderer may ask the shell to hand to the OS (CR-01,
@@ -12439,6 +12472,10 @@ fn main() {
             #[cfg(windows)]
             repair_windows_gamelib_protocol_registration(&app.config().identifier);
 
+            let send_state = state.clone();
+            app.manage(SidecarSendQueue(spawn_send_writer(move |req| {
+                send_state.write_frame(req)
+            })));
             app.manage(state);
 
             // Real Tauri tray (Phase 34.1 Plan 06, D-11; EXTENDED by Phase 35 Plan 06,
@@ -13341,6 +13378,67 @@ mod tests {
             let id = id.unwrap_or_default();
             assert_eq!(tray_recent_app_name(&id), Some(app_name));
         }
+    }
+
+    fn send_frame(channel: &str) -> SidecarRpcRequest {
+        SidecarRpcRequest {
+            id: channel.to_string(),
+            kind: "send",
+            channel: channel.to_string(),
+            args: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn send_writer_enqueue_does_not_wait_for_a_blocked_write() {
+        // The defect: `sidecar_send` wrote on the main thread, so a write stuck on a full pipe
+        // froze the UI. Enqueueing must return while the writer is blocked.
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let release_rx = Mutex::new(release_rx);
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = release_rx.lock().unwrap().recv();
+            let _ = done_tx.send(req.channel.clone());
+            Ok(())
+        });
+        let started = std::time::Instant::now();
+        for channel in ["a", "b", "c"] {
+            queue.send(send_frame(channel)).unwrap();
+        }
+        assert!(
+            started.elapsed() < Duration::from_millis(500),
+            "enqueue must not block on the write"
+        );
+        for _ in 0..3 {
+            release_tx.send(()).unwrap();
+        }
+        let written: Vec<String> = (0..3)
+            .map(|_| done_rx.recv_timeout(Duration::from_secs(5)).unwrap())
+            .collect();
+        assert_eq!(written, ["a", "b", "c"], "frames are written in send order");
+    }
+
+    #[test]
+    fn send_writer_keeps_going_after_a_failed_write() {
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = done_tx.send(req.channel.clone());
+            if req.channel == "broken" {
+                Err("broken pipe".into())
+            } else {
+                Ok(())
+            }
+        });
+        queue.send(send_frame("broken")).unwrap();
+        queue.send(send_frame("after")).unwrap();
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "broken"
+        );
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "after"
+        );
     }
 
     #[test]

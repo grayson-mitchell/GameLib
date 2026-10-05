@@ -290,6 +290,30 @@ function handleFrame(line: string): void {
 }
 
 /**
+ * The head of an inbound `invoke` frame as the Rust shell serialises it (`SidecarRpcRequest`'s
+ * field order puts `id` first, then `kind`), so the id is readable from the first bytes of a
+ * frame too large to parse.
+ */
+const OVERSIZED_INVOKE_HEAD = /^\s*\{"id":"([^"\\]{1,64})","kind":"invoke"/
+
+/**
+ * todo 2026-10-05 tauri-rpc-transport-minor-defects (defect 3): an oversized frame used to be
+ * dropped with no response, so its invoke waited the shell's 60s timeout -- or forever on a
+ * long-running channel. When the dropped frame is an `invoke` whose id is readable, answer it
+ * `ok:false` so the caller fails now. A `send` has no caller waiting; nothing to answer.
+ */
+function answerOversizedFrame(head: string): void {
+  const match = OVERSIZED_INVOKE_HEAD.exec(head.slice(0, 256))
+  if (!match) return
+  const response: SidecarRpcResponse = {
+    id: match[1],
+    ok: false,
+    error: `oversized frame dropped: over ${MAX_LINE_LENGTH} characters`
+  }
+  writeLine(response)
+}
+
+/**
  * Starts the stdio JSON-RPC loop against the given input/output streams
  * (defaults to the real process stdio for production use).
  */
@@ -299,14 +323,28 @@ export function startRpcServer(
 ): void {
   bindOutputStream(output)
   let buffer = ''
+  // True from an oversized frame's drop until its terminating newline: the rest of that
+  // frame is not a frame and must not be parsed as one.
+  let discardingOversized = false
   input.setEncoding('utf-8')
   input.on('data', (chunk: string | Buffer) => {
     buffer += chunk.toString()
+    if (discardingOversized) {
+      const end = buffer.indexOf('\n')
+      if (end === -1) {
+        buffer = ''
+        return
+      }
+      buffer = buffer.slice(end + 1)
+      discardingOversized = false
+    }
     if (buffer.length > MAX_LINE_LENGTH && !buffer.includes('\n')) {
       process.stderr.write(
         '[sidecarRpc] dropped oversized unterminated frame\n'
       )
+      answerOversizedFrame(buffer)
       buffer = ''
+      discardingOversized = true
       return
     }
     let newlineIndex = buffer.indexOf('\n')

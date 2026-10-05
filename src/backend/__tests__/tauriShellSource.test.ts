@@ -4352,3 +4352,19 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
     expect(props.hasRetainedResolver).toBe(true)
   })
 })
+
+describe('main.rs sidecar_send does not write the pipe on the main thread (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect 2)', () => {
+  // A non-async `#[tauri::command]` runs on the main thread in Tauri v2. `sidecar_send` used to
+  // take the stdin mutex and do a blocking `write_all`/`flush` there, so a busy sidecar with a
+  // full pipe froze the UI. It now only enqueues onto a single FIFO writer thread (order across
+  // sends is preserved, which an `async` + `spawn_blocking` pool would not guarantee). The
+  // queue's behaviour is covered by main.rs's own `send_writer_*` tests.
+  test('the sidecar_send body enqueues and never calls write_frame itself', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn sidecar_send(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
+    expect(body).not.toContain('write_frame(')
+    expect(body).toContain('SidecarSendQueue')
+  })
+})
