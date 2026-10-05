@@ -42,3 +42,32 @@ call unless the key matches a ref holding the current key. Also (or instead) giv
 ## Provenance
 
 Found by reading the code; no test was run (the review container had no `node_modules`). Not independently re-checked by the orchestrating session — confirm the mechanism before fixing. Line numbers are as of `5927806` on `main`.
+
+## Resolution (2026-10-05)
+
+Confirmed by reading: both overlays received the bare `dismissLoginOverlay`, which clears
+`openOverlay` and arms the unmount timer for whatever is mounted; SteamLogin's `closeWindow()`
+runs after its awaits regardless of unmount.
+
+**Changed.**
+- New `src/frontend/screens/Login/overlayDismiss.ts` — `bindOverlayDismiss(mountKey, currentKey,
+  dismiss)` returns a dismiss that is a no-op unless `mountKey === currentKey.current`, read at call
+  time.
+- `src/frontend/screens/Login/index.tsx` — `overlayMountKeyRef` mirrors `overlayMountKey`
+  (advanced synchronously in `openLoginOverlay`), and both `<SteamLogin>` and `<HumbleLogin>` get
+  `dismiss={bindOverlayDismiss(overlayMountKey, overlayMountKeyRef, dismissLoginOverlay)}`. A
+  stale Steam completion after a Humble (or a fresh Steam) overlay opened is now ignored. The
+  suggested SteamLogin `mountedRef` was not added: the key binding already makes every late call
+  from a replaced mount inert, and a late call from the still-current (closing) mount only repeats
+  a dismiss that already happened.
+
+**RED.** New `src/frontend/screens/Login/__tests__/overlayDismiss.test.ts`: first run failed to
+load (`Cannot find module '../overlayDismiss'`); with the helper alone, the two source gates
+(both overlay call sites bound to their own key; `openLoginOverlay` advances the ref) failed
+against the unwired `index.tsx`.
+
+**GREEN.** All 10 Login suites, 102 tests pass; `pnpm codecheck` exit 0; eslint 0 errors (one
+pre-existing `React.memo` warning); prettier `--check` clean on the three files.
+
+**Not verified.** No live run of the Steam-then-Humble race; the behavioural cases cover the pure
+binder, and the wiring is pinned by a source gate (no DOM renderer in this jest project).
