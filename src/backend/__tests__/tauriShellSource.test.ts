@@ -252,8 +252,21 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
     // so that stays true across a reformat. Asserted rather than assumed, because a truncated
     // body would make the fallback search below fail for a reason that has nothing to do with
     // what this test is about (fast task 261003-t8r).
+    //
+    // The check is a BRACE BALANCE, not "no `\n}` in body": `body` is cut at the first `\n}`,
+    // so it can never contain one and that check could not fail (todo 2026-10-05). If the cut
+    // brace really closes the function, every `{` in the body is matched except the fn's own
+    // opener -- balance exactly 1. An earlier column-0 `}` leaves nested blocks open and the
+    // balance above 1. String literals are blanked first (`{dark}` in a format string).
+    // Proven by moving the `if let Ok(img) = Image::from_bytes(bytes) {` block's closing
+    // brace to column 0 in main.rs: the old check and the ordering check below both passed on
+    // that truncated body; this one fails.
     expect(bodyEnd).toBeGreaterThan(fnIdx)
-    expect(body).not.toMatch(/\n\}/)
+    const bodyNoStrings = body.replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    const braceBalance =
+      (bodyNoStrings.match(/\{/g) ?? []).length -
+      (bodyNoStrings.match(/\}/g) ?? []).length
+    expect(braceBalance).toBe(1)
     // The macOS block must not be the only path -- TRAY_ICON_DARK/LIGHT selection must still
     // appear textually after it as the fallback for both platforms.
     //
