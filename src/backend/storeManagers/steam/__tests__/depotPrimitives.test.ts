@@ -3,6 +3,7 @@
 // and 64-bit-GID-as-string invariants asserted by tests, not just prose.
 
 import { createCipheriv, randomBytes } from 'node:crypto'
+import { getEventListeners } from 'node:events'
 import { deflateRawSync } from 'node:zlib'
 import * as zlibNs from 'node:zlib'
 import * as lzma from 'lzma'
@@ -995,6 +996,70 @@ describe('decompress', () => {
         } finally {
           jest.useRealTimers()
         }
+      })
+    })
+
+    // 2026-10-05 (phase 25 review, minor): two per-attempt leaks on the
+    // failure path. sleepAbortable's 'abort' listener was removed only if the
+    // signal fired, so every backoff left a closure on the run-wide signal;
+    // and a non-ok response's body was never read or cancelled, so its
+    // connection stayed tied up until GC.
+    describe('failure-path cleanup (phase 25 review)', () => {
+      const failingChunk = {
+        sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+        cb_original: 1,
+        attemptSeed: 0
+      }
+
+      it('leaves no abort listener on the caller signal after retries with backoff', async () => {
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: false,
+            status: 503,
+            statusText: 'Service Unavailable'
+          } as Response)
+        ) as unknown as typeof fetch
+        const controller = new AbortController()
+
+        await expect(
+          fetchChunk(
+            hosts,
+            depotId,
+            failingChunk,
+            key,
+            lzma,
+            3,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            controller.signal
+          )
+        ).rejects.toThrow(/failed after 3 attempts/)
+
+        expect(global.fetch).toHaveBeenCalledTimes(3)
+        expect(getEventListeners(controller.signal, 'abort')).toHaveLength(0)
+      })
+
+      it('cancels the body of every non-ok response before retrying', async () => {
+        const cancel = jest.fn(() => Promise.resolve())
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: false,
+            status: 500,
+            statusText: 'Internal Server Error',
+            body: { cancel }
+          } as unknown as Response)
+        ) as unknown as typeof fetch
+
+        await expect(
+          fetchChunk(hosts, depotId, failingChunk, key, lzma, 2)
+        ).rejects.toThrow(/failed after 2 attempts/)
+
+        expect(global.fetch).toHaveBeenCalledTimes(2)
+        expect(cancel).toHaveBeenCalledTimes(2)
       })
     })
 

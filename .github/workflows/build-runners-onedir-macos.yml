@@ -163,6 +163,21 @@ jobs:
       - name: Build the three onedir runners
         run: pnpm build-runners-onedir --arch=${{ matrix.arch }}
 
+      # Prints the digests to the run log so plan 34.18-07's developer gate
+      # (`pnpm pin:runner-digests`) can pin them for the fetch-side
+      # verification control. The `shasum -c` is a same-run self-consistency
+      # check only: SHA256SUMS was computed from these very archives by
+      # buildRunnersOnedir.ts, so it catches a missing, truncated or
+      # rewritten-after-digest archive and nothing more. It is NOT independent
+      # verification -- that is the pinned digest downloadHelperBinaries.ts
+      # checks at fetch time. It runs before the upload so a mismatch at least
+      # stops the publish.
+      - name: Check archives against this run's SHA256SUMS (self-consistency, pre-publish)
+        run: |
+          cd .build-tools/runners-onedir/out
+          cat SHA256SUMS-${{ matrix.arch }}
+          shasum -a 256 -c SHA256SUMS-${{ matrix.arch }}
+
       # Per-arch SHA256SUMS/BUILD-MANIFEST filenames, kept even with a single
       # remaining leg, for forward compatibility and pin-tool filename
       # stability -- meta/pinRunnerDigests.ts (plan 34.18-03) fetches these
@@ -177,11 +192,3 @@ jobs:
             SHA256SUMS-${{ matrix.arch }} \
             BUILD-MANIFEST-${{ matrix.arch }}.json \
             --clobber
-
-      # Surfaces the published digests in the run log so plan 34.18-07's
-      # developer gate (`pnpm pin:runner-digests`) can pin them for the
-      # fetch-side verification control.
-      - name: Print SHA256SUMS verification output
-        run: |
-          cd .build-tools/runners-onedir/out
-          shasum -a 256 -c SHA256SUMS-${{ matrix.arch }}

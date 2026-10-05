@@ -359,15 +359,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 function sleepAbortable(ms: number, signal?: AbortSignal): Promise<void> {
   if (!signal) return sleep(ms) as Promise<void>
   return new Promise((resolvePromise) => {
-    const timer = setTimeout(resolvePromise, ms)
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer)
-        resolvePromise()
-      },
-      { once: true }
-    )
+    const onAbort = () => {
+      clearTimeout(timer)
+      resolvePromise()
+    }
+    // 2026-10-05: the timer path removes the listener too — `once` only
+    // removes it if the signal fires, so every completed backoff otherwise
+    // left a closure on the run-wide signal.
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolvePromise()
+    }, ms)
+    signal.addEventListener('abort', onAbort, { once: true })
   })
 }
 
@@ -1137,6 +1140,10 @@ export async function fetchChunk(
         ) {
           cdnAuth.invalidate(depotId, host)
         }
+        // 2026-10-05: cancel the unread body so the connection is released
+        // now rather than at GC. Best-effort — a cancel failure must not
+        // replace the HTTP error this attempt is about to report.
+        await res.body?.cancel().catch(() => undefined)
         throw new ChunkHttpError(res.status, res.statusText)
       }
 

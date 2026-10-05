@@ -25,9 +25,25 @@ import { join } from 'node:path'
 
 const README = readFileSync(join(__dirname, '..', '..', 'README.md'), 'utf-8')
 
+/** The body of the `## Supported Operating Systems` section: from its
+ *  heading to the next level-2 heading (or end of file). Empty if the
+ *  heading is missing, so the assertion below fails rather than passing on a
+ *  sentence that sits elsewhere in the file. */
+function supportedOsSection(markdown: string): string {
+  const match =
+    /^## Supported Operating Systems[ \t]*$([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(
+      markdown
+    )
+  return match ? match[1] : ''
+}
+
 describe('D-02: README Intel-Mac disclosure', () => {
+  // 2026-10-05 (phase 34.18 review): scoped to the section the requirement
+  // names. A whole-file `toContain` also passed with the sentence anywhere.
   it('contains the verbatim disclosure sentence in the OS-support list', () => {
-    expect(README).toContain('GameLib will not support Intel Macs on macOS')
+    expect(supportedOsSection(README)).toContain(
+      'GameLib will not support Intel Macs on macOS'
+    )
   })
 
   it('D-03: states the fact only -- no rationale, runner names, or finding IDs leak into README.md', () => {

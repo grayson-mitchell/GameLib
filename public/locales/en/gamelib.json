@@ -470,6 +470,10 @@
             }
         }
     },
+    "wineExplanation": {
+        "wine-crossover": "Wine-Crossover is based on the Crossover OpenSource Wine project and is recommended for DX11 or older games.",
+        "wine-staging-macos": "Wine-Staging-macOS is based on the mainline Wine project and is recommended for DX11 or older games, especially when paired with the DXMT tool."
+    },
     "winetricks": {
         "unavailable": "Winetricks component management is unavailable on this build",
         "unavailableDetail": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build."
