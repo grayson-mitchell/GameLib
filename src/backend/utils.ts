@@ -286,9 +286,11 @@ async function handleExit() {
       // cancelId evaluates to 1 here -- so ANY transport error or timeout on the
       // newly-sidecar-reachable `quit` path returned the DESTRUCTIVE answer. Declaring
       // cancelId: 0 restores the stub's documented fail-safe-to-decline property for
-      // this caller. Electron's own dialog also honours cancelId (it is the response
-      // returned when the dialog is dismissed without a button press), so this is
-      // correct on both paths.
+      // this caller. cancelId is ALSO the response for a dismissal (Esc / window close,
+      // no button pressed) -- Electron's semantics, which the Tauri path only matches
+      // since `dialog_message` began returning null for a dismissal (todo 2026-10-05
+      // dialog-dismiss). Before that, a dismissal on Windows/Linux came back as
+      // buttons[1], so Esc here meant "Yes, kill everything and quit".
       cancelId: 0,
       message: tOrFallback(
         'box.quit.message',

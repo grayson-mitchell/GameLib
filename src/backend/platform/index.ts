@@ -493,8 +493,13 @@ export const dialog = {
           buttons: options?.buttons
         }
       ])
-      // result: true -> buttons[0] clicked (response 0), false -> buttons[1] clicked (response 1)
-      return { response: result === false ? 1 : 0, checkboxChecked: false }
+      // result: the clicked button's index (0 / 1), or null when the dialog was dismissed (Esc /
+      // window close) without a button. A dismissal is the caller's cancelId, as in Electron --
+      // the same safeIndex the transport-error path below uses.
+      return {
+        response: typeof result === 'number' ? result : safeIndex,
+        checkboxChecked: false
+      }
     } catch (error) {
       console.warn(
         `[electronStub] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed, defaulting to safe index ${safeIndex}:`,
