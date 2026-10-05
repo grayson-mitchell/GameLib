@@ -24,6 +24,7 @@
 import { homedir, tmpdir } from 'os'
 import { join } from 'path'
 import { env, platform } from 'process'
+import { readWindowsShellFolder, readXdgUserDir } from './knownFolders'
 
 /**
  * The app-name folder segment Electron's real `app.getPath('userData')`
@@ -89,12 +90,19 @@ export function getPath(name: string): string {
       // The darwin arm below exists for correctness (Electron's real
       // app.getPath('desktop') resolves it there too), not for a live call
       // site. Live call sites: shortcuts.ts:156 (linux) and :161 (win32).
+      // win32 and linux honour the user's real folder (OneDrive redirection,
+      // `user-dirs.dirs`) via `knownFolders.ts`, falling back to ~/Desktop.
       switch (platform) {
         case 'darwin':
-        case 'win32':
           return join(homedir(), 'Desktop')
+        case 'win32':
+          return readWindowsShellFolder('Desktop') || join(homedir(), 'Desktop')
         default:
-          return env.XDG_DESKTOP_DIR || join(homedir(), 'Desktop')
+          return (
+            env.XDG_DESKTOP_DIR ||
+            readXdgUserDir('XDG_DESKTOP_DIR') ||
+            join(homedir(), 'Desktop')
+          )
       }
     case 'documents':
       // Single consumer: save_sync.ts:146 (getDefaultGogSavePaths), reached
@@ -102,10 +110,17 @@ export function getPath(name: string): string {
       // saves-sync cluster (plan 34.5-12), not the shortcuts cluster.
       switch (platform) {
         case 'darwin':
-        case 'win32':
           return join(homedir(), 'Documents')
+        case 'win32':
+          return (
+            readWindowsShellFolder('Personal') || join(homedir(), 'Documents')
+          )
         default:
-          return env.XDG_DOCUMENTS_DIR || join(homedir(), 'Documents')
+          return (
+            env.XDG_DOCUMENTS_DIR ||
+            readXdgUserDir('XDG_DOCUMENTS_DIR') ||
+            join(homedir(), 'Documents')
+          )
       }
     default:
       throw new Error(
