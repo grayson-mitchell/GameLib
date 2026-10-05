@@ -25,6 +25,17 @@
                 "title": "Could not open the file picker"
             }
         },
+        "protocol": {
+            "launch": {
+                "accept": "Launch",
+                "arguments": "Arguments",
+                "confirmMessage": "A link wants to launch this game with the executable and arguments below. Only continue if you trust where the link came from.",
+                "decline": "Don't launch",
+                "defaultExecutable": "(the game's usual executable)",
+                "executable": "Executable",
+                "noArguments": "(none)"
+            }
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstall via CrossOver",
