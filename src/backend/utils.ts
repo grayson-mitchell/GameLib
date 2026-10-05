@@ -29,6 +29,7 @@ import {
   logDebug
 } from 'backend/logger'
 import { basename, dirname, join, normalize } from 'path'
+import { homedir } from 'os'
 import {
   gameInfoStore,
   installStore,
@@ -980,8 +981,47 @@ async function shutdownWine(gameSettings: GameSettings) {
   }
 }
 
-const getShellPath = async (path: string): Promise<string> =>
-  normalize((await execAsync(`echo ${path}`)).stdout.trim())
+/**
+ * Expands the variables `echo` used to expand, without a shell: on Windows
+ * `%VAR%` (unknown names stay literal, as cmd left them), elsewhere `$VAR`,
+ * `${VAR}` (unset expands to '', as sh did) and a leading `~` / `~/`.
+ * Nothing else is interpreted, so `$(...)`, backticks, `;`, `&` and `|` stay
+ * literal — the input can be a GOG remote-config save location or come from
+ * the renderer via the `getShellPath` invoke channel.
+ */
+function expandPathVariables(
+  path: string,
+  windows: boolean,
+  env: NodeJS.ProcessEnv,
+  home: string
+): string {
+  if (windows) {
+    const lookup = (name: string) => {
+      const key = Object.keys(env).find(
+        (k) => k.toUpperCase() === name.toUpperCase()
+      )
+      return key === undefined ? undefined : env[key]
+    }
+    return path.replace(
+      /%([^%]+)%/g,
+      (match, name: string) => lookup(name) ?? match
+    )
+  }
+  const expanded = path.replace(
+    /\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/g,
+    (_match, braced?: string, bare?: string) => env[braced ?? bare ?? ''] ?? ''
+  )
+  return expanded.replace(/^~(?=\/|$)/, home)
+}
+
+// Still returns a Promise: the `getShellPath` invoke channel and save_sync.ts
+// await it, and its old shell-backed body was async.
+const getShellPath = (path: string): Promise<string> =>
+  Promise.resolve(
+    normalize(
+      expandPathVariables(path, isWindows, process.env, homedir()).trim()
+    )
+  )
 
 export const spawnAsync = async (
   command: string,
@@ -1868,5 +1908,6 @@ export {
 // Exported only for testing purpose
 // ts-prune-ignore-next
 export const testingExportsUtils = {
-  semverGt
+  semverGt,
+  expandPathVariables
 }
