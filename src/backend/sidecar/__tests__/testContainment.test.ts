@@ -905,6 +905,12 @@ const IN_SCOPE_SUITES = [
  * `sidecarRpc` already imports, and drives the transport over in-memory `PassThrough` streams
  * with no store, no filesystem and no `homedir()` use. 68 `*.test.ts` files: 4
  * `IN_SCOPE_SUITES` + 64 below.
+ *
+ * `knownFolders.test.ts` (todo `desktop-and-documents-paths-ignore-real-user-folders`,
+ * 2026-10-05) is classified as structurally contained: it declares no `jest.mock(...)` and
+ * tests only the pure parsers (`parseUserDirs`, `parseRegQueryValue`, `expandWindowsEnv`) on
+ * string input, with no filesystem, no `homedir()` and no `reg.exe`. 69 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 65 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -934,6 +940,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'invokeReturnValueSweep.test.ts',
   'isPackagedSidecar.test.ts',
   'keyringTokenStore.test.ts',
+  'knownFolders.test.ts',
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',
   'migrationsWiring.test.ts',
