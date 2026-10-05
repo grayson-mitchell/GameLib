@@ -25,14 +25,23 @@
  * build job").
  */
 import { load as loadYaml } from 'js-yaml'
-import { readFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { archiveName } from '../../../meta/buildRunnersOnedir'
 import {
   extractRunBlock as extractRunBlockFrom,
+  runStepScript,
   stripHashComments,
-  substituteExpressions
+  substituteExpressions,
+  writeStubExecutable
 } from './helpers/workflowSteps'
 
 const WORKFLOW_PATH = join(
@@ -349,11 +358,98 @@ describe('build-runners-onedir-macos.yml arch guard step', () => {
   })
 })
 
-describe('build-runners-onedir-macos.yml ref guard step (D-02)', () => {
-  const GUARD_STEP_NAME = 'Refuse to run from the default branch'
-  const REQUIRED_REF = 'fix/steam-native-install-stability'
+// Replaces the D-02 branch-name guard (todo 2026-10-05 "refuses main and
+// points at a stale branch"). That guard compared github.ref_name against the
+// default branch and told the operator to re-dispatch on a named feature
+// branch -- correct only while main lacked the build script. Once main
+// carried it, the guard refused the one ref whose RELEASE_TAGS should ship
+// and redirected dispatches onto a branch 1,510 commits behind. The guard now
+// asks the question it was always standing in for: does the commit under
+// dispatch carry the build script? It is EXECUTED below against a stubbed
+// `gh` serving a synthetic tree, not pattern-matched.
+describe('build-runners-onedir-macos.yml build-script guard step', () => {
+  const GUARD_STEP_NAME =
+    'Refuse to run from a ref without the onedir build script'
+  const REPO_ROOT = join(__dirname, '..', '..', '..')
+  const DISPATCH_SHA = '0123456789abcdef0123456789abcdef01234567'
 
-  test("prepare-release's FIRST step is the ref guard (position, not mere presence -- a guard placed after gh release create would create the rolling release before refusing)", () => {
+  let workdir: string
+
+  beforeEach(() => {
+    workdir = mkdtempSync(join(tmpdir(), 'gamelib-onedir-guard-'))
+  })
+
+  afterEach(() => {
+    rmSync(workdir, { recursive: true, force: true })
+  })
+
+  /**
+   * A `gh` stub modelling `gh api repos/<repo>/contents/<path>?ref=<sha>`:
+   * it serves `<path>` out of FAKE_TREE, printing the file and exiting 0 when
+   * it exists, exiting 1 (as gh does on a 404) when it does not. It also
+   * refuses any ref other than DISPATCH_SHA, so a guard that stopped pinning
+   * the lookup to the dispatched commit would fail here. Any other gh
+   * invocation fails loudly so the guard cannot quietly depend on one.
+   */
+  function stubGh(): string {
+    const binDir = join(workdir, 'bin')
+    mkdirSync(binDir)
+    writeStubExecutable(
+      binDir,
+      'gh',
+      [
+        '#!/usr/bin/env bash',
+        '[ "$1" = "api" ] || { echo "unexpected gh call: $*" >&2; exit 99; }',
+        'for arg in "$@"; do',
+        '  case "$arg" in',
+        '    repos/*/contents/*)',
+        '      path="${arg#repos/*/contents/}"',
+        '      ref="${path##*\\?ref=}"',
+        '      path="${path%%\\?*}"',
+        `      [ "$ref" = "${DISPATCH_SHA}" ] || { echo "unexpected ref: $ref" >&2; exit 97; }`,
+        '      [ -f "$FAKE_TREE/$path" ] || { echo "HTTP 404: Not Found" >&2; exit 1; }',
+        '      cat "$FAKE_TREE/$path"',
+        '      exit 0',
+        '      ;;',
+        '  esac',
+        'done',
+        'echo "no contents path in: $*" >&2',
+        'exit 98',
+        ''
+      ].join('\n')
+    )
+    return binDir
+  }
+
+  function seedTree(options: { script: boolean; packageScript: boolean }) {
+    const tree = join(workdir, 'tree')
+    mkdirSync(join(tree, 'meta'), { recursive: true })
+    if (options.script) {
+      writeFileSync(join(tree, 'meta', 'buildRunnersOnedir.ts'), '// stub\n')
+    }
+    const scripts: Record<string, string> = { lint: 'eslint .' }
+    if (options.packageScript) {
+      scripts['build-runners-onedir'] = 'node meta/runTs.cjs'
+    }
+    writeFileSync(
+      join(tree, 'package.json'),
+      JSON.stringify({ scripts }, null, 2)
+    )
+    return tree
+  }
+
+  function runGuard(tree: string, sha = DISPATCH_SHA) {
+    const binDir = stubGh()
+    return runStepScript(extractRunBlock(GUARD_STEP_NAME), workdir, {
+      PATH: `${binDir}:${process.env.PATH ?? ''}`,
+      FAKE_TREE: tree,
+      GH_REPO: 'owner/repo',
+      REF_NAME: 'main',
+      SHA: sha
+    })
+  }
+
+  test("prepare-release's FIRST step is the build-script guard (position, not mere presence -- a guard placed after gh release create would create the rolling release before refusing)", () => {
     const parsed = parseWorkflow()
     const steps = parsed.jobs['prepare-release'].steps
     expect(steps).toBeDefined()
@@ -361,47 +457,67 @@ describe('build-runners-onedir-macos.yml ref guard step (D-02)', () => {
     expect((steps as NonNullable<typeof steps>)[0].name).toBe(GUARD_STEP_NAME)
   })
 
-  test('fails loudly (::error:: + exit 1) on a default-branch dispatch', () => {
-    const block = extractRunBlock(GUARD_STEP_NAME)
-    expect(block).toContain('::error::')
-    // Anchored to the wrong-branch comparison specifically (not just any
-    // ::error::/exit 1 pair in the block) -- the block also has an
-    // empty-DEFAULT_BRANCH ::error::/exit 1 pair (covered by the fail-closed
-    // test below), so a non-anchored match would stay green even if THIS
-    // path's exit 1 were deleted.
-    expect(block).toMatch(
-      /"\$REF_NAME" = "\$DEFAULT_BRANCH"[\s\S]*?::error::[\s\S]*?exit 1/
+  test('passes a dispatch on main when the commit carries both the script file and the package.json script', () => {
+    const result = runGuard(seedTree({ script: true, packageScript: true }))
+    expect(result.stdout + result.stderr).not.toContain('::error::')
+    expect(result.status).toBe(0)
+  })
+
+  test('passes against THIS checkout -- main as it stands carries what the build leg runs', () => {
+    const result = runGuard(REPO_ROOT)
+    expect(result.stdout + result.stderr).not.toContain('::error::')
+    expect(result.status).toBe(0)
+  })
+
+  test('fails loudly (::error:: + non-zero) when meta/buildRunnersOnedir.ts is absent at the dispatched commit', () => {
+    const result = runGuard(seedTree({ script: false, packageScript: true }))
+    expect(result.status).not.toBe(0)
+    expect(result.stdout).toContain('::error::')
+    expect(result.stdout).toContain('meta/buildRunnersOnedir.ts')
+  })
+
+  test('fails loudly (::error:: + non-zero) when package.json lacks the build-runners-onedir script', () => {
+    const result = runGuard(seedTree({ script: true, packageScript: false }))
+    expect(result.status).not.toBe(0)
+    expect(result.stdout).toContain('::error::')
+    expect(result.stdout).toContain('build-runners-onedir')
+  })
+
+  test('fails closed (::error:: + non-zero) when the commit sha resolves empty, rather than silently permitting the run', () => {
+    const result = runGuard(seedTree({ script: true, packageScript: true }), '')
+    expect(result.status).not.toBe(0)
+    expect(result.stdout).toContain('::error::')
+  })
+
+  test('the script name the guard checks is the one the build step runs', () => {
+    expect(extractRunBlock(GUARD_STEP_NAME)).toContain(
+      '"build-runners-onedir":'
+    )
+    expect(loadStrippedWorkflow()).toContain(
+      'run: pnpm build-runners-onedir --arch=${{ matrix.arch }}'
     )
   })
 
-  test('names the required ref literal fix/steam-native-install-stability', () => {
-    const block = extractRunBlock(GUARD_STEP_NAME)
-    expect(block).toContain(REQUIRED_REF)
-  })
-
-  test('reads github.ref_name and github.event.repository.default_branch through env:, not by direct interpolation into the shell body', () => {
+  test('reads the token, repo, ref and commit through env:, not by direct interpolation into the shell body', () => {
     const parsed = parseWorkflow()
     const steps = parsed.jobs['prepare-release'].steps as NonNullable<
       ParsedWorkflow['jobs'][string]['steps']
     >
     const guardStep = steps.find((step) => step.name === GUARD_STEP_NAME)
     expect(guardStep).toBeDefined()
-    const env = (guardStep as NonNullable<typeof guardStep>).env
-    expect(env).toBeDefined()
-    const envValues = Object.values(env as Record<string, string>)
-    expect(envValues).toContain('${{ github.ref_name }}')
-    expect(envValues).toContain('${{ github.event.repository.default_branch }}')
-
-    const block = extractRunBlock(GUARD_STEP_NAME)
-    expect(block).not.toContain('${{ github.ref_name }}')
-    expect(block).not.toContain('${{ github.event.repository.default_branch }}')
+    expect((guardStep as NonNullable<typeof guardStep>).env).toEqual({
+      GH_TOKEN: '${{ github.token }}',
+      GH_REPO: '${{ github.repository }}',
+      REF_NAME: '${{ github.ref_name }}',
+      SHA: '${{ github.sha }}'
+    })
+    expect(extractRunBlock(GUARD_STEP_NAME)).not.toContain('${{')
   })
 
-  test('fails closed (::error:: + exit 1) when the default branch resolves empty, rather than silently permitting the run', () => {
-    const block = extractRunBlock(GUARD_STEP_NAME)
-    expect(block).toMatch(
-      /-z "\$DEFAULT_BRANCH"[\s\S]*?::error::[\s\S]*?exit 1/
-    )
+  test('no longer compares against the default branch or names a branch to re-dispatch onto (comments included)', () => {
+    const raw = loadWorkflow()
+    expect(raw).not.toContain('default_branch')
+    expect(raw).not.toContain('fix/steam-native-install-stability')
   })
 })
 

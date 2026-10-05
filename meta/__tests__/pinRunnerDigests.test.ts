@@ -331,11 +331,18 @@ describe('runId gate', () => {
 })
 
 // ---------------------------------------------------------------------------
-// RELEASE_TAGS drift -- the one non-fatal branch: warns AND still writes
+// RELEASE_TAGS drift -- fatal: throws, writes nothing
 // ---------------------------------------------------------------------------
 
-describe('RELEASE_TAGS drift (non-fatal)', () => {
-  it('a manifest tag disagreeing with the live RELEASE_TAGS value warns naming the runner/values/run id, and still writes once', async () => {
+// Was a console.warn that still wrote (34.16-05). Todo 2026-10-05 ("refuses
+// main and points at a stale branch"): a run built from a ref whose
+// RELEASE_TAGS differ from the ones being pinned against publishes archives
+// of the wrong runner versions, and pinning them with only a warning ships
+// macOS runners that silently disagree with meta/releaseTags.ts. main()
+// rejecting is what makes the CLI exit non-zero -- the module-bottom
+// entrypoint routes any rejection to process.exit(1).
+describe('RELEASE_TAGS drift (fatal)', () => {
+  it('a manifest tag disagreeing with the live RELEASE_TAGS value throws naming the runner/values/run id, and writes nothing', async () => {
     queueFetchSequence({
       manifestArm64: {
         text: JSON.stringify({
@@ -345,18 +352,34 @@ describe('RELEASE_TAGS drift (non-fatal)', () => {
       }
     })
 
-    await main()
+    const thrown = await expectMainToThrow()
 
-    expect(mockedWarn).toHaveBeenCalled()
-    const warned = mockedWarn.mock.calls
-      .map((call) => String(call[0]))
-      .join('\n')
-    expect(warned).toContain('legendary')
-    expect(warned).toContain(DRIFTED_TAG)
-    expect(warned).toContain(RELEASE_TAGS.legendary)
-    expect(warned).toContain(RUN_ID)
+    expect(thrown.message).toContain('legendary')
+    expect(thrown.message).toContain(DRIFTED_TAG)
+    expect(thrown.message).toContain(RELEASE_TAGS.legendary)
+    expect(thrown.message).toContain(RUN_ID)
+    expect(thrown.message).toContain('meta/releaseTags.ts')
 
-    expect(mockedWriteFile).toHaveBeenCalledTimes(1)
+    expect(mockedWriteFile).not.toHaveBeenCalled()
+  })
+
+  it('names every drifted runner in one error, not just the first', async () => {
+    queueFetchSequence({
+      manifestArm64: {
+        text: JSON.stringify({
+          ...AGREEING_MANIFEST_ARM64,
+          legendary: { tag: DRIFTED_TAG },
+          nile: { tag: `${RELEASE_TAGS.nile}-drifted` }
+        })
+      }
+    })
+
+    const thrown = await expectMainToThrow()
+
+    expect(thrown.message).toContain('"legendary"')
+    expect(thrown.message).toContain('"nile"')
+    expect(thrown.message).not.toContain('"gogdl"')
+    expect(mockedWriteFile).not.toHaveBeenCalled()
   })
 })
 
