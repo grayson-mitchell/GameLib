@@ -1014,11 +1014,16 @@ export async function fetchChunk(
     // a timeout aborts the in-flight request, which surfaces as a normal
     // AbortError and falls into the same catch/backoff/host-rotation path
     // any other transient failure already takes.
+    //
+    // 2026-10-05 (limiter wait counted against the per-attempt timeout): the
+    // timer is ARMED only once the request is about to go out — right after
+    // `limiter.acquire()` below — not here. Armed here, it also ran through
+    // the token fetch and the FIFO limiter wait (up to 128 chunk workers
+    // share 32 slots), so on a slow link a queued attempt reached `fetch`
+    // with an already-aborted signal and was recorded as a host 'timeout'
+    // for a host it never contacted.
     const controller = new AbortController()
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      CHUNK_FETCH_TIMEOUT_MS
-    )
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
     // debug/steam-cancel-abort-thread-a: forwards an external cancel into
     // THIS attempt's own fetch() call immediately, instead of waiting for it
     // to finish/time out naturally — previously `controller` was
@@ -1026,7 +1031,9 @@ export async function fetchChunk(
     // deaf to any external signal.
     const onExternalAbort = () => controller.abort()
     signal?.addEventListener('abort', onExternalAbort, { once: true })
-    const attemptStart = Date.now()
+    // Reset right before the request goes out (below), so the latency
+    // hostHealth.record and onAttempt see is the host's, never queue time.
+    let attemptStart = Date.now()
     // Debug/steam-install-slow-start (cycle 15): hoisted out of the try block
     // so the catch below can access the raw (pre-decrypt) response for the
     // raw-response-metadata diagnostic — `encrypted` is only ever assigned
@@ -1102,6 +1109,11 @@ export async function fetchChunk(
         await limiter.acquire()
         heldSlot = true
       }
+      // 2026-10-05: the attempt's clock and its CHUNK_FETCH_TIMEOUT_MS bound
+      // start HERE, at the request itself — see `timeoutId` above. Bounded
+      // and cleared in the `finally` below, like before.
+      attemptStart = Date.now()
+      timeoutId = setTimeout(() => controller.abort(), CHUNK_FETCH_TIMEOUT_MS)
       res = await fetch(
         `${scheme}${host}/depot/${depotId}/chunk/${sha}${token}`,
         {

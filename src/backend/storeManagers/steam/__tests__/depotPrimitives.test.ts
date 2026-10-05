@@ -25,6 +25,7 @@ import {
   CHUNK_FETCH_HEADERS
 } from '../depot/decompress'
 import { HostHealthTracker } from '../depot/hostHealth'
+import { InflightLimiter } from '../depot/inflightLimiter'
 import {
   CdnAuthTokenCache,
   CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS,
@@ -928,6 +929,73 @@ describe('decompress', () => {
           expect(requestedHosts[1]).not.toBe(failingHost)
         }
       )
+
+      // 2026-10-05 todo steam-depot-limiter-wait-counts-against-per-attempt-timeout:
+      // CHUNK_FETCH_TIMEOUT_MS used to be armed (and the attempt's clock
+      // started) BEFORE `await limiter.acquire()`. Up to 128 chunk workers
+      // share 32 slots, so on a slow link the FIFO wait alone passes 15s;
+      // `fetch` was then handed an already-aborted signal, failed at once
+      // with AbortError, and the never-contacted host was recorded as a
+      // 'timeout' -- five of those demote a healthy host.
+      it('time queued on the InflightLimiter neither burns the per-attempt timeout nor counts as host latency', async () => {
+        jest.useFakeTimers()
+        try {
+          const data = Buffer.from('queued behind the limiter', 'utf8')
+          const limiter = new InflightLimiter(1)
+          // Another chunk worker's fetch holds the only slot.
+          await limiter.acquire()
+          const hostHealth = new HostHealthTracker()
+          const events: Array<{ outcome: string; ms: number }> = []
+
+          global.fetch = jest.fn(
+            (_url: unknown, opts?: { signal?: AbortSignal }) => {
+              // Real fetch() rejects at once on an already-aborted signal.
+              if (opts?.signal?.aborted) {
+                const err = new Error('This operation was aborted')
+                err.name = 'AbortError'
+                return Promise.reject(err)
+              }
+              return Promise.resolve({
+                ok: true,
+                arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
+              } as Response)
+            }
+          ) as unknown as typeof fetch
+
+          const pending = fetchChunk(
+            hosts,
+            depotId,
+            { sha: 'deadbeef', cb_original: data.length, attemptSeed: 0 },
+            key,
+            lzma,
+            1,
+            () => Promise.resolve(data),
+            undefined,
+            (ev) => events.push({ outcome: ev.outcome, ms: ev.ms }),
+            hostHealth,
+            undefined,
+            undefined,
+            undefined,
+            0,
+            limiter
+          )
+          pending.catch(() => {})
+
+          // Queued well past the per-attempt timeout before a slot frees.
+          await jest.advanceTimersByTimeAsync(CHUNK_FETCH_TIMEOUT_MS + 5000)
+          expect(global.fetch).not.toHaveBeenCalled()
+          limiter.release()
+
+          const out = await pending
+          expect(out.equals(data)).toBe(true)
+          expect(events).toEqual([{ outcome: 'success', ms: 0 }])
+          const snap = hostHealth.snapshot(hosts[0])
+          expect(snap.consecutiveFailures).toBe(0)
+          expect(snap.avgMs).toBe(0)
+        } finally {
+          jest.useRealTimers()
+        }
+      })
     })
 
     // Debug/steam-install-slow-start (diagnostic re-open, cycle 9): each
