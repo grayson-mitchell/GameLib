@@ -22,9 +22,21 @@
  * structural mock already installed).
  */
 
+// `reg.exe` must never run for real: the win32 known-folder lookup is driven through this mock.
+// `resetMocks: true` leaves it returning `undefined` by default, which the shim treats as a
+// failed lookup and falls back from.
+jest.mock('child_process', () => ({
+  ...jest.requireActual('child_process'),
+  spawnSync: jest.fn()
+}))
+
+import { spawnSync } from 'child_process'
+import { mkdirSync, rmSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
+import { join } from 'path'
 import { realHomeAtSetup } from 'backend/jest.setupContainment'
 import { getPath } from '../pathShim'
+import { clearKnownFolderCache } from '../knownFolders'
 
 function overrideProcessPlatform(os: string): string {
   const original_os = process.platform
@@ -162,6 +174,93 @@ describe('sidecar/pathShim getPath()', () => {
         } else {
           process.env.XDG_DESKTOP_DIR = savedXdgDesktop
         }
+      }
+    })
+  })
+
+  // Electron's `app.getPath('desktop'|'documents')` honours `~/.config/user-dirs.dirs` on Linux
+  // and the redirected known folder (e.g. OneDrive) on Windows; the shim used to do neither.
+  describe('desktop and documents — real user folders', () => {
+    const mockSpawnSync = spawnSync as unknown as jest.Mock
+    const saved: Record<string, string | undefined> = {}
+
+    beforeEach(() => {
+      clearKnownFolderCache()
+      for (const key of [
+        'XDG_DESKTOP_DIR',
+        'XDG_DOCUMENTS_DIR',
+        'XDG_CONFIG_HOME',
+        'USERPROFILE'
+      ]) {
+        saved[key] = process.env[key]
+      }
+      delete process.env.XDG_DESKTOP_DIR
+      delete process.env.XDG_DOCUMENTS_DIR
+    })
+
+    afterEach(() => {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+      clearKnownFolderCache()
+    })
+
+    it('linux: desktop and documents come from user-dirs.dirs when the env vars are unset', () => {
+      const originalPlatform = overrideProcessPlatform('linux')
+      const configHome = join(homedir(), 'user-dirs-config')
+      mkdirSync(configHome, { recursive: true })
+      process.env.XDG_CONFIG_HOME = configHome
+      writeFileSync(
+        join(configHome, 'user-dirs.dirs'),
+        [
+          '# This file is written by xdg-user-dirs-update',
+          'XDG_DESKTOP_DIR="$HOME/Schreibtisch"',
+          'XDG_DOCUMENTS_DIR="$HOME/Dokumente"',
+          ''
+        ].join('\n')
+      )
+      try {
+        expect(getPath('desktop')).toBe(join(homedir(), 'Schreibtisch'))
+        expect(getPath('documents')).toBe(join(homedir(), 'Dokumente'))
+      } finally {
+        overrideProcessPlatform(originalPlatform)
+        rmSync(configHome, { recursive: true, force: true })
+      }
+    })
+
+    it('win32: desktop and documents follow the User Shell Folders redirection', () => {
+      const originalPlatform = overrideProcessPlatform('win32')
+      process.env.USERPROFILE = 'C:\\Users\\Jörg'
+      mockSpawnSync.mockImplementation((_command: string, args: string[]) => {
+        const name = args[args.indexOf('/v') + 1]
+        const value =
+          name === 'Desktop'
+            ? '%USERPROFILE%\\OneDrive\\Desktop'
+            : '%USERPROFILE%\\OneDrive\\Documents'
+        return {
+          status: 0,
+          stdout: `\r\nHKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\r\n    ${name}    REG_EXPAND_SZ    ${value}\r\n\r\n`
+        }
+      })
+      try {
+        expect(getPath('desktop')).toBe('C:\\Users\\Jörg\\OneDrive\\Desktop')
+        expect(getPath('documents')).toBe(
+          'C:\\Users\\Jörg\\OneDrive\\Documents'
+        )
+        // argv, never a shell string.
+        expect(mockSpawnSync).toHaveBeenCalledWith(
+          'reg.exe',
+          [
+            'query',
+            'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders',
+            '/v',
+            'Desktop'
+          ],
+          expect.not.objectContaining({ shell: true })
+        )
+      } finally {
+        overrideProcessPlatform(originalPlatform)
       }
     })
   })

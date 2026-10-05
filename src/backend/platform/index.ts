@@ -637,8 +637,9 @@ export const safeStorage = {
 // ---- shell -------------------------------------------------------------------------
 
 export const shell = {
-  // Phase 35 Plan 15: signature-only widening. Windows-only in real Electron and never
-  // reachable on the platforms the sidecar runs; returns false rather than pretending.
+  // Phase 35 Plan 15: signature-only widening. Windows-only in real Electron; returns false
+  // rather than pretending. The sidecar DOES run on Windows, so `shortcuts.ts` no longer calls
+  // this -- it writes `.lnk` files through `shortcuts/shortcuts/windowsShortcut.ts` instead.
   writeShortcutLink: (
     _shortcutPath: string,
     _operation?: unknown,
