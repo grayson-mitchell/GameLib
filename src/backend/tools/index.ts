@@ -289,27 +289,11 @@ export const DXVK = {
       logInfo('Removing DLL overrides', LogPrefix.ToolInstaller)
 
       // unregister the dlls on the wine prefix
-      if (is64bitPrefix) {
-        dlls64.forEach(async (dll) => {
-          dll = dll.replace('.dll', '')
-          const unregisterDll = [
-            'reg',
-            'delete',
-            'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
-            '/v',
-            dll,
-            '/f'
-          ]
-          await runWineCommand({
-            gameSettings,
-            commandParts: unregisterDll,
-            wait: true,
-            protonVerb: 'run'
-          })
-        })
-      }
-      dlls32.forEach(async (dll) => {
-        dll = dll.replace('.dll', '')
+      // Awaited one at a time: `wineboot -u` below must not race these deletes, and the toggle
+      // must not resolve before the overrides are actually gone.
+      const unregisterDlls = is64bitPrefix ? [...dlls64, ...dlls32] : dlls32
+      for (const dllFile of unregisterDlls) {
+        const dll = dllFile.replace('.dll', '')
         const unregisterDll = [
           'reg',
           'delete',
@@ -324,7 +308,7 @@ export const DXVK = {
           wait: true,
           protonVerb: 'run'
         })
-      })
+      }
 
       logInfo('Removing DXVK DLLs', LogPrefix.ToolInstaller)
 
@@ -334,7 +318,7 @@ export const DXVK = {
         dllsToRemove = dlls64.map(
           (dll) => `${winePrefix}/drive_c/windows/system32/${dll}`
         )
-        dllsToRemove.concat(
+        dllsToRemove = dllsToRemove.concat(
           dlls32.map((dll) => `${winePrefix}/drive_c/windows/syswow64/${dll}`)
         )
       } else {
@@ -417,31 +401,11 @@ export const DXVK = {
     }
 
     // register dlls on the wine prefix
-    if (is64bitPrefix) {
-      dlls64.forEach(async (dll) => {
-        // remove the .dll extension otherwise will fail
-        dll = dll.replace('.dll', '')
-        const registerDll = [
-          'reg',
-          'add',
-          'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
-          '/v',
-          dll,
-          '/d',
-          'native,builtin',
-          '/f'
-        ]
-        await runWineCommand({
-          gameSettings,
-          commandParts: registerDll,
-          wait: true,
-          protonVerb: 'run'
-        })
-      })
-    }
-    dlls32.forEach(async (dll) => {
+    // Awaited one at a time, so the toggle resolves only once the overrides are written.
+    const registerDlls = is64bitPrefix ? [...dlls64, ...dlls32] : dlls32
+    for (const dllFile of registerDlls) {
       // remove the .dll extension otherwise will fail
-      dll = dll.replace('.dll', '')
+      const dll = dllFile.replace('.dll', '')
       const registerDll = [
         'reg',
         'add',
@@ -458,7 +422,7 @@ export const DXVK = {
         wait: true,
         protonVerb: 'run'
       })
-    })
+    }
 
     //locate and copy nvngx.dll to support DLSS on Nvidia GPUs
     if (tool === 'dxvk-nvapi' && action === 'backup') {

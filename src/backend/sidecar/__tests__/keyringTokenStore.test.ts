@@ -892,6 +892,35 @@ describe('SidecarKeyringTokenStore', () => {
       expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
     })
 
+    // The two tests above only read AFTER the superseded fetch has settled, so they never reach
+    // the in-flight dedupe. A read issued while that fetch is STILL pending must not join it:
+    // it began before the sign-out and its answer is the pre-signout token.
+    it('a readToken() issued after clearToken() but BEFORE the superseded read settles must not join it', async () => {
+      const deferred = deferFirstCall('keyring_get')
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      const inFlight = store.getToken()
+
+      // A failed delete leaves the cache fully invalidated, so nothing but the in-flight dedupe
+      // can answer the next read.
+      programChannel('keyring_delete', {
+        type: 'reject',
+        error: new Error('keyring:unavailable:PlatformFailure')
+      })
+      await store.clearToken()
+
+      programChannel('keyring_get', {
+        type: 'resolve',
+        value: 'post-signout-token'
+      })
+      const afterSignOut = store.getToken()
+      deferred.resolve('pre-signout-token')
+
+      await expect(inFlight).resolves.toBe('pre-signout-token')
+      await expect(afterSignOut).resolves.toBe('post-signout-token')
+      expect(callLog.filter((c) => c.channel === 'keyring_get')).toHaveLength(2)
+    })
+
     it('an in-flight isAvailable() probe that resolves AFTER clearToken() must not resurrect the pre-signout availability cache (T-34.5-G6-14)', async () => {
       const deferred = deferFirstCall('keyring_available')
       const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
