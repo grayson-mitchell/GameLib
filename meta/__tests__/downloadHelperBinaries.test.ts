@@ -573,13 +573,18 @@ describe('regression: win32/linux sourcing unchanged for legendary/gogdl/nile', 
     expect(DOWNLOAD_HELPER_BINARIES_SOURCE).toContain(literal)
   })
 
+  // 2026-10-05 (phase 34.18 review): matched the bare token, whatever quotes
+  // or template syntax surround it. The previous form only rejected a
+  // trailing single quote, so `"legendary_macOS_x86_64"` or a template
+  // literal passed. The arm64 token is allowed only as the onedir archive
+  // name's prefix.
   it('no *_macOS_x86_64/*_macOS_arm64 literal remains for legendary/gogdl/nile', () => {
     for (const runner of ['legendary', 'gogdl', 'nile']) {
-      expect(DOWNLOAD_HELPER_BINARIES_SOURCE).not.toContain(
-        `${runner}_macOS_x86_64'`
+      expect(DOWNLOAD_HELPER_BINARIES_SOURCE).not.toMatch(
+        new RegExp(`${runner}_macOS_x86_64`)
       )
-      expect(DOWNLOAD_HELPER_BINARIES_SOURCE).not.toContain(
-        `${runner}_macOS_arm64'`
+      expect(DOWNLOAD_HELPER_BINARIES_SOURCE).not.toMatch(
+        new RegExp(`${runner}_macOS_arm64(?!_onedir)`)
       )
     }
   })

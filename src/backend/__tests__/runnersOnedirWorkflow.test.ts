@@ -346,6 +346,37 @@ describe('build-runners-onedir-macos.yml upload step', () => {
   })
 })
 
+// 2026-10-05 (phase 34.16 review): the `shasum -c` step used to run AFTER the
+// upload, so even a failing check could not stop a publish. It is also only a
+// same-run self-consistency check (SHA256SUMS is computed from these same
+// archives), so it must not be labelled as verification.
+describe('build-runners-onedir-macos.yml SHA256SUMS self-check step', () => {
+  function buildSteps() {
+    return parseWorkflow().jobs.build.steps ?? []
+  }
+
+  test('the shasum -c check runs before the upload step', () => {
+    const steps = buildSteps()
+    const checkIndex = steps.findIndex((step) =>
+      /shasum -a 256 -c/.test(step.run ?? '')
+    )
+    const uploadIndex = steps.findIndex((step) =>
+      /gh release upload/.test(step.run ?? '')
+    )
+    expect(checkIndex).toBeGreaterThanOrEqual(0)
+    expect(uploadIndex).toBeGreaterThanOrEqual(0)
+    expect(checkIndex).toBeLessThan(uploadIndex)
+  })
+
+  test('the shasum -c step is not named as a verification', () => {
+    const check = buildSteps().find((step) =>
+      /shasum -a 256 -c/.test(step.run ?? '')
+    )
+    expect(check?.name).toBeDefined()
+    expect(check?.name).not.toMatch(/verif/i)
+  })
+})
+
 describe('build-runners-onedir-macos.yml arch guard step', () => {
   // Plan 34.18-02 renamed this step to append
   // "(matrix.arch=${{ matrix.arch }})" -- a cosmetic change made to hold the
