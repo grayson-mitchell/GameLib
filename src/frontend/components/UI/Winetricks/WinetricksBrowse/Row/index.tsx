@@ -113,6 +113,11 @@ export default function WinetricksBrowseRow({
       // Needs-GUI verb in any state, ever. Neutral (`--text-secondary`
       // family), not accent, not danger -- this is routing to the right
       // tool, not a failure.
+      //
+      // Disabled while any install runs, matching the footer GUI button: a
+      // GUI run on the prefix mid-install races the install. The `title`
+      // reuses `installingElsewhere`'s shipped key, and the handlers are not
+      // bound at all, so a direct call cannot open the GUI either.
       const guiLabelId = `wtb-gui-label-${component.verb}`
       actionSlotContent = (
         <>
@@ -127,7 +132,17 @@ export default function WinetricksBrowseRow({
             type="button"
             className="WinetricksBrowse__guiButton"
             aria-labelledby={`${guiLabelId} ${titleId}`}
-            {...activate(onOpenGui)}
+            disabled={installing}
+            title={
+              installing
+                ? t(
+                    'winetricks.installing',
+                    'Installation in progress: {{component}}',
+                    { component: installingComponent }
+                  )
+                : undefined
+            }
+            {...(installing ? {} : activate(onOpenGui))}
           >
             <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
             <span id={guiLabelId}>
