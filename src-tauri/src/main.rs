@@ -6021,8 +6021,22 @@ enum StoreEmbedNavigationDecision {
 /// a `Webview`. The caller (the `on_navigation` closure in `store_embed_open` below) is
 /// responsible for the one side effect the `Handoff` variant implies -- calling the existing
 /// `open_external` command function directly, never a second, duplicated opener call.
+///
+/// `steam:` HAND-OFF IS GATED ON THE TOP-LEVEL PAGE, NOT ON THE FRAME (todo 2026-10-05
+/// store-embed-hands-off-steam-urls-and-popups-from-any-frame). The ask was "main-frame `steam:`
+/// navigations only", but `on_navigation` cannot tell frames apart: tauri 2.11.5's hook is
+/// `Fn(&Url) -> bool` and wry 0.55.1's `navigation_handler` is `Fn(String) -> bool` -- no frame,
+/// no gesture, no initiator. So the safe behaviour available is: hand `steam:` off only while the
+/// embed's top-level page (`top_level_host`, recorded from the main-frame-only `on_page_load`) is
+/// a Valve host, where the store's own install/launch buttons live; block it everywhere else,
+/// including the default when no page has loaded yet. An iframe embedded IN a Valve page can still
+/// trigger a hand-off -- the caller's `STORE_EMBED_STEAM_THROTTLE` caps that at one per
+/// `STORE_EMBED_HANDOFF_MIN_GAP`.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecision {
+fn store_embed_navigation_policy(
+    url: &tauri::Url,
+    top_level_host: Option<&str>,
+) -> StoreEmbedNavigationDecision {
     let scheme = url.scheme();
     if scheme == "gamelib" {
         // The sharpest edge in the phase (T-40-04-02): a store page driving the app's own deep
@@ -6038,13 +6052,81 @@ fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecisi
         return StoreEmbedNavigationDecision::Allow;
     }
     if scheme == "steam" {
-        return StoreEmbedNavigationDecision::Handoff;
+        if top_level_host.is_some_and(store_embed_is_valve_host) {
+            return StoreEmbedNavigationDecision::Handoff;
+        }
+        // Scheme-only in the log, as above -- never the steam: URL itself.
+        eprintln!(
+            "[shell] store_embed: blocked steam: hand-off -- the top-level page is not a Valve \
+             host"
+        );
+        return StoreEmbedNavigationDecision::Block;
     }
     // Default-deny (T-40-04-03): any scheme outside the enumerated set above, not an allowlist
     // of known-bad schemes. A future store/wiki origin registering some other custom scheme
     // falls here automatically rather than needing a new arm added reactively.
     eprintln!("[shell] store_embed: blocked in-embed navigation to unrecognized scheme '{scheme}'");
     StoreEmbedNavigationDecision::Block
+}
+
+/// Whether `host` is Valve's store or community site (or a subdomain of either) -- the pages
+/// whose own buttons legitimately produce `steam:` links. Exact apex or a `.`-prefixed suffix,
+/// so `evilsteampowered.com` does not match.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn store_embed_is_valve_host(host: &str) -> bool {
+    ["steampowered.com", "steamcommunity.com"]
+        .iter()
+        .any(|apex| host == *apex || host.ends_with(&format!(".{apex}")))
+}
+
+/// Minimum gap between two hand-offs of the same kind out of the store embed (a `steam:` URL to
+/// the Steam client, or a `window.open` popup to the system browser). Neither hook carries a user
+/// gesture, so a page -- or an ad frame inside it -- could otherwise fire them in a loop.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const STORE_EMBED_HANDOFF_MIN_GAP: Duration = Duration::from_secs(2);
+
+/// Admits at most one hand-off per `min_gap`. Pure apart from its own `last` field, so the
+/// rate-limit decision is unit-testable with constructed `Instant`s.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[derive(Debug, Default)]
+struct HandoffThrottle {
+    last: Option<std::time::Instant>,
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+impl HandoffThrottle {
+    fn admit(&mut self, now: std::time::Instant, min_gap: Duration) -> bool {
+        if let Some(last) = self.last {
+            if now.saturating_duration_since(last) < min_gap {
+                return false;
+            }
+        }
+        self.last = Some(now);
+        true
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_STEAM_THROTTLE: Mutex<HandoffThrottle> =
+    Mutex::new(HandoffThrottle { last: None });
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_POPUP_THROTTLE: Mutex<HandoffThrottle> =
+    Mutex::new(HandoffThrottle { last: None });
+
+/// The embed's current top-level host, recorded from `on_page_load` (main frame only) and read
+/// by the `on_navigation` closure for `store_embed_navigation_policy`'s `steam:` gate.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_TOP_LEVEL_HOST: Mutex<Option<String>> = Mutex::new(None);
+
+/// Take one admission from `throttle`, failing CLOSED on a poisoned lock: a refused hand-off is
+/// the safe direction for a gate whose job is to stop unrequested ones.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn store_embed_handoff_admitted(throttle: &Mutex<HandoffThrottle>) -> bool {
+    match throttle.lock() {
+        Ok(mut guard) => guard.admit(std::time::Instant::now(), STORE_EMBED_HANDOFF_MIN_GAP),
+        Err(_) => false,
+    }
 }
 
 /// Create (or, if already open, navigate) the store/wiki embed child webview on `main`
@@ -6095,6 +6177,12 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // D-22: on_page_load, never on_navigation, per the 013-015 rule that carries over
         // unchanged -- main-frame-only per `40-EMBED-API-VERIFICATION.md` Q4.
         .on_page_load(|_webview, payload| {
+            // Main frame only (see above), so this is the TOP-LEVEL host the `steam:` gate in
+            // `store_embed_navigation_policy` needs. Recorded on `Started` too, so a page that
+            // has begun replacing a Valve page is not still judged by the Valve host.
+            if let Ok(mut host) = STORE_EMBED_TOP_LEVEL_HOST.lock() {
+                *host = payload.url().host_str().map(str::to_string);
+            }
             if payload.event() == tauri::webview::PageLoadEvent::Finished {
                 if let Ok(mut state) = store_embed_state().lock() {
                     state.push(payload.url().to_string());
@@ -6110,28 +6198,50 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // not `on_page_load`, is correct here.
         .on_navigation({
             let app_handle = app.clone();
-            move |url| match store_embed_navigation_policy(url) {
-                StoreEmbedNavigationDecision::Allow => true,
-                StoreEmbedNavigationDecision::Block => false,
-                StoreEmbedNavigationDecision::Handoff => {
-                    // Reuses the existing `open_external` command function directly -- never a
-                    // second, duplicated `app.opener()` call site (D-28).
-                    if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
-                        eprintln!(
-                            "[shell] store_embed: on_navigation handoff to open_external \
+            move |url| {
+                // Fail closed on a poisoned lock: no known top-level host means no hand-off.
+                let top_level_host = STORE_EMBED_TOP_LEVEL_HOST
+                    .lock()
+                    .ok()
+                    .and_then(|host| host.clone());
+                match store_embed_navigation_policy(url, top_level_host.as_deref()) {
+                    StoreEmbedNavigationDecision::Allow => true,
+                    StoreEmbedNavigationDecision::Block => false,
+                    StoreEmbedNavigationDecision::Handoff => {
+                        if !store_embed_handoff_admitted(&STORE_EMBED_STEAM_THROTTLE) {
+                            eprintln!(
+                                "[shell] store_embed: steam: hand-off rate-limited -- dropped"
+                            );
+                            return false;
+                        }
+                        // Reuses the existing `open_external` command function directly -- never a
+                        // second, duplicated `app.opener()` call site (D-28).
+                        if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
+                            eprintln!(
+                                "[shell] store_embed: on_navigation handoff to open_external \
                              failed: {e}"
-                        );
+                            );
+                        }
+                        false
                     }
-                    false
                 }
             }
         })
         // D-28: a store page's `window.open()` popup is denied inside the embed's own frame
         // and routed to the system browser instead, where the URL bar and the user's password
         // manager both work -- neither exists inside an in-app child webview (T-40-04-05).
+        // Rate-limited (todo 2026-10-05): the hook carries no user gesture, so without a cap
+        // any frame could open system-browser tabs in a loop.
         .on_new_window({
             let app_handle = app.clone();
             move |url, _features| {
+                if !store_embed_handoff_admitted(&STORE_EMBED_POPUP_THROTTLE) {
+                    eprintln!(
+                        "[shell] store_embed: denied window.open request, rate-limited -- not \
+                         routed to the system browser"
+                    );
+                    return tauri::webview::NewWindowResponse::Deny;
+                }
                 eprintln!(
                     "[shell] store_embed: denied window.open request, routing to system \
                      browser (D-28)"
@@ -17832,7 +17942,7 @@ mod tests {
         // the app's own deep link from inside the embed.
         let url = tauri::Url::parse("gamelib://launch?appName=1207659037&runner=gog").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Block
         );
     }
@@ -17849,7 +17959,7 @@ mod tests {
         ] {
             let url = tauri::Url::parse(candidate).unwrap();
             assert_eq!(
-                store_embed_navigation_policy(&url),
+                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
                 StoreEmbedNavigationDecision::Allow,
                 "expected free https navigation to `{candidate}` under D-28"
             );
@@ -17861,7 +17971,7 @@ mod tests {
     fn store_embed_navigation_policy_allows_http_freely() {
         let url = tauri::Url::parse("http://example.com/").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Allow
         );
     }
@@ -17874,9 +17984,86 @@ mod tests {
         // `open_external` path instead (D-28/D-29).
         let url = tauri::Url::parse("steam://rungameid/440").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Handoff
         );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn store_embed_navigation_policy_blocks_steam_unless_the_top_level_page_is_valve() {
+        // todo 2026-10-05: `on_navigation` cannot tell an ad iframe from the main frame, so a
+        // `steam:` hand-off is gated on the top-level page. Off a Valve page -- or before any
+        // page has loaded -- it is blocked, not handed to the Steam client.
+        let url = tauri::Url::parse("steam://run/570").unwrap();
+        for top in [
+            None,
+            Some("store.gog.com"),
+            Some("www.amazon.com"),
+            Some("evilsteampowered.com"),
+            Some("steampowered.com.example"),
+        ] {
+            assert_eq!(
+                store_embed_navigation_policy(&url, top),
+                StoreEmbedNavigationDecision::Block,
+                "expected steam: to be blocked with top-level host {top:?}"
+            );
+        }
+        for top in [
+            "store.steampowered.com",
+            "steamcommunity.com",
+            "help.steampowered.com",
+        ] {
+            assert_eq!(
+                store_embed_navigation_policy(&url, Some(top)),
+                StoreEmbedNavigationDecision::Handoff,
+                "expected steam: to be handed off from `{top}`"
+            );
+        }
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn store_embed_navigation_policy_https_is_unaffected_by_the_top_level_host() {
+        // The steam: gate must not leak into D-28's free https navigation.
+        let url = tauri::Url::parse("https://checkout.stripe.com/pay/cs_test_abc").unwrap();
+        assert_eq!(
+            store_embed_navigation_policy(&url, None),
+            StoreEmbedNavigationDecision::Allow
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn handoff_throttle_admits_one_per_gap() {
+        let gap = Duration::from_secs(2);
+        let t0 = std::time::Instant::now();
+        let mut throttle = HandoffThrottle::default();
+        assert!(throttle.admit(t0, gap), "the first hand-off is admitted");
+        assert!(
+            !throttle.admit(t0, gap),
+            "a burst at the same instant is refused"
+        );
+        assert!(!throttle.admit(t0 + Duration::from_millis(1999), gap));
+        assert!(
+            throttle.admit(t0 + gap, gap),
+            "admitted again once the gap has passed"
+        );
+        assert!(!throttle.admit(t0 + gap + Duration::from_millis(1), gap));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn handoff_throttle_refusals_do_not_extend_the_window() {
+        // A page spamming refused requests must not lock out the next legitimate one forever.
+        let gap = Duration::from_secs(2);
+        let t0 = std::time::Instant::now();
+        let mut throttle = HandoffThrottle::default();
+        assert!(throttle.admit(t0, gap));
+        for ms in (100..2000).step_by(100) {
+            assert!(!throttle.admit(t0 + Duration::from_millis(ms), gap));
+        }
+        assert!(throttle.admit(t0 + gap, gap));
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -17892,7 +18079,7 @@ mod tests {
         ] {
             let url = tauri::Url::parse(candidate).unwrap();
             assert_eq!(
-                store_embed_navigation_policy(&url),
+                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
                 StoreEmbedNavigationDecision::Block,
                 "expected `{candidate}` to be default-denied"
             );
