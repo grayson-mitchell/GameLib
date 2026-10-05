@@ -141,8 +141,9 @@ describe('DXVK.installRemove restore on a 64-bit prefix', () => {
     await DXVK.installRemove(settings(), 'dxvk', 'restore')
 
     const deletes = events.filter((e) => e.startsWith('end delete:'))
-    // 2 DLLs x (64-bit + 32-bit) overrides.
-    expect(deletes).toHaveLength(4)
+    // One override per DLL NAME: the 64-bit and 32-bit lists share names and DllOverrides is
+    // keyed by name, so the old 2 x (64-bit + 32-bit) = 4 calls repeated each edit.
+    expect(deletes).toHaveLength(2)
     const winebootStart = events.indexOf('start wineboot -u')
     expect(winebootStart).toBeGreaterThan(-1)
     for (const end of deletes) {
@@ -157,7 +158,8 @@ describe('DXVK.installRemove backup', () => {
     events.push('resolved')
 
     const adds = events.filter((e) => e.startsWith('end add:'))
-    expect(adds).toHaveLength(4)
+    // One override per DLL name (see the restore test above).
+    expect(adds).toHaveLength(2)
     for (const end of adds) {
       expect(events.indexOf(end)).toBeLessThan(events.indexOf('resolved'))
     }

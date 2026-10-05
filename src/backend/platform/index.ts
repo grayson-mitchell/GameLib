@@ -478,16 +478,23 @@ export const dialog = {
       | {
           buttons?: string[]
           cancelId?: number
+          detail?: string
           message?: string
           title?: string
           type?: string
         }
       | undefined
     const safeIndex = options?.cancelId ?? (options?.buttons?.length ?? 1) - 1
+    // Electron renders `detail` as a secondary line under the message; the Rust
+    // `dialog_message` arm reads only `message`, so `detail` is folded into it here. Dropping
+    // it silently hid the executable and arguments the deep-link launch confirm exists to show.
+    const message = [options?.message, options?.detail]
+      .filter((part) => part !== undefined && part !== '')
+      .join('\n\n')
     try {
       const result = await requestRustInvoke(RUST_DIALOG_MESSAGE, [
         {
-          message: options?.message,
+          message: message === '' ? options?.message : message,
           title: options?.title,
           kind: options?.type,
           buttons: options?.buttons

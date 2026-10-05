@@ -188,6 +188,24 @@ describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real m
     )
   })
 
+  it('folds detail into the forwarded message, since the Rust dialog only reads message', async () => {
+    program = { type: 'resolve', value: 0 }
+
+    await dialog.showMessageBox(undefined, {
+      type: 'warning',
+      title: 'Launch?',
+      message: 'A link wants to launch this game',
+      detail: 'Executable: /games/x.exe\nArguments:\n  "--foo"',
+      buttons: ["Don't launch", 'Launch'],
+      cancelId: 0
+    })
+
+    const call = callLog.find((entry) => entry.channel === RUST_DIALOG_MESSAGE)
+    expect((call?.args[0] as { message: string }).message).toBe(
+      'A link wants to launch this game\n\nExecutable: /games/x.exe\nArguments:\n  "--foo"'
+    )
+  })
+
   it('resolves { response: 1, checkboxChecked: false } when requestRustInvoke resolves 1 (buttons[1] clicked)', async () => {
     program = { type: 'resolve', value: 1 }
 

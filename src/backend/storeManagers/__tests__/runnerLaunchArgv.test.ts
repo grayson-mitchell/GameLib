@@ -102,14 +102,21 @@ describe('legendary launch argv: passthrough args sit after `--`', () => {
     // Every legendary option the app itself set precedes the separator...
     expect(argv.indexOf('--skip-version-check')).toBeLessThan(separator)
     expect(argv.indexOf('--override-exe')).toBeLessThan(separator)
-    // ...and every URL-supplied token follows it, as the game's own args.
-    expect(argv.slice(separator + 1)).toEqual([
-      '--wrapper',
-      'cmd /c calc',
-      '--override-exe',
-      '/evil.exe'
-    ])
+    // ...and every URL-supplied argument follows it unchanged, one argv entry each, as the
+    // game's own args -- the same shape nile passes them in.
+    expect(argv.slice(separator + 1)).toEqual(URL_ARGS)
     expect(argv.slice(0, separator)).not.toContain('--wrapper')
+  })
+
+  test('an argument containing a space reaches the game as ONE argument, as the confirm showed it', () => {
+    const argv = legendaryArgv(['foo bar'])
+    expect(argv.slice(argv.indexOf('--'))).toEqual(['--', 'foo bar'])
+  })
+
+  test('an argument with an unmatched quote does not throw after the user confirmed', () => {
+    expect(() => legendaryArgv(['say "hi'])).not.toThrow()
+    const argv = legendaryArgv(['say "hi'])
+    expect(argv.slice(argv.indexOf('--'))).toEqual(['--', 'say "hi'])
   })
 
   test('no passthrough args: argv is unchanged, no `--` is added', () => {

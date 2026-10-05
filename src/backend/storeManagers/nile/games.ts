@@ -14,6 +14,7 @@ import {
   logDebug,
   logError,
   logInfo,
+  logWarning,
   createGameLogWriter
 } from 'backend/logger'
 import { GameConfig } from 'backend/game_config'
@@ -140,7 +141,12 @@ export default class NileGameManager implements Game {
     }
 
     try {
-      this.addShortcuts()
+      void this.addShortcuts().catch((error) =>
+        logWarning(
+          ['Could not add shortcuts for', this.id, error],
+          LogPrefix.Nile
+        )
+      )
       libraryManagerMap['nile'].installState(this.id, true)
     } catch (error) {
       logError(['Failed to import', `${this.id}:`, error], LogPrefix.Nile)
@@ -261,7 +267,12 @@ export default class NileGameManager implements Game {
       }
       return { status: 'error', error: res.error }
     }
-    this.addShortcuts()
+    void this.addShortcuts().catch((error) =>
+      logWarning(
+        ['Could not add shortcuts for', this.id, error],
+        LogPrefix.Nile
+      )
+    )
     libraryManagerMap['nile'].installState(this.id, true)
     const metadata = libraryManagerMap['nile'].getInstallMetadata(this.id)
 

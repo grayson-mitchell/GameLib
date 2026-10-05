@@ -158,6 +158,7 @@ describe('Winetricks.install single-flight (double-click todo)', () => {
     await second
 
     children[0].emit('exit', 0)
+    children[0].emit('close', 0)
     await first
     expect(mockSendFrontendMessage).toHaveBeenLastCalledWith(
       'installing-winetricks-component',
@@ -168,6 +169,7 @@ describe('Winetricks.install single-flight (double-click todo)', () => {
     const third = Winetricks.install('gog', 'game', 'xact')
     await spawned(2)
     children[1].emit('exit', 0)
+    children[1].emit('close', 0)
     await third
   })
 })
@@ -183,6 +185,7 @@ describe('non-install runs do not borrow the installing verb (GUI/list todo)', (
     children[1].stderr.emit('data', 'fixme: some gui err line\n')
     jest.advanceTimersByTime(1000)
     children[1].emit('exit', 0)
+    children[1].emit('close', 0)
     await gui
 
     const guiEvents = progressEvents()
@@ -192,6 +195,7 @@ describe('non-install runs do not borrow the installing verb (GUI/list todo)', (
     }
 
     children[0].emit('exit', 0)
+    children[0].emit('close', 0)
     await install
   })
 
@@ -202,6 +206,7 @@ describe('non-install runs do not borrow the installing verb (GUI/list todo)', (
     const list = Winetricks.listAvailable('gog', 'game')
     await spawned(2)
     children[1].emit('exit', 0)
+    children[1].emit('close', 0)
     await list
 
     const done = progressEvents().filter((p) => p.messages[0] === 'Done')
@@ -209,6 +214,7 @@ describe('non-install runs do not borrow the installing verb (GUI/list todo)', (
     expect(done[0].installingComponent).toBe('')
 
     children[0].emit('exit', 0)
+    children[0].emit('close', 0)
     await install
   })
 })
@@ -221,6 +227,7 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     // Printed and exited inside the same 1s interval -- no tick ever fires.
     children[0].stderr.emit('data', 'warning: Some download err happened\n')
     children[0].emit('exit', 1)
+    children[0].emit('close', 1)
     await install
 
     const events = progressEvents()
@@ -235,10 +242,44 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     }
   })
 
+  it('output that arrives after exit but before close still lands before Done', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+
+    // 'exit' can fire while stdio is still draining; the abort line arrives after it.
+    children[0].emit('exit', 1)
+    children[0].stderr.emit('data', 'late abort err line\n')
+    children[0].emit('close', 1)
+    await install
+
+    const events = progressEvents()
+    const doneIndex = events.findIndex((p) => p.messages[0] === 'Done')
+    expect(events.slice(0, doneIndex).flatMap((p) => p.messages)).toContain(
+      'late abort err line\n'
+    )
+  })
+
+  it('sends Done from the exit fallback when close never arrives', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+
+    // A lingering wineserver can hold the pipes open, so 'close' never fires.
+    children[0].emit('exit', 0)
+    expect(progressEvents().some((p) => p.messages[0] === 'Done')).toBe(false)
+    jest.advanceTimersByTime(2000)
+    await install
+
+    const done = progressEvents().filter((p) => p.messages[0] === 'Done')
+    expect(done).toEqual([
+      { messages: ['Done'], installingComponent: 'vcrun2019', failed: false }
+    ])
+  })
+
   it('a non-zero exit marks Done as failed for the verb', async () => {
     const install = Winetricks.install('gog', 'game', 'vcrun2019')
     await spawned(1)
     children[0].emit('exit', 1)
+    children[0].emit('close', 1)
     await install
 
     const done = progressEvents().filter((p) => p.messages[0] === 'Done')
@@ -251,6 +292,7 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     const install = Winetricks.install('gog', 'game', 'vcrun2019')
     await spawned(1)
     children[0].emit('exit', 0)
+    children[0].emit('close', 0)
     await install
 
     const done = progressEvents().filter((p) => p.messages[0] === 'Done')

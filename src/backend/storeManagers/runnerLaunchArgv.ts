@@ -34,13 +34,14 @@ export function legendaryLaunchArgumentFields({
   args,
   launchArgumentArgs,
   launcherArgs
-}: LaunchArgvInputs): { extraArguments: string; gameArguments?: string } {
+}: LaunchArgvInputs): { extraArguments: string; gameArguments?: string[] } {
   return {
     extraArguments: [launchArgumentArgs, launcherArgs]
       .filter(Boolean)
       .join(' '),
-    // `commandToArgsArray` emits this after every option, behind a `--`.
-    ...(args.length ? { gameArguments: args.join(' ') } : {})
+    // `commandToArgsArray` emits this after every option, behind a `--`, one entry per
+    // argument exactly as nile does -- never joined and re-split.
+    ...(args.length ? { gameArguments: [...args] } : {})
   }
 }
 

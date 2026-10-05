@@ -884,8 +884,8 @@ export default class LegendaryLibraryManager implements LibraryManager {
 
     // Passthrough game args go last, behind `--`, so none of them can be parsed as one of
     // legendary's own options (see `runnerLaunchArgv.ts`).
-    if (command.subcommand === 'launch' && command.gameArguments)
-      commandParts.push('--', ...shlex.split(command.gameArguments))
+    if (command.subcommand === 'launch' && command.gameArguments?.length)
+      commandParts.push('--', ...command.gameArguments)
 
     return commandParts
   }

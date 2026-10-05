@@ -291,7 +291,11 @@ export const DXVK = {
       // unregister the dlls on the wine prefix
       // Awaited one at a time: `wineboot -u` below must not race these deletes, and the toggle
       // must not resolve before the overrides are actually gone.
-      const unregisterDlls = is64bitPrefix ? [...dlls64, ...dlls32] : dlls32
+      // De-duplicated: dlls64 and dlls32 carry the same file names, and each entry is a whole
+      // wine process, so the plain concat doubled the work under toggleDXVK's 60s bound.
+      const unregisterDlls = is64bitPrefix
+        ? [...new Set([...dlls64, ...dlls32])]
+        : dlls32
       for (const dllFile of unregisterDlls) {
         const dll = dllFile.replace('.dll', '')
         const unregisterDll = [
@@ -402,7 +406,10 @@ export const DXVK = {
 
     // register dlls on the wine prefix
     // Awaited one at a time, so the toggle resolves only once the overrides are written.
-    const registerDlls = is64bitPrefix ? [...dlls64, ...dlls32] : dlls32
+    // De-duplicated for the same reason as the unregister loop above.
+    const registerDlls = is64bitPrefix
+      ? [...new Set([...dlls64, ...dlls32])]
+      : dlls32
     for (const dllFile of registerDlls) {
       // remove the .dll extension otherwise will fail
       const dll = dllFile.replace('.dll', '')
@@ -675,13 +682,18 @@ export const Winetricks = {
         resolve(returnOutput ? output : null)
       })
 
-      child.on('exit', (code) => {
-        // Lines buffered since the last 1s tick -- usually winetricks' own
-        // abort message -- are flushed BEFORE Done, or they were dropped with
-        // the interval and the failure never reached the log or the row.
-        // `failed` carries the exit code itself (a signal exit reports
-        // `code === null`, also a failure), so attribution no longer rests on
-        // the " err" substring test alone.
+      // Done is sent once, on 'close': that is when stdout/stderr have drained, so the
+      // lines buffered since the last 1s tick -- usually winetricks' own abort message --
+      // are flushed into the log BEFORE Done. 'exit' can fire while output is still in
+      // flight. `failed` carries the exit code itself (a signal exit reports
+      // `code === null`, also a failure), so attribution no longer rests on the " err"
+      // substring test alone. A lingering wineserver can hold the pipes open past exit,
+      // so 'exit' arms a short unref'd fallback that sends Done if 'close' never comes.
+      let doneSent = false
+      let exitCode: number | null = null
+      const sendDone = (code: number | null) => {
+        if (doneSent) return
+        doneSent = true
         clearInterval(sendProgress)
         flushProgress()
         if (code !== 0) {
@@ -696,11 +708,15 @@ export const Winetricks = {
           failed: code !== 0
         })
         resolve(returnOutput ? output : null)
+      }
+
+      child.on('exit', (code) => {
+        exitCode = code
+        setTimeout(() => sendDone(code), 2000).unref?.()
       })
 
-      child.on('close', () => {
-        clearInterval(sendProgress)
-        resolve(returnOutput ? output : null)
+      child.on('close', (code) => {
+        sendDone(exitCode ?? code)
       })
     })
   },

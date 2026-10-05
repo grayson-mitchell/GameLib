@@ -26,6 +26,7 @@ import {
 import {
   logError,
   logInfo,
+  logWarning,
   LogPrefix,
   createGameLogWriter
 } from 'backend/logger'
@@ -653,7 +654,12 @@ export default class LegendaryGame implements Game {
       }
       return { status: 'error', error: res.error }
     }
-    this.addShortcuts()
+    void this.addShortcuts().catch((error) =>
+      logWarning(
+        ['Could not add shortcuts for', this.appName, error],
+        LogPrefix.Legendary
+      )
+    )
 
     return { status: 'done' }
   }
@@ -828,7 +834,12 @@ export default class LegendaryGame implements Game {
       abortId: this.appName,
       logWriters: [logWriter]
     })
-    this.addShortcuts()
+    void this.addShortcuts().catch((error) =>
+      logWarning(
+        ['Could not add shortcuts for', this.appName, error],
+        LogPrefix.Legendary
+      )
+    )
     const errorMatch = res.stderr.match(/^.*ERROR:.*$/gm)?.join('') ?? ''
     res.error = (res.error ?? '') + errorMatch
     if (res.error) {
