@@ -43,7 +43,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_deep_link::DeepLinkExt;
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
@@ -1145,8 +1145,10 @@ const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
 ///
 /// The guardrail is not lost for the rest of the surface: every OTHER channel keeps the 60s
 /// bound, and a genuinely wedged long-running invoke now surfaces as a never-settling promise
-/// rather than a wrong answer — the honest failure mode. The sidecar dying closes the channel,
-/// which wakes `rx.recv()` with a disconnect error, so a crashed sidecar still fails fast.
+/// rather than a wrong answer — the honest failure mode. A crashed sidecar still fails fast, but
+/// only because the reader thread calls `drain_pending_invokes` when the sidecar's stdout ends:
+/// the `Sender`s live in `SidecarState::pending`, so the process dying does not by itself close
+/// any channel or wake `rx.recv()`.
 ///
 /// Membership is not free and is not granted on reasoning: `getWikiGameInfo` was MEASURED and
 /// deliberately left on the 60s bound (three cold-cache calls at 1190/957/702ms — the full
@@ -1263,6 +1265,44 @@ fn abandoned_channel_for(ring: &VecDeque<(String, String)>, id: &str) -> String 
         .find(|(recorded, _)| recorded == id)
         .map(|(_, channel)| channel.clone())
         .unwrap_or_else(|| ABANDONED_CHANNEL_UNRECORDED.to_string())
+}
+
+/// The one-shot sender `SidecarState::pending` holds for each in-flight invoke.
+type InvokeSender = Sender<Result<Value, String>>;
+
+/// Fail every still-pending invoke at once. The reader thread calls this when the sidecar's
+/// stdout ends (EOF or a read error): no response can arrive after that, but the `Sender`s in
+/// `pending` would otherwise stay alive in the map, so a long-running invoke's `rx.recv()` would
+/// never wake and a bounded one would wait out its full `INVOKE_TIMEOUT`.
+///
+/// Each waiter is SENT an `Err` rather than having its sender dropped: a dropped sender wakes a
+/// bounded `recv_timeout` with `Disconnected`, which its arm reports as a timeout — the wrong
+/// story. The text matches the long-running arm's own disconnect `Err`, so a consumer sees one
+/// message for "the sidecar went away" whichever arm it was waiting in. Each id is also recorded
+/// in `abandoned`, matching the other two abandonment paths.
+///
+/// Takes the two fields rather than `&SidecarState` so it is reachable from `#[cfg(test)] mod
+/// tests` without a live `Child`/`ChildStdin`. A poisoned lock is recovered, not skipped: this
+/// runs exactly once, on the path whose whole job is to unblock waiters. Returns the drained
+/// `(id, channel)` pairs so the caller can log them.
+fn drain_pending_invokes(
+    pending: &Mutex<HashMap<String, (String, InvokeSender)>>,
+    abandoned: &Mutex<VecDeque<(String, String)>>,
+) -> Vec<(String, String)> {
+    let drained: Vec<_> = pending
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .drain()
+        .collect();
+    let mut ring = abandoned.lock().unwrap_or_else(|e| e.into_inner());
+    drained
+        .into_iter()
+        .map(|(id, (channel, tx))| {
+            let _ = tx.send(Err("sidecar closed before responding".into()));
+            push_abandoned(&mut ring, &id, &channel);
+            (id, channel)
+        })
+        .collect()
 }
 
 /// The `Err` a bounded invoke rejects with when its channel does not answer in time.
@@ -1582,9 +1622,10 @@ impl SidecarState {
                     Err(invoke_timeout_message(&channel))
                 }
             },
-            // Long-running channel: block until the sidecar answers. `recv()` still returns
-            // Err when the sender is dropped (sidecar died / pending entry removed), so this
-            // cannot hang forever on a dead sidecar.
+            // Long-running channel: block until the sidecar answers. A dead sidecar does not
+            // wake this by itself -- the sender lives in `pending`, not in the child. It wakes
+            // because the reader thread's `drain_pending_invokes` sends an `Err` to every
+            // waiter once stdout ends; this `Err(_)` arm covers a sender dropped any other way.
             None => match rx.recv() {
                 Ok(result) => result,
                 Err(_) => {
@@ -6673,6 +6714,23 @@ fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Value, String
     Ok(json)
 }
 
+/// Which button of a two-button `dialog_message` was chosen: `Some(0)`, `Some(1)`, or `None`
+/// when the dialog was dismissed (Esc / window close) without one. See the `dialog_message`
+/// arm for why this reads rfd's raw result rather than the dialog plugin's.
+///
+/// rfd reports a click on an `OkCancelCustom` button as `Custom(<its label>)` on every desktop
+/// backend; `Ok` is also accepted as buttons[0] in case a backend reports the first button
+/// generically. Everything else -- `Cancel` above all, which is what a dismissal yields -- is
+/// `None`, so the caller falls back to its declared `cancelId` instead of guessing a button.
+fn two_button_choice(result: &rfd::MessageDialogResult, label0: &str, label1: &str) -> Option<u8> {
+    match result {
+        rfd::MessageDialogResult::Custom(s) if s == label0 => Some(0),
+        rfd::MessageDialogResult::Custom(s) if s == label1 => Some(1),
+        rfd::MessageDialogResult::Ok => Some(0),
+        _ => None,
+    }
+}
+
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
@@ -6961,19 +7019,31 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
         }
         // Native message/error dialog (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05): backs both
-        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Maps
-        // `blocking_show()`'s bool onto `Value::Bool` — electronStub maps `true`->response:0,
-        // `false`->response:1. Default kind is Info when unspecified; the showErrorBox caller
-        // always sends `kind:"error"`. Runs on the existing spawned worker thread (same
+        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Default
+        // kind is Info when unspecified; the showErrorBox caller always sends `kind:"error"`.
+        // Runs on the existing spawned worker thread (same
         // modal-dialog-must-not-block-the-reader-thread reasoning as `dialog_open` above).
         //
-        // Phase 33 Plan 03 (D-06): extended to read an optional 2-element `buttons` array and
-        // wire it to `MessageDialogButtons::OkCancelCustom` — a real multi-button confirm
-        // instead of the OK-only default. `blocking_show()`'s bool keeps the same meaning:
-        // `true` -> buttons[0] clicked -> electronStub response:0, `false` -> buttons[1]
-        // clicked -> electronStub response:1. Single-button (no `buttons` / not length 2)
-        // behavior is unchanged (still OK-only, always true). Data-shape change only, no new
-        // match arm/channel (33-RESEARCH confirmed).
+        // Phase 33 Plan 03 (D-06): an optional 2-element `buttons` array renders a real
+        // two-button confirm (`OkCancelCustom`) instead of the OK-only default.
+        //
+        // Returns the chosen button's index (`0` / `1`), or `null` when the dialog was
+        // DISMISSED (Esc / window close) without a button -- electronStub maps `null` to the
+        // caller's `cancelId`, Electron's own dismissal semantics. Todo 2026-10-05
+        // dialog-dismiss: this used to return `blocking_show()`'s bool, which is `false` for a
+        // dismissal AND for buttons[1], so Esc on Windows/Linux resolved as buttons[1] -- the
+        // destructive "Yes" for `askForceUninstall` and `handleExit`.
+        //
+        // The two-button case calls `rfd` directly, NOT the plugin's
+        // `blocking_show_with_result()`: tauri-plugin-dialog 2.7.2's
+        // `desktop::show_message_dialog` unconditionally remaps rfd's `Cancel` to
+        // `Custom(<second label>)` for `OkCancelCustom` (a workaround for GTK), so through the
+        // plugin a dismissal is indistinguishable from buttons[1] on every API it offers. rfd
+        // 0.16.0 itself reports `Custom(label)` for a click and `Cancel` for a dismissal on all
+        // three desktop backends (gtk3, win_cid, macos). The dialog is shown the way the plugin
+        // shows it: built and `show()`n on the main thread, awaited on a spawned thread, with
+        // the plugin's default title (the package name). Single-button / no-`buttons` calls
+        // keep the plugin's OK-only dialog.
         "dialog_message" => {
             let message = args
                 .first()
@@ -6991,27 +7061,51 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     _ => MessageDialogKind::Info,
                 })
                 .unwrap_or(MessageDialogKind::Info);
-            let mut builder = app.dialog().message(message).kind(kind);
-            if let Some(title) = args
+            let title = args
                 .first()
                 .and_then(|v| v.get("title"))
                 .and_then(|v| v.as_str())
-            {
-                builder = builder.title(title);
-            }
+                .map(str::to_string);
             let buttons = args
                 .first()
                 .and_then(|v| v.get("buttons"))
                 .and_then(|v| v.as_array());
             if let Some(btns) = buttons.filter(|b| b.len() == 2) {
-                let label0 = btns[0].as_str().unwrap_or("");
-                let label1 = btns[1].as_str().unwrap_or("");
-                builder = builder.buttons(MessageDialogButtons::OkCancelCustom(
-                    label0.into(),
-                    label1.into(),
-                ));
+                let label0 = btns[0].as_str().unwrap_or("").to_string();
+                let label1 = btns[1].as_str().unwrap_or("").to_string();
+                let title = title.unwrap_or_else(|| app.package_info().name.clone());
+                // The plugin's own `From<MessageDialogKind> for rfd::MessageLevel`, so the
+                // level matches what the OK-only path below renders.
+                let level: rfd::MessageLevel = kind.into();
+                let buttons = rfd::MessageButtons::OkCancelCustom(label0.clone(), label1.clone());
+                let (tx, rx) = mpsc_channel::<rfd::MessageDialogResult>();
+                app.run_on_main_thread(move || {
+                    let shown = rfd::AsyncMessageDialog::new()
+                        .set_title(&title)
+                        .set_description(&message)
+                        .set_level(level)
+                        .set_buttons(buttons)
+                        .show();
+                    thread::spawn(move || {
+                        let _ = tx.send(tauri::async_runtime::block_on(shown));
+                    });
+                })
+                .map_err(|e| e.to_string())?;
+                let result = rx.recv().map_err(|e| e.to_string())?;
+                return Ok(
+                    two_button_choice(&result, &label0, &label1).map_or(Value::Null, Value::from)
+                );
             }
-            Ok(Value::Bool(builder.blocking_show()))
+            let mut builder = app.dialog().message(message).kind(kind);
+            if let Some(title) = title {
+                builder = builder.title(title);
+            }
+            // OK-only: `true` is its one button; anything else is a dismissal.
+            Ok(if builder.blocking_show() {
+                Value::from(0)
+            } else {
+                Value::Null
+            })
         }
         // Real OS notification (Phase 33 Plan 04, D-05) via `tauri-plugin-notification`. Backs
         // `electronStub.ts`'s `Notification.show()`. Mirrors `dialog_message`'s args-parse idiom
@@ -11423,6 +11517,12 @@ fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::
             let id = value.get("id").and_then(|v| v.as_str());
             eprintln!("[shell] unrecognized sidecar frame kind: {kind:?} id={id:?}");
         }
+
+        // stdout has ended (EOF, or a read error such as a non-UTF-8 line), so no response can
+        // arrive any more. Fail every invoke still waiting instead of leaving it parked forever.
+        for (id, channel) in drain_pending_invokes(&state.pending, &state.abandoned) {
+            shell_diag(&invoke_abandoned_message("sidecar exited", &id, &channel));
+        }
     });
 }
 
@@ -13512,6 +13612,73 @@ mod tests {
         assert_eq!(abandoned_channel_for(&ring, "1575"), "getCookies");
         assert_eq!(abandoned_channel_for(&ring, "1576"), "openDialog");
         assert_eq!(abandoned_channel_for(&ring, "1577"), "keyring_get");
+    }
+
+    #[test]
+    fn sidecar_exit_fails_every_pending_invoke_at_once() {
+        // Todo 2026-10-05 sidecar-death: nothing used to drain `pending`, so a waiter on a dead
+        // sidecar never woke (long-running) or waited the full 60s (bounded). Each waiter must
+        // receive an Err immediately -- `try_recv`, not a wait, is the assertion.
+        let pending = Mutex::new(HashMap::new());
+        let abandoned = Mutex::new(VecDeque::new());
+        let (tx_install, rx_install) = mpsc_channel::<Result<Value, String>>();
+        let (tx_cookies, rx_cookies) = mpsc_channel::<Result<Value, String>>();
+        {
+            let mut map = pending.lock().unwrap();
+            map.insert("7".to_string(), ("install".to_string(), tx_install));
+            map.insert("8".to_string(), ("getCookies".to_string(), tx_cookies));
+        }
+
+        let mut drained = drain_pending_invokes(&pending, &abandoned);
+        drained.sort();
+
+        assert_eq!(
+            drained,
+            vec![
+                ("7".to_string(), "install".to_string()),
+                ("8".to_string(), "getCookies".to_string()),
+            ]
+        );
+        for rx in [rx_install, rx_cookies] {
+            assert_eq!(
+                rx.try_recv(),
+                Ok(Err("sidecar closed before responding".to_string()))
+            );
+        }
+        assert!(pending.lock().unwrap().is_empty());
+        let ring = abandoned.lock().unwrap();
+        assert_eq!(abandoned_channel_for(&ring, "7"), "install");
+        assert_eq!(abandoned_channel_for(&ring, "8"), "getCookies");
+    }
+
+    #[test]
+    fn two_button_dialog_dismissal_is_not_a_button() {
+        // Todo 2026-10-05 dialog-dismiss: Esc / window close yields rfd `Cancel`, which must
+        // NOT read as buttons[1] (the destructive "Yes" in askForceUninstall/handleExit).
+        use rfd::MessageDialogResult as R;
+        assert_eq!(
+            two_button_choice(&R::Custom("No".into()), "No", "Yes"),
+            Some(0)
+        );
+        assert_eq!(
+            two_button_choice(&R::Custom("Yes".into()), "No", "Yes"),
+            Some(1)
+        );
+        assert_eq!(two_button_choice(&R::Cancel, "No", "Yes"), None);
+        assert_eq!(two_button_choice(&R::Ok, "No", "Yes"), Some(0));
+        assert_eq!(two_button_choice(&R::No, "No", "Yes"), None);
+        assert_eq!(
+            two_button_choice(&R::Custom("Other".into()), "No", "Yes"),
+            None
+        );
+    }
+
+    #[test]
+    fn draining_an_empty_pending_table_is_a_no_op() {
+        let pending = Mutex::new(HashMap::new());
+        let abandoned = Mutex::new(VecDeque::new());
+        assert!(drain_pending_invokes(&pending, &abandoned).is_empty());
+        assert!(abandoned.lock().unwrap().is_empty());
     }
 
     #[test]

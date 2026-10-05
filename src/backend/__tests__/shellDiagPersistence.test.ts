@@ -111,7 +111,7 @@ describe('Site A and Site B route through shell_diag, not a bare eprintln!', () 
 })
 
 describe('Sites C and D: both silent invoke() arms are now instrumented', () => {
-  test('shell_diag(&invoke_abandoned_message( occurs exactly twice — COUNTED', () => {
+  test('shell_diag(&invoke_abandoned_message( occurs exactly three times — COUNTED', () => {
     const code = loadMainRsCode()
 
     // Counted, not `toContain`-ed, for the same reason the sibling gate
@@ -119,8 +119,19 @@ describe('Sites C and D: both silent invoke() arms are now instrumented', () => 
     // catches deletion of every occurrence, never one of two, and the timeout arm is precisely
     // where F-9's own event came from. This is the same blind spot that gate's own history
     // documents having been hand-verified against.
+    //
+    // Three, not two, since todo 2026-10-05 sidecar-death: the two invoke() arms below, plus
+    // the reader thread's post-loop drain (pinned by the next test).
     const occurrences = code.match(/shell_diag\(&invoke_abandoned_message\(/g)
-    expect(occurrences).toHaveLength(2)
+    expect(occurrences).toHaveLength(3)
+  })
+
+  test('the reader-thread drain carries the "sidecar exited" reason', () => {
+    const code = loadMainRsCode()
+
+    expect(code).toMatch(
+      /drain_pending_invokes\(&state\.pending, &state\.abandoned\)\s*\{\s*shell_diag\(&invoke_abandoned_message\("sidecar exited", &id, &channel\)\);/
+    )
   })
 
   test('the timeout arm carries the "timeout" reason, paired with its own Err', () => {
