@@ -18,12 +18,14 @@
  * throws `UpstreamChurnError` naming every offending path plus the likely
  * cause when any upstream path changed.
  *
- * Run with `pnpm i18n-churn-guard` after `pnpm i18n`, before staging the
- * result. The `classifyChangedPaths`/`assertNoUpstreamChurn` exports are
- * also the D-05 assertion `pnpm test:ci` runs against the real working
- * tree (see `meta/__tests__/i18nCatalogChurnGuard.test.ts`'s `live tree`
- * block) — that is what turns this from an agreement into something CI
- * proves.
+ * Run with `pnpm i18n-churn-guard` after `pnpm i18n`. The
+ * `classifyChangedPaths`/`assertNoUpstreamChurn` exports are also the D-05
+ * assertion `pnpm test:ci` runs against the real working tree (see
+ * `meta/__tests__/i18nCatalogChurnGuard.test.ts`'s `live tree` block).
+ * Neither can fail on a checkout nobody ran the parser in, so
+ * `.github/workflows/test.yml` runs `pnpm i18n` and then this CLI before
+ * `pnpm test:ci` -- that ordering, not this module's existence, is what
+ * turns this from an agreement into something CI proves.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -85,6 +87,59 @@ export function assertNoUpstreamChurn(paths: string[]): void {
   }
 }
 
+/**
+ * The changed paths under `public/locales/` in the working tree at `cwd`:
+ * STAGED, UNSTAGED and UNTRACKED alike. Shared by the CLI below and the jest
+ * suite's `live tree` block, so the two can never disagree about what
+ * "changed" means.
+ *
+ * `git status`, not `git diff --name-only`: the latter (what this used to
+ * run) sees only unstaged changes to tracked files. A staged upstream edit
+ * and -- the failure that matters most -- a brand-new catalogue the parser
+ * wrote for a typo'd namespace (`t('gamelb:x')` -> `en/gamelb.json`) were
+ * both invisible to it. `--untracked-files=all` lists each file of a new
+ * locale directory instead of the collapsed `xx/`; `-z` keeps paths
+ * unquoted and makes a rename's two paths unambiguous.
+ */
+export function listChangedLocalePaths(cwd?: string): string[] {
+  // Fixed argv array via execFileSync -- never execSync with an
+  // interpolated shell string.
+  const output = execFileSync(
+    'git',
+    [
+      'status',
+      '--porcelain=v1',
+      '-z',
+      '--untracked-files=all',
+      '--',
+      'public/locales'
+    ],
+    { encoding: 'utf-8', cwd }
+  )
+  return parsePorcelainZ(output)
+}
+
+/**
+ * Pure parser for `git status --porcelain=v1 -z`: NUL-separated `XY path`
+ * records, where a rename or copy (`R`/`C` in either column) is followed by
+ * one extra record holding the ORIGINAL path. Both sides of a rename are
+ * returned -- moving an upstream catalogue away is churn too.
+ */
+export function parsePorcelainZ(output: string): string[] {
+  const records = output.split('\0')
+  const paths: string[] = []
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i]
+    if (record.length < 4) continue
+    const status = record.slice(0, 2)
+    paths.push(record.slice(3))
+    if (/[RC]/.test(status) && i + 1 < records.length) {
+      paths.push(records[++i])
+    }
+  }
+  return paths.filter((path) => path.length > 0)
+}
+
 // ---------------------------------------------------------------------------
 // CLI half -- guarded so importing this module (e.g. from the jest test
 // suite) never triggers a git shell-out or process.exit.
@@ -99,18 +154,12 @@ export function assertNoUpstreamChurn(paths: string[]): void {
 // ---------------------------------------------------------------------------
 
 function runCli(): void {
-  let diffOutput: string
+  let changedPaths: string[]
   try {
-    // Fixed argv array via execFileSync -- never execSync with an
-    // interpolated shell string.
-    diffOutput = execFileSync(
-      'git',
-      ['diff', '--name-only', '--', 'public/locales'],
-      { encoding: 'utf-8' }
-    )
+    changedPaths = listChangedLocalePaths()
   } catch (error) {
     console.error(
-      `::error::i18n-churn-guard could not run 'git diff' against ` +
+      `::error::i18n-churn-guard could not run 'git status' against ` +
         `public/locales/: ${
           error instanceof Error ? error.message : String(error)
         }`
@@ -118,11 +167,6 @@ function runCli(): void {
     process.exit(1)
     return
   }
-
-  const changedPaths = diffOutput
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
 
   try {
     assertNoUpstreamChurn(changedPaths)
