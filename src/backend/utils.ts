@@ -419,7 +419,9 @@ function removeSpecialcharacters(text: string): string {
 }
 
 async function openUrlOrFile(url: string): Promise<string | void> {
-  if (url.startsWith('http')) {
+  // A real http(s) scheme, not merely a leading "http" (`httpfoo:` used to
+  // reach the shell's `openExternal` frame arm).
+  if (/^https?:\/\//i.test(url)) {
     return shell.openExternal(url)
   }
   return shell.openPath(url)

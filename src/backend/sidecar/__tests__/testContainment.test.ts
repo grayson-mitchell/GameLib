@@ -891,6 +891,13 @@ const IN_SCOPE_SUITES = [
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
  * kit Block B gates on. A `readdirSync` recount at this task's execution time puts the directory
  * at 66 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 62 below.
+ *
+ * `sidecarStdoutFramesOnly.test.ts` (todo `sidecar-log-output-shares-the-rpc-stdout-pipe`,
+ * 2026-10-05) is classified as structurally contained: it mocks only `processGuards` (partial)
+ * and `backend/logger/index` (the same inert mock `logWriter.test.ts` uses), writes its one log
+ * file to an explicit `mkdtemp` path, and declares no `os`/`pathShim` mock. A `readdirSync`
+ * recount at this task's execution time puts the directory at 67 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 63 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -943,6 +950,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',
   'shortcutsFlows.test.ts',
+  'sidecarStdoutFramesOnly.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',
