@@ -151,3 +151,5 @@ None. No network, auth or new persisted surface beyond the one `focusRow` key pl
 ## Next Phase Readiness
 
 Ready for 48-06, which owns the `MaxRecentGames` lines in the Settings barrel and `GeneralSettings`; both are untouched here.
+
+## Self-Check: PASSED
