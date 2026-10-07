@@ -286,3 +286,24 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
   missing:
     - "Raise the controls above hovered and focused cards (z-index above 3, or a stacking context on the viewport) and probe `elementFromPoint` at the chevron centre with a real hover, then click"
   debug_session: ".planning/debug/48-controller-mode-card-shrink-and-border.md"
+
+- gap_id: G-48-8c
+  truth: "Focus-row strip cards are the same width as the main grid's cards at every window width"
+  status: failed
+  reason: "User reported: for some reason the tiles in the focus row are uniformly smaller rather than being the same size of the rest of the tiles??? — operator ruling 2026-10-07: 'match the grid', which amends locked D-01 (SPEC R3, fixed 156px) to 'equals the grid's card width'"
+  severity: minor
+  test: 8
+  reported: "2026-10-07, operator, Windows 11, dev shell, after the 48-09 tracer (not caused by it; present in mouse mode before)"
+  root_cause: "Design collision, orchestrator-verified: the strip pins every card to `flex: 0 0 156px` (FocusRowStrip/index.css, D-01 locked by SPEC R3) while the grid uses `grid-template-columns: repeat(auto-fill, minmax(156px, 1fr))` (Library/index.css:4), so grid cards stretch to fill the row and are 156px only at the narrowest fit; at any wider fit the strip reads uniformly smaller"
+  artifacts:
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.css"
+      issue: "`.focusRowTrack .gameList > * { flex: 0 0 156px }` fixes the width instead of tracking the grid's column width"
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts"
+      issue: "page-scroll delta assumes the 156px card + gap; must follow the new width"
+    - path: ".planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-SPEC.md"
+      issue: "R3 / D-01 'fixed 156px' is amended by operator ruling; record the amendment, do not silently diverge"
+  missing:
+    - "Strip card width derived from the grid's actual column width (same minmax(156px, 1fr) arithmetic over the shared container width, or the grid's computed column size), so both rows match at every width"
+    - "Page delta and controller scroll-into-view read the live card width; UAT items 5 and 6 re-checked afterwards"
+    - "D-01 amendment recorded in 48-SPEC.md / 48-UI-SPEC.md with the ruling and date"
+  debug_session: ""
