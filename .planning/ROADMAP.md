@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 8/11 plans executed
+**Plans:** 9/11 plans executed
 
 Plans:
 **Wave 1**
@@ -5686,7 +5686,7 @@ Plans:
 - [x] 48-08-PLAN.md — live gates: the 7 `human_verification:` items measured into `48-UAT.md`, R7 first on the real pre-upgrade profile (R1, R2, R3, R6, R7)
 
 **Gap closure round 2, Wave 1** *(from 48-UAT.md `## Gaps`: G-48-4a, G-48-4b, G-48-7, G-48-8a, G-48-8b, G-48-9; parallel, zero `files_modified` overlap)*
-- [ ] 48-09-PLAN.md — TRACER: controller mode never resizes a GameCard (G-48-8a) and every GameCard's mouse hover wears the console-style ring (G-48-8b), both GLOBAL by operator ruling 2026-10-07 (R3)
+- [x] 48-09-PLAN.md — TRACER: controller mode never resizes a GameCard (G-48-8a) and every GameCard's mouse hover wears the console-style ring (G-48-8b), both GLOBAL by operator ruling 2026-10-07 (R3)
 - [ ] 48-10-PLAN.md — TRACER: strip chevrons paint above a hovered/focused card via a track stacking context (G-48-4b, G-48-9), plus 12px strip-end ring clearance and clearance-aware controller scroll-into-view (pairs with G-48-8a/8b, which 48-09 owns) (R3)
 
 **Gap closure round 2, Wave 2** *(blocked on 48-10: shared `FocusRowStrip/index.css`)*

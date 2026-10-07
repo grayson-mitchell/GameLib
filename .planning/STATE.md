@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-08-PLAN.md
-last_updated: "2026-10-07T07:46:14.411Z"
+stopped_at: Completed 48-09-PLAN.md
+last_updated: "2026-10-07T10:59:10.597Z"
 last_activity: 2026-10-07
 last_activity_desc: Phase 48 execution started
-state_head: 07430d9f993073f5356a2c3f9eb46f043f67e996
+state_head: dfe993528cbbe96c82aa89993e8b18069be0b1ad
 progress:
   total_phases: 43
   completed_phases: 36
-  total_plans: 514
-  completed_plans: 505
+  total_plans: 517
+  completed_plans: 506
   percent: 84
 ---
 
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 48 — Focus row — move library top section into panel widen it
+**Current focus:** Phase 48 — Focus row — move the library top section into the panel and widen it
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING (7/8 plans done; gap closure 48-07 complete 2026-10-07, 48-08 live gates remain)
-Plan: 8 of 8
-Status: 48-07 complete (CR-01, WR-01, WR-02 fixed at the desk) — ready to execute 48-08 (live gates)
-Last activity: 2026-10-07 — 48-07 complete
+Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
+Plan: 9 of 11 complete (gap closure round 2, Wave 1: 48-09 done; 48-10 and 48-11 remain)
+Status: 48-09 complete (G-48-8a operator-verified live; G-48-8b desk-complete, live re-check owed) — ready to execute 48-10
+Last activity: 2026-10-07 — 48-09 complete
 
 Previous activity: 2026-10-01 -- Completed quick task 261001-93f: built and self-proved a macOS pixel/geometry measurement instrument for Phase 38's two open items (38-E03(a), 38-E04(a)), pre-registered both items' pass/fail criteria before any live measurement, and wrote an operator run-sheet -- scores NEITHER gate, only the operator's drag-resize gesture and System Settings scale-factor change can.
 
@@ -507,6 +507,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P06 | 5 min | 1 tasks | 7 files |
 | Phase 48 P07 | 21 min | 3 tasks | 10 files |
 | Phase 48 P08 | 2h 11m | 2 tasks | 1 files |
+| Phase 48 P09 | 85min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1138,6 +1139,7 @@ Recent decisions affecting current work:
 - [Phase 48]: 48-07: hydrate focusRow in the renderer from requestAppSettings and persist through setSetting (not backend mirror write); present focusRow key authoritative; view whitelist duplicated in common, pinned by satisfies Record<LibraryView,true>
 - [Phase 48]: Plan 48-08: chevron contrast is under 3:1 in 9 of 10 themes and a hovered card paints over the control; divider labels miss 4.5:1 in dracula and nord-light - three gaps filed in 48-UAT.md
 - [Phase 48]: Plan 48-08: every pixel measurement on this display must convert the screencapture from Display P3 to sRGB first
+- [Phase 48]: 48-09: GameCard controller mode has no geometry override and hover wears the console ring globally; stale-focus suppression scoped to .listing:hover (common ancestor of strip and grid), not a single .gameList
 
 ### Pending Todos
 
@@ -1741,8 +1743,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-07T07:46:12.092Z
-Stopped at: Completed 48-08-PLAN.md
+Last session: 2026-10-07T10:59:06.601Z
+Stopped at: Completed 48-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
