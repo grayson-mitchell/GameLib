@@ -1,9 +1,9 @@
 ---
-status: partial
+status: diagnosed
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-07T09:40:00Z
+updated: 2026-10-07T10:15:00Z
 ---
 
 ## Current Test
@@ -235,8 +235,19 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
   severity: major
   test: 8
   reported: "2026-10-07, operator, Windows 11, dev shell, physical controller"
-  artifacts: []
-  missing: []
+  root_cause: "`.gameCard.gamepad` aspect-ratio overrides (3/4 and 328/205 against the base 173/275 and 275/205) are applied whenever `activeController` is set; the strip pins card width at 156px so height follows the ratio, 248px to 208px (track 280 to 240). The class flips on every mouse/controller handoff. Separately, the 35px store-badge bar retained in controller mode (commit 16560dbdd, 2026-10-02; upstream hid it) shrinks the art link to 173px against a 208px image, cropping 35px of art. Same rule hits the main grid (250.7 to 210.3). Reproduced in a static harness of the real CSS over CDP; counterfactual with the base ratios keeps cards at 248 and uncrops the art"
+  artifacts:
+    - path: "src/frontend/screens/Library/components/GameCard/index.css"
+      issue: "lines 43-53: `.gameCard.gamepad` / `.gameCard.gamepad.justPlayed` aspect-ratio overrides change card geometry; lines 256-259: `.gameCard.gamepad > .icons` keeps a 35px bar that crops the art"
+    - path: "src/frontend/screens/Library/components/GameCard/index.tsx"
+      issue: "line 498: `gamepad` class derived from `activeController`"
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.css"
+      issue: "lines 20-29: pinned 156px width and zero-padding track make the height change visible and clip the first/last card's scaled body and ring at the track edges"
+  missing:
+    - "Stop the `gamepad` class changing card geometry: drop the two aspect-ratio overrides or neutralise them inside `.focusRowTrack` (decide scope; it is global and also changes the main grid)"
+    - "If the overrides stay for the grid, give the 35px badge bar room so it no longer crops art"
+    - "Inline padding or `scroll-padding` on the track so end-card rings are not clipped; re-check `focusRowOverflow.ts` arithmetic and UAT items 5-6 afterwards"
+  debug_session: ".planning/debug/48-controller-mode-card-shrink-and-border.md"
 
 - gap_id: G-48-8b
   truth: "The strip card's focus/hover border is the thicker controller-mode (console-style) border in mouse mode too"
@@ -245,8 +256,18 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
   severity: minor
   test: 8
   reported: "2026-10-07, operator, Windows 11, dev shell"
-  artifacts: []
-  missing: []
+  root_cause: "Deliberate, test-pinned design split (quick 260926-acw), not broken code: `.gameCard:hover` is a 2px accent outline at -1px offset with no halo or glow (z-index 2); `.gameCard:focus-within` is the console-family ring, `--focus-ring-width` 3px at +2px offset plus a 2px halo and 22px glow (z-index 3). Controller focus uses the latter; mouse hover the former. `themes.scss:78-79` states hover must never consume the focus tokens and `gameCardFocusRing.test.ts:89-112` asserts it. A mouse-clicked card already gets the thick ring; the thin border shows only while hovering"
+  artifacts:
+    - path: "src/frontend/screens/Library/components/GameCard/index.css"
+      issue: "lines 65-70: the thin hover rule; lines 72-81: the thick focus ring to mirror"
+    - path: "src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts"
+      issue: "lines 89-112 pin the hover/focus split and must change with the fix"
+    - path: "src/frontend/themes.scss"
+      issue: "lines 78-79 document the design rule being reversed"
+  missing:
+    - "Have `.gameCard:hover` consume `--focus-ring-width`, `--focus-ring-color` and `--focus-ring-halo` with the same +2px offset, halo and glow (decide scope: `.focusRowTrack .gameCard:hover` only, or every GameCard); update the test and the themes.scss note"
+    - "Pair with G-48-8a end-card clipping and G-48-9 stacking: a 3px ring at +2px scaled 1.05 reaches about 5px outside the card, so it clips at the strip ends and widens the card-over-chevron overlap"
+  debug_session: ".planning/debug/48-controller-mode-card-shrink-and-border.md"
 
 - gap_id: G-48-9
   truth: "Moving a real pointer onto a strip chevron through the adjacent edge card, the chevron stays on top of the hovered card and a click advances the strip"
@@ -255,5 +276,10 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
   severity: major
   test: 9
   reported: "2026-10-07, operator, Windows 11, dev shell, real mouse"
-  artifacts: []
-  missing: []
+  root_cause: "Same cause as the item 4 stacking gap, now confirmed by eye with a real pointer: `.focusRowStrip__control` is z-index 1 and `.gameCard:hover` is z-index 2 with transform scale(1.05); the card is a flex item of the track, which forms no stacking context, so the hovered edge card paints over the chevron. Whether the click still reaches the control was not reported"
+  artifacts:
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.css"
+      issue: "`.focusRowStrip__control` z-index 1 sits below `.gameCard:hover` z-index 2 (GameCard/index.css)"
+  missing:
+    - "Raise the controls above hovered and focused cards (z-index above 3, or a stacking context on the viewport) and probe `elementFromPoint` at the chevron centre with a real hover, then click"
+  debug_session: ".planning/debug/48-controller-mode-card-shrink-and-border.md"
