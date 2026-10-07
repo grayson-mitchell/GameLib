@@ -4,14 +4,69 @@ title: 'Windows releases ship UNSIGNED — no Windows code-signing cert is enrol
 area: build
 severity: major
 platform: windows
-ready: human
+ready: blocked
 needs: signpath-foundation-application-then-verify
-status: OPEN
+status: "PARKED 2026-10-08 — operator decision: no Windows certificate yet by either route. SignPath Foundation's free programme wants an already-released project with users; GameLib's only release is still a Draft and it has no user community, so an application is premature. A paid commercial OV certificate is declined at this stage. Windows keeps shipping unsigned and SmartScreen keeps warning; that is accepted, not fixed. See the PARKED section below for the unpark conditions."
 found_by: 'Split from the macOS signing todo on 2026-09-14, after the Apple Developer Program purchase closed the macOS half. Windows needs a SEPARATE certificate that the Apple licence does not cover.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md (Direction step 5)'
 files:
   - .github/workflows/release-tauri.yml
 ---
+
+## PARKED 2026-10-08 — no certificate will be acquired yet
+
+This section does not revise anything below it. It records the operator's 2026-10-08 decision to
+stop pursuing a Windows certificate for now. Nothing measured below is withdrawn.
+
+**Operator decision (2026-10-08).** Do not acquire a Windows code-signing certificate yet, by
+either route.
+
+- **The free route (SignPath Foundation) is not reachable yet.** Its programme is for
+  already-released, actively-maintained open-source projects. GameLib's only release is still a
+  Draft — re-measured 2026-10-01 in the section below — and the project has no user community. The
+  operator's judgement is that applying before there are published releases and real users is
+  premature. That is a judgement about timing, not a SignPath ruling; the terms clauses recorded in
+  the 260930-upo section remain the only wording this file has read.
+- **The paid route is declined for now.** Direction step 3's fallback is a commercial OV
+  certificate at $150-300/yr plus a USB token or cloud HSM. The operator does not want to pay for
+  that at this stage of the project.
+
+So Windows releases keep shipping unsigned and SmartScreen keeps warning. That is accepted, not
+fixed. `ready:` moves from `human` to `blocked`: no operator step is queued and there is nothing at
+the desk to do.
+
+**What stays true while parked.** This decision affects none of the findings below, and each is
+still live whenever a certificate does arrive:
+
+- Finding 1 — no issuer buys instant SmartScreen trust; the first signed release will still warn.
+  This is part of why the park costs less than it looks: signing is a reputation investment that
+  only begins paying once releases go out regularly to real users.
+- Finding 2 — the implemented `WINDOWS_CERTIFICATE` → `Import-PfxCertificate` →
+  `certificateThumbprint` path in `release-tauri.yml` is dead on arrival for any certificate issued
+  today (HSM/hardware-token requirement since June 2023). Whichever route is eventually taken needs
+  `bundle.windows.signCommand` or a post-build signer, not the base64 `.p12` path.
+- Finding 3 — the workflow's secret gating is correct and stays green with no secrets enrolled
+  (D-04). Nothing has to change to keep it green while parked.
+- Finding 4 — the post-build-signing / `createUpdaterArtifacts: true` collision. Still the part
+  most likely to ship a silently-broken auto-update, and still to be designed BEFORE any credential
+  is wired.
+- README's `## Code signing policy` section and `PRIVACY.md` (both published 2026-09-30) stay as
+  they are. One residual this park creates, recorded rather than edited: README.md:197 says GameLib
+  is applying to SignPath Foundation's free code-signing programme. No application has been
+  submitted and, as of this decision, none is queued — so that sentence now reads ahead of the
+  facts. The wording was deliberate, and the operator may want it to stand for when the application
+  is eventually made.
+
+**Unpark conditions.** Any one of these:
+
+1. GameLib has at least one published, non-Draft release AND enough of a user base that the
+   operator judges a SignPath application worth making. Then do the three remaining operator steps
+   from the STATUS 2026-10-01 section (publish with a Code signing policy link in the release notes,
+   confirm MFA, apply at https://signpath.org/apply), and only then Direction step 2.
+2. The operator decides to pay for a commercial OV certificate. Then skip SignPath and go to
+   Direction step 3 — but do Finding 4's ordering design first either way.
+3. A real user reports SmartScreen friction serious enough to change the cost calculation before
+   either of the above happens.
 
 ## STATUS 2026-10-01 (quick 261001-c2r)
 
