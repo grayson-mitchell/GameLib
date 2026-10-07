@@ -1,16 +1,14 @@
 ---
-status: testing
+status: partial
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-07T05:45:00Z
+updated: 2026-10-07T07:50:00Z
 ---
 
 ## Current Test
 
-number: 3
-name: R7 migration legs A to D (leg A measured in Task 1; legs B, C, D owed to Task 2)
-awaiting: Task 2 (operator at the desk)
+[testing complete]
 
 ## Protocol
 
@@ -46,35 +44,45 @@ gate_dir: /private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/c52ae8
 - Item 4's reference cards and pixels: the C1-C4 sampling rule above, verbatim.
 - Geometry: DOM `getBoundingClientRect()` and `getComputedStyle()` probes from the dev build's devtools console. The dev shell opens devtools by itself (`open_devtools()` under `debug_assertions`), docked at the bottom of the window, which is why a dev-shell capture shows the console. Devtools does not exist in a release build, so every item that needs a DOM probe runs in the dev shell; item 2 is the one item the plan wants on a release build and is handled in Task 2.
 
+**Declared deviations, Task 2 continuation (2026-10-07).**
+
+- **Item 2 build.** Item 2 ran on the dev shell (`pnpm tauri:dev`), not a release build, operator ruling 2026-10-07. R1 persistence is a config-file round trip that the build target does not change. `pnpm tauri build` was not run.
+- **Item 5 controller.** No physical controller was connected (operator answer, 2026-10-07). The controller-focus clause (D-06/D-07) is `blocked`. A keyboard-style proxy (scripted `.focus()` onto the last rendered card) was run and is recorded as a proxy only, never as the controller result.
+- **Operator actions replaced.** The operator performed no clicks. Clicks the plan assigns to the operator ran as `element.click()` from the devtools console on the same React controls (FOCUS ROW rows, the theme selector's `[role=option]` items, the strip chevrons). That proves the handlers and persistence, not pointer hit-testing. Item 4's hover check used a real pointer (`CGEvent` mouse move) so `:hover` is genuine. Item 7's long collection was created through the real Manage Categories dialog with real pointer clicks and real keystrokes.
+- **Colour space.** `screencapture -l` PNGs carry the Display P3 profile. Read raw, the chevron's modal glyph pixel was `168,252,254` against the computed `139,255,255` (29 off in red), so no pixel-vs-computed cross-check could pass. Every capture used for a luminance or ratio was converted with `sips -m "/System/Library/ColorSync/Profiles/sRGB Profile.icc"` first; after conversion the modal glyph pixel read `140,255,255`, within 1 of the computed colour. Item 4's C2 ranking was re-run on converted captures and picked the same BRIGHT and DARK cards.
+- **Probe transport.** Probes are single-line expressions typed into the docked devtools console with a compiled CGEvent helper (75 ms per character) and read back through the clipboard (`copy(...)` then `pbpaste`). Typed text is not always what was sent: the console's completion turned `window.__e=[]` into `window.__e=2.718[]` (a SyntaxError, discarded and rerun under another name), and a doubled `=` in `e==...` lost one, so a first item 4 run measured the wrong control (every placement behaved as "back"). That run was discarded; the numbers below come from the rerun with a numeric flag and no `==`. A loopback HTTP eval bridge was drafted to avoid typing and was refused by the permission system as a remote-code-execution surface; it was deleted unrun.
+- **Quit path.** Once focus had been in the devtools console, Cmd-Q via `osascript keystroke` did not quit the shell (pid 15058 survived 60 s and a retry). The app-menu item `Quit gamelib-shell` (System Events `click menu item`) quit it in 2 s, and every session from then on quit that way. Rig behaviour, not a GameLib defect.
+- **Item 6 widths.** The narrowest width is 87 px, the floor `AXSize` reached when asked for 1 px or 50 px (CGWindowList bounds `87x800`), set through Accessibility rather than a mouse drag; no `minWidth` is declared. At 87 px the strip track is 0 px wide, so a visual "no overflow" reading there would be vacuous, and 520 px (track 222 px) is recorded as a supplementary width.
+
 ## Tests
 
 ### 1. Settings -> General after the 48-06 deletions
 expected: Settings -> General: neither removed control (`Library Top Section`, `Recent Games to Show`) renders, and the gap where they sat is within 2px of the modal inter-row gap.
-result: pending
+result: pass — General container (40 children, 27 displayed) probed at 1280x800, viewport 1280x380: `document.body.innerText` matches neither `Library Top Section` nor `Recent Games to Show` (both regex false) and holds no `gamelib:` text; the gap between the two rows that now neighbour (bottom of `Disable GameLib navigation using control` 2351.28, top of `Maximum Number of Workers` 2351.28) is 0.00 px against a modal inter-row gap of 0.00 px, difference 0.00 px against the 2 px bar (getBoundingClientRect probe, dev shell, as-found theme)
 
 ### 2. R1 persistence round trip with a collection pick
 expected: R1: pick a collection in FOCUS ROW, quit, relaunch the built app: the same collection is the focus row and the strip header echoes it (D-12). Clear it, quit, relaunch: no strip, and the mirror `settings.focusRow` is `null`.
-result: pending
+result: pass — dev shell, not a release build (operator ruling, see Protocol): FOCUS ROW pick of collection `Test` wrote `focusRow = {kind:'collection',value:'Test'}` to both files; after quit and relaunch (116 ms capture cadence loop from window creation, 108 frames) the last frame shows header `Test` over the 2-card strip and the DOM read gives header text `Test`, `title` `Test`, exactly 1 active FOCUS ROW row (D-12); clearing wrote `focusRow: null` to both files and a second relaunch (98 frames) shows no header and no strip, `focusRow` still `null` on disk (the legacy `recently_played` seed did not re-hydrate it)
 
 ### 3. R7 migration live gate, legs A to D
 expected: Leg A (re-armed, not as-found), legacy `recently_played` and no `focusRow` key: Recently-played strip on the first launch (a one-time pop-in accepted), `settings.focusRow` written as `{ kind: 'view', value: 'recentlyPlayed' }`, and launch 2 shows the strip on first paint. Leg B, `favourites`: Favourites strip and `settings.focusRow = { kind: 'view', value: 'favourites' }`. Leg C, `disabled`: no strip and `focusRow: null` written. Leg D, clear after A, then relaunch: still no strip.
-result: pending
+result: pass — A (re-armed, not as-found): strip on launch 1, `focusRow = {kind:'view',value:'recentlyPlayed'}` written, strip on launch 2 (Task 1 captures, repeated 2026-10-07T07:38Z and T07:40Z with a capture loop from window creation: in launch 1 the first Library frame, frame 17 of 88, already carries the `Recently played` header, and in launch 2 the first Library frame, frame 9 of 85, carries the header and the card slots; cadence about 7 frames per second, so a gap under about 140 ms cannot be excluded, and no empty-Library frame was observed); B: Favourites header and 1-card strip, `focusRow = {kind:'view',value:'favourites'}`; C: no strip, `focusRow: null` written; D: cleared after hydration (`focusRow: null` on disk), relaunch showed no strip in any of 98 frames and the file stayed `null`. Caveat: A's as-found arm was consumed unmeasured, so A is a re-arm (operator ruling)
 
 ### 4. Strip chevron contrast over real artwork, all offered themes
 expected: Chevron contrast >= 3:1 at both edges, over the two C1-C4 reference cards (highest and lowest mean art luminance, IDs logged), in every offered theme; no overlap with the adjacent card corner or hover outline at 156px (D-01, D-05).
-result: pending
+result: issue — 10 themes enumerated live from the Settings theme selector (MUI listbox `[role=option]`, as 48-04 counted). C1: Recently played strip at window content 1280 px, track clientWidth 982, scrollWidth 3576, 20 cards. C2 (sRGB-converted captures of all 20 cards, controls hidden): BRIGHT card index 0 `steam:107100` mean luminance 0.50979, DARK card index 1 `gog:1829678475` 0.02065. C3: BRIGHT cannot be placed with an enabled control (index 0 is at `scrollLeft` 0, so back is disabled and forward cannot reach the right edge), so index 12 `steam:620` (0.37794) stands in for both edges; DARK is placed at back, and at forward index 9 `steam:63000` (0.06128) stands in. C4 minimum ratios (back/BRIGHT, fwd/BRIGHT, back/DARK, fwd/DARK; bar 3:1): zombie 1.70 1.70 2.91 1.99; midnightMirage 3.76 3.76 6.55 4.43; cyberSpaceOasis 1.89 1.89 3.24 2.23; high-contrast 2.25 2.25 3.83 2.63; dracula 1.43 1.43 2.41 1.67; marine 1.66 1.66 2.86 1.95; nord-light 3.33 2.89 2.70 3.11; nord-dark 2.57 2.57 4.40 3.02; gruvbox_dark 1.01 1.01 1.57 1.08; sweet 3.46 2.40 4.21 2.87. 12 of 40 combinations reach 3:1 and only midnightMirage passes all four; overall minimum 1.005 (gruvbox_dark). Glyph colour vs modal pixel agreed within 1 per channel in all 40. Overlap: the control's 36 px circle clears the card's corner (4 px radius) vertically, but a hovered card (real pointer, `:hover`) measures `transform` about 1.05 (rect 163.8 x 260.4 against 156 x 248), `z-index: 2` against the control's `z-index: 1`, and paints over it: chevron-coloured pixels in the icon rect 122 of 640 unhovered, 0 of 640 hovered, at both edges (screencapture, sRGB-converted)
 
 ### 5. Back and forward controls, true end of travel, controller focus
 expected: The back control mounts once scrolled. The forward control is `disabled` at the end (`scrollLeft + clientWidth >= scrollWidth - 1`). Neither control renders when all cards fit. Controller focus past the last visible card leaves it fully inside the track (D-06, D-07).
-result: pending
+result: blocked — controller half not run, no controller connected (operator answer, 2026-10-07); the other three clauses measured pass. Track at 1280: forward button present and enabled at `scrollLeft` 0 with the back button mounted and `disabled` (UI-SPEC E6, not literally 'mounts once scrolled'); three forward clicks went 0, 900, 1800, 2594 (page delta 900 = 5 cards x 180 px) and forward became `disabled` at `scrollLeft + clientWidth` = 3576 = `scrollWidth`; boundary probe: `scrollLeft + clientWidth - scrollWidth` = -2 enabled, -1 disabled, 0 disabled, back to -4 enabled, matching `>= scrollWidth - 1`; back is enabled once scrolled. Picks that fit: collection `Test` (2 cards) and Favourites (1 card), clientWidth 982 = scrollWidth 982, `.focusRowStrip__control` count 0, neither button in the DOM. Keyboard-style PROXY only, not the controller result: scripted `.focus()` onto the last rendered card (index 5, partly clipped) left it 74 px past the track's right edge with `scrollLeft` unchanged over 16 repeats, because the D-06 scroll handler is mounted only when `activeController` is set; cards past index 5 stay empty shells until scrolled in, so they are not focusable
 
 ### 6. Narrowest window width and longest title
 expected: At the narrowest draggable width and at 1280px, no title rect exceeds its card rect, and the longest title clips with no ellipsis or line-clamp (UI-SPEC E4 and E7). The strip stays one card tall with at most 20 cards (D-04).
-result: pending
+result: pass — 20 cards, one row (gameList height 247.97 = card height), track 982 / 222 / 0 px at widths 1280 / 520 / 87 (87 is the narrowest the window reaches, CGWindowList `87x800`; devtools docked, viewport height 380): at all three widths `getBoundingClientRect` of every title and its text range lies inside its card (worst overflow 0.00 px, 0 of 20 cards over, with `titlesAlwaysVisible` applied and the transition settled); the longest title (37 characters, index 4) wraps to 3 lines inside a 70.19 px title in a 247.97 px card, computed `text-overflow: clip` on the title and its span, `-webkit-line-clamp: none`, card `overflow: hidden`, so it clips with no ellipsis and no line-clamp. Caveat: at 87 px the track is 0 px wide, so nothing is visible there and the 520 px reading is the narrowest with a visible strip
 
 ### 7. FOCUS ROW panel section
 expected: FOCUS ROW is collapsed by default (D-08). A long collection name ellipsises with its full text in `title`. The divider labels read Views / Collections / Store / Runnability in that order, at >= 4.5:1 in every theme. No `gamelib:` text is visible.
-result: pending
+result: issue — collapsed by default: `aria-expanded="false"` on first read after launch and the `.dropdown.collapsed` panel measures height 0 px, `max-height: 0px`, `overflow: hidden`. Divider labels in DOM order Views, Collections, Store, Runnability (each `title` equals its text); a long collection (81 characters, created for the gate through Manage Categories) has computed `text-overflow: ellipsis`, `overflow: hidden`, `white-space: nowrap`, scrollWidth 613 over clientWidth 188, with the full 81-character text in `title`; no `gamelib:` text in `document.body.innerText`. Divider contrast against the panel background (sRGB-converted capture, 4 labels per theme, equal within a theme; bar 4.5:1): zombie 5.98, midnightMirage 13.13, cyberSpaceOasis 7.56, high-contrast 8.74, dracula 4.25, marine 5.41, nord-light 1.52, nord-dark 12.49, gruvbox_dark 6.12, sweet 6.64. Dracula (4.25) and nord-light (1.52) fail; 8 of 10 themes pass
 
 ## Evidence log
 
@@ -112,17 +120,93 @@ Entries are bold paragraph lines. Times are UTC unless marked local; the machine
 
 **Task 2 progress at the checkpoint.** Done: item 3 legs B and C (above), each ended in P4. Not yet run: item 3 leg D, which needs the operator to clear the focus row in the FOCUS ROW panel; item 2, which needs a collection pick and a quit and relaunch; and items 1 and 4 to 7, which need the devtools-console probes, the theme selector, a physical controller (item 5) and window dragging (item 6). Item 3's `result:` stays `pending` until leg D runs.
 
+**Continuation (2026-10-07, fresh executor).** Operator rulings recorded in `## Protocol`: item 2 on the dev shell, no controller (item 5 keyboard proxy only), operator-at-desk actions replaced by devtools-console DOM clicks (`element.click()` on the same React controls) wherever possible. Start state verified by me before any launch: `shasum -a 256 -c` OK for both files, `gate-procs.sh` empty.
+
+**Rig changes this session (declared).** (1) Probes are typed into the docked devtools console with a compiled `ctl` helper (CGEvent per-character typing, 75 ms per character) and read back through the clipboard (`copy(JSON.stringify(...))`, then `pbpaste`); `copy` only exists as a direct console expression, not inside a `setTimeout` callback, so every probe copies synchronously. A persistent eval bridge over loopback HTTP was drafted and NOT used: the permission system refused it as a remote-code-execution surface, and it was deleted unrun. (2) Cmd-Q via `osascript keystroke` did NOT quit the shell once focus had been in the console (pid 15058 survived 60 s and a retry); the app-menu item `Quit gamelib-shell` (System Events `click menu item`) quit cleanly in 2 s, so `quit.sh` uses the menu item. The earlier legs quit with Cmd-Q because the console had never been clicked. Not a GameLib defect; a rig note. (3) Window geometry reads: CGWindowList reported 1254x784 at window-appear (mid-animation) and 1280x800 at (116,65) once settled; every geometry reading below is taken after settling.
+
+**Leg D, launch 1 (hydrate), P3 edit and launch.** `p3-set.cjs recently_played` (no instance running): both files `libraryTopSection: "recently_played"`, `focusRow` absent. Launch 2026-10-07T06:20:06Z: shell 15058, sidecar 15190, one window id 58320 owned by pid 15058, frontmost pid 15058, `gamelib-shell` count 1. After load, disk: `settings.focusRow` = `{"kind":"view","value":"recentlyPlayed"}` in `store/config.json` and `defaultSettings.focusRow` the same in `config.json`; capture `legD1-look.png` shows the `Recently played` header and strip. Then FOCUS ROW cleared by `document.querySelector('.FilterFocusRow__row.active').click()` from the console (the active `Recently played` row, which the handler treats as clear-by-reclick; a DOM click on the same React button, not a physical pointer click, so this proves the handler and persistence, not pointer routing). Capture `legD1-cleared.png`: no header, no strip, the card grid starts directly under the tab bar, no `FilterFocusRow__row.active` left (the row list read earlier showed exactly one active row). Disk after the clear: both files `focusRow: null` (key present, value null), `libraryTopSection` still `recently_played`.
+
+**Leg D, launch 2 (relaunch after the clear, no P4 between).** Quit launch 1 via the app menu, probe empty. Relaunch 2026-10-07T06:27:36Z: shell 17563, sidecar 17645, window id 58367 owned by 17563, frontmost 17563. A tight capture loop started at window creation: 116 frames over 06:27:43 to 06:27:58Z (about 7 per second), `legD2-loop-*.png`. Result: the first 16 or so frames are the Loading screen, and from the first frame that shows the Library onward (frame 19, 06:27:4x) through frame 116 the grid starts directly under the tab bar; a crop of the card area (x 100..1600, y 1000..1600 px) hashes to only 26 distinct values, all loading or image-decode states, and the two stable states (9 frames and 89 frames) both show the card grid with no strip and no header. No frame shows a `Recently played` header. Disk after the relaunch: both files `focusRow: null`, `libraryTopSection: "recently_played"`; the app did NOT rewrite `focusRow` to `recentlyPlayed`. Leg D observed outcome: clear persists across relaunch and the legacy `recently_played` seed does not bring the strip back, as expected. The leg A first-paint caveat is NOT closed by this: leg D's relaunch has no strip to paint, so a first-paint reading of the strip on the legacy-seeded relaunch (leg A launch 2) remains unmeasured, and only its presence once loaded was proven.
+
+**Item 1, Settings -> General (measured in leg D's relaunch session, before it quit).** `location.hash = '#/settings/general'`. The 40 children of the General container, each `getBoundingClientRect()`: `document.body.innerText` contains neither `Library Top Section` nor `Recent Games to Show` (both regexes false) and no `gamelib:` text. The deleted controls sat between `DisableController` and `MaxWorkers` (`git show f66ba9b73`, `de83f63b9`). Gap between the two rows that now neighbour each other, bottom of the `Disable GameLib navigation using control` row minus top of the `Maximum Number of Workers` row: 0.00 px (2351.28 / 2351.28). The inter-row gaps between all 27 visible children, in order: `10.36,0,0,0,0,0,0,0,0,4,0,...,0`; the 10.36 is heading to first row and the single 4 px is the Help popover wrapper, the other 24 are 0.00 px. So the modal inter-row gap is 0 px, the seam is 0 px, difference 0.00 px against a 2 px bar.
+
+**P-RESTORE - closes leg D and item 1.** Quit launch 2 via the app menu on pid 17563 (clean in 2 polls), probe empty; `cp -p` of both backup copies over the originals, then `shasum -a 256 -c`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
+
+**Item 2, R1 round trip (dev shell, declared).** Start state: restored profile (`shasum -c` OK), no instance. Launch 1 at 2026-10-07T06:34:05Z (local 19:34): shell 20035, sidecar 20118, window id 58402 owned by pid 20035, frontmost pid 20035, `gamelib-shell` count 1. The hydrated row was `Recently played` (`focusRow` already in the restored files). The collection row `Test` was picked by `element.click()` on the FOCUS ROW button; disk after: `focusRow = {"kind":"collection","value":"Test"}` in both files (`legacy libraryTopSection` left `recently_played`), capture `i2L1-picked.png` shows header `Test` and two cards. Quit via the app menu, probe empty. Launch 2 at 06:35:11Z: shell 20757, window 58425, frontmost 20757, 108 frames from window creation (`i2L2-loop-*.png`); the Library paints with header `Test` and the 2-card strip, and the last 94 frames of the card-area crop are byte-identical. DOM read after: 1 `FilterFocusRow__row.active` (text `Test`), strip header text `Test`, header `title` `Test`. Then the active row was clicked again (clear-by-reclick): disk `focusRow: null` in both files, capture `i2L2-cleared.png` shows the grid directly under the tab bar. Quit, probe empty. Launch 3 at 06:36:48Z: shell 22377, window 58453, frontmost 22377, 98 frames; frame 98 shows no header and no strip; disk `focusRow: null`, not rewritten to `recentlyPlayed`.
+
+**P-RESTORE - closes item 2.** Quit launch 3 via the app menu on pid 22377 (clean in 2 polls), probe empty; the files had diverged (`focusRow: null`), then `cp -p` of both backup copies and `shasum -a 256 -c`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
+
+**Items 4, 5, 6, 7 session (one launch).** Launch 2026-10-07T06:38:21Z (local 19:38): shell 23608, sidecar 23677, window id 58475 owned by pid 23608, 1280x800 at (116,65), frontmost 23608, count 1. Devtools docked, viewport 1280x380. The theme at launch was the operator's as-found `zombie`. Theme switches were `document.getElementById('theme_selector')` opened and a `[role=option][data-value=...]` item clicked from the console, then the Library route (`location.hash = '#/'`); `store/config.json` top-level `theme` followed each switch (checked at the end: `high-contrast`, which P4 reverted to `zombie`).
+
+**Item 4 evidence.** C1: pick `Recently played` (the as-found hydration), track 982 px wide in a 1280 px window, `scrollWidth` 3576, so it overflows; no fallback pick needed. C2: card `scrollLeft = card.left - track.left - 48`, controls `visibility: hidden` for the capture, one capture per card (`c2-card0..19.png`, 2560x1600, SCALE 2.0, converted to sRGB), crop = the card's `img` rect x 2. Means: idx 0 `steam:107100` 0.50979 (a 156x97.5 landscape art), idx 12 `steam:620` 0.37794, idx 9 `steam:63000` 0.06128, idx 1 `gog:1829678475` 0.02065 (lowest). Alignment check: the pixel 4 px outside each art's left edge was panel grey `23,24,24`, inside was art. C3 placements, each read back from the DOM: back, card left edge to the track's left edge (`scrollLeft` 2160 for idx 12, 180 for idx 1); forward, card right edge to the track's right edge (`scrollLeft` 1334 for idx 12, 794 for idx 9); both controls `disabled: false` every time. Substitutions: BRIGHT idx 0 to idx 12 at both edges (idx 0 left edge equals `scrollLeft` 0, which leaves back disabled; its right edge needs `scrollLeft` -826, clamped); DARK forward idx 1 to idx 9 (needs -646, clamped). C4: glyph colour is the computed `color` of the button and its svg (identical); the modal pixel inside the icon rect agreed within 1 per channel in all 40; scrim pixels are the 36 px circle shrunk 2 px, minus the 10x16 icon rect (2584 pixels each); minima in the item 4 `result:`. Theme glyph colours, in order: zombie `89,198,39`, midnightMirage `139,255,255`, cyberSpaceOasis `224,171,64`, high-contrast `0,221,255`, dracula `189,147,249`, marine `211,159,55`, nord-light `48,68,74`, nord-dark `165,220,235`, gruvbox_dark `181,118,20`, sweet `255,154,247`; scrim `color-mix(--body-background 55%, transparent)` over the art. Overlap: back button rect (272, 228.98, 36x36), forward (1218, 228.98, 36x36), card top at 123 and bottom at 371, so the circle sits 106 px from the nearest card corner on both sides. Hover: pointer moved onto the flush card with `CGEvent`; `.gameCard:hover` computed `outline: 2px solid <accent>`, `outline-offset: -1px`, `border-radius: 4px`, rect 163.8 x 260.4 (about 1.05 scale), `z-index: 2`; control `z-index: 1`. The control's chevron-coloured pixels: 122 of 640 unhovered, 0 of 640 hovered, at back (card idx 12) and forward (card idx 12), captures `hover12.png`, `hover12f.png`.
+
+**Item 5 evidence.** See the item's `result:`. The scripted forward clicks logged `[sl, back disabled, forward disabled] = [0, true, false], [900, false, false], [1800, false, false], [2594, false, true]`. The 16-step focus walk (`k2`) logged card index 5, left offset 900, right offset -74, `scrollLeft` 0 at every step.
+
+**Item 6 evidence.** Widths set by `System Events` `set size of window 1`; CGWindowList bounds `1280x800`, `520x800`, `87x800` (87 is the floor: asking for 50 or 1 px both read 87). Probe results in `m-1280.json`, `m-520.json`, `m-87.json`. A first 1280 px reading (3 of 20 over by up to 19 px vertically) was taken while the title's 200 ms `transform` transition from `.titlesAlwaysVisible` was still running, and was discarded; all three recorded readings wait out the transition.
+
+**Item 7 evidence.** Long collection `Gate-48 long collection name ...` (81 characters) created through Manage Categories (`games.customCategories`, reverted by P4: 0 matches in `store/config.json` after restore). Dividers captured after `scrollIntoView`, background taken as the most frequent sRGB pixel in the divider's rect, foreground the computed `color` (the extreme ink pixel agreed within 1 per channel). Foreground and background per theme: zombie `177,177,177` on `50,50,50`; midnightMirage `165,237,253` on `22,29,30`; cyberSpaceOasis `177,177,177` on `21,31,61`; high-contrast `177,177,177` on `18,18,18`; dracula `177,177,177` on `69,71,90`; marine `177,177,177` on `13,62,76`; nord-light `57,59,65` on `76,86,106`; nord-dark `255,255,255` on `46,52,64`; gruvbox_dark `177,177,177` on `50,48,47`; sweet `168,146,171` on `34,4,34`. A first high-contrast read of divider 0 was lost (clipboard still `PROBE_PENDING` because the console had not taken the line) and the theme had silently stayed on `sweet`; the high-contrast set was re-run from the theme switch.
+
+**P-RESTORE - closes the items 4, 5, 6, 7 session.** Quit pid 23608 via the app menu (clean in 2 polls), probe empty. Pre-restore hashes showed `config.json` already identical and `store/config.json` diverged (theme `high-contrast`, the extra collection). Then `cp -p` of both backups and `shasum -a 256 -c`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
+After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `theme` read `zombie`.
+
+**Leg A first-paint recheck (closes the Task 1 caveat to the limit of the capture cadence).** `p3-rearm.cjs` (no instance), then launch 2026-10-07T07:38:21Z, shell 35313, window id 59048, frontmost 35313, capture loop from window creation, 88 frames over 07:38:29 to 07:38:40Z. Frames 1-4 blank window, 5-16 `Loading`, frame 17 (07:38:31Z) the first Library frame, and it already carries the `Recently played` header; art decodes over frames 17-21. Disk after: `focusRow = {"kind":"view","value":"recentlyPlayed"}` in both files. Quit (app menu) and relaunch with no P4 between: 07:40:17Z, shell 36789, window 59070, frontmost 36789, 85 frames; frames 1-8 `Loading`, frame 9 (07:40:25Z) the first Library frame, already with the header and the card slots. Cadence about 7 frames per second.
+
+**P-RESTORE - closes the leg A recheck and the whole Task 2.** Quit pid 36789 via the app menu (clean in 2 polls), `gate-procs.sh` printed nothing; pre-restore `config.json` hash equalled the backup and `store/config.json` equalled it too; then `cp -p` of both backups and `shasum -a 256 -c`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
+
 ## Summary
 
 total: 7
-passed: 0
-issues: 0
-pending: 7
+passed: 4
+issues: 2
+pending: 0
 skipped: 0
-blocked: 0
+blocked: 1
 
-Task 1 (tracer) proved the rig end to end on leg A (re-armed, not as-found): backup, scripted re-arm, launch, window-pid and provenance checks, capture, disk read, relaunch, restore. Legs B and C of item 3 then ran with the same rig and each ended in P4. Item 3's `result:` stays `pending` until leg D runs in Task 2, together with items 1, 2 and 4 to 7.
+Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip chevron reaches the 3:1 bar in 12 of 40 theme/card/edge combinations and in every theme only for midnightMirage, and a hovered card paints over the control. Item 7 is an issue: the divider labels miss 4.5:1 in two of ten themes (dracula 4.25, nord-light 1.52). Item 5 is blocked on its controller clause (no controller connected); its other clauses measured pass, and a keyboard-style proxy shows a partly clipped last card staying clipped when focus is scripted with no controller attached. The profile ended byte-identical to the P2 backup after every session.
 
 ## Gaps
 
-None recorded yet. An `issue` result appends a YAML entry here, with `reported:` and `severity:`.
+- truth: "Chevron contrast is at least 3:1 over the strip artwork at both edges, in every offered theme (D-01, D-05; adopted bar WCAG 1.4.11)"
+  status: failed
+  reason: "12 of 40 theme/card/edge combinations reach 3:1; only midnightMirage passes all four; overall minimum 1.005 (gruvbox_dark). Minima, back/BRIGHT, fwd/BRIGHT, back/DARK, fwd/DARK: zombie 1.70 1.70 2.91 1.99; midnightMirage 3.76 3.76 6.55 4.43; cyberSpaceOasis 1.89 1.89 3.24 2.23; high-contrast 2.25 2.25 3.83 2.63; dracula 1.43 1.43 2.41 1.67; marine 1.66 1.66 2.86 1.95; nord-light 3.33 2.89 2.70 3.11; nord-dark 2.57 2.57 4.40 3.02; gruvbox_dark 1.01 1.01 1.57 1.08; sweet 3.46 2.40 4.21 2.87"
+  severity: major
+  test: 4
+  reported: "2026-10-07, live gate, dev shell, sRGB-converted captures"
+  artifacts:
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.css"
+      issue: "`.focusRowStrip__control` sets `color: var(--accent)` over `color-mix(in srgb, var(--body-background) 55%, transparent)`; over bright art the scrim leaves about 120-135 grey, so accent glyphs from about 0.2 luminance up fall under 3:1"
+  missing:
+    - "A glyph/scrim pair whose ratio holds over the brightest art in every theme, for example a scrim with higher opacity or an opaque disc, or a theme-independent glyph colour with its own contrast proof"
+    - "A measured recheck with the same C1-C4 rule"
+
+- truth: "The back and forward controls do not overlap the adjacent card's hover outline (D-05, UI-SPEC E6 36 px rationale)"
+  status: failed
+  reason: "A hovered card (real pointer) is transform-scaled to about 1.05 and has z-index 2; the control has z-index 1, so the card paints over the control where they overlap. Chevron-coloured pixels in the icon rect: 122 of 640 unhovered, 0 of 640 hovered, at both edges. The pointer moving from a card onto the control therefore sees the chevron disappear under the card it left; whether the control stays clickable in that state was not probed"
+  severity: major
+  test: 4
+  reported: "2026-10-07, live gate, dev shell, real pointer"
+  artifacts:
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.css"
+      issue: "`.focusRowStrip__control` z-index 1 is below `.gameCard:hover` z-index 2 (GameCard/index.css); the card is a flex item of the track, which forms no stacking context"
+  missing:
+    - "A z-index (or stacking context on the viewport) that keeps the controls above a hovered card, plus a hit-test probe (`elementFromPoint` with a real hover) of whether the control can still be clicked"
+
+- truth: "FOCUS ROW divider labels read at least 4.5:1 in every theme (SC 1.4.3, adopted bar)"
+  status: failed
+  reason: "dracula 4.25 (`177,177,177` on `69,71,90`) and nord-light 1.52 (`57,59,65` on `76,86,106`); the other 8 themes pass (5.41 to 13.13). All four labels in a theme measure the same"
+  severity: minor
+  test: 7
+  reported: "2026-10-07, live gate, dev shell, sRGB-converted captures"
+  artifacts:
+    - path: "src/frontend/components/UI/NavShell/components/FilterFocusRow/index.scss"
+      issue: "`.FilterFocusRow__divider` uses `color: var(--text-secondary)` at `--text-xs`; against the tier-2 panel background it is under AA in dracula and nord-light"
+  missing:
+    - "A divider colour or token that clears 4.5:1 in dracula and nord-light, with a recheck over all ten themes"
