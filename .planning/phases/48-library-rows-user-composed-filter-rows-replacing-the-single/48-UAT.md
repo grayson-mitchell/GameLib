@@ -1,14 +1,14 @@
 ---
 status: diagnosed
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
-source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-VERIFICATION.md]
+source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-09-SUMMARY.md, 48-10-SUMMARY.md, 48-11-SUMMARY.md, 48-12-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-07T10:15:00Z
+updated: 2026-10-08T19:35:00Z
 ---
 
 ## Current Test
 
-[testing paused — 1 items outstanding]
+[testing paused — 3 items pending (10, 11, 12) and 3 issues owed a re-run (4, 7, 9) after gap-closure round 2; re-verification 2026-10-08 status human_needed]
 
 ## Protocol
 
@@ -99,6 +99,14 @@ severity: major
 expected: After a follow-up CSS change, re-run the 40-combination chevron measurement (10 themes x BRIGHT/DARK card x 2 edges, C1-C4 rule) and the divider-label measurement per theme; today 12/40 chevron combinations reach 3:1 (min 1.005 gruvbox_dark) and divider labels miss 4.5:1 in dracula (4.25) and nord-light (1.52). Maps to no locked SPEC requirement (48-VERIFICATION.md Follow-up); not phase-blocking. Source: 48-VERIFICATION.md human_verification 3 and 4.
 result: pending — unblocked by 48-10 (track stacking context) and 48-11 (opaque chevron disc on `var(--body-background)`; divider override to the tier-2 row colour chain in dracula and nord-light); the re-measure under `## Protocol` C1-C4 is owed. The desk census predicts a chevron minimum of 3.91 (gruvbox_dark) and a divider minimum of 5.43 (marine); see the desk census entry in the evidence log.
 
+### 11. Strip cards match the grid: width parity, paging, ring clearance and resize sanity after 48-12
+expected: At window 1280 and at a narrower width that still shows the strip (520px or the narrowest non-zero track), the first `.focusRowTrack .gameCard` and the first `.listing > .gameList .gameCard` rects (neither hovered) are within 1px in width and left edge at `scrollLeft` 0 (desk prediction on the item 4 macOS geometry: 172.4px at 1280, 198px at 520; on another platform parity is the criterion). Filtering to an empty grid (`FilterZeroResult`) and then switching to list layout leaves the strip card width unchanged, and first paint shows no 156px-then-wide jump. One forward click advances exactly one grid row and item 5's end-of-travel and 2-card clauses still hold; item 6's title-rect and 20-card clauses still hold at both widths. At 1280 and in the single-column band (a grid card wider than about 270px), hovering the first strip card at `scrollLeft` 0 and the last at end of travel shows the whole 3px ring on all four sides, and controller focus past the last visible card leaves each ring at least 3px inside the track rect. Dragging the window height slowly through the main-scrollbar threshold and the width across a column breakpoint produces no sustained strip-width flicker and no `ResizeObserver loop` error in the devtools console (48-REVIEW.md WR-01 predicts one per width-changing frame from the self-observing track; this item is its live test), and the strip again matches the grid within 1px afterwards. Source: 48-12-SUMMARY.md human checks owed; 48-VERIFICATION.md (2026-10-08) human_verification 2 and 5; G-48-8c.
+result: pending
+
+### 12. GameCard ring and geometry on mouse/controller handoff after 48-09
+expected: With a focus row showing and a physical controller connected, switching between mouse and controller input never resizes or crops any card (grid or strip): card rects are identical before and after the handoff (G-48-8a). Hovering a card with the mouse wears the same thick 3px console-style ring that controller focus wears, exactly one tile is ringed at a time, and a hovered card in the grid header or chip row area does not ring (G-48-8b). With the pointer resting anywhere over the library column, Tab-focusing a card with the keyboard still shows a visible focus ring (48-REVIEW.md WR-02 reports the stale-focus suppression now keys off `.listing:hover`; this clause is its live test). Source: 48-VERIFICATION.md (2026-10-08) human_verification 4; 48-09-SUMMARY.md.
+result: pending
+
 ## Evidence log
 
 Entries are bold paragraph lines. Times are UTC unless marked local; the machine's local clock is UTC+13.
@@ -180,12 +188,14 @@ After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `the
 
 ## Summary
 
-total: 10
+total: 12
 passed: 6
 issues: 3
-pending: 1
+pending: 3
 skipped: 0
 blocked: 0
+
+Update 2026-10-08 (gap-closure round 2 executed: 48-09, 48-10, 48-11, 48-12; re-verification `human_needed`, 8/10 must-haves, no failures): items 11 and 12 added for the 48-12 width-parity, paging, ring-clearance and resize checks and the 48-09 mouse/controller ring and geometry checks. Items 4, 7 and 9 keep their recorded `issue` results from before the fixes and are owed a re-run alongside item 10; the `## Gaps` entries G-48-4a, 4b, 7, 8a, 8b, 8c and 9 keep `status: failed` until that run reconciles them. All gates in this round are desk gates (source and token censuses, stubbed-DOM behaviour tests) with no CSS engine, so none of the live numbers below have been re-measured yet.
 
 Update 2026-10-07 (Windows, operator with a physical controller): item 8 passes, which also closes item 5's controller clause, so item 5 passes. Two new gaps were reported during item 8, G-48-8a (cards shrink/crop in controller mode, major) and G-48-8b (mouse-mode focus border should match the thicker controller border, minor). Item 9 is an issue (G-48-9, major): a hovered edge card hides the chevron under a real pointer, confirming item 4's stacking gap by eye. Item 10 stays blocked until a CSS fix lands, so the session ends `partial`. Item 10 is now unblocked by 48-10 and 48-11.
 
