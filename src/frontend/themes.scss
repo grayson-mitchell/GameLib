@@ -75,8 +75,10 @@ body {
      is toggled by src/frontend/state/GlobalState.tsx on `controller-changed`
      and is the existing fallback (see UI/InfoIcon/index.css:15).
 
-     Focus is deliberately LOUDER than, and visually distinct from, hover —
-     hover rules must never consume these tokens.
+     Focus is deliberately LOUDER than hover on every surface except library
+     tiles: `.gameCard:hover` shares the focus ring (GameCard/index.css) by
+     operator ruling 2026-10-07 (Phase 48 gap G-48-8b). No other hover rule
+     may consume these tokens.
 
      --focus-ring-fill uses color-mix(); a webview without color-mix support
      loses only the fill, never the ring itself (same degrade pga used).
