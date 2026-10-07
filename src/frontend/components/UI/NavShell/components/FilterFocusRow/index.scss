@@ -50,7 +50,9 @@
   // Deliberately lighter weight than the group's own `--bold` title, so the
   // split reads as sub-structure rather than as four more group headers
   // (UI-SPEC Typography). Distinguished by weight and `--text-secondary`,
-  // not by a rule line.
+  // not by a rule line -- except in dracula and nord-light (override below),
+  // where it shares the row colour and the hierarchy is carried by
+  // `--text-xs` and `--regular` alone.
   .FilterFocusRow__divider {
     min-width: 0;
     font-size: var(--text-xs);
@@ -60,5 +62,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    // G-48-7: `--text-secondary` on the panel's `--navbar-background` measured
+    // 4.25:1 in dracula and 1.52:1 in nord-light live (48-UAT item 7); the
+    // desk census read 4.27 and 1.52 before this rule and reads 7.48 and 7.38
+    // after. nord-light fails structurally: it is the one light theme, so its
+    // dark `--text-secondary` sits on a dark navbar. Per-theme rather than
+    // global because the measured alternatives are worse: the row chain on all
+    // 10 themes would recolour 8 passing dividers (to accent hues in
+    // cyberSpaceOasis, marine and zombie) and erase the "lighter than the
+    // rows" hierarchy where it already works; `--navbar-accent` alone still
+    // fails nord-light (2.74); `--text-default` fails it too (2.11); and a
+    // theme-level `--text-secondary` change would break nord-light's dark body
+    // text. The chain is the one NavItem's tier-2 rows already paint. Same
+    // shape and reason as NavTabs' `body.nord-light &` (quick 260823-w2f) and
+    // the dracula-only tier-2 divider (34.11-09): a measured per-theme
+    // collision, not a general rule. Gated for all 10 themes by the divider
+    // census in `themeTokens.test.ts`.
+    body.dracula &,
+    body.nord-light & {
+      color: var(--navbar-inactive, var(--navbar-accent));
+    }
   }
 }
