@@ -773,3 +773,128 @@ describe('FocusRowStrip chevron disc: glyph vs disc is >= 3:1 in every theme (G-
     }
   )
 })
+
+/** Depth-0 nested rules of a block body: `{ selector, body }` pairs. */
+const nestedRules = (
+  blockBody: string
+): { selector: string; body: string }[] => {
+  const out: { selector: string; body: string }[] = []
+  let depth = 0
+  let buf = ''
+  let selector = ''
+  let bodyStart = 0
+  for (let i = 0; i < blockBody.length; i++) {
+    const ch = blockBody[i]
+    if (ch === '{') {
+      if (depth === 0) {
+        selector = buf.trim()
+        bodyStart = i + 1
+      }
+      depth++
+    } else if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        out.push({ selector, body: blockBody.slice(bodyStart, i) })
+        buf = ''
+      }
+    } else if (depth === 0) {
+      buf = ch === ';' ? '' : buf + ch
+    }
+  }
+  return out
+}
+
+const FILTER_FOCUS_ROW_SCSS =
+  'src/frontend/components/UI/NavShell/components/FilterFocusRow/index.scss'
+
+/**
+ * The `color:` the FOCUS ROW divider paints in `themeClass`, as authored.
+ * Mirrors `selectedTabColourDecl`: a nested rule whose selector LIST names
+ * `body.<theme> &` wins over the base block's depth-0 `color`. The selector
+ * list is split on commas and compared whole, so `nord-light` can never match
+ * a `body.nord-dark &` entry (or the reverse).
+ */
+const dividerColourDecl = (
+  filterFocusRowScss: string,
+  themeClass: string
+): string => {
+  const block = cssBlock(filterFocusRowScss, '.FilterFocusRow__divider')
+  const override = nestedRules(block).find((rule) =>
+    rule.selector
+      .split(',')
+      .map((s) => s.trim())
+      .includes(`body.${themeClass} &`)
+  )
+  const decls = declsAtDepthZero(override ? override.body : block, 'color')
+  if (decls.length !== 1)
+    throw new Error(
+      `expected exactly one depth-0 color in the ${themeClass} divider rule, found ${decls.length}`
+    )
+  return decls[0]
+}
+
+/**
+ * G-48-7 (48-11 Task 2): the FOCUS ROW divider labels versus the tier-2
+ * panel's `--navbar-background`, in every theme, at WCAG 2.2 SC 1.4.3's 4.5:1
+ * (the bar 48-08 adopted; the labels are small `--text-xs` text).
+ *
+ * Replaces the live numbers of UAT item 7 -- dracula 4.25, nord-light 1.52 --
+ * which this resolver reproduced within 0.02 at plan time (dracula 4.27,
+ * nord-light 1.52). nord-light fails structurally: it is the only light
+ * theme, so its dark `--text-secondary` sits on a dark navbar. The fix is a
+ * measured per-theme override for exactly those two themes; this census holds
+ * all ten, so the eight unchanged themes cannot regress unseen.
+ *
+ * Like the other censuses it reads the declarations from the shipped
+ * stylesheets and cannot see a pixel; UAT item 10 owns the live recheck.
+ */
+describe('FocusRowStrip FOCUS ROW divider labels are >= 4.5:1 on the tier-2 panel in every theme (G-48-7)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const filterFocusRowScss = read(FILTER_FOCUS_ROW_SCSS)
+  const navShellScss = read(NAV_SHELL_SCSS)
+  const globals = globalTokens()
+  const panelDecls = declsAtDepthZero(
+    cssBlock(navShellScss, '.NavShell__tier2'),
+    'background'
+  )
+
+  it('non-vacuity: base colour, the two-theme override set, and the panel surface', () => {
+    const themeClasses = themeSelectors.map((s) => s.replace(/^body\./, ''))
+    expect(
+      declsAtDepthZero(
+        cssBlock(filterFocusRowScss, '.FilterFocusRow__divider'),
+        'color'
+      )
+    ).toEqual(['var(--text-secondary)'])
+    const overridden = themeClasses.filter(
+      (t) =>
+        dividerColourDecl(filterFocusRowScss, t) !== 'var(--text-secondary)'
+    )
+    expect(overridden).toEqual(['dracula', 'nord-light'])
+    expect(panelDecls).toEqual(['var(--navbar-background)'])
+  })
+
+  it.each(themeSelectors)(
+    '%s paints the divider label at >= 4.5:1 against --navbar-background',
+    (selector) => {
+      const themeClass = selector.replace(/^body\./, '')
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(
+        dividerColourDecl(filterFocusRowScss, themeClass),
+        scope,
+        globals
+      )
+      const bg = resolveValue(panelDecls[0] ?? '', scope, globals)
+      // An unresolved token fails the case; it never skips it.
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      // Object form so a failure names the theme and the measured ratio.
+      expect({ selector, ratio, passes: ratio >= 4.5 }).toEqual({
+        selector,
+        ratio,
+        passes: true
+      })
+    }
+  )
+})
