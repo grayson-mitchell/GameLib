@@ -1,38 +1,47 @@
 /**
  * Source-text gate for the non-console highlight ring (quick task 260925-pga,
- * rewritten by quick task 260926-acw).
+ * rewritten by 260926-acw, and flipped again for `.gameCard` by Phase 48
+ * plan 09, gap G-48-8b).
  *
- * What this proves NOW: hover and focus are SPLIT into two separate rules on
- * both `.gameCard` and `.gameListItem` -- the opposite contract from pga's
- * original unification. Hover stays a plain, token-driven (`var(--accent,
- * ...)`) but SUBTLE ring; focus is a louder, two-tone ring built from the
- * shared `--focus-ring-*` tokens (`themes.scss`'s base `body {}` block). The
- * old `-webkit-focus-ring-color` hairline is still gone. The stale-focus
- * suppression rules (left behind by gamepad navigation or a click) still
- * exist, but are now scoped to `body:not(.controllerLayout)`, and
- * `.consoleCard.focused` in `ConsoleMode/index.scss` still spends the same
- * `--accent` token for its own ring.
+ * What this proves NOW:
  *
- * Why the contract flipped: 260925-pga unified hover and focus onto one
- * rule so a mouse user and a gamepad/keyboard user got "the same
- * affordance". The todo this quick task actions
- * (`2026-09-25-controller-focus-has-no-perceptible-affordance.md`) recorded
- * two problems that unification produced: (a) hover and focus became
- * pixel-identical, so an operator could not tell which one a ring meant,
- * and (b) worse, pga's "hover wins while mousing" stale-focus suppression
- * (`.gameList:hover .gameCard:focus-within:not(:hover)`) fired whenever the
- * mouse cursor was merely RESTING over the grid, erasing gamepad focus
- * outright. 260926-acw splits the two looks and confines the suppression to
- * mouse-only sessions (`body:not(.controllerLayout)`), so a controller
- * session no longer loses its ring just because a cursor was left parked
- * over the grid.
+ * - `.gameCard`: tile hover wears the SAME console-style ring that focus
+ *   wears, from ONE shared grouped rule (`.gameCard:hover,
+ *   .gameCard:focus-within`), by operator ruling 2026-10-07 (UAT item 8,
+ *   quote: "I want the thicker border that is in controller mode (like
+ *   console)"; follow-up the same day: "I want 3px for all"). The two
+ *   single-selector rules carry only z-index (focus above a hovered
+ *   neighbour), so hover and focus cannot drift apart again.
+ * - A new `body.controllerLayout` rule returns a hovered-but-not-focused
+ *   tile to rest, because a parked cursor would otherwise ring a second tile
+ *   that is now pixel-identical to the focused one.
+ * - The stale-focus suppression (a card left focused by gamepad navigation
+ *   or a click) is scoped to `body:not(.controllerLayout) .listing:hover`,
+ *   `.listing` being the Library's common ancestor of the focus-row strip's
+ *   `.gameList` and the main grid's `.gameList` (G-48-8b, operator
+ *   observation 2). It used to be scoped to `.gameList:hover`, which are two
+ *   separate elements, so moving the pointer from the strip into the grid
+ *   left the strip's last-focused card ringed.
+ * - `.gameListItem` (list layout) keeps the 260926-acw split: hover stays a
+ *   plain 2px outline, focus is the loud token-driven ring. That split is
+ *   untouched except for the `.listing` scope above.
+ * - The old `-webkit-focus-ring-color` hairline is still gone, and
+ *   `.consoleCard.focused` in `ConsoleMode/index.scss` still spends the same
+ *   `--accent` token for its own ring.
+ *
+ * Why the `.gameCard` contract flipped: 260926-acw split hover (subtle) from
+ * focus (loud) so an operator could tell which one a ring meant. The
+ * operator has since ruled, live, that tile hover should look like the
+ * console-style ring. Ambiguity between a mouse ring and a controller ring is
+ * handled structurally instead: the controller-mode parked-cursor rule and
+ * the mouse-only stale-focus rule guarantee exactly one tile rings at a time.
  *
  * What this does NOT prove: anything about rendered pixels, whether either
  * ring is actually legible against cover art in any given theme, or whether
  * `:hover`/`:focus-within` fire for a given input path. This project treats
  * a gate that appears to cover more than it does as worse than no gate, so
  * that proof is deliberately routed elsewhere -- to the operator's live
- * controller sweep recorded in the todo -- and not claimed here.
+ * sweep recorded in `48-UAT.md` -- and not claimed here.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -59,65 +68,100 @@ function ruleBody(css: string, selector: RegExp): string {
   return match[0]
 }
 
-const GAME_CARD_HOVER_RULE = /\.gameCard:hover\s*\{[^}]*\}/
-const GAME_CARD_FOCUS_RULE = /\.gameCard:focus-within\s*\{[^}]*\}/
+// Single-selector rules are anchored on the start of the file or a preceding
+// `}` so `.gameCard:focus-within {` cannot match the second line of the
+// grouped `.gameCard:hover,\n.gameCard:focus-within {` selector list.
+const GAME_CARD_REST_RULES = /(?:^|\})\s*\.gameCard\s*\{([^}]*)\}/g
+const GAME_CARD_HOVER_RULE = /(?:^|\})\s*\.gameCard:hover\s*\{[^}]*\}/
+const GAME_CARD_FOCUS_RULE = /(?:^|\})\s*\.gameCard:focus-within\s*\{[^}]*\}/
+const GAME_CARD_GROUPED_RULES =
+  /(?:^|\})\s*\.gameCard:hover,\s*\.gameCard:focus-within\s*\{([^}]*)\}/g
+const GAME_CARD_PARKED_CURSOR_RULE =
+  /(?:^|\})\s*body\.controllerLayout \.gameCard:hover:not\(:focus-within\)\s*\{[^}]*\}/
 const GAME_LIST_ITEM_HOVER_RULE = /\.gameListItem:hover\s*\{[^}]*\}/
 const GAME_LIST_ITEM_FOCUS_RULE = /\.gameListItem:focus-within\s*\{[^}]*\}/
 
-// The one surviving grouped-selector rule: the shared scale(1.05) transform.
-// This is the exception the split-contract assertion below must allow.
-const SCALE_RULE = /\.gameCard:hover,\s*\.gameCard:focus-within\s*\{[^}]*\}/
-
-// Stale-focus suppression, now scoped to `body:not(.controllerLayout)`
-// (260926-acw). There are two such rule bodies for `.gameCard`
-// (ring/box-shadow/z-index, then the scale transform) sharing the same
-// selector text, so this is matched with the global flag and both bodies
-// are inspected independently below.
+// Stale-focus suppression (260925-pga, scoped to mouse-only sessions by
+// 260926-acw, re-scoped from `.gameList` to `.listing` by G-48-8b). Two rule
+// bodies for `.gameCard` (ring/box-shadow/z-index, then the scale transform)
+// share the same selector text, so this is matched with the global flag and
+// both bodies are inspected independently below.
 const GAME_CARD_STALE_FOCUS_SELECTOR =
-  /body:not\(\.controllerLayout\) \.gameList:hover \.gameCard:focus-within:not\(:hover\)\s*\{[^}]*\}/g
+  /body:not\(\.controllerLayout\)\s+\.listing:hover\s+\.gameCard:focus-within:not\(:hover\)\s*\{[^}]*\}/g
 const GAME_LIST_ITEM_STALE_FOCUS_RULE =
-  /body:not\(\.controllerLayout\)\s*\.gameListLayout:hover\s*\.gameListItem:focus-within:not\(:hover\)\s*\{[^}]*\}/
+  /body:not\(\.controllerLayout\)\s+\.listing:hover\s+\.gameListItem:focus-within:not\(:hover\)\s*\{[^}]*\}/
 
-describe('GameCard hover and focus are split (source gate, 260926-acw)', () => {
-  it('.gameCard has separate :hover and :focus-within rules', () => {
+function groupedRuleBodies(css: string): string[] {
+  return [...css.matchAll(GAME_CARD_GROUPED_RULES)].map((m) => m[1])
+}
+
+describe('GameCard hover wears the console-style focus ring (source gate, G-48-8b)', () => {
+  it('Test A: exactly one grouped .gameCard:hover, .gameCard:focus-within rule declares the ring, consuming the shared tokens, at +2px offset with halo and glow', () => {
     const css = readGameCardCss()
+    const ringRules = groupedRuleBodies(css).filter((b) =>
+      /(^|[\s;])outline:/.test(b)
+    )
 
-    expect(css).toMatch(GAME_CARD_HOVER_RULE)
-    expect(css).toMatch(GAME_CARD_FOCUS_RULE)
-  })
-
-  it('no selector list groups .gameCard:hover with .gameCard:focus-within, except the shared scale rule', () => {
-    const css = readGameCardCss()
-    // Every grouped-selector occurrence of "gameCard:hover ... gameCard:focus-within"
-    // in one selector list must be the scale(1.05) rule -- anything else
-    // would mean hover and focus are back to sharing a ring rule.
-    const groupedSelectorPattern =
-      /\.gameCard:hover,\s*\.gameCard:focus-within\s*\{([^}]*)\}/g
-    let match: RegExpExecArray | null
-    let groupedCount = 0
-    while ((match = groupedSelectorPattern.exec(css)) !== null) {
-      groupedCount += 1
-      expect(match[1]).toMatch(/transform:\s*scale\(1\.05\)/)
-    }
-    expect(groupedCount).toBe(1)
-    expect(css).toMatch(SCALE_RULE)
-  })
-
-  it('.gameCard:hover is subtle: a plain 2px accent outline, no --focus-ring tokens', () => {
-    const css = readGameCardCss()
-    const body = ruleBody(css, GAME_CARD_HOVER_RULE)
-
-    expect(body).toMatch(/outline:\s*2px solid var\(--accent/)
-    expect(body).not.toMatch(/var\(--focus-ring-/)
-  })
-
-  it('.gameCard:focus-within is loud and consumes --focus-ring-color', () => {
-    const css = readGameCardCss()
-    const body = ruleBody(css, GAME_CARD_FOCUS_RULE)
-
+    expect(ringRules).toHaveLength(1)
+    const body = ringRules[0]
+    expect(body).toMatch(/var\(--focus-ring-width/)
     expect(body).toMatch(/var\(--focus-ring-color/)
-    expect(body).toMatch(/z-index:\s*3/)
-    expect(body).toMatch(/box-shadow:/)
+    expect(body).toMatch(/var\(--focus-ring-halo/)
+    expect(body).toMatch(/outline-offset:\s*2px/)
+    expect(body).toMatch(/0 0 22px color-mix\(/)
+  })
+
+  it('Test B: the only other grouped rule is the shared transform: scale(1.05), so there are exactly two grouped occurrences', () => {
+    const css = readGameCardCss()
+    const bodies = groupedRuleBodies(css)
+    const others = bodies.filter((b) => !/(^|[\s;])outline:/.test(b))
+
+    expect(bodies).toHaveLength(2)
+    expect(others).toHaveLength(1)
+    expect(others[0]).toMatch(/transform:\s*scale\(1\.05\)/)
+  })
+
+  it('Test C: the single-selector .gameCard:hover rule is z-index 2 and the single-selector .gameCard:focus-within rule is z-index 3, and neither declares an outline', () => {
+    const css = readGameCardCss()
+    const hover = ruleBody(css, GAME_CARD_HOVER_RULE)
+    const focus = ruleBody(css, GAME_CARD_FOCUS_RULE)
+
+    expect(hover).toMatch(/z-index:\s*2/)
+    expect(hover).not.toMatch(/outline/)
+    expect(focus).toMatch(/z-index:\s*3/)
+    expect(focus).not.toMatch(/outline/)
+  })
+
+  it('Test D: the resting .gameCard outline has the ring geometry, a transparent 3px at +2px, so only colour and shadow animate', () => {
+    const css = readGameCardCss()
+    const resting = [...css.matchAll(GAME_CARD_REST_RULES)]
+      .map((m) => m[1])
+      .filter((b) => /(^|[\s;])outline:/.test(b))
+
+    expect(resting).toHaveLength(1)
+    expect(resting[0]).toMatch(
+      /outline:\s*var\(--focus-ring-width,\s*3px\)\s+solid\s+transparent/
+    )
+    expect(resting[0]).toMatch(/outline-offset:\s*2px/)
+  })
+
+  it('Test E: body.controllerLayout .gameCard:hover:not(:focus-within) returns a parked-cursor card to rest', () => {
+    const css = readGameCardCss()
+    const body = ruleBody(css, GAME_CARD_PARKED_CURSOR_RULE)
+
+    expect(body).toMatch(/outline-color:\s*transparent/)
+    expect(body).toMatch(/box-shadow:\s*0px 0px 12px 4px #00000055/)
+    expect(body).toMatch(/transform:\s*none/)
+    expect(body).toMatch(/z-index:\s*auto/)
+  })
+
+  it('Test F: the grouped ring rule has no bare hex literal outside a var(...) fallback slot', () => {
+    const css = readGameCardCss()
+    const ring = groupedRuleBodies(css).find((b) => /(^|[\s;])outline:/.test(b))
+    expect(ring).toBeDefined()
+    const withoutVarSpans = (ring as string).replace(/var\([^)]*\)/g, '')
+
+    expect(withoutVarSpans).not.toMatch(/#[0-9a-fA-F]{3,8}/)
   })
 
   it('the -webkit-focus-ring-color hairline is gone from the stylesheet', () => {
@@ -126,14 +170,19 @@ describe('GameCard hover and focus are split (source gate, 260926-acw)', () => {
     expect(css).not.toMatch(/-webkit-focus-ring-color/)
   })
 
-  it('.gameCard:hover has no bare hex literal outside a var(...) fallback slot', () => {
-    const css = readGameCardCss()
-    const body = ruleBody(css, GAME_CARD_HOVER_RULE)
-    const withoutVarSpans = body.replace(/var\([^)]*\)/g, '')
+  it('ConsoleMode .consoleCard.focused still spends the same --accent token (read-only cross-file guard)', () => {
+    // This does not assert ownership of console mode's styling -- it fails
+    // LOUDLY if a future change moves console mode off --accent, because at
+    // that moment the two modes silently stop matching and the whole
+    // premise of this gate ("matching the highlight border used in console
+    // mode") is void.
+    const scss = readConsoleModeScss()
 
-    expect(withoutVarSpans).not.toMatch(/#[0-9a-fA-F]{3,8}/)
+    expect(scss).toMatch(/0 0 0 3px var\(--accent/)
   })
+})
 
+describe('GameListItem hover and focus stay split (source gate, 260926-acw)', () => {
   it('.gameListItem has separate :hover and :focus-within rules', () => {
     const css = readGameCardCss()
 
@@ -163,21 +212,10 @@ describe('GameCard hover and focus are split (source gate, 260926-acw)', () => {
 
     expect(body).toMatch(/var\(--focus-ring-color/)
   })
-
-  it('ConsoleMode .consoleCard.focused still spends the same --accent token (read-only cross-file guard)', () => {
-    // This does not assert ownership of console mode's styling -- it fails
-    // LOUDLY if a future change moves console mode off --accent, because at
-    // that moment the two modes silently stop matching and the whole
-    // premise of this quick task ("matching the highlight border used in
-    // console mode") is void.
-    const scss = readConsoleModeScss()
-
-    expect(scss).toMatch(/0 0 0 3px var\(--accent/)
-  })
 })
 
-describe('Stale-focus suppression is scoped to body:not(.controllerLayout) (source gate, 260926-acw)', () => {
-  it('two body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) rule bodies exist -- ring and scale', () => {
+describe('Stale-focus suppression is scoped to body:not(.controllerLayout) .listing:hover (source gate, 260926-acw, G-48-8b Test G)', () => {
+  it('two body:not(.controllerLayout) .listing:hover .gameCard:focus-within:not(:hover) rule bodies exist -- ring and scale', () => {
     const css = readGameCardCss()
     const matches = css.match(GAME_CARD_STALE_FOCUS_SELECTOR)
 
@@ -205,7 +243,7 @@ describe('Stale-focus suppression is scoped to body:not(.controllerLayout) (sour
     expect(scaleSuppression).toMatch(/transform:\s*none/)
   })
 
-  it('body:not(.controllerLayout) .gameListLayout:hover .gameListItem:focus-within:not(:hover) clears the row outline, background and box-shadow', () => {
+  it('body:not(.controllerLayout) .listing:hover .gameListItem:focus-within:not(:hover) clears the row outline, background and box-shadow', () => {
     const css = readGameCardCss()
     const body = ruleBody(css, GAME_LIST_ITEM_STALE_FOCUS_RULE)
 
@@ -214,14 +252,21 @@ describe('Stale-focus suppression is scoped to body:not(.controllerLayout) (sour
     expect(body).toMatch(/box-shadow:\s*none/)
   })
 
-  it('neither suppression rule fires unscoped -- both selectors begin with body:not(.controllerLayout)', () => {
+  it('no stale-focus rule is still scoped to a single .gameList or .gameListLayout: the strip and the grid are separate .gameList elements, so that scope let the strip card re-ring while mousing in the grid', () => {
+    const css = readGameCardCss()
+
+    expect(css).not.toMatch(/\.gameList:hover/)
+    expect(css).not.toMatch(/\.gameListLayout:hover/)
+  })
+
+  it('neither suppression rule fires unscoped -- every selector begins with body:not(.controllerLayout)', () => {
     const css = readGameCardCss()
 
     expect(css).not.toMatch(
-      /(?<!body:not\(\.controllerLayout\)\s)\.gameList:hover \.gameCard:focus-within:not\(:hover\)/
+      /(?<!body:not\(\.controllerLayout\)\s)\.listing:hover\s+\.gameCard:focus-within:not\(:hover\)/
     )
     expect(css).not.toMatch(
-      /(?<!body:not\(\.controllerLayout\)\s)\.gameListLayout:hover \.gameListItem:focus-within:not\(:hover\)/
+      /(?<!body:not\(\.controllerLayout\)\s+)\.listing:hover\s+\.gameListItem:focus-within:not\(:hover\)/
     )
   })
 })
