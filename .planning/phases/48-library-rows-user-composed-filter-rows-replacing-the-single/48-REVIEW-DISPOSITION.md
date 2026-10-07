@@ -5,15 +5,15 @@ titles: json
 findings:
   - id: CR-01
     severity: critical
-    disposition: open
+    disposition: fixed
     title: "Legacy `libraryTopSection` seed never reaches the renderer (SPEC R7 not delivered at runtime)"
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`{ kind: 'view', value: <unrecognised> }` passes validation and renders an unlabelled strip of arbitrary games"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "A present-but-invalid `focusRow` resurrects the legacy seed, contradicting the \"present key permanently disarms\" contract"
   - id: IN-01
     severity: info
@@ -31,7 +31,7 @@ findings:
     severity: info
     disposition: open
     title: "Stale doc comment on `FocusRowSelection`"
-open: 7
+open: 4
 total: 7
 recorded: 2026-10-05T05:00:11.801Z
 ---
@@ -40,9 +40,9 @@ recorded: 2026-10-05T05:00:11.801Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | open | - |
-| WR-01 | warning | open | - |
-| WR-02 | warning | open | - |
+| CR-01 | critical | fixed | 48-07 d7d27c89b |
+| WR-01 | warning | fixed | 48-07 013984a9d |
+| WR-02 | warning | fixed | 48-07 013984a9d |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |

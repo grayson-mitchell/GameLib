@@ -7,6 +7,11 @@ covered_files: []
 covered_digest: "unavailable: verification.fingerprint is not exposed by the installed gsd-sdk/gsd-tools bridge (Unknown command: verification); not hand-written"
 behavior_unverified: 0
 overrides_applied: 0
+overrides:
+  - must_have: "libraryTopSection: recently_played_installed yields Recently-played focus row with installed-only semantics"
+    reason: "Operator ruling in 48-05 Task 1: persisted shape has no modifier slot; recency kept, installed-only dropped; installed-only reachable via the grid's Installed view"
+    accepted_by: "operator (48-05 plan checkpoint)"
+    accepted_at: "2026-10-05T17:36:51+13:00"
 re_verification: false
 gaps:
   - truth: "R7 / AC: `libraryTopSection: favourites` (or recently_played) yields the matching focus row on first upgraded launch"
