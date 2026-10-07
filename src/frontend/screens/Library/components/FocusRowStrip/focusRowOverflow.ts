@@ -40,6 +40,16 @@ const FALLBACK_CARD_GAP = 24
 // write (and so a ResizeObserver delivery) on every frame (T-48-36).
 const WIDTH_WRITE_EPSILON = 0.5
 
+// A write that would undo the write before last within this window is held
+// (T-48-36). Real scrollbar oscillation completes A to B to A in about two
+// frames (about 33ms); a human drag round trip takes far longer.
+const FLIP_WINDOW_MS = 250
+
+const defaultNow = (): number =>
+  typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now()
+
 const isFiniteMeasurement = (m: TrackMeasurement): boolean =>
   Number.isFinite(m.clientWidth) &&
   Number.isFinite(m.scrollWidth) &&
@@ -194,12 +204,31 @@ interface StripWidthStyle {
  * (T-48-36); the comparison is against each element's own value, so a
  * remounted track is never left on the fallback.
  *
+ * Resize feedback guard (T-48-36), the mechanism in order. Card height follows
+ * width (`aspect-ratio`). `.App .content` scrolls with `overflow-y: auto` and a
+ * 10px styled scrollbar that takes layout space. A library whose content height
+ * sits within a few px of the viewport can toggle that scrollbar as the strip's
+ * height changes: a wider strip leads to a scrollbar, narrower cards, no
+ * scrollbar, wider cards again. The ResizeObserver delivers each toggle a frame
+ * late, as a `ResizeObserver loop` error, every frame. So a write that would
+ * undo the write before last (the derived width is within the write epsilon of
+ * it) within `FLIP_WINDOW_MS` is held: real oscillation completes A to B to A
+ * in about two frames (about 33ms), while a human round trip takes longer than
+ * 250ms. The cost of a hold: the strip stays at the narrower width, about 10/n
+ * px under the grid (2px at 5 columns), only inside that band and only until
+ * the next real resize. The history is per track element, so a remounted track
+ * starts clean. `now` is injectable for tests and defaults to
+ * `performance.now()`.
+ *
  * The property name is a string literal at the `setProperty` call on purpose:
  * `cssTokenSweep` only counts a custom property as declared when it sees
  * `setProperty('--name'`, and would otherwise report the CSS's
  * `var(--focus-row-card-width, ...)` as undefined.
  */
-export function createStripCardWidthSync() {
+export function createStripCardWidthSync(now: () => number = defaultNow) {
+  let lastTrack: HTMLElement | null = null
+  let writes: Array<{ width: number; at: number }> = []
+
   return function syncCardWidth(
     track: HTMLElement | null,
     getStyle: (el: Element) => StripWidthStyle = (el) =>
@@ -225,6 +254,10 @@ export function createStripCardWidthSync() {
         GRID_CARD_MIN_WIDTH,
         parseFloat(style.columnGap)
       )
+      if (track !== lastTrack) {
+        lastTrack = track
+        writes = []
+      }
       const inline = parseFloat(
         track.style.getPropertyValue('--focus-row-card-width')
       )
@@ -234,8 +267,19 @@ export function createStripCardWidthSync() {
       ) {
         return inline
       }
+      const at = now()
+      const older = writes.length === 2 ? writes[0] : undefined
+      if (
+        older &&
+        Number.isFinite(inline) &&
+        Math.abs(older.width - width) < WIDTH_WRITE_EPSILON &&
+        at - older.at <= FLIP_WINDOW_MS
+      ) {
+        return inline
+      }
       const rounded = Number(width.toFixed(3))
       track.style.setProperty('--focus-row-card-width', `${rounded}px`)
+      writes = [...writes, { width: rounded, at }].slice(-2)
       return rounded
     } catch {
       return null
