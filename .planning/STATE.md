@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-11-PLAN.md
-last_updated: "2026-10-07T18:59:59.544Z"
+stopped_at: Completed 48-12-PLAN.md
+last_updated: "2026-10-07T19:21:07.903Z"
 last_activity: 2026-10-08
 last_activity_desc: Phase 48 execution started
-state_head: 6ff9251e7d2623e6b938326071a6c478f138f4f0
+state_head: fd6e3b324883d23a8bad6387a7bda38f61eb2332
 progress:
   total_phases: 43
   completed_phases: 36
-  total_plans: 517
-  completed_plans: 508
+  total_plans: 518
+  completed_plans: 509
   percent: 84
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 2 of 11
+Plan: 3 of 11
 Status: Ready to execute
 Last activity: 2026-10-08 — Completed quick task 261008-aoe: Retry in TauriLoginPanel hands back to host via onRetry; OAuthLogin and HumbleLogin remount the Dialog via overlayMountKey instead of window.location.reload()
 
@@ -510,6 +510,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P09 | 85min | 2 tasks | 5 files |
 | Phase 48 P10 | 15 min | 2 tasks | 4 files |
 | Phase 48 P11 | 8 min | 3 tasks | 7 files |
+| Phase 48 P12 | 12 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -1145,6 +1146,8 @@ Recent decisions affecting current work:
 - [Phase 48]: [48-10] Chevron stacking fixed by isolation: isolate on .focusRowTrack, not a larger control z-index (card-internal z-indexes up to 5 escape a resting card)
 - [Phase 48]: [48-10] Strip-end clearance is 12px list padding-inline with width: max-content plus a matching -12px viewport margin-inline; scroll-into-view reads the computed padding and falls back to zero clearance
 - [Phase 48]: 48-11: chevron disc is opaque var(--body-background) (deliberate deviation from UI-SPEC's translucent scrim); divider fixed by a per-theme dracula/nord-light override, not a global change
+- [Phase 48]: 48-12: strip card width is derived from the grid's auto-fill/minmax arithmetic over the strip content box (not read from the rendered grid) and written as --focus-row-card-width; amends D-01 per the 2026-10-07 'match the grid' ruling
+- [Phase 48]: 48-12: strip-end clearance and viewport bleed 12px to 15px; vertical room max(1em, 0.04 x card width + 6.5px); width writes held on a 250ms A-B-A flip (T-48-36)
 
 ### Pending Todos
 
@@ -1749,8 +1752,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-07T18:59:55.324Z
-Stopped at: Completed 48-11-PLAN.md
+Last session: 2026-10-07T19:21:03.880Z
+Stopped at: Completed 48-12-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
