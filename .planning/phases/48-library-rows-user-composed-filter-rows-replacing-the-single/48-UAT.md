@@ -1,14 +1,18 @@
 ---
-status: partial
+status: testing
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-07T07:50:00Z
+updated: 2026-10-07T07:58:02Z
 ---
 
 ## Current Test
 
-[testing complete]
+number: 8
+name: R3 gamepad focus past the last visible card scrolls it into view
+expected: |
+  With a physical controller connected and an overflowing Recently-played strip, focus past the last fully visible card scrolls it fully inside the track and can continue past the first rendered page.
+awaiting: user response
 
 ## Protocol
 
@@ -83,6 +87,18 @@ result: pass — 20 cards, one row (gameList height 247.97 = card height), track
 ### 7. FOCUS ROW panel section
 expected: FOCUS ROW is collapsed by default (D-08). A long collection name ellipsises with its full text in `title`. The divider labels read Views / Collections / Store / Runnability in that order, at >= 4.5:1 in every theme. No `gamelib:` text is visible.
 result: issue — collapsed by default: `aria-expanded="false"` on first read after launch and the `.dropdown.collapsed` panel measures height 0 px, `max-height: 0px`, `overflow: hidden`. Divider labels in DOM order Views, Collections, Store, Runnability (each `title` equals its text); a long collection (81 characters, created for the gate through Manage Categories) has computed `text-overflow: ellipsis`, `overflow: hidden`, `white-space: nowrap`, scrollWidth 613 over clientWidth 188, with the full 81-character text in `title`; no `gamelib:` text in `document.body.innerText`. Divider contrast against the panel background (sRGB-converted capture, 4 labels per theme, equal within a theme; bar 4.5:1): zombie 5.98, midnightMirage 13.13, cyberSpaceOasis 7.56, high-contrast 8.74, dracula 4.25, marine 5.41, nord-light 1.52, nord-dark 12.49, gruvbox_dark 6.12, sweet 6.64. Dracula (4.25) and nord-light (1.52) fail; 8 of 10 themes pass
+
+### 8. R3 gamepad focus past the last visible card scrolls it into view
+expected: With a physical controller connected and an overflowing Recently-played strip, moving focus right past the last fully visible card scrolls that card fully inside the track rect, and focus can continue onto cards beyond the first rendered page (SPEC R3 acceptance; D-06 handler is gated on `activeController`, source-regex-tested only). Source: 48-VERIFICATION.md (re-verification 2026-10-07) human_verification 1; UAT item 5 controller clause.
+result: pending
+
+### 9. Real-pointer reach of the strip chevrons through a hovered edge card
+expected: Moving a REAL pointer onto each chevron through the adjacent edge card (from above, below and inside the strip, so the card carries `:hover` transform 1.05 and z-index 2 against the control's z-index 1), `document.elementFromPoint` at the chevron centre returns the control, and a click advances `scrollLeft`; the card never swallows the click. UAT item 4 drove controls with `element.click()`, which bypasses hit-testing. If the card swallows the click this promotes to an R3 gap. Source: 48-VERIFICATION.md human_verification 2.
+result: pending
+
+### 10. Chevron and divider-label contrast re-measure after a CSS follow-up
+expected: After a follow-up CSS change, re-run the 40-combination chevron measurement (10 themes x BRIGHT/DARK card x 2 edges, C1-C4 rule) and the divider-label measurement per theme; today 12/40 chevron combinations reach 3:1 (min 1.005 gruvbox_dark) and divider labels miss 4.5:1 in dracula (4.25) and nord-light (1.52). Maps to no locked SPEC requirement (48-VERIFICATION.md Follow-up); not phase-blocking. Source: 48-VERIFICATION.md human_verification 3 and 4.
+result: blocked — no CSS follow-up has landed yet; this item is the re-measure gate for the two `## Gaps` contrast entries and cannot run until a fix exists
 
 ## Evidence log
 
@@ -163,12 +179,12 @@ After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `the
 
 ## Summary
 
-total: 7
+total: 10
 passed: 4
 issues: 2
-pending: 0
+pending: 2
 skipped: 0
-blocked: 1
+blocked: 2
 
 Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip chevron reaches the 3:1 bar in 12 of 40 theme/card/edge combinations and in every theme only for midnightMirage, and a hovered card paints over the control. Item 7 is an issue: the divider labels miss 4.5:1 in two of ten themes (dracula 4.25, nord-light 1.52). Item 5 is blocked on its controller clause (no controller connected); its other clauses measured pass, and a keyboard-style proxy shows a partly clipped last card staying clipped when focus is scripted with no controller attached. The profile ended byte-identical to the P2 backup after every session.
 
