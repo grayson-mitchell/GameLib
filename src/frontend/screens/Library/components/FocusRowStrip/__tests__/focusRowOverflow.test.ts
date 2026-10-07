@@ -563,3 +563,103 @@ describe('strip card width sync (G-48-8c)', () => {
     expect(second.setProperty).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('strip card width resize feedback guard (G-48-8c, T-48-36)', () => {
+  // A wider strip can raise the main scroller's 10px scrollbar, which narrows
+  // the strip, which removes the scrollbar, which widens it again. Width A
+  // (982) and B (972) are a 10px scrollbar's worth of track: 172.4 versus
+  // 170.4 at 5 columns.
+  const PROP = '--focus-row-card-width'
+  const A = 982
+  const B = 972
+  const D = 1200 // a distinct width: 6 columns of 176
+
+  const makeTrack = () => {
+    const store = new Map<string, string>()
+    const setProperty = jest.fn((k: string, v: string) => {
+      store.set(k, v)
+    })
+    return {
+      width: A,
+      getBoundingClientRect() {
+        return { width: this.width }
+      },
+      firstElementChild: {},
+      style: {
+        getPropertyValue: (k: string) => store.get(k) ?? '',
+        setProperty
+      },
+      setProperty
+    }
+  }
+  const style = () => ({
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    columnGap: '24px'
+  })
+  const setup = () => {
+    let t = 0
+    const sync = createStripCardWidthSync(() => t)
+    const at = (
+      time: number,
+      track: ReturnType<typeof makeTrack>,
+      width: number
+    ) => {
+      t = time
+      track.width = width
+      return sync(track as unknown as HTMLElement, style)
+    }
+    return { at }
+  }
+
+  it('G1: A, B, then A again within 250ms is held and returns the current width', () => {
+    const { at } = setup()
+    const track = makeTrack()
+    expect(at(0, track, A)).toBe(172.4)
+    expect(at(16, track, B)).toBe(170.4)
+    expect(at(33, track, A)).toBe(170.4)
+    expect(track.setProperty).toHaveBeenCalledTimes(2)
+    expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '170.4px')
+  })
+
+  it('G2: A, B, then A again after the window is a deliberate round trip and is written', () => {
+    const { at } = setup()
+    const track = makeTrack()
+    at(0, track, A)
+    at(16, track, B)
+    expect(at(400, track, A)).toBe(172.4)
+    expect(track.setProperty).toHaveBeenCalledTimes(3)
+    expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '172.4px')
+  })
+
+  it('G3: A, B, then a distinct C inside the window is written', () => {
+    const { at } = setup()
+    const track = makeTrack()
+    at(0, track, A)
+    at(16, track, B)
+    expect(at(33, track, D)).toBe(176)
+    expect(track.setProperty).toHaveBeenCalledTimes(3)
+    expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '176px')
+  })
+
+  it('G4: a later distinct width is written after a hold', () => {
+    const { at } = setup()
+    const track = makeTrack()
+    at(0, track, A)
+    at(16, track, B)
+    at(33, track, A) // held
+    expect(at(50, track, D)).toBe(176)
+    expect(track.setProperty).toHaveBeenCalledTimes(3)
+  })
+
+  it('G4: a different track element resets the history, so A, B on one then A on another writes A', () => {
+    const { at } = setup()
+    const first = makeTrack()
+    const second = makeTrack()
+    at(0, first, A)
+    at(16, first, B)
+    expect(at(33, second, A)).toBe(172.4)
+    expect(second.setProperty).toHaveBeenCalledTimes(1)
+    expect(second.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
+  })
+})
