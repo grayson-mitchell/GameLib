@@ -43,3 +43,28 @@ added by a commonly imported module, a timer/handle that survives the suite, or 
 that closes over large objects. `--logHeapUsage` plus `node --expose-gc --inspect` heap snapshots
 between two suites will show the retainer. Alternatively, drop `--runInBand` for CI and use
 workers with `workerIdleMemoryLimit` — check first why `--runInBand` was chosen.
+
+## Resolution (2026-10-08)
+
+`--runInBand` was inherited from Heroic (`6a35318e8`, 2021-06, `#275`); GameLib never chose it,
+and `pnpm test` already runs the same suites in parallel locally, so nothing depended on it.
+
+The retainer is not in app code: the only two `process.on(` hits outside `__tests__` in
+`src/backend` and `src/common` are comments. It is jest-runtime 29.7 itself —
+`createScriptFromCode` compiles every CJS module as a `vm.Script` with an
+`importModuleDynamically` closure over the Runtime, and Node ≥ 16.11 pins the script, and with
+it the suite's whole module registry, through those host-defined options. That is why the growth
+is per suite and proportional to the suite's module graph: Jest schedules the biggest suites
+first, so the Backend project alone climbed ~48 MB/suite for the first 100 suites and then
+flattened.
+
+Measured 2026-10-08 on the Backend project (234 suites, 5285 tests, all green both ways):
+
+| run | peak heap | wall |
+|---|---|---|
+| `--runInBand` (`--expose-gc --logHeapUsage`, 8 GB ceiling) | 4179 MB (41 MB at suite 1) | 335 s |
+| `--maxWorkers=2 --workerIdleMemoryLimit=1GB` | 1019 MB per worker | 66 s |
+
+Fix: `test:ci` is `jest --maxWorkers=2 --silent`; root `jest.config.js` sets
+`workerIdleMemoryLimit: '1GB'` (also bounds the 9 workers of a local `pnpm test`); the
+`NODE_OPTIONS=--max-old-space-size=8192` band-aid is removed from `.github/workflows/test.yml`.
