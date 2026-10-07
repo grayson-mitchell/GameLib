@@ -6,7 +6,17 @@
   position: relative;
 }
 
+/* G-48-4b / G-48-9: a hovered or focused edge card painted over the chevron
+   (UAT item 4: chevron-coloured pixels in the icon rect 122 of 640 unhovered,
+   0 of 640 hovered; UAT item 9: "if the tile is activated it hides the
+   chevron"). The track is its own stacking context, so every card-internal
+   z-index (hover 2, focus 3, title 3, icons bar 4, status and update badges 5)
+   stays inside it and the track paints at the z-index 0 layer, below both
+   z-index 1 controls whatever any card does. A larger control z-index alone was
+   not used: at rest a card has no stacking context of its own, so its children's
+   z-indexes up to 5 escape into the shared one. No position or z-index here. */
 .focusRowTrack {
+  isolation: isolate;
   overflow-x: auto;
   scroll-behavior: smooth;
   scrollbar-width: none;
