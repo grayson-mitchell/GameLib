@@ -136,7 +136,7 @@ export function migrateFocusRowSelection(
  * the backend derived from `libraryTopSection` (which lives in `config.json`,
  * not in the mirror) has not reached this renderer yet.
  */
-export interface FocusRowMirrorSeed {
+interface FocusRowMirrorSeed {
   focusRow: FocusRowSelection
   needsMigratedValue: boolean
 }

@@ -911,6 +911,13 @@ const IN_SCOPE_SUITES = [
  * tests only the pure parsers (`parseUserDirs`, `parseRegQueryValue`, `expandWindowsEnv`) on
  * string input, with no filesystem, no `homedir()` and no `reg.exe`. 69 `*.test.ts` files: 4
  * `IN_SCOPE_SUITES` + 65 below.
+ *
+ * `focusRowFirstLaunchHydration.test.ts` (Phase 48 Plan 07, CR-01, 2026-10-07) is classified as
+ * structurally contained, on a DIFFERENT basis from the others: it runs the real `backend/config`
+ * and `configStore`, so it does write files, but only under this project's `jest.setupContainment.ts`
+ * redirection, and its first test asserts that `configPath` and the store mirror resolve under
+ * `os.tmpdir()` before any write. It declares no `os`/`pathShim` mock and never touches
+ * `bootstrap.init()`.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -923,6 +930,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'devSecretVault.test.ts',
   'dialogStub.test.ts',
   'downloadQueueFlows.test.ts',
+  'focusRowFirstLaunchHydration.test.ts',
   'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
   'eosOverlayFlows.test.ts',

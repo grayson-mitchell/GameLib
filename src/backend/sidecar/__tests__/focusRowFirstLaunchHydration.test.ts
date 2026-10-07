@@ -50,7 +50,7 @@ import {
   writeFileSync
 } from 'fs'
 import { tmpdir } from 'os'
-import { dirname, join, sep } from 'path'
+import { dirname, sep } from 'path'
 
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
