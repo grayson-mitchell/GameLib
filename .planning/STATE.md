@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-09-PLAN.md
-last_updated: "2026-10-07T10:59:10.597Z"
+stopped_at: Completed 48-10-PLAN.md
+last_updated: "2026-10-07T18:37:01.088Z"
 last_activity: 2026-10-07
 last_activity_desc: Phase 48 execution started
-state_head: dfe993528cbbe96c82aa89993e8b18069be0b1ad
+state_head: 78cd69511226a553a238f9e20181283f5a532b48
 progress:
   total_phases: 43
   completed_phases: 36
   total_plans: 517
-  completed_plans: 506
+  completed_plans: 507
   percent: 84
 ---
 
@@ -75,9 +75,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 9 of 11 complete (gap closure round 2, Wave 1: 48-09 done; 48-10 and 48-11 remain)
-Status: 48-09 complete (G-48-8a operator-verified live; G-48-8b desk-complete, live re-check owed) — ready to execute 48-10
-Last activity: 2026-10-07 — 48-09 complete
+Plan: 10 of 11 complete (gap closure round 2: 48-09 and 48-10 done; 48-11 remains; 48-12 for G-48-8c is planned separately after it)
+Status: 48-10 complete (G-48-4b/G-48-9 chevron stacking operator-verified live; strip-end clearance incl. the leftmost-tile left-edge ring desk-complete, live re-check owed at UAT items 5 and 6) — ready to execute 48-11
+Last activity: 2026-10-07 — 48-10 complete
 
 Previous activity: 2026-10-01 -- Completed quick task 261001-93f: built and self-proved a macOS pixel/geometry measurement instrument for Phase 38's two open items (38-E03(a), 38-E04(a)), pre-registered both items' pass/fail criteria before any live measurement, and wrote an operator run-sheet -- scores NEITHER gate, only the operator's drag-resize gesture and System Settings scale-factor change can.
 
@@ -508,6 +508,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P07 | 21 min | 3 tasks | 10 files |
 | Phase 48 P08 | 2h 11m | 2 tasks | 1 files |
 | Phase 48 P09 | 85min | 2 tasks | 5 files |
+| Phase 48 P10 | 15 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -1140,6 +1141,8 @@ Recent decisions affecting current work:
 - [Phase 48]: Plan 48-08: chevron contrast is under 3:1 in 9 of 10 themes and a hovered card paints over the control; divider labels miss 4.5:1 in dracula and nord-light - three gaps filed in 48-UAT.md
 - [Phase 48]: Plan 48-08: every pixel measurement on this display must convert the screencapture from Display P3 to sRGB first
 - [Phase 48]: 48-09: GameCard controller mode has no geometry override and hover wears the console ring globally; stale-focus suppression scoped to .listing:hover (common ancestor of strip and grid), not a single .gameList
+- [Phase 48]: [48-10] Chevron stacking fixed by isolation: isolate on .focusRowTrack, not a larger control z-index (card-internal z-indexes up to 5 escape a resting card)
+- [Phase 48]: [48-10] Strip-end clearance is 12px list padding-inline with width: max-content plus a matching -12px viewport margin-inline; scroll-into-view reads the computed padding and falls back to zero clearance
 
 ### Pending Todos
 
@@ -1743,8 +1746,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-07T10:59:06.601Z
-Stopped at: Completed 48-09-PLAN.md
+Last session: 2026-10-07T18:36:57.100Z
+Stopped at: Completed 48-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
