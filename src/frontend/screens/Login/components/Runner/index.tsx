@@ -1,4 +1,5 @@
 import { useContext, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import ContextProvider from 'frontend/state/ContextProvider'
@@ -38,10 +39,44 @@ interface RunnerProps {
   // flight. Derived by the host PER TILE from its own overlay identity
   // (`openOverlay === '<this tile's overlay id>'`) -- never from the host's
   // screen-wide `loginInFlight` flag, which would spin every tile at once.
-  // Purely visual: it gates no behavior, guards nothing, and must not be
+  // Drives the spinner and, since quick task 261008-fjj, `aria-busy` on the
+  // tile root. It gates no behavior, guards nothing, and must not be
   // consulted in handleLogin(). Optional so the Zoom call site (which cannot
   // type-check this comparison at all, D-2) stays byte-identical.
   busy?: boolean
+}
+
+// Quick task 261008-fjj: the tiles used to be bare `<div onClick>`s -- no role,
+// no tabIndex -- so a keyboard-only user could not reach them and assistive
+// technology saw no control at all (todo 2026-10-03, found by 261003-u48).
+// They stay divs (the CSS cascade and two source gates key on `.runnerLogin`
+// being a div) but now carry button semantics. `tabIndex` drops to -1 while
+// disabled so a tile that cannot act is not a tab stop either; the handler's
+// own `props.disabled` early-return is still the guard that matters and runs
+// first regardless. Enter and Space both activate, like a native button;
+// Space is prevented so it cannot also scroll the page.
+//
+// Honest limit, so nobody re-opens the todo expecting more: `busy` is only
+// ever true while the host's `loginInFlight` is true, which is exactly when
+// `.loginContentWrapper` carries `inert` -- on WebKit >= Safari 15.5 that
+// removes this whole subtree from the accessibility tree, so `aria-busy` here
+// is correct but masked for as long as it is set. It is exposed on the
+// macOS 12.0-12.3 slice that lacks `inert` (F-36-02) and the day the wrapper's
+// `inert` is lifted; the AT-perceivable "a sign-in is in progress" state on a
+// current macOS is the overlay OUTSIDE the inert wrapper, not this tile.
+function tileA11yProps(disabled: boolean, onActivate: () => void) {
+  return {
+    role: 'button' as const,
+    tabIndex: disabled ? -1 : 0,
+    'aria-disabled': disabled ? ('true' as const) : undefined,
+    onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return
+      }
+      event.preventDefault()
+      onActivate()
+    }
+  }
 }
 
 export default function Runner(props: RunnerProps) {
@@ -150,6 +185,8 @@ export default function Runner(props: RunnerProps) {
               }`}
               onClick={() => handleLogin()}
               title={primaryDeprecated ? deprecatedHint : undefined}
+              aria-busy={props.busy ? 'true' : undefined}
+              {...tileA11yProps(props.disabled, handleLogin)}
             >
               {props.buttonText}
               {props.busy && (
@@ -166,6 +203,9 @@ export default function Runner(props: RunnerProps) {
               onClick={() => {
                 handleLogout()
               }}
+              {...tileA11yProps(props.disabled, () => {
+                handleLogout()
+              })}
             >
               {t('userselector.logout', 'Logout')}
             </div>
@@ -186,6 +226,7 @@ export default function Runner(props: RunnerProps) {
                 alternativeDeprecated ? ' deprecated' : ''
               }`}
               title={alternativeDeprecated ? deprecatedHint : undefined}
+              {...tileA11yProps(props.disabled, handleAltLogin)}
             >
               {`${props.class} ${t(
                 'login.alternative_method',

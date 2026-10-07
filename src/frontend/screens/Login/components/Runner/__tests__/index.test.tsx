@@ -513,7 +513,180 @@ describe('Runner: busy prop (quick task 261003-u48, D-3/D-4)', () => {
     expect(spinnerProps.title).toBeUndefined()
   })
 
-  it('SOURCE GATE (ABSENCE, restated locally) -- the comment-stripped Runner/index.tsx still contains zero tabIndex, zero <button and zero <a -- the constraint loginInFlightUiReachability.test.tsx already pins, restated here so a spinner rebuilt as a button fails in the suite that owns the spinner', () => {
+  it('busy: true -- the primary tile ROOT carries aria-busy "true"; busy omitted or false -- it carries none (quick task 261008-fjj: the state the spinner paints is now also declared)', () => {
+    const busyPrimary = findClickablePrimary(mount(makeProps({ busy: true })))!
+    const idlePrimary = findClickablePrimary(mount(makeProps()))!
+    const offPrimary = findClickablePrimary(mount(makeProps({ busy: false })))!
+
+    expect(tileProps(busyPrimary)['aria-busy']).toBe('true')
+    expect(tileProps(idlePrimary)['aria-busy']).toBeUndefined()
+    expect(tileProps(offPrimary)['aria-busy']).toBeUndefined()
+  })
+
+  it('busy: true, isLoggedIn: true -- the logout tile carries no aria-busy: the state belongs to the not-logged-in branch only, like the spinner', () => {
+    const tree = mount(makeProps({ busy: true, isLoggedIn: true }))
+    const logout = findLogoutTile(tree)!
+
+    expect(tileProps(logout)['aria-busy']).toBeUndefined()
+  })
+})
+
+/**
+ * Quick task 261008-fjj (closes todo 2026-10-03-runner-tile-busy-spinner-has-
+ * no-assistive-technology-exposure): the three clickable tiles are still
+ * `<div>`s but now carry button semantics. These assertions inspect the
+ * element props `Runner(props)` returns and drive the `onKeyDown` handler with
+ * a hand-built event; they cannot see focus, the tab order, or what any
+ * accessibility tree exposes -- and the `.loginContentWrapper` `inert` that
+ * the host sets for the whole time `busy` is true masks this subtree from AT
+ * on WebKit >= Safari 15.5 regardless (see the comment on tileA11yProps).
+ */
+type TileProps = {
+  role?: string
+  tabIndex?: number
+  'aria-disabled'?: string
+  'aria-busy'?: string
+  onClick?: () => void
+  onKeyDown?: (event: { key: string; preventDefault: () => void }) => void
+}
+
+function tileProps(el: ReactElement<PropsWithChildren>): TileProps {
+  return el.props as unknown as TileProps
+}
+
+function findLogoutTile(tree: ReactNode) {
+  return collectElements(tree).find((el) => {
+    const className = el.props?.className
+    return (
+      typeof className === 'string' &&
+      className.split(' ').includes('logged') &&
+      typeof (el.props as Record<string, unknown>).onClick === 'function'
+    )
+  })
+}
+
+function keyEvent(key: string) {
+  return { key, preventDefault: jest.fn() }
+}
+
+describe('Runner: tiles carry button semantics (quick task 261008-fjj)', () => {
+  afterEach(() => {
+    mockNavigate.mockClear()
+  })
+
+  it('every clickable tile -- primary, alternative, logout -- has role "button" and an onKeyDown handler', () => {
+    const alternativeLoginAction = jest.fn()
+    const loggedOut = mount(makeProps({ alternativeLoginAction }))
+    const loggedIn = mount(makeProps({ isLoggedIn: true }))
+
+    for (const tile of [
+      findClickablePrimary(loggedOut)!,
+      findClickableAlternative(loggedOut)!,
+      findLogoutTile(loggedIn)!
+    ]) {
+      expect(tileProps(tile).role).toBe('button')
+      expect(typeof tileProps(tile).onKeyDown).toBe('function')
+    }
+  })
+
+  it('enabled: tabIndex 0 and no aria-disabled on all three tiles', () => {
+    const alternativeLoginAction = jest.fn()
+    const loggedOut = mount(makeProps({ alternativeLoginAction }))
+    const loggedIn = mount(makeProps({ isLoggedIn: true }))
+
+    for (const tile of [
+      findClickablePrimary(loggedOut)!,
+      findClickableAlternative(loggedOut)!,
+      findLogoutTile(loggedIn)!
+    ]) {
+      expect(tileProps(tile).tabIndex).toBe(0)
+      expect(tileProps(tile)['aria-disabled']).toBeUndefined()
+    }
+  })
+
+  it('disabled: true -- tabIndex -1 and aria-disabled "true" on all three tiles, so a tile that cannot act is not a tab stop either (F-36-02 re-derivation: this is the pre-Safari-15.5 layer that replaces "the tiles were never focusable")', () => {
+    const alternativeLoginAction = jest.fn()
+    const loggedOut = mount(
+      makeProps({ alternativeLoginAction, disabled: true })
+    )
+    const loggedIn = mount(makeProps({ isLoggedIn: true, disabled: true }))
+
+    for (const tile of [
+      findClickablePrimary(loggedOut)!,
+      findClickableAlternative(loggedOut)!,
+      findLogoutTile(loggedIn)!
+    ]) {
+      expect(tileProps(tile).tabIndex).toBe(-1)
+      expect(tileProps(tile)['aria-disabled']).toBe('true')
+    }
+  })
+
+  it('Enter on the primary tile invokes the same action as a click -- primaryLoginAction once, no navigate -- and the event is prevented', () => {
+    const primaryLoginAction = jest.fn()
+    const tree = mount(makeProps({ primaryLoginAction }))
+    const event = keyEvent('Enter')
+    tileProps(findClickablePrimary(tree)!).onKeyDown!(event)
+
+    expect(primaryLoginAction).toHaveBeenCalledTimes(1)
+    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalledTimes(1)
+  })
+
+  it('Space on the primary tile with no primaryLoginAction navigates to loginUrl, exactly like a click, and is prevented so it cannot also scroll', () => {
+    const tree = mount(makeProps())
+    const event = keyEvent(' ')
+    tileProps(findClickablePrimary(tree)!).onKeyDown!(event)
+
+    expect(mockNavigate).toHaveBeenCalledWith('/loginweb/legendary')
+    expect(event.preventDefault).toHaveBeenCalledTimes(1)
+  })
+
+  it('an unrelated key (Tab) on the primary tile does nothing: no action, no navigate, not prevented -- so focus can still move on', () => {
+    const primaryLoginAction = jest.fn()
+    const tree = mount(makeProps({ primaryLoginAction }))
+    const event = keyEvent('Tab')
+    tileProps(findClickablePrimary(tree)!).onKeyDown!(event)
+
+    expect(primaryLoginAction).not.toHaveBeenCalled()
+    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('disabled: true -- Enter on the primary tile still short-circuits in handleLogin before primaryLoginAction is considered (the keyboard path shares the click path, it does not bypass it)', () => {
+    const primaryLoginAction = jest.fn()
+    const tree = mount(makeProps({ primaryLoginAction, disabled: true }))
+    tileProps(findClickablePrimary(tree)!).onKeyDown!(keyEvent('Enter'))
+
+    expect(primaryLoginAction).not.toHaveBeenCalled()
+    expect(mockNavigate).not.toHaveBeenCalled()
+  })
+
+  it('Enter on the alternative tile invokes alternativeLoginAction exactly once', () => {
+    const alternativeLoginAction = jest.fn()
+    const tree = mount(makeProps({ alternativeLoginAction }))
+    tileProps(findClickableAlternative(tree)!).onKeyDown!(keyEvent('Enter'))
+
+    expect(alternativeLoginAction).toHaveBeenCalledTimes(1)
+  })
+
+  it('Enter on the logout tile invokes logoutAction exactly once', () => {
+    const logoutAction = jest.fn().mockResolvedValue(undefined)
+    const tree = mount(makeProps({ isLoggedIn: true, logoutAction }))
+    tileProps(findLogoutTile(tree)!).onKeyDown!(keyEvent('Enter'))
+
+    expect(logoutAction).toHaveBeenCalledTimes(1)
+  })
+
+  it('the spinner element itself stays aria-hidden: the declared state lives on the tile root, not on the decorative ring', () => {
+    const tree = mount(makeProps({ busy: true }))
+    const spinner = findBusySpinners(tree)[0]
+
+    expect(
+      (spinner.props as unknown as Record<string, unknown>)['aria-hidden']
+    ).toBe('true')
+  })
+
+  it('SOURCE GATE (ABSENCE) -- the tiles are still <div>s: comment-stripped Runner/index.tsx contains zero <button and zero <a -- the semantics were added as attributes, the element type the CSS cascade keys on did not change', () => {
     const fs = jest.requireActual<typeof import('fs')>('fs')
     const path = jest.requireActual<typeof import('path')>('path')
     const source = fs.readFileSync(
@@ -525,7 +698,6 @@ describe('Runner: busy prop (quick task 261003-u48, D-3/D-4)', () => {
       .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
       .join('\n')
 
-    expect((stripped.match(/\btabIndex\b/g) ?? []).length).toBe(0)
     expect((stripped.match(/<button/g) ?? []).length).toBe(0)
     expect((stripped.match(/<a\s/g) ?? []).length).toBe(0)
   })
