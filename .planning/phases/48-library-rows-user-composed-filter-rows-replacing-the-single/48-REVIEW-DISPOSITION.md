@@ -3,6 +3,26 @@ phase: 48
 review: 48-REVIEW.md
 titles: json
 findings:
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "[Group 1, 48-12] ResizeObserver callback resizes its own observed target, so every width-changing resize frame raises a \"ResizeObserver loop\" error"
+  - id: WR-02
+    severity: warning
+    disposition: open
+    title: "[Group 1, 48-09] Stale-focus ring suppression now keys off `.listing:hover`, hiding keyboard focus whenever the pointer rests anywhere in the library"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "[Group 1, 48-12] `pageScrollDelta` tolerance and its sweep test model a geometry the DOM no longer has"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "[Group 2, 261008-aoe] Retry is a silent no-op while a dismissed overlay plays its 500ms exit"
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "[Group 2, 261008-aoe] New `TauriLoginPanel` tests replace `window.location` and never restore it"
   - id: WR-03
     severity: warning
     disposition: open
@@ -23,49 +43,29 @@ findings:
     severity: critical
     disposition: fixed
     title: "Legacy `libraryTopSection` seed never reaches the renderer (SPEC R7 not delivered at runtime)"
-  - id: WR-01
-    severity: warning
-    disposition: fixed
-    title: "`{ kind: 'view', value: <unrecognised> }` passes validation and renders an unlabelled strip of arbitrary games"
-  - id: WR-02
-    severity: warning
-    disposition: fixed
-    title: "A present-but-invalid `focusRow` resurrects the legacy seed, contradicting the \"present key permanently disarms\" contract"
-  - id: IN-01
-    severity: info
-    disposition: open
-    title: "Retired settings strings left in 47 locale files"
-  - id: IN-02
-    severity: info
-    disposition: open
-    title: "Stale comments referencing deleted files"
-  - id: IN-03
-    severity: info
-    disposition: open
-    title: "Unchecked brand-map lookup for the store label"
   - id: IN-04
     severity: info
     disposition: open
     title: "Stale doc comment on `FocusRowSelection`"
-open: 8
+open: 10
 total: 11
-recorded: 2026-10-07T07:51:07.409Z
+recorded: 2026-10-07T19:32:29.096Z
 ---
 
 # Phase 48: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-03 | warning | open | - |
-| IN-05 | info | open | - |
-| IN-06 | info | open | - |
-| IN-07 | info | open | - |
+| WR-01 | warning | open | - |
+| WR-02 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | open | - |
+| IN-03 | info | open | - |
+| WR-03 | warning | open | - (not in the current review) |
+| IN-05 | info | open | - (not in the current review) |
+| IN-06 | info | open | - (not in the current review) |
+| IN-07 | info | open | - (not in the current review) |
 | CR-01 | critical | fixed | 48-07 d7d27c89b (not in the current review) |
-| WR-01 | warning | fixed | 48-07 013984a9d (not in the current review) |
-| WR-02 | warning | fixed | 48-07 013984a9d (not in the current review) |
-| IN-01 | info | open | - (not in the current review) |
-| IN-02 | info | open | - (not in the current review) |
-| IN-03 | info | open | - (not in the current review) |
 | IN-04 | info | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
