@@ -2,8 +2,16 @@
   padding: 0 var(--space-md-fixed) var(--space-md-fixed);
 }
 
+/* G-48-8a / G-48-8b (strip-end clipping): the viewport bleeds out 12px each
+   side, equal and opposite to the 12px inline padding the list adds inward in
+   `.focusRowTrack .gameList` below, so the strip's cards keep their x-position
+   over the grid's 16px gutter (`.focusRowStrip` keeps its padding; the header
+   is outside the viewport and does not move). The controls are positioned
+   against this box, so they now sit 12px further out over less art. Logical
+   property: this app ships RTL locales (ar, fa, he). */
 .focusRowStrip__viewport {
   position: relative;
+  margin-inline: -12px;
 }
 
 /* G-48-4b / G-48-9: a hovered or focused edge card painted over the chevron
@@ -27,11 +35,25 @@
 }
 
 /* No scrollbar-gutter: stable here -- it reserves the PLATFORM scrollbar width (~17px on macOS) regardless of this bar's own width, widening the box and shifting content. Measured in this repo; every desk theory about it predicted the wrong direction. scrollbar-width: none above already removes the gutter the platform would otherwise reserve. */
+/* G-48-8a / G-48-8b: the first card at scrollLeft 0 and the last at the end of
+   travel sat flush with the track edge, so the track's clip cut their ring (the
+   debug session measured the scaled body cut at x 12.1 against the track's 16).
+   A hovered card's 3px ring at +2px offset, scaled 1.05, reaches (78 + 5) x 1.05
+   - 78 = about 9.15px past the unscaled edge, so 12px of inline padding clears
+   it. `width: max-content` because padding on a block-width flex list whose
+   items overflow it does not reliably extend the track's scroll width in both
+   engines this app ships on (WKWebView, WebView2); a max-content list carries
+   its own padding inside its border box, which every engine counts. The
+   viewport bleeds out by the same 12px, so the cards do not move. Vertical room
+   already exists (16px block margin against about 11.5px of ring reach).
+   `scrollFocusedCardIntoViewHorizontally` reads this padding at call time. */
 .focusRowTrack .gameList {
   display: flex;
   flex-wrap: nowrap;
   gap: 1.5rem;
-  padding: 0;
+  width: max-content;
+  padding-block: 0;
+  padding-inline: 12px;
 }
 
 .focusRowTrack .gameList > * {

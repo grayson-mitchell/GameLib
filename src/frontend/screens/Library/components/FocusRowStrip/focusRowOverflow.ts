@@ -102,8 +102,26 @@ export function measureCardPitch(
  * Both destinations are `track.scrollLeft + (card edge - track edge)`, both
  * measured from `getBoundingClientRect()` -- never an `offsetParent` offset,
  * which would turn a silent no-op into a silent wrong-offset scroll.
+ *
+ * The card is brought in to sit INSIDE the track by the list's inline padding,
+ * not flush with the edge, so its 3px focus ring at +2px offset (scaled 1.05,
+ * about 9px past the unscaled edge) is not cut by the track's clip. That
+ * clearance is read from the list's computed `paddingLeft` / `paddingRight` at
+ * call time, never restated here, so the CSS stays the one place it is
+ * written (the same rule `measureCardPitch` follows for the gap). No list, an
+ * unreadable padding or a non-finite value is zero clearance, which is the
+ * flush behaviour this handler had before. The destinations are not clamped:
+ * an RTL track can have a negative `scrollLeft`, and the browser clamps.
  */
-export function scrollFocusedCardIntoViewHorizontally(ev: FocusEvent): void {
+export function scrollFocusedCardIntoViewHorizontally(
+  ev: FocusEvent,
+  getStyle: (el: Element) => { paddingLeft: string; paddingRight: string } = (
+    el
+  ) =>
+    typeof getComputedStyle === 'function'
+      ? getComputedStyle(el)
+      : { paddingLeft: '', paddingRight: '' }
+): void {
   const target = ev.target as HTMLElement | null
   if (!target || typeof target.closest !== 'function') {
     return
@@ -115,16 +133,50 @@ export function scrollFocusedCardIntoViewHorizontally(ev: FocusEvent): void {
 
   const rect = target.getBoundingClientRect()
   const trackRect = track.getBoundingClientRect()
+  const { left: clearLeft, right: clearRight } = readEdgeClearance(
+    track.firstElementChild,
+    getStyle
+  )
 
-  if (rect.left < trackRect.left) {
+  const minLeft = trackRect.left + clearLeft
+  const maxRight = trackRect.right - clearRight
+
+  if (rect.left < minLeft) {
     track.scrollTo({
-      left: track.scrollLeft + (rect.left - trackRect.left),
+      left: track.scrollLeft + (rect.left - minLeft),
       behavior: 'smooth'
     })
-  } else if (rect.right > trackRect.right) {
+  } else if (rect.right > maxRight) {
     track.scrollTo({
-      left: track.scrollLeft + (rect.right - trackRect.right),
+      left: track.scrollLeft + (rect.right - maxRight),
       behavior: 'smooth'
     })
   }
+}
+
+/**
+ * Inline padding of the track's list, as the room a focused card keeps from
+ * each track edge. Total: any failure is zero clearance.
+ */
+function readEdgeClearance(
+  list: Element | null,
+  getStyle: (el: Element) => { paddingLeft: string; paddingRight: string }
+): { left: number; right: number } {
+  if (!list) {
+    return { left: 0, right: 0 }
+  }
+  try {
+    const style = getStyle(list)
+    return {
+      left: clearanceFrom(style.paddingLeft),
+      right: clearanceFrom(style.paddingRight)
+    }
+  } catch {
+    return { left: 0, right: 0 }
+  }
+}
+
+const clearanceFrom = (value: string): number => {
+  const px = parseFloat(value)
+  return Number.isFinite(px) && px >= 0 ? px : 0
 }
