@@ -225,7 +225,8 @@
             "viewFavourites": "Obľúbené"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} z {{total}}"
+            "filteredOfTotal": "{{shown}} z {{total}} hier",
+            "totalGames": "{{total}} hier"
         },
         "no_no_store_page_games": "Vo vašej knižnici nie sú žiadne hry bez stránky obchodu",
         "noStorePage": "Bez stránky obchodu",
@@ -307,8 +308,6 @@
     "sideload": {
         "filter": {
             "all": "Všetky",
-            "appExtension": "Aplikácia",
-            "appImageExtension": "AppImage",
             "appImages": "Súbory AppImage",
             "apps": "Aplikácie",
             "executables": "Spustiteľné súbory",

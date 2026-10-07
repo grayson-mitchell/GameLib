@@ -23,8 +23,24 @@ jobs:
       - name: Checkout repository.
         uses: actions/checkout@v6
       - uses: ./.github/actions/install-deps
+      # The D-05 i18n churn guard (meta/i18nCatalogChurnGuard.ts) checks what a PARSER RUN changed
+      # under public/locales/. On a fresh checkout nothing has run the parser, so until this step
+      # existed the guard -- and its `live tree` test inside test:ci -- passed vacuously on every
+      # pipeline (todo 2026-10-05-i18n-catalog-churn-guard-cannot-fail-in-ci). Measured clean on
+      # 2026-10-05: `pnpm i18n` on a clean tree changes nothing, so this cannot go red by itself.
+      - name: Run the i18n parser
+        run: pnpm i18n
+      - name: i18n catalogue churn guard
+        run: pnpm i18n-churn-guard
+      # `jest --runInBand` keeps growing the heap suite after suite. Measured 2026-10-05 with
+      # `--logHeapUsage`: main (450 suites) already peaked at 4078 MB, right at the default V8
+      # limit on this 16 GB runner, and 473 suites peaked at 5120 MB and died with "JavaScript heap
+      # out of memory" (exit 134) before reporting any result. 8192 MB restores headroom; the
+      # retention itself is tracked in todo 2026-10-05-jest-runinband-heap-grows-across-suites.
       - name: Test CI
         run: pnpm test:ci
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
       # Phase 35 (D-35-10-01 follow-up, 2026-08-29). This gate existed but ran NOWHERE -- not in
       # CI, not in .husky -- so it caught nothing for as long as it has existed. On the day it was
       # first run it was already RED: plan 35-10's `installed.json` watcher held an un-unref'd

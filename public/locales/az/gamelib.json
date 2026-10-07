@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} seçilib"
         },
         "header": {
-            "filteredOfTotal": "{{total}} arasından {{shown}}"
+            "filteredOfTotal": "{{total}} oyun arasından {{shown}}",
+            "totalGames": "{{total}} oyun"
         },
         "no_no_store_page_games": "Kitabxananızda mağaza səhifəsi olmayan oyun yoxdur",
         "noStorePage": "Mağaza səhifəsi yoxdur",
@@ -293,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Hamısı",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage-lər",
             "apps": "Tətbiqlər",
             "executables": "İcra edilə bilənlər",

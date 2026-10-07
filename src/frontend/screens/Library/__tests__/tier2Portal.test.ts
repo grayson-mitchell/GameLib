@@ -62,12 +62,18 @@ function cssBlock(source: string, selector: string): string {
 }
 
 /**
- * Every `<Header />` occurrence in `source` must be immediately preceded
+ * Every `<Header ` occurrence in `source` must be immediately preceded
  * (ignoring whitespace/newlines) by `createPortal(`. This is the structural
- * proof that `<Header />` is never rendered as a direct child.
+ * proof that `<Header>` is never rendered as a direct child.
+ *
+ * The needle is `'<Header '` (trailing space), not `'<Header />'` -- 261002-hx0
+ * gave `Header` two required props (`list`, `totalGames`), so a self-closing
+ * `<Header />` never appears in real source. Every real usage opens with a
+ * space before its first prop, so the trailing space still excludes any
+ * unrelated identifier merely prefixed with `Header` (e.g. `<HeaderThing`).
  */
 function everyHeaderUsageIsPortalled(source: string): boolean {
-  const needle = '<Header />'
+  const needle = '<Header '
   let fromIndex = 0
   let sawAny = false
   for (;;) {
@@ -203,12 +209,16 @@ describe('Library portals Header into the tier-2 target (Task 2, REQ-34.10-09)',
     expect(everyHeaderUsageIsPortalled(libraryTsx)).toBe(true)
   })
 
-  it('the createPortal(<Header />, ...) call site sits after LibraryContext.Provider opens, not before it', () => {
+  it('the createPortal(<Header .../>, ...) call site sits after LibraryContext.Provider opens, not before it', () => {
+    // A regex search (not a hardcoded literal) because `<Header />` is now
+    // `<Header list={...} totalGames={...} />` -- the exact whitespace
+    // between `createPortal(` and `<Header` is an implementation detail of
+    // how prettier wraps the call, not something this gate should pin.
     const providerIdx = libraryTsx.indexOf('LibraryContext.Provider')
-    const portalIdx = libraryTsx.indexOf('createPortal(\n        <Header />')
-    const portalIdxAlt = libraryTsx.indexOf('createPortal(<Header />')
-    const resolvedPortalIdx = portalIdx !== -1 ? portalIdx : portalIdxAlt
+    const portalMatch = libraryTsx.match(/createPortal\(\s*<Header\b/)
     expect(providerIdx).toBeGreaterThan(-1)
+    expect(portalMatch).not.toBeNull()
+    const resolvedPortalIdx = portalMatch?.index ?? -1
     expect(resolvedPortalIdx).toBeGreaterThan(-1)
     expect(resolvedPortalIdx).toBeGreaterThan(providerIdx)
   })
@@ -235,8 +245,18 @@ describe('Library portals Header into the tier-2 target (Task 2, REQ-34.10-09)',
     expect(libraryTsx).not.toMatch(/--header-height/)
   })
 
-  it('LibraryHeader and the alphabet strip stay unmoved in the render tree (import + JSX usage still present)', () => {
-    expect(libraryTsx.match(/LibraryHeader/g)?.length).toBeGreaterThanOrEqual(2)
+  it('no longer references LibraryHeader at all -- it was dissolved into Header (261002-hx0)', () => {
+    expect(libraryTsx.match(/LibraryHeader/g)).toBeNull()
+  })
+
+  it('SANITY: the LibraryHeader-absence assertion fires against a specimen that still names it', () => {
+    const knownBad = "import LibraryHeader from './components/LibraryHeader'"
+    expect(knownBad.match(/LibraryHeader/g)).not.toBeNull()
+  })
+
+  it('portals Header with both list and totalGames, and the alphabet strip still renders', () => {
+    expect(libraryTsx).toMatch(/<Header[\s\S]{0,200}?list=/)
+    expect(libraryTsx).toMatch(/<Header[\s\S]{0,200}?totalGames=/)
     expect(libraryTsx).toMatch(/AlphabetFilter/)
   })
 })

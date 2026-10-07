@@ -4,7 +4,34 @@
   width: 100%;
   overflow: hidden;
   position: relative;
-  transition-duration: 0.1s;
+  /* Resting outline is PRESENT but transparent, and carries the same
+     -1px offset the hover rule uses. That is what makes the hover edge
+     animate instead of flickering: from `outline-style: none` there is no
+     interpolable start value for `outline-color`, so the browser snapped
+     the edge in and the old `all` transition below painted one frame at
+     the wrong offset -- the single flicker the operator reported. An
+     outline never affects layout, so declaring it at rest costs nothing.
+
+     This mirrors ConsoleMode/index.scss, whose edges ARE smooth precisely
+     because the border exists at rest and only its colour animates
+     (`:110-113`, `background/border-color/color 140ms ease`). */
+  outline: 2px solid transparent;
+  outline-offset: -1px;
+  /* Explicit property list, NOT the bare `transition-duration: 0.1s` this
+     replaces -- with no `transition-property` that resolved to `all`, so
+     100ms was applied to `outline-offset` and alongside a `z-index` jump.
+     140ms matches console mode's figure, which is the "slower, smoother"
+     feel being copied here.
+
+     outline-WIDTH and outline-OFFSET are deliberately absent and must stay
+     absent. `:focus-within` below is a louder ring (3px at +2px offset,
+     plus a two-tone halo) and that hover/focus split is a documented
+     accessibility decision (quick 260926-acw). Animating width or offset
+     would make focus visibly crawl out of hover and blur the distinction.
+     Colour and shadow animate; geometry snaps. */
+  transition:
+    outline-color 140ms ease,
+    box-shadow 140ms ease;
   box-shadow: 0px 0px 12px 4px #00000055;
   display: flex;
   flex-direction: column;
@@ -193,26 +220,45 @@ body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) {
   transform: translateY(0);
 }
 
+/* `play` leads and `store` trails: the play/download control sits at the
+   leading edge, and the store badge takes the trailing slot play used to
+   hold. Only the grid-card variants below are reordered -- the list layout
+   (`.gameListItem > .icons`) deliberately keeps the original
+   'update settings play' order. */
 .gameCard > .icons {
   background: var(--icons-background);
   justify-content: space-around;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-areas: 'update settings play';
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-areas: 'play update settings store';
   padding: var(--space-xs-fixed);
 }
 
 .gameCard.justPlayed > .icons {
   justify-content: right;
-  grid-template-columns: 0.3fr 1fr 0.4fr 0.5fr;
-  grid-template-areas: 'update gap settings play';
+  grid-template-columns: 0.5fr 0.3fr 1fr 0.4fr 0.5fr;
+  grid-template-areas: 'play update gap settings store';
 }
 
 .gameCard.justPlayed.hidden .justPlayedImg {
   opacity: 0.2;
 }
 
+/* Controller active. This used to `display: none` the whole bar, which was
+   correct while the bar held nothing but hover actions -- the stick drives
+   selection, so those buttons are noise. The store badge now lives in this
+   bar too, and it is INFORMATION rather than an action, so hiding the bar
+   outright would have made every store badge in the library vanish the
+   moment a controller was plugged in. The bar therefore survives, flattened
+   to nothing but the badge: the action buttons go, and the bar's own
+   background and padding go with them so no new strip appears across the
+   bottom of every card. */
 .gameCard.gamepad > .icons {
+  background: transparent;
+  padding: 0;
+}
+
+.gameCard.gamepad > .icons > .svg-button {
   display: none;
 }
 
@@ -220,12 +266,16 @@ body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) {
   justify-self: center;
 }
 
+/* In flow as the icons bar's trailing grid cell, not absolutely positioned
+   against the card. The old `position: absolute; right/top` pinned it to the
+   card's top-right corner; `z-index: 2` went with that, and is dropped
+   because the bar (z-index 4) is now this element's own stacking parent --
+   keeping it would have placed the badge BEHIND the bar's background. */
 .gameCard .store-icon {
   border-radius: 10px;
-  position: absolute;
-  right: 5px;
-  top: 4px;
-  z-index: 2;
+  grid-area: store;
+  justify-self: center;
+  align-self: center;
   padding: var(--space-3xs);
   width: 35px;
   height: 35px;

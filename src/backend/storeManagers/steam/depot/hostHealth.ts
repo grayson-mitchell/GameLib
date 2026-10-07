@@ -363,12 +363,23 @@ export class HostHealthTracker {
    * expectation), when a demoted host AND a healthy alternative both exist,
    * sends that one call to the best-scoring demoted host instead of the
    * normal fan-out -- the probe is what makes the circuit breaker real.
+   *
+   * 2026-10-05 (retry returns to the host that just failed): `previousHost`
+   * is the host the caller's PREVIOUS attempt for this same chunk went to.
+   * When supplied on a retry (`attemptIndex > 0`) and another candidate
+   * exists, it is excluded and the retry rotates through the remaining
+   * ordered hosts. Without it, a worker whose attempt-0 fan-out landed on
+   * the rank-1 host retried `ordered[1]` -- the same host, whenever one
+   * failure did not push it below rank 1 (with two hosts, always). Omitting
+   * it (every pre-existing caller/test) keeps `ordered[attemptIndex %
+   * ordered.length]` unchanged.
    */
   pickHost(
     hosts: string[],
     seed: number,
     attemptIndex: number,
-    workerSlot = 0
+    workerSlot = 0,
+    previousHost?: string
   ): string {
     if (!hosts.length) {
       throw new Error('HostHealthTracker.pickHost: empty hosts list')
@@ -427,6 +438,10 @@ export class HostHealthTracker {
     const N = Math.min(TOP_N_FANOUT, healthy.length)
     if (attemptIndex === 0 && N > 1) {
       return healthy[workerSlot % N]
+    }
+    if (attemptIndex > 0 && previousHost !== undefined) {
+      const others = ordered.filter((host) => host !== previousHost)
+      if (others.length) return others[(attemptIndex - 1) % others.length]
     }
     return ordered[attemptIndex % ordered.length]
   }

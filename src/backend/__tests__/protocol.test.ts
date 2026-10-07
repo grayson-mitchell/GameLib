@@ -616,4 +616,171 @@ describe('protocol.ts --no-gui behavior', () => {
       )
     })
   })
+
+  // Todo 2026-10-05-gamelib-deep-link-launch-args-reach-runner-cli-options (critical). A
+  // `gamelib://launch?...&arg=...&altExe=...` link is attacker-authored: any web page can
+  // emit one. URL-supplied args/altExe must never reach an installed game's launch without
+  // an explicit in-app confirmation showing the exact executable and args, whose dismiss /
+  // fail-safe answer (cancelId) is "don't launch". altExe must resolve inside the game's
+  // install path. gogdl cannot take a `--` separator, so `-`-prefixed URL args are stripped
+  // for it before they reach the dialog or the launch.
+  describe('URL-supplied arg/altExe need confirmation (deep-link launch-args todo)', () => {
+    const installedLegendaryGame = {
+      app_name: 'Fortnite',
+      title: 'Fortnite',
+      runner: 'legendary' as const,
+      is_installed: true,
+      install: { install_path: '/games/Fortnite' }
+    }
+    const installedGogGame = {
+      app_name: '1207659037',
+      title: 'Installed GOG Game',
+      runner: 'gog' as const,
+      is_installed: true,
+      install: { install_path: '/games/gog' }
+    }
+    const DECLINE = 0
+    const LAUNCH = 1
+
+    beforeEach(() => {
+      mockIsCLINoGui.mockReturnValue(false)
+      ;(libraryManagerMap.legendary.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => installedLegendaryGame,
+        getSettings: () => mockGameSettings
+      })
+      ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => installedGogGame,
+        getSettings: () => mockGameSettings
+      })
+    })
+
+    const attackUrl =
+      'gamelib://launch?appName=Fortnite&runner=legendary&arg=--wrapper%20%22cmd%20/c%20calc%22'
+    const lastDialogOptions = () =>
+      (dialog.showMessageBox as jest.Mock).mock.calls[0].at(-1)
+
+    test('a URL with `arg` asks first, and declining launches nothing', async () => {
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+        response: DECLINE
+      })
+
+      await handleProtocol([attackUrl])
+
+      expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
+      expect(launchEventCallback).not.toHaveBeenCalled()
+    })
+
+    test("the dialog's dismiss answer (cancelId) is the safe, don't-launch button", async () => {
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+        response: DECLINE
+      })
+
+      await handleProtocol([attackUrl])
+
+      const options = lastDialogOptions()
+      expect(options.cancelId).toBe(DECLINE)
+      expect(options.defaultId).toBe(DECLINE)
+      expect(options.buttons).toHaveLength(2)
+    })
+
+    test('the dialog shows the title, the exact executable and the exact args', async () => {
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+        response: DECLINE
+      })
+
+      await handleProtocol([
+        attackUrl + '&altExe=' + encodeURIComponent('/games/Fortnite/bin/x.exe')
+      ])
+
+      const options = lastDialogOptions()
+      const shown = `${options.title}\n${options.message}\n${options.detail}`
+      expect(shown).toContain('Fortnite')
+      expect(shown).toContain('/games/Fortnite/bin/x.exe')
+      expect(shown).toContain('--wrapper "cmd /c calc"')
+    })
+
+    test('accepting launches with exactly the URL-supplied args and altExe', async () => {
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+        response: LAUNCH
+      })
+
+      await handleProtocol([
+        attackUrl + '&altExe=' + encodeURIComponent('/games/Fortnite/bin/x.exe')
+      ])
+
+      expect(launchEventCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appName: 'Fortnite',
+          args: ['--wrapper "cmd /c calc"'],
+          launchArguments: {
+            type: 'altExe',
+            executable: '/games/Fortnite/bin/x.exe'
+          }
+        })
+      )
+    })
+
+    test.each([
+      ['outside the install path', '/usr/bin/evil'],
+      ['a `..` escape', '/games/Fortnite/../evil/x.exe'],
+      ['a sibling sharing the prefix', '/games/Fortnite-evil/x.exe'],
+      ['a UNC-style remote share', '//host/share/x.exe']
+    ])(
+      'an altExe %s is refused: no dialog, no launch',
+      async (_label, altExe) => {
+        ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+          response: LAUNCH
+        })
+
+        await handleProtocol([
+          'gamelib://launch?appName=Fortnite&runner=legendary&altExe=' +
+            encodeURIComponent(altExe)
+        ])
+
+        expect(launchEventCallback).not.toHaveBeenCalled()
+        expect(dialog.showMessageBox).not.toHaveBeenCalled()
+      }
+    )
+
+    test('gog: `-`-prefixed URL args are stripped before the dialog and the launch', async () => {
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+        response: LAUNCH
+      })
+
+      await handleProtocol([
+        'gamelib://launch?appName=1207659037&runner=gog&arg=--wrapper&arg=calc&arg=--wra=x&arg=-skipintro'
+      ])
+
+      expect(launchEventCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ appName: '1207659037', args: ['calc'] })
+      )
+      expect(lastDialogOptions().detail).not.toContain('--wrapper')
+    })
+
+    test('an arg cannot forge a line in the dialog: newlines and bidi overrides are escaped', async () => {
+      ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({
+        response: DECLINE
+      })
+
+      await handleProtocol([
+        'gamelib://launch?appName=Fortnite&runner=legendary&arg=x%0AExecutable%3A%20safe&arg=%E2%80%AEexe'
+      ])
+
+      const { detail } = lastDialogOptions()
+      expect(detail).toContain('"x\\u{a}Executable: safe"')
+      expect(detail).toContain('"\\u{202e}exe"')
+      expect(detail.split('\n')).toHaveLength(4)
+    })
+
+    test('a URL with no arg/altExe launches unchanged, without a dialog', async () => {
+      await handleProtocol([
+        'gamelib://launch?appName=Fortnite&runner=legendary'
+      ])
+
+      expect(dialog.showMessageBox).not.toHaveBeenCalled()
+      expect(launchEventCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ appName: 'Fortnite', args: [] })
+      )
+    })
+  })
 })

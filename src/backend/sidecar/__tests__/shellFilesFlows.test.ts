@@ -377,6 +377,19 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
     expect((pushed?.args as unknown[])?.[0]).toBe(synthetic)
   })
 
+  it('openExternalUrl (send) does not treat a non-http scheme that merely starts with "http" as a URL', async () => {
+    // Todo `sidecar-log-output-shares-the-rpc-stdout-pipe`: `openUrlOrFile`
+    // used `startsWith('http')`, so `httpfoo:` reached the shell's
+    // `openExternal` frame arm.
+    const { input, frames } = startSidecar()
+    writeSend(input, 'open-external-url-2', 'openExternalUrl', [
+      'httpfoo:synthetic'
+    ])
+    await flush()
+
+    expect(frames.find((f) => f.kind === 'openExternal')).toBeUndefined()
+  })
+
   // ── REQ-34.3-01: showConfigFileInFolder — the two-branch body, reaching
   // shell.openPath -> RUST_SHELL_OPEN_PATH (configPath/gamesConfigPath are
   // filesystem paths, not http URLs, so openUrlOrFile takes its openPath
@@ -567,6 +580,38 @@ describe('sidecar shell/files/diagnostics flows (Phase 34.3 Plan 01 — REQ-34.3
       expect(existsSync(join(parentDir, folderName))).toBe(true)
       rmSync(parentDir, { recursive: true, force: true })
     })
+
+    // Todo 2026-10-05-security-hardening-minors-from-trust-boundary-review
+    // (2): a folderName that is empty, `.` or climbs out of `path` must not
+    // turn into a recursive delete of the parent or of a sibling.
+    it.each([
+      ['../sibling', 'sibling'],
+      ['..', 'root'],
+      ['', 'root'],
+      ['.', 'root']
+    ])(
+      'removeFolder refuses folderName %p and leaves the %s directory in place',
+      async (folderName, survivor) => {
+        const outer = mkdtempSync(
+          join(tmpdir(), 'gamelib-shellfilesflows-remove-escape-')
+        )
+        const root = join(outer, 'root')
+        mkdirSync(join(root, 'game'), { recursive: true })
+        mkdirSync(join(outer, 'sibling'))
+        const survivorPath = survivor === 'root' ? root : join(outer, survivor)
+
+        const { input } = startSidecar()
+        writeSend(input, `remove-escape-${survivor}`, 'removeFolder', [
+          [root, folderName]
+        ])
+        await flush()
+        jest.advanceTimersByTime(2100)
+
+        expect(existsSync(survivorPath)).toBe(true)
+        expect(existsSync(outer)).toBe(true)
+        rmSync(outer, { recursive: true, force: true })
+      }
+    )
   })
 
   // ── REQ-34.3-05 / REQ-34.3-06 cache and reset channels (Phase 34.3 Plan 02) ─

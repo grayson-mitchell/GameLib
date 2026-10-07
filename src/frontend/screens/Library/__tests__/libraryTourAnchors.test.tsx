@@ -17,12 +17,15 @@
  */
 import type { ReactElement } from 'react'
 
-const contextValue = {
+const emptyContext = () => ({
   epic: { library: [] as unknown[] },
   gog: { library: [] as unknown[] },
   amazon: { library: [] as unknown[] },
+  steam: { library: [] as unknown[] },
+  zoom: { library: [] as unknown[] },
   sideloadedLibrary: [] as unknown[]
-}
+})
+let contextValue = emptyContext()
 
 jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
@@ -38,11 +41,15 @@ jest.mock('react', () => ({
   useMemo: <T,>(factory: () => T) => factory()
 }))
 
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, defaultValue: string): string => defaultValue
-  })
-}))
+jest.mock('react-i18next', () => {
+  // Resolves against the shipped en catalogues, not the inline default: the
+  // tour-copy cases below are about what users actually SEE, and an existing
+  // key's catalogue value wins over its t() default (phase 34.12 D-07).
+  const { faithfulReactI18next } = jest.requireActual<
+    typeof import('frontend/screens/Game/GamePage/components/__tests__/faithfulTranslate')
+  >('frontend/screens/Game/GamePage/components/__tests__/faithfulTranslate')
+  return faithfulReactI18next()
+})
 
 jest.mock('../../../state/TourContext', () => ({
   useTour: () => ({ isTourActive: () => false })
@@ -65,7 +72,7 @@ jest.mock('../../../components/Tour/Tour', () => ({
 // setup does not hoist jest.mock like babel-jest).
 import LibraryTour from '../components/LibraryTour'
 
-type TourStepLike = { element?: string }
+type TourStepLike = { element?: string; intro?: string; title?: string }
 type AnyElement = ReactElement<{ steps: TourStepLike[] }>
 
 function renderedSteps(): TourStepLike[] {
@@ -79,6 +86,13 @@ function renderedSteps(): TourStepLike[] {
 // contextValue above), so the conditional `library-game-card` step is
 // absent; a future edit that silently drops or reorders a working step is
 // caught by comparing the full ordered list against this exact array.
+//
+// 261003-i4t (D-11): `library-add-game` and `library-refresh` are swapped
+// from their original order so the tour walks the panel footer
+// left-to-right, matching D-04 (plus button at the left) and D-06 (refresh
+// to the right of the count). No `element` selector, title, or body
+// changed -- only the two step objects' positions, so the anchor manifest
+// itself is unchanged (`navTourAnchorCensus.test.ts` stays green).
 const EXPECTED_ELEMENTS = [
   undefined, // welcome.intro
   undefined, // welcome.intro2
@@ -88,10 +102,14 @@ const EXPECTED_ELEMENTS = [
   '[data-tour="library-view-toggle"]',
   '[data-tour="library-sort-az"]',
   '[data-tour="library-sort-installed"]',
-  '[data-tour="library-refresh"]',
   '[data-tour="library-add-game"]',
+  '[data-tour="library-refresh"]',
   undefined // end.intro
 ]
+
+beforeEach(() => {
+  contextValue = emptyContext()
+})
 
 describe('LibraryTour re-anchored steps (34.12-02, D-09)', () => {
   it('contains exactly one step whose element is [data-tour="library-views-collections"]', () => {
@@ -124,5 +142,38 @@ describe('LibraryTour re-anchored steps (34.12-02, D-09)', () => {
   it('preserves the untouched steps in their original order', () => {
     const steps = renderedSteps()
     expect(steps.map((step) => step.element)).toEqual(EXPECTED_ELEMENTS)
+  })
+})
+
+// Tour copy must describe the tab layout (no sidebar exists since phase
+// 34.10) and, wherever it lists stores, include Steam -- GameLib's reason to
+// exist. Shared by both tour suites' copy cases.
+function staleCopyIn(steps: { intro?: string; title?: string }[]): string[] {
+  return steps
+    .flatMap((step) => [step.intro ?? '', step.title ?? ''])
+    .filter(
+      (text) =>
+        /sidebar/i.test(text) || (/\bGOG\b/.test(text) && !/Steam/.test(text))
+    )
+}
+
+describe('LibraryTour game-card step and copy', () => {
+  it.each(['epic', 'gog', 'amazon', 'steam', 'zoom'] as const)(
+    'offers the library-game-card step when only the %s library has games',
+    (store) => {
+      contextValue[store].library = [{}]
+      const elements = renderedSteps().map((step) => step.element)
+      expect(elements).toContain('[data-tour="library-game-card"]')
+    }
+  )
+
+  it('offers the library-game-card step for a sideload-only library', () => {
+    contextValue.sideloadedLibrary = [{}]
+    const elements = renderedSteps().map((step) => step.element)
+    expect(elements).toContain('[data-tour="library-game-card"]')
+  })
+
+  it('no rendered step names the retired sidebar or lists stores without Steam', () => {
+    expect(staleCopyIn(renderedSteps())).toEqual([])
   })
 })

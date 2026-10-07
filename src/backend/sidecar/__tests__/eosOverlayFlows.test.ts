@@ -5,7 +5,7 @@
  * Five describe blocks:
  *   1. Registration kind — all 8 channels are `ipcMain.handle`, never `ipcMain.on`, asserted in
  *      both directions (mirrors `wineToolsFlows.test.ts`'s Describe 1 template), plus an explicit
- *      assertion that `SEND_CHANNELS` is empty (8-of-8 invoke, zero send).
+ *      assertion, read from `listenerRegistry`, that it registers no send channel (8-of-8 invoke).
  *   2. Curated-import guard (T-34.5-15/T-34.5-12 lineage) — `eosOverlayFlowRegistration.ts` never
  *      imports `eos_overlay/ipc_handler.ts` (comment-stripped, mirrors `wineToolsFlows.test.ts`'s
  *      own Describe 2 approach).
@@ -81,7 +81,21 @@ import type { IpcHandler } from '../../platform'
 // `wineToolsFlows.test.ts`'s own file-scope-once convention. All 8 registrations here are
 // `ipcMain.handle`, which is naturally idempotent, so a second call anywhere else in this file
 // (e.g. Describe 4's own explicit re-call) cannot corrupt this initial registration. ────────────
+// Listener counts captured either side of the call, so Describe 1 asserts what THIS module
+// registered rather than a hand-written list.
+const listenerCountsBefore = new Map(
+  [...listenerRegistry].map(([channel, listeners]) => [
+    channel,
+    listeners.length
+  ])
+)
 registerEosOverlayFlows()
+const registeredSendChannels = [...listenerRegistry]
+  .filter(
+    ([channel, listeners]) =>
+      listeners.length > (listenerCountsBefore.get(channel) ?? 0)
+  )
+  .map(([channel]) => channel)
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
 describe('registration kind — all 8 EOS overlay channels are registered with the correct kind, both directions', () => {
@@ -96,12 +110,6 @@ describe('registration kind — all 8 EOS overlay channels are registered with t
     'isEosOverlayEnabled'
   ]
 
-  // 8 of 8 invoke, zero send — a deliberate property of this cluster (no channel here is
-  // fire-and-forget). Kept as an explicit array (rather than just omitting the assertion) so a
-  // future accidental `ipcMain.on` addition to this module fails a test instead of silently
-  // passing.
-  const SEND_CHANNELS: string[] = []
-
   it.each(HANDLE_CHANNELS)(
     'REQ-34.6-01 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
     (channel) => {
@@ -110,8 +118,10 @@ describe('registration kind — all 8 EOS overlay channels are registered with t
     }
   )
 
-  it('REQ-34.6-01 SEND_CHANNELS is empty — this cluster is 8-of-8 invoke, zero send', () => {
-    expect(SEND_CHANNELS).toHaveLength(0)
+  // Read from `listenerRegistry`, not a local literal: the empty-array-is-empty assertion this
+  // replaced could not fail. 8 of 8 invoke, zero send is a deliberate property of this cluster.
+  it('REQ-34.6-01 this module registers no ipcMain.on channel — 8-of-8 invoke, zero send', () => {
+    expect(registeredSendChannels).toEqual([])
   })
 
   it('REQ-34.6-01 exactly 8 ipcMain.handle registrations and 0 ipcMain.on registrations appear in the source', () => {

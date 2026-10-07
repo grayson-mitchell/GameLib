@@ -31,7 +31,7 @@
  *
  * EXTENDED (plan 34.5-47, T-34.5-47-01): a third top-level describe below
  * pins the nine PRODUCTION `refreshLibrary` call sites living OUTSIDE this
- * file (Login, NavTabs, ActionIcons, ErrorComponent, RedeemSteamKeyDialog,
+ * file (Login, NavTabs, Header, ErrorComponent, RedeemSteamKeyDialog,
  * ClearCache, EgsSettings, ConsoleMode, SideloadDialog) plus a literal-only
  * security rule (`everyOriginIsAFixedStringLiteral`) applied to all nine of
  * those sources concatenated with GlobalState.tsx's own. None of the nine
@@ -407,10 +407,7 @@ describe('GlobalState.tsx refreshLibrary — nine EXTERNAL call sites thread a u
       '../../components/UI/NavShell/components/NavTabs/index.tsx',
       'nav-tabs-games-tab'
     ],
-    [
-      '../../components/UI/ActionIcons/index.tsx',
-      'action-icons-refresh-button'
-    ],
+    ['../../components/UI/Header/index.tsx', 'action-icons-refresh-button'],
     ['../../components/UI/ErrorComponent/index.tsx', 'error-component-retry'],
     ['../../components/UI/RedeemSteamKeyDialog/index.tsx', 'redeem-steam-key'],
     ['../../screens/Settings/components/ClearCache.tsx', 'clear-cache'],

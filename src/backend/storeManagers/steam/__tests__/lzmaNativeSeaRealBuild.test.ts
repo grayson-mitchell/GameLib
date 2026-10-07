@@ -180,18 +180,27 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
       )
     }
     binaryPath = join(BINARIES_DIR, bins[0])
+  }, 180000)
 
-    // quick-260913-arr: was a hand-rolled `mkdtempSync` + a four-variable env
-    // block, which was measurably LEAKIER than the jest containment one
-    // directory away (it left APPDATA, XDG_CONFIG_HOME, XDG_DATA_HOME and
-    // XDG_CACHE_HOME pointing at the operator's real profile). The helper owns
-    // all eight, the 0700 root, and disposal. See CLAUDE.md's two-profile rule.
+  // quick-260913-arr: was a hand-rolled `mkdtempSync` + a four-variable env
+  // block, which was measurably LEAKIER than the jest containment one
+  // directory away (it left APPDATA, XDG_CONFIG_HOME, XDG_DATA_HOME and
+  // XDG_CACHE_HOME pointing at the operator's real profile). The helper owns
+  // all eight, the 0700 root, and disposal. See CLAUDE.md's two-profile rule.
+  //
+  // 2026-10-05: one profile PER TEST, not one from beforeAll. Each test is a
+  // separate binary invocation, and CLAUDE.md's rule is "fresh profile per
+  // invocation, always" -- a profile shared across tests lets the first
+  // run's on-disk state (logs, config) shape the second's. Any child still
+  // live (a timed-out test) is reaped before its profile is shredded.
+  beforeEach(() => {
     profile = createFakeHomeProfile({
       prefix: 'gamelib-lzmaNativeSeaRealBuild-home-'
     })
-  }, 180000)
+  })
 
-  afterAll(() => {
+  afterEach(() => {
+    reapLiveChildren()
     profile?.dispose()
   })
 

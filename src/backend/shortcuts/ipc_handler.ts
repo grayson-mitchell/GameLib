@@ -13,7 +13,14 @@ import { getGame } from '../utils'
 import { logWarning, LogPrefix } from 'backend/logger'
 
 addListener('addShortcut', async (event, appName, runner, fromMenu) => {
-  getGame(appName, runner).addShortcuts(fromMenu)
+  void getGame(appName, runner)
+    .addShortcuts(fromMenu)
+    .catch((error) =>
+      logWarning(
+        ['Could not add shortcuts for', appName, error],
+        LogPrefix.Backend
+      )
+    )
 
   const body = i18next.t(
     'box.shortcuts.message',

@@ -7,7 +7,8 @@
  *      `wine.isValidVersion`, `installWineVersion`, `refreshWineVersionInfo`, `removeWineVersion`,
  *      `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) are `ipcMain.handle`, never `ipcMain.on`,
  *      asserted in both directions (mirrors `humbleLoginFlows.test.ts`'s Describe 1 template), plus
- *      an explicit assertion that `SEND_CHANNELS` is empty (9-of-9 invoke, zero send).
+ *      an assertion, read from `listenerRegistry`, that `winetricksInstall` is the only send
+ *      channel the module registers.
  *   2. Curated-import guard + winetricks/runWineCommandForGame kind proof — `wineToolsFlowRegistration.ts`
  *      never imports `wine/manager/ipc_handler.ts` or `tools/ipc_handler.ts` (comment-stripped,
  *      mirrors `humbleLoginFlows.test.ts`'s own Describe 3 approach). As of Phase 34.6 Plan 07 the
@@ -99,7 +100,21 @@ import type { IpcHandler } from '../../platform'
 // are module-scope maps; calling `registerWineToolsFlows()` more than once would stack a
 // duplicate `backendEvents` listener (per this module's own `releasesInfoReady` comment),
 // mirroring `humbleLoginFlows.test.ts`'s own file-scope-once convention. ────────────────────────
+// The listener counts are captured either side of the call, so Describe 1 can assert exactly
+// which send channels THIS module registered rather than a hand-written list.
+const listenerCountsBefore = new Map(
+  [...listenerRegistry].map(([channel, listeners]) => [
+    channel,
+    listeners.length
+  ])
+)
 registerWineToolsFlows()
+const registeredSendChannels = [...listenerRegistry]
+  .filter(
+    ([channel, listeners]) =>
+      listeners.length > (listenerCountsBefore.get(channel) ?? 0)
+  )
+  .map(([channel]) => channel)
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
 describe('registration kind — all 9 Wine channels are registered with the correct kind, both directions', () => {
@@ -115,12 +130,6 @@ describe('registration kind — all 9 Wine channels are registered with the corr
     'toggleVKD3D'
   ]
 
-  // 9 of 9 invoke, zero send -- a deliberate property of this cluster (no channel here is
-  // fire-and-forget). Kept as an explicit array (rather than just omitting the assertion) so a
-  // future accidental `ipcMain.on` addition to this module fails a test instead of silently
-  // passing.
-  const SEND_CHANNELS: string[] = []
-
   it.each(HANDLE_CHANNELS)(
     'REQ-34.5-03 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
     (channel) => {
@@ -129,8 +138,11 @@ describe('registration kind — all 9 Wine channels are registered with the corr
     }
   )
 
-  it('REQ-34.5-03 SEND_CHANNELS is empty -- this cluster is 9-of-9 invoke, zero send', () => {
-    expect(SEND_CHANNELS).toHaveLength(0)
+  // Read from `listenerRegistry`, not a local literal: the literal this replaced was an empty
+  // array asserted to be empty, and it stayed green when `winetricksInstall` was added as
+  // `ipcMain.on` (Phase 34.6 Plan 07). `winetricksInstall` is the module's one send channel.
+  it('REQ-34.5-03 the only ipcMain.on channel this module registers is winetricksInstall', () => {
+    expect(registeredSendChannels).toEqual(['winetricksInstall'])
   })
 })
 

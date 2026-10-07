@@ -169,8 +169,12 @@ export class SidecarKeyringSlotStore implements TokenStore {
   private cachedToken: { value: string } | undefined
   /** The in-flight `readToken()` fetch, shared by every concurrent caller until it settles.
    * `getToken()` is now a thin adapter over `readToken()` (quick-260814-r2d), so this holds the
-   * outcome, not the lossy string. */
-  private pendingToken: Promise<TokenReadOutcome> | undefined
+   * outcome, not the lossy string. Tagged with the `cacheEpoch` it started under: a read issued
+   * after `invalidateCache()` must not join a fetch that began before it (a sign-out during a
+   * boot read would otherwise hand the next caller the pre-signout token). */
+  private pendingToken:
+    | { epoch: number; promise: Promise<TokenReadOutcome> }
+    | undefined
   /** `Date.now()` of the most recent FAILED `getToken()` read, or `undefined` if none is
    * memoized (never failed yet, the memo expired, or the cache was invalidated by a write/delete).
    * Holds a timestamp only — never a secret, never a value — see `KEYRING_FAILURE_MEMO_MS`'s doc
@@ -343,12 +347,12 @@ export class SidecarKeyringSlotStore implements TokenStore {
         ? { status: 'present', token: this.cachedToken.value }
         : { status: 'absent' }
     }
-    if (this.pendingToken) {
+    if (this.pendingToken && this.pendingToken.epoch === this.cacheEpoch) {
       logDebug(
         `SidecarKeyringSlotStore(${this.slot}).getToken(): joined in-flight read, no additional ${RUST_KEYRING_GET} issued trigger=${label}`,
         LogPrefix.Steam
       )
-      return this.pendingToken
+      return this.pendingToken.promise
     }
     // Bounded negative-result memo (F-34.5-G6-06): a read that failed within the last
     // KEYRING_FAILURE_MEMO_MS is returned directly as the same failure, WITHOUT issuing a second
@@ -371,11 +375,16 @@ export class SidecarKeyringSlotStore implements TokenStore {
       )
       return { status: 'unreadable', reason }
     }
-    this.pendingToken = this.fetchToken(context)
+    const pending = {
+      epoch: this.cacheEpoch,
+      promise: this.fetchToken(context)
+    }
+    this.pendingToken = pending
     try {
-      return await this.pendingToken
+      return await pending.promise
     } finally {
-      this.pendingToken = undefined
+      // Only clear our own entry -- a newer-epoch read may have replaced it meanwhile.
+      if (this.pendingToken === pending) this.pendingToken = undefined
     }
   }
 

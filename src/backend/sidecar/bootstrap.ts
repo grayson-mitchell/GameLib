@@ -38,7 +38,7 @@ import i18next from 'i18next'
 import * as electronStub from '../platform'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
-import { i18nextLanguageOptions, toShippedLanguage } from 'common/languages'
+import { i18nextLanguageOptions, localeFileSegments } from 'common/languages'
 
 // ---- Step 2: import the backend registration path — AFTER the hook -------
 
@@ -1026,8 +1026,7 @@ export function init(
               join(
                 publicDir,
                 'locales',
-                toShippedLanguage(language),
-                `${namespace}.json`
+                ...localeFileSegments(language, namespace)
               )
           },
           debug: false,

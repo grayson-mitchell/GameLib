@@ -58,6 +58,7 @@
  */
 
 import {
+  installConsoleStdoutRedirect,
   installStdioErrorGuards,
   installUncaughtExceptionGuard,
   installUnhandledRejectionGuard
@@ -66,3 +67,12 @@ import {
 installStdioErrorGuards()
 installUnhandledRejectionGuard()
 installUncaughtExceptionGuard()
+
+// Stdout is the RPC pipe, so every stdout-bound console method goes to stderr
+// (todo `sidecar-log-output-shares-the-rpc-stdout-pipe`; see the function's doc
+// comment). First-import position matters here too: module-scope `console.log`
+// anywhere in the backend graph must already be redirected. Self-test mode is
+// not RPC -- `lzmaNativeSeaRealBuild.test.ts` reads its SELFTEST lines from stdout.
+if (process.env.GAMELIB_SIDECAR_SELFTEST === undefined) {
+  installConsoleStdoutRedirect()
+}

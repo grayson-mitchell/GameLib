@@ -11,6 +11,7 @@ import { windowIcon } from './constants/paths'
 import { Path } from './schemas'
 import { isCLINoGui } from './constants/environment'
 import { GlobalConfig } from './config'
+import { assertContainedPath } from './sidecar/rendererPathGuard'
 
 // `steam` is a deliberate addition (D-35-19-05): widening this enum also widens the accepted
 // `?runner=` input surface for `handleLaunch`'s `RUNNERS.safeParse(runnerStr)` validator below,
@@ -129,6 +130,60 @@ async function handleLaunch(url: URL) {
     GlobalConfig.get().getSettings().hideWindowOnProtocolLaunch === true
 
   if (is_installed) {
+    // URL-supplied `arg`/`altExe` are attacker-authored (any web page can emit this link).
+    // Steam's dispatch below takes only the appName, so they never reach it; every other
+    // runner gets them vetted and confirmed first.
+    if (gameInfo.runner !== 'steam') {
+      // gogdl cannot take a `--` end-of-options marker (it forwards the literal `--` to the
+      // game), so a `-`-prefixed URL arg could be parsed as one of ITS options (`--wrapper`,
+      // `--override-exe`, or any abbreviation argparse accepts). Drop them for gog only;
+      // legendary and nile receive passthrough args behind `--` (`runnerLaunchArgv.ts`).
+      if (gameInfo.runner === 'gog') {
+        const dropped = args.filter((arg) => arg.startsWith('-'))
+        if (dropped.length) {
+          logInfo(
+            ['Ignoring option-like protocol args for gog:', dropped],
+            LogPrefix.ProtocolHandler
+          )
+          args = args.filter((arg) => !arg.startsWith('-'))
+        }
+      }
+
+      if (altExe) {
+        const installPath = gameInfo.install?.install_path
+        try {
+          if (!installPath) throw new Error('game has no install path')
+          altExe = Path.parse(
+            assertContainedPath(installPath, altExe, 'protocol altExe')
+          )
+        } catch (error) {
+          logError(
+            [
+              'Refusing protocol launch: altExe is not inside the game folder.',
+              error
+            ],
+            LogPrefix.ProtocolHandler
+          )
+          return
+        }
+      }
+
+      if (
+        (args.length || altExe) &&
+        !(await confirmUrlLaunchParameters(title, altExe, args))
+      ) {
+        // Decline means don't launch at all -- not "launch without the URL's args". The
+        // user asked for neither, and a launch they did not expect is the surprise this
+        // dialog exists to prevent.
+        logInfo(
+          'User declined the link-supplied launch parameters, not launching',
+          LogPrefix.ProtocolHandler
+        )
+        if (isCLINoGui) app.quit()
+        return
+      }
+    }
+
     let launchOption: LaunchOption | undefined = undefined
     if (altExe)
       launchOption = {
@@ -203,6 +258,70 @@ async function handleLaunch(url: URL) {
       app.quit()
     }
   }
+}
+
+// Shows a value exactly, with anything that could forge or hide a line in the dialog
+// (control, line-separator and bidi-override characters) escaped as `\u{...}`.
+function quoteForDisplay(value: string): string {
+  const unsafe = (code: number) =>
+    code < 0x20 ||
+    (code >= 0x7f && code <= 0x9f) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x200e ||
+    code === 0x200f ||
+    (code >= 0x202a && code <= 0x202e) ||
+    (code >= 0x2066 && code <= 0x2069)
+  const escaped = Array.from(value, (char) => {
+    const code = char.charCodeAt(0)
+    return unsafe(code) ? `\\u{${code.toString(16)}}` : char
+  }).join('')
+  return `"${escaped}"`
+}
+
+// Asks before a link-supplied executable / args reach a launch. Index 0 is the SAFE
+// "Don't launch" and is both `defaultId` and `cancelId`, so Enter, Escape, closing the
+// dialog, or the sidecar stub's fail-safe answer (`cancelId`, see `utils.ts` CR-04) all
+// decline. Resolves true only for an explicit press of "Launch".
+async function confirmUrlLaunchParameters(
+  title: string,
+  altExe: Path | undefined,
+  args: string[]
+): Promise<boolean> {
+  const executable = altExe
+    ? quoteForDisplay(altExe)
+    : i18next.t(
+        'gamelib:box.protocol.launch.defaultExecutable',
+        "(the game's usual executable)"
+      )
+  const argLines = args.length
+    ? args.map((arg) => `  ${quoteForDisplay(arg)}`).join('\n')
+    : `  ${i18next.t('gamelib:box.protocol.launch.noArguments', '(none)')}`
+  const options = {
+    type: 'warning' as const,
+    title,
+    message: `${title}: ${i18next.t(
+      'gamelib:box.protocol.launch.confirmMessage',
+      'A link wants to launch this game with the executable and arguments below. Only continue if you trust where the link came from.'
+    )}`,
+    detail: [
+      `${i18next.t('gamelib:box.protocol.launch.executable', 'Executable')}: ${executable}`,
+      `${i18next.t('gamelib:box.protocol.launch.arguments', 'Arguments')}:`,
+      argLines
+    ].join('\n'),
+    buttons: [
+      i18next.t('gamelib:box.protocol.launch.decline', "Don't launch"),
+      i18next.t('gamelib:box.protocol.launch.accept', 'Launch')
+    ],
+    defaultId: 0,
+    cancelId: 0,
+    icon: windowIcon
+  }
+  const mainWindow = getMainWindow()
+  const { response } = mainWindow
+    ? await dialog.showMessageBox(mainWindow, options)
+    : await dialog.showMessageBox(options)
+  return response === 1
 }
 
 function findGame(

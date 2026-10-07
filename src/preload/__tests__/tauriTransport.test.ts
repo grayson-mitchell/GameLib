@@ -369,6 +369,76 @@ describe('change events', () => {
 
     expect(snapshotGet('configStore', 'theme')).toBe('authoritative-value')
   })
+
+  // todo 2026-10-05 tauri-rpc-transport-minor-defects (defect 1). A `storeChanged` push and
+  // an in-flight fetch's result travel different routes with no ordering guarantee, and the
+  // fetch result REPLACES the store wholesale.
+  async function settle(): Promise<void> {
+    for (let i = 0; i < 6; i++) await Promise.resolve()
+  }
+
+  function deferredFetch(): {
+    resolve: (value: Record<string, unknown>) => void
+  } {
+    // Stays undefined if the fetch is never issued -- resolving it is then a no-op, so the
+    // test fails on its own assertions rather than on a TypeError.
+    let resolve: ((value: Record<string, unknown>) => void) | undefined
+    mockedInvoke.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          resolve = r as typeof resolve
+        }) as never
+    )
+    return { resolve: (value) => resolve?.(value) }
+  }
+
+  function fetchCallCount(): number {
+    return mockedInvoke.mock.calls.filter(
+      (call) => (call[1] as { channel?: string } | undefined)?.channel === STORE_FETCH_CHANNEL
+    ).length
+  }
+
+  it('a change pushed while a re-fetch is in flight survives the older fetch result', async () => {
+    const fetch = deferredFetch()
+    storeChangedHandler!({
+      payload: {
+        channel: STORE_CHANGED_CHANNEL,
+        args: [{ store: 'configStore', key: '', invalidated: true }]
+      }
+    })
+    storeChangedHandler!({
+      payload: {
+        channel: STORE_CHANGED_CHANNEL,
+        args: [{ store: 'configStore', key: 'theme', value: 'newer' }]
+      }
+    })
+    fetch.resolve({ theme: 'older' })
+    await settle()
+    expect(snapshotGet('configStore', 'theme')).toBe('newer')
+  })
+
+  it('an invalidation during an in-flight fetch starts a fresh fetch instead of reusing it', async () => {
+    const first = deferredFetch()
+    const second = deferredFetch()
+    storeChangedHandler!({
+      payload: {
+        channel: STORE_CHANGED_CHANNEL,
+        args: [{ store: 'configStore', key: '', invalidated: true }]
+      }
+    })
+    storeChangedHandler!({
+      payload: {
+        channel: STORE_CHANGED_CHANNEL,
+        args: [{ store: 'configStore', key: '', invalidated: true }]
+      }
+    })
+    first.resolve({ theme: 'before-second-invalidation' })
+    await settle()
+    second.resolve({ theme: 'after-second-invalidation' })
+    await settle()
+    expect(fetchCallCount()).toBe(2)
+    expect(snapshotGet('configStore', 'theme')).toBe('after-second-invalidation')
+  })
 })
 
 describe('allow-list', () => {

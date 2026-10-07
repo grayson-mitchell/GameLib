@@ -3,12 +3,103 @@
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-md);
-  padding: var(--space-lg) var(--space-sm);
+  /* Bottom inset matches the inline inset on purpose (--space-sm, not the
+     --space-lg the top keeps). `.Header__footer` is `margin-top: auto` and
+     neither `.NavShell__tier2` nor `.NavShell__tier2Portal` adds block
+     padding, so this one declaration IS the whole gap under the footer row's
+     icon-only AddGameButton -- at --space-lg that button floated 1.5em off
+     the panel floor while sitting 0.75em off its left wall. Three-value form
+     so the top padding is untouched. */
+  padding: var(--space-lg) var(--space-sm) var(--space-sm);
   color: var(--text-secondary);
+  min-height: 100%;
+}
+
+.Header__utilities {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Tour sits hard right, with the other five left-packed. `auto` on the
+   inline-start margin rather than `justify-content: space-between`, which
+   tier2Portal.test.ts:105-107 forbids anywhere in this file (and :102
+   forbids `position: sticky`). The auto margin absorbs the row's free
+   space and leaves the `gap` above intact between the five that stay. */
+.Header__utilities .library-tour-button {
+  margin-inline-start: auto;
+}
+
+.Header__consoleButton,
+.Header__utilityButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xs);
+  border-radius: var(--space-3xs);
+  color: inherit;
+  cursor: pointer;
+}
+
+.Header__utilityButton {
+  background: none;
+  border: none;
+}
+
+.Header__consoleButton:hover,
+.Header__utilityButton:hover {
+  background-color: var(--navbar-active-background);
+}
+
+/* Focus indicator, shape copied from NavItem/index.scss (quick 260926-acw).
+   INSET because this control lives inside the scroll-clipped tier-2 column. */
+.Header__consoleButton:focus-visible,
+.Header__consoleButton:focus:is(body.controllerLayout *),
+.Header__utilityButton:focus-visible,
+.Header__utilityButton:focus:is(body.controllerLayout *) {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--accent, #0080ff));
+  outline-offset: calc(-1 * var(--focus-ring-width, 3px));
+  box-shadow: inset 0 0 0 calc(var(--focus-ring-width, 3px) + 2px)
+    var(--focus-ring-halo, #000);
+  background: var(--focus-ring-fill);
+}
+
+/* D-07/D-08: composed badge for the sort-by-status glyph. No x-marked or
+   slashed drive glyph exists in either installed FontAwesome set (measured,
+   D-07), so this renders a solid drive icon plus a smaller faCircleXmark
+   absolutely positioned at its bottom-right corner, visible only while
+   sortInstalled is true. The badge punches out with --navbar-background --
+   declared in all 11 theme blocks and the literal background
+   .NavShell__tier2 paints on itself, so the halo matches the panel exactly
+   in every theme by construction. The x itself takes color: inherit, so it
+   carries the same foreground as the glyph it sits on rather than a new
+   foreground/background pair. */
+.Header__statusGlyph {
+  position: relative;
+  display: inline-flex;
+}
+
+.Header__statusGlyphBadge {
+  position: absolute;
+  right: -0.25em;
+  bottom: -0.25em;
+  font-size: 0.625em;
+  color: inherit;
+  background: var(--navbar-background);
+  border-radius: 50%;
 }
 
 .Header__search {
-  flex-grow: 1;
+  /*
+   * Deliberately NOT flex-grow: 1. `.Header` gains a definite min-height
+   * (bottom-justification) and the footer below is pinned to it with its own
+   * auto top margin. Flexbox resolves flex-grow BEFORE auto-margin space
+   * absorption, so a growing search row would consume the column's free
+   * space first and leave nothing for the footer's margin to pull against --
+   * silently defeating the bottom pin. The search bar is a fixed-height
+   * control; it does not need the extra space anyway.
+   */
 }
 
 .Header__search .FormControl {
@@ -25,4 +116,64 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.Header__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: auto;
+}
+
+.Header__footerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Refresh sits hard right; the plus button and the count stay left-packed.
+   Scoped to the footer row on purpose -- `.Header__utilityButton` is also
+   the idiom for four of row 1's six controls, so an unscoped rule would
+   push those too. Same `auto` margin reasoning as the tour button above:
+   `space-between` is forbidden in this file. */
+.Header__footerRow .Header__utilityButton {
+  margin-inline-start: auto;
+}
+
+/*
+ * 260815-opt, extended 261003-i4t. Deliberately NO colour change:
+ * `.numberOfgames` already paints `var(--input-background)` behind
+ * inherited text, and recolouring the foreground would introduce a new
+ * foreground/background contrast pair to validate across all 11 themes --
+ * for no informational gain, since the string itself is the signal.
+ * `tabular-nums` now applies to the base (not just `--filtered`): D-05 made
+ * the unfiltered reading a number followed by a word too ("394 games"), so
+ * digit-width jitter there would shuffle the word sideways -- the same
+ * defect the modifier already guarded against in the filtered state.
+ *
+ * `margin-inline-start` removed (261003-i4t, D-04): it was written for a
+ * count that sat first in the footer row. The icon-only AddGameButton now
+ * sits ahead of it, and `.Header__footerRow`'s own `gap` spaces all three
+ * items evenly -- restating a start margin here would double-space the
+ * pill against that gap.
+ */
+.numberOfgames {
+  font-size: var(--text-md);
+  font-weight: var(--regular);
+  background: var(--input-background);
+  padding: var(--space-xs);
+  border-radius: var(--space-3xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.steamSyncSpinner {
+  color: var(--text-secondary);
+  animation: refreshing 1.5s infinite;
+}
+
+.steamStaleIndicator {
+  font-size: var(--text-xs);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  padding-block-start: var(--space-3xs);
 }

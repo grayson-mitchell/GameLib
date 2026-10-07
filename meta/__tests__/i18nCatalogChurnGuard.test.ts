@@ -1,8 +1,13 @@
 import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import {
   classifyChangedPaths,
   assertNoUpstreamChurn,
+  listChangedLocalePaths,
+  parsePorcelainZ,
   UpstreamChurnError
 } from '../i18nCatalogChurnGuard'
 
@@ -81,27 +86,139 @@ describe('upstream churn guard', () => {
   })
 })
 
+describe('parsePorcelainZ', () => {
+  it('returns modified, staged, deleted and untracked paths', () => {
+    expect(
+      parsePorcelainZ(
+        ' M public/locales/en/a.json\0M  public/locales/en/b.json\0' +
+          'D  public/locales/en/c.json\0?? public/locales/en/d.json\0'
+      )
+    ).toEqual([
+      'public/locales/en/a.json',
+      'public/locales/en/b.json',
+      'public/locales/en/c.json',
+      'public/locales/en/d.json'
+    ])
+  })
+
+  it('returns BOTH sides of a rename, never mistaking the origin for a status record', () => {
+    expect(
+      parsePorcelainZ(
+        'R  public/locales/en/new.json\0public/locales/en/translation.json\0' +
+          ' M public/locales/en/gamelib.json\0'
+      )
+    ).toEqual([
+      'public/locales/en/new.json',
+      'public/locales/en/translation.json',
+      'public/locales/en/gamelib.json'
+    ])
+  })
+
+  it('returns nothing for empty output', () => {
+    expect(parsePorcelainZ('')).toEqual([])
+  })
+})
+
+describe('listChangedLocalePaths', () => {
+  // A disposable repo, not the real tree: the cases below need a STAGED
+  // change and an UNTRACKED file, and neither may be manufactured in the
+  // checkout the suite is running from. No `env` is passed to git -- the
+  // identity rides on `-c` flags (see the fake-HOME rule in CLAUDE.md).
+  let repo: string
+
+  function git(...args: string[]): void {
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'user.name=churn-guard-test',
+        '-c',
+        'user.email=churn-guard-test@example.invalid',
+        '-c',
+        'commit.gpgsign=false',
+        ...args
+      ],
+      { cwd: repo, stdio: 'ignore' }
+    )
+  }
+
+  function write(path: string, body = '{}\n'): void {
+    const full = join(repo, path)
+    mkdirSync(join(full, '..'), { recursive: true })
+    writeFileSync(full, body)
+  }
+
+  beforeEach(() => {
+    repo = mkdtempSync(join(tmpdir(), 'churn-guard-'))
+    git('init', '-q')
+    write('public/locales/en/translation.json')
+    write('public/locales/en/gamelib.json')
+    write('src/index.ts', 'export {}\n')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'seed')
+  })
+
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true })
+  })
+
+  it('is empty on a clean tree', () => {
+    expect(listChangedLocalePaths(repo)).toEqual([])
+  })
+
+  it('sees an unstaged catalogue change', () => {
+    write('public/locales/en/translation.json', '{"a": "b"}\n')
+    expect(listChangedLocalePaths(repo)).toEqual([
+      'public/locales/en/translation.json'
+    ])
+  })
+
+  it('sees a STAGED upstream-catalogue change (the old comment claimed this; plain `git diff` did not)', () => {
+    write('public/locales/en/translation.json', '{"a": "b"}\n')
+    git('add', 'public/locales/en/translation.json')
+    expect(listChangedLocalePaths(repo)).toEqual([
+      'public/locales/en/translation.json'
+    ])
+  })
+
+  it("sees an UNTRACKED catalogue the parser created -- the typo'd-namespace case", () => {
+    // `t('gamelb:x')` makes the parser write a brand-new file.
+    write('public/locales/en/gamelb.json')
+    expect(listChangedLocalePaths(repo)).toEqual([
+      'public/locales/en/gamelb.json'
+    ])
+    expect(() => assertNoUpstreamChurn(listChangedLocalePaths(repo))).toThrow(
+      UpstreamChurnError
+    )
+  })
+
+  it('lists each file of a wholly new locale directory, not the collapsed directory', () => {
+    write('public/locales/xx/translation.json')
+    write('public/locales/xx/gamelib.json')
+    expect(listChangedLocalePaths(repo).sort()).toEqual([
+      'public/locales/xx/gamelib.json',
+      'public/locales/xx/translation.json'
+    ])
+  })
+
+  it('ignores changes outside public/locales/', () => {
+    write('src/index.ts', 'export const x = 1\n')
+    write('src/new.ts', 'export {}\n')
+    expect(listChangedLocalePaths(repo)).toEqual([])
+  })
+})
+
 describe('live tree', () => {
   // This is a working-tree assertion, not a fixture-based one: it passes
   // trivially on a clean tree (no changed paths under public/locales/ at
-  // all) and only bites when someone runs `pnpm i18n`, staged or unstaged,
-  // and leaves an upstream-catalog change behind -- which is exactly the
-  // moment D-05 needs it to bite. Running under `pnpm test:ci` turns the
-  // "we never touch upstream catalogs" promise into something CI proves
-  // after every parser run, rather than something the phase merely
-  // asserts.
-  it('classifies the real current git diff with an empty upstream bucket', () => {
-    const diffOutput = execFileSync(
-      'git',
-      ['diff', '--name-only', '--', 'public/locales'],
-      { encoding: 'utf-8' }
-    )
-    const changedPaths = diffOutput
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-
-    const { upstream } = classifyChangedPaths(changedPaths)
+  // all) and only bites when a parser run leaves an upstream-catalog change
+  // behind -- staged, unstaged or untracked -- which is exactly the moment
+  // D-05 needs it to bite. It can only bite in CI because
+  // `.github/workflows/test.yml` runs `pnpm i18n` BEFORE `pnpm test:ci`; on
+  // a fresh checkout with no parser run the tree is clean by construction
+  // and this passes vacuously.
+  it('classifies the real current working-tree changes with an empty upstream bucket', () => {
+    const { upstream } = classifyChangedPaths(listChangedLocalePaths())
     expect(upstream).toEqual([])
   })
 })

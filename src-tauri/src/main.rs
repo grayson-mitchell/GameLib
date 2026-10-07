@@ -25,9 +25,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::{HashMap, VecDeque};
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::hash::{BuildHasher, Hash, Hasher};
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc::{channel as mpsc_channel, Sender};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -43,7 +43,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_deep_link::DeepLinkExt;
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
@@ -151,7 +151,11 @@ fn tray_image(dark: bool) -> Image<'static> {
             "[shell] WARN: macOS tray template image failed to decode, falling back to the colour variant"
         );
     }
-    let bytes = if dark { TRAY_ICON_DARK } else { TRAY_ICON_LIGHT };
+    let bytes = if dark {
+        TRAY_ICON_DARK
+    } else {
+        TRAY_ICON_LIGHT
+    };
     if let Ok(img) = Image::from_bytes(bytes) {
         return img;
     }
@@ -277,7 +281,7 @@ fn wide_nul(value: &str) -> Vec<u16> {
 #[cfg(windows)]
 fn read_system_uses_light_theme() -> Option<u32> {
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
-    use windows_sys::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
+    use windows_sys::Win32::System::Registry::{RegGetValueW, HKEY_CURRENT_USER, RRF_RT_REG_DWORD};
 
     let subkey = wide_nul(PERSONALIZE_SUBKEY);
     let value_name = wide_nul(SYSTEM_USES_LIGHT_THEME_VALUE);
@@ -600,8 +604,7 @@ fn is_plain_app_name(s: &str) -> bool {
         && s.len() <= 128
         && s != "."
         && s != ".."
-        && s
-            .chars()
+        && s.chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-')
 }
 
@@ -683,10 +686,7 @@ fn tray_recent_games_from_value(value: &Value, limit: usize) -> Vec<TrayRecentGa
         }
         // Duplicate appNames would produce two menu items with the SAME id; tauri resolves a
         // click to one of them, so the second is dead weight at best.
-        if out
-            .iter()
-            .any(|g: &TrayRecentGame| g.app_name == app_name)
-        {
+        if out.iter().any(|g: &TrayRecentGame| g.app_name == app_name) {
             continue;
         }
         let title = item
@@ -914,9 +914,7 @@ fn build_tray_menu(app: &AppHandle) -> Option<tauri::menu::Menu<tauri::Wry>> {
     match builder.build() {
         Ok(menu) => Some(menu),
         Err(e) => {
-            eprintln!(
-                "[shell] WARN: tray menu failed to build ({e}) -- continuing without a tray"
-            );
+            eprintln!("[shell] WARN: tray menu failed to build ({e}) -- continuing without a tray");
             None
         }
     }
@@ -931,11 +929,15 @@ fn refresh_tray_menu(app: &AppHandle) {
         return;
     };
     let Some(menu) = build_tray_menu(app) else {
-        eprintln!("[shell] WARN: tray menu refresh failed to build a menu -- keeping the previous menu");
+        eprintln!(
+            "[shell] WARN: tray menu refresh failed to build a menu -- keeping the previous menu"
+        );
         return;
     };
     if let Err(e) = tray.set_menu(Some(menu)) {
-        eprintln!("[shell] WARN: tray menu refresh failed to apply ({e}) -- keeping the previous menu");
+        eprintln!(
+            "[shell] WARN: tray menu refresh failed to apply ({e}) -- keeping the previous menu"
+        );
     }
 }
 
@@ -1056,6 +1058,82 @@ fn open_about_window_from_tray(app: &AppHandle) {
     }
 }
 
+/// The sidecar `send` channel whose listener runs `handleExit()` (`appShellFlowRegistration.ts`
+/// `ipcMain.on('quit', ...)`) -- the same path the in-app quit takes.
+const SIDECAR_QUIT_CHANNEL: &str = "quit";
+
+/// The sidecar `invoke` channel answered by `ipcMain.handle('health', async () => 'ok')`
+/// (`sidecar/handlers.ts`). Used only to prove the sidecar's JS thread is answering before tray
+/// Quit hands the decision to it.
+const SIDECAR_HEALTH_CHANNEL: &str = "health";
+
+/// How long tray Quit waits for the health probe before falling back to `exit(0)`. Bounds only
+/// the PROBE: once the sidecar has answered, `handleExit()` may show the "pending operations"
+/// confirm, which waits on a human and must not be cut short by any clock.
+const TRAY_QUIT_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// The tray-Quit routing policy (todo 2026-10-05 tray-quit-bypasses-the-pending-operations-
+/// confirm), with the two sidecar operations injected so `#[cfg(test)]` can drive it.
+///
+/// `Ok(())` means the quit was handed to the sidecar's `handleExit()`, which either exits via
+/// `app_exit` or -- the user answered "No" to the pending-operations confirm -- does nothing.
+/// `Err` means the sidecar is dead or not answering, and the caller must exit directly: the
+/// pre-fix behaviour, kept as the fallback so tray Quit can never become a no-op.
+///
+/// The probe runs on its own thread and is waited on with `recv_timeout`, so the bound also
+/// covers a probe stuck behind the stdin mutex on a full pipe, not only a slow answer.
+fn tray_quit_via_sidecar<P, S>(probe: P, bound: Duration, send_quit: S) -> Result<(), String>
+where
+    P: FnOnce() -> Result<Value, String> + Send + 'static,
+    S: FnOnce() -> Result<(), String>,
+{
+    let (tx, rx) = mpsc_channel::<Result<Value, String>>();
+    thread::spawn(move || {
+        let _ = tx.send(probe());
+    });
+    match rx.recv_timeout(bound) {
+        Ok(Ok(_)) => send_quit(),
+        Ok(Err(e)) => Err(format!("sidecar health probe failed: {e}")),
+        Err(_) => Err(format!(
+            "sidecar did not answer the health probe within {}ms",
+            bound.as_millis()
+        )),
+    }
+}
+
+/// Tray Quit. Routes through the sidecar's `handleExit()` so a running download gets the same
+/// "pending operations" confirm as the in-app quit (Electron routed tray Quit there too), and
+/// falls back to `exit(0)` when there is no live sidecar to ask. Runs off the main thread: the
+/// probe blocks for up to `TRAY_QUIT_PROBE_TIMEOUT`.
+fn quit_from_tray(app_handle: &AppHandle) {
+    let Some(state) = app_handle.try_state::<Arc<SidecarState>>() else {
+        eprintln!("[shell] tray Quit: no sidecar state -- exiting directly");
+        app_handle.exit(0);
+        return;
+    };
+    let state = state.inner().clone();
+    let app_handle = app_handle.clone();
+    thread::spawn(move || {
+        let probe_state = state.clone();
+        let routed = tray_quit_via_sidecar(
+            move || probe_state.invoke(SIDECAR_HEALTH_CHANNEL.to_string(), Vec::new()),
+            TRAY_QUIT_PROBE_TIMEOUT,
+            || {
+                state.write_frame(&SidecarRpcRequest {
+                    id: state.next_id(),
+                    kind: "send",
+                    channel: SIDECAR_QUIT_CHANNEL.to_string(),
+                    args: Vec::new(),
+                })
+            },
+        );
+        if let Err(e) = routed {
+            eprintln!("[shell] WARN: tray Quit: {e} -- exiting directly");
+            app_handle.exit(0);
+        }
+    });
+}
+
 /// Dispatch a recent-game launch to the sidecar, in-process.
 ///
 /// One hop when the cached entry carries a runner, two when it does not — both on a spawned
@@ -1118,7 +1196,9 @@ fn dispatch_tray_launch(app: &AppHandle, app_name: String, known_runner: Option<
         payload.insert("runner".to_string(), Value::String(runner));
         match state.invoke("launch".to_string(), vec![Value::Object(payload)]) {
             Ok(_) => eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: ok"),
-            Err(e) => eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: err={e}"),
+            Err(e) => {
+                eprintln!("[shell] tray recent-game launch: dispatched to the sidecar: err={e}")
+            }
         }
     });
 }
@@ -1141,8 +1221,10 @@ const INVOKE_TIMEOUT: Duration = Duration::from_secs(60);
 ///
 /// The guardrail is not lost for the rest of the surface: every OTHER channel keeps the 60s
 /// bound, and a genuinely wedged long-running invoke now surfaces as a never-settling promise
-/// rather than a wrong answer — the honest failure mode. The sidecar dying closes the channel,
-/// which wakes `rx.recv()` with a disconnect error, so a crashed sidecar still fails fast.
+/// rather than a wrong answer — the honest failure mode. A crashed sidecar still fails fast, but
+/// only because the reader thread calls `drain_pending_invokes` when the sidecar's stdout ends:
+/// the `Sender`s live in `SidecarState::pending`, so the process dying does not by itself close
+/// any channel or wake `rx.recv()`.
 ///
 /// Membership is not free and is not granted on reasoning: `getWikiGameInfo` was MEASURED and
 /// deliberately left on the 60s bound (three cold-cache calls at 1190/957/702ms — the full
@@ -1219,6 +1301,21 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     // 60-second transport bound caused it. A misdirecting error is arguably worse for diagnosis
     // than silence, so "dies silently" should not be repeated as the symptom.
     "openDialog",
+    // Todo 2026-10-05 (long-running Wine and sync channels): each awaits a child process or a
+    // network transfer that has no wall-clock ceiling of its own -- runWineCommand with
+    // `wait: true` (the sideload "Run Installer First" installer), callTool's winetricks branch
+    // (the GUI until the user closes it), installWineVersion (a multi-hundred-MB Wine/Proton
+    // download + extract), downloadRuntime (EAC/BattlEye download + extract) and the two
+    // cloud-save syncs (legendary sync-saves / gogdl save-sync). Bounded at 60s, the renderer
+    // saw a rejection mid-run and re-enabled its controls while the work continued.
+    // addToSteam was reviewed and deliberately left bounded: a wiki lookup plus a few small
+    // artwork downloads, with its rejection now handled at the call site.
+    "runWineCommand",
+    "callTool",
+    "installWineVersion",
+    "downloadRuntime",
+    "syncSaves",
+    "syncGOGSaves",
 ];
 
 /// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.
@@ -1259,6 +1356,44 @@ fn abandoned_channel_for(ring: &VecDeque<(String, String)>, id: &str) -> String 
         .find(|(recorded, _)| recorded == id)
         .map(|(_, channel)| channel.clone())
         .unwrap_or_else(|| ABANDONED_CHANNEL_UNRECORDED.to_string())
+}
+
+/// The one-shot sender `SidecarState::pending` holds for each in-flight invoke.
+type InvokeSender = Sender<Result<Value, String>>;
+
+/// Fail every still-pending invoke at once. The reader thread calls this when the sidecar's
+/// stdout ends (EOF or a read error): no response can arrive after that, but the `Sender`s in
+/// `pending` would otherwise stay alive in the map, so a long-running invoke's `rx.recv()` would
+/// never wake and a bounded one would wait out its full `INVOKE_TIMEOUT`.
+///
+/// Each waiter is SENT an `Err` rather than having its sender dropped: a dropped sender wakes a
+/// bounded `recv_timeout` with `Disconnected`, which its arm reports as a timeout — the wrong
+/// story. The text matches the long-running arm's own disconnect `Err`, so a consumer sees one
+/// message for "the sidecar went away" whichever arm it was waiting in. Each id is also recorded
+/// in `abandoned`, matching the other two abandonment paths.
+///
+/// Takes the two fields rather than `&SidecarState` so it is reachable from `#[cfg(test)] mod
+/// tests` without a live `Child`/`ChildStdin`. A poisoned lock is recovered, not skipped: this
+/// runs exactly once, on the path whose whole job is to unblock waiters. Returns the drained
+/// `(id, channel)` pairs so the caller can log them.
+fn drain_pending_invokes(
+    pending: &Mutex<HashMap<String, (String, InvokeSender)>>,
+    abandoned: &Mutex<VecDeque<(String, String)>>,
+) -> Vec<(String, String)> {
+    let drained: Vec<_> = pending
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .drain()
+        .collect();
+    let mut ring = abandoned.lock().unwrap_or_else(|e| e.into_inner());
+    drained
+        .into_iter()
+        .map(|(id, (channel, tx))| {
+            let _ = tx.send(Err("sidecar closed before responding".into()));
+            push_abandoned(&mut ring, &id, &channel);
+            (id, channel)
+        })
+        .collect()
 }
 
 /// The `Err` a bounded invoke rejects with when its channel does not answer in time.
@@ -1578,9 +1713,10 @@ impl SidecarState {
                     Err(invoke_timeout_message(&channel))
                 }
             },
-            // Long-running channel: block until the sidecar answers. `recv()` still returns
-            // Err when the sender is dropped (sidecar died / pending entry removed), so this
-            // cannot hang forever on a dead sidecar.
+            // Long-running channel: block until the sidecar answers. A dead sidecar does not
+            // wake this by itself -- the sender lives in `pending`, not in the child. It wakes
+            // because the reader thread's `drain_pending_invokes` sends an `Err` to every
+            // waiter once stdout ends; this `Err(_)` arm covers a sender dropped any other way.
             None => match rx.recv() {
                 Ok(result) => result,
                 Err(_) => {
@@ -1685,11 +1821,21 @@ fn send_trace_enabled() -> bool {
 ///
 /// T-34.6-16-02: the channel NAME only, never `args` — token material travels in those fields
 /// (the same constraint `sidecarRpc.ts`'s unrecognized-frame branch carries as T-28-04).
+///
+/// MAIN THREAD (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect 2): a non-`async`
+/// command runs on the main thread in Tauri v2, and this one used to take the stdin mutex and
+/// do a blocking `write_all`/`flush` there -- with the sidecar's JS thread busy and a pipe
+/// buffer of frames queued, the UI froze until the write completed. It now only ENQUEUES onto
+/// `SidecarSendQueue`'s single writer thread, which preserves send order (an `async` +
+/// `spawn_blocking` pool would not). The always-on `write_frame` failure line moved there with
+/// the write; an IO failure no longer reaches the renderer as a rejection, which -- per the
+/// paragraph above -- was the path where it got lost anyway.
 #[tauri::command]
 fn sidecar_send(
     channel: String,
     args: Vec<Value>,
     state: State<'_, Arc<SidecarState>>,
+    queue: State<'_, SidecarSendQueue>,
 ) -> Result<(), String> {
     let req = SidecarRpcRequest {
         id: state.next_id(),
@@ -1697,23 +1843,46 @@ fn sidecar_send(
         channel,
         args,
     };
-    // Read the name off the frame rather than cloning `channel` before the move: `write_frame`
-    // only borrows `req`, so the name is still available for the failure line below at zero
-    // allocation cost on this hot path.
     if send_trace_enabled() {
         eprintln!(
             "[shell] send-trace: sidecar_send entered for '{}'",
             req.channel
         );
     }
-    let result = state.write_frame(&req);
-    if let Err(ref e) = result {
-        eprintln!(
-            "[shell] send-trace: write_frame FAILED for '{}': {e}",
-            req.channel
+    queue.0.send(req).map_err(|rejected| {
+        let message = format!(
+            "send writer thread is gone; frame for '{}' not written",
+            rejected.0.channel
         );
-    }
-    result
+        eprintln!("[shell] send-trace: {message}");
+        message
+    })
+}
+
+/// The FIFO hand-off between `sidecar_send` (main thread) and the one thread that writes its
+/// frames to the sidecar's stdin. See `sidecar_send`'s MAIN THREAD paragraph.
+struct SidecarSendQueue(Sender<SidecarRpcRequest>);
+
+/// Spawn the `sidecar_send` writer thread over `write` and return its queue. Generic over the
+/// write so `#[cfg(test)]` can prove ordering and non-blocking enqueue without a child process.
+/// The thread ends when every `Sender` is dropped; in the app the managed queue lives for the
+/// process, and a parked std thread does not hold the process open.
+fn spawn_send_writer<W>(write: W) -> Sender<SidecarRpcRequest>
+where
+    W: Fn(&SidecarRpcRequest) -> Result<(), String> + Send + 'static,
+{
+    let (tx, rx) = mpsc_channel::<SidecarRpcRequest>();
+    thread::spawn(move || {
+        for req in rx {
+            if let Err(e) = write(&req) {
+                eprintln!(
+                    "[shell] send-trace: write_frame FAILED for '{}': {e}",
+                    req.channel
+                );
+            }
+        }
+    });
+    tx
 }
 
 /// The only schemes the renderer may ask the shell to hand to the OS (CR-01,
@@ -1763,9 +1932,7 @@ fn open_external(url: String, app: AppHandle) -> Result<(), String> {
 
 /// Requests the sidecar's minimal store snapshot for the renderer's synchronous store bridge.
 #[tauri::command]
-async fn sidecar_store_snapshot(
-    state: State<'_, Arc<SidecarState>>,
-) -> Result<Value, String> {
+async fn sidecar_store_snapshot(state: State<'_, Arc<SidecarState>>) -> Result<Value, String> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         state.invoke(STORE_SNAPSHOT_CHANNEL.to_string(), vec![])
@@ -2645,7 +2812,8 @@ struct RevealPostArgs {
 /// (csrf_token) is the only optional value -- a missing arg or `Value::Null` both map to
 /// `None`, never the JS-string `"null"` (see `reveal_post_script` below).
 fn reveal_post_args(args: &[Value]) -> Result<RevealPostArgs, String> {
-    let origin_url = login_window_url_arg(args).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
+    let origin_url =
+        login_window_url_arg(args).map_err(|_| "humble_reveal_post:bad-args".to_string())?;
     let path = args
         .get(1)
         .and_then(|v| v.as_str())
@@ -2698,14 +2866,20 @@ fn reveal_post_args(args: &[Value]) -> Result<RevealPostArgs, String> {
 /// `r#"..."#` literal's opening/closing lines each structurally violate (one bare `"` per
 /// line). Every JS string literal inside the template therefore uses single quotes, so no `"`
 /// character appears anywhere except each piece's own two Rust delimiters.
-fn reveal_post_script(path: &str, body: &str, csrf_token: Option<&str>, exfil_host: &str) -> String {
+fn reveal_post_script(
+    path: &str,
+    body: &str,
+    csrf_token: Option<&str>,
+    exfil_host: &str,
+) -> String {
     let path_js = serde_json::to_string(path).unwrap_or_else(|_| "\"\"".to_string());
     let body_js = serde_json::to_string(body).unwrap_or_else(|_| "\"\"".to_string());
     let csrf_js = match csrf_token {
         Some(token) => serde_json::to_string(token).unwrap_or_else(|_| "null".to_string()),
         None => "null".to_string(),
     };
-    let exfil_host_js = serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
+    let exfil_host_js =
+        serde_json::to_string(exfil_host).unwrap_or_else(|_| "\"gamelib.invalid\"".to_string());
     format!(
         concat!(
             "(function() {{ ",
@@ -2869,10 +3043,20 @@ fn is_login_cancel_request(url: &tauri::Url) -> bool {
 /// - Idempotent via `window.__GAMELIB_LOGIN_CANCEL_STRIP__`, set before any further DOM work.
 /// - Renders exactly ONE control, appended to `document.body || document.documentElement`
 ///   (resolved into a local first; if neither exists yet, the append is skipped rather than
-///   thrown -- WR-04, below), `position:fixed`, pinned to the top-right inset, `z-index` >=
-///   2147483000, visible label text "Cancel sign-in", `role="button"`, `aria-label="Cancel
+///   thrown -- WR-04, below), `position:fixed`, pinned flush to the bar's top-right corner
+///   (`top:0`, `right:0`), `z-index` >= 2147483000, `role="button"`, `aria-label="Cancel
 ///   sign-in"`, and enough contrast to be legible on a light or dark page (styling is
 ///   executor discretion).
+/// - **Quick task 261003-nsk (D-1/D-2): the glyph's own corner of ONE bar, not a floating
+///   pill.** The visible text is now a bare multiplication-sign glyph (`×`), written as
+///   the Rust-escaped sequence so the surrounding source line stays ASCII and greppable --
+///   never the character literally. The accessible name is UNCHANGED (`aria-label`/
+///   `aria-keyshortcuts` still carry "Cancel sign-in"/"Escape"): a differing visible-
+///   text/accessible-name pair is the accepted icon-button pattern here, not an oversight.
+///   The glyph box keeps its OWN opaque background (matching the bar's, so the two read as
+///   one surface) rather than a transparent one -- if the bar's own `build()` ever throws or
+///   the page deletes it, this is still the only exit from a parent-blocking sheet, and its
+///   legibility must not depend on the bar's survival (T-nsk-01).
 /// - **Pointer control, not a keyboard-activatable one (IN-02, `34.4.2-REVIEW.md`).** No
 ///   `tabindex` is set -- REQ-34.4.2-06 forbids key listeners, so this control can only ever
 ///   activate on `click`, and advertising `tabindex="0"` would promise Enter/Space activation
@@ -2938,20 +3122,23 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
         "strip.setAttribute('role', 'button'); ",
         "strip.setAttribute('aria-label', 'Cancel sign-in'); ",
         "strip.setAttribute('aria-keyshortcuts', 'Escape'); ",
-        "strip.textContent = 'Cancel sign-in'; ",
+        "strip.textContent = '\\u00d7'; ",
         "strip.style.position = 'fixed'; ",
-        "strip.style.top = '8px'; ",
-        "strip.style.right = '8px'; ",
+        "strip.style.top = '0'; ",
+        "strip.style.right = '0'; ",
+        "strip.style.width = '32px'; ",
+        "strip.style.height = '32px'; ",
+        "strip.style.boxSizing = 'border-box'; ",
+        "strip.style.lineHeight = '31px'; ",
+        "strip.style.textAlign = 'center'; ",
+        "strip.style.fontSize = '18px'; ",
         "strip.style.zIndex = '2147483000'; ",
-        "strip.style.padding = '6px 12px'; ",
-        "strip.style.borderRadius = '4px'; ",
-        "strip.style.background = '#1a1a1a'; ",
-        "strip.style.color = '#ffffff'; ",
+        "strip.style.background = '#161c1e'; ",
+        "strip.style.color = '#caf3fd'; ",
         "strip.style.fontFamily = 'sans-serif'; ",
-        "strip.style.fontSize = '13px'; ",
+        "strip.style.borderBottom = '1px solid #272f31'; ",
         "strip.style.cursor = 'pointer'; ",
         "strip.style.userSelect = 'none'; ",
-        "strip.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'; ",
         "strip.addEventListener('click', function(evt) { ",
         "evt.preventDefault(); ",
         "deliver(); ",
@@ -3004,11 +3191,30 @@ fn login_cancel_strip_script(exfil_host: &str) -> String {
 ///   re-running this whole script.
 /// - Renders exactly ONE element, id `'__gamelib_login_origin_banner__'`, appended to
 ///   `document.body || document.documentElement` (null-root-safe, mirrors the cancel strip's
-///   WR-04 fix), `position: fixed`, pinned to the **top-LEFT** inset (`top: 8px`, `left: 8px`)
-///   -- the opposite corner from the cancel strip's top-right, so the two controls can never
-///   overlap (T-34.5-C7-05).
-/// - `z-index: '2147482999'` -- strictly BELOW the cancel strip's `'2147483000'`, so the banner
-///   can never paint over the sheet's only exit affordance (T-34.5-C7-05).
+///   WR-04 fix), `position: fixed`.
+/// - **Quick task 261003-nsk (D-1/D-2): ONE full-width bar, not a top-left pill.** `top`,
+///   `left` and `right` are all `'0'`; `textAlign` is `'center'`. The former "opposite
+///   corners, so the two controls can never overlap" claim (T-34.5-C7-05) is now FALSE -- the
+///   bar spans the full width, including under the cancel glyph's corner -- and is retired
+///   rather than left standing as a description of geometry that no longer exists. It is
+///   replaced by three weaker-but-real invariants, each gated:
+///   1. `z-index: '2147482999'` stays strictly BELOW the cancel strip's `'2147483000'`, so the
+///      banner can never paint over the sheet's only exit affordance (unchanged from before,
+///      re-gated by `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`).
+///   2. `pointerEvents: 'none'` (unchanged, see below) is now LOAD-BEARING rather than merely
+///      polite: a 32px-tall full-width element with pointer events enabled would intercept
+///      every click across the top of a page GameLib does not control, including the glyph's
+///      own click -- gated by the retained `login_origin_banner_script_pointer_events_are_disabled`.
+///   3. Horizontal `padding` is kept >= the glyph box's `width`, so the centred origin text
+///      truncates (`textOverflow: 'ellipsis'`) before it can run under the glyph, rather than
+///      being visually clipped into a different-looking hostname -- gated by the new
+///      `login_origin_banner_script_reserves_horizontal_room_for_the_close_glyph` (numeric
+///      comparison, not substring presence).
+///   `height` matches the cancel strip's own `height` literal exactly (gated by
+///   `login_origin_banner_and_cancel_strip_agree_on_one_bar_height`) so the two elements read
+///   as ONE bar, not two. This is a floating overlay per D-2: no body offset or page-layout
+///   rule of any kind is injected anywhere in this script -- page content stays exactly where
+///   Humble put it.
 /// - `pointerEvents: 'none'`, `userSelect: 'none'`. Registers NO event listener of any kind --
 ///   no `click`, no `keydown`/`keyup`/`keypress`, and (unlike the cancel strip, which needs
 ///   `DOMContentLoaded` for its own click-armed control) no `addEventListener` call anywhere in
@@ -3052,15 +3258,23 @@ fn login_origin_banner_script(origin: &str) -> String {
         "banner.id = ID; ",
         "banner.textContent = window.__GAMELIB_LOGIN_ORIGIN_VALUE__; ",
         "banner.style.position = 'fixed'; ",
-        "banner.style.top = '8px'; ",
-        "banner.style.left = '8px'; ",
+        "banner.style.top = '0'; ",
+        "banner.style.left = '0'; ",
+        "banner.style.right = '0'; ",
+        "banner.style.height = '32px'; ",
+        "banner.style.boxSizing = 'border-box'; ",
+        "banner.style.lineHeight = '31px'; ",
+        "banner.style.textAlign = 'center'; ",
         "banner.style.zIndex = '2147482999'; ",
-        "banner.style.padding = '6px 12px'; ",
-        "banner.style.borderRadius = '4px'; ",
-        "banner.style.background = '#1a1a1a'; ",
-        "banner.style.color = '#ffffff'; ",
+        "banner.style.padding = '0 36px'; ",
+        "banner.style.whiteSpace = 'nowrap'; ",
+        "banner.style.overflow = 'hidden'; ",
+        "banner.style.textOverflow = 'ellipsis'; ",
+        "banner.style.background = '#161c1e'; ",
+        "banner.style.color = '#caf3fd'; ",
         "banner.style.fontFamily = 'sans-serif'; ",
-        "banner.style.fontSize = '13px'; ",
+        "banner.style.fontSize = '12px'; ",
+        "banner.style.borderBottom = '1px solid #272f31'; ",
         "banner.style.pointerEvents = 'none'; ",
         "banner.style.userSelect = 'none'; ",
         "banner.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'; ",
@@ -3110,6 +3324,91 @@ fn login_origin_banner_update_script(origin: &str) -> String {
         "})();"
     );
     template.replace("@@ORIGIN@@", &origin_js)
+}
+
+/// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
+/// surface's VISIBLE builder ONLY (`humble_login_open`'s `if visible` block), macOS-gated like
+/// its two neighbours above and for the same reason: it exists only to serve the in-page title
+/// bar those two render, and that bar exists only because an AppKit sheet has no title bar.
+///
+/// WHY THIS EXISTS (operator report, 2026-10-03): with `AppleShowScrollBars = Always` -- a
+/// CLASSIC, space-taking scrollbar, not an overlay one -- the document scrollbar runs the full
+/// height of the scrollport starting at y=0, so it carves a notch out of the right end of the
+/// title bar and sits beside the cancel glyph. The operator's words: the scrollbar needs to
+/// appear BELOW the title bar.
+///
+/// MEASURED, NOT REASONED (WKWebView probes, 2026-10-03, captured with `screencapture -l`
+/// against an offscreen `WKWebView`; note `takeSnapshot` does NOT paint scrollbars, so a probe
+/// built on it measures nothing and will mislead you):
+/// - Widening the bar to `width: 100vw` **DOES NOT WORK**, refuted twice (probe A, and again in
+///   probe C with the track already inset). A classic scrollbar paints ABOVE page content and a
+///   `position: fixed` element cannot paint into the scrollbar gutter at all. This is the
+///   obvious fix and it is wrong; do not reinstate it.
+/// - `::-webkit-scrollbar-track { margin-top }` DOES inset the track, so the thumb starts below
+///   the bar (probe B) -- but it leaves the gutter above the track showing the PAGE background,
+///   i.e. a white notch where the scrollbar notch used to be.
+/// - Giving `::-webkit-scrollbar` ITSELF the bar's background colour fills that inset region, so
+///   the bar reads as continuous to the window edge (probe D).
+///
+/// SCOPED TO `html` ON PURPOSE (probe E). An unscoped `::-webkit-scrollbar` rule applies to
+/// EVERY scrollable element in the document, which would give each of Humble's inner scrollers a
+/// 32px dead zone at its top. Probe E rendered an inner `overflow-y: scroll` box alongside the
+/// document scroller and confirmed the inner one keeps a normal, unstyled scrollbar while the
+/// document scroller gets the inset.
+///
+/// The `32px` track inset MUST equal the bar height the other two scripts set. A `#[cfg(test)]`
+/// test below extracts all three literals and asserts they agree, so the three cannot drift.
+///
+/// Mirrors its neighbours' conventions exactly: top-frame-only guard as the FIRST statement
+/// inside the try; idempotence flag set before any DOM work; `textContent` only (a `<style>`
+/// element's text is set the same safe way, never an HTML-fragment-write API); NO
+/// `addEventListener` of any kind -- the loading arm uses `document.onreadystatechange`, a
+/// property assignment, so this script is provably inert w.r.t. REQ-34.4.2-06 (Cmd+V into the
+/// password field) by construction; self-re-appending via the same debounced `MutationObserver`;
+/// exactly ONE top-level `try { } catch (e) { }`. Takes no argument and interpolates nothing, so
+/// the `serde_json`/`@@TOKEN@@` discipline does not apply -- there is no caller input to escape.
+/// Every JS string literal below is single-quoted, keeping an EVEN raw `"`-count per source line
+/// (`longRunningChannels.test.ts`'s WR-08 stripper-integrity guard). Pure: no inputs, so the same
+/// output every call.
+#[cfg(target_os = "macos")]
+fn login_scrollbar_inset_script() -> String {
+    concat!(
+        "(function() { ",
+        "try { ",
+        "if (window.top !== window) { return; } ",
+        "if (window.__GAMELIB_LOGIN_SCROLLBAR_INSET__) { return; } ",
+        "window.__GAMELIB_LOGIN_SCROLLBAR_INSET__ = true; ",
+        "var ID = '__gamelib_login_scrollbar_inset__'; ",
+        "var CSS = 'html::-webkit-scrollbar { width: 14px; background: #161c1e; } ",
+        "html::-webkit-scrollbar-track { margin-top: 32px; background: #272f31; } ",
+        "html::-webkit-scrollbar-thumb { background: #4a585c; border-radius: 7px; } ",
+        "html::-webkit-scrollbar-corner { background: #161c1e; }'; ",
+        "function build() { ",
+        "var buildRoot = document.head || document.documentElement; ",
+        "if (!buildRoot) { return; } ",
+        "var style = document.createElement('style'); ",
+        "style.id = ID; ",
+        "style.textContent = CSS; ",
+        "buildRoot.appendChild(style); ",
+        "} ",
+        "function ensure() { ",
+        "if (!document.getElementById(ID)) { build(); } ",
+        "} ",
+        "if (document.readyState === 'loading') { ",
+        "document.onreadystatechange = function() { ensure(); }; ",
+        "} ",
+        "var debounceTimer = null; ",
+        "function scheduleEnsure() { ",
+        "if (debounceTimer) { return; } ",
+        "debounceTimer = setTimeout(function() { debounceTimer = null; ensure(); }, 200); ",
+        "} ",
+        "var observer = new MutationObserver(function() { scheduleEnsure(); }); ",
+        "observer.observe(document.documentElement, { childList: true, subtree: true }); ",
+        "ensure(); ",
+        "} catch (e) { } ",
+        "})();"
+    )
+    .to_string()
 }
 
 /// Builds the JS injected as an `initialization_script()` into the Tauri-managed login
@@ -3319,7 +3618,7 @@ use objc2::runtime::{AnyObject, Bool, NSObject, ProtocolObject};
 #[cfg(target_os = "macos")]
 use objc2::{define_class, msg_send, DeclaredClass, MainThreadOnly};
 #[cfg(target_os = "macos")]
-use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURL, NSURLRequest};
+use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURLRequest, NSURL};
 #[cfg(target_os = "macos")]
 use objc2_web_kit::{
     WKFrameInfo, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate, WKUIDelegate,
@@ -3473,8 +3772,9 @@ define_class!(
             completion_handler: &block2::Block<dyn Fn(*mut NSString)>,
         ) {
             let default_text_owned = default_text.map(|s| s.to_string()).unwrap_or_default();
-            let entered = objc2::MainThreadMarker::new()
-                .and_then(|mtm| present_native_js_prompt(mtm, &prompt.to_string(), &default_text_owned));
+            let entered = objc2::MainThreadMarker::new().and_then(|mtm| {
+                present_native_js_prompt(mtm, &prompt.to_string(), &default_text_owned)
+            });
             match entered {
                 Some(text) => {
                     let ns_text = NSString::from_str(&text);
@@ -3619,8 +3919,7 @@ fn open_pristine_epic_login_window(
                         // `addLocalMonitorForEventsMatchingMask:handler:` returned below;
                         // `removeMonitor:` is the documented way to release it, and this is the
                         // only call site that ever does so for this token.
-                        let monitor: &AnyObject =
-                            unsafe { &*(monitor_ptr.0 as *const AnyObject) };
+                        let monitor: &AnyObject = unsafe { &*(monitor_ptr.0 as *const AnyObject) };
                         unsafe {
                             objc2_app_kit::NSEvent::removeMonitor(monitor);
                         }
@@ -4127,8 +4426,7 @@ const SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY: Duration = Duration::from_millis(250
 /// registry's exactly-three-call-sites test (Plan 11) is load-bearing and this is a
 /// structurally different concern (pre-presentation vs. already-presented).
 #[cfg(target_os = "macos")]
-static PENDING_VISIBLE_LOGIN_WINDOW: Mutex<Option<(String, std::time::Instant)>> =
-    Mutex::new(None);
+static PENDING_VISIBLE_LOGIN_WINDOW: Mutex<Option<(String, std::time::Instant)>> = Mutex::new(None);
 
 /// T-34.4.2-41 (NEW, Phase 34.4.2 Plan 14): bounds how long `PENDING_VISIBLE_LOGIN_WINDOW` may
 /// stay armed before its entry is treated as absent. This is a safety requirement, not a
@@ -5039,7 +5337,9 @@ fn macos_finder_reselect_workaround(path: &str) {
                     String::from_utf8_lossy(&o.stderr).trim()
                 );
             }
-            Err(e) => eprintln!("[shell] finder reselect workaround could not spawn osascript: {e}"),
+            Err(e) => {
+                eprintln!("[shell] finder reselect workaround could not spawn osascript: {e}")
+            }
             _ => {}
         }
     });
@@ -5466,14 +5766,18 @@ fn wake_lock_release_all() {
         #[cfg(target_os = "macos")]
         if let Some(assertion_id) = registry.assertions.remove(&id) {
             if let Err(e) = macos_wake_lock::release(assertion_id) {
-                eprintln!("[shell] WARN: wake lock could not be released at exit ({e}) -- continuing");
+                eprintln!(
+                    "[shell] WARN: wake lock could not be released at exit ({e}) -- continuing"
+                );
             }
         }
 
         #[cfg(target_os = "linux")]
         if let Some(child) = registry.inhibitors.remove(&id) {
             if let Err(e) = linux_wake_lock::release(child) {
-                eprintln!("[shell] WARN: wake lock could not be released at exit ({e}) -- continuing");
+                eprintln!(
+                    "[shell] WARN: wake lock could not be released at exit ({e}) -- continuing"
+                );
             }
         }
     }
@@ -5765,8 +6069,22 @@ enum StoreEmbedNavigationDecision {
 /// a `Webview`. The caller (the `on_navigation` closure in `store_embed_open` below) is
 /// responsible for the one side effect the `Handoff` variant implies -- calling the existing
 /// `open_external` command function directly, never a second, duplicated opener call.
+///
+/// `steam:` HAND-OFF IS GATED ON THE TOP-LEVEL PAGE, NOT ON THE FRAME (todo 2026-10-05
+/// store-embed-hands-off-steam-urls-and-popups-from-any-frame). The ask was "main-frame `steam:`
+/// navigations only", but `on_navigation` cannot tell frames apart: tauri 2.11.5's hook is
+/// `Fn(&Url) -> bool` and wry 0.55.1's `navigation_handler` is `Fn(String) -> bool` -- no frame,
+/// no gesture, no initiator. So the safe behaviour available is: hand `steam:` off only while the
+/// embed's top-level page (`top_level_host`, recorded from the main-frame-only `on_page_load`) is
+/// a Valve host, where the store's own install/launch buttons live; block it everywhere else,
+/// including the default when no page has loaded yet. An iframe embedded IN a Valve page can still
+/// trigger a hand-off -- the caller's `STORE_EMBED_STEAM_THROTTLE` caps that at one per
+/// `STORE_EMBED_HANDOFF_MIN_GAP`.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecision {
+fn store_embed_navigation_policy(
+    url: &tauri::Url,
+    top_level_host: Option<&str>,
+) -> StoreEmbedNavigationDecision {
     let scheme = url.scheme();
     if scheme == "gamelib" {
         // The sharpest edge in the phase (T-40-04-02): a store page driving the app's own deep
@@ -5782,13 +6100,81 @@ fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecisi
         return StoreEmbedNavigationDecision::Allow;
     }
     if scheme == "steam" {
-        return StoreEmbedNavigationDecision::Handoff;
+        if top_level_host.is_some_and(store_embed_is_valve_host) {
+            return StoreEmbedNavigationDecision::Handoff;
+        }
+        // Scheme-only in the log, as above -- never the steam: URL itself.
+        eprintln!(
+            "[shell] store_embed: blocked steam: hand-off -- the top-level page is not a Valve \
+             host"
+        );
+        return StoreEmbedNavigationDecision::Block;
     }
     // Default-deny (T-40-04-03): any scheme outside the enumerated set above, not an allowlist
     // of known-bad schemes. A future store/wiki origin registering some other custom scheme
     // falls here automatically rather than needing a new arm added reactively.
     eprintln!("[shell] store_embed: blocked in-embed navigation to unrecognized scheme '{scheme}'");
     StoreEmbedNavigationDecision::Block
+}
+
+/// Whether `host` is Valve's store or community site (or a subdomain of either) -- the pages
+/// whose own buttons legitimately produce `steam:` links. Exact apex or a `.`-prefixed suffix,
+/// so `evilsteampowered.com` does not match.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn store_embed_is_valve_host(host: &str) -> bool {
+    ["steampowered.com", "steamcommunity.com"]
+        .iter()
+        .any(|apex| host == *apex || host.ends_with(&format!(".{apex}")))
+}
+
+/// Minimum gap between two hand-offs of the same kind out of the store embed (a `steam:` URL to
+/// the Steam client, or a `window.open` popup to the system browser). Neither hook carries a user
+/// gesture, so a page -- or an ad frame inside it -- could otherwise fire them in a loop.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const STORE_EMBED_HANDOFF_MIN_GAP: Duration = Duration::from_secs(2);
+
+/// Admits at most one hand-off per `min_gap`. Pure apart from its own `last` field, so the
+/// rate-limit decision is unit-testable with constructed `Instant`s.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[derive(Debug, Default)]
+struct HandoffThrottle {
+    last: Option<std::time::Instant>,
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+impl HandoffThrottle {
+    fn admit(&mut self, now: std::time::Instant, min_gap: Duration) -> bool {
+        if let Some(last) = self.last {
+            if now.saturating_duration_since(last) < min_gap {
+                return false;
+            }
+        }
+        self.last = Some(now);
+        true
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_STEAM_THROTTLE: Mutex<HandoffThrottle> =
+    Mutex::new(HandoffThrottle { last: None });
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_POPUP_THROTTLE: Mutex<HandoffThrottle> =
+    Mutex::new(HandoffThrottle { last: None });
+
+/// The embed's current top-level host, recorded from `on_page_load` (main frame only) and read
+/// by the `on_navigation` closure for `store_embed_navigation_policy`'s `steam:` gate.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+static STORE_EMBED_TOP_LEVEL_HOST: Mutex<Option<String>> = Mutex::new(None);
+
+/// Take one admission from `throttle`, failing CLOSED on a poisoned lock: a refused hand-off is
+/// the safe direction for a gate whose job is to stop unrequested ones.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn store_embed_handoff_admitted(throttle: &Mutex<HandoffThrottle>) -> bool {
+    match throttle.lock() {
+        Ok(mut guard) => guard.admit(std::time::Instant::now(), STORE_EMBED_HANDOFF_MIN_GAP),
+        Err(_) => false,
+    }
 }
 
 /// Create (or, if already open, navigate) the store/wiki embed child webview on `main`
@@ -5830,15 +6216,21 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let linux_rect = store_embed_linux_gtk_rect(x, y, w, h)
         .map_err(|e| e.replacen("store_embed_set_bounds:", "store_embed_open:", 1))?;
 
-    let window = app.get_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
-        format!("store_embed_open:no-window:{MAIN_WINDOW_LABEL}")
-    })?;
+    let window = app
+        .get_window(MAIN_WINDOW_LABEL)
+        .ok_or_else(|| format!("store_embed_open:no-window:{MAIN_WINDOW_LABEL}"))?;
 
     let builder = tauri::WebviewBuilder::new(STORE_EMBED_LABEL, tauri::WebviewUrl::External(url))
         .user_agent(STORE_EMBED_USER_AGENT)
         // D-22: on_page_load, never on_navigation, per the 013-015 rule that carries over
         // unchanged -- main-frame-only per `40-EMBED-API-VERIFICATION.md` Q4.
         .on_page_load(|_webview, payload| {
+            // Main frame only (see above), so this is the TOP-LEVEL host the `steam:` gate in
+            // `store_embed_navigation_policy` needs. Recorded on `Started` too, so a page that
+            // has begun replacing a Valve page is not still judged by the Valve host.
+            if let Ok(mut host) = STORE_EMBED_TOP_LEVEL_HOST.lock() {
+                *host = payload.url().host_str().map(str::to_string);
+            }
             if payload.event() == tauri::webview::PageLoadEvent::Finished {
                 if let Ok(mut state) = store_embed_state().lock() {
                     state.push(payload.url().to_string());
@@ -5854,28 +6246,50 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // not `on_page_load`, is correct here.
         .on_navigation({
             let app_handle = app.clone();
-            move |url| match store_embed_navigation_policy(url) {
-                StoreEmbedNavigationDecision::Allow => true,
-                StoreEmbedNavigationDecision::Block => false,
-                StoreEmbedNavigationDecision::Handoff => {
-                    // Reuses the existing `open_external` command function directly -- never a
-                    // second, duplicated `app.opener()` call site (D-28).
-                    if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
-                        eprintln!(
-                            "[shell] store_embed: on_navigation handoff to open_external \
+            move |url| {
+                // Fail closed on a poisoned lock: no known top-level host means no hand-off.
+                let top_level_host = STORE_EMBED_TOP_LEVEL_HOST
+                    .lock()
+                    .ok()
+                    .and_then(|host| host.clone());
+                match store_embed_navigation_policy(url, top_level_host.as_deref()) {
+                    StoreEmbedNavigationDecision::Allow => true,
+                    StoreEmbedNavigationDecision::Block => false,
+                    StoreEmbedNavigationDecision::Handoff => {
+                        if !store_embed_handoff_admitted(&STORE_EMBED_STEAM_THROTTLE) {
+                            eprintln!(
+                                "[shell] store_embed: steam: hand-off rate-limited -- dropped"
+                            );
+                            return false;
+                        }
+                        // Reuses the existing `open_external` command function directly -- never a
+                        // second, duplicated `app.opener()` call site (D-28).
+                        if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
+                            eprintln!(
+                                "[shell] store_embed: on_navigation handoff to open_external \
                              failed: {e}"
-                        );
+                            );
+                        }
+                        false
                     }
-                    false
                 }
             }
         })
         // D-28: a store page's `window.open()` popup is denied inside the embed's own frame
         // and routed to the system browser instead, where the URL bar and the user's password
         // manager both work -- neither exists inside an in-app child webview (T-40-04-05).
+        // Rate-limited (todo 2026-10-05): the hook carries no user gesture, so without a cap
+        // any frame could open system-browser tabs in a loop.
         .on_new_window({
             let app_handle = app.clone();
             move |url, _features| {
+                if !store_embed_handoff_admitted(&STORE_EMBED_POPUP_THROTTLE) {
+                    eprintln!(
+                        "[shell] store_embed: denied window.open request, rate-limited -- not \
+                         routed to the system browser"
+                    );
+                    return tauri::webview::NewWindowResponse::Deny;
+                }
                 eprintln!(
                     "[shell] store_embed: denied window.open request, routing to system \
                      browser (D-28)"
@@ -6534,6 +6948,23 @@ fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Value, String
     Ok(json)
 }
 
+/// Which button of a two-button `dialog_message` was chosen: `Some(0)`, `Some(1)`, or `None`
+/// when the dialog was dismissed (Esc / window close) without one. See the `dialog_message`
+/// arm for why this reads rfd's raw result rather than the dialog plugin's.
+///
+/// rfd reports a click on an `OkCancelCustom` button as `Custom(<its label>)` on every desktop
+/// backend; `Ok` is also accepted as buttons[0] in case a backend reports the first button
+/// generically. Everything else -- `Cancel` above all, which is what a dismissal yields -- is
+/// `None`, so the caller falls back to its declared `cancelId` instead of guessing a button.
+fn two_button_choice(result: &rfd::MessageDialogResult, label0: &str, label1: &str) -> Option<u8> {
+    match result {
+        rfd::MessageDialogResult::Custom(s) if s == label0 => Some(0),
+        rfd::MessageDialogResult::Custom(s) if s == label1 => Some(1),
+        rfd::MessageDialogResult::Ok => Some(0),
+        _ => None,
+    }
+}
+
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
@@ -6822,19 +7253,31 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
         }
         // Native message/error dialog (Phase 31 Plan 02, D-03/REQ-31-03/REQ-31-05): backs both
-        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Maps
-        // `blocking_show()`'s bool onto `Value::Bool` — electronStub maps `true`->response:0,
-        // `false`->response:1. Default kind is Info when unspecified; the showErrorBox caller
-        // always sends `kind:"error"`. Runs on the existing spawned worker thread (same
+        // `dialog.showMessageBox` and `dialog.showErrorBox` on the electronStub side. Default
+        // kind is Info when unspecified; the showErrorBox caller always sends `kind:"error"`.
+        // Runs on the existing spawned worker thread (same
         // modal-dialog-must-not-block-the-reader-thread reasoning as `dialog_open` above).
         //
-        // Phase 33 Plan 03 (D-06): extended to read an optional 2-element `buttons` array and
-        // wire it to `MessageDialogButtons::OkCancelCustom` — a real multi-button confirm
-        // instead of the OK-only default. `blocking_show()`'s bool keeps the same meaning:
-        // `true` -> buttons[0] clicked -> electronStub response:0, `false` -> buttons[1]
-        // clicked -> electronStub response:1. Single-button (no `buttons` / not length 2)
-        // behavior is unchanged (still OK-only, always true). Data-shape change only, no new
-        // match arm/channel (33-RESEARCH confirmed).
+        // Phase 33 Plan 03 (D-06): an optional 2-element `buttons` array renders a real
+        // two-button confirm (`OkCancelCustom`) instead of the OK-only default.
+        //
+        // Returns the chosen button's index (`0` / `1`), or `null` when the dialog was
+        // DISMISSED (Esc / window close) without a button -- electronStub maps `null` to the
+        // caller's `cancelId`, Electron's own dismissal semantics. Todo 2026-10-05
+        // dialog-dismiss: this used to return `blocking_show()`'s bool, which is `false` for a
+        // dismissal AND for buttons[1], so Esc on Windows/Linux resolved as buttons[1] -- the
+        // destructive "Yes" for `askForceUninstall` and `handleExit`.
+        //
+        // The two-button case calls `rfd` directly, NOT the plugin's
+        // `blocking_show_with_result()`: tauri-plugin-dialog 2.7.2's
+        // `desktop::show_message_dialog` unconditionally remaps rfd's `Cancel` to
+        // `Custom(<second label>)` for `OkCancelCustom` (a workaround for GTK), so through the
+        // plugin a dismissal is indistinguishable from buttons[1] on every API it offers. rfd
+        // 0.16.0 itself reports `Custom(label)` for a click and `Cancel` for a dismissal on all
+        // three desktop backends (gtk3, win_cid, macos). The dialog is shown the way the plugin
+        // shows it: built and `show()`n on the main thread, awaited on a spawned thread, with
+        // the plugin's default title (the package name). Single-button / no-`buttons` calls
+        // keep the plugin's OK-only dialog.
         "dialog_message" => {
             let message = args
                 .first()
@@ -6852,27 +7295,51 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     _ => MessageDialogKind::Info,
                 })
                 .unwrap_or(MessageDialogKind::Info);
-            let mut builder = app.dialog().message(message).kind(kind);
-            if let Some(title) = args
+            let title = args
                 .first()
                 .and_then(|v| v.get("title"))
                 .and_then(|v| v.as_str())
-            {
-                builder = builder.title(title);
-            }
+                .map(str::to_string);
             let buttons = args
                 .first()
                 .and_then(|v| v.get("buttons"))
                 .and_then(|v| v.as_array());
             if let Some(btns) = buttons.filter(|b| b.len() == 2) {
-                let label0 = btns[0].as_str().unwrap_or("");
-                let label1 = btns[1].as_str().unwrap_or("");
-                builder = builder.buttons(MessageDialogButtons::OkCancelCustom(
-                    label0.into(),
-                    label1.into(),
-                ));
+                let label0 = btns[0].as_str().unwrap_or("").to_string();
+                let label1 = btns[1].as_str().unwrap_or("").to_string();
+                let title = title.unwrap_or_else(|| app.package_info().name.clone());
+                // The plugin's own `From<MessageDialogKind> for rfd::MessageLevel`, so the
+                // level matches what the OK-only path below renders.
+                let level: rfd::MessageLevel = kind.into();
+                let buttons = rfd::MessageButtons::OkCancelCustom(label0.clone(), label1.clone());
+                let (tx, rx) = mpsc_channel::<rfd::MessageDialogResult>();
+                app.run_on_main_thread(move || {
+                    let shown = rfd::AsyncMessageDialog::new()
+                        .set_title(&title)
+                        .set_description(&message)
+                        .set_level(level)
+                        .set_buttons(buttons)
+                        .show();
+                    thread::spawn(move || {
+                        let _ = tx.send(tauri::async_runtime::block_on(shown));
+                    });
+                })
+                .map_err(|e| e.to_string())?;
+                let result = rx.recv().map_err(|e| e.to_string())?;
+                return Ok(
+                    two_button_choice(&result, &label0, &label1).map_or(Value::Null, Value::from)
+                );
             }
-            Ok(Value::Bool(builder.blocking_show()))
+            let mut builder = app.dialog().message(message).kind(kind);
+            if let Some(title) = title {
+                builder = builder.title(title);
+            }
+            // OK-only: `true` is its one button; anything else is a dismissal.
+            Ok(if builder.blocking_show() {
+                Value::from(0)
+            } else {
+                Value::Null
+            })
         }
         // Real OS notification (Phase 33 Plan 04, D-05) via `tauri-plugin-notification`. Backs
         // `electronStub.ts`'s `Notification.show()`. Mirrors `dialog_message`'s args-parse idiom
@@ -6944,7 +7411,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // untouched; the plugin has no `js_init_script`, confirmed by 34.3-RESEARCH.md Q2).
         "clipboard_write_text" => {
             let text = clipboard_text_arg(args)?;
-            app.clipboard().write_text(text).map_err(|e| e.to_string())?;
+            app.clipboard()
+                .write_text(text)
+                .map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }
         // Read text from the OS clipboard (Phase 34.3 Plan 03, D-01/D-02, REQ-34.3-03) via
@@ -7285,9 +7754,10 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     .as_ref()
                     .map(|(pending_label, _)| pending_label.clone())
                     .or_else(|| {
-                        PRESENTED_LOGIN_SHEETS.lock().ok().and_then(|guard| {
-                            guard.as_ref().and_then(|list| list.first().cloned())
-                        })
+                        PRESENTED_LOGIN_SHEETS
+                            .lock()
+                            .ok()
+                            .and_then(|guard| guard.as_ref().and_then(|list| list.first().cloned()))
                     });
                 if let Some(incumbent_label) = incumbent {
                     eprintln!(
@@ -7362,7 +7832,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 // reveal/clear windows, which have no title bar for a title to matter on
                 // (T-34.4.1-82).
                 builder = builder.title(login_window_title(&origin, None));
-                builder = builder.inner_size(900.0, 700.0);
+                // Quick task 261003-nsk (D-3): narrowed from 900 to 572. Measured, not a
+                // taste call -- `CGWindowListCopyWindowInfo([.optionOnScreenOnly])` against
+                // the live `gamelib-shell` pid on 2026-10-03 returned exactly one on-screen
+                // login window, w=572 h=700. `open_pristine_epic_login_window`'s own
+                // `.inner_size(900.0, 700.0)` is a DIFFERENT form layout and stays 900 (D-3) --
+                // see that function's own call site, untouched by this task.
+                builder = builder.inner_size(572.0, 700.0);
                 // CR-01 fix (continued): `.center()`/`.focused(true)` are AppKit-owned
                 // concerns once this window becomes a sheet -- `beginSheet:` positions the
                 // sheet under the parent's title bar and gives it key status itself, so
@@ -7464,6 +7940,15 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     builder = builder.initialization_script(&login_origin_banner_script(&origin));
                     eprintln!(
                         "[shell] humble_login_open: login origin banner injected for '{label}'"
+                    );
+                    // Scrollbar inset (2026-10-03). Same macOS gate and the same block as the
+                    // two controls above, because it exists only to serve the bar they render:
+                    // with a CLASSIC scrollbar the document scrollbar starts at y=0 and carves a
+                    // notch out of the bar's right end. See the function's own doc comment for
+                    // the WKWebView probe results, including the two refutations of `100vw`.
+                    builder = builder.initialization_script(&login_scrollbar_inset_script());
+                    eprintln!(
+                        "[shell] humble_login_open: login scrollbar inset injected for '{label}'"
                     );
                 }
                 // Login-chrome CSS injection (quick task 260822-di1, D-2). Deliberately NOT
@@ -7812,9 +8297,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             #[cfg(debug_assertions)]
             if visible && should_auto_open_devtools(std::env::consts::OS) {
                 window.open_devtools();
-                eprintln!(
-                    "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
-                );
+                eprintln!("[shell] humble_login_open: devtools opened for '{label}' (debug build)");
             } else if visible {
                 eprintln!(
                     "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
@@ -7887,8 +8370,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         // `webview.inner()` is a live `WKWebView*` for the duration of a
                         // `with_webview` closure running on the main thread; `mtm` proves
                         // this closure is running on the main thread.
-                        let view: &objc2_web_kit::WKWebView =
-                            unsafe { &*webview.inner().cast() };
+                        let view: &objc2_web_kit::WKWebView = unsafe { &*webview.inner().cast() };
                         let data_store = unsafe { view.configuration().websiteDataStore() };
                         let cookie_store = unsafe { data_store.httpCookieStore() };
                         let host_for_filter = filter_host.clone();
@@ -8213,8 +8695,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         // `webview.inner()` is a live `WKWebView*` for the duration of a
                         // `with_webview` closure running on the main thread (tauri's own doc
                         // guarantee); `mtm` proves this closure is running on the main thread.
-                        let view: &objc2_web_kit::WKWebView =
-                            unsafe { &*webview.inner().cast() };
+                        let view: &objc2_web_kit::WKWebView = unsafe { &*webview.inner().cast() };
                         let data_store = unsafe { view.configuration().websiteDataStore() };
                         let cookie_store = unsafe { data_store.httpCookieStore() };
                         let target = target_domain.clone();
@@ -8257,9 +8738,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 }
                 match rx.recv_timeout(CLEAR_COOKIES_TIMEOUT) {
                     Ok(inner) => inner,
-                    Err(_) => {
-                        Err("humble_login_clear_cookies:count-matching:timeout".to_string())
-                    }
+                    Err(_) => Err("humble_login_clear_cookies:count-matching:timeout".to_string()),
                 }
             };
             // Non-macOS: unchanged wry getter path -- F-34.4.2-12's reentrant-pump mechanism
@@ -8901,8 +9380,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         // cast -- `webview.inner()` is a live `WKWebView*` for the duration of
                         // a `with_webview` closure running on the main thread; `mtm` proves
                         // this closure is running on the main thread.
-                        let view: &objc2_web_kit::WKWebView =
-                            unsafe { &*webview.inner().cast() };
+                        let view: &objc2_web_kit::WKWebView = unsafe { &*webview.inner().cast() };
                         let data_store = unsafe { view.configuration().websiteDataStore() };
                         let cookie_store = unsafe { data_store.httpCookieStore() };
                         let filter_domain = target_domain.clone();
@@ -9997,10 +10475,10 @@ enum WindowsSingleInstanceRole {
 /// `windows_pipe_sddl`'s pinned decision unit test and the matching TS source gate (plan 46-03).
 #[cfg(windows)]
 fn current_user_identity() -> Option<(String, u32)> {
-    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, LocalFree};
+    use windows_sys::Win32::Foundation::{CloseHandle, LocalFree, HANDLE};
     use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
     use windows_sys::Win32::Security::{
-        GetTokenInformation, TOKEN_QUERY, TOKEN_USER, TokenSessionId, TokenUser,
+        GetTokenInformation, TokenSessionId, TokenUser, TOKEN_QUERY, TOKEN_USER,
     };
     use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 
@@ -10113,8 +10591,8 @@ fn current_user_identity() -> Option<(String, u32)> {
 fn repair_windows_gamelib_protocol_registration(identifier: &str) {
     use windows_sys::Win32::Foundation::ERROR_SUCCESS;
     use windows_sys::Win32::System::Registry::{
-        HKEY, HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE, REG_EXPAND_SZ, REG_OPTION_NON_VOLATILE,
-        REG_SZ, RegCloseKey, RegCreateKeyExW, RegOpenKeyExW, RegQueryValueExW, RegSetValueExW,
+        RegCloseKey, RegCreateKeyExW, RegOpenKeyExW, RegQueryValueExW, RegSetValueExW, HKEY,
+        HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE, REG_EXPAND_SZ, REG_OPTION_NON_VOLATILE, REG_SZ,
     };
 
     const ROOT_SUBKEY: &str = r"Software\Classes\gamelib";
@@ -10320,11 +10798,11 @@ fn create_single_instance_pipe_instance(
     sddl: &str,
     first: bool,
 ) -> std::io::Result<std::os::windows::io::OwnedHandle> {
-    use windows_sys::Win32::Foundation::{INVALID_HANDLE_VALUE, LocalFree};
-    use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
+    use windows_sys::Win32::Foundation::{LocalFree, INVALID_HANDLE_VALUE};
     use windows_sys::Win32::Security::Authorization::{
         ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
     };
+    use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
     use windows_sys::Win32::Storage::FileSystem::{
         FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_ACCESS_INBOUND,
     };
@@ -10359,8 +10837,12 @@ fn create_single_instance_pipe_instance(
             bInheritHandle: 0,
         };
 
-        let open_mode =
-            PIPE_ACCESS_INBOUND | if first { FILE_FLAG_FIRST_PIPE_INSTANCE } else { 0 };
+        let open_mode = PIPE_ACCESS_INBOUND
+            | if first {
+                FILE_FLAG_FIRST_PIPE_INSTANCE
+            } else {
+                0
+            };
         let handle = CreateNamedPipeW(
             name_w.as_ptr(),
             open_mode,
@@ -10414,7 +10896,7 @@ fn create_single_instance_pipe_instance(
 /// shared-with-Unix category of risk, out of this phase's scope to close.
 #[cfg(windows)]
 fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSingleInstanceRole {
-    use windows_sys::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError};
+    use windows_sys::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS};
     use windows_sys::Win32::System::Threading::CreateMutexW;
 
     let (Some(mutex_name), Some(pipe_name), Some(sddl)) = (
@@ -10428,7 +10910,10 @@ fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSi
         return WindowsSingleInstanceRole::PrimaryWithoutListener;
     };
 
-    let mutex_name_w: Vec<u16> = mutex_name.encode_utf16().chain(std::iter::once(0)).collect();
+    let mutex_name_w: Vec<u16> = mutex_name
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
 
     // SAFETY: `mutex_name_w` is a NUL-terminated wide string built immediately above and kept
     // alive for the duration of this call. A NULL `lpMutexAttributes` is documented as safe and
@@ -10503,7 +10988,7 @@ fn deliver_to_running_instance_windows(
     use std::io::Write as _;
     use std::os::windows::fs::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::Foundation::{ERROR_ACCESS_DENIED, GENERIC_WRITE, HANDLE, LocalFree};
+    use windows_sys::Win32::Foundation::{LocalFree, ERROR_ACCESS_DENIED, GENERIC_WRITE, HANDLE};
     use windows_sys::Win32::Security::Authorization::{
         ConvertSidToStringSidW, GetSecurityInfo, SE_KERNEL_OBJECT,
     };
@@ -10889,7 +11374,9 @@ fn run_windows_single_instance_accept_loop(
             Some(url) => {
                 match accept_state.invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
                 {
-                    Ok(_) => eprintln!("[shell] delivered single-instance deep link to sidecar: ok"),
+                    Ok(_) => {
+                        eprintln!("[shell] delivered single-instance deep link to sidecar: ok")
+                    }
                     Err(e) => {
                         eprintln!("[shell] delivered single-instance deep link to sidecar: err={e}")
                     }
@@ -11066,11 +11553,7 @@ fn start_stderr_forwarder(stderr: std::process::ChildStderr) {
 /// on a spawned worker thread (Phase 28 — keyring calls); `kind == "openExternal"` opens the
 /// URL via the same facility `open_external` uses, fire-and-forget. Any other frame kind is
 /// logged via an explicit diagnostic rather than silently dropped.
-fn start_reader(
-    app: AppHandle,
-    state: Arc<SidecarState>,
-    stdout: std::process::ChildStdout,
-) {
+fn start_reader(app: AppHandle, state: Arc<SidecarState>, stdout: std::process::ChildStdout) {
     thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
@@ -11106,15 +11589,10 @@ fn start_reader(
                 // Diagnostics carry the id only, never `result`/`error` bodies (T-28-04).
                 match value.get("id").and_then(|v| v.as_str()) {
                     Some(id) => {
-                        let sender = state
-                            .pending
-                            .lock()
-                            .ok()
-                            .and_then(|mut p| p.remove(id));
+                        let sender = state.pending.lock().ok().and_then(|mut p| p.remove(id));
                         match sender {
                             Some((_channel, tx)) => {
-                                let ok =
-                                    value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+                                let ok = value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
                                 let outcome = if ok {
                                     Ok(value.get("result").cloned().unwrap_or(Value::Null))
                                 } else {
@@ -11147,9 +11625,7 @@ fn start_reader(
                             }
                         }
                     }
-                    None => shell_diag(
-                        "response frame with a missing or non-string id (dropped)"
-                    ),
+                    None => shell_diag("response frame with a missing or non-string id (dropped)"),
                 }
                 continue;
             }
@@ -11248,9 +11724,20 @@ fn start_reader(
             // (Open Question 2, resolved: converting this to a rustInvoke request/response
             // call would change electronStub.shell.openExternal's contract, out of scope).
             if kind == Some("openExternal") {
-                if let Some(url) = value.get("args").and_then(|v| v.as_array()).and_then(|a| a.first()).and_then(|v| v.as_str()) {
-                    if let Err(e) = app.opener().open_url(url, None::<&str>) {
-                        eprintln!("[shell] openExternal failed: {e}");
+                if let Some(url) = value
+                    .get("args")
+                    .and_then(|v| v.as_array())
+                    .and_then(|a| a.first())
+                    .and_then(|v| v.as_str())
+                {
+                    // Same allow-list as the `open_external` command: any line that reaches
+                    // the sidecar's stdout can forge this frame (todo
+                    // `sidecar-log-output-shares-the-rpc-stdout-pipe`). The check logs the
+                    // rejected scheme itself, never the URL.
+                    if open_external_scheme_check(url).is_ok() {
+                        if let Err(e) = app.opener().open_url(url, None::<&str>) {
+                            eprintln!("[shell] openExternal failed: {e}");
+                        }
                     }
                 } else {
                     eprintln!("[shell] openExternal frame missing a string URL in args[0]");
@@ -11263,6 +11750,12 @@ fn start_reader(
             // cannot recur unnoticed.
             let id = value.get("id").and_then(|v| v.as_str());
             eprintln!("[shell] unrecognized sidecar frame kind: {kind:?} id={id:?}");
+        }
+
+        // stdout has ended (EOF, or a read error such as a non-UTF-8 line), so no response can
+        // arrive any more. Fail every invoke still waiting instead of leaving it parked forever.
+        for (id, channel) in drain_pending_invokes(&state.pending, &state.abandoned) {
+            shell_diag(&invoke_abandoned_message("sidecar exited", &id, &channel));
         }
     });
 }
@@ -11535,7 +12028,10 @@ fn main() {
             None
         }
         Some((sid, session)) => match acquire_single_instance_windows(&sid, session) {
-            WindowsSingleInstanceRole::Secondary { pipe_name, user_sid } => {
+            WindowsSingleInstanceRole::Secondary {
+                pipe_name,
+                user_sid,
+            } => {
                 let (payload, kind) = single_instance_payload(&argv);
                 eprintln!(
                     "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
@@ -11991,6 +12487,10 @@ fn main() {
             #[cfg(windows)]
             repair_windows_gamelib_protocol_registration(&app.config().identifier);
 
+            let send_state = state.clone();
+            app.manage(SidecarSendQueue(spawn_send_writer(move |req| {
+                send_state.write_frame(req)
+            })));
             app.manage(state);
 
             // Real Tauri tray (Phase 34.1 Plan 06, D-11; EXTENDED by Phase 35 Plan 06,
@@ -12221,7 +12721,7 @@ fn main() {
                                         }
                                     }
                                     "about" => open_about_window_from_tray(app_handle),
-                                    "quit" => app_handle.exit(0),
+                                    "quit" => quit_from_tray(app_handle),
                                     // T-35-20: the appName reaching a launch is PARSED back out
                                     // of the menu id through the same allow-list that built it,
                                     // never taken from the id verbatim. A malformed id is
@@ -12771,7 +13271,6 @@ mod tests {
         );
     }
 
-
     // ---- open_external scheme allow-list (35-21, CR-01) ----
     //
     // `open_external` itself needs a live `AppHandle` (`app.opener()`), so these tests drive
@@ -12812,10 +13311,7 @@ mod tests {
 
     #[test]
     fn open_external_scheme_check_accepts_steam_rungameid() {
-        assert_eq!(
-            open_external_scheme_check("steam://rungameid/440"),
-            Ok(())
-        );
+        assert_eq!(open_external_scheme_check("steam://rungameid/440"), Ok(()));
     }
 
     #[test]
@@ -12897,6 +13393,136 @@ mod tests {
             let id = id.unwrap_or_default();
             assert_eq!(tray_recent_app_name(&id), Some(app_name));
         }
+    }
+
+    fn send_frame(channel: &str) -> SidecarRpcRequest {
+        SidecarRpcRequest {
+            id: channel.to_string(),
+            kind: "send",
+            channel: channel.to_string(),
+            args: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn send_writer_enqueue_does_not_wait_for_a_blocked_write() {
+        // The defect: `sidecar_send` wrote on the main thread, so a write stuck on a full pipe
+        // froze the UI. Enqueueing must return while the writer is blocked.
+        let (release_tx, release_rx) = mpsc_channel::<()>();
+        let release_rx = Mutex::new(release_rx);
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = release_rx.lock().unwrap().recv();
+            let _ = done_tx.send(req.channel.clone());
+            Ok(())
+        });
+        let started = std::time::Instant::now();
+        for channel in ["a", "b", "c"] {
+            queue.send(send_frame(channel)).unwrap();
+        }
+        assert!(
+            started.elapsed() < Duration::from_millis(500),
+            "enqueue must not block on the write"
+        );
+        for _ in 0..3 {
+            release_tx.send(()).unwrap();
+        }
+        let written: Vec<String> = (0..3)
+            .map(|_| done_rx.recv_timeout(Duration::from_secs(5)).unwrap())
+            .collect();
+        assert_eq!(written, ["a", "b", "c"], "frames are written in send order");
+    }
+
+    #[test]
+    fn send_writer_keeps_going_after_a_failed_write() {
+        let (done_tx, done_rx) = mpsc_channel::<String>();
+        let queue = spawn_send_writer(move |req| {
+            let _ = done_tx.send(req.channel.clone());
+            if req.channel == "broken" {
+                Err("broken pipe".into())
+            } else {
+                Ok(())
+            }
+        });
+        queue.send(send_frame("broken")).unwrap();
+        queue.send(send_frame("after")).unwrap();
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "broken"
+        );
+        assert_eq!(
+            done_rx.recv_timeout(Duration::from_secs(5)).unwrap(),
+            "after"
+        );
+    }
+
+    #[test]
+    fn tray_quit_hands_off_to_the_sidecar_when_the_probe_answers() {
+        let sent = std::cell::Cell::new(false);
+        let routed = tray_quit_via_sidecar(
+            || Ok(Value::String("ok".into())),
+            Duration::from_secs(5),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert_eq!(routed, Ok(()));
+        assert!(
+            sent.get(),
+            "the quit frame must be sent once the probe answers"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_probe_fails_without_sending() {
+        let sent = std::cell::Cell::new(false);
+        let routed = tray_quit_via_sidecar(
+            || Err("sidecar closed before responding".into()),
+            Duration::from_secs(5),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert!(routed.is_err());
+        assert!(
+            !sent.get(),
+            "a dead sidecar must not be sent the quit frame"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_probe_does_not_answer_in_time() {
+        let sent = std::cell::Cell::new(false);
+        let started = std::time::Instant::now();
+        let routed = tray_quit_via_sidecar(
+            || {
+                thread::sleep(Duration::from_secs(2));
+                Ok(Value::Null)
+            },
+            Duration::from_millis(100),
+            || {
+                sent.set(true);
+                Ok(())
+            },
+        );
+        assert!(routed.is_err());
+        assert!(!sent.get());
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "the fallback must not wait for a hung probe"
+        );
+    }
+
+    #[test]
+    fn tray_quit_falls_back_when_the_quit_frame_cannot_be_written() {
+        let routed = tray_quit_via_sidecar(
+            || Ok(Value::Null),
+            Duration::from_secs(5),
+            || Err("broken pipe".into()),
+        );
+        assert_eq!(routed, Err("broken pipe".to_string()));
     }
 
     #[test]
@@ -13022,7 +13648,11 @@ mod tests {
         let games = tray_recent_games_from_value(&payload, 5);
         assert_eq!(games.len(), 4, "no entry may be DROPPED for a bad runner");
         for game in &games {
-            assert_eq!(game.runner, None, "{} should degrade to None", game.app_name);
+            assert_eq!(
+                game.runner, None,
+                "{} should degrade to None",
+                game.app_name
+            );
         }
     }
 
@@ -13162,7 +13792,12 @@ mod tests {
         // failure; the decision that follows must be "close", never "hide". A user who can
         // always close their window is the safe failure mode -- a user trapped in a window
         // that refuses to close because a config read failed is not.
-        for unreadable in [json!({}), json!(null), json!({ "defaultSettings": 3 }), json!([])] {
+        for unreadable in [
+            json!({}),
+            json!(null),
+            json!({ "defaultSettings": 3 }),
+            json!([]),
+        ] {
             assert!(
                 !should_hide_on_close(tray_settings_from_config(&unreadable)),
                 "an unreadable config must never trap the user in an unclosable window"
@@ -13196,7 +13831,12 @@ mod tests {
     fn tray_settings_fail_open_to_a_working_tray() {
         // An absent, empty, or wrong-typed config must yield a tray that EXISTS -- an
         // unreadable config turning the tray off would be the worst possible failure mode.
-        for junk in [json!({}), json!(null), json!({ "defaultSettings": 3 }), json!([])] {
+        for junk in [
+            json!({}),
+            json!(null),
+            json!({ "defaultSettings": 3 }),
+            json!([]),
+        ] {
             let s = tray_settings_from_config(&junk);
             assert_eq!(s, TraySettingsSnapshot::default());
             assert!(!s.no_tray_icon);
@@ -13340,6 +13980,73 @@ mod tests {
         assert_eq!(abandoned_channel_for(&ring, "1575"), "getCookies");
         assert_eq!(abandoned_channel_for(&ring, "1576"), "openDialog");
         assert_eq!(abandoned_channel_for(&ring, "1577"), "keyring_get");
+    }
+
+    #[test]
+    fn sidecar_exit_fails_every_pending_invoke_at_once() {
+        // Todo 2026-10-05 sidecar-death: nothing used to drain `pending`, so a waiter on a dead
+        // sidecar never woke (long-running) or waited the full 60s (bounded). Each waiter must
+        // receive an Err immediately -- `try_recv`, not a wait, is the assertion.
+        let pending = Mutex::new(HashMap::new());
+        let abandoned = Mutex::new(VecDeque::new());
+        let (tx_install, rx_install) = mpsc_channel::<Result<Value, String>>();
+        let (tx_cookies, rx_cookies) = mpsc_channel::<Result<Value, String>>();
+        {
+            let mut map = pending.lock().unwrap();
+            map.insert("7".to_string(), ("install".to_string(), tx_install));
+            map.insert("8".to_string(), ("getCookies".to_string(), tx_cookies));
+        }
+
+        let mut drained = drain_pending_invokes(&pending, &abandoned);
+        drained.sort();
+
+        assert_eq!(
+            drained,
+            vec![
+                ("7".to_string(), "install".to_string()),
+                ("8".to_string(), "getCookies".to_string()),
+            ]
+        );
+        for rx in [rx_install, rx_cookies] {
+            assert_eq!(
+                rx.try_recv(),
+                Ok(Err("sidecar closed before responding".to_string()))
+            );
+        }
+        assert!(pending.lock().unwrap().is_empty());
+        let ring = abandoned.lock().unwrap();
+        assert_eq!(abandoned_channel_for(&ring, "7"), "install");
+        assert_eq!(abandoned_channel_for(&ring, "8"), "getCookies");
+    }
+
+    #[test]
+    fn two_button_dialog_dismissal_is_not_a_button() {
+        // Todo 2026-10-05 dialog-dismiss: Esc / window close yields rfd `Cancel`, which must
+        // NOT read as buttons[1] (the destructive "Yes" in askForceUninstall/handleExit).
+        use rfd::MessageDialogResult as R;
+        assert_eq!(
+            two_button_choice(&R::Custom("No".into()), "No", "Yes"),
+            Some(0)
+        );
+        assert_eq!(
+            two_button_choice(&R::Custom("Yes".into()), "No", "Yes"),
+            Some(1)
+        );
+        assert_eq!(two_button_choice(&R::Cancel, "No", "Yes"), None);
+        assert_eq!(two_button_choice(&R::Ok, "No", "Yes"), Some(0));
+        assert_eq!(two_button_choice(&R::No, "No", "Yes"), None);
+        assert_eq!(
+            two_button_choice(&R::Custom("Other".into()), "No", "Yes"),
+            None
+        );
+    }
+
+    #[test]
+    fn draining_an_empty_pending_table_is_a_no_op() {
+        let pending = Mutex::new(HashMap::new());
+        let abandoned = Mutex::new(VecDeque::new());
+        assert!(drain_pending_invokes(&pending, &abandoned).is_empty());
+        assert!(abandoned.lock().unwrap().is_empty());
     }
 
     #[test]
@@ -13613,8 +14320,7 @@ mod tests {
         // document title, is precisely what the arm's initial `window.set_title()` call
         // (right after `.build()`) composes. Proves the origin is present from the seed
         // alone, with no page-load event required.
-        let url =
-            login_window_url_arg(&[json!("https://www.humblebundle.com/login?x=1")]).unwrap();
+        let url = login_window_url_arg(&[json!("https://www.humblebundle.com/login?x=1")]).unwrap();
         let seeded_origin = url.origin().ascii_serialization();
         assert_eq!(seeded_origin, "https://www.humblebundle.com");
         assert_eq!(
@@ -13659,7 +14365,10 @@ mod tests {
     #[test]
     fn humble_login_cookies_for_domain_matches_bare_apex_cookie() {
         // A cookie whose domain attribute is the bare apex matches a query for that apex.
-        assert!(cookie_domain_matches("humblebundle.com", Some("humblebundle.com")));
+        assert!(cookie_domain_matches(
+            "humblebundle.com",
+            Some("humblebundle.com")
+        ));
     }
 
     #[test]
@@ -13668,13 +14377,19 @@ mod tests {
         // wildcard-subdomain marker) still matches a query for the bare apex -- this is
         // Defect A's headline case: `humble_login_cookies`' direction cannot ever match this
         // shape against a FIXED target (see the asymmetry test below).
-        assert!(cookie_domain_matches(".humblebundle.com", Some("humblebundle.com")));
+        assert!(cookie_domain_matches(
+            ".humblebundle.com",
+            Some("humblebundle.com")
+        ));
     }
 
     #[test]
     fn humble_login_cookies_for_domain_matches_subdomain_cookie() {
         // A cookie scoped to a subdomain matches a query for the parent apex.
-        assert!(cookie_domain_matches("www.humblebundle.com", Some("humblebundle.com")));
+        assert!(cookie_domain_matches(
+            "www.humblebundle.com",
+            Some("humblebundle.com")
+        ));
     }
 
     #[test]
@@ -13682,7 +14397,10 @@ mod tests {
         // Same lookalike guard as the existing poll-direction case above, proven in this
         // arm's own direction: a literal `.` separator is required, so a domain that merely
         // ENDS WITH the target string as a substring (no separator) must not match.
-        assert!(!cookie_domain_matches("nothumblebundle.com", Some("humblebundle.com")));
+        assert!(!cookie_domain_matches(
+            "nothumblebundle.com",
+            Some("humblebundle.com")
+        ));
     }
 
     #[test]
@@ -13709,8 +14427,14 @@ mod tests {
         // comparing (RFC 6265: a `.example.com` cookie is defined to apply to `example.com`
         // itself, not only to its subdomains), so BOTH directions now correctly match a
         // leading-dot cookie domain against its own bare apex host:
-        assert!(cookie_domain_matches("humblebundle.com", Some(".humblebundle.com")));
-        assert!(cookie_domain_matches(".humblebundle.com", Some("humblebundle.com")));
+        assert!(cookie_domain_matches(
+            "humblebundle.com",
+            Some(".humblebundle.com")
+        ));
+        assert!(cookie_domain_matches(
+            ".humblebundle.com",
+            Some("humblebundle.com")
+        ));
     }
 
     #[test]
@@ -13720,7 +14444,10 @@ mod tests {
         // ".."-prefixed suffix requirement no real hostname can satisfy, so this returned
         // false -- RED against the pre-fix comparator. Post-fix, the leading dot is
         // stripped from `domain` before comparing, so this is GREEN.
-        assert!(cookie_domain_matches("humblebundle.com", Some(".humblebundle.com")));
+        assert!(cookie_domain_matches(
+            "humblebundle.com",
+            Some(".humblebundle.com")
+        ));
     }
 
     #[test]
@@ -13748,8 +14475,14 @@ mod tests {
         // scoped to a SUBDOMAIN, but a subdomain host correctly matches a cookie scoped to
         // its own parent apex. Pinned here with a non-Humble pair so it stays independent of
         // the now-symmetric leading-dot case above.
-        assert!(!cookie_domain_matches("epicgames.com", Some("www.epicgames.com")));
-        assert!(cookie_domain_matches("www.epicgames.com", Some("epicgames.com")));
+        assert!(!cookie_domain_matches(
+            "epicgames.com",
+            Some("www.epicgames.com")
+        ));
+        assert!(cookie_domain_matches(
+            "www.epicgames.com",
+            Some("epicgames.com")
+        ));
     }
 
     #[test]
@@ -13761,7 +14494,10 @@ mod tests {
         // `humble_login_cookie_domain_matches_the_www_regression_case` above, re-stated here
         // in this arm's own test group so a reviewer looking only at the new arm's tests can
         // see the poll's direction was checked, not merely assumed unaffected.
-        assert!(cookie_domain_matches("www.humblebundle.com", Some("humblebundle.com")));
+        assert!(cookie_domain_matches(
+            "www.humblebundle.com",
+            Some("humblebundle.com")
+        ));
     }
 
     // ---- epic_cookie_domain_matches (Phase 35 plan 09, D-09-CORRECTED, T-35-37/T-35-38) ----
@@ -14304,8 +15040,8 @@ mod tests {
     // of the literal `'unsupported'` would fail the five-category case.
 
     #[test]
-    fn humble_login_clear_storage_script_escapes_special_characters_and_round_trips_via_serde_json(
-    ) {
+    fn humble_login_clear_storage_script_escapes_special_characters_and_round_trips_via_serde_json()
+    {
         // Deliberately includes a single quote, a double quote, a backslash, and a `</script>`
         // sequence -- the same character classes `reveal_post_script`'s own round-trip case
         // covers (T-34.4.1-65/20). Two embedded double-quote characters (not one) so this Rust
@@ -14337,8 +15073,7 @@ mod tests {
     }
 
     #[test]
-    fn humble_login_clear_storage_script_clears_all_five_categories_with_an_unsupported_fallback()
-    {
+    fn humble_login_clear_storage_script_clears_all_five_categories_with_an_unsupported_fallback() {
         let script = clear_storage_script(REVEAL_EXFIL_HOST);
         assert!(script.contains("localStorage.clear()"));
         assert!(script.contains("report.localStorage = 'unsupported'"));
@@ -14405,8 +15140,7 @@ mod tests {
         // would leave a now-forbidden name fragment in this file, defeating Phase 34.4.2
         // Plan 13's reconciliation grep.
         let mut url =
-            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/some-other-sentinel"))
-                .unwrap();
+            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/some-other-sentinel")).unwrap();
         url.query_pairs_mut().append_pair("data", "{}");
         assert!(!is_login_cancel_request(&url));
     }
@@ -14419,8 +15153,7 @@ mod tests {
 
     #[test]
     fn login_cancel_request_rejects_clear_storage_path() {
-        let url =
-            tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/clear-storage")).unwrap();
+        let url = tauri::Url::parse(&format!("https://{REVEAL_EXFIL_HOST}/clear-storage")).unwrap();
         assert!(!is_login_cancel_request(&url));
     }
 
@@ -14652,6 +15385,94 @@ mod tests {
         assert_eq!(a, b);
     }
 
+    // ---- Quick task 261003-nsk additions: one bar across the sheet's top edge, both
+    // injected scripts restyled (D-1/D-2/D-3, T-nsk-01..06). RED direction observed against
+    // the pre-edit source (recorded verbatim in `261003-nsk-SUMMARY.md`): every one of these
+    // five failed before the production edit landed -- `login_origin_banner_script` set
+    // neither `right` nor `height` nor a padding literal at all, and `login_cancel_strip_script`
+    // still wrote the visible phrase into `textContent` with 8px insets on both axes.
+
+    #[test]
+    fn login_origin_banner_script_spans_the_full_width_and_centres_its_text() {
+        let script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        assert!(script.contains("banner.style.left = '0'"));
+        assert!(script.contains("banner.style.right = '0'"));
+        assert!(script.contains("banner.style.top = '0'"));
+        assert!(script.contains("banner.style.textAlign = 'center'"));
+        assert!(!script.contains("banner.style.top = '8px'"));
+        assert!(!script.contains("banner.style.left = '8px'"));
+    }
+
+    #[test]
+    fn login_origin_banner_script_reserves_horizontal_room_for_the_close_glyph() {
+        // Numeric comparison, not substring presence (mirrors
+        // `login_origin_banner_script_z_index_is_strictly_below_the_cancel_strips`'s own
+        // discipline): the bar's horizontal padding must be at least the glyph box's width,
+        // so a centred origin can never run under the glyph (T-nsk-06).
+        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let padding_horizontal: i64 = banner_script
+            .split("banner.style.padding = '0 ")
+            .nth(1)
+            .and_then(|s| s.split("px'").next())
+            .expect("banner script must set a horizontal padding")
+            .parse()
+            .expect("banner padding must parse as an integer");
+        let glyph_width: i64 = strip_script
+            .split("strip.style.width = '")
+            .nth(1)
+            .and_then(|s| s.split("px'").next())
+            .expect("strip script must set width")
+            .parse()
+            .expect("strip width must parse as an integer");
+        assert!(padding_horizontal >= glyph_width);
+    }
+
+    #[test]
+    fn login_origin_banner_and_cancel_strip_agree_on_one_bar_height() {
+        // The "reads as ONE bar" invariant: both elements' height literals must be equal.
+        let banner_script = login_origin_banner_script(TEST_LOGIN_ORIGIN);
+        let strip_script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        let banner_height: &str = banner_script
+            .split("banner.style.height = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("banner script must set height");
+        let strip_height: &str = strip_script
+            .split("strip.style.height = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("strip script must set height");
+        assert_eq!(banner_height, strip_height);
+    }
+
+    #[test]
+    fn login_cancel_strip_script_shows_a_bare_glyph_and_keeps_its_accessible_name() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("strip.setAttribute('aria-label', 'Cancel sign-in')"));
+        assert!(script.contains("strip.setAttribute('aria-keyshortcuts', 'Escape')"));
+        assert!(!script.contains("strip.textContent = 'Cancel sign-in'"));
+        assert!(script.contains("strip.textContent = '\\u00d7'"));
+    }
+
+    #[test]
+    fn login_cancel_strip_script_glyph_box_is_flush_with_the_bar_corner() {
+        let script = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        assert!(script.contains("strip.style.top = '0'"));
+        assert!(script.contains("strip.style.right = '0'"));
+        let width: &str = script
+            .split("strip.style.width = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("strip script must set width");
+        let height: &str = script
+            .split("strip.style.height = '")
+            .nth(1)
+            .and_then(|s| s.split('\'').next())
+            .expect("strip script must set height");
+        assert_eq!(width, height);
+    }
+
     #[test]
     fn login_origin_banner_update_script_embeds_the_new_origin_and_differs_by_origin() {
         let a = login_origin_banner_update_script(TEST_LOGIN_ORIGIN);
@@ -14694,6 +15515,128 @@ mod tests {
     // reasoned prediction.
 
     #[test]
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_inset_script_scopes_every_rule_to_html_so_inner_scrollers_keep_their_own() {
+        let script = login_scrollbar_inset_script();
+
+        // Breaks if: any rule loses its `html` prefix. Probe E (2026-10-03) rendered an inner
+        // `overflow-y: scroll` box alongside the document scroller: scoped to `html`, the inner
+        // box keeps a normal scrollbar; UNSCOPED, every inner scroller on Humble's login page
+        // would inherit the 32px top dead zone meant only for the document scroller.
+        for selector in [
+            "html::-webkit-scrollbar {",
+            "html::-webkit-scrollbar-track {",
+            "html::-webkit-scrollbar-thumb {",
+        ] {
+            assert!(script.contains(selector), "missing scoped rule: {selector}");
+        }
+        assert_eq!(
+            script.matches("::-webkit-scrollbar").count(),
+            script.matches("html::-webkit-scrollbar").count()
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_track_inset_equals_the_bar_height_both_other_scripts_set() {
+        // The three literals must agree or the scrollbar starts above or below the bar's edge
+        // instead of flush with it. Extracted and compared against each other rather than
+        // asserted as three separate `== 32`, so a deliberate future move to a different bar
+        // height stays green as long as all three move together.
+        let inset = login_scrollbar_inset_script();
+        let banner = login_origin_banner_script("https://example.invalid");
+        let strip = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+
+        let track_margin = inset
+            .split("margin-top: ")
+            .nth(1)
+            .and_then(|rest| rest.split("px").next())
+            .expect("track margin-top literal");
+        let banner_height = banner
+            .split("banner.style.height = '")
+            .nth(1)
+            .and_then(|rest| rest.split("px").next())
+            .expect("banner height literal");
+        let strip_height = strip
+            .split("strip.style.height = '")
+            .nth(1)
+            .and_then(|rest| rest.split("px").next())
+            .expect("strip height literal");
+
+        assert_eq!(track_margin, banner_height);
+        assert_eq!(banner_height, strip_height);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_inset_script_paints_the_gutter_the_same_colour_as_the_bar() {
+        // Probe D (2026-10-03): the track `margin-top` alone leaves the inset region showing the
+        // PAGE background -- a white notch where the scrollbar notch used to be. The gutter only
+        // reads as part of the bar when the scrollbar element ITSELF carries the bar's colour.
+        let inset = login_scrollbar_inset_script();
+        let banner = login_origin_banner_script("https://example.invalid");
+
+        let bar_bg = banner
+            .split("banner.style.background = '")
+            .nth(1)
+            .and_then(|rest| rest.split('\'').next())
+            .expect("banner background literal");
+        assert!(
+            inset.contains(&format!(
+                "html::-webkit-scrollbar {{ width: 14px; background: {bar_bg}; }}"
+            )),
+            "scrollbar gutter must carry the bar's own background {bar_bg}"
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_chrome_never_widens_the_bar_to_100vw() {
+        // REFUTED TWICE by measurement (probes A and C, 2026-10-03): a classic scrollbar paints
+        // ABOVE page content and a `position: fixed` element cannot paint into the scrollbar
+        // gutter, so `100vw` does not close the notch -- it is the obvious fix and it is wrong.
+        // Guards all three scripts, because `100vw` is what a future reader will reach for.
+        let inset = login_scrollbar_inset_script();
+        let banner = login_origin_banner_script("https://example.invalid");
+        let strip = login_cancel_strip_script(REVEAL_EXFIL_HOST);
+        for script in [&inset, &banner, &strip] {
+            assert!(!script.contains("100vw"));
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn login_scrollbar_inset_script_follows_the_house_injection_contract() {
+        let script = login_scrollbar_inset_script();
+
+        let try_at = script.find("try { ").expect("try");
+        let top_frame_at = script
+            .find("if (window.top !== window) { return; }")
+            .expect("guard");
+        let flag_at = script
+            .find("__GAMELIB_LOGIN_SCROLLBAR_INSET__")
+            .expect("flag");
+        assert!(try_at < top_frame_at);
+        assert!(top_frame_at < flag_at);
+
+        assert_eq!(script.matches("try {").count(), 1);
+        assert_eq!(script.matches("catch (e) { }").count(), 1);
+        assert!(!script.contains("innerHTML"));
+        assert!(!script.contains("insertAdjacentHTML"));
+        assert!(!script.contains("addEventListener"));
+        assert!(!script.contains("keydown"));
+        assert!(!script.contains("keyup"));
+        assert!(!script.contains("keypress"));
+        assert!(script.contains("style.textContent = CSS;"));
+        assert!(script.contains("new MutationObserver"));
+        assert!(script.contains(
+            "observer.observe(document.documentElement, { childList: true, subtree: true })"
+        ));
+
+        assert_eq!(script, login_scrollbar_inset_script());
+    }
+
     fn login_chrome_css_script_hides_the_footer_and_navbar_leaving_the_four_protected_selectors_untouched(
     ) {
         let script = login_chrome_css_script();
@@ -14737,8 +15680,7 @@ mod tests {
     }
 
     #[test]
-    fn login_chrome_css_script_top_frame_guard_precedes_the_host_gate_and_the_idempotence_flag()
-    {
+    fn login_chrome_css_script_top_frame_guard_precedes_the_host_gate_and_the_idempotence_flag() {
         let script = login_chrome_css_script();
         let guard_idx = script.find("window.top !== window");
         let host_idx = script.find(".humblebundle.com");
@@ -14913,10 +15855,7 @@ mod tests {
         // Guards against a copy-paste that maps the new slot onto an existing account string,
         // which would let a SteamGridDB write clobber the Steam token or a Humble secret.
         let steamgrid = keyring_account("steamgrid-api-key").unwrap();
-        assert_ne!(
-            steamgrid,
-            keyring_account("steam-refresh-token").unwrap()
-        );
+        assert_ne!(steamgrid, keyring_account("steam-refresh-token").unwrap());
         assert_ne!(steamgrid, keyring_account("humble-session").unwrap());
         assert_ne!(steamgrid, keyring_account("humble-csrf").unwrap());
     }
@@ -15119,8 +16058,9 @@ mod tests {
 
     #[test]
     fn bounded_keyring_read_propagates_an_inner_error_when_it_completes_within_the_bound() {
-        let result =
-            bounded_keyring_read(Duration::from_secs(2), || Err("keyring:unavailable:x".to_string()));
+        let result = bounded_keyring_read(Duration::from_secs(2), || {
+            Err("keyring:unavailable:x".to_string())
+        });
         assert_eq!(result, Err("keyring:unavailable:x".to_string()));
     }
 
@@ -15296,7 +16236,6 @@ mod tests {
         );
     }
 
-
     // ---- F-9 root-cause timing harness (34.4.1 gap cycle 2 plan 26, Task 1) ----
     //
     // Times two DIRECT `keyring` crate reads -- one against a guaranteed-absent account, one
@@ -15411,7 +16350,9 @@ mod tests {
         // past which the entry is no longer trusted, matching this file's existing
         // `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`/`recv_timeout` convention of a bound that has
         // been EXCEEDED (not merely reached) before the caller-side fallback runs.
-        assert!(pending_login_entry_is_stale(PENDING_VISIBLE_LOGIN_WINDOW_TTL));
+        assert!(pending_login_entry_is_stale(
+            PENDING_VISIBLE_LOGIN_WINDOW_TTL
+        ));
     }
 
     #[cfg(target_os = "macos")]
@@ -15585,7 +16526,11 @@ mod tests {
             // Track which `dispatch_rust_channel` match arm this line is inside. Every arm in
             // that match is a single line of the shape `"channel_name" => {`.
             if trimmed.starts_with('"') && trimmed.ends_with("\" => {") {
-                let name = trimmed.trim_start_matches('"').split('"').next().unwrap_or("");
+                let name = trimmed
+                    .trim_start_matches('"')
+                    .split('"')
+                    .next()
+                    .unwrap_or("");
                 current_arm = target_arms.iter().find(|a| **a == name).copied();
                 continue;
             }
@@ -15706,8 +16651,7 @@ mod tests {
         // `concat!`, not a `\`-continued literal -- see the comment above the first `assert!`
         // in this test for why (WR-08).
         assert_eq!(
-            actual,
-            expected,
+            actual, expected,
             concat!(
                 "F-34.4.2-12 regression pin: the set of macOS-excluded-guarded `.cookies()` ",
                 "call sites no longer matches the exact expected set (four sites across three ",
@@ -16322,14 +17266,14 @@ mod tests {
         let oversized = format!("S-1-{}", "1".repeat(181)); // 185 chars total, over the 184 cap
         assert_eq!(oversized.len(), 185);
         let rejected = [
-            "S-1-",                        // nothing after the prefix
-            "s-1-5-21-1",                   // lowercase prefix
-            "S-1-5-21-1;(A;;GA;;;WD)",       // SDDL injection
-            "S-1-5-21-1)(A;;GA;;;WD",        // SDDL injection
-            "S-1-5-21-1\\evil",              // backslash
-            "S-1-5-21-1 ",                   // trailing space
-            "grays",                         // a username, not a SID
-            oversized.as_str(),              // over the length cap
+            "S-1-",                    // nothing after the prefix
+            "s-1-5-21-1",              // lowercase prefix
+            "S-1-5-21-1;(A;;GA;;;WD)", // SDDL injection
+            "S-1-5-21-1)(A;;GA;;;WD",  // SDDL injection
+            "S-1-5-21-1\\evil",        // backslash
+            "S-1-5-21-1 ",             // trailing space
+            "grays",                   // a username, not a SID
+            oversized.as_str(),        // over the length cap
         ];
         for candidate in rejected {
             assert_eq!(
@@ -16344,7 +17288,9 @@ mod tests {
     fn windows_mutex_name_formats_the_validated_key() {
         assert_eq!(
             windows_mutex_name(Some(WINDOWS_TEST_VALID_SID)),
-            Some(format!("Local\\gamelib-single-instance-{WINDOWS_TEST_VALID_SID}"))
+            Some(format!(
+                "Local\\gamelib-single-instance-{WINDOWS_TEST_VALID_SID}"
+            ))
         );
     }
 
@@ -16404,14 +17350,16 @@ mod tests {
     // the matching TS source gate in `tauriShellSource.test.ts`, plan 46-03) if that decision is
     // ever reversed.
     #[test]
-    fn windows_pipe_sddl_req_46_03_decision_point_b_operator_overridable_dacl_is_per_user_token_sid()
-    {
+    fn windows_pipe_sddl_req_46_03_decision_point_b_operator_overridable_dacl_is_per_user_token_sid(
+    ) {
         let sddl = windows_pipe_sddl(Some(WINDOWS_TEST_VALID_SID)).expect("valid sid");
         // Exactly one ACE.
         assert_eq!(sddl.matches("(A;").count(), 1);
         // The ACE's trustee is the text after the last ';' and before the closing ')'.
         let ace_end = sddl.rfind(')').expect("sddl must contain a closing paren");
-        let ace_start = sddl.rfind(';').expect("sddl must contain a trustee separator");
+        let ace_start = sddl
+            .rfind(';')
+            .expect("sddl must contain a trustee separator");
         let trustee = &sddl[ace_start + 1..ace_end];
         assert_eq!(trustee, WINDOWS_TEST_VALID_SID);
         // The owner (`O:`) is also that same SID.
@@ -16446,10 +17394,7 @@ mod tests {
     #[test]
     fn single_instance_payload_returns_the_validated_url_for_a_deep_link_arg() {
         let url = "gamelib://launch?appName=1&runner=gog".to_string();
-        assert_eq!(
-            single_instance_payload(&[url.clone()]),
-            (url, "deep-link")
-        );
+        assert_eq!(single_instance_payload(&[url.clone()]), (url, "deep-link"));
     }
 
     #[test]
@@ -17110,7 +18055,7 @@ mod tests {
         // the app's own deep link from inside the embed.
         let url = tauri::Url::parse("gamelib://launch?appName=1207659037&runner=gog").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Block
         );
     }
@@ -17127,7 +18072,7 @@ mod tests {
         ] {
             let url = tauri::Url::parse(candidate).unwrap();
             assert_eq!(
-                store_embed_navigation_policy(&url),
+                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
                 StoreEmbedNavigationDecision::Allow,
                 "expected free https navigation to `{candidate}` under D-28"
             );
@@ -17139,7 +18084,7 @@ mod tests {
     fn store_embed_navigation_policy_allows_http_freely() {
         let url = tauri::Url::parse("http://example.com/").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Allow
         );
     }
@@ -17152,9 +18097,86 @@ mod tests {
         // `open_external` path instead (D-28/D-29).
         let url = tauri::Url::parse("steam://rungameid/440").unwrap();
         assert_eq!(
-            store_embed_navigation_policy(&url),
+            store_embed_navigation_policy(&url, Some("store.steampowered.com")),
             StoreEmbedNavigationDecision::Handoff
         );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn store_embed_navigation_policy_blocks_steam_unless_the_top_level_page_is_valve() {
+        // todo 2026-10-05: `on_navigation` cannot tell an ad iframe from the main frame, so a
+        // `steam:` hand-off is gated on the top-level page. Off a Valve page -- or before any
+        // page has loaded -- it is blocked, not handed to the Steam client.
+        let url = tauri::Url::parse("steam://run/570").unwrap();
+        for top in [
+            None,
+            Some("store.gog.com"),
+            Some("www.amazon.com"),
+            Some("evilsteampowered.com"),
+            Some("steampowered.com.example"),
+        ] {
+            assert_eq!(
+                store_embed_navigation_policy(&url, top),
+                StoreEmbedNavigationDecision::Block,
+                "expected steam: to be blocked with top-level host {top:?}"
+            );
+        }
+        for top in [
+            "store.steampowered.com",
+            "steamcommunity.com",
+            "help.steampowered.com",
+        ] {
+            assert_eq!(
+                store_embed_navigation_policy(&url, Some(top)),
+                StoreEmbedNavigationDecision::Handoff,
+                "expected steam: to be handed off from `{top}`"
+            );
+        }
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn store_embed_navigation_policy_https_is_unaffected_by_the_top_level_host() {
+        // The steam: gate must not leak into D-28's free https navigation.
+        let url = tauri::Url::parse("https://checkout.stripe.com/pay/cs_test_abc").unwrap();
+        assert_eq!(
+            store_embed_navigation_policy(&url, None),
+            StoreEmbedNavigationDecision::Allow
+        );
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn handoff_throttle_admits_one_per_gap() {
+        let gap = Duration::from_secs(2);
+        let t0 = std::time::Instant::now();
+        let mut throttle = HandoffThrottle::default();
+        assert!(throttle.admit(t0, gap), "the first hand-off is admitted");
+        assert!(
+            !throttle.admit(t0, gap),
+            "a burst at the same instant is refused"
+        );
+        assert!(!throttle.admit(t0 + Duration::from_millis(1999), gap));
+        assert!(
+            throttle.admit(t0 + gap, gap),
+            "admitted again once the gap has passed"
+        );
+        assert!(!throttle.admit(t0 + gap + Duration::from_millis(1), gap));
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[test]
+    fn handoff_throttle_refusals_do_not_extend_the_window() {
+        // A page spamming refused requests must not lock out the next legitimate one forever.
+        let gap = Duration::from_secs(2);
+        let t0 = std::time::Instant::now();
+        let mut throttle = HandoffThrottle::default();
+        assert!(throttle.admit(t0, gap));
+        for ms in (100..2000).step_by(100) {
+            assert!(!throttle.admit(t0 + Duration::from_millis(ms), gap));
+        }
+        assert!(throttle.admit(t0 + gap, gap));
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -17170,7 +18192,7 @@ mod tests {
         ] {
             let url = tauri::Url::parse(candidate).unwrap();
             assert_eq!(
-                store_embed_navigation_policy(&url),
+                store_embed_navigation_policy(&url, Some("store.steampowered.com")),
                 StoreEmbedNavigationDecision::Block,
                 "expected `{candidate}` to be default-denied"
             );
@@ -17205,7 +18227,10 @@ mod tests {
 
         assert_eq!(state.go_back().as_deref(), Some("https://b.example/"));
         assert_eq!(state.go_back().as_deref(), Some("https://a.example/"));
-        assert!(!state.can_go_back(), "no entry remains before the first push");
+        assert!(
+            !state.can_go_back(),
+            "no entry remains before the first push"
+        );
         assert!(
             state.suppress_next_push,
             "go_back must arm the one-shot suppression flag for the confirming Finished event"
@@ -17239,12 +18264,19 @@ mod tests {
         // Mirrors `on_page_load`'s Finished handler confirming the back-navigation landed --
         // suppressed, so it must NOT push a duplicate "b" entry.
         state.push(back_target);
-        assert_eq!(state.history.len(), 3, "the suppressed confirm-push must not grow history");
+        assert_eq!(
+            state.history.len(),
+            3,
+            "the suppressed confirm-push must not grow history"
+        );
 
         // The user's actual next navigation, made from the back-ed-up "b" position.
         state.push("https://d.example/".to_string());
         assert_eq!(state.current_url().as_deref(), Some("https://d.example/"));
-        assert!(!state.can_go_forward(), "c must be gone once d is pushed from the b position");
+        assert!(
+            !state.can_go_forward(),
+            "c must be gone once d is pushed from the b position"
+        );
         assert_eq!(
             state.history,
             vec![
@@ -17263,7 +18295,11 @@ mod tests {
         state.arm_reload_suppression();
         // Mirrors `on_page_load`'s Finished handler firing for the reload's own navigation.
         state.push("https://a.example/".to_string());
-        assert_eq!(state.history.len(), 1, "reload must not grow the history stack");
+        assert_eq!(
+            state.history.len(),
+            1,
+            "reload must not grow the history stack"
+        );
         assert_eq!(state.current_url().as_deref(), Some("https://a.example/"));
     }
 
@@ -17601,7 +18637,10 @@ mod tests {
         // Anti-vacuity: the slice must be non-empty and must actually contain the branch under
         // test, so a boundary drift (e.g. the function signature changing) fails loudly here
         // rather than passing over a slice that silently stopped containing anything relevant.
-        assert!(!body.is_empty(), "store_embed_open's bounded slice must not be empty");
+        assert!(
+            !body.is_empty(),
+            "store_embed_open's bounded slice must not be empty"
+        );
         let cfg_open_pos = body
             .find("#[cfg(target_os = \"linux\")]")
             .expect("the Linux-only cfg sub-block was not located inside store_embed_open");

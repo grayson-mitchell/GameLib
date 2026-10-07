@@ -88,9 +88,9 @@ export function deriveRowState(input: {
  */
 export function attributeProgressEvent(
   current: VerbErrorMap,
-  payload: { messages: string[]; installingComponent: string }
+  payload: { messages: string[]; installingComponent: string; failed?: boolean }
 ): VerbErrorMap {
-  const { installingComponent, messages } = payload
+  const { installingComponent, messages, failed } = payload
 
   if (installingComponent === '') {
     return current
@@ -104,9 +104,14 @@ export function attributeProgressEvent(
   // test only -- including its exact looseness (a leading-space substring
   // match, not a word boundary). Do not tighten this independently of that
   // file; they are meant to agree on what counts as an error line.
-  const hasError = messages.some((message) =>
-    message.toLowerCase().includes(' err')
-  )
+  //
+  // `failed` is the backend's Done-event verdict from winetricks' exit code
+  // (2026-10-05 todo): a failed install whose abort line carried no " err"
+  // substring, or whose last lines never reached a progress tick, is still
+  // attributed here.
+  const hasError =
+    failed === true ||
+    messages.some((message) => message.toLowerCase().includes(' err'))
 
   if (!hasError) {
     return current

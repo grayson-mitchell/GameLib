@@ -171,8 +171,8 @@ describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real m
     warnSpy.mockRestore()
   })
 
-  it('resolves { response: 0, checkboxChecked: false } when requestRustInvoke resolves true (buttons[0] clicked)', async () => {
-    program = { type: 'resolve', value: true }
+  it('resolves { response: 0, checkboxChecked: false } when requestRustInvoke resolves 0 (buttons[0] clicked)', async () => {
+    program = { type: 'resolve', value: 0 }
 
     await expect(
       dialog.showMessageBox(undefined, {
@@ -188,8 +188,26 @@ describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real m
     )
   })
 
-  it('resolves { response: 1, checkboxChecked: false } when requestRustInvoke resolves false (buttons[1] clicked)', async () => {
-    program = { type: 'resolve', value: false }
+  it('folds detail into the forwarded message, since the Rust dialog only reads message', async () => {
+    program = { type: 'resolve', value: 0 }
+
+    await dialog.showMessageBox(undefined, {
+      type: 'warning',
+      title: 'Launch?',
+      message: 'A link wants to launch this game',
+      detail: 'Executable: /games/x.exe\nArguments:\n  "--foo"',
+      buttons: ["Don't launch", 'Launch'],
+      cancelId: 0
+    })
+
+    const call = callLog.find((entry) => entry.channel === RUST_DIALOG_MESSAGE)
+    expect((call?.args[0] as { message: string }).message).toBe(
+      'A link wants to launch this game\n\nExecutable: /games/x.exe\nArguments:\n  "--foo"'
+    )
+  })
+
+  it('resolves { response: 1, checkboxChecked: false } when requestRustInvoke resolves 1 (buttons[1] clicked)', async () => {
+    program = { type: 'resolve', value: 1 }
 
     await expect(
       dialog.showMessageBox(undefined, {
@@ -200,6 +218,48 @@ describe('electronStub dialog.showMessageBox (Phase 33 Plan 03, D-06/D-07 real m
         cancelId: 1
       })
     ).resolves.toEqual({ response: 1, checkboxChecked: false })
+  })
+
+  // Todo 2026-10-05 dialog-dismiss: `dialog_message` resolves null when the dialog is DISMISSED
+  // (Esc / window close) without a button. A dismissal is the caller's declared `cancelId`
+  // (Electron semantics) -- never a positional guess. Both button orders, because a guess can be
+  // right for one by coincidence: [No, Yes] has cancelId 0, so "dismiss -> 0" would pass it
+  // while answering promptI386Recovery's [Confirm, Cancel] with its destructive button.
+  it('dismissed (null) resolves the caller-declared cancelId 0 (askForceUninstall shape: destructive is buttons[1])', async () => {
+    program = { type: 'resolve', value: null }
+
+    await expect(
+      dialog.showMessageBox(undefined, {
+        buttons: [i18nLike('box.no'), i18nLike('box.yes')],
+        cancelId: 0
+      })
+    ).resolves.toEqual({ response: 0, checkboxChecked: false })
+  })
+
+  it('dismissed (null) resolves the caller-declared cancelId 1 (promptI386Recovery shape: destructive is buttons[0])', async () => {
+    program = { type: 'resolve', value: null }
+
+    await expect(
+      dialog.showMessageBox(undefined, {
+        buttons: [
+          i18nLike('box.steam.mac32Detected.confirm'),
+          i18nLike('box.cancel')
+        ],
+        cancelId: 1
+      })
+    ).resolves.toEqual({ response: 1, checkboxChecked: false })
+  })
+
+  it('single-button and no-button calls resolve 0 whether clicked (0) or dismissed (null)', async () => {
+    for (const value of [0, null]) {
+      program = { type: 'resolve', value }
+      await expect(
+        dialog.showMessageBox(undefined, { buttons: [i18nLike('box.ok')] })
+      ).resolves.toEqual({ response: 0, checkboxChecked: false })
+      await expect(
+        dialog.showMessageBox(undefined, { message: 'Done' })
+      ).resolves.toEqual({ response: 0, checkboxChecked: false })
+    }
   })
 
   it('fails safe to the caller-declared cancelId 0 on transport rejection (askForceUninstall shape: destructive is buttons[1])', async () => {

@@ -29,39 +29,60 @@ on:
 permissions:
   contents: write # required to create/update the rolling release and upload assets
 
+# Every run writes the same fixed-name assets (the three archives plus
+# SHA256SUMS-arm64 / BUILD-MANIFEST-arm64.json) to one rolling release with
+# `--clobber`. Two overlapping dispatches could interleave those uploads and
+# leave one run's archives beside the other run's digests, which
+# pin:runner-digests would then pin. Workflow-level, so the whole
+# prepare-release -> build chain is serialised; queued, never cancelled, so
+# an in-flight upload is never killed half-way through.
+concurrency:
+  group: runners-onedir-macos
+  cancel-in-progress: false
+
 jobs:
   # Release creation is isolated in its own job so a re-dispatched build leg
   # cannot race a duplicate `gh release create` (T-34.9-17). Historically this
   # guarded two concurrent matrix legs; Phase 34.18 retired the Intel leg,
-  # leaving one, but the isolation still guards against overlapping dispatches
-  # of the same workflow.
+  # leaving one. The isolation only makes the create step idempotent -- it
+  # does NOT stop overlapping dispatches interleaving their uploads; the
+  # workflow-level `concurrency:` group above is what serialises those.
   prepare-release:
     runs-on: ubuntu-latest
     steps:
-      # D-01/D-02: this workflow file is committed to BOTH gamelib/main (a
-      # workflow-only commit, so GitHub's workflow_dispatch registration rule
-      # is satisfied) and this feature branch (where it actually runs). A
-      # dispatch that lands on the default branch has neither
-      # meta/buildRunnersOnedir.ts nor the build-runners-onedir script, so it
-      # must die here, before `gh release create` runs and before any macOS
-      # runner starts -- not several minutes later on a confusing "script not
-      # found".
-      - name: Refuse to run from the default branch
+      # A dispatch against a commit that lacks meta/buildRunnersOnedir.ts or
+      # the build-runners-onedir package.json script must die here, before
+      # `gh release create` runs and before any macOS runner starts -- not
+      # several minutes later on a confusing "Missing script". This checks the
+      # commit under dispatch directly instead of comparing branch names: the
+      # earlier D-02 guard refused the default branch outright, which went
+      # stale once main gained the build script and then pushed dispatches
+      # onto an old branch whose RELEASE_TAGS no longer matched main's. This
+      # job has no checkout, so both checks read the tree through the
+      # contents API, pinned to github.sha.
+      - name: Refuse to run from a ref without the onedir build script
         env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           REF_NAME: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          SHA: ${{ github.sha }}
         run: |
-          if [ -z "$DEFAULT_BRANCH" ]; then
-            echo "::error::Could not resolve the repository's default branch from github.event.repository.default_branch. Refusing to continue rather than fail open -- this guard exists to stop a dispatch against the default branch, and an empty comparison value would silently permit exactly that."
+          if [ -z "$GH_REPO" ] || [ -z "$SHA" ]; then
+            echo "::error::Could not resolve the repository ('$GH_REPO') or the dispatched commit ('$SHA'). Refusing to continue rather than fail open -- an empty value would make the checks below vacuous."
             exit 1
           fi
 
-          if [ "$REF_NAME" = "$DEFAULT_BRANCH" ]; then
-            echo "::error::This workflow was dispatched against '$REF_NAME', the repository's default branch. Re-dispatch with --ref fix/steam-native-install-stability instead. The default branch carries this workflow file ONLY to satisfy GitHub's workflow_dispatch registration rule -- it has neither meta/buildRunnersOnedir.ts nor the build-runners-onedir script, so a run against it cannot succeed."
+          if ! gh api "repos/$GH_REPO/contents/meta/buildRunnersOnedir.ts?ref=$SHA" --silent; then
+            echo "::error::meta/buildRunnersOnedir.ts is not present at $SHA (ref '$REF_NAME'), or could not be read. Re-dispatch against a ref that carries it and the meta/releaseTags.ts you intend to ship."
             exit 1
           fi
 
-          echo "Ref check passed: dispatched against '$REF_NAME', not the default branch '$DEFAULT_BRANCH'."
+          if ! gh api -H "Accept: application/vnd.github.raw+json" "repos/$GH_REPO/contents/package.json?ref=$SHA" | grep -q '"build-runners-onedir":'; then
+            echo "::error::package.json at $SHA (ref '$REF_NAME') has no build-runners-onedir script, or could not be read. Re-dispatch against a ref that carries it and the meta/releaseTags.ts you intend to ship."
+            exit 1
+          fi
+
+          echo "Build-script check passed: $SHA (ref '$REF_NAME') carries meta/buildRunnersOnedir.ts and the build-runners-onedir script."
 
       # This job deliberately has no `actions/checkout` step -- it only talks to
       # the releases API and never needs the tree. But `gh` resolves the target
@@ -142,6 +163,21 @@ jobs:
       - name: Build the three onedir runners
         run: pnpm build-runners-onedir --arch=${{ matrix.arch }}
 
+      # Prints the digests to the run log so plan 34.18-07's developer gate
+      # (`pnpm pin:runner-digests`) can pin them for the fetch-side
+      # verification control. The `shasum -c` is a same-run self-consistency
+      # check only: SHA256SUMS was computed from these very archives by
+      # buildRunnersOnedir.ts, so it catches a missing, truncated or
+      # rewritten-after-digest archive and nothing more. It is NOT independent
+      # verification -- that is the pinned digest downloadHelperBinaries.ts
+      # checks at fetch time. It runs before the upload so a mismatch at least
+      # stops the publish.
+      - name: Check archives against this run's SHA256SUMS (self-consistency, pre-publish)
+        run: |
+          cd .build-tools/runners-onedir/out
+          cat SHA256SUMS-${{ matrix.arch }}
+          shasum -a 256 -c SHA256SUMS-${{ matrix.arch }}
+
       # Per-arch SHA256SUMS/BUILD-MANIFEST filenames, kept even with a single
       # remaining leg, for forward compatibility and pin-tool filename
       # stability -- meta/pinRunnerDigests.ts (plan 34.18-03) fetches these
@@ -156,11 +192,3 @@ jobs:
             SHA256SUMS-${{ matrix.arch }} \
             BUILD-MANIFEST-${{ matrix.arch }}.json \
             --clobber
-
-      # Surfaces the published digests in the run log so plan 34.18-07's
-      # developer gate (`pnpm pin:runner-digests`) can pin them for the
-      # fetch-side verification control.
-      - name: Print SHA256SUMS verification output
-        run: |
-          cd .build-tools/runners-onedir/out
-          shasum -a 256 -c SHA256SUMS-${{ matrix.arch }}

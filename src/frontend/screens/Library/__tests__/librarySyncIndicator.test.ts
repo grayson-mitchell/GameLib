@@ -110,7 +110,7 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       mode: 'syncing'
     },
     {
-      name: "logged in, syncing, populated library -> hidden (a refresh of a populated library is LibraryHeader's job, not a second surface)",
+      name: "logged in, syncing, populated library -> hidden (a refresh of a populated library is the tier-2 panel's Header's job, not a second surface)",
       input: {
         steamLoggedIn: true,
         steamSyncStatus: 'syncing',

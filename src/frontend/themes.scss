@@ -7,13 +7,53 @@ body {
   --cancel-button: var(--status-warning);
   --cancel-button-overlay: var(--status-warning-hover);
   --background-darker-80: var(--eighty-percent-black);
-  /* 7 consumers across 4 components used --border-color as if it were a
-     shared token; `git log -S "--border-color:" --all` shows it was never
-     declared in any revision, so all 7 rendered NO border at all. --divider
-     is the repo's divider token but is declared in only 2 of 11 theme
-     blocks, so --neutral-03 (the value themes.scss:97 itself uses) makes it
-     universal. Themes may now override. */
-  --border-color: var(--divider, var(--neutral-03));
+  /* Structural edge for 7 consumers across 4 components (WineManager table
+     and rows, the Popover frame, the SteamGridDB picker header). It was never
+     declared until 2026-10-02 (so all 7 rendered NO border), and then
+     declared as `var(--divider, var(--neutral-03))` -- which RESOLVED in
+     every theme and was VISIBLE in almost none: --divider is declared in
+     only 2 theme blocks (one of them as --neutral-03 itself) and
+     --neutral-03 in only nord-light plus _colors.scss's #272f31, so most
+     themes painted #272f31 on their own dark surface. MEASURED against
+     --body-background: 1.04:1 dracula, 1.08:1 gruvbox_dark, 1.19:1
+     high-contrast, 1.45:1 midnightMirage, and nord-light's blue only 2.63:1.
+     Resolving everywhere is not the same as being seen.
+
+     `gray` is the value the three themes that WERE visible already used (via
+     their --divider), and it clears the 3:1 non-text floor on every theme's
+     body and modal surface: worst 3.43:1 (nord-light), 3.61:1 (dracula),
+     3.73:1 (gruvbox_dark). Deliberately NOT routed through --divider, whose
+     own value is midnightMirage's invisible --neutral-03. A theme may still
+     override this, but re-measure: themeTokens.test.ts holds every theme to
+     3:1 against --body-background and --modal-background. */
+  --border-color: gray;
+
+  /* The search bar's RESTING outline. Deliberately the theme's own --accent,
+     which is what the focus ring already spends -- UI/SearchBar/index.scss
+     fades it to 90% so rest reads as a quieter version of focus rather than
+     an unrelated grey.
+
+     It was `var(--border-color)` for a few hours on 2026-10-02 and that was
+     WRONG, in a way that resolved perfectly and rendered nothing. The chain
+     then was --border-color -> `var(--divider, var(--neutral-03))`, and --divider
+     is declared in only two theme blocks while --neutral-03 is declared in
+     only one plus styles/_colors.scss's #272f31 -- so nearly every theme
+     landed on #272f31 against its own dark chrome. MEASURED, outline over
+     --navbar-background: 1.04:1 on gruvbox_dark, 1.07:1 on zombie/
+     zombie-classic and old-school, 1.09:1 nord-dark, 1.26:1 midnightMirage.
+     Only classic/cyberSpaceOasis were ever visible, at 4.11:1.
+
+     --accent is the right token precisely because every theme defines one and
+     designs it to carry against that theme's chrome: worst case over
+     --navbar-background is 3.48:1 at full strength and 3.10:1 at the 90% the
+     stylesheet uses, versus the 3:1 WCAG non-text floor. Fading further is
+     NOT safe -- 80% drops gruvbox_dark to 2.74:1.
+
+     NOTE for anyone adding a theme override here: this is one of the few
+     tokens where a muted grey is the WRONG instinct. midnightMirage used to
+     override it to --neutral-03 and that override was REMOVED in the same
+     change, because it measured 1.26:1 where inheriting measures 14.64:1. */
+  --search-bar-border: var(--accent, #0080ff);
 
   --anticheat-denied: #a25d21;
   --anticheat-broken: var(--status-warning);
@@ -90,7 +130,10 @@ body.midnightMirage {
   --osk-button-background: var(--input-background);
   --osk-button-border: var(--navbar-background);
   --search-bar-background: var(--neutral-02);
-  --search-bar-border: var(--neutral-03);
+  /* --search-bar-border deliberately NOT overridden here: this theme's own
+     --neutral-03 value measured 1.26:1 against its --navbar-background, so
+     inheriting the base --accent (14.64:1) is what makes the resting search
+     outline visible. See the base declaration's note. */
 
   /* Action Icons */
   --action-icon: var(--neutral-05);

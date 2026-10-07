@@ -286,6 +286,41 @@ describe('needsGui', () => {
     const tree = mountTree({ component: NEEDS_GUI_COMPONENT })
     expect(existsByClass(tree, 'WinetricksBrowse__tag--needsGui')).toBe(true)
   })
+
+  it('the Open GUI button is enabled and opens the GUI while nothing installs', () => {
+    const onOpenGui = jest.fn()
+    const tree = mountTree({ component: NEEDS_GUI_COMPONENT, onOpenGui })
+    const button = findByClass(tree, 'WinetricksBrowse__guiButton')
+    expect(button?.props.disabled).toBeFalsy()
+    ;(button?.props.onClick as (() => void) | undefined)?.()
+    expect(onOpenGui).toHaveBeenCalledTimes(1)
+  })
+
+  // 2026-10-05 todo: the per-row GUI button stayed live during an install,
+  // so a click started `winetricks --gui` on the prefix being installed into
+  // -- the footer GUI button has always been `disabled={installing}`.
+  it('the Open GUI button is disabled, explained, and inert while another verb installs', () => {
+    const onOpenGui = jest.fn()
+    const tree = mountTree({
+      component: NEEDS_GUI_COMPONENT,
+      installing: true,
+      installingComponent: 'dotnet48',
+      onOpenGui
+    })
+    const button = findByClass(tree, 'WinetricksBrowse__guiButton')
+    expect(button).toBeDefined()
+    expect(button?.props.disabled).toBe(true)
+    expect(typeof button?.props.title).toBe('string')
+    expect((button?.props.title as string).length).toBeGreaterThan(0)
+    // A browser does not dispatch mouse events to a disabled button, but this
+    // harness calls the handlers directly -- neither may open the GUI.
+    const onMouseDown = button?.props.onMouseDown as
+      | ((event: { preventDefault: () => void }) => void)
+      | undefined
+    onMouseDown?.({ preventDefault: () => undefined })
+    ;(button?.props.onClick as (() => void) | undefined)?.()
+    expect(onOpenGui).not.toHaveBeenCalled()
+  })
 })
 
 // C-4 / ROADMAP fence 3 invariant, parametrised over the full cross-product

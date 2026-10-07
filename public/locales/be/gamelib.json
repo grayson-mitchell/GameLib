@@ -225,7 +225,8 @@
             "groupSelectedCount_other": "Выбрана {{count}}"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} з {{total}}"
+            "filteredOfTotal": "{{shown}} з {{total}} гульні",
+            "totalGames": "{{total}} гульні"
         },
         "no_no_store_page_games": "У вашай бібліятэцы няма гульняў без старонкі крамы",
         "noStorePage": "Без старонкі крамы",
@@ -307,8 +308,6 @@
     "sideload": {
         "filter": {
             "all": "Усе",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Праграмы",
             "executables": "Выканальныя файлы",

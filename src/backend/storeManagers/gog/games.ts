@@ -517,7 +517,9 @@ export default class GOGGame implements Game {
         )
       }
     }
-    this.addShortcuts()
+    void this.addShortcuts().catch((error) =>
+      logWarning(['Could not add shortcuts for', this.id, error], LogPrefix.Gog)
+    )
     return { status: 'done' }
   }
 

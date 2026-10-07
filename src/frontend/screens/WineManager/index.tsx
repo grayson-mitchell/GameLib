@@ -125,8 +125,8 @@ export default function WineManager(): JSX.Element | null {
           <div className="infoBox">
             <FontAwesomeIcon icon={faCheck} color={'green'} />
             {t(
-              'wineExplanation.wine-crossover',
-              'Wine-Crossover is based on the Crossover OpenSource Wine project and is recommended for Intel Macs and for DX11 or older games.'
+              'gamelib:wineExplanation.wine-crossover',
+              'Wine-Crossover is based on the Crossover OpenSource Wine project and is recommended for DX11 or older games.'
             )}
           </div>
         )
@@ -135,8 +135,8 @@ export default function WineManager(): JSX.Element | null {
           <div className="infoBox">
             <FontAwesomeIcon icon={faCheck} color={'green'} />
             {t(
-              'wineExplanation.wine-staging-macos',
-              'Wine-Staging-macOS is based on the mainline Wine project and is recommended for Intel Macs and for DX11 or older games, especially when paired with the DXMT tool.'
+              'gamelib:wineExplanation.wine-staging-macos',
+              'Wine-Staging-macOS is based on the mainline Wine project and is recommended for DX11 or older games, especially when paired with the DXMT tool.'
             )}
           </div>
         )

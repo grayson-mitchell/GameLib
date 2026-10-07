@@ -14,6 +14,7 @@ import {
   logDebug,
   logError,
   logInfo,
+  logWarning,
   createGameLogWriter
 } from 'backend/logger'
 import { GameConfig } from 'backend/game_config'
@@ -34,6 +35,7 @@ import {
   isUmuSupported
 } from 'backend/utils/compatibility_layers'
 import shlex from 'shlex'
+import { nileLaunchCommandParts } from '../runnerLaunchArgv'
 import {
   killPattern,
   moveOnUnix,
@@ -139,7 +141,12 @@ export default class NileGameManager implements Game {
     }
 
     try {
-      this.addShortcuts()
+      void this.addShortcuts().catch((error) =>
+        logWarning(
+          ['Could not add shortcuts for', this.id, error],
+          LogPrefix.Nile
+        )
+      )
       libraryManagerMap['nile'].installState(this.id, true)
     } catch (error) {
       logError(['Failed to import', `${this.id}:`, error], LogPrefix.Nile)
@@ -260,7 +267,12 @@ export default class NileGameManager implements Game {
       }
       return { status: 'error', error: res.error }
     }
-    this.addShortcuts()
+    void this.addShortcuts().catch((error) =>
+      logWarning(
+        ['Could not add shortcuts for', this.id, error],
+        LogPrefix.Nile
+      )
+    )
     libraryManagerMap['nile'].installState(this.id, true)
     const metadata = libraryManagerMap['nile'].getInstallMetadata(this.id)
 
@@ -394,15 +406,14 @@ export default class NileGameManager implements Game {
         ? launchArguments.parameters
         : ''
 
-    const commandParts = [
-      'launch',
-      ...exeOverrideFlag, // Check if this works
-      ...wineFlag,
-      ...shlex.split(launchArgumentsArgs),
-      ...shlex.split(gameSettings.launcherArgs ?? ''),
-      this.id,
-      ...args
-    ]
+    const commandParts = nileLaunchCommandParts({
+      exeOverrideFlag,
+      wineFlag,
+      launchArgumentArgs: launchArgumentsArgs,
+      launcherArgs: gameSettings.launcherArgs,
+      id: this.id,
+      args
+    })
 
     sendGameStatusUpdate({
       appName: this.id,

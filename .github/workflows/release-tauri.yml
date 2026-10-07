@@ -1,4 +1,4 @@
-# Release Tauri: builds Windows + Linux + macOS (arm64 & x64) installers via
+# Release Tauri: builds Windows + Linux + macOS (Apple Silicon, arm64) installers via
 # tauri-action on a `v*` tag push (or manual workflow_dispatch), then opens a
 # DRAFT GitHub Release marked PRERELEASE for human review before publish (D-09).
 #

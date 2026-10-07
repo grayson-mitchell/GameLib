@@ -160,3 +160,32 @@ describe('F-9: an abandoned invoke is attributable to its channel', () => {
     expect(code).toContain('while ring.len() > ABANDONED_IDS_CAP')
   })
 })
+
+describe('sidecar death drains every pending invoke (todo 2026-10-05 sidecar-death)', () => {
+  // `start_reader` used to just return on stdout EOF/read error. Nothing ever emptied
+  // `SidecarState.pending`, so every Sender stayed alive in the map: a long-running invoke's
+  // `rx.recv()` never woke, and a bounded one waited its full 60s. The drain itself is a pure
+  // helper with its own cargo test; this pins that the reader thread actually CALLS it, and
+  // only once its read loop has ended.
+  function readerThreadBody(code: string): string {
+    const start = code.indexOf('fn start_reader(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('\nfn ', start + 1)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  test('the reader thread drains pending after its read loop exits', () => {
+    const body = readerThreadBody(loadMainRsCode())
+    const loopAt = body.indexOf('for line in reader.lines()')
+    const drainAt = body.indexOf(
+      'drain_pending_invokes(&state.pending, &state.abandoned'
+    )
+
+    expect(loopAt).toBeGreaterThan(-1)
+    expect(drainAt).toBeGreaterThan(loopAt)
+    // Exactly one call: a second copy inside the loop would fail every in-flight invoke on
+    // an ordinary frame.
+    expect(body.match(/drain_pending_invokes\(/g)).toHaveLength(1)
+  })
+})

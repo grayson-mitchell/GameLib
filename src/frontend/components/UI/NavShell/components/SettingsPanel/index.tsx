@@ -6,7 +6,6 @@ import {
   faCoffee,
   faUniversalAccess,
   faWineGlass,
-  faTv,
   faCircleInfo
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -22,10 +21,13 @@ import { NAV_TOUR_ID } from '../NavShellTour'
  * destination the retired left navigation held, in the settled order, plus
  * the relocated quit action last.
  *
- * Three of these rows are reparented rather than relocated: Wine Manager,
- * Accessibility and Console Mode used to be structural siblings of the
- * Settings item rather than members of its submenu -- each keeps the exact
- * guard (or lack of one) it carried at its old position.
+ * Two of these rows are reparented rather than relocated: Wine Manager and
+ * Accessibility used to be structural siblings of the Settings item rather
+ * than members of its submenu -- each keeps the exact guard (or lack of one)
+ * it carried at its old position. A third former sibling, Console Mode, has
+ * since moved again (quick 261002-b63): it no longer lives here at all, and
+ * is now an icon-only control above the search bar in the Games tier-2
+ * filter panel's `Header` component.
  *
  * The About row is the About surface's ONLY entry point, and since quick
  * `260905-d33` that surface is an in-app modal rather than an OS window. It
@@ -150,11 +152,6 @@ export default function SettingsPanel() {
         icon={faUniversalAccess}
         label={t('accessibility.title', 'Accessibility')}
         data-tour="nav-accessibility"
-      />
-      <NavItem
-        url="/console"
-        icon={faTv}
-        label={t('sidebar.console', 'Console Mode')}
       />
       <NavItem url="/settings/log" label={t('settings.navbar.log', 'Log')} />
       <NavItem

@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} hautatuta"
         },
         "header": {
-            "filteredOfTotal": "{{shown}}/{{total}}"
+            "filteredOfTotal": "{{shown}}/{{total}} joko",
+            "totalGames": "{{total}} joko"
         },
         "no_no_store_page_games": "Ez dago denda-orririk gabeko jokorik zure liburutegian",
         "noStorePage": "Denda-orririk ez",
@@ -293,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Dena",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage-ak",
             "apps": "Aplikazioak",
             "executables": "Exekutagarriak",

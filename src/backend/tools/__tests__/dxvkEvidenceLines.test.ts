@@ -66,7 +66,8 @@ const REG_DELETE_LITERAL = "'reg', 'delete'"
 const MARKER_WRITE_LITERAL = 'writeFile(currentVersionCheck, globalVersion'
 const RUNNING_WINE_COMMAND_LITERAL =
   "'Running Wine command:', commandParts.join(' ')"
-const UNAWAITED_FOREACH_SHAPE = 'dlls32.forEach(async (dll) =>'
+const AWAITED_REGISTER_LOOP_SHAPE = 'for (const dllFile of registerDlls) {'
+const AWAITED_UNREGISTER_LOOP_SHAPE = 'for (const dllFile of unregisterDlls) {'
 
 describe('DXVK install/restore evidence-line gate (F-34.5-G6-18 correction, F-34.5-G6-19)', () => {
   const toolsIndexSource = readFileSync(toolsIndexPath, 'utf-8')
@@ -141,11 +142,13 @@ describe('DXVK install/restore evidence-line gate (F-34.5-G6-18 correction, F-34
     expect(preceding).toContain('logDebug(')
   })
 
-  it('fact 7: the DLL-registration loops are un-awaited async callbacks inside a synchronous forEach', () => {
-    // Pinned so that if a future edit makes these loops awaited, THIS test changes and the
-    // settle-window requirement (F-34.5-G6-19) can be revisited deliberately, not silently.
-    // installRemove's own resolution -- and the UI switch flipping ON -- can race ahead of
-    // these reg add commands actually landing in the log.
-    expect(toolsIndexCollapsed).toContain(UNAWAITED_FOREACH_SHAPE)
+  it('fact 7: the DLL-registration and -unregistration loops are awaited, one reg command at a time', () => {
+    // This used to pin the opposite shape, un-awaited `forEach(async ...)`, which let
+    // installRemove resolve before its reg commands landed (F-34.5-G6-19's settle window). The
+    // 2026-10-05 phase 34.5 review todo made both loops awaited on purpose, and this test was
+    // changed with it. The ordering itself is proven in `dxvkInstallRemove.test.ts`; this
+    // pins the source shape a gate contract may cite.
+    expect(toolsIndexCollapsed).toContain(AWAITED_REGISTER_LOOP_SHAPE)
+    expect(toolsIndexCollapsed).toContain(AWAITED_UNREGISTER_LOOP_SHAPE)
   })
 })

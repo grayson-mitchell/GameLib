@@ -218,7 +218,8 @@
             "groupSelectedCount_other": "{{count}} odabranih"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} od {{total}}"
+            "filteredOfTotal": "{{shown}} od {{total}} igara",
+            "totalGames": "{{total}} igara"
         },
         "no_no_store_page_games": "Nema igara bez stranice trgovine u vašoj biblioteci",
         "noStorePage": "Bez stranice trgovine",
@@ -300,8 +301,6 @@
     "sideload": {
         "filter": {
             "all": "Sve",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage datoteke",
             "apps": "Aplikacije",
             "executables": "Izvršne datoteke",

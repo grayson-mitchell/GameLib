@@ -19,8 +19,8 @@ import './index.scss'
  * `NavItem` rows: Wine Manager, Accessibility, Documentation and Ko-fi
  * (all NavLink-branch rows), plus D-01's launcher row (button branch).
  * The literal hyphenated key matches the repo's existing convention
- * (`AddGameButton/index.tsx`, `ActionIcons/index.tsx`) rather than a
- * camelCase `dataTour` prop.
+ * (`AddGameButton/index.tsx`, `Header/index.tsx`'s own row-1 buttons)
+ * rather than a camelCase `dataTour` prop.
  *
  * The button branch gained `className` merging and an `active` class
  * (34.11-02 Task 1) because Views and Collections in the Games tier-2

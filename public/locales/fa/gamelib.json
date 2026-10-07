@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} مورد انتخاب شده"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} از {{total}}"
+            "filteredOfTotal": "{{shown}} از {{total}} بازی",
+            "totalGames": "{{total}} بازی"
         },
         "no_no_store_page_games": "هیچ بازی بدون صفحه فروشگاه در کتابخانه شما وجود ندارد",
         "noStorePage": "بدون صفحه فروشگاه",
@@ -293,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "همه",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImageها",
             "apps": "برنامه‌ها",
             "executables": "فایل‌های اجرایی",

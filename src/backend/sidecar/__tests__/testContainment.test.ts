@@ -891,6 +891,26 @@ const IN_SCOPE_SUITES = [
  * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
  * kit Block B gates on. A `readdirSync` recount at this task's execution time puts the directory
  * at 66 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 62 below.
+ *
+ * `sidecarStdoutFramesOnly.test.ts` (todo `sidecar-log-output-shares-the-rpc-stdout-pipe`,
+ * 2026-10-05) is classified as structurally contained: it mocks only `processGuards` (partial)
+ * and `backend/logger/index` (the same inert mock `logWriter.test.ts` uses), writes its one log
+ * file to an explicit `mkdtemp` path, and declares no `os`/`pathShim` mock. A `readdirSync`
+ * recount at this task's execution time puts the directory at 67 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 63 below.
+ *
+ * `sidecarRpcFraming.test.ts` (todo `tauri-rpc-transport-minor-defects`, 2026-10-05) is
+ * classified as structurally contained on the same basis as `outputStreamBinding.test.ts`: it
+ * declares no `jest.mock(...)`, requires only `../sidecarRpc` and the `../../platform` registry
+ * `sidecarRpc` already imports, and drives the transport over in-memory `PassThrough` streams
+ * with no store, no filesystem and no `homedir()` use. 68 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 64 below.
+ *
+ * `knownFolders.test.ts` (todo `desktop-and-documents-paths-ignore-real-user-folders`,
+ * 2026-10-05) is classified as structurally contained: it declares no `jest.mock(...)` and
+ * tests only the pure parsers (`parseUserDirs`, `parseRegQueryValue`, `expandWindowsEnv`) on
+ * string input, with no filesystem, no `homedir()` and no `reg.exe`. 69 `*.test.ts` files: 4
+ * `IN_SCOPE_SUITES` + 65 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -920,6 +940,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'invokeReturnValueSweep.test.ts',
   'isPackagedSidecar.test.ts',
   'keyringTokenStore.test.ts',
+  'knownFolders.test.ts',
   'lifecycleStub.test.ts',
   'loggerCallSiteGuard.test.ts',
   'migrationsWiring.test.ts',
@@ -943,6 +964,8 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'settingsFlows.test.ts',
   'shellFilesFlows.test.ts',
   'shortcutsFlows.test.ts',
+  'sidecarRpcFraming.test.ts',
+  'sidecarStdoutFramesOnly.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',

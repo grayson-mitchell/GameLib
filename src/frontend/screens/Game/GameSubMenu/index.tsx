@@ -325,16 +325,32 @@ export default function GamesSubmenu({
 
   async function handleAddToSteam() {
     setSteamRefresh(true)
-    if (addedToSteam) {
-      await window.api
-        .removeFromSteam(appName, runner)
-        .then(() => setAddedToSteam(false))
-    } else {
-      await window.api
-        .addToSteam(appName, runner)
-        .then((added) => setAddedToSteam(added))
+    try {
+      if (addedToSteam) {
+        await window.api
+          .removeFromSteam(appName, runner)
+          .then(() => setAddedToSteam(false))
+      } else {
+        await window.api
+          .addToSteam(appName, runner)
+          .then((added) => setAddedToSteam(added))
+      }
+    } catch (error) {
+      // A rejection (an unset GAMELIB_SHELL_EXE, a corrupt shortcuts.vdf, the
+      // invoke bound) used to leave steamRefresh true and the menu entry a
+      // spinner until remount.
+      showDialogModal({
+        showDialog: true,
+        type: 'ERROR',
+        title: tDefault('box.error.title', 'Error'),
+        message: `${tGamelib(
+          'gamepage.steamShortcut.failed',
+          'Updating the Steam shortcut failed.'
+        )}\n${String(error)}`
+      })
+    } finally {
+      setSteamRefresh(false)
     }
-    setSteamRefresh(false)
   }
 
   useEffect(() => {

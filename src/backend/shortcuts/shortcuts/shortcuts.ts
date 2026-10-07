@@ -1,4 +1,4 @@
-import { app, nativeImage, shell, type ShortcutDetails } from 'backend/platform'
+import { app, nativeImage, type ShortcutDetails } from 'backend/platform'
 import {
   chmodSync,
   existsSync,
@@ -7,9 +7,9 @@ import {
   rm,
   unlink,
   unlinkSync,
-  writeFile,
   writeFileSync
 } from 'graceful-fs'
+import { writeFile } from 'fs/promises'
 import { IconIcns } from '@shockpkg/icon-encoder'
 import { join } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -22,11 +22,13 @@ import { libraryManagerMap } from 'backend/storeManagers'
 import { isMac } from 'backend/constants/environment'
 import { userHome } from 'backend/constants/paths'
 import type { Game } from 'common/types/game_manager'
+import { writeWindowsShortcut } from './windowsShortcut'
 
 /**
  * Adds a desktop shortcut to $HOME/Desktop and to /usr/share/applications
  * so that the game can be opened from the start menu and the desktop folder.
  * Both can be disabled with addDesktopShortcuts and addStartMenuShortcuts
+ * Rejects if any requested shortcut could not be written (after trying all of them).
  * @async
  * @public
  */
@@ -50,6 +52,21 @@ async function addShortcuts(game: Game, fromMenu?: boolean) {
     return
   }
 
+  // Every requested write is attempted; any that failed are reported together at the end, so
+  // the caller never announces shortcuts that were not written.
+  const failures: string[] = []
+  const recordWrite = async (file: string, write: () => Promise<void>) => {
+    try {
+      await write()
+      logInfo(`Shortcut saved on ${file}`, LogPrefix.Backend)
+    } catch (error) {
+      logError([`Could not write shortcut ${file}`, error], LogPrefix.Backend)
+      failures.push(
+        `${file}: ${error instanceof Error ? error.message : String(error)}`
+      )
+    }
+  }
+
   switch (process.platform) {
     case 'linux': {
       const icon = await getIcon(gameInfo.app_name, gameInfo)
@@ -69,14 +86,12 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
 
       if (addDesktopShortcuts || fromMenu) {
         //777 = -rwxrwxrwx
-        writeFile(desktopFile, shortcut, { mode: 0o777 }, () => {
-          logInfo(`Shortcut saved on ${desktopFile}`, LogPrefix.Backend)
-        })
+        await recordWrite(desktopFile, () =>
+          writeFile(desktopFile, shortcut, { mode: 0o777 })
+        )
       }
       if (addStartMenuShortcuts || fromMenu) {
-        writeFile(menuFile, shortcut, () => {
-          logInfo(`Shortcut saved on ${menuFile}`, LogPrefix.Backend)
-        })
+        await recordWrite(menuFile, () => writeFile(menuFile, shortcut))
       }
       break
     }
@@ -102,12 +117,18 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
         shortcutOptions.iconIndex = 0
       }
 
+      // Not `shell.writeShortcutLink`: the sidecar has no Win32 shell-link API and stubs it to
+      // `false`, which used to drop every .lnk silently while the success toast still showed.
+      const writeLnk = async (file: string) => {
+        const result = await writeWindowsShortcut(file, shortcutOptions)
+        if (!result.ok) throw new Error(result.error)
+      }
       if (addDesktopShortcuts || fromMenu) {
-        shell.writeShortcutLink(desktopFile, shortcutOptions)
+        await recordWrite(desktopFile, () => writeLnk(desktopFile))
       }
 
       if (addStartMenuShortcuts || fromMenu) {
-        shell.writeShortcutLink(menuFile, shortcutOptions)
+        await recordWrite(menuFile, () => writeLnk(menuFile))
       }
       break
     }
@@ -117,6 +138,10 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
       }
       break
     }
+  }
+
+  if (failures.length) {
+    throw new Error(`Could not write shortcuts: ${failures.join('; ')}`)
   }
 }
 

@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} tanlangan"
         },
         "header": {
-            "filteredOfTotal": "{{total}} tadan {{shown}}"
+            "filteredOfTotal": "{{total}} o'yin tadan {{shown}}",
+            "totalGames": "{{total}} o'yin"
         },
         "no_no_store_page_games": "Kutubxonangizda do'kon sahifasi yo'q o'yinlar yo'q",
         "noStorePage": "Do'kon sahifasi yo'q",
@@ -293,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Barchasi",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage fayllar",
             "apps": "Ilovalar",
             "executables": "Bajariladigan fayllar",

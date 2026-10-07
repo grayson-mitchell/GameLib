@@ -218,7 +218,8 @@
             "groupSelectedCount_other": "{{count}} selecionados"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} de {{total}}"
+            "filteredOfTotal": "{{shown}} de {{total}} jogos",
+            "totalGames": "{{total}} jogos"
         },
         "no_no_store_page_games": "Nenhum jogo sem página de loja em sua biblioteca",
         "noStorePage": "Sem página de loja",
@@ -300,8 +301,6 @@
     "sideload": {
         "filter": {
             "all": "Tudo",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Apps",
             "executables": "Executáveis",

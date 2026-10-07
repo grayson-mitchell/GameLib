@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "{{count}} valittu"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} / {{total}}"
+            "filteredOfTotal": "{{shown}} / {{total}} peliä",
+            "totalGames": "{{total}} peliä"
         },
         "no_no_store_page_games": "Kirjastossasi ei ole pelejä ilman kauppasivua",
         "noStorePage": "Ei kauppasivua",
@@ -293,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Kaikki",
-            "appExtension": "Sovellus",
-            "appImageExtension": "AppImage",
             "appImages": "AppImage-tiedostot",
             "apps": "Sovellukset",
             "executables": "Suoritettavat tiedostot",

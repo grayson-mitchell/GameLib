@@ -151,6 +151,58 @@ describe('attributeProgressEvent', () => {
   })
 })
 
+// 2026-10-05 todo (failed install rarely reaches Failed): the backend's Done
+// event now carries `failed` from the winetricks exit code, so an install
+// that aborted without printing a " err" line is still attributed.
+describe('attributeProgressEvent: exit-code failure', () => {
+  it('a failed Done flags the verb even with no error-looking line', () => {
+    const current: VerbErrorMap = {}
+    const result = attributeProgressEvent(current, {
+      messages: ['Done'],
+      installingComponent: 'xact',
+      failed: true
+    })
+    expect(result).not.toBe(current)
+    expect(result.xact).toBe(true)
+  })
+
+  it('a successful Done returns the SAME object reference', () => {
+    const current: VerbErrorMap = {}
+    const result = attributeProgressEvent(current, {
+      messages: ['Done'],
+      installingComponent: 'xact',
+      failed: false
+    })
+    expect(result).toBe(current)
+  })
+
+  it('a failed Done with no verb (a GUI or list run) flags nothing', () => {
+    const current: VerbErrorMap = {}
+    const result = attributeProgressEvent(current, {
+      messages: ['Done'],
+      installingComponent: '',
+      failed: true
+    })
+    expect(result).toBe(current)
+  })
+
+  it('the flagged verb derives to errored once the install has stopped', () => {
+    const erroredVerbs = attributeProgressEvent(
+      {},
+      { messages: ['Done'], installingComponent: 'xact', failed: true }
+    )
+    expect(
+      deriveRowState({
+        verb: 'xact',
+        installed: [],
+        installing: false,
+        installingComponent: 'xact',
+        erroredVerbs
+      })
+    ).toBe('errored')
+  })
+})
+
 describe('clearVerbError', () => {
   it('Test 14: clearing a flagged verb returns a new map without it', () => {
     const current: VerbErrorMap = { xact: true, vcrun2019: true }

@@ -97,19 +97,26 @@ describe('NavShell shell tokens (REQ-34.10-10, REQ-34.10-03)', () => {
     expect(preReversalFixture).not.toMatch(/--traffic-light-inset:\s*78px\s*;/)
   })
 
-  it('the literal 204px appears exactly once under src/frontend -- inside the single --tier2-width declaration, nowhere else', () => {
+  it('the literal 256px appears exactly once under src/frontend -- inside the single --tier2-width declaration, nowhere else', () => {
     // REQ-34.10-10's whole point: 34.11 must be able to retune this value
-    // in one place. A second, unrelated `204px` anywhere would either be a
+    // in one place. A second, unrelated `256px` anywhere would either be a
     // duplicate declaration or a hardcoded value that silently drifts from
     // the token.
-    expect(countMatches(/204px/g)).toBe(1)
+    //
+    // Retuned 204px -> 256px on 2026-10-02. This gate exercising its own
+    // purpose is the reason it is here, so updating the pinned literal is
+    // the expected maintenance, NOT a gate being weakened to admit a change.
+    // The width is not free to be anything: see the device-pixel reasoning
+    // in NavShell/index.scss's divider comment -- it must be divisible by 4,
+    // which is why the +50 originally asked for (254px) was rejected.
+    expect(countMatches(/256px/g)).toBe(1)
   })
 
   it('sanity: NavShell/index.scss itself is the file carrying the --tier2-width declaration', () => {
     const shellStylesheet = readStripped(
       join(FRONTEND_ROOT, 'components/UI/NavShell/index.scss')
     )
-    expect(shellStylesheet).toMatch(/--tier2-width:\s*204px\s*;/)
+    expect(shellStylesheet).toMatch(/--tier2-width:\s*256px\s*;/)
   })
 
   it('the literal 78px appears exactly once under src/frontend -- inside the single --traffic-light-inset declaration, nowhere else', () => {

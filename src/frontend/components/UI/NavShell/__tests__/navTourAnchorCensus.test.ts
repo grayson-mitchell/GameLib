@@ -18,7 +18,8 @@
  * component it renders.
  *
  * This census is the other half. It proves UNIQUENESS -- for each id,
- * exactly one source file defines an element carrying that value -- but it
+ * exactly one element definition, counted per occurrence rather than per
+ * file, carries that value -- but it
  * is source-text search, so it cannot tell whether that one occurrence
  * landed on the correct row. It would pass just as happily if all twelve
  * ids were individually correct, or if all twelve were individually wrong
@@ -133,6 +134,20 @@ function filesContaining(files: string[], needle: string): string[] {
   return files.filter((path) => readStripped(path).includes(needle))
 }
 
+// Every occurrence, not every file: one `path` entry per hit, so a file that
+// defines the same anchor twice contributes two entries. A per-FILE count
+// (`filesContaining`) reports exactly 1 for a file carrying two
+// `data-tour="nav-settings"` elements -- the duplicate-selector class this
+// census exists to catch. Note `library-view-toggle` legitimately appears
+// twice in one ternary in `Header/index.tsx` (only one branch renders); it
+// is not censused here, and would need an explicit allow-list entry if it
+// ever were.
+function occurrencesOf(files: string[], needle: string): string[] {
+  return files.flatMap((path) =>
+    Array<string>(readStripped(path).split(needle).length - 1).fill(path)
+  )
+}
+
 // The twelve NavShellTour step ids (12 `element: '[data-tour="..."]'`
 // entries in `NavShellTour/index.tsx` at the time this census was
 // written -- cross-checked by hand against that file, not derived from it).
@@ -200,16 +215,13 @@ describe('nav/library tour anchor census (Layer B: uniqueness, not correctness)'
   it.each(NAV_TOUR_STEP_IDS)(
     'nav tour step id %s is defined on exactly one element in src/frontend',
     (id) => {
-      const matches = filesContaining(
-        elementDefinitionFiles,
-        `data-tour="${id}"`
-      )
+      const matches = occurrencesOf(elementDefinitionFiles, `data-tour="${id}"`)
       expect(matches).toHaveLength(1)
     }
   )
 
   it(`launcher id ${NAV_LAUNCHER_ID} is defined on exactly one element in src/frontend`, () => {
-    const matches = filesContaining(
+    const matches = occurrencesOf(
       elementDefinitionFiles,
       `data-tour="${NAV_LAUNCHER_ID}"`
     )
@@ -219,10 +231,7 @@ describe('nav/library tour anchor census (Layer B: uniqueness, not correctness)'
   it.each(LIBRARY_TOUR_ANCHOR_IDS)(
     'library tour anchor id %s is defined on exactly one element in src/frontend',
     (id) => {
-      const matches = filesContaining(
-        elementDefinitionFiles,
-        `data-tour="${id}"`
-      )
+      const matches = occurrencesOf(elementDefinitionFiles, `data-tour="${id}"`)
       expect(matches).toHaveLength(1)
     }
   )

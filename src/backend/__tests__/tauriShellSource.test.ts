@@ -17,6 +17,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
+  normalizeSourceWhitespace,
   stripSourceComments,
   stripTrailingLineComment
 } from '../testUtils/stripSourceComments'
@@ -246,10 +247,39 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
     expect(fnIdx).toBeGreaterThan(-1)
     const bodyEnd = code.indexOf('\n}', fnIdx)
     const body = code.slice(fnIdx, bodyEnd)
+    // The slice above relies on `\n}` -- a close brace at COLUMN 0 -- marking the end of the
+    // function. rustfmt indents every brace it emits inside a body (`    } else {`, `    };`),
+    // so that stays true across a reformat. Asserted rather than assumed, because a truncated
+    // body would make the fallback search below fail for a reason that has nothing to do with
+    // what this test is about (fast task 261003-t8r).
+    //
+    // The check is a BRACE BALANCE, not "no `\n}` in body": `body` is cut at the first `\n}`,
+    // so it can never contain one and that check could not fail (todo 2026-10-05). If the cut
+    // brace really closes the function, every `{` in the body is matched except the fn's own
+    // opener -- balance exactly 1. An earlier column-0 `}` leaves nested blocks open and the
+    // balance above 1. String literals are blanked first (`{dark}` in a format string).
+    // Proven by moving the `if let Ok(img) = Image::from_bytes(bytes) {` block's closing
+    // brace to column 0 in main.rs: the old check and the ordering check below both passed on
+    // that truncated body; this one fails.
+    expect(bodyEnd).toBeGreaterThan(fnIdx)
+    const bodyNoStrings = body.replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    const braceBalance =
+      (bodyNoStrings.match(/\{/g) ?? []).length -
+      (bodyNoStrings.match(/\}/g) ?? []).length
+    expect(braceBalance).toBe(1)
     // The macOS block must not be the only path -- TRAY_ICON_DARK/LIGHT selection must still
     // appear textually after it as the fallback for both platforms.
-    const macBlockIdx = body.indexOf('TRAY_ICON_TEMPLATE')
-    const fallbackIdx = body.indexOf('TRAY_ICON_DARK } else { TRAY_ICON_LIGHT')
+    //
+    // Matched against WHITESPACE-NORMALISED text (fast task 261003-t8r). This gate used to
+    // search the raw body for `TRAY_ICON_DARK } else { TRAY_ICON_LIGHT`, which exists only
+    // while `main.rs` keeps that selection on one line; `cargo fmt` expands it across five
+    // lines and the `indexOf` became -1. The assertion's INTENT is unchanged -- it is still an
+    // ordering claim, fallback strictly after the macOS block -- but it no longer doubles as a
+    // pin on the file's hand formatting. BOTH indices are derived from `flat`: an offset taken
+    // from normalised text is not comparable with one taken from raw text.
+    const flat = normalizeSourceWhitespace(body)
+    const macBlockIdx = flat.indexOf('TRAY_ICON_TEMPLATE')
+    const fallbackIdx = flat.indexOf('TRAY_ICON_DARK } else { TRAY_ICON_LIGHT')
     expect(macBlockIdx).toBeGreaterThan(-1)
     expect(fallbackIdx).toBeGreaterThan(macBlockIdx)
   })
@@ -605,6 +635,32 @@ describe('main.rs exitToTray is decided at close time (Phase 35 Plan 06 task 3, 
     // written to catch.
     const code = loadMainRsCode()
     expect(code).not.toContain('tray_settings.exit_to_tray')
+  })
+})
+
+describe('main.rs tray Quit routes through the sidecar handleExit (todo 2026-10-05 tray-quit-bypasses-the-pending-operations-confirm)', () => {
+  // The defect: `"quit" => app_handle.exit(0)` skipped the sidecar's `handleExit()`, so tray
+  // Quit with a download running killed it with no "pending operations" confirm. The routing
+  // POLICY (probe, then send, else exit) is covered by main.rs's own #[cfg(test)] mod
+  // (`tray_quit_*`); this gate pins that the tray arm actually uses it.
+  test('the tray "quit" arm does not exit directly', () => {
+    const code = loadMainRsCode()
+    const armMatch = code.match(/^\s*"quit" =>[^\n]*$/m)
+    expect(armMatch).not.toBeNull()
+    const arm = armMatch ? armMatch[0] : ''
+    expect(arm).not.toContain('.exit(')
+    expect(arm).toContain('quit_from_tray(app_handle)')
+  })
+
+  test('quit_from_tray sends the sidecar quit channel and keeps exit(0) only as a fallback', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn quit_from_tray(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
+    expect(body).toContain('SIDECAR_QUIT_CHANNEL')
+    expect(body).toContain('tray_quit_via_sidecar(')
+    expect(body).toContain('.exit(0)')
+    expect(code).toMatch(/const SIDECAR_QUIT_CHANNEL: &str = "quit";/)
   })
 })
 
@@ -1300,6 +1356,70 @@ describe('WR-07 (Plan 24) title-tracking hook + F-4 visible-only presentation ga
     expect((hiddenWindowsBody.match(/\.visible\(false\)/g) ?? []).length).toBe(
       2
     )
+  })
+
+  // Quick task 261003-nsk, Task 2 (D-3): the visible Humble sheet narrows from 900 to 572;
+  // the pristine Epic window (a DIFFERENT form layout, out of scope by D-3) stays 900. Two
+  // helpers mirroring the file's existing find-start-then-find-end slicing idiom (identical
+  // in shape to the sibling copies already defined in other describe blocks in this file).
+  function extractHumbleLoginOpenArmBody(code: string): string {
+    const armStart = code.indexOf('"humble_login_open" => {')
+    expect(armStart).toBeGreaterThan(-1)
+    const armEnd = code.indexOf('"humble_login_cookies" => {', armStart)
+    expect(armEnd).toBeGreaterThan(armStart)
+    return code.slice(armStart, armEnd)
+  }
+
+  function extractPristineLoginFnBody(code: string): string {
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  test("Guard 1 (D-3): humble_login_open's if-visible block carries the narrowed 572-wide sizing call and no longer carries the former 900-wide one", () => {
+    const code = loadMainRsCode()
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
+    expect(visibleBlock).toContain('.inner_size(572.0, 700.0)')
+    // Scoped to this block only -- a file-wide negative would red on Epic's own legitimate
+    // 900 at a different call site, which D-3 requires to stay (see Guard 2 below).
+    expect(visibleBlock).not.toContain('.inner_size(900.0, 700.0)')
+  })
+
+  test("Guard 1 self-test (RED proof): a synthetic visible block still carrying the pre-fix 900-wide call fails this guard's positive clause", () => {
+    const synthetic = [
+      '"humble_login_open" => {',
+      '  if visible {',
+      '    builder = builder.inner_size(900.0, 700.0);',
+      '  }',
+      '}',
+      '"humble_login_cookies" => {}'
+    ].join('\n')
+    const code = loadMainRsCode(synthetic)
+    const armBody = extractHumbleLoginOpenArmBody(code)
+    const visibleBlock = extractBracedBlock(armBody, 'if visible {')
+    expect(visibleBlock).not.toContain('.inner_size(572.0, 700.0)')
+  })
+
+  test('Guard 2 (D-3 scope guard): open_pristine_epic_login_window keeps its own 900-wide sizing call, unaffected by the narrowed Humble sheet', () => {
+    const code = loadMainRsCode()
+    const pristineBody = extractPristineLoginFnBody(code)
+    expect(pristineBody).toContain('.inner_size(900.0, 700.0)')
+  })
+
+  test("Guard 2 self-test (RED proof): a synthetic pristine body narrowed to 572 fails this guard's positive clause", () => {
+    const synthetic = [
+      'fn open_pristine_epic_login_window(',
+      ') {',
+      '  window_builder = window_builder.inner_size(572.0, 700.0);',
+      '}',
+      '#[cfg(target_os = "macos")]'
+    ].join('\n')
+    const code = loadMainRsCode(synthetic)
+    const pristineBody = extractPristineLoginFnBody(code)
+    expect(pristineBody).not.toContain('.inner_size(900.0, 700.0)')
   })
 })
 
@@ -4230,5 +4350,21 @@ describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handle
     expect(props.hasSendPtrShim).toBe(false)
     expect(props.hasRawNsWindowCast).toBe(false)
     expect(props.hasRetainedResolver).toBe(true)
+  })
+})
+
+describe('main.rs sidecar_send does not write the pipe on the main thread (todo 2026-10-05 tauri-rpc-transport-minor-defects, defect 2)', () => {
+  // A non-async `#[tauri::command]` runs on the main thread in Tauri v2. `sidecar_send` used to
+  // take the stdin mutex and do a blocking `write_all`/`flush` there, so a busy sidecar with a
+  // full pipe froze the UI. It now only enqueues onto a single FIFO writer thread (order across
+  // sends is preserved, which an `async` + `spawn_blocking` pool would not guarantee). The
+  // queue's behaviour is covered by main.rs's own `send_writer_*` tests.
+  test('the sidecar_send body enqueues and never calls write_frame itself', () => {
+    const code = loadMainRsCode()
+    const fnIdx = code.indexOf('fn sidecar_send(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
+    expect(body).not.toContain('write_frame(')
+    expect(body).toContain('SidecarSendQueue')
   })
 })

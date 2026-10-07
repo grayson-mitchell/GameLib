@@ -26,6 +26,7 @@ import {
 import {
   logError,
   logInfo,
+  logWarning,
   LogPrefix,
   createGameLogWriter
 } from 'backend/logger'
@@ -47,6 +48,7 @@ import { join } from 'path'
 import { gameInfoStore } from './electronStores'
 import { removeNonSteamGame } from '../../shortcuts/nonesteamgame/nonesteamgame'
 import shlex from 'shlex'
+import { legendaryLaunchArgumentFields } from '../runnerLaunchArgv'
 import { t } from 'i18next'
 import { isOnline } from '../../online_monitor'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
@@ -652,7 +654,12 @@ export default class LegendaryGame implements Game {
       }
       return { status: 'error', error: res.error }
     }
-    this.addShortcuts()
+    void this.addShortcuts().catch((error) =>
+      logWarning(
+        ['Could not add shortcuts for', this.appName, error],
+        LogPrefix.Legendary
+      )
+    )
 
     return { status: 'done' }
   }
@@ -827,7 +834,12 @@ export default class LegendaryGame implements Game {
       abortId: this.appName,
       logWriters: [logWriter]
     })
-    this.addShortcuts()
+    void this.addShortcuts().catch((error) =>
+      logWarning(
+        ['Could not add shortcuts for', this.appName, error],
+        LogPrefix.Legendary
+      )
+    )
     const errorMatch = res.stderr.match(/^.*ERROR:.*$/gm)?.join('') ?? ''
     res.error = (res.error ?? '') + errorMatch
     if (res.error) {
@@ -997,9 +1009,11 @@ export default class LegendaryGame implements Game {
     const command: LegendaryCommand = {
       subcommand: 'launch',
       appName: LegendaryAppName.parse(appNameToLaunch),
-      extraArguments: [...args, launchArgumentArgs, gameSettings.launcherArgs]
-        .filter(Boolean)
-        .join(' '),
+      ...legendaryLaunchArgumentFields({
+        args,
+        launchArgumentArgs,
+        launcherArgs: gameSettings.launcherArgs
+      }),
       ...wineFlags
     }
     if (skipVersionCheck) command['--skip-version-check'] = true

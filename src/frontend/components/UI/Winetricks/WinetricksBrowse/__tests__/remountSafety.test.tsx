@@ -301,7 +301,7 @@ const FIXTURE_COMPONENTS: WinetricksComponent[] = [
 
 type ProgressListener = (
   e: unknown,
-  payload: { messages: string[]; installingComponent: string }
+  payload: { messages: string[]; installingComponent: string; failed?: boolean }
 ) => void
 type InstallingListener = (e: unknown, component: string) => void
 
@@ -457,5 +457,99 @@ describe('Winetricks remount safety (D-17/D-18, C-1)', () => {
 
     const afterRefetch = reinvoke(props)
     expect(browseHasRevalidatingIndicator(afterRefetch)).toBe(false)
+  })
+})
+
+// The three 2026-10-05 winetricks todos, at the dialog boundary. Reuses this
+// file's harness because it is the one that already drives `Winetricks`'s
+// real state and listeners; the assertions read the props `Winetricks`
+// hands the (mocked) `WinetricksBrowse`, which is exactly what every row
+// derives its state from.
+type BrowseProps = {
+  installing: boolean
+  installingComponent: string
+  erroredVerbs: Record<string, true>
+  onInstall: (verb: string) => void
+  onOpenGui: () => void
+}
+
+function browseProps(winetricksTree: ElementLike): BrowseProps {
+  const el = findElementByType(winetricksTree, MockedWinetricksBrowse)
+  if (!el) {
+    throw new Error(
+      'WinetricksBrowse is not mounted -- this test proves nothing'
+    )
+  }
+  return el.props as unknown as BrowseProps
+}
+
+describe('Winetricks install lifecycle (2026-10-05 todos)', () => {
+  it('install() marks the verb in flight immediately, before any backend event', async () => {
+    const { props, tree } = await mountSettled()
+    browseProps(tree).onInstall('vcrun2019')
+
+    const after = browseProps(reinvoke(props))
+    expect(mockApi.winetricksInstall).toHaveBeenCalledTimes(1)
+    expect(after.installing).toBe(true)
+    expect(after.installingComponent).toBe('vcrun2019')
+  })
+
+  it("the backend's installing-change event for the verb does not clear the in-flight state", async () => {
+    const { props, tree } = await mountSettled()
+    browseProps(tree).onInstall('vcrun2019')
+    reinvoke(props)
+
+    capturedInstallingListener()({}, 'vcrun2019')
+    const during = browseProps(reinvoke(props))
+    expect(during.installing).toBe(true)
+    expect(during.installingComponent).toBe('vcrun2019')
+
+    capturedInstallingListener()({}, '')
+    const after = browseProps(reinvoke(props))
+    expect(after.installing).toBe(false)
+  })
+
+  it('a backend-started install (no click) is picked up from the installing-change event', async () => {
+    const { props } = await mountSettled()
+    capturedInstallingListener()({}, 'xact')
+    const during = browseProps(reinvoke(props))
+    expect(during.installing).toBe(true)
+    expect(during.installingComponent).toBe('xact')
+  })
+
+  it('an untagged Done (a GUI or list run exiting) does not end the running install', async () => {
+    const { props, tree } = await mountSettled()
+    browseProps(tree).onInstall('dotnet48')
+    reinvoke(props)
+
+    capturedProgressListener()(
+      {},
+      { messages: ['Done'], installingComponent: '' }
+    )
+    const after = browseProps(reinvoke(props))
+    expect(after.installing).toBe(true)
+    expect(after.installingComponent).toBe('dotnet48')
+  })
+
+  it('the per-row Open GUI callback is a no-op while an install is in flight', async () => {
+    const { props, tree } = await mountSettled()
+    browseProps(tree).onInstall('dotnet48')
+    browseProps(reinvoke(props)).onOpenGui()
+    expect(mockApi.callTool).not.toHaveBeenCalled()
+  })
+
+  it('a failed Done (non-zero winetricks exit) flags the verb errored', async () => {
+    const { props, tree } = await mountSettled()
+    browseProps(tree).onInstall('vcrun2019')
+    reinvoke(props)
+
+    capturedProgressListener()(
+      {},
+      { messages: ['Done'], installingComponent: 'vcrun2019', failed: true }
+    )
+    capturedInstallingListener()({}, '')
+    const after = browseProps(reinvoke(props))
+    expect(after.installing).toBe(false)
+    expect(after.erroredVerbs.vcrun2019).toBe(true)
   })
 })

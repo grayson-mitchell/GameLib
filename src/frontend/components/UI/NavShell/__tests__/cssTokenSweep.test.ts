@@ -53,12 +53,32 @@
  *      top -- do NOT hand-roll a stripper here.
  *   B. This gate checks NAMES, not SCOPES. A declaration found ANYWHERE in
  *      ANY file counts as declared, so a token declared under one narrow
- *      selector reads as universally available. `--search-bar-border` is the
- *      worked example: it is declared exactly once, at `themes.scss:58`
- *      inside `body.midnightMirage`, and on the other 10 themes it resolves
- *      to nothing. This gate would not have caught that, and did not; the
+ *      selector reads as universally available. `--search-bar-border` was
+ *      the worked example: it was declared exactly once, inside
+ *      `body.midnightMirage`, and on every other theme it resolved to
+ *      nothing. This gate would not have caught that, and did not; the
  *      `260912-it4` sweep found it only via the misspelled fallback arm
  *      sitting behind it. A scope-aware sweep is a different, harder gate.
+ *
+ *      That token is NO LONGER an example of the blind spot -- it was fixed
+ *      on 2026-10-02, and `themes.scss` now declares it on base `body` as
+ *      `var(--accent, #0080ff)`. It was briefly `var(--border-color)` the
+ *      same day, which is worth recording because it is a SECOND, subtler
+ *      instance of the same family: that chain resolved in every theme and
+ *      still rendered nothing, because `--border-color` is
+ *      `var(--divider, var(--neutral-03))` and both arms are near-universally
+ *      undeclared, landing on `_colors.scss`'s #272f31 -- measured at 1.07:1
+ *      against `--navbar-background` on zombie-classic. Name-scope checking
+ *      cannot see that either; only measuring the rendered pair can. The
+ *      blind spot is
+ *      unchanged and still real; only this illustration of it is spent. It
+ *      is kept rather than swapped for a live example deliberately: naming a
+ *      CURRENTLY-broken token here would make this header a to-do list that
+ *      rots the moment someone fixes it, which is what just happened. The
+ *      line number this used to cite ("themes.scss:58") was already stale
+ *      against the pre-fix tree -- the declaration sat at :93 -- so it is
+ *      dropped rather than re-pinned; a scope-aware gate is the fix, not a
+ *      hand-maintained line reference.
  */
 import { execFileSync } from 'child_process'
 import { readFileSync } from 'fs'

@@ -211,7 +211,8 @@
             "groupSelectedCount_other": "Đã chọn {{count}}"
         },
         "header": {
-            "filteredOfTotal": "{{shown}} trên {{total}}"
+            "filteredOfTotal": "{{shown}} trên {{total}} game",
+            "totalGames": "{{total}} game"
         },
         "no_no_store_page_games": "Không có game nào thiếu trang cửa hàng trong thư viện của bạn",
         "noStorePage": "Không có trang cửa hàng",
@@ -293,8 +294,6 @@
     "sideload": {
         "filter": {
             "all": "Tất cả",
-            "appExtension": "App",
-            "appImageExtension": "AppImage",
             "appImages": "AppImages",
             "apps": "Ứng dụng",
             "executables": "Tệp thực thi",

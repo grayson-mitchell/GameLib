@@ -8,6 +8,7 @@ import ContextProvider from 'frontend/state/ContextProvider'
 
 const EacRuntime = () => {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [installing, setInstalling] = useState(false)
   const [eacRuntime, setEacRuntime] = useSetting('eacRuntime', false)
   const [useGameMode, setUseGameMode] = useSetting('useGameMode', false)
@@ -44,8 +45,22 @@ const EacRuntime = () => {
       const isInstalled = await window.api.isRuntimeInstalled('eac_runtime')
       if (!isInstalled) {
         setInstalling(true)
-        const success = await window.api.downloadRuntime('eac_runtime')
-        setInstalling(false)
+        let success = false
+        try {
+          success = await window.api.downloadRuntime('eac_runtime')
+        } catch (error) {
+          showDialogModal({
+            showDialog: true,
+            type: 'ERROR',
+            title: t('box.error.title', 'Error'),
+            message: `${tGamelib(
+              'settings.eacRuntime.installFailed',
+              'The EAC Runtime could not be installed.'
+            )}\n${String(error)}`
+          })
+        } finally {
+          setInstalling(false)
+        }
         if (!success) {
           return
         }

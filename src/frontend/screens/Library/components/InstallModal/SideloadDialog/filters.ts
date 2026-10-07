@@ -24,6 +24,14 @@ import { InstallPlatform } from 'common/types'
 // this keeps the generated catalog small and each distinct English string
 // a single translation unit.
 
+// i18n-gate-exempt: filename-extension matchers handed to the native picker, never rendered copy.
+// They must never go through t: a locale that translates 'App' to 'Aplicación'
+// makes the macOS picker filter `*.Aplicación` and hide every .app bundle (the
+// same for AppImage on Linux). The capitalized literals need this declaration-
+// level exemption, so they live in this one statement; the lowercase ones
+// below are exempt by shape.
+const PICKER_EXTENSIONS = { appImage: 'AppImage', appBundle: 'App' } as const
+
 export function localImageFilters(t: TFunction) {
   return [
     {
@@ -54,9 +62,7 @@ export function fileFilters(platform: InstallPlatform, t: TFunction) {
       return [
         {
           name: t('gamelib:sideload.filter.appImages', 'AppImages'),
-          extensions: [
-            t('gamelib:sideload.filter.appImageExtension', 'AppImage')
-          ]
+          extensions: [PICKER_EXTENSIONS.appImage]
         },
         {
           name: t('gamelib:sideload.filter.otherBinaries', 'Other Binaries'),
@@ -69,7 +75,7 @@ export function fileFilters(platform: InstallPlatform, t: TFunction) {
       return [
         {
           name: t('gamelib:sideload.filter.apps', 'Apps'),
-          extensions: [t('gamelib:sideload.filter.appExtension', 'App')]
+          extensions: [PICKER_EXTENSIONS.appBundle]
         },
         {
           name: t('gamelib:sideload.filter.otherBinaries', 'Other Binaries'),

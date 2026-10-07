@@ -57,19 +57,25 @@ const WineItem = ({
   }
 
   async function install() {
-    return window.api.installWineVersion({
-      version,
-      date,
-      downsize,
-      disksize,
-      download,
-      checksum,
-      isInstalled,
-      hasUpdate,
-      type,
-      installDir,
-      release_notes_link
-    })
+    // Progress and the outcome notification arrive by push from the backend;
+    // a rejection here only needs logging instead of going unhandled.
+    return window.api
+      .installWineVersion({
+        version,
+        date,
+        downsize,
+        disksize,
+        download,
+        checksum,
+        isInstalled,
+        hasUpdate,
+        type,
+        installDir,
+        release_notes_link
+      })
+      .catch((error) =>
+        window.api.logError(`Installing ${version} failed: ${error}`)
+      )
   }
 
   async function remove() {

@@ -731,6 +731,9 @@ interface FrontendMessages {
   progressOfWinetricks: (payload: {
     messages: string[]
     installingComponent: string
+    // Set only on the `['Done']` event: true when winetricks exited non-zero
+    // (or by signal). Absent on every intermediate progress event.
+    failed?: boolean
   }) => void
   progressOfWineManager: (version: string, progress: WineManagerStatus) => void
   'installing-winetricks-component': (component: string) => void

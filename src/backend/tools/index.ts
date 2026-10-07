@@ -289,27 +289,15 @@ export const DXVK = {
       logInfo('Removing DLL overrides', LogPrefix.ToolInstaller)
 
       // unregister the dlls on the wine prefix
-      if (is64bitPrefix) {
-        dlls64.forEach(async (dll) => {
-          dll = dll.replace('.dll', '')
-          const unregisterDll = [
-            'reg',
-            'delete',
-            'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
-            '/v',
-            dll,
-            '/f'
-          ]
-          await runWineCommand({
-            gameSettings,
-            commandParts: unregisterDll,
-            wait: true,
-            protonVerb: 'run'
-          })
-        })
-      }
-      dlls32.forEach(async (dll) => {
-        dll = dll.replace('.dll', '')
+      // Awaited one at a time: `wineboot -u` below must not race these deletes, and the toggle
+      // must not resolve before the overrides are actually gone.
+      // De-duplicated: dlls64 and dlls32 carry the same file names, and each entry is a whole
+      // wine process, so the plain concat doubled the work under toggleDXVK's 60s bound.
+      const unregisterDlls = is64bitPrefix
+        ? [...new Set([...dlls64, ...dlls32])]
+        : dlls32
+      for (const dllFile of unregisterDlls) {
+        const dll = dllFile.replace('.dll', '')
         const unregisterDll = [
           'reg',
           'delete',
@@ -324,7 +312,7 @@ export const DXVK = {
           wait: true,
           protonVerb: 'run'
         })
-      })
+      }
 
       logInfo('Removing DXVK DLLs', LogPrefix.ToolInstaller)
 
@@ -334,7 +322,7 @@ export const DXVK = {
         dllsToRemove = dlls64.map(
           (dll) => `${winePrefix}/drive_c/windows/system32/${dll}`
         )
-        dllsToRemove.concat(
+        dllsToRemove = dllsToRemove.concat(
           dlls32.map((dll) => `${winePrefix}/drive_c/windows/syswow64/${dll}`)
         )
       } else {
@@ -417,31 +405,14 @@ export const DXVK = {
     }
 
     // register dlls on the wine prefix
-    if (is64bitPrefix) {
-      dlls64.forEach(async (dll) => {
-        // remove the .dll extension otherwise will fail
-        dll = dll.replace('.dll', '')
-        const registerDll = [
-          'reg',
-          'add',
-          'HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides',
-          '/v',
-          dll,
-          '/d',
-          'native,builtin',
-          '/f'
-        ]
-        await runWineCommand({
-          gameSettings,
-          commandParts: registerDll,
-          wait: true,
-          protonVerb: 'run'
-        })
-      })
-    }
-    dlls32.forEach(async (dll) => {
+    // Awaited one at a time, so the toggle resolves only once the overrides are written.
+    // De-duplicated for the same reason as the unregister loop above.
+    const registerDlls = is64bitPrefix
+      ? [...new Set([...dlls64, ...dlls32])]
+      : dlls32
+    for (const dllFile of registerDlls) {
       // remove the .dll extension otherwise will fail
-      dll = dll.replace('.dll', '')
+      const dll = dllFile.replace('.dll', '')
       const registerDll = [
         'reg',
         'add',
@@ -458,7 +429,7 @@ export const DXVK = {
         wait: true,
         protonVerb: 'run'
       })
-    })
+    }
 
     //locate and copy nvngx.dll to support DLSS on Nvidia GPUs
     if (tool === 'dxvk-nvapi' && action === 'backup') {
@@ -556,7 +527,15 @@ export const Winetricks = {
     appName: string,
     args: string[],
     returnOutput = false,
-    envOverrides?: Record<string, string>
+    envOverrides?: Record<string, string>,
+    // The verb this run installs, or '' for every other run (GUI, list-all).
+    // Passed explicitly rather than read from the module-global
+    // `installingComponent`: that global names whichever install is running
+    // RIGHT NOW, so a GUI or list run started mid-install used to tag its own
+    // progress/Done events with the installing verb -- a false Done that
+    // ended the install's in-flight state in the UI, and its stderr " err"
+    // lines attributed to a verb they had nothing to do with.
+    component = ''
   ) => {
     // Imported lazily to break a circular dependency (tools/index.ts <->
     // storeManagers/index.ts) — see the load-bearing comment in
@@ -652,15 +631,16 @@ export const Winetricks = {
         executeMessages.push(message)
         progressUpdated = true
       }
-      const sendProgress = setInterval(() => {
+      const flushProgress = () => {
         if (progressUpdated) {
           sendFrontendMessage('progressOfWinetricks', {
             messages: executeMessages,
-            installingComponent
+            installingComponent: component
           })
           progressUpdated = false
         }
-      }, 1000)
+      }
+      const sendProgress = setInterval(flushProgress, 1000)
 
       Winetricks.checkDependencies(envs, appendMessage)
 
@@ -702,18 +682,41 @@ export const Winetricks = {
         resolve(returnOutput ? output : null)
       })
 
-      child.on('exit', () => {
+      // Done is sent once, on 'close': that is when stdout/stderr have drained, so the
+      // lines buffered since the last 1s tick -- usually winetricks' own abort message --
+      // are flushed into the log BEFORE Done. 'exit' can fire while output is still in
+      // flight. `failed` carries the exit code itself (a signal exit reports
+      // `code === null`, also a failure), so attribution no longer rests on the " err"
+      // substring test alone. A lingering wineserver can hold the pipes open past exit,
+      // so 'exit' arms a short unref'd fallback that sends Done if 'close' never comes.
+      let doneSent = false
+      let exitCode: number | null = null
+      const sendDone = (code: number | null) => {
+        if (doneSent) return
+        doneSent = true
+        clearInterval(sendProgress)
+        flushProgress()
+        if (code !== 0) {
+          logWarning(
+            `Winetricks exited with code ${code}`,
+            LogPrefix.WineTricks
+          )
+        }
         sendFrontendMessage('progressOfWinetricks', {
           messages: ['Done'],
-          installingComponent
+          installingComponent: component,
+          failed: code !== 0
         })
-        clearInterval(sendProgress)
         resolve(returnOutput ? output : null)
+      }
+
+      child.on('exit', (code) => {
+        exitCode = code
+        setTimeout(() => sendDone(code), 2000).unref?.()
       })
 
-      child.on('close', () => {
-        clearInterval(sendProgress)
-        resolve(returnOutput ? output : null)
+      child.on('close', (code) => {
+        sendDone(exitCode ?? code)
       })
     })
   },
@@ -760,10 +763,29 @@ export const Winetricks = {
     }
   },
   install: async (runner: Runner, appName: string, component: string) => {
+    // Single-flight: two `winetricks -q` processes racing on one Wine prefix
+    // is never wanted, and the first to finish would clear
+    // `installingComponent` to '' while the other still runs. A refused call
+    // sends nothing -- the running install's own '' event still arrives and
+    // clears any optimistic in-flight state the dialog set for this one.
+    if (installingComponent !== '') {
+      logWarning(
+        `Not installing ${component}: ${installingComponent} is already installing`,
+        LogPrefix.WineTricks
+      )
+      return
+    }
+    installingComponent = component
     sendFrontendMessage('installing-winetricks-component', component)
     try {
-      installingComponent = component
-      await Winetricks.runWithArgs(runner, appName, ['-q', component])
+      await Winetricks.runWithArgs(
+        runner,
+        appName,
+        ['-q', component],
+        false,
+        undefined,
+        component
+      )
     } finally {
       installingComponent = ''
       sendFrontendMessage('installing-winetricks-component', '')

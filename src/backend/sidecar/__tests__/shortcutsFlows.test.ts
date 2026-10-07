@@ -142,6 +142,7 @@ import { sendFrontendMessage } from 'backend/ipc'
 import { logWarning, logError } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
 import { getIcon } from 'backend/shortcuts/utils'
+import { notify } from 'backend/dialog/dialog'
 import { execFileSync } from 'node:child_process'
 import {
   addShortcuts as realAddShortcuts,
@@ -196,6 +197,7 @@ const mockLogWarning = logWarning as jest.Mock
 const mockLogError = logError as jest.Mock
 const mockGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockGetIcon = getIcon as jest.Mock
+const mockNotify = notify as jest.Mock
 
 // A real fixture image `getIcon` resolves to -- read once by `convertPngToICNS`, which now (F-34.5-G6-07
 // fix, plan 34.5-45) runs the REAL nativeImage/IconIcns chain end to end, nothing mocked. Deliberately
@@ -399,6 +401,10 @@ describe('send-body safety — each of the 3 send channels guards its own promis
         JSON.stringify(call).includes('addShortcut')
       )
       expect(found).toBe(true)
+      // The failure is shown to the user; the "Shortcuts were created" toast is not. i18next
+      // is uninitialised in this suite, so `t()` returns the key.
+      expect(mockNotify).toHaveBeenCalledTimes(1)
+      expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error')
     } finally {
       process.off('unhandledRejection', onUnhandled)
     }

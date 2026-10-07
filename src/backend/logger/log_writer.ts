@@ -9,11 +9,14 @@ import type { LogOptions } from './types'
 
 import { getLogFilePath, logDebug } from './index'
 
+// Late-bound (looked up per call, not captured at module load) so the sidecar's
+// stdout->stderr console redirect (`installConsoleStdoutRedirect`) applies no
+// matter which module evaluated first -- the sidecar's stdout is the RPC pipe.
 const LOG_LEVEL_LOGGING_FUNC: Record<LogLevel, (message: string) => unknown> = {
-  DEBUG: console.log,
-  INFO: console.log,
-  WARNING: console.warn,
-  ERROR: console.error
+  DEBUG: (message) => console.log(message),
+  INFO: (message) => console.log(message),
+  WARNING: (message) => console.warn(message),
+  ERROR: (message) => console.error(message)
 }
 
 export default class LogWriter {

@@ -478,23 +478,35 @@ export const dialog = {
       | {
           buttons?: string[]
           cancelId?: number
+          detail?: string
           message?: string
           title?: string
           type?: string
         }
       | undefined
     const safeIndex = options?.cancelId ?? (options?.buttons?.length ?? 1) - 1
+    // Electron renders `detail` as a secondary line under the message; the Rust
+    // `dialog_message` arm reads only `message`, so `detail` is folded into it here. Dropping
+    // it silently hid the executable and arguments the deep-link launch confirm exists to show.
+    const message = [options?.message, options?.detail]
+      .filter((part) => part !== undefined && part !== '')
+      .join('\n\n')
     try {
       const result = await requestRustInvoke(RUST_DIALOG_MESSAGE, [
         {
-          message: options?.message,
+          message: message === '' ? options?.message : message,
           title: options?.title,
           kind: options?.type,
           buttons: options?.buttons
         }
       ])
-      // result: true -> buttons[0] clicked (response 0), false -> buttons[1] clicked (response 1)
-      return { response: result === false ? 1 : 0, checkboxChecked: false }
+      // result: the clicked button's index (0 / 1), or null when the dialog was dismissed (Esc /
+      // window close) without a button. A dismissal is the caller's cancelId, as in Electron --
+      // the same safeIndex the transport-error path below uses.
+      return {
+        response: typeof result === 'number' ? result : safeIndex,
+        checkboxChecked: false
+      }
     } catch (error) {
       console.warn(
         `[electronStub] dialog.showMessageBox(): ${RUST_DIALOG_MESSAGE} failed, defaulting to safe index ${safeIndex}:`,
@@ -632,8 +644,9 @@ export const safeStorage = {
 // ---- shell -------------------------------------------------------------------------
 
 export const shell = {
-  // Phase 35 Plan 15: signature-only widening. Windows-only in real Electron and never
-  // reachable on the platforms the sidecar runs; returns false rather than pretending.
+  // Phase 35 Plan 15: signature-only widening. Windows-only in real Electron; returns false
+  // rather than pretending. The sidecar DOES run on Windows, so `shortcuts.ts` no longer calls
+  // this -- it writes `.lnk` files through `shortcuts/shortcuts/windowsShortcut.ts` instead.
   writeShortcutLink: (
     _shortcutPath: string,
     _operation?: unknown,

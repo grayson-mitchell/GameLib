@@ -80,7 +80,7 @@
  */
 
 import { existsSync } from 'graceful-fs'
-import i18next from 'i18next'
+import i18next, { t } from 'i18next'
 import { ipcMain } from '../platform'
 import { getGame, handleExit } from '../utils'
 import { shortcutFiles } from '../shortcuts/shortcuts/shortcuts'
@@ -244,8 +244,18 @@ export function registerShortcutsFlows(): void {
         // `nonesteamgame.ts:258` (via the `addSteamShortcuts` branch, `shortcuts.ts:43-45`). No
         // catch/fallback/default launch command is added here or anywhere upstream -- a swallowed
         // failure that writes nothing is the correct outcome; a `.app`/VDF entry pointing at an
-        // empty exe path would be worse. `logSendFailure` is the only record of this failure.
+        // empty exe path would be worse. `logSendFailure` is the record of this failure.
+        // `addShortcuts` also rejects when a shortcut file could not be written (a missing
+        // desktop folder, a failed Windows `.lnk`), so the user is told instead of shown the
+        // success toast above.
         logSendFailure('addShortcut', error)
+        notify({
+          body: t(
+            'box.shortcuts.error',
+            'Shortcuts could not be created. See the log for details.'
+          ),
+          title: t('box.shortcuts.title', 'Shortcuts')
+        })
       }
     })()
   })

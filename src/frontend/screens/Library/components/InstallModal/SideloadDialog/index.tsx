@@ -257,9 +257,13 @@ export default function SideloadDialog({
             wineVersion: wineVersion || gameSettings.wineVersion
           }
         })
-        setRunningSetup(false)
       } catch (error) {
-        console.log('finished with error', error)
+        window.api.logError(
+          `Sideload: running the installer failed: ${String(error)}`
+        )
+      } finally {
+        // Also covers the missing-settings early return above, which used to
+        // leave the button disabled.
         setRunningSetup(false)
       }
     }
@@ -380,11 +384,16 @@ export default function SideloadDialog({
                         alone renders the English children in every locale.
                         `doorLabel` is interpolated rather than written into all
                         49 catalogs so renaming the button cannot strand this
-                        sentence again -- which is how it broke before. */}
+                        sentence again -- which is how it broke before.
+                        `shouldUnescape`: the catalogue values quote the label
+                        as `&quot;{{doorLabel}}&quot;`, and without it Trans
+                        hands the entity to React as text -- users saw a
+                        literal `&quot;` (importHintTrans.realI18next.test.ts). */}
                     <Trans
                       i18n={i18n}
                       i18nKey="sideload.import-hint.content"
                       ns="gamelib"
+                      shouldUnescape
                       values={{
                         doorLabel: tGamelib('installFlows.importDoorLabel')
                       }}

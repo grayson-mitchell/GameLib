@@ -371,7 +371,40 @@ function installStdioErrorGuards(
   }
 }
 
+/**
+ * Keeps the sidecar's stdout frames-only (todo `sidecar-log-output-shares-the-rpc-stdout-pipe`,
+ * security, 2026-10-05).
+ *
+ * The sidecar's stdout IS the RPC pipe: the Rust reader JSON-parses every line and acts on
+ * `kind:"rustInvoke"`, `kind:"openExternal"` and `ok`+`id`. Node's console sends `log`, `info`,
+ * `debug` and `dir` (and `table`/`count`/`timeEnd`/`group` labels, which go through `log`) to
+ * stdout, and the main `LogWriter` prints INFO/DEBUG through `console.log` -- so raw subprocess
+ * output logged by legendary/gogdl/the Steam bridge could put a frame-shaped line on the pipe.
+ * This points every stdout-bound console method at `console.error`, which the shell forwards
+ * line-prefixed to its own stderr (`start_stderr_forwarder`), so `pnpm tauri:dev` still shows it.
+ *
+ * Only the CONSOLE is redirected. `process.stdout` itself is untouched, so `sidecarRpc`'s frame
+ * writer (`startRpcServer(..., output = process.stdout)`) still reaches the real pipe. Anything
+ * that calls `process.stdout.write` directly bypasses this -- nothing in `src/backend` does today.
+ * `dir`'s inspect options are dropped (it is re-routed through `error`'s own formatting).
+ */
+let consoleStdoutRedirectInstalled = false
+
+function installConsoleStdoutRedirect(target: Console = console): void {
+  if (consoleStdoutRedirectInstalled) {
+    return
+  }
+  consoleStdoutRedirectInstalled = true
+
+  const toStderr = target.error
+  target.log = toStderr
+  target.info = toStderr
+  target.debug = toStderr
+  target.dir = (item?: unknown) => toStderr(item)
+}
+
 export {
+  installConsoleStdoutRedirect,
   installStdioErrorGuards,
   installUncaughtExceptionGuard,
   installUnhandledRejectionGuard,
