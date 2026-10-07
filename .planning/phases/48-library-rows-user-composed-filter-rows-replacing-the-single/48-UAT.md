@@ -3,7 +3,7 @@ status: testing
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-07T05:40:00Z
+updated: 2026-10-07T05:45:00Z
 ---
 
 ## Current Test
@@ -98,6 +98,20 @@ Entries are bold paragraph lines. Times are UTC unless marked local; the machine
 `/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
 `/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
 
+**Leg B (favourites), P3 edit and launch.** Started from the restored profile (`shasum -c` OK, no instance). `p3-set.cjs favourites` set `libraryTopSection` to `favourites` and deleted `focusRow` in `config.json` `defaultSettings` and `store/config.json` `settings`; the `diff` against the backup shows only those lines. Launch at 05:39:46Z: shell 11651, sidecar 11693, one window id 58215 owned by pid 11651, frontmost pid 11651, `gamelib-shell` count 1. Captures at window-appear (`legB-t0.png`), +10s and +30s. The t0 capture shows the `Loading` screen with no Library yet; t10 and t30 show the Library with a `Favourites` header and a one-card strip (Alan Wake) above the grid, with no `gamelib:`-prefixed text. Disk read after the launch: `store/config.json` `settings.focusRow` = `{"kind":"view","value":"favourites"}` and `config.json` `defaultSettings.focusRow` = the same. Leg B observed outcome: Favourites strip on first launch, `focusRow = { kind: 'view', value: 'favourites' }` written, as expected. The strip has one card, so it does not overflow; that is the real library, not a defect.
+
+**P-RESTORE - closes leg B.** Cmd-Q on pid 11651, probe empty, backup copies `cp -p` over the originals, then `shasum -a 256 -c`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
+
+**Leg C (disabled), P3 edit and launch.** `p3-set.cjs disabled` (same two files, same keys). Launch at 05:40:45Z: shell 12320, sidecar 12373, one window id 58247 owned by pid 12320, frontmost pid 12320, count 1. Captures t0, t10, t30 (`legC-*.png`). At t30 the Library shows the card grid starting directly under the tab bar: no header, no strip. Disk read after the launch: both files carry `libraryTopSection: "disabled"` and `focusRow: null` (the key present with value `null`, not absent). Leg C observed outcome: no strip, `focusRow: null` written, as expected.
+
+**P-RESTORE - closes leg C.** Cmd-Q on pid 12320, probe empty; the files had diverged from the backup (the app's `focusRow: null` write), then `cp -p` of both backup copies and `shasum -a 256 -c`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
+
+**Task 2 progress at the checkpoint.** Done: item 3 legs B and C (above), each ended in P4. Not yet run: item 3 leg D, which needs the operator to clear the focus row in the FOCUS ROW panel; item 2, which needs a collection pick and a quit and relaunch; and items 1 and 4 to 7, which need the devtools-console probes, the theme selector, a physical controller (item 5) and window dragging (item 6). Item 3's `result:` stays `pending` until leg D runs.
+
 ## Summary
 
 total: 7
@@ -107,7 +121,7 @@ pending: 7
 skipped: 0
 blocked: 0
 
-Task 1 (tracer) proved the rig end to end on leg A (re-armed, not as-found): backup, scripted re-arm, launch, window-pid and provenance checks, capture, disk read, relaunch, restore. Item 3's `result:` stays `pending` until legs B to D run in Task 2.
+Task 1 (tracer) proved the rig end to end on leg A (re-armed, not as-found): backup, scripted re-arm, launch, window-pid and provenance checks, capture, disk read, relaunch, restore. Legs B and C of item 3 then ran with the same rig and each ended in P4. Item 3's `result:` stays `pending` until leg D runs in Task 2, together with items 1, 2 and 4 to 7.
 
 ## Gaps
 
