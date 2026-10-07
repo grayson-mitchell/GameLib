@@ -17,6 +17,12 @@
  * own mount key -- the binder's tests alone cannot see a call site that
  * reverts to passing `dismissLoginOverlay` unbound. Same split, and same
  * no-DOM reason, as `SteamLogin/__tests__/steamCreateAccountLink.test.tsx`.
+ *
+ * OAuthLogin joined the bound set in quick task 261008-aoe. Retry makes
+ * replacing an overlay with another of the SAME runner a routine user path,
+ * and `useTauriOAuthLogin` invokes `onCancelled`/`onLoginSuccess` outside its
+ * `cancelled` state gate (Plan 34.5-34). An unbound OAuthLogin dismiss can
+ * therefore arrive late from a replaced mount and close the current overlay.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -61,8 +67,8 @@ describe('Login/index.tsx wires every overlay through the key-bound dismiss', ()
     readFileSync(join(__dirname, '..', 'index.tsx'), 'utf8')
   )
 
-  it('SOURCE GATE -- SteamLogin and HumbleLogin each receive a dismiss bound to their own overlayMountKey, never the bare dismissLoginOverlay', () => {
-    for (const overlay of ['SteamLogin', 'HumbleLogin']) {
+  it('SOURCE GATE -- SteamLogin, HumbleLogin and OAuthLogin each receive a dismiss bound to their own overlayMountKey, never the bare dismissLoginOverlay', () => {
+    for (const overlay of ['SteamLogin', 'HumbleLogin', 'OAuthLogin']) {
       const tag = new RegExp(`<${overlay}\\b[^>]*>`).exec(source)?.[0]
       expect(tag).toBeDefined()
       expect(tag).toMatch(

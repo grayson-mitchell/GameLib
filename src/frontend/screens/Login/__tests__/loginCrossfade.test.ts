@@ -219,3 +219,48 @@ describe('261003: the Humble overlay renders no in-app chrome while the native s
     expect(source).toMatch(/window\.api\.humbleReconnect\(\)/)
   })
 })
+
+describe('261008-aoe: the Humble overlay Retry remounts it instead of reloading the app', () => {
+  it('SOURCE GATE (PRESENCE) -- HumbleLogin Props declares a required onRetry: () => void', () => {
+    const source = read(HUMBLE_LOGIN_TSX)
+
+    // Breaks if: the prop is removed, or made optional (which would let a call
+    // site silently fall back to the panel's full-app reload).
+    expect(source).toMatch(/onRetry:\s*\(\)\s*=>\s*void/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- HumbleLogin hands onRetry to the TauriLoginPanel inside its renderState Dialog', () => {
+    const source = read(HUMBLE_LOGIN_TSX)
+
+    // Breaks if: the panel stops receiving the host action, so the Humble
+    // Retry reloads the whole app again.
+    expect(source).toMatch(
+      /<TauriLoginPanel\s+runner="humble"\s+state=\{state\}\s+onRetry=\{onRetry\}\s*\/>/
+    )
+  })
+
+  it('SOURCE GATE (ABSENCE) -- HumbleLogin has zero location.reload( calls: Retry is single-sourced in the panel, which now delegates', () => {
+    const source = read(HUMBLE_LOGIN_TSX)
+
+    expect((source.match(/location\.reload\(/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the <HumbleLogin> tag in Login/index.tsx carries onRetry={retryLoginOverlay} as a NAMED reference', () => {
+    const source = read(LOGIN_TSX)
+    const tag = /<HumbleLogin\b[^>]*>/.exec(source)?.[0]
+
+    // Breaks if: the prop is dropped, or inlined as an arrow (which also
+    // truncates this slice and overlayDismiss.test.ts's, at the first `>`).
+    expect(tag).toBeDefined()
+    expect(tag).toMatch(/onRetry=\{retryLoginOverlay\}/)
+  })
+
+  it('SOURCE GATE (ABSENCE, read-only file) -- HumbleLoginSurface has zero onRetry tokens, so the /loginweb/humble route keeps the panel reload default', () => {
+    const source = read(HUMBLE_SURFACE_TSX)
+
+    // Breaks if: someone threads onRetry into the surface's no-renderState
+    // fallback, which serves the /loginweb/humble route where there is no
+    // overlay to remount.
+    expect((source.match(/onRetry/g) ?? []).length).toBe(0)
+  })
+})
