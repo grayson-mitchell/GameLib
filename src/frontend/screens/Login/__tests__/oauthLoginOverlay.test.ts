@@ -26,6 +26,14 @@
  *
  * Each test is labelled PRESENCE (a specific token must exist) or ABSENCE (a
  * token/shape must NOT exist).
+ *
+ * Quick task 261008-aoe supersedes 261003-s04's D-5: Retry is still the
+ * panel's one button, but the Login screen now supplies its action
+ * (`onRetry` -> `retryLoginOverlay` -> `openLoginOverlay`, which bumps
+ * `overlayMountKey` and remounts just the overlay) instead of the panel's
+ * full-app `window.location.reload()`. The last describe block in this file
+ * pins that seam; the `/loginweb/*` route (WebView/index.tsx) is pinned to
+ * pass no `onRetry` and keep the reload default.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -120,8 +128,9 @@ describe('261003-s04 Task 1: OAuthLogin renders the Dialog only behind the phase
   it('SOURCE GATE (PRESENCE) -- TauriLoginPanel is rendered with the live hook state', () => {
     const source = read(OAUTH_LOGIN_TSX)
 
+    // 261008-aoe: the panel also receives the host-supplied Retry action.
     expect(source).toMatch(
-      /<TauriLoginPanel runner=\{runner\} state=\{state\} \/>/
+      /<TauriLoginPanel\s+runner=\{runner\}\s+state=\{state\}\s+onRetry=\{onRetry\}\s*\/>/
     )
   })
 
@@ -275,5 +284,63 @@ describe('261003-u48 Task 2: five tiles carry the per-tile busy derivation, Zoom
     expect(disabledExpressions.length).toBe(6)
     expect(new Set(disabledExpressions).size).toBe(1)
     expect(disabledExpressions[0]).toBe('disabled={oldMac || loginInFlight}')
+  })
+})
+
+describe('261008-aoe: Retry remounts the OAuth overlay instead of reloading the app', () => {
+  it('SOURCE GATE (PRESENCE) -- OAuthLogin Props declares a required onRetry: () => void', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    // Breaks if: the prop is removed, or made optional (which would let a call
+    // site silently fall back to the panel's full-app reload).
+    expect(source).toMatch(/onRetry:\s*\(\)\s*=>\s*void/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- OAuthLogin hands onRetry to TauriLoginPanel verbatim', () => {
+    const source = read(OAUTH_LOGIN_TSX)
+
+    // Breaks if: the panel stops receiving the host action, so Retry reloads again.
+    expect(source).toMatch(
+      /<TauriLoginPanel\s+runner=\{runner\}\s+state=\{state\}\s+onRetry=\{onRetry\}\s*\/>/
+    )
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the <OAuthLogin> tag in Login/index.tsx carries onRetry={retryLoginOverlay} as a NAMED reference', () => {
+    const source = read(LOGIN_TSX)
+    const tag = /<OAuthLogin\b[^>]*>/.exec(source)?.[0]
+
+    // Breaks if: the prop is dropped, or inlined as an arrow (which also
+    // truncates this slice and overlayDismiss.test.ts's, at the first `>`).
+    expect(tag).toBeDefined()
+    expect(tag).toMatch(/onRetry=\{retryLoginOverlay\}/)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- retryLoginOverlay re-opens the overlay through openLoginOverlay, reading openOverlay', () => {
+    const source = read(LOGIN_TSX)
+    const at = source.indexOf('function retryLoginOverlay(')
+
+    // Breaks if: the function is removed, stops going through openLoginOverlay
+    // (so overlayMountKey is not bumped and nothing remounts), or reads
+    // mountedOverlay (which would resurrect an overlay already dismissed and
+    // still in its 500ms exit).
+    expect(at).toBeGreaterThan(-1)
+    const body = source.slice(at, source.indexOf('\n  }\n', at))
+    expect(body).toMatch(/openLoginOverlay\(/)
+    expect(body).toMatch(/\bopenOverlay\b/)
+    expect(body).not.toMatch(/\bmountedOverlay\b/)
+  })
+
+  it('SOURCE GATE (ABSENCE) -- Login/index.tsx has zero location.reload( calls: the screen never reloads the app to retry', () => {
+    const source = read(LOGIN_TSX)
+
+    expect((source.match(/location\.reload\(/g) ?? []).length).toBe(0)
+  })
+
+  it('SOURCE GATE (ABSENCE, read-only file) -- WebView/index.tsx has zero onRetry tokens, so the /loginweb/* arm keeps the panel reload default', () => {
+    const source = read(WEBVIEW_INDEX_TSX)
+
+    // Breaks if: someone threads onRetry into the route-hosted panel, where
+    // there is no overlay to remount and Retry would do nothing.
+    expect((source.match(/onRetry/g) ?? []).length).toBe(0)
   })
 })

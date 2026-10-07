@@ -84,6 +84,28 @@ function collectClassNames(node: unknown): string[] {
   return []
 }
 
+// Walks the same element graph as collectText and returns the first <button>. Hoisted to module
+// scope (quick task 261008-aoe) so the host-supplied onRetry tests share it with the original
+// reload test.
+function findButton(node: unknown): AnyReactElement | undefined {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return undefined
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findButton(child)
+      if (found) return found
+    }
+    return undefined
+  }
+  if (typeof node === 'object' && node !== null && 'type' in node) {
+    const el = node as AnyReactElement & { type?: unknown }
+    if (el.type === 'button') return el
+    return findButton((el.props as { children?: unknown })?.children)
+  }
+  return undefined
+}
+
 describe('TauriLoginPanel — Humble in-progress surface', () => {
   it('renders in-progress copy and never the word "unavailable"', () => {
     const element = TauriLoginPanel({ runner: 'humble' }) as AnyReactElement
@@ -144,25 +166,6 @@ describe('TauriLoginPanel — Humble error/timeout surfaces [F-34.4.2-19]', () =
       value: { reload: reloadSpy },
       writable: true
     })
-
-    function findButton(node: unknown): AnyReactElement | undefined {
-      if (node === null || node === undefined || typeof node === 'boolean') {
-        return undefined
-      }
-      if (Array.isArray(node)) {
-        for (const child of node) {
-          const found = findButton(child)
-          if (found) return found
-        }
-        return undefined
-      }
-      if (typeof node === 'object' && node !== null && 'type' in node) {
-        const el = node as AnyReactElement & { type?: unknown }
-        if (el.type === 'button') return el
-        return findButton((el.props as { children?: unknown })?.children)
-      }
-      return undefined
-    }
 
     const button = findButton(element)
     expect(button).toBeDefined()
@@ -437,5 +440,98 @@ describe('TauriLoginPanel — reusable by plan 34.4.1-09 without restructuring',
     }) as AnyReactElement
 
     expect(collectText(withoutState)).toBe(collectText(withUndefinedState))
+  })
+})
+
+describe('TauriLoginPanel -- host-supplied onRetry (quick task 261008-aoe)', () => {
+  const panelSourcePath = join(__dirname, '..', 'TauriLoginPanel.tsx')
+
+  function stubReload() {
+    const reloadSpy = jest.fn()
+    Object.defineProperty(window, 'location', {
+      value: { reload: reloadSpy },
+      writable: true
+    })
+    return reloadSpy
+  }
+
+  // A SyntheticEvent-shaped argument: onClick receives one from React, and the panel must NOT
+  // forward it into host code (T-AOE-03).
+  const clickEvent = { type: 'click', target: {} }
+
+  const retryStates = [
+    ['cancelled', { phase: 'cancelled' }],
+    ['timeout', { phase: 'timeout' }],
+    ['error', { phase: 'error', message: 'unreachable' }]
+  ] as const
+
+  it.each(retryStates)(
+    'phase=%s: Retry calls the host onRetry exactly once with ZERO arguments and never reloads',
+    (_name, state) => {
+      const onRetry = jest.fn()
+      const reloadSpy = stubReload()
+      const element = TauriLoginPanel({
+        runner: 'gog',
+        state: state as never,
+        onRetry
+      }) as AnyReactElement
+
+      const button = findButton(element)
+      expect(button).toBeDefined()
+      ;(button?.props as { onClick?: (e: unknown) => void }).onClick?.(
+        clickEvent
+      )
+
+      expect(onRetry).toHaveBeenCalledTimes(1)
+      // Breaks if: onClick={onRetry} is wired directly, which would forward the event.
+      expect(onRetry).toHaveBeenCalledWith()
+      expect(reloadSpy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('humble error: Retry calls the host onRetry once and does not reload (the HumbleLogin overlay path)', () => {
+    const onRetry = jest.fn()
+    const reloadSpy = stubReload()
+    const element = TauriLoginPanel({
+      runner: 'humble',
+      state: { phase: 'error', message: 'unreachable' },
+      onRetry
+    }) as AnyReactElement
+
+    const button = findButton(element)
+    expect(button).toBeDefined()
+    ;(button?.props as { onClick?: (e: unknown) => void }).onClick?.(clickEvent)
+
+    expect(onRetry).toHaveBeenCalledTimes(1)
+    expect(onRetry).toHaveBeenCalledWith()
+    expect(reloadSpy).not.toHaveBeenCalled()
+  })
+
+  it('WITHOUT onRetry: Retry still reloads the page exactly once (the /loginweb/* default)', () => {
+    const reloadSpy = stubReload()
+    const element = TauriLoginPanel({
+      runner: 'gog',
+      state: { phase: 'timeout' }
+    }) as AnyReactElement
+
+    const button = findButton(element)
+    expect(button).toBeDefined()
+    ;(button?.props as { onClick?: (e: unknown) => void }).onClick?.(clickEvent)
+
+    expect(reloadSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- the stripped panel source has exactly ONE window.location.reload() call site, the default', () => {
+    const source = stripSourceComments(readFileSync(panelSourcePath, 'utf-8'))
+
+    // Breaks if: the fallback is deleted (the /loginweb/* routes lose Retry) or duplicated.
+    expect((source.match(/window\.location\.reload\(\)/g) ?? []).length).toBe(1)
+  })
+
+  it('SOURCE GATE (PRESENCE) -- Props declares an optional onRetry', () => {
+    const source = stripSourceComments(readFileSync(panelSourcePath, 'utf-8'))
+
+    // Breaks if: the seam is removed, or made required (which would break the route hosts).
+    expect(source).toMatch(/onRetry\?:\s*\(\)\s*=>\s*void/)
   })
 })
