@@ -52,6 +52,20 @@ window.addEventListener('error', (ev: ErrorEvent) => {
   window.api.logError(ev.error)
 })
 
+// Quick task 261008-gf1: `tauri.conf.json` now sets `app.security.csp`. A CSP
+// violation is otherwise visible ONLY in the webview devtools console -- it
+// reaches neither `gamelib.log` nor stdout -- so a policy that is one source
+// too tight would present as "an image/request silently never loads" with no
+// trail. Forward every violation to the sidecar logger. Fires at most once per
+// blocked load, and never at all under `tauri dev` (the dev server's HTML is not
+// served through Tauri, so no policy is applied there -- the rationale and the
+// origin census behind each directive live in tauriConf.test.ts's CSP block).
+document.addEventListener('securitypolicyviolation', (ev) => {
+  window.api.logError(
+    `[GameLib] CSP violation: ${ev.violatedDirective} blocked ${ev.blockedURI || '(inline)'} at ${ev.sourceFile || ev.documentURI}:${ev.lineNumber}`
+  )
+})
+
 // Must resolve before the first synchronous store read below (`configStore.get_nodefault`)
 // -- the Steam login-gate in GlobalState's constructor (later in this file, via
 // `root.render`) also depends on this being hydrated by the time React renders.

@@ -159,6 +159,170 @@ describe('tauri.conf.json updater plugin shape (D-07 / D-08)', () => {
   })
 })
 
+/**
+ * Quick task 261008-gf1 (todo 2026-10-05 "Set a restrictive CSP on the Tauri
+ * webview"): `app.security.csp` was `null` with `withGlobalTauri: true`, so any
+ * XSS in the main renderer reached `sidecar_invoke` unhindered. The policy is
+ * derived from a census of what the renderer ACTUALLY loads (2026-10-08):
+ *
+ *   - scripts: the Vite bundle only (`<script type="module" src=...>`), plus
+ *     Tauri's own injected scripts, which Tauri nonces/hashes itself
+ *     (`tauri-2.11.5/src/manager/mod.rs set_csp`) -- so NO 'unsafe-inline' and
+ *     NO 'unsafe-eval' in script-src. `withGlobalTauri`'s `bundle.global.js` is a
+ *     webview initialization script, outside CSP entirely.
+ *   - styles: the Vite CSS, MUI/emotion's runtime `<style>` injection, AND the
+ *     user-facing Settings -> Custom CSS feature, which writes arbitrary CSS into
+ *     `<style id="customCSS">` (`src/frontend/index.tsx setCustomCSS`). That
+ *     feature is the reason style-src carries 'unsafe-inline'; it is a
+ *     deliberate user-authored surface, not an oversight.
+ *   - images: store artwork from whatever CDN each store hands back, SteamGridDB
+ *     and `steamgrid.usebottles.com` results, user-entered sideload URLs, and
+ *     the `data:` URL the backend returns for the login background. Not
+ *     allow-listable by host without breaking artwork -- scheme-wide
+ *     `https: http:` plus `data:` it is. `file:` is deliberately absent: no
+ *     asset protocol is configured, so `file://` never loaded before either.
+ *   - fonts: `NotoColorEmoji.subset.ttf` (bundled, 'self') AND the @fontsource
+ *     Rubik/Cabin faces pulled in from node_modules -- one Cabin subset is under
+ *     Vite's 4 KB `assetsInlineLimit` and ships as `url(data:font/woff2...)`.
+ *     MISSED by the first census (it grepped `src/` for @font-face; the faces
+ *     live in node_modules) and CAUGHT by the live gate: `font-src blocked data`
+ *     in gamelib.log on the first bundled run. Hence `font-src 'self' data:`.
+ *
+ * LIVE-GATE FINDING #2, the Tauri nonce trap: tauri-codegen injects a nonce
+ * attribute on EVERY <style> in the bundled index.html (`tauri-utils html.rs
+ * inject_nonce(document, "style", ...)`) -- ours has `<style id="customCSS">` --
+ * and at serve time `set_csp` appends the matching 'nonce-N' to style-src. Per
+ * the CSP spec a nonce in a directive makes browsers IGNORE 'unsafe-inline' in
+ * that same directive, so MUI/emotion's runtime <style> injection was blocked
+ * (`style-src-elem blocked inline`, twice on the startup path) even though the
+ * config said 'unsafe-inline'. `dangerousDisableAssetCspModification:
+ * ["style-src"]` tells Tauri to leave style-src alone; it does NOT weaken the
+ * policy we set, it stops Tauri from adding the one token that neutralised it.
+ * script-src stays Tauri-managed.
+ *   - connect: every `window.api.*` call is a Tauri `invoke`, which on desktop
+ *     is `fetch('ipc://localhost/...')` (Windows: `http://ipc.localhost`) --
+ *     `tauri-2.11.5/scripts/ipc-protocol.js` -- so connect-src MUST carry
+ *     `ipc: http://ipc.localhost` or every invoke dies. i18n locale JSON is a
+ *     relative fetch ('self'). The ONE direct remote call in the renderer is
+ *     SideloadDialog's `axios.get('https://steamgrid.usebottles.com/...')`.
+ *   - frames / objects / workers: none. Store embeds and login windows are
+ *     NATIVE child webviews loading remote URLs -- not iframes, and Tauri does
+ *     not apply this policy to remote documents at all.
+ *
+ * Scope fact that bounds the live gate: Tauri applies the CSP only to HTML it
+ * serves itself (`manager/mod.rs get_asset` -> `tauri://` response header, or a
+ * `<meta>` on Linux). With `build.devUrl` set, `tauri dev` serves nothing through
+ * Tauri, so NO policy applies in dev and `devCsp` would be inert -- which is why
+ * it is not set. The policy is live only in a bundled build
+ * (`pnpm tauri:dev:packaged` / `tauri build`).
+ */
+describe('tauri.conf.json content security policy (quick task 261008-gf1)', () => {
+  function loadCsp(): Record<string, string> {
+    const conf = loadTauriConf()
+    const app = conf.app as Record<string, unknown>
+    const security = app.security as Record<string, unknown>
+    return security.csp as Record<string, string>
+  }
+
+  function sources(directive: string): string[] {
+    const value = loadCsp()[directive]
+    expect(typeof value).toBe('string')
+    return value.split(/\s+/).filter(Boolean)
+  }
+
+  test('app.security.csp is a directive map, not null and not a single string', () => {
+    const csp = loadCsp()
+    expect(csp).not.toBeNull()
+    expect(typeof csp).toBe('object')
+  })
+
+  test("default-src is exactly 'self'", () => {
+    expect(sources('default-src')).toEqual(["'self'"])
+  })
+
+  test("script-src is exactly 'self' -- no 'unsafe-inline', no 'unsafe-eval', no remote host (Tauri adds its own nonces/hashes at serve time)", () => {
+    expect(sources('script-src')).toEqual(["'self'"])
+  })
+
+  test("font-src is exactly 'self' data: -- the @fontsource Cabin subset is Vite-inlined as a data: URL (live-gate finding #1)", () => {
+    expect(sources('font-src')).toEqual(["'self'", 'data:'])
+  })
+
+  test("dangerousDisableAssetCspModification is exactly ['style-src'] -- Tauri's injected style nonce would otherwise nullify 'unsafe-inline' and block MUI's runtime <style> (live-gate finding #2); script-src stays Tauri-managed", () => {
+    const conf = loadTauriConf()
+    const app = conf.app as Record<string, unknown>
+    const security = app.security as Record<string, unknown>
+    expect(security.dangerousDisableAssetCspModification).toEqual(['style-src'])
+  })
+
+  test("style-src carries 'unsafe-inline' (the Settings -> Custom CSS feature writes into a <style>) and nothing remote", () => {
+    const src = sources('style-src')
+    expect(src).toContain("'self'")
+    expect(src).toContain("'unsafe-inline'")
+    expect(src.filter((s) => !s.startsWith("'"))).toEqual([])
+  })
+
+  test('connect-src carries BOTH Tauri IPC origins -- without them every window.api call fails in a bundled build', () => {
+    const src = sources('connect-src')
+    expect(src).toContain('ipc:')
+    expect(src).toContain('http://ipc.localhost')
+  })
+
+  test("connect-src carries 'self' (i18n locale JSON) and the one direct remote call the renderer makes (steamgrid.usebottles.com), and no scheme-wide https:", () => {
+    const src = sources('connect-src')
+    expect(src).toContain("'self'")
+    expect(src).toContain('https://steamgrid.usebottles.com')
+    expect(src).not.toContain('https:')
+    expect(src).not.toContain('http:')
+  })
+
+  test("img-src allows 'self', data:, https: and http: -- store artwork comes from arbitrary CDNs and the login background is a data: URL", () => {
+    expect(sources('img-src')).toEqual(["'self'", 'data:', 'https:', 'http:'])
+  })
+
+  test("object-src, frame-src and worker-src are 'none' -- the renderer uses none of them; embeds are native child webviews", () => {
+    expect(sources('object-src')).toEqual(["'none'"])
+    expect(sources('frame-src')).toEqual(["'none'"])
+    expect(sources('worker-src')).toEqual(["'none'"])
+  })
+
+  test("base-uri and form-action are 'self'", () => {
+    expect(sources('base-uri')).toEqual(["'self'"])
+    expect(sources('form-action')).toEqual(["'self'"])
+  })
+
+  test("no directive anywhere carries 'unsafe-eval'", () => {
+    for (const [directive, value] of Object.entries(loadCsp())) {
+      expect({
+        directive,
+        hasUnsafeEval: value.includes("'unsafe-eval'")
+      }).toEqual({ directive, hasUnsafeEval: false })
+    }
+  })
+
+  test('devCsp is NOT set -- with build.devUrl present it would be inert, and a present-but-inert key invites someone to trust it', () => {
+    const conf = loadTauriConf()
+    const app = conf.app as Record<string, unknown>
+    const security = app.security as Record<string, unknown>
+    const build = conf.build as Record<string, unknown>
+    expect(typeof build.devUrl).toBe('string')
+    expect(security).not.toHaveProperty('devCsp')
+  })
+
+  test('the renderer forwards CSP violations to the sidecar log (src/frontend/index.tsx listens for securitypolicyviolation and calls window.api.logError)', () => {
+    const entry = readFileSync(
+      join(__dirname, '..', '..', 'frontend', 'index.tsx'),
+      'utf8'
+    )
+      .split('\n')
+      .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .join('\n')
+    const start = entry.indexOf("addEventListener('securitypolicyviolation'")
+    expect(start).toBeGreaterThan(-1)
+    expect(entry.slice(start, start + 400)).toMatch(/window\.api\.logError\(/)
+  })
+})
+
 describe('tauri.conf.json icon set (CR-02 -- nsis needs a Windows .ico)', () => {
   test('bundle.icon contains icons/icon.ico', () => {
     const conf = loadTauriConf()
