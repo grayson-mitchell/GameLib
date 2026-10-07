@@ -46,6 +46,10 @@ import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import { SteamSyncStatus } from 'common/types/ipc'
 import { toShippedLanguage } from 'common/languages'
+import {
+  hydrateFocusRowSelection,
+  seedFocusRowFromMirror
+} from 'common/focusRowMigration'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
@@ -55,6 +59,9 @@ import { createOAuthLoginCompletion } from '../screens/WebView/useTauriOAuthLogi
 
 const storage: Storage = window.localStorage
 const globalSettings = configStore.get_nodefault('settings')
+// CR-01: the mirror alone cannot see the backend's migrated `libraryTopSection`
+// seed, so first-launch hydration (componentDidMount) fills the gap once.
+const focusRowMirrorSeed = seedFocusRowFromMirror(globalSettings)
 
 const RTL_LANGUAGES = ['fa', 'ar']
 
@@ -487,7 +494,7 @@ class GlobalState extends PureComponent<Props> {
     // by the shipped code) and is the <select>'s value. Unconverted, the four
     // underscore-named locales would show a raw `nb-NO` label with no option
     // selected.
-    focusRow: globalSettings?.focusRow ?? null,
+    focusRow: focusRowMirrorSeed.focusRow,
     language: toShippedLanguage(this.props.i18n.language),
     libraryStatus: [],
     platform: window.platform,
@@ -800,8 +807,13 @@ class GlobalState extends PureComponent<Props> {
   // not exist outside the Settings screen, so a focus-row pick made from the
   // Library screen has no other writer available. One writer, no
   // split-brain. Clearing writes `focusRow: null`, which makes the key
-  // present and permanently disarms the one-time legacy seed (48-05).
+  // present and permanently disarms the one-time legacy seed (48-05). The
+  // flag below stops first-launch hydration (CR-01, 48-07) from overwriting a
+  // pick the user makes while the backend answer is still in flight.
+  private focusRowPickedThisSession = false
+
   handleFocusRow = (value: FocusRowSelection) => {
+    this.focusRowPickedThisSession = true
     this.setState({ focusRow: value })
     window.api.setSetting({ appName: 'default', key: 'focusRow', value })
   }
@@ -1476,6 +1488,21 @@ class GlobalState extends PureComponent<Props> {
       gameUpdates = [],
       libraryStatus
     } = this.state
+
+    // CR-01: first launch of a profile whose mirror has no `focusRow` key yet.
+    // `void` is safe ONLY because hydrateFocusRowSelection never rejects.
+    if (focusRowMirrorSeed.needsMigratedValue) {
+      void hydrateFocusRowSelection({
+        requestAppSettings: () => window.api.requestAppSettings(),
+        setSetting: (payload) => window.api.setSetting(payload),
+        applyFocusRow: (value) => this.setState({ focusRow: value }),
+        hasUserPicked: () => this.focusRowPickedThisSession,
+        onError: (error) =>
+          window.api.logError(
+            `focusRow first-launch hydration failed: ${String(error)}`
+          )
+      })
+    }
 
     window.api.handleInstallGame(async (e, appName, runner) => {
       const currentApp = libraryStatus.filter(

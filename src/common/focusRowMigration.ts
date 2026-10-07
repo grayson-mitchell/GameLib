@@ -6,6 +6,17 @@
  * self-contained only because `common/types.ts` imports `TrayIconVariant` from
  * it. Here the dependency runs the other way (`FocusRowSelection` is declared
  * in `common/types.ts`), so there is no cycle.
+ *
+ * TWO-STORE HAZARD (CR-01). One setting lives in two stores: `config.json`
+ * `defaultSettings` (read by `GlobalConfigV0.getSettings()`, where the legacy
+ * seed is derived) and the `store/config.json` `settings` mirror (read by the
+ * renderer synchronously at module scope). Only `setSetting`/`writeConfig`
+ * write the mirror, and both spread the OLD mirror, so a seed derived in
+ * `getSettings()` never entered it and the renderer never saw it.
+ * `seedFocusRowFromMirror` + `hydrateFocusRowSelection` close that: the mirror
+ * stays the renderer's primary source, and the backend's migrated value is
+ * fetched once, only while the mirror lacks the key, then written back through
+ * the one setter.
  */
 import { FocusRowSelection } from 'common/types'
 
@@ -97,40 +108,93 @@ export function migrateFocusRowSelection(
   }
 }
 
-// RED skeleton (48-07 Task 1): models the PRE-FIX renderer behaviour so the
-// regression test fails on its assertions, not on a missing symbol. Replaced in
-// the GREEN commit.
+/**
+ * What the renderer can decide SYNCHRONOUSLY at module scope from the
+ * `store/config.json` `settings` mirror alone.
+ *
+ * `needsMigratedValue` is true exactly when the mirror has no `focusRow` key at
+ * all: the profile has never been through first-launch hydration, so the seed
+ * the backend derived from `libraryTopSection` (which lives in `config.json`,
+ * not in the mirror) has not reached this renderer yet.
+ */
 export interface FocusRowMirrorSeed {
   focusRow: FocusRowSelection
   needsMigratedValue: boolean
 }
 
+/**
+ * The renderer's synchronous seed (CR-01). A PRESENT `focusRow` key is
+ * authoritative even when its value is invalid (invalid becomes `null`): this is
+ * the WR-02 rule mirrored on the renderer side, so a present key permanently
+ * disarms the legacy seed. An absent key -- or a mirror that is absent or not an
+ * object -- yields `null` plus `needsMigratedValue: true`, which tells
+ * `GlobalState` to ask the backend for the migrated value once.
+ *
+ * Total: never throws.
+ */
 export function seedFocusRowFromMirror(
   mirrorSettings: unknown
 ): FocusRowMirrorSeed {
-  const mirror = mirrorSettings as { focusRow?: unknown } | null | undefined
-  const stored = mirror?.focusRow
-  return {
-    focusRow: isValidFocusRowSelection(stored) ? stored : null,
-    needsMigratedValue: true
+  if (
+    mirrorSettings !== null &&
+    typeof mirrorSettings === 'object' &&
+    'focusRow' in mirrorSettings
+  ) {
+    const stored = (mirrorSettings as { focusRow: unknown }).focusRow
+    return {
+      focusRow: isValidFocusRowSelection(stored) ? stored : null,
+      needsMigratedValue: false
+    }
   }
+  return { focusRow: null, needsMigratedValue: true }
 }
 
 export interface FocusRowHydrationDeps {
+  /** `window.api.requestAppSettings`: reaches `GlobalConfig.get().getSettings()`. */
   requestAppSettings: () => Promise<unknown>
+  /** `window.api.setSetting`: the one setter, which writes the mirror AND `config.json`. */
   setSetting: (payload: {
     appName: 'default'
     key: 'focusRow'
     value: FocusRowSelection
   }) => void
   applyFocusRow: (value: FocusRowSelection) => void
+  /** True once the user has made their own pick; checked AFTER the await. */
   hasUserPicked: () => boolean
   onError: (error: unknown) => void
 }
 
+/**
+ * First-launch hydration (CR-01): asks the backend for the migrated `focusRow`,
+ * applies it, and persists it through the one setter so the key is present in
+ * the mirror and in `config.json` from then on (which is what makes the seed
+ * run once).
+ *
+ * NEVER rejects: the whole body is one try/catch that reports to `onError` and
+ * resolves `undefined`, so a caller may `void` it without leaving an unhandled
+ * rejection. Resolves `undefined` when skipped (user picked first, or failure).
+ */
 export async function hydrateFocusRowSelection(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _deps: FocusRowHydrationDeps
+  deps: FocusRowHydrationDeps
 ): Promise<FocusRowSelection | undefined> {
-  return undefined
+  try {
+    const settings = await deps.requestAppSettings()
+    // After the await, not before: the race is a pick made while the IPC was in
+    // flight, and that pick must never be overwritten.
+    if (deps.hasUserPicked()) {
+      return undefined
+    }
+    const migrated = (settings as { focusRow?: unknown } | null | undefined)
+      ?.focusRow
+    const value: FocusRowSelection = isValidFocusRowSelection(migrated)
+      ? migrated
+      : null
+    deps.applyFocusRow(value)
+    // Always write, `null` included: the write is what makes the key present.
+    deps.setSetting({ appName: 'default', key: 'focusRow', value })
+    return value
+  } catch (error) {
+    deps.onError(error)
+    return undefined
+  }
 }
