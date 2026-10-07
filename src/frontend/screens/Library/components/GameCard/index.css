@@ -40,16 +40,17 @@
   aspect-ratio: 173/275;
 }
 
-.gameCard.gamepad {
-  aspect-ratio: 3/4;
-}
-
+/* Controller mode deliberately has NO geometry override here. A 3/4
+   `.gameCard.gamepad` ratio (and a 328/205 just-played one) used to live in
+   this spot, inherited from upstream when controller mode hid the whole icons
+   bar: an art-sized card with nothing cropped. Commit 16560dbdd then kept the
+   store badge in that bar, so the override cropped 35px of art, and because
+   the `gamepad` class flips on every mouse/controller handoff every card
+   visibly jumped 40px. Removed globally (strip and grid) by operator ruling
+   2026-10-07 (Phase 48 gap G-48-8a). Gated by
+   `__tests__/gameCardControllerGeometry.test.ts`. */
 .gameCard.justPlayed {
   aspect-ratio: 275/205;
-}
-
-.gameCard.gamepad.justPlayed {
-  aspect-ratio: 328/205;
 }
 
 /* Hover and focus are now deliberately DIFFERENT, not the same rule
@@ -252,7 +253,9 @@ body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) {
    moment a controller was plugged in. The bar therefore survives, flattened
    to nothing but the badge: the action buttons go, and the bar's own
    background and padding go with them so no new strip appears across the
-   bottom of every card. */
+   bottom of every card. The card keeps its mouse-mode ratio in controller
+   mode, so the flattened 35px badge bar fits under the art (248 - 35 = 213
+   against 208 at 156px); gameCardControllerGeometry.test.ts gates it. */
 .gameCard.gamepad > .icons {
   background: transparent;
   padding: 0;
