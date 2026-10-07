@@ -127,9 +127,26 @@ const SIZING_PROPS = [
   'flex-basis'
 ]
 
-// The focus-row strip pins cards at 156px (D-01); the grid's own minimum is
-// `minmax(156px, 1fr)`, so this is the narrowest, tightest case for both.
-const CARD_WIDTH = 156
+// G-48-8c (operator ruling 2026-10-07 "match the grid", amending D-01): the
+// focus-row strip no longer pins cards at 156px, it tracks the grid's column
+// width. So the grid's own `minmax()` floor is the narrowest card in either
+// row, and the binding case. Parsed from Library/index.css, not restated.
+function readGridFloor(): number {
+  // __tests__ -> GameCard -> components -> Library
+  const grid = readFileSync(
+    join(__dirname, '..', '..', '..', 'index.css'),
+    'utf8'
+  )
+  const floor = stripSourceComments(grid).match(
+    /minmax\(\s*(\d+(?:\.\d+)?)px,\s*1fr\s*\)/
+  )?.[1]
+  if (floor === undefined) {
+    throw new Error('Library/index.css: no minmax(Npx, 1fr) grid floor found')
+  }
+  return Number(floor)
+}
+
+const CARD_WIDTH = readGridFloor()
 
 describe('GameCard controller mode never resizes a card (source gate, G-48-8a)', () => {
   it('no rule whose selector mentions .gamepad declares a sizing property', () => {
@@ -166,7 +183,8 @@ describe('GameCard controller mode never resizes a card (source gate, G-48-8a)',
     ).toBe('275/205')
   })
 
-  it('a 156px controller-mode card is tall enough for its art above the 35px badge bar', () => {
+  // Ratios and the badge bar, parsed from the shipped stylesheet.
+  function readControllerGeometry() {
     const rules = parseTopLevelRules(readGameCardCss())
 
     // Ratio a `.gameCard.gamepad` card gets, the way the cascade resolves it
@@ -180,7 +198,6 @@ describe('GameCard controller mode never resizes a card (source gate, G-48-8a)',
         requireDecl(findRule(rules, '.gameCard'), '.gameCard', 'aspect-ratio'),
       'card aspect-ratio'
     )
-    const cardHeight = CARD_WIDTH / cardRatio
 
     const storeSel = '.gameCard .store-icon'
     const storeHeight = parsePx(
@@ -199,8 +216,23 @@ describe('GameCard controller mode never resizes a card (source gate, G-48-8a)',
       requireDecl(findRule(rules, imgSel), imgSel, 'aspect-ratio'),
       `${imgSel} aspect-ratio`
     )
+    return { cardRatio, barHeight, imgRatio }
+  }
+
+  it('a grid-floor controller-mode card is tall enough for its art above the 35px badge bar', () => {
+    const { cardRatio, barHeight, imgRatio } = readControllerGeometry()
+    const cardHeight = CARD_WIDTH / cardRatio
     const artHeight = CARD_WIDTH / imgRatio
 
     expect(cardHeight - barHeight).toBeGreaterThanOrEqual(artHeight)
+  })
+
+  it('every card wider than the grid floor fits its art too: the margin grows with width (G-48-8c)', () => {
+    // Card height and art height are both linear in width, so the margin
+    // (cardHeight - barHeight - artHeight) is w x (1/cardRatio - 1/imgRatio)
+    // - barHeight. A positive slope means the floor is the binding case, and the
+    // strip's wider matched cards cannot crop art the floor does not.
+    const { cardRatio, imgRatio } = readControllerGeometry()
+    expect(1 / cardRatio - 1 / imgRatio).toBeGreaterThan(0)
   })
 })
