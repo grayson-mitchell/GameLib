@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 8/8 plans executed
+**Plans:** 8/11 plans executed
 
 Plans:
 **Wave 1**
@@ -5684,6 +5684,13 @@ Plans:
 
 **Gap closure, Wave 2** *(blocked on 48-07)*
 - [x] 48-08-PLAN.md — live gates: the 7 `human_verification:` items measured into `48-UAT.md`, R7 first on the real pre-upgrade profile (R1, R2, R3, R6, R7)
+
+**Gap closure round 2, Wave 1** *(from 48-UAT.md `## Gaps`: G-48-4a, G-48-4b, G-48-7, G-48-8a, G-48-8b, G-48-9; parallel, zero `files_modified` overlap)*
+- [ ] 48-09-PLAN.md — TRACER: controller mode never resizes a GameCard (G-48-8a) and every GameCard's mouse hover wears the console-style ring (G-48-8b), both GLOBAL by operator ruling 2026-10-07 (R3)
+- [ ] 48-10-PLAN.md — TRACER: strip chevrons paint above a hovered/focused card via a track stacking context (G-48-4b, G-48-9), plus 12px strip-end ring clearance and clearance-aware controller scroll-into-view (G-48-8a/8b strip half) (R3)
+
+**Gap closure round 2, Wave 2** *(blocked on 48-10: shared `FocusRowStrip/index.css`)*
+- [ ] 48-11-PLAN.md — TRACER: opaque chevron disc proven at 3:1 in all 10 themes by census (G-48-4a), divider override for dracula/nord-light proven at 4.5:1 (G-48-7), two todos closed, UAT item 10 unblocked as the live re-measure gate (R2, R3)
 
 **Cross-cutting constraints:**
 - Strip content narrower than the available width shows no overflow affordance (SPEC Edge Coverage, R3 unclassified, explicit).

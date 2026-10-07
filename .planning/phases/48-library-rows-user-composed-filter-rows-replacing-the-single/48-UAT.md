@@ -191,7 +191,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 ## Gaps
 
-- truth: "Chevron contrast is at least 3:1 over the strip artwork at both edges, in every offered theme (D-01, D-05; adopted bar WCAG 1.4.11)"
+- gap_id: G-48-4a
+  truth: "Chevron contrast is at least 3:1 over the strip artwork at both edges, in every offered theme (D-01, D-05; adopted bar WCAG 1.4.11)"
   status: failed
   reason: "12 of 40 theme/card/edge combinations reach 3:1; only midnightMirage passes all four; overall minimum 1.005 (gruvbox_dark). Minima, back/BRIGHT, fwd/BRIGHT, back/DARK, fwd/DARK: zombie 1.70 1.70 2.91 1.99; midnightMirage 3.76 3.76 6.55 4.43; cyberSpaceOasis 1.89 1.89 3.24 2.23; high-contrast 2.25 2.25 3.83 2.63; dracula 1.43 1.43 2.41 1.67; marine 1.66 1.66 2.86 1.95; nord-light 3.33 2.89 2.70 3.11; nord-dark 2.57 2.57 4.40 3.02; gruvbox_dark 1.01 1.01 1.57 1.08; sweet 3.46 2.40 4.21 2.87"
   severity: major
@@ -204,7 +205,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
     - "A glyph/scrim pair whose ratio holds over the brightest art in every theme, for example a scrim with higher opacity or an opaque disc, or a theme-independent glyph colour with its own contrast proof"
     - "A measured recheck with the same C1-C4 rule"
 
-- truth: "The back and forward controls do not overlap the adjacent card's hover outline (D-05, UI-SPEC E6 36 px rationale)"
+- gap_id: G-48-4b
+  truth: "The back and forward controls do not overlap the adjacent card's hover outline (D-05, UI-SPEC E6 36 px rationale)"
   status: failed
   reason: "A hovered card (real pointer) is transform-scaled to about 1.05 and has z-index 2; the control has z-index 1, so the card paints over the control where they overlap. Chevron-coloured pixels in the icon rect: 122 of 640 unhovered, 0 of 640 hovered, at both edges. The pointer moving from a card onto the control therefore sees the chevron disappear under the card it left; whether the control stays clickable in that state was not probed"
   severity: major
@@ -216,7 +218,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
   missing:
     - "A z-index (or stacking context on the viewport) that keeps the controls above a hovered card, plus a hit-test probe (`elementFromPoint` with a real hover) of whether the control can still be clicked"
 
-- truth: "FOCUS ROW divider labels read at least 4.5:1 in every theme (SC 1.4.3, adopted bar)"
+- gap_id: G-48-7
+  truth: "FOCUS ROW divider labels read at least 4.5:1 in every theme (SC 1.4.3, adopted bar)"
   status: failed
   reason: "dracula 4.25 (`177,177,177` on `69,71,90`) and nord-light 1.52 (`57,59,65` on `76,86,106`); the other 8 themes pass (5.41 to 13.13). All four labels in a theme measure the same"
   severity: minor
