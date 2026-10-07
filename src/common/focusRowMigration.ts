@@ -21,14 +21,29 @@
 import { FocusRowSelection } from 'common/types'
 
 /**
+ * The four members of `LibraryView` (`src/frontend/types.ts`). `src/common`
+ * cannot import from `src/frontend`, so the list is duplicated on purpose; the
+ * anti-drift guard is `focusRowSelectors.test.ts`'s
+ * `satisfies Record<LibraryView, true>` case, which fails `pnpm codecheck` if
+ * `LibraryView` gains a member this list lacks. Not exported.
+ */
+const FOCUS_ROW_VIEW_VALUES = [
+  'all',
+  'installed',
+  'recentlyPlayed',
+  'favourites'
+] as const
+
+/**
  * A real shape guard over an untrusted persisted value -- the mitigation for
  * T-48-03. Precedent: `engineWiring.ts`'s WR-04 note, where a malformed
  * localStorage value threw out of a memo and blanked the whole Library
- * screen. Checks shape only (object, non-null, `kind` one of the four
- * literals, `value` a non-empty string) -- it does not validate that
- * `value` is itself a legitimate view/collection/store/runnability member;
- * an unrecognised `value` simply selects no games (or, for `kind: 'view'`,
- * falls through `passesView`'s existing default arm), never throws.
+ * screen. Checks shape (object, non-null, `kind` one of the four literals,
+ * `value` a non-empty string) -- plus, for `kind: 'view'` ONLY, that `value` is
+ * one of the four real views (WR-01): an unknown view used to fall through
+ * `passesView`'s default arm and render a strip of ALL games. The other three
+ * kinds are not membership-checked; a `collection`/`store`/`runnability` value
+ * naming nothing simply selects no games, never throws.
  *
  * Defined HERE (a `src/common` module cannot import from `src/frontend`) and
  * re-exported from `focusRowSelectors.ts`, so there is exactly one definition
@@ -56,6 +71,12 @@ export function isValidFocusRowSelection(
   if (typeof pickValue !== 'string' || pickValue.length === 0) {
     return false
   }
+  if (
+    kind === 'view' &&
+    !(FOCUS_ROW_VIEW_VALUES as readonly string[]).includes(pickValue)
+  ) {
+    return false
+  }
   return true
 }
 
@@ -63,9 +84,11 @@ export function isValidFocusRowSelection(
  * Derives the persisted `focusRow` from a profile's RAW stored settings.
  * Precedence:
  *
- * 1. `focusRow` PRESENT and valid -> returned unchanged. A present `null` is
- *    a legitimate "off" selection (the user cleared the row) and wins over
- *    any legacy value, so a cleared row is never resurrected on relaunch.
+ * 1. `focusRow` PRESENT (the key exists, whatever its value) -> it wins and
+ *    permanently disarms the seed. Valid -> returned unchanged; `null` is a
+ *    legitimate "off" selection (the user cleared the row); invalid -> `null`
+ *    (WR-02). In no case is `libraryTopSection` consulted, so neither a cleared
+ *    row nor a corrupt one is ever resurrected on relaunch.
  * 2. Otherwise the legacy `libraryTopSection` seeds it once:
  *    `recently_played` and `recently_played_installed` -> the recentlyPlayed
  *    view (operator ruling: recency kept, the installed-only qualifier is
@@ -88,13 +111,9 @@ export function migrateFocusRowSelection(
   // `in`, not `stored?.focusRow !== undefined`: only `in` tells "key present
   // with value null" apart from "key absent", and that is the whole guard.
   if (stored !== null && stored !== undefined && 'focusRow' in stored) {
-    if (stored.focusRow === null) {
-      return null
-    }
-    if (isValidFocusRowSelection(stored.focusRow)) {
-      return stored.focusRow
-    }
-    // Present but invalid: never hand it to the renderer; fall through.
+    // Present key, valid or not: authoritative. Invalid becomes `null` and
+    // never reaches the legacy switch below (WR-02).
+    return isValidFocusRowSelection(stored.focusRow) ? stored.focusRow : null
   }
 
   switch (stored?.libraryTopSection) {
