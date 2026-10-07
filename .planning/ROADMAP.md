@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 10/11 plans executed
+**Plans:** 11/11 plans executed
 
 Plans:
 **Wave 1**
@@ -5690,7 +5690,7 @@ Plans:
 - [x] 48-10-PLAN.md — TRACER: strip chevrons paint above a hovered/focused card via a track stacking context (G-48-4b, G-48-9), plus 12px strip-end ring clearance and clearance-aware controller scroll-into-view (pairs with G-48-8a/8b, which 48-09 owns) (R3)
 
 **Gap closure round 2, Wave 2** *(blocked on 48-10: shared `FocusRowStrip/index.css`)*
-- [ ] 48-11-PLAN.md — TRACER: opaque chevron disc proven at 3:1 in all 10 themes by census (G-48-4a), divider override for dracula/nord-light proven at 4.5:1 (G-48-7), two todos closed, UAT item 10 unblocked as the live re-measure gate (R2, R3)
+- [x] 48-11-PLAN.md — TRACER: opaque chevron disc proven at 3:1 in all 10 themes by census (G-48-4a), divider override for dracula/nord-light proven at 4.5:1 (G-48-7), two todos closed, UAT item 10 unblocked as the live re-measure gate (R2, R3)
 
 **Cross-cutting constraints:**
 - Strip content narrower than the available width shows no overflow affordance (SPEC Edge Coverage, R3 unclassified, explicit).
