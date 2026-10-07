@@ -97,7 +97,7 @@ severity: major
 
 ### 10. Chevron and divider-label contrast re-measure after a CSS follow-up
 expected: After a follow-up CSS change, re-run the 40-combination chevron measurement (10 themes x BRIGHT/DARK card x 2 edges, C1-C4 rule) and the divider-label measurement per theme; today 12/40 chevron combinations reach 3:1 (min 1.005 gruvbox_dark) and divider labels miss 4.5:1 in dracula (4.25) and nord-light (1.52). Maps to no locked SPEC requirement (48-VERIFICATION.md Follow-up); not phase-blocking. Source: 48-VERIFICATION.md human_verification 3 and 4.
-result: blocked — no CSS follow-up has landed yet; this item is the re-measure gate for the two `## Gaps` contrast entries and cannot run until a fix exists
+result: pending — unblocked by 48-10 (track stacking context) and 48-11 (opaque chevron disc on `var(--body-background)`; divider override to the tier-2 row colour chain in dracula and nord-light); the re-measure under `## Protocol` C1-C4 is owed. The desk census predicts a chevron minimum of 3.91 (gruvbox_dark) and a divider minimum of 5.43 (marine); see the desk census entry in the evidence log.
 
 ## Evidence log
 
@@ -176,16 +176,18 @@ After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `the
 `/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
 `/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
 
+**Desk census after 48-11 (2026-10-08, token arithmetic, no pixels).** Printed by the `themeTokens.test.ts` runs at commits `3207d7a0f` (chevron) and `782285b5e` (divider), resolving the shipped declarations through the same var() resolver the NavTab and `--border-color` censuses use. Chevron glyph (`--accent`) against its opaque disc (`--body-background`), WCAG 1.4.11 bar 3:1: midnightMirage 16.88, cyberSpaceOasis 8.51, gruvbox_dark 3.91, high-contrast 9.92, dracula 5.91, nord-light 8.88, nord-dark 11.41, marine 7.42, zombie 7.52, sweet 10.82 (minimum 3.91). Divider label against the tier-2 `--navbar-background`, bar 4.5:1: midnightMirage 13.23, cyberSpaceOasis 7.56, gruvbox_dark 6.12, high-contrast 8.74, dracula 7.48, nord-light 7.38, nord-dark 12.49, marine 5.43, zombie 5.98, sweet 6.64 (minimum 5.43). Before the divider fix the same resolver read dracula 4.27 and nord-light 1.52 (live item 7: 4.25 and 1.52). These are the values the item 10 re-measure is compared against: every chevron minimum should land at or above 3:1 and within 0.05 of its theme's figure with the scrim pixel set uniform within 2 per sRGB channel, and every divider within about 0.02 of its figure. The census cannot see the disc's edge against the art or any rendered pixel; the live re-measure owns those.
+
 ## Summary
 
 total: 10
 passed: 6
 issues: 3
-pending: 0
+pending: 1
 skipped: 0
-blocked: 1
+blocked: 0
 
-Update 2026-10-07 (Windows, operator with a physical controller): item 8 passes, which also closes item 5's controller clause, so item 5 passes. Two new gaps were reported during item 8, G-48-8a (cards shrink/crop in controller mode, major) and G-48-8b (mouse-mode focus border should match the thicker controller border, minor). Item 9 is an issue (G-48-9, major): a hovered edge card hides the chevron under a real pointer, confirming item 4's stacking gap by eye. Item 10 stays blocked until a CSS fix lands, so the session ends `partial`.
+Update 2026-10-07 (Windows, operator with a physical controller): item 8 passes, which also closes item 5's controller clause, so item 5 passes. Two new gaps were reported during item 8, G-48-8a (cards shrink/crop in controller mode, major) and G-48-8b (mouse-mode focus border should match the thicker controller border, minor). Item 9 is an issue (G-48-9, major): a hovered edge card hides the chevron under a real pointer, confirming item 4's stacking gap by eye. Item 10 stays blocked until a CSS fix lands, so the session ends `partial`. Item 10 is now unblocked by 48-10 and 48-11.
 
 Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip chevron reaches the 3:1 bar in 12 of 40 theme/card/edge combinations and in every theme only for midnightMirage, and a hovered card paints over the control. Item 7 is an issue: the divider labels miss 4.5:1 in two of ten themes (dracula 4.25, nord-light 1.52). Item 5 is blocked on its controller clause (no controller connected); its other clauses measured pass, and a keyboard-style proxy shows a partly clipped last card staying clipped when focus is scripted with no controller attached. The profile ended byte-identical to the P2 backup after every session.
 

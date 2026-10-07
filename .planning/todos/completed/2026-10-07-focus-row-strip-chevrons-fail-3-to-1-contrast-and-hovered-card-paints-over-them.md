@@ -47,3 +47,21 @@ not a blocker. The stacking half is one real-pointer probe away from being promo
   stacking context so card hover cannot outrank the controls).
 - Re-measure with the same C1-C4 rule and the 40-combination grid; that re-measure is `48-UAT.md`
   item 10.
+
+## Resolution (2026-10-08)
+
+Both halves are fixed in code; the live proof is still owed.
+
+- **Contrast** (phase 48 plan 11, Task 1, `0a72a413d` RED then `3207d7a0f` GREEN): the control now
+  sits on one opaque `var(--body-background)` disc instead of the 55% `color-mix` scrim, so the
+  glyph's only neighbour inside the circle is the theme's body colour. A census in
+  `themeTokens.test.ts` reads the shipped declarations and measures glyph against disc in all 10
+  themes at 3:1. Desk ratios: midnightMirage 16.88, cyberSpaceOasis 8.51, gruvbox_dark 3.91 (the
+  minimum), high-contrast 9.92, dracula 5.91, nord-light 8.88, nord-dark 11.41, marine 7.42,
+  zombie 7.52, sweet 10.82. This is token arithmetic, not pixels.
+- **Stacking** (phase 48 plan 10, Task 1, `acd866035` RED then `39b15f31a` GREEN):
+  `isolation: isolate` on `.focusRowTrack`, pinned by a source gate in `focusRowStripSource.test.ts`.
+
+Live proof is owed and tracked, at equal weight to the code work above: `48-UAT.md` item 9
+(real-pointer reach and click, G-48-9) and item 10 (C1-C4 re-measure of the 40 combinations,
+G-48-4a), both surfaced by `audit-uat`. This todo closes the code work, not the live gate.
