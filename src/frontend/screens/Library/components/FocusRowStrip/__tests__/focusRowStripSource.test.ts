@@ -64,6 +64,31 @@ describe('FocusRowStrip/index.css -- .focusRowTrack', () => {
   })
 })
 
+describe('FocusRowStrip/index.css -- chevron stacking contract (G-48-4b, G-48-9)', () => {
+  // The track is its own stacking context, so every card-internal z-index
+  // (hover 2, focus 3, title 3, icons bar 4, badges 5) stays inside it. The
+  // positioned controls then paint above the track's z-index 0 layer, whatever
+  // state any card is in.
+  const css = read(FOCUS_ROW_CSS_PATH)
+  const track = cssBlock(css, '.focusRowTrack')
+  const control = cssBlock(css, '.focusRowStrip__control')
+
+  it('Test 1: .focusRowTrack declares isolation: isolate', () => {
+    expect(track).toMatch(/isolation:\s*isolate/)
+  })
+
+  it('Test 2: .focusRowTrack declares no z-index -- a positive value could lift the whole track above the controls', () => {
+    expect(track).not.toMatch(/z-index/)
+  })
+
+  it('Test 3: .focusRowStrip__control is position: absolute with an integer z-index of at least 1', () => {
+    expect(control).toMatch(/position:\s*absolute/)
+    const z = control.match(/z-index:\s*(-?\d+)\s*;/)
+    expect(z).not.toBeNull()
+    expect(Number(z?.[1])).toBeGreaterThanOrEqual(1)
+  })
+})
+
 describe('FocusRowStrip/index.css -- .focusRowTrack .gameList', () => {
   const css = read(FOCUS_ROW_CSS_PATH)
   const block = cssBlock(css, '.focusRowTrack .gameList')
