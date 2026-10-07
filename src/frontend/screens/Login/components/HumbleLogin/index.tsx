@@ -8,6 +8,8 @@ import './index.scss'
 
 interface Props {
   dismiss: () => void
+  // Quick task 261008-aoe: re-opens this overlay from the host.
+  onRetry: () => void
 }
 
 /**
@@ -41,11 +43,19 @@ interface Props {
  * life, this call is what keeps the suppression window exactly as wide as
  * it was before: the whole mounted lifetime of the overlay.
  *
+ * Retry (quick task 261008-aoe): the panel's Retry button no longer reloads the
+ * whole app. `onRetry` re-opens this overlay through `Login/index.tsx`, which
+ * bumps `overlayMountKey`; the remount gives a fresh `HumbleLoginSurface`
+ * whose mount effect restarts the login watch. The replaced surface's cleanup
+ * issues `humbleStopLogin()` first. `HumbleLoginSurface` itself is untouched:
+ * its no-`renderState` fallback serves the `/loginweb/humble` route, which has
+ * no overlay to remount and keeps the panel's reload default.
+ *
  * onDone/onCancelled both route straight to `dismiss` -- never `navigate` --
  * so the co-mounted overlay lifecycle in Login/index.tsx is the only thing
  * that ever closes this surface.
  */
-export default function HumbleLogin({ dismiss }: Props) {
+export default function HumbleLogin({ dismiss, onRetry }: Props) {
   const { t: tGamelib } = useTranslation('gamelib')
 
   useSuppressStoreEmbed()
@@ -68,7 +78,11 @@ export default function HumbleLogin({ dismiss }: Props) {
               )}
             </DialogHeader>
             <div className="humbleLoginBody">
-              <TauriLoginPanel runner="humble" state={state} />
+              <TauriLoginPanel
+                runner="humble"
+                state={state}
+                onRetry={onRetry}
+              />
             </div>
           </Dialog>
         ) : null

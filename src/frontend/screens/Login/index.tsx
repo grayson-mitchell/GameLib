@@ -324,13 +324,18 @@ export default React.memo(function NewLogin() {
             overlayMountKeyRef,
             dismissLoginOverlay
           )}
+          onRetry={retryLoginOverlay}
         />
       )}
       {mountedOverlay !== null && isOAuthOverlayRunner(mountedOverlay) && (
         <OAuthLogin
           key={overlayMountKey}
           runner={mountedOverlay}
-          dismiss={dismissLoginOverlay}
+          dismiss={bindOverlayDismiss(
+            overlayMountKey,
+            overlayMountKeyRef,
+            dismissLoginOverlay
+          )}
           onRetry={retryLoginOverlay}
         />
       )}
