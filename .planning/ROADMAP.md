@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 6/8 plans executed
+**Plans:** 7/8 plans executed
 
 Plans:
 **Wave 1**
@@ -5680,7 +5680,7 @@ Plans:
 - [x] 48-06-PLAN.md — remove `Recent Games to Show` and its dead code; no storage bound (R6)
 
 **Gap closure, Wave 1** *(from 48-VERIFICATION.md: gaps_found, R7 failed at runtime / CR-01)*
-- [ ] 48-07-PLAN.md — TRACER: the legacy `libraryTopSection` seed reaches the renderer on FIRST launch (hydrate from `requestAppSettings`, persisted into the mirror), plus WR-01/WR-02 hardening and the `recently_played_installed` override recorded (R7, R1)
+- [x] 48-07-PLAN.md — TRACER: the legacy `libraryTopSection` seed reaches the renderer on FIRST launch (hydrate from `requestAppSettings`, persisted into the mirror), plus WR-01/WR-02 hardening and the `recently_played_installed` override recorded (R7, R1)
 
 **Gap closure, Wave 2** *(blocked on 48-07)*
 - [ ] 48-08-PLAN.md — live gates: the 7 `human_verification:` items measured into `48-UAT.md`, R7 first on the real pre-upgrade profile (R1, R2, R3, R6, R7)
