@@ -11,6 +11,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { GRID_CARD_MIN_WIDTH } from '../focusRowOverflow'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..', '..')
 
@@ -141,17 +142,94 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b)', (
   })
 })
 
-describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > *', () => {
+describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > * (G-48-8c)', () => {
+  // The 2026-10-07 ruling "match the grid" amends D-01: the card width is no
+  // longer a constant. It is the grid's column width, written as
+  // --focus-row-card-width by createStripCardWidthSync; 156px is the grid's
+  // floor and the pre-measurement fallback.
   const css = read(FOCUS_ROW_CSS_PATH)
   const block = cssBlock(css, '.focusRowTrack .gameList > *')
+  const gridBlock = cssBlock(read(LIBRARY_CSS_PATH), '.gameList')
 
-  it('declares a fixed flex: 0 0 156px', () => {
-    expect(block).toMatch(/flex:\s*0\s*0\s*156px/)
+  const fallback = Number(
+    block.match(
+      /flex:\s*0\s+0\s+var\(--focus-row-card-width,\s*(\d+(?:\.\d+)?)px\)\s*;/
+    )?.[1]
+  )
+  const gridMin = Number(
+    gridBlock.match(/minmax\(\s*(\d+(?:\.\d+)?)px,\s*1fr\s*\)/)?.[1]
+  )
+
+  it('sizes the card from the derived custom property: flex: 0 0 var(--focus-row-card-width, Npx)', () => {
+    expect(Number.isFinite(fallback)).toBe(true)
   })
 
-  it('never uses minmax( or 1fr -- the strip card width is never a fraction of the container', () => {
+  it('the fallback N equals the grid minmax() floor parsed from Library/index.css and the exported GRID_CARD_MIN_WIDTH', () => {
+    expect(Number.isFinite(gridMin)).toBe(true)
+    expect(fallback).toBe(gridMin)
+    expect(GRID_CARD_MIN_WIDTH).toBe(gridMin)
+  })
+
+  it('never uses minmax( or 1fr -- flex-grow and flex-shrink stay 0, so the derived width is exact', () => {
     expect(block).not.toMatch(/minmax\(/)
     expect(block).not.toMatch(/1fr/)
+  })
+})
+
+describe('FocusRowStrip/index.css -- strip/grid parity (G-48-8c)', () => {
+  // The strip derives the grid's column from the same inputs, so the inputs
+  // must be the same: gap and inline gutter are compared against the grid
+  // stylesheet, never restated.
+  const strip = read(FOCUS_ROW_CSS_PATH)
+  const grid = cssBlock(read(LIBRARY_CSS_PATH), '.gameList')
+  const stripList = cssBlock(strip, '.focusRowTrack .gameList')
+  const stripOuter = cssBlock(strip, '.focusRowStrip')
+
+  it('the strip list gap text equals the grid grid-gap text', () => {
+    const stripGap = stripList.match(/(?:^|[\s;])gap:\s*([^;]+);/)?.[1]
+    const gridGap = grid.match(/grid-gap:\s*([^;]+);/)?.[1]
+    expect(gridGap).toBeDefined()
+    expect(stripGap?.trim()).toBe(gridGap?.trim())
+  })
+
+  it('the grid inline padding token equals the strip inline padding token', () => {
+    const token = (block: string) =>
+      block.match(/padding:\s*0\s+(var\(--[\w-]+\))/)?.[1]
+    expect(token(grid)).toBeDefined()
+    expect(token(stripOuter)).toBe(token(grid))
+  })
+})
+
+describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
+  const tsx = read(FOCUS_ROW_TSX_PATH)
+  const overflow = read(
+    'src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts'
+  )
+
+  it('index.tsx imports createStripCardWidthSync from ./focusRowOverflow and useLayoutEffect from react', () => {
+    expect(tsx).toMatch(
+      /import\s*{[^}]*\bcreateStripCardWidthSync\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
+    )
+    expect(tsx).toMatch(
+      /import\s+React,\s*{[^}]*\buseLayoutEffect\b[^}]*}\s*from\s*'react'/
+    )
+  })
+
+  it('syncs inside a useLayoutEffect, so the first painted frame is already matched', () => {
+    expect(tsx).toMatch(
+      /useLayoutEffect\(\s*\(\)\s*=>\s*{[^}]*syncCardWidth\(trackRef\.current\)/
+    )
+  })
+
+  it('the ResizeObserver callback syncs the width, not bare readMeasurement', () => {
+    expect(tsx).toMatch(
+      /new ResizeObserver\(\s*\(\)\s*=>\s*{[^}]*syncCardWidth\(track\)/
+    )
+    expect(tsx).not.toMatch(/new ResizeObserver\(readMeasurement\)/)
+  })
+
+  it("focusRowOverflow.ts writes the property by string literal at the call site (cssTokenSweep's detector needs it)", () => {
+    expect(overflow).toMatch(/setProperty\('--focus-row-card-width'/)
   })
 })
 

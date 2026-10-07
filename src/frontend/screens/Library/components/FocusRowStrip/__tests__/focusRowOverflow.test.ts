@@ -5,8 +5,12 @@
  * or a hand-built event stub rather than a live element.
  */
 import {
+  GRID_CARD_MIN_WIDTH,
   canScrollBack,
   canScrollForward,
+  createStripCardWidthSync,
+  gridColumnCount,
+  gridColumnWidth,
   measureCardPitch,
   pageScrollDelta,
   scrollFocusedCardIntoViewHorizontally
@@ -59,6 +63,28 @@ describe('pageScrollDelta', () => {
 
   it('returns a positive delta for a positive pitch (caller negates for back)', () => {
     expect(pageScrollDelta(m(600, 2000, 300), 180)).toBeGreaterThan(0)
+  })
+
+  it('P1: pages exactly one grid row in the zero-slack geometry (G-48-8c)', () => {
+    // Matched cards fill the content box exactly, so the track is
+    // n x pitch wide with no slack, and clientWidth is an integer-rounded
+    // read of it. A bare floor(clientWidth / pitch) paged n - 1 cards at about
+    // half of all widths (desk sweep: 4951 mismatches with no tolerance).
+    const bad: string[] = []
+    for (let i = 0; 156 + i * 0.37 <= 3000; i++) {
+      const c = 156 + i * 0.37
+      const n = gridColumnCount(c)
+      const pitch = gridColumnWidth(c) + 24
+      for (const clientWidth of [Math.round(c + 24), Math.floor(c + 24)]) {
+        const got = pageScrollDelta(m(clientWidth, 99999, 0), pitch)
+        if (Math.abs(got - n * pitch) > 1e-6) {
+          bad.push(
+            `C=${c} clientWidth=${clientWidth} got ${got} want ${n * pitch}`
+          )
+        }
+      }
+    }
+    expect(bad).toEqual([])
   })
 })
 
@@ -365,11 +391,13 @@ describe('measureCardPitch', () => {
     expect(pitch).toBe(180)
   })
 
-  it('falls back to 156 + 24 for an empty track', () => {
-    expect(measureCardPitch(null, () => ({ columnGap: '24px' }))).toBe(180)
+  it('falls back to the grid minimum + 24 for an empty track (G-48-8c)', () => {
+    expect(measureCardPitch(null, () => ({ columnGap: '24px' }))).toBe(
+      GRID_CARD_MIN_WIDTH + 24
+    )
     expect(
       measureCardPitch({ firstElementChild: null } as unknown as Element)
-    ).toBe(180)
+    ).toBe(GRID_CARD_MIN_WIDTH + 24)
   })
 
   it('falls back per-measurement when only the gap is unreadable', () => {
@@ -378,5 +406,160 @@ describe('measureCardPitch', () => {
       () => ({ columnGap: 'normal' })
     )
     expect(pitch).toBe(224)
+  })
+})
+
+describe('grid column arithmetic (G-48-8c)', () => {
+  // repeat(auto-fill, minmax(156px, 1fr)) over a content box C with a 24px gap.
+  it('W1: 958 wide (UAT item 4 macOS, window 1280) is 5 columns of 172.4', () => {
+    expect(gridColumnCount(958, 156, 24)).toBe(5)
+    expect(gridColumnWidth(958, 156, 24)).toBeCloseTo(172.4, 9)
+  })
+
+  it('W2: 198 wide (window 520) is 1 column of 198', () => {
+    expect(gridColumnCount(198, 156, 24)).toBe(1)
+    expect(gridColumnWidth(198, 156, 24)).toBe(198)
+  })
+
+  it('W3: narrower than the minimum, the grid overflows at its floor', () => {
+    expect(gridColumnWidth(100, 156, 24)).toBe(156)
+    expect(gridColumnCount(100, 156, 24)).toBe(1)
+  })
+
+  it('W4: the second column fits at exact equality, not a pixel before', () => {
+    expect(gridColumnCount(336, 156, 24)).toBe(2)
+    expect(gridColumnWidth(336, 156, 24)).toBe(156)
+    expect(gridColumnCount(335.9, 156, 24)).toBe(1)
+    expect(gridColumnWidth(335.9, 156, 24)).toBe(335.9)
+  })
+
+  it('W5: the columns fill the box exactly and one more would not fit, 156 to 4000', () => {
+    const bad: string[] = []
+    for (let i = 0; 156 + i * 0.37 <= 4000; i++) {
+      const c = 156 + i * 0.37
+      const n = gridColumnCount(c, 156, 24)
+      const w = gridColumnWidth(c, 156, 24)
+      if (Math.abs(n * w + (n - 1) * 24 - c) > 1e-6) bad.push(`fill C=${c}`)
+      if (w < 156) bad.push(`floor C=${c}`)
+      if (!((n + 1) * 156 + n * 24 > c)) bad.push(`more C=${c}`)
+    }
+    expect(bad).toEqual([])
+  })
+
+  it('W6: a non-finite, zero or negative width is the minimum; a bad gap is the 24px fallback', () => {
+    for (const c of [NaN, Infinity, -Infinity, 0, -5]) {
+      expect(gridColumnWidth(c, 156, 24)).toBe(156)
+      expect(gridColumnCount(c, 156, 24)).toBe(1)
+    }
+    expect(gridColumnWidth(958, 156, NaN)).toBeCloseTo(172.4, 9)
+    expect(gridColumnWidth(958, 156, -4)).toBeCloseTo(172.4, 9)
+    expect(Number.isFinite(gridColumnWidth(NaN, NaN, NaN))).toBe(true)
+  })
+
+  it('defaults to the exported grid minimum and the 24px gap', () => {
+    expect(GRID_CARD_MIN_WIDTH).toBe(156)
+    expect(gridColumnWidth(958)).toBeCloseTo(172.4, 9)
+  })
+})
+
+describe('strip card width sync (G-48-8c)', () => {
+  const PROP = '--focus-row-card-width'
+
+  const makeTrack = (width: number, inline = '') => {
+    const store = new Map<string, string>()
+    if (inline) store.set(PROP, inline)
+    const setProperty = jest.fn((k: string, v: string) => {
+      store.set(k, v)
+    })
+    return {
+      getBoundingClientRect: () => ({ width }),
+      firstElementChild: {},
+      style: {
+        getPropertyValue: (k: string) => store.get(k) ?? '',
+        setProperty
+      },
+      setProperty
+    }
+  }
+  const asEl = (t: unknown) => t as unknown as HTMLElement
+  const style = () => ({
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    columnGap: '24px'
+  })
+
+  it('S1: writes the derived width once and returns it (982 - 2 x 12 = 958 -> 172.4)', () => {
+    const sync = createStripCardWidthSync()
+    const track = makeTrack(982)
+    const got = sync(asEl(track), style)
+    expect(track.setProperty).toHaveBeenCalledTimes(1)
+    expect(track.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
+    expect(got).toBe(172.4)
+  })
+
+  it.each([
+    ['172.4px', 172.4],
+    ['172.2px', 172.2]
+  ])(
+    'S2: an inline value within 0.5px (%s) is not rewritten',
+    (inline, want) => {
+      const sync = createStripCardWidthSync()
+      const track = makeTrack(982, inline)
+      expect(sync(asEl(track), style)).toBe(want)
+      expect(track.setProperty).not.toHaveBeenCalled()
+    }
+  )
+
+  it('S2: an inline value 0.5px or more away is rewritten', () => {
+    const sync = createStripCardWidthSync()
+    const track = makeTrack(982, '156px')
+    expect(sync(asEl(track), style)).toBe(172.4)
+    expect(track.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
+  })
+
+  it('S3: is total -- null track, no list, unmeasurable width, throwing getStyle', () => {
+    const sync = createStripCardWidthSync()
+    expect(sync(null, style)).toBeNull()
+
+    const noList = makeTrack(982)
+    noList.firstElementChild = null as unknown as Record<string, never>
+    expect(sync(asEl(noList), style)).toBeNull()
+    expect(noList.setProperty).not.toHaveBeenCalled()
+
+    for (const width of [0, NaN, -10, 20]) {
+      const t = makeTrack(width)
+      expect(sync(asEl(t), style)).toBeNull()
+      expect(t.setProperty).not.toHaveBeenCalled()
+    }
+
+    const throwing = makeTrack(982)
+    expect(
+      sync(asEl(throwing), () => {
+        throw new Error('no style')
+      })
+    ).toBeNull()
+    expect(throwing.setProperty).not.toHaveBeenCalled()
+  })
+
+  it('S3: an unreadable gap uses the 24px fallback', () => {
+    const sync = createStripCardWidthSync()
+    const track = makeTrack(982)
+    expect(
+      sync(asEl(track), () => ({
+        paddingLeft: '12px',
+        paddingRight: '12px',
+        columnGap: 'normal'
+      }))
+    ).toBe(172.4)
+  })
+
+  it('S4: two track elements with identical geometry each get their own write', () => {
+    const sync = createStripCardWidthSync()
+    const first = makeTrack(982)
+    const second = makeTrack(982)
+    sync(asEl(first), style)
+    sync(asEl(second), style)
+    expect(first.setProperty).toHaveBeenCalledTimes(1)
+    expect(second.setProperty).toHaveBeenCalledTimes(1)
   })
 })
