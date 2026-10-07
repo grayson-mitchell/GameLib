@@ -314,11 +314,18 @@ describe('FocusRowStrip/index.css -- overflow controls (Plan 48-04)', () => {
     )
   })
 
-  it('declares the rgba fallback BEFORE the color-mix scrim', () => {
-    const fallback = control.indexOf('rgba(0, 0, 0, 0.55)')
-    const mixed = control.indexOf('color-mix(')
-    expect(fallback).toBeGreaterThan(-1)
-    expect(mixed).toBeGreaterThan(fallback)
+  it('paints one opaque var(--body-background) disc -- no translucency token (G-48-4a)', () => {
+    // A flat alpha over artwork cannot bound the glyph contrast (UAT item 4:
+    // 12 of 40 combinations under 3:1, minimum 1.005). One opaque paint makes
+    // the ratio a property of the theme; themeTokens.test.ts holds the census.
+    const paints = control.match(/(?:^|[;\s])background(?:-color)?\s*:[^;]+/g)
+    expect(paints).toHaveLength(1)
+    expect((paints ?? [''])[0]).toMatch(
+      /background\s*:\s*var\(--body-background\)\s*$/
+    )
+    expect(control).not.toMatch(
+      /color-mix\(|rgba?\(|hsla?\(|transparent|gradient/i
+    )
   })
 
   it('colours the icon with --accent, never --border-color or --navbar-active', () => {

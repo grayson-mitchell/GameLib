@@ -659,3 +659,117 @@ describe('--border-color is visible in every theme (3:1 non-text floor)', () => 
     }
   )
 })
+
+/**
+ * Depth-0 `prop: value` declarations of a block body, in source order, with
+ * nested rules skipped (the `customProps` loop shape, but matching a NAMED
+ * property instead of a custom property). `prop` is matched whole from the
+ * start of the statement, so `color` never matches inside `background-color`.
+ */
+const declsAtDepthZero = (blockBody: string, prop: string): string[] => {
+  const out: string[] = []
+  const pattern = new RegExp(String.raw`^\s*${prop}\s*:\s*([\s\S]+)$`)
+  const take = (statement: string) => {
+    const m = pattern.exec(statement)
+    if (m) out.push(m[1].trim().replace(/\s+/g, ' '))
+  }
+  let depth = 0
+  let buf = ''
+  for (const ch of blockBody) {
+    if (ch === '{') {
+      depth++
+      buf = ''
+    } else if (ch === '}') {
+      depth--
+      buf = ''
+    } else if (ch === ';' && depth === 0) {
+      take(buf)
+      buf = ''
+    } else if (depth === 0) {
+      buf += ch
+    }
+  }
+  take(buf) // a final declaration may omit its `;`
+  return out
+}
+
+/** A literal that cannot let anything show through: hex without alpha, or a named colour. */
+const isOpaqueColour = (colour: string): boolean => {
+  if (Object.prototype.hasOwnProperty.call(NAMED_COLOURS, colour.toLowerCase()))
+    return true
+  const m = /^#([0-9a-f]+)$/i.exec(colour.trim())
+  if (!m) return false
+  const hex = m[1]
+  if (hex.length === 3 || hex.length === 6) return true
+  return hex.length === 8 && hex.slice(6).toLowerCase() === 'ff'
+}
+
+const FOCUS_ROW_STRIP_CSS =
+  'src/frontend/screens/Library/components/FocusRowStrip/index.css'
+
+/**
+ * G-48-4a (48-11 Task 1): the strip's chevron glyph versus its OWN disc, in
+ * every theme, at WCAG 2.2 SC 1.4.11's 3:1 (the bar 48-08 adopted).
+ *
+ * The 55% `color-mix` scrim this replaces measured below 3:1 in 12 of 40
+ * theme x card x edge combinations, minimum 1.005 in gruvbox_dark (UAT item 4):
+ * a flat alpha over arbitrary artwork cannot bound the ratio, because bright
+ * art behind it leaves a mid grey that any mid-luminance accent fails against.
+ * With ONE opaque `var(--body-background)` paint the only neighbour of the
+ * glyph inside the circle is the theme's body colour, so the ratio is a
+ * property of the theme, not of the artwork -- which is what this census can
+ * resolve from the shipped declarations through the same var() chain the
+ * browser follows (the NavTab and `--border-color` censuses' resolver).
+ *
+ * What it cannot prove: the disc's own edge against the art, and rendered
+ * pixels (no CSS engine here). UAT item 10 owns those.
+ */
+describe('FocusRowStrip chevron disc: glyph vs disc is >= 3:1 in every theme (G-48-4a)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const stripCss = read(FOCUS_ROW_STRIP_CSS)
+  const control = cssBlock(stripCss, '.focusRowStrip__control')
+  const globals = globalTokens()
+  const colourDecls = declsAtDepthZero(control, 'color')
+  const discDecls = [
+    ...declsAtDepthZero(control, 'background'),
+    ...declsAtDepthZero(control, 'background-color')
+  ]
+
+  it('non-vacuity: one glyph colour (--accent) and exactly one opaque --body-background disc declaration', () => {
+    expect(globals.size).toBeGreaterThan(0)
+    expect(colourDecls).toEqual(['var(--accent)'])
+    expect(discDecls).toHaveLength(1)
+    expect(discDecls[0]).toMatch(/^var\(\s*--body-background\b/)
+    expect(discDecls[0]).not.toMatch(
+      /color-mix\(|rgba?\(|hsla?\(|transparent|gradient/i
+    )
+  })
+
+  it.each(themeSelectors)(
+    '%s paints the chevron glyph at >= 3:1 against its opaque disc',
+    (selector) => {
+      const scope = themeTokens(themesScss, selector)
+      const glyph = resolveValue(colourDecls[0] ?? '', scope, globals)
+      const disc = resolveValue(discDecls[0] ?? '', scope, globals)
+      // An unresolved token fails the case; it never skips it.
+      expect(glyph).not.toBeNull()
+      expect(disc).not.toBeNull()
+      expect({
+        selector,
+        disc,
+        opaque: isOpaqueColour(disc as string)
+      }).toEqual({
+        selector,
+        disc,
+        opaque: true
+      })
+      const ratio = contrastRatio(glyph as string, disc as string)
+      // Object form so a failure names the theme and the measured ratio.
+      expect({ selector, ratio, passes: ratio >= 3 }).toEqual({
+        selector,
+        ratio,
+        passes: true
+      })
+    }
+  )
+})
