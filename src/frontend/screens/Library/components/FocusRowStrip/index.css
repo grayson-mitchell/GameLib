@@ -85,10 +85,18 @@
   border-radius: 50%;
   cursor: pointer;
   color: var(--accent);
-  /* Fallback FIRST: a webview without color-mix drops the second declaration
-     and keeps this one. The two-declaration order is what makes it apply. */
-  background: rgba(0, 0, 0, 0.55);
-  background: color-mix(in srgb, var(--body-background) 55%, transparent);
+  /* G-48-4a: one OPAQUE disc. The 55% color-mix scrim this replaces measured
+     under 3:1 in 12 of 40 theme x card x edge combinations (UAT item 4,
+     minimum 1.005 in gruvbox_dark): a flat alpha over arbitrary artwork cannot
+     bound the glyph's contrast, because bright art behind it leaves a mid grey
+     that any mid-luminance accent fails against. With an opaque paint the
+     glyph's only neighbour inside the circle is the theme's body colour, so
+     the ratio is a property of the theme and is gated per theme in
+     themeTokens.test.ts (desk minimum 3.91, gruvbox_dark). Deliberate
+     deviation from 48-UI-SPEC's "semi-transparent dark scrim", in service of
+     that spec's own purpose: stays legible over any artwork. No color-mix,
+     rgba or transparent layer here, by gate. */
+  background: var(--body-background);
 }
 
 /* Logical properties: this app ships RTL locales (ar, fa, he). */
