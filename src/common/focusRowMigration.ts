@@ -96,3 +96,41 @@ export function migrateFocusRowSelection(
       return null
   }
 }
+
+// RED skeleton (48-07 Task 1): models the PRE-FIX renderer behaviour so the
+// regression test fails on its assertions, not on a missing symbol. Replaced in
+// the GREEN commit.
+export interface FocusRowMirrorSeed {
+  focusRow: FocusRowSelection
+  needsMigratedValue: boolean
+}
+
+export function seedFocusRowFromMirror(
+  mirrorSettings: unknown
+): FocusRowMirrorSeed {
+  const mirror = mirrorSettings as { focusRow?: unknown } | null | undefined
+  const stored = mirror?.focusRow
+  return {
+    focusRow: isValidFocusRowSelection(stored) ? stored : null,
+    needsMigratedValue: true
+  }
+}
+
+export interface FocusRowHydrationDeps {
+  requestAppSettings: () => Promise<unknown>
+  setSetting: (payload: {
+    appName: 'default'
+    key: 'focusRow'
+    value: FocusRowSelection
+  }) => void
+  applyFocusRow: (value: FocusRowSelection) => void
+  hasUserPicked: () => boolean
+  onError: (error: unknown) => void
+}
+
+export async function hydrateFocusRowSelection(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _deps: FocusRowHydrationDeps
+): Promise<FocusRowSelection | undefined> {
+  return undefined
+}
