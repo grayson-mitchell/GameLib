@@ -1,172 +1,85 @@
 ---
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
-reviewed: 2026-10-05T00:00:00Z
+reviewed: 2026-10-07T00:00:00Z
 depth: standard
-files_reviewed: 28
+files_reviewed: 7
 files_reviewed_list:
-  - meta/__tests__/genI18nGateScope.test.ts
-  - src/backend/config.ts
-  - src/backend/recent_games/recent_games.ts
-  - src/backend/sidecar/enrichmentFlowRegistration.ts
-  - src/common/__tests__/focusRowMigration.test.ts
   - src/common/focusRowMigration.ts
-  - src/common/types.ts
-  - src/frontend/components/UI/Header/__tests__/headerTourAnchors.test.tsx
-  - src/frontend/components/UI/Header/index.css
-  - src/frontend/components/UI/Header/index.tsx
-  - src/frontend/components/UI/NavShell/components/FilterFocusRow/__tests__/filterFocusRow.test.tsx
-  - src/frontend/components/UI/NavShell/components/FilterFocusRow/index.scss
-  - src/frontend/components/UI/NavShell/components/FilterFocusRow/index.tsx
-  - src/frontend/screens/Library/__tests__/engineWiring.test.ts
-  - src/frontend/screens/Library/__tests__/filterChipRowPlacement.test.ts
-  - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowOverflow.test.ts
-  - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowSelectors.test.ts
-  - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowStripSource.test.ts
-  - src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts
-  - src/frontend/screens/Library/components/FocusRowStrip/focusRowSelectors.ts
-  - src/frontend/screens/Library/components/FocusRowStrip/index.css
-  - src/frontend/screens/Library/components/FocusRowStrip/index.tsx
-  - src/frontend/screens/Library/engineWiring.ts
-  - src/frontend/screens/Library/index.tsx
-  - src/frontend/screens/Settings/components/index.ts
-  - src/frontend/screens/Settings/sections/GeneralSettings/index.tsx
-  - src/frontend/state/ContextProvider.tsx
   - src/frontend/state/GlobalState.tsx
-  - src/frontend/types.ts
+  - src/backend/sidecar/__tests__/focusRowFirstLaunchHydration.test.ts
+  - src/frontend/state/__tests__/GlobalStateFocusRowHydration.test.ts
+  - src/common/__tests__/focusRowMigration.test.ts
+  - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowSelectors.test.ts
+  - src/backend/sidecar/__tests__/testContainment.test.ts
 findings:
-  critical: 1
-  warning: 2
-  info: 4
-  total: 7
+  critical: 0
+  warning: 1
+  info: 3
+  total: 4
 status: issues_found
 ---
 
-# Phase 48: Code Review Report
+# Phase 48: Code Review Report (incremental, 48-07 gap closure)
 
-**Reviewed:** 2026-10-05
+**Reviewed:** 2026-10-07
 **Depth:** standard
-**Files Reviewed:** 28 (`index.css`/`index.scss` skimmed only)
+**Files Reviewed:** 7 (diff `f6d850366..6e474fb3d`)
 **Status:** issues_found
 
 ## Summary
 
-The strip, selector, overflow arithmetic and panel section are largely sound. The three deleted files have no live references (only stale comments, IN-02). `getRecentGames()` callers are all updated: the only two callers (`recent_games.ts:18`, `:40`) already pass no argument. `tsc --noEmit` is clean and ESLint reports 0 errors on the touched TS/TSX.
+Incremental review of gap-closure plan 48-07 (CR-01 first-launch hydration, WR-01 view whitelist, WR-02 present-key disarm). The fixes are correct on the points the brief asked about. I traced each one against the real backend path (`settingsFlowRegistration.ts` handlers, `GlobalConfigV0.getSettings()`/`setSetting()`/`flush()` in `config.ts`):
 
-The significant finding is that the one-time legacy migration is correct in isolation but never reaches the renderer. It populates the backend `GlobalConfig` in memory, while `GlobalState` seeds `focusRow` from a different store (CR-01).
+- **Hydration vs user-pick race:** `hasUserPicked()` is read after the `await`, and `handleFocusRow` sets `focusRowPickedThisSession` synchronously before it persists. A pick made while the IPC is in flight wins and is persisted by the pick itself. Correct. The unit test covers it.
+- **Rejected `requestAppSettings`:** the `await` is inside the single `try`, so the rejection is caught, reported through `onError`, and the helper resolves `undefined`. `void` is therefore safe for that path. One gap remains (WR-03 below).
+- **Re-fire:** `needsMigratedValue` is computed once at module scope, and `componentDidMount` runs once per mount. The root `GlobalState` mounts once per page load, and `StrictMode` is commented out in `index.tsx`. A page reload re-reads the mirror, which hydration has by then written, so it does not re-fire. A same-page remount would re-fire (IN-06), but harmlessly.
+- **Write scope:** the only write is `setSetting({appName:'default', key:'focusRow'})`. `setSetting` spreads the existing mirror, so `games.*` and the other settings are untouched. The real-path test asserts this.
+- **WR-01 whitelist:** `FOCUS_ROW_VIEW_VALUES` matches `LibraryView` (`frontend/types.ts:432`, four members) exactly.
+- **WR-02:** the present-key short-circuit in `migrateFocusRowSelection` and in `seedFocusRowFromMirror` is consistent on both sides.
 
-Both prior-review flags were checked and are NOT confirmed as defects (see "Prior-review flags" below).
-
-## Critical Issues
-
-### CR-01: Legacy `libraryTopSection` seed never reaches the renderer (SPEC R7 not delivered at runtime)
-
-**File:** `src/frontend/state/GlobalState.tsx:57,490` (consumer), `src/backend/config.ts:341-342,406-407` (producer)
-
-**Issue:** `migrateFocusRowSelection` runs inside `GlobalConfigV0.getSettings()`. That only fills `GlobalConfig`'s in-memory `this.config` and, on the next `flush()`, `config.json`. The renderer does not read either.
-
-`GlobalState` initialises its state from the module-level `const globalSettings = configStore.get_nodefault('settings')` (line 57), then `focusRow: globalSettings?.focusRow ?? null` (line 490). That is the renderer-side `configStore['settings']` mirror (`store/config.json`).
-
-The mirror is written only in two places: `GlobalConfig.setSetting` (`config.ts:406-407`, which spreads the existing mirror and so never adds a `focusRow` key) and `writeConfig` in `utils.ts:1814`. Neither runs the migration.
-
-Trace for an upgrading user who had `libraryTopSection: 'recently_played'`:
-- The old `useSetting` write put `libraryTopSection` into the mirror.
-- The backend seeds `focusRow` in memory only.
-- The renderer reads the mirror, finds no `focusRow`, and gets `null`.
-- The Library shows no focus row.
-- The seed is lost, silently.
-
-If the user picks and then clears, `null` is written and the problem disappears, which makes it hard to notice. The old code was correct only because it read `libraryTopSection` from that same mirror. `trayIconVariant` works because its UI reads `requestAppSettings`, not the mirror.
-
-`focusRowMigration.test.ts` exercises `migrateFocusRowSelection` directly, so the gap is invisible to the suite. This is a static trace and was not run live.
-
-**Fix:** Hydrate `focusRow` from the migrated source instead of the mirror. Either option works:
-```ts
-// GlobalState: after mount (componentDidMount), pull the migrated value
-window.api.requestAppSettings().then(({ focusRow }) => {
-  if (isValidFocusRowSelection(focusRow)) this.setState({ focusRow })
-})
-```
-or have the backend write the migrated value into the mirror when it derives it in `getSettings()`. Add a test that drives the real read path from a legacy `{ libraryTopSection: 'recently_played' }` fixture to the `focusRow` the context exposes.
+No security issues. No critical issues.
 
 ## Warnings
 
-### WR-01: `{ kind: 'view', value: <unrecognised> }` passes validation and renders an unlabelled strip of arbitrary games
+### WR-03: `hydrateFocusRowSelection` "NEVER rejects" contract is broken if `onError` throws
 
-**File:** `src/common/focusRowMigration.ts:30-49`, `src/frontend/screens/Library/components/FocusRowStrip/focusRowSelectors.ts:62-70`, `FocusRowStrip/index.tsx:150-178`
-
-**Issue:** The validator accepts any non-empty string `value`. `passesView` (`filterEngine.ts:174`) has `default: return true`. So a stale, hand-edited or future-version `{kind:'view', value:'bogus'}` becomes "all games": the first 20 titles alphabetically render.
-
-`FocusRowStrip`'s `default: label = ''` then gives that strip an empty header. The migration docstring presents the fall-through as benign, but it is not "selects no games", and the user sees an unexplained, labelless row. The panel highlights nothing, so there is no obvious way to see what is selected.
-
-Other kinds degrade safely (unknown store, runnability and collection values match zero games and the strip returns `null`). Only `view` is open-ended.
-
-**Fix:** In `selectFocusRowGames`, return `[]` for a `view` value that is not one of `all | installed | recentlyPlayed | favourites`. Better, tighten `isValidFocusRowSelection` for `kind === 'view'` so both the migration and the renderer reject it:
+**File:** `src/common/focusRowMigration.ts:215-218` (caller: `src/frontend/state/GlobalState.tsx:1495-1505`)
+**Issue:** The `catch` block calls `deps.onError(error)` unguarded. The JSDoc, the `void` at the call site and the comment "`void` is safe ONLY because hydrateFocusRowSelection never rejects" all rest on the promise never rejecting. `onError` is `window.api.logError(...)`, which is a bridge call. The failure that lands in this `catch` is typically "the backend is unreachable or not ready". That is the case where a second bridge call is most likely to fail too. If `logError` throws, the async function rejects and `void` turns it into an `unhandledrejection`. The test suite only covers a throwing `applyFocusRow`, not a throwing `onError`. The project already has a documented history of `void p` handling nothing and of unhandled rejections surfacing as random failures.
+**Fix:**
 ```ts
-const VIEW_VALUES = ['all', 'installed', 'recentlyPlayed', 'favourites']
-if (kind === 'view' && !VIEW_VALUES.includes(pickValue)) return false
+  } catch (error) {
+    try {
+      deps.onError(error)
+    } catch {
+      // The reporter failed too; there is nowhere left to report to. Resolve.
+    }
+    return undefined
+  }
 ```
-
-### WR-02: A present-but-invalid `focusRow` resurrects the legacy seed, contradicting the "present key permanently disarms" contract
-
-**File:** `src/common/focusRowMigration.ts:84-96`, `src/backend/config.ts:342`
-
-**Issue:** The `GlobalState.handleFocusRow` comment says a present key "permanently disarms the one-time legacy seed". The code does not guarantee this. A present `focusRow` that fails validation falls through to the `libraryTopSection` switch.
-
-A user who cleared the row long ago, and whose file still carries `libraryTopSection: 'favourites'`, gets the favourites row back after any corruption or manual edit of `focusRow`. The intent was "an invalid value never reaches the renderer", which only requires returning `null`, not re-seeding.
-
-**Fix:** Once the key is present, never consult the legacy field:
-```ts
-if (stored && 'focusRow' in stored) {
-  return isValidFocusRowSelection(stored.focusRow) ? stored.focusRow : null
-}
-```
-
-## Prior-review flags
-
-**(1) `handleFocusRow` fire-and-forget / read-modify-write race: NOT CONFIRMED.**
-- `window.api.setSetting` is a one-way `ipcMain.on` send (`settingsFlowRegistration.ts:160`) returning `void`, so there is nothing to `await` or `.catch`. ESLint raises no floating-promise warning at `GlobalState.tsx:806`. It also matches the existing pattern in `useSettingsContext.ts:87`.
-- `GlobalConfig.setSetting` (`config.ts:404-420`) is fully synchronous: an in-memory read-modify-write followed by `writeFileSync`. The sidecar is single-threaded and IPC frames are processed in order, so rapid picks serialise and the last pick wins.
-- The residual risk is a thrown write failure with no rollback of the optimistic `setState`. That is low-severity and shared with every other setting.
-
-**(2) `RunnerToStore[focusRow.value]` yields an undefined label: NOT CONFIRMED in practice.**
-- `RunnerToStore` covers every `StoreFacetValue` except `sideload`, which is special-cased directly above.
-- A stale or unknown store value matches zero games in `filterLibrary`, so `hasGames` is false and the component returns `null` before the label code runs.
-- It is still fragile because the map is `Record<string,string>`, so TypeScript would never flag a missing key. A `?? focusRow.value` fallback would make it robust (IN-03).
-
-**Also verified, no defect:**
-- Event-listener cleanup in `FocusRowStrip`: the scroll listener, the `ResizeObserver` and the capture-phase focus listener are all removed in their effect cleanups, with matching `capture` options.
-- `isValidFocusRowSelection` is defined once in `common/focusRowMigration.ts` and re-exported from `focusRowSelectors.ts`. `migrateFocusRowSelection` and `selectFocusRowGames` both use it. `GlobalState` does not validate on load; it relies on the selector, which is safe because `focusRow?.kind` access is null-safe.
-- Migration of absent, unrecognised and non-string `libraryTopSection` values returns `null` (the `switch` default arm). `stored` being `null` is handled.
-- DLC exclusion is preserved: `filterEngine.ts:371` excludes DLC, matching the old lane.
+Add a unit test where `onError` throws and assert `resolves.toBeUndefined()`.
 
 ## Info
 
-### IN-01: Retired settings strings left in 47 locale files
+### IN-05: `testContainment.test.ts` bookkeeping not maintained for the new suite
 
-**File:** `public/locales/*/translation.json` (e.g. `en/translation.json:902,958`)
-**Issue:** `setting.library_top_section`, `setting.library_top_option.*` and `setting.maxRecentGames` are no longer referenced by any source file, but remain in 47 locale files.
-**Fix:** Prune the keys via the project's i18n pass, mindful of the documented key-removal traps.
+**File:** `src/backend/sidecar/__tests__/testContainment.test.ts:911-923, 933`
+**Issue:** The new entry `'focusRowFirstLaunchHydration.test.ts'` is inserted before `'electronReachLedger.test.ts'` and `'eosOverlayFlows.test.ts'`, so the list is no longer alphabetical like its neighbours. The running tally in the preceding doc comment ("69 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 65 below") was not advanced. The directory is at 70 files, so it is now 4 + 66. The drift gate compares sets, so nothing fails. The tally and ordering are only convention, but the tally is the thing a later contributor uses to sanity-check a `readdirSync` recount.
+**Fix:** Move the entry after `'eosOverlayFlows.test.ts'`, to its sorted position. Append "70 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 66 below." to the new paragraph.
 
-### IN-02: Stale comments referencing deleted files
+### IN-06: Hydration guard is per-module, not per-mount; the "once" claim holds per page load only
 
-**File:** `src/frontend/screens/Library/index.tsx:211,217`; `FocusRowStrip/index.tsx:53`; `meta/hardcodedStringGate.ts:760`
-**Issue:** The comments still point at `RecentlyPlayed/index.tsx`, which no longer exists.
-**Fix:** Reword them to describe the history without a path.
+**File:** `src/frontend/state/GlobalState.tsx:64, 1494-1506`
+**Issue:** `focusRowMirrorSeed.needsMigratedValue` is a module-level constant and `focusRowPickedThisSession` is an instance field. If `GlobalState` is ever remounted without a page reload (HMR in dev, a future route-level remount), the constant is still `true` and the new instance has `focusRowPickedThisSession === false`. Hydration then re-runs, re-reads the backend, and re-applies and re-writes the persisted value. This is harmless today because any earlier user pick was persisted and the backend returns it, so the value is identical. But the "never overwrite a user pick" invariant then depends on the persisted value matching the in-memory one, not on the flag.
+**Fix:** Optional hardening. Flip a module-level `focusRowHydrationStarted` flag when the call is dispatched, or set `focusRowMirrorSeed.needsMigratedValue` false after the first dispatch. Not required.
 
-### IN-03: Unchecked brand-map lookup for the store label
+### IN-07: Drift-guard comment overstates what `pnpm codecheck` catches
 
-**File:** `src/frontend/screens/Library/components/FocusRowStrip/index.tsx:186`; `FilterFocusRow/index.tsx:~127`
-**Issue:** `RunnerToStore[value]` has type `string` regardless of key, so an unmapped value is invisible to the compiler.
-**Fix:** `RunnerToStore[focusRow.value] ?? focusRow.value`.
-
-### IN-04: Stale doc comment on `FocusRowSelection`
-
-**File:** `src/common/types.ts:~178`
-**Issue:** The comment says the value is validated by `isValidFocusRowSelection` "in FocusRowStrip/focusRowSelectors.ts". The function now lives in `common/focusRowMigration.ts` and is only re-exported from that file.
-**Fix:** Update the reference.
+**File:** `src/common/focusRowMigration.ts:24-29`; `focusRowSelectors.test.ts:63-75`
+**Issue:** The comment says the `satisfies Record<LibraryView, true>` case "fails `pnpm codecheck` if `LibraryView` gains a member this list lacks". Strictly, `tsc` fails when `LibraryView` gains a member that the test's own `ALL_VIEWS` literal lacks. It is the jest assertion on the following lines that then fails if `FOCUS_ROW_VIEW_VALUES` lacks the member. The whitelist is never type-linked to `LibraryView`, so the guard is two steps, and the second step is a test run, not codecheck. The guard does work, but a reader who trusts the comment will skip the test run.
+**Fix:** Reword to "`tsc` forces `ALL_VIEWS` in `focusRowSelectors.test.ts` to gain the member, and that test then fails if this list lacks it."
 
 ---
 
-_Reviewed: 2026-10-05_
+_Reviewed: 2026-10-07_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
