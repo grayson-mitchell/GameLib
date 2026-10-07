@@ -25,7 +25,7 @@ findings:
     title: "[Group 2, 261008-aoe] New `TauriLoginPanel` tests replace `window.location` and never restore it"
   - id: WR-03
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "`hydrateFocusRowSelection` \"NEVER rejects\" contract is broken if `onError` throws"
   - id: IN-05
     severity: info
@@ -61,7 +61,7 @@ recorded: 2026-10-07T19:32:29.096Z
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
-| WR-03 | warning | open | - (not in the current review) |
+| WR-03 | warning | fixed | quick-261002-b63 0cecb87b1 (not in the current review) |
 | IN-05 | info | open | - (not in the current review) |
 | IN-06 | info | open | - (not in the current review) |
 | IN-07 | info | open | - (not in the current review) |

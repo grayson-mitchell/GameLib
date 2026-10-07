@@ -1757,3 +1757,4 @@ Stopped at: Completed 48-12-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
+| 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
