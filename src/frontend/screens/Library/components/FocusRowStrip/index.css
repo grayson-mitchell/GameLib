@@ -56,8 +56,15 @@
   padding-inline: 12px;
 }
 
+/* G-48-8c (operator ruling 2026-10-07, "match the grid", amending D-01): a
+   strip card is the width one grid column takes, not a constant. The variable
+   is written inline on .focusRowTrack by createStripCardWidthSync from the
+   grid's own auto-fill/minmax arithmetic over the strip's content box.
+   156px is the grid's floor (Library/index.css minmax(156px, 1fr)) and the
+   fallback before the first measurement or when none is possible. flex-grow
+   and flex-shrink stay 0, so the derived width is exact. */
 .focusRowTrack .gameList > * {
-  flex: 0 0 156px;
+  flex: 0 0 var(--focus-row-card-width, 156px);
 }
 
 .focusRowStrip .libraryHeader {

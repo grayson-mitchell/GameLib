@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState
@@ -24,6 +25,7 @@ import {
   TrackMeasurement,
   canScrollBack,
   canScrollForward,
+  createStripCardWidthSync,
   measureCardPitch,
   pageScrollDelta,
   scrollFocusedCardIntoViewHorizontally
@@ -70,6 +72,10 @@ function FocusRowStrip({
     scrollLeft: 0
   })
 
+  // One width sync per mount (G-48-8c): it keeps the write history that stops
+  // a resize feedback loop, so it must not be re-created per render.
+  const [syncCardWidth] = useState(() => createStripCardWidthSync())
+
   const games = useMemo(
     () => selectFocusRowGames(libraryUnion, focusRow, showHidden, deps),
     [libraryUnion, focusRow, showHidden, deps]
@@ -95,6 +101,13 @@ function FocusRowStrip({
     )
   }, [])
 
+  // Match the strip's card width to the grid's column width (G-48-8c, the
+  // 2026-10-07 ruling amending D-01) before the first paint, so there is no
+  // 156px-then-wide flash. The ResizeObserver below keeps it current.
+  useLayoutEffect(() => {
+    syncCardWidth(trackRef.current)
+  }, [hasGames, games, syncCardWidth])
+
   // Keep `measure` current: on resize of the track or of its content, and
   // on every scroll. The track only exists while the pick resolves to games,
   // so the effect re-arms when that flips.
@@ -107,7 +120,10 @@ function FocusRowStrip({
     track.addEventListener('scroll', readMeasurement, { passive: true })
     let observer: ResizeObserver | undefined
     if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(readMeasurement)
+      observer = new ResizeObserver(() => {
+        syncCardWidth(track)
+        readMeasurement()
+      })
       observer.observe(track)
       if (track.firstElementChild) {
         observer.observe(track.firstElementChild)
@@ -117,7 +133,7 @@ function FocusRowStrip({
       track.removeEventListener('scroll', readMeasurement)
       observer?.disconnect()
     }
-  }, [hasGames, games, readMeasurement])
+  }, [hasGames, games, readMeasurement, syncCardWidth])
 
   // Gamepad focus is a scripted `.focus()` onto a card; bring it fully into
   // view along the track's own `scrollLeft`. Gated on `activeController` the

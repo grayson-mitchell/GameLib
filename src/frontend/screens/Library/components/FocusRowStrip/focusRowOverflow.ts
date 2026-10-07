@@ -21,9 +21,24 @@ export interface TrackMeasurement {
 // nothing is worse than a disabled one.
 const SUBPIXEL_EPSILON = 1
 
-// Fallbacks for `measureCardPitch` only when a measurement is unavailable.
-const FALLBACK_CARD_WIDTH = 156
+/**
+ * The grid's `minmax()` floor: `Library/index.css` `.gameList` declares
+ * `repeat(auto-fill, minmax(156px, 1fr))`. Mirrored here because JS cannot read
+ * a stylesheet rule; `focusRowStripSource.test.ts` pins it equal to that
+ * stylesheet (and to the strip's own CSS fallback), so the two cannot drift.
+ * Also `measureCardPitch`'s no-measurement width.
+ */
+export const GRID_CARD_MIN_WIDTH = 156
+
+// 1.5rem at the 16px root `styles/_typography.scss` sets on `:root`. The
+// grid's `grid-gap` and the strip's `gap` both read 1.5rem; this is only the
+// fallback when the computed gap is unreadable.
 const FALLBACK_CARD_GAP = 24
+
+// A derived width within this of the element's own inline value is not
+// rewritten: a sub-pixel jitter in the measurement must not become a style
+// write (and so a ResizeObserver delivery) on every frame (T-48-36).
+const WIDTH_WRITE_EPSILON = 0.5
 
 const isFiniteMeasurement = (m: TrackMeasurement): boolean =>
   Number.isFinite(m.clientWidth) &&
@@ -38,6 +53,12 @@ const maxScrollLeft = (m: TrackMeasurement): number =>
  * current width times the card pitch. Positive; the caller negates it for
  * the back direction. Floored to one card so a control can never be a
  * live-looking no-op, and always finite.
+ *
+ * A card short of fitting by under a pixel counts as visible: matched cards
+ * fill the track with no slack (G-48-8c), and `clientWidth` is an
+ * integer-rounded read, so a bare `floor(clientWidth / pitch)` paged one card
+ * short at about half of all widths. With the tolerance a page is exactly one
+ * grid row.
  */
 export function pageScrollDelta(
   m: TrackMeasurement,
@@ -49,7 +70,10 @@ export function pageScrollDelta(
   if (!Number.isFinite(m.clientWidth) || m.clientWidth <= 0) {
     return cardPitch
   }
-  return Math.max(1, Math.floor(m.clientWidth / cardPitch)) * cardPitch
+  return (
+    Math.max(1, Math.floor((m.clientWidth + SUBPIXEL_EPSILON) / cardPitch)) *
+    cardPitch
+  )
 }
 
 export function canScrollForward(m: TrackMeasurement): boolean {
@@ -87,8 +111,136 @@ export function measureCardPitch(
   return (
     (Number.isFinite(measured) && measured > 0
       ? measured
-      : FALLBACK_CARD_WIDTH) + (Number.isFinite(gap) ? gap : FALLBACK_CARD_GAP)
+      : GRID_CARD_MIN_WIDTH) + (Number.isFinite(gap) ? gap : FALLBACK_CARD_GAP)
   )
+}
+
+const sanitiseMin = (minWidth: number): number =>
+  Number.isFinite(minWidth) && minWidth > 0 ? minWidth : GRID_CARD_MIN_WIDTH
+
+const sanitiseGap = (gap: number): number =>
+  Number.isFinite(gap) && gap >= 0 ? gap : FALLBACK_CARD_GAP
+
+/**
+ * Column count of `repeat(auto-fill, minmax(minWidth, 1fr))` over a content
+ * box of `contentWidth` with `gap` between columns: the largest n with
+ * `n x minWidth + (n - 1) x gap <= contentWidth`, at least 1. No epsilon:
+ * CSS Grid decides the repetition count at exact equality, and an epsilon
+ * would disagree with the browser across a whole 1px band instead of at a
+ * single point. A non-finite or non-positive width is one column.
+ */
+export function gridColumnCount(
+  contentWidth: number,
+  minWidth: number = GRID_CARD_MIN_WIDTH,
+  gap: number = FALLBACK_CARD_GAP
+): number {
+  const min = sanitiseMin(minWidth)
+  const g = sanitiseGap(gap)
+  if (!Number.isFinite(contentWidth) || contentWidth <= 0) {
+    return 1
+  }
+  return Math.max(1, Math.floor((contentWidth + g) / (min + g)))
+}
+
+/**
+ * Width of one grid column over `contentWidth`: the `1fr` share left after the
+ * gaps, never under the minimum (a box narrower than the minimum overflows at
+ * the floor, as the grid does). Always finite.
+ */
+export function gridColumnWidth(
+  contentWidth: number,
+  minWidth: number = GRID_CARD_MIN_WIDTH,
+  gap: number = FALLBACK_CARD_GAP
+): number {
+  const min = sanitiseMin(minWidth)
+  const g = sanitiseGap(gap)
+  if (!Number.isFinite(contentWidth) || contentWidth <= 0) {
+    return min
+  }
+  const n = gridColumnCount(contentWidth, min, g)
+  return Math.max(min, (contentWidth - (n - 1) * g) / n)
+}
+
+interface StripWidthStyle {
+  paddingLeft: string
+  paddingRight: string
+  columnGap: string
+}
+
+/**
+ * G-48-8c, and the operator's 2026-10-07 ruling "match the grid" that amends
+ * D-01: a focus-row strip card is the width one grid column takes. Returns a
+ * `syncCardWidth(track, getStyle?)` that derives that width and writes it as
+ * the inline `--focus-row-card-width` on `.focusRowTrack`, which the stylesheet
+ * consumes as the card's flex basis (156px, the grid's floor, until the first
+ * write and whenever measurement is impossible).
+ *
+ * It DERIVES the width by the grid's own arithmetic rather than reading the
+ * rendered grid:
+ *  1. Same input, so identical by construction. `.focusRowStrip` and the
+ *     grid's `.gameList` are both direct children of `.listing` and both pad
+ *     inline by `--space-md-fixed`; the viewport bleeds out by exactly the
+ *     list's padding, so the content box C below is the grid's content box.
+ *  2. Reading the grid would tie the strip to grid state. The grid is not
+ *     mounted for a zero-result filter, during a refresh, or in list layout,
+ *     and SPEC R4 makes the focus row independent of filter state.
+ *  3. It is provable at the desk: a pure function plus a stubbed element.
+ *
+ * C is the track's border-box width (a fractional `getBoundingClientRect`, not
+ * the integer-rounded `clientWidth`) less the list's two inline paddings.
+ * Total: no track, no list, an unmeasurable width or a throwing `getStyle` is
+ * `null` with no write and no throw (T-48-37). A derived width within
+ * `WIDTH_WRITE_EPSILON` of the element's own inline value is not rewritten
+ * (T-48-36); the comparison is against each element's own value, so a
+ * remounted track is never left on the fallback.
+ *
+ * The property name is a string literal at the `setProperty` call on purpose:
+ * `cssTokenSweep` only counts a custom property as declared when it sees
+ * `setProperty('--name'`, and would otherwise report the CSS's
+ * `var(--focus-row-card-width, ...)` as undefined.
+ */
+export function createStripCardWidthSync() {
+  return function syncCardWidth(
+    track: HTMLElement | null,
+    getStyle: (el: Element) => StripWidthStyle = (el) =>
+      typeof getComputedStyle === 'function'
+        ? getComputedStyle(el)
+        : { paddingLeft: '', paddingRight: '', columnGap: '' }
+  ): number | null {
+    try {
+      const list = track?.firstElementChild ?? null
+      if (!track || !list) {
+        return null
+      }
+      const style = getStyle(list)
+      const content =
+        track.getBoundingClientRect().width -
+        clearanceFrom(style.paddingLeft) -
+        clearanceFrom(style.paddingRight)
+      if (!Number.isFinite(content) || content <= 0) {
+        return null
+      }
+      const width = gridColumnWidth(
+        content,
+        GRID_CARD_MIN_WIDTH,
+        parseFloat(style.columnGap)
+      )
+      const inline = parseFloat(
+        track.style.getPropertyValue('--focus-row-card-width')
+      )
+      if (
+        Number.isFinite(inline) &&
+        Math.abs(inline - width) < WIDTH_WRITE_EPSILON
+      ) {
+        return inline
+      }
+      const rounded = Number(width.toFixed(3))
+      track.style.setProperty('--focus-row-card-width', `${rounded}px`)
+      return rounded
+    } catch {
+      return null
+    }
+  }
 }
 
 /**

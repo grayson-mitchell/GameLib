@@ -481,7 +481,7 @@ describe('strip card width sync (G-48-8c)', () => {
       setProperty
     }
   }
-  const asEl = (t: unknown) => t as unknown as HTMLElement
+  const asEl = (t: unknown) => t as HTMLElement
   const style = () => ({
     paddingLeft: '12px',
     paddingRight: '12px',
