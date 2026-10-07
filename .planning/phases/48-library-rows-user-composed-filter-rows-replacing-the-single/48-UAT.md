@@ -1,18 +1,14 @@
 ---
-status: testing
+status: partial
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-07T07:58:02Z
+updated: 2026-10-07T09:40:00Z
 ---
 
 ## Current Test
 
-number: 8
-name: R3 gamepad focus past the last visible card scrolls it into view
-expected: |
-  With a physical controller connected and an overflowing Recently-played strip, focus past the last fully visible card scrolls it fully inside the track and can continue past the first rendered page.
-awaiting: user response
+[testing paused — 1 items outstanding]
 
 ## Protocol
 
@@ -78,7 +74,7 @@ result: issue — 10 themes enumerated live from the Settings theme selector (MU
 
 ### 5. Back and forward controls, true end of travel, controller focus
 expected: The back control mounts once scrolled. The forward control is `disabled` at the end (`scrollLeft + clientWidth >= scrollWidth - 1`). Neither control renders when all cards fit. Controller focus past the last visible card leaves it fully inside the track (D-06, D-07).
-result: blocked — controller half not run, no controller connected (operator answer, 2026-10-07); the other three clauses measured pass. Track at 1280: forward button present and enabled at `scrollLeft` 0 with the back button mounted and `disabled` (UI-SPEC E6, not literally 'mounts once scrolled'); three forward clicks went 0, 900, 1800, 2594 (page delta 900 = 5 cards x 180 px) and forward became `disabled` at `scrollLeft + clientWidth` = 3576 = `scrollWidth`; boundary probe: `scrollLeft + clientWidth - scrollWidth` = -2 enabled, -1 disabled, 0 disabled, back to -4 enabled, matching `>= scrollWidth - 1`; back is enabled once scrolled. Picks that fit: collection `Test` (2 cards) and Favourites (1 card), clientWidth 982 = scrollWidth 982, `.focusRowStrip__control` count 0, neither button in the DOM. Keyboard-style PROXY only, not the controller result: scripted `.focus()` onto the last rendered card (index 5, partly clipped) left it 74 px past the track's right edge with `scrollLeft` unchanged over 16 repeats, because the D-06 scroll handler is mounted only when `activeController` is set; cards past index 5 stay empty shells until scrolled in, so they are not focusable
+result: pass — controller clause passed by operator on Windows 2026-10-07 with a physical controller (see item 8); the other three clauses measured pass on macOS earlier the same day. Originally recorded as: blocked — controller half not run, no controller connected (operator answer, 2026-10-07); the other three clauses measured pass. Track at 1280: forward button present and enabled at `scrollLeft` 0 with the back button mounted and `disabled` (UI-SPEC E6, not literally 'mounts once scrolled'); three forward clicks went 0, 900, 1800, 2594 (page delta 900 = 5 cards x 180 px) and forward became `disabled` at `scrollLeft + clientWidth` = 3576 = `scrollWidth`; boundary probe: `scrollLeft + clientWidth - scrollWidth` = -2 enabled, -1 disabled, 0 disabled, back to -4 enabled, matching `>= scrollWidth - 1`; back is enabled once scrolled. Picks that fit: collection `Test` (2 cards) and Favourites (1 card), clientWidth 982 = scrollWidth 982, `.focusRowStrip__control` count 0, neither button in the DOM. Keyboard-style PROXY only, not the controller result: scripted `.focus()` onto the last rendered card (index 5, partly clipped) left it 74 px past the track's right edge with `scrollLeft` unchanged over 16 repeats, because the D-06 scroll handler is mounted only when `activeController` is set; cards past index 5 stay empty shells until scrolled in, so they are not focusable
 
 ### 6. Narrowest window width and longest title
 expected: At the narrowest draggable width and at 1280px, no title rect exceeds its card rect, and the longest title clips with no ellipsis or line-clamp (UI-SPEC E4 and E7). The strip stays one card tall with at most 20 cards (D-04).
@@ -90,11 +86,14 @@ result: issue — collapsed by default: `aria-expanded="false"` on first read af
 
 ### 8. R3 gamepad focus past the last visible card scrolls it into view
 expected: With a physical controller connected and an overflowing Recently-played strip, moving focus right past the last fully visible card scrolls that card fully inside the track rect, and focus can continue onto cards beyond the first rendered page (SPEC R3 acceptance; D-06 handler is gated on `activeController`, source-regex-tested only). Source: 48-VERIFICATION.md (re-verification 2026-10-07) human_verification 1; UAT item 5 controller clause.
-result: pending
+result: pass — operator, Windows 11, dev shell (`pnpm tauri:dev`, branch `quick-261002-b63` at `85b2016d5`), physical controller, 2026-10-07: focus past the last visible card scrolls it into view and continues past the first page ("yes that works"). Two new defects seen in the same session are recorded as gaps G-48-8a and G-48-8b; they are outside this item's expected text.
+reported: "yes that works, but. 1. when using the mouse there is a 'thin border' around the tile. 2. when changing to the controller the border becomes thick 3. when changing to ther controll the tiles become shorter (tile is cropped) - I want the thicker border that is in controller mode (like console) - I dont want the tiles to 'shrink' - not sure why that happened!"
 
 ### 9. Real-pointer reach of the strip chevrons through a hovered edge card
 expected: Moving a REAL pointer onto each chevron through the adjacent edge card (from above, below and inside the strip, so the card carries `:hover` transform 1.05 and z-index 2 against the control's z-index 1), `document.elementFromPoint` at the chevron centre returns the control, and a click advances `scrollLeft`; the card never swallows the click. UAT item 4 drove controls with `element.click()`, which bypasses hit-testing. If the card swallows the click this promotes to an R3 gap. Source: 48-VERIFICATION.md human_verification 2.
-result: pending
+result: issue — operator, Windows 11, dev shell, real mouse, 2026-10-07: the chevron does not stay on top; an active (hovered) edge card hides it. Whether a click on the hidden chevron still reaches the control was not reported.
+reported: "no it does not stay on top... if the tile is activated it hides the chevron."
+severity: major
 
 ### 10. Chevron and divider-label contrast re-measure after a CSS follow-up
 expected: After a follow-up CSS change, re-run the 40-combination chevron measurement (10 themes x BRIGHT/DARK card x 2 edges, C1-C4 rule) and the divider-label measurement per theme; today 12/40 chevron combinations reach 3:1 (min 1.005 gruvbox_dark) and divider labels miss 4.5:1 in dracula (4.25) and nord-light (1.52). Maps to no locked SPEC requirement (48-VERIFICATION.md Follow-up); not phase-blocking. Source: 48-VERIFICATION.md human_verification 3 and 4.
@@ -180,11 +179,13 @@ After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `the
 ## Summary
 
 total: 10
-passed: 4
-issues: 2
-pending: 2
+passed: 6
+issues: 3
+pending: 0
 skipped: 0
-blocked: 2
+blocked: 1
+
+Update 2026-10-07 (Windows, operator with a physical controller): item 8 passes, which also closes item 5's controller clause, so item 5 passes. Two new gaps were reported during item 8, G-48-8a (cards shrink/crop in controller mode, major) and G-48-8b (mouse-mode focus border should match the thicker controller border, minor). Item 9 is an issue (G-48-9, major): a hovered edge card hides the chevron under a real pointer, confirming item 4's stacking gap by eye. Item 10 stays blocked until a CSS fix lands, so the session ends `partial`.
 
 Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip chevron reaches the 3:1 bar in 12 of 40 theme/card/edge combinations and in every theme only for midnightMirage, and a hovered card paints over the control. Item 7 is an issue: the divider labels miss 4.5:1 in two of ten themes (dracula 4.25, nord-light 1.52). Item 5 is blocked on its controller clause (no controller connected); its other clauses measured pass, and a keyboard-style proxy shows a partly clipped last card staying clipped when focus is scripted with no controller attached. The profile ended byte-identical to the P2 backup after every session.
 
@@ -226,3 +227,33 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
       issue: "`.FilterFocusRow__divider` uses `color: var(--text-secondary)` at `--text-xs`; against the tier-2 panel background it is under AA in dracula and nord-light"
   missing:
     - "A divider colour or token that clears 4.5:1 in dracula and nord-light, with a recheck over all ten themes"
+
+- gap_id: G-48-8a
+  truth: "Switching from mouse to controller input does not change a strip card's size; the card is not shortened or cropped"
+  status: failed
+  reason: "User reported: when changing to the controller the tiles become shorter (tile is cropped) ... I dont want the tiles to 'shrink' - not sure why that happened!"
+  severity: major
+  test: 8
+  reported: "2026-10-07, operator, Windows 11, dev shell, physical controller"
+  artifacts: []
+  missing: []
+
+- gap_id: G-48-8b
+  truth: "The strip card's focus/hover border is the thicker controller-mode (console-style) border in mouse mode too"
+  status: failed
+  reason: "User reported: when using the mouse there is a 'thin border' around the tile. when changing to the controller the border becomes thick ... I want the thicker border that is in controller mode (like console)"
+  severity: minor
+  test: 8
+  reported: "2026-10-07, operator, Windows 11, dev shell"
+  artifacts: []
+  missing: []
+
+- gap_id: G-48-9
+  truth: "Moving a real pointer onto a strip chevron through the adjacent edge card, the chevron stays on top of the hovered card and a click advances the strip"
+  status: failed
+  reason: "User reported: no it does not stay on top... if the tile is activated it hides the chevron."
+  severity: major
+  test: 9
+  reported: "2026-10-07, operator, Windows 11, dev shell, real mouse"
+  artifacts: []
+  missing: []
