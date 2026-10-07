@@ -100,6 +100,47 @@ describe('FocusRowStrip/index.css -- .focusRowTrack .gameList', () => {
   })
 })
 
+describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b)', () => {
+  // The first card at scrollLeft 0 and the last at the end of travel need room
+  // for a 1.05-scaled card's 3px ring at +2px offset (about 9.15px past the
+  // unscaled edge). The list pads inline, and the viewport bleeds out by the
+  // same amount so the cards keep their x-position over the grid.
+  const css = read(FOCUS_ROW_CSS_PATH)
+  const list = cssBlock(css, '.focusRowTrack .gameList')
+  const viewport = cssBlock(css, '.focusRowStrip__viewport')
+  const strip = cssBlock(css, '.focusRowStrip')
+
+  const inlinePadding = Number(
+    list.match(/padding-inline:\s*(\d+(?:\.\d+)?)px\s*;/)?.[1]
+  )
+  const bleed = Number(
+    viewport.match(/margin-inline:\s*-(\d+(?:\.\d+)?)px\s*;/)?.[1]
+  )
+
+  it('Test F: the list declares width: max-content, padding-block: 0 and padding-inline of at least 10px', () => {
+    expect(list).toMatch(/width:\s*max-content\s*;/)
+    expect(list).toMatch(/padding-block:\s*0\s*;/)
+    expect(Number.isFinite(inlinePadding)).toBe(true)
+    expect(inlinePadding).toBeGreaterThanOrEqual(10)
+  })
+
+  it('Test F: the list has no padding shorthand that could zero the inline value', () => {
+    expect(list).not.toMatch(/(^|[\s;])padding:/)
+  })
+
+  it('Test G: the viewport bleeds out by exactly the list padding, so cards stay aligned with the grid', () => {
+    expect(Number.isFinite(bleed)).toBe(true)
+    expect(bleed).toBe(inlinePadding)
+  })
+
+  it('Test H: the strip keeps its 16px gutter, and the bleed stays inside it', () => {
+    expect(strip).toMatch(
+      /padding:\s*0\s+var\(--space-md-fixed\)\s+var\(--space-md-fixed\)\s*;/
+    )
+    expect(bleed).toBeLessThan(16)
+  })
+})
+
 describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > *', () => {
   const css = read(FOCUS_ROW_CSS_PATH)
   const block = cssBlock(css, '.focusRowTrack .gameList > *')

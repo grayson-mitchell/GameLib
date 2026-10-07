@@ -205,6 +205,149 @@ describe('scrollFocusedCardIntoViewHorizontally', () => {
   })
 })
 
+describe('scrollFocusedCardIntoViewHorizontally -- edge clearance (G-48-8a / G-48-8b)', () => {
+  // The list's inline padding is the clearance a focused card keeps from the
+  // track edge, so its 3px ring at +2px offset (scaled 1.05) is not cut. It is
+  // read from the list's computed style at call time, never restated here.
+  interface Rect {
+    left: number
+    right: number
+  }
+
+  const makeEvent = (
+    cardRect: Rect,
+    trackRect: Rect,
+    scrollLeft: number,
+    firstElementChild: unknown = {}
+  ) => {
+    const scrollTo = jest.fn()
+    const track = {
+      scrollLeft,
+      scrollTo,
+      firstElementChild,
+      getBoundingClientRect: () => trackRect
+    }
+    const target = {
+      closest: (sel: string) => (sel === '.focusRowTrack' ? track : null),
+      getBoundingClientRect: () => cardRect
+    }
+    return { ev: { target } as unknown as FocusEvent, scrollTo }
+  }
+
+  const padded =
+    (paddingLeft: string, paddingRight: string) =>
+    (): {
+      paddingLeft: string
+      paddingRight: string
+    } => ({ paddingLeft, paddingRight })
+  const twelve = padded('12px', '12px')
+  const trackRect = { left: 100, right: 700 }
+
+  it('Test A: a card flush with the right edge scrolls by the right clearance', () => {
+    const { ev, scrollTo } = makeEvent(
+      { left: 544, right: 700 },
+      trackRect,
+      300
+    )
+    scrollFocusedCardIntoViewHorizontally(ev, twelve)
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledWith({ left: 312, behavior: 'smooth' })
+  })
+
+  it('Test B: a card flush with the left edge scrolls back by the left clearance', () => {
+    const { ev, scrollTo } = makeEvent(
+      { left: 100, right: 256 },
+      trackRect,
+      300
+    )
+    scrollFocusedCardIntoViewHorizontally(ev, twelve)
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(scrollTo).toHaveBeenCalledWith({ left: 288, behavior: 'smooth' })
+  })
+
+  it('Test C: a card at least the clearance inside both edges does not scroll', () => {
+    const left = makeEvent({ left: 112, right: 268 }, trackRect, 300)
+    scrollFocusedCardIntoViewHorizontally(left.ev, twelve)
+    expect(left.scrollTo).not.toHaveBeenCalled()
+
+    const right = makeEvent({ left: 532, right: 688 }, trackRect, 300)
+    scrollFocusedCardIntoViewHorizontally(right.ev, twelve)
+    expect(right.scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('Test D: a card past the right edge scrolls by the overhang plus the clearance', () => {
+    const { ev, scrollTo } = makeEvent(
+      { left: 600, right: 756 },
+      trackRect,
+      300
+    )
+    scrollFocusedCardIntoViewHorizontally(ev, twelve)
+    // overhang 756 - 700 = 56, plus 12 of clearance
+    expect(scrollTo).toHaveBeenCalledWith({ left: 368, behavior: 'smooth' })
+  })
+
+  it('reads each side from its own padding, not a shared value', () => {
+    const { ev, scrollTo } = makeEvent(
+      { left: 544, right: 700 },
+      trackRect,
+      300
+    )
+    scrollFocusedCardIntoViewHorizontally(ev, padded('4px', '20px'))
+    expect(scrollTo).toHaveBeenCalledWith({ left: 320, behavior: 'smooth' })
+  })
+
+  it.each(['', 'auto', 'NaN', '-8px'])(
+    'Test E: an unreadable padding (%p) gives zero clearance, so a flush card does not scroll',
+    (value) => {
+      const { ev, scrollTo } = makeEvent(
+        { left: 544, right: 700 },
+        trackRect,
+        300
+      )
+      scrollFocusedCardIntoViewHorizontally(ev, padded(value, value))
+      expect(scrollTo).not.toHaveBeenCalled()
+    }
+  )
+
+  it('Test E: a track with no firstElementChild gives zero clearance', () => {
+    const getStyle = jest.fn(twelve)
+    const { ev, scrollTo } = makeEvent(
+      { left: 100, right: 256 },
+      trackRect,
+      300,
+      null
+    )
+    scrollFocusedCardIntoViewHorizontally(ev, getStyle)
+    expect(scrollTo).not.toHaveBeenCalled()
+    expect(getStyle).not.toHaveBeenCalled()
+  })
+
+  it('Test E: a getStyle that throws is zero clearance, not a throw in a capture-phase listener', () => {
+    const { ev, scrollTo } = makeEvent(
+      { left: 100, right: 256 },
+      trackRect,
+      300
+    )
+    expect(() =>
+      scrollFocusedCardIntoViewHorizontally(ev, () => {
+        throw new Error('no style')
+      })
+    ).not.toThrow()
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('still scrolls a card that is genuinely outside the track by the plain overhang when clearance is zero', () => {
+    const { ev, scrollTo } = makeEvent(
+      { left: 60, right: 216 },
+      trackRect,
+      300,
+      null
+    )
+    scrollFocusedCardIntoViewHorizontally(ev, twelve)
+    expect(scrollTo).toHaveBeenCalledWith({ left: 260, behavior: 'smooth' })
+  })
+})
+
 describe('measureCardPitch', () => {
   const makeTrack = (cardWidth: number) => ({
     firstElementChild: {
