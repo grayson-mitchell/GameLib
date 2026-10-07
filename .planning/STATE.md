@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-07-PLAN.md
-last_updated: "2026-10-07T04:48:10.763Z"
+stopped_at: Completed 48-08-PLAN.md
+last_updated: "2026-10-07T07:46:14.411Z"
 last_activity: 2026-10-07
 last_activity_desc: Phase 48 execution started
-state_head: 025f3a94db127537e97c87575b428705e7a90496
+state_head: 07430d9f993073f5356a2c3f9eb46f043f67e996
 progress:
   total_phases: 43
   completed_phases: 36
   total_plans: 514
-  completed_plans: 504
+  completed_plans: 505
   percent: 84
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING (7/8 plans done; gap closure 48-07 complete 2026-10-07, 48-08 live gates remain)
-Plan: 7 of 8
+Plan: 8 of 8
 Status: 48-07 complete (CR-01, WR-01, WR-02 fixed at the desk) — ready to execute 48-08 (live gates)
 Last activity: 2026-10-07 — 48-07 complete
 
@@ -506,6 +506,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P05 | 9 min | 3 tasks | 14 files |
 | Phase 48 P06 | 5 min | 1 tasks | 7 files |
 | Phase 48 P07 | 21 min | 3 tasks | 10 files |
+| Phase 48 P08 | 2h 11m | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -1135,6 +1136,8 @@ Recent decisions affecting current work:
 - [Phase 48]: Presence guard on the focusRow key, not its value, so a deliberate clear (a present null) permanently disarms the legacy seed; the seed reads the raw on-disk object as the last property of the getSettings merge
 - [Phase 48]: No storage bound on games.recent (operator ruling on R6): setRecentGames unchanged; display cap is the focus-row card ceiling only — The removed setting never governed storage; the stored list was unbounded before and after
 - [Phase 48]: 48-07: hydrate focusRow in the renderer from requestAppSettings and persist through setSetting (not backend mirror write); present focusRow key authoritative; view whitelist duplicated in common, pinned by satisfies Record<LibraryView,true>
+- [Phase 48]: Plan 48-08: chevron contrast is under 3:1 in 9 of 10 themes and a hovered card paints over the control; divider labels miss 4.5:1 in dracula and nord-light - three gaps filed in 48-UAT.md
+- [Phase 48]: Plan 48-08: every pixel measurement on this display must convert the screencapture from Display P3 to sRGB first
 
 ### Pending Todos
 
@@ -1738,8 +1741,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-07T04:48:08.293Z
-Stopped at: Completed 48-07-PLAN.md
+Last session: 2026-10-07T07:46:12.092Z
+Stopped at: Completed 48-08-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
