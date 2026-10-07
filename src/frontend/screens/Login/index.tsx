@@ -89,8 +89,11 @@ export default React.memo(function NewLogin() {
   // during the teardown window never resurrects stale internal state --
   // `Dialog` mounts with `open` initialised to `true`, so a remount is the
   // only way to reopen it, and for Humble it is additionally what restarts
-  // the login watch. `overlayUnmountTimerRef` holds the pending
-  // deferred-unmount timer handle.
+  // the login watch. It is also what makes Retry work (quick task
+  // 261008-aoe): `retryLoginOverlay` re-opens the current overlay through
+  // `openLoginOverlay`, so the bump remounts just that overlay and its mount
+  // effect starts a fresh sign-in attempt, with no app reload.
+  // `overlayUnmountTimerRef` holds the pending deferred-unmount timer handle.
   const [mountedOverlay, setMountedOverlay] = useState<LoginOverlay | null>(
     null
   )
@@ -253,6 +256,26 @@ export default React.memo(function NewLogin() {
     }, LOGIN_DIALOG_EXIT_MS)
   }
 
+  // Quick task 261008-aoe: the Retry action handed to the OAuth and Humble
+  // overlays. It re-opens the SAME overlay, which bumps `overlayMountKey`, so
+  // React discards the old overlay subtree and mounts a fresh one whose own
+  // mount effect starts a new sign-in attempt (`useTauriOAuthLogin`'s capture,
+  // `HumbleLoginSurface`'s login watch). There is deliberately no explicit
+  // restart call: the remount IS the re-trigger.
+  //
+  // It reads `openOverlay`, not `mountedOverlay`: an overlay that was already
+  // dismissed and is still playing its 500ms exit must not be resurrected by
+  // its own Retry.
+  //
+  // It is not wrapped in `bindOverlayDismiss`: Retry is a synchronous click
+  // inside the currently mounted overlay, and the key remount discards the old
+  // subtree in the same commit, so the late-async hazard that binder guards
+  // cannot arise for it.
+  function retryLoginOverlay() {
+    if (openOverlay === null) return
+    openLoginOverlay(openOverlay)
+  }
+
   async function handleLibraryClick() {
     await refreshLibrary({ runInBackground: false, origin: 'login-screen' })
     navigate('/')
@@ -308,6 +331,7 @@ export default React.memo(function NewLogin() {
           key={overlayMountKey}
           runner={mountedOverlay}
           dismiss={dismissLoginOverlay}
+          onRetry={retryLoginOverlay}
         />
       )}
 

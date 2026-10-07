@@ -23,6 +23,8 @@ export type OAuthOverlayRunner = Exclude<OAuthRunner, 'zoom'>
 interface Props {
   runner: OAuthOverlayRunner
   dismiss: () => void
+  // Quick task 261008-aoe: re-opens this overlay from the host (see D-5).
+  onRetry: () => void
 }
 
 // D-3 (operator-decided, 2026-10-03; AMENDS quick task 261003-s04's own D-3
@@ -107,10 +109,16 @@ const DIALOG_PHASES: ReadonlySet<TauriOAuthLoginState['phase']> = new Set([
  * choice -- a future "cleanup" that inlines either handler reintroduces the
  * defect.
  *
- * D-5: Retry is `TauriLoginPanel`'s own (a full `window.location.reload()`),
- * matching the already-shipped Humble overlay. This component adds no
- * second retry affordance -- the panel cannot be stopped from rendering its
- * own Retry without editing it, and it is out of scope here.
+ * D-5 (superseded by quick task 261008-aoe): Retry is still `TauriLoginPanel`'s
+ * one button and this component adds no second retry affordance, but the host
+ * now supplies its action instead of the panel's full-app
+ * `window.location.reload()`. `onRetry` re-opens THIS overlay through
+ * `Login/index.tsx`'s `openLoginOverlay`, which bumps `overlayMountKey` and
+ * remounts this component; `useTauriOAuthLogin`'s mount effect then runs a
+ * fresh capture. The remount IS the re-trigger, so there is no explicit
+ * restart call. `onRetry` is a click handler only: it is deliberately not
+ * wrapped in `useCallback`, not routed through a ref, and never enters the
+ * hook's dependency array (D-2).
  *
  * D-3 (phase split, amended 2026-10-03 by quick task 261003-u48 -- see the
  * block comment directly above `DIALOG_PHASES` for the full reasoning): a
@@ -120,7 +128,7 @@ const DIALOG_PHASES: ReadonlySet<TauriOAuthLoginState['phase']> = new Set([
  * phase no longer mounts a Dialog here; that wait's feedback now lives on
  * the clicked Accounts-screen tile instead (`Runner/index.tsx`).
  */
-export default function OAuthLogin({ runner, dismiss }: Props) {
+export default function OAuthLogin({ runner, dismiss, onRetry }: Props) {
   const { completeOAuthLogin } = useContext(ContextProvider)
 
   // Acquired directly, mirroring HumbleLogin: the Dialog below (which would
@@ -161,7 +169,7 @@ export default function OAuthLogin({ runner, dismiss }: Props) {
         {getStoreDisplayName(runner, runner)}
       </DialogHeader>
       <div className="oauthLoginBody">
-        <TauriLoginPanel runner={runner} state={state} />
+        <TauriLoginPanel runner={runner} state={state} onRetry={onRetry} />
       </div>
     </Dialog>
   )

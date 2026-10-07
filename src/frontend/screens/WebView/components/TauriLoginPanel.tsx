@@ -12,6 +12,11 @@ interface Props {
   // `state` layers the real capture phases on top of the SAME render tree, exactly as plan 05
   // reserved this prop to allow.
   state?: TauriOAuthLoginState
+  // Quick task 261008-aoe: a host-supplied Retry action. The Login screen's OAuth and Humble
+  // overlays pass one that remounts just their own overlay (via `overlayMountKey`), so a retry
+  // no longer costs a full app reload. When absent the panel reloads the page, which is what the
+  // `/loginweb/<runner>` routes need because they have no overlay to remount.
+  onRetry?: () => void
 }
 
 // D-04/REQ-34.4.1-08: the backend sign-in channel each OAuth runner's login route is waiting on.
@@ -75,8 +80,11 @@ const displayNameFor = (runner?: string): string | undefined => {
  *        channel rejected it as unported -- REWORDED from plan 05's default so it never implies
  *        nothing was attempted (see the module doc comment in `useTauriOAuthLogin.ts`).
  *      - `{ phase: 'cancelled' | 'timeout' | 'error' }`: their own honest one-liners, each with a
- *        Retry button (`window.location.reload()` -- no new hook, keeps this component
- *        invocable as a plain function per this project's hookless/DOM-less test convention).
+ *        Retry button. Retry calls the host-supplied `onRetry()` (zero arguments) when there is
+ *        one -- the Login screen's overlays remount themselves -- and otherwise falls back to
+ *        `window.location.reload()`, which the `/loginweb/<runner>` routes rely on. No new hook, so this
+ *        component stays invocable as a plain function per this project's hookless/DOM-less test
+ *        convention (quick task 261008-aoe).
  *
  * No hooks besides `useTranslation` -- mirrors the `CrossoverBadge.tsx` / `WebviewUnavailablePanel.tsx`
  * extraction pattern so this component can still be invoked directly as a plain function in its
@@ -84,7 +92,7 @@ const displayNameFor = (runner?: string): string | undefined => {
  *
  * Never calls `navigator.clipboard` -- see `navigator-clipboard-noops-under-tauri`.
  */
-const TauriLoginPanel = ({ runner, state }: Props) => {
+const TauriLoginPanel = ({ runner, state, onRetry }: Props) => {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
 
@@ -124,7 +132,15 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     <button
       type="button"
       className="WebView__unavailablePanel-retry"
-      onClick={() => window.location.reload()}
+      onClick={() => {
+        // Called with NO arguments on purpose: `onClick={onRetry}` would forward React's
+        // SyntheticEvent into host code (T-AOE-03). This is the file's single reload site.
+        if (onRetry) {
+          onRetry()
+        } else {
+          window.location.reload()
+        }
+      }}
     >
       {tGamelib('webview.login.oauth.retry', 'Retry')}
     </button>
