@@ -12,7 +12,7 @@
  * per-test-file factory convention in this codebase.
  */
 import { FocusRowSelection, GameInfo } from 'common/types'
-import { FilterEngineDeps } from 'frontend/types'
+import { FilterEngineDeps, LibraryView } from 'frontend/types'
 import {
   FOCUS_ROW_MAX_CARDS,
   focusRowTitleComparator,
@@ -60,13 +60,27 @@ describe('isValidFocusRowSelection', () => {
     )
   })
 
+  it('accepts every LibraryView member (anti-drift: tsc fails if LibraryView gains one the whitelist lacks)', () => {
+    const ALL_VIEWS = {
+      all: true,
+      installed: true,
+      recentlyPlayed: true,
+      favourites: true
+    } satisfies Record<LibraryView, true>
+
+    for (const value of Object.keys(ALL_VIEWS)) {
+      expect(isValidFocusRowSelection({ kind: 'view', value })).toBe(true)
+    }
+  })
+
   it.each([
     ['undefined', undefined],
     ['null', null],
     ['a bare string (legacy enum shape)', 'favourites'],
     ['an empty object', {}],
     ['an unknown kind', { kind: 'nope', value: 'x' }],
-    ['a missing value', { kind: 'view' }]
+    ['a missing value', { kind: 'view' }],
+    ['an unrecognised view value', { kind: 'view', value: 'bogus' }]
   ])('rejects %s', (_label, malformed) => {
     expect(isValidFocusRowSelection(malformed)).toBe(false)
   })
@@ -231,7 +245,8 @@ describe('selectFocusRowGames', () => {
     ['a bare string (legacy enum shape)', 'favourites'],
     ['an empty object', {}],
     ['an unknown kind', { kind: 'nope', value: 'x' }],
-    ['a missing value', { kind: 'view' }]
+    ['a missing value', { kind: 'view' }],
+    ['an unrecognised view value', { kind: 'view', value: 'bogus' }]
   ])(
     'yields [] with no throw for malformed persisted value: %s',
     (_label, malformed) => {
