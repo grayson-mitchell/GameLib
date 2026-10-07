@@ -3,6 +3,22 @@ phase: 48
 review: 48-REVIEW.md
 titles: json
 findings:
+  - id: WR-03
+    severity: warning
+    disposition: open
+    title: "`hydrateFocusRowSelection` \"NEVER rejects\" contract is broken if `onError` throws"
+  - id: IN-05
+    severity: info
+    disposition: open
+    title: "`testContainment.test.ts` bookkeeping not maintained for the new suite"
+  - id: IN-06
+    severity: info
+    disposition: open
+    title: "Hydration guard is per-module, not per-mount; the \"once\" claim holds per page load only"
+  - id: IN-07
+    severity: info
+    disposition: open
+    title: "Drift-guard comment overstates what `pnpm codecheck` catches"
   - id: CR-01
     severity: critical
     disposition: fixed
@@ -31,22 +47,26 @@ findings:
     severity: info
     disposition: open
     title: "Stale doc comment on `FocusRowSelection`"
-open: 4
-total: 7
-recorded: 2026-10-05T05:00:11.801Z
+open: 8
+total: 11
+recorded: 2026-10-07T07:51:07.409Z
 ---
 
 # Phase 48: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| CR-01 | critical | fixed | 48-07 d7d27c89b |
-| WR-01 | warning | fixed | 48-07 013984a9d |
-| WR-02 | warning | fixed | 48-07 013984a9d |
-| IN-01 | info | open | - |
-| IN-02 | info | open | - |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
+| WR-03 | warning | open | - |
+| IN-05 | info | open | - |
+| IN-06 | info | open | - |
+| IN-07 | info | open | - |
+| CR-01 | critical | fixed | 48-07 d7d27c89b (not in the current review) |
+| WR-01 | warning | fixed | 48-07 013984a9d (not in the current review) |
+| WR-02 | warning | fixed | 48-07 013984a9d (not in the current review) |
+| IN-01 | info | open | - (not in the current review) |
+| IN-02 | info | open | - (not in the current review) |
+| IN-03 | info | open | - (not in the current review) |
+| IN-04 | info | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
