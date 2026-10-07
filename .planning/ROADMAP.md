@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 11/11 plans executed
+**Plans:** 11/12 plans executed
 
 Plans:
 **Wave 1**
@@ -5691,6 +5691,9 @@ Plans:
 
 **Gap closure round 2, Wave 2** *(blocked on 48-10: shared `FocusRowStrip/index.css`)*
 - [x] 48-11-PLAN.md — TRACER: opaque chevron disc proven at 3:1 in all 10 themes by census (G-48-4a), divider override for dracula/nord-light proven at 4.5:1 (G-48-7), two todos closed, UAT item 10 unblocked as the live re-measure gate (R2, R3)
+
+**Gap closure round 2, Wave 3** *(blocked on 48-11: shared `FocusRowStrip/index.css` and `focusRowStripSource.test.ts`, plus 48-10's `focusRowOverflow.ts`; gap G-48-8c, operator ruling 2026-10-07 "match the grid" amending D-01, recorded in 48-SPEC.md R3 and 48-UI-SPEC.md)*
+- [ ] 48-12-PLAN.md — TRACER: strip cards take the grid's own `minmax(156px, 1fr)` column width over the shared container width, derived not read so a filter-emptied grid cannot change it, written before first paint; one page is exactly one grid row; 15px end clearance plus width-scaled vertical room keep rings unclipped up to the 336px single-column supremum; scrollbar flip-flop feedback held (R3)
 
 **Cross-cutting constraints:**
 - Strip content narrower than the available width shows no overflow affordance (SPEC Edge Coverage, R3 unclassified, explicit).

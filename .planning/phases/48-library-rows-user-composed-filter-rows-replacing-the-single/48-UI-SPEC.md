@@ -72,6 +72,7 @@ template section models. Declared for reference, with the one fixed-px exception
 
 **Exceptions:**
 - **156px card width** (D-01, fixed, not a scale token) — locked by SPEC R3.
+  - **Amended 2026-10-08 (UAT gap G-48-8c, operator ruling 2026-10-07: "match the grid").** Strip cards are no longer fixed: they take the width one `repeat(auto-fill, minmax(156px, 1fr))` grid column takes over the same container width, at every window width. 156px is now the floor the strip and the grid share, not the strip's width. See SPEC R3's 2026-10-07 amendment and the note at the top of "Strip — Layout, Overflow, and Controls" below.
 - **24px (`1.5rem`) horizontal gap between strip cards** — this is not a new value, it is `.gameList`'s existing `grid-gap: 1.5rem` (`Library/index.css:5`) reused verbatim so the strip's card spacing visually matches the grid's directly below it. Do not invent a different gap.
 - **36px forward/back control diameter** — a new value, justified below under "Strip — Layout, Overflow, and Controls" → "Forward / back controls". Clears the 44px icon-only touch-target guidance only partially; see that section for why a smaller size is deliberate here (it sits over game art, not a bare touch surface, and gamepad/keyboard are the primary path per D-07, with pointer as a convenience).
 
@@ -238,6 +239,19 @@ Builds on D-01 through D-07 (fixed 156px cards, 20-item cap, forward/back over w
 gamepad-scroll-into-view). This section specifies the container mechanics, the controls'
 appearance/states, and what is explicitly dropped from the grid's own CSS.
 
+**Amended 2026-10-08 (UAT gap G-48-8c, operator ruling 2026-10-07: "match the grid").** The text
+below is kept as written and is superseded on one point: the strip's card width. The operator saw
+the strip's cards as "uniformly smaller" than the grid's, because `flex: 0 0 156px` held while the
+grid's `minmax(156px, 1fr)` columns stretched. From `48-12-PLAN.md` on, a strip card's flex basis is
+the width one grid column takes over the strip's content box (the same `.listing` width less the
+same `--space-md-fixed` gutter as the grid), derived at runtime and written as an inline
+`--focus-row-card-width` custom property, with 156px as the fallback and the floor. The track's
+`flex: 0 0 156px` rule and its "never a fraction of the container" comment below, and D-02's
+"accepted, not a defect" size difference, no longer describe the strip. The grid's own CSS is still
+untouched. The 20-card cap, the controls and their 36px size, and gamepad scroll-into-view are
+unchanged. Where E4 and E7 below say "156px-pinned" or "fixed 156px", read "grid-matched, 156px
+floor".
+
 ### Header
 
 Reuse `.library-section-header` + `h3.libraryHeader` exactly as the Favourites lane does today
@@ -398,6 +412,8 @@ restated.
 
 ### E4 — The focus-row strip / track
 
+*Amended 2026-10-08 (G-48-8c): the card width in this surface is grid-matched with a 156px floor, not fixed at 156px; see the note at the top of "Strip — Layout, Overflow, and Controls".*
+
 - A pick matching zero games, or naming a deleted collection or signed-out store, renders no strip at all — no header, no message, no placeholder — see `## Copywriting Contract` → Empty state.
 - The populated track is `display: flex` with `gap: 1.5rem` and children at `flex: 0 0 156px`, and never wraps to a second row.
 - The track is capped at 20 cards however many the pick matches, which is what keeps it a preview rather than a second grid.
@@ -421,6 +437,8 @@ restated.
 - The controls carry no visible text, so a long translation affects the accessible name only and cannot alter layout.
 
 ### E7 — Game cards inside the strip
+
+*Amended 2026-10-08 (G-48-8c): "a fixed 156px container width" below now reads "the grid's column width, 156px floor"; only the container still changes, never `GameCard`.*
 
 - Cards reuse `GameCard` unchanged at a fixed 156px container width; only the container is new, not the card.
 - `.gameList.firstLane > div:has(.justPlayed) { grid-column: span 2 }` (`Library/index.css:14-16`) is not carried forward — structurally inapplicable rather than dropped by choice, because the track is flex and has no grid-column axis. `GameCard`'s own just-played overlay is unaffected and still renders.

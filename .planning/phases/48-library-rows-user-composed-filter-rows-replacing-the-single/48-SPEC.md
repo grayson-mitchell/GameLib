@@ -3,6 +3,7 @@
 **Created:** 2026-10-03
 **Revised:** 2026-10-03 — scope reduced from N rows to ONE focus row (operator decision, see Interview Log round 4)
 **Revised:** 2026-10-04 — R6's stored-history bound dropped (operator ruling at plan-phase) after the Background claim that justified it was measured false; see the CORRECTED note in Background and the Amended note on R6
+**Revised:** 2026-10-08 — R3's fixed 156px strip card width amended to "the grid's card width at every window width" (operator ruling 2026-10-07 on UAT gap G-48-8c); see the second Amended note on R3 and the struck and added criteria under Acceptance Criteria
 **Ambiguity score:** 0.12 (gate: ≤ 0.20)
 **Requirements:** 7 locked
 
@@ -92,6 +93,7 @@ focus row fully independent of filter state, which turns that nuance into the in
    - Target: The focus row renders as a single-row horizontal strip with the existing header treatment, inserted at the current lane position (`Library/index.tsx:1218-1238`), at a **fixed 156px card width**, holding **at most 20 games**, with forward/back controls revealing any that do not fit. The grid below renders identically to today.
    - Acceptance: The strip renders exactly one card tall; it holds at most 20 cards however many the pick matches; with more cards than fit, a forward control is present and reveals the remainder; the grid's output is unchanged against a pre-phase baseline for the same filter state.
    - **Amended 2026-10-03 (discuss-phase):** the 20-item cap, the fixed 156px width and the scroll controls were added during `/gsd-discuss-phase`. The cap makes the row a **preview**, not a second grid — uncapped, a `GOG` row on a large library would be a worse browse surface than the grid it sits above.
+   - **Amended 2026-10-07 (UAT gap G-48-8c), operator ruling, recorded 2026-10-08.** The operator, on Windows with the shipped strip: *"for some reason the tiles in the focus row are uniformly smaller rather than being the same size of the rest of the tiles???"* Ruling: **"match the grid"**. The cause is the design collision CONTEXT D-01 and D-02 had accepted: the strip pinned every card at `flex: 0 0 156px` while the grid stretches `repeat(auto-fill, minmax(156px, 1fr))` cards to fill each row, so at every width wider than the narrowest fit the strip read uniformly smaller. The Target's *"at a **fixed 156px card width**"* above is kept as written and now reads: **strip cards are the width one grid column takes over the same container width, at every window width** — the `minmax(156px, 1fr)` arithmetic with the grid's own `1.5rem` gap, applied to the strip's content box, which is the same `.listing` width less the same `--space-md-fixed` gutter the grid has. 156px survives only as the floor the two share. Where the grid has no columns to measure (a filter state yielding zero grid results, the list layout, a refresh), strip cards take the width a grid column would have, so the strip still never depends on filter state (R4). **This amends the strip, never the grid:** the criterion *"the grid's output is unchanged against a pre-phase baseline"* stands, and `Library/index.css` is not edited. The 20-card cap (D-04), the forward/back controls (D-05, D-07) and gamepad scroll-into-view (D-06) are unchanged. CONTEXT D-01 (fixed width) and D-02 (the size difference accepted as Steam/Netflix convention) are superseded by this ruling for the strip; CONTEXT.md is not rewritten. Implemented by `48-12-PLAN.md`.
 
 4. **The focus row is independent of filter state**: Hidden-games visibility is the sole exception.
    - Current: The lane honours `showHidden` and `onlyInstalled` but ignores store and runnability facets — a deliberate, documented asymmetry (`Library/index.tsx:1205-1212`).
@@ -161,7 +163,8 @@ focus row fully independent of filter state, which turns that nuance into the in
 - [ ] The strip holds at most 20 cards however many games the pick matches
 - [ ] With more cards than fit, a forward control is present and reveals the remainder
 - [ ] Gamepad focus moving past the last visible card scrolls that card into view
-- [ ] Strip cards are a fixed 156px wide and do not change size as the window resizes
+- [ ] ~~Strip cards are a fixed 156px wide and do not change size as the window resizes~~ — **struck 2026-10-08**, R3 amendment (G-48-8c, operator ruling 2026-10-07): strip cards now track the grid's column width
+- [ ] Strip cards are the same width as the grid's cards at every window width, within 1px — and where the grid shows no cards (zero grid results, list layout), the width a grid column would take — **added 2026-10-08**, R3 amendment (G-48-8c)
 - [ ] A pick matching zero games renders no strip at all
 - [ ] A persisted selection naming a deleted collection renders no strip and does not crash
 - [ ] The grid's output is unchanged against a pre-phase baseline for the same filter state
