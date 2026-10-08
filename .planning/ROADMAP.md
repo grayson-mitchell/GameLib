@@ -5737,7 +5737,10 @@ then gets out of the way so you can still play what is already on disk. GameLib 
 equivalent — a signed-out or expired store is communicated per-store, if at all, and there is no
 single surface that answers "what can I actually do right now?".
 
-**Requirements**: TBD (run `/gsd-spec-phase 49` or `/gsd-discuss-phase 49` to mint)
+**Requirements**: **9, LOCKED — see `49-SPEC.md`** (ambiguity 0.17, gate ≤ 0.20). That file is
+the contract; this entry is a pointer, not a second copy to keep in sync. The spec's round-2
+decision — probe all five stores at boot in one bounded pass — settles the boot-time-auth
+question below and permanently closes the parked Humble keyring todo's unpark condition.
 **Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
 through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
 guess — the focus row and this banner share no files.

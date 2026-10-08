@@ -54,6 +54,13 @@ about the *shape* the phase lands in, and promotion settles nothing about shape.
 "Phase 999.1" below as "Phase 49". Whoever specs Phase 49 should decide the boot-time-auth question
 explicitly; that decision is what unparks or permanently closes this file.
 
+**2026-10-08, later the same day: DECIDED in `49-SPEC.md`, round 2.** Phase 49 probes all five
+stores at boot in one bounded pass, Humble and Steam keyring reads included. It does need
+boot-time auth state, so the unpark condition can no longer be met: this todo's remedy
+(deferring the read) is permanently superseded. Its evidence is carried forward as the reason
+Phase 49's R3 is time-bounded rather than unbounded. Close this file when Phase 49's plan lands
+R3; until then it stays `ready: blocked` so the measured prompt latency is not lost.
+
 ## Problem
 
 Quick task `260817-d61` deferred the **Steam** refresh-token read off the startup path so its
