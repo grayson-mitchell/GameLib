@@ -59,7 +59,7 @@ export type LzmaDecoderKind = 'native' | 'pure-js' | 'unresolved'
  * than relying on the smoke test to keep gating things correctly.
  *
  * Full investigation (what was ruled out, what wasn't, current status):
- * `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`.
+ * `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`.
  *
  * Effect when `false` (the shipped default): `resolveLzmaModule()` below
  * never even ATTEMPTS to import/smoke-test `lzma-native` -- it goes
@@ -358,8 +358,9 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
         "binding then hangs until DecompressPool's own task timeout fires",
         '-- a failure class the smoke test below is proven unable to',
         'catch, so this switch does not rely on it. See',
-        '.planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the',
-        'full investigation and the criteria for safely re-enabling this.'
+        '.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md',
+        'for the full investigation and the criteria for safely re-enabling',
+        'this.'
       ],
       LogPrefix.Steam
     )
