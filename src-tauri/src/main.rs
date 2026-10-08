@@ -1188,8 +1188,8 @@ const APP_MENU_QUIT_ID: &str = "app_menu_quit";
 /// `shutdown_child()` killed a running download with no confirm. A custom item with the same
 /// label and `CmdOrCtrl+Q` accelerator turns the gesture into an ordinary menu event instead.
 ///
-/// RESIDUAL, out of scope here: Dock-menu Quit and logout/shutdown still send `terminate:` and
-/// still bypass the confirm (filed as todo 2026-10-08 dock-quit-and-logout-bypass-...).
+/// Dock-menu Quit also sends `terminate:`; `macos_terminate_veto` covers it (todo 2026-10-08
+/// dock-quit-and-logout-bypass-...), and lets a logout/shutdown through unasked.
 ///
 /// Every failure (no menu, first item not a submenu, no Quit item, remove/insert error) logs a
 /// WARN and leaves the default menu untouched: the fallback is the old unrouted Cmd+Q, never a
@@ -1275,6 +1275,152 @@ fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
     shell_diag(&format!(
         "app menu: Quit (Cmd+Q) routed through the sidecar (id={APP_MENU_QUIT_ID})"
     ));
+}
+
+/// What `applicationShouldTerminate:` should answer for a `terminate:` that did not come from
+/// the app menu. `NSTerminateNow` lets AppKit proceed to `applicationWillTerminate:` (the
+/// pre-existing unrouted exit); `NSTerminateCancel` swallows the request so the sidecar's
+/// `handleExit()` can ask first and `app_exit` do the real exit.
+///
+/// Two reasons to let it through unasked. A system power-off (logout, restart, shutdown) must
+/// never be blocked behind a modal: macOS would show "application canceled logout". And once the
+/// shell is already exiting (`exiting`), a second veto would turn the confirmed quit into a no-op.
+#[cfg(target_os = "macos")]
+#[derive(Debug, PartialEq, Eq)]
+enum TerminateReply {
+    Now,
+    Cancel,
+}
+
+#[cfg(target_os = "macos")]
+fn terminate_reply(power_off: bool, exiting: bool) -> TerminateReply {
+    if power_off || exiting {
+        TerminateReply::Now
+    } else {
+        TerminateReply::Cancel
+    }
+}
+
+#[cfg(target_os = "macos")]
+mod macos_terminate_veto {
+    use super::{quit_via_sidecar, shell_diag, terminate_reply, TerminateReply};
+    use objc2::ffi::class_addMethod;
+    use objc2::rc::Retained;
+    use objc2::runtime::{AnyClass, AnyObject, Imp, Sel};
+    use objc2::{class, msg_send, sel, MainThreadMarker};
+    use objc2_app_kit::NSApplication;
+    use objc2_foundation::{NSNotification, NSNotificationCenter, NSString};
+    use std::ffi::c_char;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::OnceLock;
+    use tauri::AppHandle;
+
+    static APP: OnceLock<AppHandle> = OnceLock::new();
+    /// Set by the `NSWorkspaceWillPowerOffNotification` observer, which macOS posts before it asks
+    /// applications to quit for a logout, restart or shutdown.
+    static POWER_OFF: AtomicBool = AtomicBool::new(false);
+    /// Set once the shell has begun its own exit (`RunEvent::ExitRequested { code: Some(_) }`).
+    static EXITING: AtomicBool = AtomicBool::new(false);
+
+    pub fn mark_exiting() {
+        EXITING.store(true, Ordering::SeqCst);
+    }
+
+    const NS_TERMINATE_NOW: usize = 1;
+    const NS_TERMINATE_CANCEL: usize = 0;
+
+    extern "C-unwind" fn should_terminate(
+        _this: &AnyObject,
+        _cmd: Sel,
+        _sender: *mut AnyObject,
+    ) -> usize {
+        let reply = terminate_reply(
+            POWER_OFF.load(Ordering::SeqCst),
+            EXITING.load(Ordering::SeqCst),
+        );
+        match (reply, APP.get()) {
+            (TerminateReply::Cancel, Some(app)) => {
+                quit_via_sidecar(app, "Dock Quit");
+                NS_TERMINATE_CANCEL
+            }
+            // No handle to route with: never cancel what cannot be re-issued.
+            _ => NS_TERMINATE_NOW,
+        }
+    }
+
+    /// Add `applicationShouldTerminate:` to the class of tao's app delegate (tao 0.35.3 implements
+    /// only `applicationWillTerminate:`) and watch for a system power-off. Every failure logs a
+    /// WARN and leaves Dock Quit on the old unrouted exit; never a panic inside `.setup()`.
+    pub fn install(app: &AppHandle) {
+        let _ = APP.set(app.clone());
+        let Some(mtm) = MainThreadMarker::new() else {
+            shell_diag("WARN: terminate veto: not on the main thread -- Dock Quit stays unrouted");
+            return;
+        };
+        let Some(delegate) = NSApplication::sharedApplication(mtm).delegate() else {
+            shell_diag("WARN: terminate veto: no app delegate yet -- Dock Quit stays unrouted");
+            return;
+        };
+        let delegate_obj: &AnyObject = unsafe { &*(&*delegate as *const _ as *const AnyObject) };
+        let class: &AnyClass = delegate_obj.class();
+        // SAFETY: `should_terminate` matches `-(NSApplicationTerminateReply)applicationShouldTerminate:(id)`
+        // (encoding `Q@:@`); the class is registered and the selector is not yet implemented on it.
+        let added = unsafe {
+            class_addMethod(
+                class as *const AnyClass as *mut AnyClass,
+                sel!(applicationShouldTerminate:),
+                std::mem::transmute::<
+                    extern "C-unwind" fn(&AnyObject, Sel, *mut AnyObject) -> usize,
+                    Imp,
+                >(should_terminate),
+                c"Q@:@".as_ptr() as *const c_char,
+            )
+        };
+        if !added.as_bool() {
+            shell_diag(&format!(
+                "WARN: terminate veto: class_addMethod refused on {} -- Dock Quit stays unrouted",
+                class.name().to_string_lossy()
+            ));
+            return;
+        }
+        // Power-off observer. The token must outlive the process, so it is leaked on purpose.
+        let workspace: Retained<AnyObject> =
+            unsafe { msg_send![class!(NSWorkspace), sharedWorkspace] };
+        let center: Retained<NSNotificationCenter> =
+            unsafe { msg_send![&*workspace, notificationCenter] };
+        let name = NSString::from_str("NSWorkspaceWillPowerOffNotification");
+        let block = block2::RcBlock::new(|_: std::ptr::NonNull<NSNotification>| {
+            POWER_OFF.store(true, Ordering::SeqCst);
+        });
+        let token = unsafe {
+            center.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &block)
+        };
+        std::mem::forget(token);
+        shell_diag(&format!(
+            "terminate veto: applicationShouldTerminate: added to {} (Dock Quit routed through the sidecar)",
+            class.name().to_string_lossy()
+        ));
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod terminate_reply_tests {
+    use super::{terminate_reply, TerminateReply};
+
+    #[test]
+    fn a_plain_terminate_is_cancelled_so_the_sidecar_can_ask() {
+        assert_eq!(terminate_reply(false, false), TerminateReply::Cancel);
+    }
+
+    #[test]
+    fn a_power_off_is_never_blocked() {
+        assert_eq!(terminate_reply(true, false), TerminateReply::Now);
+    }
+
+    #[test]
+    fn a_quit_already_in_progress_is_never_vetoed_again() {
+        assert_eq!(terminate_reply(false, true), TerminateReply::Now);
+    }
 }
 
 /// Dispatch a recent-game launch to the sidecar, in-process.
@@ -12782,6 +12928,11 @@ fn main() {
             #[cfg(target_os = "macos")]
             route_app_menu_quit_through_sidecar(app.handle());
 
+            // Dock Quit sends `terminate:` straight to the app, not through the menu: veto it in
+            // `applicationShouldTerminate:` and route it the same way (a power-off still passes).
+            #[cfg(target_os = "macos")]
+            macos_terminate_veto::install(app.handle());
+
             // Restores the install-badge reconciliation trigger dropped in the Electron to
             // Tauri cutover (D-01/D-02): Electron's `mainWindow.on('focus', ...)`
             // (`src/backend/main.ts:272-274`, deleted in `5643c7583`) drove a store manager's
@@ -13183,17 +13334,22 @@ fn main() {
         // handles). Quits are now ROUTED rather than skipping `app_exit`: the red X and Alt+F4
         // by the main-window close handler, Cmd+Q by the macOS app menu, tray Quit by its menu
         // arm -- all through `quit_via_sidecar` -> the sidecar's `handleExit()` -> `app_exit`.
-        // The `RunEvent::Exit` reap remains the backstop for the gestures that still send
-        // `terminate:` (Dock Quit, logout/shutdown) and for the `exit(0)` fallbacks.
+        // The `RunEvent::Exit` reap remains the backstop for logout/shutdown (which must not be
+        // blocked) and for the `exit(0)` fallbacks; Dock Quit is routed by `macos_terminate_veto`.
         .run(move |app_handle, event| match event {
             // OBSERVED, NEVER PREVENTED. A routed quit arrives as `code: Some(0)` (`app.exit(0)`
             // from the `app_exit` arm), which makes this line the live gate's proof that a quit
             // took the sidecar route rather than `terminate:`. `code: None` is emitted only AFTER
             // the last window is destroyed, so stopping it would strand a windowless app; and
-            // on macOS Cmd+Q / Dock Quit never arrive here at all (tao 0.35.3 has no
-            // `applicationShouldTerminate:`).
+            // on macOS Cmd+Q / Dock Quit never arrive here at all (`terminate:` goes straight to
+            // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
             tauri::RunEvent::ExitRequested { code, .. } => {
                 shell_diag(&format!("exit requested (code={code:?})"));
+                // The shell's own exits carry `Some(_)`: from here a `terminate:` must not veto.
+                #[cfg(target_os = "macos")]
+                if code.is_some() {
+                    macos_terminate_veto::mark_exiting();
+                }
             }
             tauri::RunEvent::Exit => {
                 if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {

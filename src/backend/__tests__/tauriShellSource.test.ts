@@ -768,6 +768,22 @@ describe('main.rs Cmd+Q and the red X route through the sidecar handleExit (todo
     expect(closure).toContain('RunEvent::ExitRequested')
     expect(closure).not.toContain('prevent_exit')
   })
+
+  // Dock Quit (todo 2026-10-08 dock-quit-and-logout-bypass-the-pending-operations-confirm): a
+  // runtime-added `applicationShouldTerminate:` on tao's delegate. The reply POLICY is covered by
+  // main.rs's `terminate_reply_tests`; this pins the wiring no unit test can reach.
+  test('Dock Quit is vetoed into quit_via_sidecar, and a power-off or an exit in progress is not', () => {
+    const code = loadMainRsCode()
+    const modIdx = code.indexOf('mod macos_terminate_veto {')
+    expect(modIdx).toBeGreaterThan(-1)
+    const mod = code.slice(modIdx, code.indexOf('\n}\n', modIdx))
+    expect(mod).toContain('applicationShouldTerminate:')
+    expect(mod).toContain('quit_via_sidecar(app, "Dock Quit")')
+    expect(mod).toContain('NSWorkspaceWillPowerOffNotification')
+    expect(code).toMatch(/macos_terminate_veto::install\(app\.handle\(\)\)/)
+    // The shell's own exit must disarm the veto, or a confirmed quit could cancel itself.
+    expect(code).toContain('macos_terminate_veto::mark_exiting()')
+  })
 })
 
 describe('main.rs tray scope boundary (Phase 34.1 Plan 06 D-11, NARROWED by Phase 35 Plan 06 D-06)', () => {
