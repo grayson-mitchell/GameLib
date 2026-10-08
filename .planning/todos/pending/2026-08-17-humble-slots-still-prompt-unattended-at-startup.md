@@ -48,6 +48,12 @@ Only the proposed *remedy* is parked, not the observation.
 **Unpark condition:** if Phase 999.1 is dropped, or lands in a shape that does not need boot-time
 auth state, this todo's original UX argument stands again unchanged.
 
+**2026-10-08: Phase 999.1 was promoted out of the backlog as Phase 49** (same title, still
+unplanned: Requirements TBD, 0 plans). This does NOT unpark the todo — the condition above is
+about the *shape* the phase lands in, and promotion settles nothing about shape. Read every
+"Phase 999.1" below as "Phase 49". Whoever specs Phase 49 should decide the boot-time-auth question
+explicitly; that decision is what unparks or permanently closes this file.
+
 ## Problem
 
 Quick task `260817-d61` deferred the **Steam** refresh-token read off the startup path so its

@@ -5719,6 +5719,52 @@ ambiguity 0.12, phase is mostly a move). Nyquist Dimension 8 validation is conse
 for this phase: a known, accepted gap. `48-PATTERNS.md` plus direct measurement stood in, and
 corrected four upstream claims — see `48-01-PLAN.md`'s `<source_audit>`.
 
+### Phase 49: Cross-store signed-out / offline mode
+
+**Goal:** Warn the user which stores they are not signed in to (Epic, GOG, Amazon, Humble, Steam)
+from one consolidated surface, while cached libraries still render and installed games remain
+launchable. The Steam client is the reference UX: it tells you plainly that you are offline, and
+then gets out of the way so you can still play what is already on disk. GameLib today has no
+equivalent — a signed-out or expired store is communicated per-store, if at all, and there is no
+single surface that answers "what can I actually do right now?".
+
+**Requirements**: TBD (run `/gsd-spec-phase 49` or `/gsd-discuss-phase 49` to mint)
+**Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
+through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
+guess — the focus row and this banner share no files.
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 49 to break down)
+
+**Promoted:** 2026-10-08 from backlog Phase 999.1 (captured 2026-09-04 in `92ac64922`, from the
+reconsideration that parked
+`.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` and
+`.planning/todos/completed/2026-08-17-keyring-available-is-a-silent-prompt-channel.md`). The
+backlog directory held only a `.gitkeep`; everything it had accumulated is this entry.
+
+**Why this phase parked the two keyring todos.** Those todos proposed deferring credential reads
+off the bootstrap path so a macOS Keychain prompt would arrive attached to a deliberate user
+action. That is in direct tension with this phase: an accurate boot-time warning banner needs
+boot-time auth state. You cannot both refuse to read the credential at boot and truthfully tell the
+user at boot that their session has expired. If this phase is built, doing auth at bootstrap and
+surfacing one consolidated result is the coherent design. The Humble todo's unpark condition
+("if 999.1 is dropped, or lands in a shape that does not need boot-time auth state") now reads
+against this phase; spec/discuss should settle that shape explicitly.
+
+**One measured asymmetry worth carrying into planning.** Not all of the boot-time signal costs a
+keyring read. `HumbleUser.isLoggedIn()` (`src/backend/humble/user.ts`) reads a plain `configStore`
+flag with no keyring access, so "Humble is not connected" is free at boot. Only "session expired"
+needs `checkHealthAndFlagExpiry()` (`user.ts:757`), which is what reads `humble-session` and then
+`humble-csrf`. A two-tier banner — free "not connected" state at boot, credential-backed "expired"
+state on first use — may get most of the value at a fraction of the prompt cost. Worth measuring
+the equivalent split for Epic/GOG/Amazon/Steam before locking the design.
+
+**Scope signals:** cross-store (five runners), user-facing UI, and new strings requiring
+localisation across the repo's 49 locale catalogues (Phase 48's `48-01-PLAN.md` is the most recent
+worked example of landing keys across all of them). This is a phase, not a quick task.
+
 ---
 
 ## Parked / Superseded Phases
@@ -5749,44 +5795,8 @@ corrected four upstream claims — see `48-01-PLAN.md`'s `<source_audit>`.
 
 ## Backlog
 
-### Phase 999.1: Cross-store signed-out / offline mode (BACKLOG)
-
-**Goal:** [Captured for future planning]
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (promote with /gsd:review-backlog when ready)
-
-**Captured:** 2026-09-04, from the reconsideration that parked
-`.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` and
-`.planning/todos/pending/2026-08-17-keyring-available-is-a-silent-prompt-channel.md`.
-
-**Idea:** Warn the user which stores they are not signed in to (Epic, GOG, Amazon, Humble,
-Steam) while cached libraries still render and installed games remain launchable. The Steam
-client is the reference UX: it tells you plainly that you are offline, and then gets out of the
-way so you can still play what is already on disk. GameLib today has no equivalent — a signed-out
-or expired store is communicated per-store, if at all, and there is no single surface that answers
-"what can I actually do right now?".
-
-**Why this parks the two keyring todos.** Those todos proposed deferring credential reads off the
-bootstrap path so a macOS Keychain prompt would arrive attached to a deliberate user action. That
-is in direct tension with this phase: an accurate boot-time warning banner needs boot-time auth
-state. You cannot both refuse to read the credential at boot and truthfully tell the user at boot
-that their session has expired. If this phase is built, doing auth at bootstrap and surfacing one
-consolidated result is the coherent design.
-
-**One measured asymmetry worth carrying into planning.** Not all of the boot-time signal costs a
-keyring read. `HumbleUser.isLoggedIn()` (`src/backend/humble/user.ts`) reads a plain `configStore`
-flag with no keyring access, so "Humble is not connected" is free at boot. Only "session expired"
-needs `checkHealthAndFlagExpiry()` (`user.ts:757`), which is what reads `humble-session` and then
-`humble-csrf`. A two-tier banner — free "not connected" state at boot, credential-backed "expired"
-state on first use — may get most of the value at a fraction of the prompt cost. Worth measuring
-the equivalent split for Epic/GOG/Amazon/Steam before locking the design.
-
-**Scope signals:** cross-store (five runners), user-facing UI, and new strings requiring
-localisation across the repo's non-English locales. This is a phase, not a quick task.
+No items. Phase 999.1 (cross-store signed-out / offline mode) was promoted to Phase 49 on
+2026-10-08; its full text now lives under that entry.
 
 **Adjacent, deliberately NOT folded in:** confirming that `APPLE_CERTIFICATE`,
 `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` are enrolled as repo secrets — without
