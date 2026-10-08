@@ -46,3 +46,10 @@ sidecar's `app_exit` -> `app.exit(0)` does the actual exit. Open decisions befor
   `NSApp.terminateReply` semantics) and let a shutdown proceed, or accept the confirm;
 - how the cancel reply interacts with the `exit(0)` fallback when the sidecar is dead (quit must never become a no-op);
 - riskier than the Cmd+Q fix: it patches a framework-owned class at runtime, so it needs a live run on this Mac and a source pin.
+
+## Resolution (2026-10-08, quick 261008-qbb, `5990a7e78`)
+
+Dock Quit FIXED and live-gated 5/5 incl. negative control (`.planning/quick/261008-qbb-dock-quit-applicationshouldterminate/RESULTS.md`).
+Mechanism: runtime `class_addMethod` of `applicationShouldTerminate:` on `TaoAppDelegateParent`; plain `terminate:` -> cancel + `quit_via_sidecar`.
+Decision on the open question: logout/shutdown is NOT blocked (`NSWorkspaceWillPowerOffNotification` flag -> `NSTerminateNow`), as is any `terminate:` after the shell's own `ExitRequested{Some(_)}`; dead sidecar falls back to `exit(0)`.
+Logout/shutdown itself was NOT run live -- inferred from the unit test and the notification, not measured.
