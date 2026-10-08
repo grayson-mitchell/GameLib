@@ -1,0 +1,29 @@
+npm warn Unknown project config "node-linker". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+FAIL Backend src/backend/storeManagers/steam/__tests__/lzmaNativeSeaRealBuild.test.ts (17.149 s)
+  SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, round 2 regression)
+    ✕ the REAL compiled SEA binary's worker pool spawns cleanly, with native decode correctly gated OFF (inlineFallback=false, nativeWorkers=0) (3763 ms)
+    ✓ the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the gated (pure-JS) path (1308 ms)
+    ✓ the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path once the kill switch is (locally, temporarily) forced back on -- SKIPPED BY OPERATOR DECISION on NATIVE_LZMA_DECODE_ENABLED, not by known failure; see comment above (1318 ms)
+
+  ● SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, round 2 regression) › the REAL compiled SEA binary's worker pool spawns cleanly, with native decode correctly gated OFF (inlineFallback=false, nativeWorkers=0)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 2
+
+      249 |     }
+      250 |     expect(stats.inlineFallback).toBe(false)
+    > 251 |     expect(stats.nativeWorkers).toBe(0)
+          |                                 ^
+      252 |   }, 30000)
+      253 |
+      254 |   // CRITICAL CORRECTION, found while writing THIS test (2026-08-18, same
+
+      at Object.<anonymous> (src/backend/storeManagers/steam/__tests__/lzmaNativeSeaRealBuild.test.ts:251:33)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        17.334 s
+Ran all test suites matching /lzmaNativeSeaRealBuild/i.

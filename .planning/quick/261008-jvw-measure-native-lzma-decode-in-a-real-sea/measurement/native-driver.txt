@@ -1,0 +1,32 @@
+label=native runs=20 expectNativeWorkers=2
+timestamp=2026-10-08T01:39:03.713Z
+HEAD=8cde665b6e81cb36d2e82642abf2b1cfe1e7ec83
+git diff --stat -- src:
+src/backend/storeManagers/steam/depot/lzmaLoader.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+binary=/Users/graysonmitchell/Projects/GameLib/src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin
+size=170076128 mtime=2026-10-08T01:38:56.451Z
+| run | wall ms | exit | signal | nativeWorkers | inlineFallback | decode line |
+| --- | ------- | ---- | ------ | ------------- | -------------- | ----------- |
+| 1 | 3264 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 2 | 1368 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 3 | 1331 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 4 | 1332 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 5 | 1388 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 6 | 1395 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 7 | 1362 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 8 | 1340 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 9 | 1350 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 10 | 1358 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 11 | 1519 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 12 | 1383 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 13 | 1368 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 14 | 1345 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 15 | 1352 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 16 | 1356 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 17 | 1351 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 18 | 1314 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 19 | 1309 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 20 | 1328 | 0 | - | 2 | false | SELFTEST decode=ok bytes=65536 match=true |
+
+RESULT label=native pass=20/20 expectNativeWorkers=2

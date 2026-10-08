@@ -1,0 +1,17 @@
+run=3 wallMs=1016 exit=0 signal=null pass=true
+--- stdout ---
+[downloadQueueFlowRegistration] boot-time download-queue auto-resume is ENABLED (Phase 35 plan 11) and runs from appShellFlowRegistration.ts, not from this module — logger not yet initialized in this process, falling back to console
+SELFTEST pool={"size":2,"busy":0,"idle":2,"queued":0,"inlineFallback":false,"nativeWorkers":0}
+SELFTEST decode=ok bytes=65536 match=true
+
+--- stderr ---
+(node:4156) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-aarch64-apple-darwin --trace-deprecation ...` to show where the warning was created)
+(node:4156) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-aarch64-apple-darwin --trace-deprecation ...` to show where the warning was created)
+(node:4156) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-aarch64-apple-darwin --trace-deprecation ...` to show where the warning was created)
+
+--- lzma/DecompressPool lines from *.log under the fake profile ---
+gamelib.log: (14:40:39) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+gamelib.log: (14:40:39) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.

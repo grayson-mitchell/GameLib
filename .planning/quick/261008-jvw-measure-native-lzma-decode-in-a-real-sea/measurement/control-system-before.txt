@@ -1,0 +1,83 @@
+# 2026-10-08T01:40:33.445Z
+
+$ uptime 
+14:40  up 27 days, 14:17, 2 users, load averages: 4.72 3.87 3.31
+
+
+$ sysctl vm.swapusage kern.memorystatus_vm_pressure_level
+vm.swapusage: total = 25600.00M  used = 24585.69M  free = 1014.31M  (encrypted)
+kern.memorystatus_vm_pressure_level: 2
+
+
+$ vm_stat 
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                                    84301.
+Pages active:                                  90797.
+Pages inactive:                               124508.
+Pages speculative:                              3057.
+Pages throttled:                                   0.
+Pages wired down:                             265298.
+Pages purgeable:                                  26.
+"Translation faults":                    10533935389.
+Pages copy-on-write:                       220665940.
+Pages zero filled:                        4470088304.
+Pages reactivated:                        3018569219.
+Pages purged:                              354836541.
+File-backed pages:                            112389.
+Anonymous pages:                              105973.
+Pages stored in compressor:                  3857331.
+Pages occupied by compressor:                 425209.
+Decompressions:                           3105547182.
+Compressions:                             3455352560.
+Pageins:                                   420852569.
+Pageouts:                                    5045371.
+Swapins:                                    73083372.
+Swapouts:                                   82087607.
+Pages tagged:                                 207472.
+Pages tagged resident:                        100327.
+Pages tagged compressed:                      107145.
+Pages tag-storage:                             32768.
+Pages tag-storage holding tags:                 4793.
+Pages tag-storage free:                          684.
+Pages tag-storage non-tag pageable:            27146.
+Pages tag-storage non-tag wired:                 145.
+Bytes of compressed tags:                   18007744.
+Tagged compressions:                       157851876.
+Tagged decompressions:                     153550324.
+
+
+$ pmset -g therm
+Note: No thermal warning level has been recorded
+Note: No performance warning level has been recorded
+Note: No CPU power status has been recorded
+
+
+$ top -l 1 -n 15 -o cpu -stats pid,command,cpu,mem
+Processes: 667 total, 4 running, 663 sleeping, 5828 threads 
+2026/10/08 14:40:34
+Load Avg: 4.72, 3.87, 3.31 
+CPU usage: 18.84% user, 16.72% sys, 64.42% idle 
+SharedLibs: 382M resident, 80M data, 60M linkedit.
+MemRegions: 1273843 total, 1613M resident, 62M private, 1679M shared.
+PhysMem: 14G used (4146M wired, 6311M compressor), 893M unused.
+VM: 362T vsize, 6144M framework vsize, 73083544(0) swapins, 82087607(0) swapouts.
+Networks: packets: 126709217/120G in, 94500615/83G out.
+Disks: 396240111/9571G read, 88644741/2790G written.
+
+PID    COMMAND          %CPU MEM  
+99704  MTLCompilerServi 0.0  19M  
+98645  ShareSheetUI     0.0  22M  
+98518  diagnosticd      0.0  3392K
+98516  log              0.0  5392K
+98113  intelligenceplat 0.0  7504K
+98051  Messages Assista 0.0  13M  
+98037  backgroundtaskma 0.0  3872K
+97349  PlugInLibrarySer 0.0  1952K
+97328  com.apple.Safari 0.0  8769K
+97117  centaurid        0.0  3456K
+97032  VTDecoderXPCServ 0.0  4321K
+97026  keybagd          0.0  1952K
+97014  containermanager 0.0  2704K
+97013  trustd           0.0  5888K
+97012  secinitd         0.0  3264K
+
