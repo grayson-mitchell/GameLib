@@ -483,6 +483,25 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
   })
 
+  it("quit (send) logs the '[GAMELIB_SIDECAR_SEND_HANDLER] quit' marker, the live gate's sidecar-side proof that the shell's frame landed (todo 2026-10-05 cmd-q-and-red-x)", async () => {
+    const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+    try {
+      const { input } = startSidecar()
+      writeSend(input, 'quit-marker-1', 'quit', [])
+      await flush()
+
+      expect(
+        logInfoSpy.mock.calls.some(
+          ([msg]) => msg === '[GAMELIB_SIDECAR_SEND_HANDLER] quit'
+        )
+      ).toBe(true)
+      // ... and it still reaches handleExit().
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
+    } finally {
+      logInfoSpy.mockRestore()
+    }
+  })
+
   // ── Quick task 260907-juv (Gate A): handleExit() -> shutdownLongLivedChildren() ──
   //
   // Layer A of the two-layer helper-process-orphan fix. `longLivedChildren` is mocked
