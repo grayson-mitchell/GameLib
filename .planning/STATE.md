@@ -1,21 +1,17 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Phase Details
-current_phase: 48
-current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-12-PLAN.md
-last_updated: "2026-10-07T19:21:07.903Z"
-last_activity: 2026-10-08
-last_activity_desc: Phase 48 execution started
-state_head: fd6e3b324883d23a8bad6387a7bda38f61eb2332
+stopped_at: Phase 49 context gathered
+last_updated: "2026-10-08T09:36:52.150Z"
+last_activity: "2026-10-08 — Completed quick task 261008-kvz: Cmd+Q and the red X route through the sidecar pending-operations confirm, live-gated 8/8 arms + negative control on macOS; Dock Quit/logout residual filed"
 progress:
-  total_phases: 43
+  total_phases: 44
   completed_phases: 36
-  total_plans: 518
-  completed_plans: 509
-  percent: 84
+  total_plans: 521
+  completed_plans: 510
+  percent: 82
 ---
 
 # Project State
@@ -1761,9 +1757,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-07T19:21:03.880Z
-Stopped at: Completed 48-12-PLAN.md
-Resume file: None
+Last session: 2026-10-08T09:36:52.108Z
+Stopped at: Phase 49 context gathered
+Resume file: .planning/phases/49-cross-store-signed-out-offline-mode/49-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
