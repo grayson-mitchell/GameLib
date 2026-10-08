@@ -120,3 +120,24 @@ may read louder than intended next to the rest of the chrome; if it does, a dimm
 to clear 3:1 on dracula and gruvbox_dark (e.g. `#757575` measured 3.09 / 3.20, with nord-light at
 4.0). Separate finding, out of scope here: midnightMirage's own `--divider: var(--neutral-03)`
 measures 1.45:1, so the `--divider` consumers listed above are invisible in the default theme.
+
+## Live gate (2026-10-08) -- CLOSED
+
+Ran the prebuilt debug app (Oct 8, after `6ca9f9c90`) on a throwaway `HOME`, switched theme via
+`store/config.json`, and measured the Wine Manager `.toolbarBtn` outline from window captures
+(`screencapture -l`) against the adjacent surface:
+
+| theme | ratio |
+| --- | --- |
+| midnightMirage | 6.43 |
+| gruvbox_dark | 3.96 |
+| dracula | 3.77 |
+| nord-light | 2.77 |
+
+All four are visibly outlined (was 1.04-2.63 before the fix). `nord-light` reads 2.77 on the capture
+against 3.43 computed from the CSS; the captured edge pixel is `#929292`, not `gray` (`#808080`), so
+the capture path lightens it -- the discrepancy is unresolved, the border is plainly visible.
+
+**Not seen rendered:** `.gameListHeader`, `h4` and `.wineItem` rows (need Wine versions; the
+throwaway profile had none), `PopoverComponent`, `SteamGridDBPicker`. Those five consumers are
+verified by the computed contrast census in `themeTokens.test.ts` only.
