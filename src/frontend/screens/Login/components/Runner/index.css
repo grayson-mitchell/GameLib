@@ -43,6 +43,18 @@
   color: var(--accent);
 }
 
+/* Quick task 261008-fjj: the tiles are now keyboard-focusable (role="button",
+   tabIndex), so keyboard focus needs a visible ring. `--accent`, not
+   `--border-color` -- that token resolves to an invisible grey (1.08:1) in 10
+   of 13 themes despite its own comment calling itself universal. Inset
+   (negative offset) so it paints inside the 60px fixed-height row without
+   reflow, same reasoning as the deprecated wrapper outline below. A disabled
+   tile is tabIndex -1 and never receives focus, so no `.disabled` arm. */
+.runnerWrapper .runnerLogin:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .logged {
   color: var(--danger);
   cursor: pointer;

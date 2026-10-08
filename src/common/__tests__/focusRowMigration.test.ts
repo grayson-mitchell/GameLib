@@ -288,6 +288,32 @@ describe('Phase 48 plan 07: hydrateFocusRowSelection', () => {
     expect(deps.onError).toHaveBeenCalledTimes(1)
   })
 
+  it('WR-03: a throwing onError still resolves (never rejects) and falls back to console.error', async () => {
+    const boom = new Error('ipc down')
+    const reporterBoom = new Error('bridge gone')
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    const deps = makeDeps({
+      requestAppSettings: () => Promise.reject(boom),
+      onError: () => {
+        throw reporterBoom
+      }
+    })
+
+    try {
+      await expect(hydrateFocusRowSelection(deps)).resolves.toBeUndefined()
+      expect(consoleError).toHaveBeenCalledTimes(1)
+      expect(consoleError).toHaveBeenCalledWith(
+        'focusRow hydration failed',
+        boom,
+        reporterBoom
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it('an invalid focusRow in the settings is applied and written as null', async () => {
     const deps = makeDeps({
       requestAppSettings: () =>

@@ -160,6 +160,80 @@ describe('lzmaNativeBinding SEA branch', () => {
     writeFileSyncSpy.mockRestore()
     rmSyncSpy.mockRestore()
   })
+
+  // Shared setup for the temp-file cleanup tests below: SEA mocked on, the fs
+  // calls spied as no-ops through `require()` (see the comment in the test
+  // above for why the ESM namespace cannot be spied).
+  function setupSeaCleanup() {
+    jest.doMock('node:sea', () => ({
+      isSea: () => true,
+      getRawAsset: jest.fn(() => new ArrayBuffer(4))
+    }))
+
+    let lzmaNativeBinding: LzmaNativeBindingResolver
+    jest.isolateModules(() => {
+      lzmaNativeBinding = loadFresh()
+    })
+
+    const writeFileSyncSpy = jest
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
+      .spyOn(require('node:fs'), 'writeFileSync')
+      .mockImplementation(() => undefined)
+    const rmSyncSpy = jest
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
+      .spyOn(require('node:fs'), 'rmSync')
+      .mockImplementation(() => undefined)
+    const dlopenSpy = jest.spyOn(process, 'dlopen')
+
+    return {
+      lzmaNativeBinding: lzmaNativeBinding!,
+      writeFileSyncSpy,
+      rmSyncSpy,
+      dlopenSpy
+    }
+  }
+
+  it('removes the temp .node and rethrows the ORIGINAL error when process.dlopen throws', () => {
+    const { lzmaNativeBinding, writeFileSyncSpy, rmSyncSpy, dlopenSpy } =
+      setupSeaCleanup()
+    dlopenSpy.mockImplementation(() => {
+      throw new Error('dlopen boom')
+    })
+
+    expect(() => lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toThrow('dlopen boom')
+
+    expect(writeFileSyncSpy).toHaveBeenCalledTimes(1)
+    expect(rmSyncSpy).toHaveBeenCalledTimes(1)
+    expect(rmSyncSpy.mock.calls[0][0]).toBe(writeFileSyncSpy.mock.calls[0][0])
+  })
+
+  it('never lets a cleanup failure mask the dlopen error', () => {
+    const { lzmaNativeBinding, rmSyncSpy, dlopenSpy } = setupSeaCleanup()
+    dlopenSpy.mockImplementation(() => {
+      throw new Error('dlopen boom')
+    })
+    rmSyncSpy.mockImplementation(() => {
+      throw new Error('EBUSY')
+    })
+
+    expect(() => lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toThrow('dlopen boom')
+
+    expect(rmSyncSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('on success removes the temp .node exactly once, AFTER process.dlopen', () => {
+    const { lzmaNativeBinding, writeFileSyncSpy, rmSyncSpy, dlopenSpy } =
+      setupSeaCleanup()
+    dlopenSpy.mockImplementation(() => undefined)
+
+    lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
+
+    expect(rmSyncSpy).toHaveBeenCalledTimes(1)
+    expect(rmSyncSpy.mock.calls[0][0]).toBe(writeFileSyncSpy.mock.calls[0][0])
+    expect(rmSyncSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+      dlopenSpy.mock.invocationCallOrder[0]
+    )
+  })
 })
 
 describe('lzmaNativeBinding dev branch', () => {

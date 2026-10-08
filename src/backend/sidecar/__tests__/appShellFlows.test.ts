@@ -483,6 +483,25 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
   })
 
+  it("quit (send) logs the '[GAMELIB_SIDECAR_SEND_HANDLER] quit' marker, the live gate's sidecar-side proof that the shell's frame landed (todo 2026-10-05 cmd-q-and-red-x)", async () => {
+    const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+    try {
+      const { input } = startSidecar()
+      writeSend(input, 'quit-marker-1', 'quit', [])
+      await flush()
+
+      expect(
+        logInfoSpy.mock.calls.some(
+          ([msg]) => msg === '[GAMELIB_SIDECAR_SEND_HANDLER] quit'
+        )
+      ).toBe(true)
+      // ... and it still reaches handleExit().
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
+    } finally {
+      logInfoSpy.mockRestore()
+    }
+  })
+
   // ── Quick task 260907-juv (Gate A): handleExit() -> shutdownLongLivedChildren() ──
   //
   // Layer A of the two-layer helper-process-orphan fix. `longLivedChildren` is mocked
@@ -929,23 +948,38 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     it("calls logSendHandlerReached('frontendReady') as its FIRST observable effect, then the Frontend Ready log line", async () => {
       const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
 
-      const { input } = startSidecar()
-      writeSend(input, 'frontend-ready-1', 'frontendReady', [])
-      await flush()
+      // This is the FIRST frontendReady delivery into the shared registration, so it is
+      // the one that arms the 5s `initQueue(true)` auto-resume `setTimeout`. Under REAL
+      // timers that timer outlives this test and fires ~5s into the run against the ONE
+      // `initQueue` mock -- `jest.isolateModules` re-uses an already-instantiated mock
+      // from the main registry rather than re-running the factory -- which is how the
+      // `toHaveBeenCalledTimes(1)` assertions in the isolated initQueue tests below
+      // intermittently saw 2 (todo 2026-10-05). Fake timers here mean it never arms; the
+      // stream plumbing (`writeSend` -> stdin `data`) rides on nextTick/microtasks, and
+      // `flush()` on setImmediate, so all three stay real.
+      jest.useFakeTimers({
+        doNotFake: ['setImmediate', 'nextTick', 'queueMicrotask']
+      })
+      try {
+        const { input } = startSidecar()
+        writeSend(input, 'frontend-ready-1', 'frontendReady', [])
+        await flush()
 
-      // logInfoSpy.mock.calls may already carry earlier boot-time lines (real, unmocked
-      // logger) -- find the observable marker line specifically and assert it precedes
-      // the plain 'Frontend Ready' line, rather than assuming index 0 of the whole spy.
-      const markerIndex = logInfoSpy.mock.calls.findIndex(
-        ([msg]) => msg === '[GAMELIB_SIDECAR_SEND_HANDLER] frontendReady'
-      )
-      const readyLineIndex = logInfoSpy.mock.calls.findIndex(
-        ([msg]) => msg === 'Frontend Ready'
-      )
-      expect(markerIndex).toBeGreaterThanOrEqual(0)
-      expect(readyLineIndex).toBeGreaterThan(markerIndex)
-
-      logInfoSpy.mockRestore()
+        // logInfoSpy.mock.calls may already carry earlier boot-time lines (real, unmocked
+        // logger) -- find the observable marker line specifically and assert it precedes
+        // the plain 'Frontend Ready' line, rather than assuming index 0 of the whole spy.
+        const markerIndex = logInfoSpy.mock.calls.findIndex(
+          ([msg]) => msg === '[GAMELIB_SIDECAR_SEND_HANDLER] frontendReady'
+        )
+        const readyLineIndex = logInfoSpy.mock.calls.findIndex(
+          ([msg]) => msg === 'Frontend Ready'
+        )
+        expect(markerIndex).toBeGreaterThanOrEqual(0)
+        expect(readyLineIndex).toBeGreaterThan(markerIndex)
+      } finally {
+        jest.useRealTimers()
+        logInfoSpy.mockRestore()
+      }
     })
 
     it('does NOT call handleProtocol -- the one remaining deliberate exclusion -- RED-proven by temporarily adding the call (see SUMMARY)', async () => {
@@ -1209,10 +1243,19 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         // INSIDE `jest.isolateModules` -- a fresh, throwaway copy -- so it never touches
         // the shared/outer `backend/constants/environment` mock every other test in this
         // file relies on being `isSnap: false`; no cleanup of that flag is needed here.
-        frontendReadyListener()
-        await flush()
-        frontendReadyListener()
-        await flush()
+        //
+        // Fake timers for the same reason as the frontendReady (send, D-11) marker test
+        // above: the first delivery here arms the 5s `initQueue(true)` auto-resume, and
+        // under real timers it would fire mid-run against the shared `initQueue` mock.
+        jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+        try {
+          frontendReadyListener()
+          await flush()
+          frontendReadyListener()
+          await flush()
+        } finally {
+          jest.useRealTimers()
+        }
 
         // 260919-sch: the Snap warning moved off the native RUST_DIALOG_MESSAGE
         // path onto showDialogBoxModalAuto -- assert BOTH sides: the repeat
@@ -1425,6 +1468,13 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         expect(() => frontendReadyListener()).not.toThrow()
         await flush()
 
+        // `isolatedInitQueue` is NOT isolated: `jest.isolateModules` hands back the
+        // main registry's already-built mock, so any real 5s timer leaked by an earlier
+        // frontendReady delivery in this file lands on it too (todo 2026-10-05: 1 fake +
+        // 2 real = 3). The leaks are fixed at source (fake timers on both real-timer
+        // deliveries), but count only what THIS advance fires: clear with no `await`
+        // between the clear and the assertion so nothing real can interleave.
+        isolatedInitQueue.mockClear()
         jest.advanceTimersByTime(5000)
 
         expect(isolatedInitQueue).toHaveBeenCalledTimes(1)

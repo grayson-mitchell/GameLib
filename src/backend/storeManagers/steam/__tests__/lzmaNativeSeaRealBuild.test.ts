@@ -49,7 +49,7 @@
 // is now gated OFF by default in shipping code
 // (`NATIVE_LZMA_DECODE_ENABLED`, `lzmaLoader.ts`) until that is understood
 // and fixed. Full investigation, current status, and re-enable criteria:
-// `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`.
+// `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`.
 //
 // CRITICAL CORRECTION, found while writing this file's own tests for the
 // gate above: the hang is NOT native-specific. With native confirmed
@@ -212,8 +212,9 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // Phase 23.1 plan 05, THIRD finding's own follow-up (coordinator/human-
   // operator directed, 2026-08-18, same session): native decode is now
   // gated OFF by default (NATIVE_LZMA_DECODE_ENABLED, lzmaLoader.ts) --
-  // see `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md` for
-  // why, and this file's own second test below (skipped when this comment
+  // see
+  // `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`
+  // for why, and this file's own second test below (skipped when this comment
   // was written; un-skipped and green since 2026-09-12) for the
   // original finding this test used to assert against directly. With the
   // gate in place, a real compiled SEA binary's pool must still spawn
@@ -274,7 +275,7 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // but it does NOT make a real packaged SEA install's worker-pool decode
   // path safe -- that remains an open, and now BROADER, risk than
   // originally scoped. See
-  // `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`'s own
+  // `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`'s own
   // "CRITICAL CORRECTION" entry for the full record.
   //
   // UN-SKIPPED 2026-09-12 (todo `2026-09-12-lzma-sea-real-sized-decode-
@@ -390,8 +391,8 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // Full investigation narrative (this comment's own content, preserved),
   // current status, and the criteria for safely re-enabling native decode
   // (which this test's own pass is part of):
-  // `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`. That file
-  // is also linked directly from lzmaLoader.ts's own
+  // `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`.
+  // That file is also linked directly from lzmaLoader.ts's own
   // `NATIVE_LZMA_DECODE_ENABLED` kill-switch doc comment -- the two must be
   // updated together if either changes.
   //

@@ -224,14 +224,22 @@ function resolveNativeBinding(_dir: string): unknown {
     writeFileSync(addonPath, Buffer.from(raw), { mode: 0o600 })
 
     const nativeModule: { exports: unknown } = { exports: {} }
-    process.dlopen(nativeModule, addonPath)
-
     try {
-      rmSync(addonPath)
-    } catch {
-      // Expected/ignorable on Windows, where a file backing a currently
-      // loaded native module cannot be unlinked while it is still mapped
-      // into the process.
+      process.dlopen(nativeModule, addonPath)
+    } finally {
+      // Runs on BOTH paths so a failed dlopen cannot leave an executable
+      // .node behind in os.tmpdir(). The dlopen error still propagates (no
+      // catch here) and `cachedBinding` stays unassigned, so a later call
+      // retries.
+      try {
+        rmSync(addonPath)
+      } catch {
+        // Expected/ignorable on Windows, where a file backing a currently
+        // loaded native module cannot be unlinked while it is still mapped
+        // into the process. On the throw path nothing is mapped, so removal
+        // succeeds on every OS; this catch exists for the success path on
+        // Windows.
+      }
     }
 
     cachedBinding = nativeModule.exports

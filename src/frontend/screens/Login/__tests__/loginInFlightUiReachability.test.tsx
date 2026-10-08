@@ -22,6 +22,13 @@
  *     `oldMac || loginInFlight` expression now fed to ALL SIX tiles
  *     uniformly (assertion 2), not from unmounting.
  *
+ * Quick task 261008-fjj (2026-10-08): the tiles stopped being bare
+ * untabbable divs -- they now carry role="button" and a disabled-keyed
+ * tabIndex. The focusability-premise assertion below was re-derived (not
+ * deleted) to pin that new shape; F-36-02's residual is re-stated in the
+ * assertion's own comment and in 34.4.2-PLATFORM-SCOPE.md's Fifteenth
+ * update.
+ *
  * F-36-01 (accept, DEFERRED): Epic-under-Tauri's SIDLogin path also uses
  * `primaryLoginAction` but is NOT wired into `loginInFlight` -- every
  * universal assertion below is scoped to what the Steam/Humble flows
@@ -198,16 +205,36 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
     expect((source.match(/loginweb\/steam/g) ?? []).length).toBe(0)
   })
 
-  it("SOURCE GATE (ABSENCE, load-bearing for the inert argument) -- Runner's tiles carry zero tabIndex, zero <button, zero <a -- they are bare untabbable divs, which is WHY a container-level inert (pinned below) protects the two genuinely-focusable controls it wraps without needing to also fight a tabIndex lock", () => {
+  it('SOURCE GATE (PRESENCE + ABSENCE, re-derived by quick task 261008-fjj) -- Runner\'s tiles ARE focusable now (role="button", tabIndex) but every tile\'s tabIndex is the single disabled-keyed expression `disabled ? -1 : 0`, so on the pre-Safari-15.5 slice where inert is a no-op (F-36-02) the tiles leave the tab order by their own attribute for exactly the time inert would have removed them; still zero <button / <a', () => {
     const source = read(RUNNER_TSX)
 
-    // Breaks if: any tile becomes a real focusable element (a <button>, an
-    // <a>, or a div with an explicit tabIndex) -- at that point the
-    // "disabled prop is the primary JS layer, inert is near-zero-impact for
-    // tiles specifically" analysis in 36-01-PLAN.md's
-    // verified_guard_layer_analysis would no longer hold, and the retired
-    // tabIndex lock would need to be reconsidered, not left dropped.
-    expect((source.match(/\btabIndex\b/g) ?? []).length).toBe(0)
+    // History: until 261008-fjj this assertion pinned ZERO tabIndex -- the
+    // tiles were bare untabbable divs, which is what made inert
+    // "near-zero-impact for tiles specifically" (36-01-PLAN.md
+    // verified_guard_layer_analysis) and let the operator drop the
+    // tabIndex={-1} container lock. That same plan said this gate "goes RED
+    // the day someone converts the tiles to real buttons -- which is exactly
+    // when the residual-risk statement in the threat register would need
+    // re-deriving". That day came (todo 2026-10-03: keyboard-only users could
+    // not reach the tiles at all). F-36-02 RE-DERIVED: a tile is a tab stop
+    // only while !disabled; disabled={oldMac || loginInFlight} is true on all
+    // six tiles for the whole time the wrapper is inert; and handleLogin()'s
+    // props.disabled early-return (pinned above) still guards activation. So
+    // the slice's residual stays near zero -- now by two explicit layers
+    // instead of by accident of markup. The container tabIndex lock stays
+    // dropped: it would still protect nothing the tiles do not already do.
+    //
+    // Breaks if: the disabled-keyed tabIndex expression is removed or any
+    // tile grows a tabIndex that is NOT that expression (a second distinct
+    // tabIndex token appears), role="button" disappears (the tiles would be
+    // focusable but role-less), or a tile is rebuilt as a <button>/<a> -- the
+    // CSS cascade and the Runner unit suite both key on `.runnerLogin` being
+    // a div, so an element-type change must be a deliberate edit here too.
+    const tabIndexTokens = source.match(/\btabIndex\b[^,\n]*/g) ?? []
+    expect(tabIndexTokens.length).toBeGreaterThan(0)
+    expect(new Set(tabIndexTokens).size).toBe(1)
+    expect(tabIndexTokens[0]).toBe('tabIndex: disabled ? -1 : 0')
+    expect(source).toMatch(/role: 'button'/)
     expect((source.match(/<button/g) ?? []).length).toBe(0)
     expect((source.match(/<a\s/g) ?? []).length).toBe(0)
   })

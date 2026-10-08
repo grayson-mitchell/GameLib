@@ -342,10 +342,16 @@ export default React.memo(function NewLogin() {
 
       {/* T-34.4.2-39/-41: `inert` is the React-18 string-empty form (boolean
           `inert` is React-19-only; this project pins react@^18.3.1). No
-          `tabIndex` here -- the tiles are bare `<div onClick>` with no
-          tabIndex/role, already outside the tab order, so a container
-          tabIndex would protect nothing (operator-dropped lock, see
-          36-01-PLAN.md locked_decisions). No `aria-hidden` here either --
+          `tabIndex` here (operator-dropped lock, see 36-01-PLAN.md
+          locked_decisions). Since quick task 261008-fjj the tiles ARE
+          focusable (`role="button"`, `tabIndex` 0) -- but Runner drops each
+          tile to `tabIndex` -1 and `aria-disabled` whenever `disabled` is
+          true, and `disabled={oldMac || loginInFlight}` is true on every
+          tile for the whole time this `inert` is set, so on the pre-Safari-
+          15.5 slice where `inert` is a no-op (F-36-02) the tiles still leave
+          the tab order by their own attribute, and `handleLogin()`'s
+          `props.disabled` early-return still guards activation. A container
+          tabIndex would still protect nothing. No `aria-hidden` here either --
           this wrapper holds two genuinely focusable controls
           (LanguageSelector, goToLibrary) and `aria-hidden` over focusable
           descendants is an ARIA violation; MUI's Dialog focus trap covers

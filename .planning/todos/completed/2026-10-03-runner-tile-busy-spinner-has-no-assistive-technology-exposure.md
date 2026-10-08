@@ -7,6 +7,7 @@ platform: any
 ready: code
 found_by: "Quick task 261003-u48 D-5, noted during plan execution rather than discovered live"
 source: ".planning/quick/261003-u48-drop-the-finalizing-modal-from-the-oauth/261003-u48-PLAN.md"
+status: "RESOLVED 2026-10-08, quick task 261008-fjj, with one stated limit. Every clickable Runner tile (primary, alternative, logout) now carries role=button, tabIndex 0 (-1 while disabled), aria-disabled while disabled, Enter/Space activation through the same handler and guard as click, and a :focus-visible ring; the primary tile carries aria-busy while busy. The two source gates that pinned 'tiles are untabbable divs' (load-bearing for F-36-02) were re-derived, not deleted, and F-36-02 is re-stated in 34.4.2-PLATFORM-SCOPE.md's Fifteenth update. LIMIT: busy is only ever true while loginInFlight is true, which is exactly when .loginContentWrapper is inert -- on WebKit >= Safari 15.5 that removes the tile from the AX tree, so aria-busy on the tile is correct but masked for the whole time it is set. The AT-perceivable 'mid-login' state on a current macOS is the overlay outside the inert wrapper; the post-window dead-UI gap is the two other quick tasks' job. No live VoiceOver probe ran -- its expected result here is 'tile absent from the AX tree while busy', i.e. it would confirm the mask, not refute the fix."
 files:
   - src/frontend/screens/Login/components/Runner/index.tsx
   - src/frontend/screens/Login/index.tsx

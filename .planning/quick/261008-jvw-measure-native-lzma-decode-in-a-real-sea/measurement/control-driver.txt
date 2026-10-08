@@ -1,0 +1,14 @@
+label=control runs=3 expectNativeWorkers=0
+timestamp=2026-10-08T01:40:33.422Z
+HEAD=8cde665b6e81cb36d2e82642abf2b1cfe1e7ec83
+git diff --stat -- src:
+(empty -- src matches HEAD)
+binary=/Users/graysonmitchell/Projects/GameLib/src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin
+size=170076128 mtime=2026-10-08T01:40:33.224Z
+| run | wall ms | exit | signal | nativeWorkers | inlineFallback | decode line |
+| --- | ------- | ---- | ------ | ------------- | -------------- | ----------- |
+| 1 | 3298 | 0 | - | 0 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 2 | 1173 | 0 | - | 0 | false | SELFTEST decode=ok bytes=65536 match=true |
+| 3 | 1016 | 0 | - | 0 | false | SELFTEST decode=ok bytes=65536 match=true |
+
+RESULT label=control pass=3/3 expectNativeWorkers=0

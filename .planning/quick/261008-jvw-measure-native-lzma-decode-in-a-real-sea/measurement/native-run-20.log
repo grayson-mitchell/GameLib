@@ -1,0 +1,17 @@
+run=20 wallMs=1328 exit=0 signal=null pass=true
+--- stdout ---
+[downloadQueueFlowRegistration] boot-time download-queue auto-resume is ENABLED (Phase 35 plan 11) and runs from appShellFlowRegistration.ts, not from this module — logger not yet initialized in this process, falling back to console
+SELFTEST pool={"size":2,"busy":0,"idle":2,"queued":0,"inlineFallback":false,"nativeWorkers":2}
+SELFTEST decode=ok bytes=65536 match=true
+
+--- stderr ---
+(node:3408) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-aarch64-apple-darwin --trace-deprecation ...` to show where the warning was created)
+(node:3408) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-aarch64-apple-darwin --trace-deprecation ...` to show where the warning was created)
+(node:3408) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-aarch64-apple-darwin --trace-deprecation ...` to show where the warning was created)
+
+--- lzma/DecompressPool lines from *.log under the fake profile ---
+gamelib.log: (14:39:33) [INFO]:    [Steam]:           lzmaLoader: native lzma-native decoder engaged for Steam VZ depot chunk decode (23.1-01 spike measured ~5.8-6.6x real-chunk speedup over the pure-JS path on darwin-arm64; CONTEXT.md's live measurement found decode, not network, was this codebase's actual throughput bottleneck). This line is logged exactly once per process -- its ABSENCE from a run's gamelib.log, with only the fallback warning below present instead, is how a silently-degraded decode path (this debug arc's own prior defect, closed for the worker pool via decompressPool.ts's DecompressPool.init() logging) is caught without another forensic round-trip.
+gamelib.log: (14:39:33) [INFO]:    [Steam]:           lzmaLoader: native lzma-native decoder engaged for Steam VZ depot chunk decode (23.1-01 spike measured ~5.8-6.6x real-chunk speedup over the pure-JS path on darwin-arm64; CONTEXT.md's live measurement found decode, not network, was this codebase's actual throughput bottleneck). This line is logged exactly once per process -- its ABSENCE from a run's gamelib.log, with only the fallback warning below present instead, is how a silently-degraded decode path (this debug arc's own prior defect, closed for the worker pool via decompressPool.ts's DecompressPool.init() logging) is caught without another forensic round-trip.

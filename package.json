@@ -43,7 +43,7 @@
     "find-deadcode": "node meta/findDeadcode.cjs",
     "test": "jest",
     "test-watch": "jest --watch --maxWorkers=25%",
-    "test:ci": "jest --runInBand --silent",
+    "test:ci": "jest --maxWorkers=2 --silent",
     "lint": "node meta/lintScoped.cjs",
     "lint:src": "node meta/lintScoped.cjs --src",
     "lint:tests": "node meta/lintScoped.cjs --tests",

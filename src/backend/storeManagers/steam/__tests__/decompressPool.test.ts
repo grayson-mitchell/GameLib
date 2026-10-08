@@ -800,8 +800,8 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
   // default (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- a real
   // packaged SEA binary showed native resolution succeeding but a real-sized
   // decode hanging, a failure class the smoke test below cannot catch. See
-  // .planning/debug/sea-native-lzma-real-chunk-decode-hang.md. The tests
-  // below that exercise the NATIVE adapter itself (byte-equivalence, the
+  // .planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md.
+  // The tests below that exercise the NATIVE adapter itself (byte-equivalence, the
   // error path, decoderKind reporting 'native') explicitly re-enable it via
   // setNativeLzmaDecodeEnabledForTests(true) -- proving the ADAPTER remains
   // correct without flipping the shipped default. The gate's own default-off
@@ -933,7 +933,7 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
 // property the plan's own fix depends on: by DEFAULT (no test override),
 // loadLzmaModule() must resolve to the pure-JS path WITHOUT ever attempting
 // to import/smoke-test lzma-native at all. See
-// .planning/debug/sea-native-lzma-real-chunk-decode-hang.md.
+// .planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md.
 describe('lzmaLoader native-decode kill switch (default-off, Phase 23.1 plan 05)', () => {
   beforeEach(() => {
     resetLzmaLoaderForTests()

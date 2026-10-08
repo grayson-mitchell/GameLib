@@ -649,18 +649,140 @@ describe('main.rs tray Quit routes through the sidecar handleExit (todo 2026-10-
     expect(armMatch).not.toBeNull()
     const arm = armMatch ? armMatch[0] : ''
     expect(arm).not.toContain('.exit(')
-    expect(arm).toContain('quit_from_tray(app_handle)')
+    expect(arm).toContain('quit_via_sidecar(app_handle, ')
   })
 
-  test('quit_from_tray sends the sidecar quit channel and keeps exit(0) only as a fallback', () => {
+  test('quit_via_sidecar sends the sidecar quit channel and keeps exit(0) only as a fallback', () => {
     const code = loadMainRsCode()
-    const fnIdx = code.indexOf('fn quit_from_tray(')
+    const fnIdx = code.indexOf('fn quit_via_sidecar(')
     expect(fnIdx).toBeGreaterThan(-1)
     const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
     expect(body).toContain('SIDECAR_QUIT_CHANNEL')
-    expect(body).toContain('tray_quit_via_sidecar(')
+    expect(body).toContain('route_quit_via_sidecar(')
     expect(body).toContain('.exit(0)')
     expect(code).toMatch(/const SIDECAR_QUIT_CHANNEL: &str = "quit";/)
+  })
+})
+
+describe('main.rs Cmd+Q and the red X route through the sidecar handleExit (todo 2026-10-05 cmd-q-and-red-x-quit-bypass-the-pending-operations-confirm)', () => {
+  // The defect: with `exitToTray` off the red X fell through `prevent_close()` (a bare early
+  // return) and macOS Cmd+Q was AppKit's `terminate:`, so both reached `RunEvent::Exit` and
+  // `shutdown_child()` with no "pending operations" confirm. Cmd+Q never emits `ExitRequested`
+  // on macOS in the pinned tao (no `applicationShouldTerminate:`), so it is fixed by replacing
+  // the default app menu's predefined Quit with a custom item, not by intercepting an event.
+  // The routing POLICY and `close_request_action` are covered by main.rs's own #[cfg(test)]
+  // mod (`quit_routing_*`, `tray_quit_*`); this block pins the wiring no unit test can reach.
+
+  // Blank every double-quoted literal so a `{` / `}` inside a format string cannot skew the
+  // brace depth of the scan below.
+  // Per line: a stray `'"'` char literal elsewhere in the file must not desync the quote
+  // pairing for everything after it, and a line-local desync cannot move a brace's offset
+  // because blanking preserves each line's length.
+  const blankStrings = (s: string) =>
+    s
+      .split('\n')
+      .map((line) =>
+        line.replace(
+          /"(?:[^"\\]|\\.)*"/g,
+          (m) => '"' + ' '.repeat(m.length - 2) + '"'
+        )
+      )
+      .join('\n')
+
+  const closeHandlerSlice = (code: string) => {
+    const idx = code.indexOf('WindowEvent::CloseRequested')
+    expect(idx).toBeGreaterThan(-1)
+    const end = code.indexOf('});', idx)
+    expect(end).toBeGreaterThan(idx)
+    return code.slice(idx, end)
+  }
+
+  test('the main-window CloseRequested handler is NOT inside the tray-existence gate', () => {
+    const code = blankStrings(loadMainRsCode())
+    const closeIdx = code.indexOf('WindowEvent::CloseRequested')
+    expect(closeIdx).toBeGreaterThan(-1)
+    const gate = 'if !tray_settings.no_tray_icon {'
+    let from = 0
+    for (;;) {
+      const at = code.indexOf(gate, from)
+      if (at === -1 || at > closeIdx) break
+      let depth = 0
+      let closedAt = -1
+      for (let i = at + gate.length - 1; i < code.length; i++) {
+        if (code[i] === '{') depth++
+        else if (code[i] === '}') {
+          depth--
+          if (depth === 0) {
+            closedAt = i
+            break
+          }
+        }
+      }
+      expect(closedAt).toBeGreaterThan(-1)
+      // The gate must have closed BEFORE the close handler registration.
+      expect(closedAt).toBeLessThan(closeIdx)
+      from = at + gate.length
+    }
+  })
+
+  test('the close handler prevents the close BEFORE handing off, routes via close_request_action, and never early-returns', () => {
+    const code = loadMainRsCode()
+    const handler = closeHandlerSlice(code)
+    const preventIdx = handler.indexOf('api.prevent_close()')
+    const routeIdx = handler.indexOf('quit_via_sidecar(')
+    expect(preventIdx).toBeGreaterThan(-1)
+    expect(routeIdx).toBeGreaterThan(-1)
+    expect(preventIdx).toBeLessThan(routeIdx)
+    expect(handler).toContain('close_request_action(')
+    expect(handler).toContain('should_hide_on_close(load_tray_settings())')
+    expect(handler).not.toMatch(/\breturn\s*;/)
+  })
+
+  test('the macOS app menu replaces the predefined Quit with a custom item that routes to the sidecar', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('const APP_MENU_QUIT_ID: &str = "app_menu_quit";')
+    const fnIdx = code.indexOf('fn route_app_menu_quit_through_sidecar(')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const body = code.slice(fnIdx, code.indexOf('\n}', fnIdx))
+    expect(body).toContain('remove_at(')
+    expect(body).toContain('APP_MENU_QUIT_ID')
+    expect(body).toContain('CmdOrCtrl+Q')
+    expect(body).toContain('on_menu_event')
+    expect(body).toContain('quit_via_sidecar(')
+    expect(code).toContain('route_app_menu_quit_through_sidecar(app')
+    // .setup() reaches it: a call site other than the definition.
+    expect(code.split('route_app_menu_quit_through_sidecar(').length - 1).toBe(
+      2
+    )
+  })
+
+  test('the .run closure observes ExitRequested but never prevents the exit', () => {
+    const code = loadMainRsCode()
+    const runIdx = code.indexOf('.run(move |app_handle, event|')
+    expect(runIdx).toBeGreaterThan(-1)
+    let closure = code.slice(runIdx)
+    const stops = [closure.indexOf('\nfn '), closure.indexOf('\nmod ')].filter(
+      (i) => i > 0
+    )
+    if (stops.length) closure = closure.slice(0, Math.min(...stops))
+    expect(closure).toContain('RunEvent::ExitRequested')
+    expect(closure).not.toContain('prevent_exit')
+  })
+
+  // Dock Quit (todo 2026-10-08 dock-quit-and-logout-bypass-the-pending-operations-confirm): a
+  // runtime-added `applicationShouldTerminate:` on tao's delegate. The reply POLICY is covered by
+  // main.rs's `terminate_reply_tests`; this pins the wiring no unit test can reach.
+  test('Dock Quit is vetoed into quit_via_sidecar, and a power-off or an exit in progress is not', () => {
+    const code = loadMainRsCode()
+    const modIdx = code.indexOf('mod macos_terminate_veto {')
+    expect(modIdx).toBeGreaterThan(-1)
+    const mod = code.slice(modIdx, code.indexOf('\n}\n', modIdx))
+    expect(mod).toContain('applicationShouldTerminate:')
+    expect(mod).toContain('quit_via_sidecar(app, "Dock Quit")')
+    expect(mod).toContain('NSWorkspaceWillPowerOffNotification')
+    expect(code).toMatch(/macos_terminate_veto::install\(app\.handle\(\)\)/)
+    // The shell's own exit must disarm the veto, or a confirmed quit could cancel itself.
+    expect(code).toContain('macos_terminate_veto::mark_exiting()')
   })
 })
 

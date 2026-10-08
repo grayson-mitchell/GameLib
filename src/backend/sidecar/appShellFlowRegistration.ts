@@ -311,6 +311,9 @@ export function registerAppShellFlows(
   })
 
   ipcMain.on('quit', () => {
+    // Live-gate marker (todo 2026-10-05 cmd-q-and-red-x): proves the shell's routed quit frame
+    // landed in the sidecar, before handleExit() can block on the pending-operations confirm.
+    logSendHandlerReached('quit')
     handleExit().catch((error) => logSendFailure('quit', error))
   })
 

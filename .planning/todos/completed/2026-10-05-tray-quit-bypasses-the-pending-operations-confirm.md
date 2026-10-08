@@ -74,3 +74,12 @@ run). Split out as
 running is unobserved. If `handleExit()` itself stalls after the hand-off (e.g. on
 `gogPresence.deletePresence()`), tray Quit appears to do nothing; a second click re-probes and
 re-sends rather than force-exiting, which could in principle raise a second confirm.
+
+## Live verification (2026-10-08)
+
+Observed on macOS by quick task 261008-kvz (the route is now `quit_via_sidecar(app, "tray Quit")`): with
+`GamesConfig/lock` present, tray Quit logged `quit (tray Quit): handed to the sidecar handleExit`, the
+pending-operations confirm appeared (window-scoped capture), and answering No left the shell, sidecar and main
+window alive. Evidence: `.planning/quick/261008-kvz-route-cmd-q-and-the-red-x-exittotray-off/evidence/arm-tray-quit-no.md`
+and `arm-tray-quit-confirm-panel.png`. The pending operation was the `isLocked` file, not a running download;
+the Yes path was not driven for the tray gesture (it shares the exit path with the Cmd+Q and red-X Yes arms).

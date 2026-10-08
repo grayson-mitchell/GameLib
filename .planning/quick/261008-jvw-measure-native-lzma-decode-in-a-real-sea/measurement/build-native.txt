@@ -1,0 +1,22 @@
+
+> gamelib@0.8.0 build:sidecar-sea /Users/graysonmitchell/Projects/GameLib
+> pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts
+
+
+> gamelib@0.8.0 build:sidecar /Users/graysonmitchell/Projects/GameLib
+> esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts
+
+
+  build/main/sidecar.js  1.4mb ⚠️
+
+⚡ Done in 35ms
+
+  ...5qx6zm74fqyjf22r0000gn/T/gamelib-runts-KUUc8m/buildSidecarSea.cjs  23.8kb
+
+⚡ Done in 5ms
+[build:sidecar-sea] decompress worker bundled and embedded as SEA asset "decompressWorker.js" -- consumed at runtime by DecompressPool via node:sea.getAsset().
+[build:sidecar-sea] Resolved target triple: aarch64-apple-darwin (native build)
+[build:sidecar-sea] native LZMA addon embedded as SEA asset "lzma_native.node" from node_modules/lzma-native/prebuilds/darwin-arm64/node.napi.node
+[build:sidecar-sea] lzma-native resolved paths baked for the worker bundle (root=/Users/graysonmitchell/Projects/GameLib/node_modules/lzma-native)
+SEA sidecar arch verified: arm64 (aarch64-apple-darwin)
+SEA sidecar compiled -> src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin

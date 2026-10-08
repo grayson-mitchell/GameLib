@@ -191,6 +191,8 @@ export interface FocusRowHydrationDeps {
  *
  * NEVER rejects: the whole body is one try/catch that reports to `onError` and
  * resolves `undefined`, so a caller may `void` it without leaving an unhandled
+ * rejection. The `onError` call is itself guarded (WR-03): a reporter that
+ * throws must not escape the catch and turn the `void` into an unhandled
  * rejection. Resolves `undefined` when skipped (user picked first, or failure).
  */
 export async function hydrateFocusRowSelection(
@@ -213,7 +215,13 @@ export async function hydrateFocusRowSelection(
     deps.setSetting({ appName: 'default', key: 'focusRow', value })
     return value
   } catch (error) {
-    deps.onError(error)
+    try {
+      deps.onError(error)
+    } catch (reportError) {
+      // The reporter is the IPC bridge; if it is down too, the console is the
+      // last place either error can go.
+      console.error('focusRow hydration failed', error, reportError)
+    }
     return undefined
   }
 }

@@ -6,6 +6,7 @@ severity: minor
 platform: any
 ready: code
 found_by: "Hit independently by three fix agents and the orchestrating session, 2026-10-05"
+status: "RESOLVED 2026-10-08. Root cause: jest.isolateModules re-uses the main registry's already-built `initQueue` mock, so it is ONE jest.fn across every isolated registration; two frontendReady deliveries made under REAL timers (the D-11 marker test and the CR-02 Snap test) each armed a real 5s `initQueue(true)` setTimeout that fired mid-run against that shared mock. Reproduced deterministically by inserting a 5.2s real wait before the test: received 3 (1 fake + 2 real). Fixed by running both deliveries under fake timers (the stream-based one with nextTick/queueMicrotask/setImmediate kept real) and by `mockClear()`-ing immediately before `advanceTimersByTime(5000)` so the assertion counts only that advance."
 files:
   - src/backend/sidecar/__tests__/appShellFlows.test.ts:1400-1435
 ---

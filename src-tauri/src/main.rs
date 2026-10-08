@@ -806,6 +806,31 @@ fn should_hide_on_close(settings: TraySettingsSnapshot) -> bool {
     settings.exit_to_tray && !settings.no_tray_icon
 }
 
+/// What a main-window close request does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CloseRequestAction {
+    /// Hide the window to the tray; the app stays alive.
+    Hide,
+    /// Hand the quit to the sidecar's `handleExit()` (`quit_via_sidecar`).
+    RouteQuit,
+}
+
+/// Decide what a main-window close does, given whether a tray existed at startup and whether a
+/// FRESH settings read says to hide on close (`should_hide_on_close`).
+///
+/// Hide only when BOTH hold: hiding a window with no tray to restore it from would trap the
+/// user, and a failed settings read degrades to the all-false `TraySettingsSnapshot::default()`
+/// so `hide_on_close` is false and the quit is routed -- the user can always close. The fail-safe
+/// the old handler's comment describes is preserved: the sidecar exits when nothing is pending,
+/// and `exit(0)` is the fallback when it cannot be asked.
+fn close_request_action(tray_exists: bool, hide_on_close: bool) -> CloseRequestAction {
+    if tray_exists && hide_on_close {
+        CloseRequestAction::Hide
+    } else {
+        CloseRequestAction::RouteQuit
+    }
+}
+
 /// Seed the recent-games cache from `configStore`'s on-disk JSON
 /// (`<appFolder>/store/config.json`, key `games.recent` -- `constants/key_value_stores.ts`'s
 /// `new TypeCheckedStoreBackend('configStore', { cwd: 'store' })`).
@@ -1063,26 +1088,28 @@ fn open_about_window_from_tray(app: &AppHandle) {
 const SIDECAR_QUIT_CHANNEL: &str = "quit";
 
 /// The sidecar `invoke` channel answered by `ipcMain.handle('health', async () => 'ok')`
-/// (`sidecar/handlers.ts`). Used only to prove the sidecar's JS thread is answering before tray
-/// Quit hands the decision to it.
+/// (`sidecar/handlers.ts`). Used only to prove the sidecar's JS thread is answering before a
+/// routed quit hands the decision to it.
 const SIDECAR_HEALTH_CHANNEL: &str = "health";
 
-/// How long tray Quit waits for the health probe before falling back to `exit(0)`. Bounds only
-/// the PROBE: once the sidecar has answered, `handleExit()` may show the "pending operations"
-/// confirm, which waits on a human and must not be cut short by any clock.
-const TRAY_QUIT_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+/// How long a routed quit waits for the health probe before falling back to `exit(0)`. Bounds
+/// only the PROBE: once the sidecar has answered, `handleExit()` may show the "pending
+/// operations" confirm, which waits on a human and must not be cut short by any clock.
+const QUIT_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// The tray-Quit routing policy (todo 2026-10-05 tray-quit-bypasses-the-pending-operations-
-/// confirm), with the two sidecar operations injected so `#[cfg(test)]` can drive it.
+/// The quit routing policy shared by tray Quit, Cmd+Q (the macOS app menu) and the main-window
+/// close (todos 2026-10-05 tray-quit-bypasses-the-pending-operations-confirm and
+/// 2026-10-05 cmd-q-and-red-x-quit-bypass-the-pending-operations-confirm), with the two
+/// sidecar operations injected so `#[cfg(test)]` can drive it.
 ///
 /// `Ok(())` means the quit was handed to the sidecar's `handleExit()`, which either exits via
 /// `app_exit` or -- the user answered "No" to the pending-operations confirm -- does nothing.
 /// `Err` means the sidecar is dead or not answering, and the caller must exit directly: the
-/// pre-fix behaviour, kept as the fallback so tray Quit can never become a no-op.
+/// pre-fix behaviour, kept as the fallback so a routed quit can never become a no-op.
 ///
 /// The probe runs on its own thread and is waited on with `recv_timeout`, so the bound also
 /// covers a probe stuck behind the stdin mutex on a full pipe, not only a slow answer.
-fn tray_quit_via_sidecar<P, S>(probe: P, bound: Duration, send_quit: S) -> Result<(), String>
+fn route_quit_via_sidecar<P, S>(probe: P, bound: Duration, send_quit: S) -> Result<(), String>
 where
     P: FnOnce() -> Result<Value, String> + Send + 'static,
     S: FnOnce() -> Result<(), String>,
@@ -1101,13 +1128,17 @@ where
     }
 }
 
-/// Tray Quit. Routes through the sidecar's `handleExit()` so a running download gets the same
-/// "pending operations" confirm as the in-app quit (Electron routed tray Quit there too), and
-/// falls back to `exit(0)` when there is no live sidecar to ask. Runs off the main thread: the
-/// probe blocks for up to `TRAY_QUIT_PROBE_TIMEOUT`.
-fn quit_from_tray(app_handle: &AppHandle) {
+/// Every user-initiated quit: tray Quit, Cmd+Q (the macOS app-menu item installed by
+/// `route_app_menu_quit_through_sidecar`) and the main-window close when the window is not
+/// hiding to the tray. Routes through the sidecar's `handleExit()` so a pending operation gets
+/// the same "pending operations" confirm as the in-app quit (Electron routed all of these there),
+/// and falls back to `exit(0)` when there is no live sidecar to ask. `origin` names the gesture
+/// in the shell log. Runs off the main thread: the probe blocks for up to `QUIT_PROBE_TIMEOUT`.
+fn quit_via_sidecar(app_handle: &AppHandle, origin: &'static str) {
     let Some(state) = app_handle.try_state::<Arc<SidecarState>>() else {
-        eprintln!("[shell] tray Quit: no sidecar state -- exiting directly");
+        shell_diag(&format!(
+            "quit ({origin}): no sidecar state -- exiting directly"
+        ));
         app_handle.exit(0);
         return;
     };
@@ -1115,9 +1146,9 @@ fn quit_from_tray(app_handle: &AppHandle) {
     let app_handle = app_handle.clone();
     thread::spawn(move || {
         let probe_state = state.clone();
-        let routed = tray_quit_via_sidecar(
+        let routed = route_quit_via_sidecar(
             move || probe_state.invoke(SIDECAR_HEALTH_CHANNEL.to_string(), Vec::new()),
-            TRAY_QUIT_PROBE_TIMEOUT,
+            QUIT_PROBE_TIMEOUT,
             || {
                 state.write_frame(&SidecarRpcRequest {
                     id: state.next_id(),
@@ -1127,11 +1158,269 @@ fn quit_from_tray(app_handle: &AppHandle) {
                 })
             },
         );
-        if let Err(e) = routed {
-            eprintln!("[shell] WARN: tray Quit: {e} -- exiting directly");
-            app_handle.exit(0);
+        match routed {
+            Ok(()) => shell_diag(&format!(
+                "quit ({origin}): handed to the sidecar handleExit"
+            )),
+            Err(e) => {
+                shell_diag(&format!("WARN: quit ({origin}): {e} -- exiting directly"));
+                app_handle.exit(0);
+            }
         }
     });
+}
+
+/// Menu id of the custom macOS app-menu Quit item that replaces the predefined one. Deliberately
+/// NOT `"quit"`: Tauri 2 delivers every menu event app-wide to every `on_menu_event` handler, and
+/// the tray handler's `"quit"` arm would fire a second time for the same click.
+#[cfg(target_os = "macos")]
+const APP_MENU_QUIT_ID: &str = "app_menu_quit";
+
+/// macOS Cmd+Q: swap the default app menu's predefined Quit for a custom item that routes through
+/// `quit_via_sidecar` (todo 2026-10-05 cmd-q-and-red-x-quit-bypass-the-pending-operations-confirm).
+///
+/// Why a menu item and not an `ExitRequested` interceptor. `main()` never calls `.menu(...)`, so
+/// macOS gets Tauri's `Menu::default`, whose app submenu ends in `PredefinedMenuItem::quit` -- the
+/// item that carries Cmd+Q. muda maps it to the AppKit selector `terminate:`. tao 0.35.3's app
+/// delegate implements NO `applicationShouldTerminate:` (only `applicationWillTerminate:`, which
+/// goes straight to `Event::LoopDestroyed` -> `RunEvent::Exit`), so Cmd+Q never emits
+/// `RunEvent::ExitRequested` and there is nothing to intercept; it bypassed `handleExit()` and
+/// `shutdown_child()` killed a running download with no confirm. A custom item with the same
+/// label and `CmdOrCtrl+Q` accelerator turns the gesture into an ordinary menu event instead.
+///
+/// Dock-menu Quit also sends `terminate:`; `macos_terminate_veto` covers it (todo 2026-10-08
+/// dock-quit-and-logout-bypass-...), and lets a logout/shutdown through unasked.
+///
+/// Every failure (no menu, first item not a submenu, no Quit item, remove/insert error) logs a
+/// WARN and leaves the default menu untouched: the fallback is the old unrouted Cmd+Q, never a
+/// broken menu and never a panic inside `.setup()`.
+#[cfg(target_os = "macos")]
+fn route_app_menu_quit_through_sidecar(app: &AppHandle) {
+    use tauri::menu::{MenuItem, MenuItemKind};
+
+    let Some(menu) = app.menu() else {
+        shell_diag("WARN: app menu: no app-wide menu -- Cmd+Q stays unrouted");
+        return;
+    };
+    let items = match menu.items() {
+        Ok(items) => items,
+        Err(e) => {
+            shell_diag(&format!(
+                "WARN: app menu: could not list the menu ({e}) -- Cmd+Q stays unrouted"
+            ));
+            return;
+        }
+    };
+    let Some(app_submenu) = items.first().and_then(|item| item.as_submenu()) else {
+        shell_diag("WARN: app menu: first item is not the app submenu -- Cmd+Q stays unrouted");
+        return;
+    };
+    let sub_items = match app_submenu.items() {
+        Ok(items) => items,
+        Err(e) => {
+            shell_diag(&format!(
+                "WARN: app menu: could not list the app submenu ({e}) -- Cmd+Q stays unrouted"
+            ));
+            return;
+        }
+    };
+    let found = sub_items
+        .iter()
+        .enumerate()
+        .find_map(|(index, item)| match item {
+            MenuItemKind::Predefined(predefined) => match predefined.text() {
+                Ok(label) if label.starts_with("Quit") => Some((index, label)),
+                _ => None,
+            },
+            _ => None,
+        });
+    let Some((index, label)) = found else {
+        shell_diag("WARN: app menu: no predefined Quit item found -- Cmd+Q stays unrouted");
+        return;
+    };
+    let custom = match MenuItem::with_id(app, APP_MENU_QUIT_ID, &label, true, Some("CmdOrCtrl+Q")) {
+        Ok(item) => item,
+        Err(e) => {
+            shell_diag(&format!(
+                "WARN: app menu: could not build the custom Quit item ({e}) -- Cmd+Q stays unrouted"
+            ));
+            return;
+        }
+    };
+    // Build the replacement BEFORE removing the original, so a failure above can never leave the
+    // menu without a Quit. If the insert fails after the remove, put the predefined item back.
+    let removed = match app_submenu.remove_at(index) {
+        Ok(removed) => removed,
+        Err(e) => {
+            shell_diag(&format!(
+                "WARN: app menu: could not remove the predefined Quit ({e}) -- Cmd+Q stays unrouted"
+            ));
+            return;
+        }
+    };
+    if let Err(e) = app_submenu.insert(&custom, index) {
+        shell_diag(&format!(
+            "WARN: app menu: could not insert the custom Quit ({e}) -- restoring the predefined item"
+        ));
+        if let Some(original) = removed {
+            let _ = app_submenu.insert(&original, index);
+        }
+        return;
+    }
+    app.on_menu_event(|app_handle, event| {
+        if event.id().as_ref() == APP_MENU_QUIT_ID {
+            quit_via_sidecar(app_handle, "Cmd+Q");
+        }
+    });
+    shell_diag(&format!(
+        "app menu: Quit (Cmd+Q) routed through the sidecar (id={APP_MENU_QUIT_ID})"
+    ));
+}
+
+/// What `applicationShouldTerminate:` should answer for a `terminate:` that did not come from
+/// the app menu. `NSTerminateNow` lets AppKit proceed to `applicationWillTerminate:` (the
+/// pre-existing unrouted exit); `NSTerminateCancel` swallows the request so the sidecar's
+/// `handleExit()` can ask first and `app_exit` do the real exit.
+///
+/// Two reasons to let it through unasked. A system power-off (logout, restart, shutdown) must
+/// never be blocked behind a modal: macOS would show "application canceled logout". And once the
+/// shell is already exiting (`exiting`), a second veto would turn the confirmed quit into a no-op.
+#[cfg(target_os = "macos")]
+#[derive(Debug, PartialEq, Eq)]
+enum TerminateReply {
+    Now,
+    Cancel,
+}
+
+#[cfg(target_os = "macos")]
+fn terminate_reply(power_off: bool, exiting: bool) -> TerminateReply {
+    if power_off || exiting {
+        TerminateReply::Now
+    } else {
+        TerminateReply::Cancel
+    }
+}
+
+#[cfg(target_os = "macos")]
+mod macos_terminate_veto {
+    use super::{quit_via_sidecar, shell_diag, terminate_reply, TerminateReply};
+    use objc2::ffi::class_addMethod;
+    use objc2::rc::Retained;
+    use objc2::runtime::{AnyClass, AnyObject, Imp, Sel};
+    use objc2::{class, msg_send, sel, MainThreadMarker};
+    use objc2_app_kit::NSApplication;
+    use objc2_foundation::{NSNotification, NSNotificationCenter, NSString};
+    use std::ffi::c_char;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::OnceLock;
+    use tauri::AppHandle;
+
+    static APP: OnceLock<AppHandle> = OnceLock::new();
+    /// Set by the `NSWorkspaceWillPowerOffNotification` observer, which macOS posts before it asks
+    /// applications to quit for a logout, restart or shutdown.
+    static POWER_OFF: AtomicBool = AtomicBool::new(false);
+    /// Set once the shell has begun its own exit (`RunEvent::ExitRequested { code: Some(_) }`).
+    static EXITING: AtomicBool = AtomicBool::new(false);
+
+    pub fn mark_exiting() {
+        EXITING.store(true, Ordering::SeqCst);
+    }
+
+    const NS_TERMINATE_NOW: usize = 1;
+    const NS_TERMINATE_CANCEL: usize = 0;
+
+    extern "C-unwind" fn should_terminate(
+        _this: &AnyObject,
+        _cmd: Sel,
+        _sender: *mut AnyObject,
+    ) -> usize {
+        let reply = terminate_reply(
+            POWER_OFF.load(Ordering::SeqCst),
+            EXITING.load(Ordering::SeqCst),
+        );
+        match (reply, APP.get()) {
+            (TerminateReply::Cancel, Some(app)) => {
+                quit_via_sidecar(app, "Dock Quit");
+                NS_TERMINATE_CANCEL
+            }
+            // No handle to route with: never cancel what cannot be re-issued.
+            _ => NS_TERMINATE_NOW,
+        }
+    }
+
+    /// Add `applicationShouldTerminate:` to the class of tao's app delegate (tao 0.35.3 implements
+    /// only `applicationWillTerminate:`) and watch for a system power-off. Every failure logs a
+    /// WARN and leaves Dock Quit on the old unrouted exit; never a panic inside `.setup()`.
+    pub fn install(app: &AppHandle) {
+        let _ = APP.set(app.clone());
+        let Some(mtm) = MainThreadMarker::new() else {
+            shell_diag("WARN: terminate veto: not on the main thread -- Dock Quit stays unrouted");
+            return;
+        };
+        let Some(delegate) = NSApplication::sharedApplication(mtm).delegate() else {
+            shell_diag("WARN: terminate veto: no app delegate yet -- Dock Quit stays unrouted");
+            return;
+        };
+        let delegate_obj: &AnyObject = unsafe { &*(&*delegate as *const _ as *const AnyObject) };
+        let class: &AnyClass = delegate_obj.class();
+        // SAFETY: `should_terminate` matches `-(NSApplicationTerminateReply)applicationShouldTerminate:(id)`
+        // (encoding `Q@:@`); the class is registered and the selector is not yet implemented on it.
+        let added = unsafe {
+            class_addMethod(
+                class as *const AnyClass as *mut AnyClass,
+                sel!(applicationShouldTerminate:),
+                std::mem::transmute::<
+                    extern "C-unwind" fn(&AnyObject, Sel, *mut AnyObject) -> usize,
+                    Imp,
+                >(should_terminate),
+                c"Q@:@".as_ptr() as *const c_char,
+            )
+        };
+        if !added.as_bool() {
+            shell_diag(&format!(
+                "WARN: terminate veto: class_addMethod refused on {} -- Dock Quit stays unrouted",
+                class.name().to_string_lossy()
+            ));
+            return;
+        }
+        // Power-off observer. The token must outlive the process, so it is leaked on purpose.
+        let workspace: Retained<AnyObject> =
+            unsafe { msg_send![class!(NSWorkspace), sharedWorkspace] };
+        let center: Retained<NSNotificationCenter> =
+            unsafe { msg_send![&*workspace, notificationCenter] };
+        let name = NSString::from_str("NSWorkspaceWillPowerOffNotification");
+        let block = block2::RcBlock::new(|_: std::ptr::NonNull<NSNotification>| {
+            POWER_OFF.store(true, Ordering::SeqCst);
+        });
+        let token = unsafe {
+            center.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &block)
+        };
+        std::mem::forget(token);
+        shell_diag(&format!(
+            "terminate veto: applicationShouldTerminate: added to {} (Dock Quit routed through the sidecar)",
+            class.name().to_string_lossy()
+        ));
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod terminate_reply_tests {
+    use super::{terminate_reply, TerminateReply};
+
+    #[test]
+    fn a_plain_terminate_is_cancelled_so_the_sidecar_can_ask() {
+        assert_eq!(terminate_reply(false, false), TerminateReply::Cancel);
+    }
+
+    #[test]
+    fn a_power_off_is_never_blocked() {
+        assert_eq!(terminate_reply(true, false), TerminateReply::Now);
+    }
+
+    #[test]
+    fn a_quit_already_in_progress_is_never_vetoed_again() {
+        assert_eq!(terminate_reply(false, true), TerminateReply::Now);
+    }
 }
 
 /// Dispatch a recent-game launch to the sidecar, in-process.
@@ -12569,62 +12858,80 @@ fn main() {
                 }
             }
 
-            // `exitToTray` (tray_icon.ts:38-46's click handler is the SHOW half of this; the
-            // HIDE-instead-of-quit half lived in `src/backend/main.ts:286-292`'s close handler).
+            // The main-window close (the red X, Cmd+W's `performClose:`, Alt+F4).
             //
-            // THE SETTING IS RE-READ AT CLOSE TIME, NOT TAKEN FROM THE STARTUP SNAPSHOT.
-            // This is a corrected defect, not a style choice (plan 35-06 task 3, live gate):
-            // the first implementation read `exit_to_tray` from `TRAY_SETTINGS` and attached the
-            // handler only when it was already true, so turning the setting ON mid-session did
-            // nothing until the next relaunch -- measured, the app quit on the red traffic-light
-            // with `exitToTray: true` on disk.
+            // Two decisions are taken HERE, at close time, from a FRESH read, and neither is
+            // taken from the `.setup()` startup snapshot:
+            //   1. hide-to-tray vs quit -- `should_hide_on_close(load_tray_settings())`, the
+            //      `exitToTray` half (`tray_icon.ts:38-46`'s click handler is the SHOW half;
+            //      `src/backend/main.ts:286-292` was the HIDE half). The first implementation
+            //      read `exit_to_tray` from `TRAY_SETTINGS` and attached the handler only when
+            //      it was already true, so turning the setting ON mid-session did nothing until
+            //      relaunch (plan 35-06 task 3, live gate). A window close is rare and
+            //      user-initiated, so a small synchronous config read costs nothing perceptible.
+            //   2. whether a tray EXISTS -- `!noTrayIcon`, legitimately startup-only since a tray
+            //      cannot appear later in the run -- folded in by `close_request_action`.
             //
-            // The startup-snapshot rationale that produced that bug named exactly TWO settings --
-            // `noTrayIcon` and `startInTray` -- and it is correct for both: each governs a
-            // decision that can only be taken before the tray or the window exists. `exitToTray`
-            // was swept in behind that same justification without qualifying for it. It governs a
-            // decision taken when the USER CLOSES THE WINDOW, and Electron read it live at that
-            // moment (`main.ts:288` reads `GlobalConfig.get().getSettings()` INSIDE the close
-            // handler). A window close is rare and user-initiated, so a small synchronous config
-            // read there costs nothing a user could perceive.
+            // THE HANDLER IS ATTACHED UNCONDITIONALLY (todo 2026-10-05 cmd-q-and-red-x-quit-
+            // bypass-the-pending-operations-confirm). It used to be gated on tray existence and
+            // returned without `prevent_close()` whenever the window was not hiding, so the
+            // red X fell through to `RunEvent::Exit` and `shutdown_child()` killed a running
+            // download with no confirm; with `noTrayIcon` on there was no handler at all.
             //
-            // The handler is therefore attached whenever a tray EXISTS -- `!noTrayIcon`, which is
-            // legitimately startup-only, since a tray cannot appear later in the run -- and the
-            // hide-vs-close decision is made inside it from a fresh read.
+            // `prevent_close()` runs FIRST, before either branch: the "pending operations"
+            // confirm is an unparented native panel and a "No" answer must find the window
+            // still there, not a windowless running app. `RouteQuit` hands the decision to the
+            // sidecar's `handleExit()` (exits via `app_exit` when nothing is pending or the user
+            // answers Yes; `exit(0)` is the fallback when it cannot be asked), so the user can
+            // always close.
             //
             // FAIL-SAFE DIRECTION IS DELIBERATE: `load_tray_settings()` degrades to
-            // `TraySettingsSnapshot::default()` (all false) on any read failure, so
-            // `should_hide_on_close` returns false and the close PROCEEDS. A user who can always
-            // close their window is the safe failure; a user trapped in a window that refuses to
-            // close because a config read failed is not.
-            if !tray_settings.no_tray_icon {
-                match app.get_webview_window(MAIN_WINDOW_LABEL) {
-                    Some(window) => {
-                        let close_window = window.clone();
-                        window.on_window_event(move |event| {
-                            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                                if !should_hide_on_close(load_tray_settings()) {
-                                    // Not an error and not a no-op: this is the ordinary quit
-                                    // path. Fall through without calling `prevent_close()`.
-                                    return;
+            // `TraySettingsSnapshot::default()` (all false) on any read failure, so the close
+            // is ROUTED, not hidden. A user trapped in a window that refuses to close because a
+            // config read failed is the unsafe failure.
+            let tray_exists = !tray_settings.no_tray_icon;
+            match app.get_webview_window(MAIN_WINDOW_LABEL) {
+                Some(window) => {
+                    let close_window = window.clone();
+                    let close_app_handle = app.handle().clone();
+                    window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            api.prevent_close();
+                            match close_request_action(
+                                tray_exists,
+                                should_hide_on_close(load_tray_settings()),
+                            ) {
+                                CloseRequestAction::Hide => {
+                                    if let Err(e) = close_window.hide() {
+                                        eprintln!(
+                                            "[shell] WARN: exitToTray: hide on close failed ({e})"
+                                        );
+                                    }
                                 }
-                                api.prevent_close();
-                                if let Err(e) = close_window.hide() {
-                                    eprintln!(
-                                        "[shell] WARN: exitToTray: hide on close failed ({e})"
-                                    );
+                                CloseRequestAction::RouteQuit => {
+                                    quit_via_sidecar(&close_app_handle, "window close");
                                 }
                             }
-                        });
-                        eprintln!(
-                            "[shell] exitToTray: close handler attached; the setting is re-read on every close (no relaunch needed)"
-                        );
-                    }
-                    None => eprintln!(
-                        "[shell] WARN: exitToTray: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
-                    ),
+                        }
+                    });
+                    shell_diag(&format!(
+                        "close handler attached (tray={tray_exists}): hide-to-tray re-read on every close; otherwise the quit is routed to the sidecar"
+                    ));
                 }
+                None => eprintln!(
+                    "[shell] WARN: close handler: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
+                ),
             }
+
+            // macOS Cmd+Q is not a window close and never reaches the handler above: route it
+            // through the same sidecar hand-off by replacing the app menu's predefined Quit.
+            #[cfg(target_os = "macos")]
+            route_app_menu_quit_through_sidecar(app.handle());
+
+            // Dock Quit sends `terminate:` straight to the app, not through the menu: veto it in
+            // `applicationShouldTerminate:` and route it the same way (a power-off still passes).
+            #[cfg(target_os = "macos")]
+            macos_terminate_veto::install(app.handle());
 
             // Restores the install-badge reconciliation trigger dropped in the Electron to
             // Tauri cutover (D-01/D-02): Electron's `mainWindow.on('focus', ...)`
@@ -12733,7 +13040,7 @@ fn main() {
                                         }
                                     }
                                     "about" => open_about_window_from_tray(app_handle),
-                                    "quit" => quit_from_tray(app_handle),
+                                    "quit" => quit_via_sidecar(app_handle, "tray Quit"),
                                     // T-35-20: the appName reaching a launch is PARSED back out
                                     // of the menu id through the same allow-list that built it,
                                     // never taken from the id verbatim. A malformed id is
@@ -13022,14 +13329,29 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("error while running the GameLib Tauri shell")
-        // WR-03: normal window close (red X / Cmd+Q / Alt+F4) does not route through the
-        // in-app app_exit/app_relaunch commands, so without an explicit RunEvent::Exit
-        // handler the sidecar child can be left running as an orphan after the user
-        // believes the app has quit -- retaining an authenticated Steam session, open
-        // network sockets, and file handles. Kill it here on the way out; this is not a
-        // WindowEvent::CloseRequested handler and does not cancel or defer exit.
-        .run(move |app_handle, event| {
-            if let tauri::RunEvent::Exit = event {
+        // WR-03: the sidecar child must not outlive the app, so the `RunEvent::Exit` arm below
+        // reaps it (an orphan would retain an authenticated Steam session, open sockets and file
+        // handles). Quits are now ROUTED rather than skipping `app_exit`: the red X and Alt+F4
+        // by the main-window close handler, Cmd+Q by the macOS app menu, tray Quit by its menu
+        // arm -- all through `quit_via_sidecar` -> the sidecar's `handleExit()` -> `app_exit`.
+        // The `RunEvent::Exit` reap remains the backstop for logout/shutdown (which must not be
+        // blocked) and for the `exit(0)` fallbacks; Dock Quit is routed by `macos_terminate_veto`.
+        .run(move |app_handle, event| match event {
+            // OBSERVED, NEVER PREVENTED. A routed quit arrives as `code: Some(0)` (`app.exit(0)`
+            // from the `app_exit` arm), which makes this line the live gate's proof that a quit
+            // took the sidecar route rather than `terminate:`. `code: None` is emitted only AFTER
+            // the last window is destroyed, so stopping it would strand a windowless app; and
+            // on macOS Cmd+Q / Dock Quit never arrive here at all (`terminate:` goes straight to
+            // `applicationWillTerminate:`; `macos_terminate_veto` vetoes it before that).
+            tauri::RunEvent::ExitRequested { code, .. } => {
+                shell_diag(&format!("exit requested (code={code:?})"));
+                // The shell's own exits carry `Some(_)`: from here a `terminate:` must not veto.
+                #[cfg(target_os = "macos")]
+                if code.is_some() {
+                    macos_terminate_veto::mark_exiting();
+                }
+            }
+            tauri::RunEvent::Exit => {
                 if let Some(state) = app_handle.try_state::<Arc<SidecarState>>() {
                     state.shutdown_child();
                 }
@@ -13049,6 +13371,7 @@ fn main() {
                     let _ = std::fs::remove_file(path);
                 }
             }
+            _ => {}
         });
 }
 
@@ -13471,7 +13794,7 @@ mod tests {
     #[test]
     fn tray_quit_hands_off_to_the_sidecar_when_the_probe_answers() {
         let sent = std::cell::Cell::new(false);
-        let routed = tray_quit_via_sidecar(
+        let routed = route_quit_via_sidecar(
             || Ok(Value::String("ok".into())),
             Duration::from_secs(5),
             || {
@@ -13489,7 +13812,7 @@ mod tests {
     #[test]
     fn tray_quit_falls_back_when_the_probe_fails_without_sending() {
         let sent = std::cell::Cell::new(false);
-        let routed = tray_quit_via_sidecar(
+        let routed = route_quit_via_sidecar(
             || Err("sidecar closed before responding".into()),
             Duration::from_secs(5),
             || {
@@ -13508,7 +13831,7 @@ mod tests {
     fn tray_quit_falls_back_when_the_probe_does_not_answer_in_time() {
         let sent = std::cell::Cell::new(false);
         let started = std::time::Instant::now();
-        let routed = tray_quit_via_sidecar(
+        let routed = route_quit_via_sidecar(
             || {
                 thread::sleep(Duration::from_secs(2));
                 Ok(Value::Null)
@@ -13529,12 +13852,89 @@ mod tests {
 
     #[test]
     fn tray_quit_falls_back_when_the_quit_frame_cannot_be_written() {
-        let routed = tray_quit_via_sidecar(
+        let routed = route_quit_via_sidecar(
             || Ok(Value::Null),
             Duration::from_secs(5),
             || Err("broken pipe".into()),
         );
         assert_eq!(routed, Err("broken pipe".to_string()));
+    }
+
+    // ---- quick 261008-kvz: Cmd+Q and the red X route through the sidecar ----
+
+    #[test]
+    fn quit_routing_close_hides_only_when_a_tray_exists_and_the_setting_says_hide() {
+        assert_eq!(close_request_action(true, true), CloseRequestAction::Hide);
+        assert_eq!(
+            close_request_action(false, true),
+            CloseRequestAction::RouteQuit,
+            "no tray to restore from: hiding would trap the user"
+        );
+        assert_eq!(
+            close_request_action(true, false),
+            CloseRequestAction::RouteQuit,
+            "exitToTray off: the close is routed, not hidden"
+        );
+        assert_eq!(
+            close_request_action(false, false),
+            CloseRequestAction::RouteQuit
+        );
+    }
+
+    #[test]
+    fn quit_routing_a_failed_settings_read_routes_the_quit_never_hides() {
+        // `load_tray_settings()` degrades to `default()` on a read failure.
+        assert_eq!(
+            close_request_action(true, should_hide_on_close(TraySettingsSnapshot::default())),
+            CloseRequestAction::RouteQuit
+        );
+        for unreadable in [json!({}), json!(null), json!({ "defaultSettings": 3 })] {
+            assert_eq!(
+                close_request_action(
+                    true,
+                    should_hide_on_close(tray_settings_from_config(&unreadable))
+                ),
+                CloseRequestAction::RouteQuit,
+                "an unreadable config must never trap the user in an unclosable window"
+            );
+        }
+    }
+
+    #[test]
+    fn quit_routing_no_tray_icon_on_disk_routes_even_with_exit_to_tray_on() {
+        let on_disk = tray_settings_from_config(&json!({
+            "defaultSettings": { "exitToTray": true, "noTrayIcon": true }
+        }));
+        assert!(on_disk.exit_to_tray && on_disk.no_tray_icon);
+        // The tray existed at startup iff noTrayIcon was off.
+        let tray_exists = !on_disk.no_tray_icon;
+        assert_eq!(
+            close_request_action(tray_exists, should_hide_on_close(on_disk)),
+            CloseRequestAction::RouteQuit
+        );
+    }
+
+    #[test]
+    fn quit_routing_exit_to_tray_on_with_a_tray_still_hides() {
+        let on_disk = tray_settings_from_config(&json!({
+            "defaultSettings": { "exitToTray": true, "noTrayIcon": false }
+        }));
+        assert_eq!(
+            close_request_action(!on_disk.no_tray_icon, should_hide_on_close(on_disk)),
+            CloseRequestAction::Hide
+        );
+    }
+
+    #[test]
+    fn quit_routing_the_app_menu_quit_id_cannot_collide_with_a_tray_arm() {
+        // The tray handler's `"quit"` arm and its `recent:` prefix both see every app-wide menu
+        // event; the custom Cmd+Q item's id must match neither.
+        #[cfg(target_os = "macos")]
+        {
+            assert_ne!(APP_MENU_QUIT_ID, "quit");
+            assert!(!APP_MENU_QUIT_ID.starts_with(TRAY_RECENT_ID_PREFIX));
+            assert_eq!(tray_recent_app_name(APP_MENU_QUIT_ID), None);
+        }
     }
 
     #[test]

@@ -1,0 +1,63 @@
+
+> gamelib@0.8.0 tauri:dev /Users/graysonmitchell/Projects/GameLib
+> cross-env GAMELIB_DEV_SECRET_VAULT=1 pnpm tauri:dev:run
+
+
+> gamelib@0.8.0 tauri:dev:run /Users/graysonmitchell/Projects/GameLib
+> node meta/tauriDevPreflight.cjs && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri dev
+
+[tauri-dev-preflight] OK: no foreign gamelib-shell process is running.
+
+> gamelib@0.8.0 build:sidecar /Users/graysonmitchell/Projects/GameLib
+> esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts
+
+
+  build/main/sidecar.js  1.4mb ⚠️
+
+⚡ Done in 50ms
+
+> gamelib@0.8.0 build:decompress-worker-dev /Users/graysonmitchell/Projects/GameLib
+> node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts
+
+
+  ...fqyjf22r0000gn/T/gamelib-runts-H1drt7/buildDecompressWorkerDev.cjs  8.0kb
+
+⚡ Done in 13ms
+[build:decompress-worker-dev] esbuild-aliased worker bundle -> build/main/decompressWorker.js
+     Running BeforeDevCommand (`pnpm exec vite`)
+
+  VITE v6.3.5  ready in 223 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /Users/graysonmitchell/Projects/GameLib/src-tauri for changes...
+[1m[92m    Finished[0m ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`dev` profile [unoptimized + debuginfo]]8;;\ target(s) in 0.67s
+[1m[92m     Running[0m `target/debug/gamelib-shell`
+[shell] spawning sidecar (dev): "/Users/graysonmitchell/.nvm/versions/node/v26.2.0/bin/node" "/Users/graysonmitchell/Projects/GameLib/src-tauri/../build/main/sidecar.js"
+[shell]   cwd=/Users/graysonmitchell/Projects/GameLib/src-tauri
+[shell]   entry_exists=true
+[shell]   GAMELIB_SHELL_EXE=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+[shell]   GAMELIB_APP_ROOT=/Users/graysonmitchell/Projects/GameLib
+[shell]   forward_args=[]
+[shell] sidecar process spawned OK
+[shell] close handler attached (tray=true): hide-to-tray re-read on every close; otherwise the quit is routed to the sidecar
+[shell] app menu: Quit (Cmd+Q) routed through the sidecar (id=app_menu_quit)
+[shell] window focus refresh: listener attached to 'main'
+[shell] tray recent games: seeded 8 entries from disk (limit 8)
+[shell] devtools opened for 'main' webview (debug build)
+[shell] sidecar signalled READY (__GAMELIB_SIDECAR_READY__)
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'legendary_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'gog_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'zoom_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'steam_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'nile_library' — using the hardcoded cache-store shape
+[sidecar:err] [sidecar/handlers] no live store instance for 'gog_api_info' — returning {}
+[shell] focus sentinel raise: unminimize=ok, show=ok, set_focus=ok
+[shell] quit (window close): handed to the sidecar handleExit
+[shell] quit (Cmd+Q): handed to the sidecar handleExit
+[shell] quit (window close): handed to the sidecar handleExit
+[shell] quit (tray Quit): handed to the sidecar handleExit
+[shell] quit (Cmd+Q): handed to the sidecar handleExit
+[shell] exit requested (code=Some(0))
+[shell] sidecar terminated on exit
