@@ -170,6 +170,38 @@ namespace). All five are settled below. No SPEC amendment was needed.
   store. Humble's sync keeps its own 401 handling, so it still latches expiry if it runs before
   the probe lands.
 
+### Research-driven decisions (added 2026-10-08 after `49-RESEARCH.md`)
+
+- **D-17:** **GOG expiry rule.** `gogdl auth` prints a bare `null` for any non-OK refresh and
+  logs `Failed to refresh credentials` only on a connection error. The GOG probe latches
+  `expired` when: stdout is `null`, no connection-error line was logged, the online monitor says
+  online, and the GOG auth config file is present. A rare GOG 5xx is therefore read as expired
+  until the next healthy probe or sign-in clears it; the operator accepted that residual over the
+  alternative, which rotates GOG's refresh token. The verdict logic lives inside
+  `GOGUser.getCredentials` because `callRunner` joins identical in-flight commands and Block E
+  already spawns `gogdl auth` at boot.
+- **D-18:** **Humble csrf backfill is dropped from the boot pass.** The pass does the
+  `humble-session` read plus `getGamekeys` only; it never opens the hidden csrf-backfill webview
+  `checkHealthAndFlagExpiry()` opens today (that would violate P2). The csrf token is backfilled by
+  the first deliberate Humble action that needs it. Correction to D-16's premise: Humble's library
+  sync does **not** latch expiry (`humble/library.ts` `session_expired` branches return
+  `{ status: 'failed' }` only), so after D-16 the pass is the only Humble latch site; the health
+  check must return an outcome that keeps `unreadable` distinct from `absent`.
+- **D-19:** **Steam sync notice under missing credentials: suppress-only.**
+  `resolveSteamSyncIndicator` keeps `steamCredentialsMissing` as an input and returns `'hidden'`
+  when `steamSyncStatus === 'failed' && steamCredentialsMissing`, so the generic "Couldn't sync /
+  Retry" notice never renders beside the new expired row. The `signedOut` mode and token are still
+  deleted everywhere (R4); the acceptance test forbids the word, not the suppression.
+- **D-20:** **Smoke gate stays at 30 s.** `meta/sidecarStartupSmoke.cjs` is not changed. The plan
+  documents that the gate measures a cold profile (nothing logged in, nothing probed) and that a
+  warm local run can exceed 30 s only because the 45 s bound is still draining; the abort at the
+  bound `unref()`s every handle.
+- **D-21:** **Steam probe reads the keyring only, never `ensureConnected()`.** The pass issues the
+  bounded `keyring_get` through `authTrigger` with `'boot-probe'` and classifies
+  `absent` → expired, `unreadable` → unknown, present → connected; it never opens a CM connection.
+  The sticky unlock means later automatic `SteamLibraryManager.refresh()` calls may connect; that
+  is the recorded reversal of 260817-d61 and the plan prose states it.
+
 ### Claude's Discretion
 
 - What each HTTP-store probe actually calls (legendary / gogdl / nile invocation or a direct token
