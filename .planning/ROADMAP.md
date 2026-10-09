@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 12/15 plans executed
+**Plans:** 13/15 plans executed
 
 Plans:
 **Wave 1**
@@ -5696,7 +5696,7 @@ Plans:
 - [x] 48-12-PLAN.md — TRACER: strip cards take the grid's own `minmax(156px, 1fr)` column width over the shared container width, derived not read so a filter-emptied grid cannot change it, written before first paint; one page is exactly one grid row; 15px end clearance plus width-scaled vertical room keep rings unclipped up to the 336px single-column supremum; scrollbar flip-flop feedback held (R3)
 
 **Gap closure round 3, Wave 1** *(from 48-UAT.md item 11 `result: issue`: G-48-11b, cause not yet investigated)*
-- [ ] 48-13-PLAN.md — TRACER: reproduce G-48-11b (strip pages past its last card into blank, forward never disables) at the desk in WebKit and Chromium against the files at a git ref, isolate the cause with a counterfactual, record G-48-11a/11b in `## Gaps`; then red gate, fix, both engines green. Stops before any fix if the desk cannot reproduce it (R3)
+- [x] 48-13-PLAN.md — TRACER: reproduce G-48-11b (strip pages past its last card into blank, forward never disables) at the desk in WebKit and Chromium against the files at a git ref, isolate the cause with a counterfactual, record G-48-11a/11b in `## Gaps`; then red gate, fix, both engines green. Stops before any fix if the desk cannot reproduce it (R3)
 
 **Gap closure round 3, Wave 2** *(blocked on 48-13: shared `focusRowOverflow.ts`, strip tests, harness)*
 - [ ] 48-14-PLAN.md — TRACER: the strip width write leaves the ResizeObserver callback for the next frame (G-48-11a, 48-REVIEW.md WR-01), layout-effect first-paint write kept; WebKit loop-error count under item 11's sweep; WR-01 dispositioned `fixed` (R3)

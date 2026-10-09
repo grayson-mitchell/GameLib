@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v0.8
 milestone_name: Phase Details
-current_phase: 49
-current_phase_name: Cross-store signed-out / offline mode
+current_phase: 48
+current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 49-02-PLAN.md
-last_updated: "2026-10-09T03:27:17.080Z"
+stopped_at: "48-13 halted after Task 1 (stop rule: G-48-11b not reproduced in Chromium, WebKit not runnable on Windows host)"
+last_updated: "2026-10-09T03:52:29.827Z"
 last_activity: 2026-10-09
-last_activity_desc: Phase 49 execution started
-state_head: 98550cd14fee7350923959c153306630976e23b9
+last_activity_desc: Phase 48 execution started
+state_head: 291e872b0653632175803fd66ae9add2f29ff957
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 533
-  completed_plans: 511
+  completed_plans: 512
   percent: 82
 ---
 
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 49 — Cross-store signed-out / offline mode
+**Current focus:** Phase 48 — Focus row — move the library top section into the panel and widen it
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 3 of 12
-Status: Ready to execute
-Last activity: 2026-10-09 — Phase 49 execution started
+Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
+Plan: 1 of 15
+Status: Executing Phase 48
+Last activity: 2026-10-09 — Phase 48 execution started
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -1157,6 +1157,7 @@ Recent decisions affecting current work:
 - [Phase 49]: 49-01: sign-in selector rule order is expiredFlag, !loggedIn, healthy, else unknown (a latched flag outranks a logged-out read; legendary deletes user.json on the latching verdict)
 - [Phase 49]: 49-01: ?open= is validated by exact-membership parseSignInStore, consumed once per Login mount, and removed with replace:true (T-49-01)
 - [Phase 49]: 49-02: login.*Reconnect tiles reuse each locale's steamReconnect verbatim; case-inflecting locales (cs, hu, lt, pl) keep {{store}} in a case-neutral slot
+- [Phase 48]: 48-13: G-48-11b NOT reproduced in Chromium 153 (108 variants, scrollWidth within 0.6px of E); stop rule fired, Task 2 not started, no src change
 
 ### Pending Todos
 
@@ -1181,6 +1182,7 @@ Recent decisions affecting current work:
 - **NEW BLOCKER found by 34.10-10 Task 2's verification, plan NOT closed**: `hardcodedStringGate.test.ts`'s one remaining failure is a real violation at `src/frontend/screens/WebView/index.tsx:347` (`'the Humble sign-in window closed or could not be reached'`) — but that line is **uncommitted WIP from the concurrent debug session** (`.planning/debug/humble-isloggedin-never-set.md`, F-34.4.2-19), confirmed via `git diff` (the string only exists in the working tree, not at HEAD). 34.10-10 is explicitly forbidden from touching that file (contamination rules) or widening the allowlist (T-34.10-25). Plan 34.10-10 stops here — Task 1 and Task 2's own artifacts are committed and correct, but the plan's "full suite green" success criterion cannot be met until the concurrent session either wraps that string in `t()` or commits/reverts its WIP. No action needed from 34.10-10 beyond re-running `pnpm jest --runInBand --silent --forceExit` once that session's WebView/index.tsx work is committed.
 - REQUIREMENTS.md has no Phase 34.9 traceability section -- REQ-34.9-01..11 are cited by ROADMAP.md, STATE.md, and every 34.9 plan/summary, but requirements.mark-complete cannot find them to check off. Pre-existing gap, not caused by plan 34.9-07; needs a REQUIREMENTS.md backfill pass (D-XX -> REQ mapping + traceability table) for the whole phase.
 - Phase 34.9-09: build-runners-onedir-macos.yml cannot be dispatched via gh workflow run until it exists on the repo's default branch (main) -- GitHub's workflow_dispatch requires this for ANY --ref, not just the pushed feature branch. Not resolvable within plan 34.9-09's authorized scope (no PR, no push to main). Blocks: real x64 onedir artifact (never built, no local fallback possible per constraint 1), pinning meta/runnersOnedirDigests.json's 6 sentinels, and full CI proof of the download-verify-extract round trip. See 34.9-CI-ROUNDTRIP.md.
+- G-48-11b needs a WebKit (WKWebView) reproduction on a Mac: run evidence/48-13/run-webkit.sh HEAD, then re-run 48-13 Task 2 if reproduced (or 48-15 live gate)
 
 ### Quick Tasks Completed
 
@@ -1766,8 +1768,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T03:27:12.847Z
-Stopped at: Completed 49-02-PLAN.md
+Last session: 2026-10-09T03:52:25.735Z
+Stopped at: 48-13 halted after Task 1 (stop rule: G-48-11b not reproduced in Chromium, WebKit not runnable on Windows host)
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
