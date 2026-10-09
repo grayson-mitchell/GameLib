@@ -63,6 +63,10 @@ concurrency:
 #       from a Rust release with no repo change at all.
 #   (d) The 2 `#[ignore]`d tests in the 234-test baseline above still run nowhere, in this job or
 #       any other.
+#   (e) The sidecar is a placeholder (see the "Placeholder for externalBin" step), so this job proves
+#       nothing about the real SEA sidecar or its externalBin naming/packaging -- a sidecar build
+#       that stopped emitting `gamelib-sidecar-<triple>` would still pass here and surface only in
+#       release-tauri.yml.
 # And: passing here does not make this a "required check" on `main`. That is a GitHub
 # branch-protection/ruleset setting under Settings -> Branches, performed by a repo admin, and is
 # NOT established by this file.
@@ -135,7 +139,7 @@ jobs:
         shell: bash
         working-directory: src-tauri
         run: |
-          triple=$(rustc -vV | sed -n 's/^host: //p')
+          triple=$(rustc -vV | sed -n 's/^host: //p' | tr -d '\r')
           test -n "$triple" || { echo "could not read host triple from rustc -vV" >&2; exit 1; }
           node -e '
             const fs = require("node:fs");
