@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Completed 49-08-PLAN.md
-last_updated: "2026-10-09T17:40:30.624Z"
-last_activity: 2026-10-09
+stopped_at: Completed 49-09-PLAN.md
+last_updated: "2026-10-09T18:06:28.306Z"
+last_activity: 2026-10-10
 last_activity_desc: Phase 49 execution started
-state_head: 397c356577f491fb69090b079a8a709a1572f878
+state_head: cb4bf4215b52f9d7e65847a9eb0ffa51048cabe4
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 523
+  completed_plans: 524
   percent: 82
 ---
 
@@ -75,9 +75,9 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 8 of 12
+Plan: 9 of 12
 Status: Ready to execute
-Last activity: 2026-10-09 — Phase 49 execution started
+Last activity: 2026-10-10 — Phase 49 execution started
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -529,6 +529,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P06 | 12 min | 2 tasks | 15 files |
 | Phase 49 P07 | 9 min | 3 tasks | 11 files |
 | Phase 49 P08 | 7 min | 3 tasks | 12 files |
+| Phase 49 P09 | 30 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -1189,6 +1190,8 @@ Recent decisions affecting current work:
 - [Phase 49]: Dismissed sign-in set is one AppSettings key (dismissedSignInNotices) defaulting to [] with no migration; dismiss and re-arm are its only writers and persist only on change — Absent key and factory default are the same [] on both sides of the two-store hazard; re-arm is idempotent so it runs from push, pull, Humble auth push and end of mount
 - [Phase 49]: Renderer componentDidMount runs humbleSync only; the Humble expiry health check lives solely in the sidecar boot pass — D-16 and T-49-21: a second latch path would double-write the expiry flag; a source gate with a RED specimen enforces it
 - [Phase 49]: 49-08: boot sign-in probe bound SIGN_IN_PROBE_BOUND_MS=45000 equals Rust KEYRING_READ_TIMEOUT; pass starts after READY, outcomes pull handler registers before READY, test-worker guard lives inside startSignInProbePass — D-01/R3: measured ~12.5s Humble prompt latency motivates the bound; READY must never wait on a probe
+- [Phase 49]: 49-09: expired sign-in rows ignore the dismissed set entirely, so a dismiss can never hide a proven expiry
+- [Phase 49]: 49-09: SteamSyncNotice credential-missing case is suppressed (resolver returns hidden), not replaced; Library sign-in notice owns it
 
 ### Pending Todos
 
@@ -1798,8 +1801,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T17:40:00.456Z
-Stopped at: Completed 49-08-PLAN.md
+Last session: 2026-10-09T18:06:23.100Z
+Stopped at: Completed 49-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

@@ -5753,7 +5753,7 @@ question below and permanently closes the parked Humble keyring todo's unpark co
 **Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
 through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
 guess — the focus row and this banner share no files.
-**Plans:** 8/12 plans executed
+**Plans:** 9/12 plans executed
 
 Plans:
 **Wave 1**
@@ -5771,7 +5771,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [x] 49-08-PLAN.md — Bounded boot probe pass after READY (45 s, parallel, edge-triggered, unref'd) + folded Humble todo closure
-- [ ] 49-09-PLAN.md — Full Library sign-in notice (not-connected rows, dismiss, two weights) + `SteamSyncNotice` `signedOut` removal (D-19)
+- [x] 49-09-PLAN.md — Full Library sign-in notice (not-connected rows, dismiss, two weights) + `SteamSyncNotice` `signedOut` removal (D-19)
 - [ ] 49-10-PLAN.md — All five Manage Accounts tiles from one selector, `steamTileState.ts` retired, parity gate, `?open=` idempotency
 
 **Wave 5** *(blocked on Wave 4 completion)*
