@@ -150,6 +150,22 @@ body.controllerLayout .gameCard:hover:not(:focus-within) {
   z-index: auto;
 }
 
+/* Keyboard-mode counterpart (G-48-12a). With `.keyboardNav` set, the
+   stale-focus suppression above is off so a Tab-focused card keeps its ring
+   while the pointer rests over the library. Hover and focus now wear the
+   same ring, so a card under the RESTING pointer would be a second ring. A
+   hovered card that does not hold focus is therefore returned to rest while
+   keyboard mode is on, which leaves the Tab-focused card the only ring --
+   the same treatment `body.controllerLayout` gives a parked cursor. A real
+   pointer move or press ends keyboard mode (helpers/inputModality.ts), so
+   mouse hover is untouched the moment the mouse is used. */
+body.keyboardNav .gameCard:hover:not(:focus-within) {
+  outline-color: transparent;
+  box-shadow: 0px 0px 12px 4px #00000055;
+  transform: none;
+  z-index: auto;
+}
+
 .gameCard > .gameCardStatus {
   position: absolute;
   z-index: 5;
@@ -537,8 +553,11 @@ body:not(.controllerLayout):not(.keyboardNav)
    no-background) appearance. Confined to mouse-only sessions so a resting
    cursor over the list does not erase gamepad focus, same reasoning as the
    grid suppression above. `.gameListItem`'s base rule declares no
-   background or box-shadow, so both reset to `none`. */
-body:not(.controllerLayout)
+   background or box-shadow, so both reset to `none`. Also scoped off
+   `body.keyboardNav` (G-48-12a): a Tab-focused row keeps its ring while the
+   pointer rests over the library. Rows get no parked-cursor rule: their
+   hover outline (2px accent) already differs from the focus ring. */
+body:not(.controllerLayout):not(.keyboardNav)
   .listing:hover
   .gameListItem:focus-within:not(:hover) {
   outline: none;
