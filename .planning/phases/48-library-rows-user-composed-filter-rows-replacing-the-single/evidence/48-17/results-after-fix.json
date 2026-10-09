@@ -86,6 +86,56 @@
    "n": 5,
    "inlineWidth": 174.4,
    "expectedCardW": 174.4
+  },
+  {
+   "id": "A7",
+   "gridShown": true,
+   "sb": 0,
+   "trackW": 998,
+   "C": 968,
+   "cardW": 174.390625,
+   "gridCardW": 174.390625,
+   "n": 5,
+   "inlineWidth": 174.4,
+   "expectedCardW": 174.4
+  },
+  {
+   "id": "A8ref",
+   "gridShown": true,
+   "sb": 10,
+   "trackW": 988,
+   "C": 958,
+   "cardW": 172.390625,
+   "gridCardW": 172.390625,
+   "n": 5,
+   "inlineWidth": 172.4,
+   "expectedCardW": 172.4
+  },
+  {
+   "id": "A8",
+   "gridShown": false,
+   "sb": 0,
+   "trackW": 898,
+   "C": 868,
+   "cardW": 196.5,
+   "gridCardW": null,
+   "n": 4,
+   "inlineWidth": 196.5,
+   "expectedCardW": 196.5,
+   "refC": 958,
+   "expectedC": 858
+  },
+  {
+   "id": "A9",
+   "gridShown": false,
+   "sb": 0,
+   "trackW": 998,
+   "C": 968,
+   "cardW": 174.390625,
+   "gridCardW": null,
+   "n": 5,
+   "inlineWidth": 174.4,
+   "expectedCardW": 174.4
   }
  ],
  "before": {
