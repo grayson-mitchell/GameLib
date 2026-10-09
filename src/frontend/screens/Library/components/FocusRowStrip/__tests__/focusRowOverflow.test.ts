@@ -14,6 +14,7 @@ import {
   gridColumnWidth,
   measureCardPitch,
   pageScrollDelta,
+  readScrollerAllowance,
   scrollFocusedCardIntoViewHorizontally
 } from '../focusRowOverflow'
 
@@ -662,6 +663,198 @@ describe('strip card width resize feedback guard (G-48-8c, T-48-36)', () => {
     expect(at(33, second, A)).toBe(172.4)
     expect(second.setProperty).toHaveBeenCalledTimes(1)
     expect(second.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
+  })
+})
+
+describe('strip card width -- scrollbar allowance hold (G-48-11c)', () => {
+  // The main scroller's 10px vertical bar takes layout width, so an empty grid
+  // (no overflow, no bar) leaves the strip's container 10px wider and the
+  // derived column 10 / n wider. While no grid is shown the strip keeps the
+  // content box the grid had. 982 / 992 are the track widths with / without the
+  // bar (958 / 968 content over a 12px padding each side).
+  const PROP = '--focus-row-card-width'
+
+  const makeTrack = (width: number) => {
+    const store = new Map<string, string>()
+    const setProperty = jest.fn((k: string, v: string) => {
+      store.set(k, v)
+    })
+    return {
+      width,
+      getBoundingClientRect() {
+        return { width: this.width }
+      },
+      firstElementChild: {},
+      style: {
+        getPropertyValue: (k: string) => store.get(k) ?? '',
+        setProperty
+      },
+      setProperty
+    }
+  }
+  const asEl = (t: unknown) => t as HTMLElement
+  const style = () => ({
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    columnGap: '24px'
+  })
+  const ctx = (gridShown: boolean, allowance: number) => ({
+    gridShown: () => gridShown,
+    scrollbarAllowance: () => allowance
+  })
+  // A clock that always reads far past the flip window, so the 250ms hold
+  // (a different mechanism, pinned by G1-G4) never interferes.
+  const makeSync = () => {
+    let t = 0
+    return createStripCardWidthSync(() => (t += 1000))
+  }
+
+  it('Z1: grid shown at allowance 10 is the column over the live content, identical to the two-argument call', () => {
+    const withCtx = makeTrack(982)
+    const plain = makeTrack(982)
+    const got = makeSync()(asEl(withCtx), style, ctx(true, 10))
+    expect(got).toBe(172.4)
+    expect(got).toBe(makeSync()(asEl(plain), style))
+    expect(withCtx.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
+  })
+
+  it('Z2: the grid hidden, allowance 0, the track 10px wider keeps Z1 width and writes nothing new', () => {
+    const sync = makeSync()
+    const track = makeTrack(982)
+    expect(sync(asEl(track), style, ctx(true, 10))).toBe(172.4)
+    track.width = 992
+    expect(sync(asEl(track), style, ctx(false, 0))).toBeCloseTo(172.4, 3)
+    expect(track.setProperty).toHaveBeenCalledTimes(1)
+  })
+
+  it('Z3: the grid hidden on a track that never saw a grid is the live content, no compensation', () => {
+    const track = makeTrack(992)
+    expect(makeSync()(asEl(track), style, ctx(false, 0))).toBe(174.4)
+    expect(track.setProperty).toHaveBeenCalledWith(PROP, '174.4px')
+  })
+
+  it('Z4: after Z2, a track 100px narrower with the grid still hidden follows it (column over live content - 10)', () => {
+    const sync = makeSync()
+    const track = makeTrack(982)
+    sync(asEl(track), style, ctx(true, 10))
+    track.width = 992
+    sync(asEl(track), style, ctx(false, 0))
+    track.width = 892
+    // live content 892 - 24 = 868; less the 10px the grid's bar would take
+    const want = gridColumnWidth(858, GRID_CARD_MIN_WIDTH, 24)
+    expect(want).toBeCloseTo(196.5, 3)
+    expect(sync(asEl(track), style, ctx(false, 0))).toBeCloseTo(want, 3)
+  })
+
+  it('Z5: the grid shown again refreshes the reference', () => {
+    const sync = makeSync()
+    const track = makeTrack(982)
+    sync(asEl(track), style, ctx(true, 10))
+    track.width = 992
+    // the grid returns without a bar: reference becomes 0 and the live width is written
+    expect(sync(asEl(track), style, ctx(true, 0))).toBe(174.4)
+    // hidden again at the same geometry: no compensation against the old 10
+    expect(sync(asEl(track), style, ctx(false, 0))).toBe(174.4)
+    expect(track.setProperty).toHaveBeenCalledTimes(2)
+  })
+
+  it('Z6: a different track element starts with no reference', () => {
+    const sync = makeSync()
+    const first = makeTrack(982)
+    sync(asEl(first), style, ctx(true, 10))
+    const second = makeTrack(992)
+    expect(sync(asEl(second), style, ctx(false, 0))).toBe(174.4)
+  })
+
+  it('Z7: a throwing gridShown or scrollbarAllowance is treated as shown at allowance 0 and writes the live width', () => {
+    const throwShown = {
+      gridShown: () => {
+        throw new Error('no ref')
+      },
+      scrollbarAllowance: () => 10
+    }
+    const throwAllowance = {
+      gridShown: () => false,
+      scrollbarAllowance: () => {
+        throw new Error('no scroller')
+      }
+    }
+    for (const bad of [throwShown, throwAllowance]) {
+      const sync = makeSync()
+      const track = makeTrack(982)
+      sync(asEl(track), style, ctx(true, 10))
+      track.width = 992
+      let got: number | null = null
+      expect(() => {
+        got = sync(asEl(track), style, bad)
+      }).not.toThrow()
+      expect(got).toBe(174.4)
+      expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '174.4px')
+    }
+  })
+
+  it('Z8: no third argument behaves exactly as before', () => {
+    const sync = makeSync()
+    const track = makeTrack(982)
+    expect(sync(asEl(track), style)).toBe(172.4)
+    track.width = 992
+    expect(sync(asEl(track), style)).toBe(174.4)
+    expect(track.setProperty).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('readScrollerAllowance (G-48-11c)', () => {
+  const globals = globalThis as unknown as { getComputedStyle?: unknown }
+  const original = globals.getComputedStyle
+  afterEach(() => {
+    if (original === undefined) {
+      delete globals.getComputedStyle
+    } else {
+      globals.getComputedStyle = original
+    }
+  })
+  const withBorders = (left: string, right: string) => {
+    globals.getComputedStyle = () => ({
+      borderLeftWidth: left,
+      borderRightWidth: right
+    })
+  }
+  const trackIn = (scroller: unknown) =>
+    ({
+      closest: (selector: string) =>
+        selector === 'main.content' ? scroller : null
+    }) as unknown as HTMLElement
+
+  it('R1: no main.content ancestor gives 0', () => {
+    expect(readScrollerAllowance(trackIn(null))).toBe(0)
+  })
+
+  it('R2: offsetWidth 1050, clientWidth 1040, zero borders gives 10; borders are not counted as bar', () => {
+    withBorders('0px', '0px')
+    expect(
+      readScrollerAllowance(trackIn({ offsetWidth: 1050, clientWidth: 1040 }))
+    ).toBe(10)
+    withBorders('1px', '1px')
+    expect(
+      readScrollerAllowance(trackIn({ offsetWidth: 1052, clientWidth: 1040 }))
+    ).toBe(10)
+  })
+
+  it('R3: a non-finite or negative result gives 0, and a throwing read gives 0', () => {
+    withBorders('0px', '0px')
+    expect(
+      readScrollerAllowance(trackIn({ offsetWidth: 1040, clientWidth: 1050 }))
+    ).toBe(0)
+    expect(
+      readScrollerAllowance(trackIn({ offsetWidth: NaN, clientWidth: 1040 }))
+    ).toBe(0)
+    expect(
+      readScrollerAllowance({
+        closest: () => {
+          throw new Error('detached')
+        }
+      } as unknown as HTMLElement)
+    ).toBe(0)
   })
 })
 

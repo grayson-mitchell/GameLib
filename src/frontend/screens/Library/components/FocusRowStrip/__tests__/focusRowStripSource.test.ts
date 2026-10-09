@@ -379,7 +379,7 @@ describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
 
   it('syncs inside a useLayoutEffect, so the first painted frame is already matched', () => {
     expect(tsx).toMatch(
-      /useLayoutEffect\(\s*\(\)\s*=>\s*{[^}]*syncCardWidth\(trackRef\.current\)/
+      /useLayoutEffect\(\s*\(\)\s*=>\s*{[^}]*syncCardWidth\(trackRef\.current,\s*undefined,\s*layoutContext\)/
     )
   })
 
@@ -416,7 +416,7 @@ describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
     const start = tsx.indexOf('createNextFrameRunner(')
     expect(start).not.toBe(-1)
     const body = brace(tsx, start)
-    expect(body).toMatch(/syncCardWidth\(track\)/)
+    expect(body).toMatch(/syncCardWidth\(track,\s*undefined,\s*layoutContext\)/)
     expect(body).toMatch(/readMeasurement\(\)/)
   })
 
@@ -429,6 +429,37 @@ describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
     const body = brace(tsx, cleanup)
     expect(body).toMatch(/\.cancel\(\)/)
     expect(body).toMatch(/observer\?\.disconnect\(\)/)
+  })
+
+  // G-48-11c: while no grid is shown the strip holds the grid's scrollbar
+  // allowance. `gridShown` reaches the sync through a ref so the observer's
+  // next-frame runner (created once per effect run) reads the live value.
+  it('G-48-11c: gridShown is a prop, read through a ref assigned in a useLayoutEffect declared before the sync effect', () => {
+    expect(tsx).toMatch(/gridShown:\s*boolean/)
+    expect(tsx).toMatch(/useRef\(gridShown\)/)
+    const assign = tsx.indexOf('gridShownRef.current = gridShown')
+    expect(assign).not.toBe(-1)
+    expect(tsx.slice(0, assign)).toMatch(
+      /useLayoutEffect\(\s*\(\)\s*=>\s*{\s*$/
+    )
+    expect(assign).toBeLessThan(tsx.indexOf('syncCardWidth(trackRef.current'))
+  })
+
+  it('G-48-11c: one stable layout context carries gridShown and readScrollerAllowance', () => {
+    expect(tsx).toMatch(
+      /import\s*{[^}]*\breadScrollerAllowance\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
+    )
+    expect(tsx).toMatch(
+      /useState\(\s*\(\)\s*:?[^=]*=>\s*\(?{\s*gridShown:\s*\(\)\s*=>\s*gridShownRef\.current,\s*scrollbarAllowance:\s*readScrollerAllowance\s*}/
+    )
+  })
+
+  it('G-48-11c: gridShown is in the sync layout effect dependency array', () => {
+    const start = tsx.indexOf('syncCardWidth(trackRef.current')
+    expect(start).not.toBe(-1)
+    const deps = tsx.slice(start).match(/}\s*,\s*\[([^\]]*)\]/)
+    expect(deps).not.toBeNull()
+    expect(deps?.[1]).toMatch(/\bgridShown\b/)
   })
 
   it("focusRowOverflow.ts writes the property by string literal at the call site (cssTokenSweep's detector needs it)", () => {
@@ -447,6 +478,16 @@ describe('Library/index.css -- the grid stylesheet is untouched', () => {
 
 describe('Library/index.tsx -- the lane replacement', () => {
   const source = read(LIBRARY_TSX_PATH)
+
+  it('G-48-11c: <FocusRowStrip passes gridShown= mirroring the GamesList grid mount condition', () => {
+    const start = source.indexOf('<FocusRowStrip')
+    expect(start).not.toBe(-1)
+    const tag = source.slice(start, source.indexOf('/>', start))
+    const attr = tag.match(/gridShown=\{([^]*)\}/)
+    expect(attr).not.toBeNull()
+    expect(attr?.[1]).toContain('libraryToShow.length > 0')
+    expect(attr?.[1]).toContain("layout === 'grid'")
+  })
 
   it('mounts FocusRowStrip exactly once', () => {
     expect(source.split('<FocusRowStrip').length - 1).toBe(1)
