@@ -22,6 +22,11 @@
  * already guards double-entry via `refreshingByRunner.steam` and already
  * clears that flag on failure -- no new backend wiring is needed.
  *
+ * There is no sign-in mode here (Phase 49 D-19). A sync that failed because
+ * the Steam credential is provably missing is suppressed by the resolver, and
+ * the Library sign-in notice shows the Steam `expired` row instead; a Retry
+ * for that case would re-enter the same empty credential read and fail again.
+ *
  * Does NOT reuse the library's full-screen error surface (see
  * `Library/index.tsx:883-892`) -- that component's usage there is a
  * full-screen early-return replacement, and reusing that shape here would
@@ -29,7 +34,6 @@
  */
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import {
   faExclamationTriangle,
   faSyncAlt
@@ -43,13 +47,12 @@ import './index.scss'
 // flagged the previously-exported form as a used-in-module finding -- there
 // is no external consumer, so the export served no purpose).
 interface SteamSyncNoticeProps {
-  mode: 'syncing' | 'failed' | 'signedOut'
+  mode: 'syncing' | 'failed'
 }
 
 export default function SteamSyncNotice({ mode }: SteamSyncNoticeProps) {
   const { t: tGamelib } = useTranslation('gamelib')
   const { refreshLibrary } = useContext(ContextProvider)
-  const navigate = useNavigate()
 
   if (mode === 'syncing') {
     return (
@@ -61,44 +64,6 @@ export default function SteamSyncNotice({ mode }: SteamSyncNoticeProps) {
             'Syncing your Steam library…'
           )}
         </span>
-      </div>
-    )
-  }
-
-  // Same outer div, same document flow, same class shape as the other two
-  // modes -- the structural contract in this file's header applies to every
-  // branch, not just the two it was written for.
-  if (mode === 'signedOut') {
-    return (
-      <div className="SteamSyncNotice SteamSyncNotice--failed">
-        <FontAwesomeIcon icon={faExclamationTriangle} />
-        <span className="SteamSyncNotice__text">
-          <strong>
-            {tGamelib(
-              'gamelib:library.steamSync.signedOutTitle',
-              'Your Steam sign-in expired'
-            )}
-          </strong>
-          <span>
-            {tGamelib(
-              'gamelib:library.steamSync.signedOutBody',
-              'Sign in again to sync your Steam library. Your other libraries are still available.'
-            )}
-          </span>
-        </span>
-        {/* Sign in, NOT retry: a refresh here re-enters the same path, hits
-            the same empty credential read, and fails identically. Matches the
-            install dialog's 'signIn' affordance (steam/depotErrors.ts). */}
-        <button
-          type="button"
-          className="button is-footer"
-          onClick={() => navigate('/login')}
-        >
-          {tGamelib(
-            'gamelib:library.steamSync.signedOutAction',
-            'Sign in to Steam'
-          )}
-        </button>
       </div>
     )
   }

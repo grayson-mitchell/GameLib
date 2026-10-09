@@ -34,11 +34,7 @@ import type { SteamSyncStatus } from 'common/types/ipc'
 
 /** The render mode this resolver decides. `'hidden'` covers BOTH "nothing to
  * report" and "logged out" -- see branch 1 and branch 4 below. */
-export type SteamSyncIndicatorMode =
-  | 'hidden'
-  | 'syncing'
-  | 'failed'
-  | 'signedOut'
+export type SteamSyncIndicatorMode = 'hidden' | 'syncing' | 'failed'
 
 export interface SteamSyncIndicatorInput {
   steamLoggedIn: boolean
@@ -77,24 +73,20 @@ export function resolveSteamSyncIndicator(
     return { mode: 'hidden' }
   }
 
-  // Branch 1b: a failure whose CAUSE is a proven-missing credential gets its
-  // own surface, because the generic one is actively wrong here -- it says
-  // "check that Steam is reachable" (Steam is reachable; the session is
-  // unauthenticated) and offers a Retry that re-enters the same path, hits the
-  // same empty keyring read, and fails identically. Phase 37 already settled
-  // this reasoning for the INSTALL path in steam/depotErrors.ts: "Deliberately
-  // offers no 'Retry' wording: retrying without first signing in can only fail
-  // again in the identical way." This is that decision, applied to sync.
+  // Branch 1b: a failure whose CAUSE is a proven-missing credential is
+  // SUPPRESSED here (Phase 49 D-19). The Library sign-in notice owns this case
+  // with the Steam `expired` row. The generic notice is actively wrong beside
+  // it -- it says "check that Steam is reachable" (Steam is reachable; the
+  // session is unauthenticated) and its Retry re-enters the same path, hits
+  // the same empty keyring read, and fails identically (the 260823-ai6
+  // rationale, and Phase 37's for the install path in steam/depotErrors.ts).
+  // So this is suppressed, not replaced: there is no sync-notice sign-in mode.
   //
   // BEFORE branch 2 so it wins over the generic failure, and AFTER branch 1 so
-  // it can never leak a Steam surface to a user with no Steam account.
-  //
-  // Deliberately gated on `'failed'` too, rather than firing on the flag
-  // alone: the Manage Accounts tile already reports the signed-out state, and
-  // an always-on banner here would be a second permanent surface competing
-  // with it. This one speaks only when a sync actually failed.
+  // the logged-out answer is unchanged. Gated on `'failed'` too, rather than
+  // firing on the flag alone, so idle and syncing are unaffected.
   if (input.steamSyncStatus === 'failed' && input.steamCredentialsMissing) {
-    return { mode: 'signedOut' }
+    return { mode: 'hidden' }
   }
 
   // Branch 2: a failure is surfaced REGARDLESS of `steamLibraryCount`. A
