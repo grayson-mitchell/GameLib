@@ -572,6 +572,96 @@ describe('sidecar bootstrap protocol-url wiring (Phase 34.5 gap cycle 6 plan 44,
       const initBody = extractInitBody(synthetic)
       expect(initBody).not.toContain('registerProtocolUrlHandler()')
     })
+
+    // Phase 49-08 (R3): the sign-in probe pass is registered AFTER the READY write and
+    // BEFORE deliverStartupProtocolUrl(); its outcomes pull handler is registered BEFORE
+    // READY. Returns the violated rules, so the real source must return [] and every
+    // RED specimen must return a non-empty list.
+    function signInProbeOrderViolations(initBody: string): string[] {
+      const handler = initBody.indexOf('registerSignInProbeOutcomesHandler()')
+      const ready = initBody.indexOf('READY_SENTINEL}')
+      const start = initBody.indexOf('startSignInProbePass()')
+      const deliver = initBody.lastIndexOf('deliverStartupProtocolUrl()')
+      const violations: string[] = []
+      if (ready < 0) violations.push('no READY write')
+      if (handler < 0 || handler > ready) {
+        violations.push('outcomes handler is not registered before READY')
+      }
+      if (start < 0 || start < ready) {
+        violations.push('pass is not started after READY')
+      }
+      if (deliver < 0 || start > deliver) {
+        violations.push(
+          'pass is not started before deliverStartupProtocolUrl()'
+        )
+      }
+      return violations
+    }
+
+    it('the real bootstrap.ts registers the outcomes handler before READY and starts the pass after READY, before deliverStartupProtocolUrl()', () => {
+      const source = readFileSync(
+        join(__dirname, '..', 'bootstrap.ts'),
+        'utf-8'
+      )
+      const initBody = extractInitBody(source)
+      expect(signInProbeOrderViolations(initBody)).toEqual([])
+    })
+
+    const specimen = (lines: string[]) =>
+      extractInitBody(
+        [
+          'export function init(input, output) {',
+          ...lines.map((line) => '  ' + line),
+          '}'
+        ].join('\n')
+      )
+    const READY_LINE = 'output.write(`${READY_SENTINEL}\\n`)'
+
+    it('self-test (RED proof): starting the pass BEFORE the READY write fails the gate', () => {
+      const initBody = specimen([
+        'registerSignInProbeOutcomesHandler()',
+        'startSignInProbePass()',
+        READY_LINE,
+        'deliverStartupProtocolUrl()'
+      ])
+      expect(signInProbeOrderViolations(initBody)).toContain(
+        'pass is not started after READY'
+      )
+    })
+
+    it('self-test (RED proof): starting the pass AFTER deliverStartupProtocolUrl() fails the gate', () => {
+      const initBody = specimen([
+        'registerSignInProbeOutcomesHandler()',
+        READY_LINE,
+        'deliverStartupProtocolUrl()',
+        'startSignInProbePass()'
+      ])
+      expect(signInProbeOrderViolations(initBody)).toContain(
+        'pass is not started before deliverStartupProtocolUrl()'
+      )
+    })
+
+    it('self-test (RED proof): registering the outcomes handler AFTER READY fails the gate', () => {
+      const initBody = specimen([
+        READY_LINE,
+        'registerSignInProbeOutcomesHandler()',
+        'startSignInProbePass()',
+        'deliverStartupProtocolUrl()'
+      ])
+      expect(signInProbeOrderViolations(initBody)).toContain(
+        'outcomes handler is not registered before READY'
+      )
+    })
+
+    it('self-test (GREEN proof): the correct order has no violations', () => {
+      const initBody = specimen([
+        'registerSignInProbeOutcomesHandler()',
+        READY_LINE,
+        'startSignInProbePass()',
+        'deliverStartupProtocolUrl()'
+      ])
+      expect(signInProbeOrderViolations(initBody)).toEqual([])
+    })
   })
 
   it('Test C (registration + rejection): handleProtocolUrl accepts a gamelib:// url and rejects a non-gamelib one without echoing it', async () => {

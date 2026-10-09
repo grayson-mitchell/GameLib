@@ -925,6 +925,16 @@ const IN_SCOPE_SUITES = [
  * disposable per-file profile under `os.tmpdir()`, mocks only the per-game settings branch and host
  * wine discovery, declares no `os`/`pathShim` mock and never touches `bootstrap.init()`. 71
  * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 67 below.
+ *
+ * `signInProbeBootWire.test.ts` (Phase 49 Plan 08, R3, 2026-10-10) is classified as structurally
+ * contained on the same basis as `gogPresenceBootWire.test.ts`, whose preamble it copies: the
+ * `backend/store_backend`/`axios` mocks plus the same `../../online_monitor` partial mock, and it
+ * calls the real `bootstrap.init()` over `PassThrough` streams with the pass and outcomes modules
+ * replaced by order recorders. It declares NO `jest.mock('os', ...)` of its own, deliberately --
+ * containment is structural, the same floor both model files rely on. It cannot be an
+ * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock kit
+ * Block B gates on. A `readdirSync` recount at this task's execution time puts the directory at 72
+ * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 68 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -982,6 +992,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'shortcutsFlows.test.ts',
   'sidecarRpcFraming.test.ts',
   'sidecarStdoutFramesOnly.test.ts',
+  'signInProbeBootWire.test.ts',
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',
