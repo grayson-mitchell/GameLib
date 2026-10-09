@@ -77,6 +77,7 @@ import type {
   StoreEmbedBounds,
   StoreEmbedNavEvent
 } from 'backend/store/storeEmbedSeam'
+import type { SignInProbeOutcomeMap } from '../signInState'
 
 // ts-prune-ignore-next
 interface SyncIPCFunctions {
@@ -560,6 +561,10 @@ interface AsyncIPCFunctions {
     status: ConnectivityStatus
     retryIn: number
   }
+  // Phase 49 (49-04), D-08: read-only pull of this launch's sign-in probe
+  // outcomes, for a renderer that mounted after the `signInProbeOutcomes` push.
+  // Pure getter -- it can never start a probe (P3, T-49-11).
+  getSignInProbeOutcomes: () => SignInProbeOutcomeMap
   getSystemInfo: (cache?: boolean) => Promise<SystemInformation>
   removeRecent: (appName: string) => Promise<void>
   getWikiGameInfo: (
@@ -754,6 +759,11 @@ interface FrontendMessages {
   // startup/401 expiry detection. MUST NOT include the session cookie
   // (Pitfall 4 / T-10-05) — HumbleAuthState is structurally cookie-free.
   humbleAuthState: (state: HumbleAuthState) => void
+  // Phase 49 (49-04), D-08: this launch's per-store sign-in probe outcomes,
+  // pushed after each probe settles and after each sign-in or sign-out. The
+  // payload carries outcome labels only -- never a token, cookie, error text or
+  // account identifier (T-49-09).
+  signInProbeOutcomes: (payload: { outcomes: SignInProbeOutcomeMap }) => void
   // Phase 11 (library.ts, Plan 02): pushed after each sync commits fresh
   // data. Carries the display-safe HumbleKey[] only — no cookie, no raw
   // key value (C4 / T-11-01).

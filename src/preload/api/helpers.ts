@@ -47,6 +47,10 @@ export const runWineCommand = makeHandlerInvoker('runWineCommand')
 export const runWineCommandForGame = makeHandlerInvoker('runWineCommandForGame')
 export const onConnectivityChanged = frontendListenerSlot('connectivity-changed')
 export const getConnectivityStatus = makeHandlerInvoker('get-connectivity-status')
+// Phase 49 (49-04), D-08: a push with no preload slot arrives nowhere, silently
+// (sidecar-send-channels-fail-silently), so the push and the pull both live here.
+export const handleSignInProbeOutcomes = frontendListenerSlot('signInProbeOutcomes')
+export const getSignInProbeOutcomes = makeHandlerInvoker('getSignInProbeOutcomes')
 export const setConnectivityOnline = makeListenerCaller('set-connectivity-online')
 export const connectivityChanged = makeListenerCaller('connectivity-changed')
 export const isNative = makeHandlerInvoker('isNative')
