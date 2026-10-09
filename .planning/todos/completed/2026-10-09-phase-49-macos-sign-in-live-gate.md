@@ -5,6 +5,7 @@ area: auth
 severity: major
 platform: macos
 ready: live-gate
+resolves_phase: 49
 files:
   - .planning/phases/49-cross-store-signed-out-offline-mode/49-LIVE-GATE.md
   - .planning/phases/49-cross-store-signed-out-offline-mode/49-UAT.md
@@ -38,3 +39,5 @@ todo `2026-10-10-dismissed-sign-in-notice-returns-after-relaunch.md`); item 5 NO
 (encrypted nile token store, todo `2026-10-10-amazon-expiry-strings-need-a-real-induction.md`);
 item 6 FINDING A4. This todo stays open until 10d and 5 are re-run green; the probe layer needs
 no re-run.
+
+**Disposition 2026-10-09:** 10d fixed (`aea939456`) and live-verified; item 5 deferred to `deferred-items.md` by operator decision. Gate closed against Phase 49; remaining findings are tracked per todo.

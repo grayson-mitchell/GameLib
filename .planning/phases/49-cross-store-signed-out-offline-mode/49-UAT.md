@@ -47,7 +47,7 @@ Evidence: gamelib-launch-4.log, runner-gog-launch-4.log, hosts-check.txt. Assump
 
 ### 5. Amazon expired records the exact refresh status and latches only on 400, 401 or 403 (launch 2)
 expected: With an expired access token and an invalid refresh token, the nile runner log shows `Failed to refresh the token <Response [NNN]>` and the observed NNN is recorded; for NNN in 400, 401, 403 gamelib.log shows `[signInProbe] nile outcome=expired`, the Library shows one Amazon expired row, and the Amazon tile reads "Sign-in expired — Reconnect"; any other NNN is recorded as a finding against A3.
-result: skipped — not scorable: nile v1.2.0 keeps its tokens in an encrypted `*.enc` blob; current_user.json has only `name`/`user_id`, so the induction has nothing to edit (review R34 fired). Operator declined server-side device deregistration. A3/A6 untested; todo filed `ready: live-gate`.
+result: skipped — not scorable: nile v1.2.0 keeps its tokens in an encrypted `*.enc` blob; current_user.json has only `name`/`user_id`, so the induction has nothing to edit (review R34 fired). Operator declined server-side device deregistration. A3/A6 untested; todo filed `ready: live-gate`. DEFERRED by operator decision 2026-10-09 to deferred-items.md; the phase does not block on it.
 
 Evidence: gamelib-launch-2.log, runner-nile-launch-2.log, flags.log, item5-row.png, item5-tile.png. Assumptions A3, A6. Arm B in launch 5 if no Amazon game is installed.
 
@@ -77,7 +77,7 @@ Evidence: gamelib-launch-8.log, sidecar-stdout.txt, item9-timing.txt. Decision D
 
 ### 10. A never-connected row reads as information, dismisses, and stays dismissed (launches 9 and 10)
 expected: A never-connected store's row reads "<Store> is not connected" with a Sign in button and a dismiss control, looks informational and not like an error in midnightMirage, gruvbox_dark and dracula, the dismiss hides it and writes dismissedSignInNotices, and the row is still absent after a relaunch.
-result: issue — 10d FAIL: the Humble row returned in launch 10 although config-dismissed.txt shows `dismissedSignInNotices = ["humble"]` in both config files (F-49-R1-3, GlobalState.tsx:528/82 seed). 10a pass ("Humble Bundle is not connected", Sign in, ×), 10b pass on midnightMirage/gruvbox_dark/dracula (operator judgment; item10-themes/), FINDING nord_light black text on dark banner, 10c pass (row hid immediately, setting written).
+result: pass — launch 9 (10a/10b/10c) and a post-fix live check on 2026-10-09 for 10d: after `aea939456` (mount hydrates `dismissedSignInNotices` from app settings) the operator signed out of Humble, dismissed the row, relaunched, row absent. Run 1 had scored 10d FAIL (F-49-R1-3, record kept verbatim in 49-LIVE-GATE.md); 10b FINDING nord_light black text on a dark banner (todo filed, not a gate failure).
 
 Evidence: item10-midnightMirage.png, item10-gruvbox_dark.png, item10-dracula.png, config-dismissed.txt, gamelib-launch-9.log, gamelib-launch-10.log. Principle P4.
 

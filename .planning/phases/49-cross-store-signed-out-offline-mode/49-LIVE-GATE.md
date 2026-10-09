@@ -1046,3 +1046,25 @@ wc -l (selected):
 **FAIL 8/11** on the strict count: items 1, 2, 3, 4, 7, 8, 9, 11 PASS; item 10 FAIL (10d); item 5 NOT SCORED; item 6 FINDING (acceptable result (c)). The probe layer (classifiers, verdict writer, bound, Keychain degradation, sidecar exit) passed every scored item. The failures and major findings are in the renderer's persistence and re-derivation, plus legendary's file deletion.
 
 **Assumptions:** A1 CONFIRMED (launch 2 marker; launch 4 negative marker). A2 CONFIRMED (bare `null`, no refresh-failed line for a dead token; `Failed to refresh credentials` for a blocked host). A3 NOT TESTED (item 5). A4 CONFIRMED as a FINDING (no refresh with 0 installed). A5 PARTIALLY CONFIRMED (stderr marker reaches the probe; stdout carries no JSON on failure; healthy-path `account` key not inspected). A6 NOT TESTED (item 5).
+
+## Post-run disposition (2026-10-09, operator decisions)
+
+Run 1 above is kept verbatim. After it:
+
+- **Item 10d: FIXED and live-verified.** `aea939456` hydrates `dismissedSignInNotices` from
+  `requestAppSettings()` at mount (the seed came from a module-load mirror read that was `[]` on a
+  cold boot). Operator check: sign out of Humble, dismiss, relaunch → row absent. UAT item 10
+  re-scored `pass`.
+- **F-49-R1-1 narrowed and closed.** A second live check measured the real cold-boot path: latch →
+  quit → relaunch with `user.json` gone → the Library still showed the expired row and the tile read
+  Reconnect (the flag wins in `resolveSignInState` branch 1). The launch-3 "not connected" state was
+  the gate's own restore-without-login. `7419d4dc7` makes the mount call `getUserInfo()`
+  unconditionally so a restored file re-seeds the UI.
+- **Item 5 DEFERRED** (operator decision): the Amazon expiry strings need a server-side device
+  deregistration to induce. Carried in `deferred-items.md` and the `ready: live-gate` todo
+  `2026-10-10-amazon-expiry-strings-need-a-real-induction.md`. A3/A6 stay source-derived.
+- **Item 6** stays a recorded FINDING (A4) with a `ready: code` todo.
+
+**Effective verdict after disposition: PASS 9/11 scored, 1 finding (item 6), 1 deferred (item 5).**
+The `ready: live-gate` todo for this gate is closed against Phase 49; what remains is tracked
+per finding.
