@@ -186,9 +186,9 @@ describe('credentialsMissing latch', () => {
           handlers[event] = cb
         })
       }
-      const { LoginSession } = jest.requireMock('steam-session') as {
-        LoginSession: jest.Mock
-      }
+      const { LoginSession } = jest.requireMock<{ LoginSession: jest.Mock }>(
+        'steam-session'
+      )
       LoginSession.mockImplementation(() => fakeSession)
 
       await SteamUser.startQRLogin()
