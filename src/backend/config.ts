@@ -355,6 +355,7 @@ class GlobalConfigV0 extends GlobalConfig {
       customWinePaths: [],
       defaultInstallPath: heroicInstallPath,
       focusRow: null,
+      dismissedSignInNotices: [],
       libraryTopSection: 'disabled',
       trayIconVariant: 'auto',
       defaultSteamPath: getSteamCompatFolder(),

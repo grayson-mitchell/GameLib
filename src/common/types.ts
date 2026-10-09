@@ -10,6 +10,7 @@ import {
 } from './types/legendary'
 import { NileInstallInfo, NileInstallPlatform } from './types/nile'
 import type { TrayIconVariant } from './trayIconVariant'
+import type { SignInStore } from './signInState'
 import {
   ZoomInstallPlatform,
   ZoomInstalledInfo,
@@ -153,6 +154,10 @@ export interface AppSettings extends GameSettings {
   experimentalFeatures?: ExperimentalFeatures
   framelessWindow: boolean
   focusRow: FocusRowSelection
+  // 49-07 (D-10): the stores whose not-connected Library notice the user dismissed.
+  // Renderer-owned: written only through `setSetting` by `GlobalState`; the sidecar
+  // sign-in pass never reads or writes it. Absent on an existing profile = `[]`.
+  dismissedSignInNotices: SignInStore[]
   hideChangelogsOnStartup: boolean
   hideWindowOnProtocolLaunch: boolean
   libraryTopSection: LibraryTopSectionOptions
