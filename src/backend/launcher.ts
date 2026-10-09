@@ -1763,11 +1763,13 @@ async function callRunner(
     })
 
     child.on('close', (code, signal) => {
-      errorHandler(
-        `${stdout.join().concat(stderr.join())}`,
-        appName,
-        runner.name
-      )
+      if (!options?.skipErrorHandler) {
+        errorHandler(
+          `${stdout.join().concat(stderr.join())}`,
+          appName,
+          runner.name
+        )
+      }
 
       if (signal && !child.killed) {
         rej(new Error(`Process terminated with signal ${signal}`))
@@ -1837,7 +1839,9 @@ async function callRunner(
       const errorMessage =
         error instanceof Error ? error.message : String(error)
 
-      errorHandler(errorMessage, appName, runner.name)
+      if (!options?.skipErrorHandler) {
+        errorHandler(errorMessage, appName, runner.name)
+      }
 
       logError(
         ['Error running', 'command', `"${safeCommand}":`, error],
