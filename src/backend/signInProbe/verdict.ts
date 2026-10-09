@@ -42,9 +42,6 @@ import { configStore as steamConfigStore } from 'backend/storeManagers/steam/ele
 import type { SignInProbeOutcome, SignInStore } from 'common/signInState'
 import { isSignInEpochCurrent } from './sessionEpoch'
 
-// WHY exported ahead of its consumer: 49-08's pass types its per-store result
-// log and its tests with it. Remove this marker when that plan lands.
-// ts-prune-ignore-next
 export type SignInVerdictResult = 'latched' | 'cleared' | 'unchanged' | 'stale'
 
 interface PersistedFlag {

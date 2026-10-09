@@ -737,7 +737,7 @@ describe('R8: the pass only ever aborts its own probes', () => {
     }
   })
 
-  it('wires the default registrations to the shared abort ids', async () => {
+  it('keeps one distinct abort id per spawn-based probe', () => {
     // The default registrations are resolved through runnerProbes, whose ids
     // are the contract with callRunner's abort controllers.
     expect(Object.values(SIGN_IN_PROBE_ABORT_IDS).sort()).toEqual(
