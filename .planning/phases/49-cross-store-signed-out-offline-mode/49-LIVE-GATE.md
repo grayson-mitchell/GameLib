@@ -133,6 +133,11 @@ next process's first write (`src/backend/logger/log_writer.ts:144-146`, `#archiv
 the **runner** logs rotate the same way (each `getRunnerLogWriter` is its own `LogWriter`), so the
 runner logs are archived per launch too, not only `gamelib.log`.
 
+If `pgrep -f` reports a count that does not match the windows you can see (it matches any process
+whose command line merely contains the path, for example another shell or a `log stream` filter;
+48-08's P1 hit exactly this), use the exact-name form `pgrep -x gamelib-shell` instead, and say so in
+`preflight.txt`.
+
 **First pass only (before launch 1):**
 
 ```bash
@@ -569,7 +574,9 @@ failure.
   danger colour, no warning triangle, text legible against the row. (49-09 routed this judgment
   here, UAT item 10.)
   (c) Click B's × : the row disappears. Quit. Then
-  `grep -n dismissedSignInNotices "$APPSUP/GameLib/config.json" | tee -a "$GATE_DIR/config-dismissed.txt"`.
+  `grep -rn dismissedSignInNotices "$APPSUP/GameLib" | tee -a "$GATE_DIR/config-dismissed.txt"`
+  (the renderer persists it through `setSetting({ appName: 'default', key: 'dismissedSignInNotices' })`,
+  `GlobalState.tsx:857-869`; the recursive grep does not assume which JSON file holds it).
   **Restore your original theme before quitting.**
 - **Gestures (launch 10):** (d) relaunch; B's row is **absent** while A's row (still not connected,
   item 11 not yet done or done) behaves per item 11; `config-dismissed.txt` still lists B.
@@ -598,7 +605,7 @@ failure.
   controller, press B; without one, open the dev inspector console and run `history.back()` (the
   identical call the B button makes) and record that this stand-in was used. Expected: the overlay
   does **not** reopen (`?open=` was removed with `{ replace: true }`,
-  `Login/index.tsx:264-266`). If neither is available, withdraw this leg and cite
+  `Login/index.tsx:260-261`). If neither is available, withdraw this leg and cite
   `loginOpenParam.test.ts` (49-10) as the unit-level cover.
   (d) Click A's row `Sign in` again, and this time **complete the sign-in** (real credentials).
   Return to Library. Quit. Launch 10: relaunch, Library shows **no row for A**.
@@ -656,4 +663,232 @@ failure.
    that the directory is mode 0700 under `/tmp` and is removed.)
 4. Commit nothing under `/tmp`, nothing from `secrets/`, and no screenshot showing an account name.
 
-<!-- gsd:review-continue -->
+---
+
+## Structural Reachability Review
+
+Authored by plan 49-11 **before publication**, per
+`.claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md` §2: all seven
+defect-class tests applied to every item, sub-check and precondition, and to the capture
+instruction itself. Verdicts: **REACHABLE**, **IMPOSSIBLE**, **CONDITIONAL** (reachable only if a
+named external premise holds; the contract carries the in-run check for that premise). The plan
+authored this contract and did not run it (D-E); every "evidence" below is a source file:line or a
+command whose output is cited, not a live observation.
+
+**Tests 6 and 7 have caught nothing before this contract** (the reference says so itself). This
+review is their first application, and it found things with both: see _Review-driven changes_.
+
+### Review table
+
+| # | Item / sub-check / precondition | Surface it names | What it asks for | Verdict | Evidence |
+|---|---|---|---|---|---|
+| R1 | Capture: session dir + `tee -a` + delimiter | `terminal.log` | one UTC dir, append every launch, `=== GATE LAUNCH N — … ===` | REACHABLE | `gate_pre` in the Capture standard; reference §3 |
+| R2 | Capture: archive `gamelib.log` per launch | `gamelib.log` | `cp` to `gamelib-launch-N.log` after quit | REACHABLE | rotation at `log_writer.ts:144-146` (`renameSync` to `.old` on first write) |
+| R3 | Capture: archive runner logs per launch | `runners/{legendary,gog,nile}.log` | `cp` to `runner-<r>-launch-N.log` | REACHABLE (added by this review) | `logger/index.ts:82-93` one `LogWriter` per runner, same rotation class as R2 |
+| R4 | Capture: exactly one instance | `pgrep -f 'target/debug/gamelib-shell'` | empty before, count 1 after, again at teardown | REACHABLE | the command itself (reference §3) |
+| R5 | Capture: closing inventory | session dir | `ls -la`, `wc -l` | REACHABLE | the commands |
+| R6 | Capture: redaction before repo | excerpts | `gate_redact` + a human read | CONDITIONAL (depends on the operator reading the output; no tool can prove the redactor complete) | `probeLegendarySession` passes no `logSanitizer` (`runnerProbes.ts:57-64`) so `legendary.log` is raw |
+| R7 | Preflight: vault variable unset | shell env | `env \| grep GAMELIB_DEV_SECRET_VAULT` prints nothing | REACHABLE | `package.json:32-33` (`tauri:dev` sets it, `tauri:dev:keyring` does not) |
+| R8 | Preflight: credential paths resolve | Application Support | `ls`/`find` the four files | CONDITIONAL (the `userData` directory name is not verified on this Windows box) | `gog/constants.ts:7`, `legendary/constants.ts:9`, `nile/constants.ts:4-7`, `constants/paths.ts:24,45`; the preflight discovers and records them |
+| R9 | Preflight: key-name listing | credential files | key paths, never values | REACHABLE | the node snippet prints `Object.keys` recursion only |
+| R10 | Preflight: sidecar build | `build/main/sidecar.js` | `pnpm build:sidecar` | REACHABLE | `package.json:37` |
+| R11 | Item 1 precondition: Epic connected, file edited in place | `user.json` | `isLoggedIn()` stays true | REACHABLE | `legendary/user.ts:707-709` is `existsSync(legendaryUserInfo)` |
+| R12 | Item 1 precondition: healthy baseline (launch 1) | `legendary status --json` | `outcome=healthy` first | REACHABLE | `classify.ts:120-123` (healthy needs an `account` that is not `<not logged in>`) |
+| R13 | Item 1 induction edit | `user.json` fields | past `*expires_at`, invalid `refresh_token` | CONDITIONAL (key names are legendary's; this tree does not name them, so preflight lists them) | preflight step 3 |
+| R14 | Item 1 gestures: Library notice, Accounts tile | Library, Manage Accounts | look and screenshot | REACHABLE | Library = `games` tab, Accounts = `accounts` tab, `NavShell/navTabs.ts:11` |
+| R15 | Item 1 literals `outcome=expired`, `verdict=latched` | `gamelib.log` | two lines | REACHABLE | emitters `pass.ts:217-219`, `verdict.ts:136`; sink `gamelib.log` |
+| R16 | Item 1 literal `Stored credentials are no longer valid` | `runner-legendary` log | the legendary binary's text | CONDITIONAL (external binary, the very thing under test) | constant `classify.ts:48`; both streams reach the runner writer, `launcher.ts:1748,1763` |
+| R17 | Item 1 row and tile text | Library row, Epic tile | "Your Epic Games sign-in expired", "Sign-in expired — Reconnect" | REACHABLE | `LibrarySignInNotice/index.tsx` row copy; `RunnerToStore.legendary` = "Epic Games" (`facetLabels.ts:27`); `gamelib.json` `login.epicReconnect` |
+| R18 | Item 1 "exactly one row" | row decision | one row per store | REACHABLE | `resolveLibrarySignInRows` walks `SIGN_IN_STORES` (49-09) |
+| R19 | Item 2 precondition: no legendary flag after launch 3 | `flags.log` | census | REACHABLE | `gate_flags` command |
+| R20 | Item 2 induction: hosts block | `/etc/hosts`, DNS cache | add line, flush, `curl` fails | CONDITIONAL (needs `sudo`; the OAuth hostname is the operator-confirmed one, not source-derived here) | `curl` exit non-zero is the in-run proof; record the host legendary actually contacted |
+| R21 | Item 2 precondition: app stays online | connectivity monitor | `pass started` appears | REACHABLE | `online_monitor.ts:80-83` pings four other hosts; `pass.ts:307-309` starts only when online |
+| R22 | Item 2 literal `HTTP request for login failed` | `runner-legendary` log | text | CONDITIONAL (external binary; FINDING path defined) | constant `classify.ts:49` |
+| R23 | Item 2 absence: no row, flag unset | row, `flags.log` | nothing latched | REACHABLE | positive proof: `verdict=unchanged` (`verdict.ts:103-105,136`) |
+| R24 | Item 3 precondition: `auth.json` edited in place | gogdl auth config | file stays | REACHABLE | `classify.ts:151-152` needs `authConfigExists`; `gog/user.ts:410` |
+| R25 | Item 3 induction | `auth.json` entries | invalid `refresh_token`, `loginTime=1` | CONDITIONAL (key names from preflight; `loginTime` per `gog/user.ts:141`) | preflight step 3 |
+| R26 | Item 3 precondition: the `auth` spawn runs | TTL cache | cache empty in a fresh process | REACHABLE | `gog/user.ts:121-123,350-359`; positive: `Running command:` … `auth` in `gamelib.log` |
+| R27 | Item 3 literal: bare `null`, no `Failed to refresh credentials` | `runner-gog` log | one present, one absent | CONDITIONAL (external binary) | `classify.ts:150-157`, `gog/user.ts:101-112`; the absence has a positive control (R32) |
+| R28 | Item 3 row and tile | Library, GOG tile | copy | REACHABLE | `gamelib.json` `login.gogReconnect`; `RunnerToStore.gog` = "GOG" |
+| R29 | Item 4 **as the plan worded it**: block `auth.gog.com` with valid credentials | gogdl refresh | expects `Failed to refresh credentials` | **IMPOSSIBLE as worded** | a valid unexpired token is answered from `auth.json` with no network call (49-RESEARCH 1b table: "Stored token not expired → credentials JSON"); the block would exercise nothing. **RESTATED as R30.** |
+| R30 | Item 4 restated: also set `loginTime=1` keeping the valid refresh token | `auth.json` | forces a refresh attempt into the blocked host | CONDITIONAL | RESEARCH 1b "Expired, refresh raises ConnectionError → `null` + `Failed to refresh credentials`"; in-run proof is R31 |
+| R31 | Item 4 literal `Failed to refresh credentials` | `runner-gog` log | present | CONDITIONAL (external binary) | constant `classify.ts:50-51`; same sink as R27's absence |
+| R32 | Item 4 absence: no GOG row | row | none | REACHABLE | positive: `verdict=unchanged` and `Failed to refresh credentials` present |
+| R33 | Item 5 precondition: ≥ 1 installed Amazon game | `installed.json` | count ≥ 1 | CONDITIONAL (A4 may make `list-updates` a no-op without one; arm B defined) | preflight step 4; RESEARCH A4 |
+| R34 | Item 5 induction | `current_user.json` | expired access token, invalid refresh token | CONDITIONAL (key names from preflight) | the in-run proof is R35's line, not the edit |
+| R35 | Item 5 literal `Failed to refresh the token <Response [NNN]>` | `runner-nile` log | record NNN | CONDITIONAL (external binary; A3, A6) | `classify.ts:52,169-172` |
+| R36 | Item 5 result NNN ∈ {400,401,403} | classifier | `expired` | REACHABLE (FINDING path defined for other NNN) | `classify.ts:185-196` |
+| R37 | Item 6 emptying `installed.json` in place | `installed.json` | `[]`, original backed up | REACHABLE | the command and the count print |
+| R38 | Item 6 any of three outcomes recorded | `runner-nile` log | present/absent | REACHABLE | acceptance rule in the item |
+| R39 | Item 7 precondition: Keychain build, vault unset | `tauri:dev:keyring` | Keychain actually used | REACHABLE | `package.json:32-33`; R7 |
+| R40 | Item 7 precondition: a prompt appears | macOS Keychain ACL | dialog shown | CONDITIONAL (an earlier "Always Allow" or an unchanged binary identity suppresses it) | in-run proof: the dialog is seen and `elapsed` is human-scale; remedy documented |
+| R41 | Item 7 precondition: Steam pre-latched | `credentialsMissing` | flag set by launches 1-5 | CONDITIONAL | `steam/user.ts:117-118` (`absent` → `expired`); `flags.log` shows it after launch 5; else 7c NOT SCORED |
+| R42 | Item 7 gesture: click Deny | system dialog | operator clicks | REACHABLE | system UI, not app UI |
+| R43 | Item 7 literals incl. `trigger=boot-probe` | `gamelib.log` | issuing / failed / memoized lines for two slots | REACHABLE | `keyringTokenStore.ts:406,413,436`; label via `steam/user.ts:115-116`, `humble/user.ts:784` |
+| R44 | Item 7 absence: no `latched` for steam/humble | `gamelib.log` | verdict lines | REACHABLE | structural guarantee (`verdict.ts:103-105` returns before any write); positive `verdict=unchanged` |
+| R45 | Item 7 Steam row stays | Library | row present after the pass | REACHABLE | presence is observed at boot from the persisted flag, before the pass |
+| R46 | Item 8 needs a new process | process-scoped 120 s memo | relaunch between 7 and 8 | REACHABLE (restated order) | `keyringTokenStore.ts:60,369-373` |
+| R47 | Item 8 gesture: leave dialogs unanswered | system dialog | do nothing for ~50 s | REACHABLE | operator waits |
+| R48 | Item 8 literal `bound reached` exactly | `gamelib.log` | line at ≈45 s | CONDITIONAL (Rust's own 45 s timeout can win the millisecond race) | `pass.ts:84` equals `main.rs:3079`; restated to an `elapsed` window, `bound reached` recorded not scored |
+| R49 | Item 8 elapsed window 44.9-50 s | `gamelib.log` | `outcome=unknown elapsed=n` | REACHABLE | `pass.ts:217-219` |
+| R50 | Item 9 **as the plan worded it**: quit the app, measure exit, PID gone | Rust shell shutdown | drain proof | **IMPOSSIBLE as worded** | quitting makes the shell SIGTERM the sidecar's group (`main.rs:1883-1927`) and print `sidecar terminated on exit` (`main.rs:1940`) whether or not it would drain; PID-gone passes vacuously. **RESTATED as R51.** |
+| R51 | Item 9 restated: run the sidecar directly, close stdin at READY, time the exit | `build/main/sidecar.js` | drain measurement | REACHABLE | the same direct-run shape as `meta/sidecarStartupSmoke.cjs:129-134` (real profile, named exemption), with the EOF moved to READY |
+| R52 | Item 9 `pass started` naming five stores | `gamelib.log` | positive proof the pass probed everything | CONDITIONAL (the pass starts only when online) | `pass.ts:198-201,307-309` |
+| R53 | Item 9 timing instrument | `perl` | millisecond stamps | REACHABLE | `perl` ships with macOS; `date +%N` does not |
+| R54 | Item 10 precondition: two never-connected stores | Accounts tiles | A and B | CONDITIONAL (the operator may have all five connected; a sign-out fallback is recorded) | preflight step 5 |
+| R55 | Item 10a row copy | Library row | "<Store> is not connected", `Sign in`, × | REACHABLE | `LibrarySignInNotice/index.tsx:150-182`; `gamelib.json` `library.signIn.notConnected` |
+| R56 | Item 10b theme switch | Settings → General | pick three themes | REACHABLE | `ThemeSelector` mounted at `GeneralSettings/index.tsx:36`; theme names `themeLabels.ts` (`midnightMirage`, `dracula`; `gruvbox_dark` is in the set per 49-09's UAT routing) |
+| R57 | Item 10c dismiss × and persistence | row × button | click, then grep the setting | REACHABLE | `LibrarySignInNotice/index.tsx:181`; `GlobalState.tsx:857-869` |
+| R58 | Item 10d absence after relaunch | row | B absent | REACHABLE | meaningful: B's row was observed present in launch 9 before the dismiss |
+| R59 | Item 11a Sign in → one overlay | row button → `/login?open=` | one overlay for that store | REACHABLE | `LibrarySignInNotice/index.tsx:166`; `Login/index.tsx:246-257` |
+| R60 | Item 11 premise: a login form is shown | WKWebView cookie jar | form before credentials | CONDITIONAL (a live session in the jar auto-completes the overlay, F-34.4.2-16) | in-run proof: the form is rendered; else not scored, pick another store |
+| R61 | Item 11b tab round trip does not reopen | NavShell tabs | Games → Accounts | REACHABLE | `navTabs.ts:11`; `?open=` removed at `Login/index.tsx:260-261` |
+| R62 | Item 11c Back | browser history | Back does not reopen | CONDITIONAL (no UI Back control; controller B or inspector `history.back()`) | `tauriGamepadInput.ts:147-150`; unit cover `loginOpenParam.test.ts` (49-10) |
+| R63 | Item 11d complete a real sign-in | store overlay | log in, no row on return | CONDITIONAL (needs the operator's real credentials) | `Login/index.tsx:455-535` open the overlay for all five stores |
+| R64 | Item 11d absence of A's row | Library | no row | REACHABLE | meaningful: A's row was observed present at gesture (a) in the same launch |
+
+### Test 1 — origin and scheme reachability
+
+No sub-check or precondition uses a `http://` URL. `grep -c "http://"` over this file prints `0`.
+Every network target is a store's real `https` host; the `/etc/hosts` lines point those hosts at
+`127.0.0.1` for the duration of one launch and are not a fixture the surface under test must accept.
+**No finding.**
+
+### Test 2 — concurrency reachability
+
+The contract never asks the operator to drive two things at once through one UI. Items 1/3/5 share
+launch 2 but their inductions are three independent files and their evidence is three separate
+sinks, so nothing is driven concurrently. Items 7/8 raise **two** Keychain dialogs (one per slot)
+at once; macOS presents system dialogs one at a time and the operator answers them in sequence, so
+this is not a concurrent drive. For item 7 the operator answers both; for item 8 neither until the
+pass is complete. **One CONDITIONAL:** if only one dialog appears (a slot already allowed), record
+it; the other slot's literal then reads `ok`, not a Deny. **No impossibility.**
+
+### Test 3 — log-line emitter reachability, with the SINK clause
+
+Every required literal has an emitter file:line and a sink in the _Where each required literal comes
+from_ table. Partition confirmed against the tree: `[signInProbe] …` (`pass.ts:198-241`,
+`verdict.ts:136`) and the keyring lines (`keyringTokenStore.ts:373,406,413,436,459`) are sidecar
+`logInfo`/`logWarning`, hence `gamelib.log` only; runner text reaches the per-runner log because
+`callRunner` attaches `getRunnerLogWriter(runner.name)` and writes both streams to it
+(`launcher.ts:1748,1763`); only `[shell]` and `[sidecar:err]` reach `terminal.log`. **No literal is
+demanded of `terminal.log` except `[shell] sidecar terminated on exit`, which is labelled
+informational and not scored.** Three runner literals (`Stored credentials are no longer valid`,
+`Failed to refresh credentials`, `Failed to refresh the token`) have their constants in
+`classify.ts:48-53` but are _emitted by external binaries_; their emitter cannot be grepped in this
+tree and that is exactly what A1-A6 gate. **No finding beyond the declared assumption.**
+
+### Test 4 — absence-observability
+
+| Required absence | Would the presence case be observable? | Kind |
+|---|---|---|
+| Item 2: no row / flag unset | yes: `verdict=latched` line plus a row plus a census entry | falsifiable |
+| Item 3: no `Failed to refresh credentials` | yes: item 4's launch produces that exact literal in that exact sink | falsifiable (positive control exists) |
+| Item 4: no GOG row | yes, as item 2 | falsifiable |
+| Item 7: no `latched` for steam/humble; Humble has no row | yes: any write logs `verdict=latched` | **structural guarantee**: `verdict.ts:103-105` returns `unchanged` before any store write, so this confirms an existing guarantee, not a novel discovery |
+| Item 7: Steam row stays | yes: the row is observed present at boot before the pass | falsifiable |
+| Item 8: no `[signInProbe]` line caused by the late Deny | yes: the pass logs through `logInfo` | falsifiable |
+| Items 10d/11d: row absent | yes: the same row was observed present earlier in the same launch | falsifiable |
+| Item 9 (as worded): PID gone after quit | **no**: SIGTERM kills it regardless | **vacuous, restated (R50/R51)** |
+
+### Test 5 — requirement-interaction reachability (the pairing pass)
+
+**Reduction applied:** every _state-mutating_ requirement against every _evidence-bearing_
+requirement, not the full (M+N)² cross product.
+
+- **M = 14 state-mutating requirements:** m1 Epic `user.json` edit; m2 gogdl `auth.json` edit;
+  m3 nile `current_user.json` edit; m4 nile `installed.json` emptied; m5 `/etc/hosts` block;
+  m6 app relaunch (rotates `gamelib.log` and the runner logs, resets the process-scoped Deny memo,
+  the sticky Steam unlock, the sign-in epochs and gogdl's TTL cache); m7 Keychain Deny (arms the 120 s
+  memo); m8 Keychain Allow; m9 dismiss; m10 sign-in completion; m11 theme switch;
+  m12 `GAMELIB_DEV_SECRET_VAULT` toggle (including the Steam latch the vault builds write);
+  m13 the direct sidecar run (rotates logs, runs against the real profile); m14 every restore step.
+- **N = 13 evidence-bearing requirements:** e1 `[signInProbe]` lines; e2 keyring `trigger=` lines;
+  e3 `legendary` runner log; e4 `gog` runner log; e5 `nile` runner log; e6 persisted-flag census;
+  e7 Library rows; e8 Accounts tile text; e9 the dismissed setting; e10 `terminal.log` `[shell]`
+  lines; e11 timing numbers; e12 archive completeness; e13 backup validity as a restore source.
+- **Pairs considered: 14 × 13 = 182. Pairs flagged: 23. Intended-by-design: 3 (m9×e9, m10×e8,
+  m11×e7: the mutation _is_ what the evidence observes). Remaining 156: disjoint file or process,
+  no interaction.**
+
+Every flagged pair, with its disposition:
+
+| # | Pair (mutator × evidence) | What would be destroyed or invalidated | Disposition in the contract |
+|---|---|---|---|
+| F1 | m6 × e1 | `gamelib.log` renamed to `.old` on the next process's first write (`log_writer.ts:144-146`); a second relaunch overwrites `.old` | `gate_archive N` after every quit, before the next launch |
+| F2-F4 | m6 × e3, e4, e5 | the same rotation applies to each runner log (R3) | runner logs archived per launch (**extends reference §3**, which names only `gamelib.log`) |
+| F5 | m6 × e6 | launch 2's `expired` latch persists and would make launch 4's "no row, flag unset" fail or pass wrongly | launch 3 added: restore + a healthy launch that clears the flags before any absence assertion |
+| F6 | m6 × e13 | a healthy launch can refresh and **rotate** a refresh token (gogdl does, RESEARCH 594), so an older backup restores a dead token | `gate_backup N` after **every** quit; each induction restores from the backup taken after the launch before it |
+| F7 | m7 × e2 | item 7's Deny arms the 120 s memo (`keyringTokenStore.ts:60`); item 8 in the same process would be answered from memo with no prompt | item 8 is its own launch (7), a new process |
+| F8 | m8 × e2 | a persistent "Always Allow" would remove the prompt that items 7/8 need | Allow-once only, and launch 9 runs after 6 and 7 |
+| F9 | m12 × e2 | `pnpm tauri:dev` sets the vault variable, bypassing the Keychain; items 7/8 would be vacuous | `pnpm tauri:dev:keyring` plus the env assertion (R7) |
+| F10 | m12 × e6 | vault launches read the Steam slot as absent and latch `credentialsMissing` | recognised and used: it is item 7c's precondition, cleared by launch 9's Allow |
+| F11 | m9 × e7 | a dismissed row hides item 11d's "no row", proving nothing | item 11 uses store A, item 10 uses store B |
+| F12 | m10 × e7 | completing a sign-in turns item 10's store into a connected one | same separation |
+| F13-F16 | m13 × e1, e3, e4, e5 | the direct sidecar run rotates `gamelib.log` and the runner logs and uses the real profile | runs after `gate_archive 7`; archived as launch 8; named real-profile arm |
+| F17 | m5 × e1 | a hosts block wide enough to take the app offline suppresses the pass, making every "no row" vacuous | only the OAuth hosts are blocked; `pass started` is required positively (R21) |
+| F18 | m5 × e4 | the block exercises nothing against a valid unexpired GOG token | item 4 restated with `loginTime=1` (R29/R30) |
+| F19 | m14 × e6 | a restore that did not take would look like a store the app cannot reach | each restore has a positive observable (`outcome=healthy` next launch; `curl` status; `diff`) |
+| F20 | m1 × e1 | legendary deleting `user.json` would make Epic "not connected", so it is never probed | the edit is in place; `pass started stores=` must name `legendary` |
+| F21 | m3 × e5 | a nile edit that does not trigger a refresh leaves item 5 unobserved | the runner-log line, not the edit, is the proof; FAIL means re-run |
+| F22 | m4 × e5 | an emptied `installed.json` may stop `list-updates` refreshing (A4) | this is item 6's purpose, recorded as a result |
+| F23 | m6 × e10 | a truncating `tee` on relaunch destroys the transcript (F-34.4.2-11, the original defect) | `tee -a` throughout; delimiter per launch |
+
+**Counts for this review: 64 table rows (R1-R64: 41 REACHABLE, 21 CONDITIONAL, 2 IMPOSSIBLE-as-worded, both restated); 182 pairs considered; 23 flagged; 0 unresolved.**
+
+### Test 6 — pre-existing external-state reachability
+
+| Item premise | External state that could invalidate it | Check that covers it |
+|---|---|---|
+| 1, 3, 5 "credential is expired" | legendary / gogdl / nile each cache or refresh on their own | the runner-log line for each, not the edit, is the proof (R16, R27, R35) |
+| 3 "the refresh is attempted" | gogdl's TTL cache hides the spawn | fresh process each launch; `Running command: … auth` required (R26) |
+| 4 "the refresh reaches the network" | an unexpired GOG token never calls out | `loginTime=1` added (R29/R30) |
+| 2, 4 "the host is unreachable" | DNS cache, an unrelated resolver path | `curl` exit proof before the launch and a status proof after the restore |
+| 7, 8 "Keychain used" | `GAMELIB_DEV_SECRET_VAULT` exported in the operator's shell; a persisted "Always Allow" | env assertion, `tauri:dev:keyring`, dialog seen (R7, R39, R40) |
+| 7c "Steam pre-latched" | vault launches may not have latched it | `flags.log` after launch 5; else not scored (R41) |
+| 9 "all five stores connected" | the pass starts only when online | `pass started stores=` names all five (R52) |
+| 10 "a never-connected store exists" | all five connected | preflight step 5, sign-out fallback (R54) |
+| 11 "logged out" | the **WKWebView cookie jar** can auto-complete the overlay with no form (F-34.4.2-16) | the rendered login form is the positive observable (R60) |
+| every launch | a stale `gamelib-shell` instance | `pgrep` empty before, 1 after (R4) |
+
+### Test 7 — UI-level reachability (operator gesture sequences)
+
+| Gesture | Component that renders the control | State assumed | Result |
+|---|---|---|---|
+| Item 1/3/5: look at the Library notice and the Accounts tile | Library tab and `LibrarySignInNotice`; Accounts tab and `Login/index.tsx` tiles | rows derive from persisted flags at launch | reachable |
+| Item 10a: see the row, its `Sign in` and × | `LibrarySignInNotice/index.tsx:150-182` | `row.dismissible` true for `not-connected` | reachable |
+| Item 10b: switch theme | `ThemeSelector`, `GeneralSettings/index.tsx:36` | Settings route reachable from the nav | reachable |
+| Item 10c: click × | `index.tsx:181` → `GlobalState.tsx:857` | none | reachable |
+| Item 11a: click `Sign in` | `index.tsx:166` → `/login?open=<store>` → `Login/index.tsx:246-257` | the effect is keyed on `searchParams`, not `loading` | reachable |
+| Item 11a (tile path): click a store tile instead | `Runner/index.tsx:128-136`; all five tiles pass `primaryLoginAction` (`Login/index.tsx:455,473,491,520,535`) | none | reachable, and **no route navigation** unmounts the other tiles (the F-34.4.2-17 trap does not apply here) |
+| Item 11b: Games then Accounts | `NavShell` tabs, `navTabs.ts:11` | none | reachable |
+| Item 11c: **Back** | **no UI control**; `window.history.back()` only via a gamepad B press, `tauriGamepadInput.ts:147-150` | a controller | **CONDITIONAL**: inspector `history.back()` stand-in, or withdrawn with the unit cover named |
+| Item 7/8: click Deny / do nothing | macOS system dialogs, not app UI | the dialog appears | reachable if R40 holds |
+
+### Review-driven changes (nothing withdrawn; two items restated)
+
+1. **Item 9 restated (R50 IMPOSSIBLE → R51).** Measured by running the sidecar directly with stdin
+   closed at READY, not by quitting the app.
+2. **Item 4 restated (R29 IMPOSSIBLE → R30).** Adds `loginTime=1` so a refresh is actually attempted.
+3. **Launch 3 added** (restore plus a healthy "clear" launch), because launch 2's persisted
+   `expired` latches would otherwise contaminate launch 4's absence assertions (F5).
+4. **Runner logs archived per launch**, and **credentials backed up after every launch** (F2-F4, F6).
+5. **Item 8 is its own launch** and is scored by an `elapsed` window, not by `bound reached`
+   alone (F7, R48).
+6. **Items 10 and 11 use two different never-connected stores** (F11, F12), and item 11's Back leg
+   is conditional (R62).
+7. **Items 5/6 gain an arm B** for an operator with no installed Amazon game (R33, A4).
+8. **Which dev command is which** is stated (`tauri:dev` sets the vault variable; `tauri:dev:keyring`
+   does not), because the prior Steam keyring gate's "build with `pnpm tauri:dev`" is now the
+   opposite of what items 7/8 need (F9).
+
+### What this review does not claim
+
+This list is drawn from defects this project has already measured; nothing here shows it complete.
+The count of structural impossibilities found in this contract at authoring time is **2** (R29,
+R50), both restated before publication; 49-12 should record the count it meets at run time,
+whatever it is, so the next completeness gap surfaces as a number. Tests 6 and 7 were applied for
+the first time here. The three theme names are all present in the selector's set (`themeLabels.ts:43,107` for
+`gruvbox_dark`). Four operator-supplied facts are not verifiable from this Windows box and are
+discovered at preflight: the `userData` directory name, the credential files' key names, the Epic
+OAuth hostname legendary contacts, and whether a Keychain "Always Allow" already exists.
