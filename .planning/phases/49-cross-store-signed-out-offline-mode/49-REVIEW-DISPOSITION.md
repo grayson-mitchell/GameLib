@@ -17,7 +17,7 @@ findings:
     title: "A cleared verdict for a non-Humble store is invisible to the renderer until the whole probe pass finishes (F-49-R1-2)"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "authTrigger.ts origin lookup is a plain-object bracket access on untrusted input"
 ---
 
@@ -32,4 +32,4 @@ fails closed today). Recorded 2026-10-09 by the execute-phase closure chain.
 | WR-01 | warning | open | `2026-10-10-nile-probe-joins-list-updates-in-flight-spawn-and-never-observes-output.md` (renamed from the interleaving todo; root cause corrected per this review) |
 | WR-02 | warning | fixed | `2026-10-10-amazon-probe-is-a-no-op-with-nothing-installed.md` (now in `completed/`): quick 261010-h9n, commit `268bae390` — the zero-installed shape classifies `unknown`, never `healthy`; `library sync` not adopted (D-16); a replacement probe command stays gated on the Amazon induction todo |
 | WR-03 | warning | open | `2026-10-10-library-sign-in-rows-do-not-rederive-a-mid-session-clear.md` (review adds the mechanism: only Humble gets a per-store push; the rest wait for `publishSignInProbeOutcomes()` after the whole pass) |
-| WR-04 | warning | open | `2026-10-10-authtrigger-origin-lookup-is-an-unguarded-bracket-access.md` (new) |
+| WR-04 | warning | fixed | `2026-10-10-authtrigger-origin-lookup-is-an-unguarded-bracket-access.md` (now in `completed/`): quick 261010-ho8, commit `a2f162db0` — an own-property guard plus a `typeof origin !== 'string'` rejection, so no renderer origin can resolve through `Object.prototype` or reach an allowlisted key via coercion |
