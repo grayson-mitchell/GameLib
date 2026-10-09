@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-15-PLAN.md
-last_updated: "2026-10-09T05:59:34.643Z"
+stopped_at: Completed 48-16-PLAN.md
+last_updated: "2026-10-09T07:15:15.692Z"
 last_activity: 2026-10-09
-last_activity_desc: Phase 48 execution resumed (wave continue)
-state_head: a919de86d581003976557be087744de2d135a6e4
+last_activity_desc: Phase 48 execution started
+state_head: cde6f30e692e5e15744fdec6a38e664870e9e538
 progress:
   total_phases: 44
   completed_phases: 36
-  total_plans: 533
-  completed_plans: 514
+  total_plans: 536
+  completed_plans: 515
   percent: 82
 ---
 
@@ -75,9 +75,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 3 of 15
+Plan: 2 of 18
 Status: Ready to execute
-Last activity: 2026-10-09 — Phase 48 execution resumed (wave continue)
+Last activity: 2026-10-09 — Phase 48 execution started
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -519,6 +519,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P02 | 25 min | 3 tasks | 97 files |
 | Phase 48 P14 | 70min | 2 tasks | 10 files |
 | Phase 48 P15 | 4h | 3 tasks | 1 files |
+| Phase 48 P16 | 75min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -1163,6 +1164,8 @@ Recent decisions affecting current work:
 - [Phase 48]: 48-14: strip width sync moved to next frame via createNextFrameRunner; observer callback only reads and requests (G-48-11a, WR-01); WebKit sweep 34 vs 0 loop errors, live proof owed to 48-15
 - [Phase 48]: Live gate 48-15 on HEAD 460df71e4: G-48-11a and G-48-11b resolved by measurement against a pre-fix arming control (34 loop errors pre-fix vs 0 fixed; blank travel pre-fix vs 15pt clearance fixed); items 11 and 12 stay issue with new gaps G-48-11c and G-48-12a
 - [Phase 48]: Plan 48-15 verify asserted 12 parser items but parseUatItemsWithStats counts outstanding items plus gaps (14 at base); consistency was checked against status words and gap statuses instead
+- [Phase 48]: 48-16: keyboard-mode body class (body.keyboardNav) scopes the stale-focus suppression instead of a :focus-visible scope; F1 measured to leave two rings
+- [Phase 48]: 48-16: same-coordinate pointer moves do not end keyboard mode (engine synthetic move after scroll); untrusted Tab keydowns never enter it
 
 ### Pending Todos
 
@@ -1773,8 +1776,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T05:59:32.237Z
-Stopped at: Completed 48-15-PLAN.md
+Last session: 2026-10-09T07:15:13.497Z
+Stopped at: Completed 48-16-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
