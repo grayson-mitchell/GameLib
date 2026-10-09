@@ -30,6 +30,7 @@ export type SteamAuthTrigger =
   | 'user-install'
   | 'user-play'
   | 'login'
+  | 'boot-probe'
 
 /**
  * Every trigger except `'startup'`. Used both to decide whether a given

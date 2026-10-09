@@ -46,6 +46,14 @@ jest.mock('../authTrigger', () => ({
   currentTriggerLabel: () => 'user-refresh'
 }))
 
+// Phase 49 (49-06): sign-in / sign-out publish through the epoch fence.
+const mockNoteSignInSucceeded = jest.fn()
+const mockNoteSignedOut = jest.fn()
+jest.mock('backend/signInProbe/outcomes', () => ({
+  noteSignInSucceeded: (...args: unknown[]) => mockNoteSignInSucceeded(...args),
+  noteSignedOut: (...args: unknown[]) => mockNoteSignedOut(...args)
+}))
+
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
   logInfo: jest.fn(),
@@ -139,5 +147,63 @@ describe('credentialsMissing latch', () => {
       ([key]) => key === 'userData'
     )
     expect(userDataWrites).toHaveLength(0)
+  })
+
+  // Phase 49 (49-06): the sign-in / sign-out epoch hooks. A probe that began
+  // before a sign-in must not re-latch afterwards (R2 concurrency edge).
+  describe('sign-in epoch hooks', () => {
+    type Internals = {
+      finishAuth: (token: string) => Promise<string>
+      connectSteamUserClient: (token: string) => Promise<string>
+    }
+
+    it('finishAuth notes the sign-in after clearing credentialsMissing', async () => {
+      const internals = SteamUser as unknown as Internals
+      jest
+        .spyOn(internals, 'connectSteamUserClient')
+        .mockResolvedValue('Persona')
+
+      await internals.finishAuth('refresh-token')
+
+      expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
+      expect(mockNoteSignInSucceeded).toHaveBeenCalledTimes(1)
+      expect(mockNoteSignInSucceeded).toHaveBeenCalledWith('steam')
+    })
+
+    it('the QR success path notes the sign-in', async () => {
+      const internals = SteamUser as unknown as Internals
+      jest
+        .spyOn(internals, 'connectSteamUserClient')
+        .mockResolvedValue('Persona')
+      const handlers: Record<string, () => Promise<void> | void> = {}
+      const fakeSession = {
+        refreshToken: 'qr-refresh-token',
+        loginTimeout: 0,
+        startWithQR: jest
+          .fn()
+          .mockResolvedValue({ qrChallengeUrl: 'https://s.team/q/1' }),
+        once: jest.fn((event: string, cb: () => Promise<void> | void) => {
+          handlers[event] = cb
+        })
+      }
+      const { LoginSession } = jest.requireMock('steam-session') as {
+        LoginSession: jest.Mock
+      }
+      LoginSession.mockImplementation(() => fakeSession)
+
+      await SteamUser.startQRLogin()
+      await handlers['authenticated']()
+
+      expect(mockConfigStore.delete).toHaveBeenCalledWith(CREDENTIALS_MISSING)
+      expect(mockNoteSignInSucceeded).toHaveBeenCalledTimes(1)
+      expect(mockNoteSignInSucceeded).toHaveBeenCalledWith('steam')
+    })
+
+    it('logout notes the sign-out', async () => {
+      await SteamUser.logout()
+
+      expect(mockNoteSignedOut).toHaveBeenCalledTimes(1)
+      expect(mockNoteSignedOut).toHaveBeenCalledWith('steam')
+    })
   })
 })

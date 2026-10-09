@@ -13,6 +13,7 @@ import type {
 } from 'common/types/steam'
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session'
 import SteamUserLib from 'steam-user'
+import type { SignInProbeOutcome } from 'common/signInState'
 
 // ── D-02 (Phase 33-02): ensureConnected canary + relog revalidation ─────────
 //
@@ -86,6 +87,11 @@ export class SteamUser {
 
   static isLoggedIn(): boolean {
     return Boolean(configStore.get_nodefault('isLoggedIn'))
+  }
+
+  // RED stub (49-06 Task 1): inert until the GREEN commit.
+  static async probeCredentialPresence(): Promise<SignInProbeOutcome> {
+    return 'unknown'
   }
 
   // ── LIB-01: Authenticated client accessor ─────────────────────────────────

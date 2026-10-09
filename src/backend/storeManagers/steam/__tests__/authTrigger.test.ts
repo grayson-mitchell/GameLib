@@ -45,7 +45,8 @@ describe('noteSteamAuthTrigger / isSteamAuthUnlocked', () => {
     'game-page',
     'user-install',
     'user-play',
-    'login'
+    'login',
+    'boot-probe'
   ])('every deliberate trigger (%s) unlocks the gate', (trigger) => {
     expect(noteSteamAuthTrigger(trigger)).toBe(true)
     expect(isSteamAuthUnlocked()).toBe(true)
@@ -154,6 +155,44 @@ describe('noteRefreshTrigger (Task 2 — refreshLibrary dispatch threading)', ()
 
   it('a named non-Steam runner never unlocks the gate regardless of a deliberate-looking origin', () => {
     noteRefreshTrigger('nile', 'nav-tabs-games-tab')
+    expect(isSteamAuthUnlocked()).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Phase 49 (49-06, D-14): the boot-probe trigger. A deliberate, backend-only
+// trigger: it unlocks the gate with the same sticky semantics, and no renderer
+// origin string can produce it (T-49-16).
+// ---------------------------------------------------------------------------
+
+describe("'boot-probe' trigger (Phase 49 D-14)", () => {
+  it('unlocks a locked gate and reports the transition', () => {
+    expect(noteSteamAuthTrigger('boot-probe')).toBe(true)
+    expect(isSteamAuthUnlocked()).toBe(true)
+  })
+
+  it('is sticky: a second deliberate note returns false', () => {
+    expect(noteSteamAuthTrigger('boot-probe')).toBe(true)
+    expect(noteSteamAuthTrigger('user-refresh')).toBe(false)
+    expect(isSteamAuthUnlocked()).toBe(true)
+  })
+
+  it('labels keyring reads as boot-probe after the note', () => {
+    noteSteamAuthTrigger('boot-probe')
+    expect(currentTriggerLabel()).toBe('boot-probe')
+  })
+
+  it("is not renderer-reachable: mapRefreshOriginToTrigger('boot-probe') is 'startup'", () => {
+    expect(mapRefreshOriginToTrigger('boot-probe')).toBe('startup')
+  })
+
+  it('a renderer dispatch carrying the origin boot-probe leaves the gate locked', () => {
+    noteRefreshTrigger(undefined, 'boot-probe')
+    expect(isSteamAuthUnlocked()).toBe(false)
+  })
+
+  it("'startup' still never unlocks the gate", () => {
+    noteSteamAuthTrigger('startup')
     expect(isSteamAuthUnlocked()).toBe(false)
   })
 })
