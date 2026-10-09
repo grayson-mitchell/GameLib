@@ -4,6 +4,12 @@ import {
   SteamSyncIndicatorMode
 } from '../librarySyncIndicator'
 import type { SteamSyncStatus } from 'common/types/ipc'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import {
+  stripSourceComments,
+  stripTrailingLineComment
+} from 'backend/testUtils/stripSourceComments'
 
 // 34.15 D-09 -- exhaustive state matrix + a saboteur reproducing the shipped
 // bug. See `librarySyncIndicator.ts`'s own header for why this file cannot
@@ -250,19 +256,18 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
     expect(result.mode).toBe('failed')
   })
 
-  // ── 260823-ai6: signed-out sync failures get their own surface ───────────
+  // -- Phase 49 D-19: the generic notice is SUPPRESSED, not replaced ----------
   //
-  // The generic 'failed' banner says "check that Steam is reachable" and
-  // offers "Retry Steam sync". When the cause is a proven-missing credential
-  // both are wrong: Steam IS reachable, and the retry re-enters the same
-  // path, hits the same empty credential read, and fails identically. Phase
-  // 37 settled that reasoning for the install path (steam/depotErrors.ts);
-  // these rows hold it for sync.
-  describe('signedOut mode (260823-ai6)', () => {
-    it('takes precedence over the generic failed banner', () => {
-      // THE regression. Placing this branch after the 'failed' branch -- or
-      // dropping it -- yields 'failed' here and ships an action that cannot
-      // succeed.
+  // 260823-ai6 gave a proven-missing credential its own `signedOut` surface in
+  // this notice. Phase 49 moved that surface to the Library sign-in notice (the
+  // Steam `expired` row), so this resolver now has one job for the case: stay
+  // out of the way. The generic 'failed' banner says "check that Steam is
+  // reachable" and offers a Retry that re-enters the same empty credential
+  // read and fails identically, so it must not render beside the expired row.
+  describe('suppress-only (Phase 49 D-19)', () => {
+    it('hides the generic failed notice when the credential is provably missing', () => {
+      // THE regression. Dropping the branch yields 'failed' here and ships a
+      // Retry that cannot succeed beside the expired Steam row.
       expect(
         resolveSteamSyncIndicator({
           steamLoggedIn: true,
@@ -270,12 +275,10 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
           steamLibraryCount: 0,
           steamCredentialsMissing: true
         }).mode
-      ).toBe('signedOut')
+      ).toBe('hidden')
     })
 
-    it('still wins when a cached library rendered', () => {
-      // Mirrors branch 2's own rule: a failure is surfaced regardless of
-      // steamLibraryCount, so the credential-aware variant must be too.
+    it('still hides it when a cached library rendered', () => {
       expect(
         resolveSteamSyncIndicator({
           steamLoggedIn: true,
@@ -283,7 +286,7 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
           steamLibraryCount: 42,
           steamCredentialsMissing: true
         }).mode
-      ).toBe('signedOut')
+      ).toBe('hidden')
     })
 
     it('leaves a plain failure alone when the credential is intact', () => {
@@ -297,10 +300,7 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       ).toBe('failed')
     })
 
-    it('does NOT fire on the flag alone -- only on an actual failure', () => {
-      // Scoping rule: the Manage Accounts tile already reports the signed-out
-      // state. An always-on banner here would be a second permanent surface
-      // competing with it, so idle and syncing must stay unaffected.
+    it('does NOT fire on the flag alone -- idle stays hidden and syncing stays syncing', () => {
       expect(
         resolveSteamSyncIndicator({
           steamLoggedIn: true,
@@ -319,10 +319,7 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
       ).toBe('syncing')
     })
 
-    it('never leaks to a user with no Steam account -- branch 1 still wins', () => {
-      // Branch 1's comment says it is evaluated FIRST so no later branch can
-      // leak a Steam surface to a logged-out user. The new branch must not be
-      // the exception that breaks that promise.
+    it('logged out stays hidden -- branch 1 still wins', () => {
       expect(
         resolveSteamSyncIndicator({
           steamLoggedIn: false,
@@ -331,6 +328,66 @@ describe('resolveSteamSyncIndicator -- 34.15 D-06/D-08/D-09/D-10', () => {
           steamCredentialsMissing: true
         }).mode
       ).toBe('hidden')
+    })
+  })
+
+  // The sign-in mode is gone from both files, not merely unreachable. A
+  // comment-stripped read keeps the explanatory comments (which may name the
+  // old mode) from satisfying or tripping the gate.
+  describe('the signedOut mode is removed (Phase 49 D-19)', () => {
+    const RESOLVER_PATH = join(__dirname, '..', 'librarySyncIndicator.ts')
+    const NOTICE_PATH = join(
+      __dirname,
+      '..',
+      'components',
+      'SteamSyncNotice',
+      'index.tsx'
+    )
+
+    function gated(path: string): string {
+      return stripSourceComments(readFileSync(path, 'utf8'))
+        .split('\n')
+        .map(stripTrailingLineComment)
+        .join('\n')
+    }
+
+    function assertNoSignedOut(source: string, label: string): void {
+      if (source.includes('signedOut')) {
+        throw new Error(
+          `${label} FAILED: the token signedOut is still present.`
+        )
+      }
+    }
+
+    it('neither the resolver nor the notice mentions signedOut in code', () => {
+      expect(() =>
+        assertNoSignedOut(gated(RESOLVER_PATH), 'resolver')
+      ).not.toThrow()
+      expect(() =>
+        assertNoSignedOut(gated(NOTICE_PATH), 'notice')
+      ).not.toThrow()
+    })
+
+    it('RED specimen: re-adding | signedOut to the union trips the gate', () => {
+      const real = gated(RESOLVER_PATH)
+      expect(real).toContain("| 'failed'")
+      const specimen = real.replace("| 'failed'", "| 'failed'\n  | 'signedOut'")
+      expect(() => assertNoSignedOut(specimen, 'resolver')).toThrow(/signedOut/)
+    })
+
+    it('RED specimen: a signedOut branch in the notice trips the gate', () => {
+      const specimen = `${gated(NOTICE_PATH)}\nif (mode === 'signedOut') return null`
+      expect(() => assertNoSignedOut(specimen, 'notice')).toThrow(/signedOut/)
+    })
+
+    it('a mention only inside a comment does not trip the gate', () => {
+      const stripped = stripSourceComments(
+        ['// the old signedOut mode', '/* signedOut */', 'const real = 1'].join(
+          '\n'
+        )
+      )
+      expect(stripped).toContain('const real = 1')
+      expect(() => assertNoSignedOut(stripped, 'x')).not.toThrow()
     })
   })
 })
