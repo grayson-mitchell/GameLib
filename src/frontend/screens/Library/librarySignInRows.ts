@@ -22,8 +22,16 @@ import {
  * the dismissed-set input arrive in plan 49-09 Task 1.
  */
 
+// Exported on purpose ahead of its first cross-module import: this is the
+// public row shape plan 49-01 directs this module to publish for the
+// `LibrarySignInNotice` component, and plan 49-09 widens it (`not-connected`).
+// ts-prune-ignore-next
 export type LibrarySignInRowKind = 'expired' | 'not-connected'
 
+// Same reason as `LibrarySignInRowKind` above: the component that renders
+// these rows imports its stylesheet, so Jest proves the decision through
+// this module and the component consumes the exported shape at runtime.
+// ts-prune-ignore-next
 export interface LibrarySignInRow {
   store: SignInStore
   kind: LibrarySignInRowKind

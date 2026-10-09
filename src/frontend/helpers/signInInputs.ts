@@ -26,6 +26,10 @@ import type {
  * cannot expire.
  */
 
+// Exported on purpose ahead of its first cross-module import: plan 49-01 names
+// this as the input shape later phase-49 plans build on (49-03 onward), and
+// the Frontend jest project can only reach it through this helper module.
+// ts-prune-ignore-next
 export interface SignInInputSource {
   epicUsername?: string | null
   gogUsername?: string | null
