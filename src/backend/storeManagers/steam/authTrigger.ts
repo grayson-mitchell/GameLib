@@ -16,12 +16,21 @@
  * all, and the single source of the `trigger=` label every `keyring_get`
  * issue/outcome/memo log line carries so the hypothesis can be re-measured on
  * real hardware.
+ *
+ * REVERSAL (Phase 49, D-14): quick task 260817-d61 kept an automatic Steam
+ * refresh away from the keyring at boot. Phase 49 deliberately reverses that
+ * for a signed-in account: the boot sign-in probe notes the backend-only
+ * `'boot-probe'` trigger, which is deliberate and therefore sticky, so once the
+ * pass has run the gate stays unlocked for the process and a later automatic
+ * `SteamLibraryManager.refresh()` may open a CM connection where it used to
+ * skip. The probe itself reads the keyring only and never connects (D-21); a
+ * signed-out account never notes the trigger and never unlocks.
  */
 
 /**
  * The full set of triggers that can drive a Steam keyring read. `'startup'`
  * is the ONLY non-deliberate value — everything else names a deliberate
- * Steam user action.
+ * Steam user action or, for `'boot-probe'`, the deliberate boot sign-in probe.
  */
 export type SteamAuthTrigger =
   | 'startup'
@@ -44,13 +53,18 @@ const DELIBERATE_TRIGGERS: ReadonlySet<SteamAuthTrigger> = new Set([
   'game-page',
   'user-install',
   'user-play',
-  'login'
+  'login',
+  'boot-probe'
 ])
 
 /**
  * Origin -> trigger ALLOWLIST (never a denylist — see `mapRefreshOriginToTrigger`'s
  * own doc comment for why). Every renderer-supplied `origin` string that is
  * NOT a key here maps to `'startup'`, the locked, least-privileged outcome.
+ *
+ * `'boot-probe'` is a backend-only trigger and must NEVER be mapped from a
+ * renderer origin: a renderer-reachable value would let the UI unlock Steam's
+ * keyring gate on demand (T-49-16).
  */
 const ORIGIN_TO_TRIGGER: Readonly<Record<string, SteamAuthTrigger>> = {
   'action-icons-refresh-button': 'user-refresh',

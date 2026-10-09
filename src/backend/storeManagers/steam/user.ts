@@ -3,7 +3,11 @@ import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { configStore } from './electronStores'
 import { STEAM_INSTALL_PATHS } from './constants'
 import { getTokenStore, readTokenOutcome } from './tokenStore'
-import { currentTriggerLabel } from './authTrigger'
+import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
+import {
+  noteSignInSucceeded,
+  noteSignedOut
+} from 'backend/signInProbe/outcomes'
 import { withTimeout } from './withTimeout'
 import { platform } from 'process'
 import type {
@@ -89,9 +93,33 @@ export class SteamUser {
     return Boolean(configStore.get_nodefault('isLoggedIn'))
   }
 
-  // RED stub (49-06 Task 1): inert until the GREEN commit.
+  /**
+   * Phase 49 (49-06, D-14 / D-21): the Steam boot sign-in probe. Reads the
+   * keyring slot ONCE under the deliberate `'boot-probe'` trigger and maps the
+   * outcome to a probe verdict. It returns an outcome only: applying it is
+   * 49-08's pass (`applySignInVerdict`), so this method writes no store.
+   *
+   * It never opens a CM connection (D-21): presence of the refresh token is the
+   * whole question, and a connection would cost a network round trip and could
+   * log the account on at boot. A signed-out account returns `unknown` before
+   * the trigger is noted, so it never unlocks the keyring gate.
+   *
+   * `unreadable` (timeout, Keychain denial) is NOT evidence of absence and is
+   * `unknown`; only a successful read that finds the slot empty is `expired`
+   * (P1, 260822-vov). Noting `'boot-probe'` reverses quick task 260817-d61 for a
+   * signed-in account, as recorded in `authTrigger.ts`.
+   */
   static async probeCredentialPresence(): Promise<SignInProbeOutcome> {
-    return 'unknown'
+    if (!this.isLoggedIn()) return 'unknown'
+    try {
+      noteSteamAuthTrigger('boot-probe')
+      const outcome = await readTokenOutcome(getTokenStore(), 'boot-probe')
+      if (outcome.status === 'present') return 'healthy'
+      if (outcome.status === 'absent') return 'expired'
+      return 'unknown'
+    } catch {
+      return 'unknown'
+    }
   }
 
   // ── LIB-01: Authenticated client accessor ─────────────────────────────────
@@ -336,6 +364,8 @@ export class SteamUser {
     // A signed-out session has no credential to be missing — leaving a stale
     // `true` here would mislabel the next login's tile before any read runs.
     configStore.delete('credentialsMissing')
+    // Phase 49: fence any boot probe that began before this sign-out.
+    noteSignedOut('steam')
     logInfo('Logging user out from Steam', LogPrefix.Steam)
   }
 
@@ -369,6 +399,8 @@ export class SteamUser {
     await getTokenStore().setToken(refreshToken)
     configStore.set('isLoggedIn', true)
     configStore.delete('credentialsMissing')
+    // Phase 49: a completed sign-in outranks any probe that began earlier.
+    noteSignInSucceeded('steam')
 
     // Connect steam-user to get the persona name. If this fails the user is still
     // logged in (credentials already stored above), so we fall back to a placeholder.
@@ -546,6 +578,8 @@ export class SteamUser {
           await getTokenStore().setToken(session.refreshToken)
           configStore.set('isLoggedIn', true)
           configStore.delete('credentialsMissing')
+          // Phase 49: a completed sign-in outranks any probe that began earlier.
+          noteSignInSucceeded('steam')
 
           // Mark done synchronously so pollQRLogin() returns 'done' as soon as
           // the user approves on their phone — don't block the UI on the CM

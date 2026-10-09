@@ -25,6 +25,15 @@ jest.mock('backend/platform', () => ({
   app: { getPath: jest.fn(() => '/tmp/test') }
 }))
 
+// Phase 49 (49-06): finishAuth()/logout() now publish the sign-in outcome map
+// through `noteSignInSucceeded` / `noteSignedOut`, which send a frontend
+// message. The real `sendFrontendMessage` needs an Electron window this suite
+// does not have.
+jest.mock('backend/ipc', () => ({
+  sendFrontendMessage: jest.fn(),
+  addHandler: jest.fn()
+}))
+
 // ── Logger mock (factory to prevent transitive module load failures) ──────────
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
