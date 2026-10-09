@@ -17,6 +17,10 @@ import { clearCache } from 'backend/utils'
 import { nileUserData } from './constants'
 import { isMac } from 'backend/constants/environment'
 import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
+import {
+  noteSignedOut,
+  noteSignInSucceeded
+} from 'backend/signInProbe/outcomes'
 
 // Amazon-owned APEX domain. Suffix-matching happens Rust-side in
 // `cookie_domain_matches`, so this single apex covers `www.amazon.com` (the
@@ -239,6 +243,11 @@ export class NileUser {
       }
     }
 
+    // Phase 49 (R2): a completed sign-in proves the session, so the expiry flag
+    // clears and the fence moves.
+    configStore.delete('expired')
+    noteSignInSucceeded('nile')
+
     return {
       status: 'done',
       user
@@ -270,6 +279,10 @@ export class NileUser {
     // an already-accurate claim -- it does not correct a false one.
     configStore.delete('userData')
     clearCache('nile')
+    // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
+    // began before it, so a late verdict cannot re-latch a signed-out store.
+    configStore.delete('expired')
+    noteSignedOut('nile')
 
     try {
       await clearAmazonCookiesForLogout()

@@ -10,6 +10,11 @@ import { NonEmptyString } from './commands/base'
 import { configStore } from 'backend/constants/key_value_stores'
 import { isMac } from 'backend/constants/environment'
 import { legendaryUserInfo } from './constants'
+import { legendaryConfigStore } from './electronStores'
+import {
+  noteSignedOut,
+  noteSignInSucceeded
+} from 'backend/signInProbe/outcomes'
 import {
   getLoginWindowSeamOrThrow,
   classifyCookieRead,
@@ -139,6 +144,12 @@ export class LegendaryUser {
       if (res.error || res.abort) {
         return errorMessage(res.error ?? 'abort by user')
       }
+
+      // Phase 49 (R2): a completed sign-in proves the session, so the expiry
+      // flag clears and the fence moves. This is the one Epic sign-in success
+      // site: legendary `auth` is only ever run with `--code` here.
+      legendaryConfigStore.delete('expired')
+      noteSignInSucceeded('legendary')
 
       const userInfo = this.getUserInfo()
       return { status: 'done', data: userInfo }
@@ -677,6 +688,10 @@ export class LegendaryUser {
 
     configStore.delete('userInfo')
     clearCache('legendary')
+    // Phase 49 (R2): sign-out clears the expiry flag and fences any probe that
+    // began before it, so a late verdict cannot re-latch a signed-out store.
+    legendaryConfigStore.delete('expired')
+    noteSignedOut('legendary')
 
     // Phase 40 CR-03: gated on `!res.abort`. On abort the app is exiting --
     // the renderer that would observe this rejection is being torn down, so

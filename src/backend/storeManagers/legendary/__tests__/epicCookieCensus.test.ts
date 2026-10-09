@@ -75,6 +75,14 @@ jest.mock('backend/platform', () => ({
   }
 }))
 
+// Phase 49 (49-05): logout() now publishes the sign-in outcome map through
+// `noteSignedOut`, which sends a frontend message. Real `sendFrontendMessage`
+// needs an Electron window, which this suite does not provide.
+jest.mock('backend/ipc', () => ({
+  sendFrontendMessage: jest.fn(),
+  addHandler: jest.fn()
+}))
+
 jest.mock('../constants', () => ({
   legendaryUserInfo: '/tmp/gamelib-legendary-epic-census-test/user.json'
 }))
