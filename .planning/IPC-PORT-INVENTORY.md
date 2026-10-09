@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 216 |
-| Ported to sidecar | 61 |
+| Unique channels | 217 |
+| Ported to sidecar | 62 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -160,6 +160,17 @@ inventory-reconciliation step, so the omission is structural, not an oversight b
 `preload-surface-gate.py` went RED here and was the only thing that caught it -- the full 377-suite
 run, lint, tsc and prettier were all green with the channel unlisted.
 
+**Unique channels raised 216 → 217 (Phase 49 plan 08, 2026-10-10, closing a gap left by plan 49-04):**
+`getSignInProbeOutcomes` is a BRAND NEW channel, not a late-discovered pre-existing one -- the
+renderer's mount-time pull of the boot sign-in probe outcome map (`src/backend/signInProbe/outcomes.ts`,
+registered by `registerSignInProbeOutcomesHandler()` in `bootstrap.ts` before READY). It is
+`makeHandlerInvoker`-exposed in `src/preload/api/helpers.ts` (added by `57ea8923b`, plan 49-04) and
+has no Electron leg to register. `preload-surface-gate.py` went RED at that commit and was only
+noticed when plan 49-08's `pnpm planning-gates` run hit it. It lands in the Phase 34.1 app-shell
+bucket beside the other cross-cutting app-state pulls; that bucket's header goes 33 → 34 and
+`Ported to sidecar` goes 61 → 62. The one-channel offset against the live union (caused by
+`getEpicGamesStatus`) is unchanged: both numbers moved together.
+
 ## Already ported (34)
 
 `cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
@@ -197,7 +208,7 @@ preload-surface audit — 28 → 31:**
   `34.5/preload-surface-gate.py`, which had never been wired into CI and so had never run
   outside the session that wrote it.
 
-## Phase 34.1 — Slice 4 — app shell and window chrome (33 channels)
+## Phase 34.1 — Slice 4 — app shell and window chrome (34 channels)
 
 **Retired 2026-08-27 (Phase 34.18):** `isIntelMac` was dropped from this slice's channel list —
 an arm64-only macOS build cannot run on an Intel Mac, so the channel exposed a capability the app
@@ -211,7 +222,7 @@ was reassigned to Phase 34.5 by Phase 34.1 CONTEXT decision D-14 on 2026-07-25, 
 Wine tooling and was in this slice only because the inventory grouped channels by file; see
 the Phase 34.5 list below for its new home.
 
-`abort`, `changeLanguage`, `changeTrayColor`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getLoginBackground`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
+`abort`, `changeLanguage`, `changeTrayColor`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getLoginBackground`, `getSignInProbeOutcomes`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
 
 ## Phase 34.2 — Slice 5 — game details, settings and overrides (26 channels)
 
