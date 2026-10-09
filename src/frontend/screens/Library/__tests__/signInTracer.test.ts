@@ -80,8 +80,11 @@ describe('tracer (a): latched Steam expiry -> one row -> ?open=steam', () => {
     const states = resolveSignInStates(steamExpiredInputs())
     expect(states.steam).toBe('expired')
 
-    const rows = resolveLibrarySignInRows({ states })
-    expect(rows).toEqual([
+    // The other four stores are logged out in this fixture, so since 49-09 they
+    // also get a (neutral, dismissible) not-connected row. The tracer's claim
+    // is about the expired slice only.
+    const rows = resolveLibrarySignInRows({ states, dismissed: [] })
+    expect(rows.filter((row) => row.kind === 'expired')).toEqual([
       { store: 'steam', kind: 'expired', dismissible: false }
     ])
   })

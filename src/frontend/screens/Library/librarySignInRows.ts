@@ -18,13 +18,25 @@ import {
  * The only runtime import is the canonical store order from `common`, which
  * itself has no imports.
  *
- * This tracer carries the `expired` slice only. The `not-connected` kind and
- * the dismissed-set input arrive in plan 49-09 Task 1.
+ * Row rules (R4, R5, D-11), walked in canonical `SIGN_IN_STORES` order so the
+ * result is stable for every permutation of input state:
+ *
+ *   - `expired`                         -> a row, NEVER dismissible. The user
+ *     had a working session and lost it; a dismiss must not be able to hide a
+ *     proven expiry, so the dismissed set is not even consulted for this kind.
+ *   - `not-connected`, not dismissed    -> a dismissible row. The store was
+ *     simply never connected (or signed out on purpose), which is information,
+ *     not a failure.
+ *   - `not-connected`, dismissed        -> no row.
+ *   - `connected` / `unknown`           -> no row. `unknown` means "could not
+ *     tell" and must never be rendered as a sign-in problem.
+ *
+ * Two stores in the same state are two rows; rows are never merged.
  */
 
 // Exported on purpose ahead of its first cross-module import: this is the
 // public row shape plan 49-01 directs this module to publish for the
-// `LibrarySignInNotice` component, and plan 49-09 widens it (`not-connected`).
+// `LibrarySignInNotice` component.
 // ts-prune-ignore-next
 export type LibrarySignInRowKind = 'expired' | 'not-connected'
 
@@ -40,17 +52,22 @@ export interface LibrarySignInRow {
 
 interface LibrarySignInRowsInput {
   states: Record<SignInStore, SignInState>
+  /** The persisted dismissed set (`AppSettings.dismissedSignInNotices`). */
+  dismissed: readonly SignInStore[]
 }
 
 export function resolveLibrarySignInRows({
-  states
+  states,
+  dismissed
 }: LibrarySignInRowsInput): LibrarySignInRow[] {
   const rows: LibrarySignInRow[] = []
   for (const store of SIGN_IN_STORES) {
-    // A proven expiry always gets a row and is never dismissible: the user
-    // had a working session and lost it.
-    if (states[store] === 'expired') {
+    const state = states[store]
+    if (state === 'expired') {
+      // A proven expiry always gets a row and ignores the dismissed set.
       rows.push({ store, kind: 'expired', dismissible: false })
+    } else if (state === 'not-connected' && !dismissed.includes(store)) {
+      rows.push({ store, kind: 'not-connected', dismissible: true })
     }
   }
   return rows
