@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 14/15 plans executed
+**Plans:** 15/15 plans executed
 
 Plans:
 **Wave 1**
@@ -5702,7 +5702,7 @@ Plans:
 - [x] 48-14-PLAN.md — TRACER: the strip width write leaves the ResizeObserver callback for the next frame (G-48-11a, 48-REVIEW.md WR-01), layout-effect first-paint write kept; WebKit loop-error count under item 11's sweep; WR-01 dispositioned `fixed` (R3)
 
 **Gap closure round 3, Wave 3** *(blocked on 48-14; `autonomous: false`, live gate on the operator's Mac)*
-- [ ] 48-15-PLAN.md — live gate: UAT item 11 in full on the fixed build (FAIL 2 with an arming control, FAIL 1 with the `focusRow` null control, every NOT-RUN clause), items 4 (overlap), 9 and 12 re-run in the same rig; item 7 and `## Gaps` statuses reconciled from measurements (R3)
+- [x] 48-15-PLAN.md — live gate: UAT item 11 in full on the fixed build (FAIL 2 with an arming control, FAIL 1 with the `focusRow` null control, every NOT-RUN clause), items 4 (overlap), 9 and 12 re-run in the same rig; item 7 and `## Gaps` statuses reconciled from measurements (R3)
 
 **Cross-cutting constraints:**
 - Strip content narrower than the available width shows no overflow affordance (SPEC Edge Coverage, R3 unclassified, explicit).
