@@ -20,6 +20,11 @@ import { NileLoginData, NileRegisterData } from 'common/types/nile'
 import { HumbleKey } from 'common/types/humble'
 import type { OAuthLoginCompletionPayload } from 'frontend/screens/WebView/useTauriOAuthLogin'
 import type { SteamSyncStatus } from 'common/types/ipc'
+import type {
+  SignInProbeOutcomeMap,
+  SignInState,
+  SignInStore
+} from 'common/signInState'
 
 export type Category =
   | 'all'
@@ -41,6 +46,14 @@ export interface ContextType {
   libraryStatus: GameStatus[]
   focusRow: FocusRowSelection
   handleFocusRow: (value: FocusRowSelection) => void
+  // 49-07 (D-08): this launch's sign-in probe outcomes; `{}` = every store pending.
+  signInProbeOutcomes: SignInProbeOutcomeMap
+  // 49-07 (D-10): the persisted per-store dismissed set and its two writers.
+  dismissedSignInNotices: SignInStore[]
+  handleDismissSignInNotice: (store: SignInStore) => void
+  handleRearmSignInDismissals: (
+    states: Record<SignInStore, SignInState>
+  ) => void
   platform: NodeJS.Platform | 'unknown'
   refresh: (library: Runner, checkUpdates?: boolean) => Promise<void>
   refreshLibrary: (options: RefreshOptions) => Promise<void>

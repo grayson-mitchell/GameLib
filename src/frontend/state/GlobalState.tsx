@@ -50,6 +50,19 @@ import {
   hydrateFocusRowSelection,
   seedFocusRowFromMirror
 } from 'common/focusRowMigration'
+import {
+  resolveSignInStates,
+  sanitizeSignInProbeOutcomeMap,
+  type SignInProbeOutcomeMap,
+  type SignInState,
+  type SignInStore
+} from 'common/signInState'
+import {
+  addSignInDismissal,
+  normalizeSignInDismissals,
+  rearmSignInDismissals
+} from 'common/signInDismissal'
+import { collectSignInInputs } from '../helpers/signInInputs'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
@@ -58,6 +71,14 @@ import { performSteamLogout } from './SteamSignOut'
 import { createOAuthLoginCompletion } from '../screens/WebView/useTauriOAuthLogin'
 
 const storage: Storage = window.localStorage
+
+/** Element-wise equality of two canonical-order store lists (deep-equal for these arrays). */
+function sameSignInStores(
+  a: readonly SignInStore[],
+  b: readonly SignInStore[]
+): boolean {
+  return a.length === b.length && a.every((store, i) => store === b[i])
+}
 const globalSettings = configStore.get_nodefault('settings')
 // CR-01: the mirror alone cannot see the backend's migrated `libraryTopSection`
 // seed, so first-launch hydration (componentDidMount) fills the gap once.
@@ -122,6 +143,14 @@ interface StateProps {
   wineVersions: WineVersionInfo[]
   error: boolean
   focusRow: FocusRowSelection
+  // 49-07 (D-08): this launch's sign-in probe outcomes, fed by the
+  // `signInProbeOutcomes` push AND a one-time `getSignInProbeOutcomes()` pull on
+  // mount (the push can precede the listener). Both pass through
+  // `sanitizeSignInProbeOutcomeMap`. `{}` means every store is still pending.
+  signInProbeOutcomes: SignInProbeOutcomeMap
+  // 49-07 (D-10): the persisted per-store dismissed set. Renderer-owned: only
+  // `handleDismissSignInNotice` / `handleRearmSignInDismissals` write it.
+  dismissedSignInNotices: SignInStore[]
   gameUpdates: string[]
   language: string
   libraryStatus: GameStatus[]
@@ -495,6 +524,10 @@ class GlobalState extends PureComponent<Props> {
     // underscore-named locales would show a raw `nb-NO` label with no option
     // selected.
     focusRow: focusRowMirrorSeed.focusRow,
+    signInProbeOutcomes: {},
+    dismissedSignInNotices: normalizeSignInDismissals(
+      globalSettings?.dismissedSignInNotices
+    ),
     language: toShippedLanguage(this.props.i18n.language),
     libraryStatus: [],
     platform: window.platform,
@@ -816,6 +849,59 @@ class GlobalState extends PureComponent<Props> {
     this.focusRowPickedThisSession = true
     this.setState({ focusRow: value })
     window.api.setSetting({ appName: 'default', key: 'focusRow', value })
+  }
+
+  // 49-07 (D-10): dismissing twice equals once -- persist only when the set
+  // actually changed. `addSignInDismissal` returns a canonical-order array, so
+  // an element-wise comparison is a deep-equality check.
+  handleDismissSignInNotice = (store: SignInStore) => {
+    const current = this.state.dismissedSignInNotices
+    const next = addSignInDismissal(current, store)
+    if (sameSignInStores(current, next)) {
+      return
+    }
+    this.setState({ dismissedSignInNotices: next })
+    window.api.setSetting({
+      appName: 'default',
+      key: 'dismissedSignInNotices',
+      value: next
+    })
+  }
+
+  // 49-07 (D-10): re-arm is a renderer-side prune at the proven-expired
+  // observation. The sidecar pass never writes AppSettings.
+  handleRearmSignInDismissals = (states: Record<SignInStore, SignInState>) => {
+    const current = this.state.dismissedSignInNotices
+    const next = rearmSignInDismissals(current, states)
+    if (sameSignInStores(current, next)) {
+      return
+    }
+    this.setState({ dismissedSignInNotices: next })
+    window.api.setSetting({
+      appName: 'default',
+      key: 'dismissedSignInNotices',
+      value: next
+    })
+  }
+
+  // Re-derives every store state from what the renderer holds right now and
+  // prunes the dismissed set. Idempotent, so every call site (outcome push,
+  // outcome pull, Humble auth push, end of mount) may call it freely.
+  private rearmFromCurrentState = () => {
+    const states = resolveSignInStates(
+      collectSignInInputs(
+        {
+          epicUsername: this.state.epic.username,
+          gogUsername: this.state.gog.username,
+          amazonUserId: this.state.amazon.user_id,
+          humbleLoggedIn: this.state.humble.isLoggedIn,
+          humbleExpired: this.state.humble.expired,
+          steamUsername: this.state.steam?.username
+        },
+        this.state.signInProbeOutcomes
+      )
+    )
+    this.handleRearmSignInDismissals(states)
   }
 
   handleExperimentalFeatures = (value: ExperimentalFeatures) => {
@@ -1611,14 +1697,27 @@ class GlobalState extends PureComponent<Props> {
     // non-blocking expiry toast (HumbleExpiryToast) reacts to the resulting
     // `expired` state transition on its own.
     window.api.handleHumbleAuthState((e, humbleState) => {
-      this.setState((prevState: StateProps) => ({
-        humble: {
-          ...prevState.humble,
-          isLoggedIn: humbleState.isLoggedIn,
-          username: humbleState.username ?? prevState.humble.username,
-          expired: !!humbleState.expired
-        }
-      }))
+      this.setState(
+        (prevState: StateProps) => ({
+          humble: {
+            ...prevState.humble,
+            isLoggedIn: humbleState.isLoggedIn,
+            username: humbleState.username ?? prevState.humble.username,
+            expired: !!humbleState.expired
+          }
+        }),
+        this.rearmFromCurrentState
+      )
+    })
+
+    // 49-07 (D-08): this launch's sign-in probe outcomes. The sidecar writes
+    // the three persisted expiry flags BEFORE it publishes, so a re-render off
+    // this push reads the fresh flags. Sanitised at the boundary (T-49-20).
+    window.api.handleSignInProbeOutcomes((e, { outcomes }) => {
+      this.setState(
+        { signInProbeOutcomes: sanitizeSignInProbeOutcomeMap(outcomes) },
+        this.rearmFromCurrentState
+      )
     })
 
     // Phase 11 (Plan 03): pushed by HumbleLibrary.sync()/loadCached() with
@@ -1658,16 +1757,17 @@ class GlobalState extends PureComponent<Props> {
       }))
     })
 
-    // D-08/D-23: this is the expiry-detection trigger, now chained into a
-    // sync (Phase 11) so an already-expired session never syncs — the health
-    // check must resolve first. Fire-and-forget — the backend pushes
+    // 49-07 (D-16, R3): the expiry health check moved into the sidecar boot
+    // sign-in pass, so the renderer no longer runs it "in addition". Sync
+    // stays on mount, fire-and-forget -- the backend pushes
     // humbleAuthState/humbleKeysUpdated/humbleSyncProgress as each stage
-    // resolves, so we don't block mount waiting on it. Gated on `isLoggedIn`
-    // (the connected flag), NOT `username` — a connected-but-anonymous
-    // account (identity fetch failed) must still get the startup health
-    // check + sync.
+    // resolves, so we don't block mount waiting on it. Humble sync does not
+    // latch expiry (the D-18 correction); the pass does. Gated on
+    // `isLoggedIn` (the connected flag), NOT `username` -- a connected-but-
+    // anonymous account (identity fetch failed) must still get the startup
+    // sync.
     if (this.state.humble.isLoggedIn) {
-      void window.api.humbleCheckHealth().then(() => window.api.humbleSync())
+      void window.api.humbleSync()
     }
 
     // Phase 11 (Plan 03): cache-then-sync (D-23) — render whatever is
@@ -1825,6 +1925,23 @@ class GlobalState extends PureComponent<Props> {
     window.api
       .getConnectivityStatus()
       .then((connectivity) => this.setState({ connectivity }))
+
+    // 49-07 (D-08, Pitfall 11): pull once on mount, because the outcomes push
+    // can precede the listener above. Read-only getter -- nothing here starts
+    // a probe (P3).
+    window.api
+      .getSignInProbeOutcomes()
+      .then((outcomes) =>
+        this.setState(
+          { signInProbeOutcomes: sanitizeSignInProbeOutcomeMap(outcomes) },
+          this.rearmFromCurrentState
+        )
+      )
+      .catch((error) =>
+        window.api.logError(`Sign-in outcomes pull failed: ${String(error)}`)
+      )
+
+    this.rearmFromCurrentState()
 
     this.setPrimaryFontFamily(this.state.primaryFontFamily, false)
     this.setSecondaryFontFamily(this.state.secondaryFontFamily, false)
@@ -1993,6 +2110,8 @@ class GlobalState extends PureComponent<Props> {
             renameCategory: this.renameCustomCategory
           },
           handleFocusRow: this.handleFocusRow,
+          handleDismissSignInNotice: this.handleDismissSignInNotice,
+          handleRearmSignInDismissals: this.handleRearmSignInDismissals,
           handleExperimentalFeatures: this.handleExperimentalFeatures,
           setTheme: this.setTheme,
           setZoomPercent: this.setZoomPercent,
