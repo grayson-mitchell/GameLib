@@ -63,6 +63,8 @@ import { showDialogBoxModalAuto } from './dialog/dialog'
 import { legendarySetup } from './storeManagers/legendary/setup'
 import { readFileSync, writeFileSync } from 'fs'
 import { LegendaryCommand } from './storeManagers/legendary/commands'
+import { legendaryConfigStore } from './storeManagers/legendary/electronStores'
+import { resolveEpicOfflineMode } from './storeManagers/legendary/epicOfflineMode'
 import { searchForExecutableOnPath } from './utils/os/path'
 import {
   createAbortController,
@@ -521,6 +523,16 @@ async function prepareLaunch(
   if (!offlineMode && gameInfo.runner === 'legendary') {
     offlineMode = await isEpicServiceOffline()
   }
+
+  // R8 (Phase 49): an expired Epic store goes offline for games that can run
+  // offline. The flag is read ONCE, here; a probe that latches it after this
+  // point only affects the next launch, never one already in flight.
+  offlineMode = resolveEpicOfflineMode({
+    offlineMode,
+    runner: gameInfo.runner,
+    canRunOffline: Boolean(gameInfo.canRunOffline),
+    storeExpired: Boolean(legendaryConfigStore.get_nodefault('expired'))
+  })
 
   // Check if the game needs an internet connection
   if (!gameInfo.canRunOffline && offlineMode) {
