@@ -28,6 +28,14 @@
   overflow-x: auto;
   scroll-behavior: smooth;
   scrollbar-width: none;
+  /* WR-04: a Tab-focused off-screen card gets the engine's native focus scroll,
+     which aligns it flush with the track edge (the scripted
+     scrollFocusedCardIntoViewHorizontally handler only runs for a controller).
+     That clips the focus ring and puts the edge card under the chevron disc.
+     Inline scroll padding leaves the same clearance as the list's own
+     padding-inline below; the two must stay equal (pinned in
+     focusRowStripSource.test.ts). Logical property: RTL locales ship. */
+  scroll-padding-inline: 15px;
 }
 
 .focusRowTrack::-webkit-scrollbar {

@@ -275,6 +275,16 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
     expect(k).toBeGreaterThanOrEqual((scale - 1) / 2 / cardRatio)
   })
 
+  it('WR-04: the track declares scroll-padding-inline equal to the list padding, so a Tab-focused edge card keeps its ring clear of the clip and the chevron', () => {
+    const track = cssBlock(css, '.focusRowTrack')
+    const scrollPadding = Number(
+      track.match(/scroll-padding-inline:\s*(\d+(?:\.\d+)?)px\s*;/)?.[1]
+    )
+    expect(Number.isFinite(scrollPadding)).toBe(true)
+    expect(scrollPadding).toBe(inlinePadding)
+    expect(track).not.toMatch(/(^|[\s;])scroll-padding:/)
+  })
+
   it('Test F: the list has no padding shorthand that could zero the inline value', () => {
     expect(list).not.toMatch(/(^|[\s;])padding:/)
   })
