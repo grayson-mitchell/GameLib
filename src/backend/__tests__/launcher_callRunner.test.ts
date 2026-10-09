@@ -439,7 +439,7 @@ describe('callRunner skipErrorHandler (49-03, 49-SPEC P2)', () => {
     ;(createGameLogWriter as jest.Mock).mockResolvedValue(makeFakeLogWriter())
     errorHandlerSpy = jest
       .spyOn(backendUtils, 'errorHandler')
-      .mockImplementation(() => undefined)
+      .mockResolvedValue(undefined)
   })
 
   afterEach(() => {
