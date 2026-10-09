@@ -4,7 +4,7 @@ Out-of-scope discoveries logged during execution; not fixed by the plan that fou
 
 ## Found during 49-09
 
-1. `meta/__tests__/hardcodedStringGate.test.ts` > "scans the whole committed scope and finds zero violations outside the allowlist" fails with one violation: `src/frontend/index.tsx:88:46` (`'(inline)'` argument in the CSP `securitypolicyviolation` listener, added by `e4c943461 fix(48): IN-10`). Pre-existing and unrelated to Phase 49's files.
+1. **CLOSED 2026-10-09 during the Phase 49 closure chain's regression gate** (the literal was moved inside the `window.api.logError` call so the gate reads it as a log argument; the D-18 allowlist is pinned to two entries and was not grown). Original note: `meta/__tests__/hardcodedStringGate.test.ts` > "scans the whole committed scope and finds zero violations outside the allowlist" failed with one violation: `src/frontend/index.tsx:88:46` (`'(inline)'` argument in the CSP `securitypolicyviolation` listener, added by `e4c943461 fix(48): IN-10`). Pre-existing and unrelated to Phase 49's files.
 2. `pnpm lint-translations:gamelib` reports 720 findings (missing translations in non-en locales, e.g. `tour.*`, `wineExplanation.*`). None concern the Phase 49 keys. Also the pnpm script starts with `export`, which fails under the Windows pnpm shell; running `LINT_TRANSLATIONS_NAMESPACES=gamelib node meta/runTs.cjs --bundle --platform=node --target=node21 meta/lintTranslations.ts` from bash works.
 
 ## Found during 49-12 (live gate Run 1)

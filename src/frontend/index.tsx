@@ -85,7 +85,11 @@ const cspOrigin = (uri: string): string => {
   }
 }
 document.addEventListener('securitypolicyviolation', (ev) => {
-  const blocked = cspOrigin(ev.blockedURI || '(inline)')
+  // An empty `blockedURI` is an inline source (inline script/style, eval).
+  // The placeholder label lives inside the log call below so the hardcoded-
+  // string gate reads it as a log argument (`isWindowApiLogArgument`), not UI
+  // text; the dedupe key keeps the empty string, one key per directive.
+  const blocked = ev.blockedURI ? cspOrigin(ev.blockedURI) : ''
   const key = `${ev.violatedDirective} ${blocked}`
   if (
     reportedCspViolations.has(key) ||
@@ -95,7 +99,7 @@ document.addEventListener('securitypolicyviolation', (ev) => {
   }
   reportedCspViolations.add(key)
   window.api.logError(
-    `[GameLib] CSP violation: ${ev.violatedDirective} blocked ${blocked} at ${cspOrigin(ev.sourceFile || ev.documentURI)}:${ev.lineNumber}`
+    `[GameLib] CSP violation: ${ev.violatedDirective} blocked ${blocked || '(inline)'} at ${cspOrigin(ev.sourceFile || ev.documentURI)}:${ev.lineNumber}`
   )
 })
 
