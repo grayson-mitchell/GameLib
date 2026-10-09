@@ -172,6 +172,32 @@ describe('GlobalState.tsx sign-in renderer state wiring (49-07: D-08, D-10, D-16
     expect(writers).toHaveLength(2)
   })
 
+  it('hydrates the dismissed set from requestAppSettings on mount, as a read, not a third writer (F-49-R1-3)', () => {
+    // Phase 49 live gate Run 1, item 10d FAIL: the construction-time seed came
+    // from the module-load mirror read and was `[]` on a cold boot, so a
+    // dismissed not-connected row returned on every relaunch while both config
+    // files still held the store. The mount must hydrate from the backend's
+    // settings and MERGE (normalise over current + persisted), never setSetting.
+    const didMount = extractBalanced(stripped, 'componentDidMount()', '{', '}')
+    expect(didMount).toMatch(
+      /requestAppSettings\(\)[\s\S]*?normalizeSignInDismissals\(\s*settings\?\.dismissedSignInNotices\s*\)/
+    )
+    expect(didMount).toMatch(
+      /normalizeSignInDismissals\(\[\.\.\.current, \.\.\.persisted\]\)/
+    )
+    expect(didMount).toMatch(/setState\(\{ dismissedSignInNotices: merged \}\)/)
+    // The hydration block itself never writes the setting back. The focusRow
+    // CR-01 hydration earlier in the mount legitimately calls setSetting, so
+    // slice from the LAST requestAppSettings() (ours) to the re-arm call.
+    const rearmAt = didMount.indexOf('this.rearmFromCurrentState()')
+    const block = didMount.slice(
+      didMount.lastIndexOf('requestAppSettings()', rearmAt),
+      rearmAt
+    )
+    expect(block).toMatch(/dismissedSignInNotices/)
+    expect(block).not.toMatch(/setSetting\(/)
+  })
+
   it('never references humbleCheckHealth anywhere in GlobalState.tsx', () => {
     expect(stripped).not.toMatch(/humbleCheckHealth/)
   })

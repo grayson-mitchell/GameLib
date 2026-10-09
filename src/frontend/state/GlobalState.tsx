@@ -1941,6 +1941,37 @@ class GlobalState extends PureComponent<Props> {
         window.api.logError(`Sign-in outcomes pull failed: ${String(error)}`)
       )
 
+    // F-49-R1-3 (Phase 49 live gate Run 1, item 10d FAIL): the dismissed set
+    // seeded at construction comes from `globalSettings`, a module-load read of
+    // the renderer mirror. On a cold boot that read lands before the mirror
+    // carries the persisted value, so the seed is `[]` and a dismissed
+    // not-connected row returned on every relaunch while both config files
+    // still held the store (measured 2026-10-09, launch 10). Hydrate once from
+    // the backend's authoritative settings, the same route the focusRow seed
+    // takes (CR-01). This is a READ: it never calls setSetting, so the two
+    // persisted writers (dismiss, re-arm) stay the only writers. Union with
+    // the in-session set so a dismiss that raced the fetch is not undone.
+    void window.api
+      .requestAppSettings()
+      .then((settings) => {
+        const persisted = normalizeSignInDismissals(
+          settings?.dismissedSignInNotices
+        )
+        if (persisted.length === 0) {
+          return
+        }
+        const current = this.state.dismissedSignInNotices
+        const merged = normalizeSignInDismissals([...current, ...persisted])
+        if (!sameSignInStores(current, merged)) {
+          this.setState({ dismissedSignInNotices: merged })
+        }
+      })
+      .catch((error) =>
+        window.api.logError(
+          `dismissedSignInNotices hydration failed: ${String(error)}`
+        )
+      )
+
     this.rearmFromCurrentState()
 
     this.setPrimaryFontFamily(this.state.primaryFontFamily, false)

@@ -4,7 +4,7 @@ title: 'Dismissed sign-in notice returns after relaunch although dismissedSignIn
 area: ui
 severity: major
 platform: any
-ready: code
+ready: live-gate
 found_by: "plan 49-12, Phase 49 macOS live gate Run 1 (49-LIVE-GATE.md)"
 files:
   - src/frontend/state/GlobalState.tsx
@@ -24,3 +24,12 @@ and ×. `GlobalState.tsx:528` seeds state from `globalSettings?.dismissedSignInN
 `normalizeSignInDismissals` / `parseSignInStore` accepts `humble`, and whether
 `handleRearmSignInDismissals` prunes it in memory without writing. Add a boot test that seeds
 the setting and asserts the row is absent.
+
+## Fix (2026-10-09, inline quick fix)
+
+`GlobalState.componentDidMount` now hydrates `dismissedSignInNotices` once from
+`window.api.requestAppSettings()` (the backend's authoritative read), merging with the in-session
+set through `normalizeSignInDismissals`, never calling `setSetting`. Same route the focusRow seed
+takes (CR-01). Pinned by `GlobalStateSignInMount.test.ts` ("hydrates the dismissed set …"); the
+two-writer count is unchanged. **Needs one live check on the Mac:** dismiss a not-connected row,
+relaunch, row absent. Until then this stays `ready: live-gate`.
