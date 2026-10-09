@@ -918,6 +918,13 @@ const IN_SCOPE_SUITES = [
  * redirection, and its first test asserts that `configPath` and the store mirror resolve under
  * `os.tmpdir()` before any write. It declares no `os`/`pathShim` mock and never touches
  * `bootstrap.init()`. 70 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 66 below.
+ *
+ * `dismissedSignInNoticesSetting.test.ts` (Phase 49 Plan 07, D-10, 2026-10-10) is classified as
+ * structurally contained on the same basis as `focusRowFirstLaunchHydration.test.ts`, whose harness
+ * it copies: it runs the real `backend/config`, `configStore` and `settingsFlowRegistration` over a
+ * disposable per-file profile under `os.tmpdir()`, mocks only the per-game settings branch and host
+ * wine discovery, declares no `os`/`pathShim` mock and never touches `bootstrap.init()`. 71
+ * `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 67 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -929,6 +936,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'clipboardFlows.test.ts',
   'devSecretVault.test.ts',
   'dialogStub.test.ts',
+  'dismissedSignInNoticesSetting.test.ts',
   'downloadQueueFlows.test.ts',
   'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
