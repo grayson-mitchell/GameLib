@@ -4,29 +4,68 @@ verified: 2026-10-09T12:00:00Z
 status: passed
 score: 10/10 must-haves verified (R1-R7 from 48-SPEC.md; R3 split into R3-core, R3-gamepad, R3-parity and R3-chevron-reach)
 covered_files:
-  - src/common/focusRowMigration.ts
-  - src/common/__tests__/focusRowMigration.test.ts
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-01-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-01-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-02-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-02-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-03-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-03-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-04-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-04-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-05-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-05-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-06-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-06-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-07-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-07-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-08-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-08-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-09-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-09-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-10-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-10-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-11-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-11-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-12-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-12-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-13-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-13-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-14-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-14-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-15-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-15-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-16-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-16-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-17-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-17-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-18-PLAN.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-18-SUMMARY.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-SPEC.md
+  - .planning/phases/48-library-rows-user-composed-filter-rows-replacing-the-single/48-UAT.md
   - src/backend/sidecar/__tests__/focusRowFirstLaunchHydration.test.ts
-  - src/frontend/state/GlobalState.tsx
-  - src/frontend/state/__tests__/GlobalStateFocusRowHydration.test.ts
-  - src/frontend/index.tsx
-  - src/frontend/helpers/inputModality.ts
-  - src/frontend/helpers/__tests__/inputModality.test.ts
-  - src/frontend/themes.scss
+  - src/common/__tests__/focusRowMigration.test.ts
+  - src/common/focusRowMigration.ts
   - src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts
   - src/frontend/components/UI/NavShell/components/FilterFocusRow/index.scss
-  - src/frontend/screens/Library/index.tsx
+  - src/frontend/helpers/__tests__/inputModality.test.ts
+  - src/frontend/helpers/inputModality.ts
+  - src/frontend/index.tsx
   - src/frontend/screens/Library/__tests__/librarySyncNoticeSource.test.ts
-  - src/frontend/screens/Library/components/FocusRowStrip/index.tsx
-  - src/frontend/screens/Library/components/FocusRowStrip/index.css
-  - src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts
   - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowOverflow.test.ts
   - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowSelectors.test.ts
   - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowStripSource.test.ts
-  - src/frontend/screens/Library/components/GameCard/index.css
+  - src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts
+  - src/frontend/screens/Library/components/FocusRowStrip/index.css
+  - src/frontend/screens/Library/components/FocusRowStrip/index.tsx
   - src/frontend/screens/Library/components/GameCard/__tests__/gameCardControllerGeometry.test.ts
   - src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts
-covered_digest: "unavailable: verification.fingerprint is not exposed by the installed gsd-sdk/gsd-tools bridge (gsd-sdk falls back to gsd-tools.cjs, which answers 'Unknown command: verification'); not hand-written. covered_files is the phase-attributed source list (plan key-files), not the raw git diff 752b510f8..HEAD, which also carries unrelated work merged in from main (Login, Steam depot, sign-in notice, tauri shell tests)."
+  - src/frontend/screens/Library/components/GameCard/index.css
+  - src/frontend/screens/Library/index.tsx
+  - src/frontend/state/GlobalState.tsx
+  - src/frontend/state/__tests__/GlobalStateFocusRowHydration.test.ts
+  - src/frontend/themes.scss
+covered_digest: "v2:sha256:baf7cc66c28d8ebe9d7c423f6d0c6009072898af52400dfe0de0f676fb293855"
+covered_digest_note: "computed 2026-10-09 by `gsd-tools verification fingerprint` (v2) over the 22 phase-attributed source and test files plus every 48-*-PLAN.md and 48-*-SUMMARY.md, 48-SPEC.md and 48-UAT.md; the verifier's earlier note that the verb was unexposed was wrong, it takes the phase dir then the covered paths"
 behavior_unverified: 0
 overrides_applied: 1
 overrides:
