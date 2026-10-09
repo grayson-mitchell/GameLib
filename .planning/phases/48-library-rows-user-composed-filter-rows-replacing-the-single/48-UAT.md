@@ -1,14 +1,14 @@
 ---
-status: diagnosed
+status: partial
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-09-SUMMARY.md, 48-10-SUMMARY.md, 48-11-SUMMARY.md, 48-12-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-09T03:50:27Z
+updated: 2026-10-09T06:10:00Z
 ---
 
 ## Current Test
 
-[testing paused — 1 item pending (12), items 10 passed and 11 issue 2026-10-08 and 3 issues owed a re-run (4, 7, 9) after gap-closure round 2; re-verification 2026-10-08 status human_needed]
+[testing paused — 10 items passed, 2 issues (11, 12) after the 2026-10-09 live gate 48-15; gaps G-48-8a, G-48-11c and G-48-12a still failed; controller clauses owed (no controller connected); re-verification pending]
 
 ## Protocol
 
@@ -155,7 +155,7 @@ result: pass — A (re-armed, not as-found): strip on launch 1, `focusRow = {kin
 
 ### 4. Strip chevron contrast over real artwork, all offered themes
 expected: Chevron contrast >= 3:1 at both edges, over the two C1-C4 reference cards (highest and lowest mean art luminance, IDs logged), in every offered theme; no overlap with the adjacent card corner or hover outline at 156px (D-01, D-05).
-result: issue — 10 themes enumerated live from the Settings theme selector (MUI listbox `[role=option]`, as 48-04 counted). C1: Recently played strip at window content 1280 px, track clientWidth 982, scrollWidth 3576, 20 cards. C2 (sRGB-converted captures of all 20 cards, controls hidden): BRIGHT card index 0 `steam:107100` mean luminance 0.50979, DARK card index 1 `gog:1829678475` 0.02065. C3: BRIGHT cannot be placed with an enabled control (index 0 is at `scrollLeft` 0, so back is disabled and forward cannot reach the right edge), so index 12 `steam:620` (0.37794) stands in for both edges; DARK is placed at back, and at forward index 9 `steam:63000` (0.06128) stands in. C4 minimum ratios (back/BRIGHT, fwd/BRIGHT, back/DARK, fwd/DARK; bar 3:1): zombie 1.70 1.70 2.91 1.99; midnightMirage 3.76 3.76 6.55 4.43; cyberSpaceOasis 1.89 1.89 3.24 2.23; high-contrast 2.25 2.25 3.83 2.63; dracula 1.43 1.43 2.41 1.67; marine 1.66 1.66 2.86 1.95; nord-light 3.33 2.89 2.70 3.11; nord-dark 2.57 2.57 4.40 3.02; gruvbox_dark 1.01 1.01 1.57 1.08; sweet 3.46 2.40 4.21 2.87. 12 of 40 combinations reach 3:1 and only midnightMirage passes all four; overall minimum 1.005 (gruvbox_dark). Glyph colour vs modal pixel agreed within 1 per channel in all 40. Overlap: the control's 36 px circle clears the card's corner (4 px radius) vertically, but a hovered card (real pointer, `:hover`) measures `transform` about 1.05 (rect 163.8 x 260.4 against 156 x 248), `z-index: 2` against the control's `z-index: 1`, and paints over it: chevron-coloured pixels in the icon rect 122 of 640 unhovered, 0 of 640 hovered, at both edges (screencapture, sRGB-converted)
+result: pass — hover-overlap clause re-run live 2026-10-09 (B9; HEAD 460df71e4, bundled debug `gamelib-shell` mtime 2026-10-09 18:11:29 local, fresh 14-game fixture HOMEs (all/view, midnightMirage), window 1280x800 unless stated, `screencapture -l` read in sRGB, CGEvent pointer, P1 asserted per launch): the forward chevron at `scrollLeft` 0 and the back chevron after one page, each approached through the adjacent edge card from above, from below and from inside the strip. With the edge card hovered (card 4 widened to 2149-2519 px, card 5 to 536-906 px, the 1.05 scale) the chevron's glyph-coloured pixel count in its icon rect is 122 in all six captures against 122 unhovered, a difference of 0 (bar: within 2; before 48-10 it was 122 unhovered against 0 hovered). The contrast clause is cited, not re-run, from item 10 (2026-10-08, HEAD 2ad53a325): every one of the 10 offered themes clears 3:1 for the chevron glyph against its opaque disc, minimum gruvbox_dark 4.02 (was 12 of 40 combinations, minimum 1.005); the BRIGHT/DARK C1-C4 card pair was replaced there by the opaque-disc check, as item 10 records. The adjacent-corner part of the clause was measured 2026-10-07 (circle 106 px from the nearest card corner) and is not re-measured at the grid-matched card width. macOS only. Previously recorded (2026-10-07, dev shell): issue — 10 themes enumerated live from the Settings theme selector (MUI listbox `[role=option]`, as 48-04 counted). C1: Recently played strip at window content 1280 px, track clientWidth 982, scrollWidth 3576, 20 cards. C2 (sRGB-converted captures of all 20 cards, controls hidden): BRIGHT card index 0 `steam:107100` mean luminance 0.50979, DARK card index 1 `gog:1829678475` 0.02065. C3: BRIGHT cannot be placed with an enabled control (index 0 is at `scrollLeft` 0, so back is disabled and forward cannot reach the right edge), so index 12 `steam:620` (0.37794) stands in for both edges; DARK is placed at back, and at forward index 9 `steam:63000` (0.06128) stands in. C4 minimum ratios (back/BRIGHT, fwd/BRIGHT, back/DARK, fwd/DARK; bar 3:1): zombie 1.70 1.70 2.91 1.99; midnightMirage 3.76 3.76 6.55 4.43; cyberSpaceOasis 1.89 1.89 3.24 2.23; high-contrast 2.25 2.25 3.83 2.63; dracula 1.43 1.43 2.41 1.67; marine 1.66 1.66 2.86 1.95; nord-light 3.33 2.89 2.70 3.11; nord-dark 2.57 2.57 4.40 3.02; gruvbox_dark 1.01 1.01 1.57 1.08; sweet 3.46 2.40 4.21 2.87. 12 of 40 combinations reach 3:1 and only midnightMirage passes all four; overall minimum 1.005 (gruvbox_dark). Glyph colour vs modal pixel agreed within 1 per channel in all 40. Overlap: the control's 36 px circle clears the card's corner (4 px radius) vertically, but a hovered card (real pointer, `:hover`) measures `transform` about 1.05 (rect 163.8 x 260.4 against 156 x 248), `z-index: 2` against the control's `z-index: 1`, and paints over it: chevron-coloured pixels in the icon rect 122 of 640 unhovered, 0 of 640 hovered, at both edges (screencapture, sRGB-converted)
 
 ### 5. Back and forward controls, true end of travel, controller focus
 expected: The back control mounts once scrolled. The forward control is `disabled` at the end (`scrollLeft + clientWidth >= scrollWidth - 1`). Neither control renders when all cards fit. Controller focus past the last visible card leaves it fully inside the track (D-06, D-07).
@@ -167,7 +167,7 @@ result: pass — 20 cards, one row (gameList height 247.97 = card height), track
 
 ### 7. FOCUS ROW panel section
 expected: FOCUS ROW is collapsed by default (D-08). A long collection name ellipsises with its full text in `title`. The divider labels read Views / Collections / Store / Runnability in that order, at >= 4.5:1 in every theme. No `gamelib:` text is visible.
-result: issue — collapsed by default: `aria-expanded="false"` on first read after launch and the `.dropdown.collapsed` panel measures height 0 px, `max-height: 0px`, `overflow: hidden`. Divider labels in DOM order Views, Collections, Store, Runnability (each `title` equals its text); a long collection (81 characters, created for the gate through Manage Categories) has computed `text-overflow: ellipsis`, `overflow: hidden`, `white-space: nowrap`, scrollWidth 613 over clientWidth 188, with the full 81-character text in `title`; no `gamelib:` text in `document.body.innerText`. Divider contrast against the panel background (sRGB-converted capture, 4 labels per theme, equal within a theme; bar 4.5:1): zombie 5.98, midnightMirage 13.13, cyberSpaceOasis 7.56, high-contrast 8.74, dracula 4.25, marine 5.41, nord-light 1.52, nord-dark 12.49, gruvbox_dark 6.12, sweet 6.64. Dracula (4.25) and nord-light (1.52) fail; 8 of 10 themes pass
+result: pass — bookkeeping from item 10, no re-measure (2026-10-09): the one failing clause, divider contrast, was re-measured live 2026-10-08 (HEAD 2ad53a325, debug build) as item 10: all ten themes at or above 4.5:1, minimum marine 4.90, dracula 4.25 to 5.83 and nord-light 1.52 to 5.48. The other clauses stand as originally measured 2026-10-07: collapsed by default, long collection name ellipsised with its full text in `title`, dividers in the order Views, Collections, Store, Runnability, no `gamelib:` text. Previously recorded (2026-10-07, dev shell): issue — collapsed by default: `aria-expanded="false"` on first read after launch and the `.dropdown.collapsed` panel measures height 0 px, `max-height: 0px`, `overflow: hidden`. Divider labels in DOM order Views, Collections, Store, Runnability (each `title` equals its text); a long collection (81 characters, created for the gate through Manage Categories) has computed `text-overflow: ellipsis`, `overflow: hidden`, `white-space: nowrap`, scrollWidth 613 over clientWidth 188, with the full 81-character text in `title`; no `gamelib:` text in `document.body.innerText`. Divider contrast against the panel background (sRGB-converted capture, 4 labels per theme, equal within a theme; bar 4.5:1): zombie 5.98, midnightMirage 13.13, cyberSpaceOasis 7.56, high-contrast 8.74, dracula 4.25, marine 5.41, nord-light 1.52, nord-dark 12.49, gruvbox_dark 6.12, sweet 6.64. Dracula (4.25) and nord-light (1.52) fail; 8 of 10 themes pass
 
 ### 8. R3 gamepad focus past the last visible card scrolls it into view
 expected: With a physical controller connected and an overflowing Recently-played strip, moving focus right past the last fully visible card scrolls that card fully inside the track rect, and focus can continue onto cards beyond the first rendered page (SPEC R3 acceptance; D-06 handler is gated on `activeController`, source-regex-tested only). Source: 48-VERIFICATION.md (re-verification 2026-10-07) human_verification 1; UAT item 5 controller clause.
@@ -176,7 +176,7 @@ reported: "yes that works, but. 1. when using the mouse there is a 'thin border'
 
 ### 9. Real-pointer reach of the strip chevrons through a hovered edge card
 expected: Moving a REAL pointer onto each chevron through the adjacent edge card (from above, below and inside the strip, so the card carries `:hover` transform 1.05 and z-index 2 against the control's z-index 1), `document.elementFromPoint` at the chevron centre returns the control, and a click advances `scrollLeft`; the card never swallows the click. UAT item 4 drove controls with `element.click()`, which bypasses hit-testing. If the card swallows the click this promotes to an R3 gap. Source: 48-VERIFICATION.md human_verification 2.
-result: issue — operator, Windows 11, dev shell, real mouse, 2026-10-07: the chevron does not stay on top; an active (hovered) edge card hides it. Whether a click on the hidden chevron still reaches the control was not reported.
+result: pass — re-run live 2026-10-09 on macOS with a CGEvent pointer (the original report was Windows 11 with a physical mouse; HEAD 460df71e4, bundled debug `gamelib-shell` mtime 2026-10-09 18:11:29 local, fresh 14-game fixture HOMEs (all/view, midnightMirage), window 1280x800 unless stated, `screencapture -l` read in sRGB, CGEvent pointer, P1 asserted per launch). Pointer moved onto each chevron through the adjacent edge card from above, from below and from inside the strip (6-step paths, 0.7 s dwell). The hovered edge card never hid the chevron: glyph pixel count 122 against 122 unhovered in all six approaches (B9). With the pointer on the chevron centre the card is no longer hovered, and a click at the centre advanced the strip by exactly 5 cards on the grey ladder every time (0-4 to 5-9 on each forward click, 5-9 to 0-4 on each back click), so the card never swallowed the click. `document.elementFromPoint` was not recorded: the devtools console takes no typed lines in this rig, so hit-testing is shown by the click outcome only. Previously recorded (2026-10-07, Windows 11 dev shell, real mouse): issue — operator, Windows 11, dev shell, real mouse, 2026-10-07: the chevron does not stay on top; an active (hovered) edge card hides it. Whether a click on the hidden chevron still reaches the control was not reported.
 reported: "no it does not stay on top... if the tile is activated it hides the chevron."
 severity: major
 
@@ -186,11 +186,11 @@ result: pass — fixture profile on a throwaway HOME (14 sideloaded games, solid
 
 ### 11. Strip cards match the grid: width parity, paging, ring clearance and resize sanity after 48-12
 expected: At window 1280 and at a narrower width that still shows the strip (520px or the narrowest non-zero track), the first `.focusRowTrack .gameCard` and the first `.listing > .gameList .gameCard` rects (neither hovered) are within 1px in width and left edge at `scrollLeft` 0 (desk prediction on the item 4 macOS geometry: 172.4px at 1280, 198px at 520; on another platform parity is the criterion). Filtering to an empty grid (`FilterZeroResult`) and then switching to list layout leaves the strip card width unchanged, and first paint shows no 156px-then-wide jump. One forward click advances exactly one grid row and item 5's end-of-travel and 2-card clauses still hold; item 6's title-rect and 20-card clauses still hold at both widths. At 1280 and in the single-column band (a grid card wider than about 270px), hovering the first strip card at `scrollLeft` 0 and the last at end of travel shows the whole 3px ring on all four sides, and controller focus past the last visible card leaves each ring at least 3px inside the track rect. Dragging the window height slowly through the main-scrollbar threshold and the width across a column breakpoint produces no sustained strip-width flicker and no `ResizeObserver loop` error in the devtools console (48-REVIEW.md WR-01 predicts one per width-changing frame from the self-observing track; this item is its live test), and the strip again matches the grid within 1px afterwards. Source: 48-12-SUMMARY.md human checks owed; 48-VERIFICATION.md (2026-10-08) human_verification 2 and 5; G-48-8c.
-result: issue — same fixture and build as item 10 (midnightMirage, window 1280x800, then 760 wide by Accessibility; 520 not run). PASS: strip card width equals grid card width, 177.0-177.5 pt vs 177.0-177.5 pt at 1280 (first card, scrollLeft 0, x identical) and 219.0 pt vs 219.0 pt at 760; one forward click advances exactly one grid row (5 cards, grey levels 0-4 to 5-9) at 1280; the hovered first strip card at scrollLeft 0 wears the whole ring on all four sides, left side not clipped. FAIL 1 (WR-01 confirmed live): the `ResizeObserver loop completed undelivered notifications` window error fires during a width sweep 1280 to 600 to 1280 and a height sweep 800 to 400 to 800 in 0.15 s steps: 27 times and 25 times in two launches with the strip, 0 times in the identical sweep with `focusRow` null (strip absent, 14 cards, same build), logged by the BLANKPROBE window-error hook. Flicker was not measured. FAIL 2 (new, not in any gap): from a fresh launch with 14 cards, forward click 1 shows cards 5-9, click 2 shows cards 10-13 and one EMPTY slot, click 3 and 4 show a completely blank strip, and the forward chevron stays enabled (glyph full colour, same as click 1) throughout; reproduced on two launches. The strip can be paged past its last card into nothing, and the end-of-travel disable never arms. Cause not investigated; this fixture's count is not a multiple of the 5-card page. NOT RUN: last-card ring at end of travel (blocked by FAIL 2), controller focus ring, empty-grid then list-layout width stability, first-paint 156px-then-wide jump, 520 px width. Rig notes: the first click after a launch only activates the window, so every click run was preceded by an activation click and a hover dwell; fake HOME does not isolate WebKit cookies.
+result: issue — re-run live 2026-10-09 on the build carrying 48-13 and 48-14 (HEAD 460df71e4, bundled debug `gamelib-shell` mtime 2026-10-09 18:11:29 local, fresh 14-game fixture HOMEs (all/view, midnightMirage), window 1280x800 unless stated, `screencapture -l` read in sRGB, CGEvent pointer, P1 asserted per launch). FAIL 2 (G-48-11b) is fixed: two launches show click 1 cards 5-9, click 2 cards 9-13 with card 13's right art edge 14.5 pt and 15.0 pt (derived track edge, +/- 1 px) inside the track and no empty slot, the forward glyph (55,101,101) equal to the disabled back reference, a third click leaving the track crop hash unchanged, and back clicks returning to cards 0-4 with back disabled; the pre-fix binary on the same fixture reproduced the blank travel. Width 760 (k = 2): 6 clicks to cards 12-13, 15.0 pt clearance, forward disabled; width 520 (k = 1): 13 clicks to card 13, 15.0 pt, forward disabled. FAIL 1 (G-48-11a) is fixed: the same 1280 to 600 to 1280 and 800 to 400 to 800 sweep logged 0 `ResizeObserver loop` window errors in each of two strip launches and 0 in the `focusRow` null control, against 34 on the pre-fix binary in the same rig; after the sweep the first strip card's left and right art edges had 0 px spread over 10 captures and equalled the grid card. Parity: strip card width equals the grid's at 1280 (354-355 px, one launch 1 px wider), 760 (438 px) and 520 (444 px), left edges equal at `scrollLeft` 0. One forward click advances exactly k = 5 cards at 1280. First paint: no frame near 156 pt, first Library frame within 1.0-1.5 CSS px of settled and identical in the grid, 0 px strip-versus-grid in every frame (cadence 121 ms, so a sub-frame change is not excluded). Ring: card 0 at `scrollLeft` 0 and card 13 at end of travel hovered show the ring on all four sides, 5-6 px (2.5-3.0 pt), outer edge 5.5 pt inside the track. MISS: filtering to an empty grid (`FilterZeroResult`) changed the strip card from 354-355 px to 358-359 px, +2 CSS px against the 1 px bar (the main scrollbar was also gone in that state); in list layout with the empty result it stayed 358-359 and with results 354-355; filed as G-48-11c. NOT RUN: the controller focus ring (no controller), item 6's title-rect and 20-card clauses at both widths (14-card fixture, no DOM rects), item 5's 2-card (no controls) clause on this build. Previously recorded (2026-10-08, debug build on HEAD 2ad53a325): issue — same fixture and build as item 10 (midnightMirage, window 1280x800, then 760 wide by Accessibility; 520 not run). PASS: strip card width equals grid card width, 177.0-177.5 pt vs 177.0-177.5 pt at 1280 (first card, scrollLeft 0, x identical) and 219.0 pt vs 219.0 pt at 760; one forward click advances exactly one grid row (5 cards, grey levels 0-4 to 5-9) at 1280; the hovered first strip card at scrollLeft 0 wears the whole ring on all four sides, left side not clipped. FAIL 1 (WR-01 confirmed live): the `ResizeObserver loop completed undelivered notifications` window error fires during a width sweep 1280 to 600 to 1280 and a height sweep 800 to 400 to 800 in 0.15 s steps: 27 times and 25 times in two launches with the strip, 0 times in the identical sweep with `focusRow` null (strip absent, 14 cards, same build), logged by the BLANKPROBE window-error hook. Flicker was not measured. FAIL 2 (new, not in any gap): from a fresh launch with 14 cards, forward click 1 shows cards 5-9, click 2 shows cards 10-13 and one EMPTY slot, click 3 and 4 show a completely blank strip, and the forward chevron stays enabled (glyph full colour, same as click 1) throughout; reproduced on two launches. The strip can be paged past its last card into nothing, and the end-of-travel disable never arms. Cause not investigated; this fixture's count is not a multiple of the 5-card page. NOT RUN: last-card ring at end of travel (blocked by FAIL 2), controller focus ring, empty-grid then list-layout width stability, first-paint 156px-then-wide jump, 520 px width. Rig notes: the first click after a launch only activates the window, so every click run was preceded by an activation click and a hover dwell; fake HOME does not isolate WebKit cookies.
 
 ### 12. GameCard ring and geometry on mouse/controller handoff after 48-09
 expected: With a focus row showing and a physical controller connected, switching between mouse and controller input never resizes or crops any card (grid or strip): card rects are identical before and after the handoff (G-48-8a). Hovering a card with the mouse wears the same thick 3px console-style ring that controller focus wears, exactly one tile is ringed at a time, and a hovered card in the grid header or chip row area does not ring (G-48-8b). With the pointer resting anywhere over the library column, Tab-focusing a card with the keyboard still shows a visible focus ring (48-REVIEW.md WR-02 reports the stale-focus suppression now keys off `.listing:hover`; this clause is its live test). Source: 48-VERIFICATION.md (2026-10-08) human_verification 4; 48-09-SUMMARY.md.
-result: pending
+result: issue — mouse and keyboard clauses re-run live 2026-10-09 (HEAD 460df71e4, bundled debug `gamelib-shell` mtime 2026-10-09 18:11:29 local, fresh 14-game fixture HOMEs (all/view, midnightMirage), window 1280x800 unless stated, `screencapture -l` read in sRGB, CGEvent pointer, P1 asserted per launch). PASS: hovering a strip card rings exactly that one tile (top 5 px, bottom 5, left 6, right 6; 2.5-3.0 pt) and hovering a grid card rings exactly that one tile, strip card unringed (four sides 5, 5, 6, 6 px when scrolled into view); the pointer on the grid header or on the chip row (a `"Fix"` search chip showing) rings nothing (0 tiles). FAIL (the clause 48-REVIEW.md WR-02 predicted): with the pointer resting in the gap between two grid cards, inside the listing, 40 Tab presses focus controls inside cards and 0 of 40 captures show a ringed card; the identical key sequence and anchor click with the pointer then moved to the sidebar rings the focused card on all four sides (5, 5, 6, 6 px) in 40 of 40 captures. Filed as G-48-12a. NOT RUN: the mouse/controller handoff clause (card rects identical across the handoff, G-48-8a), because no physical controller was connected. Previously recorded (2026-10-08): pending
 
 ## Evidence log
 
@@ -312,11 +312,13 @@ After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `the
 ## Summary
 
 total: 12
-passed: 7
-issues: 4
-pending: 1
+passed: 10
+issues: 2
+pending: 0
 skipped: 0
 blocked: 0
+
+Update 2026-10-09 (live gate 48-15, HEAD 460df71e4 debug build carrying 48-13 and 48-14, fresh fake-HOME fixtures, macOS): items 4 (hover-overlap clause), 9, 11 and 12 were re-run with numbers; item 7 was reconciled from item 10 with no re-measure. Items 4, 7 and 9 now pass. Item 11 stays an issue: FAIL 2 (G-48-11b) and FAIL 1 (G-48-11a) are fixed and measured (two launches walk 0-4, 5-9, 9-13 with the forward chevron disabled and 15 pt end clearance; 0 `ResizeObserver loop` errors against 34 on the pre-fix binary), but the empty-grid state widens the strip card by 2 CSS px (new gap G-48-11c). Item 12 is an issue: hover rings pass, the Tab-focus ring is absent while the pointer rests over the listing (new gap G-48-12a, the WR-02 prediction). Gaps resolved by measurement: G-48-4a and G-48-7 (item 10), G-48-4b, G-48-8b, G-48-8c, G-48-9, G-48-11a and G-48-11b. Gaps still failed: G-48-8a (no controller), G-48-11c and G-48-12a. Owed: the controller clauses (item 11's focus ring past the last visible card, item 12's mouse/controller handoff, G-48-8a), item 6's title-rect and 20-card clauses and item 5's 2-card clause on this build, and `document.elementFromPoint` for item 9 (devtools console takes no typed lines in this rig).
 
 Update 2026-10-08 (gap-closure round 2 executed: 48-09, 48-10, 48-11, 48-12; re-verification `human_needed`, 8/10 must-haves, no failures): items 11 and 12 added for the 48-12 width-parity, paging, ring-clearance and resize checks and the 48-09 mouse/controller ring and geometry checks. Items 4, 7 and 9 keep their recorded `issue` results from before the fixes and are owed a re-run alongside item 10; the `## Gaps` entries G-48-4a, 4b, 7, 8a, 8b, 8c and 9 keep `status: failed` until that run reconciles them. All gates in this round are desk gates (source and token censuses, stubbed-DOM behaviour tests) with no CSS engine, so none of the live numbers below have been re-measured yet.
 
@@ -328,7 +330,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-4a
   truth: "Chevron contrast is at least 3:1 over the strip artwork at both edges, in every offered theme (D-01, D-05; adopted bar WCAG 1.4.11)"
-  status: failed
+  status: resolved
+  resolved_by: "item 10, 2026-10-08, HEAD 2ad53a325 debug build: all 10 offered themes clear 3:1 for the chevron glyph against its opaque disc (minimum gruvbox_dark 4.02; was 12 of 40 combinations, minimum 1.005); cited in item 4 on 2026-10-09"
   reason: "12 of 40 theme/card/edge combinations reach 3:1; only midnightMirage passes all four; overall minimum 1.005 (gruvbox_dark). Minima, back/BRIGHT, fwd/BRIGHT, back/DARK, fwd/DARK: zombie 1.70 1.70 2.91 1.99; midnightMirage 3.76 3.76 6.55 4.43; cyberSpaceOasis 1.89 1.89 3.24 2.23; high-contrast 2.25 2.25 3.83 2.63; dracula 1.43 1.43 2.41 1.67; marine 1.66 1.66 2.86 1.95; nord-light 3.33 2.89 2.70 3.11; nord-dark 2.57 2.57 4.40 3.02; gruvbox_dark 1.01 1.01 1.57 1.08; sweet 3.46 2.40 4.21 2.87"
   severity: major
   test: 4
@@ -342,7 +345,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-4b
   truth: "The back and forward controls do not overlap the adjacent card's hover outline (D-05, UI-SPEC E6 36 px rationale)"
-  status: failed
+  status: resolved
+  resolved_by: "item 4 hover-overlap clause, B9, 2026-10-09, HEAD 460df71e4 debug build, macOS CGEvent pointer: edge card hovered, chevron glyph pixel count 122 against 122 unhovered at both chevrons from above, below and inside (was 122 against 0)"
   reason: "A hovered card (real pointer) is transform-scaled to about 1.05 and has z-index 2; the control has z-index 1, so the card paints over the control where they overlap. Chevron-coloured pixels in the icon rect: 122 of 640 unhovered, 0 of 640 hovered, at both edges. The pointer moving from a card onto the control therefore sees the chevron disappear under the card it left; whether the control stays clickable in that state was not probed"
   severity: major
   test: 4
@@ -355,7 +359,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-7
   truth: "FOCUS ROW divider labels read at least 4.5:1 in every theme (SC 1.4.3, adopted bar)"
-  status: failed
+  status: resolved
+  resolved_by: "item 10, 2026-10-08, HEAD 2ad53a325 debug build: divider labels clear 4.5:1 in all ten themes, minimum marine 4.90, dracula 4.25 to 5.83, nord-light 1.52 to 5.48; cited in item 7 on 2026-10-09"
   reason: "dracula 4.25 (`177,177,177` on `69,71,90`) and nord-light 1.52 (`57,59,65` on `76,86,106`); the other 8 themes pass (5.41 to 13.13). All four labels in a theme measure the same"
   severity: minor
   test: 7
@@ -389,7 +394,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-8b
   truth: "The strip card's focus/hover border is the thicker controller-mode (console-style) border in mouse mode too"
-  status: failed
+  status: resolved
+  resolved_by: "item 12 B11, 2026-10-09, HEAD 460df71e4 debug build: a hovered strip card and a hovered grid card ring on all four sides at 5-6 px (2.5-3.0 pt), the same band widths as the keyboard-focus ring on a card (5, 5, 6, 6 px); controller-mode ring itself not re-measured (no controller)"
   reason: "User reported: when using the mouse there is a 'thin border' around the tile. when changing to the controller the border becomes thick ... I want the thicker border that is in controller mode (like console)"
   severity: minor
   test: 8
@@ -409,7 +415,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-9
   truth: "Moving a real pointer onto a strip chevron through the adjacent edge card, the chevron stays on top of the hovered card and a click advances the strip"
-  status: failed
+  status: resolved
+  resolved_by: "item 9 B9, 2026-10-09, HEAD 460df71e4 debug build, macOS CGEvent pointer (original report Windows): chevron glyph count 122 against 122 unhovered with the edge card hovered, and a click at the chevron centre advanced the strip by exactly 5 cards in all six approaches"
   reason: "User reported: no it does not stay on top... if the tile is activated it hides the chevron."
   severity: major
   test: 9
@@ -424,7 +431,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-8c
   truth: "Focus-row strip cards are the same width as the main grid's cards at every window width"
-  status: failed
+  status: resolved
+  resolved_by: "item 11 B5, 2026-10-09, HEAD 460df71e4 debug build: strip card width equals the grid card width at 1280 (354-355 px, one launch 1 px wider), 760 (438 px) and 520 (444 px), left edges equal at scrollLeft 0; three widths sampled, not every width; the empty-grid state is filed separately as G-48-11c"
   reason: "User reported: for some reason the tiles in the focus row are uniformly smaller rather than being the same size of the rest of the tiles??? — operator ruling 2026-10-07: 'match the grid', which amends locked D-01 (SPEC R3, fixed 156px) to 'equals the grid's card width'"
   severity: minor
   test: 8
@@ -445,7 +453,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-11a
   truth: "Resizing the window with a focus-row strip showing raises no ResizeObserver loop window error, and the strip width settles without sustained flicker (48-REVIEW.md WR-01; T-48-36)"
-  status: failed
+  status: resolved
+  resolved_by: "item 11 B3, 2026-10-09, HEAD 460df71e4 debug build: 0 ResizeObserver loop window errors in each of two strip launches and 0 in the focusRow null control, against 34 on the pre-fix binary in the same rig (was 27 and 25); B4 strip card edges 0 px spread over 10 captures after the sweep"
   reason: "User reported (item 11 FAIL 1, WR-01 confirmed live): the `ResizeObserver loop completed undelivered notifications` window error fires during a width sweep 1280 to 600 to 1280 and a height sweep 800 to 400 to 800 in 0.15 s steps: 27 times and 25 times in two launches with the strip, 0 times in the identical sweep with `focusRow` null (strip absent, 14 cards, same build), logged by the BLANKPROBE window-error hook. Flicker was not measured."
   severity: medium
   test: 11
@@ -463,7 +472,8 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-11b
   truth: "The strip pages no further than its last card, and the forward control is disabled once `scrollLeft + clientWidth >= scrollWidth - 1` (SPEC R3, D-05, D-07, item 5 end-of-travel clause)"
-  status: fixed-pending-live-gate
+  status: resolved
+  resolved_by: "item 11 B1 and B2, 2026-10-09, HEAD 460df71e4 debug build: two launches at 1280 page 0-4, 5-9, 9-13 with card 13 14.5 pt and 15.0 pt inside the track, no empty slot, forward chevron disabled and a third click changing no pixel; 760 ends on card 13 after 6 clicks and 520 after 13, each 15.0 pt clear and forward disabled; the pre-fix binary reproduced blank travel on the same fixture"
   reason: "User reported (item 11 FAIL 2, new, not in any gap): from a fresh launch with 14 cards, forward click 1 shows cards 5-9, click 2 shows cards 10-13 and one EMPTY slot, click 3 and 4 show a completely blank strip, and the forward chevron stays enabled (glyph full colour, same as click 1) throughout; reproduced on two launches. The strip can be paged past its last card into nothing, and the end-of-travel disable never arms. Item 5 measured a correct end of travel on 2026-10-07, before 48-10 and 48-12: 20 cards at 156px, scrollWidth 3576 = 20 x 180 - 24."
   severity: major
   test: 11
@@ -477,4 +487,34 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
     - "Pin the strip card wrapper width to `var(--focus-row-card-width, 156px)` under `.focusRowTrack .gameList` (the cf-pin-item-width rule), written red-gate first; plan 48-13 Task 2 is unblocked"
     - "A live re-run of item 11 FAIL 2 (48-15)"
   resolution: "Fixed 2026-10-09 in c747af0a6: `width: var(--focus-row-card-width, 156px)` on `.focusRowTrack .gameList > *`. Red gate in focusRowStripSource.test.ts. Desk harness, ref c747af0a6: WKWebView and Chromium both 108 of 108 variants within 0.6px of E, no empty slot (evidence/48-13/results-after-fix.json). Not closed: the live item 11 FAIL 2 re-run is owed to 48-15."
+  debug_session: ""
+
+- gap_id: G-48-11c
+  truth: "Filtering to an empty grid (FilterZeroResult) and then switching to list layout leaves the strip card width unchanged (item 11, 48-12 SPEC amendment: strip cards equal the grid's width)"
+  status: failed
+  reason: "Live 2026-10-09 (item 11 B7, HEAD 460df71e4 debug build, 1280x800, macOS): with a search that matches nothing (`zzzz`, `0 of 14 games`) the strip card measured 358-359 px (179.0-179.5 pt) against 354-355 px (177.0-177.5 pt) with all 14 games, a change of +4 capture px = +2 CSS px against the 1 px bar. In that state the main scrollbar is gone and the fifth strip card sits 5 pt inside the track. In list layout with the empty result the strip card stayed 358-359 px; in list layout with all 14 games it was 354-355 px; a search matching one game (`07`) left it at 354-355 px. Back to grid layout and an empty search it read 354-355 px."
+  severity: minor
+  test: 11
+  reported: "2026-10-09, live gate 48-15, HEAD 460df71e4 debug build on a 14-game fixture profile (fake HOME), macOS"
+  artifacts:
+    - path: "not diagnosed"
+      issue: "symptom only: strip card width changes by +2 CSS px in the FilterZeroResult state"
+  missing:
+    - "Diagnosis: why the strip card width differs in the empty-result state, and whether the +2 CSS px is the width a grid card would take there"
+    - "A live re-run of item 11's empty-grid clause after a fix"
+  debug_session: ""
+
+- gap_id: G-48-12a
+  truth: "With the pointer resting anywhere over the library column, Tab-focusing a card with the keyboard still shows a visible focus ring (48-REVIEW.md WR-02)"
+  status: failed
+  reason: "Live 2026-10-09 (item 12 B11, HEAD 460df71e4 debug build, macOS, real CGEvent Tab key): with the pointer resting in the gap between two grid cards (inside the listing) 40 Tab presses focused controls inside cards and 0 of 40 captures showed a ringed card, in two launches. The identical key sequence and anchor click with the pointer then moved to the sidebar showed a ring on the focused card on all four sides (5, 5, 6, 6 px) in 40 of 40 captures. With the pointer over the heading, rings appeared only on the card under the pointer (hover ring), not on the keyboard-focused card."
+  severity: major
+  test: 12
+  reported: "2026-10-09, live gate 48-15, HEAD 460df71e4 debug build on a 14-game fixture profile (fake HOME), macOS"
+  artifacts:
+    - path: "not diagnosed"
+      issue: "symptom only: no ring on a Tab-focused card while the pointer rests over the grid listing"
+  missing:
+    - "Diagnosis of why the focus ring is absent in that state (WR-02 in 48-REVIEW.md predicted it)"
+    - "A live re-run of item 12's keyboard clause after a fix"
   debug_session: ""
