@@ -3,7 +3,7 @@ status: partial
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-09-SUMMARY.md, 48-10-SUMMARY.md, 48-11-SUMMARY.md, 48-12-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-09T07:15:00Z
+updated: 2026-10-09T20:00:00Z
 ---
 
 ## Current Test
@@ -496,12 +496,17 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
   severity: minor
   test: 11
   reported: "2026-10-09, live gate 48-15, HEAD 460df71e4 debug build on a 14-game fixture profile (fake HOME), macOS"
+  root_cause: "MEASURED IN WEBKIT at the desk (2026-10-09, plan 48-17, WKWebView via evidence/48-17/run-webkit.sh at base a2f57882b, evidence/48-17/results-before-fix.json), not yet live. The global `::-webkit-scrollbar { width: 10px }` (index.scss) gives the `main.content` scroller (App.css, `overflow-y: auto`) a vertical bar that takes layout width; an empty grid no longer overflows, the bar goes, and `.listing` and the strip track widen by the bar. Instrument: scrollbar 10 with the grid (A1), 0 with FilterZeroResult (A2). Track 988 to 998 (+10 = the bar), strip card 172.391 to 174.391 (+2.0 = 10 / n at n = 5 columns), list layout empty (A5) 174.391. Isolating counterfactual A3 (empty state plus a spacer that keeps the scroller overflowing): scrollbar 10, card 172.391, delta 0. A4 (grid shown, scroller overflow hidden): the grid card is 174.391, equal to the A2 strip card. So the +2 is exactly the width a grid column has over the scrollbar-less container: the strip matched a grid that is never shown, while SPEC R4 and item 11 require it not to move with filter state. Matches live +2 CSS px (48-15 B7, 354-355 to 358-359 capture px)."
   artifacts:
-    - path: "not diagnosed"
-      issue: "symptom only: strip card width changes by +2 CSS px in the FilterZeroResult state"
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts"
+      issue: "syncCardWidth derived the column over the live track width, which includes the 10px the scroller's bar gives back when the grid is not shown; now takes a StripLayoutContext and holds the grid's scrollbar allowance (readScrollerAllowance)"
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.tsx"
+      issue: "had no way to know the grid is hidden; gains a gridShown prop read through a ref by one stable layout context at both sync call sites, and gridShown in the sync layout effect deps"
+    - path: "src/frontend/screens/Library/index.tsx"
+      issue: "passes gridShown (libraryToShow.length > 0, not refreshing in the foreground, layout grid), mirroring the GamesList mount condition"
   missing:
-    - "Diagnosis: why the strip card width differs in the empty-result state, and whether the +2 CSS px is the width a grid card would take there"
-    - "A live re-run of item 11's empty-grid clause after a fix"
+    - "DONE 2026-10-09: desk fix d77571f9c (strip-only scrollbar-allowance hold; Library/index.css, App.css and index.scss untouched); WebKit A1-A9 pass (evidence/48-17/results-after-fix.json): empty and list states read 172.391 against 172.391 with the grid, a non-overflowing library matches its grid, a resize while hidden follows, and a track that never saw the grid takes the live scrollbar-less column (documented edge)"
+    - "A live re-run of item 11's empty-grid then list-layout clause (48-18)"
   debug_session: ""
 
 - gap_id: G-48-12a
