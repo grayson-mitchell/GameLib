@@ -892,3 +892,157 @@ the first time here. The three theme names are all present in the selector's set
 `gruvbox_dark`). Four operator-supplied facts are not verifiable from this Windows box and are
 discovered at preflight: the `userData` directory name, the credential files' key names, the Epic
 OAuth hostname legendary contacts, and whether a Keychain "Always Allow" already exists.
+
+---
+
+## Run 1 — 2026-10-09 (UTC; operator's local date 2026-10-10 NZDT)
+
+**Operator:** the project owner, on the Mac, driving the app window, the Keychain dialogs and
+`sudo`. **Shell side:** driven from the assistant's shell after the operator's interactive zsh
+swallowed three multi-line pastes (`interactive_comments` off, then `banghist`, then an unexplained
+silent paste); recorded in `preflight.txt`. PID checks on the assistant side used
+`pgrep -x gamelib-shell` because a `bash -c` carrying the `-f` pattern self-matches.
+
+**Session dir:** `/tmp/gamelib-gate-49-20261009T193112Z`, mode 0700. **Tags under test:**
+legendary 0.21.0, gogdl v1.3.0, nile v1.2.0 (`meta/releaseTags.ts:44-46`). Sidecar rebuilt
+before launch 1 (`build/main/sidecar.js`, 1442145 bytes).
+
+**Launches run:** 1, 2, 3, 4, 6, 7, 8, 9, 10. **Launch 5 not run** (see item 5/6). Every launch
+had exactly one `gamelib-shell` instance at window-up and at teardown. No launch was aborted.
+
+### Preflight facts that changed the plan
+
+- Credential paths resolved: Epic `GameLib/legendaryConfig/legendary/user.json`; GOG
+  `gamelib/gog_store/auth.json` (one directory, two spellings); Amazon
+  `GameLib/nile_config/nile/current_user.json` + `installed.json`.
+- Epic keys include `expires_at`, `refresh_expires_at`, `refresh_token` (induction as written).
+- GOG entry keys include `loginTime` (induction as written; one account entry).
+- **Amazon `current_user.json` holds only `name` and `user_id`.** nile v1.2.0 keeps its tokens
+  in an encrypted `*.enc` blob in the same directory. The item 5 induction (edit refresh/expiry
+  keys) has nothing to edit. Installed count = 0.
+- All five stores connected at launch 1 (Accounts screen); never-connected set empty, so items
+  10/11 used the sign-out fallback (Humble = B, GOG = A). No controller: item 11c used the
+  inspector `history.back()` stand-in.
+
+### Verdicts
+
+One line per item for the record gate, then the table:
+
+- Item 1 — PASS (launch 2), with FINDING F-49-R1-1
+- Item 2 — PASS (launch 4)
+- Item 3 — PASS (launch 2)
+- Item 4 — PASS (launch 4)
+- Item 5 — NOT SCORED (induction impossible: encrypted nile token store); FINDING recorded, todo filed
+- Item 6 — FINDING A4 (result (c), from launches 1-4; launch 5 skipped as redundant)
+- Item 7 — PASS (launch 6; Steam denied, Humble recorded absent)
+- Item 8 — PASS (launch 7)
+- Item 9 — PASS (launch 8)
+- Item 10 — FAIL on 10d (launch 10); 10a/10b/10c PASS; FINDING nord_light
+- Item 11 — PASS (launches 9, 10)
+
+| Item | Launch | Result | Evidence | Notes |
+|---|---|---|---|---|
+| 1 | 2 | **PASS** (+ FINDING) | `gamelib-launch-2.log`, `runner-legendary-launch-2.log`, `flags.log` | screenshots not captured (capture loop saw the wrong Space); row/tile copy operator-attested. FINDING: legendary **deleted `user.json`** on the invalid refresh token; see F-49-R1-1. |
+| 2 | 4 | **PASS** | `gamelib-launch-4.log`, `runner-legendary-launch-4.log`, `hosts-check.txt`, `item2-library.png` | Library showed "Epic Games is not connected" (F-49-R1-1 fallout), not an expired row. |
+| 3 | 2 | **PASS** | `gamelib-launch-2.log`, `runner-gog-launch-2.log`, `flags.log` | gogdl did not rewrite or remove `auth.json` (mtime unchanged). |
+| 4 | 4 | **PASS** | `gamelib-launch-4.log`, `runner-gog-launch-4.log`, `hosts-check.txt` | |
+| 5 | — | **NOT SCORED** | `preflight.txt` | induction impossible by file edit (encrypted token store); operator declined server-side device deregistration. Follow-up todo, `ready: live-gate`. |
+| 6 | 1-4 (launch 5 skipped) | **FINDING (A4)** | `runner-nile-launch-{1,2,3,4,6,7,9}.log` | with 0 installed, `list-updates --json` prints `[]` + `ERROR [CLI]: No games installed` before any auth; observed 7×. Result (c). |
+| 7 | 6 | **PASS** (Steam) / Humble recorded as absent | `gamelib-launch-6.log`, `item7-library.png` | one dialog (Steam) denied; Humble slot read `ok present=false` (session lives in the dev vault, not the Keychain), review Test 2 CONDITIONAL. 7c PASS: Steam row still present. No dialog screenshot. |
+| 8 | 7 | **PASS** | `gamelib-launch-7.log`, `item8-timeline.txt` | sidecar bound won: `bound reached`, `steam outcome=unknown elapsed=45009ms`; Rust `keyring:timeout` 6 ms later; late Deny produced no `[signInProbe]` line. |
+| 9 | 8 | **PASS** | `gamelib-launch-8.log`, `sidecar-stdout.txt`, `item9-timing.txt` | `EXIT_CODE 0`, elapsed **2.437 s**, `pass started stores=legendary,gog,nile,humble,steam`, no leftover pid. |
+| 10 | 9, 10 | **FAIL (10d)**; 10a/10b/10c PASS; FINDING (nord_light) | `item10-themes/`, `config-dismissed.txt`, `item10d-launch10-library.png` | dismiss persisted (`store/config.json settings.dismissedSignInNotices = ["humble"]`) yet the Humble row returned on relaunch. See F-49-R1-3. |
+| 11 | 9, 10 | **PASS** | `gamelib-launch-9.log`, `item11-shot-{1,2}.png`, `gamelib-launch-10.log` | exactly two `oauthLoginCapture runner=gog` windows in launch 9: `loginwin-2 … cancelled reason=window-closed` (11a close), `loginwin-3 … captured` (11d). No third window → 11b/11c did not reopen. Launch 10: `gog outcome=healthy`, no GOG row. |
+
+### Required literals observed (redacted excerpts)
+
+Launch 1 (positive control): `pass complete outcomes=legendary:healthy,gog:healthy,nile:healthy,humble:healthy,steam:expired` (Steam latched by the vault build as the contract predicts; `credentialsMissing` present in `flags.log` after launch 1).
+
+Launch 2:
+```
+[signInProbe] pass started stores=legendary,gog,nile,humble,steam
+Sign-in probe: … legendary status --json
+[signInProbe] legendary outcome=expired elapsed=1049ms
+[signInProbe] legendary verdict=latched
+Running command: … gogdl --auth-config-path "…/gog_store/auth.json" auth
+[signInProbe] gog outcome=expired elapsed=1041ms
+[signInProbe] gog verdict=latched
+[signInProbe] pass complete outcomes=legendary:expired,gog:expired,nile:healthy,humble:healthy,steam:expired
+runner-legendary: [EPCAPI] ERROR: Login to EGS API failed with errorCode: errors.com.epicgames.account.auth_token.invalid_refresh_token
+runner-legendary: [Core] ERROR: Stored credentials are no longer valid! Please login again.
+runner-gog: null            (×3, one per gogdl auth spawn; NO "Failed to refresh credentials")
+flags: legendary_store/config.json "expired": true ; gog_store/config.json "expired": true
+```
+`status --json` printed **no JSON to stdout** on the failure path (A5: the healthy path's stdout was not inspected for the `account` key in this run; the classifier reached `expired` from the stderr marker).
+
+Launch 3 (clear): `gog outcome=healthy` + `gog verdict=cleared`; `legendary outcome=healthy` + `legendary verdict=cleared`; flags census: Steam only.
+
+Launch 4:
+```
+[signInProbe] legendary outcome=unknown elapsed=685ms
+[signInProbe] legendary verdict=unchanged
+[signInProbe] gog outcome=unknown elapsed=430ms
+[signInProbe] gog verdict=unchanged
+runner-legendary: [Core] ERROR: HTTP request for login failed: ConnectionError(MaxRetryError('HTTPSConnectionPool(host='account-public-service-prod03.ol.epicgames.com', port=443) …
+runner-gog: [AUTH] ERROR: Failed to refresh credentials   (then null)
+hosts-check: epic curl exit=7 (block) → after restore epic http=404, gog http=404; diff clean; 0 gate lines left
+```
+
+Launch 6:
+```
+SidecarKeyringSlotStore(humble-session).getToken(): keyring_get ok present=false len=0 trigger=unspecified elapsed=44ms
+SidecarKeyringSlotStore(steam-refresh-token).getToken(): issuing keyring_get (may prompt) trigger=boot-probe
+SidecarKeyringSlotStore(steam-refresh-token).getToken(): keyring_get failed: keyring:unavailable:Platform secure storage failure: User canceled the operation. trigger=boot-probe elapsed=3134ms
+keyring failure memoized slot=steam-refresh-token class=unavailable ms=120000 trigger=boot-probe
+[signInProbe] steam outcome=unknown elapsed=3135ms / steam verdict=unchanged
+[signInProbe] humble outcome=unknown elapsed=3ms / humble verdict=unchanged
+```
+
+Launch 7:
+```
+09:44:00 steam-refresh-token issuing keyring_get (may prompt) trigger=boot-probe
+09:44:45 [signInProbe] steam bound reached
+09:44:45 [signInProbe] steam outcome=unknown elapsed=45009ms ; steam verdict=unchanged
+09:44:45 pass complete outcomes=legendary:healthy,gog:healthy,nile:healthy,humble:unknown,steam:unknown
+09:44:45 keyring_get failed: keyring:timeout trigger=boot-probe elapsed=45015ms ; memoized class=timeout
+(late Deny after pass complete: no further [signInProbe] line)
+```
+
+Launch 8 (`item9-timing.txt`): `EOF_AT 1791578785.420`, `EXIT_CODE 0`, `EXIT_AT 1791578787.857`, `ELAPSED 2.437 s`, pgrep empty. `gamelib-launch-8.log`: `pass started stores=legendary,gog,nile,humble,steam`; legendary/gog/nile outcomes logged; no `pass complete` (steam/humble keyring invokes had no peer and rode the unref'd timer, as scoped).
+
+Launch 9: Allow → `steam-refresh-token keyring_get ok present=true len=493 trigger=boot-probe elapsed=26303ms`, `steam outcome=healthy`, `steam verdict=cleared`; flags census empty. `GOG logout: cleared 6 cookie(s)`. `config-dismissed.txt`: `config.json.defaultSettings.dismissedSignInNotices = ["humble"]` and `store/config.json.settings.dismissedSignInNotices = ["humble"]`.
+
+Launch 10: `pass started stores=legendary,gog,nile,steam` (Humble signed out), all four `healthy`; dismissed list still `["humble"]`; **Library rendered "Humble Bundle is not connected" with Sign in and ×** (operator-observed, `item10d-launch10-library.png`).
+
+### Findings (each has a pending todo)
+
+- **F-49-R1-1 (item 1, major).** legendary 0.21.0 **deletes `user.json`** when the refresh token is rejected. `LegendaryUser.isLoggedIn()` is `existsSync(user.json)`, `getUserInfo()` then purges `userInfo` from the backend config store (`legendary/user.ts:713`), and the renderer only asks for a rebuild when `userInfo` already exists (`GlobalState.tsx:1859`). Net effect after a real expiry: the Accounts tile reads "EPIC GAMES LOGIN", the Library shows "Epic Games is not connected", and the "Sign-in expired — Reconnect" copy is visible only in the session that latched it. The `expired` latch itself is correct. Restored in this run by a real Epic login in launch 10.
+- **F-49-R1-2 (items 3 and 9, renderer, medium).** A mid-session `verdict=cleared` does not reach the Library until it remounts: Epic's row stayed after a 2.4 s clear in launch 3 (confounded by F-49-R1-1), and a stale Steam expired row rendered ~70 s after `steam verdict=cleared` in launch 9 and vanished on navigating away and back.
+- **F-49-R1-3 (item 10d, major, FAIL).** Dismissal persisted to both config files, yet the row returned on relaunch. `GlobalState.tsx:528` seeds `dismissedSignInNotices` from `configStore.get_nodefault('settings')` at module load (`:82`); the on-disk `["humble"]` did not reach that seed.
+- **F-49-R1-4 (item 6, A4).** With nothing installed the Amazon probe is a no-op: nile exits before auth. A user with no installed Amazon game is never told their Amazon sign-in expired. Note: nile's `library sync` (run by the app anyway) does exercise the token and succeeded every launch.
+- **F-49-R1-5 (nile classifier, medium).** Identical nile output (`[]` + `No games installed`) classified `healthy` in launches 1-4 and 9-10 but `unknown` in launches 6-7; the only visible difference is stdout/stderr interleaving order.
+- **F-49-R1-6 (item 10b, nord_light, minor).** Operator judgment: the not-connected row's text renders black on a dark banner in `nord_light`; illegible. The three required themes were judged pass.
+- **Operator UI notes (not gate items):** the sign-in rows render after the first shelf, not at the top; the banner's vertical padding could be halved.
+
+### Restores and final state
+
+Epic `user.json` restored from `after-L1` after launch 2 (positive: `legendary outcome=healthy`, `verdict=cleared` in launch 3). GOG restored from `after-L1` after launch 2 and from `after-L3` after launch 4 (positive: `gog outcome=healthy` in launches 3 and 6). `/etc/hosts` restored: diff clean, 0 gate lines, both hosts HTTP 404. Amazon untouched. Theme back on `zombie`. Final connection state: Epic signed in (real login, launch 10), GOG signed in (item 11d), Amazon connected, Humble signed in again (launch 10, `keyring_set ok`), Steam connected. Structural impossibilities met at run time: **1** (item 5's induction; the contract's preflight-conditional R34 fired).
+
+### Closing inventory
+
+`ls -la` of the session dir: 9 `gamelib-launch-N.log` files (1,2,3,4,6,7,8,9,10), 27 runner logs, `terminal.log`, `flags.log`, `hosts-check.txt`, `item8-timeline.txt`, `item9-timing.txt`, `config-dismissed.txt`, `preflight.txt`, `sidecar-stdout.txt`, 8 PNGs + `item10-themes/` (4 PNGs), `secrets/` (34 entries), `excerpts/` (43 redacted files, self-checked: 0 names, 0 emails, 0 token-shaped strings).
+
+```
+wc -l (selected):
+     173 gamelib-launch-1.log     148 gamelib-launch-2.log     144 gamelib-launch-3.log
+     187 gamelib-launch-4.log      97 gamelib-launch-6.log      97 gamelib-launch-7.log
+      37 gamelib-launch-8.log     527 gamelib-launch-9.log     269 gamelib-launch-10.log
+     650 terminal.log              27 flags.log                 71 preflight.txt
+    3882 total
+```
+
+## Verdict
+
+**FAIL 8/11** on the strict count: items 1, 2, 3, 4, 7, 8, 9, 11 PASS; item 10 FAIL (10d); item 5 NOT SCORED; item 6 FINDING (acceptable result (c)). The probe layer (classifiers, verdict writer, bound, Keychain degradation, sidecar exit) passed every scored item. The failures and major findings are in the renderer's persistence and re-derivation, plus legendary's file deletion.
+
+**Assumptions:** A1 CONFIRMED (launch 2 marker; launch 4 negative marker). A2 CONFIRMED (bare `null`, no refresh-failed line for a dead token; `Failed to refresh credentials` for a blocked host). A3 NOT TESTED (item 5). A4 CONFIRMED as a FINDING (no refresh with 0 installed). A5 PARTIALLY CONFIRMED (stderr marker reaches the probe; stdout carries no JSON on failure; healthy-path `account` key not inspected). A6 NOT TESTED (item 5).

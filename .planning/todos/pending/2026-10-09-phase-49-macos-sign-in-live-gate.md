@@ -29,3 +29,12 @@ Things to know before starting:
 - The run edits real credentials and `/etc/hosts`. Every edit has a restore and a positive
   observable. Back up after every healthy launch, not once.
 - Nothing from the session's `secrets/` directory, and no unredacted log, may enter the repo.
+
+## Run 1 result
+
+Run 1 on 2026-10-09 (UTC): **FAIL 8/11**, full record in `49-LIVE-GATE.md` `## Run 1`, results in
+`49-UAT.md`. Items 1-4, 7-9, 11 PASS; item 10 FAIL on 10d (dismiss does not survive relaunch,
+todo `2026-10-10-dismissed-sign-in-notice-returns-after-relaunch.md`); item 5 NOT SCORED
+(encrypted nile token store, todo `2026-10-10-amazon-expiry-strings-need-a-real-induction.md`);
+item 6 FINDING A4. This todo stays open until 10d and 5 are re-run green; the probe layer needs
+no re-run.
