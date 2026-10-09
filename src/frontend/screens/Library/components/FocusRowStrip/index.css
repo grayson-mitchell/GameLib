@@ -79,6 +79,11 @@
    and flex-shrink stay 0, so the derived width is exact. */
 .focusRowTrack .gameList > * {
   flex: 0 0 var(--focus-row-card-width, 156px);
+  /* G-48-11b: the list is width: max-content, and WKWebView sizes it from the
+     items' intrinsic contribution rather than their flex-basis, so the extent
+     inflates (or collapses) and the strip pages into blank space. Pinning the
+     width is the only counterfactual that fixed all 108 measured variants. */
+  width: var(--focus-row-card-width, 156px);
 }
 
 .focusRowStrip .libraryHeader {

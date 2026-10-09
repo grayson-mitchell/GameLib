@@ -324,6 +324,18 @@ describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > * (G-48-8c)', ()
     expect(block).not.toMatch(/minmax\(/)
     expect(block).not.toMatch(/1fr/)
   })
+
+  // G-48-11b: under the list's `width: max-content`, WKWebView sizes the list
+  // from the items' intrinsic contribution, not their flex-basis. Measured in
+  // 48-13 (evidence/48-13/results-before-fix.json, 108 variants): only pinning
+  // the item width fixes every variant; the other three counterfactuals fix none.
+  it('pins the item width to the same derived custom property and fallback as the flex-basis (G-48-11b)', () => {
+    const pinned = block.match(
+      /(?:^|[;\s])width:\s*var\(--focus-row-card-width,\s*(\d+(?:\.\d+)?)px\)\s*;/
+    )
+    expect(pinned).not.toBeNull()
+    expect(Number(pinned?.[1])).toBe(fallback)
+  })
 })
 
 describe('FocusRowStrip/index.css -- strip/grid parity (G-48-8c)', () => {
