@@ -6,7 +6,8 @@ severity: minor
 platform: any
 ready: blocked
 needs: design-then-code-fix
-status: "PARKED 2026-09-04 — superseded by the cross-store signed-out/offline mode design (ROADMAP Phase 999.1), which needs boot-time auth state and therefore conflicts with deferring the read. The dev-mode prompt symptom that motivated this todo is addressed by GAMELIB_DEV_SECRET_VAULT=1; shipped-build prompt count is governed by Apple code signing, not read timing. See the PARKED section below for the unpark condition."
+status: "RESOLVED 2026-10 by Phase 49 — the boot read is now deliberate, bounded and labelled; see the Resolution section"
+resolves_phase: 49
 found_by: "Quick task 260817-d61 live gate (measured on hardware, two independent launches)"
 source: ".planning/quick/260817-d61-defer-the-steam-keyring-read-from-startu/260817-d61-LIVE-GATE.md"
 files:
@@ -176,3 +177,25 @@ deferral design for these two slots cannot lean on a non-Keychain fallback, beca
 - Sibling todo: `2026-08-17-keyring-available-is-a-silent-prompt-channel.md`
 - Memory `dev-secret-vault-avoids-keychain-prompts` — `GAMELIB_DEV_SECRET_VAULT=1` skips all three
   slots in dev; it is opt-in, and unset is what makes dev runs pester.
+
+## Resolution — Phase 49
+
+Closed by Phase 49 plan 08 (cross-store signed-out / offline mode). The SPEC round-2 decision
+— probe all five stores at boot in one bounded pass, Humble and Steam keyring reads included
+— permanently closes the unpark condition above: this todo's remedy (deferring the read) is
+superseded, not parked.
+
+- **The measured prompt latency is not withdrawn.** The ~12.5 s of unattended Keychain prompt
+  latency across the two Humble slots is the reason R3 is bounded at 45 s (D-01):
+  `SIGN_IN_PROBE_BOUND_MS` equals Rust's `KEYRING_READ_TIMEOUT`, so a probe stuck behind a
+  prompt resolves `unknown` rather than holding boot.
+- **Humble now supplies its own trigger label (D-15).** The boot read carries
+  `trigger=boot-probe` through `HumbleSecretStore.readSecret` without importing the Steam gate
+  (`authTrigger.ts`), which answers this file's request for a Humble-specific label.
+- **The csrf slot is no longer read at boot (D-18).** The pass reads one Humble slot
+  (`humble-session`), not two.
+- **The dev-build prompt symptom belongs to `GAMELIB_DEV_SECRET_VAULT=1` (D-04).** The pass has one
+  code path on every platform and build and has no dev-only branch; dev-build Keychain prompts are
+  that vault's job, not the pass's.
+- **The renderer-mount health call is gone (D-16).** Nothing in the Library tree starts a probe;
+  the pass runs once per launch after READY and again only on a later offline-to-online edge.
