@@ -10,6 +10,7 @@ import { app } from 'backend/platform'
 import { gogdlAuthConfig } from './constants'
 import { isMac } from 'backend/constants/environment'
 import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
+import type { SignInProbeOutcome } from 'common/signInState'
 
 // GOG-owned APEX domain(s). Suffix-matching happens Rust-side in
 // `cookie_domain_matches`, so this single apex covers every subdomain that may
@@ -338,6 +339,14 @@ export class GOGUser {
       logError(['Error getting GOG credentials:', error])
       return undefined
     }
+  }
+
+  // RED stub: replaced by the real single-spawn verdict in the GREEN commit.
+  public static async getCredentialsWithVerdict(): Promise<{
+    credentials: GOGCredentials | undefined
+    verdict: SignInProbeOutcome
+  }> {
+    return { credentials: await this.getCredentials(), verdict: 'unknown' }
   }
 
   // D-15 (Phase 40 plan 04): stayed a plain (non-async-looking-mandatory)

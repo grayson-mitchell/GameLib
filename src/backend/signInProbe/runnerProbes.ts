@@ -98,3 +98,8 @@ export async function probeNileSession(): Promise<SignInProbeOutcome> {
     return 'unknown'
   }
 }
+
+// RED stub: replaced by the real GOG probe in the GREEN commit.
+export async function probeGogSession(): Promise<SignInProbeOutcome> {
+  return 'unknown'
+}
