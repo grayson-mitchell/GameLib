@@ -65,9 +65,37 @@ installKeyboardNavTracking()
 // blocked load, and never at all under `tauri dev` (the dev server's HTML is not
 // served through Tauri, so no policy is applied there -- the rationale and the
 // origin census behind each directive live in tauriConf.test.ts's CSP block).
+//
+// IN-10: bounded and credential-safe. One line per distinct directive + origin,
+// capped at 50 distinct pairs (a policy slightly too tight against an artwork
+// CDN would otherwise emit one IPC call and one log line per game card), and the
+// blocked URI is reduced to its origin because `blockedURI` carries the query
+// string for same-origin and fetch/XHR blocks. A keyword such as `inline` or
+// `eval` is not a URL and is kept as-is.
+const reportedCspViolations = new Set<string>()
+const MAX_REPORTED_CSP_VIOLATIONS = 50
+const cspOrigin = (uri: string): string => {
+  try {
+    // Non-special schemes (tauri://, data:, blob:) report an opaque "null"
+    // origin, so rebuild scheme + host by hand: no path, query or fragment.
+    const url = new URL(uri)
+    return url.host ? `${url.protocol}//${url.host}` : url.protocol
+  } catch {
+    return uri
+  }
+}
 document.addEventListener('securitypolicyviolation', (ev) => {
+  const blocked = cspOrigin(ev.blockedURI || '(inline)')
+  const key = `${ev.violatedDirective} ${blocked}`
+  if (
+    reportedCspViolations.has(key) ||
+    reportedCspViolations.size >= MAX_REPORTED_CSP_VIOLATIONS
+  ) {
+    return
+  }
+  reportedCspViolations.add(key)
   window.api.logError(
-    `[GameLib] CSP violation: ${ev.violatedDirective} blocked ${ev.blockedURI || '(inline)'} at ${ev.sourceFile || ev.documentURI}:${ev.lineNumber}`
+    `[GameLib] CSP violation: ${ev.violatedDirective} blocked ${blocked} at ${cspOrigin(ev.sourceFile || ev.documentURI)}:${ev.lineNumber}`
   )
 })
 
