@@ -32,19 +32,29 @@ jest.mock('backend/ipc', () => ({
   addHandler: jest.fn()
 }))
 jest.mock('backend/storeManagers/legendary/electronStores', () => ({
-  legendaryConfigStore: require('./fakeFlagStore').makeFakeFlagStore()
+  legendaryConfigStore: jest
+    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
+    .makeFakeFlagStore()
 }))
 jest.mock('backend/storeManagers/gog/electronStores', () => ({
-  configStore: require('./fakeFlagStore').makeFakeFlagStore()
+  configStore: jest
+    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
+    .makeFakeFlagStore()
 }))
 jest.mock('backend/storeManagers/nile/electronStores', () => ({
-  configStore: require('./fakeFlagStore').makeFakeFlagStore()
+  configStore: jest
+    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
+    .makeFakeFlagStore()
 }))
 jest.mock('backend/storeManagers/steam/electronStores', () => ({
-  configStore: require('./fakeFlagStore').makeFakeFlagStore()
+  configStore: jest
+    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
+    .makeFakeFlagStore()
 }))
 jest.mock('backend/humble/electronStores', () => ({
-  configStore: require('./fakeFlagStore').makeFakeFlagStore()
+  configStore: jest
+    .requireActual<typeof import('./fakeFlagStore')>('./fakeFlagStore')
+    .makeFakeFlagStore()
 }))
 
 const logInfoMock = logInfo as unknown as jest.Mock

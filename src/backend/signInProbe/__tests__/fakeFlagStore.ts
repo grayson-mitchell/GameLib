@@ -12,6 +12,9 @@ export interface FakeFlagStore {
   reset(): void
 }
 
+// WHY exported: verdict.test.ts reaches it through jest.requireActual() inside its
+// jest.mock factories, which the dead-code scanner cannot see.
+// ts-prune-ignore-next
 export function makeFakeFlagStore(): FakeFlagStore {
   const store: FakeFlagStore = {
     data: new Map(),
