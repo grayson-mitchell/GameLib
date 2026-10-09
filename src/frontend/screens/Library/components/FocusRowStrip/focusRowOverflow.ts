@@ -64,11 +64,14 @@ const maxScrollLeft = (m: TrackMeasurement): number =>
  * the back direction. Floored to one card so a control can never be a
  * live-looking no-op, and always finite.
  *
- * A card short of fitting by under a pixel counts as visible: matched cards
- * fill the track with no slack (G-48-8c), and `clientWidth` is an
- * integer-rounded read, so a bare `floor(clientWidth / pitch)` paged one card
- * short at about half of all widths. With the tolerance a page is exactly one
- * grid row.
+ * The track is the viewport box, which bleeds 15px out each side (index.css),
+ * so its `clientWidth` is the grid's content width C plus 30px, i.e. `n x pitch
+ * + 6` for the `n` columns the grid fits (`n x pitch = C + 24`): 6px of slack,
+ * and a bare `floor(clientWidth / pitch)` already returns `n`. The
+ * `SUBPIXEL_EPSILON` tolerance is kept as a defence for the zero-slack case
+ * (`clientWidth = n x pitch` read back integer-rounded, which a bare floor
+ * pages one card short at about half of all widths): a card short of fitting
+ * by under a pixel counts as visible, so a page is exactly one grid row.
  */
 export function pageScrollDelta(
   m: TrackMeasurement,

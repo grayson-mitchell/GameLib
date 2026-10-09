@@ -67,11 +67,31 @@ describe('pageScrollDelta', () => {
     expect(pageScrollDelta(m(600, 2000, 300), 180)).toBeGreaterThan(0)
   })
 
-  it('P1: pages exactly one grid row in the zero-slack geometry (G-48-8c)', () => {
-    // Matched cards fill the content box exactly, so the track is
-    // n x pitch wide with no slack, and clientWidth is an integer-rounded
-    // read of it. A bare floor(clientWidth / pitch) paged n - 1 cards at about
-    // half of all widths (desk sweep: 4951 mismatches with no tolerance).
+  it('P1: pages exactly one grid row in the shipped geometry (G-48-8c)', () => {
+    // The track is the viewport box, which bleeds 15px each side, so its
+    // clientWidth is C + 30 = n x pitch + 6 (n x pitch = C + 24): 6px of slack,
+    // and clientWidth is an integer-rounded read of it.
+    const bad: string[] = []
+    for (let i = 0; 156 + i * 0.37 <= 3000; i++) {
+      const c = 156 + i * 0.37
+      const n = gridColumnCount(c)
+      const pitch = gridColumnWidth(c) + 24
+      for (const clientWidth of [Math.round(c + 30), Math.floor(c + 30)]) {
+        const got = pageScrollDelta(m(clientWidth, 99999, 0), pitch)
+        if (Math.abs(got - n * pitch) > 1e-6) {
+          bad.push(
+            `C=${c} clientWidth=${clientWidth} got ${got} want ${n * pitch}`
+          )
+        }
+      }
+    }
+    expect(bad).toEqual([])
+  })
+
+  it('P1b: the epsilon tolerance still pages one grid row in the zero-slack geometry (defence)', () => {
+    // clientWidth = n x pitch read back integer-rounded. A bare
+    // floor(clientWidth / pitch) paged n - 1 cards at about half of all widths
+    // (desk sweep: 4951 mismatches with no tolerance).
     const bad: string[] = []
     for (let i = 0; 156 + i * 0.37 <= 3000; i++) {
       const c = 156 + i * 0.37
