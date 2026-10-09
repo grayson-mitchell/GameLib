@@ -47,7 +47,7 @@ export const KEYBOARD_NAV_CLASS = 'keyboardNav'
 
 type Listener = (event: Event) => void
 
-export interface ModalityTarget {
+interface ModalityTarget {
   addEventListener(
     type: string,
     listener: Listener,
@@ -60,7 +60,7 @@ export interface ModalityTarget {
   ): void
 }
 
-export interface ModalityBody {
+interface ModalityBody {
   classList: { add(token: string): void; remove(token: string): void }
 }
 
