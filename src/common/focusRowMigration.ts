@@ -24,8 +24,10 @@ import { FocusRowSelection } from 'common/types'
  * The four members of `LibraryView` (`src/frontend/types.ts`). `src/common`
  * cannot import from `src/frontend`, so the list is duplicated on purpose; the
  * anti-drift guard is `focusRowSelectors.test.ts`'s
- * `satisfies Record<LibraryView, true>` case, which fails `pnpm codecheck` if
- * `LibraryView` gains a member this list lacks. Not exported.
+ * `satisfies Record<LibraryView, true>` case: `tsc` (`pnpm codecheck`) forces
+ * the test's own `ALL_VIEWS` to gain any new `LibraryView` member, and that
+ * test's runtime `isValidFocusRowSelection` loop then fails if this list was
+ * not updated too. Codecheck alone never inspects this list. Not exported.
  */
 const FOCUS_ROW_VIEW_VALUES = [
   'all',
