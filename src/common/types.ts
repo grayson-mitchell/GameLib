@@ -566,6 +566,14 @@ export interface CallRunnerOptions {
   onOutput?: (output: string, child: ChildProcess) => void
   abortId?: string
   cwd?: string
+  /**
+   * For background probes that classify a runner's output themselves (via
+   * `onOutput`) and must never raise a modal (49-SPEC P2). When true,
+   * `callRunner` calls `errorHandler` at neither its `close` site nor its
+   * `.catch` site. It does not change logging, abort handling, the in-flight
+   * join, or the `ExecResult` shape.
+   */
+  skipErrorHandler?: boolean
 }
 
 export interface EnviromentVariable {

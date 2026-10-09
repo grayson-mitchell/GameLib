@@ -67,6 +67,7 @@ jest.mock('child_process', () => ({
 
 import { spawn, exec, execFile } from 'child_process'
 import { callRunner } from 'backend/launcher'
+import * as backendUtils from 'backend/utils'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import {
   getRunnerLogWriter,
@@ -408,5 +409,100 @@ describe('credential redaction census gate (34.5-61, F-34.5-G6-22/F-34.5-G6-24)'
       (flag) => !redactionList.includes(flag)
     )
     expect(unredacted).toEqual([])
+  })
+})
+
+describe('callRunner skipErrorHandler (49-03, 49-SPEC P2)', () => {
+  const LEGENDARY_LINE =
+    'Stored credentials are no longer valid! Please login again.'
+  let errorHandlerSpy: jest.SpyInstance
+
+  // callRunner awaits async work (log writers, the PowerShell lookup) before it
+  // spawns, so a bare process.nextTick emit can land BEFORE the listeners
+  // attach and the promise never settles. Wait until callRunner's own stderr
+  // listener is attached instead.
+  const afterSpawn = (emit: () => void) => {
+    const poll = () => {
+      if (fakeChild.stderr.listenerCount('data') > 0) {
+        emit()
+      } else {
+        setImmediate(poll)
+      }
+    }
+    setImmediate(poll)
+  }
+
+  beforeEach(() => {
+    fakeChild = new FakeChildProcess()
+    ;(spawn as unknown as jest.Mock).mockReturnValue(fakeChild)
+    ;(getRunnerLogWriter as jest.Mock).mockReturnValue(makeFakeLogWriter())
+    ;(createGameLogWriter as jest.Mock).mockResolvedValue(makeFakeLogWriter())
+    errorHandlerSpy = jest
+      .spyOn(backendUtils, 'errorHandler')
+      .mockImplementation(() => undefined)
+  })
+
+  afterEach(() => {
+    errorHandlerSpy.mockRestore()
+  })
+
+  it('Test 1: a failing child with skipErrorHandler never reaches errorHandler, yet onOutput saw the stderr chunk verbatim', async () => {
+    const onOutput = jest.fn()
+    const promise = callRunner(['status', 'skip-fail-appid'], runner, {
+      skipErrorHandler: true,
+      onOutput
+    })
+
+    afterSpawn(() => {
+      fakeChild.stderr.emit('data', LEGENDARY_LINE)
+      fakeChild.emit('close', 1, null)
+    })
+
+    const res = await promise
+    expect(res.error).toBeDefined()
+    expect(errorHandlerSpy).not.toHaveBeenCalled()
+    expect(onOutput).toHaveBeenCalledWith(LEGENDARY_LINE, fakeChild)
+  })
+
+  it('Test 2: a clean exit with skipErrorHandler never reaches errorHandler and carries no .error/.abort', async () => {
+    const promise = callRunner(['status', 'skip-clean-appid'], runner, {
+      skipErrorHandler: true
+    })
+
+    afterSpawn(() => fakeChild.emit('close', 0, null))
+
+    const res = await promise
+    expect(res.error).toBeUndefined()
+    expect(res.abort).toBeUndefined()
+    expect(errorHandlerSpy).not.toHaveBeenCalled()
+  })
+
+  it('Test 3: without the option the same failing child still reaches errorHandler (behaviour unchanged)', async () => {
+    const promise = callRunner(['status', 'default-fail-appid'], runner, {})
+
+    afterSpawn(() => {
+      fakeChild.stderr.emit('data', LEGENDARY_LINE)
+      fakeChild.emit('close', 1, null)
+    })
+
+    const res = await promise
+    expect(res.error).toBeDefined()
+    expect(errorHandlerSpy).toHaveBeenCalled()
+  })
+
+  it('Test 4: with skipErrorHandler an aborted run is classified .abort and never reaches errorHandler', async () => {
+    const promise = callRunner(['status', 'skip-abort-appid'], runner, {
+      abortId: 'skip-abort-appid',
+      skipErrorHandler: true
+    })
+
+    afterSpawn(() => {
+      callAbortController('skip-abort-appid')
+      fakeChild.emit('close', 1, null)
+    })
+
+    const res = await promise
+    expect(res.abort).toBe(true)
+    expect(errorHandlerSpy).not.toHaveBeenCalled()
   })
 })
