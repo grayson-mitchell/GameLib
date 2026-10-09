@@ -17,6 +17,7 @@ import {
   type CookieReadVerdict
 } from './loginWindowSeam'
 import { getHumbleSecretStore, type HumbleSecretKey } from './secretStore'
+import type { SignInProbeOutcome } from 'common/signInState'
 
 // Re-exported so existing callers (user.test.ts, plus the D-08
 // GAMELIB_LOGIN_SEAM_SMOKE hook in humbleLoginFlowRegistration.ts) are
@@ -747,6 +748,11 @@ export class HumbleUser {
 
     settle({ status: 'done', username })
     return 'done'
+  }
+
+  // RED stub (49-06 Task 2): inert until the GREEN commit.
+  static async probeSession(_context: string): Promise<SignInProbeOutcome> {
+    return 'unknown'
   }
 
   // ── HACCT-02: Startup/401 expiry health check (D-08/D-09) ────────────────

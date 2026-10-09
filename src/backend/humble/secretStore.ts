@@ -54,6 +54,7 @@ import { logWarning, LogPrefix } from 'backend/logger'
 
 import { configStore } from './electronStores'
 import { HUMBLE_TOKEN_PREFIX, HUMBLE_TOKEN_STORE_KEY } from './constants'
+import type { TokenReadOutcome } from 'backend/storeManagers/steam/tokenStore'
 
 /** The two secrets `user.ts` persists today. A closed union, not a free
  * string -- the TS-side counterpart of Rust's keyring slot allowlist
@@ -83,6 +84,13 @@ export interface HumbleSecretStore {
   /** Returns the stored secret, or `''` when none is stored, the store is
    * unavailable, or decryption failed. */
   getSecret(key: HumbleSecretKey): Promise<string>
+  /** OPTIONAL (Phase 49, 49-06, D-15). A three-state read: unlike `getSecret`, it
+   * distinguishes an empty slot (`absent`) from a read that failed (`unreadable`).
+   * `context` is a never-secret trigger label (the `isAvailable(context?)`
+   * precedent, quick-260905-jx3) carried into the keyring log lines so the
+   * Keychain prompt this read can raise is attributable. An implementation that
+   * cannot prompt may omit the method. */
+  readSecret?(key: HumbleSecretKey, context?: string): Promise<TokenReadOutcome>
   /** Persists a secret. */
   setSecret(key: HumbleSecretKey, value: string): Promise<void>
   /** Removes both stored secrets. Never throws. */

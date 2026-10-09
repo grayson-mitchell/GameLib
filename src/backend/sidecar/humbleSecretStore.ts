@@ -55,6 +55,7 @@ import {
   type HumbleSecretStore,
   type HumbleSecretKey
 } from '../humble/secretStore'
+import type { TokenReadOutcome } from '../storeManagers/steam/tokenStore'
 import { configStore } from '../humble/electronStores'
 import { HUMBLE_TOKEN_STORE_KEY } from '../humble/constants'
 
@@ -83,6 +84,14 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
 
   async getSecret(key: HumbleSecretKey): Promise<string> {
     return SLOT_STORES[key].getToken()
+  }
+
+  // RED stub (49-06 Task 2): drops the label until the GREEN commit.
+  async readSecret(
+    key: HumbleSecretKey,
+    _context?: string
+  ): Promise<TokenReadOutcome> {
+    return SLOT_STORES[key].readToken()
   }
 
   async setSecret(key: HumbleSecretKey, value: string): Promise<void> {

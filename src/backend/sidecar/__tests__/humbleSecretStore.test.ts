@@ -672,3 +672,98 @@ describe('SidecarHumbleSecretStore', () => {
     expect(codeOnly).not.toMatch(/steam-refresh-token/)
   })
 })
+
+// ── readSecret(key, context) -- Phase 49 (49-06, D-15) ───────────────────────
+//
+// The boot sign-in probe needs the three-state read (present / absent /
+// unreadable) AND a trigger label so the Keychain prompt it can raise is
+// attributable. `SidecarKeyringSlotStore.readToken(context)` already labels
+// every line; this seam only has to forward the label.
+describe('SidecarHumbleSecretStore.readSecret (Phase 49, D-15)', () => {
+  const issueLines = (): string[] =>
+    mockLogInfo.mock.calls
+      .map((c) => String(c[0]))
+      .filter((l) => l.includes('issuing keyring_get'))
+
+  beforeEach(() => {
+    program = {}
+    callLog = []
+    backingStore = {}
+    resetSidecarHumbleSecretStoreCachesForTests()
+    mockRequestRustInvoke.mockImplementation(
+      (channel: string, args: unknown[]) => {
+        callLog.push({ channel, args })
+        const outcome = program[channel]
+        if (!outcome) {
+          return Promise.reject(
+            new Error(`no outcome programmed for channel: ${channel}`)
+          )
+        }
+        return outcome.type === 'resolve'
+          ? Promise.resolve(outcome.value)
+          : Promise.reject(outcome.error)
+      }
+    )
+  })
+
+  it("readSecret('sessionCookie', 'boot-probe') issues one keyring_get on the humble-session slot labelled trigger=boot-probe", async () => {
+    programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
+    const store = new SidecarHumbleSecretStore()
+
+    await store.readSecret('sessionCookie', 'boot-probe')
+
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_SESSION] }
+    ])
+    const lines = issueLines()
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain('trigger=boot-probe')
+    expect(lines[0]).not.toContain('trigger=unspecified')
+  })
+
+  it('discriminates: a readSecret call with no context is labelled trigger=unspecified, as getToken() is', async () => {
+    programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
+    const store = new SidecarHumbleSecretStore()
+
+    await store.readSecret('sessionCookie')
+
+    const lines = issueLines()
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain('trigger=unspecified')
+    expect(lines[0]).not.toContain('trigger=boot-probe')
+  })
+
+  it('passes a present value through as { status: present }', async () => {
+    programChannel('keyring_get', { type: 'resolve', value: 'cookie-value' })
+    await expect(
+      new SidecarHumbleSecretStore().readSecret('sessionCookie', 'boot-probe')
+    ).resolves.toStrictEqual({ status: 'present', token: 'cookie-value' })
+  })
+
+  it('passes an empty slot through as { status: absent }', async () => {
+    programChannel('keyring_get', { type: 'resolve', value: null })
+    await expect(
+      new SidecarHumbleSecretStore().readSecret('sessionCookie', 'boot-probe')
+    ).resolves.toStrictEqual({ status: 'absent' })
+  })
+
+  it('passes a failed read through as unreadable, never as absent', async () => {
+    programChannel('keyring_get', {
+      type: 'reject',
+      error: new Error('keyring:denied')
+    })
+    const outcome = await new SidecarHumbleSecretStore().readSecret(
+      'sessionCookie',
+      'boot-probe'
+    )
+    expect(outcome.status).toBe('unreadable')
+  })
+
+  it("readSecret('csrfToken') addresses the humble-csrf slot, not the session slot", async () => {
+    programChannel('keyring_get', { type: 'resolve', value: 'csrf-value' })
+    await new SidecarHumbleSecretStore().readSecret('csrfToken', 'x')
+    expect(callLog).toStrictEqual([
+      { channel: 'keyring_get', args: [KEYRING_SLOT_HUMBLE_CSRF] }
+    ])
+  })
+})

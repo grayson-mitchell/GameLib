@@ -71,6 +71,14 @@ jest.mock('backend/ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
 }))
 
+// ── sign-in outcome epoch hooks (Phase 49, 49-06) ──────────────────────────
+const mockNoteSignInSucceeded = jest.fn()
+const mockNoteSignedOut = jest.fn()
+jest.mock('backend/signInProbe/outcomes', () => ({
+  noteSignInSucceeded: (...args: unknown[]) => mockNoteSignInSucceeded(...args),
+  noteSignedOut: (...args: unknown[]) => mockNoteSignedOut(...args)
+}))
+
 // ── electronStores mock ───────────────────────────────────────────────────────
 const mockConfigStore = {
   get: jest.fn(),
@@ -409,6 +417,29 @@ describe('HumbleUser', () => {
       expect(sessionCookieCall![1]).not.toBe('raw-cookie-value')
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
       expect(mockConfigStore.set).toHaveBeenCalledWith('expired', false)
+    })
+
+    test('Phase 49: a successful login notes the sign-in so an older probe cannot re-latch expired', async () => {
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
+
+      const loginPromise = HumbleUser.startLogin()
+      await flushAsync()
+      HumbleUser.notifyLoginNavigated()
+      await loginPromise
+
+      expect(mockConfigStore.set).toHaveBeenCalledWith('expired', false)
+      expect(mockNoteSignInSucceeded).toHaveBeenCalledTimes(1)
+      expect(mockNoteSignInSucceeded).toHaveBeenCalledWith('humble')
+      expect(mockNoteSignedOut).not.toHaveBeenCalled()
     })
 
     test('WR-06: a successful login pushes the authoritative humbleAuthState so the renderer converges even if the login route already unmounted', async () => {
@@ -970,6 +1001,32 @@ describe('HumbleUser', () => {
       expect(mockSendFrontendMessage).not.toHaveBeenCalled()
     })
 
+    test('Phase 49: returns the probe outcome (expired / unknown / healthy)', async () => {
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'sessionCookie') {
+          return 'humble:v1:' + Buffer.from('cookie').toString('base64')
+        }
+        if (key === 'csrfToken') {
+          return 'humble:v1:' + Buffer.from('csrf').toString('base64')
+        }
+        return undefined
+      })
+      mockDecryptString.mockReturnValue('cookie')
+
+      mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
+      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+        'expired'
+      )
+      mockGetGamekeys.mockResolvedValue({ status: 'access_denied' })
+      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+        'unknown'
+      )
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
+      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+        'healthy'
+      )
+    })
+
     test('does nothing (no adapter call) when there is no stored session cookie', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
       await HumbleUser.checkHealthAndFlagExpiry()
@@ -986,10 +1043,11 @@ describe('HumbleUser', () => {
       mockDecryptString.mockReturnValue('secret-health-cookie-xyz')
       mockGetGamekeys.mockRejectedValue(new Error('ECONNREFUSED'))
 
-      // Must NOT reject — health is unknown, not expired.
-      await expect(
-        HumbleUser.checkHealthAndFlagExpiry()
-      ).resolves.toBeUndefined()
+      // Must NOT reject — health is unknown, not expired. Phase 49 (49-06):
+      // the method now returns the probe outcome, so "unknown" is observable.
+      await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+        'unknown'
+      )
 
       expect(mockConfigStore.set).not.toHaveBeenCalled()
       expect(mockSendFrontendMessage).not.toHaveBeenCalled()
@@ -1105,6 +1163,14 @@ describe('HumbleUser', () => {
     // clearCookies does not throw out of disconnect()' cover partial-failure
     // non-abort. Re-pointing them here would have duplicated those tests
     // verbatim against the same single surviving path.
+
+    test('Phase 49: disconnect() notes the sign-out so an older probe cannot re-latch expired', async () => {
+      await HumbleUser.disconnect()
+
+      expect(mockNoteSignedOut).toHaveBeenCalledTimes(1)
+      expect(mockNoteSignedOut).toHaveBeenCalledWith('humble')
+      expect(mockNoteSignInSucceeded).not.toHaveBeenCalled()
+    })
 
     test('HSYNC-02/D-04/D-30: clears humbleLibraryStore + humbleSyncStore but NEVER humbleRevealedStore', async () => {
       await HumbleUser.disconnect()
