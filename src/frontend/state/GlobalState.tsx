@@ -1856,7 +1856,6 @@ class GlobalState extends PureComponent<Props> {
       }
     )
 
-    const legendaryUser = configStore.has('userInfo')
     const gogUser = gogConfigStore.has('userData')
     const amazonUser = nileConfigStore.has('userData')
     const zoomUser = zoomConfigStore.has('isLoggedIn')
@@ -1869,8 +1868,22 @@ class GlobalState extends PureComponent<Props> {
     // spun forever with no errors, since nothing was ever running to clear it.
     const steamUser = steamConfigStore.has('userData')
 
-    if (legendaryUser) {
-      await window.api.getUserInfo()
+    // F-49-R1-1 (Phase 49 live gate Run 1): this used to be gated on
+    // `legendaryUser` (the mirror already holding `userInfo`). legendary
+    // 0.21.0 deletes `user.json` when a refresh token is rejected, the backend
+    // then purges `userInfo` (`legendary/user.ts:713`), and once it was gone
+    // nothing ever asked for it back, even after the file returned. The
+    // backend's `getUserInfo()` is self-healing in both directions (rebuilds
+    // from the file when present, purges when absent), so call it on every
+    // mount and seed the username from its answer when the mirror had none.
+    // The cold-boot expired path does not depend on this: the latched flag
+    // wins in `resolveSignInState` branch 1 (measured live 2026-10-09).
+    const epicUserInfo = await window.api.getUserInfo()
+    const legendaryUser = Boolean(epicUserInfo)
+    if (epicUserInfo?.displayName && !this.state.epic.username) {
+      this.setState((prev: StateProps) => ({
+        epic: { ...prev.epic, username: epicUserInfo.displayName }
+      }))
     }
 
     if (amazonUser) {

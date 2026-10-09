@@ -198,6 +198,19 @@ describe('GlobalState.tsx sign-in renderer state wiring (49-07: D-08, D-10, D-16
     expect(block).not.toMatch(/setSetting\(/)
   })
 
+  it('asks the backend for Epic user info on every mount, not only when the mirror already holds it (F-49-R1-1)', () => {
+    // Phase 49 live gate Run 1: once legendary deleted user.json and the
+    // backend purged userInfo, a `legendaryUser` gate meant nothing ever
+    // rebuilt it. getUserInfo() is self-healing, so the mount must call it
+    // unconditionally and seed the username from the answer.
+    const didMount = extractBalanced(stripped, 'componentDidMount()', '{', '}')
+    expect(didMount).not.toMatch(/if \(legendaryUser\)/)
+    expect(didMount).toMatch(
+      /const epicUserInfo = await window\.api\.getUserInfo\(\)/
+    )
+    expect(didMount).toMatch(/username: epicUserInfo\.displayName/)
+  })
+
   it('never references humbleCheckHealth anywhere in GlobalState.tsx', () => {
     expect(stripped).not.toMatch(/humbleCheckHealth/)
   })

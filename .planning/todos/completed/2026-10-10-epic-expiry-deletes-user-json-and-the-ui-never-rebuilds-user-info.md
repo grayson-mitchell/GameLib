@@ -5,6 +5,7 @@ area: auth
 severity: major
 platform: any
 ready: code
+resolves_commit: 03d17a4ab
 found_by: "plan 49-12, Phase 49 macOS live gate Run 1 (49-LIVE-GATE.md)"
 files:
   - src/backend/storeManagers/legendary/user.ts
@@ -31,3 +32,21 @@ Measured in Run 1, launch 2 (`49-LIVE-GATE.md` § Run 1, F-49-R1-1). With an inv
 Decide the intended model: either the `expired` latch must survive the file deletion and win over
 "not connected" in both the row and the tile, or the probe must treat a missing file with a set
 `expired` flag as expired. Add a test that simulates the deletion.
+
+## Resolution (2026-10-09, inline quick fix)
+
+**Headline narrowed by a live check.** The real-world sequence was measured on the Mac: induce
+the expiry → launch (latches `expired`, legendary deletes `user.json`) → quit → cold relaunch. The
+relaunch's pass named only `gog,nile,humble,steam`, and the Library still showed "Your Epic Games
+sign-in expired" with the "Sign-in expired — Reconnect" tile: the persisted flag wins in
+`resolveSignInState` branch 1 exactly as designed, and `legendaryConfigStore` is in the boot
+hydration set. Reconnect → real login cleared the flag, recreated the file and rebuilt `userInfo`.
+So the "not connected" state the gate saw in launch 3 was produced by the gate's own
+restore-without-login, not by a user-reachable path.
+
+**What was fixed.** `GlobalState.componentDidMount` no longer gates `getUserInfo()` on the mirror
+already holding `userInfo`; it calls the self-healing backend read on every mount and seeds
+`epic.username` from the answer when the mirror had none. A credential file that reappears
+without a login (a restore, a backup) now re-seeds the UI on the next boot. Pinned in
+`GlobalStateSignInMount.test.ts`. The legendary file deletion itself is the runner's behaviour and
+is left as is.
