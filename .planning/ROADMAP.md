@@ -5753,7 +5753,7 @@ question below and permanently closes the parked Humble keyring todo's unpark co
 **Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
 through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
 guess — the focus row and this banner share no files.
-**Plans:** 10/12 plans executed
+**Plans:** 11/12 plans executed
 
 Plans:
 **Wave 1**
@@ -5775,7 +5775,7 @@ Plans:
 - [x] 49-10-PLAN.md — All five Manage Accounts tiles from one selector, `steamTileState.ts` retired, parity gate, `?open=` idempotency
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 49-11-PLAN.md — Author the macOS live-gate contract + Structural Reachability Review + UAT (A1–A6, Keychain, warm exit)
+- [x] 49-11-PLAN.md — Author the macOS live-gate contract + Structural Reachability Review + UAT (A1–A6, Keychain, warm exit)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 49-12-PLAN.md — Run and score the macOS live gate (non-autonomous)

@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Completed 49-10-PLAN.md
-last_updated: "2026-10-09T18:30:14.470Z"
+stopped_at: Completed 49-11-PLAN.md
+last_updated: "2026-10-09T18:57:10.192Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 49 execution started
-state_head: daece7b4ded4ac503cbf980c6adc06f46c097c08
+state_head: d864cfc512133e099caae88f5009a1e6f6b8b1d4
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 525
+  completed_plans: 526
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 10 of 12
+Plan: 11 of 12
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 49 execution started
 
@@ -531,6 +531,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P08 | 7 min | 3 tasks | 12 files |
 | Phase 49 P09 | 30 min | 3 tasks | 10 files |
 | Phase 49 P10 | 45min | 2 tasks | 13 files |
+| Phase 49 P11 | 45 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1194,6 +1195,10 @@ Recent decisions affecting current work:
 - [Phase 49]: 49-09: expired sign-in rows ignore the dismissed set entirely, so a dismiss can never hide a proven expiry
 - [Phase 49]: 49-09: SteamSyncNotice credential-missing case is suppressed (resolver returns hidden), not replaced; Library sign-in notice owns it
 - [Phase 49]: 49-10: Login tiles re-read persisted verdicts through collectSignInInputs inside the existing effect (openOverlay dep kept, 260823-awo); parity gate compares parsed key:expression pairs of the selector call, not raw text, because prettier wraps the nested call
+- [Phase 49]: Live-gate item 9 measures sidecar drain by running build/main/sidecar.js directly with stdin closed at READY; quitting the app makes the shell SIGTERM the sidecar (main.rs:1883-1927) so a PID-gone check passes vacuously — Structural Reachability Review Test 4, restated before publication
+- [Phase 49]: Live-gate item 4 also sets loginTime=1 with the valid refresh token kept, because a valid unexpired GOG token is answered locally and the hosts block would exercise nothing — Review Test 6, restated before publication
+- [Phase 49]: Live-gate launch 3 (restore plus a healthy clear launch) is inserted so launch 2's persisted expired latches cannot contaminate launch 4's absence assertions; credentials and runner logs are backed up and archived after every launch — Review Test 5 pairs F5, F2-F4, F6
+- [Phase 49]: pnpm tauri:dev sets GAMELIB_DEV_SECRET_VAULT=1 and pnpm tauri:dev:keyring does not; Keychain live-gate items 7 and 8 must use the keyring build in a shell with the variable unset — package.json:32-33; otherwise the items are vacuous
 
 ### Pending Todos
 
@@ -1803,8 +1808,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T18:30:10.270Z
-Stopped at: Completed 49-10-PLAN.md
+Last session: 2026-10-09T18:57:05.105Z
+Stopped at: Completed 49-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
