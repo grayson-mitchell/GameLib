@@ -917,7 +917,7 @@ const IN_SCOPE_SUITES = [
  * and `configStore`, so it does write files, but only under this project's `jest.setupContainment.ts`
  * redirection, and its first test asserts that `configPath` and the store mirror resolve under
  * `os.tmpdir()` before any write. It declares no `os`/`pathShim` mock and never touches
- * `bootstrap.init()`.
+ * `bootstrap.init()`. 70 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 66 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -930,13 +930,13 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'devSecretVault.test.ts',
   'dialogStub.test.ts',
   'downloadQueueFlows.test.ts',
-  'focusRowFirstLaunchHydration.test.ts',
   'electronReachLedger.test.ts',
   'electronUntouched.test.ts',
   'eosOverlayFlows.test.ts',
   'externalDynamicImportGate.test.ts',
   'fileStore.test.ts',
   'flowRegistrationCensus.test.ts',
+  'focusRowFirstLaunchHydration.test.ts',
   'gameDetailsImportGate.test.ts',
   'gamelibNamespaceLoad.test.ts',
   'gogPresenceBootWire.test.ts',
