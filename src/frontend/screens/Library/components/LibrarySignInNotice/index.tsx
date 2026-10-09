@@ -36,11 +36,14 @@ import './index.scss'
 
 export default function LibrarySignInNotice() {
   const { t: tGamelib } = useTranslation('gamelib')
-  const { epic, gog, amazon, humble, steam } = useContext(ContextProvider)
+  const { epic, gog, amazon, humble, steam, signInProbeOutcomes } =
+    useContext(ContextProvider)
   const navigate = useNavigate()
 
-  // The outcome map is `{}` (every store pending) until plan 49-07 wires
-  // `signInProbeOutcomes` from context.
+  // Row visibility is derived from context state on every render: no event
+  // subscription and no local copy, so a sign-in that completed while the
+  // Library was unmounted leaves no row on return (R6). `signInProbeOutcomes`
+  // is this launch's pushed-and-pulled map (`{}` = every store pending).
   const states = resolveSignInStates(
     collectSignInInputs(
       {
@@ -51,7 +54,7 @@ export default function LibrarySignInNotice() {
         humbleExpired: humble?.expired,
         steamUsername: steam?.username
       },
-      {}
+      signInProbeOutcomes
     )
   )
   const rows = resolveLibrarySignInRows({ states })

@@ -219,10 +219,6 @@ export {
   downloadManagerStore,
   nileLibraryStore,
   nileConfigStore,
-  // Phase 49 (49-03): exported ahead of its first renderer consumer, the
-  // sign-in collector in 49-07, which reads `legendaryConfigStore.expired`.
-  // Remove this marker when that import lands.
-  // ts-prune-ignore-next
   legendaryConfigStore,
   zoomLibraryStore,
   zoomInstalledGamesStore,
