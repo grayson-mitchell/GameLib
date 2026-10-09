@@ -5744,11 +5744,32 @@ question below and permanently closes the parked Humble keyring todo's unpark co
 **Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
 through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
 guess — the focus row and this banner share no files.
-**Plans:** 0 plans
+**Plans:** 12 plans
 
 Plans:
+**Wave 1**
+- [ ] 49-01-PLAN.md — Tracer (latched Steam expiry → common selector → one Library row → `/login?open=`), R1 truth table, dismissal helpers, i18n gate-scope registration
+- [ ] 49-02-PLAN.md — Eight `gamelib:` keys in all 49 catalogues + 48 manifest stamps
+- [ ] 49-03-PLAN.md — `legendaryConfigStore` + three `expired` keys allow-listed; `callRunner` `skipErrorHandler`; Epic `--offline` when expired
 
-- [ ] TBD (run /gsd-plan-phase 49 to break down)
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 49-04-PLAN.md — Pure runner classifiers, session-epoch fence, outcome map push/pull, `applySignInVerdict`
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 49-05-PLAN.md — Epic, GOG (D-17) and Amazon expiry probes + sign-in/logout clear sites
+- [ ] 49-06-PLAN.md — Steam `'boot-probe'` keyring-only probe (reverses 260817-d61) + Humble labelled session probe (no csrf, no webview)
+- [ ] 49-07-PLAN.md — Renderer state: outcome map, `dismissedSignInNotices` AppSettings key, re-arm, Humble mount health call removed
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 49-08-PLAN.md — Bounded boot probe pass after READY (45 s, parallel, edge-triggered, unref'd) + folded Humble todo closure
+- [ ] 49-09-PLAN.md — Full Library sign-in notice (not-connected rows, dismiss, two weights) + `SteamSyncNotice` `signedOut` removal (D-19)
+- [ ] 49-10-PLAN.md — All five Manage Accounts tiles from one selector, `steamTileState.ts` retired, parity gate, `?open=` idempotency
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 49-11-PLAN.md — Author the macOS live-gate contract + Structural Reachability Review + UAT (A1–A6, Keychain, warm exit)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 49-12-PLAN.md — Run and score the macOS live gate (non-autonomous)
 
 **Promoted:** 2026-10-08 from backlog Phase 999.1 (captured 2026-09-04 in `92ac64922`, from the
 reconsideration that parked

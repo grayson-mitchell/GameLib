@@ -1,17 +1,21 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v0.8
 milestone_name: Phase Details
+current_phase: 49
+current_phase_name: Cross-store signed-out / offline mode
 status: executing
 stopped_at: Phase 49 context gathered
-last_updated: "2026-10-08T09:36:52.150Z"
-last_activity: "2026-10-08 — Completed quick task 261008-kvz: Cmd+Q and the red X route through the sidecar pending-operations confirm, live-gated 8/8 arms + negative control on macOS; Dock Quit/logout residual filed"
+last_updated: "2026-10-09T02:54:09.314Z"
+last_activity: 2026-10-08
+last_activity_desc: "Completed quick task 261008-kvz: Cmd+Q and the red X route through the sidecar pending-operations confirm, live-gated 8/8 arms + negative control on macOS; Dock Quit/logout residual filed"
+state_head: bd56101342fe04813a2da696b5ef02ba077c87f9
 progress:
   total_phases: 44
   completed_phases: 36
-  total_plans: 521
+  total_plans: 533
   completed_plans: 510
-  percent: 82
+  percent: 50
 ---
 
 # Project State
@@ -70,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
+Phase: 49 (Cross-store signed-out / offline mode) — READY TO EXECUTE
 Plan: 3 of 11
 Status: Ready to execute
 Last activity: 2026-10-08 — Completed quick task 261008-kvz: Cmd+Q and the red X route through the sidecar pending-operations confirm, live-gated 8/8 arms + negative control on macOS; Dock Quit/logout residual filed
@@ -112,7 +116,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 84%
+Progress: [█████░░░░░] 50%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
