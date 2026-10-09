@@ -21,7 +21,11 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleStartLogin', async () => HumbleUser.startLogin())
   addHandler('humbleGetUserInfo', () => HumbleUser.getUserDetails())
   addHandler('humbleReconnect', async () => HumbleUser.reconnect())
-  addHandler('humbleCheckHealth', () => HumbleUser.checkHealthAndFlagExpiry())
+  // Phase 49 (49-06): checkHealthAndFlagExpiry now returns the probe outcome;
+  // the channel's contract is still Promise<void>, so the outcome is dropped here.
+  addHandler('humbleCheckHealth', async () => {
+    await HumbleUser.checkHealthAndFlagExpiry()
+  })
   // Phase 11 (library.ts, Plan 02): sync IPC surface. These delegate to
   // HumbleLibrary and return ONLY the display-safe HumbleKey[]/HumbleSyncState
   // projections — never register humbleLibraryStore/humbleRevealedStore on

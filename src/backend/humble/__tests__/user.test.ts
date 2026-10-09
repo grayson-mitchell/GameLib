@@ -1951,9 +1951,11 @@ describe('HumbleUser', () => {
         mockSeamOpen.mockResolvedValue('csrf-backfill-window-2')
         mockSeamCookies.mockRejectedValue(new Error('window jar read failed'))
 
-        await expect(
-          HumbleUser.checkHealthAndFlagExpiry()
-        ).resolves.toBeUndefined()
+        // Phase 49 (49-06): the method returns the probe outcome; the session
+        // itself was healthy, the failed backfill is non-fatal.
+        await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+          'healthy'
+        )
 
         expect(mockSeamClose).toHaveBeenCalledTimes(1)
         expect(mockSeamClose).toHaveBeenCalledWith('csrf-backfill-window-2')
@@ -1968,9 +1970,11 @@ describe('HumbleUser', () => {
         primeHealthyNoCsrfConfig()
         mockSeamOpen.mockRejectedValue(new Error('window build failed'))
 
-        await expect(
-          HumbleUser.checkHealthAndFlagExpiry()
-        ).resolves.toBeUndefined()
+        // Phase 49 (49-06): the method returns the probe outcome; the session
+        // itself was healthy, the failed backfill is non-fatal.
+        await expect(HumbleUser.checkHealthAndFlagExpiry()).resolves.toBe(
+          'healthy'
+        )
 
         expect(mockSeamClose).not.toHaveBeenCalled()
         expect(mockConfigStore.set).not.toHaveBeenCalledWith(

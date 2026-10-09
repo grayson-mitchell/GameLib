@@ -167,7 +167,9 @@ export function registerHumbleFlows(): void {
   })
 
   ipcMain.handle('humbleCheckHealth', async () => {
-    return HumbleUser.checkHealthAndFlagExpiry()
+    // Phase 49 (49-06): the method returns the probe outcome; the channel's
+    // contract is still Promise<void>, so the outcome is dropped here.
+    await HumbleUser.checkHealthAndFlagExpiry()
   })
 
   ipcMain.handle('humbleSync', async () => {

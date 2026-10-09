@@ -8,6 +8,10 @@ import {
 } from './electronStores'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
 import { getGamekeys } from './adapter'
+import {
+  noteSignInSucceeded,
+  noteSignedOut
+} from 'backend/signInProbe/outcomes'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
@@ -693,6 +697,8 @@ export class HumbleUser {
     await storeHumbleSecret('sessionCookie', cookieValue)
     configStore.set('isLoggedIn', true)
     configStore.set('expired', false)
+    // Phase 49: a completed sign-in outranks any probe that began earlier.
+    noteSignInSucceeded('humble')
 
     // Phase 14 (T-14-04, RESEARCH.md Pitfall A): opportunistically capture
     // the csrf_cookie value at the SAME login moment as _simpleauth_sess.
@@ -750,37 +756,78 @@ export class HumbleUser {
     return 'done'
   }
 
-  // RED stub (49-06 Task 2): inert until the GREEN commit.
-  static async probeSession(_context: string): Promise<SignInProbeOutcome> {
-    return 'unknown'
-  }
+  // ── Phase 49 (49-06): boot sign-in probe ──────────────────────────────────
 
-  // ── HACCT-02: Startup/401 expiry health check (D-08/D-09) ────────────────
-
-  static async checkHealthAndFlagExpiry(): Promise<void> {
-    const cookie = await HumbleUser.getCredentials()
-    if (!cookie) return
+  /**
+   * The Humble boot sign-in probe (D-15 / D-18). It reads the `humble-session`
+   * slot ONCE under `context` (a never-secret trigger label) and decides from
+   * `getGamekeys`. It returns an outcome only: it writes no store and pushes
+   * nothing, because applying the verdict is 49-08's pass.
+   *
+   * It never reads the `humble-csrf` slot and never calls
+   * `getLoginWindowSeamOrThrow` (D-18, P2): the csrf backfill opens a hidden
+   * login window, which a boot-time probe must not do. That backfill stays in
+   * `checkHealthAndFlagExpiry`.
+   *
+   * Only `session_expired` is `expired`. An unreadable read is never evidence
+   * of absence, and an `absent` slot behind a connected flag is not proof of
+   * expiry either (A9), so both are `unknown` and `getGamekeys` is not called.
+   * A thrown request, `access_denied` and `schema_error` are `unknown` too.
+   * The HTTP call is bounded by `REQUEST_TIMEOUT_MS` (`adapter.ts`), so this is
+   * not unbounded boot work.
+   */
+  static async probeSession(context: string): Promise<SignInProbeOutcome> {
+    const store = getHumbleSecretStore()
+    let cookie = ''
+    try {
+      if (store.readSecret) {
+        const read = await store.readSecret('sessionCookie', context)
+        if (read.status !== 'present') return 'unknown'
+        cookie = read.token
+      } else {
+        cookie = await store.getSecret('sessionCookie')
+      }
+    } catch {
+      return 'unknown'
+    }
+    if (!cookie) return 'unknown'
 
     let result: Awaited<ReturnType<typeof getGamekeys>>
     try {
       result = await getGamekeys(cookie)
     } catch (err) {
-      // Transient/network failure (e.g. offline app start) — health is
-      // UNKNOWN, so do not flag expiry and do not push any state. Without
-      // this catch the rejection propagates through the humbleCheckHealth
-      // IPC handler to the renderer's fire-and-forget call as an unhandled
-      // rejection on every offline start. Message/status only — never the
-      // cookie.
+      // Transient/network failure (e.g. offline app start) -- health is
+      // UNKNOWN. Message only, never the cookie.
       logWarning(
         [
-          'Humble startup health check failed (transient, health unknown):',
-          err
+          'Humble sign-in probe failed (transient, health unknown):',
+          err instanceof Error ? err.message : String(err)
         ],
         LogPrefix.Backend
       )
-      return
+      return 'unknown'
     }
-    if (result.status === 'session_expired') {
+    if (result.status === 'session_expired') return 'expired'
+    if (result.status === 'ok') return 'healthy'
+    return 'unknown'
+  }
+
+  // ── HACCT-02: Startup/401 expiry health check (D-08/D-09) ────────────────
+
+  /**
+   * The retained `humbleCheckHealth` channel's implementation. Phase 49: the
+   * read and verdict now come from `probeSession`; this method keeps its
+   * original effects on top (flag `expired`, push `humbleAuthState`, and the
+   * csrf backfill on a healthy session) and returns the outcome. After 49-07 no
+   * renderer path calls it; the channel stays registered, uncalled, because
+   * removing it would churn `humbleFlows.test.ts` for no behavioural gain.
+   */
+  static async checkHealthAndFlagExpiry(): Promise<SignInProbeOutcome> {
+    // A transient/network failure or an unreadable slot is UNKNOWN, so no
+    // expiry is flagged and nothing is pushed -- probeSession never rejects,
+    // which keeps an offline start from surfacing as an unhandled rejection.
+    const outcome = await HumbleUser.probeSession('humble-health-check')
+    if (outcome === 'expired') {
       configStore.set('expired', true)
       const userData = configStore.get_nodefault('userData')
       sendFrontendMessage('humbleAuthState', {
@@ -790,7 +837,8 @@ export class HumbleUser {
       })
     }
     // access_denied (403) is a Humble-side C5 backoff signal, NOT a re-login
-    // trigger (D-08) — intentionally no state change on that path.
+    // trigger (D-08) — intentionally no state change on that path (it is
+    // `unknown` to probeSession).
 
     // Debug session humble-reveal-key-fails / T-14-04 gap fix: csrf_cookie
     // was previously ONLY ever captured inside finishLogin() (an active
@@ -804,7 +852,7 @@ export class HumbleUser {
     // self-healing the gap without requiring the user to disconnect/
     // reconnect. Best-effort/non-fatal, mirrors finishLogin's own capture
     // exactly (never blocks the health check, never logs the value).
-    if (result.status === 'ok' && !(await HumbleUser.getCsrfToken())) {
+    if (outcome === 'healthy' && !(await HumbleUser.getCsrfToken())) {
       // S-09 (Phase 34.4.1 Plan 18 gap-cycle closure, D-GAP-03) / Phase 39
       // Plan 05 collapse: this backfill opens a temporary HIDDEN window
       // through the login-window seam -- the same shape disconnect()'s
@@ -850,6 +898,7 @@ export class HumbleUser {
         }
       }
     }
+    return outcome
   }
 
   // ── HACCT-03: Disconnect (D-07 — full partition wipe) ─────────────────────
@@ -868,6 +917,8 @@ export class HumbleUser {
     // plaintext-degraded) sessionCookie on disk after a user-confirmed
     // disconnect (WR-02 / T-10-07).
     configStore.clear()
+    // Phase 49: fence any boot probe that began before this disconnect.
+    noteSignedOut('humble')
 
     // Phase 34.4.1 gap-cycle plan 13 (F-1 BLOCKING closure): clear the
     // keyring-backed session/csrf secrets too, as part of the SAME credential

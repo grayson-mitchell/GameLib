@@ -150,7 +150,9 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     })
 
     it('REQ-34.4-07 humbleCheckHealth invoke round-trips and delegates exactly once', async () => {
-      jest.mocked(HumbleUser.checkHealthAndFlagExpiry).mockResolvedValue()
+      jest
+        .mocked(HumbleUser.checkHealthAndFlagExpiry)
+        .mockResolvedValue('unknown')
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'check-health-1', 'humbleCheckHealth', [])
@@ -353,7 +355,9 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   describe('kind assertion — all 10 channels are reachable only as an invoke', () => {
     it('REQ-34.4-07 every one of the 10 channels resolves a response frame for its own id when driven as an invoke', async () => {
       jest.mocked(HumbleUser.getUserDetails).mockReturnValue(undefined)
-      jest.mocked(HumbleUser.checkHealthAndFlagExpiry).mockResolvedValue()
+      jest
+        .mocked(HumbleUser.checkHealthAndFlagExpiry)
+        .mockResolvedValue('unknown')
       jest.mocked(HumbleLibrary.sync).mockResolvedValue({
         status: 'ok'
       } as Awaited<ReturnType<typeof HumbleLibrary.sync>>)

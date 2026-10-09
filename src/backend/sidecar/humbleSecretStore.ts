@@ -86,12 +86,25 @@ export class SidecarHumbleSecretStore implements HumbleSecretStore {
     return SLOT_STORES[key].getToken()
   }
 
-  // RED stub (49-06 Task 2): drops the label until the GREEN commit.
+  /**
+   * Phase 49 (49-06, D-15): the three-state read the boot sign-in probe uses.
+   * `context` is a never-secret trigger label forwarded to
+   * `SidecarKeyringSlotStore.readToken(context)`, which already stamps
+   * `trigger=<context>` on its issue/cache/join/memo lines, so the Keychain
+   * prompt this read can raise is attributable. No Humble file imports a
+   * Steam gate module for it; the label is a plain string.
+   *
+   * Sidecar exit contract: this method adds no timer, watcher, socket or child.
+   * The in-flight `keyring_get` invoke is bounded by Rust's 45 s
+   * `KEYRING_READ_TIMEOUT` and the 60 s `RUST_INVOKE_TIMEOUT_MS`, whose timer is
+   * already `unref()`'d (`sidecarRpc.ts`); the pass's bound-abort path is
+   * `boundedSignInProbe` resolving `unknown` at `SIGN_IN_PROBE_BOUND_MS`.
+   */
   async readSecret(
     key: HumbleSecretKey,
-    _context?: string
+    context?: string
   ): Promise<TokenReadOutcome> {
-    return SLOT_STORES[key].readToken()
+    return SLOT_STORES[key].readToken(context)
   }
 
   async setSecret(key: HumbleSecretKey, value: string): Promise<void> {
