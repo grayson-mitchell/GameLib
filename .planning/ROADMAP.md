@@ -5753,7 +5753,7 @@ question below and permanently closes the parked Humble keyring todo's unpark co
 **Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
 through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
 guess — the focus row and this banner share no files.
-**Plans:** 3/12 plans executed
+**Plans:** 4/12 plans executed
 
 Plans:
 **Wave 1**
@@ -5762,7 +5762,7 @@ Plans:
 - [x] 49-03-PLAN.md — `legendaryConfigStore` + three `expired` keys allow-listed; `callRunner` `skipErrorHandler`; Epic `--offline` when expired
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 49-04-PLAN.md — Pure runner classifiers, session-epoch fence, outcome map push/pull, `applySignInVerdict`
+- [x] 49-04-PLAN.md — Pure runner classifiers, session-epoch fence, outcome map push/pull, `applySignInVerdict`
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 49-05-PLAN.md — Epic, GOG (D-17) and Amazon expiry probes + sign-in/logout clear sites

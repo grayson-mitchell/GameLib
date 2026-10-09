@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Completed 49-03-PLAN.md
-last_updated: "2026-10-09T10:42:24.009Z"
+stopped_at: Completed 49-04-PLAN.md
+last_updated: "2026-10-09T11:10:14.727Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 49 execution started
-state_head: 67dd883a0f5bf5a6d85adc22940135520eae4dfc
+state_head: 77daab020a4c0257284585768a4cb0ff04617139
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 518
+  completed_plans: 519
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-10-09 — Phase 49 execution started
 
@@ -524,6 +524,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P17 | ~45min | 3 tasks | 12 files |
 | Phase 48 P18 | 2h | 3 tasks | 1 files |
 | Phase 49 P03 | 25 min | 3 tasks | 12 files |
+| Phase 49 P04 | 14 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -1177,6 +1178,7 @@ Recent decisions affecting current work:
 - [Phase 48]: Phase closed 2026-10-09: re-verification round 3 passed 10/10 with a real v2 covered-input fingerprint over 60 files (the verifier's claim that `verification fingerprint` was unexposed was wrong; the verb takes the phase dir then paths); 48-VALIDATION.md nyquist_compliant, 48-SECURITY.md 64 threats closed, 0 open
 - [Phase 49]: legendaryConfigStore is exported under that name (not configStore) in its own legendary_store dir; expired follows the credentialsMissing precedent and is not write-denied — legendary/user.ts already imports the global configStore; a distinct dir keeps legendary from seeing or deleting the verdict; UI-only impact accepted (T-49-06, T-49-08)
 - [Phase 49]: resolveEpicOfflineMode can only enable offline mode and never blocks a launch; the credentials modal stays the fallback for games that cannot run offline — R8: only legendary + canRunOffline + expired turns offline on; read once in prepareLaunch so a mid-launch probe cannot abort a launch
+- [Phase 49]: Sign-in classifiers read a GOG token object while offline, and a Nile capture mixing auth and non-auth refresh statuses, as unknown (safe direction under 260822-vov) — Healthy needs positive evidence of a live session and clears a latched flag; a transient status beside an auth status means the failure is not proven
 
 ### Pending Todos
 
@@ -1786,8 +1788,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T10:41:57.341Z
-Stopped at: Completed 49-03-PLAN.md
+Last session: 2026-10-09T11:10:00.128Z
+Stopped at: Completed 49-04-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
