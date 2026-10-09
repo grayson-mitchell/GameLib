@@ -23,7 +23,7 @@ import type { SignInState } from 'common/signInState'
  * frontend jest project runs `testEnvironment: 'node'` with no jsdom (see
  * `src/frontend/jest.config.js`).
  */
-export interface SignInTile {
+interface SignInTile {
   /** Feeds `Runner`'s `isLoggedIn`. */
   isLoggedIn: boolean
   /** True only for a proven expiry: show the Reconnect button text. */

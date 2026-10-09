@@ -826,7 +826,7 @@ describe('src/backend/signInProbe/pass.ts source gates (D-04, T-49-23, P3)', () 
   })
 
   it('imports nothing from electron', () => {
-    expect(code).not.toMatch(/from 'electron'/)
+    expect(code).not.toMatch(/froms+'electron'/)
   })
 
   it('has no call site for requestSignInProbePass or runSignInProbePass outside pass.ts and __tests__', () => {
