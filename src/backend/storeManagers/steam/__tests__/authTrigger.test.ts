@@ -114,6 +114,26 @@ describe('mapRefreshOriginToTrigger', () => {
     expect(mapRefreshOriginToTrigger('redeem-steam-key')).toBe('user-refresh')
     expect(mapRefreshOriginToTrigger('game-status')).toBe('user-refresh')
   })
+
+  it.each([
+    '__proto__',
+    'constructor',
+    'toString',
+    'hasOwnProperty',
+    'valueOf'
+  ])(
+    'WR-04 own-property guard: inherited Object.prototype name %s never resolves through the prototype chain, maps to startup',
+    (origin) => {
+      const result = mapRefreshOriginToTrigger(origin)
+      expect(typeof result).toBe('string')
+      expect(result).toBe('startup')
+    }
+  )
+
+  it('WR-04 own-property guard: a non-string origin whose string coercion is an allowlisted key maps to startup', () => {
+    const origin = ['login-success'] as unknown as string
+    expect(mapRefreshOriginToTrigger(origin)).toBe('startup')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -157,6 +177,16 @@ describe('noteRefreshTrigger (Task 2 — refreshLibrary dispatch threading)', ()
     noteRefreshTrigger('nile', 'nav-tabs-games-tab')
     expect(isSteamAuthUnlocked()).toBe(false)
   })
+
+  it.each(['__proto__', 'constructor'])(
+    'WR-04 end-to-end: noteRefreshTrigger("steam", %s) keeps the gate locked and the label a string "startup", never an object or function',
+    (origin) => {
+      noteRefreshTrigger('steam', origin)
+      expect(isSteamAuthUnlocked()).toBe(false)
+      expect(typeof currentTriggerLabel()).toBe('string')
+      expect(currentTriggerLabel()).toBe('startup')
+    }
+  )
 })
 
 // ---------------------------------------------------------------------------
