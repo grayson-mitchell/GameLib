@@ -5744,11 +5744,11 @@ question below and permanently closes the parked Humble keyring todo's unpark co
 **Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
 through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
 guess — the focus row and this banner share no files.
-**Plans:** 12 plans
+**Plans:** 1/12 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 49-01-PLAN.md — Tracer (latched Steam expiry → common selector → one Library row → `/login?open=`), R1 truth table, dismissal helpers, i18n gate-scope registration
+- [x] 49-01-PLAN.md — Tracer (latched Steam expiry → common selector → one Library row → `/login?open=`), R1 truth table, dismissal helpers, i18n gate-scope registration
 - [ ] 49-02-PLAN.md — Eight `gamelib:` keys in all 49 catalogues + 48 manifest stamps
 - [ ] 49-03-PLAN.md — `legendaryConfigStore` + three `expired` keys allow-listed; `callRunner` `skipErrorHandler`; Epic `--offline` when expired
 

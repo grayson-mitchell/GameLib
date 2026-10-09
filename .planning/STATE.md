@@ -5,17 +5,17 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Phase 49 context gathered
-last_updated: "2026-10-09T02:54:09.314Z"
-last_activity: 2026-10-08
-last_activity_desc: "Completed quick task 261008-kvz: Cmd+Q and the red X route through the sidecar pending-operations confirm, live-gated 8/8 arms + negative control on macOS; Dock Quit/logout residual filed"
-state_head: bd56101342fe04813a2da696b5ef02ba077c87f9
+stopped_at: Completed 49-01-PLAN.md
+last_updated: "2026-10-09T03:19:30.497Z"
+last_activity: 2026-10-09
+last_activity_desc: Phase 49 execution started
+state_head: 7d3516bcc0a6abb8589660a87416b4a43719181d
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 533
   completed_plans: 510
-  percent: 50
+  percent: 82
 ---
 
 # Project State
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 48 — Focus row — move the library top section into the panel and widen it
+**Current focus:** Phase 49 — Cross-store signed-out / offline mode
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 49 (Cross-store signed-out / offline mode) — READY TO EXECUTE
-Plan: 3 of 11
+Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-10-08 — Completed quick task 261008-kvz: Cmd+Q and the red X route through the sidecar pending-operations confirm, live-gated 8/8 arms + negative control on macOS; Dock Quit/logout residual filed
+Last activity: 2026-10-09 — Phase 49 execution started
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -116,7 +116,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 82%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
@@ -515,6 +515,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P10 | 15 min | 2 tasks | 4 files |
 | Phase 48 P11 | 8 min | 3 tasks | 7 files |
 | Phase 48 P12 | 12 min | 3 tasks | 6 files |
+| Phase 49 P01 | 20 min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -1152,6 +1153,8 @@ Recent decisions affecting current work:
 - [Phase 48]: 48-11: chevron disc is opaque var(--body-background) (deliberate deviation from UI-SPEC's translucent scrim); divider fixed by a per-theme dracula/nord-light override, not a global change
 - [Phase 48]: 48-12: strip card width is derived from the grid's auto-fill/minmax arithmetic over the strip content box (not read from the rendered grid) and written as --focus-row-card-width; amends D-01 per the 2026-10-07 'match the grid' ruling
 - [Phase 48]: 48-12: strip-end clearance and viewport bleed 12px to 15px; vertical room max(1em, 0.04 x card width + 6.5px); width writes held on a 250ms A-B-A flip (T-48-36)
+- [Phase 49]: 49-01: sign-in selector rule order is expiredFlag, !loggedIn, healthy, else unknown (a latched flag outranks a logged-out read; legendary deletes user.json on the latching verdict)
+- [Phase 49]: 49-01: ?open= is validated by exact-membership parseSignInStore, consumed once per Login mount, and removed with replace:true (T-49-01)
 
 ### Pending Todos
 
@@ -1761,9 +1764,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-08T09:36:52.108Z
-Stopped at: Phase 49 context gathered
-Resume file: .planning/phases/49-cross-store-signed-out-offline-mode/49-CONTEXT.md
+Last session: 2026-10-09T03:19:25.737Z
+Stopped at: Completed 49-01-PLAN.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
