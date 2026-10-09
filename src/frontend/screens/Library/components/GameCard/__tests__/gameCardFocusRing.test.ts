@@ -46,6 +46,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { KEYBOARD_NAV_CLASS } from '../../../../../helpers/inputModality'
 
 function readGameCardCss(): string {
   const raw = readFileSync(join(__dirname, '..', 'index.css'), 'utf8')
@@ -86,8 +87,19 @@ const GAME_LIST_ITEM_FOCUS_RULE = /\.gameListItem:focus-within\s*\{[^}]*\}/
 // bodies for `.gameCard` (ring/box-shadow/z-index, then the scale transform)
 // share the same selector text, so this is matched with the global flag and
 // both bodies are inspected independently below.
-const GAME_CARD_STALE_FOCUS_SELECTOR =
-  /body:not\(\.controllerLayout\)\s+\.listing:hover\s+\.gameCard:focus-within:not\(:hover\)\s*\{[^}]*\}/g
+//
+// Phase 48 plan 16 (G-48-12a, WR-02): the `.gameCard` suppression is ALSO
+// scoped off keyboard mode, so a Tab-focused card keeps its ring while the
+// pointer rests over the library. The class name is read from the module that
+// sets it, so the stylesheet and the tracker cannot drift apart.
+const KEYBOARD_CLASS_PATTERN = KEYBOARD_NAV_CLASS.replace(
+  /[.*+?^${}()|[\]\\]/g,
+  '\\$&'
+)
+const GAME_CARD_STALE_FOCUS_SELECTOR = new RegExp(
+  `body:not\\(\\.controllerLayout\\):not\\(\\.${KEYBOARD_CLASS_PATTERN}\\)\\s+\\.listing:hover\\s+\\.gameCard:focus-within:not\\(:hover\\)\\s*\\{[^}]*\\}`,
+  'g'
+)
 const GAME_LIST_ITEM_STALE_FOCUS_RULE =
   /body:not\(\.controllerLayout\)\s+\.listing:hover\s+\.gameListItem:focus-within:not\(:hover\)\s*\{[^}]*\}/
 
@@ -259,14 +271,24 @@ describe('Stale-focus suppression is scoped to body:not(.controllerLayout) .list
     expect(css).not.toMatch(/\.gameListLayout:hover/)
   })
 
-  it('neither suppression rule fires unscoped -- every selector begins with body:not(.controllerLayout)', () => {
+  it('neither suppression rule fires unscoped -- every selector begins with body:not(.controllerLayout), and every .gameCard one also with :not(.keyboardNav)', () => {
     const css = readGameCardCss()
 
     expect(css).not.toMatch(
-      /(?<!body:not\(\.controllerLayout\)\s)\.listing:hover\s+\.gameCard:focus-within:not\(:hover\)/
+      new RegExp(
+        `(?<!body:not\\(\\.controllerLayout\\):not\\(\\.${KEYBOARD_CLASS_PATTERN}\\)\\s+)\\.listing:hover\\s+\\.gameCard:focus-within:not\\(:hover\\)`
+      )
     )
     expect(css).not.toMatch(
       /(?<!body:not\(\.controllerLayout\)\s+)\.listing:hover\s+\.gameListItem:focus-within:not\(:hover\)/
     )
+  })
+})
+
+describe('Keyboard mode is tied to the stylesheet (source gate, G-48-12a, Test H)', () => {
+  it('Test H: the stylesheet spells the keyboard-mode class exactly as the tracker exports it', () => {
+    const css = readGameCardCss()
+
+    expect(css).toContain(`:not(.${KEYBOARD_NAV_CLASS})`)
   })
 })
