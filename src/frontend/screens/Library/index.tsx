@@ -1162,6 +1162,11 @@ export default React.memo(function Library(): JSX.Element {
           libraryUnion={libraryUnion}
           deps={engineDeps}
           showHidden={showHidden}
+          gridShown={
+            libraryToShow.length > 0 &&
+            (!refreshing || refreshingInTheBackground) &&
+            layout === 'grid'
+          }
           handleModal={handleModal}
         />
 

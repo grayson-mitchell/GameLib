@@ -171,6 +171,46 @@ export function gridColumnWidth(
   return Math.max(min, (contentWidth - (n - 1) * g) / n)
 }
 
+/**
+ * What the strip needs to know about the surrounding library to hold the grid's
+ * scrollbar allowance (G-48-11c). Injected so the sync stays a pure function.
+ * `gridShown` mirrors the grid's mount condition; `scrollbarAllowance` is the
+ * scroller's vertical-bar width, `readScrollerAllowance` in the app.
+ */
+export interface StripLayoutContext {
+  gridShown: () => boolean
+  scrollbarAllowance: (track: HTMLElement) => number
+}
+
+/**
+ * The layout width the `main.content` scroller's vertical scrollbar takes:
+ * `offsetWidth - clientWidth` less the element's own side borders, which are
+ * not bar. 0 when there is no scroller, no bar, a non-finite or negative result
+ * or any throw. Borders are read only where `getComputedStyle` exists.
+ */
+export function readScrollerAllowance(track: HTMLElement): number {
+  try {
+    const scroller = track.closest<HTMLElement>('main.content')
+    if (!scroller) {
+      return 0
+    }
+    const borders =
+      typeof getComputedStyle === 'function'
+        ? (() => {
+            const cs = getComputedStyle(scroller)
+            return (
+              (parseFloat(cs.borderLeftWidth) || 0) +
+              (parseFloat(cs.borderRightWidth) || 0)
+            )
+          })()
+        : 0
+    const allowance = scroller.offsetWidth - scroller.clientWidth - borders
+    return Number.isFinite(allowance) && allowance > 0 ? allowance : 0
+  } catch {
+    return 0
+  }
+}
+
 interface StripWidthStyle {
   paddingLeft: string
   paddingRight: string
@@ -193,7 +233,21 @@ interface StripWidthStyle {
  *     list's padding, so the content box C below is the grid's content box.
  *  2. Reading the grid would tie the strip to grid state. The grid is not
  *     mounted for a zero-result filter, during a refresh, or in list layout,
- *     and SPEC R4 makes the focus row independent of filter state.
+ *     and SPEC R4 makes the focus row independent of filter state. "The width
+ *     a grid column would have" while the grid is hidden therefore means the
+ *     width it had as last laid out when the grid showed, INCLUDING the grid's
+ *     own scrollbar state (G-48-11c): `.App .content` is the scroller and its
+ *     10px bar takes layout width, an empty grid no longer overflows, the bar
+ *     goes, and the container, hence the derived column, widens by 10 / n
+ *     (48-15 B7: +2 CSS px at 5 columns, measured again in WebKit by 48-17).
+ *     So the sync also reads the scroller's vertical-bar allowance
+ *     (`context.scrollbarAllowance`): while `context.gridShown()` it uses C
+ *     live and remembers that allowance per track; while it is hidden it uses
+ *     C - (remembered - current), which keeps the content box the grid had yet
+ *     still follows a real change of the track width (a window resize). With no
+ *     remembered allowance (a track that never saw the grid) C is live. A
+ *     throwing context is read as "grid shown, allowance 0" for the width and
+ *     leaves the remembered allowance alone. No context is the old behaviour.
  *  3. It is provable at the desk: a pure function plus a stubbed element.
  *
  * C is the track's border-box width (a fractional `getBoundingClientRect`, not
@@ -228,13 +282,17 @@ interface StripWidthStyle {
 export function createStripCardWidthSync(now: () => number = defaultNow) {
   let lastTrack: HTMLElement | null = null
   let writes: Array<{ width: number; at: number }> = []
+  // The scroller's bar allowance when the grid last showed on `lastTrack`;
+  // undefined until it has (G-48-11c). Reset beside `writes`.
+  let reference: number | undefined
 
   return function syncCardWidth(
     track: HTMLElement | null,
     getStyle: (el: Element) => StripWidthStyle = (el) =>
       typeof getComputedStyle === 'function'
         ? getComputedStyle(el)
-        : { paddingLeft: '', paddingRight: '', columnGap: '' }
+        : { paddingLeft: '', paddingRight: '', columnGap: '' },
+    context?: StripLayoutContext
   ): number | null {
     try {
       const list = track?.firstElementChild ?? null
@@ -249,15 +307,32 @@ export function createStripCardWidthSync(now: () => number = defaultNow) {
       if (!Number.isFinite(content) || content <= 0) {
         return null
       }
-      const width = gridColumnWidth(
-        content,
-        GRID_CARD_MIN_WIDTH,
-        parseFloat(style.columnGap)
-      )
       if (track !== lastTrack) {
         lastTrack = track
         writes = []
+        reference = undefined
       }
+      let held = content
+      if (context) {
+        try {
+          const shown = context.gridShown()
+          const allowance = context.scrollbarAllowance(track)
+          const bar =
+            Number.isFinite(allowance) && allowance > 0 ? allowance : 0
+          if (shown) {
+            reference = bar
+          } else if (reference !== undefined) {
+            held = content - (reference - bar)
+          }
+        } catch {
+          held = content
+        }
+      }
+      const width = gridColumnWidth(
+        held,
+        GRID_CARD_MIN_WIDTH,
+        parseFloat(style.columnGap)
+      )
       const inline = parseFloat(
         track.style.getPropertyValue('--focus-row-card-width')
       )

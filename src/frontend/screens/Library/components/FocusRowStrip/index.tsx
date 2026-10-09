@@ -29,7 +29,9 @@ import {
   createStripCardWidthSync,
   measureCardPitch,
   pageScrollDelta,
-  scrollFocusedCardIntoViewHorizontally
+  readScrollerAllowance,
+  scrollFocusedCardIntoViewHorizontally,
+  type StripLayoutContext
 } from './focusRowOverflow'
 import './index.css'
 
@@ -38,6 +40,8 @@ interface Props {
   libraryUnion: GameInfo[]
   deps: FilterEngineDeps
   showHidden: FilterMode
+  /** Whether the grid below is mounted (G-48-11c): the strip holds the grid's scrollbar allowance while it is not. */
+  gridShown: boolean
   handleModal: (appName: string, runner: Runner, gameInfo: GameInfo) => void
 }
 
@@ -61,6 +65,7 @@ function FocusRowStrip({
   libraryUnion,
   deps,
   showHidden,
+  gridShown,
   handleModal
 }: Props) {
   const { t } = useTranslation()
@@ -76,6 +81,21 @@ function FocusRowStrip({
   // One width sync per mount (G-48-8c): it keeps the write history that stops
   // a resize feedback loop, so it must not be re-created per render.
   const [syncCardWidth] = useState(() => createStripCardWidthSync())
+
+  // G-48-11c: `gridShown` reaches the sync through a ref, so the observer's
+  // next-frame runner (built once per effect run) reads the live value. Declared
+  // before the sync effect: layout effects run in order, so the ref is current
+  // by the time it is read.
+  const gridShownRef = useRef(gridShown)
+  useLayoutEffect(() => {
+    gridShownRef.current = gridShown
+  })
+  const [layoutContext] = useState(
+    (): StripLayoutContext => ({
+      gridShown: () => gridShownRef.current,
+      scrollbarAllowance: readScrollerAllowance
+    })
+  )
 
   const games = useMemo(
     () => selectFocusRowGames(libraryUnion, focusRow, showHidden, deps),
@@ -106,8 +126,8 @@ function FocusRowStrip({
   // 2026-10-07 ruling amending D-01) before the first paint, so there is no
   // 156px-then-wide flash. The ResizeObserver below keeps it current.
   useLayoutEffect(() => {
-    syncCardWidth(trackRef.current)
-  }, [hasGames, games, syncCardWidth])
+    syncCardWidth(trackRef.current, undefined, layoutContext)
+  }, [hasGames, games, syncCardWidth, layoutContext, gridShown])
 
   // Keep `measure` current: on resize of the track or of its content, and
   // on every scroll. The track only exists while the pick resolves to games,
@@ -126,7 +146,7 @@ function FocusRowStrip({
     readMeasurement()
     track.addEventListener('scroll', readMeasurement, { passive: true })
     const frame = createNextFrameRunner(() => {
-      syncCardWidth(track)
+      syncCardWidth(track, undefined, layoutContext)
       readMeasurement()
     })
     let observer: ResizeObserver | undefined
@@ -145,7 +165,7 @@ function FocusRowStrip({
       observer?.disconnect()
       frame.cancel()
     }
-  }, [hasGames, games, readMeasurement, syncCardWidth])
+  }, [hasGames, games, readMeasurement, syncCardWidth, layoutContext])
 
   // Gamepad focus is a scripted `.focus()` onto a card; bring it fully into
   // view along the track's own `scrollLeft`. Gated on `activeController` the

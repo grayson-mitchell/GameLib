@@ -107,15 +107,17 @@ function assertNoticeMounted(source: string): void {
  * G3 (THE CORE GATE): the known-bad conjunction is gone, and the
  * D-11-fenced overlay survives untouched.
  *
- * The occurrence count is pinned at exactly 3, not 2 -- confirmed against
+ * The occurrence count is pinned at exactly 4, not 2 -- confirmed against
  * the real file at HEAD before this plan: the destructure
  * (`refreshingInTheBackground,`), the D-11-fenced overlay
  * (`refreshing && !refreshingInTheBackground && <UpdateComponent />` at
  * old :1011), AND a third, pre-existing, unrelated site gating the main
  * `<GamesList>` render (`(!refreshing || refreshingInTheBackground) &&`,
- * old :1029) that already existed at HEAD and this plan never touches. A
- * FOURTH occurrence -- not a third -- is what would mean the old guard
- * survived somewhere new.
+ * old :1029) that already existed at HEAD and this plan never touches.
+ * Phase 48 plan 17 (G-48-11c) added the fourth, on purpose: the
+ * `gridShown` prop passed to `<FocusRowStrip`, which mirrors that
+ * `<GamesList>` gate so the strip knows when the grid is mounted. A FIFTH
+ * occurrence is what would mean the old guard survived somewhere new.
  */
 function assertOldGuardGoneAndFenceIntact(source: string): void {
   if (source.includes('steam?.library?.length === 0')) {
@@ -126,11 +128,12 @@ function assertOldGuardGoneAndFenceIntact(source: string): void {
   }
 
   const occurrences = (source.match(/refreshingInTheBackground/g) || []).length
-  if (occurrences !== 3) {
+  if (occurrences !== 4) {
     throw new Error(
       `G3 FAILED: refreshingInTheBackground occurs ${occurrences} times, ` +
-        'expected exactly 3 (the destructure, the D-11-fenced overlay, and ' +
-        'the pre-existing GamesList render gate). A fourth occurrence means ' +
+        'expected exactly 4 (the destructure, the D-11-fenced overlay, the ' +
+        'pre-existing GamesList render gate, and the FocusRowStrip gridShown ' +
+        'prop that mirrors it). A fifth occurrence means ' +
         'the old guard survived somewhere new.'
     )
   }
