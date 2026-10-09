@@ -1,11 +1,33 @@
 ---
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
-verified: 2026-10-08T12:00:00Z
-status: human_needed
-score: 8/10 must-haves verified (R1-R7 from 48-SPEC.md; R3 split into R3-core, R3-gamepad, R3-parity and R3-chevron-reach)
-covered_files: []
-covered_digest: "unavailable: verification.fingerprint is not exposed by the installed gsd-sdk/gsd-tools bridge (Unknown command: verification); not hand-written"
-behavior_unverified: 2
+verified: 2026-10-09T12:00:00Z
+status: passed
+score: 10/10 must-haves verified (R1-R7 from 48-SPEC.md; R3 split into R3-core, R3-gamepad, R3-parity and R3-chevron-reach)
+covered_files:
+  - src/common/focusRowMigration.ts
+  - src/common/__tests__/focusRowMigration.test.ts
+  - src/backend/sidecar/__tests__/focusRowFirstLaunchHydration.test.ts
+  - src/frontend/state/GlobalState.tsx
+  - src/frontend/state/__tests__/GlobalStateFocusRowHydration.test.ts
+  - src/frontend/index.tsx
+  - src/frontend/helpers/inputModality.ts
+  - src/frontend/helpers/__tests__/inputModality.test.ts
+  - src/frontend/themes.scss
+  - src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts
+  - src/frontend/components/UI/NavShell/components/FilterFocusRow/index.scss
+  - src/frontend/screens/Library/index.tsx
+  - src/frontend/screens/Library/__tests__/librarySyncNoticeSource.test.ts
+  - src/frontend/screens/Library/components/FocusRowStrip/index.tsx
+  - src/frontend/screens/Library/components/FocusRowStrip/index.css
+  - src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts
+  - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowOverflow.test.ts
+  - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowSelectors.test.ts
+  - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowStripSource.test.ts
+  - src/frontend/screens/Library/components/GameCard/index.css
+  - src/frontend/screens/Library/components/GameCard/__tests__/gameCardControllerGeometry.test.ts
+  - src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts
+covered_digest: "unavailable: verification.fingerprint is not exposed by the installed gsd-sdk/gsd-tools bridge (gsd-sdk falls back to gsd-tools.cjs, which answers 'Unknown command: verification'); not hand-written. covered_files is the phase-attributed source list (plan key-files), not the raw git diff 752b510f8..HEAD, which also carries unrelated work merged in from main (Login, Steam depot, sign-in notice, tauri shell tests)."
+behavior_unverified: 0
 overrides_applied: 1
 overrides:
   - must_have: "libraryTopSection: recently_played_installed yields Recently-played focus row with installed-only semantics"
@@ -14,65 +36,52 @@ overrides:
     accepted_at: "2026-10-05T17:36:51+13:00"
 re_verification:
   previous_status: human_needed
-  previous_score: 7/8
+  previous_score: 8/10
   gaps_closed:
-    - "R3 gamepad scroll-into-view: passed live by the operator on Windows with a physical controller (UAT item 8, 2026-10-07); handler also covered by behavioural stub tests including the 48-10 edge-clearance cases"
-    - "G-48-8a: controller mode no longer changes any GameCard's box (48-09, source-gated, desk arithmetic); live confirmation owed"
-    - "G-48-8b: mouse hover wears the console-style 3px ring on every GameCard (48-09, source-gated); live confirmation owed"
-    - "G-48-4b / G-48-9: .focusRowTrack is an isolated stacking context so a hovered card cannot paint over a chevron (48-10, source-gated); real-pointer hit-test owed"
-    - "G-48-4a: chevron on one opaque var(--body-background) disc, glyph at least 3:1 in all 10 themes by token census (48-11); live pixel re-measure owed"
-    - "G-48-7: dracula and nord-light divider labels use the tier-2 row colour chain, at least 4.5:1 in all 10 themes by token census (48-11); live re-measure owed"
-    - "G-48-8c: strip cards take the grid's minmax(156px, 1fr) column width derived from the strip's own content box (48-12); live within-1px parity owed"
+    - "R3-parity (was PRESENT_BEHAVIOR_UNVERIFIED): measured live, strip and grid first card 355 vs 354 capture px at 1280 and equal at 760 (UAT item 11 / 48-18, macOS WebKit); item 11 passes on Windows by eye with a controller; G-48-8c resolved"
+    - "R3-chevron-reach (was PRESENT_BEHAVIOR_UNVERIFIED): UAT item 9 re-run live with a CGEvent pointer through the edge card from above, below and inside, chevron glyph 122 px vs 122 px unhovered, click advanced exactly one grid row every time; G-48-4b / G-48-9 resolved"
+    - "G-48-11a (ResizeObserver loop, WR-01): 48-14 moves the width write into a next-frame runner; 0 loop errors live vs 34 on the pre-fix binary"
+    - "G-48-11b (WebKit paging past the last card): 48-13 pins the strip card width (index.css:86); two launches walk 0-4, 5-9, 9-13 with 15pt end clearance"
+    - "G-48-11c (empty-grid strip +2px): 48-17 scrollbar-allowance hold; 355 vs 355 px in 10 of 10 captures, pre-fix arming control +2 CSS px"
+    - "G-48-12a (Tab focus ring lost under a resting pointer, WR-02): 48-16 body.keyboardNav; exactly one ringed tile in 40 of 40 and 41 of 41 captures"
+    - "G-48-12b (L3 distinct positions): bar extended to 40 presses by operator, 16 distinct positions, bar at least 10"
+    - "G-48-8a (controller mode resizes cards): live pass with a physical controller on Windows 11 (UAT item 12, 2026-10-09)"
+    - "G-48-11d (controller-mode tile buttons hidden): traced to a pre-existing upstream rule present at baseline 752b510f8; ruled intended by the operator, no code change"
+    - "G-48-4a, G-48-7, G-48-8b: live re-measure, UAT items 10, 7, 12 pass"
+    - "UAT file: status complete, 12 of 12 pass, 0 issues, 0 pending, 0 blocked; all 13 Gaps entries status resolved"
   gaps_remaining: []
   regressions: []
 gaps: []
 deferred: []
 advisory:
-  - finding: "No code review exists for the round-2 plans 48-09..48-12 (48-REVIEW.md and 48-REVIEW-DISPOSITION.md cover rounds up to 48-07)"
+  - finding: "48-REVIEW.md (2026-10-08) predates the 48-14 (next-frame runner), 48-16 (inputModality / keyboardNav) and 48-17 (scrollbar-allowance hold) code; no review covers those files. Its WR-01, WR-02 and WR-03 are dispositioned fixed in 48-REVIEW-DISPOSITION.md; IN-01 to IN-07 remain open (info)"
     category: other
-    reason: "Not a must-have; /gsd-code-review 48 would cover the new focusRowOverflow.ts sync/hold logic and the global GameCard CSS change"
+    reason: "Not a must-have. /gsd-code-review 48 would cover focusRowOverflow.ts (createNextFrameRunner, readScrollerAllowance), helpers/inputModality.ts and the GameCard keyboardNav CSS"
     evidence_status: "none provided"
-  - finding: "48-UI-SPEC.md still says 'Semi-transparent dark scrim' for the chevron (line 319); the opaque-disc deviation (48-11) is recorded in the plan, the CSS comment and the themeTokens census, not in the UI-SPEC"
+  - finding: "48-UI-SPEC.md line 319 still says 'Semi-transparent dark scrim' for the chevron; the shipped control is an opaque var(--body-background) disc (48-11)"
     category: other
-    reason: "Documentation drift only; the code, its comment and its gate agree with each other"
+    reason: "Documentation drift only; code, its CSS comment, the themeTokens census and the live contrast pass (UAT item 10) agree with each other"
     evidence_status: "none provided"
-behavior_unverified_items:
-  - truth: "R3 / chevron reach: with a real pointer crossing the adjacent edge card onto a chevron, the chevron stays on top and a click advances the strip (UAT item 9, G-48-4b, G-48-9)"
-    test: "On Windows dev shell with a real mouse, overflowing strip: move the pointer onto each chevron through the adjacent edge card (from above, below and inside), then click"
-    expected: "document.elementFromPoint at the chevron centre returns the control (or a descendant); the click advances scrollLeft by one grid row; the chevron stays visible while the edge card is hovered"
-    why_human: "48-10 puts isolation: isolate on .focusRowTrack and the source gate pins it plus the control z-index, but whether a CSS engine paints and hit-tests the chevron above a hovered, transformed card is a rendering invariant no jest project can see. UAT item 9 still reads issue (recorded before 48-10)"
-  - truth: "R3 / amended criterion: strip cards are the same width as the grid's cards at every window width, within 1px (G-48-8c)"
-    test: "At window 1280 and at one narrower width, read getBoundingClientRect().width of the first .focusRowTrack .gameList > * and of the first grid card"
-    expected: "Equal within 1px at both widths; strip stays one card tall and at most 20 cards; with a filter yielding zero grid results the strip width is unchanged"
-    why_human: "The derivation is proven at the desk (gridColumnWidth over a content box, stylesheet values parsed from Library/index.css and asserted equal), and the assumption that the strip's content box equals the grid's content box rests on layout (viewport bleed -15px against list padding 15px, both under .listing). Only a layout engine confirms the browser resolves it to the same pixels"
-human_verification:
-  - test: "UAT item 9 re-run, real-pointer chevron reach after 48-10 (see behavior_unverified_items 1)"
-    expected: "Chevron stays on top of a hovered edge card; click pages the strip"
-    why_human: "Rendering and hit-testing invariant"
-  - test: "G-48-8c parity, live (see behavior_unverified_items 2). Also resize the window across a column-count breakpoint and watch for flicker or a ResizeObserver loop error in the console (the 250ms flip-hold, T-48-36)"
-    expected: "Strip card width equals grid card width within 1px at 1280 and a narrower width; no console 'ResizeObserver loop' error and no visible flip-flop while dragging"
-    why_human: "Pixel measurement and a feedback loop that depends on a real scrollbar toggling"
-  - test: "UAT item 10 (now pending): chevron 40-combination re-measure (10 themes x BRIGHT/DARK card x 2 edges) and divider-label measure, C1-C4 rule"
-    expected: "Every chevron minimum at least 3:1 and within 0.05 of the census figure (census minimum 3.91, gruvbox_dark); every divider at least 4.5:1 and within about 0.02 of census (minimum 5.43, marine); dracula about 7.48, nord-light about 7.38"
-    why_human: "Pixel measurement over real themes and the disc edge against artwork, which the token census cannot see"
-  - test: "G-48-8a / G-48-8b live: with a controller, switch mouse to controller and back on a strip and on the grid"
-    expected: "Card boxes do not change size or crop on handoff; mouse hover shows the same 3px ring as controller focus; exactly one tile rings at a time (parked cursor in controller mode, stale focus in mouse mode, across strip and grid)"
-    why_human: "Input-mode handoff and live :hover/:focus-within interplay; the unit gates parse stylesheet text only"
-  - test: "UAT items 5 and 6 re-check at grid-matched widths"
-    expected: "Back/forward page by exactly one grid row and end at scrollWidth; at widths 1280, 520 and the narrowest, no title rect exceeds its card, the end cards' rings are not clipped by the track at scrollLeft 0 and at the end of travel; controller focus past the last visible card scrolls it in with ring clearance"
-    why_human: "Layout and scroll geometry after 48-10 and 48-12 changed padding, bleed, card width and the scroll-into-view target"
+  - finding: "Live evidence is split across engines: width parity, end-of-travel, resize sweep, chevron reach and contrast were measured numerically on macOS WKWebView; controller clauses (R3-gamepad, G-48-8a, item 11 ring clearance and first paint) were judged by eye by the operator on Windows 11 / WebView2 with a physical controller. No numeric parity measurement exists on WebView2"
+    category: other
+    reason: "The amended R3 criterion (within 1px of the grid) is engine-independent by construction (derived from the track content box) and the Windows by-eye pass found no jump or crop; a numeric Windows run is optional hardening, not a gap"
+    evidence_status: "none provided"
+  - finding: "48-18 observation: at 1280 the strip's cards 1-4 are 1-2 capture px (at most 1 CSS px) wider than the grid's, card 4's left edge 3 capture px right of the grid's (pitch 403 vs 402.5)"
+    category: other
+    reason: "The SPEC criterion binds the first card, and it is met (355 vs 354 capture px, left edges equal); sub-pixel pitch drift on later cards is recorded, not a criterion"
+    evidence_status: "none provided"
 ---
 
-# Phase 48: Focus Row Verification Report (re-verification, gap-closure round 2)
+# Phase 48: Focus Row Verification Report (re-verification, round 3, after plans 48-13 to 48-18 and the completed UAT)
 
 **Phase Goal:** The single lane above the games grid stops being a four-option dropdown buried in Settings and becomes a **focus row** chosen from the Games tier-2 panel, pickable from any view, collection, store or runnability value, rendered as a horizontal strip that fills the available width, with the `Recent Games to Show` number setting removed and the row sized by what fits.
-**Verified:** 2026-10-08
-**Status:** human_needed
-**Re-verification:** Yes, after gap-closure round 2 (48-09, 48-10, 48-11, 48-12). HEAD `0a0bfca2d`, branch `quick-261002-b63`. Previous report: 2026-10-07, `human_needed`, 7/8.
+**Verified:** 2026-10-09
+**Status:** passed
+**Re-verification:** Yes. HEAD `24d38d58f`, branch `quick-261002-b63`. Previous report: 2026-10-08, `human_needed`, 8/10 (stale: 48-13 to 48-18 changed covered source files after it).
 
 ## Requirement IDs
 
-R1-R7 are phase-local, defined in `48-SPEC.md`; `.planning/REQUIREMENTS.md` has no Phase 48 rows (expected; the executor's `requirements.mark-complete R3` returned not_found for that reason). Plan frontmatter cross-reference: 48-01 [R2,R3], 48-02 [R1,R3,R4,R5], 48-03 [R2], 48-04 [R3], 48-05 [R7], 48-06 [R6], 48-07 [R7,R1], 48-08 [R1,R2,R3,R6,R7], 48-09 [R3], 48-10 [R3], 48-11 [R2,R3], 48-12 [R3]. Every one of R1-R7 is claimed by at least one plan; none is orphaned, and no plan names an ID absent from the SPEC. R3 is read as amended on 2026-10-07 (recorded in the SPEC 2026-10-08): the "fixed 156px" criterion is struck and the "same width as the grid's cards within 1px" criterion is added (SPEC lines 96, 166, 167). R6 is read as amended 2026-10-04.
+R1-R7 are phase-local, defined in `48-SPEC.md`; `.planning/REQUIREMENTS.md` has no Phase 48 rows (confirmed again: its only R1-R7 hits are Phase 24's REQ-24-xx text). That is expected, not an orphaned-requirement finding. Plan frontmatter cross-reference, all 18 plans: 48-01 [R2,R3], 48-02 [R1,R3,R4,R5], 48-03 [R2], 48-04 [R3], 48-05 [R7], 48-06 [R6], 48-07 [R7,R1], 48-08 [R1,R2,R3,R6,R7], 48-09 [R3], 48-10 [R3], 48-11 [R2,R3], 48-12 [R3], 48-13 [R3], 48-14 [R3], 48-15 [R3], 48-16 [R3], 48-17 [R3,R4], 48-18 [R3,R4]. Every one of R1-R7 is claimed by at least one plan, no plan names an ID absent from the SPEC, none is orphaned. R3 is read as amended 2026-10-07 (fixed-156px struck; "same width as the grid's cards within 1px" added); R6 as amended 2026-10-04. CONTEXT D-01/D-02 are superseded for the strip by the operator's "match the grid" ruling, as recorded in the SPEC and UI-SPEC.
 
 ## Goal Achievement
 
@@ -80,96 +89,87 @@ R1-R7 are phase-local, defined in `48-SPEC.md`; `.planning/REQUIREMENTS.md` has 
 
 | # | Truth (48-SPEC.md) | Status | Evidence |
 |---|--------------------|--------|----------|
-| R1 | One persisted `{kind,value}` selection, or off, survives restart | VERIFIED | Carried from round 1; regression check: `GlobalStateFocusRowHydration`, `focusRowFirstLaunchHydration` (real read path) and `focusRowMigration` suites pass in this run; UAT item 2 live pass |
-| R2 | FOCUS ROW section in the Games tier-2 panel, single-select, clearable, fixed group order, no collections group when empty | VERIFIED | `filterFocusRow.test.tsx` passes; `FilterFocusRow` still mounted; UAT item 7 live (structure, order, ellipsis, no raw key). The divider contrast defect (G-48-7) is now fixed in source, see R2 follow-up below |
-| R3-core | One horizontal strip, one card tall, max 20, controls reveal remainder, no affordance when content fits, zero-match renders nothing, grid unchanged | VERIFIED | `FocusRowStrip/index.css` (`.focusRowTrack` overflow-x auto, `.gameList` flex nowrap, card basis from `--focus-row-card-width`); `FOCUS_ROW_MAX_CARDS` cap intact; controls mount only when `canScrollForward/Back`; `focusRowStripSource` and `focusRowOverflow` suites pass; UAT items 5 and 6 live pass (measured before 48-10/48-12, re-check owed below). Grid files: `git diff 752b510f8 HEAD` on `Library/index.css` and `GamesList/index.tsx` is empty; `GameCard/index.css` is unchanged since `151e2cba2` and its pre-round-2 delta is the operator-ruled global change (below) |
-| R3-gamepad | Gamepad focus past the last visible card scrolls it into view | VERIFIED | UAT item 8: operator, Windows 11, physical controller, "yes that works" (pre-48-10). Handler `scrollFocusedCardIntoViewHorizontally` is exercised behaviourally by Tests A-E and the plain-overhang cases in `focusRowOverflow.test.ts` (stubbed rects, scrollTo spy), and is attached in a capture-phase listener gated on `activeController` (`index.tsx:142-159`). 48-10 later changed its target to leave the list's padding as clearance; that change is unit-proven, live re-check listed under human item 5 |
-| R3-parity | Strip cards are the same width as the grid's at every window width, within 1px; where the grid shows no cards, the width a grid column would take (amended 2026-10-07) | PRESENT_BEHAVIOR_UNVERIFIED | Present and wired: `gridColumnCount`/`gridColumnWidth` (`focusRowOverflow.ts:142-172`) implement `repeat(auto-fill, minmax(156px,1fr))` with the 1.5rem gap; `createStripCardWidthSync` derives C from the track's border-box width less the list's computed inline padding, writes `--focus-row-card-width` inline; called from `useLayoutEffect` (first paint, `index.tsx:107`) and the ResizeObserver callback (`:124`); CSS consumes it as `flex: 0 0 var(--focus-row-card-width, 156px)` (`index.css:80-82`). Geometry cross-checked by hand: viewport `margin-inline:-15px` + list `padding-inline:15px` against the grid's `padding: 0 var(--space-md-fixed)` under the same `.listing` flex column gives the same content box. Source gates parse both stylesheets and assert gap text, padding token and the 156 floor equal. Independent of grid mount state by construction. Not measured in a layout engine, so routed to human verification |
-| R3-chevron-reach | Forward control reachable by a real pointer through a hovered edge card | PRESENT_BEHAVIOR_UNVERIFIED | `.focusRowTrack { isolation: isolate }` with no z-index, controls `position:absolute; z-index:1` (`index.css:26-31`, `95-121`); source gates pin both (Tests 1-3). UAT item 9 is still `issue` because it predates 48-10; the hit-test re-run is owed |
-| R4 | Independent of filters except hidden games | VERIFIED | `focusRowSelectors.test.ts` passes (incl. held-out backstop); unchanged since round 1 |
-| R5 | recentlyPlayed by recency, everything else by title, stable tie-break on `app_name` | VERIFIED | `focusRowSelectors.test.ts` passes; unchanged |
-| R6 (amended) | `Recent Games to Show` control and its dead code removed | VERIFIED | `git ls-files` finds no `MaxRecentGames`/`LibraryTopSection` component; `git grep -il maxRecentGames -- src` returns nothing; `getRecentGames` is `async () => configStore.get('games.recent', [])`; UAT item 1 live |
-| R7 | `Library Top Section` removed; one-time migration; clear-then-relaunch does not restore | VERIFIED | Carried from round 1 (CR-01 closed by 48-07; UAT item 3 legs A-D live); real-read-path suites pass in this run. `recently_played_installed` criterion carried as PASSED (override), not re-litigated |
+| R1 | One persisted `{kind,value}` selection, or off, survives restart | VERIFIED | `GlobalStateFocusRowHydration`, `focusRowFirstLaunchHydration` (real read path), `focusRowMigration` pass in this run; UAT item 2 live (collection pick round trip) |
+| R2 | FOCUS ROW section in the Games tier-2 panel, single-select, clearable, fixed group order, no collections group when empty | VERIFIED | `filterFocusRow.test.tsx` passes; UAT item 7 live pass; divider contrast fix (G-48-7, `FilterFocusRow/index.scss`) re-measured live in item 10 |
+| R3-core | One horizontal strip, one card tall, max 20, controls reveal remainder, no affordance when content fits, zero-match renders nothing, grid unchanged | VERIFIED | `FocusRowStrip/index.css` (overflow-x auto track, nowrap list, card width from `--focus-row-card-width`); UAT items 5 and 6 live (20 cards one row, track 982/222/0 at 1280/520/87), item 11 clauses 3 and 5 live on Windows; end of travel with disabled forward chevron and about 15pt clearance live (48-15/48-18). Grid files: `git diff 752b510f8 HEAD` on `Library/index.css` and `GamesList/index.tsx` is empty |
+| R3-gamepad | Gamepad focus past the last visible card scrolls it into view | VERIFIED | UAT item 8 (operator, Windows 11, physical controller) and again UAT item 11 clause 1 on HEAD def5f1d29 at 1280 and the narrow width, whole ring clear of the track edge; handler behavioural tests in `focusRowOverflow.test.ts` pass |
+| R3-parity | Strip cards same width as the grid's, within 1px, at every window width; where the grid shows no cards, the width a grid column would take (amended) | VERIFIED | Code: `gridColumnCount`/`gridColumnWidth`, `createStripCardWidthSync` (with `StripLayoutContext`, `readScrollerAllowance`, `FLIP_WINDOW_MS = 250`, next-frame runner) wired from `useLayoutEffect` and the observer in `FocusRowStrip/index.tsx`; `gridShown` passed from `Library/index.tsx:1165`. Live: 355 vs 354 capture px at 1280 (left edges 544/544), 438 vs 438 at 760 (48-18); empty grid 355 vs W0 355 in 10 of 10 captures and in list layout (G-48-11c), pre-fix arming control +2 CSS px; cold-relaunch first paint showed no narrow-then-wide jump (Windows, item 11 clause 2). Former behavior_unverified item closed |
+| R3-chevron-reach | Forward control reachable by a real pointer through a hovered edge card | VERIFIED | `.focusRowTrack { isolation: isolate }` (`index.css:27`), controls z-index 1; `focusRowStripSource` gates pass. UAT item 9 re-run live with a real pointer from above, below and inside: glyph 122 px vs 122 px with the edge card hovered, click advanced exactly one grid row every time. Former behavior_unverified item closed. Method note: pixels and click effect rather than `document.elementFromPoint` (devtools console took no typed lines in the rig); the click result is the behavioural proof |
+| R4 | Independent of filters except hidden games | VERIFIED | `focusRowSelectors.test.ts` passes; `gridShown` (48-17) is a layout input only and does not alter the selected games |
+| R5 | recentlyPlayed by recency, everything else by title, stable tie-break on `app_name` | VERIFIED | `focusRowSelectors.test.ts` passes |
+| R6 (amended) | `Recent Games to Show` control and its dead code removed | VERIFIED | `git grep -il maxRecentGames -- src` returns nothing; UAT item 1 live (Settings > General probe) |
+| R7 | `Library Top Section` removed; one-time migration; clear-then-relaunch does not restore | VERIFIED | Migration suites pass in this run (WR-03 guard added in `0cecb87b1`, `focusRowMigration.ts:192-219`); UAT item 3 legs A-D live. `recently_played_installed` carried as PASSED (override) |
 
-**Score:** 8/10 truths verified (R3 counted as four sub-truths); 2 present, behavior-unverified (R3-parity, R3-chevron-reach). No truth failed.
+**Score:** 10/10 truths verified (R3 counted as four sub-truths); 0 present-but-behavior-unverified; 0 failed.
 
-### Round-2 gap closure, claim versus code
+### Gap closure since the previous report, claim versus code
 
-| Gap | Plan | Code evidence (read in this run) | Gate | Live |
-|-----|------|----------------------------------|------|------|
-| G-48-8a controller mode resizes cards | 48-09 | `git diff 752b510f8 HEAD -- GameCard/index.css`: `.gameCard.gamepad` (3/4) and `.gameCard.gamepad.justPlayed` (328/205) aspect-ratio rules deleted; only `.gameCard.gamepad > .icons` remains | `gameCardControllerGeometry.test.ts`: no `.gamepad` selector declares a sizing property (comment-stripped brace walk), plus art-fits arithmetic over values parsed from the shipped CSS at the 156px floor and every wider card | owed |
-| G-48-8b hover thinner than controller ring | 48-09 | one grouped `.gameCard:hover, .gameCard:focus-within` rule consuming `--focus-ring-width/-color/-halo`, +2px offset, halo and glow; z-index 2 / 3 in separate single-selector rules; stale-focus rules re-scoped to `.listing:hover`; `body.controllerLayout .gameCard:hover:not(:focus-within)` returns a parked cursor to rest; `.gameListItem` split untouched; `themes.scss` note updated | `gameCardFocusRing.test.ts` Tests A-G rewritten | owed |
-| G-48-4b / G-48-9 hovered card paints over chevron | 48-10 | `isolation: isolate` on `.focusRowTrack` (`index.css:27`); control z-index 1 | `focusRowStripSource.test.ts` Tests 1-3 | owed (R3-chevron-reach) |
-| strip-end ring clipping | 48-10, 48-12 | list `padding-inline:15px`, `width:max-content`, viewport `margin-inline:-15px`, `margin-block: max(var(--space-md), calc(var(--focus-row-card-width,156px)*0.04 + 6.5px))`; `scrollFocusedCardIntoViewHorizontally` reads the list's computed padding at call time | Tests F, G, H, V and the ring-reach non-vacuity test (13.65px / 18.60px at the 336px supremum); clearance Tests A-E | owed |
-| G-48-4a chevron contrast | 48-11 | `.focusRowStrip__control { color: var(--accent); background: var(--body-background) }`, no `color-mix`/`rgba`/`transparent` | `themeTokens.test.ts` chevron census reads the shipped declarations through the shared var() resolver for all 10 themes (desk minimum 3.91, gruvbox_dark) and fails on translucency; `focusRowStripSource` "opaque disc" test | owed (UAT item 10) |
-| G-48-7 divider contrast | 48-11 | `FilterFocusRow/index.scss`: nested `body.dracula &, body.nord-light & { color: var(--navbar-inactive, var(--navbar-accent)) }` | divider census over 10 themes at 4.5:1 (desk minimum 5.43, marine; dracula 7.48, nord-light 7.38) | owed (UAT item 10) |
-| G-48-8c strip narrower than grid | 48-12 | see R3-parity row; `pageScrollDelta` floors `(clientWidth + 1) / pitch` so a page is exactly one grid row in the zero-slack geometry; `measureCardPitch` reads the live card rect; flip-hold (`FLIP_WINDOW_MS = 250`, per-track two-write history, 0.5px write epsilon) in `createStripCardWidthSync` | W1-W6, S1-S4, P1, G1-G4 behaviour tables in `focusRowOverflow.test.ts`; parity gates in `focusRowStripSource.test.ts` | owed |
+| Gap | Plan | Code evidence (read this run) | Gate | Live |
+|-----|------|-------------------------------|------|------|
+| G-48-11b strip scrolls past last card in WebKit | 48-13 (`c747af0a6`) | `index.css:86` `width: var(--focus-row-card-width, 156px)` on strip cards, with comment on WKWebView max-content sizing | source gates | two launches 0-4, 5-9, 9-13, forward disabled, 15pt clearance (48-15, 48-18) |
+| G-48-11a ResizeObserver loop (WR-01) | 48-14 (`1cc619836`) | `createNextFrameRunner` (`focusRowOverflow.ts:388`), imported and used in `index.tsx:148`; ticket guard against late frames | `focusRowOverflow`, `focusRowStripSource` | 0 loop errors vs 34 pre-fix (721 samples, 34 sizes) |
+| G-48-12a Tab ring under resting pointer (WR-02) | 48-16 (`0c3d2ad23`, `a0a3211f1`) | `helpers/inputModality.ts` `KEYBOARD_NAV_CLASS`, installed from `src/frontend/index.tsx`; `GameCard/index.css` scopes the stale-focus suppression with `:not(.keyboardNav)` (lines 129, 365, 560) and adds the parked-cursor rule (line 162) | `inputModality.test.ts`, `gameCardFocusRing.test.ts` | 40/40 and 41/41 captures one ringed tile |
+| G-48-11c empty-grid strip +2px | 48-17 (`d77571f9c`) | `StripLayoutContext`, `readScrollerAllowance`, `FLIP_WINDOW_MS` in `focusRowOverflow.ts`; `gridShown` prop and ref in `FocusRowStrip/index.tsx:44-96`; `Library/index.tsx:1165` | `focusRowOverflow`, `focusRowStripSource`, `librarySyncNoticeSource` | 355 vs 355 px, 10/10 captures, list layout, one-result search |
+| G-48-8a, G-48-11d, G-48-12b | 48-18 plus operator session | no code change (G-48-11d is the baseline rule `.gameCard.gamepad > .icons > .svg-button { display: none }`) | n/a | UAT items 11 and 12, operator, Windows 11, controller |
 
-Records of the amendment: `48-SPEC.md` carries the dated R3 note, the struck criterion (line 166), the added parity criterion (line 167) and a `Revised:` header line; `48-UI-SPEC.md` carries dated notes at lines 75, 242, 415 and 441. CONTEXT.md is deliberately not rewritten; D-01 and D-02 are superseded for the strip by the operator's "match the grid" ruling, as recorded.
-
-A note on "grid unchanged" (SPEC R3 criterion, boundary "Any change to the games grid"): `GameCard/index.css` did change in 48-09, and the card is shared with the grid (controller-mode geometry, hover ring, stale-focus scope). That is the operator's explicit ruling of 2026-10-07 ("global, not strip-only", recorded in the 48-09 plan objective and in the CSS comments), not a silent divergence. The grid's own stylesheet (`Library/index.css`) and its renderer (`GamesList/index.tsx`) are byte-identical to the pre-phase baseline, and what the grid shows and in what order is unchanged.
+Plans 48-15 and 48-18 are live-gate plans (no source change); their evidence lives in `48-UAT.md` and `evidence/48-13`, `48-14`, `48-16`, `48-17`.
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data | Source | Real data | Status |
 |----------|------|--------|-----------|--------|
 | FocusRowStrip cards | `selectFocusRowGames(...)` | library state, `games.recent`, `customCategories` | Yes | FLOWING |
-| Strip card width | `--focus-row-card-width` | `track.getBoundingClientRect()` and computed list padding/gap, through `gridColumnWidth` | Yes (not a literal; fallback 156px only before first measurement or when unmeasurable) | FLOWING |
-| Chevron colours | `--accent` on `--body-background` | theme tokens | Yes | FLOWING |
-| Context `focusRow` | mirror seed, else migrated `requestAppSettings()` | `store/config.json` / `config.json` | Yes (UAT item 3) | FLOWING |
+| Strip card width | `--focus-row-card-width` | track rect, computed list padding/gap and, when no grid, the scroller allowance through `gridColumnWidth` | Yes (156px is only the pre-measurement fallback) | FLOWING |
+| `gridShown` | `libraryToShow.length > 0 && (!refreshing or refreshingInTheBackground) && layout === 'grid'` | Library state | Yes | FLOWING |
+| Keyboard mode | `body.keyboardNav` | trusted Tab keydown / real pointer events | Yes | FLOWING |
+| Context `focusRow` | mirror seed, else migrated `requestAppSettings()` | config store | Yes (UAT item 3) | FLOWING |
 
 ### Behavioral Spot-Checks and Automated Checks
 
 | Check | Command | Result | Status |
 |-------|---------|--------|--------|
-| Phase suites | `npx jest FocusRowStrip FilterFocusRow themeTokens GameCard focusRowMigration GlobalStateFocusRowHydration focusRowFirstLaunchHydration` | 12 suites, 349 tests passed | PASS |
+| Phase suites | `npx jest FocusRowStrip FilterFocusRow themeTokens GameCard focusRowMigration GlobalStateFocusRowHydration focusRowFirstLaunchHydration inputModality` | 13 suites, 392 tests passed | PASS |
 | Type check | `npx tsc --noEmit` | no output, clean | PASS |
-| Grid files untouched | `git diff --stat 752b510f8 HEAD -- Library/index.css GamesList/index.tsx`; `git diff --stat 151e2cba2 HEAD` on those two plus `GameCard/index.css` | empty | PASS |
-| R6 greps | `git grep -il maxRecentGames -- src`; `git ls-files` for the deleted components | 0 hits | PASS |
-| Debt markers | added lines in `git diff 752b510f8 HEAD -- src` matching `TBD`, `FIXME`, `XXX` | none | PASS |
-| Lint, prettier, codecheck | not re-run; reported clean by the executors and the orchestrator | n/a | accepted |
-| Full `npm test` | not re-run; orchestrator reports 39 failed suites / 109 failed tests of 10444, all in the known Windows-only set touching none of this phase's files (CI is ubuntu-only) | n/a | accepted, not a phase regression |
+| Grid files untouched | `git diff --stat 752b510f8 HEAD -- Library/index.css GamesList/index.tsx` | empty | PASS |
+| R6 grep | `git grep -il maxRecentGames -- src` | 0 hits | PASS |
+| Debt markers | added lines in the phase diff of FocusRowStrip, inputModality, GameCard, FilterFocusRow matching TBD/FIXME/XXX | none | PASS |
+| UAT file | `48-UAT.md` status complete, summary 12/12/0/0/0/0, every Gaps entry resolved | consistent with per-item results | PASS |
+| Full `npm test` | not run (about 40 suites fail on this Windows machine independent of any change; CI is ubuntu-only) | n/a | accepted, per instruction |
+| Lint, prettier | not re-run; executors reported clean | n/a | accepted |
 
-Probes: none declared for this phase (Step 7c not applicable). Debt marker gate: no unreferenced marker. The `deferred-items.md` entry (`overlayDismiss` red in isolation) is pre-existing and outside this phase.
+Probes: none declared (Step 7c not applicable).
 
 ### Requirements Coverage
 
-| Requirement | Source Plans | Status | Evidence |
-|-------------|--------------|--------|----------|
-| R1 | 48-02, 48-07, 48-08 | SATISFIED | truths table |
-| R2 | 48-01, 48-03, 48-08, 48-11 | SATISFIED (divider contrast fix owed a live re-measure, not a requirement) | |
-| R3 | 48-01, 48-02, 48-04, 48-08, 48-09, 48-10, 48-11, 48-12 | SATISFIED in code; the amended parity criterion and chevron pointer reach are human-verification items | |
-| R4 | 48-02 | SATISFIED | |
-| R5 | 48-02 | SATISFIED | |
-| R6 (amended) | 48-06, 48-08 | SATISFIED | |
-| R7 | 48-05, 48-07, 48-08 | SATISFIED | |
+| Requirement | Source Plans | Status |
+|-------------|--------------|--------|
+| R1 | 48-02, 48-07, 48-08 | SATISFIED |
+| R2 | 48-01, 48-03, 48-08, 48-11 | SATISFIED |
+| R3 | 48-01, 48-02, 48-04, 48-08 through 48-18 | SATISFIED, parity and chevron reach now live-proven |
+| R4 | 48-02, 48-17, 48-18 | SATISFIED |
+| R5 | 48-02 | SATISFIED |
+| R6 (amended) | 48-06, 48-08 | SATISFIED |
+| R7 | 48-05, 48-07, 48-08 | SATISFIED (one override) |
 
 ### Anti-Patterns Found
 
 | File | Pattern | Severity | Impact |
 |------|---------|----------|--------|
-| `focusRowOverflow.test.ts` S1 | comment "982 - 2 x 12 = 958" uses the superseded 12px padding in a fixture description | Info | Test fixture, not shipped; the CSS and the source gates use 15px |
-| `48-UI-SPEC.md:319` | "Semi-transparent dark scrim" survives; the opaque disc is not noted there | Info | Documentation drift (advisory above) |
-| `focusRowMigration.ts` `hydrateFocusRowSelection` | WR-03 `onError` could throw | Warning, not blocking | Unchanged from round 1; todo filed (`.planning/todos/pending/...hydrate-focus-row-selection...`) |
+| `48-UI-SPEC.md:319` | "Semi-transparent dark scrim" survives | Info | Documentation drift (advisory) |
+| `focusRowOverflow.test.ts` S1 | fixture comment cites superseded 12px padding | Info | Test only |
 | `config.ts` | `libraryTopSection: 'disabled'` kept in factory defaults | Info | Intentional migration source |
 
-No stub, placeholder or empty-implementation patterns in the files this round touched; no TBD/FIXME/XXX added.
+No stub, placeholder or empty-implementation patterns in files touched this round; no unreferenced TBD/FIXME/XXX.
 
 ## Human Verification Required
 
-1. **Real-pointer chevron reach (UAT item 9 re-run).** Test: on Windows with a real mouse and an overflowing strip, move the pointer onto each chevron through the adjacent edge card (above, below, inside) and click. Expected: the chevron stays on top and the click pages the strip by one grid row. Why human: rendering/hit-testing invariant; 48-10 is source-gated only.
-2. **Grid parity live (G-48-8c).** Test: at 1280 and one narrower width compare the first strip card and the first grid card widths; also drag-resize across a column-count breakpoint with the console open. Expected: within 1px; no `ResizeObserver loop` error and no flip-flop. Why human: layout engine and scrollbar feedback.
-3. **UAT item 10, contrast re-measure.** Test: the C1-C4 40-combination chevron measurement and the per-theme divider measurement. Expected: at least 3:1 and 4.5:1, near the census figures (3.91 / 5.43 minimum). Why human: pixels, disc edge against art.
-4. **G-48-8a / G-48-8b live with a controller.** Expected: no card resize or crop on handoff in strip or grid; hover shows the thick ring; exactly one tile rings.
-5. **UAT items 5 and 6 at grid-matched widths.** Expected: one-row paging, unclipped end rings at `scrollLeft` 0 and at the end, no title overflow at 1280, 520 and the narrowest width, controller scroll-into-view with ring clearance.
-
-All five route through `/gsd-verify-work 48` against `48-UAT.md` (status `diagnosed`; its `## Gaps` entries G-48-4a, 4b, 7, 8a, 8b, 9, 8c still read `failed` as recorded before the fixes, and items 4, 7 and 9 still read `issue` until the live re-run updates them; item 10 is `pending`).
+None. Every item of the previous report's human list is closed by a recorded live pass: chevron reach (UAT 9), parity and resize (UAT 11), contrast (UAT 10), controller handoff and ring (UAT 12), end-of-travel and narrow width (UAT 5, 6, 11).
 
 ## Gaps Summary
 
-No requirement R1-R7 fails and no must-have is FAILED. Round 2 closes all seven recorded UAT gaps in source, each with a stylesheet or behaviour gate that passes in this run (12 suites, 349 tests, tsc clean), and the one open item of the prior report (R3 gamepad scroll) is now closed by the operator's live controller pass. Status stays `human_needed` rather than `passed` because the closures are desk-proven, not live-proven: two R3 sub-truths (grid-width parity and real-pointer chevron reach) depend on a CSS engine, and the contrast, handoff and resize checks are explicitly owed to the live re-run. If the live re-run contradicts a source gate (for example the chevron still loses a hit-test to a hovered card, or parity is off by more than 1px), promote that sub-truth to a gap against R3.
+No requirement R1-R7 fails, no must-have is FAILED or behavior-unverified, and the UAT is complete with 12 of 12 passing and every recorded gap resolved. Status is `passed`. Remaining items are advisory only: the code review predates the 48-14/16/17 code, the UI-SPEC chevron wording is stale, seven info-level review findings are open, and parity was measured numerically on WebKit but only by eye on Windows WebView2. The `covered_digest` could not be generated because the installed tooling does not expose `verification.fingerprint`.
 
 ---
 
-_Verified: 2026-10-08_
+_Verified: 2026-10-09_
 _Verifier: Claude (gsd-verifier)_
