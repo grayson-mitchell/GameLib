@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Completed 49-01-PLAN.md
-last_updated: "2026-10-09T03:19:30.497Z"
+stopped_at: Completed 49-02-PLAN.md
+last_updated: "2026-10-09T03:27:17.080Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 49 execution started
-state_head: 7d3516bcc0a6abb8589660a87416b4a43719181d
+state_head: 98550cd14fee7350923959c153306630976e23b9
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 533
-  completed_plans: 510
+  completed_plans: 511
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-10-09 — Phase 49 execution started
 
@@ -516,6 +516,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P11 | 8 min | 3 tasks | 7 files |
 | Phase 48 P12 | 12 min | 3 tasks | 6 files |
 | Phase 49 P01 | 20 min | 3 tasks | 17 files |
+| Phase 49 P02 | 25 min | 3 tasks | 97 files |
 
 ## Accumulated Context
 
@@ -1155,6 +1156,7 @@ Recent decisions affecting current work:
 - [Phase 48]: 48-12: strip-end clearance and viewport bleed 12px to 15px; vertical room max(1em, 0.04 x card width + 6.5px); width writes held on a 250ms A-B-A flip (T-48-36)
 - [Phase 49]: 49-01: sign-in selector rule order is expiredFlag, !loggedIn, healthy, else unknown (a latched flag outranks a logged-out read; legendary deletes user.json on the latching verdict)
 - [Phase 49]: 49-01: ?open= is validated by exact-membership parseSignInStore, consumed once per Login mount, and removed with replace:true (T-49-01)
+- [Phase 49]: 49-02: login.*Reconnect tiles reuse each locale's steamReconnect verbatim; case-inflecting locales (cs, hu, lt, pl) keep {{store}} in a case-neutral slot
 
 ### Pending Todos
 
@@ -1764,8 +1766,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T03:19:25.737Z
-Stopped at: Completed 49-01-PLAN.md
+Last session: 2026-10-09T03:27:12.847Z
+Stopped at: Completed 49-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
