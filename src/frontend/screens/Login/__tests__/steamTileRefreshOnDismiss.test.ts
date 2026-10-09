@@ -38,7 +38,7 @@ function stripComments(source: string): string {
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
 }
 
-const ANCHOR = 'setIsHumbleLoggedIn(Boolean(humble?.isLoggedIn)'
+const ANCHOR = 'setSignInStates('
 
 /** The full body of the store-tile effect, comments removed. */
 function effectBody(source: string): string {
@@ -82,13 +82,22 @@ describe('Steam tile refreshes when the login overlay closes', () => {
     expect(effectDeps(sabotaged)).not.toContain('openOverlay')
   })
 
-  it('G2: the effect re-reads the store rather than reusing a cached value', () => {
+  it('G2: the effect re-reads the stores rather than reusing a cached value', () => {
     // A dep that re-runs an effect which never re-reads the flag would be a
-    // gate measuring the wrong property.
+    // gate measuring the wrong property. Phase 49 D-06: the read now goes
+    // through `collectSignInInputs`, which reads every persisted verdict
+    // (including Steam's `credentialsMissing`) at call time and caches none.
     const body = effectBody(source)
-    expect(body).toContain(
-      "steamConfigStore.get_nodefault('credentialsMissing')"
+    expect(body).toContain('collectSignInInputs(')
+    expect(body).toContain('setSignInStates')
+  })
+
+  it('G2 non-vacuity: the gate FAILS against a specimen whose effect no longer collects inputs', () => {
+    const sabotaged = source.replace(
+      /collectSignInInputs\(\s*\{/,
+      'staleInputs({'
     )
-    expect(body).toContain('setSteamCredentialsMissing')
+    expect(sabotaged).not.toBe(source)
+    expect(effectBody(sabotaged)).not.toContain('collectSignInInputs(')
   })
 })
