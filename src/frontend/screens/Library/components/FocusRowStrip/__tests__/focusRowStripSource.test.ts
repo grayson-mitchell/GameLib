@@ -383,11 +383,52 @@ describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
     )
   })
 
-  it('the ResizeObserver callback syncs the width, not bare readMeasurement', () => {
-    expect(tsx).toMatch(
-      /new ResizeObserver\(\s*\(\)\s*=>\s*{[^}]*syncCardWidth\(track\)/
-    )
+  // G-48-11a / WR-01: a style write inside the ResizeObserver callback resizes
+  // the observed track inside the delivery, and the browser reports a
+  // `ResizeObserver loop` error. The callback only reads and requests.
+  const brace = (source: string, from: number): string => {
+    let depth = 0
+    for (let i = source.indexOf('{', from); i < source.length; i++) {
+      if (source[i] === '{') depth++
+      if (source[i] === '}') {
+        depth--
+        if (depth === 0) {
+          return source.slice(source.indexOf('{', from) + 1, i)
+        }
+      }
+    }
+    throw new Error('unterminated block')
+  }
+
+  it('G-48-11a, WR-01: the ResizeObserver callback writes no width and requests a deferred sync', () => {
+    const start = tsx.indexOf('new ResizeObserver(')
+    expect(start).not.toBe(-1)
+    const body = brace(tsx, start)
+    expect(body).not.toMatch(/syncCardWidth\(/)
+    expect(body).toMatch(/\.request\(\)/)
     expect(tsx).not.toMatch(/new ResizeObserver\(readMeasurement\)/)
+  })
+
+  it('G-48-11a, WR-01: the deferred run is a createNextFrameRunner whose work syncs the width then re-reads', () => {
+    expect(tsx).toMatch(
+      /import\s*{[^}]*\bcreateNextFrameRunner\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
+    )
+    const start = tsx.indexOf('createNextFrameRunner(')
+    expect(start).not.toBe(-1)
+    const body = brace(tsx, start)
+    expect(body).toMatch(/syncCardWidth\(track\)/)
+    expect(body).toMatch(/readMeasurement\(\)/)
+  })
+
+  it('G-48-11a, WR-01: the effect cleanup cancels the pending frame beside the disconnect', () => {
+    const cleanup = tsx.indexOf(
+      'return () => {',
+      tsx.indexOf('new ResizeObserver(')
+    )
+    expect(cleanup).not.toBe(-1)
+    const body = brace(tsx, cleanup)
+    expect(body).toMatch(/\.cancel\(\)/)
+    expect(body).toMatch(/observer\?\.disconnect\(\)/)
   })
 
   it("focusRowOverflow.ts writes the property by string literal at the call site (cssTokenSweep's detector needs it)", () => {

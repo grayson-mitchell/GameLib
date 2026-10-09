@@ -8,6 +8,7 @@ import {
   GRID_CARD_MIN_WIDTH,
   canScrollBack,
   canScrollForward,
+  createNextFrameRunner,
   createStripCardWidthSync,
   gridColumnCount,
   gridColumnWidth,
@@ -661,5 +662,134 @@ describe('strip card width resize feedback guard (G-48-8c, T-48-36)', () => {
     expect(at(33, second, A)).toBe(172.4)
     expect(second.setProperty).toHaveBeenCalledTimes(1)
     expect(second.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
+  })
+})
+
+describe('next-frame runner (G-48-11a, WR-01)', () => {
+  // A hand-built frame queue: handles are incrementing numbers, `fireAll` runs
+  // the queued callbacks the way a browser frame would, and a callback fired late
+  // (after cancel) is still invoked so the runner's own guard is what is tested.
+  const setup = (run: () => void) => {
+    const queue = new Map<number, () => void>()
+    let next = 1
+    const schedule = jest.fn((cb: () => void) => {
+      const handle = next++
+      queue.set(handle, cb)
+      return handle
+    })
+    const cancel = jest.fn((handle: unknown) => {
+      queue.delete(handle as number)
+    })
+    const callbacks: Array<() => void> = []
+    const scheduleKeep = jest.fn((cb: () => void) => {
+      callbacks.push(cb)
+      return schedule(cb)
+    })
+    const runner = createNextFrameRunner(run, scheduleKeep, cancel)
+    return {
+      runner,
+      schedule: scheduleKeep,
+      cancel,
+      pending: () => queue.size,
+      fireAll: () => {
+        const due = [...queue.values()]
+        queue.clear()
+        due.forEach((cb) => cb())
+      },
+      fireLate: () => callbacks.forEach((cb) => cb())
+    }
+  }
+
+  it('N1: request() does not run synchronously and schedules once', () => {
+    const run = jest.fn()
+    const { runner, schedule } = setup(run)
+    runner.request()
+    expect(run).not.toHaveBeenCalled()
+    expect(schedule).toHaveBeenCalledTimes(1)
+  })
+
+  it('N2: the scheduled callback runs the work exactly once', () => {
+    const run = jest.fn()
+    const { runner, fireAll } = setup(run)
+    runner.request()
+    fireAll()
+    expect(run).toHaveBeenCalledTimes(1)
+  })
+
+  it('N3: several requests before the frame produce one run and one pending frame', () => {
+    const run = jest.fn()
+    const { runner, fireAll, pending } = setup(run)
+    runner.request()
+    runner.request()
+    runner.request()
+    expect(pending()).toBe(1)
+    fireAll()
+    expect(run).toHaveBeenCalledTimes(1)
+  })
+
+  it('N4: cancel() cancels the pending handle, the work never runs, and cancel is idempotent', () => {
+    const run = jest.fn()
+    const { runner, cancel, fireAll, fireLate, pending } = setup(run)
+    runner.request()
+    runner.cancel()
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(cancel).toHaveBeenCalledWith(1)
+    expect(pending()).toBe(0)
+    fireAll()
+    fireLate()
+    expect(run).not.toHaveBeenCalled()
+    runner.cancel()
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('N4: cancel() with nothing pending is a no-op', () => {
+    const run = jest.fn()
+    const { runner, cancel } = setup(run)
+    expect(() => runner.cancel()).not.toThrow()
+    expect(cancel).not.toHaveBeenCalled()
+  })
+
+  it('N5: after a frame has run a new request schedules again', () => {
+    const run = jest.fn()
+    const { runner, schedule, fireAll } = setup(run)
+    runner.request()
+    fireAll()
+    runner.request()
+    expect(schedule).toHaveBeenCalledTimes(2)
+    fireAll()
+    expect(run).toHaveBeenCalledTimes(2)
+  })
+
+  it('N5: a run that throws neither escapes the frame callback nor sticks the runner', () => {
+    const run = jest
+      .fn()
+      .mockImplementationOnce(() => {
+        throw new Error('boom')
+      })
+      .mockImplementation(() => undefined)
+    const { runner, schedule, fireAll } = setup(run)
+    runner.request()
+    expect(() => fireAll()).not.toThrow()
+    runner.request()
+    expect(schedule).toHaveBeenCalledTimes(2)
+    fireAll()
+    expect(run).toHaveBeenCalledTimes(2)
+  })
+
+  describe('with no injected scheduler', () => {
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('N6: defers through setTimeout where requestAnimationFrame is not a function', () => {
+      expect(typeof requestAnimationFrame).not.toBe('function')
+      jest.useFakeTimers()
+      const run = jest.fn()
+      const runner = createNextFrameRunner(run)
+      runner.request()
+      expect(run).not.toHaveBeenCalled()
+      jest.advanceTimersByTime(50)
+      expect(run).toHaveBeenCalledTimes(1)
+    })
   })
 })
