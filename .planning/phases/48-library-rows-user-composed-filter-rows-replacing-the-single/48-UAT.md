@@ -139,6 +139,99 @@ visible at `scrollLeft` 0, measured, not assumed; item 11 measured 5 at 1280.
 
 **48-15 rig notes (declared).** P1 is as written above, unchanged. The launched binary is the bundled `src-tauri/target/debug/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell` (the binary items 10 and 11 ran, mtime 18:11:29 after this build), not the sibling `src-tauri/target/debug/gamelib-shell` (mtime 18:12:05, same build run). The capture reader is a compiled Swift sRGB converter (`rd`) feeding a node analyser (`cards.cjs`), which stands in for the plan's single node card reader; card index comes from the grey ladder (10 + 18 x i, tolerance 1) read along one row of the strip's art. Capture px are 2 per CSS pt. The track's left edge sits 30 capture px (15 pt, the list padding) left of card 0 at `scrollLeft` 0, and the track's right edge is placed at window width x 2 - 22 px (2538 at 1280): the forward chevron glyph centre sits 29 px inside it exactly as the back glyph sits 29 px inside the left edge, and the grid's fifth card ends 30 px short of it. That edge is derived from geometry, not read from a DOM rect (the devtools console accepted no typed lines), so a clearance read from it carries about +/- 1 px. The window is addressed by name (`window "GameLib"`), not `window 1`, because the Web Inspector window of the debug build takes `window 1` until the main window is activated. Quit is the app menu item; every launch ended with an empty instance probe. The real-profile guard is the `real-profile/` copy and `real-profile.sha256` in the gate dir (`cmp` exit 0 twice; sha256 3140261a... and 54a3460e..., the same two hashes as the 2026-10-07 P2 backup).
 
+**48-18 gate (round 4, 2026-10-09).** Live gate for G-48-11c (item 11's empty-grid then list-layout clause), G-48-12a (item 12's keyboard clause) and the one-ring invariant, on a build carrying `fix(48-16)` and `fix(48-17)`; G-48-8a's controller clauses are carried explicitly.
+gate_dir_48_18: /private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/d5df43dc-dc1b-4be8-90c2-8d7e8874114c/scratchpad/gate-48-18
+
+`gate_dir_48_18` is a `mkdir -m 700` directory in this session's scratchpad. It holds `prefix.app`, the helpers (`go.sh`, `l1.sh`, `l1m.cjs`, `l2.sh`, `l2m.cjs`, `q.sh`, `winlist`, `ctl`, `rd`, `cards.cjs`, `rings.cjs`, `make-fixture.cjs`, `walk.sh`, `sweep.sh`, `sampler.sh`, `lib.sh`), the per-launch fake HOMEs, captures, log extracts, the real-profile copy and `real-profile.sha256`. It is never committed. The helpers `winlist`, `ctl`, `rd`, `cards.cjs`, `rings.cjs`, `chev.cjs`, `walk.sh`, `sweep.sh`, `make-fixture.cjs`, `lib.sh`, `sampler.sh`, `loopcount.sh`, `px.cjs`, `ringm.cjs` and the synthetic `tpl/` config templates were copied from `gate_dir_48_15` (still present); none of its fixtures, captures or real-profile files were copied.
+
+**48-18 build.** `pnpm tauri:dev:packaged` at HEAD `26f2fe9b0d691b308ba89132cff37c94cefcb025` on branch `quick-261002-b63`, which carries `fix(48-16)` 0c3d2ad23 and a0a3211f1 and `fix(48-17)` d77571f9c (`git merge-base --is-ancestor` true for 0c3d2ad23 and d77571f9c). The script's vite build and `tauri build --debug` completed and wrote `GameLib.app`; it then exited 1 at the updater-artifact signing step (`TAURI_SIGNING_PRIVATE_KEY` unset), as in 48-15. Binary `src-tauri/target/debug/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell`, mtime 2026-10-09 20:46:48 local, sha256 63f6a983614655c286d5f329879b40b33b43a064a0f954fab5be701fd00194cf.
+
+**48-18 arming binary.** Before the build, the existing bundled binary read sha256 516fab2086cb0a13ac9476c949fd7d4a51d2ee38612b7effa928e34c621b701c (48-15's build at `460df71e4`, carrying neither fix), so the whole `GameLib.app` was copied with `cp -Rp` to `$GATE_DIR/prefix.app`; the copy's binary re-read the same sha256. L1 and L2 each ran once on it as the arming control.
+
+**48-18 fixture and build (copied from 48-18-PLAN.md, `## Fixture and build`).**
+
+- **Build:** `pnpm tauri:dev:packaged` at a HEAD carrying `fix(48-16)` and `fix(48-17)`.
+  - The binary is `src-tauri/target/debug/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell`.
+  - The script's exit 1 at the updater-signing step, after the `.app` is written, is expected (48-15).
+  - Record HEAD, the binary's mtime and its sha256.
+- **Arming binary:** before that build, if the existing bundled binary's sha256 is
+  `516fab2086cb0a13ac9476c949fd7d4a51d2ee38612b7effa928e34c621b701c` (48-15's build at `460df71e4`,
+  carrying neither fix), `cp -Rp` the whole `GameLib.app` to `$GATE_DIR/prefix.app`.
+  - Otherwise skip it and record why. The arming basis is then 48-15's B7 (+2 CSS px) and B11
+    (0 of 40).
+- **Fixture:** 48-15's fixture, unchanged. A fresh fake HOME per launch holds 14 sideload games,
+  `Fixture 00` to `Fixture 13`, installed, `platform: 'Mac'`.
+  - Art: grey level 10 + 18 x i, 600x900.
+  - `focusRow` `{"kind":"view","value":"all"}` in both nested places; `theme` `midnightMirage`.
+  - Window 1280x800, set by `System Events` on the window named `"GameLib"`.
+- **WebKit storage is not isolated by a fake HOME.** Every in-app setting this gate changes (the
+  search text, the list layout) is set back in-app before quit. The page is scrolled to the top
+  before quit, because 48-15 measured the scroll offset persisting across launches.
+
+**48-18 bars adopted (copied verbatim from 48-18-PLAN.md, `## Bars adopted`).**
+
+Widths are read in capture px at scale 2 (2 capture px = 1 CSS px), from the grey-ladder art
+runs, as in 48-15. Ring tiles are counted with 48-15's `rings.cjs`: straight accent runs of at
+least 150 px.
+
+- **L1, G-48-11c, item 11's empty-grid clause (48-15 B7 re-run).** Two fresh launches on the fixed
+  build. W0 is the first strip card's art width at `scrollLeft` 0 with all 14 games.
+  - Type `zzzz`. FilterZeroResult shows `0 of 14 games`. Record whether the main scrollbar is
+    present; it is expected absent, which is the arming condition.
+  - Take a 10-capture loop from the last keystroke. Every capture's strip card is within 2 capture
+    px of W0.
+  - Switch to list layout: within 2 of W0.
+  - Clear the search, with list layout and 14 games: within 2.
+  - Switch back to grid: within 2.
+  - Search `07` (one result): within 2.
+  - Arming: the same sequence on `prefix.app` reproduces the +4 capture px in the empty state. The
+    substitute is 48-15 B7.
+- **L2, G-48-12a, item 12's keyboard clause (48-15 B11 re-run).** A fresh launch.
+  - The pointer rests in the gap between two grid cards, inside the listing. Make one anchor click
+    on that gap, then 40 Tab presses with a capture after each (0.45 s).
+  - Control: the same anchor click and key sequence with the pointer then moved to the sidebar.
+  - Pass:
+    - the listing run's count of captures with exactly one ringed tile equals the sidebar
+      control's count (48-15's control read 40 of 40);
+    - no capture has two or more ringed tiles;
+    - the ringed tile moves with Tab: at least 10 distinct tile positions over the 40.
+  - Header variant: the pointer resting over the `All games` heading, with the same bar.
+  - Arming: the listing run on `prefix.app` reproduces 0 of 40.
+- **L3, one ring with the pointer on a card.** Anchor click on the gap, then a real move onto grid
+  card A (A rings), then 20 Tab presses with captures.
+  - Pass: every capture has exactly one ringed tile; at least 10 distinct tile positions are ringed;
+    A's tile is ringed in at most 3 of the 20 (only while Tab focus is inside A).
+- **L4, keyboard then mouse.** After L2's listing run, make a real move onto grid card C, then onto
+  card D.
+  - Pass: each capture has exactly one ringed tile, the one under the pointer.
+- **L5, a Tab that scrolls the page under a resting pointer.** In L2's listing run, record the first
+  capture whose grid row has moved (the page scrolled).
+  - Pass: every later capture in which the focus is in a card shows exactly one ringed tile.
+  - If 40 presses never scroll the page, extend to 80 and record it. This is the WebKit
+    synthetic-move case 48-16's tracker is built for.
+- **L6, item 12 hover regressions (48-15 B11 hover).**
+  - Hover a strip card, then a grid card: exactly one tile each, with ring bands at least 3
+    capture px on all four sides.
+  - The pointer on the heading, then on the chip row with a `"Fix"` search chip showing: 0 tiles.
+- **L7, item 11 regressions from the 48-17 sync change.**
+  - B5 parity at 1280 and at 760: the strip card and the grid card are within 2 capture px in
+    width, with left edges within 2.
+  - B1 at 1280, one launch: the walk ends on card 13 with 15 +/- 1 pt clearance and no empty slot,
+    the forward chevron is disabled, and an extra click leaves the crop hash unchanged.
+  - B3, one strip launch: 48-15's sweep logs 0 `ResizeObserver loop` window errors, with the
+    window-bounds sampler proving the resize happened.
+- **B10, controller.** Only with a physical controller connected, on any OS; the operator performs
+  the controller actions.
+  - Item 11: controller focus past the last visible card leaves the ring at least 3 px inside the
+    track.
+  - Item 12 handoff (G-48-8a): card rects are identical before and after mouse, then controller,
+    then mouse, on the strip and on the grid, compared from captures.
+  - Keyboard to controller: after Tab-focusing a card, a controller press moves focus and exactly
+    one ring shows.
+  - Without a controller: not run, and recorded as owed.
+
+**48-18 rig notes (declared).** P1 is as written above, unchanged: every launch recorded launched pid = window owner pid = frontmost pid, and `ctl` itself refuses input unless the frontmost pid equals `GATE_PID`. The window is addressed by name and read by `winlist` (id, owner pid, bounds 1280x800 at 116,65 on every launch). The fresh-HOME launch, activation click on the `All games` heading, scroll to the top, quit through the app menu and anchored empty probe are the 48-15 recipe. Search box click point (239,228) and list-layout icon (176,178) are screen points read from a 48-15 capture and confirmed on each launch from the captures (the search chip `"zzzz"` and the `Installed` badges appear). Widths are read by `cards.cjs` along the strip's art row at y = 420 and y = 700: in list layout the `Installed` badge hides the left of card 0 at y = 420, so the y = 700 row (which starts at the track's left edge, 544) is used there. The main scrollbar's presence is read as the thumb colour (166,237,253) in x 2546-2554 over y 300-1500 of the capture. Sidecar pids were not recorded. The helper `l2m.cjs` counts ringed tiles per capture with `rings.cjs` at its 150 px minimum and names a tile position by its x range plus its first horizontal band's y.
+
 ## Tests
 
 ### 1. Settings -> General after the 48-06 deletions
@@ -306,6 +399,24 @@ After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `the
 **48-15 B11.** Mouse and keyboard clauses of item 12. Fresh fixture `fh.42sJP7`, shell pid 16904, window id 65397, frontmost and owner 16904, 1280x800. Hover (rings detected as straight accent runs of at least 150 px, `rings.cjs`): pointer parked on the heading `All games`: 0 ring tiles. Pointer on strip card 2: exactly 1 tile ringed (strip card 2, x 1344-1707: top 5 px, bottom 5, left 6, right 6). Pointer moved to a grid card: exactly 1 tile ringed (the grid card, left 6 px, right 5 px, top 5 px; its bottom is below the 800 pt window at that scroll) and the strip card unringed. A second launch scrolled the page 420 px first (`fh.7ybGm3`, pid 21238, id 65489): the hovered grid card shows top 5, bottom 5, left 6, right 6, one tile. Pointer on the grid header area (right of the heading, y = 171) and on the chip row with a `"Fix"` search chip showing (empty row area and over the chip): 0 ring tiles in each. Keyboard clause (WR-02): pointer resting in the gap between two grid cards, inside the listing, one activation click on that gap to anchor focus, 40 Tab presses with a capture after each (0.45 s): 0 of 40 captures show a ringed card, though the focus is inside cards (the inner settings or play button carries its small focus outline in the captures, for example tab 20). Control, same key sequence and the same anchor click, pointer then moved to the sidebar (outside the library column; fixture `fh.KkYfyi`, pid 18981, id 65457): 40 of 40 captures show a ringed card on all four sides (bands top 5, bottom 5, left 6, right 6). Pointer over the header instead (`fh.n15fAV`, pid 19576, id 65472): frames 1-15 no ring and frames 16-40 a ring on the card under the pointer (the page had scrolled under it, so that ring is the hover ring, and the card with the focus-visible play button carries none). So the keyboard focus ring is present in this build when the pointer is outside the library column and absent while the pointer rests over the grid listing, which is the behaviour 48-REVIEW.md WR-02 predicted. An unarmed first run (`fh.lHBSkx`, no anchor click) reached no card in 40 Tabs and is not used.
 
 **48-15 real-profile check (Task 2 close).** After the last Task 2 quit and an empty instance probe, `shasum -a 256 -c "$GATE_DIR/real-profile.sha256"`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
+
+**48-18 L1 arming (pre-fix).** `prefix.app` (binary sha256 516fab20..., 48-15's build, neither fix), fresh fixture `fh.f4G34o` (all/view, midnightMirage), shell pid 84655, window id 65584 (1280x800 at 116,65), frontmost pid 84655, window owner pid 84655 (P1). Activation click on the `All games` heading, page scrolled to the top. W0 (strip card 0 art, `scrollLeft` 0, 14 games) = 354 capture px (544-897). Typed `zzzz`: `FilterZeroResult` shown (`0 of 14 games`), main scrollbar thumb present in the base capture (136 thumb-colour samples) and absent in all 12 empty-state captures (0 samples), the arming condition. 10-capture loop from the last keystroke (about 130 ms apart) plus a settled capture: every strip card art 358 px (544-901), +4 capture px (+2 CSS px) in all 11 captures. List layout with the empty result: right edge 901, width 358 at the y = 700 row (`Installed` badges at y = 420). Clear search in list layout, 14 games: 354. Back to grid: 354. Search `07` (one result): 354. Cleared: 354. So the pre-fix build reproduces G-48-11c's +4 capture px in the empty state only, with the scrollbar gone, exactly as 48-15 B7 read it. Method: `l1.sh` (CGEvent pointer and keys, frontmost pid asserted before every input by `ctl`), `screencapture -x -o -l65584`, `l1m.cjs` over `cards.cjs`. Quit through the app menu (`quit ok 84655`), anchored probe empty, log `window-error=0`.
+
+**48-18 L1 launch 1.** Fixed build (HEAD 26f2fe9b0, binary sha256 63f6a983...), fresh fixture `fh.KNoB4I`, shell pid 85302, window id 65621 (1280x800 at 116,65), frontmost pid 85302, window owner pid 85302 (P1). W0 = 355 capture px (544-898), scrollbar thumb present (136 samples). Typed `zzzz`: `FilterZeroResult` with `0 of 14 games`, scrollbar thumb 0 samples in all 11 empty captures (absent, arming condition met). 10-capture loop: strip card 355 px (544-898) in all 10, spread 0, difference from W0 0 capture px in every one; settled capture 355. List layout, empty: 355 (right edge 898, y = 700 row). Clear search with list layout and 14 games: 355 (scrollbar back, 190 samples). Back to grid: 355. Search `07`: 355. Cleared and grid at quit: 355. Every difference from W0 is 0 against a bar of 2. Per-launch logs `window-error=0`, `ResizeObserver loop` 0. Quit through the app menu, empty probe, search cleared and grid layout restored in-app, page at the top. Method as the arming entry.
+
+**48-18 L1 launch 2.** Fixed build, fresh fixture `fh.otkyc5`, shell pid 85725, window id 65648, frontmost pid 85725, window owner pid 85725 (P1). W0 = 355 (544-898), scrollbar present. `zzzz`: `0 of 14 games` (checked in the settled capture: chip `"zzzz"`, `No games match your filters`), scrollbar thumb 0 samples in all 11 empty captures. 10-capture loop: 355 px in all 10, difference from W0 0; settled 355. List layout empty: 355. Cleared in list layout: 355. Back to grid: 355. Search `07`: 355. Cleared: 355. Logs `window-error=0`, `ResizeObserver loop` 0. Quit through the app menu, empty probe. Both fixed launches meet every L1 bar (largest difference 0 capture px); the pre-fix control read +4 on the same sequence.
+
+**48-18 L2 arming (pre-fix).** `prefix.app`, fresh fixture `fh.oHuuQq`, shell pid 86134, window id 65685, frontmost pid 86134, owner 86134 (P1). Pointer parked on the gap between two grid cards at screen (577,713), one anchor click there, then 40 Tab presses with a capture after each (0.45 s). Ringed tiles per capture (`rings.cjs`, runs of at least 150 px in the accent colour): 0 in all 41 captures (tab-0 to tab-40); exactly-one count 0 of 40, two-or-more 0, distinct tile positions 0. The pre-fix build reproduces 48-15's B11 reading of 0 of 40. Method: `l2.sh listing 40`, `l2m.cjs`. Quit through the app menu, probe empty.
+
+**48-18 L2 listing.** Fixed build, fresh fixture `fh.m78gz8`, shell pid 86652, window id 65703, frontmost pid 86652, owner 86652 (P1). Same sequence as the arming run (anchor click on the gap at (577,713), pointer left resting there, 40 Tabs, a capture after each). Captures with exactly one ringed tile: 40 of 40 (tab-1 to tab-40); two or more: 0; zero: 1 (tab-0, before any Tab, as expected). Distinct tile positions: 16 (columns x 541-900, 943-1303, 1346-1705, 1748-2108 and 2151-2510 in the first row; three Tabs per card, so the ring advances every third press). Bar: count equals the sidebar control's 40 of 40, no capture with two or more, at least 10 positions: met. The first Tab put the ring on card 0 at y = 1044 and the next capture read y = 1016 (a 28 px focus scroll); the page then scrolled by 395 px at tab-16 (see L5). Quit through the app menu, probe empty.
+
+**48-18 L2 header.** Fixed build, fresh fixture `fh.UO6KFi`, shell pid 87318, window id 65722, frontmost pid 87318, owner 87318 (P1). Anchor click on the gap, then the pointer moved onto the `All games` heading at (466,171) and left there, 40 Tabs. Exactly one ringed tile: 40 of 40; two or more: 0; zero: 1 (tab-0); distinct positions 16. The tile sequence equals the listing run's apart from a 1 px difference in the first band's y. In 48-15 this variant read no ring for tabs 1-15 and a hover ring afterwards; here the ring follows focus from the first Tab. Met. Quit through the app menu, probe empty.
+
+**48-18 L2 sidebar control.** Fixed build, fresh fixture `fh.fFps1F`, shell pid 87793, window id 65737, frontmost pid 87793, owner 87793 (P1). Anchor click on the gap, then the pointer moved to the sidebar's empty area at (244,705), 40 Tabs. Exactly one ringed tile: 40 of 40 (48-15's control read 40 of 40); two or more: 0; zero: 1 (tab-0); distinct positions 16. This is the count the listing and header runs are compared with. Quit through the app menu, probe empty.
+
+**48-18 real-profile check.** After the last Task 1 quit and an empty instance probe (`pgrep -x gamelib-shell`, `pgrep -x GameLib` and the anchored sidecar match all empty), `shasum -a 256 -c "$GATE_DIR/real-profile.sha256"` (sha256 3140261a... and 54a3460e..., the same two hashes as 48-15):
 `/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
 `/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
 
