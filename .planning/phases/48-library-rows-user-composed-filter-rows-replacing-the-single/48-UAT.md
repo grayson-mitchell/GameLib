@@ -3,7 +3,7 @@ status: partial
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-09-SUMMARY.md, 48-10-SUMMARY.md, 48-11-SUMMARY.md, 48-12-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-09T06:10:00Z
+updated: 2026-10-09T07:15:00Z
 ---
 
 ## Current Test
@@ -511,10 +511,13 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
   severity: major
   test: 12
   reported: "2026-10-09, live gate 48-15, HEAD 460df71e4 debug build on a 14-game fixture profile (fake HOME), macOS"
+  root_cause: "MEASURED IN CHROMIUM at the desk (2026-10-09, plan 48-16, base 61a767437, chrome-headless-shell over CDP with real pointer and Tab input, evidence/48-16/results-before-fix.json), not yet in WebKit. The stale-focus suppression `body:not(.controllerLayout) .listing:hover .gameCard:focus-within:not(:hover)` (GameCard/index.css, ring rule and scale rule) fires for a keyboard user: `body:not(.controllerLayout)` is also the state a keyboard user is in, and `.listing:hover` is satisfied by a pointer merely resting anywhere over the library column, so the Tab-focused card is returned to rest. Rig instrument S0 passes (hover rings with z-index 2, a Tab-focused card rings). Pointer in the gap between two grid cards with `.listing` hovered and no card hovered: the Tab-focused main-grid card is UNRINGED (0 rings). The same Tab sequence with the pointer on the sidebar: RINGED (1 ring). Counterfactual deleting only the two `.listing:hover .gameCard:focus-within:not(:hover)` rules from the harness copy of the stylesheet: RINGED (1 ring). Matches live 0 of 40 against 40 of 40 (48-15 B11) and 48-REVIEW.md WR-02."
   artifacts:
-    - path: "not diagnosed"
-      issue: "symptom only: no ring on a Tab-focused card while the pointer rests over the grid listing"
+    - path: "src/frontend/screens/Library/components/GameCard/index.css"
+      issue: "three stale-focus suppression selectors (ring rule and scale rule for .gameCard, and the .gameListItem twin) lacked a keyboard-mode scope"
+    - path: "src/frontend/helpers/inputModality.ts"
+      issue: "new: installKeyboardNavTracking sets body.keyboardNav on a trusted Tab keydown and clears it on a real pointer move or press (index.tsx calls it once)"
   missing:
-    - "Diagnosis of why the focus ring is absent in that state (WR-02 in 48-REVIEW.md predicted it)"
-    - "A live re-run of item 12's keyboard clause after a fix"
+    - "DONE 2026-10-09: desk fix 0c3d2ad23 and a0a3211f1 (keyboard-mode body class; the two .gameCard suppressions and the .gameListItem suppression are scoped off it, and a keyboard-mode parked-cursor rule returns a hovered unfocused card to rest); S0-S7 pass in Chromium (evidence/48-16/results-after-fix.json)"
+    - "A live WebKit re-run of item 12's keyboard clause, including that a Tab which scrolls the page under a resting pointer does not end keyboard mode (48-18)"
   debug_session: ""
