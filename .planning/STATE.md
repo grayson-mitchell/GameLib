@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Completed 49-09-PLAN.md
-last_updated: "2026-10-09T18:06:28.306Z"
+stopped_at: Completed 49-10-PLAN.md
+last_updated: "2026-10-09T18:30:14.470Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 49 execution started
-state_head: cb4bf4215b52f9d7e65847a9eb0ffa51048cabe4
+state_head: daece7b4ded4ac503cbf980c6adc06f46c097c08
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 524
+  completed_plans: 525
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 9 of 12
+Plan: 10 of 12
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 49 execution started
 
@@ -530,6 +530,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P07 | 9 min | 3 tasks | 11 files |
 | Phase 49 P08 | 7 min | 3 tasks | 12 files |
 | Phase 49 P09 | 30 min | 3 tasks | 10 files |
+| Phase 49 P10 | 45min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -1192,6 +1193,7 @@ Recent decisions affecting current work:
 - [Phase 49]: 49-08: boot sign-in probe bound SIGN_IN_PROBE_BOUND_MS=45000 equals Rust KEYRING_READ_TIMEOUT; pass starts after READY, outcomes pull handler registers before READY, test-worker guard lives inside startSignInProbePass — D-01/R3: measured ~12.5s Humble prompt latency motivates the bound; READY must never wait on a probe
 - [Phase 49]: 49-09: expired sign-in rows ignore the dismissed set entirely, so a dismiss can never hide a proven expiry
 - [Phase 49]: 49-09: SteamSyncNotice credential-missing case is suppressed (resolver returns hidden), not replaced; Library sign-in notice owns it
+- [Phase 49]: 49-10: Login tiles re-read persisted verdicts through collectSignInInputs inside the existing effect (openOverlay dep kept, 260823-awo); parity gate compares parsed key:expression pairs of the selector call, not raw text, because prettier wraps the nested call
 
 ### Pending Todos
 
@@ -1801,8 +1803,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T18:06:23.100Z
-Stopped at: Completed 49-09-PLAN.md
+Last session: 2026-10-09T18:30:10.270Z
+Stopped at: Completed 49-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
