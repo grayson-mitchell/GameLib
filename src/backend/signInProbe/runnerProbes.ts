@@ -10,7 +10,12 @@
  *     falls into the interactive `auth` flow.
  *   - nile `list-updates --json` only refreshes its token when the access token
  *     has already expired, so a revoked refresh token is invisible until the
- *     access token ages out (RESEARCH A4).
+ *     access token ages out (RESEARCH A4). With zero installed games it exits 0
+ *     before any auth call (F-49-R1-4, measured), so that run classifies
+ *     `unknown`, never `healthy`. `library sync` is not a permitted substitute
+ *     (D-16: the pass never triggers a library sync); a replacement command is
+ *     gated on the Amazon induction live gate, where its expired-token output
+ *     becomes measurable.
  *   Both are live-gated by 49-11 / 49-12; a drifted marker degrades to `unknown`.
  *
  * Every spawn passes `skipErrorHandler: true` (no modal, P2) and feeds

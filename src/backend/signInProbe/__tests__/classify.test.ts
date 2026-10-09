@@ -16,6 +16,7 @@ import {
   EPIC_NETWORK_FAILURE_MARKER,
   GOG_REFRESH_CONNECTION_FAILURE_MARKER,
   NILE_AUTH_FAILURE_STATUSES,
+  NILE_NO_GAMES_INSTALLED_MARKER,
   NILE_REFRESH_FAILURE_MARKER,
   SIGN_IN_PROBE_OUTPUT_CAP
 } from '../classify'
@@ -219,8 +220,47 @@ describe('classifyNileOutput (Amazon, RESEARCH 1c)', () => {
     )
   })
 
-  it('no refresh failure line and empty output (nothing installed), observed, is healthy', () => {
+  it('no refresh failure line and empty output, observed, is healthy (the zero-installed shape is not empty; see below)', () => {
     expect(classifyNileOutput({ ...nileBase, output: '' })).toBe('healthy')
+  })
+
+  // The zero-installed shape, measured 2026-10-10 against the bundled nile 1.2.0
+  // with an isolated NILE_CONFIG_PATH: stdout `[]`, stderr
+  // `ERROR [CLI]:<TAB> No games installed`, exit 0, no auth call (A4, F-49-R1-4).
+  const noGamesStdout = '[]\n'
+  const noGamesStderr = 'ERROR [CLI]:\t No games installed\n'
+
+  it('the no-games marker is exactly the bare phrase (prefix and whitespace unpinned)', () => {
+    expect(NILE_NO_GAMES_INSTALLED_MARKER).toBe('No games installed')
+  })
+
+  it('F-49-R1-4: the zero-installed shape with a clean exit is unknown, not healthy', () => {
+    expect(
+      classifyNileOutput({
+        ...nileBase,
+        output: `${noGamesStdout}${noGamesStderr}`,
+        errored: false
+      })
+    ).toBe('unknown')
+  })
+
+  it('F-49-R1-4: the zero-installed shape is unknown with stderr first too', () => {
+    expect(
+      classifyNileOutput({
+        ...nileBase,
+        output: `${noGamesStderr}${noGamesStdout}`,
+        errored: false
+      })
+    ).toBe('unknown')
+  })
+
+  it('F-49-R1-4: an auth-failure refresh line still wins over the no-games line', () => {
+    expect(
+      classifyNileOutput({
+        ...nileBase,
+        output: `${refreshFailure('401')}\n${noGamesStderr}${noGamesStdout}`
+      })
+    ).toBe('expired')
   })
 
   // ---- negatives ----

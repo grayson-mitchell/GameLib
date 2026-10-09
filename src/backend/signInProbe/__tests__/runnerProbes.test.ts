@@ -180,6 +180,13 @@ describe('probeNileSession', () => {
     await expect(probeNileSession()).resolves.toBe('unknown')
   })
 
+  it('F-49-R1-4: returns unknown for the zero-installed shape ([] + No games installed, exit 0)', async () => {
+    // The two chunks nile 1.2.0 emits with nothing installed, in the order a
+    // real spawn delivered them (49-LIVE-GATE Run 1 item 6); no auth call ran.
+    armRunner(mockNileRun, ['[]\n', 'ERROR [CLI]:\t No games installed\n'])
+    await expect(probeNileSession()).resolves.toBe('unknown')
+  })
+
   it('returns unknown when the runner call rejects', async () => {
     mockNileRun.mockRejectedValue(new Error('spawn failed'))
     await expect(probeNileSession()).resolves.toBe('unknown')

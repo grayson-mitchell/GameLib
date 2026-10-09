@@ -51,6 +51,12 @@ export const GOG_REFRESH_CONNECTION_FAILURE_MARKER =
   'Failed to refresh credentials'
 export const NILE_REFRESH_FAILURE_MARKER = 'Failed to refresh the token'
 export const NILE_AUTH_FAILURE_STATUSES = ['400', '401', '403']
+/**
+ * nile 1.2.0 with zero installed games (A4, F-49-R1-4): `list-updates` prints
+ * `[]` and `ERROR [CLI]:<TAB> No games installed`, exits 0, and never reaches
+ * an auth call. Substring only: the prefix and its whitespace are not pinned.
+ */
+export const NILE_NO_GAMES_INSTALLED_MARKER = 'No games installed'
 
 /** Upper bound on captured runner output, in characters. */
 export const SIGN_IN_PROBE_OUTPUT_CAP = 64_000
@@ -177,6 +183,14 @@ const NILE_REFRESH_RESPONSE_PATTERN = new RegExp(
  * on with the stale token, so the HTTP status is recoverable from the line and
  * the exit code says nothing. Only 400/401/403 are an authentication failure
  * (A3: which of those Amazon returns for a dead refresh token is assumed).
+ *
+ * With nothing installed nile exits 0 before any auth call (A4, F-49-R1-4,
+ * observed 7x in 49-LIVE-GATE Run 1 and re-measured 2026-10-10 against the
+ * bundled binary). That spawn is zero evidence about the credential either
+ * way, so it is `unknown`, never `healthy`. A refresh-failure line still
+ * decides first if the two ever co-occur. `library sync` is not a permitted
+ * substitute probe (D-16), and a replacement command is gated on the Amazon
+ * induction live gate.
  */
 export function classifyNileOutput(input: ClassifierInput): SignInProbeOutcome {
   if (input.aborted || !input.observed) {
@@ -196,6 +210,11 @@ export function classifyNileOutput(input: ClassifierInput): SignInProbeOutcome {
   }
   // A refresh failure with no `<Response [` is connection-error text.
   if (input.output.includes(NILE_REFRESH_FAILURE_MARKER)) {
+    return 'unknown'
+  }
+  // Zero installed games: nile exited before any auth call (A4, F-49-R1-4), so
+  // this spawn proves nothing about the credential. Not positive evidence.
+  if (input.output.includes(NILE_NO_GAMES_INSTALLED_MARKER)) {
     return 'unknown'
   }
   if (input.errored) {
