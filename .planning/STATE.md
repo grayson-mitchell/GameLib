@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: "48-13 halted after Task 1 (stop rule: G-48-11b not reproduced in Chromium, WebKit not runnable on Windows host)"
-last_updated: "2026-10-09T03:52:29.827Z"
+stopped_at: Completed 48-14-PLAN.md
+last_updated: "2026-10-09T04:37:32.651Z"
 last_activity: 2026-10-09
-last_activity_desc: Phase 48 execution started
-state_head: 291e872b0653632175803fd66ae9add2f29ff957
+last_activity_desc: Phase 48 execution resumed (wave continue)
+state_head: 6376731a511044f0a495ee107fdd7c66b653c7ad
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 533
-  completed_plans: 512
+  completed_plans: 513
   percent: 82
 ---
 
@@ -75,9 +75,9 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 1 of 15
-Status: Executing Phase 48
-Last activity: 2026-10-09 — Phase 48 execution started
+Plan: 2 of 15
+Status: Ready to execute
+Last activity: 2026-10-09 — Phase 48 execution resumed (wave continue)
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -517,6 +517,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P12 | 12 min | 3 tasks | 6 files |
 | Phase 49 P01 | 20 min | 3 tasks | 17 files |
 | Phase 49 P02 | 25 min | 3 tasks | 97 files |
+| Phase 48 P14 | 70min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -1158,6 +1159,7 @@ Recent decisions affecting current work:
 - [Phase 49]: 49-01: ?open= is validated by exact-membership parseSignInStore, consumed once per Login mount, and removed with replace:true (T-49-01)
 - [Phase 49]: 49-02: login.*Reconnect tiles reuse each locale's steamReconnect verbatim; case-inflecting locales (cs, hu, lt, pl) keep {{store}} in a case-neutral slot
 - [Phase 48]: 48-13: G-48-11b NOT reproduced in Chromium 153 (108 variants, scrollWidth within 0.6px of E); stop rule fired, Task 2 not started, no src change
+- [Phase 48]: 48-14: strip width sync moved to next frame via createNextFrameRunner; observer callback only reads and requests (G-48-11a, WR-01); WebKit sweep 34 vs 0 loop errors, live proof owed to 48-15
 
 ### Pending Todos
 
@@ -1768,8 +1770,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T03:52:25.735Z
-Stopped at: 48-13 halted after Task 1 (stop rule: G-48-11b not reproduced in Chromium, WebKit not runnable on Windows host)
+Last session: 2026-10-09T04:37:30.491Z
+Stopped at: Completed 48-14-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
