@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Non hai xogos sen páxina de tenda na túa biblioteca",
         "noStorePage": "Sen páxina de tenda",
+        "signIn": {
+            "dismiss": "Descartar o aviso de inicio de sesión de {{store}}",
+            "expired": "A túa sesión de {{store}} caducou",
+            "notConnected": "{{store}} non está conectado",
+            "reconnect": "Reconectar",
+            "signIn": "Iniciar sesión"
+        },
         "steamSync": {
             "failedBody": "As túas outras bibliotecas seguen dispoñibles. Téntao de novo ou comproba que Steam sexa accesible.",
             "failedTitle": "Non se puido sincronizar a túa biblioteca de Steam",
@@ -232,7 +239,10 @@
         "storeOther": "Outro"
     },
     "login": {
+        "amazonReconnect": "Sesión caducada — Reconectar",
         "connected": "Conectado",
+        "epicReconnect": "Sesión caducada — Reconectar",
+        "gogReconnect": "Sesión caducada — Reconectar",
         "humble_dialog_title": "Iniciar sesión en Humble Bundle",
         "logoutFailedTitle": "Peche de sesión incompleto",
         "steam_logout_failed_message": "O peche de sesión de Steam non rematou a tempo. Téntao de novo.",

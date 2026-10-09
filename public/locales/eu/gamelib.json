@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Ez dago denda-orririk gabeko jokorik zure liburutegian",
         "noStorePage": "Denda-orririk ez",
+        "signIn": {
+            "dismiss": "Baztertu {{store}} saio-hasieraren oharra",
+            "expired": "Zure {{store}} saioa iraungi da",
+            "notConnected": "{{store}} ez dago konektatuta",
+            "reconnect": "Berrkonektatu",
+            "signIn": "Hasi saioa"
+        },
         "steamSync": {
             "failedBody": "Zure beste liburutegiak eskuragarri jarraitzen dute. Saiatu berriro, edo egiaztatu Steam eskuragarri dagoela.",
             "failedTitle": "Ezin izan da zure Steam liburutegia sinkronizatu",
@@ -232,7 +239,10 @@
         "storeOther": "Bestela"
     },
     "login": {
+        "amazonReconnect": "Saioa iraungi da — Berrkonektatu",
         "connected": "Konektatuta",
+        "epicReconnect": "Saioa iraungi da — Berrkonektatu",
+        "gogReconnect": "Saioa iraungi da — Berrkonektatu",
         "humble_dialog_title": "Hasi saioa Humble Bundle-n",
         "logoutFailedTitle": "Saioa ez da erabat itxi",
         "steam_logout_failed_message": "Steam-eko saioa itxiek ez du garaiz amaitu. Mesedez, saiatu berriro.",

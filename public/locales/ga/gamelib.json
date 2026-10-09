@@ -241,6 +241,13 @@
         },
         "no_no_store_page_games": "Níl aon chluiche gan leathanach siopa i do leabharlann",
         "noStorePage": "Gan leathanach siopa",
+        "signIn": {
+            "dismiss": "Dún fógra síniú isteach {{store}}",
+            "expired": "Chuaigh do shíniú isteach {{store}} in éag",
+            "notConnected": "Níl {{store}} ceangailte",
+            "reconnect": "Ceangail arís",
+            "signIn": "Sínigh isteach"
+        },
         "steamSync": {
             "failedBody": "Tá do leabharlanna eile fós ar fáil. Bain triail eile as, nó cinntigh go bhfuil Steam inrochtana.",
             "failedTitle": "Níorbh fhéidir do leabharlann Steam a shioncronú",
@@ -253,7 +260,10 @@
         "storeOther": "Eile"
     },
     "login": {
+        "amazonReconnect": "Síniú isteach in éag — Ceangail arís",
         "connected": "Ceangailte",
+        "epicReconnect": "Síniú isteach in éag — Ceangail arís",
+        "gogReconnect": "Síniú isteach in éag — Ceangail arís",
         "humble_dialog_title": "Sínigh isteach i Humble Bundle",
         "logoutFailedTitle": "Síniú amach neamhiomlán",
         "steam_logout_failed_message": "Níor chríochnaigh síniú amach Steam in am. Bain triail eile as le do thoil.",

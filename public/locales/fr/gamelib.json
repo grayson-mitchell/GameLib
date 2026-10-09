@@ -174,6 +174,13 @@
         },
         "noStorePage": "Aucune page boutique",
         "no_no_store_page_games": "Aucun jeu sans page boutique dans votre bibliothèque",
+        "signIn": {
+            "dismiss": "Fermer l'avis de connexion {{store}}",
+            "expired": "Votre connexion {{store}} a expiré",
+            "notConnected": "{{store}} n'est pas connecté",
+            "reconnect": "Reconnecter",
+            "signIn": "Se connecter"
+        },
         "steamSync": {
             "failedBody": "Vos autres bibliothèques sont toujours disponibles. Réessayez, ou vérifiez que Steam est accessible.",
             "failedTitle": "Impossible de synchroniser votre bibliothèque Steam",
@@ -186,7 +193,10 @@
         "storeOther": "Autre"
     },
     "login": {
+        "amazonReconnect": "Connexion expirée — Reconnecter",
         "connected": "Connecté",
+        "epicReconnect": "Connexion expirée — Reconnecter",
+        "gogReconnect": "Connexion expirée — Reconnecter",
         "steamReconnect": "Connexion expirée — Reconnecter",
         "humble_dialog_title": "Se connecter à Humble Bundle",
         "logoutFailedTitle": "Déconnexion incomplète",

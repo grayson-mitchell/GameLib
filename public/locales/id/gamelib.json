@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Tidak ada gim tanpa halaman toko di perpustakaan Anda",
         "noStorePage": "Tanpa halaman toko",
+        "signIn": {
+            "dismiss": "Tutup pemberitahuan masuk {{store}}",
+            "expired": "Sesi masuk {{store}} Anda telah berakhir",
+            "notConnected": "{{store}} tidak terhubung",
+            "reconnect": "Hubungkan ulang",
+            "signIn": "Masuk"
+        },
         "steamSync": {
             "failedBody": "Pustaka lainnya masih tersedia. Coba lagi, atau periksa apakah Steam dapat dijangkau.",
             "failedTitle": "Gagal menyinkronkan pustaka Steam Anda",
@@ -232,7 +239,10 @@
         "storeOther": "Lainnya"
     },
     "login": {
+        "amazonReconnect": "Sesi masuk berakhir — Hubungkan ulang",
         "connected": "Terhubung",
+        "epicReconnect": "Sesi masuk berakhir — Hubungkan ulang",
+        "gogReconnect": "Sesi masuk berakhir — Hubungkan ulang",
         "humble_dialog_title": "Masuk ke Humble Bundle",
         "logoutFailedTitle": "Keluar tidak selesai",
         "steam_logout_failed_message": "Proses keluar dari Steam tidak selesai tepat waktu. Silakan coba lagi.",

@@ -234,6 +234,13 @@
         },
         "no_no_store_page_games": "В вашей библиотеке нет игр без страницы магазина",
         "noStorePage": "Нет страницы магазина",
+        "signIn": {
+            "dismiss": "Закрыть уведомление о входе в {{store}}",
+            "expired": "Срок входа в {{store}} истёк",
+            "notConnected": "{{store}} не подключён",
+            "reconnect": "Переподключиться",
+            "signIn": "Войти"
+        },
         "steamSync": {
             "failedBody": "Ваши другие библиотеки по-прежнему доступны. Повторите попытку или проверьте доступность Steam.",
             "failedTitle": "Не удалось синхронизировать библиотеку Steam",
@@ -246,7 +253,10 @@
         "storeOther": "Другое"
     },
     "login": {
+        "amazonReconnect": "Срок входа истёк — Переподключиться",
         "connected": "Подключено",
+        "epicReconnect": "Срок входа истёк — Переподключиться",
+        "gogReconnect": "Срок входа истёк — Переподключиться",
         "humble_dialog_title": "Войти в Humble Bundle",
         "logoutFailedTitle": "Выход выполнен не полностью",
         "steam_logout_failed_message": "Выход из Steam не завершился вовремя. Попробуйте ещё раз.",

@@ -227,6 +227,13 @@
         },
         "no_no_store_page_games": "אין משחקים ללא עמוד חנות בספרייה שלך",
         "noStorePage": "ללא עמוד חנות",
+        "signIn": {
+            "dismiss": "סגור את ההודעה על ההתחברות ל-{{store}}",
+            "expired": "תוקף ההתחברות שלך ל-{{store}} פג",
+            "notConnected": "{{store}} אינו מחובר",
+            "reconnect": "התחבר מחדש",
+            "signIn": "התחבר"
+        },
         "steamSync": {
             "failedBody": "שאר הספריות שלך עדיין זמינות. נסה שוב, או ודא ש-Steam נגיש.",
             "failedTitle": "לא ניתן היה לסנכרן את ספריית Steam שלך",
@@ -239,7 +246,10 @@
         "storeOther": "אחר"
     },
     "login": {
+        "amazonReconnect": "תוקף ההתחברות פג — התחבר מחדש",
         "connected": "מחובר",
+        "epicReconnect": "תוקף ההתחברות פג — התחבר מחדש",
+        "gogReconnect": "תוקף ההתחברות פג — התחבר מחדש",
         "humble_dialog_title": "התחבר ל-Humble Bundle",
         "logoutFailedTitle": "ההתנתקות לא הושלמה",
         "steam_logout_failed_message": "ההתנתקות מ-Steam לא הושלמה בזמן. נסה שוב.",

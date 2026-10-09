@@ -227,6 +227,13 @@
         },
         "no_no_store_page_games": "Nessun gioco senza pagina store nella tua libreria",
         "noStorePage": "Nessuna pagina store",
+        "signIn": {
+            "dismiss": "Chiudi l'avviso di accesso a {{store}}",
+            "expired": "L'accesso a {{store}} è scaduto",
+            "notConnected": "{{store}} non è connesso",
+            "reconnect": "Riconnetti",
+            "signIn": "Accedi"
+        },
         "steamSync": {
             "failedBody": "Le tue altre librerie sono ancora disponibili. Riprova, oppure verifica che Steam sia raggiungibile.",
             "failedTitle": "Impossibile sincronizzare la tua libreria Steam",
@@ -239,7 +246,10 @@
         "storeOther": "Altro"
     },
     "login": {
+        "amazonReconnect": "Accesso scaduto — Riconnetti",
         "connected": "Connesso",
+        "epicReconnect": "Accesso scaduto — Riconnetti",
+        "gogReconnect": "Accesso scaduto — Riconnetti",
         "humble_dialog_title": "Accedi a Humble Bundle",
         "logoutFailedTitle": "Disconnessione incompleta",
         "steam_logout_failed_message": "La disconnessione da Steam non è stata completata in tempo. Riprova.",

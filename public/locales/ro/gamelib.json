@@ -227,6 +227,13 @@
         },
         "no_no_store_page_games": "Nu există jocuri fără pagină de magazin în biblioteca ta",
         "noStorePage": "Fără pagină de magazin",
+        "signIn": {
+            "dismiss": "Închide notificarea de conectare la {{store}}",
+            "expired": "Sesiunea ta {{store}} a expirat",
+            "notConnected": "{{store}} nu este conectat",
+            "reconnect": "Reconectează-te",
+            "signIn": "Conectează-te"
+        },
         "steamSync": {
             "failedBody": "Celelalte biblioteci ale tale sunt încă disponibile. Încearcă din nou sau verifică dacă Steam este accesibil.",
             "failedTitle": "Nu am putut sincroniza biblioteca ta Steam",
@@ -239,7 +246,10 @@
         "storeOther": "Altele"
     },
     "login": {
+        "amazonReconnect": "Sesiune expirată — Reconectează-te",
         "connected": "Conectat",
+        "epicReconnect": "Sesiune expirată — Reconectează-te",
+        "gogReconnect": "Sesiune expirată — Reconectează-te",
         "humble_dialog_title": "Conectează-te la Humble Bundle",
         "logoutFailedTitle": "Deconectare incompletă",
         "steam_logout_failed_message": "Deconectarea de la Steam nu s-a finalizat la timp. Te rugăm să încerci din nou.",

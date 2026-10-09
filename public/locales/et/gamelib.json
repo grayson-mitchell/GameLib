@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Sinu teegis pole ühtegi mängu ilma poeleheta",
         "noStorePage": "Poeleht puudub",
+        "signIn": {
+            "dismiss": "Sulge {{store}} sisselogimise teade",
+            "expired": "Sinu {{store}} sisselogimine aegus",
+            "notConnected": "{{store}} pole ühendatud",
+            "reconnect": "Ühenda uuesti",
+            "signIn": "Logi sisse"
+        },
         "steamSync": {
             "failedBody": "Teie teised teegid on endiselt saadaval. Proovige uuesti või kontrollige, kas Steam on kättesaadav.",
             "failedTitle": "Sinu Steami teeki ei õnnestunud sünkida",
@@ -232,7 +239,10 @@
         "storeOther": "Muu"
     },
     "login": {
+        "amazonReconnect": "Sisselogimine aegunud — Ühenda uuesti",
         "connected": "Ühendatud",
+        "epicReconnect": "Sisselogimine aegunud — Ühenda uuesti",
+        "gogReconnect": "Sisselogimine aegunud — Ühenda uuesti",
         "humble_dialog_title": "Logi sisse Humble Bundle'isse",
         "logoutFailedTitle": "Väljalogimine pole lõpetatud",
         "steam_logout_failed_title": "Väljalogimine ebaõnnestus",

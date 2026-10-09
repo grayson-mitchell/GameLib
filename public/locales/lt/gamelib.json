@@ -234,6 +234,13 @@
         },
         "no_no_store_page_games": "Jūsų bibliotekoje nėra žaidimų be parduotuvės puslapio",
         "noStorePage": "Be parduotuvės puslapio",
+        "signIn": {
+            "dismiss": "Uždaryti pranešimą apie prisijungimą prie {{store}}",
+            "expired": "Jūsų {{store}} prisijungimo galiojimas baigėsi",
+            "notConnected": "Prie {{store}} neprisijungta",
+            "reconnect": "Prisijungti iš naujo",
+            "signIn": "Prisijungti"
+        },
         "steamSync": {
             "failedBody": "Kitos jūsų bibliotekos vis dar pasiekiamos. Bandykite dar kartą arba patikrinkite, ar Steam pasiekiamas.",
             "failedTitle": "Nepavyko sinchronizuoti jūsų Steam bibliotekos",
@@ -246,7 +253,10 @@
         "storeOther": "Kita/-s/-i"
     },
     "login": {
+        "amazonReconnect": "Prisijungimo galiojimas baigėsi — prisijungti iš naujo",
         "connected": "Prisijungta",
+        "epicReconnect": "Prisijungimo galiojimas baigėsi — prisijungti iš naujo",
+        "gogReconnect": "Prisijungimo galiojimas baigėsi — prisijungti iš naujo",
         "humble_dialog_title": "Prisijunkite prie Humble Bundle",
         "logoutFailedTitle": "Atsijungimas nebaigtas",
         "steam_logout_failed_message": "Steam atsijungimas nebuvo baigtas laiku. Bandykite dar kartą.",

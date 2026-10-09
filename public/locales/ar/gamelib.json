@@ -248,6 +248,13 @@
         },
         "no_no_store_page_games": "لا توجد ألعاب بلا صفحة متجر في مكتبتك",
         "noStorePage": "بلا صفحة متجر",
+        "signIn": {
+            "dismiss": "تجاهل إشعار تسجيل الدخول إلى {{store}}",
+            "expired": "انتهت صلاحية تسجيل دخولك إلى {{store}}",
+            "notConnected": "{{store}} غير متصل",
+            "reconnect": "إعادة الاتصال",
+            "signIn": "تسجيل الدخول"
+        },
         "steamSync": {
             "failedBody": "لا تزال مكتباتك الأخرى متاحة. حاول مرة أخرى، أو تحقق من إمكانية الوصول إلى Steam.",
             "failedTitle": "تعذّرت مزامنة مكتبة Steam الخاصة بك",
@@ -260,7 +267,10 @@
         "storeOther": "آخر"
     },
     "login": {
+        "amazonReconnect": "انتهت صلاحية تسجيل الدخول — إعادة الاتصال",
         "connected": "متصل",
+        "epicReconnect": "انتهت صلاحية تسجيل الدخول — إعادة الاتصال",
+        "gogReconnect": "انتهت صلاحية تسجيل الدخول — إعادة الاتصال",
         "humble_dialog_title": "تسجيل الدخول إلى Humble Bundle",
         "logoutFailedTitle": "تسجيل الخروج غير مكتمل",
         "steam_logout_failed_message": "لم يكتمل تسجيل الخروج من Steam في الوقت المحدد. يرجى المحاولة مرة أخرى.",

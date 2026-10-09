@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Không có game nào thiếu trang cửa hàng trong thư viện của bạn",
         "noStorePage": "Không có trang cửa hàng",
+        "signIn": {
+            "dismiss": "Đóng thông báo đăng nhập {{store}}",
+            "expired": "Phiên đăng nhập {{store}} của bạn đã hết hạn",
+            "notConnected": "{{store}} chưa được kết nối",
+            "reconnect": "Kết nối lại",
+            "signIn": "Đăng nhập"
+        },
         "steamSync": {
             "failedBody": "Các thư viện khác của bạn vẫn khả dụng. Hãy thử lại, hoặc kiểm tra xem có thể kết nối tới Steam không.",
             "failedTitle": "Không thể đồng bộ thư viện Steam của bạn",
@@ -232,7 +239,10 @@
         "storeOther": "Khác"
     },
     "login": {
+        "amazonReconnect": "Phiên đăng nhập đã hết hạn — Kết nối lại",
         "connected": "Đã kết nối",
+        "epicReconnect": "Phiên đăng nhập đã hết hạn — Kết nối lại",
+        "gogReconnect": "Phiên đăng nhập đã hết hạn — Kết nối lại",
         "humble_dialog_title": "Đăng nhập vào Humble Bundle",
         "logoutFailedTitle": "Đăng xuất chưa hoàn tất",
         "steam_logout_failed_message": "Đăng xuất Steam không hoàn tất kịp thời. Vui lòng thử lại.",

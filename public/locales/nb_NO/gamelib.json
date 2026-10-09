@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Ingen spill uten butikkside i biblioteket ditt",
         "noStorePage": "Ingen butikkside",
+        "signIn": {
+            "dismiss": "Lukk varselet om {{store}}-innlogging",
+            "expired": "{{store}}-innloggingen din er utløpt",
+            "notConnected": "{{store}} er ikke tilkoblet",
+            "reconnect": "Koble til på nytt",
+            "signIn": "Logg inn"
+        },
         "steamSync": {
             "failedBody": "Dine andre biblioteker er fremdeles tilgjengelige. Prøv igjen, eller sjekk at Steam er tilgjengelig.",
             "failedTitle": "Kunne ikke synkronisere Steam-biblioteket ditt",
@@ -232,7 +239,10 @@
         "storeOther": "Annen"
     },
     "login": {
+        "amazonReconnect": "Innlogging utløpt — Koble til på nytt",
         "connected": "Tilkoblet",
+        "epicReconnect": "Innlogging utløpt — Koble til på nytt",
+        "gogReconnect": "Innlogging utløpt — Koble til på nytt",
         "humble_dialog_title": "Logg inn på Humble Bundle",
         "logoutFailedTitle": "Utlogging ikke fullført",
         "steam_logout_failed_message": "Utlogging fra Steam ble ikke fullført i tide. Prøv igjen.",

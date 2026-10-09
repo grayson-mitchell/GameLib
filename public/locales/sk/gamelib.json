@@ -234,6 +234,13 @@
         },
         "no_no_store_page_games": "Vo vašej knižnici nie sú žiadne hry bez stránky obchodu",
         "noStorePage": "Bez stránky obchodu",
+        "signIn": {
+            "dismiss": "Zavrieť oznámenie o prihlásení do {{store}}",
+            "expired": "Platnosť vášho prihlásenia do {{store}} vypršala",
+            "notConnected": "{{store}} nie je pripojený",
+            "reconnect": "Znova pripojiť",
+            "signIn": "Prihlásiť sa"
+        },
         "steamSync": {
             "failedBody": "Vaše ostatné knižnice sú stále dostupné. Skúste to znova alebo skontrolujte, či je Steam dostupný.",
             "failedTitle": "Nepodarilo sa synchronizovať vašu knižnicu Steam",
@@ -246,7 +253,10 @@
         "storeOther": "Iné"
     },
     "login": {
+        "amazonReconnect": "Platnosť prihlásenia vypršala — Znova pripojiť",
         "connected": "Pripojené",
+        "epicReconnect": "Platnosť prihlásenia vypršala — Znova pripojiť",
+        "gogReconnect": "Platnosť prihlásenia vypršala — Znova pripojiť",
         "humble_dialog_title": "Prihlásiť sa do Humble Bundle",
         "logoutFailedTitle": "Odhlásenie nedokončené",
         "steam_logout_failed_message": "Odhlásenie zo Steam sa nedokončilo včas. Skúste to prosím znova.",

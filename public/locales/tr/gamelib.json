@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Kitaplığınızda mağaza sayfası olmayan oyun yok",
         "noStorePage": "Mağaza sayfası yok",
+        "signIn": {
+            "dismiss": "{{store}} oturum bildirimini kapat",
+            "expired": "{{store}} oturumunuzun süresi doldu",
+            "notConnected": "{{store}} bağlı değil",
+            "reconnect": "Yeniden bağlan",
+            "signIn": "Oturum aç"
+        },
         "steamSync": {
             "failedBody": "Diğer kitaplıklarınız hâlâ kullanılabilir. Tekrar deneyin veya Steam'e erişilebildiğini kontrol edin.",
             "failedTitle": "Steam kitaplığınız senkronize edilemedi",
@@ -232,7 +239,10 @@
         "storeOther": "Diğer"
     },
     "login": {
+        "amazonReconnect": "Oturum süresi doldu — Yeniden bağlan",
         "connected": "Bağlandı",
+        "epicReconnect": "Oturum süresi doldu — Yeniden bağlan",
+        "gogReconnect": "Oturum süresi doldu — Yeniden bağlan",
         "humble_dialog_title": "Humble Bundle'da oturum aç",
         "logoutFailedTitle": "Oturum kapatma tamamlanamadı",
         "steam_logout_failed_message": "Steam oturumu kapatma işlemi zamanında tamamlanamadı. Lütfen tekrar deneyin.",

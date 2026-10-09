@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Nincs áruházi oldal nélküli játék a könyvtáradban",
         "noStorePage": "Nincs áruházi oldal",
+        "signIn": {
+            "dismiss": "A(z) {{store}} bejelentkezési értesítésének elvetése",
+            "expired": "A(z) {{store}} bejelentkezésed lejárt",
+            "notConnected": "A(z) {{store}} nincs csatlakoztatva",
+            "reconnect": "Újracsatlakozás",
+            "signIn": "Bejelentkezés"
+        },
         "steamSync": {
             "failedBody": "A többi könyvtárad továbbra is elérhető. Próbáld újra, vagy ellenőrizd, hogy a Steam elérhető-e.",
             "failedTitle": "Nem sikerült szinkronizálni a Steam könyvtáradat",
@@ -232,7 +239,10 @@
         "storeOther": "Egyéb"
     },
     "login": {
+        "amazonReconnect": "A bejelentkezés lejárt — Újracsatlakozás",
         "connected": "Csatlakoztatva",
+        "epicReconnect": "A bejelentkezés lejárt — Újracsatlakozás",
+        "gogReconnect": "A bejelentkezés lejárt — Újracsatlakozás",
         "humble_dialog_title": "Bejelentkezés a Humble Bundle-be",
         "logoutFailedTitle": "A kijelentkezés nem fejeződött be",
         "steam_logout_failed_title": "A kijelentkezés sikertelen",

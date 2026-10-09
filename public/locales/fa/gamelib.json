@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "هیچ بازی بدون صفحه فروشگاه در کتابخانه شما وجود ندارد",
         "noStorePage": "بدون صفحه فروشگاه",
+        "signIn": {
+            "dismiss": "بستن اعلان ورود به {{store}}",
+            "expired": "ورود شما به {{store}} منقضی شده است",
+            "notConnected": "{{store}} متصل نیست",
+            "reconnect": "اتصال مجدد",
+            "signIn": "ورود"
+        },
         "steamSync": {
             "failedBody": "کتابخانه‌های دیگر شما همچنان در دسترس هستند. دوباره امتحان کنید یا مطمئن شوید Steam در دسترس است.",
             "failedTitle": "همگام‌سازی کتابخانه Steam شما ممکن نشد",
@@ -232,7 +239,10 @@
         "storeOther": "بقیه"
     },
     "login": {
+        "amazonReconnect": "ورود منقضی شده — اتصال مجدد",
         "connected": "متصل",
+        "epicReconnect": "ورود منقضی شده — اتصال مجدد",
+        "gogReconnect": "ورود منقضی شده — اتصال مجدد",
         "humble_dialog_title": "ورود به Humble Bundle",
         "logoutFailedTitle": "خروج ناقص",
         "steam_logout_failed_message": "خروج از Steam به موقع انجام نشد. لطفاً دوباره امتحان کنید.",

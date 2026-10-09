@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "您的庫中沒有無商店頁面的遊戲",
         "noStorePage": "無商店頁面",
+        "signIn": {
+            "dismiss": "關閉 {{store}} 登入通知",
+            "expired": "您的 {{store}} 登入已過期",
+            "notConnected": "{{store}} 未連接",
+            "reconnect": "重新連接",
+            "signIn": "登入"
+        },
         "steamSync": {
             "failedBody": "您的其他資料庫仍然可用。請重試，或確認 Steam 是否可連線。",
             "failedTitle": "無法同步您的 Steam 資料庫",
@@ -232,7 +239,10 @@
         "storeOther": "其它"
     },
     "login": {
+        "amazonReconnect": "登入已過期 — 重新連接",
         "connected": "已連接",
+        "epicReconnect": "登入已過期 — 重新連接",
+        "gogReconnect": "登入已過期 — 重新連接",
         "humble_dialog_title": "登入 Humble Bundle",
         "logoutFailedTitle": "登出未完成",
         "steam_logout_failed_message": "Steam 登出未能及時完成，請再試一次。",

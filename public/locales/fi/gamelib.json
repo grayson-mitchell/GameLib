@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Kirjastossasi ei ole pelejä ilman kauppasivua",
         "noStorePage": "Ei kauppasivua",
+        "signIn": {
+            "dismiss": "Sulje {{store}}-kirjautumisilmoitus",
+            "expired": "{{store}}-kirjautumisesi on vanhentunut",
+            "notConnected": "{{store}} ei ole yhdistetty",
+            "reconnect": "Yhdistä uudelleen",
+            "signIn": "Kirjaudu sisään"
+        },
         "steamSync": {
             "failedBody": "Muut kirjastosi ovat yhä käytettävissä. Yritä uudelleen tai tarkista, että Steam on tavoitettavissa.",
             "failedTitle": "Steam-kirjastoa ei voitu synkronoida",
@@ -232,7 +239,10 @@
         "storeOther": "Muu"
     },
     "login": {
+        "amazonReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen",
         "connected": "Yhdistetty",
+        "epicReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen",
+        "gogReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen",
         "logoutFailedTitle": "Uloskirjautuminen jäi kesken",
         "steam_logout_failed_message": "Steam-uloskirjautuminen ei valmistunut ajoissa. Yritä uudelleen.",
         "steam_logout_failed_title": "Uloskirjautuminen epäonnistui",

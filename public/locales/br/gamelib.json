@@ -241,6 +241,13 @@
         },
         "no_no_store_page_games": "C'hoari ebet hep pajenn stal en ho levraoueg",
         "noStorePage": "Pajenn stal ebet",
+        "signIn": {
+            "dismiss": "Serriñ ar c'hemenn kevreañ {{store}}",
+            "expired": "Aet eo da get ho kevreadur {{store}}",
+            "notConnected": "{{store}} n'eo ket kevreet",
+            "reconnect": "Adkevreañ",
+            "signIn": "Kevreañ"
+        },
         "steamSync": {
             "failedBody": "Ho lyrjadoù all a chom da c'hout. Klaskit en-dro, pe gwiriit e c'haller tizhout Steam.",
             "failedTitle": "N'haller ket goubredañ ho lyrjad Steam",
@@ -253,7 +260,10 @@
         "storeOther": "All"
     },
     "login": {
+        "amazonReconnect": "Aet da get ar c'hevreañ — Adkevreañ",
         "connected": "Kevreet",
+        "epicReconnect": "Aet da get ar c'hevreañ — Adkevreañ",
+        "gogReconnect": "Aet da get ar c'hevreañ — Adkevreañ",
         "humble_dialog_title": "Kevreañ da Humble Bundle",
         "logoutFailedTitle": "Digevreañ diglok",
         "steam_logout_failed_message": "N'eo ket echu bet digevreañ Steam a-walc'h buan. Klaskit en-dro mar plij.",

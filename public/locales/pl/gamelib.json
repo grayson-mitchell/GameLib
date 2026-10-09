@@ -234,6 +234,13 @@
         },
         "no_no_store_page_games": "Brak gier bez strony sklepu w Twojej bibliotece",
         "noStorePage": "Brak strony sklepu",
+        "signIn": {
+            "dismiss": "Zamknij powiadomienie o logowaniu do {{store}}",
+            "expired": "Twoje logowanie do {{store}} wygasło",
+            "notConnected": "Brak połączenia z {{store}}",
+            "reconnect": "Połącz ponownie",
+            "signIn": "Zaloguj się"
+        },
         "steamSync": {
             "failedBody": "Twoje pozostałe biblioteki są nadal dostępne. Spróbuj ponownie lub sprawdź, czy Steam jest dostępny.",
             "failedTitle": "Nie udało się zsynchronizować biblioteki Steam",
@@ -246,7 +253,10 @@
         "storeOther": "Inne"
     },
     "login": {
+        "amazonReconnect": "Logowanie wygasło — Połącz ponownie",
         "connected": "Połączono",
+        "epicReconnect": "Logowanie wygasło — Połącz ponownie",
+        "gogReconnect": "Logowanie wygasło — Połącz ponownie",
         "humble_dialog_title": "Zaloguj się do Humble Bundle",
         "logoutFailedTitle": "Wylogowanie niepełne",
         "steam_logout_failed_message": "Wylogowanie ze Steam nie zakończyło się w wyznaczonym czasie. Spróbuj ponownie.",

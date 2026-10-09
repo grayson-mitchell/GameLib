@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "您的资料库中没有无商店页面的游戏",
         "noStorePage": "无商店页面",
+        "signIn": {
+            "dismiss": "关闭 {{store}} 登录通知",
+            "expired": "你的 {{store}} 登录已过期",
+            "notConnected": "{{store}} 未连接",
+            "reconnect": "重新连接",
+            "signIn": "登录"
+        },
         "steamSync": {
             "failedBody": "你的其他库仍然可用。请重试，或检查 Steam 是否可以访问。",
             "failedTitle": "无法同步你的 Steam 库",
@@ -232,7 +239,10 @@
         "storeOther": "其他"
     },
     "login": {
+        "amazonReconnect": "登录已过期 — 重新连接",
         "connected": "已连接",
+        "epicReconnect": "登录已过期 — 重新连接",
+        "gogReconnect": "登录已过期 — 重新连接",
         "humble_dialog_title": "登录 Humble Bundle",
         "logoutFailedTitle": "退出登录未完成",
         "steam_logout_failed_message": "Steam 退出登录未能及时完成。请重试。",

@@ -227,6 +227,13 @@
         },
         "no_no_store_page_games": "No hi ha jocs sense pàgina de botiga a la teva biblioteca",
         "noStorePage": "Sense pàgina de botiga",
+        "signIn": {
+            "dismiss": "Descarta l'avís d'inici de sessió de {{store}}",
+            "expired": "La teva sessió de {{store}} ha caducat",
+            "notConnected": "{{store}} no està connectat",
+            "reconnect": "Reconnecta",
+            "signIn": "Inicia sessió"
+        },
         "steamSync": {
             "failedBody": "Les teves altres biblioteques encara estan disponibles. Torna-ho a provar o comprova que Steam sigui accessible.",
             "failedTitle": "No s'ha pogut sincronitzar la teva biblioteca de Steam",
@@ -239,7 +246,10 @@
         "storeOther": "Altres"
     },
     "login": {
+        "amazonReconnect": "Sessió caducada — Reconnecta",
         "connected": "Connectat",
+        "epicReconnect": "Sessió caducada — Reconnecta",
+        "gogReconnect": "Sessió caducada — Reconnecta",
         "humble_dialog_title": "Inicia sessió a Humble Bundle",
         "logoutFailedTitle": "Tancament de sessió incomplet",
         "steam_logout_failed_message": "El tancament de sessió de Steam no s'ha completat a temps. Torna-ho a provar.",

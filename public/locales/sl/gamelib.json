@@ -234,6 +234,13 @@
         },
         "no_no_store_page_games": "V vaši knjižnici ni iger brez trgovinske strani",
         "noStorePage": "Brez trgovinske strani",
+        "signIn": {
+            "dismiss": "Opusti obvestilo o prijavi v {{store}}",
+            "expired": "Vaša prijava v {{store}} je potekla",
+            "notConnected": "{{store}} ni povezan",
+            "reconnect": "Ponovno poveži",
+            "signIn": "Prijava"
+        },
         "steamSync": {
             "failedBody": "Vaše ostale knjižnice so še vedno na voljo. Poskusite znova ali preverite, ali je Steam dosegljiv.",
             "failedTitle": "Sinhronizacija knjižnice Steam ni uspela",
@@ -246,7 +253,10 @@
         "storeOther": "Drugo"
     },
     "login": {
+        "amazonReconnect": "Prijava je potekla — Ponovno poveži",
         "connected": "Povezano",
+        "epicReconnect": "Prijava je potekla — Ponovno poveži",
+        "gogReconnect": "Prijava je potekla — Ponovno poveži",
         "humble_dialog_title": "Prijava v Humble Bundle",
         "logoutFailedTitle": "Odjava ni bila dokončana",
         "steam_logout_failed_message": "Odjava iz storitve Steam se ni dokončala pravočasno. Poskusite znova.",

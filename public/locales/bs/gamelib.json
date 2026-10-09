@@ -227,6 +227,13 @@
         },
         "no_no_store_page_games": "Nema igara bez stranice trgovine u vašoj biblioteci",
         "noStorePage": "Bez stranice trgovine",
+        "signIn": {
+            "dismiss": "Odbaci obavijest o prijavi na {{store}}",
+            "expired": "Vaša {{store}} prijava je istekla",
+            "notConnected": "{{store}} nije povezan",
+            "reconnect": "Ponovo poveži",
+            "signIn": "Prijavi se"
+        },
         "steamSync": {
             "failedBody": "Vaše ostale biblioteke su i dalje dostupne. Pokušajte ponovo ili provjerite je li Steam dostupan.",
             "failedTitle": "Nije moguće sinhronizovati vašu Steam biblioteku",
@@ -239,7 +246,10 @@
         "storeOther": "Drugi"
     },
     "login": {
+        "amazonReconnect": "Prijava je istekla — Ponovo poveži",
         "connected": "Povezano",
+        "epicReconnect": "Prijava je istekla — Ponovo poveži",
+        "gogReconnect": "Prijava je istekla — Ponovo poveži",
         "humble_dialog_title": "Prijavi se na Humble Bundle",
         "logoutFailedTitle": "Odjava nije završena",
         "steam_logout_failed_message": "Odjava sa Steam-a nije završena na vrijeme. Pokušajte ponovo.",

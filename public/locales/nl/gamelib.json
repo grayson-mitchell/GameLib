@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Geen spellen zonder winkelpagina in je bibliotheek",
         "noStorePage": "Geen winkelpagina",
+        "signIn": {
+            "dismiss": "Melding over {{store}}-aanmelding sluiten",
+            "expired": "Je {{store}}-aanmelding is verlopen",
+            "notConnected": "{{store}} is niet verbonden",
+            "reconnect": "Opnieuw verbinden",
+            "signIn": "Aanmelden"
+        },
         "steamSync": {
             "failedBody": "Je andere bibliotheken zijn nog steeds beschikbaar. Probeer het opnieuw of controleer of Steam bereikbaar is.",
             "failedTitle": "Kon je Steam-bibliotheek niet synchroniseren",
@@ -232,7 +239,10 @@
         "storeOther": "Overig"
     },
     "login": {
+        "amazonReconnect": "Aanmelding verlopen — Opnieuw verbinden",
         "connected": "Verbonden",
+        "epicReconnect": "Aanmelding verlopen — Opnieuw verbinden",
+        "gogReconnect": "Aanmelding verlopen — Opnieuw verbinden",
         "humble_dialog_title": "Aanmelden bij Humble Bundle",
         "logoutFailedTitle": "Afmelden niet volledig voltooid",
         "steam_logout_failed_message": "Afmelden bij Steam is niet op tijd voltooid. Probeer het opnieuw.",

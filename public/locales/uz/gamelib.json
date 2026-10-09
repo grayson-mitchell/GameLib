@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "Kutubxonangizda do'kon sahifasi yo'q o'yinlar yo'q",
         "noStorePage": "Do'kon sahifasi yo'q",
+        "signIn": {
+            "dismiss": "{{store}} kirish bildirishnomasini yopish",
+            "expired": "{{store}} kirish muddati tugadi",
+            "notConnected": "{{store}} ulanmagan",
+            "reconnect": "Qayta ulanish",
+            "signIn": "Kirish"
+        },
         "steamSync": {
             "failedBody": "Boshqa kutubxonalaringiz hali ham mavjud. Qayta urinib ko'ring yoki Steam ishga tushayotganini tekshiring.",
             "failedTitle": "Steam kutubxonangizni sinxronlab bo'lmadi",
@@ -232,7 +239,10 @@
         "storeOther": "Boshqa"
     },
     "login": {
+        "amazonReconnect": "Kirish muddati tugadi — Qayta ulanish",
         "connected": "Ulangan",
+        "epicReconnect": "Kirish muddati tugadi — Qayta ulanish",
+        "gogReconnect": "Kirish muddati tugadi — Qayta ulanish",
         "humble_dialog_title": "Humble Bundle'ga kirish",
         "logoutFailedTitle": "Tizimdan chiqish to'liq bajarilmadi",
         "steam_logout_failed_message": "Steam'dan chiqish belgilangan vaqtda tugallanmadi. Iltimos, qayta urinib ko'ring.",
