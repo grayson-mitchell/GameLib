@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v0.8
 milestone_name: Phase Details
-current_phase: 49
-current_phase_name: Cross-store signed-out / offline mode
-status: executing
-stopped_at: "Phase 49 plan 49-12 Task 1: blocking human-action checkpoint — operator must run 49-LIVE-GATE.md on the Mac, then re-run /gsd-execute-phase 49 with the verdicts"
-last_updated: "2026-10-09T19:00:26.853Z"
+current_phase: 9
+current_phase_name: Quality Gate
+status: planning
+stopped_at: Phase 49 complete, ready to plan Phase 9
+last_updated: "2026-10-09T23:10:35.279Z"
 last_activity: 2026-10-10
-last_activity_desc: Phase 49 execution started
-state_head: 6a3aadc265c8cea5ab701cb0fdf2ec1ae4992020
+last_activity_desc: Phase 49 complete, transitioned to Phase 9
+state_head: eb0f32f9f2f621eff656fd16dbbcf01a35a453ec
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 526
-  percent: 82
+  completed_plans: 527
+  percent: 79
 ---
 
 # Project State
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 11 of 12
-Status: Ready to execute
-Last activity: 2026-10-10 — Phase 49 execution started
+Phase: 9 — Quality Gate
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-10 — Phase 49 complete, transitioned to Phase 9
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -116,7 +116,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 82%
+Progress: [████████░░] 79%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
@@ -163,7 +163,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 
 **Velocity (v0.1):**
 
-- Total plans completed: 256 (phases 1-4)
+- Total plans completed: 268 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -201,6 +201,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | 34.11 | 9 | - | - |
 | 41 | 7 | - | - |
 | 48 | 18 | - | - |
+| 49 | 12 | - | - |
 
 **v0.1 Detail Log:**
 
@@ -1809,7 +1810,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-10-09T19:00:21.155Z
-Stopped at: Phase 49 plan 49-12 Task 1: blocking human-action checkpoint — operator must run 49-LIVE-GATE.md on the Mac, then re-run /gsd-execute-phase 49 with the verdicts
+Stopped at: Phase 49 complete, ready to plan Phase 9
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
