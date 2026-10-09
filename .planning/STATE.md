@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Completed 49-05-PLAN.md
-last_updated: "2026-10-09T11:32:49.836Z"
+stopped_at: Completed 49-06-PLAN.md
+last_updated: "2026-10-09T11:50:14.287Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 49 execution started
-state_head: 44053c8750abbd1302e0a00218f713cd31a8fd45
+state_head: ec5bc645992700495f746dd83a93ae3776ed7c63
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 520
+  completed_plans: 521
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 5 of 12
+Plan: 6 of 12
 Status: Ready to execute
 Last activity: 2026-10-09 — Phase 49 execution started
 
@@ -526,6 +526,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P03 | 25 min | 3 tasks | 12 files |
 | Phase 49 P04 | 14 min | 3 tasks | 10 files |
 | Phase 49 P05 | 13 min | 2 tasks | 12 files |
+| Phase 49 P06 | 12 min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -1181,6 +1182,8 @@ Recent decisions affecting current work:
 - [Phase 49]: resolveEpicOfflineMode can only enable offline mode and never blocks a launch; the credentials modal stays the fallback for games that cannot run offline — R8: only legendary + canRunOffline + expired turns offline on; read once in prepareLaunch so a mid-launch probe cannot abort a launch
 - [Phase 49]: Sign-in classifiers read a GOG token object while offline, and a Nile capture mixing auth and non-auth refresh statuses, as unknown (safe direction under 260822-vov) — Healthy needs positive evidence of a live session and clears a latched flag; a transient status beside an auth status means the failure is not proven
 - [Phase 49]: Probe verdicts are decided in one place per store: GOG inside GOGUser.getCredentialsWithVerdict (single gogdl auth spawn, shared in-flight promise with Block E); Epic and Amazon in runnerProbes.ts; applySignInVerdict stays the only latch. — Block E and the pass cannot join each other's spawn and lose its captured output; only a bare null stdout with no connection-error line, online, with the auth config present counts as expired (D-17).
+- [Phase 49]: 49-06: Steam keyring deferral (quick 260817-d61) is reversed on purpose for a signed-in account - the sticky deliberate 'boot-probe' trigger unlocks the gate after the boot pass, so later automatic SteamLibraryManager.refresh() calls may CM-connect; the probe itself reads the keyring only (D-14, D-21) — A boot-time notice cannot tell the truth without reading the keyring; a signed-out account never notes the trigger
+- [Phase 49]: 49-06: Humble absent session slot and any unreadable read are unknown, never expired (A9, P1) — An empty slot behind a connected flag is not proof of expiry; favours never reporting a false expiry
 
 ### Pending Todos
 
@@ -1790,8 +1793,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T11:32:33.633Z
-Stopped at: Completed 49-05-PLAN.md
+Last session: 2026-10-09T11:49:53.394Z
+Stopped at: Completed 49-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
