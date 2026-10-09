@@ -25,13 +25,13 @@ status: partial
 
 ## Fixed Issues
 
-### WR-04: Tab-focused strip cards get no horizontal edge clearance
+### WR-04: Tab-focused strip cards get no horizontal edge clearance, so the keyboard ring is clipped and the chevron overlaps
 
 **Files modified:** `src/frontend/screens/Library/components/FocusRowStrip/index.css`, `src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowStripSource.test.ts`
 **Commit:** faab25249
 **Applied fix:** Added `scroll-padding-inline: 15px` to `.focusRowTrack`. Native focus scroll now leaves the same clearance as the scripted controller handler, with no behaviour change in controller mode. Added a source-census test in the strip-end clearance block of `focusRowStripSource.test.ts`. It parses the value and asserts it equals the list's `padding-inline` (and so the viewport bleed), and that no `scroll-padding` shorthand is declared. `focusRowStripSource.test.ts` passes, 56 tests. The behaviour is engine-dependent and was not exercised live; it needs a Tab-focus pass in the real WebView (fixed: requires human verification).
 
-### IN-01: `pageScrollDelta` doc and test P1 model a zero-slack geometry
+### IN-01: `pageScrollDelta` doc and test P1 model a zero-slack geometry the DOM no longer has
 
 **Files modified:** `src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts`, `src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowOverflow.test.ts`
 **Commit:** 41c2d5ade
@@ -43,19 +43,19 @@ status: partial
 **Commit:** d01b69747
 **Applied fix:** The JSDoc now names `syncCardWidth(track, getStyle?, context?: StripLayoutContext)`. The optional options-object refactor was not done (it would touch every call site).
 
-### IN-03: `TauriLoginPanel` tests never restore `window.location`
+### IN-03: `TauriLoginPanel` tests replace `window.location` and never restore it
 
 **Files modified:** `src/frontend/screens/WebView/components/__tests__/TauriLoginPanel.test.tsx`
 **Commit:** 125e8036d
 **Applied fix:** Added a file-level `afterEach` that restores the original `window.location` descriptor, or deletes the property if it was absent. The suite's `window` is a plain stub object, so there is no original. Both `Object.defineProperty(window, 'location', ...)` stubs now set `configurable: true`, which the `delete` needs: the earlier non-configurable define would have made restore impossible. `TauriLoginPanel.test.tsx` passes, 38 tests.
 
-### IN-04: Stale doc comment on `FocusRowSelection`
+### IN-04: Stale doc comment on `FocusRowSelection` names the wrong validator file
 
 **Files modified:** `src/common/types.ts`
 **Commit:** c858669d6
 **Applied fix:** The comment now names `common/focusRowMigration.ts` as the definition of `isValidFocusRowSelection`, with `FocusRowStrip/focusRowSelectors.ts` as the re-export. Comment-only.
 
-### IN-05: `testContainment.test.ts` list order and tally
+### IN-05: `testContainment.test.ts` list ordering and tally comment not maintained for the new suite
 
 **Files modified:** `src/backend/sidecar/__tests__/testContainment.test.ts`
 **Commit:** a4ad746ae
@@ -67,7 +67,7 @@ status: partial
 **Commit:** 2f8a9ead7
 **Applied fix:** Reworded the comment. `tsc` forces the test's own `ALL_VIEWS` to gain a new `LibraryView` member, and the test's runtime `isValidFocusRowSelection` loop then fails if the production list was not updated. Codecheck alone never inspects the production list. Comment-only. `focusRowMigration.test.ts` passes, 36 tests. The optional type-only compile-time guard was not added.
 
-### IN-08: `gridShown` re-states the grid mount condition
+### IN-08: `gridShown` re-states the grid mount condition, guarded only by a partial regex
 
 **Files modified:** `src/frontend/screens/Library/index.tsx`, `src/frontend/screens/Library/__tests__/librarySyncNoticeSource.test.ts`, `src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowStripSource.test.ts`
 **Commit:** b4ea17051
