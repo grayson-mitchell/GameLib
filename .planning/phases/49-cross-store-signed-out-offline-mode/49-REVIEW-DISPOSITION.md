@@ -9,7 +9,7 @@ findings:
     title: "nile sign-in probe's flip is a runner-command dedup collision, not stdout/stderr ordering (F-49-R1-5)"
   - id: WR-02
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Amazon sign-in probe reports healthy with zero installed games, independent of credential state (A4 / F-49-R1-4)"
   - id: WR-03
     severity: warning
@@ -30,6 +30,6 @@ fails closed today). Recorded 2026-10-09 by the execute-phase closure chain.
 | Finding | Severity | Disposition | Source / tracking |
 |---|---|---|---|
 | WR-01 | warning | open | `2026-10-10-nile-probe-joins-list-updates-in-flight-spawn-and-never-observes-output.md` (renamed from the interleaving todo; root cause corrected per this review) |
-| WR-02 | warning | open | `2026-10-10-amazon-probe-is-a-no-op-with-nothing-installed.md` |
+| WR-02 | warning | fixed | `2026-10-10-amazon-probe-is-a-no-op-with-nothing-installed.md` (now in `completed/`): quick 261010-h9n, commit `268bae390` — the zero-installed shape classifies `unknown`, never `healthy`; `library sync` not adopted (D-16); a replacement probe command stays gated on the Amazon induction todo |
 | WR-03 | warning | open | `2026-10-10-library-sign-in-rows-do-not-rederive-a-mid-session-clear.md` (review adds the mechanism: only Humble gets a per-store push; the rest wait for `publishSignInProbeOutcomes()` after the whole pass) |
 | WR-04 | warning | open | `2026-10-10-authtrigger-origin-lookup-is-an-unguarded-bracket-access.md` (new) |
