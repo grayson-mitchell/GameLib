@@ -100,8 +100,14 @@ const GAME_CARD_STALE_FOCUS_SELECTOR = new RegExp(
   `body:not\\(\\.controllerLayout\\):not\\(\\.${KEYBOARD_CLASS_PATTERN}\\)\\s+\\.listing:hover\\s+\\.gameCard:focus-within:not\\(:hover\\)\\s*\\{[^}]*\\}`,
   'g'
 )
-const GAME_LIST_ITEM_STALE_FOCUS_RULE =
-  /body:not\(\.controllerLayout\)\s+\.listing:hover\s+\.gameListItem:focus-within:not\(:hover\)\s*\{[^}]*\}/
+const GAME_LIST_ITEM_STALE_FOCUS_RULE = new RegExp(
+  `body:not\\(\\.controllerLayout\\):not\\(\\.${KEYBOARD_CLASS_PATTERN}\\)\\s+\\.listing:hover\\s+\\.gameListItem:focus-within:not\\(:hover\\)\\s*\\{[^}]*\\}`
+)
+// Keyboard-mode parked-cursor rule (G-48-12a): the keyboard counterpart of
+// `body.controllerLayout .gameCard:hover:not(:focus-within)`.
+const GAME_CARD_KEYBOARD_PARKED_CURSOR_RULE = new RegExp(
+  `(?:^|\\})\\s*body\\.${KEYBOARD_CLASS_PATTERN}\\s+\\.gameCard:hover:not\\(:focus-within\\)\\s*\\{[^}]*\\}`
+)
 
 function groupedRuleBodies(css: string): string[] {
   return [...css.matchAll(GAME_CARD_GROUPED_RULES)].map((m) => m[1])
@@ -160,6 +166,16 @@ describe('GameCard hover wears the console-style focus ring (source gate, G-48-8
   it('Test E: body.controllerLayout .gameCard:hover:not(:focus-within) returns a parked-cursor card to rest', () => {
     const css = readGameCardCss()
     const body = ruleBody(css, GAME_CARD_PARKED_CURSOR_RULE)
+
+    expect(body).toMatch(/outline-color:\s*transparent/)
+    expect(body).toMatch(/box-shadow:\s*0px 0px 12px 4px #00000055/)
+    expect(body).toMatch(/transform:\s*none/)
+    expect(body).toMatch(/z-index:\s*auto/)
+  })
+
+  it('Test I: body.keyboardNav .gameCard:hover:not(:focus-within) returns a parked-cursor card to rest while keyboard mode is on', () => {
+    const css = readGameCardCss()
+    const body = ruleBody(css, GAME_CARD_KEYBOARD_PARKED_CURSOR_RULE)
 
     expect(body).toMatch(/outline-color:\s*transparent/)
     expect(body).toMatch(/box-shadow:\s*0px 0px 12px 4px #00000055/)
@@ -271,7 +287,7 @@ describe('Stale-focus suppression is scoped to body:not(.controllerLayout) .list
     expect(css).not.toMatch(/\.gameListLayout:hover/)
   })
 
-  it('neither suppression rule fires unscoped -- every selector begins with body:not(.controllerLayout), and every .gameCard one also with :not(.keyboardNav)', () => {
+  it('neither suppression rule fires unscoped -- every selector begins with body:not(.controllerLayout), and every one also with :not(.keyboardNav)', () => {
     const css = readGameCardCss()
 
     expect(css).not.toMatch(
@@ -280,7 +296,9 @@ describe('Stale-focus suppression is scoped to body:not(.controllerLayout) .list
       )
     )
     expect(css).not.toMatch(
-      /(?<!body:not\(\.controllerLayout\)\s+)\.listing:hover\s+\.gameListItem:focus-within:not\(:hover\)/
+      new RegExp(
+        `(?<!body:not\\(\\.controllerLayout\\):not\\(\\.${KEYBOARD_CLASS_PATTERN}\\)\\s+)\\.listing:hover\\s+\\.gameListItem:focus-within:not\\(:hover\\)`
+      )
     )
   })
 })
