@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "[Group 1, 48-12] ResizeObserver callback resizes its own observed target, so every width-changing resize frame raises a \"ResizeObserver loop\" error"
   - id: WR-02
     severity: warning
@@ -47,7 +47,7 @@ findings:
     severity: info
     disposition: open
     title: "Stale doc comment on `FocusRowSelection`"
-open: 10
+open: 8
 total: 11
 recorded: 2026-10-07T19:32:29.096Z
 ---
@@ -56,7 +56,7 @@ recorded: 2026-10-07T19:32:29.096Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
+| WR-01 | warning | fixed | 48-14 1cc619836 |
 | WR-02 | warning | open | - |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |

@@ -6,6 +6,15 @@
 // commits. Never writes into src/. Output goes to --out (a scratchpad dir).
 //
 //   node build-harness.mjs --ref <git-ref> --out <dir> [--override <name>]
+//   node build-harness.mjs --ref <git-ref> --out <dir> --ro shipped|deferred|control   (48-14, G-48-11a)
+//
+// --ro builds a different page: a fluid strip (the listing takes the viewport's
+// width) whose ResizeObserver is wired either as the pre-48-14 source did
+// (`shipped`) or as index.tsx does now (`deferred`), counting observer
+// callbacks, width writes and `ResizeObserver loop` window errors in
+// window.__ro. 'control' is the instrument check: a callback that resizes the
+// observed track on every delivery, which MUST raise the error if the rig can see it.
+// Driven by evidence/48-14/wk-ro-sweep.swift.
 //
 // Overrides (counterfactuals) are extra stylesheets appended AFTER the real
 // ones, never a source edit. See OVERRIDES below.
@@ -32,6 +41,11 @@ const arg = (name, dflt) => {
 const ref = arg('--ref', 'HEAD')
 const out = arg('--out')
 const override = arg('--override', 'none')
+const ro = arg('--ro', '')
+if (ro && ro !== 'shipped' && ro !== 'deferred' && ro !== 'control') {
+  console.error('--ro must be shipped, deferred or control')
+  process.exit(2)
+}
 if (!out) {
   console.error('usage: build-harness.mjs --ref <git-ref> --out <dir> [--override <name>]')
   process.exit(2)
@@ -75,6 +89,124 @@ if (!(override in OVERRIDES)) {
   console.error(`unknown override ${override}; known: ${Object.keys(OVERRIDES).join(', ')}`)
   process.exit(2)
 }
+
+
+// --- 48-14 (G-48-11a) --ro page script. Plain ES5; no rAF is used by the page
+// itself (the deferred arm reaches it through the app's own createNextFrameRunner).
+const RO_SCRIPT = String.raw`
+;(function () {
+  var MODE = window.__RO_MODE
+  var FRO = window.FRO
+  var N = 14
+  var ro = (window.__ro = {
+    mode: MODE,
+    roCallbacks: 0,
+    widthWrites: 0,
+    roLoopErrors: 0,
+    errorEvents: 0,
+    errorMessages: [],
+    resizeEvents: 0,
+    minInnerWidth: window.innerWidth,
+    maxInnerWidth: window.innerWidth,
+    minInnerHeight: window.innerHeight,
+    maxInnerHeight: window.innerHeight,
+    ready: false
+  })
+  // WebKit sanitises an error with no same-origin script to the message
+  // "Script error." on a file:// page (measured 2026-10-09: the classic loop
+  // control raised those, never the "ResizeObserver loop" text). So a loop error
+  // is the named message OR a bare "Script error." with no source line; every
+  // error event is also counted in errorEvents with its distinct messages.
+  window.addEventListener('error', function (e) {
+    var m = String(e.message)
+    ro.errorEvents++
+    if (ro.errorMessages.indexOf(m) < 0 && ro.errorMessages.length < 5) ro.errorMessages.push(m)
+    if (/ResizeObserver loop/.test(m) || (m === 'Script error.' && !e.lineno)) ro.roLoopErrors++
+  })
+  window.addEventListener('resize', function () {
+    ro.resizeEvents++
+    ro.minInnerWidth = Math.min(ro.minInnerWidth, window.innerWidth)
+    ro.maxInnerWidth = Math.max(ro.maxInnerWidth, window.innerWidth)
+    ro.minInnerHeight = Math.min(ro.minInnerHeight, window.innerHeight)
+    ro.maxInnerHeight = Math.max(ro.maxInnerHeight, window.innerHeight)
+  })
+  function el(tag, cls, parent) {
+    var e = document.createElement(tag)
+    if (cls) e.className = cls
+    if (parent) parent.appendChild(e)
+    return e
+  }
+  var listing = el('div', 'listing', document.getElementById('stage'))
+  var strip = el('div', 'focusRowStrip', listing)
+  el('h3', 'libraryHeader', el('div', 'library-section-header', strip)).textContent = 'All games'
+  var viewport = el('div', 'focusRowStrip__viewport', strip)
+  var track = el('div', 'focusRowTrack', viewport)
+  var list = el('div', 'gameList', track)
+  for (var i = 0; i < N; i++) {
+    // the visible branch of GameCard/index.tsx (same shape as page-script.js)
+    var outer = el('div', '', list)
+    var card = el('div', 'gameCard', el('div', '', outer))
+    var a = el('a', '', card)
+    a.setAttribute('href', '#fx' + i)
+    var img = el('img', 'gameImg', a)
+    img.setAttribute('alt', 'cover')
+    img.setAttribute('src', window.__ART)
+    var t = el('span', 'gameTitle', a)
+    el('span', '', t).textContent = 'Fixture ' + (i < 10 ? '0' : '') + i
+    el('span', 'runner', a).textContent = 'Other'
+  }
+  var sync = FRO.createStripCardWidthSync()
+  function counted() {
+    var before = track.style.getPropertyValue('--focus-row-card-width')
+    var r = sync(track)
+    if (track.style.getPropertyValue('--focus-row-card-width') !== before) ro.widthWrites++
+    return r
+  }
+  function readMeasurement() {
+    return [track.clientWidth, track.scrollWidth, track.scrollLeft]
+  }
+  // The useLayoutEffect equivalent: one sync before the observer exists. Not
+  // counted as a resize write.
+  sync(track)
+  readMeasurement()
+  var observer
+  if (MODE === 'control') {
+    // Instrument check, not app wiring: resize the observed track inside every
+    // delivery. If this raises no loop error the rig cannot see one.
+    var flip = false
+    observer = new ResizeObserver(function () {
+      ro.roCallbacks++
+      flip = !flip
+      track.style.height = flip ? '300px' : '301px'
+      ro.widthWrites++
+    })
+  } else if (MODE === 'shipped') {
+    // Copies the pre-48-14 observer effect: git show d7bcc6e1d:
+    // src/frontend/screens/Library/components/FocusRowStrip/index.tsx lines
+    // 121-131 (the callback syncs the width, then reads).
+    observer = new ResizeObserver(function () {
+      ro.roCallbacks++
+      counted()
+      readMeasurement()
+    })
+  } else {
+    // Mirrors index.tsx as of 48-14: the callback reads and requests; the
+    // runner's work syncs then re-reads, on the next frame.
+    var frame = FRO.createNextFrameRunner(function () {
+      counted()
+      readMeasurement()
+    })
+    observer = new ResizeObserver(function () {
+      ro.roCallbacks++
+      readMeasurement()
+      frame.request()
+    })
+  }
+  observer.observe(track)
+  if (track.firstElementChild) observer.observe(track.firstElementChild)
+  ro.ready = true
+})()
+`
 
 // --- bundle focusRowOverflow.ts (the app's own functions) with the repo's esbuild
 const work = mkdtempSync(join(tmpdir(), 'strip-harness-'))
@@ -171,6 +303,37 @@ try {
     `/* ${FILES.strip} @ ${shortRef} */\n${show(FILES.strip)}`,
     `/* override: ${override} */\n${OVERRIDES[override]}`
   ].join('\n')
+
+
+  if (ro) {
+    const roHtml = `<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- G-48-11a --ro ${ro} page. ref=${shortRef}. Fluid strip: .listing takes the viewport width.
+   The shipped arm copies the pre-48-14 observer effect (d7bcc6e1d, FocusRowStrip/index.tsx 121-131). -->
+<style>
+:root {
+  font-size: 16px;
+${rootDecls}
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+${css}
+.listing { width: 100%; }
+</style></head>
+<body>
+<div id="stage"></div>
+<script>${bundled}</script>
+<script>window.__RO_MODE = ${JSON.stringify(ro)}; window.__ART = ${JSON.stringify(art['600x900'])}</script>
+<script>${RO_SCRIPT}</script>
+</body></html>
+`
+    mkdirSync(resolve(out), { recursive: true })
+    const roDest = join(resolve(out), `ro-${ro}-${shortRef}.html`)
+    writeFileSync(roDest, roHtml)
+    process.stdout.write(roDest + '\n')
+    rmSync(work, { recursive: true, force: true }) // process.exit skips the finally
+    process.exit(0)
+  }
 
   const cfg = { ref: shortRef, override, art, variants }
   const pageScript = readFileSync(join(here, 'page-script.js'), 'utf8')

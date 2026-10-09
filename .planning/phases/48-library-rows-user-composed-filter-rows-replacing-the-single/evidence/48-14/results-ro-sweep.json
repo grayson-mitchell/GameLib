@@ -1,0 +1,105 @@
+{
+  "ref": "1cc619836",
+  "engine": "WKWebView (macOS, non-activating accessory window, WKWebsiteDataStore.nonPersistent)",
+  "sweep": "content width 1280->600->1280 in 40px steps, then height 800->400->800 in 25px steps, one step per 0.15s (UAT item 11), 1s settle",
+  "armed": true,
+  "armedNote": "shipped = the pre-48-14 observer effect (d7bcc6e1d). control = a callback that resizes the observed track on every delivery (instrument check, not app wiring). WebKit reports the loop error as the sanitised message \"Script error.\" on a file:// page, so roLoopErrors counts that message with no source line as well as the named text; errorEvents counts every error event and errorMessages lists the distinct messages. The live item 11 counts were 27 and 25 (shipped wiring, live app).",
+  "runs": [
+    {
+      "mode": "shipped",
+      "run": 1,
+      "roCallbacks": 103,
+      "widthWrites": 34,
+      "roLoopErrors": 34,
+      "errorEvents": 34,
+      "errorMessages": [
+        "Script error."
+      ],
+      "resizeEvents": 66,
+      "innerWidth": [
+        600,
+        1280
+      ],
+      "innerHeight": [
+        400,
+        800
+      ]
+    },
+    {
+      "mode": "deferred",
+      "run": 1,
+      "roCallbacks": 69,
+      "widthWrites": 34,
+      "roLoopErrors": 0,
+      "errorEvents": 0,
+      "errorMessages": [],
+      "resizeEvents": 66,
+      "innerWidth": [
+        600,
+        1280
+      ],
+      "innerHeight": [
+        400,
+        800
+      ]
+    },
+    {
+      "mode": "shipped",
+      "run": 2,
+      "roCallbacks": 103,
+      "widthWrites": 34,
+      "roLoopErrors": 34,
+      "errorEvents": 34,
+      "errorMessages": [
+        "Script error."
+      ],
+      "resizeEvents": 66,
+      "innerWidth": [
+        600,
+        1280
+      ],
+      "innerHeight": [
+        400,
+        800
+      ]
+    },
+    {
+      "mode": "deferred",
+      "run": 2,
+      "roCallbacks": 69,
+      "widthWrites": 34,
+      "roLoopErrors": 0,
+      "errorEvents": 0,
+      "errorMessages": [],
+      "resizeEvents": 66,
+      "innerWidth": [
+        600,
+        1280
+      ],
+      "innerHeight": [
+        400,
+        800
+      ]
+    },
+    {
+      "mode": "control",
+      "run": 1,
+      "roCallbacks": 710,
+      "widthWrites": 710,
+      "roLoopErrors": 710,
+      "errorEvents": 710,
+      "errorMessages": [
+        "Script error."
+      ],
+      "resizeEvents": 66,
+      "innerWidth": [
+        600,
+        1280
+      ],
+      "innerHeight": [
+        400,
+        800
+      ]
+    }
+  ]
+}
