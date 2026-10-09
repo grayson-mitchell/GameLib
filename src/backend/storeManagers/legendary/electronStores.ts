@@ -1,4 +1,5 @@
 import CacheStore from '../../cache'
+import { TypeCheckedStoreBackend } from 'backend/electron_store'
 import { ExtraInfo, GameInfo } from 'common/types'
 import { GameOverride, LegendaryInstallInfo } from 'common/types/legendary'
 
@@ -25,3 +26,16 @@ export const gamesOverrideStore: CacheStore<GameOverride, 'gamesOverride'> =
   )
 
 export const gameInfoStore = new CacheStore<ExtraInfo>('legendary_gameinfo')
+
+/**
+ * Epic's persisted sign-in verdict (`expired`) — Phase 49 D-05.
+ *
+ * Deliberately NOT named `configStore`: `legendary/user.ts` already imports the
+ * GLOBAL `configStore`, and this store lives in its own `legendary_store`
+ * directory, distinct from `legendaryConfigPath` (legendary's own data dir), so
+ * legendary can never see or delete it.
+ */
+export const legendaryConfigStore = new TypeCheckedStoreBackend(
+  'legendaryConfigStore',
+  { cwd: 'legendary_store' }
+)

@@ -66,7 +66,7 @@ export function isSafeKeyPath(key: string): boolean {
 
 /**
  * Per-store allow-list of TOP-LEVEL field names the renderer may read via the Tauri
- * store snapshot/fetch/set paths. Every one of `StoreStructure`'s 21 keys
+ * store snapshot/fetch/set paths. Every one of `StoreStructure`'s 22 keys
  * (src/common/types/electron_store.ts) has an entry here.
  *
  * A value of `'*'` means the store's `StoreStructure` type is an open index signature
@@ -115,7 +115,9 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
   timestampStore: '*',
   fontsStore: ['fonts'],
   // `credentials` (GOGLoginData) omitted — see header comment.
-  gogConfigStore: ['userData', 'isLoggedIn'],
+  // `expired` is a non-secret boolean verdict (the sign-in probe proved the
+  // stored credential rejected) — the same shape as steamConfigStore.credentialsMissing.
+  gogConfigStore: ['userData', 'isLoggedIn', 'expired'],
   // `credentials` (ZoomCredentials) omitted — see header comment.
   zoomConfigStore: ['isLoggedIn', 'username'],
   // `refreshToken` omitted — safeStorage-encrypted Steam session token, see header comment.
@@ -131,7 +133,11 @@ export const STORE_ALLOWLIST: Record<string, readonly string[] | '*'> = {
     'wineCrossoverBottle',
     'provisioned'
   ],
-  nileConfigStore: ['userData'],
+  // `expired`: non-secret boolean verdict, like steamConfigStore.credentialsMissing.
+  nileConfigStore: ['userData', 'expired'],
+  // Phase 49 D-05: `expired` is a non-secret boolean verdict (legendary's own
+  // "Stored credentials are no longer valid" proven by the sign-in probe).
+  legendaryConfigStore: ['expired'],
   // `sessionCookie` (safeStorage-encrypted 'humble:v1:' ciphertext) and `csrfToken`
   // (StoreStructure: "Main-process-only — never included in any sendFrontendMessage
   // payload or HumbleAuthState") are both omitted — see header comment.
@@ -381,6 +387,9 @@ export const BOOT_SET_STORES: readonly string[] = [
   'gogConfigStore',
   'gogInstalledGamesStore',
   'nileConfigStore',
+  // Phase 49: the Library sign-in notice reads `expired` SYNCHRONOUSLY at render,
+  // so it must be hydrated at boot rather than returning undefined until a lazy fetch.
+  'legendaryConfigStore',
   'zoomConfigStore',
   'zoomInstalledGamesStore',
   'steamConfigStore',

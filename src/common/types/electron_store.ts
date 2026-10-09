@@ -76,6 +76,12 @@ export interface StoreStructure {
     userData: UserData
     credentials?: GOGLoginData
     isLoggedIn: boolean
+    // Set only by a PROVEN authentication failure from the GOG sign-in probe
+    // (gogdl's own "not logged in / token refresh rejected" verdict). Cleared
+    // on a successful sign-in, on logout and on a healthy probe. NEVER set from
+    // a network error or timeout — that is "unknown", not "signed out" (the
+    // 260822-vov rule). Mirrors steamConfigStore.credentialsMissing.
+    expired?: boolean
   }
   zoomConfigStore: {
     credentials?: ZoomCredentials
@@ -101,6 +107,22 @@ export interface StoreStructure {
   steamBottleConfigStore: SteamBottleConfig
   nileConfigStore: {
     userData?: NileUserData
+    // Set only by a PROVEN authentication failure from the Amazon (nile)
+    // sign-in probe. Cleared on a successful sign-in, on logout and on a
+    // healthy probe. NEVER set from a network error or timeout (the 260822-vov
+    // rule). Mirrors steamConfigStore.credentialsMissing.
+    expired?: boolean
+  }
+  // Phase 49 (D-05): Epic's persisted sign-in verdict. Its own store (cwd
+  // 'legendary_store', distinct from legendary's own data dir) because Epic had
+  // no typed config store of its own. No secret field lives here.
+  legendaryConfigStore: {
+    // Set only by a PROVEN authentication failure from the sign-in probe
+    // (legendary's own "Stored credentials are no longer valid" line). Cleared
+    // on a successful sign-in, on logout and on a healthy probe. NEVER set from
+    // a network error or timeout (the 260822-vov rule). Mirrors
+    // steamConfigStore.credentialsMissing.
+    expired?: boolean
   }
   humbleConfigStore: {
     isLoggedIn: boolean

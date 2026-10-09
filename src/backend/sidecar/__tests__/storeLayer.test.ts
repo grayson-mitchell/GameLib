@@ -150,7 +150,7 @@ beforeAll(() => {
 })
 
 describe('round-trip', () => {
-  // Hardcoded literal array of ALL 21 `ValidStoreName` strings MINUS the two
+  // Hardcoded literal array of ALL 22 `ValidStoreName` strings MINUS the two
   // documented dead entries below — adding a store to `StoreStructure`
   // without covering it here FAILS this suite (it.each asserts each
   // resolves).
@@ -170,6 +170,7 @@ describe('round-trip', () => {
     'steamConfigStore',
     'steamBottleConfigStore',
     'nileConfigStore',
+    'legendaryConfigStore',
     'humbleConfigStore',
     'sideloadedStore',
     'downloadManager',

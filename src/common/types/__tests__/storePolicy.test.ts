@@ -19,7 +19,7 @@ import {
   filterStoreSnapshot
 } from '../storePolicy'
 
-// Hardcoded reference of all 21 StoreStructure keys (src/common/types/electron_store.ts).
+// Hardcoded reference of all 22 StoreStructure keys (src/common/types/electron_store.ts).
 // This list must NOT be derived from storePolicy.ts's own exports — the whole point is
 // that a StoreStructure addition without a matching storePolicy.ts entry FAILS this test.
 const ALL_VALID_STORE_NAMES = [
@@ -34,6 +34,7 @@ const ALL_VALID_STORE_NAMES = [
   'steamConfigStore',
   'steamBottleConfigStore',
   'nileConfigStore',
+  'legendaryConfigStore',
   'humbleConfigStore',
   'sideloadedStore',
   'downloadManager',
@@ -167,6 +168,23 @@ describe('allow-list', () => {
     expect(isAllowedStoreField('humbleConfigStore', 'isLoggedIn')).toBe(true)
     expect(isAllowedStoreField('humbleConfigStore', 'expired')).toBe(true)
     expect(isAllowedStoreField('configStore', 'theme')).toBe(true)
+  })
+
+  it('legendaryConfigStore.expired is allowed (non-secret boolean verdict)', () => {
+    expect(isAllowedStoreField('legendaryConfigStore', 'expired')).toBe(true)
+    expect(isAllowedStoreField('legendaryConfigStore', 'credentials')).toBe(
+      false
+    )
+  })
+
+  it('gogConfigStore.expired is allowed while its secret neighbour stays denied', () => {
+    expect(isAllowedStoreField('gogConfigStore', 'expired')).toBe(true)
+    expect(isAllowedStoreField('gogConfigStore', 'credentials')).toBe(false)
+  })
+
+  it('nileConfigStore.expired is allowed while an unknown neighbour stays denied', () => {
+    expect(isAllowedStoreField('nileConfigStore', 'expired')).toBe(true)
+    expect(isAllowedStoreField('nileConfigStore', 'credentials')).toBe(false)
   })
 
   // CR-02 REGRESSION (Phase 29 code review): `notARealStore` happens to miss the

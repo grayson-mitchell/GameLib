@@ -81,7 +81,8 @@ import {
   installStore as _legendaryInstallStore,
   libraryStore as _legendaryLibraryStore,
   gamesOverrideStore as _legendaryGamesOverrideStore,
-  gameInfoStore as _legendaryGameInfoStore
+  gameInfoStore as _legendaryGameInfoStore,
+  legendaryConfigStore as _legendaryConfigStore
 } from '../storeManagers/legendary/electronStores'
 
 import {
@@ -175,6 +176,7 @@ export function ensureStoresRegistered(): void {
     _legendaryLibraryStore,
     _legendaryGamesOverrideStore,
     _legendaryGameInfoStore,
+    _legendaryConfigStore,
     _humbleConfigStore,
     _humbleLibraryStore,
     _humbleSyncStore,

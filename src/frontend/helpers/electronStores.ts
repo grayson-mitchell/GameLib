@@ -182,6 +182,11 @@ const nileConfigStore = new TypeCheckedStoreFrontend('nileConfigStore', {
   cwd: 'nile_store'
 })
 
+const legendaryConfigStore = new TypeCheckedStoreFrontend(
+  'legendaryConfigStore',
+  { cwd: 'legendary_store' }
+)
+
 const timestampStore = new TypeCheckedStoreFrontend('timestampStore', {
   cwd: 'store',
   name: 'timestamp'
@@ -214,6 +219,7 @@ export {
   downloadManagerStore,
   nileLibraryStore,
   nileConfigStore,
+  legendaryConfigStore,
   zoomLibraryStore,
   zoomInstalledGamesStore,
   zoomConfigStore,
