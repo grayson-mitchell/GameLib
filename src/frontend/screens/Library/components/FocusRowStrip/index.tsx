@@ -25,6 +25,7 @@ import {
   TrackMeasurement,
   canScrollBack,
   canScrollForward,
+  createNextFrameRunner,
   createStripCardWidthSync,
   measureCardPitch,
   pageScrollDelta,
@@ -111,6 +112,12 @@ function FocusRowStrip({
   // Keep `measure` current: on resize of the track or of its content, and
   // on every scroll. The track only exists while the pick resolves to games,
   // so the effect re-arms when that flips.
+  //
+  // The observer callback only reads and requests a next-frame sync
+  // (G-48-11a, WR-01): writing `--focus-row-card-width` inside the callback
+  // resizes the observed track within the delivery that reported it, which the
+  // browser reports as a `ResizeObserver loop` error. The write happens in the
+  // frame instead; first paint is still matched by the layout effect above.
   useEffect(() => {
     const track = trackRef.current
     if (!track) {
@@ -118,11 +125,15 @@ function FocusRowStrip({
     }
     readMeasurement()
     track.addEventListener('scroll', readMeasurement, { passive: true })
+    const frame = createNextFrameRunner(() => {
+      syncCardWidth(track)
+      readMeasurement()
+    })
     let observer: ResizeObserver | undefined
     if (typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver(() => {
-        syncCardWidth(track)
         readMeasurement()
+        frame.request()
       })
       observer.observe(track)
       if (track.firstElementChild) {
@@ -132,6 +143,7 @@ function FocusRowStrip({
     return () => {
       track.removeEventListener('scroll', readMeasurement)
       observer?.disconnect()
+      frame.cancel()
     }
   }, [hasGames, games, readMeasurement, syncCardWidth])
 

@@ -288,6 +288,89 @@ export function createStripCardWidthSync(now: () => number = defaultNow) {
 }
 
 /**
+ * G-48-11a, 48-REVIEW.md WR-01. Runs `run` on the next animation frame, never
+ * synchronously, at most once per frame, cancellable.
+ *
+ * Why it exists: the strip's `ResizeObserver` used to call `syncCardWidth`
+ * inside its callback. That writes `--focus-row-card-width` on the observed
+ * `.focusRowTrack`, card height follows width (`aspect-ratio`), so the track's
+ * own size changed inside the delivery that had just reported it. The browser
+ * has no way to deliver that new size in the same frame and dispatches
+ * `ResizeObserver loop completed with undelivered notifications` (27 and 25
+ * in two live launches of UAT item 11's resize sweep). Moving the write to the
+ * next frame puts it outside any delivery, so there is nothing undelivered.
+ *
+ * The first-paint write stays in the component's `useLayoutEffect`; only the
+ * resize path is deferred. 48-12's flip-hold keeps working because the sync
+ * reads its clock when it writes, which is now inside the frame.
+ *
+ * Total, like `createStripCardWidthSync`: a throwing `run` neither escapes the
+ * frame callback nor leaves the runner stuck, and `cancel` is idempotent. A
+ * frame callback that fires after `cancel` (a stub or a browser that ignores
+ * the cancel) does nothing. Without `requestAnimationFrame` (the `node` jest
+ * project) it falls back to `setTimeout(cb, 0)`.
+ */
+export function createNextFrameRunner(
+  run: () => void,
+  schedule: (cb: () => void) => unknown = defaultSchedule,
+  cancel: (handle: unknown) => void = defaultCancel
+): { request: () => void; cancel: () => void } {
+  let pending = false
+  let handle: unknown
+  // Each scheduled frame owns a ticket; only the current ticket may run.
+  let ticket = 0
+
+  return {
+    request() {
+      if (pending) {
+        return
+      }
+      pending = true
+      const mine = ++ticket
+      handle = schedule(() => {
+        if (!pending || mine !== ticket) {
+          return
+        }
+        pending = false
+        handle = undefined
+        try {
+          run()
+        } catch {
+          // a failed sync must not break the next one
+        }
+      })
+    },
+    cancel() {
+      if (!pending) {
+        return
+      }
+      pending = false
+      ticket++
+      const h = handle
+      handle = undefined
+      try {
+        cancel(h)
+      } catch {
+        // nothing left to cancel
+      }
+    }
+  }
+}
+
+const defaultSchedule = (cb: () => void): unknown =>
+  typeof requestAnimationFrame === 'function'
+    ? requestAnimationFrame(() => cb())
+    : setTimeout(cb, 0)
+
+const defaultCancel = (handle: unknown): void => {
+  if (typeof requestAnimationFrame === 'function') {
+    cancelAnimationFrame(handle as number)
+  } else {
+    clearTimeout(handle as ReturnType<typeof setTimeout>)
+  }
+}
+
+/**
  * Horizontal analogue of `GamesList`'s vertical `scrollCardIntoView`, and
  * net-new rather than a parameterisation of it: that one is wired to
  * `main.content`'s `scrollTop`.
