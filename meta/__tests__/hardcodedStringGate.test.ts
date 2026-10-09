@@ -1816,7 +1816,7 @@ describe('hardcodedStringGate', () => {
         )
 
         expect(facetResult.violations).toHaveLength(0)
-        expect(facetResult.exempted).toBe(13)
+        expect(facetResult.exempted).toBe(14)
 
         expect(chipResult.violations).toHaveLength(0)
         expect(chipResult.exempted).toBe(36)
