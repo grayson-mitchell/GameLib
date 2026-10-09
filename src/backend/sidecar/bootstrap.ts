@@ -116,6 +116,13 @@ import { configStore } from '../constants/key_value_stores'
 // by-construction gate, which bans only the Steam token surface bindings (`configStore`,
 // `TOKEN_STORE_KEY`, `TOKEN_PREFIX`) in this file.
 import gogPresence from '../storeManagers/gog/presence'
+// Phase 49 plan 08 (R3, A10): the bounded boot sign-in probe pass and its outcomes pull handler.
+// `outcomes.ts` is already resident in the sidecar bundle through the store users' verdict
+// writers; `pass.ts` is new but only composes modules already resident (the five store users and
+// the online monitor). `pass.ts` imports from `backend/platform` only, never `electron`
+// (electronReachLedger.test.ts).
+import { startSignInProbePass } from '../signInProbe/pass'
+import { registerSignInProbeOutcomesHandler } from '../signInProbe/outcomes'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -255,6 +262,13 @@ let playtimeQueueDrainInitialized = false
 // inside setGogPresenceWhenOnline() itself, matching Blocks E/F/G, so the new suite can call the
 // helper directly without owning a guard it cannot reset.
 let gogPresenceInitialized = false
+// Guards the sign-in probe outcomes pull-handler registration (Phase 49 plan 08). Same reason as
+// the flags above: bootstrap.test.ts / *Flows.test.ts call init() many times per file, and
+// without this guard each call would register the handler again. Production calls init() once.
+let signInProbeOutcomesHandlerInitialized = false
+// Guards the sign-in probe pass start (Phase 49 plan 08). Same reason. The test-worker guard for
+// real probes lives inside the pass itself, so init()-calling suites never run real probes.
+let signInProbeInitialized = false
 // Holds the i18next init promise, chained so a caller can await CATALOG READINESS rather than
 // mere init()-was-called (D-02 area, Block F). Assigned the CAUGHT promise -- not the raw
 // `i18next.use(Backend).init(...)` one -- because a failed i18n init must still let the
@@ -1317,10 +1331,28 @@ export function init(
     gogPresenceInitialized = true
     setGogPresenceWhenOnline()
   }
+  // Phase 49 plan 08 (R3) -- the sign-in probe outcomes PULL handler. Registration only, and
+  // placed before the READY write so the renderer's mount-time pull is answerable the moment the
+  // shell sees READY. It reads an in-memory map and starts no probe.
+  if (!signInProbeOutcomesHandlerInitialized) {
+    signInProbeOutcomesHandlerInitialized = true
+    registerSignInProbeOutcomesHandler()
+  }
   output.write(`${READY_SENTINEL}\n`)
+  // Phase 49 plan 08 (R3, SPEC "READY first"): the bounded boot sign-in probe pass starts HERE,
+  // after the READY write, so READY never waits on a probe. The call is registration only -- one
+  // connectivity listener and an unref()'d setImmediate -- so it cannot delay the protocol-URL
+  // delivery below. It creates no handle of its own beyond those the pass enumerates in its
+  // exit-contract header (every timer unref()'d, spawned children aborted at the bound).
+  if (!signInProbeInitialized) {
+    signInProbeInitialized = true
+    startSignInProbePass()
+  }
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
   // AFTER the READY_SENTINEL write above — so the shell knows the sidecar is up before any
   // launch begins, and so every store manager imported by ./handlers (Step 2, above) is fully
-  // constructed before handleProtocol can possibly touch libraryManagerMap.
+  // constructed before handleProtocol can possibly touch libraryManagerMap. The sign-in probe
+  // pass start above is registration only, so protocol-URL delivery is still the last statement
+  // that does any work.
   deliverStartupProtocolUrl()
 }
