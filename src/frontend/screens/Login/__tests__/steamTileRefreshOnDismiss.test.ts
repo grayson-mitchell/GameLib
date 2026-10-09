@@ -93,8 +93,10 @@ describe('Steam tile refreshes when the login overlay closes', () => {
   })
 
   it('G2 non-vacuity: the gate FAILS against a specimen whose effect no longer collects inputs', () => {
+    // Global on purpose: the same call also seeds the useState initialiser,
+    // which is not the effect, so only replacing every occurrence proves it.
     const sabotaged = source.replace(
-      /collectSignInInputs\(\s*\{/,
+      /collectSignInInputs\(\s*\{/g,
       'staleInputs({'
     )
     expect(sabotaged).not.toBe(source)

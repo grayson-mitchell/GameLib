@@ -178,7 +178,7 @@
     "src/frontend/screens/Login/index.tsx",
     "src/frontend/screens/Login/loginOpenParam.ts",
     "src/frontend/screens/Login/overlayDismiss.ts",
-    "src/frontend/screens/Login/steamTileState.ts",
+    "src/frontend/screens/Login/signInTileState.ts",
     "src/frontend/screens/Settings/components/AlternativeExe.tsx",
     "src/frontend/screens/Settings/components/CheckUpdatesOnStartup.tsx",
     "src/frontend/screens/Settings/components/ClearCache.tsx",

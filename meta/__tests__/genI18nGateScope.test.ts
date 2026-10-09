@@ -329,7 +329,6 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Library/engineWiring.ts',
   'src/frontend/screens/Library/filterEngine.ts',
   'src/frontend/screens/Login/components/HumbleLogin/index.tsx',
-  'src/frontend/screens/Login/steamTileState.ts',
   'src/frontend/screens/Settings/components/EgsSettings.tsx',
   'src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx',
   'src/frontend/screens/Settings/components/LauncherArgs.tsx',
@@ -1012,8 +1011,8 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 194-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 238-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(194)
+  it('A0 fixture sanity: the seeded scope is the REAL 195-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 238-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(195)
     expect(forkTouchedSnapshot.files.length).toBe(238)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
@@ -1055,7 +1054,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 194 -> 238 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 195 -> 238 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({

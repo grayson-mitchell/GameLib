@@ -217,9 +217,11 @@ describe('Epic login tiles: embedded login is PRIMARY, SIDLogin is the alternati
 
   it("SOURCE GATE — the Epic PRIMARY tile is labelled login.epic, keeps loginUrl={epicLoginPath} for LoginWarning/Humble>Keys, and its primaryLoginAction opens the shared OAuth overlay for 'legendary' -- NOT a SIDLogin diversion (quick task 261003-s04 moved the primary action from a loginweb route onto the overlay; D-8 narrows this gate rather than deleting it, since the embedded-login-is-primary invariant 260822-r3g restored still holds)", () => {
     const block = epicRunnerBlock()
-    expect(block).toMatch(
-      /buttonText=\{t\('login\.epic', 'Epic Games Login'\)\}/
-    )
+    // Phase 49 R7: the label is now chosen by the shared selector's tile
+    // (expired -> the Epic Reconnect copy), so the plain label is the
+    // non-expired branch of a ternary rather than the whole prop.
+    expect(block).toMatch(/: t\('login\.epic', 'Epic Games Login'\)/)
+    expect(block).toMatch(/gamelib:login\.epicReconnect/)
     expect(block).toMatch(/loginUrl=\{epicLoginPath\}/)
     // Breaks if: the primary action is removed, or rewired to anything other
     // than opening the overlay for 'legendary' -- in particular, it must NOT

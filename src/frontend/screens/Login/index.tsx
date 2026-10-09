@@ -25,8 +25,9 @@ import OAuthLogin, { type OAuthOverlayRunner } from './components/OAuthLogin'
 import ContextProvider from '../../state/ContextProvider'
 import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
-import { steamConfigStore } from 'frontend/helpers/electronStores'
-import { isSteamConnected } from './steamTileState'
+import { collectSignInInputs } from 'frontend/helpers/signInInputs'
+import { resolveSignInStates } from 'common/signInState'
+import { resolveSignInTile } from './signInTileState'
 import { LOGIN_OPEN_PARAM, resolveLoginOpenRequest } from './loginOpenParam'
 import { bindOverlayDismiss } from './overlayDismiss'
 
@@ -65,8 +66,16 @@ function isOAuthOverlayRunner(
 }
 
 export default React.memo(function NewLogin() {
-  const { epic, gog, amazon, zoom, steam, humble, refreshLibrary } =
-    useContext(ContextProvider)
+  const {
+    epic,
+    gog,
+    amazon,
+    zoom,
+    steam,
+    humble,
+    refreshLibrary,
+    signInProbeOutcomes
+  } = useContext(ContextProvider)
   const { t } = useTranslation()
   // Fork-owned strings live in gamelib.json — translation.json is upstream's
   // and meta/i18nCatalogChurnGuard.ts fails the build on any fork edit to it.
@@ -128,37 +137,37 @@ export default React.memo(function NewLogin() {
   // `disabled=` and the wrapper's `inert`: that, not the motion, is the
   // T-34.4.2-39/-41 guard.
   const overlayRendersChrome = openOverlay === 'steam'
-  const [isEpicLoggedIn, setIsEpicLoggedIn] = useState(Boolean(epic.username))
-  const [isGogLoggedIn, setIsGogLoggedIn] = useState(Boolean(gog.username))
-  const [isAmazonLoggedIn, setIsAmazonLoggedIn] = useState(
-    Boolean(amazon.user_id)
-  )
   const [isZoomLoggedIn, setIsZoomLoggedIn] = useState(Boolean(zoom.username))
-  // Read straight from the store rather than from GlobalState: the backend
-  // latches this on a routine library refresh, long after GlobalState was
+  // Phase 49 D-06 (R7): the five store tiles (Epic, GOG, Amazon, Steam, Humble)
+  // are all driven by the ONE selector the Library sign-in notice reads, so a
+  // tile and the notice cannot disagree about a store. The persisted verdicts
+  // (Steam's `credentialsMissing`, the Epic/GOG/Amazon/Humble `expired` flags)
+  // are read through `collectSignInInputs` at call time and never cached: the
+  // backend latches them on a routine refresh long after this screen was
   // constructed, and the renderer's snapshot is kept live by
-  // STORE_CHANGED_CHANNEL (backend/electron_store.ts announces on set/delete).
-  // Re-read in the effect below so navigating to this screen always shows the
-  // current verdict without needing a dedicated push channel.
-  const [steamCredentialsMissing, setSteamCredentialsMissing] = useState(() =>
-    Boolean(steamConfigStore.get_nodefault('credentialsMissing'))
-  )
-  const [isSteamLoggedIn, setIsSteamLoggedIn] = useState(
-    isSteamConnected(steam?.username, steamCredentialsMissing)
-  )
-  // Runner only shows `buttonText` (the reconnect prompt) in its
-  // not-logged-in branch, so when the session has expired we present the
-  // tile as "not logged in" (D-09: tile flips to Session expired — Reconnect)
-  // even though a username is still cached in state.
+  // STORE_CHANGED_CHANNEL. They are re-read in the effect below so navigating
+  // to this screen always shows the current verdict without a dedicated push
+  // channel.
   //
-  // D-02/D-16: connected state is driven by `isLoggedIn` (set once the
-  // gamekeys endpoint validates a session), NOT `username` — identity is a
-  // best-effort fetch and is frequently absent (e.g. a 404). Quick task
-  // 260815-kt0: `Runner` no longer renders any identity value at all — every
-  // store's tile shows the same uniform "Connected" indicator once
-  // `isLoggedIn` is true, regardless of whether a username was ever fetched.
-  const [isHumbleLoggedIn, setIsHumbleLoggedIn] = useState(
-    Boolean(humble?.isLoggedIn) && !humble?.expired
+  // `Runner` renders `buttonText` only in its not-logged-in branch and has no
+  // third state, so an `expired` store is presented as "not logged in" with a
+  // Reconnect prompt (see `resolveSignInTile`) even though an identity is still
+  // cached. Quick task 260815-kt0: `Runner` renders no identity value at all --
+  // every connected tile shows the same uniform "Connected" indicator.
+  const [signInStates, setSignInStates] = useState(() =>
+    resolveSignInStates(
+      collectSignInInputs(
+        {
+          epicUsername: epic.username,
+          gogUsername: gog.username,
+          amazonUserId: amazon.user_id,
+          humbleLoggedIn: humble?.isLoggedIn,
+          humbleExpired: humble?.expired,
+          steamUsername: steam?.username
+        },
+        signInProbeOutcomes
+      )
+    )
   )
 
   const systemInfo = useAwaited(window.api.systemInfo.get)
@@ -190,16 +199,22 @@ export default React.memo(function NewLogin() {
   }, [epic, gog])
 
   useEffect(() => {
-    setIsEpicLoggedIn(Boolean(epic.username))
-    setIsGogLoggedIn(Boolean(gog.username))
-    setIsAmazonLoggedIn(Boolean(amazon.user_id))
     setIsZoomLoggedIn(Boolean(zoom.username))
-    const credentialsMissing = Boolean(
-      steamConfigStore.get_nodefault('credentialsMissing')
+    setSignInStates(
+      resolveSignInStates(
+        collectSignInInputs(
+          {
+            epicUsername: epic.username,
+            gogUsername: gog.username,
+            amazonUserId: amazon.user_id,
+            humbleLoggedIn: humble?.isLoggedIn,
+            humbleExpired: humble?.expired,
+            steamUsername: steam?.username
+          },
+          signInProbeOutcomes
+        )
+      )
     )
-    setSteamCredentialsMissing(credentialsMissing)
-    setIsSteamLoggedIn(isSteamConnected(steam?.username, credentialsMissing))
-    setIsHumbleLoggedIn(Boolean(humble?.isLoggedIn) && !humble?.expired)
   }, [
     epic.username,
     gog.username,
@@ -208,6 +223,7 @@ export default React.memo(function NewLogin() {
     steam?.username,
     humble?.isLoggedIn,
     humble?.expired,
+    signInProbeOutcomes,
     // 260823-awo: a completed Steam sign-in does NOT change `steam?.username`
     // -- `steamLogin` writes back the same persona name it already had -- so
     // none of the deps above move and this effect never re-runs. The tile then
@@ -314,6 +330,14 @@ export default React.memo(function NewLogin() {
     navigate('/')
   }
 
+  // One tile per store from the shared selector (R7). `unknown` renders as
+  // Connected; only a proven `expired` shows the Reconnect button text.
+  const epicTile = resolveSignInTile(signInStates.legendary)
+  const gogTile = resolveSignInTile(signInStates.gog)
+  const amazonTile = resolveSignInTile(signInStates.nile)
+  const steamTile = resolveSignInTile(signInStates.steam)
+  const humbleTile = resolveSignInTile(signInStates.humble)
+
   if (loading) {
     return <UpdateComponent />
   }
@@ -403,10 +427,17 @@ export default React.memo(function NewLogin() {
           <div className="runnerGroup">
             <Runner
               class="epic"
-              buttonText={t('login.epic', 'Epic Games Login')}
+              buttonText={
+                epicTile.reconnect
+                  ? tGamelib(
+                      'gamelib:login.epicReconnect',
+                      'Sign-in expired — Reconnect'
+                    )
+                  : t('login.epic', 'Epic Games Login')
+              }
               loginUrl={epicLoginPath}
               icon={() => <EpicLogo />}
-              isLoggedIn={isEpicLoggedIn}
+              isLoggedIn={epicTile.isLoggedIn}
               logoutAction={epic.logout}
               // Quick task 260822-r3g (2026-08-22) REVERTS the F-34.5-G6-01 Epic tile pivot
               // and puts ROADMAP Phase 34.7 ON HOLD. The pivot existed because Epic's embedded
@@ -427,10 +458,17 @@ export default React.memo(function NewLogin() {
             />
             <Runner
               class="gog"
-              buttonText={t('login.gog', 'GOG Login')}
+              buttonText={
+                gogTile.reconnect
+                  ? tGamelib(
+                      'gamelib:login.gogReconnect',
+                      'Sign-in expired — Reconnect'
+                    )
+                  : t('login.gog', 'GOG Login')
+              }
               icon={() => <GOGLogo />}
               loginUrl={gogLoginPath}
-              isLoggedIn={isGogLoggedIn}
+              isLoggedIn={gogTile.isLoggedIn}
               logoutAction={gog.logout}
               primaryLoginAction={() => openLoginOverlay('gog')}
               disabled={oldMac || loginInFlight}
@@ -438,10 +476,17 @@ export default React.memo(function NewLogin() {
             />
             <Runner
               class="nile"
-              buttonText={t('login.amazon', 'Amazon Login')}
+              buttonText={
+                amazonTile.reconnect
+                  ? tGamelib(
+                      'gamelib:login.amazonReconnect',
+                      'Sign-in expired — Reconnect'
+                    )
+                  : t('login.amazon', 'Amazon Login')
+              }
               icon={() => <AmazonLogo />}
               loginUrl={amazonLoginPath}
-              isLoggedIn={isAmazonLoggedIn}
+              isLoggedIn={amazonTile.isLoggedIn}
               logoutAction={amazon.logout}
               primaryLoginAction={() => openLoginOverlay('nile')}
               disabled={oldMac || loginInFlight}
@@ -461,7 +506,7 @@ export default React.memo(function NewLogin() {
             <Runner
               class="steam"
               buttonText={
-                steamCredentialsMissing
+                steamTile.reconnect
                   ? tGamelib(
                       'gamelib:login.steamReconnect',
                       'Sign-in expired — Reconnect'
@@ -470,7 +515,7 @@ export default React.memo(function NewLogin() {
               }
               icon={() => <SteamLogo />}
               loginUrl={steamLoginPath}
-              isLoggedIn={isSteamLoggedIn}
+              isLoggedIn={steamTile.isLoggedIn}
               logoutAction={steam?.logout ?? (() => Promise.resolve())}
               primaryLoginAction={() => openLoginOverlay('steam')}
               disabled={oldMac || loginInFlight}
@@ -479,13 +524,13 @@ export default React.memo(function NewLogin() {
             <Runner
               class="humble"
               buttonText={
-                humble?.expired
+                humbleTile.reconnect
                   ? t('login.humble_reconnect', 'Session expired — Reconnect')
                   : t('login.humble', 'Humble Bundle Login')
               }
               icon={() => <HumbleLogo />}
               loginUrl={humbleLoginPath}
-              isLoggedIn={isHumbleLoggedIn}
+              isLoggedIn={humbleTile.isLoggedIn}
               logoutAction={humble?.logout ?? (() => Promise.resolve())}
               primaryLoginAction={() => openLoginOverlay('humble')}
               disabled={oldMac || loginInFlight}

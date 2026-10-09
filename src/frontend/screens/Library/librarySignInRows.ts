@@ -13,7 +13,7 @@ import {
  * this repo's Frontend jest project has no jsdom and no stylesheet transform.
  * Anything that imports the component dies at that import before the first
  * assertion runs, so the decision is the only part Jest can prove directly --
- * the same extraction `librarySyncIndicator.ts` and `steamTileState.ts` use.
+ * the same extraction `librarySyncIndicator.ts` and `Login/signInTileState.ts` use.
  *
  * The only runtime import is the canonical store order from `common`, which
  * itself has no imports.

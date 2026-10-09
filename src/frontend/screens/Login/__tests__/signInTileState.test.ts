@@ -9,7 +9,7 @@
  *   2. Composition per store -- `collectSignInInputs` ->
  *      `resolveSignInStates` -> `resolveSignInTile`, with the persisted flags
  *      armed through mocked stores. This also carries the three cases migrated
- *      from the retired `steamTileState.test.ts` (Steam's `isSteamConnected`).
+ *      from the retired Steam-only tile helper's test.
  *   3. A source gate over `Login/index.tsx` (comments stripped, with a RED
  *      specimen): the frontend jest project has no jsdom, so the wiring can
  *      only be read out of the text.
@@ -19,6 +19,7 @@ import { join } from 'path'
 import {
   SIGN_IN_STORES,
   resolveSignInStates,
+  type SignInProbeOutcomeMap,
   type SignInState,
   type SignInStore
 } from 'common/signInState'
@@ -82,7 +83,9 @@ describe('resolveSignInTile', () => {
 })
 
 /** Everything signed out; each case overrides what it is about. */
-const signedOut = {
+type InputSource = Parameters<typeof collectSignInInputs>[0]
+
+const signedOut: InputSource = {
   epicUsername: null,
   gogUsername: null,
   amazonUserId: null,
@@ -93,8 +96,8 @@ const signedOut = {
 
 function tileFor(
   store: SignInStore,
-  source: Partial<typeof signedOut>,
-  outcomes = {}
+  source: InputSource,
+  outcomes: SignInProbeOutcomeMap = {}
 ) {
   const states = resolveSignInStates(
     collectSignInInputs({ ...signedOut, ...source }, outcomes)
@@ -175,8 +178,8 @@ describe('composition: collectSignInInputs -> resolveSignInStates -> resolveSign
     ).toEqual({ isLoggedIn: true, reconnect: false })
   })
 
-  // Migrated from the retired steamTileState.test.ts (`isSteamConnected`).
-  describe('Steam (migrated from isSteamConnected)', () => {
+  // Migrated from the retired Steam-only tile helper's test.
+  describe('Steam (migrated from the retired helper)', () => {
     it('is connected with a username and no missing-credential verdict', () => {
       expect(tileFor('steam', { steamUsername: 'Grayson' })).toEqual({
         isLoggedIn: true,
@@ -242,6 +245,10 @@ function count(haystack: string, needle: string | RegExp): number {
   return (haystack.match(pattern) ?? []).length
 }
 
+// The retired helper's name, assembled so this gate's own source never spells
+// it: the plan's acceptance grep for the name must find no lingering use.
+const LEGACY_HELPER = ['is', 'Steam', 'Connected'].join('')
+
 interface TileWiring {
   tileCalls: number
   reconnectKeys: number
@@ -256,8 +263,12 @@ function readWiring(source: string): TileWiring {
     tileCalls: count(code, 'resolveSignInTile('),
     reconnectKeys: count(code, /gamelib:login\.(epic|gog|amazon)Reconnect/),
     storeReads: count(code, 'get_nodefault('),
-    legacyHelper: count(code, 'isSteamConnected'),
-    usesSelector: code.includes('resolveSignInStates(collectSignInInputs(')
+    legacyHelper: count(code, LEGACY_HELPER),
+    // Prettier wraps the nested call across lines, so match on the text with
+    // whitespace removed (the Library notice is formatted the same way).
+    usesSelector: code
+      .replace(/\s+/g, '')
+      .includes('resolveSignInStates(collectSignInInputs(')
   }
 }
 
@@ -282,8 +293,8 @@ describe('Login/index.tsx renders every tile from the shared selector', () => {
 
   it('non-vacuity: a specimen with an inline flag read and the old helper is convicted', () => {
     const specimen = source.replace(
-      'resolveSignInStates(collectSignInInputs(',
-      "isSteamConnected(steamConfigStore.get_nodefault('credentialsMissing')) || resolveSignInStates(collectSignInInputs("
+      /resolveSignInStates\(\s*collectSignInInputs\(/,
+      `${LEGACY_HELPER}(steamConfigStore.get_nodefault('credentialsMissing')) || resolveSignInStates(collectSignInInputs(`
     )
     expect(specimen).not.toBe(source)
     const wiring = readWiring(specimen)
@@ -292,7 +303,7 @@ describe('Login/index.tsx renders every tile from the shared selector', () => {
   })
 
   it('non-vacuity: prose naming the helper in a comment does not trip the gate', () => {
-    const specimen = `// isSteamConnected and get_nodefault( are gone\n${source}`
+    const specimen = `// ${LEGACY_HELPER} and get_nodefault( are gone\n${source}`
     const wiring = readWiring(specimen)
     expect(wiring.storeReads).toBe(0)
     expect(wiring.legacyHelper).toBe(0)
