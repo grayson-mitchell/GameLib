@@ -223,10 +223,11 @@ interface StripWidthStyle {
 /**
  * G-48-8c, and the operator's 2026-10-07 ruling "match the grid" that amends
  * D-01: a focus-row strip card is the width one grid column takes. Returns a
- * `syncCardWidth(track, getStyle?)` that derives that width and writes it as
- * the inline `--focus-row-card-width` on `.focusRowTrack`, which the stylesheet
- * consumes as the card's flex basis (156px, the grid's floor, until the first
- * write and whenever measurement is impossible).
+ * `syncCardWidth(track, getStyle?, context?: StripLayoutContext)` that derives
+ * that width and writes it as the inline `--focus-row-card-width` on
+ * `.focusRowTrack`, which the stylesheet consumes as the card's flex basis
+ * (156px, the grid's floor, until the first write and whenever measurement is
+ * impossible).
  *
  * It DERIVES the width by the grid's own arithmetic rather than reading the
  * rendered grid:
