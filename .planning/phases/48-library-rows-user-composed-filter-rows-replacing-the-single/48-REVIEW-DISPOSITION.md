@@ -3,6 +3,54 @@ phase: 48
 review: 48-REVIEW.md
 titles: json
 findings:
+  - id: WR-04
+    severity: warning
+    disposition: open
+    title: "Tab-focused strip cards get no horizontal edge clearance, so the keyboard ring is clipped and the chevron overlaps"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "`pageScrollDelta` doc and test P1 model a zero-slack geometry the DOM no longer has"
+  - id: IN-02
+    severity: info
+    disposition: skipped
+    title: "Retry is a silent no-op while a dismissed overlay plays its 500ms exit"
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "`TauriLoginPanel` tests replace `window.location` and never restore it"
+  - id: IN-04
+    severity: info
+    disposition: open
+    title: "Stale doc comment on `FocusRowSelection` names the wrong validator file"
+  - id: IN-05
+    severity: info
+    disposition: open
+    title: "`testContainment.test.ts` list ordering and tally comment not maintained for the new suite"
+  - id: IN-06
+    severity: info
+    disposition: skipped
+    title: "Hydration guard is per-module, not per-mount"
+  - id: IN-07
+    severity: info
+    disposition: fixed
+    title: "Drift-guard comment overstates what `pnpm codecheck` catches"
+  - id: IN-08
+    severity: info
+    disposition: open
+    title: "`gridShown` re-states the grid mount condition, guarded only by a partial regex"
+  - id: IN-09
+    severity: info
+    disposition: skipped
+    title: "A first-ever `mousemove` after Tab ends keyboard mode"
+  - id: IN-10
+    severity: info
+    disposition: fixed
+    title: "CSP violation forwarder is unbounded and logs full blocked URLs"
+  - id: IN-11
+    severity: info
+    disposition: fixed
+    title: "`createStripCardWidthSync` JSDoc advertises a two-argument signature"
   - id: WR-01
     severity: warning
     disposition: fixed
@@ -11,62 +59,39 @@ findings:
     severity: warning
     disposition: fixed
     title: "[Group 1, 48-09] Stale-focus ring suppression now keys off `.listing:hover`, hiding keyboard focus whenever the pointer rests anywhere in the library"
-  - id: IN-01
-    severity: info
-    disposition: open
-    title: "[Group 1, 48-12] `pageScrollDelta` tolerance and its sweep test model a geometry the DOM no longer has"
-  - id: IN-02
-    severity: info
-    disposition: open
-    title: "[Group 2, 261008-aoe] Retry is a silent no-op while a dismissed overlay plays its 500ms exit"
-  - id: IN-03
-    severity: info
-    disposition: open
-    title: "[Group 2, 261008-aoe] New `TauriLoginPanel` tests replace `window.location` and never restore it"
   - id: WR-03
     severity: warning
     disposition: fixed
     title: "`hydrateFocusRowSelection` \"NEVER rejects\" contract is broken if `onError` throws"
-  - id: IN-05
-    severity: info
-    disposition: open
-    title: "`testContainment.test.ts` bookkeeping not maintained for the new suite"
-  - id: IN-06
-    severity: info
-    disposition: open
-    title: "Hydration guard is per-module, not per-mount; the \"once\" claim holds per page load only"
-  - id: IN-07
-    severity: info
-    disposition: open
-    title: "Drift-guard comment overstates what `pnpm codecheck` catches"
   - id: CR-01
     severity: critical
     disposition: fixed
     title: "Legacy `libraryTopSection` seed never reaches the renderer (SPEC R7 not delivered at runtime)"
-  - id: IN-04
-    severity: info
-    disposition: open
-    title: "Stale doc comment on `FocusRowSelection`"
-open: 7
-total: 11
-recorded: 2026-10-07T19:32:29.096Z
+open: 6
+total: 16
+recorded: 2026-10-09T10:17:40.971Z
 ---
 
 # Phase 48: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | fixed | 48-14 1cc619836 |
-| WR-02 | warning | fixed | 48-16 a0a3211f1 |
+| WR-04 | warning | open | - |
 | IN-01 | info | open | - |
-| IN-02 | info | open | - |
+| IN-02 | info | skipped | 48-REVIEW-FIX.md |
 | IN-03 | info | open | - |
+| IN-04 | info | open | - |
+| IN-05 | info | open | - |
+| IN-06 | info | skipped | 48-REVIEW-FIX.md |
+| IN-07 | info | fixed | 48-REVIEW-FIX.md |
+| IN-08 | info | open | - |
+| IN-09 | info | skipped | 48-REVIEW-FIX.md |
+| IN-10 | info | fixed | 48-REVIEW-FIX.md |
+| IN-11 | info | fixed | 48-REVIEW-FIX.md |
+| WR-01 | warning | fixed | 48-14 1cc619836 (not in the current review) |
+| WR-02 | warning | fixed | 48-16 a0a3211f1 (not in the current review) |
 | WR-03 | warning | fixed | quick-261002-b63 0cecb87b1 (not in the current review) |
-| IN-05 | info | open | - (not in the current review) |
-| IN-06 | info | open | - (not in the current review) |
-| IN-07 | info | open | - (not in the current review) |
 | CR-01 | critical | fixed | 48-07 d7d27c89b (not in the current review) |
-| IN-04 | info | open | - (not in the current review) |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
 Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
