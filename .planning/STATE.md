@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v0.8
 milestone_name: Phase Details
-current_phase: 9
-current_phase_name: Quality Gate
-status: planning
-stopped_at: Phase 48 complete, ready to plan Phase 9
-last_updated: "2026-10-09T09:54:18.868Z"
+current_phase: 49
+current_phase_name: Cross-store signed-out / offline mode
+status: executing
+stopped_at: Completed 49-03-PLAN.md
+last_updated: "2026-10-09T10:42:24.009Z"
 last_activity: 2026-10-09
-last_activity_desc: Phase 48 complete, transitioned to Phase 9
-state_head: ab5c30b6a58ce38fb3a6f2810ef64fc832718797
+last_activity_desc: Phase 49 execution started
+state_head: 67dd883a0f5bf5a6d85adc22940135520eae4dfc
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 517
-  percent: 79
+  completed_plans: 518
+  percent: 82
 ---
 
 # Project State
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 48 complete (2026-10-09). STATE's CLI pointer advanced to Phase 9 — Quality Gate (never started); Phase 49 — Cross-store signed-out / offline mode is the phase actually in progress (2 of 8 plans summarised).
+**Current focus:** Phase 49 — Cross-store signed-out / offline mode
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 9 — Quality Gate
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-09 — Phase 48 complete, transitioned to Phase 9
+Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
+Plan: 3 of 12
+Status: Ready to execute
+Last activity: 2026-10-09 — Phase 49 execution started
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -116,7 +116,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 79%
+Progress: [████████░░] 82%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
@@ -523,6 +523,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P16 | 75min | 3 tasks | 16 files |
 | Phase 48 P17 | ~45min | 3 tasks | 12 files |
 | Phase 48 P18 | 2h | 3 tasks | 1 files |
+| Phase 49 P03 | 25 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1174,6 +1175,8 @@ Recent decisions affecting current work:
 - [Phase 48]: 2026-10-09 Windows controller session closed UAT items 11 and 12: controller-focus ring clearance, cold-launch first paint, 20-card cap, title rect, 2-card row, mouse/controller handoff geometry (G-48-8a) and the one-ring invariant all pass by eye; 48-UAT.md complete 12/12
 - [Phase 48]: G-48-11d (controller mode hides the card's hover-action buttons, only the store badge stays) is NOT a phase regression: upstream Heroic c555988b7 hid the whole bar in 2022, 16560dbdd (2026-10-02) kept the badge; operator ruled 'leave as is', closed with no code change
 - [Phase 48]: Phase closed 2026-10-09: re-verification round 3 passed 10/10 with a real v2 covered-input fingerprint over 60 files (the verifier's claim that `verification fingerprint` was unexposed was wrong; the verb takes the phase dir then paths); 48-VALIDATION.md nyquist_compliant, 48-SECURITY.md 64 threats closed, 0 open
+- [Phase 49]: legendaryConfigStore is exported under that name (not configStore) in its own legendary_store dir; expired follows the credentialsMissing precedent and is not write-denied — legendary/user.ts already imports the global configStore; a distinct dir keeps legendary from seeing or deleting the verdict; UI-only impact accepted (T-49-06, T-49-08)
+- [Phase 49]: resolveEpicOfflineMode can only enable offline mode and never blocks a launch; the credentials modal stays the fallback for games that cannot run offline — R8: only legendary + canRunOffline + expired turns offline on; read once in prepareLaunch so a mid-launch probe cannot abort a launch
 
 ### Pending Todos
 
@@ -1783,8 +1786,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T08:09:01.676Z
-Stopped at: Phase 48 complete, ready to plan Phase 9
+Last session: 2026-10-09T10:41:57.341Z
+Stopped at: Completed 49-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
