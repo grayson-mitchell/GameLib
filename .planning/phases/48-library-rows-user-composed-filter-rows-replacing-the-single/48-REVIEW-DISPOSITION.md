@@ -5,11 +5,11 @@ titles: json
 findings:
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Tab-focused strip cards get no horizontal edge clearance, so the keyboard ring is clipped and the chevron overlaps"
   - id: IN-01
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`pageScrollDelta` doc and test P1 model a zero-slack geometry the DOM no longer has"
   - id: IN-02
     severity: info
@@ -17,15 +17,15 @@ findings:
     title: "Retry is a silent no-op while a dismissed overlay plays its 500ms exit"
   - id: IN-03
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`TauriLoginPanel` tests replace `window.location` and never restore it"
   - id: IN-04
     severity: info
-    disposition: open
+    disposition: fixed
     title: "Stale doc comment on `FocusRowSelection` names the wrong validator file"
   - id: IN-05
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`testContainment.test.ts` list ordering and tally comment not maintained for the new suite"
   - id: IN-06
     severity: info
@@ -37,7 +37,7 @@ findings:
     title: "Drift-guard comment overstates what `pnpm codecheck` catches"
   - id: IN-08
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`gridShown` re-states the grid mount condition, guarded only by a partial regex"
   - id: IN-09
     severity: info
@@ -67,24 +67,24 @@ findings:
     severity: critical
     disposition: fixed
     title: "Legacy `libraryTopSection` seed never reaches the renderer (SPEC R7 not delivered at runtime)"
-open: 6
+open: 0
 total: 16
-recorded: 2026-10-09T10:17:40.971Z
+recorded: 2026-10-09T10:18:04.911Z
 ---
 
 # Phase 48: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-04 | warning | open | - |
-| IN-01 | info | open | - |
+| WR-04 | warning | fixed | 48-REVIEW-FIX.md |
+| IN-01 | info | fixed | 48-REVIEW-FIX.md |
 | IN-02 | info | skipped | 48-REVIEW-FIX.md |
-| IN-03 | info | open | - |
-| IN-04 | info | open | - |
-| IN-05 | info | open | - |
+| IN-03 | info | fixed | 48-REVIEW-FIX.md |
+| IN-04 | info | fixed | 48-REVIEW-FIX.md |
+| IN-05 | info | fixed | 48-REVIEW-FIX.md |
 | IN-06 | info | skipped | 48-REVIEW-FIX.md |
 | IN-07 | info | fixed | 48-REVIEW-FIX.md |
-| IN-08 | info | open | - |
+| IN-08 | info | fixed | 48-REVIEW-FIX.md |
 | IN-09 | info | skipped | 48-REVIEW-FIX.md |
 | IN-10 | info | fixed | 48-REVIEW-FIX.md |
 | IN-11 | info | fixed | 48-REVIEW-FIX.md |
