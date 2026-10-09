@@ -2,30 +2,30 @@
 gsd_state_version: "1.0"
 milestone: v0.8
 milestone_name: Phase Details
-current_phase: 48
-current_phase_name: Focus row — move the library top section into the panel and widen it
-status: executing
-stopped_at: Completed 48-18-PLAN.md
-last_updated: "2026-10-09T08:09:20.182Z"
+current_phase: 9
+current_phase_name: Quality Gate
+status: planning
+stopped_at: Phase 48 complete, ready to plan Phase 9
+last_updated: "2026-10-09T09:54:18.868Z"
 last_activity: 2026-10-09
-last_activity_desc: Phase 48 execution started
-state_head: 1d182923444640daafa3f1494808a9cdd100f1a4
+last_activity_desc: Phase 48 complete, transitioned to Phase 9
+state_head: ab5c30b6a58ce38fb3a6f2810ef64fc832718797
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
   completed_plans: 517
-  percent: 82
+  percent: 79
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-05)
+See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 48 — Focus row — move the library top section into the panel and widen it
+**Current focus:** Phase 48 complete (2026-10-09). STATE's CLI pointer advanced to Phase 9 — Quality Gate (never started); Phase 49 — Cross-store signed-out / offline mode is the phase actually in progress (2 of 8 plans summarised).
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 18 of 18
-Status: Ready to execute
-Last activity: 2026-10-09 — Phase 48 execution started
+Phase: 9 — Quality Gate
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-09 — Phase 48 complete, transitioned to Phase 9
 
 Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
 
@@ -116,7 +116,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 82%
+Progress: [████████░░] 79%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
@@ -163,7 +163,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 
 **Velocity (v0.1):**
 
-- Total plans completed: 170 (phases 1-4)
+- Total plans completed: 256 (phases 1-4)
 - Average duration: ~5-15 min/plan
 - Total execution time: ~5 days (2026-06-24 → 2026-06-29)
 
@@ -200,6 +200,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | 34.10 | 27 | - | - |
 | 34.11 | 9 | - | - |
 | 41 | 7 | - | - |
+| 48 | 18 | - | - |
 
 **v0.1 Detail Log:**
 
@@ -1170,6 +1171,9 @@ Recent decisions affecting current work:
 - [Phase 48]: 48-16: same-coordinate pointer moves do not end keyboard mode (engine synthetic move after scroll); untrusted Tab keydowns never enter it
 - [Phase 48]: 48-17: strip holds the grid's scrollbar allowance (strip-only) while no grid is shown; G-48-11c = main.content 10px bar toggling, measured in WebKit (+2 = 10/5)
 - [Phase 48]: 48-18: G-48-11c and G-48-12a resolved by live WebKit measurement against the preserved pre-fix bundle; G-48-8a stays failed (no controller); L3 distinct-position bar read 8 of 10 and was filed as G-48-12b for an operator ruling, not waved through
+- [Phase 48]: 2026-10-09 Windows controller session closed UAT items 11 and 12: controller-focus ring clearance, cold-launch first paint, 20-card cap, title rect, 2-card row, mouse/controller handoff geometry (G-48-8a) and the one-ring invariant all pass by eye; 48-UAT.md complete 12/12
+- [Phase 48]: G-48-11d (controller mode hides the card's hover-action buttons, only the store badge stays) is NOT a phase regression: upstream Heroic c555988b7 hid the whole bar in 2022, 16560dbdd (2026-10-02) kept the badge; operator ruled 'leave as is', closed with no code change
+- [Phase 48]: Phase closed 2026-10-09: re-verification round 3 passed 10/10 with a real v2 covered-input fingerprint over 60 files (the verifier's claim that `verification fingerprint` was unexposed was wrong; the verb takes the phase dir then paths); 48-VALIDATION.md nyquist_compliant, 48-SECURITY.md 64 threats closed, 0 open
 
 ### Pending Todos
 
@@ -1194,7 +1198,6 @@ Recent decisions affecting current work:
 - **NEW BLOCKER found by 34.10-10 Task 2's verification, plan NOT closed**: `hardcodedStringGate.test.ts`'s one remaining failure is a real violation at `src/frontend/screens/WebView/index.tsx:347` (`'the Humble sign-in window closed or could not be reached'`) — but that line is **uncommitted WIP from the concurrent debug session** (`.planning/debug/humble-isloggedin-never-set.md`, F-34.4.2-19), confirmed via `git diff` (the string only exists in the working tree, not at HEAD). 34.10-10 is explicitly forbidden from touching that file (contamination rules) or widening the allowlist (T-34.10-25). Plan 34.10-10 stops here — Task 1 and Task 2's own artifacts are committed and correct, but the plan's "full suite green" success criterion cannot be met until the concurrent session either wraps that string in `t()` or commits/reverts its WIP. No action needed from 34.10-10 beyond re-running `pnpm jest --runInBand --silent --forceExit` once that session's WebView/index.tsx work is committed.
 - REQUIREMENTS.md has no Phase 34.9 traceability section -- REQ-34.9-01..11 are cited by ROADMAP.md, STATE.md, and every 34.9 plan/summary, but requirements.mark-complete cannot find them to check off. Pre-existing gap, not caused by plan 34.9-07; needs a REQUIREMENTS.md backfill pass (D-XX -> REQ mapping + traceability table) for the whole phase.
 - Phase 34.9-09: build-runners-onedir-macos.yml cannot be dispatched via gh workflow run until it exists on the repo's default branch (main) -- GitHub's workflow_dispatch requires this for ANY --ref, not just the pushed feature branch. Not resolvable within plan 34.9-09's authorized scope (no PR, no push to main). Blocks: real x64 onedir artifact (never built, no local fallback possible per constraint 1), pinning meta/runnersOnedirDigests.json's 6 sentinels, and full CI proof of the download-verify-extract round trip. See 34.9-CI-ROUNDTRIP.md.
-- G-48-11b needs a WebKit (WKWebView) reproduction on a Mac: run evidence/48-13/run-webkit.sh HEAD, then re-run 48-13 Task 2 if reproduced (or 48-15 live gate)
 
 ### Quick Tasks Completed
 
@@ -1781,7 +1784,7 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-10-09T08:09:01.676Z
-Stopped at: Completed 48-18-PLAN.md
+Stopped at: Phase 48 complete, ready to plan Phase 9
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
