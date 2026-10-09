@@ -107,17 +107,19 @@ function assertNoticeMounted(source: string): void {
  * G3 (THE CORE GATE): the known-bad conjunction is gone, and the
  * D-11-fenced overlay survives untouched.
  *
- * The occurrence count is pinned at exactly 4, not 2 -- confirmed against
+ * The occurrence count is pinned at exactly 3, not 2 -- confirmed against
  * the real file at HEAD before this plan: the destructure
  * (`refreshingInTheBackground,`), the D-11-fenced overlay
  * (`refreshing && !refreshingInTheBackground && <UpdateComponent />` at
  * old :1011), AND a third, pre-existing, unrelated site gating the main
  * `<GamesList>` render (`(!refreshing || refreshingInTheBackground) &&`,
  * old :1029) that already existed at HEAD and this plan never touches.
- * Phase 48 plan 17 (G-48-11c) added the fourth, on purpose: the
- * `gridShown` prop passed to `<FocusRowStrip`, which mirrors that
- * `<GamesList>` gate so the strip knows when the grid is mounted. A FIFTH
- * occurrence is what would mean the old guard survived somewhere new.
+ * Phase 48 plan 17 (G-48-11c) added a fourth, on purpose: the `gridShown`
+ * prop passed to `<FocusRowStrip`, which mirrored that `<GamesList>` gate so
+ * the strip knew when the grid is mounted. Phase 48 review IN-08 hoisted the
+ * two copies into one `gridMounted` constant, so the third and fourth sites
+ * are now one definition. A FOURTH occurrence is what would mean the old guard
+ * survived somewhere new, or that the mount condition was re-stated.
  */
 function assertOldGuardGoneAndFenceIntact(source: string): void {
   if (source.includes('steam?.library?.length === 0')) {
@@ -128,13 +130,14 @@ function assertOldGuardGoneAndFenceIntact(source: string): void {
   }
 
   const occurrences = (source.match(/refreshingInTheBackground/g) || []).length
-  if (occurrences !== 4) {
+  if (occurrences !== 3) {
     throw new Error(
       `G3 FAILED: refreshingInTheBackground occurs ${occurrences} times, ` +
-        'expected exactly 4 (the destructure, the D-11-fenced overlay, the ' +
-        'pre-existing GamesList render gate, and the FocusRowStrip gridShown ' +
-        'prop that mirrors it). A fifth occurrence means ' +
-        'the old guard survived somewhere new.'
+        'expected exactly 3 (the destructure, the D-11-fenced overlay, and ' +
+        'the single gridMounted definition that the GamesList mount and the ' +
+        'FocusRowStrip gridShown prop both use). A fourth occurrence means ' +
+        'the old guard survived somewhere new or the mount condition was ' +
+        're-stated.'
     )
   }
 

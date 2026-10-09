@@ -489,14 +489,23 @@ describe('Library/index.css -- the grid stylesheet is untouched', () => {
 describe('Library/index.tsx -- the lane replacement', () => {
   const source = read(LIBRARY_TSX_PATH)
 
-  it('G-48-11c: <FocusRowStrip passes gridShown= mirroring the GamesList grid mount condition', () => {
+  it('G-48-11c, IN-08: <FocusRowStrip passes gridShown= built from the same gridMounted constant that gates the GamesList mount', () => {
     const start = source.indexOf('<FocusRowStrip')
     expect(start).not.toBe(-1)
     const tag = source.slice(start, source.indexOf('/>', start))
     const attr = tag.match(/gridShown=\{([^]*)\}/)
     expect(attr).not.toBeNull()
-    expect(attr?.[1]).toContain('libraryToShow.length > 0')
+    expect(attr?.[1]).toContain('gridMounted')
     expect(attr?.[1]).toContain("layout === 'grid'")
+    // The one definition carries every clause of the mount condition,
+    // including the refreshing one the old attribute check never pinned.
+    const def = source.match(/const gridMounted =([^]*?)return \(/)
+    expect(def).not.toBeNull()
+    expect(def?.[1]).toContain('libraryToShow.length > 0')
+    expect(def?.[1]).toContain('!refreshing || refreshingInTheBackground')
+    // ...and the GamesList mount is gated on that same constant.
+    expect(source).toMatch(/\{gridMounted && \(\s*<GamesList/)
+    expect(source.split('gridMounted').length - 1).toBe(3)
   })
 
   it('mounts FocusRowStrip exactly once', () => {

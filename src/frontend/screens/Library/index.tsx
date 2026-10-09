@@ -1062,6 +1062,14 @@ export default React.memo(function Library(): JSX.Element {
     )
   }
 
+  // IN-08: the one statement of when the grid (`GamesList`) is mounted. The
+  // strip's `gridShown` ANDs the grid layout onto it (GamesList switches
+  // layouts internally, so the mount itself is layout-independent). Two copies
+  // of this condition would let the strip hold a stale scrollbar allowance when
+  // one drifts (the +2px column drift G-48-11c fixed).
+  const gridMounted =
+    libraryToShow.length > 0 && (!refreshing || refreshingInTheBackground)
+
   return (
     <LibraryContext.Provider
       value={{
@@ -1162,11 +1170,7 @@ export default React.memo(function Library(): JSX.Element {
           libraryUnion={libraryUnion}
           deps={engineDeps}
           showHidden={showHidden}
-          gridShown={
-            libraryToShow.length > 0 &&
-            (!refreshing || refreshingInTheBackground) &&
-            layout === 'grid'
-          }
+          gridShown={gridMounted && layout === 'grid'}
           handleModal={handleModal}
         />
 
@@ -1190,19 +1194,18 @@ export default React.memo(function Library(): JSX.Element {
             <EmptyLibraryMessage />
           ))}
 
-        {libraryToShow.length > 0 &&
-          (!refreshing || refreshingInTheBackground) && (
-            <GamesList
-              library={libraryToShow}
-              layout={layout}
-              handleGameCardClick={handleModal}
-              ariaLabel={
-                showFavouritesLibrary
-                  ? t('favourites', 'Favourites')
-                  : t('title.allGames', 'All Games')
-              }
-            />
-          )}
+        {gridMounted && (
+          <GamesList
+            library={libraryToShow}
+            layout={layout}
+            handleGameCardClick={handleModal}
+            ariaLabel={
+              showFavouritesLibrary
+                ? t('favourites', 'Favourites')
+                : t('title.allGames', 'All Games')
+            }
+          />
+        )}
       </div>
 
       <button id="backToTopBtn" onClick={backToTop} ref={backToTopElement}>
