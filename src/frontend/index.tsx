@@ -35,6 +35,7 @@ import GlobalState from './state/GlobalState'
 import { initShortcuts } from './helpers/shortcuts'
 import { configStore } from './helpers/electronStores'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
+import { installKeyboardNavTracking } from './helpers/inputModality'
 import { defaultThemes } from './components/UI/ThemeSelector'
 import { migrateThemeKey } from './components/UI/ThemeSelector/themeLabels'
 import Loading from './screens/Loading'
@@ -51,6 +52,10 @@ initOnlineMonitor()
 window.addEventListener('error', (ev: ErrorEvent) => {
   window.api.logError(ev.error)
 })
+
+// G-48-12a: body.keyboardNav keeps a Tab-focused card's ring while the pointer
+// rests over the library (GameCard/index.css stale-focus suppression).
+installKeyboardNavTracking()
 
 // Quick task 261008-gf1: `tauri.conf.json` now sets `app.security.csp`. A CSP
 // violation is otherwise visible ONLY in the webview devtools console -- it

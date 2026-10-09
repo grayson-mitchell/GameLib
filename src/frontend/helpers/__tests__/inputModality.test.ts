@@ -26,7 +26,7 @@ import {
   installKeyboardNavTracking
 } from '../inputModality'
 
-type Handler = (event: Record<string, unknown>) => void
+type Handler = (event: Event) => void
 interface Registered {
   type: string
   handler: Handler
@@ -60,7 +60,8 @@ function makeTarget(opts: { throwOnAddCall?: number } = {}) {
       if (i >= 0) active.splice(i, 1)
     },
     fire(type: string, event: Record<string, unknown> = {}) {
-      for (const r of [...active]) if (r.type === type) r.handler(event)
+      for (const r of [...active])
+        if (r.type === type) r.handler(event as unknown as Event)
     }
   }
 }

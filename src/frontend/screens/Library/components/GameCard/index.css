@@ -116,8 +116,19 @@
    TWO separate `.gameList` elements, so a pointer in the grid was outside
    the strip's `.gameList:hover` and the strip's last-controller-focused
    card kept its `:focus-within` ring, a second ring beside the hovered
-   tile. `.listing` is their nearest common ancestor. */
-body:not(.controllerLayout) .listing:hover .gameCard:focus-within:not(:hover) {
+   tile. `.listing` is their nearest common ancestor.
+   Keyboard mode (G-48-12a, WR-02): `body:not(.controllerLayout)` is ALSO the
+   state a keyboard user is in, so a Tab-focused card lost its ring whenever
+   the pointer merely rested over the library -- live 2026-10-09 (48-15 B11),
+   0 of 40 captures ringed with the pointer in the listing, 40 of 40 with it
+   in the sidebar. `body.keyboardNav` (helpers/inputModality.ts: set by a
+   trusted Tab, cleared by a real pointer move or press) turns this
+   suppression off, so keyboard focus owns the ring; the rule that follows
+   the controllerLayout one returns a parked cursor's card to rest so exactly
+   one tile still rings. */
+body:not(.controllerLayout):not(.keyboardNav)
+  .listing:hover
+  .gameCard:focus-within:not(:hover) {
   outline: none;
   box-shadow: 0px 0px 12px 4px #00000055;
   z-index: auto;
@@ -332,8 +343,12 @@ body.controllerLayout .gameCard:hover:not(:focus-within) {
    while the pointer is over the library (`.listing:hover`, the common
    ancestor of the strip and the grid, G-48-8b). Scoped to
    `body:not(.controllerLayout)` for the same reason as the ring suppression
-   above (260926-acw): a resting cursor must not erase gamepad focus. */
-body:not(.controllerLayout) .listing:hover .gameCard:focus-within:not(:hover) {
+   above (260926-acw): a resting cursor must not erase gamepad focus. Also
+   scoped off `body.keyboardNav` (G-48-12a): a Tab-focused card keeps its
+   scale as well as its ring while the pointer rests over the library. */
+body:not(.controllerLayout):not(.keyboardNav)
+  .listing:hover
+  .gameCard:focus-within:not(:hover) {
   transform: none;
 }
 
