@@ -4,7 +4,8 @@ title: 'Dismissed sign-in notice returns after relaunch although dismissedSignIn
 area: ui
 severity: major
 platform: any
-ready: live-gate
+ready: code
+resolves_commit: aea939456
 found_by: "plan 49-12, Phase 49 macOS live gate Run 1 (49-LIVE-GATE.md)"
 files:
   - src/frontend/state/GlobalState.tsx
@@ -33,3 +34,5 @@ set through `normalizeSignInDismissals`, never calling `setSetting`. Same route 
 takes (CR-01). Pinned by `GlobalStateSignInMount.test.ts` ("hydrates the dismissed set …"); the
 two-writer count is unchanged. **Needs one live check on the Mac:** dismiss a not-connected row,
 relaunch, row absent. Until then this stays `ready: live-gate`.
+
+**Live check 2026-10-09 (operator, keyring build):** signed out of Humble, dismissed the row, relaunched — Humble row absent. Fix verified.
