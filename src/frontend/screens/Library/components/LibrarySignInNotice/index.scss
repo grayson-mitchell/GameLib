@@ -31,11 +31,67 @@
     }
   }
 
+  // Emphasis is relational (multi-theme rule): the border and icon are
+  // judged against `--navbar-background`, which is lighter than the body in
+  // some themes (`dracula` most severely), never against an assumed dark band.
   &__row--expired > svg {
     color: var(--status-danger, orange);
   }
 
+  // Never-connected is information, not a failure (P4): neutral border, icon
+  // in the default text colour, and no `--status-danger` anywhere.
+  &__row--notConnected {
+    border-color: var(--neutral-04);
+
+    .LibrarySignInNotice__icon {
+      color: var(--text-default);
+    }
+  }
+
+  &__icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--text-lg);
+    height: var(--text-lg);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
   &__text {
     flex: 1;
+  }
+
+  &__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    margin-inline-start: auto;
+    flex-shrink: 0;
+  }
+
+  &__dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3xs);
+    border: none;
+    background: transparent;
+    color: var(--text-default);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text-secondary, var(--text-default));
+    }
+
+    &:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 2px;
+    }
   }
 }

@@ -6,7 +6,7 @@
  * (the real module opens a Tauri-backed store at import). The spies are
  * re-armed in `beforeEach` so no test inherits another's flag.
  */
-import { resolveSignInStates } from 'common/signInState'
+import { resolveSignInStates, type SignInStore } from 'common/signInState'
 import { resolveLibrarySignInRows } from '../../screens/Library/librarySignInRows'
 import { collectSignInInputs } from '../signInInputs'
 import {
@@ -175,6 +175,16 @@ describe('collectSignInInputs: loggedIn gates and outcomes', () => {
   })
 })
 
+// The other four stores are signed out in this fixture, which since 49-09
+// yields a (dismissible) not-connected row for each. They are dismissed here so
+// the assertions stay about the one store whose state changes.
+const OTHER_STORES_DISMISSED: SignInStore[] = [
+  'legendary',
+  'nile',
+  'humble',
+  'steam'
+]
+
 describe('composition (R6): row visibility is state-derived across unmount', () => {
   it('a sign-in that completed while the Library was unmounted leaves no row on return', () => {
     // Before: GOG expired -> one row.
@@ -182,7 +192,8 @@ describe('composition (R6): row visibility is state-derived across unmount', () 
     const before = resolveLibrarySignInRows({
       states: resolveSignInStates(
         collectSignInInputs({ ...signedOut, gogUsername: 'gog-user' }, {})
-      )
+      ),
+      dismissed: OTHER_STORES_DISMISSED
     })
     expect(before).toEqual([
       { store: 'gog', kind: 'expired', dismissible: false }
@@ -199,6 +210,8 @@ describe('composition (R6): row visibility is state-derived across unmount', () 
     )
 
     expect(states.gog).toBe('connected')
-    expect(resolveLibrarySignInRows({ states })).toEqual([])
+    expect(
+      resolveLibrarySignInRows({ states, dismissed: OTHER_STORES_DISMISSED })
+    ).toEqual([])
   })
 })
