@@ -340,7 +340,7 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
 
 - gap_id: G-48-11b
   truth: "The strip pages no further than its last card, and the forward control is disabled once `scrollLeft + clientWidth >= scrollWidth - 1` (SPEC R3, D-05, D-07, item 5 end-of-travel clause)"
-  status: failed
+  status: fixed-pending-live-gate
   reason: "User reported (item 11 FAIL 2, new, not in any gap): from a fresh launch with 14 cards, forward click 1 shows cards 5-9, click 2 shows cards 10-13 and one EMPTY slot, click 3 and 4 show a completely blank strip, and the forward chevron stays enabled (glyph full colour, same as click 1) throughout; reproduced on two launches. The strip can be paged past its last card into nothing, and the end-of-travel disable never arms. Item 5 measured a correct end of travel on 2026-10-07, before 48-10 and 48-12: 20 cards at 156px, scrollWidth 3576 = 20 x 180 - 24."
   severity: major
   test: 11
@@ -353,4 +353,5 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
     - "DONE 2026-10-09: WebKit reproduction (108 variants, 6 overrides, results-before-fix.json)"
     - "Pin the strip card wrapper width to `var(--focus-row-card-width, 156px)` under `.focusRowTrack .gameList` (the cf-pin-item-width rule), written red-gate first; plan 48-13 Task 2 is unblocked"
     - "A live re-run of item 11 FAIL 2 (48-15)"
+  resolution: "Fixed 2026-10-09 in c747af0a6: `width: var(--focus-row-card-width, 156px)` on `.focusRowTrack .gameList > *`. Red gate in focusRowStripSource.test.ts. Desk harness, ref c747af0a6: WKWebView and Chromium both 108 of 108 variants within 0.6px of E, no empty slot (evidence/48-13/results-after-fix.json). Not closed: the live item 11 FAIL 2 re-run is owed to 48-15."
   debug_session: ""

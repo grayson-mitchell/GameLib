@@ -67,13 +67,16 @@ coverage:
     human_judgment: false
   - id: D3
     description: "G-48-11b root cause (the live blank-travel signature)"
-    verification: []
-    human_judgment: true
-    rationale: "Not reproduced at the desk. The failing engine is WebKit (WKWebView), which could not be run on this host. A Mac rerun of run-webkit.sh or the 48-15 live gate must supply it."
+    verification:
+      - kind: other
+        ref: "bash evidence/48-13/run-webkit.sh c747af0a6 (WK_WINDOW=1): 108 variants, 0 bad, scrollWidth within 0.6px of E, last-card inset 14.53..15.19; Chromium same; negative control 108 bad in both engines (results-after-fix.json)"
+        status: pass
+    human_judgment: false
+    note: "Reproduced in WKWebView 2026-10-09 (cf-pin-item-width isolates it); the live item 11 re-run is still owed to 48-15."
 
 duration: 75min
 completed: 2026-10-09
-status: halted
+status: complete
 ---
 
 # Phase 48 Plan 13: G-48-11b desk reproduction Summary
@@ -88,7 +91,18 @@ status: halted
 - **Tasks:** 1 of 2 (Task 1 done; Task 2 not started by the plan's own stop rule)
 - **Files modified:** 10 (8 created, 2 edited, all under `.planning`; no `src/` file)
 
-## Stop-rule outcome (read this first)
+## Task 2 outcome (2026-10-09, supersedes the stop-rule outcome below)
+
+The stop rule below fired at the time because the Windows host could not run WebKit. On 2026-10-09 the WKWebView arm ran on macOS (`run-webkit.sh`, `WK_WINDOW=1`, HEAD 01534f7ad) and **reproduced G-48-11b**: all 108 variants had a wrong extent (placeholder cards collapse the list to scrollWidth 2740 against E 2755.6; rendered and lazy cards inflate it, 3030 at n=14 content 958 and up to 12486 at n=20, so the third forward click is blank and forward stays enabled). Only `cf-pin-item-width` fixed every variant; `cf-no-max-content`, `cf-contain-items` and `cf-art-no-intrinsic` fixed none. Recorded in `results-before-fix.json` (`reproduced: true`, 12 runs) and commit `c83a94eb7`.
+
+Task 2 then ran as quick task 261009-o30:
+
+- **RED:** `focusRowStripSource.test.ts` gained a case asserting `width: var(--focus-row-card-width, Npx)` on `.focusRowTrack .gameList > *` with N equal to the flex-basis fallback. It failed (1 failed, 48 passed) before the fix.
+- **GREEN:** `width: var(--focus-row-card-width, 156px)` added to that rule in `FocusRowStrip/index.css` (`c747af0a6`). FocusRowStrip jest plus `cssTokenSweep`: 141 passed.
+- **After-fix measurement** (`results-after-fix.json`, ref `c747af0a6`): WKWebView and Chromium, 108 variants each, 0 bad; scrollWidth within 0.6px of E, last-card inset 14.53..15.19, no empty slot, forward disabled at the end. The content-sized negative control still registers 108 bad in both engines.
+- **Not done:** the live item 11 FAIL 2 re-run in the app stays with 48-15. A desk harness passing is not the live gate.
+
+## Stop-rule outcome (historical, written before the WebKit run)
 
 `results-before-fix.json` has `reproduced: false`. The plan's stop rule applies: Task 2 was not started, no `src/` file was changed, and the gap stays `failed`. **A live diagnostic is needed**, and it has to be in WebKit.
 
