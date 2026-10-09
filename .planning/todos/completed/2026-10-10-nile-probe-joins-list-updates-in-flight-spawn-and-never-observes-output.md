@@ -5,6 +5,7 @@ area: auth
 severity: medium
 platform: any
 ready: code
+resolves_commit: d2e2c01ce
 found_by: "plan 49-12, Phase 49 macOS live gate Run 1 (49-LIVE-GATE.md)"
 files:
   - src/backend/launcher.ts
@@ -36,3 +37,12 @@ classifier returns `unknown`. **A classifier-order test would pass today and not
 defect.** Fix upstream: give the probe's spawn a non-colliding identity (or include `onOutput`/
 `abortId` in the dedup key, or let a joined caller also receive the output), and pin it with a
 test that races the two callers.
+
+## Fix (2026-10-09, inline quick fix)
+
+`callRunner` now treats a caller that passes `onOutput` as non-joinable: it neither returns an
+in-flight promise for the same argv nor registers its own promise as joinable (callers without an
+observer keep the original dedup). Pinned in `launcher_callRunner.test.ts` with three cases; two
+go red against the pre-fix `launcher.ts` (mutation-proven), the third is the dedup control.
+Backend project 5624/5628 green (one unrelated parallel-run flake in `dxvkInstallRemove`, green
+in isolation).

@@ -189,6 +189,85 @@ describe('callRunner close-handler exit-code classification (D-2 root cause)', (
   })
 })
 
+describe('in-flight dedup never swallows a caller that observes output (49-REVIEW WR-01, F-49-R1-5)', () => {
+  // callRunner awaits (log writers, path resolution) before it spawns, so the
+  // children only exist after the microtask queue drains.
+  const flush = () => new Promise<void>((r) => setImmediate(r))
+  beforeEach(() => {
+    ;(exec as unknown as jest.Mock).mockImplementation(
+      (_cmd: string, cb?: (...args: unknown[]) => void) => cb?.(null, '', '')
+    )
+    ;(execFile as unknown as jest.Mock).mockImplementation(
+      (_cmd: string, _args: unknown, cb?: (...args: unknown[]) => void) =>
+        cb?.(null, '', '')
+    )
+    ;(getRunnerLogWriter as jest.Mock).mockReturnValue(makeFakeLogWriter())
+    ;(createGameLogWriter as jest.Mock).mockResolvedValue(makeFakeLogWriter())
+  })
+
+  it('a second caller with identical argv and an onOutput observer gets its OWN spawn and sees the stream', async () => {
+    const children: FakeChildProcess[] = []
+    ;(spawn as unknown as jest.Mock).mockImplementation(() => {
+      const c = new FakeChildProcess()
+      children.push(c)
+      return c
+    })
+    const commandParts = ['list-updates', '--json']
+    const seen: string[] = []
+
+    const first = callRunner(commandParts, runner, { abortId: 'lib-caller' })
+    const probe = callRunner(commandParts, runner, {
+      abortId: 'probe-caller',
+      onOutput: (chunk) => seen.push(chunk)
+    })
+
+    await flush()
+    expect(children).toHaveLength(2)
+    children[1].stdout.emit('data', '[]\n')
+    children[0].emit('close', 0, null)
+    children[1].emit('close', 0, null)
+    await Promise.all([first, probe])
+    expect(seen).toEqual(['[]\n'])
+  })
+
+  it('two callers WITHOUT an observer still share one spawn (dedup unchanged)', async () => {
+    const children: FakeChildProcess[] = []
+    ;(spawn as unknown as jest.Mock).mockImplementation(() => {
+      const c = new FakeChildProcess()
+      children.push(c)
+      return c
+    })
+    const commandParts = ['list-updates', '--json', 'dedup-control']
+    const a = callRunner(commandParts, runner, { abortId: 'a' })
+    const b = callRunner(commandParts, runner, { abortId: 'b' })
+    await flush()
+    expect(children).toHaveLength(1)
+    children[0].emit('close', 0, null)
+    const [ra, rb] = await Promise.all([a, b])
+    expect(ra).toBe(rb)
+  })
+
+  it('an observing caller does not register as joinable: a later plain caller spawns its own child', async () => {
+    const children: FakeChildProcess[] = []
+    ;(spawn as unknown as jest.Mock).mockImplementation(() => {
+      const c = new FakeChildProcess()
+      children.push(c)
+      return c
+    })
+    const commandParts = ['list-updates', '--json', 'observer-first']
+    const probe = callRunner(commandParts, runner, {
+      abortId: 'probe-first',
+      onOutput: () => undefined
+    })
+    const plain = callRunner(commandParts, runner, { abortId: 'plain-second' })
+    await flush()
+    expect(children).toHaveLength(2)
+    children[0].emit('close', 0, null)
+    children[1].emit('close', 0, null)
+    await Promise.all([probe, plain])
+  })
+})
+
 describe('credential redaction through the production callRunner path (34.5-61, F-34.5-G6-22)', () => {
   beforeEach(() => {
     fakeChild = new FakeChildProcess()

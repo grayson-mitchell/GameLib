@@ -1725,9 +1725,17 @@ async function callRunner(
   // check if the same command is currently running
   // if so, return the same promise instead of running it again
   const key = [runner.name, commandParts].join(' ')
+  // 49-REVIEW WR-01 (F-49-R1-5): a caller that observes the stream can never be
+  // served by joining someone else's in-flight spawn, because `onOutput` is
+  // only ever invoked from the child this call creates (below). The sign-in
+  // probe's `nile list-updates --json` raced `listUpdateableGames()`'s identical
+  // argv at boot, joined it, saw no output and classified `unknown`. Such a
+  // caller neither joins nor registers as joinable; callers without an
+  // observer keep the original dedup.
+  const joinable = !options?.onOutput
   const currentPromise = commandsRunning[key]
 
-  if (key in commandsRunning) {
+  if (joinable && key in commandsRunning) {
     return currentPromise
   }
 
@@ -1868,13 +1876,17 @@ async function callRunner(
       }
     })
     .finally(() => {
-      // remove from list when done
-      delete commandsRunning[key]
+      // remove from list when done (only the registered, joinable spawn)
+      if (joinable && commandsRunning[key] === promise) {
+        delete commandsRunning[key]
+      }
       deleteAbortController(abortId)
     })
 
   // keep track of which commands are running
-  commandsRunning[key] = promise
+  if (joinable) {
+    commandsRunning[key] = promise
+  }
 
   return promise
 }
