@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 16/18 plans executed
+**Plans:** 17/18 plans executed
 
 Plans:
 **Wave 1**
@@ -5708,7 +5708,7 @@ Plans:
 - [x] 48-16-PLAN.md — TRACER: reproduce G-48-12a (no ring on a Tab-focused card while the pointer rests over the library) in Chromium over CDP at the base HEAD and isolate the `.listing:hover` stale-focus suppression with a counterfactual; then red gate and fix: a trusted-Tab keyboard-mode body class that the suppression is scoped off, plus a keyboard parked-cursor rule so exactly one tile rings; desk matrix S0-S7; WR-02 dispositioned `fixed`. Stops before any fix if the desk cannot reproduce it (R3)
 
 **Gap closure round 4, Wave 2** *(blocked on 48-16: shared Meta jest baseline after 48-16 registers a new module with the i18n gate, and `48-UAT.md`)*
-- [ ] 48-17-PLAN.md — TRACER: diagnose G-48-11c (strip card +2 CSS px when the grid empties) in WKWebView against written thresholds for the main-scroller scrollbar toggle; then red gate and fix: the strip holds the grid's scrollbar allowance while no grid is shown, strip-only, grid untouched per the SPEC R3 amendment; WebKit states A1-A9. Stops before any fix if the toggle is not confirmed (R3, R4)
+- [x] 48-17-PLAN.md — TRACER: diagnose G-48-11c (strip card +2 CSS px when the grid empties) in WKWebView against written thresholds for the main-scroller scrollbar toggle; then red gate and fix: the strip holds the grid's scrollbar allowance while no grid is shown, strip-only, grid untouched per the SPEC R3 amendment; WebKit states A1-A9. Stops before any fix if the toggle is not confirmed (R3, R4)
 
 **Gap closure round 4, Wave 3** *(blocked on 48-16 and 48-17; `autonomous: false`, live gate on the operator's Mac)*
 - [ ] 48-18-PLAN.md — live gate: item 11's empty-grid clause and item 12's keyboard clause on one build carrying both fixes, each against the preserved pre-fix bundle; the one-ring invariant across input modes, hover, parity, end-of-travel and loop-error regressions; controller clauses (G-48-8a) run only with a controller, else carried as owed; `48-UAT.md` reconciled (R3, R4)

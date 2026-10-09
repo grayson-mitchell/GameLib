@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 48
 current_phase_name: Focus row — move the library top section into the panel and widen it
 status: executing
-stopped_at: Completed 48-16-PLAN.md
-last_updated: "2026-10-09T07:15:15.692Z"
+stopped_at: Completed 48-17-PLAN.md
+last_updated: "2026-10-09T07:29:56.610Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 48 execution started
-state_head: cde6f30e692e5e15744fdec6a38e664870e9e538
+state_head: 6e6ace05a605e6654b7f47be552e0f3f3feb70be
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 515
+  completed_plans: 516
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 ## Current Position
 
 Phase: 48 (Focus row — move the library top section into the panel and widen it) — EXECUTING
-Plan: 2 of 18
+Plan: 3 of 18
 Status: Ready to execute
 Last activity: 2026-10-09 — Phase 48 execution started
 
@@ -520,6 +520,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 48 P14 | 70min | 2 tasks | 10 files |
 | Phase 48 P15 | 4h | 3 tasks | 1 files |
 | Phase 48 P16 | 75min | 3 tasks | 16 files |
+| Phase 48 P17 | ~45min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -1166,6 +1167,7 @@ Recent decisions affecting current work:
 - [Phase 48]: Plan 48-15 verify asserted 12 parser items but parseUatItemsWithStats counts outstanding items plus gaps (14 at base); consistency was checked against status words and gap statuses instead
 - [Phase 48]: 48-16: keyboard-mode body class (body.keyboardNav) scopes the stale-focus suppression instead of a :focus-visible scope; F1 measured to leave two rings
 - [Phase 48]: 48-16: same-coordinate pointer moves do not end keyboard mode (engine synthetic move after scroll); untrusted Tab keydowns never enter it
+- [Phase 48]: 48-17: strip holds the grid's scrollbar allowance (strip-only) while no grid is shown; G-48-11c = main.content 10px bar toggling, measured in WebKit (+2 = 10/5)
 
 ### Pending Todos
 
@@ -1776,8 +1778,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T07:15:13.497Z
-Stopped at: Completed 48-16-PLAN.md
+Last session: 2026-10-09T07:29:54.416Z
+Stopped at: Completed 48-17-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
