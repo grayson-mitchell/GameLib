@@ -69,6 +69,10 @@ No source file was changed. `48-UAT.md` is the only tracked file this plan wrote
 - Item 12: `issue`, on L3's distinct-position bar only. The keyboard clause, one-ring invariant and hover rings all passed. Owed: the mouse/controller handoff (G-48-8a) and the keyboard-to-controller ring check.
 - `48-UAT.md` summary: 12 total, 10 passed, 1 issue, 1 blocked. Frontmatter `status: partial`.
 
+## Follow-up: L3 extended to 40 presses (2026-10-09)
+
+The operator ruled that L3 run 40 Tab presses with the bar otherwise unchanged. Re-measured live on the same fixed build (sha256 63f6a983..., fresh fixture, P1, frontmost pid asserted before every input): exactly one ringed tile in 41 of 41 captures, 16 distinct ringed positions over the 40 Tab captures (bar at least 10; all 14 cards reached), card A's tile ringed in 3 of 40 (bar at most 3). G-48-12b is resolved. Item 12 is now `blocked` rather than `issue`: no measured clause fails, but the mouse/controller handoff (G-48-8a) and the keyboard to controller check stay unmeasured without a controller. `48-UAT.md` summary is now 12 total, 10 passed, 0 issues, 2 blocked; gaps still failed: G-48-8a only. The superseded statements above (item 12 `issue`, G-48-12b filed and still failed, 1 issue / 1 blocked) describe the state at the 20-press run. Real-profile sha256 check `OK` for both files after the run; no GameLib instance running.
+
 ## Observation (not a bar miss)
 
 At 1280 the strip's cards 1-4 are 1-2 capture px wider than the grid's, and card 4's left edge sits 3 capture px right of the grid's (pitch 403 against 402.5). The first-card bar (width within 2, left edges within 2) is met; 48-15's launch 1 read the same direction (355-356 against 354-355). It is recorded in item 11's result, not filed.
