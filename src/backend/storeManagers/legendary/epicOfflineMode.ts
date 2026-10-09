@@ -1,6 +1,6 @@
 import type { Runner } from 'common/types'
 
-export interface EpicOfflineModeInput {
+interface EpicOfflineModeInput {
   offlineMode: boolean
   runner: Runner
   canRunOffline: boolean
