@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 49
 current_phase_name: Cross-store signed-out / offline mode
 status: executing
-stopped_at: Completed 49-06-PLAN.md
-last_updated: "2026-10-09T11:50:14.287Z"
+stopped_at: Completed 49-07-PLAN.md
+last_updated: "2026-10-09T12:04:10.437Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 49 execution started
-state_head: ec5bc645992700495f746dd83a93ae3776ed7c63
+state_head: d699e0e1fd0baa0b02d9f98292ba4b21beef5e7e
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
-  completed_plans: 521
+  completed_plans: 522
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 49 (Cross-store signed-out / offline mode) — EXECUTING
-Plan: 6 of 12
+Plan: 7 of 12
 Status: Ready to execute
 Last activity: 2026-10-09 — Phase 49 execution started
 
@@ -527,6 +527,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P04 | 14 min | 3 tasks | 10 files |
 | Phase 49 P05 | 13 min | 2 tasks | 12 files |
 | Phase 49 P06 | 12 min | 2 tasks | 15 files |
+| Phase 49 P07 | 9 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -1184,6 +1185,8 @@ Recent decisions affecting current work:
 - [Phase 49]: Probe verdicts are decided in one place per store: GOG inside GOGUser.getCredentialsWithVerdict (single gogdl auth spawn, shared in-flight promise with Block E); Epic and Amazon in runnerProbes.ts; applySignInVerdict stays the only latch. — Block E and the pass cannot join each other's spawn and lose its captured output; only a bare null stdout with no connection-error line, online, with the auth config present counts as expired (D-17).
 - [Phase 49]: 49-06: Steam keyring deferral (quick 260817-d61) is reversed on purpose for a signed-in account - the sticky deliberate 'boot-probe' trigger unlocks the gate after the boot pass, so later automatic SteamLibraryManager.refresh() calls may CM-connect; the probe itself reads the keyring only (D-14, D-21) — A boot-time notice cannot tell the truth without reading the keyring; a signed-out account never notes the trigger
 - [Phase 49]: 49-06: Humble absent session slot and any unreadable read are unknown, never expired (A9, P1) — An empty slot behind a connected flag is not proof of expiry; favours never reporting a false expiry
+- [Phase 49]: Dismissed sign-in set is one AppSettings key (dismissedSignInNotices) defaulting to [] with no migration; dismiss and re-arm are its only writers and persist only on change — Absent key and factory default are the same [] on both sides of the two-store hazard; re-arm is idempotent so it runs from push, pull, Humble auth push and end of mount
+- [Phase 49]: Renderer componentDidMount runs humbleSync only; the Humble expiry health check lives solely in the sidecar boot pass — D-16 and T-49-21: a second latch path would double-write the expiry flag; a source gate with a RED specimen enforces it
 
 ### Pending Todos
 
@@ -1793,8 +1796,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T11:49:53.394Z
-Stopped at: Completed 49-06-PLAN.md
+Last session: 2026-10-09T12:03:49.101Z
+Stopped at: Completed 49-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

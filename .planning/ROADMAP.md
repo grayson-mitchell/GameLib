@@ -5753,7 +5753,7 @@ question below and permanently closes the parked Humble keyring todo's unpark co
 **Depends on:** Phase 35 (the Tauri shell is the only runtime; boot-time auth state is read
 through the Phase 28 keyring path). **Not** Phase 48, which `phase.add` defaulted to by positional
 guess — the focus row and this banner share no files.
-**Plans:** 6/12 plans executed
+**Plans:** 7/12 plans executed
 
 Plans:
 **Wave 1**
@@ -5767,7 +5767,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 49-05-PLAN.md — Epic, GOG (D-17) and Amazon expiry probes + sign-in/logout clear sites
 - [x] 49-06-PLAN.md — Steam `'boot-probe'` keyring-only probe (reverses 260817-d61) + Humble labelled session probe (no csrf, no webview)
-- [ ] 49-07-PLAN.md — Renderer state: outcome map, `dismissedSignInNotices` AppSettings key, re-arm, Humble mount health call removed
+- [x] 49-07-PLAN.md — Renderer state: outcome map, `dismissedSignInNotices` AppSettings key, re-arm, Humble mount health call removed
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 49-08-PLAN.md — Bounded boot probe pass after READY (45 s, parallel, edge-triggered, unref'd) + folded Humble todo closure
