@@ -1,0 +1,41 @@
+// The inline Library sign-in notice (Phase 49 D-09) -- always in normal
+// document flow. This stylesheet declares no layout-escape property at all:
+// it is the other half of the structural guarantee SteamSyncNotice gives, so
+// the notice can never cover the merged library grid.
+//
+// Unscoped-selector lesson (34.10's `.MuiTabs-root` incident): every selector
+// below nests under `.LibrarySignInNotice`.
+.LibrarySignInNotice {
+  display: flex;
+  flex-direction: column;
+  margin-block-end: var(--space-2xs);
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md-fixed);
+    border-radius: var(--space-3xs);
+    background: var(--navbar-background);
+    border: 1px solid var(--neutral-04);
+    color: var(--text-default);
+    font-size: var(--text-sm);
+
+    & > svg {
+      flex-shrink: 0;
+      font-size: var(--text-lg);
+    }
+
+    .button {
+      flex-shrink: 0;
+    }
+  }
+
+  &__row--expired > svg {
+    color: var(--status-danger, orange);
+  }
+
+  &__text {
+    flex: 1;
+  }
+}

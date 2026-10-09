@@ -49,6 +49,7 @@ import { openInstallGameModal } from 'frontend/state/InstallGameModal'
 import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalContext'
 import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
 import SteamSyncNotice from './components/SteamSyncNotice'
+import LibrarySignInNotice from './components/LibrarySignInNotice'
 import { resolveSteamSyncIndicator } from './librarySyncIndicator'
 import { resolveSteamVisibility } from './steamLibraryVisibility'
 // Namespace import: filterEngine's helpers are referenced as
@@ -1167,6 +1168,8 @@ export default React.memo(function Library(): JSX.Element {
         {showAlphabetFilter && <AlphabetFilter />}
 
         {refreshing && !refreshingInTheBackground && <UpdateComponent />}
+
+        <LibrarySignInNotice />
 
         {steamSyncMode !== 'hidden' && <SteamSyncNotice mode={steamSyncMode} />}
 

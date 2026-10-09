@@ -28,7 +28,11 @@ export const RunnerToStore: Record<string, string> = {
   gog: 'GOG',
   nile: 'Amazon Games',
   zoom: 'ZOOM Platform',
-  steam: 'Steam'
+  steam: 'Steam',
+  // Phase 49: the Library sign-in notice keys this map by `SignInStore`, which
+  // includes `humble`. Every existing consumer looks values up by key (none
+  // iterates the map), so the facet panel is unchanged.
+  humble: 'Humble Bundle'
 }
 
 // These four keys are MINTED by plan 07, which is the plan that runs the

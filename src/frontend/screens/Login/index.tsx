@@ -3,7 +3,7 @@ import classNames from 'classnames'
 import './index.scss'
 import Runner from './components/Runner'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import EpicLogo from 'frontend/assets/epic-logo.svg?react'
 import GOGLogo from 'frontend/assets/gog-logo.svg?react'
 import GameLibIcon from 'frontend/assets/gamelib-icon.png'
@@ -27,6 +27,7 @@ import { useAwaited } from '../../hooks/useAwaited'
 import { hasHelp } from 'frontend/hooks/hasHelp'
 import { steamConfigStore } from 'frontend/helpers/electronStores'
 import { isSteamConnected } from './steamTileState'
+import { LOGIN_OPEN_PARAM, resolveLoginOpenRequest } from './loginOpenParam'
 import { bindOverlayDismiss } from './overlayDismiss'
 
 export const epicLoginPath = '/loginweb/legendary'
@@ -78,6 +79,10 @@ export default React.memo(function NewLogin() {
   )
 
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // Phase 49 D-13: set once this mount has acted on an `?open=` request, so a
+  // re-render (or the URL rewrite below) can never open the overlay twice.
+  const openParamConsumedRef = useRef(false)
   const [loading, setLoading] = useState(true)
   const [showSidLogin, setShowSidLogin] = useState(false)
   // Login overlay lifecycle (Task 2, 36-01; generalised beyond Steam-only by
@@ -214,6 +219,34 @@ export default React.memo(function NewLogin() {
     openOverlay,
     t
   ])
+
+  // Phase 49 D-13: the Library sign-in notice lands here with `?open=<store>`
+  // and expects that store's overlay to be up. Keyed on `searchParams` and NOT
+  // on `loading`: `Login` renders `<UpdateComponent />` until `setLoading(false)`
+  // and the overlay must open regardless. The param is validated by
+  // `resolveLoginOpenRequest` (T-49-01) and removed with `{ replace: true }`
+  // so back navigation and a repeat visit cannot reopen it.
+  useEffect(() => {
+    const param = searchParams.get(LOGIN_OPEN_PARAM)
+    if (param === null) {
+      return
+    }
+    const store = resolveLoginOpenRequest({
+      param,
+      alreadyConsumed: openParamConsumedRef.current,
+      overlayOpen: openOverlay !== null
+    })
+    if (store !== null) {
+      openParamConsumedRef.current = true
+      openLoginOverlay(store)
+    }
+    const next = new URLSearchParams(searchParams)
+    next.delete(LOGIN_OPEN_PARAM)
+    setSearchParams(next, { replace: true })
+    // `openLoginOverlay` and `openOverlay` are deliberately not dependencies:
+    // this must react to the URL changing, not to the overlay opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Cleanup: a pending deferred-unmount timer must never fire against an
   // unmounted component.
