@@ -54,6 +54,91 @@ gate_dir: /private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/c52ae8
 - **Quit path.** Once focus had been in the devtools console, Cmd-Q via `osascript keystroke` did not quit the shell (pid 15058 survived 60 s and a retry). The app-menu item `Quit gamelib-shell` (System Events `click menu item`) quit it in 2 s, and every session from then on quit that way. Rig behaviour, not a GameLib defect.
 - **Item 6 widths.** The narrowest width is 87 px, the floor `AXSize` reached when asked for 1 px or 50 px (CGWindowList bounds `87x800`), set through Accessibility rather than a mouse drag; no `minWidth` is declared. At 87 px the strip track is 0 px wide, so a visual "no overflow" reading there would be vacuous, and 520 px (track 222 px) is recorded as a supplementary width.
 
+**48-15 gate (round 3, 2026-10-09).** Live gate for G-48-11a and G-48-11b on the 48-13 and 48-14 fixes, plus the owed live confirmations for items 4, 9 and 12.
+gate_dir_48_15: /private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/98c93c10-353c-4a0a-8942-512b490448f5/scratchpad/gate-48-15
+
+`gate_dir_48_15` is a `mkdir -m 700` directory in this session's scratchpad. It holds the fixture builder (`make-fixture.cjs`), the helpers (`winlist`, `ctl`, `rd`, `cards.cjs`, `walk.sh`, `sweep.sh`, `run-b3.sh`), the per-launch fake HOMEs, captures, log extracts, the pre-fix app copy, the real-profile backup and `real-profile.sha256`. It is never committed.
+
+**48-15 build.** `pnpm tauri:dev:packaged` at HEAD `460df71e4ed531454e13de0e66faa0553250729c` on branch `quick-261002-b63`, which carries `fix(48-13)` c747af0a6 and `feat(48-14)` 1cc619836 (`git merge-base --is-ancestor` true for both). The build script's vite build and `tauri build --debug` completed and produced `GameLib.app`; the script then exited 1 at the updater-artifact signing step (`TAURI_SIGNING_PRIVATE_KEY` unset), after the `.app` and the dmg were written. Binary `src-tauri/target/debug/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell`, mtime 2026-10-09 18:11:29 local, sha256 516fab2086cb0a13ac9476c949fd7d4a51d2ee38612b7effa928e34c621b701c. The built CSS (`build/renderer/assets/index-ZMVPz7dJ.css`) carries `.focusRowTrack .gameList>*{flex:0 0 var(--focus-row-card-width, 156px);width:var(--focus-row-card-width, 156px)}`. Declared deviation from the Task 1 precondition wording: `git log --oneline -40 | grep -c 'feat(48-1[34])'` prints 1, because the 48-13 fix commit is `fix(48-13)`, not `feat(48-13)`; both fixes are in HEAD, which is the precondition's intent.
+
+**48-15 fixture and build (copied from 48-15-PLAN.md, `## Fixture and build`).**
+
+- **Build:** `pnpm tauri:dev:packaged` (vite build, sidecar, `tauri build --debug`) at a HEAD carrying
+  `feat(48-13)` and `feat(48-14)`. The binary is `src-tauri/target/debug/gamelib-shell`. Record
+  `git rev-parse HEAD` and the binary's mtime in `## Protocol`.
+- **Fixture:** a fresh fake HOME per launch, built by a script in `$GATE_DIR` (fake-HOME convention:
+  fresh profile per invocation, never reused). It holds
+  `Library/Application Support/gamelib/sideload_apps/library.json` with 14 sideload games titled
+  `Fixture 00` to `Fixture 13`. Each game has `is_installed: true` and `platform: 'Mac'`.
+  - Art: `art_cover` and `art_square` are solid-grey PNG data URIs, grey level 10 + 18 x i for card
+    i, so one sampled pixel names the card. The art's natural size is the one 48-13's
+    `results-before-fix.json` reproduced the defect with; 600x900 if 48-13 found it size-independent.
+  - Settings: `config.json` `defaultSettings.focusRow` and `store/config.json` `settings.focusRow`
+    are both `{"kind":"view","value":"all"}`, and top-level `theme` is `midnightMirage`.
+  - Control profile: identical, with `focusRow: null` in both places.
+  - Window: 1280x800, resized by Accessibility (`System Events` `set size of window 1`).
+- **WebKit storage is not isolated by a fake HOME** (memory, `fake-home-does-not-isolate-webkit-cookies`).
+  The gate picks no collection or category and leaves no in-app setting changed. Any setting it
+  changes (the list layout in B7) is set back in-app before quit.
+
+**48-15 bars adopted (copied verbatim from 48-15-PLAN.md, `## Bars adopted`).**
+
+Each bar operationalises an existing `expected:` text in 48-UAT.md. k is the number of whole cards
+visible at `scrollLeft` 0, measured, not assumed; item 11 measured 5 at 1280.
+
+- **B1, G-48-11b, item 11 paging and end of travel (item 5's clause), 1280.** Two fresh launches.
+  - Click 1 shows cards k to 2k - 1.
+  - The click that reaches the end shows cards 14 - k to 13. Card 13's right art edge sits 15 +/- 1px
+    inside the track's right edge, and there is no empty slot: no run of track background as wide as
+    a card between cards or after card 13's clearance.
+  - The forward chevron then renders disabled: its glyph pixel equals the disabled back chevron's
+    glyph pixel at `scrollLeft` 0, within 2 per sRGB channel.
+  - One more forward click leaves the track crop's hash unchanged.
+  - Back clicks return to cards 0 to k - 1 with back disabled.
+  - The expected forward click count is ceil((14 - k) / k): 2 at k = 5.
+- **B2, other widths.** At window 760 and 520, the same walk to the end: ceil((14 - k) / k) clicks,
+  ending on card 13 with 15 +/- 1px clearance, no blank, forward disabled.
+- **B3, G-48-11a, item 11 resize clause.** The sweep is width 1280 to 600 to 1280 in 40px steps, then
+  height 800 to 400 to 800 in 25px steps, one step per 0.15 s. Count `window-error` lines matching
+  `ResizeObserver loop` in each launch's own log.
+  - Pass: 0 in each of two strip launches, and 0 in one `focusRow` null control launch.
+  - Arming reference: item 11's live 27 and 25 on the pre-fix build, and 48-14's WebKit harness
+    count. Neither is re-run here.
+- **B4, flicker.** After each sweep returns to 1280x800, take 10 captures 100 ms apart. Pass: the
+  first strip card's left and right art edges have 0px spread across the 10, and the strip card
+  equals the grid card width within 1px.
+- **B5, parity (item 11).** At 1280, 760 and 520: the first strip card and the first grid card are
+  within 1px in width, and their left edges within 1px at `scrollLeft` 0.
+- **B6, first paint (item 11).** Run a capture loop from window creation. No Library frame shows strip
+  cards more than 1px off their settled width. Record the cadence; a gap under one frame interval
+  cannot be excluded.
+- **B7, empty grid then list layout (item 11).** Search a string no fixture title contains, so
+  `FilterZeroResult` shows: the strip card width is unchanged within 1px. Then switch to list
+  layout: the strip card width is unchanged within 1px, or record exactly what renders. Switch
+  back to grid before quit.
+- **B8, end-card rings (item 11).** At the end of travel, hover card 13 with the real pointer (0.5 s
+  dwell). At `scrollLeft` 0, hover card 0. Pass: accent-colour ring pixels at least 3px wide on all
+  four sides, with the ring's outer edge inside the track's edge.
+- **B9, items 4 and 9, G-48-4b and G-48-9.** For the forward chevron at `scrollLeft` 0 and the back
+  chevron after one page, move the real pointer onto the chevron centre through the adjacent edge
+  card, from above, from below and from inside the strip.
+  - Pass: with the card hovered, the chevron's glyph-coloured pixel count in its icon rect is within
+    2 of the unhovered count. Item 4 measured 122 unhovered against 0 hovered before 48-10.
+  - Pass: a click at the centre moves the strip by exactly k cards on the grey ladder.
+  - If the console works, also record `document.elementFromPoint` at the centre.
+- **B10, controller (item 11's clause and item 12's handoff clause).** Only with a physical
+  controller connected. Item 8 ran on Windows; any OS is acceptable. The bars are item 11's ring at
+  least 3px inside the track, and item 12's card rects identical across handoff, compared from
+  captures. Without a controller these clauses are not run and are recorded as owed.
+- **B11, item 12's mouse and keyboard clauses (G-48-8b, WR-02).**
+  - Hovering a strip card and then a grid card shows a ring at least 3px wide on each side, on
+    exactly one tile at a time.
+  - Hovering the grid header and the chip row rings nothing.
+  - With the pointer resting over the library column, a Tab-focused card shows ring pixels.
+  - 48-REVIEW.md WR-02 predicts this last clause fails. It is measured, not assumed.
+
+**48-15 rig notes (declared).** P1 is as written above, unchanged. The launched binary is the bundled `src-tauri/target/debug/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell` (the binary items 10 and 11 ran, mtime 18:11:29 after this build), not the sibling `src-tauri/target/debug/gamelib-shell` (mtime 18:12:05, same build run). The capture reader is a compiled Swift sRGB converter (`rd`) feeding a node analyser (`cards.cjs`), which stands in for the plan's single node card reader; card index comes from the grey ladder (10 + 18 x i, tolerance 1) read along one row of the strip's art. Capture px are 2 per CSS pt. The track's left edge sits 30 capture px (15 pt, the list padding) left of card 0 at `scrollLeft` 0, and the track's right edge is placed at window width x 2 - 22 px (2538 at 1280): the forward chevron glyph centre sits 29 px inside it exactly as the back glyph sits 29 px inside the left edge, and the grid's fifth card ends 30 px short of it. That edge is derived from geometry, not read from a DOM rect (the devtools console accepted no typed lines), so a clearance read from it carries about +/- 1 px. The window is addressed by name (`window "GameLib"`), not `window 1`, because the Web Inspector window of the debug build takes `window 1` until the main window is activated. Quit is the app menu item; every launch ended with an empty instance probe. The real-profile guard is the `real-profile/` copy and `real-profile.sha256` in the gate dir (`cmp` exit 0 twice; sha256 3140261a... and 54a3460e..., the same two hashes as the 2026-10-07 P2 backup).
+
 ## Tests
 
 ### 1. Settings -> General after the 48-06 deletions
@@ -185,6 +270,22 @@ After restore `grep -c "Gate-48" store/config.json` printed 0 and top-level `the
 `/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
 
 **Desk census after 48-11 (2026-10-08, token arithmetic, no pixels).** Printed by the `themeTokens.test.ts` runs at commits `3207d7a0f` (chevron) and `782285b5e` (divider), resolving the shipped declarations through the same var() resolver the NavTab and `--border-color` censuses use. Chevron glyph (`--accent`) against its opaque disc (`--body-background`), WCAG 1.4.11 bar 3:1: midnightMirage 16.88, cyberSpaceOasis 8.51, gruvbox_dark 3.91, high-contrast 9.92, dracula 5.91, nord-light 8.88, nord-dark 11.41, marine 7.42, zombie 7.52, sweet 10.82 (minimum 3.91). Divider label against the tier-2 `--navbar-background`, bar 4.5:1: midnightMirage 13.23, cyberSpaceOasis 7.56, gruvbox_dark 6.12, high-contrast 8.74, dracula 7.48, nord-light 7.38, nord-dark 12.49, marine 5.43, zombie 5.98, sweet 6.64 (minimum 5.43). Before the divider fix the same resolver read dracula 4.27 and nord-light 1.52 (live item 7: 4.25 and 1.52). These are the values the item 10 re-measure is compared against: every chevron minimum should land at or above 3:1 and within 0.05 of its theme's figure with the scrim pixel set uniform within 2 per sRGB channel, and every divider within about 0.02 of its figure. The census cannot see the disc's edge against the art or any rendered pixel; the live re-measure owns those.
+
+**48-15 B1 control (pre-fix).** Provenance holds: the existing bundled binary `src-tauri/target/debug/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell` had mtime 2026-10-08 12:00:53 local (epoch 1791414053), earlier than the committer time of `fix(48-13)` c747af0a6 (1791519665), so it cannot carry either fix; it is the build items 10 and 11 ran on and it reaches the Library standalone. Copied whole to `prefix.app` in the gate dir before the rebuild (sha256 af98b036d4e32b1796250788d793a5de7b5826965cc10510b6ed232c4aaa9d36). Launch 2026-10-09 18:08 local on a fresh 14-card fixture (all/view, midnightMirage): shell pid 83703, sidecar 83728, window id 64824 (1280x800 at 116,65), frontmost pid 83703, window owner pid 83703 (P1). Captures by window id, sRGB-read, strip row y = 420 px. s0: cards 0-4 whole (k = 5), art 354-355 px wide (177.0-177.5 pt), the same widths as the grid row's 0-4 at y = 1200; forward glyph (140,255,255), count 122 of 640. Click 1: cards 5-9. Click 2: cards 10-13 whole and then a 403 px stretch (2105-2508) with no card, one empty slot. Clicks 3 and 4: no card at all in the 1964 px track (completely blank). The forward glyph stayed (140,255,255), count 122, after every one of the four clicks: it never disabled. FAIL 2 reproduces in this rig on the pre-fix build: blank travel past card 13 and no end-of-travel disable. Rig slip, declared: my first back-click coordinate was wrong (window x + 137 instead of + 274), so three clicks landed on the sidebar row `Recently played` and left it selected (empty grid, chip `Recently played`); a click on `All games` cleared it in-app and the capture shows the grid back to 14 games before quit. That filter is a WebKit-side in-app state, set back in-app as T-48-48 requires; no config file was touched. Quit through the app menu, probe empty.
+
+**48-15 B1 launch 1.** Fixed build (HEAD 460df71e4, binary mtime 18:11:29), fresh fixture `fh.9uYxUX`, 1280x800: shell pid 86165, window id 64869, frontmost pid 86165, window owner pid 86165. Activation click on the `All games` heading, then 0.6 s hover dwell. s0: cards 0-4 whole, k = 5; strip art 355-356 px wide (177.5-178 pt) against grid art 354-355 px (177.0-177.5 pt), first-card left edge 544 px in both; forward glyph (140,255,255) enabled; back glyph (55,101,101) = the disabled reference. Click 1 (1.6 s settle): cards 5-9, 5 cards. Click 2: cards 9-13, card 13 art right edge x = 2508 px so clearance 14.5 pt to the track edge at 2538 (+/- 1 px derivation, see rig notes), longest non-card run in the track under 300 px (no empty slot), forward glyph (55,101,101): equal to the disabled back reference (55,101,101), difference 0/0/0 per sRGB channel. Click 3 (the extra click): track crop hash f7e059eac9, identical to click 2's f7e059eac9. Back click 1: cards 4-8. Back click 2: cards 0-4, crop hash 93b4b0c1c0 identical to s0's, back glyph (55,101,101) disabled. Back click 3: unchanged hash. Forward clicks to the end: 2 = ceil((14 - 5) / 5). Method: `walk.sh` (CGEvent click on the chevron centre, 1.6 s settle, `screencapture -x -o -l<id>`), `cards.cjs` (grey-ladder runs along the strip's art row, crop hash = sha1 over every 2nd px of y 300-880, x track), one capture per click.
+
+**48-15 B1 launch 2.** Fixed build, fresh fixture `fh.b9CAO9`, 1280x800: shell pid 86678, window id 64887, frontmost 86678, window owner 86678. s0: cards 0-4 whole, k = 5, strip art 354-355 px, equal pixel for pixel to the grid row's art (strip row y = 420 and grid row y = 1200 both read 0:544-897, 1:946-1300, 2:1349-1702, 3:1751-2105, 4:2154-2507), so 177.0-177.5 pt, card 4 right edge 2507 so 15.0 pt inside the track edge; forward glyph (140,255,255); back (55,101,101). Click 1: cards 5-9. Click 2: cards 9-13, card 13 art right edge x = 2507 px, clearance 15.0 pt, no empty slot, forward glyph (55,101,101), equal to the disabled back reference (diff 0/0/0). Click 3: crop hash fb80ecc168 = click 2's fb80ecc168. Back click 1: cards 4-8. Back click 2: cards 0-4, hash 61f71877a4 = s0's, back disabled. Back click 3: unchanged. Launch-to-launch variation, recorded: launch 1's strip cards were 1 px wider than launch 2's (355-356 against 354-355 px), so card 13's clearance read 14.5 pt in launch 1 and 15.0 pt in launch 2; both are inside 15 +/- 1.
+
+**48-15 B3 strip 1.** Fixed build, fresh fixture `fh.cPtdX8` (all/view), shell pid 87232, window id 64925, frontmost 87232, owner 87232, 1280x800, Library visible with the strip. Sweep `sweep.sh` (System Events, window addressed as "GameLib"): width 1280 to 600 to 1280 in 40 px steps, then height 800 to 400 to 800 in 25 px steps, `delay 0.15` per step. A 0.1 s window-bounds sampler (CGWindowList) logged 740 samples, width 600-1280, height 400-800, 34 distinct sizes, so the sweep really resized the main window. Per-launch log `Library/Logs/GameLib/gamelib.log` (and `gamelib-shell.log`) under the fixture HOME, `tr '\r' '\n'` first: `window-error` lines 0, matching `ResizeObserver loop` 0 (the BLANKPROBE hook is live: 14 BLANKPROBE lines in a sibling launch's log). Discarded first attempt, declared: an earlier run of this launch addressed `window 1`, which was the Web Inspector window at that moment (size read back 1000x400), not the main window; its count of 0 proves nothing and is not used. The sampler is what showed the fix.
+
+**48-15 B3 strip 2.** Fixed build, fresh fixture `fh.F0TmS3` (all/view), shell pid 92693, window id 64942, frontmost 92693, owner 92693. Same sweep; sampler 733 samples, width 600-1280, height 400-800, 34 distinct sizes. Log: `window-error` 0, `ResizeObserver loop` 0.
+
+**48-15 B3 control.** Fixed build, fresh control fixture `fh.fSjCO2` with `focusRow: null` in both files (no strip, 14 grid cards), shell pid 98009, window id 64959, frontmost 98009, owner 98009. Same sweep; sampler 733 samples, 34 distinct sizes. Log: `window-error` 0, `ResizeObserver loop` 0. Arming, measured in this rig rather than only cited: the same sweep on the pre-fix `prefix.app` binary, fresh strip fixture `fh.vlU5cn`, shell pid 4349, window id 64977, frontmost 4349, owner 4349, sampler 728 samples, 34 distinct sizes: `window-error` 34, `ResizeObserver loop` 34 (item 11 live had 27 and 25 on the same build, WebKit harness counts in 48-14's SUMMARY). So the instrument sees the error on the pre-fix build and reads 0 on the fixed build with the strip showing, 0 in the null control; 0 / 0 against 34 is not a dead probe.
+
+**48-15 real-profile check.** After Task 1's last quit and an empty instance probe (`pgrep -x gamelib-shell`, `pgrep -x GameLib`, anchored sidecar match: all empty), `shasum -a 256 -c "$GATE_DIR/real-profile.sha256"`:
+`/Users/graysonmitchell/Library/Application Support/GameLib/config.json: OK`
+`/Users/graysonmitchell/Library/Application Support/GameLib/store/config.json: OK`
 
 ## Summary
 
