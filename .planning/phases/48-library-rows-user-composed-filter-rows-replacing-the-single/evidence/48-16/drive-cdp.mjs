@@ -330,6 +330,148 @@ const tabIntoGrid = async (id, pointer) => {
 SCENARIOS.S1 = () => tabIntoGrid('S1', 'gap')
 SCENARIOS.S1c = () => tabIntoGrid('S1c', 'sidebar')
 
+// Index (within all cards) of the main-grid card n, for reporting.
+const MAIN_OFFSET = 5
+
+// S2: the pointer rests on grid card 2 (hovered) while Tab focuses another
+// grid card. The focused card must be the only ring.
+SCENARIOS.S2 = async () => {
+  await load(gridPage)
+  const hoverRect = await mainCard(2)
+  await moveTo(hoverRect.cx, hoverRect.cy)
+  const { presses, state, capped } = await tabUntil(
+    (st) => st.main && st.fi !== MAIN_OFFSET + 2
+  )
+  const snap = await measure()
+  const hovered = snap.cards.filter((c) => c.hovered).map((c) => c.i)
+  return finish(
+    'S2',
+    snap,
+    !capped &&
+      snap.focusedRinged &&
+      snap.ringedCount === 1 &&
+      hovered.includes(MAIN_OFFSET + 2) &&
+      !snap.cards[MAIN_OFFSET + 2].ringed,
+    {
+      note: `pointer on main card 2 (hovered cards: ${hovered.join(',')}); presses=${presses} focusedCard=${state.fi}`
+    }
+  )
+}
+
+// A real click on main card 0's first button, which takes DOM focus.
+const clickMainCardButton = async (n) => {
+  const r = await evalJs(`(() => {
+    const b = document.querySelectorAll('#mainList .gameCard')[${n}].querySelector('button');
+    const r = b.getBoundingClientRect();
+    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width, h: r.height };
+  })()`)
+  if (!r || r.w === 0 || r.h === 0) throw new Error('card button has no box')
+  await click(r.cx, r.cy)
+}
+
+// S3, stale click: a clicked card, then a real move onto another card.
+SCENARIOS.S3 = async () => {
+  await load(gridPage)
+  await clickMainCardButton(0)
+  const afterClick = await evalJs(FOCUS_STATE)
+  const c4 = await mainCard(4)
+  await moveTo(c4.cx, c4.cy)
+  const snap = await measure()
+  const ringed = snap.cards.filter((c) => c.ringed).map((c) => c.i)
+  return finish(
+    'S3',
+    snap,
+    afterClick.fi === MAIN_OFFSET &&
+      ringed.length === 1 &&
+      ringed[0] === MAIN_OFFSET + 4,
+    {
+      note: `focus after click=${afterClick.fi}; ringed after move=${ringed.join(',')}`
+    }
+  )
+}
+
+// S4, stale script focus (the gamepad stand-in): .focus() with no
+// controllerLayout, then a real move onto another card.
+SCENARIOS.S4 = async () => {
+  await load(gridPage)
+  await evalJs(
+    `document.querySelectorAll('#mainList .gameCard')[0].querySelector('button').focus()`
+  )
+  const afterFocus = await evalJs(FOCUS_STATE)
+  const c4 = await mainCard(4)
+  await moveTo(c4.cx, c4.cy)
+  const snap = await measure()
+  const ringed = snap.cards.filter((c) => c.ringed).map((c) => c.i)
+  return finish(
+    'S4',
+    snap,
+    afterFocus.fi === MAIN_OFFSET &&
+      ringed.length === 1 &&
+      ringed[0] === MAIN_OFFSET + 4,
+    {
+      note: `focus after script focus=${afterFocus.fi}; ringed after move=${ringed.join(',')}`
+    }
+  )
+}
+
+// S5, keyboard then mouse: S1's end state, then a real move onto card 6.
+SCENARIOS.S5 = async () => {
+  const s1 = await tabIntoGrid('S1', 'gap')
+  const focused = s1.focusedCard
+  const c6 = await mainCard(6)
+  await moveTo(c6.cx, c6.cy)
+  const snap = await measure()
+  const ringed = snap.cards.filter((c) => c.ringed).map((c) => c.i)
+  return finish(
+    'S5',
+    snap,
+    snap.cards[MAIN_OFFSET + 6].ringed &&
+      !snap.cards[focused].ringed &&
+      snap.ringedCount === 1 &&
+      !/keyboardNav/.test(snap.bodyClass),
+    {
+      note: `previously focused=${focused} (S1 pass=${s1.pass}); ringed after move=${ringed.join(',')}`
+    }
+  )
+}
+
+// S6, synthetic move: S1's end state, then one mouseMoved at the exact
+// coordinates the pointer already rests at.
+SCENARIOS.S6 = async () => {
+  const s1 = await tabIntoGrid('S1', 'gap')
+  await moveSameCoords()
+  const snap = await measure()
+  return finish(
+    'S6',
+    snap,
+    /keyboardNav/.test(snap.bodyClass) && snap.focusedRinged,
+    { note: `S1 pass before the synthetic move=${s1.pass}` }
+  )
+}
+
+// S7, list rows: the pointer rests in .listing but off every row (the left
+// margin strip of .gameListLayout, beside a row), Tab into a row. The row must
+// wear the focus ring (3px, not the 2px hover outline).
+SCENARIOS.S7 = async () => {
+  if (!listPage) throw new Error('S7 needs --list')
+  await load(listPage)
+  const r3 = await mainRow(3)
+  const layout = await rect('#mainList', 0)
+  await moveTo(layout.left - 8, r3.cy)
+  const pre = await measure()
+  const preOk = pre.listingHover && !pre.cards.some((c) => c.hovered)
+  const { presses, state, capped } = await tabUntil((st) => st.main)
+  const snap = await measure()
+  return finish(
+    'S7',
+    snap,
+    preOk && !capped && snap.focusedRinged && snap.ringedCount === 1,
+    {
+      note: `layout=list preconditionOk=${preOk} presses=${presses} focusedRow=${state.fi}`
+    }
+  )
+}
+
 export { SCENARIOS }
 
 const ids = (only ?? Object.keys(SCENARIOS)).filter((id) => SCENARIOS[id])
