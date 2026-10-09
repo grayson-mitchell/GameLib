@@ -312,8 +312,8 @@ Negative criteria (from Prohibitions):
 
 ## Edge Coverage
 
-**Coverage:** 23/23 applicable edges resolved · 0 unresolved
-(17 explicit · 1 backstop · 5 dismissed)
+**Coverage:** 24/24 applicable edges resolved · 0 unresolved
+(17 explicit · 1 backstop · 5 dismissed · 1 accepted boundary, added 2026-10-09)
 
 | Category    | Requirement | Status       | Resolution / Reason                                                                   |
 | ----------- | ----------- | ------------ | ------------------------------------------------------------------------------------- |
@@ -327,6 +327,7 @@ Negative criteria (from Prohibitions):
 | concurrency | R3          | ✅ covered   | AC: no unbounded in-flight work; stdin-EOF exit within bound                          |
 | adjacency   | R4          | ✅ covered   | AC: same-state stores are separate rows                                               |
 | empty       | R4          | ✅ covered   | AC: zero rows renders nothing                                                         |
+| empty       | R2, R3      | 🚧 boundary  | ACCEPTED 2026-10-09 (operator): with zero Amazon games installed, nile `list-updates` exits before any auth call, so an expired Amazon credential is not detectable by the boot probe and the store reads `healthy`. Found live (49-LIVE-GATE.md Run 1 item 6, F-49-R1-4). Not a Phase 49 deliverable; tracked by `.planning/todos/pending/2026-10-10-amazon-probe-is-a-no-op-with-nothing-installed.md` (`ready: code`) and gated on the Amazon induction in `…amazon-expiry-strings-need-a-real-induction.md` (`ready: live-gate`), because any replacement probe command's expired-token output is unmeasurable until then. |
 | ordering    | R4          | ✅ covered   | AC: canonical store order, stable                                                     |
 | idempotency | R5          | ✅ covered   | AC: dismiss twice = once; re-arm exactly once                                         |
 | concurrency | R5          | 🧪 backstop  | Held-out test: dismiss persisted during a running pass survives the pass's state write |
