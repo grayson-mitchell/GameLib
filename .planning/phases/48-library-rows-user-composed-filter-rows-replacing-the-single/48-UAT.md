@@ -3,7 +3,7 @@ status: diagnosed
 phase: 48-library-rows-user-composed-filter-rows-replacing-the-single
 source: [48-04-SUMMARY.md, 48-05-SUMMARY.md, 48-06-SUMMARY.md, 48-07-SUMMARY.md, 48-09-SUMMARY.md, 48-10-SUMMARY.md, 48-11-SUMMARY.md, 48-12-SUMMARY.md, 48-VERIFICATION.md]
 started: 2026-10-07T05:33:13Z
-updated: 2026-10-08T19:35:00Z
+updated: 2026-10-09T03:50:27Z
 ---
 
 ## Current Test
@@ -318,4 +318,39 @@ Items 1, 2, 3 and 6 pass with measured numbers. Item 4 is an issue: the strip ch
     - "Strip card width derived from the grid's actual column width (same minmax(156px, 1fr) arithmetic over the shared container width, or the grid's computed column size), so both rows match at every width"
     - "Page delta and controller scroll-into-view read the live card width; UAT items 5 and 6 re-checked afterwards"
     - "D-01 amendment recorded in 48-SPEC.md / 48-UI-SPEC.md with the ruling and date"
+  debug_session: ""
+
+- gap_id: G-48-11a
+  truth: "Resizing the window with a focus-row strip showing raises no ResizeObserver loop window error, and the strip width settles without sustained flicker (48-REVIEW.md WR-01; T-48-36)"
+  status: failed
+  reason: "User reported (item 11 FAIL 1, WR-01 confirmed live): the `ResizeObserver loop completed undelivered notifications` window error fires during a width sweep 1280 to 600 to 1280 and a height sweep 800 to 400 to 800 in 0.15 s steps: 27 times and 25 times in two launches with the strip, 0 times in the identical sweep with `focusRow` null (strip absent, 14 cards, same build), logged by the BLANKPROBE window-error hook. Flicker was not measured."
+  severity: medium
+  test: 11
+  reported: "2026-10-08, live gate, debug build on a 14-game fixture profile (fake HOME), macOS"
+  root_cause: "WR-01's mechanism, derived from the delivery algorithm (48-REVIEW.md) and live-confirmed by item 11: the ResizeObserver callback in `FocusRowStrip/index.tsx` writes `--focus-row-card-width` on the `.focusRowTrack` it observes. Card height follows width through `aspect-ratio`, so the track's own box changes inside the same delivery. The 48-12 flip-hold (`ae9054a54`) bounds a flip-flop but leaves the write in the callback."
+  artifacts:
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.tsx"
+      issue: "the ResizeObserver callback calls `syncCardWidth(track)` on the element it observes (about lines 123-126)"
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts"
+      issue: "`track.style.setProperty('--focus-row-card-width', ...)` is the write that resizes the observed box (about line 281)"
+  missing:
+    - "Move the width write out of the observer callback (defer it out of the delivery), keeping the layout-effect write for first paint"
+    - "A live re-run of the item 11 sweep with its `focusRow` null control (48-15)"
+  debug_session: ""
+
+- gap_id: G-48-11b
+  truth: "The strip pages no further than its last card, and the forward control is disabled once `scrollLeft + clientWidth >= scrollWidth - 1` (SPEC R3, D-05, D-07, item 5 end-of-travel clause)"
+  status: failed
+  reason: "User reported (item 11 FAIL 2, new, not in any gap): from a fresh launch with 14 cards, forward click 1 shows cards 5-9, click 2 shows cards 10-13 and one EMPTY slot, click 3 and 4 show a completely blank strip, and the forward chevron stays enabled (glyph full colour, same as click 1) throughout; reproduced on two launches. The strip can be paged past its last card into nothing, and the end-of-travel disable never arms. Item 5 measured a correct end of travel on 2026-10-07, before 48-10 and 48-12: 20 cards at 156px, scrollWidth 3576 = 20 x 180 - 24."
+  severity: major
+  test: 11
+  reported: "2026-10-08, live gate, debug build on a 14-game fixture profile (fake HOME), macOS"
+  root_cause: "NOT REPRODUCED AT THE DESK, cause unknown. A blank viewport at a scrollLeft still within scrollWidth - clientWidth proves the track's scroll extent runs past the last card (the browser clamps scrollLeft, so a stale measure, an inflated pitch or a wrong page delta cannot scroll into empty space). Plan 48-13 built a standalone page from the shipped stylesheets and the app's own focusRowOverflow.ts at e6938fc1f and ran 108 variants (n 14 and 20; content box 958, 462 and 198; shells, rendered cards and a lazy walk; art 1x1, 600x900 and a viewBox-only svg; short and 37-character titles) in Chromium 153 (chrome-headless-shell, standing in for WebView2): every variant ends at scrollWidth within 0.6px of the expected N x w + (N - 1) x 24 + 30 (n=14, content 958: 2755 against 2755.6), card width within 0.009px of the grid column width, first-card inset 15, last-card inset 14.531 to 15.188, and a walk of ceil((n - k) / k) clicks ending on card n - 1 with no empty slot and forward disabled (n=14, content 958: 2 clicks, cards 9-13). Counterfactuals pinning item width, containing items or neutralising the art change nothing; `width: auto` on the list loses the 15px end padding (scrollWidth 15.6 under E, last-card inset -0.469 to 0.188), which is the reason 48-10 added `width: max-content`. A negative control that content-sizes the items does reach scrollWidth 8742 against 2755.6 (n=14, content 958, 600x900 art), so the harness can see an inflated extent. The failing engine is therefore WebKit (WKWebView), which could not be run on the Windows host that executed 48-13 (no swiftc). The arithmetic walk (pageScrollDelta, canScrollForward over the true geometry) passes with rounded clientWidth for n 14 and 20 over content 156 to 1600, and fails only in a floor-clientWidth pass by a 1.28px sub-epsilon residual (n=14 content 161.92; n=20 content 164.88), which cannot produce blank travel. Unproven lead for the live diagnostic, not a finding: `width: max-content` (78cd69511, 48-10) makes the list width depend on the items' intrinsic contribution, and a WebKit that does not clamp that contribution to the items' `flex: 0 0` basis would inflate the extent by the art's natural width. Evidence: evidence/48-13/results-before-fix.json."
+  artifacts:
+    - path: "src/frontend/screens/Library/components/FocusRowStrip/index.css"
+      issue: "`.focusRowTrack .gameList { width: max-content }` (about lines 60-71) is the only intrinsic-keyword width on the path, a candidate only until reproduced in WebKit"
+  missing:
+    - "A WebKit reproduction: on the Mac run `evidence/48-13/run-webkit.sh HEAD` (and its overrides, then `cf-no-max-content` and `cf-pin-item-width`), or in the live app read `.focusRowTrack` scrollWidth, the list's border-box width and one card wrapper's width with 14 cards and compare with E = 14 x w + 13 x 24 + 30"
+    - "The fix the isolating counterfactual points to, written red-gate first (plan 48-13 Task 2 is not started: the stop rule fired)"
+    - "A live re-run of item 11 FAIL 2 (48-15)"
   debug_session: ""
