@@ -1,0 +1,815 @@
+{
+  "base": "61a7674372d5d0ff7556f3b687bc50eb1983dc9c",
+  "runs": [
+    {
+      "engine": "chromium",
+      "ref": "61a7674372d5d0ff7556f3b687bc50eb1983dc9c",
+      "override": "none",
+      "tracker": "absent",
+      "scenarios": [
+        {
+          "id": "S0",
+          "pass": true,
+          "focusedCard": 0,
+          "focusedRinged": true,
+          "ringedCount": 1,
+          "listingHover": false,
+          "bodyClass": "",
+          "cards": [
+            {
+              "i": 0,
+              "list": "strip",
+              "ringed": true,
+              "hovered": false,
+              "zIndex": "3",
+              "outline": "solid 3px rgb(0, 128, 255)"
+            },
+            {
+              "i": 1,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 2,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 3,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 4,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 5,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 6,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 7,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 8,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 9,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 10,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 11,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 12,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 13,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 14,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            }
+          ],
+          "note": "hover phase: hoveredMainCard=8 ringed=true z=2; tab phase: 2 presses",
+          "hoverOk": true
+        },
+        {
+          "id": "S1",
+          "pass": false,
+          "focusedCard": 5,
+          "focusedRinged": false,
+          "ringedCount": 0,
+          "listingHover": true,
+          "bodyClass": "",
+          "cards": [
+            {
+              "i": 0,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 1,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 2,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 3,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 4,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 5,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "none 3px rgb(221, 221, 221)"
+            },
+            {
+              "i": 6,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 7,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 8,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 9,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 10,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 11,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 12,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 13,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 14,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            }
+          ],
+          "note": "pointer=gap preconditionOk=true presses=17 focusedMainCard=5"
+        },
+        {
+          "id": "S1c",
+          "pass": true,
+          "focusedCard": 5,
+          "focusedRinged": true,
+          "ringedCount": 1,
+          "listingHover": false,
+          "bodyClass": "",
+          "cards": [
+            {
+              "i": 0,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 1,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 2,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 3,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 4,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 5,
+              "list": "main",
+              "ringed": true,
+              "hovered": false,
+              "zIndex": "3",
+              "outline": "solid 3px rgb(0, 128, 255)"
+            },
+            {
+              "i": 6,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 7,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 8,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 9,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 10,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 11,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 12,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 13,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 14,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            }
+          ],
+          "note": "pointer=sidebar preconditionOk=true presses=17 focusedMainCard=5"
+        }
+      ]
+    },
+    {
+      "engine": "chromium",
+      "ref": "61a7674372d5d0ff7556f3b687bc50eb1983dc9c",
+      "override": "cf-no-stale-suppression",
+      "tracker": "absent",
+      "scenarios": [
+        {
+          "id": "S0",
+          "pass": true,
+          "focusedCard": 0,
+          "focusedRinged": true,
+          "ringedCount": 1,
+          "listingHover": false,
+          "bodyClass": "",
+          "cards": [
+            {
+              "i": 0,
+              "list": "strip",
+              "ringed": true,
+              "hovered": false,
+              "zIndex": "3",
+              "outline": "solid 3px rgb(0, 128, 255)"
+            },
+            {
+              "i": 1,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 2,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 3,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 4,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 5,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 6,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 7,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 8,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 9,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 10,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 11,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 12,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 13,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 14,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            }
+          ],
+          "note": "hover phase: hoveredMainCard=8 ringed=true z=2; tab phase: 2 presses",
+          "hoverOk": true
+        },
+        {
+          "id": "S1",
+          "pass": true,
+          "focusedCard": 5,
+          "focusedRinged": true,
+          "ringedCount": 1,
+          "listingHover": true,
+          "bodyClass": "",
+          "cards": [
+            {
+              "i": 0,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 1,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 2,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 3,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 4,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 5,
+              "list": "main",
+              "ringed": true,
+              "hovered": false,
+              "zIndex": "3",
+              "outline": "solid 3px rgb(0, 128, 255)"
+            },
+            {
+              "i": 6,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 7,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 8,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 9,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 10,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 11,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 12,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 13,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 14,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            }
+          ],
+          "note": "pointer=gap preconditionOk=true presses=17 focusedMainCard=5"
+        },
+        {
+          "id": "S1c",
+          "pass": true,
+          "focusedCard": 5,
+          "focusedRinged": true,
+          "ringedCount": 1,
+          "listingHover": false,
+          "bodyClass": "",
+          "cards": [
+            {
+              "i": 0,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 1,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 2,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 3,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 4,
+              "list": "strip",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 5,
+              "list": "main",
+              "ringed": true,
+              "hovered": false,
+              "zIndex": "3",
+              "outline": "solid 3px rgb(0, 128, 255)"
+            },
+            {
+              "i": 6,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 7,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 8,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 9,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 10,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 11,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 12,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 13,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            },
+            {
+              "i": 14,
+              "list": "main",
+              "ringed": false,
+              "hovered": false,
+              "zIndex": "auto",
+              "outline": "solid 3px rgba(0, 0, 0, 0)"
+            }
+          ],
+          "note": "pointer=sidebar preconditionOk=true presses=17 focusedMainCard=5"
+        }
+      ]
+    }
+  ]
+}
