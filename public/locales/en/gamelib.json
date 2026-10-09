@@ -244,6 +244,13 @@
         },
         "no_no_store_page_games": "No games without a store page in your library",
         "noStorePage": "No store page",
+        "signIn": {
+            "dismiss": "Dismiss the {{store}} sign-in notice",
+            "expired": "Your {{store}} sign-in expired",
+            "notConnected": "{{store}} is not connected",
+            "reconnect": "Reconnect",
+            "signIn": "Sign in"
+        },
         "steamSync": {
             "failedBody": "Your other libraries are still available. Try again, or check that Steam is reachable.",
             "failedTitle": "Couldn't sync your Steam library",
@@ -256,7 +263,10 @@
         "storeOther": "Other"
     },
     "login": {
+        "amazonReconnect": "Sign-in expired — Reconnect",
         "connected": "Connected",
+        "epicReconnect": "Sign-in expired — Reconnect",
+        "gogReconnect": "Sign-in expired — Reconnect",
         "humble_dialog_title": "Sign in to Humble Bundle",
         "logoutFailedMessage": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
         "logoutFailedTitle": "Sign-out incomplete",

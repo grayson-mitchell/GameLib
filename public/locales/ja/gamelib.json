@@ -220,6 +220,13 @@
         },
         "no_no_store_page_games": "ライブラリにストアページのないゲームはありません",
         "noStorePage": "ストアページなし",
+        "signIn": {
+            "dismiss": "{{store}}のサインイン通知を閉じる",
+            "expired": "{{store}}のサインインの有効期限が切れました",
+            "notConnected": "{{store}}は接続されていません",
+            "reconnect": "再接続",
+            "signIn": "サインイン"
+        },
         "steamSync": {
             "failedBody": "他のライブラリは引き続き利用できます。もう一度試すか、Steamに接続できるか確認してください。",
             "failedTitle": "Steamライブラリを同期できませんでした",
@@ -232,7 +239,10 @@
         "storeOther": "その他"
     },
     "login": {
+        "amazonReconnect": "サインインの有効期限切れ — 再接続",
         "connected": "接続済み",
+        "epicReconnect": "サインインの有効期限切れ — 再接続",
+        "gogReconnect": "サインインの有効期限切れ — 再接続",
         "humble_dialog_title": "Humble Bundleにサインイン",
         "logoutFailedTitle": "サインアウトが完了していません",
         "steam_logout_failed_message": "Steamのサインアウトが時間内に完了しませんでした。もう一度お試しください。",

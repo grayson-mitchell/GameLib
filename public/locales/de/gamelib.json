@@ -168,6 +168,13 @@
         },
         "noStorePage": "Keine Store-Seite",
         "no_no_store_page_games": "Keine Spiele ohne Store-Seite in deiner Bibliothek",
+        "signIn": {
+            "dismiss": "Hinweis zur {{store}}-Anmeldung schließen",
+            "expired": "Deine {{store}}-Anmeldung ist abgelaufen",
+            "notConnected": "{{store}} ist nicht verbunden",
+            "reconnect": "Erneut verbinden",
+            "signIn": "Anmelden"
+        },
         "steamSync": {
             "failedBody": "Deine anderen Bibliotheken sind weiterhin verfügbar. Versuche es erneut oder prüfe, ob Steam erreichbar ist.",
             "failedTitle": "Deine Steam-Bibliothek konnte nicht synchronisiert werden",
@@ -180,7 +187,10 @@
         "storeOther": "Andere"
     },
     "login": {
+        "amazonReconnect": "Anmeldung abgelaufen — Erneut verbinden",
         "connected": "Verbunden",
+        "epicReconnect": "Anmeldung abgelaufen — Erneut verbinden",
+        "gogReconnect": "Anmeldung abgelaufen — Erneut verbinden",
         "steamReconnect": "Anmeldung abgelaufen — Erneut verbinden",
         "humble_dialog_title": "Bei Humble Bundle anmelden",
         "logoutFailedMessage": "Ihr Konto wurde auf diesem Gerät abgemeldet, aber die Browser-Sitzung konnte nicht vollständig gelöscht werden. Melden Sie sich auf einem gemeinsam genutzten Computer erneut ab oder löschen Sie Ihre Browserdaten für diese Website, um sicherzustellen, dass Ihre Sitzung nicht zugänglich bleibt.",
