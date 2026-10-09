@@ -5662,7 +5662,7 @@ its measured per-store inventory (2026-10-03) is the expensive part.
 an insertion above an unchanged grid means D is **unaffected and no longer blocked** — it is a
 separate change, not this phase's deliverable.
 
-**Plans:** 17/18 plans executed
+**Plans:** 18/18 plans executed
 
 Plans:
 **Wave 1**
@@ -5711,7 +5711,7 @@ Plans:
 - [x] 48-17-PLAN.md — TRACER: diagnose G-48-11c (strip card +2 CSS px when the grid empties) in WKWebView against written thresholds for the main-scroller scrollbar toggle; then red gate and fix: the strip holds the grid's scrollbar allowance while no grid is shown, strip-only, grid untouched per the SPEC R3 amendment; WebKit states A1-A9. Stops before any fix if the toggle is not confirmed (R3, R4)
 
 **Gap closure round 4, Wave 3** *(blocked on 48-16 and 48-17; `autonomous: false`, live gate on the operator's Mac)*
-- [ ] 48-18-PLAN.md — live gate: item 11's empty-grid clause and item 12's keyboard clause on one build carrying both fixes, each against the preserved pre-fix bundle; the one-ring invariant across input modes, hover, parity, end-of-travel and loop-error regressions; controller clauses (G-48-8a) run only with a controller, else carried as owed; `48-UAT.md` reconciled (R3, R4)
+- [x] 48-18-PLAN.md — live gate: item 11's empty-grid clause and item 12's keyboard clause on one build carrying both fixes, each against the preserved pre-fix bundle; the one-ring invariant across input modes, hover, parity, end-of-travel and loop-error regressions; controller clauses (G-48-8a) run only with a controller, else carried as owed; `48-UAT.md` reconciled (R3, R4)
 
 **Cross-cutting constraints:**
 - Strip content narrower than the available width shows no overflow affordance (SPEC Edge Coverage, R3 unclassified, explicit).
