@@ -134,12 +134,24 @@ export function resetSteamAuthTrigger(): void {
  * this file. `'mount'` and `'push'` are automatic origins and are
  * deliberately NOT listed here — they fall through to `'startup'` along with
  * everything else unrecognised.
+ *
+ * 49-REVIEW WR-04: the lookup below is own-property-guarded because
+ * `ORIGIN_TO_TRIGGER` is a plain object literal and therefore inherits from
+ * `Object.prototype`. A bare bracket index on `'__proto__'` or
+ * `'constructor'` would resolve through the prototype chain to an object or
+ * a function instead of `undefined`, which slips past a `?? 'startup'`
+ * fallback and breaks `currentTriggerLabel()`'s "never undefined, a log
+ * label" string contract. Same shared pattern, same reasoning, as the
+ * renderer-origin guard at `steamFlowRegistration.ts`'s T-34.5-C4-10 site.
  */
 export function mapRefreshOriginToTrigger(
   origin?: string | null
 ): SteamAuthTrigger {
-  if (!origin) return 'startup'
-  return ORIGIN_TO_TRIGGER[origin] ?? 'startup'
+  if (typeof origin !== 'string' || origin.length === 0) return 'startup'
+  if (!Object.prototype.hasOwnProperty.call(ORIGIN_TO_TRIGGER, origin)) {
+    return 'startup'
+  }
+  return ORIGIN_TO_TRIGGER[origin]
 }
 
 /**
