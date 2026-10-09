@@ -46,6 +46,20 @@ const mockApi = {
 
 import TauriLoginPanel from '../TauriLoginPanel'
 
+// IN-03: several tests replace `window.location` with a reload spy. Capture the
+// stub window's own descriptor now and put it back after every test, so no later
+// test (or suite sharing this module registry) reads the last test's stub. The
+// stubs are `configurable: true`, which is what lets the `delete` below work
+// when the descriptor was originally absent.
+const originalLocation = Object.getOwnPropertyDescriptor(window, 'location')
+afterEach(() => {
+  if (originalLocation) {
+    Object.defineProperty(window, 'location', originalLocation)
+  } else {
+    delete (window as { location?: unknown }).location
+  }
+})
+
 type AnyReactElement = ReactElement<{ children?: unknown }>
 
 function collectText(node: unknown): string {
@@ -164,7 +178,8 @@ describe('TauriLoginPanel — Humble error/timeout surfaces [F-34.4.2-19]', () =
     const reloadSpy = jest.fn()
     Object.defineProperty(window, 'location', {
       value: { reload: reloadSpy },
-      writable: true
+      writable: true,
+      configurable: true
     })
 
     const button = findButton(element)
@@ -450,7 +465,8 @@ describe('TauriLoginPanel -- host-supplied onRetry (quick task 261008-aoe)', () 
     const reloadSpy = jest.fn()
     Object.defineProperty(window, 'location', {
       value: { reload: reloadSpy },
-      writable: true
+      writable: true,
+      configurable: true
     })
     return reloadSpy
   }
