@@ -99,7 +99,16 @@ export async function probeNileSession(): Promise<SignInProbeOutcome> {
   }
 }
 
-// RED stub: replaced by the real GOG probe in the GREEN commit.
+/**
+ * GOG: the verdict is decided inside `GOGUser.getCredentialsWithVerdict`, the
+ * single `gogdl auth` spawn site shared with Block E (D-17). Lazy import for the
+ * same cycle reason as `libraryManagerMap` above.
+ */
 export async function probeGogSession(): Promise<SignInProbeOutcome> {
-  return 'unknown'
+  try {
+    const { GOGUser } = await import('../storeManagers/gog/user')
+    return (await GOGUser.getCredentialsWithVerdict()).verdict
+  } catch {
+    return 'unknown'
+  }
 }

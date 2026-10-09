@@ -22,6 +22,14 @@ jest.mock('backend/platform', () => ({
   app: { getVersion: () => '1.0.0' }
 }))
 
+// Phase 49 (49-05): login()/logout() now publish the sign-in outcome map through
+// `noteSignInSucceeded` / `noteSignedOut`, which send a frontend message. The
+// real `sendFrontendMessage` needs an Electron window this suite does not have.
+jest.mock('backend/ipc', () => ({
+  sendFrontendMessage: jest.fn(),
+  addHandler: jest.fn()
+}))
+
 jest.mock('axios')
 
 jest.mock('backend/logger', () => ({
@@ -60,6 +68,8 @@ const mockConfigStoreGetNodefault = jest.fn((key: string): unknown =>
 jest.mock('backend/storeManagers/gog/electronStores', () => ({
   configStore: {
     set: mockConfigStoreSet,
+    // Phase 49: login() clears the persisted expiry flag.
+    delete: jest.fn(),
     get_nodefault: mockConfigStoreGetNodefault,
     clear: mockConfigStoreClear
   }

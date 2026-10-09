@@ -247,7 +247,7 @@ describe('Amazon: the only latch is applySignInVerdict (source gate)', () => {
 })
 
 describe('Amazon: a probe that began before a sign-in cannot re-set expired', () => {
-  it('returns stale with no write when the epoch moved after the probe started', async () => {
+  it('returns stale with no write when the epoch moved after the probe started', () => {
     const epochAtStart = captureSignInEpoch('nile')
     noteSignInSucceeded('nile')
 

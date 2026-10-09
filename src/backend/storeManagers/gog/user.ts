@@ -11,6 +11,14 @@ import { gogdlAuthConfig } from './constants'
 import { isMac } from 'backend/constants/environment'
 import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
 import type { SignInProbeOutcome } from 'common/signInState'
+import {
+  classifyGogdlAuth,
+  createBoundedOutputCapture
+} from 'backend/signInProbe/classify'
+import {
+  noteSignedOut,
+  noteSignInSucceeded
+} from 'backend/signInProbe/outcomes'
 
 // GOG-owned APEX domain(s). Suffix-matching happens Rust-side in
 // `cookie_domain_matches`, so this single apex covers every subdomain that may
@@ -114,6 +122,18 @@ const CREDENTIALS_EXPIRY_SAFETY_MARGIN_MS = 60_000
 let cachedCredentials: GOGCredentials | undefined
 let cachedCredentialsFetchedAt = 0
 
+interface CredentialsWithVerdict {
+  credentials: GOGCredentials | undefined
+  verdict: SignInProbeOutcome
+}
+
+// The one in-flight `gogdl auth` spawn (Phase 49, RESEARCH Pitfall 2). `callRunner`
+// joins identical in-flight commands and a joiner's `onOutput` never fires, so if
+// Block E's `getUserDetails` and the probe pass each reached `runRunnerCommand`
+// separately, whichever arrived second would join a spawn it could not capture and
+// lose the connection-error line D-17 needs. Both go through this promise instead.
+let inFlightCredentials: Promise<CredentialsWithVerdict> | null = null
+
 // Maps a `gogdl auth --code` token-exchange response (GOGLoginData) into the
 // GOGCredentials shape the fix-1 TTL cache stores -- debug/gog-spawn-reduction.md
 // fix 5. This is a real type mismatch, not a formality: GOGLoginData only types
@@ -195,6 +215,10 @@ export class GOGUser {
     }
     logInfo('Login Successful', LogPrefix.Gog)
     configStore.set('isLoggedIn', true)
+    // Phase 49 (R2): a completed sign-in proves the session, so the expiry flag
+    // clears and the fence moves.
+    configStore.delete('expired')
+    noteSignInSucceeded('gog')
     // Seed the fix-1 TTL cache directly from this `gogdl auth --code` exchange's own
     // stdout -- debug/gog-spawn-reduction.md fix 5. Without this, the cache is empty
     // right after login and the very next getCredentials() call (e.g. the post-login
@@ -302,11 +326,26 @@ export class GOGUser {
    * @returns user credentials
    */
   public static async getCredentials(): Promise<GOGCredentials | undefined> {
+    return (await this.getCredentialsWithVerdict()).credentials
+  }
+
+  /**
+   * `getCredentials()` plus a sign-in verdict (Phase 49, R2, D-17). This is the
+   * single `gogdl auth` spawn site: Block E (`getUserDetails`) and the probe pass
+   * both reach it, and they share one in-flight promise so neither can join the
+   * other's spawn and lose its output.
+   *
+   * The verdict is computed for every caller but only the pass applies it
+   * (`applySignInVerdict`), so the pass stays the single latch site. A cache hit
+   * is `healthy` (the cached token came from a successful spawn this session);
+   * offline is `unknown` and spawns nothing.
+   */
+  public static async getCredentialsWithVerdict(): Promise<CredentialsWithVerdict> {
     if (!isOnline()) {
       logWarning('Unable to get credentials - app is offline', {
         prefix: LogPrefix.Gog
       })
-      return
+      return { credentials: undefined, verdict: 'unknown' }
     }
     // TTL cache -- debug/gog-spawn-reduction.md fix 1. Skip the `gogdl auth` spawn
     // entirely if the last-fetched token is still within its own stated lifetime.
@@ -316,37 +355,63 @@ export class GOGUser {
         cachedCredentials.expires_in * 1000 -
           CREDENTIALS_EXPIRY_SAFETY_MARGIN_MS
     ) {
-      return cachedCredentials
+      return { credentials: cachedCredentials, verdict: 'healthy' }
     }
+    if (inFlightCredentials) {
+      return inFlightCredentials
+    }
+    const spawned = this.spawnCredentialsWithVerdict()
+    inFlightCredentials = spawned
+    try {
+      return await spawned
+    } finally {
+      if (inFlightCredentials === spawned) {
+        inFlightCredentials = null
+      }
+    }
+  }
+
+  private static async spawnCredentialsWithVerdict(): Promise<CredentialsWithVerdict> {
     // Lazy import — see the load-bearing comment on the sibling call in
     // login() above (breaks the gog/user.ts <-> storeManagers/index.ts cycle).
     const { libraryManagerMap } = await import('../index')
-    const { stdout } = await libraryManagerMap['gog'].runRunnerCommand(
-      ['auth'],
-      {
-        abortId: 'gogdl-get-credentials',
-        logSanitizer: authLogSanitizer
-      }
-    )
+    // Captured output, never `ExecResult.stderr` (RESEARCH Pitfall 1), and never
+    // logged: gogdl's stdout is a token-exchange object. `authLogSanitizer`
+    // stays on the spawn for the runner log. `skipErrorHandler` changes nothing
+    // observable for `gogdl auth` today (errorHandler's branches match legendary
+    // tracebacks and "No saved credentials", neither of which gogdl prints) and
+    // guarantees the boot probe can never raise a modal (P2).
+    const capture = createBoundedOutputCapture()
+    const res = await libraryManagerMap['gog'].runRunnerCommand(['auth'], {
+      abortId: 'gogdl-get-credentials',
+      logSanitizer: authLogSanitizer,
+      skipErrorHandler: true,
+      onOutput: (chunk) => capture.onOutput(chunk)
+    })
+    const { stdout } = res
+
+    let credentials: GOGCredentials | undefined
     try {
-      const credentials = JSON.parse(stdout) as GOGCredentials | undefined
+      credentials = JSON.parse(stdout) as GOGCredentials | undefined
       if (credentials) {
         cachedCredentials = credentials
         cachedCredentialsFetchedAt = Date.now()
       }
-      return credentials
     } catch (error) {
       logError(['Error getting GOG credentials:', error])
-      return undefined
+      credentials = undefined
     }
-  }
 
-  // RED stub: replaced by the real single-spawn verdict in the GREEN commit.
-  public static async getCredentialsWithVerdict(): Promise<{
-    credentials: GOGCredentials | undefined
-    verdict: SignInProbeOutcome
-  }> {
-    return { credentials: await this.getCredentials(), verdict: 'unknown' }
+    const verdict = classifyGogdlAuth({
+      stdout,
+      output: capture.text(),
+      observed: capture.observed(),
+      errored: Boolean(res.error),
+      aborted: Boolean(res.abort),
+      online: isOnline(),
+      authConfigExists: existsSync(gogdlAuthConfig)
+    })
+    return { credentials, verdict }
   }
 
   // D-15 (Phase 40 plan 04): stayed a plain (non-async-looking-mandatory)
@@ -371,6 +436,10 @@ export class GOGUser {
     }
     cachedCredentials = undefined
     cachedCredentialsFetchedAt = 0
+    // Phase 49 (R2): `configStore.clear()` above already dropped the expiry flag;
+    // this fences any probe that began before the sign-out and returns the
+    // outcome to pending.
+    noteSignedOut('gog')
     logInfo('Logging user out', LogPrefix.Gog)
 
     try {
@@ -390,6 +459,7 @@ export class GOGUser {
   public static __resetCredentialsCacheForTests(): void {
     cachedCredentials = undefined
     cachedCredentialsFetchedAt = 0
+    inFlightCredentials = null
   }
 
   public static isLoggedIn() {

@@ -5,8 +5,8 @@
  * chunks are fed through `options.onOutput`, so the fake-HOME two-profile rule's
  * isolated half is satisfied by construction.
  */
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { readdirSync, readFileSync, statSync } from 'fs'
+import { join, relative, sep } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { logDebug, logError, logInfo, logWarning } from 'backend/logger'
 import {
@@ -210,5 +210,53 @@ describe('runnerProbes.ts source gates', () => {
     ).toBeGreaterThanOrEqual(2)
     expect(source).not.toMatch(/\blog(Info|Warning|Error|Debug)\b/)
     expect(source).not.toMatch(/console\./)
+  })
+})
+
+describe('T-49-07: skipErrorHandler is confined to the probe sites', () => {
+  // __tests__ -> signInProbe -> backend
+  const backendRoot = join(__dirname, '..', '..')
+
+  function sourceFiles(dir: string): string[] {
+    return readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry)
+      if (statSync(full).isDirectory()) {
+        return entry === '__tests__' || entry === 'node_modules'
+          ? []
+          : sourceFiles(full)
+      }
+      return entry.endsWith('.ts') || entry.endsWith('.tsx') ? [full] : []
+    })
+  }
+
+  /** Backend-relative paths of every non-test file that sets the option. */
+  function filesPassingSkipErrorHandler(): string[] {
+    return sourceFiles(backendRoot)
+      .filter((file) =>
+        stripSourceComments(readFileSync(file, 'utf8')).includes(
+          'skipErrorHandler: true'
+        )
+      )
+      .map((file) => relative(backendRoot, file).split(sep).join('/'))
+  }
+
+  it('only src/backend/signInProbe/** and GOGUser.getCredentialsWithVerdict pass skipErrorHandler: true', () => {
+    const offenders = filesPassingSkipErrorHandler().filter(
+      (file) =>
+        !file.startsWith('signInProbe/') && file !== 'storeManagers/gog/user.ts'
+    )
+
+    expect(offenders).toEqual([])
+  })
+
+  it('the gate sees the allowed sites (so an empty offender list is not vacuous)', () => {
+    const seen = filesPassingSkipErrorHandler()
+
+    expect(seen).toEqual(
+      expect.arrayContaining([
+        'signInProbe/runnerProbes.ts',
+        'storeManagers/gog/user.ts'
+      ])
+    )
   })
 })

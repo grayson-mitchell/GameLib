@@ -25,6 +25,14 @@
  *     (Phase 38), so there is no live target to clear cookies against.
  */
 
+// Phase 49 (49-05): login()/logout() now publish the sign-in outcome map through
+// `noteSignInSucceeded` / `noteSignedOut`, which send a frontend message. The
+// real `sendFrontendMessage` needs an Electron window this suite does not have.
+jest.mock('backend/ipc', () => ({
+  sendFrontendMessage: jest.fn(),
+  addHandler: jest.fn()
+}))
+
 jest.mock('axios')
 
 jest.mock('backend/platform', () => ({
