@@ -22,6 +22,20 @@
  * Every positive assertion uses `toBe`/`toContain`, never a vacuous negative-regex assertion --
  * see `EosDeclineCallSiteGuard.test.ts`'s own header for why (7 such instances shipped in this
  * project before that rule was adopted).
+ *
+ * 2026-10 (Phase 45, plan 45-02): `FILES.winetricks` now points at the new
+ * `WinetricksSettings/index.tsx` tab (the old `Winetricks/index.tsx` dialog + its
+ * `WinetricksBrowse/` tree are deleted in this same plan). The new tab's `window.api.winetricks*`
+ * call sites are ALL invoke-kind -- the send-kind `winetricksInstall` channel this gate used to
+ * exempt is never called here, and Task 3 of this plan retires it from the registry entirely --
+ * so `SEND_KIND_EXEMPT_NAME` and its dedicated test are removed; every call site must now sit
+ * inside `callOrDeclare(`. Measured census (`window.api.<WINETRICKS_API_METHODS member>` matches
+ * in the new file): `winetricksListAvailable` x1, `winetricksListInstalled` x2 (initial load +
+ * the queue-changed refetch), `winetricksQueueState` x1, `winetricksApply` x1,
+ * `winetricksCancelRemaining` x1 -- 6 total, not 5 (5 is the distinct-method-name count after
+ * Task 3 shrinks `WINETRICKS_API_METHODS`; it is not the call-site count). The
+ * `WINETRICKS_DECLINED_GUARD` token assertion is kept as its own standalone check rather than
+ * bundled into the now-removed exemption test.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -55,7 +69,12 @@ const FILES = {
     '..',
     'components/UI/SteamGridDBPicker/index.tsx'
   ),
-  winetricks: join(__dirname, '..', '..', 'components/UI/Winetricks/index.tsx')
+  winetricks: join(
+    __dirname,
+    '..',
+    '..',
+    'screens/Settings/sections/WinetricksSettings/index.tsx'
+  )
 } as const
 
 /** Collapses every run of whitespace to a single space -- a whitespace WINDOW, not a line. */
@@ -66,15 +85,17 @@ function collapse(source: string): string {
 /**
  * The real, post-edit count of deferred SteamGridDB/winetricks call sites per file. Set by
  * direct recount after Tasks 2-3's edits (see the SUMMARY for the exact command and output).
- * The pre-edit and post-edit counts are identical -- this plan only WRAPS existing call sites,
- * adding and removing none, mirroring 34.5-48's own `EXPECTED_EOS_CALL_SITES` precedent.
+ * The pre-edit and post-edit counts are identical for the four SteamGridDB-cluster files -- this
+ * plan only WRAPS existing call sites there, adding and removing none, mirroring 34.5-48's own
+ * `EXPECTED_EOS_CALL_SITES` precedent. `FILES.winetricks` is a new file (plan 45-02 repoints it
+ * at `WinetricksSettings/index.tsx`), measured directly: 6 call sites (see the header comment).
  */
 const EXPECTED_DEFERRED_CALL_SITES: Record<string, number> = {
   [FILES.steamGridDbApiKey]: 2,
   [FILES.sideloadDialog]: 1,
   [FILES.editGameDialog]: 1,
   [FILES.steamGridDbPicker]: 3,
-  [FILES.winetricks]: 3
+  [FILES.winetricks]: 6
 }
 
 const TOTAL_EXPECTED_DEFERRED_CALL_SITES = Object.values(
@@ -84,12 +105,9 @@ const TOTAL_EXPECTED_DEFERRED_CALL_SITES = Object.values(
 /** Same generous 200-collapsed-character window `EosDeclineCallSiteGuard.test.ts` uses. */
 const CALL_SITE_WINDOW = 200
 
-/** The one send-kind call site this gate exempts from the wrapper check. */
-const SEND_KIND_EXEMPT_NAME = 'winetricksInstall'
-
 /**
- * The literal guard token Task 3 introduces in `Winetricks/index.tsx` to gate the send-kind
- * `winetricksInstall` call behind the invoke-kind probes' own decline. Renaming it requires
+ * The literal guard token `WinetricksSettings/index.tsx` carries to gate every
+ * `window.api.winetricks*` call behind the invoke-kind probes' own decline. Renaming it requires
  * updating this test in the same commit.
  */
 const WINETRICKS_DECLINED_GUARD_TOKEN = 'WINETRICKS_DECLINED_GUARD'
@@ -123,7 +141,7 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
     collapsedByFile[path] = collapse(readFileSync(path, 'utf-8'))
   }
 
-  it('non-vacuity anchor: every file has at least one deferred call site, and the total is exactly 10', () => {
+  it('non-vacuity anchor: every file has at least one deferred call site, and the total is exactly 13', () => {
     let total = 0
     for (const [path, expected] of Object.entries(
       EXPECTED_DEFERRED_CALL_SITES
@@ -134,8 +152,8 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
       total += count
     }
     expect(total).toBeGreaterThan(0)
-    expect(total).toBe(10)
-    expect(TOTAL_EXPECTED_DEFERRED_CALL_SITES).toBe(10)
+    expect(total).toBe(13)
+    expect(TOTAL_EXPECTED_DEFERRED_CALL_SITES).toBe(13)
   })
 
   it('every invoke-kind call site is the call thunk of a callOrDeclare(...) invocation', () => {
@@ -144,7 +162,6 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
       const sites = findDeferredCallSites(collapsed)
       expect(sites.length).toBeGreaterThan(0)
       for (const site of sites) {
-        if (site.name === SEND_KIND_EXEMPT_NAME) continue
         const windowStart = Math.max(0, site.index - CALL_SITE_WINDOW)
         const preceding = collapsed.slice(windowStart, site.index)
         expect(preceding).toContain('callOrDeclare(')
@@ -152,11 +169,8 @@ describe('SteamGridDB/winetricks decline call-site gate', () => {
     }
   })
 
-  it('exactly one call site is the explicit, gated send-kind exemption (winetricksInstall)', () => {
+  it('the winetricks file carries the WINETRICKS_DECLINED_GUARD token', () => {
     const winetricksCollapsed = collapsedByFile[FILES.winetricks]
-    const sites = findDeferredCallSites(winetricksCollapsed)
-    const exempt = sites.filter((s) => s.name === SEND_KIND_EXEMPT_NAME)
-    expect(exempt.length).toBe(1)
     expect(winetricksCollapsed).toContain(WINETRICKS_DECLINED_GUARD_TOKEN)
   })
 
