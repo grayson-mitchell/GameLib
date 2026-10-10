@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 45
 current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
 status: executing
-stopped_at: Completed 45-05-PLAN.md
-last_updated: "2026-10-10T09:00:05.019Z"
+stopped_at: Completed 45-06-PLAN.md
+last_updated: "2026-10-10T09:16:02.036Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 45 execution started
-state_head: f004dcb75e6cccd448f3478e14dc34050955fc3e
+state_head: c5185572995592e4d0b78ad0be8a5662dcee601d
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 548
-  completed_plans: 534
+  completed_plans: 535
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 45 execution started
 
@@ -542,6 +542,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 45 P09 | 95min | 3 tasks | 72 files |
 | Phase 45 P10 | 9 min | 3 tasks | 72 files |
 | Phase 45 P05 | 35 min | 2 tasks | 5 files |
+| Phase 45 P06 | 13 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -1223,6 +1224,9 @@ Recent decisions affecting current work:
 - [Phase 45]: Irish (ga) uses pragmatic best-effort mutation forms across all five CLDR plural categories rather than exhaustive dialectal precision
 - [Phase 45]: Batch-B counter labels (installed/selected/failed) in lt, pl, ro, ru, sk, sl, sr, uk use the Label: {{count}} form in every CLDR plural category; applyAriaLabel keeps per-category noun inflection
 - [Phase 45]: 45-05: attributeProgressEvent removed (failure is a backend queue outcome folded by foldRunOutcomes); queued/installing require a running run
+- [Phase 45]: 45-06: a generic warning: line classifies as environment (not error); the exit code, via a synthetic error line, decides failure
+- [Phase 45]: 45-06: the apply-guard catalog cache holds the visible-filtered list; the guard additionally re-checks isVisibleVerb as defence in depth
+- [Phase 45]: 45-06: D-15 real-log ERROR-share measurement deferred to the macOS operator session / 45-12 live gate (0 WineTricks lines in the Windows log)
 
 ### Pending Todos
 
@@ -1832,8 +1836,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-10T09:00:00.856Z
-Stopped at: Completed 45-05-PLAN.md
+Last session: 2026-10-10T09:15:57.986Z
+Stopped at: Completed 45-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
