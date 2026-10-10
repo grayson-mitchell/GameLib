@@ -307,3 +307,9 @@ export function collectText(node: unknown): string {
   }
   return ''
 }
+
+export async function flush(times = 60): Promise<void> {
+  for (let i = 0; i < times; i++) {
+    await Promise.resolve()
+  }
+}
