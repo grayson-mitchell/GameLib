@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 45
 current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
 status: executing
-stopped_at: Phase 45 UI-SPEC approved (7/7, probe 76/80 resolved, 4 unresolved for planner)
-last_updated: "2026-10-10T04:12:22.078Z"
+stopped_at: Completed 45-01-PLAN.md
+last_updated: "2026-10-10T05:14:38.393Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 45 execution started
-state_head: 11788df847c0532ae1750a3554144ba2dc3ddcf8
+state_head: e3f1522dd69f8df5b5121a9e7cc9d53d57a0f0c6
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 548
-  completed_plans: 527
+  completed_plans: 528
   percent: 82
 ---
 
@@ -75,8 +75,8 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — EXECUTING
-Plan: 1 of 12
-Status: Executing Phase 45
+Plan: 2 of 12
+Status: Ready to execute
 Last activity: 2026-10-10 — Phase 45 execution started
 
 Previous activity: 2026-10-10 — Phase 49 complete, transitioned to Phase 9
@@ -535,6 +535,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P09 | 30 min | 3 tasks | 10 files |
 | Phase 49 P10 | 45min | 2 tasks | 13 files |
 | Phase 49 P11 | 45 min | 2 tasks | 3 files |
+| Phase 45 P01 | 57min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -1202,6 +1203,9 @@ Recent decisions affecting current work:
 - [Phase 49]: Live-gate item 4 also sets loginTime=1 with the valid refresh token kept, because a valid unexpired GOG token is answered locally and the hosts block would exercise nothing — Review Test 6, restated before publication
 - [Phase 49]: Live-gate launch 3 (restore plus a healthy clear launch) is inserted so launch 2's persisted expired latches cannot contaminate launch 4's absence assertions; credentials and runner logs are backed up and archived after every launch — Review Test 5 pairs F5, F2-F4, F6
 - [Phase 49]: pnpm tauri:dev sets GAMELIB_DEV_SECRET_VAULT=1 and pnpm tauri:dev:keyring does not; Keychain live-gate items 7 and 8 must use the keyring build in a shell with the variable unset — package.json:32-33; otherwise the items are vacuous
+- [Phase 45]: winetricksApplyGuard.ts and winetricksEnvironment.ts were written complete rather than strictly test-first, because their shape was already fully specified by the plan's behavior block (documented, not an oversight)
+- [Phase 45]: applyInFlight is set synchronously as apply()'s first statement, before the Winetricks.catalogFor await, closing a same-tick concurrency race an async-only isBusy() check would otherwise miss
+- [Phase 45]: Winetricks.catalogFor caches listAvailable's parsed result keyed runner:appName, so validating a verb list against the real catalog does not require a fresh winetricks list-all spawn on every apply() call
 
 ### Pending Todos
 
@@ -1811,9 +1815,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-10T01:58:58.940Z
-Stopped at: Phase 45 UI-SPEC approved (7/7, probe 76/80 resolved, 4 unresolved for planner)
-Resume file: .planning/phases/45-native-in-app-winetricks-ui-redesigned-from-scratch-one-self/45-UI-SPEC.md
+Last session: 2026-10-10T05:14:35.897Z
+Stopped at: Completed 45-01-PLAN.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
