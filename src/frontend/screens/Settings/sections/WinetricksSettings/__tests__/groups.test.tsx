@@ -33,6 +33,9 @@ jest.mock('../index.scss', () => ({}), { virtual: true })
 jest.mock('../Row/index.scss', () => ({}), { virtual: true })
 jest.mock('../GroupHeader/index.scss', () => ({}), { virtual: true })
 jest.mock('../EverythingElseGroup/index.scss', () => ({}), { virtual: true })
+jest.mock('../StickyBar/index.scss', () => ({}), { virtual: true })
+jest.mock('../LogPanel/index.scss', () => ({}), { virtual: true })
+jest.mock('../EnvironmentBanner/index.scss', () => ({}), { virtual: true })
 jest.mock('react', () =>
   jest
     .requireActual<typeof import('./treeHarness')>('./treeHarness')
