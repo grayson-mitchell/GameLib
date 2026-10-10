@@ -11,6 +11,7 @@
 import type {
   Runner,
   WinetricksComponent,
+  WinetricksEnvironmentReport,
   WinetricksQueueRun,
   WinetricksQueueState
 } from 'common/types'
@@ -68,12 +69,23 @@ function emptyQueueState(): WinetricksQueueState {
   }
 }
 
+/** A queue state with no run, carrying the given environment report. */
+export function idleStateWith(
+  environment: Partial<WinetricksEnvironmentReport>
+): WinetricksQueueState {
+  const base = emptyQueueState()
+  return { ...base, environment: { ...base.environment, ...environment } }
+}
+
 export function queueStateWith(
   run: Partial<WinetricksQueueRun> & Pick<WinetricksQueueRun, 'verbs'>,
-  busy = false
+  busy = false,
+  environment: Partial<WinetricksEnvironmentReport> = {}
 ): WinetricksQueueState {
+  const base = emptyQueueState()
   return {
-    ...emptyQueueState(),
+    ...base,
+    environment: { ...base.environment, ...environment },
     busy,
     run: {
       runId: 1,
@@ -101,6 +113,7 @@ export interface MockApi {
   winetricksApply: jest.Mock
   winetricksCancelRemaining: jest.Mock
   handleWinetricksQueueChanged: jest.Mock
+  handleProgressOfWinetricks: jest.Mock
   getKnownFixes: jest.Mock
   getWikiGameInfo: jest.Mock
   logError: jest.Mock
@@ -121,6 +134,7 @@ export function makeApi(overrides: Partial<MockApi> = {}): MockApi {
       Promise.resolve(emptyQueueState())
     ),
     handleWinetricksQueueChanged: jest.fn(() => () => undefined),
+    handleProgressOfWinetricks: jest.fn(() => () => undefined),
     getKnownFixes: jest.fn(() => Promise.resolve(null)),
     getWikiGameInfo: jest.fn(() => Promise.resolve(null)),
     logError: jest.fn(),
@@ -140,6 +154,22 @@ export function capturedQueueChangedListener(
   return calls[calls.length - 1][0]
 }
 
+interface ProgressPayload {
+  messages: string[]
+  installingComponent: string
+  failed?: boolean
+  lines?: { kind: string; text: string; percent?: number }[]
+  percent?: number
+}
+
+type ProgressListener = (event: unknown, payload: ProgressPayload) => void
+
+export function capturedProgressListener(api: MockApi): ProgressListener {
+  const calls = api.handleProgressOfWinetricks.mock
+    .calls as unknown as ProgressListener[][]
+  return calls[calls.length - 1][0]
+}
+
 type Tab = () => unknown
 
 export function rerender(tab: Tab): ElementLike {
@@ -150,12 +180,14 @@ export function rerender(tab: Tab): ElementLike {
 // a test that must act while a lookup is still pending (fake-timer advance).
 export async function mountTab(
   tab: Tab,
-  afterFirstFlush?: () => void
+  afterFirstFlush?: () => void,
+  platform = 'linux'
 ): Promise<ElementLike> {
   harness().__resetMount()
   harness().__setContext({
     appName: 'fake-app',
     runner: RUNNER,
+    platform,
     gameInfo: { title: 'Fake Game' }
   })
   rerender(tab)
