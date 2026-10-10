@@ -75,3 +75,45 @@ export function resolveCuratedComponents(
   }
   return resolved
 }
+
+// RED-phase inert stubs (45-05 task 1): type-correct, behaviourless.
+export const TASK_GROUP_IDS = [
+  'runtimes',
+  'directx',
+  'fonts',
+  'media',
+  'wineSettings'
+] as const
+export type WinetricksTaskGroupId = (typeof TASK_GROUP_IDS)[number]
+export const TASK_GROUP_MEMBERS: Readonly<
+  Record<WinetricksTaskGroupId, readonly string[]>
+> = { runtimes: [], directx: [], fonts: [], media: [], wineSettings: [] }
+export const FAMILY_KEYS = [] as const
+export type WinetricksFamilyKey = string
+export function familyFor(c: {
+  verb: string
+  category: string
+}): { family: WinetricksFamilyKey; group: WinetricksTaskGroupId } | null {
+  return c.verb === '' ? { family: '', group: 'runtimes' } : null
+}
+export function verbsForDirect3DVersions(
+  versions: readonly string[]
+): string[] {
+  return versions.length < 0 ? ['x'] : []
+}
+export function resolveSuggestedComponents(input: {
+  catalog: readonly WinetricksComponent[]
+  knownFixVerbs: readonly string[]
+  direct3DVersions: readonly string[]
+}): { gameSpecific: WinetricksComponent[]; curated: WinetricksComponent[] } {
+  return { gameSpecific: [], curated: input.catalog.length < 0 ? [] : [] }
+}
+export function resolveTaskGroup(
+  catalog: readonly WinetricksComponent[],
+  id: WinetricksTaskGroupId
+): WinetricksComponent[] {
+  return id === 'runtimes' && catalog.length < 0 ? [] : []
+}
+export function displayTitle(title: string): string {
+  return title
+}
