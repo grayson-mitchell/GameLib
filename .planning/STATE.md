@@ -5,17 +5,17 @@ milestone_name: Phase Details
 current_phase: 9
 current_phase_name: Quality Gate
 status: planning
-stopped_at: Phase 49 complete, ready to plan Phase 9
-last_updated: "2026-10-09T23:10:35.279Z"
+stopped_at: Phase 45 context gathered
+last_updated: "2026-10-10T01:36:29.173Z"
 last_activity: 2026-10-10
 last_activity_desc: Completed quick task 261010-h9n — Amazon sign-in probe classifies the zero-installed nile exit as unknown, not healthy (F-49-R1-4, WR-02); Phase 49 complete, transitioned to Phase 9
-state_head: eb0f32f9f2f621eff656fd16dbbcf01a35a453ec
+state_head: c3486613b2b0e2787f41ef4c0e8313ec513cf647
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 536
   completed_plans: 527
-  percent: 79
+  percent: 82
 ---
 
 # Project State
@@ -118,7 +118,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 79%
+Progress: [████████░░] 82%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
@@ -1811,9 +1811,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-09T19:00:21.155Z
-Stopped at: Phase 49 complete, ready to plan Phase 9
-Resume file: None
+Last session: 2026-10-10T01:36:26.474Z
+Stopped at: Phase 45 context gathered
+Resume file: .planning/phases/45-native-in-app-winetricks-ui-redesigned-from-scratch-one-self/45-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
