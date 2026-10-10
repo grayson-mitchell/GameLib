@@ -74,3 +74,77 @@ describe('assertWinetricksApplyPayload (T-45-01/T-45-02)', () => {
     ])
   })
 })
+
+// Phase 45 Plan 06 (D-09/D-17, T-45-16): `listAvailable` filters hidden verbs out of the catalog,
+// and the guard re-checks visibility on the matched entry so a stale or unfiltered catalog (a
+// cache populated before the filter existed, a test double) can never smuggle one through.
+describe('assertWinetricksApplyPayload hidden verbs (D-09/D-17, T-45-16)', () => {
+  // What `listAvailable` returns after `filterVisibleCatalog`.
+  const FILTERED_CATALOG: WinetricksComponent[] = [
+    ...CATALOG,
+    {
+      verb: 'gdiplus_winxp',
+      title: 'MS GDI+',
+      category: 'dlls',
+      cached: false,
+      needsGui: false
+    }
+  ]
+  // What an unfiltered / stale catalog would hold.
+  const STALE_CATALOG: WinetricksComponent[] = [
+    ...FILTERED_CATALOG,
+    {
+      verb: 'annihilate',
+      title: 'Delete ALL DATA',
+      category: 'settings',
+      cached: false
+    },
+    {
+      verb: 'foobar2000',
+      title: 'foobar2000 v1.4',
+      category: 'apps',
+      cached: false,
+      needsGui: true
+    },
+    {
+      verb: '3dmark06',
+      title: '3D Mark 06',
+      category: 'benchmarks',
+      cached: false,
+      needsGui: true
+    }
+  ]
+
+  it.each(['annihilate', 'foobar2000', '3dmark06'])(
+    'refuses %s when the catalog is the filtered list (not a member)',
+    (verb) => {
+      expect(() =>
+        assertWinetricksApplyPayload([verb], FILTERED_CATALOG)
+      ).toThrow(WinetricksApplyRejected)
+    }
+  )
+
+  it.each(['annihilate', 'foobar2000', '3dmark06'])(
+    'refuses %s even when a stale catalog still lists it (visibility re-check)',
+    (verb) => {
+      expect(() => assertWinetricksApplyPayload([verb], STALE_CATALOG)).toThrow(
+        WinetricksApplyRejected
+      )
+    }
+  )
+
+  it('refuses a batch that mixes a visible verb with a hidden one', () => {
+    expect(() =>
+      assertWinetricksApplyPayload(['vcrun2019', 'annihilate'], STALE_CATALOG)
+    ).toThrow(WinetricksApplyRejected)
+  })
+
+  it('accepts gdiplus_winxp (media=manual_download, but an ordinary w_download verb)', () => {
+    expect(
+      assertWinetricksApplyPayload(['gdiplus_winxp'], FILTERED_CATALOG)
+    ).toEqual(['gdiplus_winxp'])
+    expect(
+      assertWinetricksApplyPayload(['gdiplus_winxp'], STALE_CATALOG)
+    ).toEqual(['gdiplus_winxp'])
+  })
+})
