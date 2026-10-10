@@ -4,7 +4,7 @@
 // the only caller that reads the script file from disk; this module only
 // ever receives the script text as a string.
 
-export type WinetricksVerbMetadata = {
+type WinetricksVerbMetadata = {
   verb: string
   category: string
   title?: string

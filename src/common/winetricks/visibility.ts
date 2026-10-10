@@ -5,10 +5,7 @@
 // The `apps` and `benchmarks` categories exist only on winetricks' screen 1
 // (install-an-application / install-a-benchmark), never on the per-game
 // settings/dlls/fonts menus this tab builds -- hide both wholesale (D-09).
-export const HIDDEN_CATEGORIES: ReadonlySet<string> = new Set([
-  'apps',
-  'benchmarks'
-])
+const HIDDEN_CATEGORIES: ReadonlySet<string> = new Set(['apps', 'benchmarks'])
 
 // The interactive launcher verbs upstream seats as peers on its own
 // 13-row screen-2 `--radiolist` (ROADMAP.md Phase 45: `dlls fonts settings
@@ -16,7 +13,7 @@ export const HIDDEN_CATEGORIES: ReadonlySet<string> = new Set([
 // folder annihilate`), minus the three category names themselves. A
 // bottle-wiper (`annihilate`) one search away from a novice is the exact
 // failure mode D-09 exists to prevent (D-09).
-export const HIDDEN_VERBS: ReadonlySet<string> = new Set([
+const HIDDEN_VERBS: ReadonlySet<string> = new Set([
   'annihilate',
   'winecfg',
   'regedit',

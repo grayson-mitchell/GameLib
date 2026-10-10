@@ -880,7 +880,7 @@ export type WinetricksVerbOutcome =
   | 'cancelled'
 
 /** Classifies a single line of raw winetricks stdout/stderr for display (Phase 45 D-16). */
-export type WinetricksLogLineKind =
+type WinetricksLogLineKind =
   | 'progress'
   | 'noise'
   | 'info'
