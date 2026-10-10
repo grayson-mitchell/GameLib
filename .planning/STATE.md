@@ -6,16 +6,16 @@ current_phase: 45
 current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
 status: executing
 stopped_at: Phase 45 UI-SPEC approved (7/7, probe 76/80 resolved, 4 unresolved for planner)
-last_updated: "2026-10-10T04:02:35.662Z"
+last_updated: "2026-10-10T04:12:22.078Z"
 last_activity: 2026-10-10
-last_activity_desc: Completed quick task 261010-h9n — Amazon sign-in probe classifies the zero-installed nile exit as unknown, not healthy (F-49-R1-4, WR-02); Phase 49 complete, transitioned to Phase 9
-state_head: 96eb9ded95ed4d32e9ecb303ce0b3d0856dfcc73
+last_activity_desc: Phase 45 execution started
+state_head: 11788df847c0532ae1750a3554144ba2dc3ddcf8
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 548
   completed_plans: 527
-  percent: 50
+  percent: 82
 ---
 
 # Project State
@@ -25,7 +25,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 49 — Cross-store signed-out / offline mode
+**Current focus:** Phase 45 — Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — READY TO EXECUTE
-Plan: 0 of 0 — Phase 9 (Quality Gate) has no plans; the next phase after 49 is an operator choice
-Status: Ready to execute
-Last activity: 2026-10-10 — Completed quick task 261010-ho8 — Fix authTrigger.ts ORIGIN_TO_TRIGGER[origin] unguarded bracket lookup (49-REVIEW WR-04)
+Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — EXECUTING
+Plan: 1 of 12
+Status: Executing Phase 45
+Last activity: 2026-10-10 — Phase 45 execution started
 
 Previous activity: 2026-10-10 — Phase 49 complete, transitioned to Phase 9
 
@@ -118,7 +118,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 82%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
