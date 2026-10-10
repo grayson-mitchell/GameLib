@@ -43,7 +43,10 @@ import type {
   WineCommandArgs,
   WineInstallation,
   WineManagerStatus,
+  WinetricksApplyResult,
   WinetricksComponent,
+  WinetricksLogLine,
+  WinetricksQueueState,
   WineVersionInfo
 } from '../types'
 import type { CatalogLocaleSettings, CatalogProduct } from './discounts'
@@ -196,6 +199,21 @@ interface AsyncIPCFunctions {
     runner: Runner,
     appName: string
   ) => Promise<WinetricksComponent[]>
+  // Phase 45 Plan 01 (D-11/D-12/D-13): the sequential-install queue. `winetricksInstall`
+  // (send-kind, above) stays in place -- plan 45-02 retires it.
+  winetricksApply: (
+    runner: Runner,
+    appName: string,
+    verbs: string[]
+  ) => Promise<WinetricksApplyResult>
+  winetricksQueueState: (
+    runner: Runner,
+    appName: string
+  ) => Promise<WinetricksQueueState>
+  winetricksCancelRemaining: (
+    runner: Runner,
+    appName: string
+  ) => Promise<WinetricksQueueState>
   checkGameUpdates: () => Promise<string[]>
   getEpicGamesStatus: () => Promise<boolean>
   updateAll: () => Promise<({ status: 'done' | 'error' | 'abort' } | null)[]>
@@ -739,9 +757,15 @@ interface FrontendMessages {
     // Set only on the `['Done']` event: true when winetricks exited non-zero
     // (or by signal). Absent on every intermediate progress event.
     failed?: boolean
+    // Populated by Phase 45 Plan 06; unused (always undefined) by this plan.
+    lines?: WinetricksLogLine[]
+    percent?: number
   }) => void
   progressOfWineManager: (version: string, progress: WineManagerStatus) => void
   'installing-winetricks-component': (component: string) => void
+  // Phase 45 Plan 01 (D-11/D-12/D-13): pushed on every queue-state transition for the
+  // currently-open game's winetricks tab.
+  winetricksQueueChanged: (state: WinetricksQueueState) => void
   logFileUploaded: (url: string, data: UploadedLogData) => void
   logFileUploadDeleted: (url: string) => void
   progressUpdate: (progress: GameStatus) => void

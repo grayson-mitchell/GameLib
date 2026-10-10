@@ -16,6 +16,12 @@ export const winetricksListInstalled = makeHandlerInvoker('winetricksInstalled')
 export const winetricksListAvailable = makeHandlerInvoker('winetricksAvailable')
 export const winetricksInstall = makeListenerCaller('winetricksInstall')
 export const handleWinetricksInstalling = frontendListenerSlot('installing-winetricks-component')
+// Phase 45 Plan 01 (D-11/D-12/D-13): the winetricks queue. `winetricksInstall` above stays in
+// place -- plan 45-02 retires it.
+export const winetricksApply = makeHandlerInvoker('winetricksApply')
+export const winetricksQueueState = makeHandlerInvoker('winetricksQueueState')
+export const winetricksCancelRemaining = makeHandlerInvoker('winetricksCancelRemaining')
+export const handleWinetricksQueueChanged = frontendListenerSlot('winetricksQueueChanged')
 
 export const wine = {
   isValidVersion: makeHandlerInvoker('wine.isValidVersion')

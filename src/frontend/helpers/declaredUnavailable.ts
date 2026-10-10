@@ -74,7 +74,7 @@ export const STEAMGRIDDB_CHANNELS = [
 ] as const
 
 /**
- * The 3 deferred winetricks channels (D-03), named as the PRELOAD API-METHOD names the
+ * The winetricks channels (D-03), named as the PRELOAD API-METHOD names the
  * frontend actually calls -- deliberately named `_API_METHODS`, not `_CHANNELS`, because these
  * are NOT the wire channel names. `src/preload/api/wine.ts:15-16` maps
  * `winetricksListInstalled` to the wire channel `winetricksInstalled`, and
@@ -85,15 +85,27 @@ export const STEAMGRIDDB_CHANNELS = [
  * `deferred-items.md` item 31, plan 34.5-55). `winetricksInstall` has no method/channel split
  * (it is both, and is send-kind), so it appears here unchanged as the third member -- this
  * constant enumerates every deferred call site the frontend actually touches for this cluster.
+ * Phase 45 Plan 01 (2026-10-10) grows this from 3 to 6: `winetricksApply`/`winetricksQueueState`/
+ * `winetricksCancelRemaining` are live (not deferred) invoke-kind channels built in that plan,
+ * but are routed through `callOrDeclare` for the same uniform defensive-error-handling reason
+ * every other `window.api.winetricks*` call is.
  */
+// Phase 45 Plan 01 (D-11/D-12/D-13) adds the three winetricks-queue invoke-kind
+// channels. They have no method/channel split either (identity, like
+// `winetricksInstall`): `window.api.winetricksApply` calls the wire channel
+// `winetricksApply`, and so on.
 export const WINETRICKS_API_METHODS = [
   'winetricksListInstalled',
   'winetricksListAvailable',
-  'winetricksInstall'
+  'winetricksInstall',
+  'winetricksApply',
+  'winetricksQueueState',
+  'winetricksCancelRemaining'
 ] as const
 
 /**
- * The 3 deferred winetricks WIRE CHANNEL names (D-03), matching
+ * The winetricks WIRE CHANNEL names (D-03; grown from 3 to 6 by Phase 45 Plan 01, see the
+ * doc comment above `WINETRICKS_API_METHODS`), matching
  * `.planning/IPC-PORT-INVENTORY.md`'s bucket row exactly. Used as `callOrDeclare`'s `channel:`
  * field so the log line names what the inventory names, never the preload method name. Mapping:
  * `winetricksListInstalled` -> `winetricksInstalled`; `winetricksListAvailable` ->
@@ -115,7 +127,10 @@ export const WINETRICKS_API_METHODS = [
 const WINETRICKS_CHANNELS = [
   'winetricksAvailable',
   'winetricksInstall',
-  'winetricksInstalled'
+  'winetricksInstalled',
+  'winetricksApply',
+  'winetricksQueueState',
+  'winetricksCancelRemaining'
 ] as const
 
 /**
@@ -172,7 +187,10 @@ export const WINETRICKS_CHANNEL_BY_METHOD: Record<
 > = {
   winetricksListInstalled: 'winetricksInstalled',
   winetricksListAvailable: 'winetricksAvailable',
-  winetricksInstall: 'winetricksInstall'
+  winetricksInstall: 'winetricksInstall',
+  winetricksApply: 'winetricksApply',
+  winetricksQueueState: 'winetricksQueueState',
+  winetricksCancelRemaining: 'winetricksCancelRemaining'
 }
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`

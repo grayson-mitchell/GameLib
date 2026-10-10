@@ -51,6 +51,8 @@ import { Tabs, Tab } from '@mui/material'
 import { GameInfo } from 'common/types'
 import DisableUMU from '../../components/DisableUMU'
 import VerboseLogs from '../../components/VerboseLogs'
+import WinetricksSettings from '../WinetricksSettings'
+import { shouldShowWinetricksTab } from '../WinetricksSettings/visibility'
 
 const windowsPlatforms = ['Win32', 'Windows', 'windows']
 function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
@@ -74,7 +76,7 @@ function getStartingTab(platform: string, gameInfo?: GameInfo | null): string {
 export default function GamesSettings() {
   const { t } = useTranslation()
   const { platform } = useContext(ContextProvider)
-  const { isDefault, gameInfo } = useContext(SettingsContext)
+  const { isDefault, gameInfo, runner } = useContext(SettingsContext)
   const [wineVersion] = useSetting('wineVersion', defaultWineVersion)
   const [isNative, setIsNative] = useState(false)
   const isLinux = platform === 'linux'
@@ -100,12 +102,33 @@ export default function GamesSettings() {
     }
     return false
   }
+  const showOtherTab = shouldShowSettings('other')
+  const showWineTab = shouldShowSettings('wine')
+  // Phase 45 Plan 01 (D-03): mirrors `Tools/index.tsx`'s own gate, plus the Wine
+  // tab's `!isCrossover` guard -- see visibility.ts for why both are required.
+  const showWinetricksTab = shouldShowWinetricksTab({
+    isDefault,
+    isWindows: isWin,
+    hasRunner: !!runner,
+    showWineTab,
+    isCrossover
+  })
+
   // Get the latest used tab index for the current game
   const localStorageKey = gameInfo
     ? `${gameInfo.app_name}-setting_tab`
     : 'default'
-  const latestTabIndex =
+  let latestTabIndex =
     localStorage.getItem(localStorageKey) || getStartingTab(platform, gameInfo)
+  // A tab persisted from a previous render (or a previous game) can be hidden
+  // under the CURRENT render's visibility -- most concretely the winetricks
+  // tab, whose gate depends on `runner`/`isCrossover`, neither of which is
+  // stable across the Default-page / per-game Settings boundary. Falling
+  // back to the same starting tab a fresh mount would pick keeps `value`
+  // from ever pointing at a `<Tab>` that was not rendered.
+  if (latestTabIndex === 'winetricks' && !showWinetricksTab) {
+    latestTabIndex = getStartingTab(platform, gameInfo)
+  }
   const [value, setValue] = useState(latestTabIndex)
 
   const handleChange = (
@@ -130,9 +153,6 @@ export default function GamesSettings() {
     }
   }, [gameInfo])
 
-  const showOtherTab = shouldShowSettings('other')
-  const showWineTab = shouldShowSettings('wine')
-
   return (
     <>
       {isDefault && (
@@ -152,6 +172,7 @@ export default function GamesSettings() {
         variant="scrollable"
       >
         {showWineTab && <Tab label="Wine" value="wine" />}
+        {showWinetricksTab && <Tab label="Winetricks" value="winetricks" />}
         {showOtherTab && (
           <Tab label={t('settings.navbar.other', 'Other')} value="other" />
         )}
@@ -202,6 +223,12 @@ export default function GamesSettings() {
           </>
         )}
       </TabPanel>
+
+      {showWinetricksTab && (
+        <TabPanel value={value} index={'winetricks'}>
+          <WinetricksSettings />
+        </TabPanel>
+      )}
 
       <TabPanel value={value} index={'other'}>
         {!isNative && <ShowFPS />}

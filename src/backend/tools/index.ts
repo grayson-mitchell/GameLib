@@ -3,7 +3,8 @@ import {
   GameSettings,
   Runner,
   Tool,
-  WineCommandArgs
+  WineCommandArgs,
+  WinetricksInstallOutcome
 } from 'common/types'
 
 import {
@@ -535,7 +536,13 @@ export const Winetricks = {
     // progress/Done events with the installing verb -- a false Done that
     // ended the install's in-flight state in the UI, and its stderr " err"
     // lines attributed to a verb they had nothing to do with.
-    component = ''
+    component = '',
+    // Phase 45 Plan 01 (D-11): fires exactly once, with whether the run
+    // failed, so `Winetricks.install` (and the queue built on top of it) can
+    // report a real per-verb outcome instead of a resolved-with-no-value
+    // promise. Every other `runWithArgs` call site (GUI, list-all) passes
+    // nothing -- the parameter is optional and a no-op when omitted.
+    onDone?: (failed: boolean) => void
   ) => {
     // Imported lazily to break a circular dependency (tools/index.ts <->
     // storeManagers/index.ts) — see the load-bearing comment in
@@ -548,6 +555,7 @@ export const Winetricks = {
     const { wineVersion } = gameSettings
 
     if (!(await validWine(wineVersion))) {
+      onDone?.(true)
       return
     }
 
@@ -679,6 +687,7 @@ export const Winetricks = {
           type: 'ERROR'
         })
         clearInterval(sendProgress)
+        onDone?.(true)
         resolve(returnOutput ? output : null)
       })
 
@@ -707,6 +716,7 @@ export const Winetricks = {
           installingComponent: component,
           failed: code !== 0
         })
+        onDone?.(code !== 0)
         resolve(returnOutput ? output : null)
       }
 
@@ -762,7 +772,11 @@ export const Winetricks = {
       return []
     }
   },
-  install: async (runner: Runner, appName: string, component: string) => {
+  install: async (
+    runner: Runner,
+    appName: string,
+    component: string
+  ): Promise<WinetricksInstallOutcome> => {
     // Single-flight: two `winetricks -q` processes racing on one Wine prefix
     // is never wanted, and the first to finish would clear
     // `installingComponent` to '' while the other still runs. A refused call
@@ -773,10 +787,16 @@ export const Winetricks = {
         `Not installing ${component}: ${installingComponent} is already installing`,
         LogPrefix.WineTricks
       )
-      return
+      return 'refused'
     }
     installingComponent = component
     sendFrontendMessage('installing-winetricks-component', component)
+    // Phase 45 Plan 01 (D-11): `onDone` is the only source of truth for this
+    // call's own outcome. Defaults to 'failed' -- if `runWithArgs` resolves
+    // without ever invoking `onDone` (a shape this plan has not observed but
+    // does not rule out either), the queue built on top of this must not
+    // silently read that as success.
+    let outcome: WinetricksInstallOutcome = 'failed'
     try {
       await Winetricks.runWithArgs(
         runner,
@@ -784,12 +804,16 @@ export const Winetricks = {
         ['-q', component],
         false,
         undefined,
-        component
+        component,
+        (failed) => {
+          outcome = failed ? 'failed' : 'installed'
+        }
       )
     } finally {
       installingComponent = ''
       sendFrontendMessage('installing-winetricks-component', '')
     }
+    return outcome
   },
   checkDependencies: async (
     envs: Record<string, string>,
@@ -815,6 +839,13 @@ export const Winetricks = {
       logWarning([message], LogPrefix.WineTricks)
     }
   }
+}
+
+// Phase 45 Plan 01 (D-11): reads the same module-level single-flight slot
+// `Winetricks.install` guards on, so `winetricksQueue.ts` can report `busy`
+// without duplicating that state.
+export function getInstallingComponent(): string {
+  return installingComponent
 }
 
 /**

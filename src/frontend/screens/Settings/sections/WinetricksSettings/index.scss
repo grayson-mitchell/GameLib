@@ -1,0 +1,136 @@
+// Phase 45 Plan 01 (D-01/D-02/D-11-D-13): styling for the tracer-scope
+// Winetricks settings tab. `.WinetricksSettings` declares NO `overflow` --
+// `.App .content` is this app's one scroll container (confirmed in
+// `App.css`), so a second scroll region here would reopen the
+// scroll-within-a-scroll defect class already paid for once in
+// `WinetricksBrowse/index.scss`. `min-width: 0` lets this panel shrink
+// inside the Settings tab layout instead of forcing a horizontal scrollbar
+// on its ancestor.
+//
+// Every `var()` below carries a fallback, and none of them reach for the
+// four tokens this plan's acceptance criteria bans (nav-bar-scoped colours,
+// the link-hover text colour, a raw status colour, or the near-invisible
+// generic border colour) -- all four are either theme-inconsistent or
+// measured-invisible in prior incidents (see `gamelib-conventions` skill,
+// CSS scope traps).
+.WinetricksSettings {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: var(--space-sm, 0.75rem);
+
+  &__declined {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs, 0.25rem);
+    color: var(--text-secondary, #8b939a);
+  }
+
+  &__heading {
+    margin: 0;
+    font-size: var(--text-xs, 0.75rem);
+    font-weight: var(--bold, 700);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary, #8b939a);
+  }
+
+  &__rows {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    gap: var(--space-3xs, 0.125rem);
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: var(--space-2xs, 0.25rem);
+    padding-inline: var(--space-sm, 0.75rem);
+    padding-block: var(--space-2xs, 0.25rem);
+  }
+
+  &__rowTitle {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__rowStatus {
+    flex: 0 0 auto;
+    font-size: var(--text-xs, 0.75rem);
+    color: var(--text-secondary, #8b939a);
+
+    &--failed {
+      color: var(--danger, #e74c3c);
+    }
+
+    &--installed {
+      color: var(--success, #2ecc71);
+    }
+  }
+
+  &__rowCheckbox {
+    flex: 0 0 auto;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 3px;
+    background: none;
+    border: 1px solid var(--accent, #0080ff);
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+  }
+
+  // D-11/D-12: sticky action bar for the apply/in-flight/done states.
+  // `position: sticky` here never opens a second scroll region of its own
+  // -- it just pins this bar to the bottom of whichever ancestor is
+  // actually scrolling (`.App .content`).
+  &__bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: var(--space-sm, 0.75rem);
+    padding: var(--space-sm, 0.75rem);
+    background: var(--input-background, #272f31);
+
+    button {
+      background: var(--accent, #0080ff);
+      color: var(--text-default, #ffffff);
+      border: 0;
+      border-radius: 4px;
+      padding: var(--space-2xs, 0.25rem) var(--space-sm, 0.75rem);
+      cursor: pointer;
+
+      &:disabled {
+        cursor: default;
+        opacity: 0.5;
+      }
+    }
+  }
+
+  // The Done state's " · " separator between the installed and failed
+  // counts is drawn here, never as a JSX literal -- see 45-01-PLAN.md's
+  // sticky bar spec.
+  &__barFailed {
+    color: var(--danger, #e74c3c);
+
+    &::before {
+      content: ' · ';
+      color: var(--text-secondary, #8b939a);
+    }
+  }
+}

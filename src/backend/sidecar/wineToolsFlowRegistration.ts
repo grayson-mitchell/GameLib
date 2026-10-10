@@ -24,11 +24,11 @@
  * branch's shell is removed in favour of a non-shell `spawnAsync` argv call — landing alongside
  * the same plan's hardening for `importGame` and `moveInstall` (34.6-06).
  *
- * Declared channel list (13 total, 12 invoke + 1 send — verified against `main.ts`,
+ * Declared channel list (16 total, 15 invoke + 1 send — verified against `main.ts`,
  * `wine/manager/ipc_handler.ts` and `tools/ipc_handler.ts` source by 34.5-RESEARCH.md/this plan's
- * own `<interfaces>` block):
+ * own `<interfaces>` block; Phase 45 Plan 01, 2026-10-10, adds the winetricks-queue trio):
  *
- *   invoke (ipcMain.handle, 12):
+ *   invoke (ipcMain.handle, 15):
  *     - `runWineCommand`         -> main.ts:766
  *     - `getAlternativeWine`     -> main.ts:973
  *     - `wine.isValidVersion`    -> main.ts:1532
@@ -41,6 +41,9 @@
  *     - `winetricksAvailable`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
  *     - `winetricksInstalled`    -> tools/ipc_handler.ts (Phase 34.6 Plan 07)
  *     - `runWineCommandForGame`  -> tools/ipc_handler.ts (Phase 34.6 Plan 07, T-34.5-C6-49-03)
+ *     - `winetricksApply`           -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
+ *     - `winetricksQueueState`      -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
+ *     - `winetricksCancelRemaining` -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
  *
  *   send (ipcMain.on, 1):
  *     - `winetricksInstall`      -> tools/ipc_handler.ts (Phase 34.6 Plan 07, D-11 observable)
@@ -65,6 +68,7 @@ import {
   updateWineListsIfOutdated
 } from '../wine/manager/utils'
 import { DXVK, Winetricks, runWineCommandOnGame } from '../tools'
+import { WinetricksQueue } from '../tools/winetricksQueue'
 import { getGame, spawnAsync } from '../utils'
 import { isWindows } from '../constants/environment'
 import { assertCommandParts } from './rendererPathGuard'
@@ -95,9 +99,11 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
- * Registers this cluster's 13 channels (12 invoke, 1 send — `winetricksInstall`, D-11 — as of
- * Phase 34.6 Plan 07). Called once from `handlers.ts` — this module owns no side effects at
- * import time; the caller decides when registration onto the handler registry happens.
+ * Registers this cluster's 16 channels (15 invoke, 1 send — `winetricksInstall`, D-11). As of
+ * Phase 45 Plan 01 (2026-10-10), the count is 12 invoke + 1 send from Phase 34.6 Plan 07 plus the
+ * 3 new winetricks-queue invoke channels (`winetricksApply`, `winetricksQueueState`,
+ * `winetricksCancelRemaining`). Called once from `handlers.ts` — this module owns no side effects
+ * at import time; the caller decides when registration onto the handler registry happens.
  *
  * Idempotence guard (Rule 1 fix, mirroring `runnerAuthFlowRegistration.ts`'s/
  * `shortcutsFlowRegistration.ts`'s own `let registered = false` guard): before plan 34.6-07 this
@@ -320,6 +326,39 @@ export function registerWineToolsFlows(): void {
       const appName = args[1] as string
       const game = getGame(appName, runner)
       return Winetricks.listInstalled(game)
+    }
+  )
+
+  // ── Winetricks queue (Phase 45 Plan 01, D-11/D-12/D-13/D-18) ───────────────────────────────
+  //
+  // Invoke-kind, unlike `winetricksInstall` below: each acks immediately with the new queue
+  // state (T-45-03 repudiation mitigation) and the sequential install loop continues detached
+  // inside `winetricksQueue.ts`, never through this registration module.
+  ipcMain.handle(
+    'winetricksApply',
+    async (_event: unknown, ...args: unknown[]) => {
+      const runner = args[0] as Runner
+      const appName = args[1] as string
+      const verbs = args[2] as string[]
+      return WinetricksQueue.apply(runner, appName, verbs)
+    }
+  )
+
+  ipcMain.handle(
+    'winetricksQueueState',
+    async (_event: unknown, ...args: unknown[]) => {
+      const runner = args[0] as Runner
+      const appName = args[1] as string
+      return WinetricksQueue.getState(runner, appName)
+    }
+  )
+
+  ipcMain.handle(
+    'winetricksCancelRemaining',
+    async (_event: unknown, ...args: unknown[]) => {
+      const runner = args[0] as Runner
+      const appName = args[1] as string
+      return WinetricksQueue.cancelRemaining(runner, appName)
     }
   )
 

@@ -861,7 +861,72 @@ export interface WinetricksComponent {
   title: string
   category: string
   cached: boolean
+  // The four fields below are added by Phase 45 Plan 01 (D-01/D-02) but are left
+  // unpopulated by this plan -- a later plan in this phase sources and fills them.
+  publisher?: string
+  year?: string
+  media?: string
+  conflicts?: string[]
+  homepage?: string
+  needsGui?: boolean
 }
+
+/** One in-flight (or finished) verb's lifecycle state inside a `WinetricksQueueRun`. */
+export type WinetricksVerbOutcome =
+  | 'pending'
+  | 'installing'
+  | 'installed'
+  | 'failed'
+  | 'cancelled'
+
+/** Classifies a single line of raw winetricks stdout/stderr for display (Phase 45 D-16). */
+export type WinetricksLogLineKind =
+  | 'progress'
+  | 'noise'
+  | 'info'
+  | 'environment'
+  | 'error'
+
+export interface WinetricksLogLine {
+  kind: WinetricksLogLineKind
+  text: string
+  percent?: number
+}
+
+/** One sequential-install run across a batch of verbs for a single game (D-11). */
+export interface WinetricksQueueRun {
+  runId: number
+  runner: Runner
+  appName: string
+  verbs: string[]
+  outcomes: Record<string, WinetricksVerbOutcome>
+  currentVerb: string
+  status: 'running' | 'done'
+  cancelRequested: boolean
+  log: WinetricksLogLine[]
+}
+
+/** Environment-level warnings surfaced alongside a queue run (D-16, populated by a later plan). */
+export interface WinetricksEnvironmentReport {
+  unsupportedWineVersion: string | null
+  missingDependencies: string[]
+}
+
+/** The full winetricks-queue state for one game, as pushed via `winetricksQueueChanged`. */
+export interface WinetricksQueueState {
+  runner: Runner
+  appName: string
+  run: WinetricksQueueRun | null
+  busy: boolean
+  environment: WinetricksEnvironmentReport
+}
+
+export type WinetricksApplyResult =
+  | { accepted: true; state: WinetricksQueueState }
+  | { accepted: false; reason: 'busy' | 'invalid'; detail: string }
+
+/** `Winetricks.install`'s own per-call outcome (D-11), distinct from the queue-run outcome map. */
+export type WinetricksInstallOutcome = 'installed' | 'failed' | 'refused'
 
 export interface GameScoreInfo {
   score: string
