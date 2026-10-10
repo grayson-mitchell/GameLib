@@ -1,44 +1,154 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-10T08:05:43.039Z",
+  "timestamp": "2026-10-10T19:19:41Z",
   "phase": "45",
   "phase_name": "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch",
   "phase_dir": ".planning/phases/45-native-in-app-winetricks-ui-redesigned-from-scratch-one-self",
-  "plan": 10,
-  "task": 6,
+  "plan": 12,
+  "task": 12,
   "total_tasks": 12,
-  "status": "paused",
+  "status": "checkpoint",
   "completed_tasks": [
-    {"id": 1, "name": "45-01 tracer slice + backend winetricks queue contract (wave 1)", "status": "done", "commit": "eec761a6e"},
-    {"id": 2, "name": "45-03 English copy contract (41 leaves) + applyFill.ts tool (wave 1)", "status": "done", "commit": "4a74d1d91"},
-    {"id": 3, "name": "45-04 metadata parser, needs-GUI set, D-09 visibility (wave 1, TDD)", "status": "done", "commit": "0f31f236e"},
-    {"id": 4, "name": "wave 1 post-merge gate: tsc green; runnerSliceRegistration pin 62->65 fixed", "status": "done", "commit": "aedb0fc8f"},
-    {"id": 5, "name": "45-02 retire Phase 44 browse tree, GUI hatch, winetricksInstall send channel (wave 2)", "status": "done", "commit": "08126ec40"},
-    {"id": 6, "name": "45-09 locale fill batch A, 24 locales ar..it (wave 2)", "status": "done", "commit": "bba2a065f"}
+    {
+      "id": 1,
+      "name": "45-01 tracer + queue (wave 1)",
+      "status": "done",
+      "commit": "eec761a6e"
+    },
+    {
+      "id": 2,
+      "name": "45-03 English copy contract (wave 1)",
+      "status": "done",
+      "commit": "4a74d1d91"
+    },
+    {
+      "id": 3,
+      "name": "45-04 metadata/visibility (wave 1, TDD)",
+      "status": "done",
+      "commit": "0f31f236e"
+    },
+    {
+      "id": 4,
+      "name": "45-02 retire Phase 44 tree + GUI hatch (wave 2)",
+      "status": "done",
+      "commit": "08126ec40"
+    },
+    {
+      "id": 5,
+      "name": "45-09 locales batch A (wave 2)",
+      "status": "done",
+      "commit": "bba2a065f"
+    },
+    {
+      "id": 6,
+      "name": "45-10 locales batch B (wave 2)",
+      "status": "done",
+      "commit": "f7c5f2b54"
+    },
+    {
+      "id": 7,
+      "name": "wave 2 gate fix: longRunningCallSiteGuard read the deleted Winetricks component",
+      "status": "done",
+      "commit": "d62f65dcc"
+    },
+    {
+      "id": 8,
+      "name": "45-05 verbs.ts/deriveRowState.ts taxonomy (wave 3, TDD)",
+      "status": "done",
+      "commit": "7289b433d"
+    },
+    {
+      "id": 9,
+      "name": "45-06 output classifier + annotated catalog (wave 3, TDD); D-15 real-log measurement deferred to macOS",
+      "status": "done",
+      "commit": "5250c7a4e"
+    },
+    {
+      "id": 10,
+      "name": "45-07 tab body: rows, Suggested, task groups, Everything else (wave 4, TDD)",
+      "status": "done",
+      "commit": "8fdfd8834"
+    },
+    {
+      "id": 11,
+      "name": "45-08 sticky bar, log panel, environment banner, remountSafety port (wave 5, TDD)",
+      "status": "done",
+      "commit": "7050e3995"
+    },
+    {
+      "id": 12,
+      "name": "IPC-PORT-INVENTORY bucket line for the three 45-01 channels (preload-surface-gate was red)",
+      "status": "done",
+      "commit": "862017cb8"
+    },
+    {
+      "id": 13,
+      "name": "45-11 retired-key removal, i18n gate scope mirror (A-17 cleared), Phase 44 closed as superseded (wave 6)",
+      "status": "done",
+      "commit": "b18e52219"
+    },
+    {
+      "id": 14,
+      "name": "45-12 Task 1 authoring: 45-LIVE-GATE.md + 45-UAT.md (27 pending items)",
+      "status": "done",
+      "commit": "657716616"
+    }
   ],
   "remaining_tasks": [
-    {"id": 7, "name": "45-10 locale fill batch B, 24 locales ja..zh_Hant (wave 2) — dispatch FIRST", "status": "not_started"},
-    {"id": 8, "name": "wave 2 post-merge gate: npx tsc --noEmit -p tsconfig.json; npx jest --silent; gsd_run check verify.schema-drift / verify.codebase-drift / ui.safety-gate 45", "status": "not_started"},
-    {"id": 9, "name": "45-05 verbs.ts + deriveRowState.ts row taxonomy (wave 3, TDD-applicable)", "status": "not_started"},
-    {"id": 10, "name": "45-06 winetricksOutputClassifier + lifecycle (wave 3)", "status": "not_started"},
-    {"id": 11, "name": "45-07 grouped rows UI (wave 4)", "status": "not_started"},
-    {"id": 12, "name": "45-08 sticky bar, log panel, environment banner (wave 5)", "status": "not_started"},
-    {"id": 13, "name": "45-11 final locale sweep + gate consolidation; owns genI18nGateScope A-17 fix and the orphaned winetricksBrowse.needsGuiTag/installingRow + 3 translation.json keys (wave 6)", "status": "not_started"},
-    {"id": 14, "name": "45-12 live gate + UAT — autonomous: false, human checkpoint; AUTO_MODE is false so it must be presented to the user (wave 7)", "status": "not_started"},
-    {"id": 15, "name": "phase tail: aggregate_results -> code_review_gate (code-review hook active) -> regression_gate -> verify_phase_goal (gsd-verifier, sonnet) -> update_roadmap", "status": "not_started"}
+    {
+      "id": 15,
+      "name": "45-12 Task 1 build step + Task 2 live gate G1-G9 on a packaged macOS build (operator, on the Mac) - Gate: blocking-human",
+      "status": "blocked"
+    },
+    {
+      "id": 16,
+      "name": "45-12 Task 3: transcribe operator results, score, file todos, SUMMARY (continuation executor after \"gate recorded\")",
+      "status": "not_started"
+    },
+    {
+      "id": 17,
+      "name": "phase tail: aggregate_results -> code_review_gate -> regression_gate -> verify_phase_goal (gsd-verifier, sonnet) -> update_roadmap -> close_phase_todos -> transition",
+      "status": "not_started"
+    }
   ],
-  "blockers": [],
+  "blockers": [
+    "45-12 Task 2 requires the packaged macOS build, GPTK and a real bottle on the operator's Mac"
+  ],
   "async_jobs": [],
   "human_actions_pending": [
-    {"action": "Plan 45-12 is a live gate (autonomous: false) and will stop at a human checkpoint when reached", "context": "AUTO_MODE=false; the orchestrator must present the checkpoint rather than auto-approve", "blocking": false}
+    {
+      "action": "Run the 45-12 live gate on the Mac per 45-LIVE-GATE.md (build from build_sha b18e52219; items G8, G6, G1+G2, G4, G3, G5, G7, G9, then the D-15 count), then reply \"gate recorded\" with 27 observations",
+      "context": "AUTO_MODE=false; the gate is blocking-human (precondition unmet on Windows)",
+      "blocking": true
+    }
   ],
   "decisions": [
-    {"decision": "Executors run sequentially on the main tree (branch quick-261002-b63), model sonnet, with the #4254 project_root_pin bound to /Users/graysonmitchell/Projects/GameLib and gsd_run query dispatch-isolation --force-isolation none recorded per plan", "rationale": "workflow.use_worktrees=false in .planning/config.json forces ISOLATION=none; executor_model resolves to sonnet under the balanced profile", "phase": "45"},
-    {"decision": "Executor prompts instruct the agent to Read execute-plan.md / summary.md / checkpoints.md / worktree-path-safety.md / executor-examples.md (plus tdd.md when phase.tdd-applicable is true) by absolute path instead of inlining ~125KB verbatim", "rationale": "same content reaches the executor at zero orchestrator output cost; @-includes do not expand in Agent prompts (#3324)", "phase": "45"},
-    {"decision": "Four known-red jest suites are carried deliberately, not fixed by the orchestrator: lintTranslations (completes when 45-10 lands), genI18nGateScope A-17 (45-11 owns meta/i18nForkTouchedFiles.json; committed list lacks UI/index.tsx, WinetricksSettings/index.tsx, WinetricksSettings/visibility.ts), findDeadcode (WinetricksLogLineKind -> 45-06; WinetricksVerbMetadata/HIDDEN_CATEGORIES/HIDDEN_VERBS -> 45-05/45-11 consumers; re-check after wave 3)", "rationale": "each is an in-flight interface or artifact a later plan in this phase owns; fixing them early would be redone or would break the owning plan", "phase": "45"},
-    {"decision": "Left the dev gamelib-shell (pid 87335, target/debug, tauri dev started 13:29) running and the stale .planning/milestone.lock (phase 48, pid 96479 dead since 2026-10-09 21:08) untracked", "rationale": "no live-gate fixture depends on the dev process in waves 1-6; the lock belongs to a dead session and is not this phase's file", "phase": "45"}
+    {
+      "decision": "Executors run sequentially on the main tree (branch quick-261002-b63), model sonnet, with the #4254 project_root_pin bound to /Users/graysonmitchell/Projects/GameLib and gsd_run query dispatch-isolation --force-isolation none recorded per plan",
+      "rationale": "workflow.use_worktrees=false in .planning/config.json forces ISOLATION=none; executor_model resolves to sonnet under the balanced profile",
+      "phase": "45"
+    },
+    {
+      "decision": "Executor prompts instruct the agent to Read execute-plan.md / summary.md / checkpoints.md / worktree-path-safety.md / executor-examples.md (plus tdd.md when phase.tdd-applicable is true) by absolute path instead of inlining ~125KB verbatim",
+      "rationale": "same content reaches the executor at zero orchestrator output cost; @-includes do not expand in Agent prompts (#3324)",
+      "phase": "45"
+    },
+    {
+      "decision": "Four known-red jest suites are carried deliberately, not fixed by the orchestrator: lintTranslations (completes when 45-10 lands), genI18nGateScope A-17 (45-11 owns meta/i18nForkTouchedFiles.json; committed list lacks UI/index.tsx, WinetricksSettings/index.tsx, WinetricksSettings/visibility.ts), findDeadcode (WinetricksLogLineKind -> 45-06; WinetricksVerbMetadata/HIDDEN_CATEGORIES/HIDDEN_VERBS -> 45-05/45-11 consumers; re-check after wave 3)",
+      "rationale": "each is an in-flight interface or artifact a later plan in this phase owns; fixing them early would be redone or would break the owning plan",
+      "phase": "45"
+    },
+    {
+      "decision": "Left the dev gamelib-shell (pid 87335, target/debug, tauri dev started 13:29) running and the stale .planning/milestone.lock (phase 48, pid 96479 dead since 2026-10-09 21:08) untracked",
+      "rationale": "no live-gate fixture depends on the dev process in waves 1-6; the lock belongs to a dead session and is not this phase's file",
+      "phase": "45"
+    }
   ],
-  "uncommitted_files": [" M .planning/state.json", "?? .planning/milestone.lock"],
-  "next_action": "Run /gsd-execute-phase 45: it skips the 5 summarized plans and dispatches 45-10 (sentinel: gsd_run query dispatch-isolation --raw --phase 45 --plan 45-10 --force-isolation none; TDD-applicable false). After 45-10 closes out, run the wave 2 post-merge gate, then pre-wave verify.key-links for 45-05/45-06 and continue wave 3.",
-  "context_notes": "Each executor took 25-95 min and up to 35 min before its FIRST tree write; the subagent transcript file stays a 156-byte stub until the agent finishes, so stat it for nothing. Judge progress by git commits and git status --porcelain only. 45-03 amended its closeout to add a Co-Authored-By trailer (gsd_run query commit adds none). 45-02's SUMMARY carries a 'Finding-Bearing Deleted Tests' section that 45-07/45-08 must port when rebuilding the row UI."
+  "uncommitted_files": [
+    " M .planning/state.json",
+    "?? .planning/milestone.lock",
+    "?? .planning/debug/rust-test-ci-missing-sidecar.md"
+  ],
+  "next_action": "On the Mac: run the live gate per 45-LIVE-GATE.md, then resume the 45-12 checkpoint with \"gate recorded\" + per-item observations so Task 3 runs; then the execute-phase tail (code review, regression gate, verifier).",
+  "context_notes": "Windows session 2026-10-10/11 ran waves 2-7. Post-merge jest criterion on Windows: failing set == the 39-suite Windows baseline (memory windows-local-jest-failures.md). Platform-only steps were deferred honestly: 45-06 D-15 log measurement, 45-12 build/live gate. git checkout -- <file> fires husky post-checkout (pnpm i, \"Packages: -127\" steady state) - revert with git show HEAD:path > path."
 }
