@@ -7,8 +7,11 @@ platform: any
 ready: code
 found_by: "plan 49-12, Phase 49 macOS live gate Run 1 (49-LIVE-GATE.md)"
 files:
-  - src/frontend/screens/Library/LibrarySignInNotice/index.scss
+  - src/frontend/screens/Library/components/LibrarySignInNotice/index.scss
   - src/frontend/screens/Library/index.tsx
+
+completed: 2026-10-11
+status: "RESOLVED 2026-10-11 in quick task 261011-hj6: the rows now mount once, after the chip row and above FocusRowStrip (the first shelf), in Library/index.tsx, locked by G4 and L1; each row block padding and its footer button block padding were halved (--space-sm to --space-2xs) and the button leaked Settings margin was zeroed, taking one row from about 78px (62px on a fresh launch) to about 41px; rows, copy, dismissal and librarySignInRows.ts are unchanged; top placement and the rendered height are for the operator eye at the next launch; commits d6355aa87 (placement) and 67684475b (density)"
 ---
 
 # Operator notes from the Phase 49 live gate
