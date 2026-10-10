@@ -103,7 +103,8 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // ported byte-equivalently from tools/ipc_handler.ts (A-01/D-02).
   // Phase 45 Plan 01 (2026-10-10): winetricksApply / winetricksQueueState /
   // winetricksCancelRemaining (invoke)
-  'wineToolsFlowRegistration.ts': { invoke: 15, send: 1 }
+  // Phase 45 Plan 02 (2026-10-10, D-11 promote): send 1 -> 0 -- winetricksInstall retired outright.
+  'wineToolsFlowRegistration.ts': { invoke: 15, send: 0 }
 }
 
 /**

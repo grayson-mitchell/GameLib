@@ -52,17 +52,22 @@
  *      implementation. All 8 names are listed explicitly — the whole point is that no new code
  *      exists for them.
  *   8. winetricks + runWineCommandForGame presence (Phase 34.6 Plan 07) — the inverse of item 7
- *      for the 3 winetricks-cluster names ported out of the deferred set.
+ *      for the 3 winetricks-cluster names ported out of the deferred set. Phase 45 Plan 02
+ *      (D-11 promote, 2026-10-10) retired one of the three, `winetricksInstall`, outright — the
+ *      describe block now asserts it is absent from BOTH registries, not merely send-kind.
  *   9. EOS overlay presence (Phase 34.6 Plan 08) — the inverse of item 7 for the 8 EOS overlay
  *      names ported out of the deferred set; all 8 are invoke-kind, none send-kind.
  *  10. SteamGridDB presence (Phase 34.6 Plan 09) — the inverse of item 7 for the 5 SteamGridDB
  *      names ported out of the deferred set.
- *  11. 24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — the phase's own completeness gate:
- *      all 24 in-scope channels (EOS overlay 8 + SteamGridDB 5 + winetricks 3 + the 8
+ *  11. 23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 02 retired
+ *      winetricksInstall, 24 -> 23) — the phase's own completeness gate over the currently-LIVE
+ *      registries: 23 in-scope channels (EOS overlay 8 + SteamGridDB 5 + winetricks 2 + the 8
  *      late-discovered channels this plan and plans 34.6-05/06 ported) asserted by NAME with the
- *      correct kind, in ONE test, diffed against `.planning/IPC-PORT-INVENTORY.md`'s own two
- *      Phase-34.6 bucket lines so the census cannot silently drift from the document that scoped
- *      it. `registerAppShellFlows` (owns `frontendReady`) and `registerInstallFlows` (owns
+ *      correct kind, in ONE test. A separate test unions the live 23 back with the one retired
+ *      name to diff against `.planning/IPC-PORT-INVENTORY.md`'s own two unedited, historical
+ *      Phase-34.6 bucket lines (still 24 — a port record, not a live census) so the census cannot
+ *      silently drift from the document that scoped it. `registerAppShellFlows` (owns
+ *      `frontendReady`) and `registerInstallFlows` (owns
  *      `moveInstall`/`importGame`) are called in this describe's OWN isolated `beforeAll` — not
  *      added to this file's `MODULES` table — because neither is one of this slice's own five
  *      (now six) declared-but-originally-empty modules; widening `MODULES` to include their full
@@ -74,8 +79,9 @@
  * This suite is the phase's completeness gate: `34.5-PORTED-CHANNELS.md` (plan 34.5-14) declared
  * the 38 rows Phase 34.5 shipped; Phase 34.6 grows this suite's own totals beyond that document's
  * scope as each deferred cluster is ported, so agreement with that document is a Phase-34.5-era
- * property this suite no longer re-asserts past this plan. The 24-channel census (item 11) is
- * this phase's OWN completeness gate, diffed directly against `IPC-PORT-INVENTORY.md`.
+ * property this suite no longer re-asserts past this plan. The 23-channel census (item 11,
+ * 24 -> 23 once Phase 45 Plan 02 retired winetricksInstall) is this phase's OWN completeness
+ * gate, diffed directly against `IPC-PORT-INVENTORY.md`.
  */
 
 import { readFileSync } from 'fs'
@@ -196,11 +202,12 @@ const WINE_TOOLS_CHANNELS = [
   'installWineVersion',
   'refreshWineVersionInfo',
   'removeWineVersion',
-  // Phase 34.6 Plan 07 (REQ-34.6-04/07/13, A-01/D-02/D-11): the 3 winetricks channels plus
+  // Phase 34.6 Plan 07 (REQ-34.6-04/07/13, A-01/D-02/D-11): the winetricks channels plus
   // runWineCommandForGame, ported from the DEFERRED set into this module's real registration.
+  // Phase 45 Plan 02 (D-11 promote, 2026-10-10): `winetricksInstall` retired outright (deleted,
+  // not kind-swapped) — removed from this declared set entirely, 13 -> 12.
   'winetricksAvailable',
   'winetricksInstalled',
-  'winetricksInstall',
   'runWineCommandForGame'
 ]
 
@@ -546,12 +553,14 @@ const SEND_CHANNELS = [
   'logoutGOG',
   'addShortcut',
   'processShortcut',
-  'removeShortcut',
-  // Phase 34.6 Plan 07 (D-11): winetricksInstall stays send-kind.
-  'winetricksInstall'
+  'removeShortcut'
+  // Phase 34.6 Plan 07 (D-11) added `winetricksInstall` here as send-kind; Phase 45 Plan 02
+  // (D-11 promote, 2026-10-10) retired it outright — removed from this list, 5 -> 4. See
+  // RETIRED_SINCE_CENSUS in Describe 11 below for the historical-document cross-check this
+  // retirement affects.
 ]
 
-describe('completeness — all 67 channels are registered with the right kind, across all six modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module; Phase 34.6 Plan 09 added enrichmentFlowRegistration.ts; Phase 34.6 Plan 10 added the last 3 late-discovered channels to registerRunnerMiscFlows)', () => {
+describe('completeness — all 66 channels are registered with the right kind, across all six modules together (Phase 34.5 Plan 13, REQ-34.5-10; Phase 34.6 Plan 08 added the EOS overlay module; Phase 34.6 Plan 09 added enrichmentFlowRegistration.ts; Phase 34.6 Plan 10 added the last 3 late-discovered channels to registerRunnerMiscFlows; Phase 45 Plan 02 retired winetricksInstall, 67 -> 66)', () => {
   beforeAll(() => {
     // Restore from the canonical snapshot (see the module-scope comment near the top of this
     // file) rather than re-invoking the six `registerXFlows()` functions — some of them are
@@ -559,7 +568,7 @@ describe('completeness — all 67 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 65 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send)', () => {
+  it('exactly 65 channels are handle-kind and exactly 4 are listen-kind (Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -571,11 +580,13 @@ describe('completeness — all 67 channels are registered with the right kind, a
     // Phase 45 Plan 01 (2026-10-10): wineToolsFlowRegistration.ts gained three invoke-kind
     // channels (winetricksApply, winetricksQueueState, winetricksCancelRemaining) — 62+3=65
     // invoke, 5+0=5 send. Measured (jest failure ACTUAL: Received 65) and re-derived — agree.
+    // Phase 45 Plan 02 (2026-10-10): `winetricksInstall` (send-kind) was deleted entirely, not
+    // kind-swapped — handle count is unaffected (65), listen count drops by exactly 1 (5 -> 4).
     expect(handleChannels.length).toBe(65)
-    expect(listenChannels.length).toBe(5)
+    expect(listenChannels.length).toBe(4)
   })
 
-  it('the send set is precisely the 5 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
+  it('the send set is precisely the 4 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
     const listenChannels = new Set(
       [...listenerRegistry.entries()]
         .filter(([, listeners]) => listeners.length > 0)
@@ -602,11 +613,12 @@ describe('completeness — all 67 channels are registered with the right kind, a
     }
   )
 
-  it('per-module declared counts are exactly 11 / 13 / 7 / 14 / 8 / 14, totalling 67 (Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14)', () => {
+  it('per-module declared counts are exactly 11 / 12 / 7 / 14 / 8 / 14, totalling 66 (Phase 34.6 Plan 10: registerRunnerMiscFlows grew 11 -> 14; Phase 45 Plan 02 retired winetricksInstall from registerWineToolsFlows, 13 -> 12)', () => {
     const counts = MODULES.map((m) => m.declaredChannels.length)
-    // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67) — agree.
-    expect(counts).toEqual([11, 13, 7, 14, 8, 14])
-    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(67)
+    // Measured (jest failure ACTUAL) and independently re-derived (64 prior total + 3 new = 67,
+    // then -1 for winetricksInstall's retirement = 66) — agree.
+    expect(counts).toEqual([11, 12, 7, 14, 8, 14])
+    expect(counts.reduce((sum, n) => sum + n, 0)).toBe(66)
   })
 
   afterAll(() => {
@@ -681,11 +693,12 @@ describe('SEAM Invariant B — the 3 dropped Zoom channels are NOT registered by
 })
 
 // ── Describe 8: winetricks presence, correct kind (Phase 34.6 Plan 07, REQ-34.6-04/07/13) ──────
-// The inverse of Describe 7's absence proof for the same 3 names — this cluster's D-09 pair.
+// The inverse of Describe 7's absence proof for the same names — this cluster's D-09 pair.
 // `winetricksAvailable`/`winetricksInstalled` are invoke-kind; `runWineCommandForGame` is also
-// invoke-kind; `winetricksInstall` alone is send-kind (D-11) — present in `listenerRegistry`,
-// absent from `handlerRegistry`.
-describe('winetricks + runWineCommandForGame presence, correct kind, across all six modules together (Phase 34.6 Plan 07; Phase 34.6 Plan 08 added a fifth module; Phase 34.6 Plan 09 added a sixth)', () => {
+// invoke-kind. `winetricksInstall` was send-kind (D-11) until Phase 45 Plan 02 (D-11 promote)
+// retired it outright — the test below now proves it is absent from BOTH registries, not
+// merely kind-swapped.
+describe('winetricks + runWineCommandForGame presence, correct kind, across all six modules together (Phase 34.6 Plan 07; Phase 34.6 Plan 08 added a fifth module; Phase 34.6 Plan 09 added a sixth; Phase 45 Plan 02 retired winetricksInstall)', () => {
   beforeAll(() => {
     restoreCanonicalRegistrations()
   })
@@ -702,11 +715,9 @@ describe('winetricks + runWineCommandForGame presence, correct kind, across all 
     }
   )
 
-  it('winetricksInstall is registered as ipcMain.on (send), and NOT as ipcMain.handle', () => {
+  it('winetricksInstall is retired (Phase 45 Plan 02, D-11 promote) — absent from BOTH registries, not merely kind-swapped', () => {
     expect(handlerRegistry.has('winetricksInstall')).toBe(false)
-    expect(
-      (listenerRegistry.get('winetricksInstall') ?? []).length
-    ).toBeGreaterThan(0)
+    expect((listenerRegistry.get('winetricksInstall') ?? []).length).toBe(0)
   })
 
   afterAll(() => {
@@ -799,11 +810,21 @@ describe('SteamGridDB presence, correct kind, across all six modules together (P
 const STEAMGRIDDB_CENSUS_CHANNELS = ENRICHMENT_CHANNELS.filter((channel) =>
   channel.startsWith('steamgriddb.')
 )
+// Phase 45 Plan 02 (D-11 promote, 2026-10-10): `winetricksInstall` retired outright — removed
+// from this LIVE census member list, 3 -> 2. It is not simply deleted from this file's
+// knowledge: it stays listed in `RETIRED_SINCE_CENSUS` below precisely so the historical
+// `IPC-PORT-INVENTORY.md` cross-check (which still records the 24-channel, Phase-34.6-era
+// bucket lines as a port record, not a live census) keeps proving documentary agreement
+// instead of silently losing the ability to see the discrepancy.
 const WINETRICKS_CENSUS_CHANNELS = [
   'winetricksAvailable',
-  'winetricksInstall',
   'winetricksInstalled'
 ]
+// Channels this describe's own 24-channel scope (D-01) originally counted that have since been
+// retired by a LATER plan — not absent from the scope, absent from the live registries. Kept
+// separate from `CENSUS_CHANNELS` (the live set) so the two can be unioned back together for the
+// one test that cross-checks against `IPC-PORT-INVENTORY.md`'s unedited historical bucket lines.
+const RETIRED_SINCE_CENSUS = ['winetricksInstall']
 // Phase 34.6 Plan 05/06/10 (D-01): the 8 late-discovered channels — `getAchievements`,
 // `getDefaultSavePath` and `getPlaytimeFromRunner` land in THIS plan (Task 1 above); the other 5
 // were already ported by plans 34.6-05/06 (`frontendReady`, `moveInstall`, `importGame`,
@@ -819,14 +840,19 @@ const LATE_DISCOVERED_CENSUS_CHANNELS = [
   'moveInstall',
   'runWineCommandForGame'
 ]
-const TWENTY_FOUR_CHANNELS = [
+// Phase 45 Plan 02 (D-11 promote, 2026-10-10): 24 -> 23 — `winetricksInstall`'s retirement
+// (see `RETIRED_SINCE_CENSUS` above) drops the live total by exactly 1. Renamed from
+// `TWENTY_FOUR_CHANNELS`: that name is now false on its face, and a numeric identifier that no
+// longer matches its own array length is worse than a merely-stale title.
+const CENSUS_CHANNELS = [
   ...EOS_OVERLAY_CHANNELS,
   ...STEAMGRIDDB_CENSUS_CHANNELS,
   ...WINETRICKS_CENSUS_CHANNELS,
   ...LATE_DISCOVERED_CENSUS_CHANNELS
 ]
-// The only 2 send-kind members of the 24: winetricksInstall (D-11) and frontendReady (D-11).
-const CENSUS_SEND_CHANNELS = ['winetricksInstall', 'frontendReady']
+// The only send-kind member of the live 23: frontendReady (D-11). `winetricksInstall` (D-11) was
+// the other send-kind member until Phase 45 Plan 02 retired it outright.
+const CENSUS_SEND_CHANNELS = ['frontendReady']
 
 /** Extracts every backtick-quoted name from a single line of markdown — used to parse
  * `IPC-PORT-INVENTORY.md`'s own bucket lines without hand-retyping their contents (retyping is
@@ -835,7 +861,7 @@ function extractBacktickedNames(line: string): string[] {
   return [...line.matchAll(/`([a-zA-Z0-9_.]+)`/g)].map((match) => match[1])
 }
 
-describe('24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — every in-scope channel across the whole phase, registered with the correct kind', () => {
+describe('23-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30; Phase 45 Plan 02 retired winetricksInstall, 24 -> 23) — every in-scope, currently-live channel across the whole phase, registered with the correct kind', () => {
   beforeAll(() => {
     // Start from the canonical six-module snapshot, then add the two extra modules this census
     // alone needs. Isolated to this describe: see the module-scope comment above for why these
@@ -851,12 +877,12 @@ describe('24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — every in-sc
     restoreCanonicalRegistrations()
   })
 
-  it('lists exactly 24 names: EOS overlay 8 + SteamGridDB 5 + winetricks 3 + late-discovered 8', () => {
+  it('lists exactly 23 live names: EOS overlay 8 + SteamGridDB 5 + winetricks 2 + late-discovered 8 (winetricksInstall retired, Phase 45 Plan 02)', () => {
     expect(EOS_OVERLAY_CHANNELS.length).toBe(8)
     expect(STEAMGRIDDB_CENSUS_CHANNELS.length).toBe(5)
-    expect(WINETRICKS_CENSUS_CHANNELS.length).toBe(3)
+    expect(WINETRICKS_CENSUS_CHANNELS.length).toBe(2)
     expect(LATE_DISCOVERED_CENSUS_CHANNELS.length).toBe(8)
-    expect(TWENTY_FOUR_CHANNELS.length).toBe(24)
+    expect(CENSUS_CHANNELS.length).toBe(23)
   })
 
   it("matches .planning/IPC-PORT-INVENTORY.md's two Phase-34.6 bucket lines exactly — set equality against the document itself, not a retyped copy", () => {
@@ -903,11 +929,20 @@ describe('24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — every in-sc
       ...extractBacktickedNames(lateDiscoveredLine ?? '')
     ]
 
+    // The document's own bucket lines are an unedited PORT RECORD (as of Phase 34.6, 2026-08-25)
+    // — they still name `winetricksInstall` and still total 24, and that is correct: it is a
+    // historical fact, not a live census. Phase 45 Plan 02 (D-11 promote, 2026-10-10) retired
+    // `winetricksInstall` from the LIVE registries afterward, which is why `CENSUS_CHANNELS`
+    // above is 23, not 24. Union the live set back with `RETIRED_SINCE_CENSUS` to compare
+    // against the document's unedited 24 — this proves documentary agreement without
+    // rewriting history or silently losing the ability to see a real drift.
     expect(inventoryTwentyFour.length).toBe(24)
-    expect(new Set(inventoryTwentyFour)).toEqual(new Set(TWENTY_FOUR_CHANNELS))
+    expect(new Set(inventoryTwentyFour)).toEqual(
+      new Set([...CENSUS_CHANNELS, ...RETIRED_SINCE_CENSUS])
+    )
   })
 
-  it.each(TWENTY_FOUR_CHANNELS)(
+  it.each(CENSUS_CHANNELS)(
     '%s is registered with the correct kind',
     (channel) => {
       if (CENSUS_SEND_CHANNELS.includes(channel)) {
@@ -920,11 +955,11 @@ describe('24-channel census (Phase 34.6 Plan 10, D-01/T-34.6-30) — every in-sc
     }
   )
 
-  it('exactly 22 of the 24 are invoke-kind and exactly 2 (winetricksInstall, frontendReady) are send-kind', () => {
-    const sendCount = TWENTY_FOUR_CHANNELS.filter((channel) =>
+  it('exactly 22 of the live 23 are invoke-kind and exactly 1 (frontendReady) is send-kind (winetricksInstall retired, Phase 45 Plan 02)', () => {
+    const sendCount = CENSUS_CHANNELS.filter((channel) =>
       CENSUS_SEND_CHANNELS.includes(channel)
     ).length
-    expect(sendCount).toBe(2)
-    expect(TWENTY_FOUR_CHANNELS.length - sendCount).toBe(22)
+    expect(sendCount).toBe(1)
+    expect(CENSUS_CHANNELS.length - sendCount).toBe(22)
   })
 })

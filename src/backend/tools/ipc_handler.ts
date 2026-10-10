@@ -1,5 +1,5 @@
 import { libraryManagerMap } from 'backend/storeManagers'
-import { addListener, addHandler, sendFrontendMessage } from '../ipc'
+import { addHandler, sendFrontendMessage } from '../ipc'
 import { Winetricks, runWineCommandOnGame } from '.'
 import path from 'path'
 import { execAsync, getGame, sendGameStatusUpdate } from 'backend/utils'
@@ -58,9 +58,9 @@ addHandler('callTool', async (event, { tool, exe, appName, runner }) => {
   sendGameStatusUpdate({ appName, runner, status: 'done' })
 })
 
-addListener('winetricksInstall', async (event, runner, appName, component) =>
-  Winetricks.install(runner, appName, component)
-)
+// `winetricksInstall` (send-kind, `addListener`) was retired by Phase 45 Plan 02 (D-11 promote,
+// 2026-10-10) — `winetricksApply` (`backend/tools/winetricksQueue.ts`, registered by the Tauri
+// sidecar's `wineToolsFlowRegistration.ts`) is now the only renderer-reachable install path.
 
 addHandler('winetricksAvailable', async (event, runner, appName) => {
   try {

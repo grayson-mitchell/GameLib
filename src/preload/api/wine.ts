@@ -14,10 +14,10 @@ export const handleProgressOfWineManager = frontendListenerSlot('progressOfWineM
 export const handleWineVersionsUpdated = frontendListenerSlot('wineVersionsUpdated')
 export const winetricksListInstalled = makeHandlerInvoker('winetricksInstalled')
 export const winetricksListAvailable = makeHandlerInvoker('winetricksAvailable')
-export const winetricksInstall = makeListenerCaller('winetricksInstall')
 export const handleWinetricksInstalling = frontendListenerSlot('installing-winetricks-component')
-// Phase 45 Plan 01 (D-11/D-12/D-13): the winetricks queue. `winetricksInstall` above stays in
-// place -- plan 45-02 retires it.
+// Phase 45 Plan 01 (D-11/D-12/D-13): the winetricks queue. Phase 45 Plan 02 (D-11 promote) then
+// retired the send-kind `winetricksInstall` that used to sit above this block -- the queue's
+// apply method (below) is now the only renderer-reachable install path.
 export const winetricksApply = makeHandlerInvoker('winetricksApply')
 export const winetricksQueueState = makeHandlerInvoker('winetricksQueueState')
 export const winetricksCancelRemaining = makeHandlerInvoker('winetricksCancelRemaining')

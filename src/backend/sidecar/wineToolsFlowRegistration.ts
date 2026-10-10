@@ -16,17 +16,24 @@
  * `Winetricks` object has NO `!isLinux` guard anywhere — it has genuine macOS support via a
  * dedicated `macEnvs` branch (`:628`, selected by `isMac ? macEnvs : linuxEnvs` at `:642`). No
  * macOS decline branch is ported here; an empty component list is an ACCEPTABLE RESULT of
- * `listInstalled()`/`listAvailable()`, not a platform decline. `winetricksInstall` stays
- * `ipcMain.on` (send-kind, D-11) — converting it to invoke would smuggle a behaviour change into
- * a port. `runWineCommandForGame` carried `T-34.5-C6-49-03` (a renderer-supplied `commandParts`
- * array reaching a Wine process, and a shell on the Windows branch); Plan 34.6-11 (REQ-34.6-05)
- * hardens it — `rendererPathGuard.assertCommandParts` shape-checks `commandParts` and the Windows
- * branch's shell is removed in favour of a non-shell `spawnAsync` argv call — landing alongside
- * the same plan's hardening for `importGame` and `moveInstall` (34.6-06).
+ * `listInstalled()`/`listAvailable()`, not a platform decline. `runWineCommandForGame` carried
+ * `T-34.5-C6-49-03` (a renderer-supplied `commandParts` array reaching a Wine process, and a shell
+ * on the Windows branch); Plan 34.6-11 (REQ-34.6-05) hardens it — `rendererPathGuard.assertCommandParts`
+ * shape-checks `commandParts` and the Windows branch's shell is removed in favour of a non-shell
+ * `spawnAsync` argv call — landing alongside the same plan's hardening for `importGame` and
+ * `moveInstall` (34.6-06).
  *
- * Declared channel list (16 total, 15 invoke + 1 send — verified against `main.ts`,
+ * Phase 45 Plan 02 (D-11 promote, 2026-10-10): the send-kind `winetricksInstall` channel
+ * (`ipcMain.on`) is RETIRED outright — deleted, not kind-swapped. `winetricksApply` (below) is now
+ * the only renderer-reachable install path; see `winetricksInstallPathInvariant.test.ts` for the
+ * source-level proof. `logSendFailure` and the `logSendHandlerReached` import both became unused
+ * by this deletion and are removed with it (`sendChannelObservable.ts` keeps exporting the latter
+ * for `appShellFlowRegistration.ts`'s `frontendReady` channel).
+ *
+ * Declared channel list (15 total, 15 invoke + 0 send — verified against `main.ts`,
  * `wine/manager/ipc_handler.ts` and `tools/ipc_handler.ts` source by 34.5-RESEARCH.md/this plan's
- * own `<interfaces>` block; Phase 45 Plan 01, 2026-10-10, adds the winetricks-queue trio):
+ * own `<interfaces>` block; Phase 45 Plan 01, 2026-10-10, adds the winetricks-queue trio; Phase 45
+ * Plan 02, 2026-10-10, retires `winetricksInstall`):
  *
  *   invoke (ipcMain.handle, 15):
  *     - `runWineCommand`         -> main.ts:766
@@ -45,8 +52,7 @@
  *     - `winetricksQueueState`      -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
  *     - `winetricksCancelRemaining` -> tools/winetricksQueue.ts (Phase 45 Plan 01, D-11)
  *
- *   send (ipcMain.on, 1):
- *     - `winetricksInstall`      -> tools/ipc_handler.ts (Phase 34.6 Plan 07, D-11 observable)
+ *   send (ipcMain.on, 0): none — `winetricksInstall` retired, Phase 45 Plan 02 (D-11 promote).
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): the cluster plan that fills this module in imports the underlying logic modules
@@ -76,7 +82,6 @@ import { sendFrontendMessage } from '../ipc'
 import { notify } from '../dialog/dialog'
 import { logDebug, logError, LogPrefix } from '../logger'
 import { backendEvents } from '../backend_events'
-import { logSendHandlerReached } from './sendChannelObservable'
 import { t } from 'i18next'
 import type {
   Runner,
@@ -86,32 +91,20 @@ import type {
   WineVersionInfo
 } from 'common/types'
 
-// D-11 (Phase 34.6 Plan 07, REQ-34.6-04/07/13): `winetricksInstall` is this cluster's one
-// send-kind channel. Mirrors `appShellFlowRegistration.ts`'s own `logSendFailure` shape exactly
-// (that module registers this phase's sibling send channel, `frontendReady`) — a caught
-// rejection/throw is the ONLY observability a send-kind failure gets, since `ipcMain.on` has no
-// return value the renderer can inspect.
-function logSendFailure(channel: string, error: unknown): void {
-  console.warn(
-    `[wineToolsFlowRegistration] ${channel} failed:`,
-    error instanceof Error ? error.message : String(error)
-  )
-}
-
 /**
- * Registers this cluster's 16 channels (15 invoke, 1 send — `winetricksInstall`, D-11). As of
- * Phase 45 Plan 01 (2026-10-10), the count is 12 invoke + 1 send from Phase 34.6 Plan 07 plus the
- * 3 new winetricks-queue invoke channels (`winetricksApply`, `winetricksQueueState`,
- * `winetricksCancelRemaining`). Called once from `handlers.ts` — this module owns no side effects
- * at import time; the caller decides when registration onto the handler registry happens.
+ * Registers this cluster's 15 channels (15 invoke, 0 send — `winetricksInstall` retired, Phase 45
+ * Plan 02, D-11 promote). As of Phase 45 Plan 01 (2026-10-10), the count was 12 invoke + 1 send
+ * from Phase 34.6 Plan 07 plus the 3 new winetricks-queue invoke channels (`winetricksApply`,
+ * `winetricksQueueState`, `winetricksCancelRemaining`); Phase 45 Plan 02 then retired the one send
+ * channel outright. Called once from `handlers.ts` — this module owns no side effects at import
+ * time; the caller decides when registration onto the handler registry happens.
  *
  * Idempotence guard (Rule 1 fix, mirroring `runnerAuthFlowRegistration.ts`'s/
- * `shortcutsFlowRegistration.ts`'s own `let registered = false` guard): before plan 34.6-07 this
- * function had no such guard because `ipcMain.handle` is naturally idempotent (`Map.set` replaces
- * the existing entry). Now that this cluster registers one `ipcMain.on` listener
- * (`winetricksInstall`), an unguarded second call would stack a duplicate listener — mirrors the
- * exact bug class `runnerSliceRegistration.test.ts`'s own Describe 3 docstring records being
- * fixed for `registerRunnerAuthFlows` in plan 34.5-06.
+ * `shortcutsFlowRegistration.ts`'s own `let registered = false` guard): kept as harmless defence
+ * even though the one `ipcMain.on` listener that originally motivated it (`winetricksInstall`) is
+ * now gone — `ipcMain.handle` is naturally idempotent (`Map.set` replaces the existing entry), but
+ * removing a guard that costs nothing and protects against a future send-kind addition is not this
+ * plan's job to do.
  */
 let registered = false
 export function registerWineToolsFlows(): void {
@@ -331,9 +324,10 @@ export function registerWineToolsFlows(): void {
 
   // ── Winetricks queue (Phase 45 Plan 01, D-11/D-12/D-13/D-18) ───────────────────────────────
   //
-  // Invoke-kind, unlike `winetricksInstall` below: each acks immediately with the new queue
-  // state (T-45-03 repudiation mitigation) and the sequential install loop continues detached
-  // inside `winetricksQueue.ts`, never through this registration module.
+  // Invoke-kind — each acks immediately with the new queue state (T-45-03 repudiation
+  // mitigation) and the sequential install loop continues detached inside `winetricksQueue.ts`,
+  // never through this registration module. (The send-kind `winetricksInstall` channel this
+  // comment used to contrast against was retired by Phase 45 Plan 02, D-11 promote.)
   ipcMain.handle(
     'winetricksApply',
     async (_event: unknown, ...args: unknown[]) => {
@@ -361,29 +355,6 @@ export function registerWineToolsFlows(): void {
       return WinetricksQueue.cancelRemaining(runner, appName)
     }
   )
-
-  // D-11: `winetricksInstall` is this cluster's one send-kind channel — `ipcMain.on`, never
-  // `ipcMain.handle`. Converting it to invoke would smuggle a behaviour change into a byte-
-  // equivalent port. `logSendHandlerReached` is the FIRST statement inside the try, per this
-  // phase's D-11 observable contract (proves the handler body was reached even though a send
-  // channel has no return value the renderer can inspect). Idiom modeled on
-  // `shortcutsFlowRegistration.ts`'s own async-body send-kind channels (`addShortcut`): the
-  // underlying `Winetricks.install` call is itself async, so the body is wrapped in
-  // `void (async () => { ... })()` to let a rejection be caught by `logSendFailure` rather than
-  // becoming an unhandled promise rejection.
-  ipcMain.on('winetricksInstall', (_event: unknown, ...args: unknown[]) => {
-    void (async () => {
-      try {
-        logSendHandlerReached('winetricksInstall')
-        const runner = args[0] as Runner
-        const appName = args[1] as string
-        const component = args[2] as string
-        await Winetricks.install(runner, appName, component)
-      } catch (error) {
-        logSendFailure('winetricksInstall', error)
-      }
-    })()
-  })
 
   // T-34.5-C6-49-03 (Tampering, mitigate — HARDENED, Phase 34.6 Plan 11, REQ-34.6-05):
   // `runWineCommandForGame` carries a renderer-supplied `commandParts` array reaching a Wine

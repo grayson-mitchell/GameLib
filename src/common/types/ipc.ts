@@ -142,11 +142,6 @@ interface SyncIPCFunctions {
   closeWindow: () => void
   setFullscreen: (enabled: boolean) => void
   setTitleBarOverlay: (options: TitleBarOverlay) => void
-  winetricksInstall: (
-    runner: Runner,
-    appName: string,
-    component: string
-  ) => void
   changeGameVersionPinnedStatus: (
     appName: string,
     runner: Runner,
@@ -199,8 +194,9 @@ interface AsyncIPCFunctions {
     runner: Runner,
     appName: string
   ) => Promise<WinetricksComponent[]>
-  // Phase 45 Plan 01 (D-11/D-12/D-13): the sequential-install queue. `winetricksInstall`
-  // (send-kind, above) stays in place -- plan 45-02 retires it.
+  // Phase 45 Plan 01 (D-11/D-12/D-13): the sequential-install queue. Phase 45 Plan 02 (D-11
+  // promote) then retired the send-kind `winetricksInstall` that used to sit above this block --
+  // `winetricksApply` is now the only renderer-reachable install path.
   winetricksApply: (
     runner: Runner,
     appName: string,

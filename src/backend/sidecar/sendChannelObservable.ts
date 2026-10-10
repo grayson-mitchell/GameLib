@@ -16,10 +16,13 @@
  * `logSendHandlerReached(channel)` closes that gap: it is the ONE thing a send
  * channel's body can do that is both durable (written to `gamelib.log` via the
  * real logger, not stdout) and greppable (a fixed, channel-name-suffixed
- * marker). Both of this phase's send-kind channels — `frontendReady` (this
- * plan) and `winetricksInstall` (a sibling plan in this phase's scope) — share
- * this one module rather than each inventing their own log line, so a live
- * gate has exactly one marker shape to grep for.
+ * marker). `frontendReady` (this plan) and `winetricksInstall` (a sibling
+ * plan in this phase's scope, until Phase 45 Plan 02 — D-11 promote — retired
+ * it outright, 2026-10-10) both shared this one module rather than each
+ * inventing their own log line, so a live gate has exactly one marker shape
+ * to grep for. This module keeps exporting `logSendHandlerReached` for
+ * `appShellFlowRegistration.ts`'s `frontendReady` channel even with
+ * `winetricksInstall` gone.
  *
  * HONEST LIMITATION (D-11's own, carried here verbatim): this proves the
  * handler BODY was reached. It is NOT a return value, and it does not tell the

@@ -7,16 +7,18 @@
  *      `wine.isValidVersion`, `installWineVersion`, `refreshWineVersionInfo`, `removeWineVersion`,
  *      `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`) are `ipcMain.handle`, never `ipcMain.on`,
  *      asserted in both directions (mirrors `humbleLoginFlows.test.ts`'s Describe 1 template), plus
- *      an assertion, read from `listenerRegistry`, that `winetricksInstall` is the only send
- *      channel the module registers.
+ *      an assertion, read from `listenerRegistry`, that this module registers NO send channels at
+ *      all (Phase 45 Plan 02, D-11 promote, retired the module's one send channel,
+ *      `winetricksInstall`).
  *   2. Curated-import guard + winetricks/runWineCommandForGame kind proof — `wineToolsFlowRegistration.ts`
  *      never imports `wine/manager/ipc_handler.ts` or `tools/ipc_handler.ts` (comment-stripped,
  *      mirrors `humbleLoginFlows.test.ts`'s own Describe 3 approach). As of Phase 34.6 Plan 07 the
  *      three winetricks channels and `runWineCommandForGame` are PORTED, not deferred: this
- *      describe now asserts PRESENCE with the correct kind — `winetricksAvailable`,
- *      `winetricksInstalled`, `runWineCommandForGame` in `handlerRegistry` only, `winetricksInstall`
- *      in `listenerRegistry` only (D-11 send-kind) — rather than the pre-port absence assertion it
- *      replaces (T-34.5-15).
+ *      describe asserts PRESENCE with the correct kind — `winetricksAvailable`,
+ *      `winetricksInstalled`, `runWineCommandForGame` in `handlerRegistry` only — rather than the
+ *      pre-port absence assertion it replaces (T-34.5-15). Phase 45 Plan 02 (D-11 promote) then
+ *      retired `winetricksInstall` outright: this describe now also asserts its ABSENCE from BOTH
+ *      `handlerRegistry` and `listenerRegistry`, not merely its presence in the latter.
  *   3. Pass-through proof — `../../launcher`'s `runWineCommand` is mocked so the registered
  *      `runWineCommand` handler can be proven to forward `args[0]` unchanged rather than
  *      reshaping it (D-14's seam is a thin pass-through, not new construction).
@@ -153,9 +155,10 @@ describe('registration kind — all 9 Wine channels are registered with the corr
 
   // Read from `listenerRegistry`, not a local literal: the literal this replaced was an empty
   // array asserted to be empty, and it stayed green when `winetricksInstall` was added as
-  // `ipcMain.on` (Phase 34.6 Plan 07). `winetricksInstall` is the module's one send channel.
-  it('REQ-34.5-03 the only ipcMain.on channel this module registers is winetricksInstall', () => {
-    expect(registeredSendChannels).toEqual(['winetricksInstall'])
+  // `ipcMain.on` (Phase 34.6 Plan 07). Phase 45 Plan 02 (D-11 promote, 2026-10-10) then retired
+  // that one send channel outright, so this module now registers NO send channels at all.
+  it('REQ-34.5-03 this module registers no ipcMain.on channels (winetricksInstall retired, Phase 45 Plan 02)', () => {
+    expect(registeredSendChannels).toEqual([])
   })
 })
 
@@ -170,7 +173,7 @@ describe('curated-import guard — no ipc_handler import, and no deferred/foreig
     expect(/ipc_handler/.test(stripped)).toBe(false)
   })
 
-  it('T-34.5-15 the three winetricks channels and runWineCommandForGame are PRESENT with the correct kind (invoke, except winetricksInstall which is send-kind)', () => {
+  it('T-34.5-15 the three winetricks channels and runWineCommandForGame are PRESENT with the correct kind (all invoke); winetricksInstall is retired and absent from BOTH registries', () => {
     // Phase 34.6 Plan 07 ports these four channels. This test replaces the pre-port absence
     // assertion (kept, never deleted — a mis-registered send channel fails SILENTLY under the
     // sidecar, so kind-correctness here is the only thing that would catch it).
@@ -184,12 +187,10 @@ describe('curated-import guard — no ipc_handler import, and no deferred/foreig
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
     }
 
-    // D-11: `winetricksInstall` stays send-kind — present in listenerRegistry, ABSENT from
-    // handlerRegistry. Converting it to invoke would smuggle a behaviour change into a port.
+    // Phase 45 Plan 02 (D-11 promote, 2026-10-10): `winetricksInstall` is retired outright, not
+    // merely kind-swapped — absent from BOTH handlerRegistry and listenerRegistry.
     expect(handlerRegistry.has('winetricksInstall')).toBe(false)
-    expect(
-      (listenerRegistry.get('winetricksInstall') ?? []).length
-    ).toBeGreaterThan(0)
+    expect((listenerRegistry.get('winetricksInstall') ?? []).length).toBe(0)
   })
 })
 
@@ -626,9 +627,9 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
 // `WinetricksQueue` (`tools/winetricksQueue.ts`), not to `../../tools` directly. Each is proven
 // present in `handlerRegistry` (invoke-kind), absent from `listenerRegistry`, and forwarding its
 // runner/appName (and verbs, for `winetricksApply`) to the matching mock BY IDENTITY, returning
-// the mock's value unchanged -- mirrors Describe 3's own pass-through-proof shape. The existing
-// `winetricksInstall` send-kind assertions (Describe 1/2 above) are untouched; plan 45-02 retires
-// that channel, not this plan.
+// the mock's value unchanged -- mirrors Describe 3's own pass-through-proof shape. Phase 45 Plan
+// 02 (D-11 promote) has since retired the `winetricksInstall` send-kind channel that Describe
+// 1/2 above used to assert the presence of -- those describes now assert its absence instead.
 describe('winetricks-queue channels — present, invoke-kind, forward args by identity (Phase 45 Plan 01, D-11)', () => {
   const mockApply = WinetricksQueue.apply as jest.MockedFunction<
     typeof WinetricksQueue.apply

@@ -76,41 +76,37 @@ export const STEAMGRIDDB_CHANNELS = [
 /**
  * The winetricks channels (D-03), named as the PRELOAD API-METHOD names the
  * frontend actually calls -- deliberately named `_API_METHODS`, not `_CHANNELS`, because these
- * are NOT the wire channel names. `src/preload/api/wine.ts:15-16` maps
+ * are NOT the wire channel names. `src/preload/api/wine.ts` maps
  * `winetricksListInstalled` to the wire channel `winetricksInstalled`, and
  * `winetricksListAvailable` to `winetricksAvailable`. A prior sweep
  * (`34.5-PORTED-CHANNELS.md` correction 3) grepped the CHANNEL names against this
  * API-METHOD-name space and structurally could not match the two real call sites in
  * `Winetricks/index.tsx` -- it reported a census of 8 when the real census is 10 (`F-34.5-G6-21`,
- * `deferred-items.md` item 31, plan 34.5-55). `winetricksInstall` has no method/channel split
- * (it is both, and is send-kind), so it appears here unchanged as the third member -- this
- * constant enumerates every deferred call site the frontend actually touches for this cluster.
- * Phase 45 Plan 01 (2026-10-10) grows this from 3 to 6: `winetricksApply`/`winetricksQueueState`/
- * `winetricksCancelRemaining` are live (not deferred) invoke-kind channels built in that plan,
- * but are routed through `callOrDeclare` for the same uniform defensive-error-handling reason
- * every other `window.api.winetricks*` call is.
+ * `deferred-items.md` item 31, plan 34.5-55). Phase 45 Plan 01 (2026-10-10) grew this from 3 to 6
+ * by adding `winetricksApply`/`winetricksQueueState`/`winetricksCancelRemaining` -- live (not
+ * deferred) invoke-kind channels, routed through `callOrDeclare` for the same uniform
+ * defensive-error-handling reason every other `window.api.winetricks*` call is. Phase 45 Plan 02
+ * (D-11 promote, 2026-10-10) then retired the one send-kind member, `winetricksInstall` --
+ * shrinking this from 6 to 5, all invoke-kind, with no method/channel split left in this cluster
+ * at all (every remaining member's preload method name differs from or equals its wire channel
+ * name per the plain invoke-kind mapping below, never an identity-because-send-kind case).
  */
-// Phase 45 Plan 01 (D-11/D-12/D-13) adds the three winetricks-queue invoke-kind
-// channels. They have no method/channel split either (identity, like
-// `winetricksInstall`): `window.api.winetricksApply` calls the wire channel
-// `winetricksApply`, and so on.
 export const WINETRICKS_API_METHODS = [
   'winetricksListInstalled',
   'winetricksListAvailable',
-  'winetricksInstall',
   'winetricksApply',
   'winetricksQueueState',
   'winetricksCancelRemaining'
 ] as const
 
 /**
- * The winetricks WIRE CHANNEL names (D-03; grown from 3 to 6 by Phase 45 Plan 01, see the
- * doc comment above `WINETRICKS_API_METHODS`), matching
- * `.planning/IPC-PORT-INVENTORY.md`'s bucket row exactly. Used as `callOrDeclare`'s `channel:`
- * field so the log line names what the inventory names, never the preload method name. Mapping:
- * `winetricksListInstalled` -> `winetricksInstalled`; `winetricksListAvailable` ->
- * `winetricksAvailable`; `winetricksInstall` -> `winetricksInstall` (identity -- the send-kind
- * call has no method/channel split).
+ * The winetricks WIRE CHANNEL names (D-03; grown from 3 to 6 by Phase 45 Plan 01, then shrunk to
+ * 5 by Phase 45 Plan 02's retirement of `winetricksInstall` -- see the doc comment above
+ * `WINETRICKS_API_METHODS`), matching `.planning/IPC-PORT-INVENTORY.md`'s bucket row exactly.
+ * Used as `callOrDeclare`'s `channel:` field so the log line names what the inventory names,
+ * never the preload method name. Mapping: `winetricksListInstalled` -> `winetricksInstalled`;
+ * `winetricksListAvailable` -> `winetricksAvailable`; the three queue methods are identity
+ * (invoke-kind, method name equals wire channel name).
  *
  * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
  * flagged the previously-exported form as a used-in-module finding -- there
@@ -126,7 +122,6 @@ export const WINETRICKS_API_METHODS = [
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const WINETRICKS_CHANNELS = [
   'winetricksAvailable',
-  'winetricksInstall',
   'winetricksInstalled',
   'winetricksApply',
   'winetricksQueueState',
@@ -179,7 +174,8 @@ export const STEAMGRIDDB_CHANNEL_BY_MEMBER: Record<
 
 /**
  * [Rule 1 auto-fix, plan 34.5-55 Task 3] Same reasoning as `STEAMGRIDDB_CHANNEL_BY_MEMBER`
- * above, for the winetricks cluster's send-kind/invoke-kind channel names.
+ * above, for the winetricks cluster's channel names. All invoke-kind as of Phase 45 Plan 02
+ * (D-11 promote) -- the send-kind `winetricksInstall` member this map used to carry is retired.
  */
 export const WINETRICKS_CHANNEL_BY_METHOD: Record<
   (typeof WINETRICKS_API_METHODS)[number],
@@ -187,7 +183,6 @@ export const WINETRICKS_CHANNEL_BY_METHOD: Record<
 > = {
   winetricksListInstalled: 'winetricksInstalled',
   winetricksListAvailable: 'winetricksAvailable',
-  winetricksInstall: 'winetricksInstall',
   winetricksApply: 'winetricksApply',
   winetricksQueueState: 'winetricksQueueState',
   winetricksCancelRemaining: 'winetricksCancelRemaining'

@@ -435,6 +435,17 @@ silent-failure warning already documented for this project's other send channels
 `winetricks` branch already works from Phase 34.5 via `Winetricks.run()` on the shared
 `tools/index.ts` object; this phase is only about the three dedicated IPC channels above.
 
+**Dated note, Phase 45 Plan 02 (D-11 promote, 2026-10-10) — appended, not a rewrite of the bucket
+line above, which stays an unedited historical record of what was true as of Phase 34.6:**
+`winetricksInstall` (the send-kind member of the `(winetricks, 3)` bucket) is **retired outright**
+— deleted from `wineToolsFlowRegistration.ts` and `tools/ipc_handler.ts`, not kind-swapped. The
+`callTool` `winetricks` branch mentioned in the paragraph above is also **removed** (D-17,
+`Winetricks.run()` itself deleted). In their place, Phase 45 Plan 01 (2026-10-10) added three new
+invoke-kind channels not reflected in this Slice 9 section at all: `winetricksApply`,
+`winetricksQueueState`, `winetricksCancelRemaining` (`backend/tools/winetricksQueue.ts`). As of
+this note, the live winetricks IPC surface is those three plus the surviving
+`winetricksAvailable`/`winetricksInstalled` pair — five invoke-kind channels, zero send-kind.
+
 ## Late-discovered — owner Phase 34.6 (8 channels) — **PORTED**
 
 Found 2026-08-12 by plan 34.5-49's full preload-surface audit (D-CYCLE6-C,
