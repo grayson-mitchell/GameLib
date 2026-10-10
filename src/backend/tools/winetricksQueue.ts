@@ -1,7 +1,6 @@
 import {
   Runner,
   WinetricksApplyResult,
-  WinetricksEnvironmentReport,
   WinetricksQueueRun,
   WinetricksQueueState,
   WinetricksVerbOutcome
@@ -10,6 +9,14 @@ import { sendFrontendMessage } from '../ipc'
 import { sendGameStatusUpdate } from '../utils'
 import { logError, LogPrefix } from 'backend/logger'
 import { Winetricks, getInstallingComponent } from './index'
+import {
+  WinetricksApplyRejected,
+  assertWinetricksApplyPayload
+} from './winetricksApplyGuard'
+import {
+  getEnvironmentReport,
+  onEnvironmentChanged
+} from './winetricksEnvironment'
 
 // Phase 45 Plan 01 (D-11/D-12/D-13): the backend-resident sequential-install
 // queue. Mirrors `installFixes()`'s `for...of` + `await Winetricks.install`
@@ -18,17 +25,23 @@ import { Winetricks, getInstallingComponent } from './index'
 // untouched; it keeps calling `Winetricks.install` directly, not through this
 // module.
 //
-// Tracer scope (Task 1): one run at a time, process-wide (`currentRun`), a
-// deliberately minimal payload guard, and a hardcoded empty environment
-// report. Task 2 replaces the guard with `assertWinetricksApplyPayload` and
-// the environment report with the real store -- this module's shape (one
-// `currentRun`, `apply`/`getState`/`cancelRemaining`) does not change.
+// One run at a time, process-wide (`currentRun`). `applyInFlight` closes the
+// race Task 2 introduced: validating against `Winetricks.catalogFor` needs
+// an `await`, so two `apply()` calls issued in the same tick would otherwise
+// both pass the (now asynchronous) busy check before either sets `currentRun`.
+// It is set synchronously as `apply`'s first statement -- before that
+// `await` -- and cleared in `finally`; `isBusy()` folds it in so `busy` in
+// pushed state reflects it too.
 let currentRun: WinetricksQueueRun | null = null
 let nextRunId = 1
+let applyInFlight = false
 
-function emptyEnvironmentReport(): WinetricksEnvironmentReport {
-  return { unsupportedWineVersion: null, missingDependencies: [] }
-}
+// D-16: a single listener, registered once at module load, mirrors an
+// environment-report change into a `winetricksQueueChanged` push for that
+// game even when there is no run (`pushState` below requires one).
+onEnvironmentChanged((runner, appName) => {
+  sendFrontendMessage('winetricksQueueChanged', getState(runner, appName))
+})
 
 function pushState(run: WinetricksQueueRun): void {
   sendFrontendMessage(
@@ -38,7 +51,11 @@ function pushState(run: WinetricksQueueRun): void {
 }
 
 function isBusy(): boolean {
-  return currentRun?.status === 'running' || getInstallingComponent() !== ''
+  return (
+    applyInFlight ||
+    currentRun?.status === 'running' ||
+    getInstallingComponent() !== ''
+  )
 }
 
 function getState(runner: Runner, appName: string): WinetricksQueueState {
@@ -60,7 +77,7 @@ function getState(runner: Runner, appName: string): WinetricksQueueState {
         }
       : null,
     busy: isBusy(),
-    environment: emptyEnvironmentReport()
+    environment: getEnvironmentReport(runner, appName)
   }
 }
 
@@ -93,11 +110,11 @@ async function runLoop(run: WinetricksQueueRun): Promise<void> {
   }
 }
 
-function apply(
+async function apply(
   runner: Runner,
   appName: string,
-  verbs: string[]
-): WinetricksApplyResult {
+  verbs: unknown
+): Promise<WinetricksApplyResult> {
   if (isBusy()) {
     return {
       accepted: false,
@@ -106,54 +123,61 @@ function apply(
     }
   }
 
-  // Tracer-scope guard: Task 2 replaces this with `assertWinetricksApplyPayload`
-  // (max length, verb-shape regex, catalog membership, dedupe).
-  if (!Array.isArray(verbs) || verbs.length === 0) {
-    return {
-      accepted: false,
-      reason: 'invalid',
-      detail: 'verbs must be a non-empty array of strings.'
+  // Set synchronously, before the catalog `await` below -- this is the
+  // whole fix for the same-tick race: a second `apply()` call starting
+  // before this one resumes sees `applyInFlight` (via `isBusy()`) already
+  // true.
+  applyInFlight = true
+  try {
+    const catalog = await Winetricks.catalogFor(runner, appName)
+
+    let verbList: string[]
+    try {
+      verbList = assertWinetricksApplyPayload(verbs, catalog)
+    } catch (error) {
+      if (error instanceof WinetricksApplyRejected) {
+        return { accepted: false, reason: 'invalid', detail: error.message }
+      }
+      throw error
     }
-  }
-  if (!verbs.every((verb) => typeof verb === 'string')) {
-    return {
-      accepted: false,
-      reason: 'invalid',
-      detail: 'verbs must be an array of strings.'
+
+    const outcomes: Record<string, WinetricksVerbOutcome> = {}
+    for (const verb of verbList) {
+      outcomes[verb] = 'pending'
     }
+
+    const run: WinetricksQueueRun = {
+      runId: nextRunId++,
+      runner,
+      appName,
+      verbs: verbList,
+      outcomes,
+      currentVerb: '',
+      status: 'running',
+      cancelRequested: false,
+      log: []
+    }
+    currentRun = run
+
+    const state = getState(runner, appName)
+    sendGameStatusUpdate({ appName, runner, status: 'winetricks' })
+    pushState(run)
+
+    // Not awaited: `apply` acks immediately (invoke-kind, D-13 repudiation
+    // mitigation) and the install loop continues detached. A bare `void` on a
+    // rejecting promise handles NOTHING (project lesson) -- `.catch` is
+    // required.
+    void runLoop(run).catch((error) => {
+      logError(
+        ['winetricksQueue run loop failed:', error],
+        LogPrefix.WineTricks
+      )
+    })
+
+    return { accepted: true, state }
+  } finally {
+    applyInFlight = false
   }
-
-  const outcomes: Record<string, WinetricksVerbOutcome> = {}
-  for (const verb of verbs) {
-    outcomes[verb] = 'pending'
-  }
-
-  const run: WinetricksQueueRun = {
-    runId: nextRunId++,
-    runner,
-    appName,
-    verbs: [...verbs],
-    outcomes,
-    currentVerb: '',
-    status: 'running',
-    cancelRequested: false,
-    log: []
-  }
-  currentRun = run
-
-  const state = getState(runner, appName)
-  sendGameStatusUpdate({ appName, runner, status: 'winetricks' })
-  pushState(run)
-
-  // Not awaited: `apply` acks immediately (invoke-kind, D-13 repudiation
-  // mitigation) and the install loop continues detached. A bare `void` on a
-  // rejecting promise handles NOTHING (project lesson) -- `.catch` is
-  // required.
-  void runLoop(run).catch((error) => {
-    logError(['winetricksQueue run loop failed:', error], LogPrefix.WineTricks)
-  })
-
-  return { accepted: true, state }
 }
 
 function cancelRemaining(

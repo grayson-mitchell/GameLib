@@ -34,7 +34,7 @@ const FIRST_TOKEN_RE = /^(\S+)\s+(\S.*)$/
 //
 // Do not "helpfully" widen this to `\S+` -- that is exactly the class of bug
 // this test guards against.
-const VERB_SHAPE_RE = /^[a-z0-9_][a-z0-9_=]*$/
+export const VERB_SHAPE_RE = /^[a-z0-9_][a-z0-9_=]*$/
 
 // Trailing bracketed flags group, e.g. `[downloadable,cached]`. End-anchored
 // over a negated character class (not `.*`) to keep matching linear in line

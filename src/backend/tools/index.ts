@@ -4,6 +4,7 @@ import {
   Runner,
   Tool,
   WineCommandArgs,
+  WinetricksComponent,
   WinetricksInstallOutcome
 } from 'common/types'
 
@@ -493,6 +494,21 @@ export const DXVK = {
 }
 
 let installingComponent = ''
+
+// Phase 45 Plan 01 (D-01/T-45-01): cache of the last non-empty `listAvailable`
+// result per game, keyed `${runner}:${appName}`. `winetricksApplyGuard.ts`
+// needs a catalog to validate renderer-supplied verbs against, and the
+// Settings tab always calls `listAvailable` before `apply` -- so the normal
+// path through `catalogFor` costs no extra wine invocation; it only falls
+// back to `listAvailable` itself (one more wine call) on a cache miss, e.g. a
+// cold backend handling `winetricksApply` before the tab's own mount effect
+// has resolved.
+const catalogCache = new Map<string, WinetricksComponent[]>()
+
+function catalogCacheKey(runner: Runner, appName: string): string {
+  return `${runner}:${appName}`
+}
+
 export const Winetricks = {
   download: async () => {
     if (isWindows) {
@@ -756,10 +772,28 @@ export const Winetricks = {
         true,
         { LANG: 'C', LC_ALL: 'C' }
       )
-      return parseWinetricksListAll(output ?? [])
+      const components = parseWinetricksListAll(output ?? [])
+      if (components.length > 0) {
+        catalogCache.set(catalogCacheKey(runner, appName), components)
+      }
+      return components
     } catch {
       return []
     }
+  },
+  // Phase 45 Plan 01 (D-01/T-45-01): used by `winetricksApplyGuard.ts` via
+  // `winetricksQueue.ts` to validate renderer-supplied verbs against the real
+  // catalog. Returns the cached list when present; otherwise awaits
+  // `listAvailable` itself (which populates the cache as a side effect).
+  catalogFor: async (
+    runner: Runner,
+    appName: string
+  ): Promise<WinetricksComponent[]> => {
+    const cached = catalogCache.get(catalogCacheKey(runner, appName))
+    if (cached) {
+      return cached
+    }
+    return Winetricks.listAvailable(runner, appName)
   },
   listInstalled: async (game: Game) => {
     const gameSettings = await game.getSettings()
