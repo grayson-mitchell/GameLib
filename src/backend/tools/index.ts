@@ -30,7 +30,13 @@ import {
   getWineFromProton
 } from '../utils'
 import { execOptions } from 'backend/constants/others'
-import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
+import {
+  logDebug,
+  logError,
+  logInfo,
+  LogPrefix,
+  logWarning
+} from 'backend/logger'
 import i18next from 'i18next'
 import { dirname, join } from 'path'
 import { isOnline } from '../online_monitor'
@@ -60,6 +66,16 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import './dxmt'
 import { Game } from '../../common/types/game_manager'
 import { parseWinetricksListAll } from './winetricksListParse'
+import {
+  appendLogLine,
+  classifyWinetricksLine,
+  parseUnsupportedWineVersion,
+  splitOutputChunk
+} from './winetricksOutputClassifier'
+import {
+  recordMissingDependencies,
+  recordUnsupportedWine
+} from './winetricksEnvironment'
 
 type ReleasesResponse = {
   assets: {
@@ -562,7 +578,6 @@ export const Winetricks = {
     onDone?: (failed: boolean) => void,
     onLine?: (line: WinetricksLogLine) => void
   ) => {
-    void onLine // RED-phase stub: wired in the GREEN commit
     // Imported lazily to break a circular dependency (tools/index.ts <->
     // storeManagers/index.ts) — see the load-bearing comment in
     // storeManagers/gog/user.ts.
@@ -641,7 +656,15 @@ export const Winetricks = {
       // why this exists at all.
       const envs = { ...(isMac ? macEnvs : linuxEnvs), ...envOverrides }
 
+      // Phase 45 D-14/D-15: every line is classified HERE, where the raw text
+      // exists, into one of progress/noise/info/environment/error. Only
+      // `error` is logged at ERROR; curl's meter becomes a percentage and a
+      // single replaceable progress line; wine's debug channels go to debug.
       const executeMessages: string[] = []
+      // Lines classified since the previous flush (bounded, progress lines
+      // replace each other) and the latest curl percentage for this run.
+      const pendingLines: WinetricksLogLine[] = []
+      let lastPercent: number | undefined
       let progressUpdated = false
       const appendMessage = (message: string) => {
         // Don't store more than 100 messages, to not
@@ -652,39 +675,99 @@ export const Winetricks = {
         executeMessages.push(message)
         progressUpdated = true
       }
+      const recordLine = (line: WinetricksLogLine) => {
+        if (line.kind === 'progress') {
+          if (line.percent !== undefined) {
+            lastPercent = line.percent
+          }
+          // The raw meter is never forwarded as a message.
+        } else {
+          appendMessage(line.text)
+        }
+        appendLogLine(pendingLines, line)
+        progressUpdated = true
+        onLine?.(line)
+      }
+      const handleLine = (rawLine: string) => {
+        const line = classifyWinetricksLine(rawLine)
+        if (!line) {
+          return
+        }
+        switch (line.kind) {
+          case 'progress':
+            break
+          case 'noise':
+            logDebug(line.text, LogPrefix.WineTricks)
+            break
+          case 'info':
+            logInfo(line.text, LogPrefix.WineTricks)
+            break
+          case 'environment': {
+            logWarning(line.text, LogPrefix.WineTricks)
+            const unsupported = parseUnsupportedWineVersion(line.text)
+            if (unsupported !== null) {
+              recordUnsupportedWine(runner, appName, unsupported)
+            }
+            break
+          }
+          case 'error':
+            logError(line.text, LogPrefix.WineTricks)
+            break
+        }
+        recordLine(line)
+      }
       const flushProgress = () => {
         if (progressUpdated) {
           sendFrontendMessage('progressOfWinetricks', {
             messages: executeMessages,
-            installingComponent: component
+            installingComponent: component,
+            lines: pendingLines.splice(0, pendingLines.length),
+            ...(lastPercent !== undefined && { percent: lastPercent })
           })
           progressUpdated = false
         }
       }
       const sendProgress = setInterval(flushProgress, 1000)
 
-      Winetricks.checkDependencies(envs, appendMessage)
+      // The messages checkDependencies raises are environment notices; they
+      // reach the renderer as `environment` lines (and were already logged by
+      // checkDependencies itself, so they are not logged a second time here).
+      Winetricks.checkDependencies(runner, appName, envs, (message) =>
+        recordLine({ kind: 'environment', text: message })
+      ).catch((error) => {
+        logWarning(
+          ['Winetricks dependency check failed:', error],
+          LogPrefix.WineTricks
+        )
+      })
 
       logInfo(`Running ${winetricks} ${args.join(' ')}`, LogPrefix.WineTricks)
 
       const child = spawn(winetricks, args, { env: envs })
 
       const output: string[] = []
+      // One partial-line remainder per stream: a chunk boundary can fall in
+      // the middle of a line (curl redraws with a bare \r).
+      let stdoutRemainder = ''
+      let stderrRemainder = ''
 
       child.stdout.setEncoding('utf8')
       child.stdout.on('data', (data: string) => {
         if (returnOutput) {
+          // The list-all parser reads this verbatim; it is never classified.
           output.push(data)
         } else {
-          appendMessage(data)
-          logInfo(data, LogPrefix.WineTricks)
+          const split = splitOutputChunk(stdoutRemainder, data)
+          stdoutRemainder = split.remainder
+          split.lines.forEach(handleLine)
         }
       })
 
       child.stderr.setEncoding('utf8')
       child.stderr.on('data', (data: string) => {
-        logError(data, LogPrefix.WineTricks)
-        appendMessage(data)
+        const split = splitOutputChunk(stderrRemainder, data)
+        stderrRemainder = split.remainder
+        split.lines.forEach(handleLine)
       })
 
       child.on('error', (error) => {
@@ -717,17 +800,31 @@ export const Winetricks = {
         if (doneSent) return
         doneSent = true
         clearInterval(sendProgress)
+        // A final line with no trailing newline is still a line.
+        if (!returnOutput) {
+          handleLine(stdoutRemainder)
+        }
+        handleLine(stderrRemainder)
+        stdoutRemainder = ''
+        stderrRemainder = ''
         flushProgress()
+        // The exit code decides failure (`w_die` is only a `warning:`), so a
+        // failed run always ends with a line that names it.
+        const exitLines: WinetricksLogLine[] = []
         if (code !== 0) {
-          logWarning(
-            `Winetricks exited with code ${code}`,
-            LogPrefix.WineTricks
-          )
+          const exitLine: WinetricksLogLine = {
+            kind: 'error',
+            text: `winetricks exited with code ${code}`
+          }
+          logWarning(exitLine.text, LogPrefix.WineTricks)
+          onLine?.(exitLine)
+          exitLines.push(exitLine)
         }
         sendFrontendMessage('progressOfWinetricks', {
           messages: ['Done'],
           installingComponent: component,
-          failed: code !== 0
+          failed: code !== 0,
+          ...(exitLines.length > 0 && { lines: exitLines })
         })
         onDone?.(code !== 0)
         resolve(returnOutput ? output : null)
@@ -846,6 +943,8 @@ export const Winetricks = {
     return outcome
   },
   checkDependencies: async (
+    runner: Runner,
+    appName: string,
     envs: Record<string, string>,
     appendMessage: (message: string) => void
   ) => {
@@ -856,6 +955,8 @@ export const Winetricks = {
       try {
         await execAsync(`which ${dependency}`, { ...execOptions, env: envs })
       } catch {
+        // A probe that rejects OR throws synchronously counts as missing and
+        // never escapes this function.
         missingDeps.push(dependency)
         const message = `${dependency} not installed! Winetricks might fail to install some packages or even open`
         appendMessage(message)
@@ -868,6 +969,10 @@ export const Winetricks = {
       appendMessage(message)
       logWarning([message], LogPrefix.WineTricks)
     }
+
+    // D-16: the exact missing subset (an empty one clears an earlier record)
+    // feeds the environment banner, once per check.
+    recordMissingDependencies(runner, appName, [...missingDeps].sort())
   }
 }
 

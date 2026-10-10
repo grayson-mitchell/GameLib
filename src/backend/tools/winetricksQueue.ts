@@ -17,6 +17,7 @@ import {
   getEnvironmentReport,
   onEnvironmentChanged
 } from './winetricksEnvironment'
+import { appendLogLine } from './winetricksOutputClassifier'
 
 // Phase 45 Plan 01 (D-11/D-12/D-13): the backend-resident sequential-install
 // queue. Mirrors `installFixes()`'s `for...of` + `await Winetricks.install`
@@ -93,7 +94,16 @@ async function runLoop(run: WinetricksQueueRun): Promise<void> {
       run.currentVerb = verb
       pushState(run)
 
-      const outcome = await Winetricks.install(run.runner, run.appName, verb)
+      // D-18 / E9: the run keeps the classified lines of the verbs it runs
+      // (progress lines replace each other, capped), so a remounted tab can
+      // rebuild its log from `getState`. No queue state is pushed per line --
+      // the renderer already receives them live via `progressOfWinetricks`.
+      const outcome = await Winetricks.install(
+        run.runner,
+        run.appName,
+        verb,
+        (line) => appendLogLine(run.log, line)
+      )
       run.outcomes[verb] = outcome === 'installed' ? 'installed' : 'failed'
       run.currentVerb = ''
       pushState(run)

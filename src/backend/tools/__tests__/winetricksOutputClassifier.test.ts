@@ -10,7 +10,9 @@
  * the text) decides failure; `w_try` failures say `Note: command ... returned status N.
  * Aborting.`
  */
+import type { WinetricksLogLine } from 'common/types'
 import {
+  appendLogLine,
   classifyWinetricksLine,
   parseUnsupportedWineVersion,
   splitOutputChunk
@@ -206,5 +208,56 @@ describe('splitOutputChunk', () => {
   it('does not lose the text of an over-cap chunk', () => {
     const { lines, remainder } = splitOutputChunk('', 'x'.repeat(70000))
     expect(lines.join('').length + remainder.length).toBe(70000)
+  })
+})
+
+describe('appendLogLine', () => {
+  const info = (text: string): WinetricksLogLine => ({ kind: 'info', text })
+  const progress = (text: string, percent?: number): WinetricksLogLine =>
+    percent === undefined
+      ? { kind: 'progress', text }
+      : { kind: 'progress', text, percent }
+
+  it('replaces the previous progress line instead of appending another', () => {
+    const buffer: WinetricksLogLine[] = []
+    appendLogLine(buffer, progress('a', 42))
+    appendLogLine(buffer, progress('b', 60))
+    expect(buffer).toEqual([progress('b', 60)])
+  })
+
+  it('still replaces across wine noise that arrived in between', () => {
+    const buffer: WinetricksLogLine[] = []
+    appendLogLine(buffer, progress('a', 42))
+    appendLogLine(buffer, { kind: 'noise', text: 'fixme:x' })
+    appendLogLine(buffer, progress('b', 60))
+    expect(buffer.map((line) => line.text)).toEqual(['b', 'fixme:x'])
+  })
+
+  it('does not replace a progress line from before an intervening info line', () => {
+    const buffer: WinetricksLogLine[] = []
+    appendLogLine(buffer, progress('a', 100))
+    appendLogLine(buffer, info('Executing w_do_call next'))
+    appendLogLine(buffer, progress('b', 5))
+    expect(buffer.map((line) => line.text)).toEqual([
+      'a',
+      'Executing w_do_call next',
+      'b'
+    ])
+  })
+
+  it('keeps the last known percent when the replacing line carries none', () => {
+    const buffer: WinetricksLogLine[] = []
+    appendLogLine(buffer, progress('row', 42))
+    appendLogLine(buffer, progress('header'))
+    expect(buffer).toEqual([progress('header', 42)])
+  })
+
+  it('drops the oldest entries beyond the cap', () => {
+    const buffer: WinetricksLogLine[] = []
+    for (let i = 0; i < 250; i++) {
+      appendLogLine(buffer, info(`line ${i}`))
+    }
+    expect(buffer).toHaveLength(200)
+    expect(buffer[0].text).toBe('line 50')
   })
 })
