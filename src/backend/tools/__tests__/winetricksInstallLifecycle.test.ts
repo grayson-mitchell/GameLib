@@ -20,6 +20,15 @@ const mockSpawn = jest.fn()
 const mockSendFrontendMessage = jest.fn()
 const mockGetWineFromProton = jest.fn()
 const mockExecAsync = jest.fn()
+const mockRecordMissingDependencies = jest.fn()
+const mockRecordUnsupportedWine = jest.fn()
+
+jest.mock('../winetricksEnvironment', () => ({
+  recordMissingDependencies: (...args: unknown[]) =>
+    mockRecordMissingDependencies(...args),
+  recordUnsupportedWine: (...args: unknown[]) =>
+    mockRecordUnsupportedWine(...args)
+}))
 
 jest.mock('child_process', () => ({
   ...jest.requireActual('child_process'),
@@ -75,6 +84,8 @@ jest.mock('backend/logger', () => {
   }
 })
 
+import type { WinetricksLogLine } from 'common/types'
+import { logDebug, logError } from 'backend/logger'
 import { Winetricks } from '../index'
 
 type FakeChild = EventEmitter & {
@@ -134,6 +145,8 @@ type ProgressPayload = {
   messages: string[]
   installingComponent: string
   failed?: boolean
+  lines?: WinetricksLogLine[]
+  percent?: number
 }
 
 function progressEvents(): ProgressPayload[] {
@@ -216,7 +229,7 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     expect(doneIndex).toBeGreaterThan(0)
     const flushed = events.slice(0, doneIndex)
     expect(flushed.flatMap((p) => p.messages)).toContain(
-      'warning: Some download err happened\n'
+      'warning: Some download err happened'
     )
     for (const payload of flushed) {
       expect(payload.installingComponent).toBe('vcrun2019')
@@ -236,7 +249,7 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     const events = progressEvents()
     const doneIndex = events.findIndex((p) => p.messages[0] === 'Done')
     expect(events.slice(0, doneIndex).flatMap((p) => p.messages)).toContain(
-      'late abort err line\n'
+      'late abort err line'
     )
   })
 
@@ -264,9 +277,12 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     await install
 
     const done = progressEvents().filter((p) => p.messages[0] === 'Done')
-    expect(done).toEqual([
-      { messages: ['Done'], installingComponent: 'vcrun2019', failed: true }
-    ])
+    expect(done).toHaveLength(1)
+    expect(done[0]).toMatchObject({
+      messages: ['Done'],
+      installingComponent: 'vcrun2019',
+      failed: true
+    })
   })
 
   it('a zero exit marks Done as not failed', async () => {
@@ -280,5 +296,233 @@ describe('exit flushes buffered lines and reports failure (failed-install todo)'
     expect(done).toEqual([
       { messages: ['Done'], installingComponent: 'vcrun2019', failed: false }
     ])
+  })
+
+  it('a non-zero exit appends a synthetic error line naming the exit code to the Done lines', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+    children[0].emit('exit', 3)
+    children[0].emit('close', 3)
+    await install
+
+    const done = progressEvents().filter((p) => p.messages[0] === 'Done')
+    expect(done).toHaveLength(1)
+    const lines = done[0].lines ?? []
+    expect(lines[lines.length - 1]).toEqual({
+      kind: 'error',
+      text: expect.stringContaining('3')
+    })
+  })
+})
+
+const CURL_ROW_42 =
+  ' 42 12.3M   42 5229k    0     0  1234k      0  0:00:10  0:00:04  0:00:06 1233k'
+const CURL_ROW_60 =
+  ' 60 12.3M   60 7400k    0     0  1234k      0  0:00:10  0:00:06  0:00:04 1233k'
+
+async function finishInstall(install: Promise<unknown>): Promise<void> {
+  children[children.length - 1].emit('exit', 0)
+  children[children.length - 1].emit('close', 0)
+  await install
+}
+
+describe('output is classified at its source (D-15)', () => {
+  it('never logs wine fixme/err noise or a curl meter row at ERROR, and reports the percent', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+
+    children[0].stderr.emit(
+      'data',
+      `0024:fixme:ntdll:NtQuerySystemInformation info_class 1\n` +
+        `002c:err:module:import_dll Library X.dll not found\n` +
+        `fixme:heap:RtlSetHeapInformation stub\n` +
+        `${CURL_ROW_42}\r`
+    )
+    jest.advanceTimersByTime(1000)
+
+    expect(logError).not.toHaveBeenCalled()
+    expect(logDebug).toHaveBeenCalledTimes(3)
+    const flush = progressEvents().find((p) => (p.lines ?? []).length > 0)
+    expect(flush).toBeDefined()
+    expect(flush?.percent).toBe(42)
+    expect(
+      (flush?.lines ?? []).filter((line) => line.kind === 'progress')
+    ).toHaveLength(1)
+
+    await finishInstall(install)
+  })
+
+  it('collapses two meter rows inside one tick into one progress line carrying the latest percent', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+
+    children[0].stderr.emit('data', `${CURL_ROW_42}\r${CURL_ROW_60}\r`)
+    jest.advanceTimersByTime(1000)
+
+    const flush = progressEvents().find((p) => (p.lines ?? []).length > 0)
+    const progress = (flush?.lines ?? []).filter(
+      (line) => line.kind === 'progress'
+    )
+    expect(progress).toHaveLength(1)
+    expect(progress[0]).toMatchObject({ percent: 60 })
+    expect(flush?.percent).toBe(60)
+
+    await finishInstall(install)
+  })
+
+  it('never forwards the raw curl meter as a message', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+
+    children[0].stderr.emit('data', `${CURL_ROW_42}\r`)
+    jest.advanceTimersByTime(1000)
+
+    for (const payload of progressEvents()) {
+      expect(payload.messages.join('\n')).not.toContain('12.3M')
+    }
+
+    await finishInstall(install)
+  })
+
+  it('reassembles a line split across two chunks before classifying it', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+
+    children[0].stderr.emit('data', '002c:err:mod')
+    children[0].stderr.emit('data', 'ule:import_dll gone\n')
+
+    expect(logError).not.toHaveBeenCalled()
+    expect(logDebug).toHaveBeenCalledTimes(1)
+
+    await finishInstall(install)
+  })
+
+  it('flushes an unterminated final line on close', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+
+    children[0].stderr.emit(
+      'data',
+      'Note: command x returned status 1. Aborting.'
+    )
+    expect(logError).not.toHaveBeenCalled()
+    children[0].emit('exit', 1)
+    children[0].emit('close', 1)
+    await install
+
+    expect(logError).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps list-all stdout intact for the parser and does not classify it', async () => {
+    const chunk = '===== dlls =====\nvcrun2019 Visual C++ 2019 libraries\n'
+    const run = Winetricks.runWithArgs('gog', 'game', ['list-all'], true)
+    await spawned(1)
+
+    children[0].stdout.emit('data', chunk)
+    children[0].emit('exit', 0)
+    children[0].emit('close', 0)
+
+    await expect(run).resolves.toEqual([chunk])
+    expect(logDebug).not.toHaveBeenCalled()
+  })
+})
+
+describe('environment recording (D-16)', () => {
+  it('records the wine version from the unsupported-wine notice during a list-all run', async () => {
+    const run = Winetricks.runWithArgs('gog', 'game', ['list-all'], true)
+    await spawned(1)
+
+    children[0].stderr.emit(
+      'data',
+      'warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x\n'
+    )
+    expect(mockRecordUnsupportedWine).toHaveBeenCalledWith('gog', 'game', '7.7')
+
+    children[0].emit('exit', 0)
+    children[0].emit('close', 0)
+    await run
+  })
+
+  it('records the sorted missing subset of the five host dependencies', async () => {
+    mockExecAsync.mockImplementation((command: string) =>
+      /which (zenity|7z)$/.test(command)
+        ? Promise.reject(new Error('not found'))
+        : Promise.resolve({ stdout: '', stderr: '' })
+    )
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+    await flushMicrotasks(60)
+
+    expect(mockRecordMissingDependencies).toHaveBeenCalledTimes(1)
+    expect(mockRecordMissingDependencies).toHaveBeenCalledWith('gog', 'game', [
+      '7z',
+      'zenity'
+    ])
+
+    jest.advanceTimersByTime(1000)
+    const lines = progressEvents().flatMap((p) => p.lines ?? [])
+    expect(lines).toContainEqual({
+      kind: 'environment',
+      text: expect.stringContaining('zenity not installed!')
+    })
+
+    await finishInstall(install)
+  })
+
+  it('clears the record with an empty list when every dependency is present', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+    await flushMicrotasks(60)
+
+    expect(mockRecordMissingDependencies).toHaveBeenCalledWith(
+      'gog',
+      'game',
+      []
+    )
+
+    await finishInstall(install)
+  })
+
+  it('a probe that throws synchronously counts as missing and never rejects the run', async () => {
+    mockExecAsync.mockImplementation(() => {
+      throw new Error('spawn blew up')
+    })
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+    await flushMicrotasks(60)
+
+    expect(mockRecordMissingDependencies).toHaveBeenCalledWith('gog', 'game', [
+      '7z',
+      'cabextract',
+      'curl',
+      'unzip',
+      'zenity'
+    ])
+
+    await expect(finishInstall(install)).resolves.toBeUndefined()
+  })
+})
+
+describe('onLine hook', () => {
+  it('is invoked for every classified line including the synthetic exit line', async () => {
+    const seen: WinetricksLogLine[] = []
+    const install = Winetricks.install('gog', 'game', 'vcrun2019', (line) =>
+      seen.push(line)
+    )
+    await spawned(1)
+
+    children[0].stderr.emit('data', 'Executing w_do_call vcrun2019\n')
+    children[0].emit('exit', 2)
+    children[0].emit('close', 2)
+    await install
+
+    expect(seen[0]).toEqual({
+      kind: 'info',
+      text: 'Executing w_do_call vcrun2019'
+    })
+    expect(seen[seen.length - 1]).toEqual({
+      kind: 'error',
+      text: expect.stringContaining('2')
+    })
   })
 })

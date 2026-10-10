@@ -442,3 +442,78 @@ describe('WinetricksQueue environment push (D-16)', () => {
     expect(state.environment.missingDependencies).toEqual(['7z', 'cabextract'])
   })
 })
+
+describe('WinetricksQueue run log (D-18 / E9)', () => {
+  const CURL_ROW_42 =
+    ' 42 12.3M   42 5229k    0     0  1234k      0  0:00:10  0:00:04  0:00:06 1233k'
+  const CURL_ROW_100 =
+    '100 12.3M  100 12.3M    0     0  1530k      0  0:00:08  0:00:08 --:--:-- 1660k'
+
+  it("appends a verb's classified lines to run.log in order, progress lines replacing each other", async () => {
+    await WinetricksQueue.apply('gog', 'log-game', ['xact', 'corefonts'])
+    await spawned(1)
+
+    children[0].stderr.emit('data', 'Executing w_do_call xact\n')
+    children[0].stderr.emit('data', `${CURL_ROW_42}\r${CURL_ROW_100}\r`)
+
+    expect(WinetricksQueue.getState('gog', 'log-game').run?.log).toEqual([
+      { kind: 'info', text: 'Executing w_do_call xact' },
+      { kind: 'progress', text: CURL_ROW_100, percent: 100 }
+    ])
+
+    await finishChild(0, 0)
+    await spawned(2)
+    children[1].stderr.emit('data', 'Executing w_do_call corefonts\n')
+
+    const log = WinetricksQueue.getState('gog', 'log-game').run?.log ?? []
+    expect(log[log.length - 1]).toEqual({
+      kind: 'info',
+      text: 'Executing w_do_call corefonts'
+    })
+    expect(log.map((line) => line.text)).toContain('Executing w_do_call xact')
+
+    await finishChild(1, 0)
+  })
+
+  it('never holds more than 200 lines, dropping the oldest', async () => {
+    await WinetricksQueue.apply('gog', 'cap-game', ['xact'])
+    await spawned(1)
+
+    const chunk = Array.from({ length: 250 }, (_, i) => `line ${i}\n`).join('')
+    children[0].stderr.emit('data', chunk)
+
+    const log = WinetricksQueue.getState('gog', 'cap-game').run?.log ?? []
+    expect(log).toHaveLength(200)
+    expect(log[0].text).toBe('line 50')
+    expect(log[log.length - 1].text).toBe('line 249')
+
+    await finishChild(0, 0)
+  })
+
+  it('ends the log of a failed verb with the synthetic exit-code error line', async () => {
+    await WinetricksQueue.apply('gog', 'fail-log-game', ['xact'])
+    await spawned(1)
+    await finishChild(0, 1)
+
+    const log = WinetricksQueue.getState('gog', 'fail-log-game').run?.log ?? []
+    expect(log[log.length - 1]).toEqual({
+      kind: 'error',
+      text: expect.stringContaining('1')
+    })
+  })
+
+  it('does not push a queue state for every line', async () => {
+    await WinetricksQueue.apply('gog', 'push-game', ['xact'])
+    await spawned(1)
+    const before = queueChangedPushes('push-game').length
+
+    children[0].stderr.emit(
+      'data',
+      Array.from({ length: 50 }, (_, i) => `line ${i}\n`).join('')
+    )
+
+    expect(queueChangedPushes('push-game')).toHaveLength(before)
+
+    await finishChild(0, 0)
+  })
+})

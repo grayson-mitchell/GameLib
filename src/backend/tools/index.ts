@@ -5,7 +5,8 @@ import {
   Tool,
   WineCommandArgs,
   WinetricksComponent,
-  WinetricksInstallOutcome
+  WinetricksInstallOutcome,
+  WinetricksLogLine
 } from 'common/types'
 
 import {
@@ -558,8 +559,10 @@ export const Winetricks = {
     // report a real per-verb outcome instead of a resolved-with-no-value
     // promise. Every other `runWithArgs` call site (list-all) passes
     // nothing -- the parameter is optional and a no-op when omitted.
-    onDone?: (failed: boolean) => void
+    onDone?: (failed: boolean) => void,
+    onLine?: (line: WinetricksLogLine) => void
   ) => {
+    void onLine // RED-phase stub: wired in the GREEN commit
     // Imported lazily to break a circular dependency (tools/index.ts <->
     // storeManagers/index.ts) — see the load-bearing comment in
     // storeManagers/gog/user.ts.
@@ -800,7 +803,8 @@ export const Winetricks = {
   install: async (
     runner: Runner,
     appName: string,
-    component: string
+    component: string,
+    onLine?: (line: WinetricksLogLine) => void
   ): Promise<WinetricksInstallOutcome> => {
     // Single-flight: two `winetricks -q` processes racing on one Wine prefix
     // is never wanted, and the first to finish would clear
@@ -832,7 +836,8 @@ export const Winetricks = {
         component,
         (failed) => {
           outcome = failed ? 'failed' : 'installed'
-        }
+        },
+        onLine
       )
     } finally {
       installingComponent = ''
