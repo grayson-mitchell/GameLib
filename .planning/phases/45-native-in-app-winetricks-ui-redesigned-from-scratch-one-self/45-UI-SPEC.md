@@ -52,18 +52,31 @@ condition holds here exactly as it did for Phase 44.
 ## Spacing Scale
 
 This project's existing spacing system (`styles/_spacing.scss`, em-based @ 16px root). Reused
-verbatim — not a parallel scale:
+verbatim — not a parallel scale. Every value below is a multiple of 4px **except** `--space-2xs`,
+which is a declared, justified exception (see immediately below the table — not a baseline grid
+step):
 
 | Token | Value (px @ 16px root) | Usage in this phase |
 |-------|-------------------------|----------------------|
 | `--space-3xs` | 4px | Checkbox-to-label gap, badge internal padding |
-| `--space-2xs` | 6px | Row internal vertical padding, group-header internal padding |
 | `--space-xs` | 8px | Gap between a row's trailing metadata and its checkbox/icon slot |
 | `--space-sm` | 12px | Gap between the three tiers (Suggested / task groups / Everything else), row horizontal inset |
 | `--space-md` | 16px | Banner-to-scroll-container gap, sticky bar internal padding |
 | `--space-lg` | 24px | Vertical gap above the banner when present |
 
 **Exceptions:**
+- **`--space-2xs` (6px) — row internal vertical padding, group-header internal padding.** Not a
+  4px-grid step; kept anyway, as a named exception, because it is the exact metric the shipped
+  `FilterFacetGroup` / `FilterFocusRow` / `FilterCollectionList` components already use for this
+  identical padding role (`src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss`
+  and siblings), and this tab's own Component carry-forward note (see Layout) commits to copying
+  that pattern's *contract* — caret, badge, row padding — verbatim. Substituting `--space-xs` (8px)
+  here would silently de-align this tab's row/group-header padding from the exact precedent it is
+  modeled on, trading one grid nonconformance for a visual-parity regression against a component
+  this spec explicitly says to match. `_spacing.scss` is a pre-existing, codebase-wide token several
+  other shipped surfaces depend on at this exact value (`FilterChipRow`, `LibrarySignInNotice`,
+  `SearchBar`, `HumbleExpiryToast`, among others) — it is not this phase's invention and not a value
+  this phase can unilaterally change.
 - Checkbox hit target: **44×44px** minimum (existing documented touch-target exception, carried
   forward from Phase 44's own `--space-2xs` note), even though the visual checkbox glyph itself is
   14×14px (matches `FilterFacetRow__box`'s shipped dimension) — the *clickable* row region is the
