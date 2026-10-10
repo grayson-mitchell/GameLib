@@ -1,1 +1,100 @@
-// RED-phase placeholder; the real stylesheet lands in the GREEN commit.
+// Phase 45 Plan 07: the Everything else group's body -- the sticky search box,
+// the results heading, the zero-result block and its Clear search button
+// (UI-SPEC E5).
+//
+// The group opens no scroll region of its own: its rows grow inside the tab's
+// single page scroll container (D-02), and `position: sticky` below only pins
+// the search box to the top of whichever ancestor is actually scrolling, so it
+// stays reachable however far the rows run. Every rule is scoped under
+// `.WinetricksSettings` and every `var()` carries a fallback (D-21; enforced by
+// `__tests__/tokenCensus.test.ts`).
+.WinetricksSettings {
+  .WinetricksEverythingElse {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .WinetricksEverythingElse__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .WinetricksEverythingElse__search {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    padding: var(--space-xs, 0.5rem) var(--space-sm, 0.75rem);
+    background: var(--input-background, #272f31);
+  }
+
+  .WinetricksEverythingElse__input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-xs, 0.5rem) var(--space-sm, 0.75rem);
+    background: var(--body-background, #070a0b);
+    // The unchecked-checkbox border step, not `--border-color`: that token
+    // resolves to an invisible grey in 10 of 13 themes.
+    border: 1px solid var(--neutral-05, #a8aeaf);
+    border-radius: var(--space-3xs, 0.25rem);
+    color: var(--text-default, #caf3fd);
+    font-size: var(--text-md, 1rem);
+
+    &:focus-visible {
+      outline: 2px solid var(--accent, #0080ff);
+      outline-offset: 0;
+    }
+  }
+
+  .WinetricksEverythingElse__results {
+    margin: 0;
+    padding: var(--space-xs, 0.5rem) var(--space-sm, 0.75rem);
+    font-size: var(--text-sm, 0.875rem);
+    color: var(--text-secondary, #a8aeaf);
+  }
+
+  // The query is user-controlled and unbounded, so the heading wraps inside
+  // the panel instead of widening it (E5-long-text).
+  .WinetricksEverythingElse__zero {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs, 0.5rem);
+    min-width: 0;
+    padding: var(--space-md, 1rem) var(--space-sm, 0.75rem);
+  }
+
+  .WinetricksEverythingElse__zeroHeading {
+    margin: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: var(--text-default, #caf3fd);
+  }
+
+  .WinetricksEverythingElse__clear {
+    margin: 0;
+    padding: var(--space-3xs, 0.25rem) var(--space-sm, 0.75rem);
+    appearance: none;
+    background: var(--accent, #0080ff);
+    // See Row/index.scss: `--background` inverts correctly against `--accent`.
+    color: var(--background, #070a0b);
+    border: 0;
+    border-radius: var(--space-3xs, 0.25rem);
+    font-size: var(--text-sm, 0.875rem);
+    line-height: 1;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent, #0080ff);
+      outline-offset: 2px;
+    }
+  }
+}

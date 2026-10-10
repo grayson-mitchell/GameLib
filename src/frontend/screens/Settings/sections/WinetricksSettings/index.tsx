@@ -25,12 +25,13 @@ import {
 } from 'frontend/helpers/declaredUnavailable'
 import SuggestedGroup from './SuggestedGroup'
 import TaskGroup from './TaskGroup'
+import EverythingElseGroup from './EverythingElseGroup'
 import WinetricksRow from './Row'
 import type { RenderWinetricksRow } from './Row'
 
 // Phase 45 (D-01/D-02/D-05-D-08/D-10/D-11): the Winetricks Settings tab. Three
 // tiers top to bottom -- Suggested for this game (always open), five task
-// groups (collapsed), and, from plan 45-07 Task 3, Everything else -- all
+// groups (collapsed), and Everything else (collapsed, with its own search) -- all
 // rendered inside the Settings screen's one scroll container, backed by the
 // backend-resident sequential queue (`backend/tools/winetricksQueue.ts`).
 // Every `window.api.winetricks*` call lives in this one file -- the call-site
@@ -440,6 +441,10 @@ export default function WinetricksSettings() {
               renderRow={renderRow}
             />
           ))}
+          <EverythingElseGroup
+            components={allComponents}
+            renderRow={renderRow}
+          />
         </>
       )}
 
