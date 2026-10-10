@@ -11,7 +11,8 @@
 // bounded height; D-02 (one scroll container) and the spec's own E4 row
 // forbid it, and the locked decision wins. `min-width: 0` lets this panel
 // shrink inside the Settings tab layout instead of forcing a horizontal
-// scrollbar on its ancestor.
+// scrollbar on its ancestor. On its own this does not stop the tab from
+// widening the Settings dialog itself -- see the last rule in this file.
 //
 // Every `var()` below carries a fallback, and none of them reach for the
 // four tokens D-21 bans (nav-bar-scoped colours, the link-hover text colour, a
@@ -124,4 +125,25 @@
     flex-direction: column;
     min-width: 0;
   }
+}
+
+// 45-12 G1: SettingsModal borrows `.InstallModal__dialog` for its MUI paper
+// (SettingsModal/index.tsx). That class, in
+// Library/components/InstallModal/index.scss, sets `min-width: fit-content`,
+// and min-width beats every max-width in the cascade (CSS 2.1 10.4). So this
+// tab's unbounded content -- Everything-else rows, log lines, long locale
+// badges -- pushed the centred paper past both window edges.
+//
+// This rule is scoped by `:has()` so it applies only while this tab is
+// mounted (TabPanel renders only the selected tab's children). Its 0,2,0
+// specificity beats the floor's 0,1,0 in any load order, so the Install
+// modal and the other Settings tabs keep their floor untouched. The paper is
+// a scroll-container flex item, so releasing its min-width lets it shrink
+// with a narrow window instead of overflowing it.
+//
+// Pinned by `__tests__/tokenCensus.test.ts`. Do not "fix" this with
+// `max-width` or `contain` instead -- see the 261011-hh5 todo record for why
+// both were rejected.
+.InstallModal__dialog:has(.WinetricksSettings) {
+  min-width: 0;
 }

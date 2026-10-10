@@ -16,6 +16,13 @@
  * The checker is a pure function over file text; a sabotaged sample proves it
  * can fail, and the directory walk asserts it found real input, so a green run
  * cannot be vacuous.
+ *
+ * This file also pins the Settings dialog width release (quick 261011-hh5).
+ * `.InstallModal__dialog`'s `min-width: fit-content` (InstallModal/index.scss)
+ * beats any `max-width` in the chain, and only a top-level
+ * `.InstallModal__dialog:has(.WinetricksSettings) { min-width: 0; }` rule in
+ * this tab's own stylesheet stops the tab's content from widening the dialog
+ * past the window while it is mounted.
  */
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
@@ -96,6 +103,34 @@ function checkStylesheet(source: string): Violation[] {
     }
   }
   return violations
+}
+
+// Checks that a top-level `.InstallModal__dialog:has(.WinetricksSettings)`
+// rule declares `min-width: 0`. "Top-level" means brace depth 0 at the match,
+// which rejects the selector when it is merely nested inside another rule
+// (where it would compile to a never-matching descendant selector). The rule
+// body is read up to the next `}`; a nested `{` inside that span means the
+// match was not a flat, single-declaration rule.
+function releasesDialogWidthFloor(source: string): boolean {
+  const text = stripComments(source)
+  const selector = /\.InstallModal__dialog:has\(\.WinetricksSettings\)\s*\{/g
+
+  for (const match of text.matchAll(selector)) {
+    const index = match.index ?? 0
+    const before = text.slice(0, index)
+    const depth =
+      (before.match(/\{/g) ?? []).length - (before.match(/\}/g) ?? []).length
+    if (depth !== 0) continue
+
+    const bodyStart = index + match[0].length
+    const bodyEnd = text.indexOf('}', bodyStart)
+    if (bodyEnd === -1) continue
+    const body = text.slice(bodyStart, bodyEnd)
+    if (body.includes('{')) continue
+
+    if (/min-width\s*:\s*0\b/.test(body)) return true
+  }
+  return false
 }
 
 function scssFiles(dir: string): string[] {
@@ -184,5 +219,55 @@ describe('Winetricks tab stylesheets (D-21)', () => {
     const row = readFileSync(join(TAB_DIR, 'Row', 'index.scss'), 'utf8')
     expect(row).toMatch(/&--twoLine\s*\{[^}]*height:\s*56px/)
     expect(row).toMatch(/&--oneLine\s*\{[^}]*height:\s*44px/)
+  })
+})
+
+describe('Settings dialog width floor (261011-hh5)', () => {
+  it('accepts a top-level release rule', () => {
+    const sample = [
+      '.InstallModal__dialog:has(.WinetricksSettings) {',
+      '  min-width: 0;',
+      '}'
+    ].join('\n')
+    expect(releasesDialogWidthFloor(sample)).toBe(true)
+  })
+
+  it('rejects the same rule declaring max-width instead of min-width', () => {
+    const sample = [
+      '.InstallModal__dialog:has(.WinetricksSettings) {',
+      '  max-width: 100vw;',
+      '}'
+    ].join('\n')
+    expect(releasesDialogWidthFloor(sample)).toBe(false)
+  })
+
+  it('rejects the rule when it appears only in comments', () => {
+    const sample = [
+      '// .InstallModal__dialog:has(.WinetricksSettings) { min-width: 0; }',
+      '/* .InstallModal__dialog:has(.WinetricksSettings) { min-width: 0; } */',
+      '.WinetricksSettings { min-width: 0; }'
+    ].join('\n')
+    expect(releasesDialogWidthFloor(sample)).toBe(false)
+  })
+
+  it('rejects the rule nested inside .WinetricksSettings, a never-matching descendant selector', () => {
+    const sample = [
+      '.WinetricksSettings {',
+      '  .InstallModal__dialog:has(.WinetricksSettings) {',
+      '    min-width: 0;',
+      '  }',
+      '}'
+    ].join('\n')
+    expect(releasesDialogWidthFloor(sample)).toBe(false)
+  })
+
+  it('rejects a stylesheet whose only min-width: 0 sits on the .WinetricksSettings root (the pre-fix shape)', () => {
+    const sample = ['.WinetricksSettings {', '  min-width: 0;', '}'].join('\n')
+    expect(releasesDialogWidthFloor(sample)).toBe(false)
+  })
+
+  it("index.scss releases the Settings dialog paper's min-width floor while the tab is mounted", () => {
+    const source = readFileSync(join(TAB_DIR, 'index.scss'), 'utf8')
+    expect(releasesDialogWidthFloor(source)).toBe(true)
   })
 })
