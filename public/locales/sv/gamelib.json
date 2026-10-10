@@ -464,8 +464,6 @@
         "emptyHeading": "Inga komponenter tillgängliga",
         "installFailedTag": "Installationen misslyckades",
         "installedTag": "Installerad",
-        "installingRow": "Installerar…",
-        "needsGuiTag": "Kräver Winetricks-GUI",
         "retry": "Försök igen",
         "searchPlaceholder": "Sök komponenter…",
         "zeroResultHeading": "Ingen komponent matchar “{{query}}”.",

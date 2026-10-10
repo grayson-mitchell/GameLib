@@ -464,8 +464,6 @@
         "emptyHeading": "هیچ مؤلفه‌ای موجود نیست",
         "installFailedTag": "نصب ناموفق بود",
         "installedTag": "نصب‌شده",
-        "installingRow": "در حال نصب…",
-        "needsGuiTag": "به رابط گرافیکی Winetricks نیاز دارد",
         "retry": "تلاش دوباره",
         "searchPlaceholder": "جستجوی مؤلفه‌ها…",
         "zeroResultHeading": "هیچ مؤلفه‌ای با “{{query}}” مطابقت ندارد.",

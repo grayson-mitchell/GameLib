@@ -471,8 +471,6 @@
         "emptyHeading": "Nu există componente disponibile",
         "installFailedTag": "Instalarea a eșuat",
         "installedTag": "Instalat",
-        "installingRow": "Se instalează…",
-        "needsGuiTag": "Necesită interfața grafică Winetricks",
         "retry": "Reîncearcă",
         "searchPlaceholder": "Caută componente…",
         "zeroResultHeading": "Nicio componentă nu corespunde cu “{{query}}”.",

@@ -492,8 +492,6 @@
         "emptyHeading": "لا تتوفر مكوّنات",
         "installFailedTag": "فشل التثبيت",
         "installedTag": "مثبَّت",
-        "installingRow": "جارٍ التثبيت…",
-        "needsGuiTag": "يتطلب واجهة Winetricks الرسومية",
         "retry": "إعادة المحاولة",
         "searchPlaceholder": "بحث في المكوّنات…",
         "zeroResultHeading": "لا يوجد مكوّن يطابق “{{query}}”.",

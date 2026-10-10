@@ -1075,10 +1075,7 @@
         "proton-cachyos": "Athshocraigh eochair aisghabhálaIs malairt Proton é Proton-CachyOS atá á chothabháil ag foireann CachyOS. Cuimsíonn sé uirlisí breise cosúil le DXVK-Sarek agus D7VK."
     },
     "winetricks": {
-        "install": "Suiteáil",
-        "installing": "Suiteáil ar siúl: {{component}}",
-        "loading-available": "Ag lódáil comhpháirteanna atá ar fáil ...",
-        "openGUI": "Oscail Comhéadan Úsáideora Winetricks"
+        "loading-available": "Ag lódáil comhpháirteanna atá ar fáil ..."
     },
     "amazon-luna": "Amazon Luna",
     "zoom-store": "Siopa Zoom",

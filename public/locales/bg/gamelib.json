@@ -464,8 +464,6 @@
         "emptyHeading": "Няма налични компоненти",
         "installFailedTag": "Инсталирането е неуспешно",
         "installedTag": "Инсталиран",
-        "installingRow": "Инсталиране…",
-        "needsGuiTag": "Изисква графичен интерфейс на Winetricks",
         "retry": "Нов опит",
         "searchPlaceholder": "Търсене на компоненти…",
         "zeroResultHeading": "Няма компонент, отговарящ на “{{query}}”.",

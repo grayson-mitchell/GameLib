@@ -1026,9 +1026,6 @@
     "Amazon Games": "Amazon Games",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Kur",
-        "installing": "Kurulum devam ediyor: {{component}}",
-        "openGUI": "Winetricks GUI’yi aç",
         "loading-available": "Mevcut bileşenler yükleniyor..."
     },
     "window": {

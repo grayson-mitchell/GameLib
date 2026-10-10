@@ -464,8 +464,6 @@
         "emptyHeading": "Ingen komponenter tilgængelige",
         "installFailedTag": "Installation mislykkedes",
         "installedTag": "Installeret",
-        "installingRow": "Installerer…",
-        "needsGuiTag": "Kræver Winetricks-GUI'en",
         "retry": "Prøv igen",
         "searchPlaceholder": "Søg efter komponenter…",
         "zeroResultHeading": "Ingen komponenter matcher “{{query}}”.",

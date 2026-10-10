@@ -478,8 +478,6 @@
         "emptyHeading": "Ni razpoložljivih komponent",
         "installFailedTag": "Namestitev ni uspela",
         "installedTag": "Nameščeno",
-        "installingRow": "Nameščanje…",
-        "needsGuiTag": "Potrebuje grafični vmesnik Winetricks",
         "retry": "Poskusi znova",
         "searchPlaceholder": "Iskanje komponent…",
         "zeroResultHeading": "Nobena komponenta se ne ujema z “{{query}}”.",

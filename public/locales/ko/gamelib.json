@@ -464,8 +464,6 @@
         "emptyHeading": "사용 가능한 구성 요소가 없습니다",
         "installFailedTag": "설치 실패",
         "installedTag": "설치됨",
-        "installingRow": "설치 중…",
-        "needsGuiTag": "Winetricks GUI가 필요합니다",
         "retry": "다시 시도",
         "searchPlaceholder": "구성 요소 검색…",
         "zeroResultHeading": "“{{query}}”와 일치하는 구성 요소가 없습니다.",

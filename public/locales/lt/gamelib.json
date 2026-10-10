@@ -478,8 +478,6 @@
         "emptyHeading": "Nėra pasiekiamų komponentų",
         "installFailedTag": "Diegimas nepavyko",
         "installedTag": "Įdiegta",
-        "installingRow": "Diegiama…",
-        "needsGuiTag": "Reikalinga Winetricks GUI",
         "retry": "Bandyti iš naujo",
         "searchPlaceholder": "Ieškoti komponentų…",
         "zeroResultHeading": "Nėra komponento, atitinkančio “{{query}}”.",

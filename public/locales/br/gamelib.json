@@ -485,8 +485,6 @@
         "emptyHeading": "N'eus parzhioù hegerz ebet",
         "installFailedTag": "C'hwitet ar staliañ",
         "installedTag": "Staliet",
-        "installingRow": "O staliañ…",
-        "needsGuiTag": "Ret eo GUI Winetricks",
         "retry": "Adklask",
         "searchPlaceholder": "Klask parzhioù…",
         "zeroResultHeading": "Parzh ebet a glot gant “{{query}}”.",

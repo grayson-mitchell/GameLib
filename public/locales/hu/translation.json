@@ -1028,9 +1028,6 @@
     "Amazon Games": "Amazon Games",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Telepítés",
-        "installing": "Telepítés folyamatban: {{component}}",
-        "openGUI": "Winetricks GUI megnyitása",
         "loading-available": "Elérhető összetevők betöltése…"
     },
     "category-settings": {

@@ -464,8 +464,6 @@
         "emptyHeading": "Geen onderdelen beschikbaar",
         "installFailedTag": "Installatie mislukt",
         "installedTag": "Geïnstalleerd",
-        "installingRow": "Installeren…",
-        "needsGuiTag": "Vereist de Winetricks-GUI",
         "retry": "Opnieuw proberen",
         "searchPlaceholder": "Onderdelen zoeken…",
         "zeroResultHeading": "Geen onderdeel komt overeen met “{{query}}”.",

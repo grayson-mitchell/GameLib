@@ -464,8 +464,6 @@
         "emptyHeading": "Ei saatavilla olevia komponentteja",
         "installFailedTag": "Asennus epäonnistui",
         "installedTag": "Asennettu",
-        "installingRow": "Asennetaan…",
-        "needsGuiTag": "Vaatii Winetricksin graafisen käyttöliittymän",
         "retry": "Yritä uudelleen",
         "searchPlaceholder": "Hae komponentteja…",
         "zeroResultHeading": "Mikään komponentti ei vastaa hakua “{{query}}”.",

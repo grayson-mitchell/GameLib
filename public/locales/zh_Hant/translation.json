@@ -1001,9 +1001,6 @@
     "Amazon Games": "Amazon 遊戲",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "安裝",
-        "installing": "正在安裝： {{component}}",
-        "openGUI": "",
         "loading-available": ""
     },
     "category-settings": {

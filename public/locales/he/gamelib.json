@@ -471,8 +471,6 @@
         "emptyHeading": "אין רכיבים זמינים",
         "installFailedTag": "ההתקנה נכשלה",
         "installedTag": "מותקן",
-        "installingRow": "מתקין…",
-        "needsGuiTag": "דורש את מנשק המשתמש הגרפי של Winetricks",
         "retry": "ניסיון חוזר",
         "searchPlaceholder": "חיפוש רכיבים…",
         "zeroResultHeading": "אין רכיב שמתאים ל־“{{query}}”.",

@@ -1047,10 +1047,7 @@
     "Amazon Games": "Amazon Spil",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Installer",
-        "installing": "Installation i gang: {{component}}",
-        "loading-available": "Indlæser tilgængelige komponenter ...",
-        "openGUI": "Åbn Winetricks GUI"
+        "loading-available": "Indlæser tilgængelige komponenter ..."
     },
     "adtraction-locked": {
         "description": "Domænet track.adtraction.com syntes at være ulæseligt eller blokeret. Med adtraction støtter ethvert køb, du foretager i GOG-butikken, GameLib økonomisk. Overvej at fjerne blokeringen, hvis du ønsker at bidrage.",

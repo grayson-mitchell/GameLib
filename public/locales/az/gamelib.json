@@ -464,8 +464,6 @@
         "emptyHeading": "Heç bir komponent mövcud deyil",
         "installFailedTag": "Quraşdırma alınmadı",
         "installedTag": "Quraşdırılıb",
-        "installingRow": "Quraşdırılır…",
-        "needsGuiTag": "Winetricks GUI tələb edir",
         "retry": "Yenidən cəhd et",
         "searchPlaceholder": "Komponentləri axtar…",
         "zeroResultHeading": "“{{query}}” ilə uyğun komponent yoxdur.",

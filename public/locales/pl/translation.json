@@ -1028,9 +1028,6 @@
     "amazon": "Amazon",
     "Amazon Games": "Amazon Games",
     "winetricks": {
-        "install": "Zainstaluj",
-        "installing": "Instalacja w trakcie: {{component}}",
-        "openGUI": "Otwórz interfejs Winetricks",
         "loading-available": "Wczytywanie dostępnych komponentów..."
     },
     "window": {

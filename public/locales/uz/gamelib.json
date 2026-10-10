@@ -464,8 +464,6 @@
         "emptyHeading": "Mavjud komponentlar yo'q",
         "installFailedTag": "O'rnatish amalga oshmadi",
         "installedTag": "O'rnatilgan",
-        "installingRow": "O'rnatilmoqda…",
-        "needsGuiTag": "Winetricks GUI talab qiladi",
         "retry": "Qayta urinish",
         "searchPlaceholder": "Komponentlarni qidirish…",
         "zeroResultHeading": "“{{query}}”ga mos komponent topilmadi.",

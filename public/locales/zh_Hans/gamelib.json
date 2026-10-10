@@ -464,8 +464,6 @@
         "emptyHeading": "没有可用组件",
         "installFailedTag": "安装失败",
         "installedTag": "已安装",
-        "installingRow": "正在安装…",
-        "needsGuiTag": "需要 Winetricks 图形界面",
         "retry": "重试",
         "searchPlaceholder": "搜索组件…",
         "zeroResultHeading": "没有与“{{query}}”匹配的组件。",

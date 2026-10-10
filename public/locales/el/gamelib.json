@@ -464,8 +464,6 @@
         "emptyHeading": "Δεν υπάρχουν διαθέσιμα στοιχεία",
         "installFailedTag": "Η εγκατάσταση απέτυχε",
         "installedTag": "Εγκατεστημένο",
-        "installingRow": "Εγκατάσταση…",
-        "needsGuiTag": "Απαιτεί το γραφικό περιβάλλον του Winetricks",
         "retry": "Δοκιμάστε ξανά",
         "searchPlaceholder": "Αναζήτηση στοιχείων…",
         "zeroResultHeading": "Κανένα στοιχείο δεν ταιριάζει με “{{query}}”.",

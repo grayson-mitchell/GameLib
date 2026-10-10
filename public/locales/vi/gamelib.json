@@ -464,8 +464,6 @@
         "emptyHeading": "Không có thành phần khả dụng",
         "installFailedTag": "Cài đặt không thành công",
         "installedTag": "Đã cài đặt",
-        "installingRow": "Đang cài đặt…",
-        "needsGuiTag": "Yêu cầu GUI của Winetricks",
         "retry": "Thử lại",
         "searchPlaceholder": "Tìm kiếm thành phần…",
         "zeroResultHeading": "Không có thành phần nào khớp với “{{query}}”.",

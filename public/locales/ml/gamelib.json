@@ -464,8 +464,6 @@
         "emptyHeading": "ലഭ്യമായ ഘടകങ്ങളില്ല",
         "installFailedTag": "ഇൻസ്റ്റാൾ പരാജയപ്പെട്ടു",
         "installedTag": "ഇൻസ്റ്റാൾ ചെയ്തു",
-        "installingRow": "ഇൻസ്റ്റാൾ ചെയ്യുന്നു…",
-        "needsGuiTag": "Winetricks GUI ആവശ്യമാണ്",
         "retry": "വീണ്ടും ശ്രമിക്കുക",
         "searchPlaceholder": "ഘടകങ്ങൾ തിരയുക…",
         "zeroResultHeading": "“{{query}}” എന്നതുമായി പൊരുത്തപ്പെടുന്ന ഘടകമില്ല.",

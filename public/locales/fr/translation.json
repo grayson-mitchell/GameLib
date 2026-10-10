@@ -1030,9 +1030,6 @@
     "Amazon Games": "Jeux Amazon",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Installation",
-        "installing": "Installation en cours : {{component}}",
-        "openGUI": "Ouvrir l'interface de Winetricks",
         "loading-available": "Chargement des composants disponibles..."
     },
     "category-settings": {

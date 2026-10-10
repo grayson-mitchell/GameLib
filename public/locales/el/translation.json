@@ -1006,10 +1006,7 @@
     "Amazon Games": "Παιχνίδια Amazon",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Εγκατάσταση",
-        "installing": "Εγκατάσταση σε εξέλιξη: {{component}}",
-        "loading-available": "Φόρτωση διαθέσιμων στοιχείων...",
-        "openGUI": "Άνοιγμα γραφικού περιβάλλοντος του Winetricks"
+        "loading-available": "Φόρτωση διαθέσιμων στοιχείων..."
     },
     "category-settings": {
         "cancel": "Ακύρωση",

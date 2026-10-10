@@ -1010,9 +1010,6 @@
     "Amazon Games": "Amazon-Spel",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Installera",
-        "installing": "Installation pågår: {{component}}",
-        "openGUI": "Öppna Winetricks GUI",
         "loading-available": "Laddar tillgängliga komponenter..."
     },
     "window": {

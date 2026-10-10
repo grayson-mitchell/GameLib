@@ -464,8 +464,6 @@
         "emptyHeading": "Ez dago osagairik eskuragarri",
         "installFailedTag": "Instalazioak huts egin du",
         "installedTag": "Instalatuta",
-        "installingRow": "Instalatzen…",
-        "needsGuiTag": "Winetricks-en GUIa behar du",
         "retry": "Saiatu berriro",
         "searchPlaceholder": "Bilatu osagaiak…",
         "zeroResultHeading": "Ez dago “{{query}}”(r)ekin bat datorren osagairik.",

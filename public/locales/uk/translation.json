@@ -1036,9 +1036,6 @@
     "Amazon Games": "Amazon Games",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Встановити",
-        "installing": "Виконується встановлення: {{component}}",
-        "openGUI": "Відкрити інтерфейс Winetricks",
         "loading-available": "Завантаження доступних компонентів..."
     },
     "category-settings": {

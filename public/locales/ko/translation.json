@@ -1009,9 +1009,6 @@
     "Amazon Games": "아마존 게임",
     "prime-gaming": "프라임 게이밍",
     "winetricks": {
-        "install": "설치",
-        "openGUI": "와인트리긋 GUI 열기",
-        "installing": "설치 진행 중: {{component}}",
         "loading-available": ""
     },
     "category-settings": {

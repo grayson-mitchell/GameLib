@@ -471,8 +471,6 @@
         "emptyHeading": "No hi ha components disponibles",
         "installFailedTag": "La instal·lació ha fallat",
         "installedTag": "Instal·lat",
-        "installingRow": "S'està instal·lant…",
-        "needsGuiTag": "Necessita la interfície gràfica de Winetricks",
         "retry": "Torna-ho a provar",
         "searchPlaceholder": "Cerca components…",
         "zeroResultHeading": "Cap component coincideix amb “{{query}}”.",

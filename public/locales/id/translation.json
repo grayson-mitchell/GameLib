@@ -1009,10 +1009,7 @@
     "prime-gaming": "Prime Gaming",
     "Amazon Games": "Amazon Games",
     "winetricks": {
-        "install": "Instal",
-        "installing": "Proses instalasi sedang berlangsung: {{component}}",
-        "loading-available": "Memuat komponen yang tersedia ...",
-        "openGUI": "Buka GUI Winetricks"
+        "loading-available": "Memuat komponen yang tersedia ..."
     },
     "category-settings": {
         "cancel": "Batalkan",

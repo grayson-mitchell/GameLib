@@ -471,8 +471,6 @@
         "emptyHeading": "Nema dostupnih komponenti",
         "installFailedTag": "Instalacija nije uspjela",
         "installedTag": "Instalirano",
-        "installingRow": "Instaliranje…",
-        "needsGuiTag": "Potreban je Winetricks GUI",
         "retry": "Pokušaj ponovo",
         "searchPlaceholder": "Pretraži komponente…",
         "zeroResultHeading": "Nema komponente koja odgovara “{{query}}”.",

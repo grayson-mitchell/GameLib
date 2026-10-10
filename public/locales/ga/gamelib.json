@@ -485,8 +485,6 @@
         "emptyHeading": "Níl aon chomhpháirteanna ar fáil",
         "installFailedTag": "Theip ar an suiteáil",
         "installedTag": "Suiteáilte",
-        "installingRow": "Ag suiteáil…",
-        "needsGuiTag": "Teastaíonn GUI Winetricks",
         "retry": "Bain triail eile as",
         "searchPlaceholder": "Cuardaigh comhpháirteanna…",
         "zeroResultHeading": "Níl aon chomhpháirt ag teacht le “{{query}}”.",

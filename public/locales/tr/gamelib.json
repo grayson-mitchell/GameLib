@@ -464,8 +464,6 @@
         "emptyHeading": "Kullanılabilir bileşen yok",
         "installFailedTag": "Yükleme başarısız oldu",
         "installedTag": "Yüklendi",
-        "installingRow": "Yükleniyor…",
-        "needsGuiTag": "Winetricks GUI gerektirir",
         "retry": "Yeniden dene",
         "searchPlaceholder": "Bileşen ara…",
         "zeroResultHeading": "“{{query}}” ile eşleşen bileşen yok.",

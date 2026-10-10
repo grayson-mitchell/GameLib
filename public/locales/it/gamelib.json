@@ -471,8 +471,6 @@
         "emptyHeading": "Nessun componente disponibile",
         "installFailedTag": "Installazione non riuscita",
         "installedTag": "Installato",
-        "installingRow": "Installazione in corso…",
-        "needsGuiTag": "Richiede la GUI di Winetricks",
         "retry": "Riprova",
         "searchPlaceholder": "Cerca componenti…",
         "zeroResultHeading": "Nessun componente corrisponde a “{{query}}”.",

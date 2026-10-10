@@ -1009,9 +1009,6 @@
     "Amazon Games": "Amazon Games",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Inštalácia",
-        "installing": "Prebieha inštalácia komponentu: {{component}}",
-        "openGUI": "Otvoriť GUI Winetricks",
         "loading-available": "Načítanie dostupných komponentov ..."
     },
     "category-settings": {

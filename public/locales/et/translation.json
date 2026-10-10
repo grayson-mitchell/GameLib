@@ -1026,9 +1026,6 @@
     "Amazon Games": "Amazon Games",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Paigaldus",
-        "openGUI": "Ava Winetricksi graafiline kasutajaliides",
-        "installing": "Paigaldamine: {{component}}",
         "loading-available": "Laen saadavalolevaid komponente ..."
     },
     "category-settings": {

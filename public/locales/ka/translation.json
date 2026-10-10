@@ -705,9 +705,6 @@
         "release": ""
     },
     "winetricks": {
-        "install": "დაყენება",
-        "installing": "",
-        "openGUI": "",
         "loading-available": ""
     },
     "accessibility": {

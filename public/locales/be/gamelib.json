@@ -478,8 +478,6 @@
         "emptyHeading": "Няма даступных кампанентаў",
         "installFailedTag": "Установка не ўдалася",
         "installedTag": "Установлена",
-        "installingRow": "Устаноўка…",
-        "needsGuiTag": "Патрабуецца графічны інтэрфейс Winetricks",
         "retry": "Паўторыць",
         "searchPlaceholder": "Пошук кампанентаў…",
         "zeroResultHeading": "Няма кампанентаў, якія адпавядаюць “{{query}}”.",

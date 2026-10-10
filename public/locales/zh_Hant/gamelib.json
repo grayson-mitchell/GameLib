@@ -464,8 +464,6 @@
         "emptyHeading": "沒有可用的元件",
         "installFailedTag": "安裝失敗",
         "installedTag": "已安裝",
-        "installingRow": "正在安裝…",
-        "needsGuiTag": "需要 Winetricks 圖形介面",
         "retry": "重試",
         "searchPlaceholder": "搜尋元件…",
         "zeroResultHeading": "沒有與「{{query}}」相符的元件。",

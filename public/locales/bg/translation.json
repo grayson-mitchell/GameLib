@@ -1029,9 +1029,6 @@
     "Amazon Games": "Игри от Amazon",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Инсталиране",
-        "installing": "В момента протича инсталация: {{component}}",
-        "openGUI": "Отваряне на интерфейса на Winetricks",
         "loading-available": "Зареждане на наличните компоненти…"
     },
     "window": {

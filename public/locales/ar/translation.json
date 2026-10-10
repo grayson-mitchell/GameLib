@@ -1015,9 +1015,6 @@
     "Amazon Games": "ألعاب أمازون",
     "prime-gaming": "لعب برايم",
     "winetricks": {
-        "install": "ثبِّت",
-        "installing": "يُثبَّت: {{component}}",
-        "openGUI": "افتح واجهة واين.تركس",
         "loading-available": ""
     },
     "window": {

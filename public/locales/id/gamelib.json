@@ -464,8 +464,6 @@
         "emptyHeading": "Tidak ada komponen yang tersedia",
         "installFailedTag": "Pemasangan gagal",
         "installedTag": "Terpasang",
-        "installingRow": "Memasang…",
-        "needsGuiTag": "Memerlukan GUI Winetricks",
         "retry": "Coba lagi",
         "searchPlaceholder": "Cari komponen…",
         "zeroResultHeading": "Tidak ada komponen yang cocok dengan “{{query}}”.",

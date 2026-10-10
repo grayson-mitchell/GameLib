@@ -464,8 +464,6 @@
         "emptyHeading": "კომპონენტები არ არის ხელმისაწვდომი",
         "installFailedTag": "ინსტალაცია ვერ მოხერხდა",
         "installedTag": "დაინსტალირებული",
-        "installingRow": "ინსტალაცია…",
-        "needsGuiTag": "Winetricks-ის გრაფიკული ინტერფეისია საჭირო",
         "retry": "თავიდან ცდა",
         "searchPlaceholder": "კომპონენტების ძებნა…",
         "zeroResultHeading": "“{{query}}”-ს შესატყვისი კომპონენტი არ არის.",

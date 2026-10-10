@@ -1002,10 +1002,7 @@
     "Amazon Games": "Trò Chơi Amazon",
     "prime-gaming": "Trò chơi chính",
     "winetricks": {
-        "install": "Cài Đặt",
-        "installing": "Đang tiến hành cài đặt: {{component}}",
-        "loading-available": "Đang tải các thành phần có sẵn ...",
-        "openGUI": "Mở GUI Winetricks"
+        "loading-available": "Đang tải các thành phần có sẵn ..."
     },
     "category-settings": {
         "cancel": "Hủy",

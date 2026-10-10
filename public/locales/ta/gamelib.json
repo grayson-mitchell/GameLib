@@ -464,8 +464,6 @@
         "emptyHeading": "கூறுகள் எதுவும் இல்லை",
         "installFailedTag": "நிறுவல் தோல்வியடைந்தது",
         "installedTag": "நிறுவப்பட்டது",
-        "installingRow": "நிறுவுகிறது…",
-        "needsGuiTag": "Winetricks GUI தேவை",
         "retry": "மீண்டும் முயற்சிக்கவும்",
         "searchPlaceholder": "கூறுகளைத் தேடு…",
         "zeroResultHeading": "“{{query}}” உடன் பொருந்தும் கூறு இல்லை.",

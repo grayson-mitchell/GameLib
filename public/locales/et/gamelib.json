@@ -461,8 +461,6 @@
         "emptyHeading": "Komponente ei ole saadaval",
         "installFailedTag": "Installimine ebaõnnestus",
         "installedTag": "Installitud",
-        "installingRow": "Installimine…",
-        "needsGuiTag": "Vajab Winetricksi graafilist liidest",
         "retry": "Proovi uuesti",
         "searchPlaceholder": "Otsi komponente…",
         "zeroResultHeading": "Ükski komponent ei vasta “{{query}}”.",

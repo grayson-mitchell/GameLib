@@ -1012,9 +1012,6 @@
     "Amazon Games": "Amazon-pelit",
     "prime-gaming": "Amazon Prime Gaming",
     "winetricks": {
-        "install": "Asenna",
-        "openGUI": "Avaa Winetricksin käyttöliittymä",
-        "installing": "Asennus meneillään: {{component}}",
         "loading-available": "Ladataan saatavilla olevia komponentteja..."
     },
     "window": {

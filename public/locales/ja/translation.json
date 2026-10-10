@@ -1013,9 +1013,6 @@
     "amazon": "アマゾン",
     "prime-gaming": "omPrime Gaming",
     "winetricks": {
-        "install": "インストール",
-        "installing": "インストール中: {{component}}",
-        "openGUI": "WinetricksのGUIを開く",
         "loading-available": "利用可能なコンポーネントを読み込んでいます..."
     },
     "category-settings": {

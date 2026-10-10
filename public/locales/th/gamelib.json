@@ -464,8 +464,6 @@
         "emptyHeading": "ไม่มีคอมโพเนนต์ที่ใช้ได้",
         "installFailedTag": "การติดตั้งล้มเหลว",
         "installedTag": "ติดตั้งแล้ว",
-        "installingRow": "กำลังติดตั้ง…",
-        "needsGuiTag": "ต้องใช้ GUI ของ Winetricks",
         "retry": "ลองใหม่",
         "searchPlaceholder": "ค้นหาคอมโพเนนต์…",
         "zeroResultHeading": "ไม่มีคอมโพเนนต์ที่ตรงกับ “{{query}}”.",

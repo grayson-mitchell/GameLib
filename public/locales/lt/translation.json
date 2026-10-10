@@ -781,9 +781,6 @@
         "notes": "Lapeliai"
     },
     "winetricks": {
-        "install": "Įdiegti",
-        "installing": "Įdiegiamas vykdomas: „{{component}}“",
-        "openGUI": "Atidaryti „Winetricks“ grafinę sąsają",
         "loading-available": "Kraunami pasiekiami komponentai..."
     },
     "accessibility": {

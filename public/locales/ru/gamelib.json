@@ -478,8 +478,6 @@
         "emptyHeading": "Нет доступных компонентов",
         "installFailedTag": "Установка не удалась",
         "installedTag": "Установлено",
-        "installingRow": "Установка…",
-        "needsGuiTag": "Требуется графический интерфейс Winetricks",
         "retry": "Повторить",
         "searchPlaceholder": "Поиск компонентов…",
         "zeroResultHeading": "Нет компонентов, соответствующих “{{query}}”.",

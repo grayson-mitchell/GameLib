@@ -1022,10 +1022,7 @@
     "Amazon Games": "Amazon Games",
     "prime-gaming": "Prime Gaming",
     "winetricks": {
-        "install": "Instalar",
-        "installing": "Instalación en progreso: {{component}}",
-        "loading-available": "Cargando compoñentes dispoñibles ...",
-        "openGUI": "Abrir GUI de Winetricks"
+        "loading-available": "Cargando compoñentes dispoñibles ..."
     },
     "category-settings": {
         "cancel": "Cancelar",
