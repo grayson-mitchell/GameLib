@@ -10,11 +10,17 @@
   flex-direction: column;
   margin-block-end: var(--space-2xs);
 
+  // Density (quick 261011-hj6, operator request from the Phase 49 live gate
+  // Run 1): the banner was too tall. One row was 62px on a fresh launch and
+  // 78px once the Settings stylesheet had loaded, because the footer button
+  // dominates the row and Settings adds an 8px block margin to it. Halving the
+  // row and button block padding and zeroing that margin gives 41px in both
+  // states (1 + 5 + 29 + 5 + 1). Inline padding is unchanged.
   &__row {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md-fixed);
+    padding: var(--space-2xs) var(--space-md-fixed);
     border-radius: var(--space-3xs);
     background: var(--navbar-background);
     border: 1px solid var(--neutral-04);
@@ -28,6 +34,15 @@
 
     .button {
       flex-shrink: 0;
+    }
+
+    // The doubled class is deliberate: this compiles to a rule with three
+    // classes, which outranks the two-class footer button rule in the
+    // Settings stylesheet whichever CSS chunk loads first. A plain button
+    // selector here would only tie with it and leave the margin to load order.
+    .button.is-footer {
+      margin-block: 0;
+      padding-block: var(--space-2xs);
     }
   }
 
