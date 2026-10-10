@@ -130,3 +130,15 @@ document claims live coverage this phase does not have.
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
+
+## Closure — superseded by Phase 45 (2026-10-11)
+
+Phase 44 is closed as **superseded by Phase 45** by hand edit (Phase 45 D-22). `status` stays `draft` and `nyquist_compliant` stays `false`: the template lifecycle is draft -> validated, and `validated` would be a false claim for a screen that was retired mid-gate (the quick `260925-ghg` sweep held it at draft on purpose for the same reason). This closure records no measurement and does not satisfy the Validation Sign-Off above.
+
+**What dies with the screen, by name.**
+
+- Contrast defect 9: the Install button `:hover` background is 3.50:1 on nord-light and no token resolves it (`--accent-overlay` is worse at 2.34:1; base `--accent` passes at 8.88:1 but gives no visible hover). It shipped unfixed and dies with the screen.
+- D-24: the `Needs GUI`, `Errored` and `Installing-elsewhere` row-state cells were never reached.
+- D-23: never covered.
+
+Phase 44 is NOT recorded as verified or passed. See `44-LIVE-GATE.md` for the matching closure section.

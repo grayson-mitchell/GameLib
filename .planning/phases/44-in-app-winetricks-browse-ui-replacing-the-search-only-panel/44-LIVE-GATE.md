@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: superseded
 phase: 44-in-app-winetricks-browse-ui-replacing-the-search-only-panel
 plan: 44-08
 build_sha: 82ac54d86
@@ -444,3 +444,17 @@ either was caught, and it is the rule worth carrying to every future colour gate
 
 Plan 44-08 stays open pending the defect 9 decision. Everything else this gate set out to measure
 has been measured.
+
+## Closure — superseded by Phase 45 (2026-10-11)
+
+The gate was **abandoned, not failed**: Phase 45 replaces the entire screen it was gating, so plan 44-08 is not completed. Closed by hand edit (Phase 45 D-22). This closure records no measurement; nothing in it was filled in by an agent.
+
+**What stands.** The D-22 no-reflow gate passed on its fourth attempt (0 px delta at both boundaries), and eight of the nine contrast defects were fixed and verified across a light arm and a dark arm.
+
+**What dies with the screen, by name.**
+
+- Contrast defect 9: the Install button `:hover` background is 3.50:1 on nord-light and no token resolves it (`--accent-overlay` is worse at 2.34:1; base `--accent` passes at 8.88:1 but gives no visible hover). It shipped unfixed and dies with the screen.
+- D-24: the `Needs GUI`, `Errored` and `Installing-elsewhere` row-state cells were never reached.
+- D-23: the unattended-incapable verbs and the other items listed above under "Not covered by this gate (D-23)" were never covered, and nothing here claims they were.
+
+Phase 44 is NOT recorded as verified or passed. The live verification owed to the replacement surface is plan `45-12-PLAN.md` in the Phase 45 directory.
