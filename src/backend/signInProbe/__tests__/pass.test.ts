@@ -6,7 +6,8 @@
  * Collaborators, and why each is real or fake:
  *   - REAL: `applySignInVerdict`, `outcomes`, `sessionEpoch` -- the pass's
  *     contract with them (write only through the verdict, record only a
- *     non-stale result, publish once) is the thing under test. The five
+ *     non-stale result, publish immediately per store rather than once per
+ *     pass -- D-08, revised for F-49-R1-2) is the thing under test. The five
  *     persisted-flag stores are plain fakes, as in `verdict.test.ts`.
  *   - FAKE: `backend/online_monitor` (captures the connectivity listener),
  *     `backend/utils/aborthandler/aborthandler` (records abort ids), the logger
@@ -623,11 +624,36 @@ describe('test-worker guard', () => {
 })
 
 describe('outcome map and verdict (D-08)', () => {
-  it('publishes the outcome map exactly once per pass', async () => {
+  it('publishes the outcome map once per resolved store, not once per pass', async () => {
     await runSignInProbePass(makeDeps())
-    expect(publishCount()).toBe(1)
+    expect(publishCount()).toBe(SIGN_IN_STORES.length)
     await runSignInProbePass(makeDeps())
-    expect(publishCount()).toBe(2)
+    expect(publishCount()).toBe(SIGN_IN_STORES.length * 2)
+  })
+
+  it('F-49-R1-2 regression: a fast store publishes immediately, without waiting for a slower sibling in the same pass', async () => {
+    const slowGate = deferred<SignInProbeOutcome>()
+    const pass = runSignInProbePass(
+      makeDeps({
+        gog: { probe: recordingProbe('gog', () => slowGate.promise) }
+      })
+    )
+
+    // Let every already-resolved probe (legendary, nile, humble, steam) run
+    // to completion and publish, while gog's probe is still pending -- this
+    // is the shape of Launch 9 (steam verdict=cleared while a slower sibling
+    // probe was still in flight).
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(getSignInProbeOutcomes().steam).toBe('healthy')
+    expect(getSignInProbeOutcomes().gog).toBeUndefined()
+    expect(publishCount()).toBe(SIGN_IN_STORES.length - 1)
+
+    slowGate.resolve('healthy')
+    await pass
+
+    expect(getSignInProbeOutcomes().gog).toBe('healthy')
+    expect(publishCount()).toBe(SIGN_IN_STORES.length)
   })
 
   it('records an outcome for a completed probe and latches an expired one through applySignInVerdict', async () => {
@@ -664,7 +690,9 @@ describe('outcome map and verdict (D-08)', () => {
     expect(getSignInProbeOutcomes().gog).toBeUndefined()
     expect(getSignInProbeOutcomes().legendary).toBe('healthy')
     expect(fakeStores.gog.sets).toEqual([])
-    expect(publishCount()).toBe(1)
+    // gog is stale -- nothing recorded, nothing published for it; the other
+    // four stores each still record and publish their own outcome.
+    expect(publishCount()).toBe(SIGN_IN_STORES.length - 1)
   })
 
   it('survives a probe that rejects: unknown, no write, the pass still completes', async () => {
@@ -673,7 +701,10 @@ describe('outcome map and verdict (D-08)', () => {
     )
     expect(getSignInProbeOutcomes().nile).toBe('unknown')
     expect(fakeStores.nile.sets).toEqual([])
-    expect(publishCount()).toBe(1)
+    // nile's rejected probe still resolves to 'unknown' and is recorded (only
+    // `stale`/errored verdicts skip the record+publish), so every store in
+    // this pass publishes.
+    expect(publishCount()).toBe(SIGN_IN_STORES.length)
   })
 })
 

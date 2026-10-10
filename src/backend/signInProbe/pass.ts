@@ -11,8 +11,13 @@
  * can start one (P3, T-49-23).
  *
  * Writes go ONLY through `applySignInVerdict` (49-04), an outcome is recorded
- * only when that verdict was not `stale`, and the outcome map is published once
- * per pass (D-08). This module never touches AppSettings (D-10, T-49-25).
+ * only when that verdict was not `stale`, and the outcome map is published
+ * immediately after that store's own recorded outcome -- not batched to the
+ * end of the pass (D-08, revised 2026-10-10: a mid-session `cleared` verdict
+ * on a fast store must not wait on a slower sibling probe in the same pass;
+ * see `.planning/debug/resolved/stale-signin-row-remount.md`). A `stale` or
+ * errored verdict records nothing, so it publishes nothing. This module never
+ * touches AppSettings (D-10, T-49-25).
  *
  * D-01: the bound is exactly Rust's `KEYRING_READ_TIMEOUT`
  * (`src-tauri/src/main.rs:3079`), the floor REQ-34.4.1-GAP-11 names. The
@@ -190,7 +195,11 @@ function loggedInStores(deps: SignInProbePassDeps): SignInStore[] {
   })
 }
 
-/** One pass: probe every logged-in store in parallel, apply, record, publish once. */
+/**
+ * One pass: probe every logged-in store in parallel; each store applies,
+ * records and publishes its own outcome the instant it is known, so a fast
+ * store's verdict reaches the renderer without waiting on a slower sibling.
+ */
 export async function runSignInProbePass(
   deps: SignInProbePassDeps = defaultDeps()
 ): Promise<void> {
@@ -230,11 +239,15 @@ export async function runSignInProbePass(
         return `${store}:stale`
       }
       recordSignInProbeOutcome(store, outcome)
+      // Publish per-store, immediately: a fast store's own verdict must reach
+      // the renderer without waiting for slower siblings in the same pass
+      // (F-49-R1-2 -- a stale Library sign-in row persisted ~70s behind a
+      // once-per-pass publish gated on the slowest probe).
+      publishSignInProbeOutcomes()
       return `${store}:${outcome}`
     })
   )
 
-  publishSignInProbeOutcomes()
   logInfo(
     `[signInProbe] pass complete outcomes=${labels.join(',')}`,
     LogPrefix.Backend
