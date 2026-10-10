@@ -1,6 +1,9 @@
 /**
- * Source-text structural gate for four call sites named by the todo
+ * Source-text structural gate for three of the four call sites named by the todo
  * `2026-10-05-long-running-wine-and-sync-channels-hit-the-60s-invoke-timeout`.
+ * (The fourth, `launchWinetricks` -> `callTool` in `components/UI/Winetricks`, was
+ * retired together with the Open Winetricks GUI hatch in Phase 45 Plan 02; the
+ * native Winetricks tab that replaced it owns its own busy-state tests.)
  *
  * Each awaits an invoke that can reject (the old 60s bound, an unset
  * `GAMELIB_SHELL_EXE`, a corrupt `shortcuts.vdf`, a failed download) and used to
@@ -56,15 +59,6 @@ describe('long-running invoke call sites release their busy state on rejection',
     )
     expect(body).toMatch(/window\.api\s*\.runWineCommand\(/)
     expect(blockAfter(body, 'finally')).toContain('setRunningSetup(false)')
-  })
-
-  test('Winetricks launchWinetricks handles a callTool rejection', () => {
-    const body = blockAfter(
-      read('components/UI/Winetricks/index.tsx'),
-      'function launchWinetricks()'
-    )
-    expect(body).toContain('.callTool(')
-    expect(body).toContain('.catch(')
   })
 
   test('WineItem install handles an installWineVersion rejection', () => {
