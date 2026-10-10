@@ -1,6 +1,6 @@
-# Phase 22 — PARKED (superseded by Phase 24)
+# Phase 22 — SUPERSEDED (permanent; superseded by Phase 24)
 
-**Status:** PARKED 2026-07-21
+**Status:** SUPERSEDED 2026-07-21 (originally recorded as PARKED; permanent, will not be unparked — filename kept so existing links resolve)
 **Superseded by:** Phase 24 — macOS native Steam bridge (out-of-process `steam_api` proxy)
 **Plans:** 8 written, 0 executed — all artifacts retained, nothing deleted
 

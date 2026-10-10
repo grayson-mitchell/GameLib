@@ -5842,7 +5842,7 @@ worked example of landing keys across all of them). This is a phase, not a quick
 
 ### Phase 22: Steam Game Families (multiple bottle configurations)
 
-**Status:** ⛔ PARKED 2026-07-21 — superseded by Phase 24. See `.planning/phases/22-multiple-steam-bottles/PARKED.md` and commit `b40aa6d8`.
+**Status:** ⛔ SUPERSEDED 2026-07-21 by Phase 24 (permanent — will not be unparked). See `.planning/phases/22-multiple-steam-bottles/PARKED.md` and commit `b40aa6d8`.
 **Plans:** 8 written, 0 executed — all artifacts retained, nothing deleted.
 
 **Why:** Phase 22 existed to let a user group macOS Steam games into "families," each backed by its own dedicated CrossOver bottle with its own Steam client/login/Wine version, working around the fact that the Phase 17 single-bottle foundation shared one bottle for every macOS Steam game. Phase 24 shipped a native `steam_api` proxy instead: a drop-in shim in a single shared bridge bottle talks out-of-process to the real native macOS Steam client. There is no bottled Windows Steam client to configure per family anymore, and one shared bridge bottle (`DEFAULT_BRIDGE_BOTTLE_NAME`, D-03) serves all bridge-eligible games — the per-family bottle matrix Phase 22 was designed to manage no longer has anything to manage. This was anticipated: the bridge was already recorded in STATE.md as "Phase 22's preferred successor" before Phase 24 was executed.
@@ -5862,7 +5862,7 @@ worked example of landing keys across all of them). This is a phase, not a quick
 - [ ] 22-07-PLAN.md — Install-time family picker + gate both install chokepoints
 - [ ] 22-08-PLAN.md — "Steam Families" Settings section: create/rename/set-wine/guarded delete
 
-**If ever unparked:** the parts of Phase 22 that could still have value are the ones *not* about bottle multiplicity — chiefly any per-game launch-configuration UI and the Steam game-families data model itself. Re-derive those against the bridge architecture rather than executing the plans as written. Bridge scope limits that might reopen adjacent work are tracked in Phase 24's own artifacts (`24-UAT.md`, `24-SECURITY.md`) and the `spike-findings-gamelib` skill — notably that the bridge currently proxies only ISteamUser + ISteamFriends, so games needing more interfaces (Utils/Apps/UserStats/RemoteStorage/Matchmaking/Networking) are out of scope until those proxies are built.
+**Not revivable — salvage means a NEW phase:** this phase is permanently superseded and will not be executed. The parts that could still have value are the ones *not* about bottle multiplicity — chiefly any per-game launch-configuration UI and the Steam game-families data model itself. If either is wanted, scope it as a new phase derived against the bridge architecture; do not resume these plans. Bridge scope limits that might reopen adjacent work are tracked in Phase 24's own artifacts (`24-UAT.md`, `24-SECURITY.md`) and the `spike-findings-gamelib` skill — notably that the bridge currently proxies only ISteamUser + ISteamFriends, so games needing more interfaces (Utils/Apps/UserStats/RemoteStorage/Matchmaking/Networking) are out of scope until those proxies are built.
 
 ## Backlog
 
