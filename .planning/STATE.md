@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 45
 current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
 status: executing
-stopped_at: Completed 45-09-PLAN.md
-last_updated: "2026-10-10T08:26:45.595Z"
+stopped_at: Completed 45-10-PLAN.md
+last_updated: "2026-10-10T08:39:43.155Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 45 execution started
-state_head: 954d523eeb386f825972300e560cb7a4a32a01b1
+state_head: 3575ea97e79641698740e2fb227ed11816a0cf9a
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 548
-  completed_plans: 532
+  completed_plans: 533
   percent: 82
 ---
 
@@ -75,8 +75,8 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — EXECUTING
-Plan: 1 of 12
-Status: Executing Phase 45
+Plan: 2 of 12
+Status: Ready to execute
 Last activity: 2026-10-10 — Phase 45 execution started
 
 Previous activity: 2026-10-10 — Phase 49 complete, transitioned to Phase 9
@@ -540,6 +540,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 45 P04 | ~50min | 2 tasks | 5 files |
 | Phase 45 P02 | 95min | 3 tasks | 32 files |
 | Phase 45 P09 | 95min | 3 tasks | 72 files |
+| Phase 45 P10 | 9 min | 3 tasks | 72 files |
 
 ## Accumulated Context
 
@@ -1219,6 +1220,7 @@ Recent decisions affecting current work:
 - [Phase 45]: 45-02: deleted the Winetricks GUI hatch -- Winetricks.run, the -q --gui invocation, the umu gui branch, winetricks-gui GAMEID -- from tools/index.ts and both callTool dispatch sites
 - [Phase 45]: Always include {{count}} in every CLDR plural form regardless of countOptional status, to avoid placeholder-preservation validator failures
 - [Phase 45]: Irish (ga) uses pragmatic best-effort mutation forms across all five CLDR plural categories rather than exhaustive dialectal precision
+- [Phase 45]: Batch-B counter labels (installed/selected/failed) in lt, pl, ro, ru, sk, sl, sr, uk use the Label: {{count}} form in every CLDR plural category; applyAriaLabel keeps per-category noun inflection
 
 ### Pending Todos
 
@@ -1828,8 +1830,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-10T08:03:50.138Z
-Stopped at: Completed 45-09-PLAN.md
+Last session: 2026-10-10T08:39:28.136Z
+Stopped at: Completed 45-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
