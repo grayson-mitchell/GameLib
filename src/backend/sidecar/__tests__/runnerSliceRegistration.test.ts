@@ -559,7 +559,7 @@ describe('completeness — all 67 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 62 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send)', () => {
+  it('exactly 65 channels are handle-kind and exactly 5 are listen-kind (Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -568,7 +568,10 @@ describe('completeness — all 67 channels are registered with the right kind, a
     // Measured (jest failure ACTUAL, this plan's execution) and independently re-derived from
     // arithmetic (59+3=62 invoke, 5+0=5 send — getAchievements/getDefaultSavePath/
     // getPlaytimeFromRunner are all invoke-kind, none send) — both agree.
-    expect(handleChannels.length).toBe(62)
+    // Phase 45 Plan 01 (2026-10-10): wineToolsFlowRegistration.ts gained three invoke-kind
+    // channels (winetricksApply, winetricksQueueState, winetricksCancelRemaining) — 62+3=65
+    // invoke, 5+0=5 send. Measured (jest failure ACTUAL: Received 65) and re-derived — agree.
+    expect(handleChannels.length).toBe(65)
     expect(listenChannels.length).toBe(5)
   })
 
