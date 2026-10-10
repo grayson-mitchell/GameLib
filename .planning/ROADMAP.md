@@ -5546,12 +5546,12 @@ that screen, those die with it rather than being fixed, and 44 should be closed 
 `query commit`, which previously truncated ~99,000 chars of STATE.md.
 **Requirements**: TBD
 **Depends on:** Phase 44
-**Plans:** 1/12 plans executed
+**Plans:** 2/12 plans executed
 
 Plans:
 **Wave 1**
 - [x] 45-01-PLAN.md — Tracer: Winetricks Settings tab + backend install queue (winetricksApply / queue state / cancel), verb guard, environment store
-- [ ] 45-03-PLAN.md — English copy contract (41 winetricksBrowse leaves in gamelib.json) + validator-first locale fill tool
+- [x] 45-03-PLAN.md — English copy contract (41 winetricksBrowse leaves in gamelib.json) + validator-first locale fill tool
 - [ ] 45-04-PLAN.md — Pure w_metadata parser, w_download_manual-derived needs-GUI set, D-09 visibility predicate (TDD, committed script excerpt)
 
 **Wave 2** *(blocked on Wave 1 completion)*

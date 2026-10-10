@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 45
 current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
 status: executing
-stopped_at: Completed 45-01-PLAN.md
-last_updated: "2026-10-10T05:14:38.393Z"
+stopped_at: Completed 45-03-PLAN.md
+last_updated: "2026-10-10T05:37:08.966Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 45 execution started
-state_head: e3f1522dd69f8df5b5121a9e7cc9d53d57a0f0c6
+state_head: e9dfb697e8c133f922002118d42b97e49615f6eb
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 548
-  completed_plans: 528
+  completed_plans: 529
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 45 execution started
 
@@ -536,6 +536,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 49 P10 | 45min | 2 tasks | 13 files |
 | Phase 49 P11 | 45 min | 2 tasks | 3 files |
 | Phase 45 P01 | 57min | 3 tasks | 21 files |
+| Phase 45 P03 | 15min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -1206,6 +1207,9 @@ Recent decisions affecting current work:
 - [Phase 45]: winetricksApplyGuard.ts and winetricksEnvironment.ts were written complete rather than strictly test-first, because their shape was already fully specified by the plan's behavior block (documented, not an oversight)
 - [Phase 45]: applyInFlight is set synchronously as apply()'s first statement, before the Winetricks.catalogFor await, closing a same-tick concurrency race an async-only isBusy() check would otherwise miss
 - [Phase 45]: Winetricks.catalogFor caches listAvailable's parsed result keyed runner:appName, so validating a verb list against the real catalog does not require a fresh winetricks list-all spawn on every apply() call
+- [Phase 45]: Scoped applyFill.ts's required-key computation to winetricksBrowse.* only (SCOPE_PREFIX guard), after an unscoped first pass flagged unrelated namespaces as missing
+- [Phase 45]: Resolved applyFill.ts staging-file paths via process.cwd(), not __dirname, since meta/runTs.cjs bundles the entry file into an esbuild tmpdir where __dirname no longer points at 45-i18n-fill/
+- [Phase 45]: Left the 2 retired Phase-44 winetricksBrowse keys (needsGuiTag, installingRow) in gamelib.json; removal deferred to plan 45-11 as the plan specifies
 
 ### Pending Todos
 
@@ -1815,8 +1819,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-10T05:14:35.897Z
-Stopped at: Completed 45-01-PLAN.md
+Last session: 2026-10-10T05:37:06.536Z
+Stopped at: Completed 45-03-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
