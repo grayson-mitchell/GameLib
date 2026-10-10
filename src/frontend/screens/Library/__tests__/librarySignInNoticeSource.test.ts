@@ -20,8 +20,11 @@
  *   G2  `navigate(buildLoginOpenPath(` only inside an `onClick={() =>` arrow,
  *       and never inside a `useEffect` body.
  *   G3  the stylesheet declares no `position` and only one top-level selector.
- *   G4  the notice mounts after `<AlphabetFilter`, before the main
- *       `<GamesList`, and not within 300 characters of `ErrorComponent`.
+ *   G4  the notice mounts exactly once, after `<FilterChipRow` and before
+ *       `<FocusRowStrip` (the first shelf), with the main `<GamesList` after
+ *       it, and not within 300 characters of `ErrorComponent`. Quick
+ *       261011-hj6 moved the slot here from after `<AlphabetFilter`, at the
+ *       operator's request (Phase 49 live gate Run 1).
  *   G5  (R8) the `libraryToShow` derivation reads no sign-in state.
  *   G6  (P3) neither file calls a `window.api` member named `*Probe*` or
  *       `*SignIn*`, so mounting the Library starts no probe.
@@ -33,7 +36,9 @@
  *
  * Not provable here: that the notice paints, that it reads as information
  * rather than an error across themes, or that it clears the grid. Those are
- * owed to the live gate (49-12 UAT).
+ * owed to the live gate (49-12 UAT). Likewise the top-of-Library placement as
+ * painted, and the halved banner height (quick 261011-hj6), are owed to the
+ * operator's eye at the next launch.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -157,16 +162,36 @@ function assertScssInFlowAndScoped(scss: string): void {
 
 // G4 --------------------------------------------------------------------
 function assertNoticePlacement(source: string): void {
-  const alphabetIdx = source.indexOf('<AlphabetFilter')
+  const chipRowIdx = source.indexOf('<FilterChipRow')
   const noticeIdx = source.indexOf('<LibrarySignInNotice')
-  if (alphabetIdx === -1 || noticeIdx === -1) {
-    fail('G4', '<AlphabetFilter or <LibrarySignInNotice not found.')
+  const focusRowIdx = source.indexOf('<FocusRowStrip')
+  if (chipRowIdx === -1 || noticeIdx === -1 || focusRowIdx === -1) {
+    fail(
+      'G4',
+      '<FilterChipRow, <LibrarySignInNotice or <FocusRowStrip not found.'
+    )
   }
-  if (!(noticeIdx > alphabetIdx)) {
-    fail('G4', 'the notice does not sit after <AlphabetFilter.')
+  const mountCount = source.split('<LibrarySignInNotice').length - 1
+  if (mountCount !== 1) {
+    fail(
+      'G4',
+      `the notice is mounted ${mountCount} times; it must mount exactly once.`
+    )
   }
-  // Searched from the notice's own index: the Favourites lane mounts an
-  // earlier, unrelated <GamesList.
+  if (!(noticeIdx > chipRowIdx)) {
+    fail(
+      'G4',
+      'the notice does not sit after <FilterChipRow; the active-filter chips stay first (260815-qf0).'
+    )
+  }
+  if (!(noticeIdx < focusRowIdx)) {
+    fail(
+      'G4',
+      'the notice does not sit before <FocusRowStrip; it belongs above the first shelf.'
+    )
+  }
+  // Searched from the notice's own index: only a <GamesList after the mount
+  // counts.
   const gamesListIdx = source.indexOf('<GamesList', noticeIdx)
   if (gamesListIdx === -1) {
     fail('G4', 'no main <GamesList after the notice.')
@@ -289,7 +314,7 @@ describe('LibrarySignInNotice -- structural gates (real source)', () => {
     expect(hits[0].i - expiredIdx).toBeLessThan(3)
   })
 
-  it('G4: the notice sits above the grid, after AlphabetFilter, away from ErrorComponent', () => {
+  it('G4: the notice mounts once, after FilterChipRow, above FocusRowStrip and the grid, away from ErrorComponent', () => {
     expect(() => assertNoticePlacement(library)).not.toThrow()
   })
 
@@ -376,6 +401,38 @@ describe('RED proofs -- specimens derived from the REAL source', () => {
     const mount = /<LibrarySignInNotice\s*\/>/
     expect(library).toMatch(mount)
     const specimen = `${library.replace(mount, '')}\n<LibrarySignInNotice />\n`
+    expect(() => assertNoticePlacement(specimen)).toThrow(/G4/)
+  })
+
+  it('G4: the old slot after AlphabetFilter trips the gate', () => {
+    const mount = /<LibrarySignInNotice\s*\/>/
+    const alphabet = '{showAlphabetFilter && <AlphabetFilter />}'
+    expect(library).toMatch(mount)
+    expect(library).toContain(alphabet)
+    const specimen = library
+      .replace(mount, '')
+      .replace(alphabet, `${alphabet}\n<LibrarySignInNotice />`)
+    expect(() => assertNoticePlacement(specimen)).toThrow(/G4/)
+  })
+
+  it('G4: a mount above the chip row trips the gate', () => {
+    const mount = /<LibrarySignInNotice\s*\/>/
+    const chipRow = '<FilterChipRow />'
+    expect(library).toMatch(mount)
+    expect(library).toContain(chipRow)
+    const specimen = library
+      .replace(mount, '')
+      .replace(chipRow, `<LibrarySignInNotice />\n${chipRow}`)
+    expect(() => assertNoticePlacement(specimen)).toThrow(/G4/)
+  })
+
+  it('G4: a second mount (a copy, not a move) trips the gate', () => {
+    const mount = /<LibrarySignInNotice\s*\/>/
+    expect(library).toMatch(mount)
+    const specimen = library.replace(
+      mount,
+      '<LibrarySignInNotice />\n<LibrarySignInNotice />'
+    )
     expect(() => assertNoticePlacement(specimen)).toThrow(/G4/)
   })
 

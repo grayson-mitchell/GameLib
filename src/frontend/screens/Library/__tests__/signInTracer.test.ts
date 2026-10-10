@@ -182,18 +182,22 @@ function assertNoticeWiring(source: string): void {
 }
 
 function assertLibraryPlacement(source: string): void {
-  const alphabetIdx = source.indexOf('<AlphabetFilter')
+  const chipRowIdx = source.indexOf('<FilterChipRow')
   const noticeIdx = source.indexOf('<LibrarySignInNotice')
-  if (alphabetIdx === -1 || noticeIdx === -1) {
+  const focusRowIdx = source.indexOf('<FocusRowStrip')
+  if (chipRowIdx === -1 || noticeIdx === -1 || focusRowIdx === -1) {
     throw new Error(
-      'L1 FAILED: <AlphabetFilter or <LibrarySignInNotice absent.'
+      'L1 FAILED: <FilterChipRow, <LibrarySignInNotice or <FocusRowStrip absent.'
     )
   }
-  if (!(noticeIdx > alphabetIdx)) {
-    throw new Error('L1 FAILED: notice does not sit after <AlphabetFilter.')
+  if (!(noticeIdx > chipRowIdx)) {
+    throw new Error('L1 FAILED: notice does not sit after <FilterChipRow.')
   }
-  // Search from the notice's own index: the Favourites lane mounts an earlier,
-  // unrelated <GamesList.
+  if (!(noticeIdx < focusRowIdx)) {
+    throw new Error('L1 FAILED: notice does not sit before <FocusRowStrip.')
+  }
+  // Search from the notice's own index: only a <GamesList after the mount
+  // counts.
   const gamesListIdx = source.indexOf('<GamesList', noticeIdx)
   if (gamesListIdx === -1) {
     throw new Error('L1 FAILED: no main <GamesList after the notice.')
@@ -212,7 +216,7 @@ describe('tracer (b): source gates on the wired files (real source)', () => {
     expect(() => assertNoticeWiring(readGated(NOTICE_PATH))).not.toThrow()
   })
 
-  it('Library/index.tsx mounts the notice after AlphabetFilter and before the main GamesList', () => {
+  it('Library/index.tsx mounts the notice after FilterChipRow, above FocusRowStrip, and before the main GamesList', () => {
     expect(() =>
       assertLibraryPlacement(readGated(LIBRARY_INDEX_PATH))
     ).not.toThrow()
@@ -261,6 +265,19 @@ describe('tracer RED proofs -- specimens derived from the REAL source', () => {
     expect(real).toMatch(mount)
 
     const specimen = `${real.replace(mount, '')}\n<LibrarySignInNotice />\n`
+    expect(() => assertLibraryPlacement(specimen)).toThrow(/L1/)
+  })
+
+  it('L1: the old slot after AlphabetFilter trips the placement gate', () => {
+    const real = readGated(LIBRARY_INDEX_PATH)
+    const mount = /<LibrarySignInNotice\s*\/>/
+    const alphabet = '{showAlphabetFilter && <AlphabetFilter />}'
+    expect(real).toMatch(mount)
+    expect(real).toContain(alphabet)
+
+    const specimen = real
+      .replace(mount, '')
+      .replace(alphabet, `${alphabet}\n<LibrarySignInNotice />`)
     expect(() => assertLibraryPlacement(specimen)).toThrow(/L1/)
   })
 
