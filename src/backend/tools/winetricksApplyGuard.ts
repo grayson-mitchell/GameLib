@@ -43,7 +43,7 @@ export function assertWinetricksApplyPayload(
     )
   }
 
-  const verbStrings = verbs as string[]
+  const verbStrings: string[] = verbs
   if (!verbStrings.every((verb) => VERB_SHAPE_RE.test(verb))) {
     throw new WinetricksApplyRejected(
       'winetricksApply: verbs must match the winetricks verb shape'
