@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 45
 current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
 status: executing
-stopped_at: Completed 45-04-PLAN.md
-last_updated: "2026-10-10T06:02:44.079Z"
+stopped_at: Completed 45-02-PLAN.md
+last_updated: "2026-10-10T07:17:49.804Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 45 execution started
-state_head: 584c59d73b42c131d2928e0a2da8155a5d7ca690
+state_head: 4a9db64d151ae8374ec793c0ce5a948f22797d97
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 548
-  completed_plans: 530
+  completed_plans: 531
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 45 execution started
 
@@ -538,6 +538,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 45 P01 | 57min | 3 tasks | 21 files |
 | Phase 45 P03 | 15min | 2 tasks | 3 files |
 | Phase 45 P04 | ~50min | 2 tasks | 5 files |
+| Phase 45 P02 | 95min | 3 tasks | 32 files |
 
 ## Accumulated Context
 
@@ -1213,6 +1214,8 @@ Recent decisions affecting current work:
 - [Phase 45]: Left the 2 retired Phase-44 winetricksBrowse keys (needsGuiTag, installingRow) in gamelib.json; removal deferred to plan 45-11 as the plan specifies
 - [Phase 45]: RED evidence for TDD tasks uses a type-correct inert stub module (empty Map/Set returns), never a missing-module error, to satisfy gsd-tools tdd-red-evidence's fail-closed classifier
 - [Phase 45]: D-09 visible-verb count measured at exactly 502 over the committed fixture (328 dlls + 42 fonts + 132 settings), matching the planning-time estimate
+- [Phase 45]: 45-02: retired winetricksInstall send channel outright (D-11 promote) rather than kind-swapping it -- deleted from both transports, preload, and the shared type map
+- [Phase 45]: 45-02: deleted the Winetricks GUI hatch -- Winetricks.run, the -q --gui invocation, the umu gui branch, winetricks-gui GAMEID -- from tools/index.ts and both callTool dispatch sites
 
 ### Pending Todos
 
@@ -1822,8 +1825,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-10T06:02:41.722Z
-Stopped at: Completed 45-04-PLAN.md
+Last session: 2026-10-10T07:17:47.565Z
+Stopped at: Completed 45-02-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

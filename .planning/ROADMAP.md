@@ -5546,7 +5546,7 @@ that screen, those die with it rather than being fixed, and 44 should be closed 
 `query commit`, which previously truncated ~99,000 chars of STATE.md.
 **Requirements**: TBD
 **Depends on:** Phase 44
-**Plans:** 3/12 plans executed
+**Plans:** 4/12 plans executed
 
 Plans:
 **Wave 1**
@@ -5555,7 +5555,7 @@ Plans:
 - [x] 45-04-PLAN.md — Pure w_metadata parser, w_download_manual-derived needs-GUI set, D-09 visibility predicate (TDD, committed script excerpt)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 45-02-PLAN.md — Retire the Phase 44 dialog tree, the Tools-card button, the Open Winetricks GUI hatch and send-kind winetricksInstall; install-path invariant test
+- [x] 45-02-PLAN.md — Retire the Phase 44 dialog tree, the Tools-card button, the Open Winetricks GUI hatch and send-kind winetricksInstall; install-path invariant test
 - [ ] 45-09-PLAN.md — Locale fill, batch A (24 locales)
 - [ ] 45-10-PLAN.md — Locale fill, batch B (24 locales)
 

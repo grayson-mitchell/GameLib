@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 2
 waived_count: 0
 fixed_count: 0
-total_count: 1
-last_updated: 2026-09-29T06:01:11.010Z
+total_count: 2
+last_updated: 2026-10-10T07:17:03.298Z
 ---
 
 # Broken Windows Ledger
@@ -16,6 +16,7 @@ last_updated: 2026-09-29T06:01:11.010Z
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | quick-260929-okd | deviation | meta/i18nForkTouchedFiles.json |  | A-17 ANTI-ROT test fails: the committed snapshot (215 entries) is MISSING 9 src/frontend files that the live git derivation finds. jest reports `- Expected - 9 / + Received + 0`, and all 9 return 0 hits when grepped against the committed JSON, so the drift is NOT 'extra files in the snapshot' -- it is the other direction. Pre-existing and unrelated to this plan's backend-only changes: the snapshot was last refreshed 2026-09-21 (c20a46bbb) while every drifting file was last modified 2026-09-23..2026-09-26, so it went stale days before this task; and none of the four branch merges made earlier the same day touched src/frontend. Fix is to regenerate the snapshot and re-derive its count pins, as quick task 260921-saw did. | open |  | 2026-09-29T06:01:11.010Z |  |
+| 2 | 45 | deviation | src/backend/sidecar/__tests__/runnerSliceRegistration.test.ts |  | Rule 1 deviation: edited 4 of 11 describe blocks (undeclared file) to match winetricksInstall channel retirement; pre-commit prettier hook also required reformatting | open |  | 2026-10-10T07:17:03.298Z |  |
 
 ````json
 [
@@ -29,6 +30,19 @@ last_updated: 2026-09-29T06:01:11.010Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-29T06:01:11.010Z",
+    "resolved_at": null,
+    "milestone": "v0.8"
+  },
+  {
+    "id": 2,
+    "kind": "deviation",
+    "phase": "45",
+    "file": "src/backend/sidecar/__tests__/runnerSliceRegistration.test.ts",
+    "line": null,
+    "description": "Rule 1 deviation: edited 4 of 11 describe blocks (undeclared file) to match winetricksInstall channel retirement; pre-commit prettier hook also required reformatting",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-10T07:17:03.298Z",
     "resolved_at": null,
     "milestone": "v0.8"
   }
