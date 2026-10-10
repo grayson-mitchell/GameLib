@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 45
 current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
 status: executing
-stopped_at: Completed 45-06-PLAN.md
-last_updated: "2026-10-10T09:16:02.036Z"
+stopped_at: Completed 45-07-PLAN.md
+last_updated: "2026-10-10T09:57:52.824Z"
 last_activity: 2026-10-10
 last_activity_desc: Phase 45 execution started
-state_head: c5185572995592e4d0b78ad0be8a5662dcee601d
+state_head: 813ff6990106054a1866bb9115e53ebb317ddf48
 progress:
   total_phases: 44
   completed_phases: 36
   total_plans: 548
-  completed_plans: 535
+  completed_plans: 536
   percent: 82
 ---
 
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-10-10 — Phase 45 execution started
 
@@ -543,6 +543,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 45 P10 | 9 min | 3 tasks | 72 files |
 | Phase 45 P05 | 35 min | 2 tasks | 5 files |
 | Phase 45 P06 | 13 min | 3 tasks | 9 files |
+| Phase 45 P07 | 38 min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -1227,6 +1228,9 @@ Recent decisions affecting current work:
 - [Phase 45]: 45-06: a generic warning: line classifies as environment (not error); the exit code, via a synthetic error line, decides failure
 - [Phase 45]: 45-06: the apply-guard catalog cache holds the visible-filtered list; the guard additionally re-checks isVisibleVerb as defence in depth
 - [Phase 45]: 45-06: D-15 real-log ERROR-share measurement deferred to the macOS operator session / 45-12 live gate (0 WineTricks lines in the Windows log)
+- [Phase 45]: 45-07: transient Done word is derived (row shows phaseDone while its run is running and its outcome is installed), not timed - no timer in the tab
+- [Phase 45]: 45-07: both D-06 suggestion lookups are awaited before first paint but bounded to 4s so a hung PCGamingWiki request cannot hold the tab in loading
+- [Phase 45]: 45-07: injected-TFunction label helpers use gamelib:-prefixed literal keys so i18next-parser files them in the gamelib catalog
 
 ### Pending Todos
 
@@ -1836,8 +1840,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-10T09:15:57.986Z
-Stopped at: Completed 45-06-PLAN.md
+Last session: 2026-10-10T09:57:48.684Z
+Stopped at: Completed 45-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
