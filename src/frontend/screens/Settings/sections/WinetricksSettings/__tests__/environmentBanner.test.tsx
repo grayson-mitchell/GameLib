@@ -222,7 +222,8 @@ describe('the tab and the banner (E2-loading, E1-populated)', () => {
     expect(bannerRows(tree)).toHaveLength(2)
 
     const order = findAll(tree, (el) => {
-      const cn = String(el.props.className ?? '')
+      const cn =
+        typeof el.props.className === 'string' ? el.props.className : ''
       return /(^|\s)(WinetricksEnvironmentBanner|WinetricksSuggested)(\s|$)/.test(
         cn
       )

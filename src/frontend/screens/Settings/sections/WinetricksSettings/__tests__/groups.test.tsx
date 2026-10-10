@@ -19,6 +19,7 @@ import {
 } from './treeHarness'
 import {
   buildCatalog,
+  capturedProgressListener,
   capturedQueueChangedListener,
   installApi,
   makeApi,
@@ -452,35 +453,43 @@ describe('run state on the rows (D-10, D-12, D-13, D-18)', () => {
     expect(text).not.toContain('Done')
   })
 
+  // Plan 45-08 replaced the 45-07 mechanism (percent read off the tail of every
+  // pushed `run.log`) with the live `progressOfWinetricks` events the backend now
+  // sends; this case drives the same two outcomes through the new path.
   it('shows a live download percentage on the installing row, and the plain phase word once the tail is no longer a progress line', async () => {
     await mount()
-    const listener = capturedQueueChangedListener(api)
-    const base = {
-      verbs: ['vcrun2019'],
-      outcomes: { vcrun2019: 'installing' as const },
-      currentVerb: 'vcrun2019'
-    }
-    listener(
+    capturedQueueChangedListener(api)(
       {},
       queueStateWith({
-        ...base,
-        log: [{ kind: 'progress', text: '42', percent: 42 }]
+        verbs: ['vcrun2019'],
+        outcomes: { vcrun2019: 'installing' as const },
+        currentVerb: 'vcrun2019'
       })
+    )
+    const progress = capturedProgressListener(api)
+    progress(
+      {},
+      {
+        messages: [],
+        installingComponent: 'vcrun2019',
+        lines: [{ kind: 'progress', text: '42', percent: 42 }]
+      }
     )
     expect(collectText(rowFor(suggested(again()), 'vcrun2019'))).toContain(
       'Downloading 42%'
     )
 
-    listener(
+    progress(
       {},
-      queueStateWith({
-        ...base,
-        log: [
+      {
+        messages: [],
+        installingComponent: 'vcrun2019',
+        lines: [
           { kind: 'progress', text: '100', percent: 100 },
           { kind: 'noise', text: 'fixme:' },
           { kind: 'info', text: 'Executing w_try_cabextract' }
         ]
-      })
+      }
     )
     const text = collectText(rowFor(suggested(again()), 'vcrun2019'))
     expect(text).toContain('Installing…')

@@ -398,7 +398,8 @@ describe('the tab and the live log (D-14, D-18, A-45-03)', () => {
     const tree = await mountTab(WinetricksSettings)
     const dock = findByClass(tree, 'WinetricksSettings__dock')[0]
     const order = findAll(dock, (el) => {
-      const cn = String(el.props.className ?? '')
+      const cn =
+        typeof el.props.className === 'string' ? el.props.className : ''
       return /(^|\s)(WinetricksLogPanel|WinetricksStickyBar)(\s|$)/.test(cn)
     }).map((el) => String(el.props.className).split(' ')[0])
     expect(order).toEqual(['WinetricksLogPanel', 'WinetricksStickyBar'])

@@ -1,6 +1,7 @@
 // Phase 45 (D-01/D-02/D-05/D-11-D-13): styling for the Winetricks settings tab
-// shell, the Suggested group and the sticky action bar. Row, group-header and
-// Everything-else styling live beside their components.
+// shell, the Suggested group, the whole-tab loading and empty states and the
+// sticky dock. Row, group-header, Everything-else, action-bar, log-panel and
+// environment-banner styling live beside their components.
 //
 // `.WinetricksSettings` declares NO scroll behaviour of its own -- `.App
 // .content` is this app's one scroll container (confirmed in `App.css`), so a
@@ -71,6 +72,45 @@
     font-size: var(--text-sm, 0.875rem);
     line-height: 1.4;
     color: var(--text-secondary, #8b939a);
+  }
+
+  // E10-loading: the centered loading text, nothing else on screen.
+  &__loading {
+    display: flex;
+    justify-content: center;
+    padding: var(--space-lg, 1.5rem) var(--space-sm, 0.75rem);
+    color: var(--text-secondary, #8b939a);
+  }
+
+  // E10-empty / E10-error: a centered icon, a heading and one wrapping sentence.
+  // No recovery action exists for this state.
+  .WinetricksEmptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    gap: var(--space-xs, 0.5rem);
+    padding: var(--space-lg, 1.5rem) var(--space-sm, 0.75rem);
+    text-align: center;
+    color: var(--text-secondary, #8b939a);
+  }
+
+  .WinetricksEmptyState__icon {
+    font-size: var(--text-xl, 1.5rem);
+  }
+
+  .WinetricksEmptyState__heading {
+    margin: 0;
+    font-size: var(--text-md, 1rem);
+    font-weight: var(--bold, 700);
+    color: var(--text-default, #caf3fd);
+  }
+
+  .WinetricksEmptyState__body {
+    margin: 0;
+    font-size: var(--text-sm, 0.875rem);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
   }
 
   // D-11/D-12: the dock pins the log disclosure and the action bar to the

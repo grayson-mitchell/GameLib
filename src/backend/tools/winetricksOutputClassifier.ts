@@ -84,40 +84,9 @@ export function classifyWinetricksLine(line: string): WinetricksLogLine | null {
   return { kind: 'info', text }
 }
 
-const MAX_BUFFERED_LINES = 200
-
-// Appends `line` to a bounded line buffer (the per-flush pending delta and a
-// queue run's log both use it). A progress line REPLACES the previous progress
-// line when nothing but wine noise has been appended since -- curl redraws one
-// meter, it does not write a new log entry per redraw -- and keeps the last
-// known percent when the replacing line (a header) carries none. The oldest
-// entry is dropped once the buffer exceeds `cap`.
-export function appendLogLine(
-  buffer: WinetricksLogLine[],
-  line: WinetricksLogLine,
-  cap = MAX_BUFFERED_LINES
-): void {
-  if (line.kind === 'progress') {
-    for (let i = buffer.length - 1; i >= 0; i--) {
-      const candidate = buffer[i]
-      if (candidate.kind === 'progress') {
-        const percent = line.percent ?? candidate.percent
-        buffer[i] =
-          percent === undefined
-            ? line
-            : { kind: 'progress', text: line.text, percent }
-        return
-      }
-      if (candidate.kind !== 'noise') {
-        break
-      }
-    }
-  }
-  buffer.push(line)
-  while (buffer.length > cap) {
-    buffer.shift()
-  }
-}
+// The bounded line buffer lives in `common/` so the renderer folds live deltas
+// with the same rule; the backend keeps importing it from here.
+export { appendLogLine } from 'common/winetricks/logBuffer'
 
 // Splits on \n AND \r: curl redraws its meter with a bare \r, so splitting on
 // \n alone would hold the whole download as one unterminated "line".

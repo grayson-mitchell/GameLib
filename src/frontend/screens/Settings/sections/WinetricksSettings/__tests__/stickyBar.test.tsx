@@ -254,7 +254,9 @@ describe('done mode (E8-error, E8-zero-one-many)', () => {
     const done = runOf({ a: 'failed', b: 'failed' }, { status: 'done' })
     const tree = bar({ mode: 'done', run: done })
     const everyClass = findAll(tree, () => true)
-      .map((el) => String(el.props.className ?? ''))
+      .map((el) =>
+        typeof el.props.className === 'string' ? el.props.className : ''
+      )
       .join(' ')
     expect(String(tree.props.className)).not.toMatch(/error|danger/)
     expect(everyClass).not.toMatch(/--error|--danger/)

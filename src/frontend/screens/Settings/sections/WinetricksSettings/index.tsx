@@ -2,9 +2,19 @@ import './index.scss'
 
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBoxOpen } from '@fortawesome/free-solid-svg-icons'
 
 import SettingsContext from '../../SettingsContext'
-import { Runner, WinetricksComponent, WinetricksQueueState } from 'common/types'
+import ContextProvider from 'frontend/state/ContextProvider'
+import {
+  Runner,
+  WinetricksComponent,
+  WinetricksLogLine,
+  WinetricksQueueRun,
+  WinetricksQueueState
+} from 'common/types'
+import { appendLogLine } from 'common/winetricks/logBuffer'
 import {
   clearVerbError,
   deriveRowState,
@@ -29,6 +39,8 @@ import TaskGroup from './TaskGroup'
 import EverythingElseGroup from './EverythingElseGroup'
 import WinetricksRow from './Row'
 import StickyBar from './StickyBar'
+import LogPanel from './LogPanel'
+import EnvironmentBanner from './EnvironmentBanner'
 import type { RenderWinetricksRow } from './Row'
 
 // Phase 45 (D-01/D-02/D-05-D-08/D-10/D-11): the Winetricks Settings tab. Three
@@ -84,8 +96,29 @@ function stringArray(value: unknown): string[] {
     : []
 }
 
+// What a batch of classified lines says about a download in progress:
+// a number (the latest curl percentage), `null` (a later non-progress line
+// means the download ended), or `undefined` (nothing decisive -- only wine
+// noise, or a meter header that carries no percentage yet).
+function percentSignal(
+  lines: readonly WinetricksLogLine[]
+): number | null | undefined {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]
+    if (line.kind === 'noise') continue
+    if (line.kind === 'progress') return line.percent
+    return null
+  }
+  return undefined
+}
+
+// A download percentage belongs to the verb that produced it, so a change of
+// running verb clears it without any explicit reset.
+type LivePercent = { verb: string; percent: number } | null
+
 export default function WinetricksSettings() {
   const { appName, runner, gameInfo } = useContext(SettingsContext)
+  const { platform } = useContext(ContextProvider)
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
 
@@ -108,6 +141,17 @@ export default function WinetricksSettings() {
   // re-read. A ref, not state: the queue listener below is created once per
   // (appName, runner) and would otherwise close over a stale copy.
   const reloadedRunId = useRef<number | null>(null)
+  // E9 / D-18: the current (or most recent) run's classified log. Seeded from
+  // the backend's `run.log` whenever a run this tab has not seen arrives, then
+  // grown by live `progressOfWinetricks` deltas, because the queue does not push
+  // state per output line. Earlier runs' lines are dropped (A-45-03).
+  const [logLines, setLogLines] = useState<WinetricksLogLine[]>([])
+  const [livePercent, setLivePercent] = useState<LivePercent>(null)
+  // Refs, not state: the progress listener below is created once per
+  // (appName, runner) and must see the latest run and the run id the log was
+  // seeded for without re-subscribing.
+  const latestRun = useRef<WinetricksQueueRun | null>(null)
+  const seededRunId = useRef<number | null>(null)
 
   // Mirrors `Tools/index.tsx`'s own early return: the parent
   // (`GamesSettings`) only mounts this component when `shouldShowWinetricksTab`
@@ -123,6 +167,21 @@ export default function WinetricksSettings() {
   // declaration's body, so every `window.api.winetricks*` call needs a
   // binding TS already knows is `Runner`, not `Runner | undefined`.
   const safeRunner: Runner = runner
+
+  // Seeds the log (and the live percent) from a run this tab has not seen yet:
+  // a remount mid-run, or a fresh run. A state push for the run already seeded
+  // keeps the live lines, which are newer than the push's snapshot.
+  function seedLogFrom(run: WinetricksQueueRun | null) {
+    if (!run || seededRunId.current === run.runId) return
+    seededRunId.current = run.runId
+    setLogLines([...run.log])
+    const signal = percentSignal(run.log)
+    setLivePercent(
+      run.status === 'running' && typeof signal === 'number'
+        ? { verb: run.currentVerb, percent: signal }
+        : null
+    )
+  }
 
   // C-1 / D-17 (Phase 44 remount lesson): this mount's ONLY condition is
   // `!declined`. Neither `loadingAvailable` nor `queueState.busy` may ever
@@ -186,12 +245,11 @@ export default function WinetricksSettings() {
         call: () => window.api.winetricksListInstalled(safeRunner, appName)
       })
       if (cancelled) return
-      if (!installedResult.ok) {
-        setDeclined(true)
-        setLoadingAvailable(false)
-        return
-      }
-      setInstalled(installedResult.value)
+      // E10-partial / A-45-04: the catalog loaded, so a failed installed-list
+      // read fails OPEN -- every row renders as Available. Reinstalling an
+      // installed component is harmless, and the catalog probe above already
+      // decided whether this build supports the feature at all.
+      setInstalled(installedResult.ok ? installedResult.value : [])
 
       const stateResult = await callOrDeclare({
         channel: WINETRICKS_CHANNEL_BY_METHOD.winetricksQueueState,
@@ -205,7 +263,9 @@ export default function WinetricksSettings() {
         setLoadingAvailable(false)
         return
       }
+      latestRun.current = stateResult.value.run
       setQueueState(stateResult.value)
+      seedLogFrom(stateResult.value.run)
       // D-18: a remounted tab rebuilds failed rows from the state the backend
       // still holds. The installed list above is already fresh, so a finished
       // run found here needs no further re-read.
@@ -242,7 +302,9 @@ export default function WinetricksSettings() {
       state: WinetricksQueueState
     ) {
       if (state.runner !== runner || state.appName !== appName) return
+      latestRun.current = state.run
       setQueueState(state)
+      seedLogFrom(state.run)
       setErroredVerbs((current) => foldRunOutcomes(current, state.run))
       if (
         state.run?.status === 'done' &&
@@ -253,12 +315,53 @@ export default function WinetricksSettings() {
       }
     }
 
+    // D-14: live percent and classified lines for the verb this game's run is
+    // installing. The payload names only the component, never a game, so an
+    // event is accepted only while OUR run is running that exact verb; any
+    // other install's output is not ours to show.
+    function onProgress(
+      _event: IpcRendererEvent,
+      payload: {
+        installingComponent: string
+        lines?: WinetricksLogLine[]
+        percent?: number
+      }
+    ) {
+      const run = latestRun.current
+      if (
+        !run ||
+        run.status !== 'running' ||
+        payload.installingComponent !== run.currentVerb
+      ) {
+        return
+      }
+      const delta = payload.lines ?? []
+      if (delta.length > 0) {
+        setLogLines((current) => {
+          const next = [...current]
+          for (const line of delta) appendLogLine(next, line)
+          return next
+        })
+      }
+      const signal = percentSignal(delta)
+      if (typeof signal === 'number') {
+        setLivePercent({ verb: run.currentVerb, percent: signal })
+      } else if (signal === null) {
+        setLivePercent(null)
+      } else if (payload.percent !== undefined) {
+        setLivePercent({ verb: run.currentVerb, percent: payload.percent })
+      }
+    }
+
     const removeListener =
       window.api.handleWinetricksQueueChanged(onQueueChanged)
+    const removeProgressListener =
+      window.api.handleProgressOfWinetricks(onProgress)
 
     return () => {
       cancelled = true
       removeListener()
+      removeProgressListener()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appName, runner])
@@ -279,7 +382,9 @@ export default function WinetricksSettings() {
     })
     if (!result.ok) return
     if (result.value.accepted) {
+      latestRun.current = result.value.state.run
       setQueueState(result.value.state)
+      seedLogFrom(result.value.state.run)
       setSelection([])
       // A fresh attempt started for these verbs, so a previous failure no
       // longer applies (D-15). Cleared only once the backend accepted the run:
@@ -298,6 +403,7 @@ export default function WinetricksSettings() {
       call: () => window.api.winetricksCancelRemaining(safeRunner, appName)
     })
     if (result.ok) {
+      latestRun.current = result.value.run
       setQueueState(result.value)
     }
   }
@@ -321,20 +427,13 @@ export default function WinetricksSettings() {
       ]
     : installed
 
-  // Live download percentage for the installing row: the latest meaningful
-  // line in the run log, when it is a classified curl progress row. A progress
-  // line followed by anything but wine noise means the download has ended.
-  let currentPercent: number | undefined
-  if (run) {
-    for (let i = run.log.length - 1; i >= 0; i--) {
-      const line = run.log[i]
-      if (line.kind === 'noise') continue
-      if (line.kind === 'progress' && line.percent !== undefined) {
-        currentPercent = line.percent
-      }
-      break
-    }
-  }
+  // Live download percentage for the installing row: set by the progress
+  // listener for the verb the run is installing right now, and ignored the
+  // moment the run moves to another verb.
+  const currentPercent =
+    run && livePercent && livePercent.verb === run.currentVerb
+      ? livePercent.percent
+      : undefined
 
   function toggleVerb(verb: string) {
     if (locked) return
@@ -417,16 +516,45 @@ export default function WinetricksSettings() {
       )}
 
       {!declined && loadingAvailable && (
-        <span>
-          {t(
-            'winetricks.loading-available',
-            'Loading available components ...'
-          )}
-        </span>
+        <div className="WinetricksSettings__loading">
+          <span>
+            {t(
+              'winetricks.loading-available',
+              'Loading available components ...'
+            )}
+          </span>
+        </div>
       )}
 
-      {!declined && !loadingAvailable && (
+      {/* E10-empty / E10-error: no catalog at all (a failed load or parse).
+          No recovery action, no banner, no log, no bar. */}
+      {!declined && !loadingAvailable && allComponents.length === 0 && (
+        <div className="WinetricksEmptyState">
+          <FontAwesomeIcon
+            icon={faBoxOpen}
+            className="WinetricksEmptyState__icon"
+          />
+          <p className="WinetricksEmptyState__heading">
+            {tGamelib(
+              'winetricksBrowse.emptyHeading',
+              'No components available'
+            )}
+          </p>
+          <p className="WinetricksEmptyState__body">
+            {tGamelib(
+              'winetricksBrowse.emptyBody',
+              'Winetricks metadata could not be loaded for this bottle.'
+            )}
+          </p>
+        </div>
+      )}
+
+      {!declined && !loadingAvailable && allComponents.length > 0 && (
         <>
+          <EnvironmentBanner
+            environment={queueState.environment}
+            platform={platform}
+          />
           <SuggestedGroup
             gameSpecific={suggested.gameSpecific}
             curated={suggested.curated}
@@ -444,21 +572,19 @@ export default function WinetricksSettings() {
             components={allComponents}
             renderRow={renderRow}
           />
+          <div className="WinetricksSettings__dock">
+            <LogPanel lines={logLines} />
+            <StickyBar
+              mode={barMode}
+              selectedCount={selection.length}
+              run={run}
+              titleOf={titleOf}
+              applyDisabled={queueState.busy}
+              onApply={() => void applyVerbs(selection)}
+              onCancelRemaining={() => void cancelRemaining()}
+            />
+          </div>
         </>
-      )}
-
-      {!declined && !loadingAvailable && (
-        <div className="WinetricksSettings__dock">
-          <StickyBar
-            mode={barMode}
-            selectedCount={selection.length}
-            run={run}
-            titleOf={titleOf}
-            applyDisabled={queueState.busy}
-            onApply={() => void applyVerbs(selection)}
-            onCancelRemaining={() => void cancelRemaining()}
-          />
-        </div>
       )}
     </div>
   )

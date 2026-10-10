@@ -1,1 +1,92 @@
-// RED stub (Phase 45 Plan 08): the real stylesheet replaces this.
+// Phase 45 Plan 08: the details log disclosure and its panel (UI-SPEC E9).
+//
+// This is the ONE deliberately bounded, independently scrolling region in the
+// tab. D-02 forbids a scroll container on any group body, and none has one; the
+// log panel is a fixed 160px so a long winetricks run can never push the list or
+// the action bar around, and it is docked directly above the bar rather than
+// inside the list (E1-overflow, E9-populated). Long lines wrap
+// (`overflow-wrap: anywhere`) instead of scrolling sideways (E9-overflow).
+//
+// Red is reserved for lines the backend classified as errors (D-14): the error
+// rule below is the only place in this file that reaches for the danger alias.
+// Wine noise is muted, never red (D-15). Every rule is scoped under
+// `.WinetricksSettings` and every `var()` carries a fallback (D-21; enforced by
+// `__tests__/tokenCensus.test.ts`).
+.WinetricksSettings {
+  .WinetricksLogPanel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--input-background, #272f31);
+  }
+
+  .WinetricksLogPanel .WinetricksLogPanel__toggle {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: var(--space-xs, 0.5rem);
+    margin: 0;
+    padding: var(--space-xs, 0.5rem) var(--space-md, 1rem);
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary, #a8aeaf);
+    font-size: var(--text-sm, 0.875rem);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--accent, #0080ff);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent, #0080ff);
+      outline-offset: -2px;
+    }
+  }
+
+  .WinetricksLogPanel .WinetricksLogPanel__caret {
+    transform: rotate(-90deg);
+  }
+
+  .WinetricksLogPanel .WinetricksLogPanel__caret--expanded {
+    transform: rotate(0deg);
+  }
+
+  .WinetricksLogPanel .WinetricksLogPanel__region {
+    box-sizing: border-box;
+    height: 160px;
+    margin: 0;
+    padding: var(--space-xs, 0.5rem) var(--space-md, 1rem);
+    overflow-y: auto;
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: var(--text-xs, 0.6875rem);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--text-default, #caf3fd);
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .WinetricksLogPanel .WinetricksLogPanel__empty {
+    margin: 0;
+    color: var(--text-secondary, #a8aeaf);
+  }
+
+  .WinetricksLogPanel .log-error {
+    color: var(--danger, #cc3333);
+  }
+
+  .WinetricksLogPanel .log-warning,
+  .WinetricksLogPanel .log-info,
+  .WinetricksLogPanel .log-progress {
+    color: var(--text-default, #caf3fd);
+  }
+
+  .WinetricksLogPanel .log-noise {
+    color: var(--text-secondary, #a8aeaf);
+  }
+}
