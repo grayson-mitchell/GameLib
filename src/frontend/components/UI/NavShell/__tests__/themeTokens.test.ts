@@ -911,6 +911,20 @@ const WINETRICKS_APPLY_SELECTOR =
  * No `s` flag: the inner capture is a negated character class, which already
  * spans newlines (see the TS1501 note above `selectedTabColourDecl`).
  */
+/**
+ * Every nested selector inside the Apply block body that scopes to a theme
+ * (`body.<theme> ...`) but does NOT end with `&:not(:disabled)` -- i.e.
+ * would also apply to the disabled Apply button. An empty array means every
+ * theme override is correctly guarded. Factored out so Test C (the real
+ * stylesheet) and Test D (an in-memory-sabotaged copy, no file mutation)
+ * share one checker, and Test D proves Test C can actually fail.
+ */
+const themeOverridesMissingNotDisabled = (applyBody: string): string[] =>
+  nestedRules(applyBody)
+    .map((rule) => rule.selector)
+    .filter((selector) => selector.startsWith('body.'))
+    .filter((selector) => !selector.endsWith('&:not(:disabled)'))
+
 const applyTextColourDecl = (applyBody: string, themeClass: string): string => {
   const scoped = new RegExp(
     `body\\.${themeClass}\\s*&:not\\(:disabled\\)\\s*\\{([^}]*)\\}`
@@ -997,4 +1011,89 @@ describe('Winetricks enabled Apply text contrast in every theme (45-12 G7)', () 
       })
     }
   )
+
+  it('the pre-fix pair fails 4.5:1 in the two themes the live gate sampled', () => {
+    // The literal old declarations (before this quick task's fix), resolved
+    // through the SAME themeTokens + globals + resolveValue path the gate
+    // above uses. Proves the gate detects the exact reported defect, not
+    // merely some unrelated failure. 1.01/1.52 need not match the capture's
+    // numbers exactly -- token resolution and pixel sampling differ -- only
+    // the pass/fail side of 4.5 matters.
+    const OLD_APPLY_COLOR = 'var(--text-default, #ffffff)'
+    const APPLY_BACKGROUND = 'var(--accent, #0080ff)'
+    for (const selector of ['body.nord-light', 'body.midnightMirage']) {
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(OLD_APPLY_COLOR, scope, globals)
+      const bg = resolveValue(APPLY_BACKGROUND, scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      // Object form so a failure names the theme and the measured ratio.
+      expect({ selector, ratio, passes: ratio < 4.5 }).toEqual({
+        selector,
+        ratio,
+        passes: true
+      })
+    }
+  })
+
+  it('the gruvbox_dark override is load-bearing', () => {
+    // The depth-0 BASE color, deliberately NOT the override, against the
+    // base background. If this resolves >= 4.5, gruvbox's tokens changed
+    // and the override (and this test) should be deleted, not re-pinned.
+    const scope = themeTokens(themesScss, 'body.gruvbox_dark')
+    const baseColour = declsAtDepthZero(applyBody, 'color')[0]
+    const baseBackground = declsAtDepthZero(applyBody, 'background')[0]
+    const fg = resolveValue(baseColour, scope, globals)
+    const bg = resolveValue(baseBackground, scope, globals)
+    expect(fg).not.toBeNull()
+    expect(bg).not.toBeNull()
+    const ratio = contrastRatio(fg as string, bg as string)
+    expect({
+      ratio,
+      passes: ratio < 4.5,
+      note: "if this goes red, gruvbox's tokens changed so the base pair now passes -- delete the override and this test, do not re-pin it"
+    }).toEqual({
+      ratio,
+      passes: true,
+      note: "if this goes red, gruvbox's tokens changed so the base pair now passes -- delete the override and this test, do not re-pin it"
+    })
+  })
+
+  it('a theme override cannot reach disabled Apply', () => {
+    const themeOverrideSelectors = nestedRules(applyBody)
+      .map((rule) => rule.selector)
+      .filter((selector) => selector.startsWith('body.'))
+    expect(themeOverrideSelectors.length).toBeGreaterThan(0)
+    expect(themeOverrideSelectors).toContain(
+      'body.gruvbox_dark &:not(:disabled)'
+    )
+    expect(themeOverridesMissingNotDisabled(applyBody)).toEqual([])
+
+    const disabledRule = nestedRules(applyBody).find(
+      (rule) => rule.selector === '&:disabled'
+    )
+    expect(disabledRule).not.toBeUndefined()
+    const disabledBody = (disabledRule as { selector: string; body: string })
+      .body
+    expect(declsAtDepthZero(disabledBody, 'background')).toEqual([
+      'transparent'
+    ])
+    const disabledColourDecls = declsAtDepthZero(disabledBody, 'color')
+    expect(disabledColourDecls).toHaveLength(1)
+    const scope = themeTokens(themesScss, 'body.gruvbox_dark')
+    expect(resolveValue(disabledColourDecls[0], scope, globals)).toEqual(
+      resolveValue('var(--text-secondary, #a8aeaf)', scope, globals)
+    )
+  })
+
+  it('checker can fail: dropping :not(:disabled) from the override is caught, in memory only', () => {
+    // The tokenCensus.test.ts sabotage idiom: mutate a STRING copy, never the
+    // file on disk. The literal "&:not(:disabled)" appears exactly once in
+    // the Apply block (the gruvbox override selector), so this targets it.
+    const sabotaged = applyBody.replace('&:not(:disabled)', '&')
+    expect(themeOverridesMissingNotDisabled(sabotaged)).toEqual([
+      'body.gruvbox_dark &'
+    ])
+  })
 })
