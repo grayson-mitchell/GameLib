@@ -5,11 +5,11 @@ milestone_name: Phase Details
 current_phase: 9
 current_phase_name: Quality Gate
 status: planning
-stopped_at: Phase 45 context gathered
-last_updated: "2026-10-10T01:36:29.173Z"
+stopped_at: Phase 45 UI-SPEC approved (7/7, probe 76/80 resolved, 4 unresolved for planner)
+last_updated: "2026-10-10T01:59:01.457Z"
 last_activity: 2026-10-10
 last_activity_desc: Completed quick task 261010-h9n — Amazon sign-in probe classifies the zero-installed nile exit as unknown, not healthy (F-49-R1-4, WR-02); Phase 49 complete, transitioned to Phase 9
-state_head: c3486613b2b0e2787f41ef4c0e8313ec513cf647
+state_head: da587069c9bcd60bf0b34a627e5bb238387a5c4a
 progress:
   total_phases: 44
   completed_phases: 36
@@ -1811,9 +1811,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-10T01:36:26.474Z
-Stopped at: Phase 45 context gathered
-Resume file: .planning/phases/45-native-in-app-winetricks-ui-redesigned-from-scratch-one-self/45-CONTEXT.md
+Last session: 2026-10-10T01:58:58.940Z
+Stopped at: Phase 45 UI-SPEC approved (7/7, probe 76/80 resolved, 4 unresolved for planner)
+Resume file: .planning/phases/45-native-in-app-winetricks-ui-redesigned-from-scratch-one-self/45-UI-SPEC.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
