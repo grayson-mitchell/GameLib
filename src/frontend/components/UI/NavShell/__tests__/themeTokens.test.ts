@@ -898,3 +898,103 @@ describe('FocusRowStrip FOCUS ROW divider labels are >= 4.5:1 on the tier-2 pane
     }
   )
 })
+
+const WINETRICKS_STICKY_BAR_SCSS =
+  'src/frontend/screens/Settings/sections/WinetricksSettings/StickyBar/index.scss'
+const WINETRICKS_APPLY_SELECTOR =
+  '.WinetricksStickyBar .WinetricksStickyBar__apply'
+
+/**
+ * The `color:` the ENABLED Apply button paints in `themeClass`, as authored.
+ * Mirrors `selectedTabColourDecl`: a nested `body.<theme> &:not(:disabled)`
+ * override inside the Apply block wins over the block's own depth-0 `color`.
+ * No `s` flag: the inner capture is a negated character class, which already
+ * spans newlines (see the TS1501 note above `selectedTabColourDecl`).
+ */
+const applyTextColourDecl = (applyBody: string, themeClass: string): string => {
+  const scoped = new RegExp(
+    `body\\.${themeClass}\\s*&:not\\(:disabled\\)\\s*\\{([^}]*)\\}`
+  ).exec(applyBody)
+  if (scoped) {
+    const decls = declsAtDepthZero(scoped[1], 'color')
+    if (decls.length !== 1)
+      throw new Error(
+        `expected exactly one depth-0 color in the ${themeClass} Apply override, found ${decls.length}`
+      )
+    return decls[0]
+  }
+  const base = declsAtDepthZero(applyBody, 'color')
+  if (base.length !== 1)
+    throw new Error(
+      `expected exactly one depth-0 base color in the Apply block, found ${base.length}`
+    )
+  return base[0]
+}
+
+/**
+ * Per-theme WCAG 1.4.3 census for the Winetricks sticky bar's ENABLED Apply
+ * button (todo 2026-10-11, live gate 45-12 G7: 1.52:1 nord-light, 1.01:1
+ * midnightMirage).
+ *
+ * Lives here, not beside the stylesheet, because the cross-theme `var()`
+ * resolver and contrast helpers above are module-private to this file -- the
+ * `--border-color` census above is likewise not NavShell-specific.
+ *
+ * Reads the authored declarations FROM the stylesheet on every run; never a
+ * hardcoded copy of them.
+ *
+ * Like every census in this file it cannot see a pixel: no CSS engine runs
+ * under the node test environment, so a live capture still adjudicates
+ * appearance.
+ */
+describe('Winetricks enabled Apply text contrast in every theme (45-12 G7)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const stickyBarScss = read(WINETRICKS_STICKY_BAR_SCSS)
+  const globals = globalTokens()
+  const applyBody = cssBlock(stickyBarScss, WINETRICKS_APPLY_SELECTOR)
+
+  it('non-vacuity: global tokens, the base declarations, and the gruvbox_dark override all resolve', () => {
+    expect(globals.size).toBeGreaterThan(0)
+    expect(applyBody.length).toBeGreaterThan(0)
+    const bgDecls = declsAtDepthZero(applyBody, 'background')
+    expect(bgDecls).toHaveLength(1)
+    expect(bgDecls[0]).toMatch(/var\(\s*--accent/)
+    expect(declsAtDepthZero(applyBody, 'color')).toHaveLength(1)
+    const scoped = new RegExp(
+      `body\\.gruvbox_dark\\s*&:not\\(:disabled\\)\\s*\\{([^}]*)\\}`
+    ).exec(applyBody)
+    expect(scoped).not.toBeNull()
+    expect(
+      declsAtDepthZero((scoped as RegExpExecArray)[1], 'color')
+    ).toHaveLength(1)
+  })
+
+  it.each(themeSelectors)(
+    '%s paints the enabled Apply text at >= 4.5:1 against its own accent fill',
+    (selector) => {
+      const theme = selector.replace(/^body\./, '')
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(
+        applyTextColourDecl(applyBody, theme),
+        scope,
+        globals
+      )
+      const bg = resolveValue(
+        declsAtDepthZero(applyBody, 'background')[0] ?? '',
+        scope,
+        globals
+      )
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      // Object form so a failure names the theme and the measured ratio.
+      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+})

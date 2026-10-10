@@ -72,10 +72,42 @@
 
   // Enabled Apply is the one accent-filled control (UI-SPEC Color item 2).
   // Disabled Apply is quiet: an outline in the secondary text colour.
+  //
+  // `--background` inverts correctly against `--accent` by construction: a
+  // theme whose accent is near-white necessarily has a dark background.
+  // Retry (`Row/index.scss` `.WinetricksRow__retry`) and Clear
+  // (`EverythingElseGroup/index.scss` `.WinetricksEverythingElse__clear`)
+  // already paint this exact pair.
+  //
+  // The page text token (`--text-default`) carries no relationship to the
+  // accent. It measured 1.52:1 in nord-light and 1.01:1 in midnightMirage in
+  // live gate 45-12 G7 (todo 2026-10-11); at the token level it failed 4.5:1
+  // in all 10 themes, not only the two the live gate sampled.
   .WinetricksStickyBar .WinetricksStickyBar__apply {
     border: 1px solid var(--accent, #0080ff);
     background: var(--accent, #0080ff);
-    color: var(--text-default, #ffffff);
+    color: var(--background, #070a0b);
+
+    // gruvbox_dark's accent `#b57614` is a mid-tone. Its own `--background`
+    // `#1d2021` measures 4.35:1 against it, under 4.5. Only near-black
+    // clears it, and `--neutral-01` measures 5.26:1.
+    //
+    // A theme-scoped override rather than a `themes.scss` edit, following
+    // NavTabs' `body.nord-light &` precedent: a measured per-theme
+    // collision, not a general rule.
+    //
+    // `:not(:disabled)` is load-bearing. Without it the override's
+    // specificity beats `&:disabled` and paints near-black text on the
+    // transparent disabled button.
+    //
+    // Retry and Clear share this 4.35:1 collision too, recorded in a
+    // follow-up todo.
+    //
+    // NOT LIVE-VERIFIED: contrast arithmetic; a capture is owed at the next
+    // 45-12 re-run.
+    body.gruvbox_dark &:not(:disabled) {
+      color: var(--neutral-01, #070a0b);
+    }
 
     &:disabled {
       border-color: var(--neutral-05, #a8aeaf);
