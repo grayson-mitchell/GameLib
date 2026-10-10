@@ -1165,6 +1165,18 @@ export default React.memo(function Library(): JSX.Element {
         */}
         <FilterChipRow />
 
+        {/*
+          Quick task 261011-hj6: the sign-in rows sit at the top of the
+          Library, above the first shelf, at the operator's request (Phase 49
+          live gate Run 1, operator UI notes in 49-LIVE-GATE.md). They are
+          below the chip row on purpose (260815-qf0), and the chip row renders
+          nothing with no filter active, so in an unfiltered library they are
+          the first thing in `.listing`. SteamSyncNotice deliberately stays
+          above the grid. Locked by G4 in librarySignInNoticeSource.test.ts and
+          L1 in signInTracer.test.ts.
+        */}
+        <LibrarySignInNotice />
+
         <FocusRowStrip
           focusRow={focusRow}
           libraryUnion={libraryUnion}
@@ -1177,8 +1189,6 @@ export default React.memo(function Library(): JSX.Element {
         {showAlphabetFilter && <AlphabetFilter />}
 
         {refreshing && !refreshingInTheBackground && <UpdateComponent />}
-
-        <LibrarySignInNotice />
 
         {steamSyncMode !== 'hidden' && <SteamSyncNotice mode={steamSyncMode} />}
 
