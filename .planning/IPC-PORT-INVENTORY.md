@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 217 |
-| Ported to sidecar | 62 |
+| Unique channels | 220 |
+| Ported to sidecar | 65 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -445,6 +445,19 @@ invoke-kind channels not reflected in this Slice 9 section at all: `winetricksAp
 `winetricksQueueState`, `winetricksCancelRemaining` (`backend/tools/winetricksQueue.ts`). As of
 this note, the live winetricks IPC surface is those three plus the surviving
 `winetricksAvailable`/`winetricksInstalled` pair — five invoke-kind channels, zero send-kind.
+
+## Phase 45 — Plan 01 — native winetricks queue (3 channels) — **PORTED**
+
+Added 2026-10-10 by the Phase 45 wave-5 post-merge gate. Plan 45-01 exposed three new invoke-kind
+channels under `src/preload/api/wine.ts`, registered in `wineToolsFlowRegistration.ts` and served by
+`backend/tools/winetricksQueue.ts`. Plan 45-02's dated note in the Slice 9 section above names them
+in prose, which `preload-surface-gate.py` deliberately ignores (its bucket parser accepts only a line
+that is nothing but backtick names joined by ", "), so the gate failed coverage until this section
+existed. The bucket lives here rather than in the Slice 9 section because `ported-channels-gate.py`
+pins that section's name count at 16. `## Totals` → `Unique channels` rises 217 → 220 and
+`Ported to sidecar` 62 → 65, following the Phase 40 Plan 05 precedent.
+
+`winetricksApply`, `winetricksCancelRemaining`, `winetricksQueueState`
 
 ## Late-discovered — owner Phase 34.6 (8 channels) — **PORTED**
 
