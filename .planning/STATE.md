@@ -2,20 +2,20 @@
 gsd_state_version: "1.0"
 milestone: v0.8
 milestone_name: Phase Details
-current_phase: 9
-current_phase_name: Quality Gate
-status: planning
+current_phase: 45
+current_phase_name: "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch"
+status: executing
 stopped_at: Phase 45 UI-SPEC approved (7/7, probe 76/80 resolved, 4 unresolved for planner)
-last_updated: "2026-10-10T01:59:01.457Z"
+last_updated: "2026-10-10T04:02:35.662Z"
 last_activity: 2026-10-10
 last_activity_desc: Completed quick task 261010-h9n — Amazon sign-in probe classifies the zero-installed nile exit as unknown, not healthy (F-49-R1-4, WR-02); Phase 49 complete, transitioned to Phase 9
-state_head: da587069c9bcd60bf0b34a627e5bb238387a5c4a
+state_head: 96eb9ded95ed4d32e9ecb303ce0b3d0856dfcc73
 progress:
   total_phases: 44
   completed_phases: 36
-  total_plans: 536
+  total_plans: 548
   completed_plans: 527
-  percent: 82
+  percent: 50
 ---
 
 # Project State
@@ -74,9 +74,9 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 9 — Quality Gate
+Phase: 45 (Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch) — READY TO EXECUTE
 Plan: 0 of 0 — Phase 9 (Quality Gate) has no plans; the next phase after 49 is an operator choice
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-10-10 — Completed quick task 261010-ho8 — Fix authTrigger.ts ORIGIN_TO_TRIGGER[origin] unguarded bracket lookup (49-REVIEW WR-04)
 
 Previous activity: 2026-10-10 — Phase 49 complete, transitioned to Phase 9
@@ -118,7 +118,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 82%
+Progress: [█████░░░░░] 50%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 

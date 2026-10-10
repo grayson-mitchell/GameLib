@@ -5549,19 +5549,37 @@ that screen, those die with it rather than being fixed, and 44 should be closed 
 **Plans:** 12 plans
 
 Plans:
-
+**Wave 1**
 - [ ] 45-01-PLAN.md — Tracer: Winetricks Settings tab + backend install queue (winetricksApply / queue state / cancel), verb guard, environment store
-- [ ] 45-02-PLAN.md — Retire the Phase 44 dialog tree, the Tools-card button, the Open Winetricks GUI hatch and send-kind winetricksInstall; install-path invariant test
 - [ ] 45-03-PLAN.md — English copy contract (41 winetricksBrowse leaves in gamelib.json) + validator-first locale fill tool
 - [ ] 45-04-PLAN.md — Pure w_metadata parser, w_download_manual-derived needs-GUI set, D-09 visibility predicate (TDD, committed script excerpt)
-- [ ] 45-05-PLAN.md — Task-group map, family table, suggestion resolver; checkbox-model row states
-- [ ] 45-06-PLAN.md — Backend output classifier, percent/log/environment feed, metadata-annotated and visibility-filtered catalog
-- [ ] 45-07-PLAN.md — Novice-first body: row, Suggested, five task groups, Everything else with search
-- [ ] 45-08-PLAN.md — Sticky bar, Cancel remaining, classified log, environment banner, list states; ported remount-safety proof
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 45-02-PLAN.md — Retire the Phase 44 dialog tree, the Tools-card button, the Open Winetricks GUI hatch and send-kind winetricksInstall; install-path invariant test
 - [ ] 45-09-PLAN.md — Locale fill, batch A (24 locales)
 - [ ] 45-10-PLAN.md — Locale fill, batch B (24 locales)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 45-05-PLAN.md — Task-group map, family table, suggestion resolver; checkbox-model row states
+- [ ] 45-06-PLAN.md — Backend output classifier, percent/log/environment feed, metadata-annotated and visibility-filtered catalog
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 45-07-PLAN.md — Novice-first body: row, Suggested, five task groups, Everything else with search
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 45-08-PLAN.md — Sticky bar, Cancel remaining, classified log, environment banner, list states; ported remount-safety proof
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 45-11-PLAN.md — Retired-key removal, i18n gate scope mirror, full gate battery, Phase 44 closed as superseded (hand edits)
+
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 45-12-PLAN.md — D-21 live gate on a packaged build (multi-verb Apply, induced failure, GPTK banner, gdiplus_winxp, light + dark)
+
+**Cross-cutting constraints:**
+- D-20: every value was validated by `validateTranslation` (placeholders and glossary terms) through `applyFill.ts --check` BEFORE it was written; no locale was written with an open problem
+- D-20: `meta/__tests__/gamelibCatalogParity.test.ts` passes for all 24 locales (no orphaned key, no dropped placeholder, no partially present plural group)
+- D-20: each locale's `gamelib.mt.json` lists the newly filled keys (provenance stamped; `model` and `filledAt` untouched — a known, stated inaccuracy of the one-global-field manifest)
+- D-08: the 13 `family.*` sentences are translated as family-level descriptions, not per-verb text
 
 ### Phase 46: Windows single-instance guard and gamelib:// deep-link registration
 
