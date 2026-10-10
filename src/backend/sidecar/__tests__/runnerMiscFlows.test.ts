@@ -14,10 +14,11 @@
  *      `copySystemInfoToClipboard`, `hasExecutable`) and the three DEFERRED winetricks channel
  *      names (`winetricksAvailable`, `winetricksInstall`, `winetricksInstalled` — Phase 34.6,
  *      D-03) are absent from both registries, so a curated-import mistake that pulled in
- *      `tools/ipc_handler.ts`/`utils/ipc_handler.ts` wholesale, or `callTool` reaching
- *      `Winetricks.run` being confused with registering the winetricks IPC channels themselves
- *      (Pitfall 4), would be caught here. Module completeness (14 handle, 0 send,
- *      `listenerRegistry` untouched) is asserted explicitly.
+ *      `tools/ipc_handler.ts`/`utils/ipc_handler.ts` wholesale, or `callTool`'s now-removed
+ *      `winetricks` branch (Phase 45 D-17 deleted its `Winetricks.run()` GUI call; an unknown
+ *      `tool` value is a no-op dispatch, see Describe 4) being confused with registering the
+ *      winetricks IPC channels themselves (Pitfall 4), would be caught here. Module completeness
+ *      (14 handle, 0 send, `listenerRegistry` untouched) is asserted explicitly.
  *   2. Curated-import guard — `runnerMiscFlowRegistration.ts` never imports `utils/ipc_handler.ts`
  *      or `wine/runtimes/ipc_handler.ts` (comment-stripped via the shared `stripSourceComments`
  *      util, so a docblock merely NAMING either file cannot trip the gate).
@@ -28,12 +29,13 @@
  *      function anyway) — full `getPath('documents')` switch-case coverage lives in
  *      `pathShim.test.ts`; this is a pointer proving the case this cluster's docstring cites
  *      still resolves, nothing more.
- *   4. `callTool` branch dispatch — with `Winetricks.run` and `runWineCommandOnGame` mocked, each
- *      of the three `tool` branches (`winetricks`, `winecfg`, `runExe`) is proven to reach the
- *      right function with the right arguments, `sendGameStatusUpdate` fires with `status: 'done'`
- *      on every branch, and the `runner === 'gog'` post-step is proven separately. An explicit
- *      case proves the `winetricks` branch is NOT gated on Phase 34.6 (Pitfall 4) — it must call
- *      `Winetricks.run`, not throw or no-op.
+ *   4. `callTool` branch dispatch — with `runWineCommandOnGame` mocked, each of the two remaining
+ *      `tool` branches (`winecfg`, `runExe`) is proven to reach the right function with the right
+ *      arguments, `sendGameStatusUpdate` fires with `status: 'done'` on every branch, and the
+ *      `runner === 'gog'` post-step is proven separately. An explicit case proves the retired
+ *      `winetricks` tool value (Phase 45 D-17 removed its `Winetricks.run()` GUI call) is now a
+ *      no-op dispatch — it must reach neither `runWineCommandOnGame` nor any winetricks mock,
+ *      and still send the `done` status rather than throwing.
  *
  * `runnerMiscFlowRegistration.ts` reaches `helperBinaries/index.ts` (a static top-level import of
  * `backend/utils` for `getCometBin`) and `wine/runtimes/runtimes.ts` (which imports
@@ -145,16 +147,14 @@ jest.mock('../../ipc', () => ({
   sendFrontendMessage: (...args: unknown[]) => mockSendFrontendMessage(...args)
 }))
 
-// ── ../../tools — `Winetricks.run`/`runWineCommandOnGame` are the curated import targets for
-// `callTool`'s three tool branches; factory-mocked (mirrors `wineToolsFlows.test.ts`'s own
-// `../../tools` mock) so this suite proves callTool's OWN dispatch, not Winetricks'/the Wine
-// command runner's internal logic ───────────────────────────────────────────────────────────────
-const mockWinetricksRun = jest.fn()
+// ── ../../tools — `runWineCommandOnGame` is the curated import target for `callTool`'s two
+// remaining tool branches (`winecfg`/`runExe`); factory-mocked (mirrors `wineToolsFlows.test.ts`'s
+// own `../../tools` mock) so this suite proves callTool's OWN dispatch, not the Wine command
+// runner's internal logic. No `Winetricks` export is mocked here — Phase 45 D-17 removed the
+// GUI branch's `Winetricks.run()` call, and `runnerMiscFlowRegistration.ts` no longer imports
+// `Winetricks` at all ───────────────────────────────────────────────────────────────────────────
 const mockRunWineCommandOnGame = jest.fn()
 jest.mock('../../tools', () => ({
-  Winetricks: {
-    run: (...args: unknown[]) => mockWinetricksRun(...args)
-  },
   runWineCommandOnGame: (...args: unknown[]) =>
     mockRunWineCommandOnGame(...args)
 }))
@@ -298,7 +298,7 @@ describe('registration kind — all 11 channels are registered with the correct 
   )
 
   it.each(['winetricksAvailable', 'winetricksInstall', 'winetricksInstalled'])(
-    'Pitfall 4 %s (the DEFERRED-to-34.6 winetricks IPC channel, D-03) is absent from both registries — callTool reaching Winetricks.run must not be confused with registering this channel',
+    'Pitfall 4 %s (the DEFERRED-to-34.6 winetricks IPC channel, D-03) is absent from both registries — callTool receiving tool: "winetricks" as a no-op dispatch (Phase 45 D-17) must not be confused with registering this channel',
     (channel) => {
       expect(handlerRegistry.has(channel)).toBe(false)
       expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
@@ -349,18 +349,16 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
     })
     mockCheckForOfflineInstallerChanges.mockResolvedValue(undefined)
     mockGetGameInfo.mockReturnValue(undefined)
-    mockWinetricksRun.mockResolvedValue(undefined)
     mockRunWineCommandOnGame.mockResolvedValue({ stdout: '', stderr: '' })
   })
 
-  it('REQ-34.5-07 Pitfall 4: the winetricks branch calls Winetricks.run — it is NOT gated on Phase 34.6, and sendGameStatusUpdate fires with status "done"', async () => {
+  it('Phase 45 D-17: an unrecognised tool value (e.g. the retired "winetricks" GUI branch) is a no-op dispatch — it reaches neither runWineCommandOnGame nor any winetricks mock, and sendGameStatusUpdate still fires with status "done"', async () => {
     await callToolHandler()(undefined, {
       tool: 'winetricks',
       appName: 'fake-app',
       runner: 'legendary'
     })
 
-    expect(mockWinetricksRun).toHaveBeenCalledWith('legendary', 'fake-app')
     expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
     const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
       jest.requireMock('backend/utils')
@@ -387,7 +385,6 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
         wait: false
       }
     )
-    expect(mockWinetricksRun).not.toHaveBeenCalled()
     const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
       jest.requireMock('backend/utils')
     expect(sendGameStatusUpdate).toHaveBeenCalledWith({
@@ -432,7 +429,6 @@ describe('callTool branch dispatch — winetricks/winecfg/runExe, the gog post-s
     })
 
     expect(mockRunWineCommandOnGame).not.toHaveBeenCalled()
-    expect(mockWinetricksRun).not.toHaveBeenCalled()
     const { sendGameStatusUpdate }: { sendGameStatusUpdate: jest.Mock } =
       jest.requireMock('backend/utils')
     expect(sendGameStatusUpdate).toHaveBeenCalledWith({

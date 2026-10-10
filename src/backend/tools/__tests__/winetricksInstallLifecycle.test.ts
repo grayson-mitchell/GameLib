@@ -174,31 +174,12 @@ describe('Winetricks.install single-flight (double-click todo)', () => {
   })
 })
 
-describe('non-install runs do not borrow the installing verb (GUI/list todo)', () => {
-  it("a GUI run's progress and Done events started mid-install carry installingComponent ''", async () => {
-    const install = Winetricks.install('gog', 'game', 'dotnet48')
-    await spawned(1)
-
-    const gui = Winetricks.run('gog', 'game')
-    await spawned(2)
-
-    children[1].stderr.emit('data', 'fixme: some gui err line\n')
-    jest.advanceTimersByTime(1000)
-    children[1].emit('exit', 0)
-    children[1].emit('close', 0)
-    await gui
-
-    const guiEvents = progressEvents()
-    expect(guiEvents.length).toBeGreaterThanOrEqual(2)
-    for (const payload of guiEvents) {
-      expect(payload.installingComponent).toBe('')
-    }
-
-    children[0].emit('exit', 0)
-    children[0].emit('close', 0)
-    await install
-  })
-
+describe('non-install runs do not borrow the installing verb (list todo)', () => {
+  // The sibling "GUI run" case (`Winetricks.run('gog', 'game')`, proving progress/Done events
+  // mid-install carried `installingComponent ''`) is deleted here — Phase 45 D-17 removed
+  // `Winetricks.run` (and the `['-q', '--gui']` call it made) entirely, so there is no GUI
+  // branch left to misattribute the installing verb. The list-all case below is kept; it proves
+  // the same non-vacuity for `Winetricks.listAvailable`, the other non-install caller.
   it('a list-all run mid-install sends its Done untagged', async () => {
     const install = Winetricks.install('gog', 'game', 'dotnet48')
     await spawned(1)

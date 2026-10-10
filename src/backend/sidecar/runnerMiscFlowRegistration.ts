@@ -58,8 +58,9 @@
  *
  * `callTool` reassignment (REQ-34.1-10 / 34.1 D-14): this channel originally sat in Phase 34.1's
  * slice-4 inventory purely because the inventory grouped channels by the Electron file they lived
- * in (`tools/ipc_handler.ts`). It is Wine tooling (`winetricks`/`winecfg`/`runExe` dispatch) —
- * this phase's domain — and was reassigned here rather than ported in 34.1.
+ * in (`tools/ipc_handler.ts`). It is Wine tooling (`winecfg`/`runExe` dispatch — the winetricks
+ * GUI branch was removed by Phase 45 D-17) — this phase's domain — and was reassigned here
+ * rather than ported in 34.1.
  *
  * `documents` gray area (research Pitfall 1 / D-09): `pathShim.ts`'s `documents` case (plan
  * 34.5-01, REQ-34.5-01) was added anticipating GOG saves-sync's need for it, and CONTEXT.md/
@@ -90,7 +91,7 @@ import type { RuntimeName, Runner } from 'common/types'
 import type { GOGCloudSavesLocation } from 'common/types/gog'
 import path from 'path'
 import { libraryManagerMap } from '../storeManagers'
-import { Winetricks, runWineCommandOnGame } from '../tools'
+import { runWineCommandOnGame } from '../tools'
 import { isEpicServiceOffline, sendGameStatusUpdate, getGame } from '../utils'
 import { isOnline } from '../online_monitor'
 import { logInfo, logWarning, LogPrefix } from '../logger'
@@ -139,11 +140,12 @@ export function registerRunnerMiscFlows(): void {
 
   // ── "Other" channels (tools/ipc_handler.ts:25, main.ts:840,1251) ──────────
   // Plan 34.5-12. `callTool` reassigned here from Phase 34.1 by REQ-34.1-10 / 34.1 D-14 — it is
-  // Wine tooling (winetricks/winecfg/runExe dispatch), not "misc" in domain, and only sat in
-  // slice 4's original inventory because that inventory grouped channels by Electron file.
+  // Wine tooling (winecfg/runExe dispatch — the winetricks GUI branch was removed by Phase 45
+  // D-17), not "misc" in domain, and only sat in slice 4's original inventory because that
+  // inventory grouped channels by Electron file.
   ipcMain.handle('callTool', async (_event: unknown, ...args: unknown[]) => {
     const { tool, exe, appName, runner } = args[0] as {
-      tool: 'winetricks' | 'winecfg' | 'runExe'
+      tool: 'winecfg' | 'runExe'
       exe?: string
       appName: string
       runner: Runner
@@ -154,15 +156,6 @@ export function registerRunnerMiscFlows(): void {
       .getSettings()
 
     switch (tool) {
-      case 'winetricks':
-        // Pitfall 4 (34.5-RESEARCH.md § Common Pitfalls): this branch calls
-        // `Winetricks.run()` on the shared `tools/index.ts` object — pure Node, no Electron
-        // dependency — and WORKS TODAY despite `winetricksAvailable`/`winetricksInstall`/
-        // `winetricksInstalled` being deferred to Phase 34.6 (D-03). This is intentionally NOT
-        // gated on that deferral, an early return, or a feature flag — flagged in
-        // `34.5-PORTED-CHANNELS.md` so a reader does not mistake it for broken/blocked.
-        await Winetricks.run(runner, appName)
-        break
       case 'winecfg':
         await runWineCommandOnGame(runner, appName, {
           gameSettings,

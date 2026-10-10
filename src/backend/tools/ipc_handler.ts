@@ -28,9 +28,6 @@ addHandler('callTool', async (event, { tool, exe, appName, runner }) => {
     .getSettings()
 
   switch (tool) {
-    case 'winetricks':
-      await Winetricks.run(runner, appName)
-      break
     case 'winecfg':
       await runWineCommandOnGame(runner, appName, {
         gameSettings,

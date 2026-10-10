@@ -545,10 +545,10 @@ export const Winetricks = {
     args: string[],
     returnOutput = false,
     envOverrides?: Record<string, string>,
-    // The verb this run installs, or '' for every other run (GUI, list-all).
+    // The verb this run installs, or '' for every other run (list-all).
     // Passed explicitly rather than read from the module-global
     // `installingComponent`: that global names whichever install is running
-    // RIGHT NOW, so a GUI or list run started mid-install used to tag its own
+    // RIGHT NOW, so a list run started mid-install used to tag its own
     // progress/Done events with the installing verb -- a false Done that
     // ended the install's in-flight state in the UI, and its stderr " err"
     // lines attributed to a verb they had nothing to do with.
@@ -556,7 +556,7 @@ export const Winetricks = {
     // Phase 45 Plan 01 (D-11): fires exactly once, with whether the run
     // failed, so `Winetricks.install` (and the queue built on top of it) can
     // report a real per-verb outcome instead of a resolved-with-no-value
-    // promise. Every other `runWithArgs` call site (GUI, list-all) passes
+    // promise. Every other `runWithArgs` call site (list-all) passes
     // nothing -- the parameter is optional and a no-op when omitted.
     onDone?: (failed: boolean) => void
   ) => {
@@ -576,7 +576,6 @@ export const Winetricks = {
     }
 
     let winetricks = `${toolsPath}/winetricks`
-    const gui = args.includes('--gui')
 
     if (!existsSync(winetricks)) {
       await Winetricks.download()
@@ -589,12 +588,7 @@ export const Winetricks = {
         args.splice(args.indexOf('-q'), 1)
       }
 
-      if (gui) {
-        args.splice(args.indexOf('--gui'), 1)
-        args.unshift('')
-      } else {
-        args.unshift('winetricks')
-      }
+      args.unshift('winetricks')
     }
 
     const { winePrefix, wineVersion: alwaysWine_wineVersion } =
@@ -619,7 +613,7 @@ export const Winetricks = {
         ...setupWineEnvVars(settingsWithWineVersion, appName),
         WINEPREFIX: winePrefix,
         PATH: `${winepath}:${process.env.PATH}`,
-        GAMEID: gui ? 'winetricks-gui' : 'umu-0',
+        GAMEID: 'umu-0',
         UMU_RUNTIME_UPDATE: '0'
       }
 
@@ -639,7 +633,7 @@ export const Winetricks = {
 
       // envOverrides merges LAST so it wins over both platform branches.
       // Defaults to undefined, which makes the spread a no-op -- the
-      // run/install/GUI call sites are byte-identical in behaviour to
+      // install/list-all call sites are byte-identical in behaviour to
       // before this option existed. See listAvailable's LANG=C comment for
       // why this exists at all.
       const envs = { ...(isMac ? macEnvs : linuxEnvs), ...envOverrides }
@@ -745,9 +739,6 @@ export const Winetricks = {
         sendDone(exitCode ?? code)
       })
     })
-  },
-  run: async (runner: Runner, appName: string) => {
-    await Winetricks.runWithArgs(runner, appName, ['-q', '--gui'])
   },
   listAvailable: async (runner: Runner, appName: string) => {
     try {

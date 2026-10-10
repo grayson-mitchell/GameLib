@@ -81,7 +81,7 @@ const VOID_PARITY_CHANNELS: Record<string, string> = {
   removeFromSteam:
     'declared Promise<void>; awaits removeNonSteamGame(game) and returns nothing',
   callTool:
-    'declared Promise<void>; dispatches to winetricks/winecfg/runExe plus a status push, returns nothing'
+    'declared Promise<void>; dispatches to winecfg/runExe plus a status push, returns nothing'
 }
 
 /** Multi-line-capable: tolerates the channel name landing on the line after `ipcMain.handle(`. */
