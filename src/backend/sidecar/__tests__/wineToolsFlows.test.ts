@@ -85,6 +85,18 @@ jest.mock('../../tools', () => ({
   runWineCommandOnGame: jest.fn()
 }))
 
+// Phase 45 Plan 01 (D-11): the three winetricks-queue channels delegate to
+// `WinetricksQueue.apply/getState/cancelRemaining`, not to `../../tools` directly -- mocked here
+// so Describe 9 can prove each handler forwards its arguments to the matching queue method by
+// identity, without running the real queue/catalog/install logic.
+jest.mock('../../tools/winetricksQueue', () => ({
+  WinetricksQueue: {
+    apply: jest.fn(),
+    getState: jest.fn(),
+    cancelRemaining: jest.fn()
+  }
+}))
+
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -93,6 +105,7 @@ import { handlerRegistry, listenerRegistry } from '../../platform'
 import { runWineCommand } from '../../launcher'
 import { GameConfig } from '../../game_config'
 import { DXVK, runWineCommandOnGame } from '../../tools'
+import { WinetricksQueue } from '../../tools/winetricksQueue'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import type { IpcHandler } from '../../platform'
 
@@ -603,5 +616,99 @@ describe('runWineCommandForGame Windows-branch shell removal (T-34.5-C6-49-03, P
     // instead pass one flattened string as spawnAsync's first argument.
     expect(Array.isArray(forwardedArgs)).toBe(true)
     expect(forwardedArgs).toEqual(commandParts.slice(1))
+  })
+})
+
+// ── Describe 9: Winetricks-queue channels (Phase 45 Plan 01, D-11) — presence, kind, pass-
+// through ────────────────────────────────────────────────────────────────────────────────────
+//
+// `winetricksApply`/`winetricksQueueState`/`winetricksCancelRemaining` all delegate to
+// `WinetricksQueue` (`tools/winetricksQueue.ts`), not to `../../tools` directly. Each is proven
+// present in `handlerRegistry` (invoke-kind), absent from `listenerRegistry`, and forwarding its
+// runner/appName (and verbs, for `winetricksApply`) to the matching mock BY IDENTITY, returning
+// the mock's value unchanged -- mirrors Describe 3's own pass-through-proof shape. The existing
+// `winetricksInstall` send-kind assertions (Describe 1/2 above) are untouched; plan 45-02 retires
+// that channel, not this plan.
+describe('winetricks-queue channels — present, invoke-kind, forward args by identity (Phase 45 Plan 01, D-11)', () => {
+  const mockApply = WinetricksQueue.apply as jest.MockedFunction<
+    typeof WinetricksQueue.apply
+  >
+  const mockGetState = WinetricksQueue.getState as jest.MockedFunction<
+    typeof WinetricksQueue.getState
+  >
+  const mockCancelRemaining =
+    WinetricksQueue.cancelRemaining as jest.MockedFunction<
+      typeof WinetricksQueue.cancelRemaining
+    >
+
+  beforeEach(() => {
+    mockApply.mockClear()
+    mockGetState.mockClear()
+    mockCancelRemaining.mockClear()
+  })
+
+  it.each([
+    'winetricksApply',
+    'winetricksQueueState',
+    'winetricksCancelRemaining'
+  ])('%s is registered as ipcMain.handle, and NOT as ipcMain.on', (channel) => {
+    expect(handlerRegistry.has(channel)).toBe(true)
+    expect((listenerRegistry.get(channel) ?? []).length).toBe(0)
+  })
+
+  it("the registered 'winetricksApply' handler forwards runner, appName and verbs to WinetricksQueue.apply by identity and returns its value unchanged", async () => {
+    const fakeResult = {
+      accepted: true as const,
+      state: { marker: 'fake-apply-state' }
+    }
+    mockApply.mockResolvedValue(fakeResult as never)
+
+    const handler = handlerRegistry.get('winetricksApply') as IpcHandler
+    expect(handler).toBeDefined()
+
+    const verbs = ['xact', 'corefonts']
+    const result = await handler({} as never, 'gog', 'test-app', verbs)
+
+    expect(mockApply).toHaveBeenCalledTimes(1)
+    const [forwardedRunner, forwardedAppName, forwardedVerbs] =
+      mockApply.mock.calls[0]
+    expect(forwardedRunner).toBe('gog')
+    expect(forwardedAppName).toBe('test-app')
+    // Identity, not just deep-equality -- proves the handler forwards the SAME array rather
+    // than cloning/reshaping it before delegating.
+    expect(forwardedVerbs).toBe(verbs)
+    expect(result).toBe(fakeResult)
+  })
+
+  it("the registered 'winetricksQueueState' handler forwards runner and appName to WinetricksQueue.getState by identity and returns its value unchanged", async () => {
+    const fakeState = { marker: 'fake-queue-state' }
+    mockGetState.mockReturnValue(fakeState as never)
+
+    const handler = handlerRegistry.get('winetricksQueueState') as IpcHandler
+    expect(handler).toBeDefined()
+
+    const result = await handler({} as never, 'gog', 'test-app')
+
+    expect(mockGetState).toHaveBeenCalledTimes(1)
+    expect(mockGetState.mock.calls[0][0]).toBe('gog')
+    expect(mockGetState.mock.calls[0][1]).toBe('test-app')
+    expect(result).toBe(fakeState)
+  })
+
+  it("the registered 'winetricksCancelRemaining' handler forwards runner and appName to WinetricksQueue.cancelRemaining by identity and returns its value unchanged", async () => {
+    const fakeState = { marker: 'fake-cancel-state' }
+    mockCancelRemaining.mockReturnValue(fakeState as never)
+
+    const handler = handlerRegistry.get(
+      'winetricksCancelRemaining'
+    ) as IpcHandler
+    expect(handler).toBeDefined()
+
+    const result = await handler({} as never, 'gog', 'test-app')
+
+    expect(mockCancelRemaining).toHaveBeenCalledTimes(1)
+    expect(mockCancelRemaining.mock.calls[0][0]).toBe('gog')
+    expect(mockCancelRemaining.mock.calls[0][1]).toBe('test-app')
+    expect(result).toBe(fakeState)
   })
 })

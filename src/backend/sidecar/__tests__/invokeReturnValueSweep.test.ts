@@ -7,7 +7,7 @@
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 40, with the exact per-module tally 10/12/4/14.
+ *   1. The extracted channel count is exactly 43, with the exact per-module tally 10/15/4/14.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -42,8 +42,10 @@ const MODULES: ModuleSpec[] = [
     // `ipcMain.handle(...)` only. If `winetricksInstall` ever appears in this module's
     // extracted array, that is a real defect -- a send channel registered as invoke -- and
     // must NOT be absorbed by raising this number.
+    // Phase 45 Plan 01 (2026-10-10): 12 -> 15. winetricksApply / winetricksQueueState /
+    // winetricksCancelRemaining (invoke)
     path: join(__dirname, '../wineToolsFlowRegistration.ts'),
-    expectedCount: 12
+    expectedCount: 15
   },
   {
     name: 'shortcuts',
@@ -165,10 +167,13 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 34.6 Plan 10 (2026-08-24): 37 -> 40, the same +3 recorded on the `runnerMisc` module
   // spec above (`getAchievements`, `getDefaultSavePath`, `getPlaytimeFromRunner`; all three are
   // invoke-kind, D-14).
+  // Phase 45 Plan 01 (2026-10-10): 40 -> 43, the same +3 recorded on the `wineTools` module spec
+  // above (`winetricksApply`, `winetricksQueueState`, `winetricksCancelRemaining`; all three are
+  // invoke-kind, D-11).
   // This total and the per-module counts must always move together -- if they ever disagree, the
   // extraction is wrong and neither number should be adjusted until that is understood.
-  it('extracts exactly 40 channels total', () => {
-    expect(allChannels).toHaveLength(40)
+  it('extracts exactly 43 channels total', () => {
+    expect(allChannels).toHaveLength(43)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {
