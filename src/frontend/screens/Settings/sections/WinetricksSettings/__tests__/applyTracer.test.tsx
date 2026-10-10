@@ -33,9 +33,12 @@ jest.mock('../index.scss', () => ({}))
 // below can match the real rendered English text (e.g. "1 installed")
 // instead of a raw, uninterpolated template.
 function interpolate(template: string, vars: Record<string, unknown>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) =>
-    String(vars[key] ?? '')
-  )
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
+    const value = vars[key]
+    return typeof value === 'string' || typeof value === 'number'
+      ? String(value)
+      : ''
+  })
 }
 
 jest.mock('react-i18next', () => ({
@@ -164,7 +167,7 @@ function findAll(
 }
 
 function hasClass(tree: ElementLike, className: string): ElementLike[] {
-  return findAll(tree, (el) => String(el.props.className ?? '') === className)
+  return findAll(tree, (el) => el.props.className === className)
 }
 
 function collectText(node: unknown): string {
