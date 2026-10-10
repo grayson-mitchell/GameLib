@@ -1,9 +1,15 @@
 import type { WinetricksComponent } from 'common/types'
 
-// Phase 44, plan 01. Pure, dependency-free constants + resolver backing the
-// Winetricks Browse UI's "Curated" shortcut group and its Needs-GUI routing.
-// Mirrors `src/common/humble/viewFilters.ts`'s shape: no React, no i18n, no
-// I/O -- unit-testable from both the Common and Backend jest projects.
+// Phase 44 plan 01 introduced the curated shortcut and its resolver; Phase 45
+// plan 05 extends this module with the novice-first taxonomy the three-tier tab
+// renders: task groups (D-05/D-07), family descriptions (D-08), the suggestion
+// resolver (D-06) and a display-title cleanup. Pure and dependency-free: no
+// React, no i18n, no I/O -- unit-testable from both the Common and Backend jest
+// projects. Mirrors `src/common/humble/viewFilters.ts`'s shape.
+//
+// The hand-written list of verbs that cannot install unattended was retired
+// here (D-17): the set is now derived from the script's own download-by-hand
+// call sites (`metadata.ts`) and arrives on each catalog entry as `needsGui`.
 
 // D-01 / "decision #3": exactly 8 verbs, HAND-MAINTAINED, in this exact
 // order. Deliberately NOT derived from `cached` or `installed` state -- a
@@ -24,26 +30,188 @@ export const CURATED_WINETRICKS_VERBS = [
   'physx'
 ] as const
 
-// ROADMAP Phase 44 scope fence 3 / UI-SPEC `C-4`: these 8 verbs are the
-// complete set winetricks cannot install unattended under `-q` -- they pop a
-// zenity GUI and hang (or fail silently) instead of completing. Every row
-// for one of these verbs must never show an Install button in any state; it
-// is routed to the GUI launch affordance instead. See
-// `deriveRowState.ts`'s unconditional first-precedence branch.
-const NEEDS_GUI_VERBS_LIST = [
-  '3dmark03',
-  '3dmark06',
-  'fontxplorer',
-  'foobar2000',
-  'stalker_pripyat_bench',
-  'ubisoftconnect',
-  'unigine_heaven',
-  'utorrent'
+// D-05: the task groups the tab leads with, in render order. These are NOT
+// upstream's raw categories (dlls/fonts/settings) -- a group is a hand-picked
+// shortcut a novice recognises by purpose.
+export const TASK_GROUP_IDS = [
+  'runtimes',
+  'directx',
+  'fonts',
+  'media',
+  'wineSettings'
 ] as const
 
-export const NEEDS_GUI_WINETRICKS_VERBS: ReadonlySet<string> = new Set(
-  NEEDS_GUI_VERBS_LIST
-)
+export type WinetricksTaskGroupId = (typeof TASK_GROUP_IDS)[number]
+
+// D-07: HAND-MAINTAINED membership, in render order. Deliberately NOT derived
+// from `category` or from cached/installed state. Every member must exist in
+// the pinned script, be visible, not be a needs-GUI verb, and carry a family
+// of the same group; `__tests__/verbs.test.ts` pins all four against the
+// committed script excerpt, so a renamed or dropped upstream verb turns that
+// test red instead of silently shrinking a group. A group is a shortcut VIEW:
+// its members also stay in the catalog the "Everything else" tier renders.
+export const TASK_GROUP_MEMBERS: Readonly<
+  Record<WinetricksTaskGroupId, readonly string[]>
+> = {
+  runtimes: [
+    'vcrun2022',
+    'vcrun2019',
+    'vcrun2013',
+    'vcrun2012',
+    'vcrun2010',
+    'vcrun2008',
+    'dotnet48',
+    'dotnet40',
+    'vb6run'
+  ],
+  directx: [
+    'd3dx9',
+    'd3dx10',
+    'd3dx11_43',
+    'd3dcompiler_43',
+    'd3dcompiler_47',
+    'dxvk',
+    'physx',
+    'xact',
+    'xinput'
+  ],
+  fonts: ['corefonts', 'tahoma', 'arial', 'times', 'cjkfonts'],
+  media: ['wmp9', 'wmp10', 'wmp11', 'quartz', 'mf'],
+  wineSettings: [
+    'fontsmooth=rgb',
+    'fontsmooth=gray',
+    'fontsmooth=disable',
+    'csmt=on',
+    'csmt=off',
+    'videomemorysize=default',
+    'videomemorysize=2048',
+    'vd=1024x768',
+    'vd=off'
+  ]
+}
+
+// D-08: the 13 verb families whose description the row shows in place of the
+// raw upstream title.
+export const FAMILY_KEYS = [
+  'vcrun',
+  'dotnet',
+  'vbrun',
+  'd3dx',
+  'dxvk',
+  'physx',
+  'xactXinput',
+  'fonts',
+  'media',
+  'fontsmooth',
+  'videomemorysize',
+  'csmt',
+  'vd'
+] as const
+
+export type WinetricksFamilyKey = (typeof FAMILY_KEYS)[number]
+
+// HAND-MAINTAINED family -> task group assignment (pinned by the D-07 test).
+const FAMILY_GROUP: Readonly<
+  Record<WinetricksFamilyKey, WinetricksTaskGroupId>
+> = {
+  vcrun: 'runtimes',
+  dotnet: 'runtimes',
+  vbrun: 'runtimes',
+  d3dx: 'directx',
+  dxvk: 'directx',
+  physx: 'directx',
+  xactXinput: 'directx',
+  fonts: 'fonts',
+  media: 'media',
+  fontsmooth: 'wineSettings',
+  videomemorysize: 'wineSettings',
+  csmt: 'wineSettings',
+  vd: 'wineSettings'
+}
+
+// HAND-MAINTAINED verb-prefix table for every family except `fonts`, which is
+// keyed on the `fonts` category instead. First match wins. `dxvk` is anchored
+// so it does NOT swallow the separate `dxvk_nvapi*` verbs; `mf` is anchored so
+// it does not swallow `mfc42` and friends.
+const FAMILY_PATTERNS: ReadonlyArray<
+  readonly [Exclude<WinetricksFamilyKey, 'fonts'>, RegExp]
+> = [
+  ['vcrun', /^vcrun/],
+  ['dotnet', /^dotnet\d/],
+  ['vbrun', /^vb\d+run$/],
+  ['d3dx', /^(d3dx|d3dcompiler_)/],
+  ['dxvk', /^dxvk\d*$/],
+  ['physx', /^physx$/],
+  ['xactXinput', /^(xact|xinput)/],
+  ['media', /^(wmp\d+$|quartz|mf$)/],
+  ['fontsmooth', /^fontsmooth=/],
+  ['videomemorysize', /^videomemorysize=/],
+  ['csmt', /^csmt=/],
+  ['vd', /^vd=/]
+]
+
+/**
+ * D-08's classifier. Maps a component to one of the 13 family keys by verb
+ * prefix (or the `fonts` category) plus the task group that family belongs
+ * to. Returns null for a verb outside every family, whose row falls back to
+ * the cleaned upstream title.
+ */
+export function familyFor(c: {
+  verb: string
+  category: string
+}): { family: WinetricksFamilyKey; group: WinetricksTaskGroupId } | null {
+  if (c.category === 'fonts') {
+    return { family: 'fonts', group: FAMILY_GROUP.fonts }
+  }
+  for (const [family, pattern] of FAMILY_PATTERNS) {
+    if (pattern.test(c.verb)) {
+      return { family, group: FAMILY_GROUP[family] }
+    }
+  }
+  return null
+}
+
+// D-06: PCGamingWiki reports the Direct3D major versions a game uses; these
+// are the runtime verbs each one calls for.
+const DIRECT3D_VERBS: Readonly<Record<string, readonly string[]>> = {
+  '9': ['d3dx9'],
+  '10': ['d3dx10', 'd3dcompiler_43'],
+  '11': ['d3dx11_43', 'd3dcompiler_47']
+}
+
+/**
+ * Reads the leading integer of each version string (PCGamingWiki values look
+ * like `9`, `9.0c`, `11`) and returns the verbs for 9/10/11, de-duplicated in
+ * first-seen order. Any other version maps to nothing.
+ */
+export function verbsForDirect3DVersions(
+  versions: readonly string[]
+): string[] {
+  const verbs: string[] = []
+  for (const version of versions) {
+    const major = /^\s*(\d+)/.exec(version)?.[1]
+    for (const verb of (major && DIRECT3D_VERBS[major]) || []) {
+      if (!verbs.includes(verb)) {
+        verbs.push(verb)
+      }
+    }
+  }
+  return verbs
+}
+
+function resolveVerbs(
+  catalog: readonly WinetricksComponent[],
+  verbs: readonly string[]
+): WinetricksComponent[] {
+  const resolved: WinetricksComponent[] = []
+  for (const verb of verbs) {
+    const match = catalog.find((component) => component.verb === verb)
+    if (match) {
+      resolved.push(match)
+    }
+  }
+  return resolved
+}
 
 /**
  * D-03's resolver. For each verb in `CURATED_WINETRICKS_VERBS`, in curated
@@ -66,54 +234,66 @@ export const NEEDS_GUI_WINETRICKS_VERBS: ReadonlySet<string> = new Set(
 export function resolveCuratedComponents(
   all: readonly WinetricksComponent[]
 ): WinetricksComponent[] {
-  const resolved: WinetricksComponent[] = []
-  for (const verb of CURATED_WINETRICKS_VERBS) {
-    const match = all.find((component) => component.verb === verb)
-    if (match) {
-      resolved.push(match)
-    }
-  }
-  return resolved
+  return resolveVerbs(all, CURATED_WINETRICKS_VERBS)
 }
 
-// RED-phase inert stubs (45-05 task 1): type-correct, behaviourless.
-export const TASK_GROUP_IDS = [
-  'runtimes',
-  'directx',
-  'fonts',
-  'media',
-  'wineSettings'
-] as const
-export type WinetricksTaskGroupId = (typeof TASK_GROUP_IDS)[number]
-export const TASK_GROUP_MEMBERS: Readonly<
-  Record<WinetricksTaskGroupId, readonly string[]>
-> = { runtimes: [], directx: [], fonts: [], media: [], wineSettings: [] }
-export const FAMILY_KEYS = [] as const
-export type WinetricksFamilyKey = string
-export function familyFor(c: {
-  verb: string
-  category: string
-}): { family: WinetricksFamilyKey; group: WinetricksTaskGroupId } | null {
-  return c.verb === '' ? { family: '', group: 'runtimes' } : null
-}
-export function verbsForDirect3DVersions(
-  versions: readonly string[]
-): string[] {
-  return versions.length < 0 ? ['x'] : []
-}
+/**
+ * D-06's resolver for the "Suggested for this game" group. Game-specific rows
+ * come first: the known-fixes verbs, then the verbs implied by the game's
+ * Direct3D versions, de-duplicated. They resolve ONLY against `catalog` (the
+ * visible catalog the backend returns), so a hidden or unknown verb named by
+ * either source is skipped silently (T-45-14). The curated 8 follow, minus any
+ * verb already shown game-specifically. With no per-game signal `gameSpecific`
+ * is empty and `curated` is the full curated set, so the group is never empty
+ * while the curated verbs resolve. Returns the same component objects present
+ * in `catalog`.
+ */
 export function resolveSuggestedComponents(input: {
   catalog: readonly WinetricksComponent[]
   knownFixVerbs: readonly string[]
   direct3DVersions: readonly string[]
 }): { gameSpecific: WinetricksComponent[]; curated: WinetricksComponent[] } {
-  return { gameSpecific: [], curated: input.catalog.length < 0 ? [] : [] }
+  const { catalog, knownFixVerbs, direct3DVersions } = input
+  const gameSpecific: WinetricksComponent[] = []
+  for (const component of resolveVerbs(catalog, [
+    ...knownFixVerbs,
+    ...verbsForDirect3DVersions(direct3DVersions)
+  ])) {
+    if (!gameSpecific.includes(component)) {
+      gameSpecific.push(component)
+    }
+  }
+  const curated = resolveCuratedComponents(catalog).filter(
+    (component) => !gameSpecific.includes(component)
+  )
+  return { gameSpecific, curated }
 }
+
+/**
+ * Resolves a task group's members against `catalog`, in `TASK_GROUP_MEMBERS`
+ * order, skipping silently any member the catalog lacks. Returns the SAME
+ * component objects and never removes anything from `catalog` (D-07: a group
+ * is a shortcut view, not a partition).
+ */
 export function resolveTaskGroup(
   catalog: readonly WinetricksComponent[],
   id: WinetricksTaskGroupId
 ): WinetricksComponent[] {
-  return id === 'runtimes' && catalog.length < 0 ? [] : []
+  return resolveVerbs(catalog, TASK_GROUP_MEMBERS[id])
 }
+
+// A trailing parenthesised group, closed (`(Adobe, 2019)`) or truncated by the
+// upstream list output (`(concrt140.dll,mfc140.dll`). Anchored to the end and
+// free of nested quantifiers.
+const TRAILING_GROUP_RE = /\s*\([^()]*\)?\s*$/
+
+/**
+ * Strips ONE trailing parenthesised group from an upstream title (they carry
+ * DLL lists and publisher/year). A title that is nothing but a group is kept
+ * whole so the result is never empty. The caller keeps the full upstream
+ * title for the native `title` tooltip.
+ */
 export function displayTitle(title: string): string {
-  return title
+  const stripped = title.replace(TRAILING_GROUP_RE, '').trim()
+  return stripped === '' ? title.trim() : stripped
 }

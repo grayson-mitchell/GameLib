@@ -29,7 +29,7 @@ const FIXTURE_SCRIPT = readFileSync(
   'utf8'
 )
 const FIXTURE_METADATA = parseWinetricksMetadata(FIXTURE_SCRIPT)
-const FIXTURE_NEEDS_GUI = deriveNeedsGuiVerbs(FIXTURE_SCRIPT)
+const FIXTURE_GUI_ONLY = deriveNeedsGuiVerbs(FIXTURE_SCRIPT)
 
 const GROUP_CATEGORY: Record<(typeof TASK_GROUP_IDS)[number], string> = {
   runtimes: 'dlls',
@@ -45,7 +45,7 @@ function fixtureCatalog(): WinetricksComponent[] {
     title: m.title ?? m.verb,
     category: m.category,
     cached: false,
-    needsGui: FIXTURE_NEEDS_GUI.has(m.verb)
+    needsGui: FIXTURE_GUI_ONLY.has(m.verb)
   }))
 }
 
@@ -70,12 +70,12 @@ function membershipProblems(
       const entry = {
         verb,
         category: meta.category,
-        needsGui: FIXTURE_NEEDS_GUI.has(verb)
+        needsGui: FIXTURE_GUI_ONLY.has(verb)
       }
       if (!isVisibleVerb(entry)) {
         problems.push(`${group}/${verb}: not visible`)
       }
-      if (FIXTURE_NEEDS_GUI.has(verb)) {
+      if (FIXTURE_GUI_ONLY.has(verb)) {
         problems.push(`${group}/${verb}: derived needs-GUI verb`)
       }
       const family = familyFor({ verb, category: meta.category })

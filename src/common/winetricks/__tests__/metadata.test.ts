@@ -23,7 +23,7 @@ const FIXTURE_SCRIPT = readFileSync(
   'utf8'
 )
 
-const NEEDS_GUI_VERBS = [
+const MANUAL_DOWNLOAD_VERBS = [
   '3dmark03',
   '3dmark06',
   'foobar2000',
@@ -118,7 +118,7 @@ describe('parseWinetricksMetadata', () => {
 describe('deriveNeedsGuiVerbs', () => {
   it('against the committed fixture, returns exactly the six w_download_manual callers', () => {
     const result = deriveNeedsGuiVerbs(FIXTURE_SCRIPT)
-    expect([...result].sort()).toEqual([...NEEDS_GUI_VERBS].sort())
+    expect([...result].sort()).toEqual([...MANUAL_DOWNLOAD_VERBS].sort())
   })
 
   it('does not include gdiplus_winxp or protectionid (media=manual_download, ordinary w_download)', () => {
@@ -142,7 +142,7 @@ describe('deriveNeedsGuiVerbs', () => {
     const result = deriveNeedsGuiVerbs(sabotaged)
     expect(result.has('foobar2000')).toBe(false)
     expect([...result].sort()).toEqual(
-      NEEDS_GUI_VERBS.filter((v) => v !== 'foobar2000').sort()
+      MANUAL_DOWNLOAD_VERBS.filter((v) => v !== 'foobar2000').sort()
     )
   })
 })
