@@ -47,7 +47,7 @@ import {
   setupWineEnvVars,
   validWine
 } from '../launcher'
-import { chmod, readFile } from 'fs/promises'
+import { chmod, readFile, stat } from 'fs/promises'
 import {
   any_gpu_supports_version,
   get_nvngx_path,
@@ -66,6 +66,11 @@ import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import './dxmt'
 import { Game } from '../../common/types/game_manager'
 import { parseWinetricksListAll } from './winetricksListParse'
+import {
+  deriveNeedsGuiVerbs,
+  parseWinetricksMetadata
+} from 'common/winetricks/metadata'
+import { filterVisibleCatalog } from 'common/winetricks/visibility'
 import {
   appendLogLine,
   classifyWinetricksLine,
@@ -522,6 +527,14 @@ let installingComponent = ''
 // has resolved.
 const catalogCache = new Map<string, WinetricksComponent[]>()
 
+// Phase 45 Plan 06 (D-19/D-17): what `Winetricks.scriptMetadata` derives from
+// the downloaded script, cached by the script's `mtimeMs:size`.
+type ScriptMetadata = {
+  byVerb: ReturnType<typeof parseWinetricksMetadata>
+  needsGui: ReturnType<typeof deriveNeedsGuiVerbs>
+}
+let scriptMetadataCache: { key: string; value: ScriptMetadata } | null = null
+
 function catalogCacheKey(runner: Runner, appName: string): string {
   return `${runner}:${appName}`
 }
@@ -864,12 +877,76 @@ export const Winetricks = {
         { LANG: 'C', LC_ALL: 'C' }
       )
       const components = parseWinetricksListAll(output ?? [])
-      if (components.length > 0) {
-        catalogCache.set(catalogCacheKey(runner, appName), components)
+
+      // D-19/D-17: annotate each verb from the script already on disk -- no
+      // second wine or winetricks invocation. When the script cannot be read
+      // the components stay unannotated (and, with no `needsGui`, only the
+      // category half of D-09 applies) rather than failing the whole list.
+      const metadata = await Winetricks.scriptMetadata()
+      const merged = metadata
+        ? components.map((component): WinetricksComponent => {
+            const upstream = metadata.byVerb.get(component.verb)
+            return {
+              ...component,
+              // The untruncated upstream title; list-all's is cut to one line.
+              title: upstream?.title ?? component.title,
+              ...(upstream?.publisher !== undefined && {
+                publisher: upstream.publisher
+              }),
+              ...(upstream?.year !== undefined && { year: upstream.year }),
+              ...(upstream?.media !== undefined && { media: upstream.media }),
+              ...(upstream?.conflicts !== undefined && {
+                conflicts: upstream.conflicts
+              }),
+              ...(upstream?.homepage !== undefined && {
+                homepage: upstream.homepage
+              }),
+              needsGui: metadata.needsGui.has(component.verb)
+            }
+          })
+        : components
+
+      // D-09: the renderer only ever sees verbs it may install. The cache the
+      // apply guard validates against holds the same filtered list.
+      const visible = filterVisibleCatalog(merged)
+      if (visible.length > 0) {
+        catalogCache.set(catalogCacheKey(runner, appName), visible)
       }
-      return components
+      return visible
     } catch {
       return []
+    }
+  },
+  // D-19: parses the already-downloaded `${toolsPath}/winetricks` -- a fixed
+  // path, never a renderer-supplied one -- and caches the result keyed
+  // `${mtimeMs}:${size}`, so a script re-downloaded by the 7-day cache is
+  // picked up and an unchanged one is read once. Returns null (after one
+  // warning) when the file cannot be stat-ed or read.
+  //
+  // On the umu path the winetricks that actually runs is umu's own, which may
+  // differ in version from this download; metadata still comes from the
+  // downloaded script (acceptable, recorded).
+  scriptMetadata: async (): Promise<ScriptMetadata | null> => {
+    const path = `${toolsPath}/winetricks`
+    try {
+      const { mtimeMs, size } = await stat(path)
+      const key = `${mtimeMs}:${size}`
+      if (scriptMetadataCache?.key === key) {
+        return scriptMetadataCache.value
+      }
+      const scriptText = await readFile(path, 'utf8')
+      const value: ScriptMetadata = {
+        byVerb: parseWinetricksMetadata(scriptText),
+        needsGui: deriveNeedsGuiVerbs(scriptText)
+      }
+      scriptMetadataCache = { key, value }
+      return value
+    } catch (error) {
+      logWarning(
+        ['Could not read the winetricks script for its metadata:', error],
+        LogPrefix.WineTricks
+      )
+      return null
     }
   },
   // Phase 45 Plan 01 (D-01/T-45-01): used by `winetricksApplyGuard.ts` via

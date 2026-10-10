@@ -1,4 +1,5 @@
 import { WinetricksComponent } from 'common/types'
+import { isVisibleVerb } from 'common/winetricks/visibility'
 import { VERB_SHAPE_RE } from './winetricksListParse'
 
 // Phase 45 Plan 01 (D-11, T-45-01/T-45-02): shape-and-membership guard for
@@ -7,8 +8,8 @@ import { VERB_SHAPE_RE } from './winetricksListParse'
 // that guard, this one is NOT shape-only -- it also checks catalog
 // membership, because a verb string with legal shape but absent from the
 // real catalog (e.g. a stale/forged value) must never reach
-// `Winetricks.install`. Plan 45-06 adds a visibility rule on top of this;
-// this function stays shape-and-membership only.
+// `Winetricks.install`. Plan 45-06 adds a visibility re-check (D-09/D-17) on
+// the matched catalog entry.
 export const WINETRICKS_APPLY_MAX_VERBS = 100
 
 export class WinetricksApplyRejected extends Error {
@@ -50,10 +51,26 @@ export function assertWinetricksApplyPayload(
     )
   }
 
-  const catalogVerbs = new Set(catalog.map((component) => component.verb))
-  if (!verbStrings.every((verb) => catalogVerbs.has(verb))) {
+  const catalogByVerb = new Map(
+    catalog.map((component) => [component.verb, component])
+  )
+  if (!verbStrings.every((verb) => catalogByVerb.has(verb))) {
     throw new WinetricksApplyRejected(
       'winetricksApply: verbs must be present in the catalog'
+    )
+  }
+
+  // D-09/D-17, T-45-16: `listAvailable` already returns only visible verbs;
+  // re-check the matched entry anyway so a stale or unfiltered catalog (an
+  // older cache, a test double) can never smuggle `annihilate`, an app, a
+  // benchmark or a needs-GUI verb through to `Winetricks.install`.
+  const hidden = verbStrings.filter((verb) => {
+    const entry = catalogByVerb.get(verb)
+    return entry === undefined || !isVisibleVerb(entry)
+  })
+  if (hidden.length > 0) {
+    throw new WinetricksApplyRejected(
+      'winetricksApply: verbs must be installable (hidden verbs are refused)'
     )
   }
 
