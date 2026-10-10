@@ -41,8 +41,8 @@
     margin: 0;
     padding: var(--space-xs, 0.5rem) var(--space-sm, 0.75rem);
     background: var(--body-background, #070a0b);
-    // The unchecked-checkbox border step, not `--border-color`: that token
-    // resolves to an invisible grey in 10 of 13 themes.
+    // The unchecked-checkbox border step, not the generic border-colour
+    // token, which resolves to an invisible grey in 10 of 13 themes.
     border: 1px solid var(--neutral-05, #a8aeaf);
     border-radius: var(--space-3xs, 0.25rem);
     color: var(--text-default, #caf3fd);

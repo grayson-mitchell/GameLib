@@ -2,12 +2,13 @@
 // groups (UI-SPEC Layout, "Component carry-forward note").
 //
 // The `FilterFacetGroup` contract under this tab's own scope. That component's
-// hover and focus colour is `var(--navbar-active, ...)`, banned on this surface
-// (D-21): each `--navbar-*` and `--text-hover` consumption traced to one of
+// hover and focus colour comes from the navbar custom-property family, banned on
+// this surface (D-21): each consumption of that family or of the hover-text
+// token traced to one of
 // Phase 44's nine live-gate contrast defects. Hover and focus use `--accent`
 // directly instead -- the one deliberate deviation from the precedent
 // (UI-SPEC Color item 5). `--accent` resolves in every theme block, unlike
-// `--navbar-active`, which is declared in only 4 of 10+, so only the terminal
+// the navbar active-colour property, which is declared in only 4 of 10+, so only the terminal
 // hex fallback is needed. `__tests__/tokenCensus.test.ts` enforces the ban.
 //
 // A group body here grows with its rows inside the tab's single page scroll

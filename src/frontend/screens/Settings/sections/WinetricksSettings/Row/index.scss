@@ -7,8 +7,9 @@
 //
 // D-21 token discipline. Colours are the theme-adaptive aliases UI-SPEC Color
 // names, each with a terminal hex fallback so a theme block that lacks the
-// property cannot drop the whole declaration. None of `--navbar-*`,
-// `--text-hover`, the raw `--status-*` pair or `--border-color` is consumed:
+// property cannot drop the whole declaration. None of the navbar
+// custom-property family, the hover-text token, the raw status-colour pair or the
+// generic border-colour token is consumed:
 // each traced to one of Phase 44's nine live-gate contrast defects, and
 // `__tests__/tokenCensus.test.ts` fails the build if one returns.
 //
@@ -86,7 +87,8 @@
     }
 
     // The unchecked border is the global neutral-scale step, not
-    // `--border-color`, which resolves to an invisible grey in 10 of 13 themes.
+    // the generic border-colour token, which resolves to an invisible grey in 10
+    // of 13 themes.
     &[aria-checked='true'] .WinetricksRow__box {
       background: var(--accent, #0080ff);
       border-color: var(--accent, #0080ff);

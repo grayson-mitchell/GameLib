@@ -20,8 +20,8 @@ type Props = {
 // The `FilterFacetGroup` disclosure CONTRACT (caret rotation, uppercase
 // bold-tracked label, tabular-nums count badge) declared under this tab's own
 // CSS scope. It is deliberately not the NavShell component instance: that one
-// is selector-scoped to `.NavShell__tier2Portal` and consumes the `--navbar-*`
-// chain this surface is banned from using (D-21), and reusing a component
+// is selector-scoped to `.NavShell__tier2Portal` and consumes the navbar
+// custom-property chain this surface is banned from using (D-21), and reusing a component
 // across an unrelated ancestor scope is the cross-context CSS leak this
 // codebase has already paid for twice.
 //
