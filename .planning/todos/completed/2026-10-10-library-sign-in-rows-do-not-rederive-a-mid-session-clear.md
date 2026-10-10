@@ -10,6 +10,9 @@ files:
   - src/frontend/screens/Library/LibrarySignInNotice/index.tsx
   - src/frontend/screens/Library/librarySignInRows.ts
   - src/frontend/state/GlobalState.tsx
+completed: 2026-10-11
+status: "RESOLVED 2026-10-10 by 9f8453c72 fix(signInProbe): publish each store's outcome immediately, not once per pass. Root cause was in the backend, not the renderer: runSignInProbePass batched publishSignInProbeOutcomes once after Promise.all over all five stores, so a fast store's cleared verdict waited on the slowest sibling probe; remount was the only other render trigger. Regression test in src/backend/signInProbe/__tests__/pass.test.ts. Live-verified on macOS 2026-10-10 (see the SteamSyncNotice false-failure todo, found_by). This file was not moved when the fix landed; closed 2026-10-11."
+resolved_by: 9f8453c72
 ---
 
 # A cleared verdict reaches the Library only on remount
