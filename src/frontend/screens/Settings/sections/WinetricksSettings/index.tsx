@@ -12,6 +12,7 @@ import {
   type VerbErrorMap
 } from 'common/winetricks/deriveRowState'
 import {
+  displayTitle,
   resolveSuggestedComponents,
   resolveTaskGroup,
   TASK_GROUP_IDS
@@ -27,6 +28,7 @@ import SuggestedGroup from './SuggestedGroup'
 import TaskGroup from './TaskGroup'
 import EverythingElseGroup from './EverythingElseGroup'
 import WinetricksRow from './Row'
+import StickyBar from './StickyBar'
 import type { RenderWinetricksRow } from './Row'
 
 // Phase 45 (D-01/D-02/D-05-D-08/D-10/D-11): the Winetricks Settings tab. Three
@@ -382,21 +384,18 @@ export default function WinetricksSettings() {
     direct3DVersions
   })
 
-  let installedCount = 0
-  let failedCount = 0
-  if (run) {
-    for (const outcome of Object.values(run.outcomes)) {
-      if (outcome === 'installed') installedCount++
-      if (outcome === 'failed') failedCount++
-    }
-  }
+  // D-11/D-12: rest until a run starts; in flight while it runs; done once it
+  // ends and stays done until the selection changes again.
+  const barMode: 'rest' | 'inFlight' | 'done' = isRunning
+    ? 'inFlight'
+    : isDone && selection.length === 0
+      ? 'done'
+      : 'rest'
 
-  const currentVerbTitle =
-    (run?.currentVerb &&
-      allComponents.find((c) => c.verb === run.currentVerb)?.title) ||
-    run?.currentVerb ||
-    ''
-  const currentIndex = run ? run.verbs.indexOf(run.currentVerb ?? '') + 1 : 0
+  function titleOf(verb: string): string {
+    const component = allComponents.find((c) => c.verb === verb)
+    return component ? displayTitle(component.title) : verb
+  }
 
   return (
     <div className="WinetricksSettings">
@@ -449,69 +448,16 @@ export default function WinetricksSettings() {
       )}
 
       {!declined && !loadingAvailable && (
-        <div className="WinetricksSettings__bar">
-          {!isRunning && !isDone && (
-            <>
-              <span>
-                {tGamelib('winetricksBrowse.selectedCount', {
-                  count: selection.length,
-                  defaultValue: '{{count}} selected',
-                  defaultValue_one: '{{count}} selected'
-                })}
-              </span>
-              <button
-                type="button"
-                disabled={selection.length === 0 || queueState.busy}
-                aria-label={tGamelib('winetricksBrowse.applyAriaLabel', {
-                  count: selection.length,
-                  defaultValue: 'Apply {{count}} selected components',
-                  defaultValue_one: 'Apply {{count}} selected component'
-                })}
-                onClick={() => applyVerbs(selection)}
-              >
-                {tGamelib('winetricksBrowse.apply', 'Apply')}
-              </button>
-            </>
-          )}
-
-          {isRunning && (
-            <>
-              <span>
-                {tGamelib('winetricksBrowse.installingBar', {
-                  current: currentIndex,
-                  total: run?.verbs.length ?? 0,
-                  title: currentVerbTitle,
-                  defaultValue:
-                    'Installing {{current}} of {{total}} · {{title}}'
-                })}
-              </span>
-              <button type="button" onClick={() => cancelRemaining()}>
-                {tGamelib(
-                  'winetricksBrowse.cancelRemaining',
-                  'Cancel remaining'
-                )}
-              </button>
-            </>
-          )}
-
-          {isDone && (
-            <span>
-              {tGamelib('winetricksBrowse.installedCount', {
-                count: installedCount,
-                defaultValue: '{{count}} installed',
-                defaultValue_one: '{{count}} installed'
-              })}
-              {failedCount > 0 && (
-                <span className="WinetricksSettings__barFailed">
-                  {tGamelib('winetricksBrowse.failedCount', {
-                    count: failedCount,
-                    defaultValue: '{{count}} failed',
-                    defaultValue_one: '{{count}} failed'
-                  })}
-                </span>
-              )}
-            </span>
-          )}
+        <div className="WinetricksSettings__dock">
+          <StickyBar
+            mode={barMode}
+            selectedCount={selection.length}
+            run={run}
+            titleOf={titleOf}
+            applyDisabled={queueState.busy}
+            onApply={() => void applyVerbs(selection)}
+            onCancelRemaining={() => void cancelRemaining()}
+          />
         </div>
       )}
     </div>

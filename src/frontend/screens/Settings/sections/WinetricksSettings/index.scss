@@ -73,45 +73,15 @@
     color: var(--text-secondary, #8b939a);
   }
 
-  // D-11/D-12: sticky action bar for the apply/in-flight/done states.
-  // `position: sticky` here never opens a second scroll region of its own
-  // -- it just pins this bar to the bottom of whichever ancestor is
-  // actually scrolling (`.App .content`).
-  &__bar {
+  // D-11/D-12: the dock pins the log disclosure and the action bar to the
+  // bottom of the Settings page. `position: sticky` never opens a second scroll
+  // region of its own -- it pins the dock to whichever ancestor is actually
+  // scrolling (`.App .content`).
+  &__dock {
     position: sticky;
     bottom: 0;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     min-width: 0;
-    gap: var(--space-sm, 0.75rem);
-    padding: var(--space-sm, 0.75rem);
-    background: var(--input-background, #272f31);
-
-    button {
-      background: var(--accent, #0080ff);
-      color: var(--text-default, #ffffff);
-      border: 0;
-      border-radius: 4px;
-      padding: var(--space-2xs, 0.25rem) var(--space-sm, 0.75rem);
-      cursor: pointer;
-
-      &:disabled {
-        cursor: default;
-        opacity: 0.5;
-      }
-    }
-  }
-
-  // The Done state's " · " separator between the installed and failed
-  // counts is drawn here, never as a JSX literal -- see 45-01-PLAN.md's
-  // sticky bar spec.
-  &__barFailed {
-    color: var(--danger, #e74c3c);
-
-    &::before {
-      content: ' · ';
-      color: var(--text-secondary, #8b939a);
-    }
   }
 }
