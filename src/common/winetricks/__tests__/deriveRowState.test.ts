@@ -1,202 +1,260 @@
+import type { WinetricksQueueRun } from 'common/types'
 import {
-  attributeProgressEvent,
   clearVerbError,
   deriveRowState,
+  foldRunOutcomes,
   VerbErrorMap
 } from '../deriveRowState'
 
-// A verb from NEEDS_GUI_WINETRICKS_VERBS (src/common/winetricks/verbs.ts),
-// used across the precedence tests below.
-const NEEDS_GUI_VERB = 'ubisoftconnect'
+type RunSlice = Pick<WinetricksQueueRun, 'outcomes' | 'currentVerb' | 'status'>
 
 function flagged(verb: string): VerbErrorMap {
   return { [verb]: true }
 }
 
+function running(
+  outcomes: WinetricksQueueRun['outcomes'],
+  currentVerb = ''
+): RunSlice {
+  return { outcomes, currentVerb, status: 'running' }
+}
+
+// One case per precedence rule that a wrong ordering would fail.
 describe('deriveRowState precedence', () => {
-  it('Test 1: needsGui wins even when installing, installed, AND errored simultaneously', () => {
-    const state = deriveRowState({
-      verb: NEEDS_GUI_VERB,
-      installed: [NEEDS_GUI_VERB],
-      installing: true,
-      installingComponent: NEEDS_GUI_VERB,
-      erroredVerbs: flagged(NEEDS_GUI_VERB)
-    })
-    expect(state).toBe('needsGui')
+  it('rule 1: installing beats installed for the current verb of a running run', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: ['vcrun2019'],
+        selected: true,
+        run: running({ vcrun2019: 'installing' }, 'vcrun2019'),
+        erroredVerbs: flagged('vcrun2019')
+      })
+    ).toBe('installing')
   })
 
-  it('Test 2: installing === true and installingComponent === verb returns installing', () => {
-    const state = deriveRowState({
-      verb: 'vcrun2019',
-      installed: [],
-      installing: true,
-      installingComponent: 'vcrun2019',
-      erroredVerbs: {}
-    })
-    expect(state).toBe('installing')
+  it('rule 2: installed beats queued, errored and selected', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: ['vcrun2019'],
+        selected: true,
+        run: running({ vcrun2019: 'pending' }, 'vcrun2013'),
+        erroredVerbs: flagged('vcrun2019')
+      })
+    ).toBe('installed')
   })
 
-  it('Test 3: a verb present in installed returns installed even when also flagged errored', () => {
-    const state = deriveRowState({
-      verb: 'vcrun2019',
-      installed: ['vcrun2019'],
-      installing: false,
-      installingComponent: '',
-      erroredVerbs: flagged('vcrun2019')
-    })
-    expect(state).toBe('installed')
+  it('rule 3: queued beats errored and selected while the run is running', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: [],
+        selected: true,
+        run: running({ vcrun2019: 'pending' }, 'vcrun2013'),
+        erroredVerbs: flagged('vcrun2019')
+      })
+    ).toBe('queued')
   })
 
-  it('Test 4: a verb flagged errored, not installed, not installing, returns errored', () => {
-    const state = deriveRowState({
-      verb: 'vcrun2019',
-      installed: [],
-      installing: false,
-      installingComponent: '',
-      erroredVerbs: flagged('vcrun2019')
-    })
-    expect(state).toBe('errored')
+  it('rule 4: errored beats selected', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: [],
+        selected: true,
+        run: null,
+        erroredVerbs: flagged('vcrun2019')
+      })
+    ).toBe('errored')
   })
 
-  it('Test 5: installing another verb, not installed/errored, returns installingElsewhere', () => {
-    const state = deriveRowState({
-      verb: 'vcrun2019',
-      installed: [],
-      installing: true,
-      installingComponent: 'vcrun2013',
-      erroredVerbs: {}
-    })
-    expect(state).toBe('installingElsewhere')
+  it('rule 5: selected when ticked and nothing outranks it', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: [],
+        selected: true,
+        run: null,
+        erroredVerbs: {}
+      })
+    ).toBe('selected')
   })
 
-  it('Test 6: none of the above returns available', () => {
-    const state = deriveRowState({
-      verb: 'vcrun2019',
-      installed: [],
-      installing: false,
-      installingComponent: '',
-      erroredVerbs: {}
-    })
-    expect(state).toBe('available')
-  })
-
-  it('Test 7: installing === false with a stale non-empty installingComponent returns available', () => {
-    const state = deriveRowState({
-      verb: 'vcrun2019',
-      installed: [],
-      installing: false,
-      installingComponent: 'vcrun2019',
-      erroredVerbs: {}
-    })
-    expect(state).toBe('available')
+  it('rule 6: available when nothing applies', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: [],
+        selected: false,
+        run: null,
+        erroredVerbs: {}
+      })
+    ).toBe('available')
   })
 })
 
-describe('attributeProgressEvent', () => {
-  it('Test 8: empty installingComponent returns the SAME object reference, even on an error message', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['wine: Unhandled page fault ERR:'],
-      installingComponent: ''
-    })
-    expect(result).toBe(current)
+describe('deriveRowState: the checkbox model', () => {
+  it('D-10: an installed row is never selectable -- installed wins even when selected is true', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: ['vcrun2019'],
+        selected: true,
+        run: null,
+        erroredVerbs: {}
+      })
+    ).toBe('installed')
   })
 
-  it('Test 9: an error message (case-insensitive) flags the installingComponent verb', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['wine: Unhandled page fault ERR:'],
-      installingComponent: 'xact'
-    })
-    expect(result).not.toBe(current)
-    expect(result.xact).toBe(true)
+  it('D-13: a pending verb of a running run derives queued and the current verb derives installing', () => {
+    const run = running(
+      { vcrun2013: 'installing', vcrun2019: 'pending' },
+      'vcrun2013'
+    )
+    const base = { installed: [], selected: false, run, erroredVerbs: {} }
+    expect(deriveRowState({ ...base, verb: 'vcrun2019' })).toBe('queued')
+    expect(deriveRowState({ ...base, verb: 'vcrun2013' })).toBe('installing')
   })
 
-  it('Test 10: non-error messages return the SAME object reference (no state churn)', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['Installing xact...', 'Done'],
-      installingComponent: 'xact'
-    })
-    expect(result).toBe(current)
+  it('a verb that is not part of the run is unaffected by it', () => {
+    expect(
+      deriveRowState({
+        verb: 'physx',
+        installed: [],
+        selected: false,
+        run: running({ vcrun2019: 'pending' }, 'vcrun2013'),
+        erroredVerbs: {}
+      })
+    ).toBe('available')
   })
 
-  it('Test 11: attributing an already-flagged verb again returns the SAME object reference', () => {
-    const current: VerbErrorMap = flagged('xact')
-    const result = attributeProgressEvent(current, {
-      messages: ['wine: Unhandled page fault ERR:'],
-      installingComponent: 'xact'
-    })
-    expect(result).toBe(current)
+  it('a done run with a stale pending outcome does not lock the row as queued', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: [],
+        selected: false,
+        run: {
+          outcomes: { vcrun2019: 'pending' },
+          currentVerb: '',
+          status: 'done'
+        },
+        erroredVerbs: {}
+      })
+    ).toBe('available')
   })
 
-  it('Test 12: a " warn" message does NOT flag the verb', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['fixme: something not implemented WARN:'],
-      installingComponent: 'xact'
-    })
-    expect(result).toBe(current)
-    expect(result.xact).toBeUndefined()
+  it('a done run keeps a stale currentVerb from showing installing', () => {
+    expect(
+      deriveRowState({
+        verb: 'vcrun2019',
+        installed: [],
+        selected: false,
+        run: {
+          outcomes: { vcrun2019: 'installed' },
+          currentVerb: 'vcrun2019',
+          status: 'done'
+        },
+        erroredVerbs: {}
+      })
+    ).toBe('available')
   })
 
-  it('Test 13: " err" requires a leading space -- "terrible"/"Error:" at position 0 does not flag', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['This installer is terrible', 'Error: something went wrong'],
-      installingComponent: 'xact'
-    })
-    expect(result).toBe(current)
-    expect(result.xact).toBeUndefined()
+  it('a cancelled outcome derives available, or selected when ticked', () => {
+    const run: RunSlice = {
+      outcomes: { vcrun2019: 'cancelled' },
+      currentVerb: '',
+      status: 'done'
+    }
+    const base = { verb: 'vcrun2019', installed: [], run, erroredVerbs: {} }
+    expect(deriveRowState({ ...base, selected: false })).toBe('available')
+    expect(deriveRowState({ ...base, selected: true })).toBe('selected')
   })
 })
 
-// 2026-10-05 todo (failed install rarely reaches Failed): the backend's Done
-// event now carries `failed` from the winetricks exit code, so an install
-// that aborted without printing a " err" line is still attributed.
-describe('attributeProgressEvent: exit-code failure', () => {
-  it('a failed Done flags the verb even with no error-looking line', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['Done'],
-      installingComponent: 'xact',
-      failed: true
-    })
-    expect(result).not.toBe(current)
-    expect(result.xact).toBe(true)
-  })
-
-  it('a successful Done returns the SAME object reference', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['Done'],
-      installingComponent: 'xact',
-      failed: false
-    })
-    expect(result).toBe(current)
-  })
-
-  it('a failed Done with no verb (a GUI or list run) flags nothing', () => {
-    const current: VerbErrorMap = {}
-    const result = attributeProgressEvent(current, {
-      messages: ['Done'],
-      installingComponent: '',
-      failed: true
-    })
-    expect(result).toBe(current)
-  })
-
-  it('the flagged verb derives to errored once the install has stopped', () => {
-    const erroredVerbs = attributeProgressEvent(
+describe('foldRunOutcomes (D-12)', () => {
+  it('flags every verb whose outcome is failed', () => {
+    const result = foldRunOutcomes(
       {},
-      { messages: ['Done'], installingComponent: 'xact', failed: true }
+      {
+        verbs: ['a', 'b', 'c'],
+        outcomes: { a: 'failed', b: 'installed', c: 'failed' }
+      }
+    )
+    expect(result).toEqual({ a: true, c: true })
+  })
+
+  it('keeps unrelated flags while adding new ones', () => {
+    const current = flagged('old')
+    const result = foldRunOutcomes(current, {
+      verbs: ['a'],
+      outcomes: { a: 'failed' }
+    })
+    expect(result).toEqual({ old: true, a: true })
+    expect(result).not.toBe(current)
+  })
+
+  it('clears a flag when the verb outcome becomes installing', () => {
+    expect(
+      foldRunOutcomes(flagged('a'), {
+        verbs: ['a'],
+        outcomes: { a: 'installing' }
+      })
+    ).toEqual({})
+  })
+
+  it('clears a flag when the verb outcome becomes installed', () => {
+    expect(
+      foldRunOutcomes(flagged('a'), {
+        verbs: ['a'],
+        outcomes: { a: 'installed' }
+      })
+    ).toEqual({})
+  })
+
+  it('leaves a flag alone while the verb is pending or cancelled', () => {
+    const current = flagged('a')
+    expect(
+      foldRunOutcomes(current, { verbs: ['a'], outcomes: { a: 'pending' } })
+    ).toBe(current)
+    expect(
+      foldRunOutcomes(current, { verbs: ['a'], outcomes: { a: 'cancelled' } })
+    ).toBe(current)
+  })
+
+  it('returns the SAME reference for a null run', () => {
+    const current = flagged('a')
+    expect(foldRunOutcomes(current, null)).toBe(current)
+  })
+
+  it('returns the SAME reference when nothing changes (already flagged, or nothing failed)', () => {
+    const current = flagged('a')
+    expect(
+      foldRunOutcomes(current, { verbs: ['a'], outcomes: { a: 'failed' } })
+    ).toBe(current)
+    const empty: VerbErrorMap = {}
+    expect(
+      foldRunOutcomes(empty, { verbs: ['b'], outcomes: { b: 'installed' } })
+    ).toBe(empty)
+  })
+
+  it('a flagged verb derives errored once the run has stopped', () => {
+    const run: RunSlice = {
+      outcomes: { xact: 'failed' },
+      currentVerb: '',
+      status: 'done'
+    }
+    const erroredVerbs = foldRunOutcomes(
+      {},
+      { verbs: ['xact'], outcomes: run.outcomes }
     )
     expect(
       deriveRowState({
         verb: 'xact',
         installed: [],
-        installing: false,
-        installingComponent: 'xact',
+        selected: false,
+        run,
         erroredVerbs
       })
     ).toBe('errored')
@@ -204,7 +262,7 @@ describe('attributeProgressEvent: exit-code failure', () => {
 })
 
 describe('clearVerbError', () => {
-  it('Test 14: clearing a flagged verb returns a new map without it', () => {
+  it('clearing a flagged verb returns a new map without it', () => {
     const current: VerbErrorMap = { xact: true, vcrun2019: true }
     const result = clearVerbError(current, 'xact')
     expect(result).not.toBe(current)
@@ -212,7 +270,7 @@ describe('clearVerbError', () => {
     expect(result.vcrun2019).toBe(true)
   })
 
-  it('Test 15: clearing an unflagged verb returns the SAME object reference', () => {
+  it('clearing an unflagged verb returns the SAME object reference', () => {
     const current: VerbErrorMap = { vcrun2019: true }
     const result = clearVerbError(current, 'xact')
     expect(result).toBe(current)

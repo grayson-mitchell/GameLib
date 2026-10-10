@@ -1,131 +1,33 @@
-import { NEEDS_GUI_WINETRICKS_VERBS } from './verbs'
+import type { WinetricksQueueRun } from 'common/types'
 
-// Phase 44, plan 01. Pure row-state precedence + per-verb error attribution
-// for the Winetricks Browse UI. No React, no i18n, no I/O -- unit-testable
-// under the Common jest project's plain node environment.
-
-// Six mutually-exclusive action-slot states. The UI-SPEC's seventh row
-// variant, "Available + Cached", is DELIBERATELY NOT a member here: `cached`
-// is an orthogonal modifier carried on `WinetricksComponent` and rendered as
-// a badge alongside whichever one of these six states applies. Do not add a
-// seventh member for it.
-//
-// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
-// flagged the previously-exported form as a used-in-module finding). Its only
-// cross-file mention, `Row/index.tsx:231,234`, is a prose comment naming the
-// type in an exhaustiveness-guard error message -- never an import -- so
-// there is no external consumer to preserve.
-type WinetricksRowState =
+// RED-phase inert stub (45-05 task 2): type-correct, behaviourless.
+export type WinetricksRowState =
   | 'available'
+  | 'selected'
+  | 'queued'
   | 'installing'
-  | 'installingElsewhere'
   | 'installed'
-  | 'needsGui'
   | 'errored'
 
-// Per-verb error set. A plain readonly record (not a Set) so React state
-// identity comparisons stay cheap and the value is trivially serialisable.
 export type VerbErrorMap = Readonly<Record<string, true>>
 
-/**
- * The row-state precedence function. Order is load-bearing and matches the
- * ordinals below -- see `deriveRowState.test.ts` for a case per rule that
- * would pass under a wrong ordering.
- */
 export function deriveRowState(input: {
   verb: string
   installed: readonly string[]
-  installing: boolean
-  installingComponent: string
+  selected: boolean
+  run: Pick<WinetricksQueueRun, 'outcomes' | 'currentVerb' | 'status'> | null
   erroredVerbs: VerbErrorMap
 }): WinetricksRowState {
-  const { verb, installed, installing, installingComponent, erroredVerbs } =
-    input
-
-  // (1) C-4 / ROADMAP fence 3: unconditional, wins over every other state --
-  // a Needs-GUI verb must never show an Install affordance regardless of
-  // installing/installed/errored status.
-  if (NEEDS_GUI_WINETRICKS_VERBS.has(verb)) {
-    return 'needsGui'
-  }
-
-  // (2) This verb is the one currently installing.
-  if (installing && installingComponent === verb) {
-    return 'installing'
-  }
-
-  // (3) Already installed -- wins over a stale error flag from a prior run.
-  if (installed.includes(verb)) {
-    return 'installed'
-  }
-
-  // (4) Flagged by a prior attempt's error attribution.
-  if (erroredVerbs[verb]) {
-    return 'errored'
-  }
-
-  // (5) Some OTHER verb is installing right now.
-  if (installing) {
-    return 'installingElsewhere'
-  }
-
-  // (6) Default.
-  return 'available'
+  return input.verb === '' ? 'selected' : 'available'
 }
 
-/**
- * The correlation function RESEARCH Pitfall 2 identifies as unowned:
- * nothing in this repo today attributes a progress log line to the verb
- * that produced it. `ProgressDialog/index.tsx:68-91` classifies lines for
- * CSS colour only, in one flat shared log, with no per-verb attribution.
- * `payload.installingComponent` is the correlation key that makes
- * attribution possible here.
- *
- * Returns `current` UNCHANGED (same object reference) when there is no verb
- * to attribute to, when no message matches, or when the verb is already
- * flagged -- a fresh object on every progress event would re-render all
- * (potentially 567) rows for no reason.
- */
-export function attributeProgressEvent(
+export function foldRunOutcomes(
   current: VerbErrorMap,
-  payload: { messages: string[]; installingComponent: string; failed?: boolean }
+  run: Pick<WinetricksQueueRun, 'verbs' | 'outcomes'> | null
 ): VerbErrorMap {
-  const { installingComponent, messages, failed } = payload
-
-  if (installingComponent === '') {
-    return current
-  }
-
-  if (current[installingComponent]) {
-    return current
-  }
-
-  // Borrowed verbatim from ProgressDialog/index.tsx:68-91 for the string
-  // test only -- including its exact looseness (a leading-space substring
-  // match, not a word boundary). Do not tighten this independently of that
-  // file; they are meant to agree on what counts as an error line.
-  //
-  // `failed` is the backend's Done-event verdict from winetricks' exit code
-  // (2026-10-05 todo): a failed install whose abort line carried no " err"
-  // substring, or whose last lines never reached a progress tick, is still
-  // attributed here.
-  const hasError =
-    failed === true ||
-    messages.some((message) => message.toLowerCase().includes(' err'))
-
-  if (!hasError) {
-    return current
-  }
-
-  return { ...current, [installingComponent]: true }
+  return run === null ? current : current
 }
 
-/**
- * Clears a verb's error flag. Called when a fresh install attempt starts on
- * that verb (UI-SPEC row Errored: "Clears back to Available the moment a
- * new install attempt starts on that verb"). Returns `current` unchanged
- * when the verb was not flagged.
- */
 export function clearVerbError(
   current: VerbErrorMap,
   verb: string
