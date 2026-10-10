@@ -1360,7 +1360,7 @@ Plans:
 
 ---
 
-### Phase 34.16: macOS runner onedir x64 CI leg — publish the workflow to the default branch, source and digest-verify darwin archives, and extend the runner-bundle guard beyond arm64 (INSERTED) — ⏸ CLOSED PARTIAL 2026-08-27 — superseded by Phase 34.18 (arm64 ACHIEVED; x64 UNACHIEVABLE per F-34.16-G)
+### Phase 34.16: macOS runner onedir x64 CI leg — publish the workflow to the default branch, source and digest-verify darwin archives, and extend the runner-bundle guard beyond arm64 (INSERTED) — ⛔ SUPERSEDED by Phase 34.18 (closed 2026-08-27, confirmed 2026-10-11; permanent — x64 retired, arm64 achieved; live-gate verdict stays FAIL)
 
 **Goal:** Close the six phase-34.9 deferred items that were routed to "a follow-up phase" which
 did not exist until now (2026-08-22). All six share **one blocking precondition**: the
@@ -1480,6 +1480,15 @@ keep describing the goal they were actually executed against.
 - **No phase verification was run**, and none should be: a verifier scoring this phase against its
   stated goal would correctly return FAIL. The honest record is this block, not a green check.
 
+- **Closure confirmed 2026-10-11 — Phase 34.18 is COMPLETE** (7/7 plans, `34.18-VERIFICATION.md`
+  `passed` 10/10, `34.18-LIVE-GATE.md` PASS 21/21, run `33047720816`, three real arm64 digests
+  pinned). Every disposition this phase left open has landed there: `F-34.16-D` (x64 half),
+  `F-34.16-G`, REQ-34.9-02/-03/-04, REQ-34.16-01/-02/-04 (via REQ-34.18-09; -04 superseded by
+  REQ-34.18-03) and the 34.9 ledger items. Nothing remains open against this phase, so it is
+  **permanently superseded, not parked or partial**. It is NOT marked complete: the `34.16-06`
+  live-gate verdict stays `FAIL` (1 pass / 1 fail / 4 not attempted) and its x64 criteria were
+  retired, not met. Salvage of any x64 work means a NEW phase, not resuming these plans.
+
 - **`F-34.16-D` — disposition dated 2026-08-27 (Phase 34.18), x64 half ONLY.** The **arm64 half was
   already FIXED and proven live** in CI by plans 34.16-07/-08/-09 (the three-form PyInstaller
   extractor, the two-layer version-drift tripwire, and a clean local arm64 onedir build) and is NOT
@@ -1591,7 +1600,7 @@ already `CLOSED 2026-08-25` with its residual re-homed to items 12/13, so 34.18 
 rather than closing it twice. (3) a **seventh** scope consumer exists that this entry's list of six
 does not name: `meta/pinRunnerDigests.ts` + its test (D-04), which is **un-runnable at HEAD** because
 it fetches a `SHA256SUMS-x64` that was never published.
-**Depends on:** Phase 34.16 (CLOSED PARTIAL — this phase consumes its verdict and its findings)
+**Depends on:** Phase 34.16 (SUPERSEDED by this phase — consumed its verdict and its findings)
 **Plans:** 7 plans in 5 waves — plan 34.18-07 is a BLOCKING human gate (`autonomous: false`).
 **The phase does not close on sentinels (D-05):** it closes with three real arm64 digests and a
 `pnpm download-helper-binaries` that exits 0 on darwin. Code-ready is explicitly not done.
