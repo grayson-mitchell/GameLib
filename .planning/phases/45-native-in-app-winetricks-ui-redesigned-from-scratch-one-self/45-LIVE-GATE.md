@@ -1,14 +1,14 @@
 ---
-status: pending
+status: failed
 phase: 45-native-in-app-winetricks-ui-redesigned-from-scratch-one-self
 plan: 45-12
-build_sha: b18e5221924e19edf253f9d8b814f52ad17ccdea
-build_type: packaged release (`pnpm tauri build --bundles app`) - TO BE BUILT ON THE OPERATOR'S macOS MACHINE from build_sha; not yet built
-built_at: "[RECORD - not yet built]"
-resigned_at: "[RECORD - only if the blank-render defect reproduces]"
-operator: [NAME]
+build_sha: 44d9cc4c3eedc582cb29cf8dc73f28568df715b5
+build_type: packaged release (`pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build --bundles app`, APPLE_SIGNING_IDENTITY set) built on the operator's Mac from build_sha
+built_at: "2026-10-10T19:39:38Z"
+resigned_at: "not needed - the bundle was signed during the build and rendered on every launch"
+operator: Grayson Mitchell (app side); the assistant drove the shell side, captures and pixel sampling
 authored: 2026-10-11
-started: "[RECORD - UTC stamp of GATE LAUNCH 1]"
+started: "2026-10-10T19:41:07Z"
 ---
 
 # Phase 45 Live Gate - D-21 (native Winetricks Settings tab)
@@ -30,16 +30,16 @@ No gate item has been attempted. Author and runner are different parties (standi
 
 | Field | Value |
 |---|---|
-| Commit (`build_sha`) | `b18e5221924e19edf253f9d8b814f52ad17ccdea` (short `b18e52219`) - HEAD at authoring, branch `quick-261002-b63`. The operator may build from a later commit instead, provided `build_sha` above is edited to that commit BEFORE the empty-diff check below is run and recorded. |
-| Representative of HEAD? | **Unproven until the operator runs the check.** Immediately before building, on the Mac: `BUILD_SHA=b18e5221924e19edf253f9d8b814f52ad17ccdea; git diff --name-only "$BUILD_SHA" HEAD -- src src-tauri package.json vite.config.ts` must print nothing. Paste the (empty) output here: `[RECORD]` |
+| Commit (`build_sha`) | `44d9cc4c3eedc582cb29cf8dc73f28568df715b5` (short `44d9cc4c3`) - HEAD on the Mac at build time, branch `quick-261002-b63`; two docs-only commits after the authoring commit `b18e52219`. `build_sha` was edited to this value before the empty-diff check below was run (preflight.log, 2026-10-10T19:40:49Z). |
+| Representative of HEAD? | **Unproven until the operator runs the check.** Immediately before building, on the Mac: `BUILD_SHA=b18e5221924e19edf253f9d8b814f52ad17ccdea; git diff --name-only "$BUILD_SHA" HEAD -- src src-tauri package.json vite.config.ts` must print nothing. Paste the (empty) output here: `` (empty - preflight.log lines `diff-vs-build-sha-begin` / `diff-vs-build-sha-end` with nothing between, run against both `b18e52219` and `44d9cc4c3`) |
 | Build type | packaged **release**: `pnpm tauri build --bundles app`. NOT `tauri dev` (the dev shell serves from Vite and has its own teardown behaviour). Scoring against a dev build or a build whose `src/` differs from `build_sha` is prohibited by the plan. |
-| Build status | **NOT YET BUILT.** `src-tauri/target/release/bundle/macos/GameLib.app` does not exist for this commit. |
+| Build status | BUILT 2026-10-10T19:38:27Z-19:39:38Z. A `GameLib.app` dated 08:34 local already existed but was unsigned (`adhoc,linker-signed`) and carried a sidecar SEA and `build/renderer` from before the Phase 45 commits were pulled, so the full chain was rebuilt; `tauri build` exits 1 after bundling (no `TAURI_SIGNING_PRIVATE_KEY`, updater step) which is expected. |
 | Before building | Quit any running `tauri dev` / Vite (`pgrep -fl 'tauri|vite|gamelib-shell'` must be empty). A live dev instance relaunches on commits and can consume fixtures. |
 | Blank-render re-sign recipe | Phase 44 measured that a bundle built WITHOUT `APPLE_SIGNING_IDENTITY` in the environment renders a blank white window (linker ad-hoc signature, no entitlements, `Sealed Resources=none`). Fix: build with `APPLE_SIGNING_IDENTITY` set; if the window is still blank, `ditto` the bundle to a scratch path and re-sign with hardened runtime + `entitlements.plist` (`flags=0x10000(runtime)`, `com.apple.security.cs.allow-jit`), then gate THAT copy and record its path. Source of the recipe and its measured before/after table: `44-LIVE-GATE.md` "Why this bundle was re-signed". The unsigned original is left unmodified as the negative control. A blank-render episode is a build artefact, NOT a finding against Phase 45. |
-| Bundle verified | `[RECORD]` - `gamelib-shell` and SEA `gamelib-sidecar` present under `Contents/MacOS`; `codesign -dv` identifier/flags; bundle opens past a blank window (record WebContent RSS or a window capture with non-zero stddev) |
-| Bundle path actually launched | `[RECORD]` |
-| Game / bottle used (G1-G7, G9) | `[RECORD]` name, runner, wine version, `WINEPREFIX` path |
-| CrossOver game (G8) | `[RECORD]` or `NONE AVAILABLE` (then G8's CrossOver arm is `blocked`, never `pass`) |
+| Bundle verified | `gamelib-shell` (13650496 B) and SEA `gamelib-sidecar` (170142384 B) under `Contents/MacOS`, both stamped 08:39 local; `codesign -dv --entitlements -`: `Identifier=com.gamelib.shell`, `flags=0x10000(runtime)`, `TeamIdentifier=S7U223QWXJ`, `Sealed Resources version=2 rules=13 files=511`, entitlement `com.apple.security.cs.allow-jit`; every launch rendered (`[BLANKPROBE-MARK] app-chunk-import-done ... rootKids=1` in each archived log; window captures G7-probe-dark.png etc. show the full UI) |
+| Bundle path actually launched | `src-tauri/target/release/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell` (inner binary, from a terminal with `tee -a`; `[bootstrap] appRoot resolved=.../bundle/macos/GameLib.app/` in each log) |
+| Game / bottle used (G1-G7, G9) | Alan Wake (GOG, installed), runner gog, wineVersion `Game-Porting-Toolkit-latest` (type toolkit), `wine64 --version` = `wine-7.7 (Game Porting Toolkit 1.1)`, `WINEPREFIX=~/GameLib/Prefixes/Alan Wake`; baseline `winetricks.log` 15 lines, 44 lines at close |
+| CrossOver game (G8) | NONE AVAILABLE - no GamesConfig entry has `wineVersion.type: crossover` (CrossOver.app is installed but no game uses it); the arm is `blocked` |
 
 ## Pre-registered criteria
 
@@ -472,7 +472,15 @@ wc -l "$GATE_DIR"/*
 
 ## Evidence inventory
 
-`[RECORD - closing ls -la and wc -l output of the session directory]`
+Session dir `/tmp/gamelib-gate-45-20261010T194049Z` (closing inventory 2026-10-10T22:37:17Z, full text in `inventory.txt` there):
+
+- `terminal.log` 372 lines - four delimiters: `=== GATE LAUNCH 1 - 2026-10-10T19:41:07Z ===` (line 1), `2 - 21:05:43Z` (81), `3 - 21:56:16Z` (210), `4 - 22:17:35Z` (307); every operator observation and every measurement is appended there with a UTC stamp.
+- `gamelib-launch-1..4.log` (1971 / 852 / 332 / 388 lines) and `gamelib-launch-1..4.old`; `gamelib-pre-session.log` + `.log.old`; `preflight.log` (21 lines).
+- `winetricks-baseline.log` (15) and 13 per-item `winetricks-before-*.log` copies (G1, G1b-G2, G1c-G2, G4, G4b, G4-launch2, G3, G5, G5b, G7-light, launch3, launch4).
+- `probe-listall-gptk.stdout` (579 lines) / `.stderr` (1 line) - the G6 cause probe.
+- Recordings: `G1c-G2-launch1.mov` (270 MB), `G4-G3-launch1.mov` (345 MB), `G4-G3-launch2.mov` (299 MB), `G5-G7-launch2.mov` (510 MB).
+- Window captures: `G1-launch1-shot1..6.png`, `G6-launch1-banner-after-G1-run.png`, `G7-probe-dark.png`, `G7-light-B-ticked.png`, `G7-light-C-hover.png`, `G7-light-F-after.png`, crops `crop-apply-light-4x.png`, `crop-installing-row-light-2x.png`; 2 s bursts `burst-light-*` (90), `burst2-light-*` (120), `burst3-*` (240), `burst4-*` (75), `burst5-*` (138), `burst6-*` (299).
+- `steps/`: `helpers.sh`, `cap.sh` (window capture by CGWindow id), `winid.swift`, `sample.swift` (rect colour histogram), `samplet.sh`, `bands.swift`, `contrast.sh` (WCAG ratio). Session size ~5.0 GB; captures stay there (T-45-32).
 
 ## Results
 
@@ -482,15 +490,27 @@ the score per G-item and the final status.
 
 | Item | Launch ordinal | Observation (operator) | Score |
 |---|---|---|---|
-| G1 | [RECORD] | [RECORD] | [RECORD] |
-| G2 | [RECORD] | [RECORD] | [RECORD] |
-| G3 | [RECORD] | [RECORD] | [RECORD] |
-| G4 | [RECORD] | [RECORD] | [RECORD] |
-| G5 | [RECORD] | [RECORD] | [RECORD] |
-| G6 | [RECORD] | [RECORD] | [RECORD] |
-| G7 | [RECORD] | [RECORD] | [RECORD] |
-| G8 | [RECORD] | [RECORD] | [RECORD] |
-| G9 | [RECORD] | [RECORD] | [RECORD] |
-| D-15 count | [RECORD] | [RECORD] | [RECORD] |
+| G1 | 1 (attempts 1-3) | 3 installed three times; rows seen Queued -> Installing -> Done; dialog overflow clipped the tab on attempt 1; no frame-stepped recording reviewed | issue |
+| G2 | 1 | no dialog; game page read Installing Winetricks Packages; run continued to 3 installed; rebuilt state not described | pass |
+| G3 | 2 | Cancel disabled through verb 1 (intermittent, seen 3 of 4 runs); cancel semantics correct when pressed in verb 2 | issue |
+| G4 | 2 (attempt 2) | vcrun2013 -> bad -> vcrun2019; 2 installed · 1 failed; Install failed + Retry; nothing red early; log panel unreadable (overflow) | pass |
+| G5 | 2 (attempt 2) | gdiplus_winxp Installed, no prompt, zenity present; attempt 1 hit the duplicate MS GDI+ title | pass |
+| G6 | 1 | absent at tab open (list-all skips the version check); correct copy/version/colour/persistence after the first run | issue |
+| G7 | 2, 3, 4 | Apply enabled 1.52:1 light / 1.01:1 dark; failed-state reds 3.56 / 2.84; bar 1 failed 3.03 / 1.95; light unchecked box 1.95, queued box 2.87, placeholder 2.04; dark hover NOT REACHED | issue |
+| G8 | 1 | present on Alan Wake, absent on Game Defaults, Tools card Winecfg + Run EXE only; CrossOver arm has no fixture | blocked |
+| G9 | 4 (+1) | window could not be narrowed; de arm rendered; E8/E9 overflow fail at natural width, 11 ids blocked | issue |
+| D-15 count | 1-4 | 0 ERROR-level Winetricks lines in all eight archives; fixme at DEBUG and Downloading at INFO present | pass |
 
-**Overall status:** `pending` until Task 3 sets `passed` or `failed` in the frontmatter.
+**Overall status:** `failed` - G1, G3, G6, G7, G9 are `issue`; G8 is `blocked` on its CrossOver arm; G2, G4, G5 and the D-15 count `pass`. Transcribed from the operator's observations and the session transcript on 2026-10-10 (UTC); nothing in the Results was inferred.
+
+## Run record and contract corrections (2026-10-10, appended after the run; the criteria above are unchanged)
+
+Four launches were needed, not one: launch 2 because a failed verb (`bad`) offers only an immediate Retry and cannot be re-batched between two real verbs within a launch, so G4's repeat required a fresh sidecar; launch 3 for the disabled-Apply cell (only reachable before a launch's first run) and a clean `bad` for the dark theme; launch 4 for G9 and three dark cells. Nothing scored in an earlier launch was re-scored.
+
+Contract defects found while running it, each scored on the criterion as written and recorded here rather than edited above:
+
+1. **G6 assumed the tab-open `list-all` emits the wine-version warning (N11).** It does not: winetricks sets `_W_wine_not_needed=1` for every `list` command and returns from `winetricks_wine_setup` before the check. The banner is therefore unreachable at tab open on this build and appears only once a `-q` install runs. Measured by a hand-run `list-all` under the GPTK environment (`probe-listall-gptk.stderr`, one line).
+2. **G7 assumed a fresh `bad`-containing batch per theme (N12).** An errored verb has no checkbox; a theme switch does remount the tab, and the remount re-folds only the sidecar's latest run, so `bad` becomes tickable again only if the latest run no longer contains it. In practice this worked after a later run had replaced it; the dark run used it that way (launch 3).
+3. **G9's narrow arm assumed the window can be narrowed.** The operator could not resize it by dragging; captures show the window at three different widths across launches 3-4 (2784 / 2696 / 2862 px at 2x), so the window is not fixed-size, but no narrow arm was established. Recorded, not explained.
+4. **The capture standard's `tee -a` transcript works** for the inner binary launched from a terminal; a backgrounded `screencapture -v` must be given a fixed `-V` duration (a stop signal discards the file - one recording was lost that way) and `screencapture -l <CGWindowID>` plus a colour histogram is a workable pixel-sampling method without pyobjc or ffmpeg.
+5. **Operator-visible facts the contract did not anticipate:** `gdiplus` and `gdiplus_winxp` share the upstream title "MS GDI+" and the row shows no verb id; the "Everything else" group searches the entire catalog; WebKit's native recent-searches chip appears under the `type=search` input and intercepted a checkbox click; the first verb of a run intermittently renders as Queued with Cancel disabled until the verb boundary.
