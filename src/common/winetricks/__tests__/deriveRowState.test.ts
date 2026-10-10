@@ -3,7 +3,8 @@ import {
   clearVerbError,
   deriveRowState,
   foldRunOutcomes,
-  VerbErrorMap
+  VerbErrorMap,
+  WinetricksRowState
 } from '../deriveRowState'
 
 type RunSlice = Pick<WinetricksQueueRun, 'outcomes' | 'currentVerb' | 'status'>
@@ -18,6 +19,30 @@ function running(
 ): RunSlice {
   return { outcomes, currentVerb, status: 'running' }
 }
+
+// Compile-time exhaustiveness guard: adding or removing a state breaks this
+// literal, so the precedence cases below cannot silently miss a new state.
+const ALL_STATES: Record<WinetricksRowState, true> = {
+  available: true,
+  selected: true,
+  queued: true,
+  installing: true,
+  installed: true,
+  errored: true
+}
+
+describe('WinetricksRowState', () => {
+  it('has exactly the six states of the checkbox model (D-10, D-13)', () => {
+    expect(Object.keys(ALL_STATES).sort()).toEqual([
+      'available',
+      'errored',
+      'installed',
+      'installing',
+      'queued',
+      'selected'
+    ])
+  })
+})
 
 // One case per precedence rule that a wrong ordering would fail.
 describe('deriveRowState precedence', () => {
