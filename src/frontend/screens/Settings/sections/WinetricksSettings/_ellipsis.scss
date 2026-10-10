@@ -1,0 +1,14 @@
+// Single-line truncation, shared by the tab's header-style stylesheets.
+//
+// Lives in a partial so `GroupHeader/index.scss` and `index.scss` can truncate a
+// label without themselves carrying a scroll-container declaration: this tab has
+// exactly ONE scroll container (D-02, UI-SPEC E4-overflow), and a plan
+// acceptance grep for those declarations in the group stylesheets must stay at
+// zero. This mixin is only the clip-and-ellipsis idiom for one line of text. It
+// never opens a scroll region and caps no group body's height.
+@mixin single-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

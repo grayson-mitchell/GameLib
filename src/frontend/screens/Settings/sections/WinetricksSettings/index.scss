@@ -1,22 +1,27 @@
-// Phase 45 Plan 01 (D-01/D-02/D-11-D-13): styling for the tracer-scope
-// Winetricks settings tab. `.WinetricksSettings` declares NO `overflow` --
-// `.App .content` is this app's one scroll container (confirmed in
-// `App.css`), so a second scroll region here would reopen the
-// scroll-within-a-scroll defect class already paid for once in
-// `WinetricksBrowse/index.scss`. `min-width: 0` lets this panel shrink
-// inside the Settings tab layout instead of forcing a horizontal scrollbar
-// on its ancestor.
+// Phase 45 (D-01/D-02/D-05/D-11-D-13): styling for the Winetricks settings tab
+// shell, the Suggested group and the sticky action bar. Row, group-header and
+// Everything-else styling live beside their components.
+//
+// `.WinetricksSettings` declares NO scroll behaviour of its own -- `.App
+// .content` is this app's one scroll container (confirmed in `App.css`), so a
+// second scroll region here, or on any group body, would reopen the
+// scroll-within-a-scroll defect class already paid for once in the Phase 44
+// browse panel. UI-SPEC's Spacing section once gave a task-group body a
+// bounded height; D-02 (one scroll container) and the spec's own E4 row
+// forbid it, and the locked decision wins. `min-width: 0` lets this panel
+// shrink inside the Settings tab layout instead of forcing a horizontal
+// scrollbar on its ancestor.
 //
 // Every `var()` below carries a fallback, and none of them reach for the
-// four tokens this plan's acceptance criteria bans (nav-bar-scoped colours,
-// the link-hover text colour, a raw status colour, or the near-invisible
-// generic border colour) -- all four are either theme-inconsistent or
-// measured-invisible in prior incidents (see `gamelib-conventions` skill,
-// CSS scope traps).
+// four tokens D-21 bans (nav-bar-scoped colours, the link-hover text colour, a
+// raw status colour, or the near-invisible generic border colour) -- all four
+// are either theme-inconsistent or measured-invisible in prior incidents (see
+// the `gamelib-conventions` skill, CSS scope traps).
 .WinetricksSettings {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  // The gap between the three tiers.
   gap: var(--space-sm, 0.75rem);
 
   &__declined {
@@ -26,70 +31,46 @@
     color: var(--text-secondary, #8b939a);
   }
 
-  &__heading {
-    margin: 0;
-    font-size: var(--text-xs, 0.75rem);
-    font-weight: var(--bold, 700);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-secondary, #8b939a);
-  }
-
-  &__rows {
+  .WinetricksSuggested,
+  .WinetricksTaskGroup {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    gap: var(--space-3xs, 0.125rem);
   }
 
-  &__row {
+  .WinetricksSuggested__body,
+  .WinetricksTaskGroup__body {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     min-width: 0;
-    gap: var(--space-2xs, 0.25rem);
-    padding-inline: var(--space-sm, 0.75rem);
-    padding-block: var(--space-2xs, 0.25rem);
   }
 
-  &__rowTitle {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  // A collapsed body stays in the DOM so the header's `aria-controls` always
+  // points at a real element; the `hidden` attribute is what removes it from
+  // layout, and this rule keeps a theme's `display` reset from undoing that.
+  .WinetricksTaskGroup__body[hidden] {
+    display: none;
   }
 
-  &__rowStatus {
-    flex: 0 0 auto;
-    font-size: var(--text-xs, 0.75rem);
+  // Sub-heading and reason line for the curated 8 inside Suggested. Game-specific
+  // rows above it carry no heading of their own.
+  .WinetricksSuggested__sub {
+    padding: var(--space-xs, 0.5rem) var(--space-sm, 0.75rem)
+      var(--space-3xs, 0.25rem);
+  }
+
+  .WinetricksSuggested__subHeading {
+    margin: 0;
+    font-size: var(--text-sm, 0.875rem);
+    font-weight: var(--bold, 700);
+    color: var(--text-default, #caf3fd);
+  }
+
+  .WinetricksSuggested__hint {
+    margin: 0;
+    font-size: var(--text-sm, 0.875rem);
+    line-height: 1.4;
     color: var(--text-secondary, #8b939a);
-
-    &--failed {
-      color: var(--danger, #e74c3c);
-    }
-
-    &--installed {
-      color: var(--success, #2ecc71);
-    }
-  }
-
-  &__rowCheckbox {
-    flex: 0 0 auto;
-    width: 1.1rem;
-    height: 1.1rem;
-    border-radius: 3px;
-    background: none;
-    border: 1px solid var(--accent, #0080ff);
-    cursor: pointer;
-
-    &:disabled {
-      cursor: default;
-      opacity: 0.5;
-    }
   }
 
   // D-11/D-12: sticky action bar for the apply/in-flight/done states.

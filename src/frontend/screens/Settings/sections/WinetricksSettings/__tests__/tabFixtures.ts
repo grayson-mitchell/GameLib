@@ -58,7 +58,7 @@ export function buildCatalog(
   return entries.filter((entry) => !omit.includes(entry.verb))
 }
 
-export function emptyQueueState(): WinetricksQueueState {
+function emptyQueueState(): WinetricksQueueState {
   return {
     runner: RUNNER,
     appName: 'fake-app',
@@ -89,7 +89,7 @@ export function queueStateWith(
   }
 }
 
-export type QueueChangedListener = (
+type QueueChangedListener = (
   event: unknown,
   state: WinetricksQueueState
 ) => void
@@ -146,7 +146,12 @@ export function rerender(tab: Tab): ElementLike {
   return render(tab, {})
 }
 
-export async function mountTab(tab: Tab): Promise<ElementLike> {
+// `afterFirstFlush` runs once the mount effect has had a chance to settle, for
+// a test that must act while a lookup is still pending (fake-timer advance).
+export async function mountTab(
+  tab: Tab,
+  afterFirstFlush?: () => void
+): Promise<ElementLike> {
   harness().__resetMount()
   harness().__setContext({
     appName: 'fake-app',
@@ -154,6 +159,8 @@ export async function mountTab(tab: Tab): Promise<ElementLike> {
     gameInfo: { title: 'Fake Game' }
   })
   rerender(tab)
+  await flush()
+  afterFirstFlush?.()
   await flush()
   return rerender(tab)
 }

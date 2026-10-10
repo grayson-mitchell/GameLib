@@ -1,0 +1,82 @@
+// Phase 45 Plan 07: group header for the Suggested group and the disclosure
+// groups (UI-SPEC Layout, "Component carry-forward note").
+//
+// The `FilterFacetGroup` contract under this tab's own scope. That component's
+// hover and focus colour is `var(--navbar-active, ...)`, banned on this surface
+// (D-21): each `--navbar-*` and `--text-hover` consumption traced to one of
+// Phase 44's nine live-gate contrast defects. Hover and focus use `--accent`
+// directly instead -- the one deliberate deviation from the precedent
+// (UI-SPEC Color item 5). `--accent` resolves in every theme block, unlike
+// `--navbar-active`, which is declared in only 4 of 10+, so only the terminal
+// hex fallback is needed. `__tests__/tokenCensus.test.ts` enforces the ban.
+//
+// A group body here grows with its rows inside the tab's single page scroll
+// container (D-02), so this stylesheet sets no height cap on any group body and
+// opens no scroll region of its own.
+@use '../ellipsis';
+
+.WinetricksSettings {
+  .WinetricksGroupHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs, 0.5rem);
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    // `--space-2xs` is a declared UI-SPEC exception (matches FilterFacetGroup).
+    padding: var(--space-2xs, 0.375rem) var(--space-sm, 0.75rem);
+    appearance: none;
+    background: var(--input-background, #272f31);
+    border: 0;
+    border-radius: var(--space-3xs, 0.25rem);
+    color: var(--text-default, #caf3fd);
+    font-size: var(--text-xs, 0.6875rem);
+    font-weight: var(--bold, 700);
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    text-align: start;
+    text-transform: uppercase;
+
+    &--button {
+      cursor: pointer;
+      user-select: none;
+      transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+
+      &:hover,
+      &:focus-visible {
+        color: var(--accent, #0080ff);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--accent, #0080ff);
+        outline-offset: -2px;
+      }
+    }
+  }
+
+  // The label is the one flexible child, so a translated name longer than the
+  // English truncates while the count badge and caret stay visible, and the
+  // header never wraps to a second line (E4-long-text).
+  .WinetricksGroupHeader__label {
+    flex: 1 1 auto;
+    @include ellipsis.single-line;
+  }
+
+  .WinetricksGroupHeader__count {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .WinetricksGroupHeader__caret {
+    flex: 0 0 auto;
+    transform: rotate(-90deg);
+    transition: transform 0.12s ease;
+
+    &--expanded {
+      transform: rotate(0deg);
+    }
+  }
+}

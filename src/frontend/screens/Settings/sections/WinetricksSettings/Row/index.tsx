@@ -18,6 +18,17 @@ import './index.scss'
 
 type WinetricksRowTemplate = 'twoLine' | 'oneLine'
 
+/**
+ * How a group asks the tab to draw one verb. The tab owns selection, queue and
+ * installed state; a group only decides WHICH verbs appear and in which
+ * template, so every place a verb renders shares one selection (D-07).
+ */
+export type RenderWinetricksRow = (
+  component: WinetricksComponent,
+  template: WinetricksRowTemplate,
+  showCategory: boolean
+) => ReactNode
+
 type Props = {
   component: WinetricksComponent
   rowState: WinetricksRowState

@@ -215,10 +215,9 @@ describe('Suggested for this game (E3, D-06)', () => {
     jest.useFakeTimers()
     try {
       api.getWikiGameInfo.mockImplementation(() => new Promise(() => undefined))
-      const pending = mount()
-      await flush()
-      jest.advanceTimersByTime(10000)
-      const tree = await pending
+      const tree = await mountTab(WinetricksSettings, () =>
+        jest.advanceTimersByTime(10000)
+      )
       expect(rowVerbs(suggested(tree))).toEqual(CURATED_ORDER)
     } finally {
       jest.useRealTimers()
