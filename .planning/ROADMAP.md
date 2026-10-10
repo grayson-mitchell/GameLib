@@ -5546,7 +5546,7 @@ that screen, those die with it rather than being fixed, and 44 should be closed 
 `query commit`, which previously truncated ~99,000 chars of STATE.md.
 **Requirements**: TBD
 **Depends on:** Phase 44
-**Plans:** 10/12 plans executed
+**Plans:** 11/12 plans executed
 
 Plans:
 **Wave 1**
@@ -5570,7 +5570,7 @@ Plans:
 - [x] 45-08-PLAN.md — Sticky bar, Cancel remaining, classified log, environment banner, list states; ported remount-safety proof
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 45-11-PLAN.md — Retired-key removal, i18n gate scope mirror, full gate battery, Phase 44 closed as superseded (hand edits)
+- [x] 45-11-PLAN.md — Retired-key removal, i18n gate scope mirror, full gate battery, Phase 44 closed as superseded (hand edits)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 45-12-PLAN.md — D-21 live gate on a packaged build (multi-verb Apply, induced failure, GPTK banner, gdiplus_winxp, light + dark)
