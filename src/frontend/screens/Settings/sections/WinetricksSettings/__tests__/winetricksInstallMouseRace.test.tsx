@@ -22,12 +22,20 @@ import type { WinetricksRowState } from 'common/winetricks/deriveRowState'
 import { findByClass, harness, render, type ElementLike } from './treeHarness'
 
 jest.mock('../Row/index.scss', () => ({}), { virtual: true })
-jest.mock('react', () => jest.requireActual('./treeHarness').createReactMock())
+jest.mock('react', () =>
+  jest
+    .requireActual<typeof import('./treeHarness')>('./treeHarness')
+    .createReactMock()
+)
 jest.mock('react-i18next', () =>
-  jest.requireActual('./treeHarness').createI18nMock()
+  jest
+    .requireActual<typeof import('./treeHarness')>('./treeHarness')
+    .createI18nMock()
 )
 jest.mock('@fortawesome/react-fontawesome', () =>
-  jest.requireActual('./treeHarness').createFontAwesomeMock()
+  jest
+    .requireActual<typeof import('./treeHarness')>('./treeHarness')
+    .createFontAwesomeMock()
 )
 
 import WinetricksRow from '../Row/index'

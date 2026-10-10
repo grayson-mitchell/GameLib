@@ -40,13 +40,14 @@ type Instance = {
   idCursor: number
 }
 
-export interface ReactHarness {
+interface ReactHarness {
   __beginRender: () => void
   __resetMount: () => void
   __setContext: (value: unknown) => void
   __expand: (node: unknown) => unknown
 }
 
+// ts-prune-ignore-next -- consumed by tests through `jest.requireActual('./treeHarness')` inside a hoisted `jest.mock` factory, a string path static analysis cannot follow
 export function createReactMock() {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let nextInstanceId = 0
@@ -183,6 +184,7 @@ export function createReactMock() {
   }
 }
 
+// ts-prune-ignore-next -- consumed by tests through `jest.requireActual('./treeHarness')` inside a hoisted `jest.mock` factory, a string path static analysis cannot follow
 export function createI18nMock() {
   const interpolate = (
     template: string,
@@ -227,6 +229,7 @@ export function createI18nMock() {
 // FontAwesomeIcon renders to a host `svg` carrying its class names and icon
 // name, so a test can assert "this row shows the success icon" without
 // pulling the SVG renderer into a node-environment run.
+// ts-prune-ignore-next -- consumed by tests through `jest.requireActual('./treeHarness')` inside a hoisted `jest.mock` factory, a string path static analysis cannot follow
 export function createFontAwesomeMock() {
   return {
     FontAwesomeIcon: (props: {
@@ -283,7 +286,7 @@ export function findAll(
   return found
 }
 
-export function hasClassToken(el: ElementLike, token: string): boolean {
+function hasClassToken(el: ElementLike, token: string): boolean {
   const cn = el.props.className
   return typeof cn === 'string' && cn.split(/\s+/).includes(token)
 }
@@ -303,10 +306,4 @@ export function collectText(node: unknown): string {
     return collectText((node as ElementLike).props.children)
   }
   return ''
-}
-
-export async function flush(times = 60): Promise<void> {
-  for (let i = 0; i < times; i++) {
-    await Promise.resolve()
-  }
 }

@@ -1,1 +1,260 @@
-// RED-phase placeholder; the real stylesheet lands in the GREEN commit.
+// Phase 45 Plan 07: the Winetricks tab's verb row (UI-SPEC Layout, Row anatomy).
+//
+// Every rule is scoped under `.WinetricksSettings`: this repo has already paid
+// for a cross-context CSS leak twice (`Dropdown` styling its panel's contents,
+// and the unscoped `.MuiTabs-root` incident). The scope also out-specifies the
+// global `button { color: #161616 }` rule in `styles/_buttons.scss`.
+//
+// D-21 token discipline. Colours are the theme-adaptive aliases UI-SPEC Color
+// names, each with a terminal hex fallback so a theme block that lacks the
+// property cannot drop the whole declaration. None of `--navbar-*`,
+// `--text-hover`, the raw `--status-*` pair or `--border-color` is consumed:
+// each traced to one of Phase 44's nine live-gate contrast defects, and
+// `__tests__/tokenCensus.test.ts` fails the build if one returns.
+//
+// Fixed metrics are load-bearing, not polish. A state swap (checkbox to
+// spinner to Installed) that is not metrically identical would shift every row
+// below it at the exact instant a user might be acting on one of them. Both
+// templates therefore have a fixed height, the leading slot and trailing status
+// slot have fixed widths, and every flex child sets `min-width: 0` so a long
+// title truncates instead of widening the row.
+.WinetricksSettings {
+  .WinetricksRow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs, 0.5rem);
+    box-sizing: border-box;
+    min-width: 0;
+    // `--space-2xs` is a declared UI-SPEC exception: the exact metric the
+    // shipped FilterFacetRow already uses for this padding role.
+    padding-block: var(--space-2xs, 0.375rem);
+    padding-inline: var(--space-2xs, 0.375rem) var(--space-sm, 0.75rem);
+    color: var(--text-default, #caf3fd);
+    // Row definition: an inset shadow paints outside layout, so it cannot
+    // perturb the fixed height.
+    box-shadow: inset 0 -1px 0
+      var(--divider, color-mix(in srgb, currentColor 14%, transparent));
+
+    &:hover {
+      background: color-mix(in srgb, currentColor 10%, transparent);
+    }
+
+    &--twoLine {
+      height: 56px;
+    }
+
+    &--oneLine {
+      height: 44px;
+    }
+  }
+
+  // Leading slot: checkbox, spinner, success icon or danger icon. 44px wide so
+  // the checkbox hit target meets the touch minimum even though the visible box
+  // is 14px (UI-SPEC Spacing exceptions).
+  .WinetricksRow__lead {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    width: 44px;
+    min-width: 0;
+  }
+
+  .WinetricksRow__checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent, #0080ff);
+      outline-offset: -2px;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    // The unchecked border is the global neutral-scale step, not
+    // `--border-color`, which resolves to an invisible grey in 10 of 13 themes.
+    &[aria-checked='true'] .WinetricksRow__box {
+      background: var(--accent, #0080ff);
+      border-color: var(--accent, #0080ff);
+
+      // A drawn tick, so "checked" is a shape and never a colour alone.
+      &::after {
+        content: '';
+        position: absolute;
+        inset-block-start: 1px;
+        inset-inline-start: 4px;
+        width: 3px;
+        height: 7px;
+        border: solid var(--background, #070a0b);
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+    }
+  }
+
+  .WinetricksRow__box {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--neutral-05, #a8aeaf);
+    border-radius: var(--space-3xs, 0.25rem);
+  }
+
+  .WinetricksRow__icon {
+    flex: 0 0 auto;
+
+    &--installing {
+      color: var(--text-secondary, #a8aeaf);
+    }
+
+    &--installed {
+      color: var(--success, #2ecc71);
+    }
+
+    &--errored {
+      color: var(--danger, #cc3333);
+    }
+  }
+
+  .WinetricksRow__text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .WinetricksRow__titleLine {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs, 0.5rem);
+    min-width: 0;
+    line-height: 1.5;
+  }
+
+  // Ellipsis lands on the title, never on the category tag (E7-long-text), so
+  // the title shrinks first and the trailing tags keep their natural width.
+  .WinetricksRow__title {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--regular, 400);
+  }
+
+  .WinetricksRow--twoLine .WinetricksRow__title {
+    font-weight: var(--bold, 700);
+  }
+
+  .WinetricksRow__meta {
+    flex: 0 3 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-sm, 0.875rem);
+    color: var(--text-secondary, #a8aeaf);
+  }
+
+  .WinetricksRow__cached,
+  .WinetricksRow__category {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: var(--text-xs, 0.6875rem);
+    color: var(--text-secondary, #a8aeaf);
+  }
+
+  .WinetricksRow__caption {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-sm, 0.875rem);
+    line-height: 1.4;
+    color: var(--text-secondary, #a8aeaf);
+  }
+
+  // Trailing status slot: fixed width sized to its widest content (the failed
+  // tag plus the Retry button) so no state ever reflows the row horizontally.
+  .WinetricksRow__status {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-xs, 0.5rem);
+    width: 12rem;
+    min-width: 0;
+    font-size: var(--text-sm, 0.875rem);
+    white-space: nowrap;
+  }
+
+  .WinetricksRow__phase {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary, #a8aeaf);
+  }
+
+  .WinetricksRow__tag {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &--installed {
+      color: var(--success, #2ecc71);
+    }
+
+    &--errored {
+      color: var(--danger, #cc3333);
+    }
+  }
+
+  .WinetricksRow__retry {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--space-3xs, 0.25rem);
+    margin: 0;
+    padding: var(--space-3xs, 0.25rem) var(--space-sm, 0.75rem);
+    appearance: none;
+    background: var(--accent, #0080ff);
+    // `--background` inverts correctly against `--accent` by construction: a
+    // theme whose accent is near-white necessarily has a dark background. The
+    // page text colour carries no relationship to the accent and measured
+    // 1.01:1 here in Phase 44.
+    color: var(--background, #070a0b);
+    border: 0;
+    border-radius: var(--space-3xs, 0.25rem);
+    font-size: var(--text-sm, 0.875rem);
+    line-height: 1;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--accent, #0080ff);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+}

@@ -16,10 +16,13 @@
  *    shifting the rows below it;
  *  - upstream strings reach the DOM as text nodes only (T-45-20).
  */
+import { readFileSync } from 'fs'
 import { join } from 'path'
+import type { TFunction } from 'i18next'
 import * as sass from 'sass'
 import type { WinetricksComponent } from 'common/types'
 import type { WinetricksRowState } from 'common/winetricks/deriveRowState'
+import { FAMILY_KEYS, TASK_GROUP_IDS } from 'common/winetricks/verbs'
 import {
   collectText,
   findAll,
@@ -31,15 +34,24 @@ import {
 } from './treeHarness'
 
 jest.mock('../Row/index.scss', () => ({}), { virtual: true })
-jest.mock('react', () => jest.requireActual('./treeHarness').createReactMock())
+jest.mock('react', () =>
+  jest
+    .requireActual<typeof import('./treeHarness')>('./treeHarness')
+    .createReactMock()
+)
 jest.mock('react-i18next', () =>
-  jest.requireActual('./treeHarness').createI18nMock()
+  jest
+    .requireActual<typeof import('./treeHarness')>('./treeHarness')
+    .createI18nMock()
 )
 jest.mock('@fortawesome/react-fontawesome', () =>
-  jest.requireActual('./treeHarness').createFontAwesomeMock()
+  jest
+    .requireActual<typeof import('./treeHarness')>('./treeHarness')
+    .createFontAwesomeMock()
 )
 
 import WinetricksRow from '../Row/index'
+import { familySentence, taskGroupName } from '../labels'
 
 type RowProps = Parameters<typeof WinetricksRow>[0]
 
@@ -361,5 +373,72 @@ describe('compiled stylesheet (fixed metrics, scope)', () => {
 
   it('declares a visible keyboard focus ring', () => {
     expect(compiled).toMatch(/:focus-visible/)
+  })
+})
+
+// The label helpers carry the English defaults as string literals so
+// i18next-parser can extract them. A typo in one would ship as a visible
+// copy defect in the locale-fallback path, so each default is pinned against
+// the frozen English catalog (45-03).
+describe('label helpers (D-08, D-07)', () => {
+  const catalog = JSON.parse(
+    readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        'public',
+        'locales',
+        'en',
+        'gamelib.json'
+      ),
+      'utf8'
+    )
+  ) as {
+    winetricksBrowse: {
+      family: Record<string, string>
+      taskGroup: Record<string, string>
+    }
+  }
+
+  // Echoes the supplied English default, exactly what an absent translation does.
+  const echo = ((_key: string, defaultValue: string) =>
+    defaultValue) as unknown as TFunction
+
+  it('familySentence returns the catalog sentence for each of the 13 families', () => {
+    expect(FAMILY_KEYS).toHaveLength(13)
+    for (const family of FAMILY_KEYS) {
+      expect(familySentence(echo, family)).toBe(
+        catalog.winetricksBrowse.family[family]
+      )
+    }
+  })
+
+  it('taskGroupName returns the catalog name for each of the 5 groups', () => {
+    expect(TASK_GROUP_IDS).toHaveLength(5)
+    for (const id of TASK_GROUP_IDS) {
+      expect(taskGroupName(echo, id)).toBe(
+        catalog.winetricksBrowse.taskGroup[id]
+      )
+    }
+  })
+
+  it('every literal key names the gamelib namespace so the parser files it there', () => {
+    const calls: string[] = []
+    const spy = ((key: string, defaultValue: string) => {
+      calls.push(key)
+      return defaultValue
+    }) as unknown as TFunction
+    for (const family of FAMILY_KEYS) familySentence(spy, family)
+    for (const id of TASK_GROUP_IDS) taskGroupName(spy, id)
+    expect(calls).toHaveLength(18)
+    for (const key of calls) {
+      expect(key.startsWith('gamelib:winetricksBrowse.')).toBe(true)
+    }
   })
 })
