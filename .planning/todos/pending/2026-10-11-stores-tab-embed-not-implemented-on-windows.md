@@ -257,3 +257,16 @@ Update that skill reference once W8 passes live, not before.
 - W8 re-run, W9, W10.
 - The macOS/Linux compile of 261012-f25.
 - This file stays in `pending/` at `ready: live-gate`.
+
+## W8 re-run (2026-10-12, operator, Windows, `pnpm tauri:dev` at `47cd338b4`)
+
+W8 PASS at 120% and at 80% Accessibility zoom, with the zoom-aware bounds fix from quick
+261012-gn8 (`e97265b1c`, `a8e03e290`). This is the operator's report: they gave one verdict per
+zoom level, not a result for each of R1-R6, and nothing was captured. The spike 017 "1:1" finding in
+`Skill("spike-findings-gamelib")` now carries the zoom caveat (SKILL.md and
+`references/tauri-embedded-store-browser.md`).
+
+Still open: W9 (the packaged NSIS build repeats W1-W2), W10 (`38-E01` P1-P5 against the shipped
+app, recorded in `38-VERIFICATION.md`), the macOS/Linux compile and the macOS/Linux live run of
+261012-f25 and 261012-gn8, and the case where the window is resized while away from the store
+route. This file stays `ready: live-gate` in `pending/`.

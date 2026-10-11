@@ -84,6 +84,12 @@ and integer px round-trip exactly; fractional CSS px round to the nearest whole 
 (`[[wkwebview-percentage-height-vs-1fr-grid-row]]`) does not apply — this is native-frame
 geometry.
 
+**Zoom caveat (2026-10-12, quick 261012-gn8):** the 1:1 mapping holds only at webview zoom 1.
+Accessibility zoom is Tauri `setZoom(f)`, under which one CSS px is f logical px, so the renderer
+multiplies the slot rect by the applied factor (`--webview-zoom`, read in `storeEmbedZoom.ts`) and
+re-sends bounds when that factor changes and after every open (the macOS/Windows existing-embed
+`store_embed_open` branch does not re-apply the rect). Live on Windows: W8 PASS at 120% and 80%.
+
 ### Route-change lifecycle
 
 - Store tab hidden: `webview.hide()` / shown: `webview.show()` (both proven Ok; webview and
