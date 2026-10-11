@@ -1,0 +1,31 @@
+HEAD=7255c2507b048e4ac05417a96905f443fd4fec4a
+git status --short:
+ M .planning/state.json
+?? .planning/debug/rust-test-ci-missing-sidecar.md
+?? .planning/milestone.lock
+?? .planning/quick/261011-mza-re-enable-native-lzma-depot-decode-opera/
+git diff --stat -- src: 
+date=2026-10-11T07:45:39Z
+---- build ----
+
+> gamelib@0.8.0 build:sidecar-sea C:\Users\grays\Projects\GameLib
+> pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts
+
+
+> gamelib@0.8.0 build:sidecar C:\Users\grays\Projects\GameLib
+> esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts
+
+
+  build\main\sidecar.js  1.4mb
+
+Done in 49ms
+
+  ..\..\AppData\Local\Temp\gamelib-runts-nDSuIb\buildSidecarSea.cjs  23.8kb
+
+Done in 7ms
+[build:sidecar-sea] decompress worker bundled and embedded as SEA asset "decompressWorker.js" -- consumed at runtime by DecompressPool via node:sea.getAsset().
+[build:sidecar-sea] Resolved target triple: x86_64-pc-windows-msvc (native build)
+[build:sidecar-sea] native LZMA addon embedded as SEA asset "lzma_native.node" from node_modules\lzma-native\prebuilds\win32-x64\node.napi.node
+[build:sidecar-sea] lzma-native resolved paths baked for the worker bundle (root=C:\Users\grays\Projects\GameLib\node_modules\lzma-native)
+[build:sidecar-sea] Arch gate skipped for x86_64-pc-windows-msvc: lipo -archs is a macOS-only check (either the target or the host is non-darwin).
+SEA sidecar compiled -> src-tauri\binaries\gamelib-sidecar-x86_64-pc-windows-msvc.exe

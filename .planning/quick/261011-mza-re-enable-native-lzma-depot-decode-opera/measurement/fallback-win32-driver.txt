@@ -1,0 +1,33 @@
+label=fallback-win32 runs=20 expectNativeWorkers=0
+timestamp=2026-10-11T07:46:22.023Z
+HEAD=7255c2507b048e4ac05417a96905f443fd4fec4a
+git diff --stat -- src:
+(empty -- src matches HEAD)
+binary=C:\Users\grays\Projects\GameLib\src-tauri\binaries\gamelib-sidecar-x86_64-pc-windows-msvc.exe
+size=120994304 mtime=2026-10-11T07:46:01.074Z
+tmpdir=C:\Users\grays\AppData\Local\Temp
+tmpAddonsBefore=0
+| run | wall ms | exit | signal | nativeWorkers | inlineFallback | tmpAddons | decode line |
+| --- | ------- | ---- | ------ | ------------- | -------------- | --------- | ----------- |
+| 1 | 2293 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 2 | 2309 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 3 | 2318 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 4 | 2294 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 5 | 2335 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 6 | 2357 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 7 | 2305 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 8 | 2335 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 9 | 2328 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 10 | 2322 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 11 | 2289 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 12 | 2328 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 13 | 2281 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 14 | 2297 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 15 | 2314 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 16 | 2322 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 17 | 2292 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 18 | 2277 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 19 | 2300 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+| 20 | 2305 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+
+RESULT label=fallback-win32 pass=20/20 expectNativeWorkers=0

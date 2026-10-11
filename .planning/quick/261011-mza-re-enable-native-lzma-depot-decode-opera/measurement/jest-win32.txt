@@ -1,0 +1,16 @@
+npm warn Unknown project config "node-linker". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+FAIL Backend src/backend/storeManagers/steam/__tests__/lzmaNativeSeaRealBuild.test.ts
+  ● Test suite failed to run
+
+    TypeError: Converting circular structure to JSON
+        --> starting at object with constructor 'Error'
+        --- property 'error' closes the circle
+        at stringify (<anonymous>)
+
+      at messageParent (node_modules/jest-worker/build/workers/messageParent.js:29:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.85 s
+Ran all test suites matching /lzmaNativeSeaRealBuild/i.
