@@ -86,6 +86,29 @@ only becomes worth doing on a link fast enough to keep the pool busy. One caveat
 not count VZ versus VSZa (zstd) chunks, so the LZMA share of `avgDecodeMs` is not separated
 out.
 
+## CI linux-x64 (item 3: done)
+
+`workflow_dispatch` run [38176505164](https://github.com/grayson-mitchell/GameLib/actions/runs/38176505164)
+of `test.yml` on `quick-261002-b63` at `e764ed9f9`, ubuntu-latest:
+`PASS src/backend/storeManagers/steam/__tests__/lzmaNativeSeaRealBuild.test.ts (17.651 s)`.
+The suite has no skip branch, and all three tests assert against a real, cold-built SEA binary:
+`nativeWorkers === size` with `inlineFallback: false`, and a correct real-sized decode on the
+native path. So native engages on every worker in a linux-x64 SEA, unlike win32. This was
+reachable before the merge to `main` because `test.yml` also has a `workflow_dispatch` trigger.
+
+The run itself ended red on four tests, none of them LZMA: `lintTranslations` and
+`comparePresenceBaseline` (96 `library.tileSize.*` keys unfilled, from `fa3f581ce`, quick
+261011-t4y), and `logSecretGate` (raw winetricks `stdout` logged at `src/backend/tools/index.ts:1160`,
+from `3084aab25`). Both reproduce locally and both block this branch's merge to `main`.
+
+## Resolution (2026-10-12)
+
+All three items done. Native decode is correct on real depot bytes end to end on darwin-arm64
+(BG2:EE), engages on linux-x64 in a real SEA, and decodes ~6x faster than pure-JS with the
+shipped 5.4.3 prebuild. On the measured connection that speedup does not shorten an install,
+because fetch dominates. The `lzmaLoader.ts` speedup clause and the once-per-isolate wording
+were corrected in `4f8bc5539` and `3f421e41c`. Win32 stays tracked separately.
+
 ## If a decode hang recurs
 
 Capture full system state first (thermal, memory pressure, concurrent I/O, not just CPU load; that

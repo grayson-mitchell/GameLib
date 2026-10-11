@@ -84,10 +84,13 @@ export type LzmaDecoderKind = 'native' | 'pure-js' | 'unresolved'
  * embed. The runtime outcome is recorded in quick 261011-mza's SUMMARY
  * (`.planning/quick/261011-mza-re-enable-native-lzma-depot-decode-opera/`).
  *
- * STILL OWED: the operator's live Steam depot install on the Mac (engaged
- * line, completion, end-to-end throughput) and CI's first linux-x64 result,
- * tracked by
- * `.planning/todos/pending/2026-10-11-native-lzma-mac-live-steam-depot-install-and-throughput-remeasure.md`.
+ * LIVE AND CI EVIDENCE (2026-10-12). A native Baldur's Gate II: Enhanced
+ * Edition install on darwin-arm64 (5.4.3 prebuild, 3.9 GB, 2465 files)
+ * completed and verified with zero decode errors. `avgDecodeMs` was 17-26
+ * against `avgNetMs` ~1.2 s, so fetch, not decode, bounded that install. CI's
+ * first linux-x64 real-SEA run passed `lzmaNativeSeaRealBuild.test.ts` with
+ * native engaged on every worker. Recorded in
+ * `.planning/todos/completed/2026-10-11-native-lzma-mac-live-steam-depot-install-and-throughput-remeasure.md`.
  *
  * HOW TO TURN IT BACK OFF. First, capture diagnostics at the moment of the
  * field failure; that run is the only evidence the 2026-08-18 closure asked
