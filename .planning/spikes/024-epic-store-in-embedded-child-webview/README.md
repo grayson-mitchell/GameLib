@@ -3,10 +3,10 @@ spike: 024
 name: epic-store-in-embedded-child-webview
 type: standard
 validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected Tauri globals PRESENT, then observe whether Talon/Cloudflare blocks STORE browsing the way it blocks the LOGIN endpoint"
-verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers
+verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers. Run 11 (2026-10-11): a Safari Private Window on the SAME IP and engine, cold jar, rendered both hosts twice — the discriminator is the embedded webview itself, not the IP, the UA or the jar
 run_date: 2026-09-15
 rerun_date: 2026-10-11
-runs: 10
+runs: 11
 related: [013, 016, 017, 018]
 tags: [tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, macos]
 ---
@@ -129,13 +129,53 @@ size in every verified shot.
    account and the operator's tab bar). AppleScript to Safari was not authorised from this session,
    so a Private Window control was not run.
 
-**What survives, sharpened.** The IP is not blanket-blocked — a warm jar on it is served. What is
-challenged every time is a **cold jar from this IP in this embedded webview**, with the UA now
-irrelevant. The two candidates left are (a) per-IP reputation applied to cold visitors, and (b)
-something about the embedded `WKWebView` itself (Tauri's injected scripts, custom-scheme origin,
-missing TLS session state). One of two cheap controls separates them, and both need an operator:
-a **Safari Private Window** on this machine (cold jar, real browser — renders ⇒ (b), challenged ⇒
-(a)), or a run of this harness on a **different network**.
+**What survived at this point** (superseded by run 11, kept for the record): the IP is not
+blanket-blocked — a warm jar on it is served. The two candidates left were (a) per-IP reputation
+applied to cold visitors, and (b) something about the embedded `WKWebView` itself. A **Safari
+Private Window** on this machine separates them: renders ⇒ (b), challenged ⇒ (a). Run 11 ran it.
+
+### Run 11 — Safari Private Window, cold jar, same IP (2026-10-11, quick `261011-ws7`)
+
+**Rendered, twice.** Real Safari 26.6, a fresh Private Window each time (closing the last
+Private Window discards its ephemeral store), not signed in, same machine, same residential IP.
+
+| Sample | URL | Window title at 25 s (CGWindowList) | At 45 s | Egress IP |
+|---|---|---|---|---|
+| 1 | `store.epicgames.com/en-US/` | `Epic Games Store \| Download & Play PC Games, Mods, DLC & More – Epic Games` | unchanged, Discover page painted | `api.ipify.org` in the **same private window** printed the exact address the webview's challenge card printed in runs 5–10 — iCloud Private Relay is **not** in play |
+| 2 | `www.epicgames.com/store/en-US/` (the configured URL) | same real title | — | same window session as the IP check's successor; new Private Window |
+
+`shot-safari-private-cold-jar-RENDERED-run11.png` is sample 1: the `Private` badge top-left, a
+**`Sign in`** button (no account, so no warm jar), the store's Discover carousel. The IP shot is
+not committed (it is the address). Driven by `System Events` keystrokes (⇧⌘N, ⌘L, URL, ⏎) because
+Apple events to Safari itself are not authorised from the session; titles read via a Swift
+one-off over `CGWindowListCopyWindowInfo`.
+
+**What this settles — and it is the biggest move in this file since run 2:**
+
+- **IP reputation is refuted** as the discriminator. A cold visitor from this IP, on this
+  WebKit, is served the store. The "different network" test is moot.
+- **The UA is refuted** (runs 6–10). **The jar is refuted** (run 3 was fresh and failed; run 11
+  was fresh and passed).
+- What is left is **the embedded webview itself**: the Tauri-managed child `WKWebView` is
+  challenged where Safari's `WKWebView` is not. Candidates, in order of cheapness to test:
+  1. **Tauri's injected initialization scripts** — `__TAURI__`, `__TAURI_INTERNALS__`, `ipc`,
+     `isTauri`, `__TAURI_IIFE__`. This file's "What IS established #1" called the 2026-08-03
+     Talon-fingerprint theory refuted because the globals were present in run 1, which passed.
+     That inference was too strong: Cloudflare's decision is reputation-weighted, and a
+     first-contact pass followed by challenges on every later cold visit is exactly what a
+     bot-like JS environment produces once the IP has a history. Run 11 makes this the prime
+     suspect again.
+  2. **WKWebView-vs-Safari environment tells** that survive a correct UA: no `window.safari`
+     object, no Safari extension surface, `WKWebViewConfiguration` defaults.
+  3. Something in how the child is attached (`add_child`, bounds, visibility) that Turnstile's
+     visibility/interaction heuristics dislike.
+- **The cheap next measurement already exists in the shipped app**: `open_pristine_epic_login_window`
+  (`src-tauri/src/main.rs`) is a `WKWebView` with **no Tauri injection** that passed Cloudflare
+  on 2026-09-28 with `cf_clearance` ×3 in its jar. Point it at the store URL instead of the login
+  URL. Renders ⇒ candidate 1 is confirmed and `/store/epic` has an in-app path (a pristine
+  window, not the child embed); challenged ⇒ candidate 1 is out and 2–3 remain. Filed as todo
+  `2026-10-11-epic-store-in-the-pristine-login-wkwebview-the-embed-challenge-is-webview-side`.
+
 
 ## What IS established
 
@@ -153,6 +193,10 @@ a **Safari Private Window** on this machine (cold jar, real browser — renders 
 4. **`www.epicgames.com/store/en-US/` and `store.epicgames.com` converge.** Epic 302s the
    configured start URL onto the other host — observed in the nav sequence of every run. The
    host distinction that prompted run 2 is therefore **not** a variable.
+5. **The challenge is specific to the embedded webview** (run 11, 2026-10-11). Same IP, same
+   WebKit, cold jar, real Safari: served, twice. Not the IP, not the UA (runs 6–10), not the jar
+   (run 3 vs run 11). Item 1 above stands as a *fact* (globals present in the run that passed)
+   but no longer as a *refutation* — see run 11 for why.
 
 ## What is NOT established
 
@@ -172,13 +216,11 @@ a **Safari Private Window** on this machine (cold jar, real browser — renders 
 - ~~Full-viewport layout: the embed had shrunk to ~`986×117` logical by capture time.~~ — **fixed
   in `35309eb4e`**, but only after this exact defect silently invalidated run 4. Recording a
   measurement defect as a known limitation does not stop it contaminating the next run.
-- **Whether a different IP would clear it.** Runs 4–10 share one residential IP with runs 1–3, so
-  they cannot separate "Tauri webview is blocked" from "a cold jar on this IP is challenged". Run 1
-  remains the only unchallenged contact and it was this IP's first. Runs 6–10 ruled the **user
-  agent** out and showed a warm signed-in Safari jar on the same IP is served (see the runs 6–10
-  section). Testing the remainder needs a Safari Private Window control or a different network,
-  not another run of this arm — and it does not change the product decision, since the gate
-  cannot be conditional on a user's IP reputation.
+- ~~**Whether a different IP would clear it.**~~ — **moot after run 11.** A cold jar on *this*
+  IP in real Safari is served, so the IP is not what is being judged. Runs 6–10 ruled the user
+  agent out. What is NOT established is **which property of the Tauri-managed child webview**
+  trips the challenge — the three candidates and the one-config-change test are listed under run
+  11.
 
 ## Method notes worth keeping
 
@@ -215,16 +257,18 @@ Change `identifier` in `tauri.conf.json` to force a fresh WKWebsiteDataStore.
 
 ## Consequence for `/store/epic`
 
-**Keep it scoped out — on measurement, not "for now".** D-05's decision stands and is backed by
-ten runs: the interactive measurement (runs 4–5) and the UA arm (runs 6–10). `/store/epic` stays
-gated (`embeddable: false`, the `store === 'epic'` guard in `WebView/index.tsx`, and
-`WebviewUnavailablePanel reason="epic"`); the panel copy is already honest about it.
+**The gate stays; the reason for it changed.** Nothing shippable moved: the Tauri child embed is
+challenged in 9 of 10 cold runs across four UAs (runs 2–10), so `/store/epic` stays gated
+(`embeddable: false`, the `store === 'epic'` guard in `WebView/index.tsx`, and
+`WebviewUnavailablePanel reason="epic"`) and the panel copy is still honest.
 
-The follow-up todo closed WONTFIX on 2026-09-15 (quick `260915-hza`) with runs 4–5 attached, and
-quick `261011-w8j` appended runs 6–10 on 2026-10-11 without reopening it. An earlier draft of this
-section said "permanently" and "only a change in Epic's posture could reopen it"; that overstated
-what five runs with a constant UA could show. What would reopen it now is specific: a **cold-jar
-control that renders** — a Safari Private Window on this machine, or this harness on a different
-network. If either renders, the discriminator is on our side and the question is live again; if
-both are challenged, the IP-reputation reading stands with nothing left untested on this machine.
-Either way, re-run more than once and keep the Steam control.
+What is retired is the *explanation*. The 2026-09-15 WONTFIX rested on "the Turnstile cannot be
+cleared and the cause is Epic's posture or this IP"; quick `261011-w8j` ruled the UA out and quick
+`261011-ws7`'s run 11 ruled the IP and the jar out — a cold Safari Private Window on the same IP
+renders the store. **The discriminator is on our side**, in the embedded webview. The question is
+therefore live again, as a **webview-side** question, and the next step is one config change in
+code that already exists: point `open_pristine_epic_login_window` at the store URL (todo
+`2026-10-11-epic-store-in-the-pristine-login-wkwebview-…`). If that renders, Epic in-app browsing
+has a path (a pristine window, not the child embed, so D-05's embed decision still stands on its
+own terms). An earlier draft of this section said "permanently"; two earlier drafts stated
+reopen conditions that fired within a day. Re-run more than once and keep the Steam control.

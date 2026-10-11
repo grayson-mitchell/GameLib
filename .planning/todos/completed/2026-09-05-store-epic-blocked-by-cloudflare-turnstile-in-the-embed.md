@@ -161,3 +161,11 @@ Safari jar on the same IP was served in the same session, so the surviving quest
 this IP" vs "the embedded webview itself" — a Safari Private Window control or a different network
 would separate them. WONTFIX stands; nothing here reopens it. Details in the spike README,
 `### Runs 6–10`.
+
+## Addendum 2026-10-11 (later) — run 11 moves the cause onto our side (quick `261011-ws7`)
+
+A Safari Private Window on the same machine and IP, cold jar, rendered the store twice. With the
+UA (runs 6–10), the IP and the jar all refuted, the Turnstile gate is specific to the Tauri child
+webview. **The WONTFIX's product outcome stands (the child embed stays gated); its reasoning
+("Epic's posture / this IP") is retired.** The live question moved to
+`pending/2026-10-11-epic-store-in-the-pristine-login-wkwebview-the-embed-challenge-is-webview-side.md`.

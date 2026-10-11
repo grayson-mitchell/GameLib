@@ -539,14 +539,15 @@ export default function WebView() {
   // embed to 969x58. The scope-out is MEASURED, not "for now": the follow-up todo closed
   // WONTFIX on 2026-09-15, and quick 261011-w8j re-probed on 2026-10-11 with the Chrome UA spoof
   // OFF (runs 6-8), an `EpicGamesLauncher` UA (run 9) and a full Safari UA (run 10) -- every run
-  // was challenged, so the user agent is ruled out as the cause. What would reopen it is a
-  // cold-jar control that renders (a Safari Private Window on the same machine, or a different
-  // network), not a change in our code. Three honest limits survive the measurement: run 1
+  // was challenged, so the user agent is ruled out as the cause. Run 11 (quick 261011-ws7,
+  // same day) then ran the cold-jar control: a Safari Private Window on the SAME machine, IP
+  // and WebKit rendered the store twice. So the IP and the jar are ruled out too, and the
+  // discriminator is this embedded webview itself -- the gate is webview-side, not Epic's
+  // posture. The question is live again as a webview question; the next step is the pristine
+  // login WKWebView pointed at the store (todo 2026-10-11-epic-store-in-the-pristine-login-
+  // wkwebview-...), which does not touch this guard. Two honest limits survive: run 1
   // rendered, so this is not a capability question -- the store CAN render in a Tauri-managed
-  // child webview; all ten runs share one residential IP, so "the Tauri webview is blocked"
-  // cannot be separated from "a cold jar on this IP is challenged" here (a warm, signed-in
-  // Safari jar on the same IP IS served), and the gate cannot be conditional on a user's IP
-  // reputation anyway; and anything behind sign-in
+  // child webview; and anything behind sign-in
   // was deliberately untouched (D-07). None of this is a flat accusation that Epic blocks
   // in-app browsing, and the mechanism is not fully explained. The Epic tile stays (D-08,
   // `NavShell/components/StoresPanel/index.tsx`) -- it now lands on the panel instead.

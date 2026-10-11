@@ -152,3 +152,10 @@ in-app without embedding the web storefront at all, so neither depends on the re
 - The `webview.unavailable.epic.*` locale keys stay even if Epic is un-gated —
   `i18nCatalogChurnGuard` rejects non-`gamelib.json` removals and `removing-a-locale-key-has-three-traps`
   applies.
+
+## Superseded the same day — run 11 (quick `261011-ws7`)
+
+The Safari Private Window control named above as operator work was run via `System Events`
+keystrokes: cold jar, same IP (verified), same WebKit — **rendered twice**. IP reputation is
+refuted; the discriminator is the embedded webview. Follow-up todo:
+`2026-10-11-epic-store-in-the-pristine-login-wkwebview-the-embed-challenge-is-webview-side`.
