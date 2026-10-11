@@ -24,7 +24,23 @@
     border-radius: var(--space-3xs);
     background: var(--navbar-background);
     border: 1px solid var(--neutral-04);
-    color: var(--text-default);
+    // F-49-R1-6 (Phase 49 live gate Run 1, item 10b): the body surface's text
+    // token measured 2.11:1 on this banner in nord-light, the one light
+    // theme, whose navbar stays dark. It passed in the other nine only because
+    // their navbar and body surfaces are both dark.
+    // The row now paints the navbar surface's own text chain, the one
+    // NavItem's tier-2 rows paint on the same surface as
+    // `--navitem-inactive-color`. That makes it correct by construction rather
+    // than by coincidence.
+    // The token census reads 4.87:1 at its lowest (marine), 7.38:1 in
+    // nord-light. In cyberSpaceOasis, marine and zombie it takes the navbar
+    // accent hue those themes' nav rows already use.
+    // Every foreground on the row inherits this colour rather than naming a
+    // token, so one pairing governs the row. It is gated for all 10 themes in
+    // `themeTokens.test.ts`.
+    // NOT LIVE-VERIFIED: contrast arithmetic; the operator's next macOS launch
+    // owes the look.
+    color: var(--navbar-inactive, var(--navbar-accent));
     font-size: var(--text-sm);
 
     & > svg {
@@ -40,9 +56,21 @@
     // classes, which outranks the two-class footer button rule in the
     // Settings stylesheet whichever CSS chunk loads first. A plain button
     // selector here would only tie with it and leave the margin to load order.
+    // The rule also makes the button transparent and inheriting, so its label
+    // sits on the banner with the row's pairing whichever stylesheet loaded
+    // first. Before this:
+    // - A fresh launch painted it with the theme's primary fill and tertiary
+    //   text: 2.59:1 in nord-light. zombie declares no primary, so the fill
+    //   dropped out and near-black text sat on the banner at 1.55:1.
+    // - The Settings stylesheet, once loaded, painted the body text token on
+    //   the banner: 2.11:1 in nord-light.
+    // Its hover state still comes from that Settings rule on an
+    // equal-specificity tie; that is recorded as a follow-up todo.
     .button.is-footer {
       margin-block: 0;
       padding-block: var(--space-2xs);
+      background-color: transparent;
+      color: inherit;
     }
   }
 
@@ -54,12 +82,12 @@
   }
 
   // Never-connected is information, not a failure (P4): neutral border, icon
-  // in the default text colour, and no `--status-danger` anywhere.
+  // inheriting the row's text colour, and no `--status-danger` anywhere.
   &__row--notConnected {
     border-color: var(--neutral-04);
 
     .LibrarySignInNotice__icon {
-      color: var(--text-default);
+      color: inherit;
     }
   }
 
@@ -97,7 +125,7 @@
     padding: var(--space-3xs);
     border: none;
     background: transparent;
-    color: var(--text-default);
+    color: inherit;
     cursor: pointer;
 
     &:hover {
