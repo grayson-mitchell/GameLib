@@ -3,11 +3,11 @@ created: 2026-09-15T00:00:00.000Z
 title: 'Epic''s in-embed "Sign in" button has no decided behaviour — intercept and hand off, fail visibly, or hide'
 area: webview/store-embed
 severity: minor
-platform: any
-ready: human
+platform: macos
+ready: live-gate
 status: OPEN
 found_by: 'quick-260915-hza, 2026-09-15 — split out of the /store/epic Turnstile todo when that closed WONTFIX. It was the "second decision, separable" in that todo and was deliberately never actioned there.'
-blocked_by: '/store/epic is gated off the embed entirely (WONTFIX, 2026-09-15). This surface is UNREACHABLE by users today, so there is nothing to fix and nothing to verify. Unblocks only if Epic browsing is un-gated — see "What would unblock this".'
+blocked_by: "Phase 50's live gate (the Sign in arm) — see ROADMAP.md `### Phase 50`"
 files:
   - src/frontend/screens/WebView/index.tsx
   - src/frontend/screens/WebView/storeEmbedOrigins.ts
@@ -95,3 +95,37 @@ decision to adopt a Rust-managed raw `WKWebView` for `/store/epic` (a different 
 D-05's wording) and the cold-load stall todo. If adopted, "intercept" here is a native
 `WKNavigationDelegate` on that subview — the `open_pristine_epic_login_window` delegate is the
 in-repo precedent — not an `on_navigation` closure.
+
+## Decision (2026-10-12)
+
+**The call.** Quick `261012-d5g` recorded the D-05 call in
+`.planning/todos/completed/2026-10-12-make-the-d-05-call-epic-store-embed-as-a-rust-managed-raw-wkwebview-subview.md`,
+owned by Phase 50 in `.planning/ROADMAP.md` `### Phase 50`: **no interception and no DOM hiding.**
+`/store/epic` will render in a Rust-managed raw `WKWebView` subview — the same non-injected
+construction as the shipped pristine Epic login window (`open_pristine_epic_login_window`), which
+completes Epic login today. This todo's premise — the Talon 403 on `/id/api/email/exists` against
+a Tauri-injected webview — does not apply to that construction. Option 3 (hide via DOM injection)
+is rejected outright; option 2's "dead-end button" is not expected to be dead.
+
+**The falsifiable rule.** Phase 50's live gate measures Epic's own Sign in button in place (its
+"Sign in" arm). If that arm completes sign-in, this todo closes with no code. ONLY if that arm is
+Turnstile-challenged or 403s does the hand-off to the pristine login window become a Phase 50
+task — and then "intercept" is a native `WKNavigationDelegate` on the subview, as the 261012-8gu
+section above already says.
+
+**Superseded premise.** `## What would unblock this` said the only unblock was "a change in
+Epic's Cloudflare posture, not our code." That is superseded — the un-gate came from our side:
+spike 024 runs 12-27 placed the discriminator in Tauri's webview construction (README `## What IS
+established` #6-#9) and found a construction that is served. `## Why this is blocked, not human`
+is likewise historical. Both are kept as written, as the record.
+
+**Re-triage note.** `ready: live-gate` because only Phase 50's live gate, not a human design call,
+can now move this todo. `platform: macos` because Phase 50 is macOS only.
+
+**The Trap still holds.** `## Trap for whoever un-gates Epic` still holds, and Phase 50 moves both
+halves together (the guard becomes darwin-only; the `embeddable: false` flag and the deep-link /
+last-URL restore paths are revisited). Its cited line numbers (`index.tsx:468`,
+`index.tsx:460-467`, `storeEmbedOrigins.ts:44`) are stale — the guard and flag have moved; locate
+them by `grep -n "store === 'epic'" src/frontend/screens/WebView/index.tsx` and
+`grep -n 'embeddable: false' src/frontend/screens/WebView/storeEmbedOrigins.ts` rather than citing
+new numbers.
