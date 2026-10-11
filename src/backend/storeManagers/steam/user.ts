@@ -6,8 +6,12 @@ import { getTokenStore, readTokenOutcome } from './tokenStore'
 import { currentTriggerLabel, noteSteamAuthTrigger } from './authTrigger'
 import {
   noteSignInSucceeded,
-  noteSignedOut
+  noteSignedOut,
+  publishSignInProbeOutcomes,
+  recordSignInProbeOutcome
 } from 'backend/signInProbe/outcomes'
+import { captureSignInEpoch } from 'backend/signInProbe/sessionEpoch'
+import { applySignInVerdict } from 'backend/signInProbe/verdict'
 import { withTimeout } from './withTimeout'
 import { platform } from 'process'
 import type {
@@ -44,6 +48,30 @@ const RELOG_GRACE_MS = 20000
 // constant (never a second hand-typed 120000) so the logged value cannot
 // drift from the value actually set on the session.
 const QR_LOGIN_TIMEOUT_MS = 120000
+
+// quick 261011-rj0: the EResults with which the CM refuses the CREDENTIAL
+// itself, as opposed to refusing this connection (LogonSessionReplaced,
+// RateLimitExceeded, ServiceUnavailable, ...). Only these mean "the stored
+// refresh token is no longer good" and so only these may latch
+// `credentialsMissing` -- the Library then shows the sign-in row with Sign in,
+// which is the one action that fixes it. Values from
+// node_modules/steam-user/enums/EResult.js; literal numbers rather than
+// `SteamUserLib.EResult` so the test double (which carries no enum) and the
+// runtime cannot disagree.
+const CREDENTIAL_REFUSAL_ERESULTS: ReadonlySet<number> = new Set([
+  5, // InvalidPassword
+  15, // AccessDenied -- the live case (gamelib.log 2026-10-10/11)
+  26, // Revoked
+  27, // Expired
+  63 // AccountLogonDenied
+])
+const CREDENTIAL_REFUSAL_NAMES: ReadonlySet<string> = new Set([
+  'InvalidPassword',
+  'AccessDenied',
+  'Revoked',
+  'Expired',
+  'AccountLogonDenied'
+])
 
 // ── SteamUser static class ────────────────────────────────────────────────────
 
@@ -156,6 +184,47 @@ export class SteamUser {
     const failure = this.logonFailure
     if (!failure || failure.client !== this.client) return null
     return { message: failure.message, eresult: failure.eresult }
+  }
+
+  /** True when the CM refused the stored credential itself, not the connection. */
+  private static isCredentialRefusal(rejection: {
+    message: string
+    eresult?: number
+  }): boolean {
+    if (typeof rejection.eresult === 'number') {
+      return CREDENTIAL_REFUSAL_ERESULTS.has(rejection.eresult)
+    }
+    return CREDENTIAL_REFUSAL_NAMES.has(rejection.message)
+  }
+
+  /**
+   * quick 261011-rj0: report what the CM itself said about the stored
+   * credential, through the SAME fenced, write-if-changed latch the Phase 49
+   * boot probe uses (`applySignInVerdict`), so the Library sign-in row and the
+   * Manage Accounts tile learn about it the way they learn everything else.
+   *
+   * This is deliberately NOT a change to D-21. The boot probe still reads the
+   * keyring only and never opens the CM; this runs inside a deliberate
+   * `ensureConnected()` caller (a library refresh, an install) that has already
+   * paid for the connection. It is the first verdict site fed by a CM response
+   * rather than a keyring read, which is why it goes through `applySignInVerdict`
+   * and nothing else: the epoch fence (T-49-10) refuses a verdict from an
+   * attempt that began before a sign-in completed, and write-if-changed keeps
+   * a repeated refusal from re-notifying the renderer.
+   *
+   * Records and publishes the outcome only when the flag actually moved. A
+   * cold connect happens once per launch; re-publishing an unchanged map on
+   * every one would be noise, and `resolveSignInState` already lets a latched
+   * flag outrank whatever outcome the boot probe recorded.
+   */
+  private static reportLogonVerdict(
+    outcome: 'healthy' | 'expired',
+    epochAtStart: number
+  ): void {
+    const result = applySignInVerdict('steam', outcome, epochAtStart)
+    if (result !== 'latched' && result !== 'cleared') return
+    recordSignInProbeOutcome('steam', outcome)
+    publishSignInProbeOutcomes()
   }
 
   /**
@@ -288,6 +357,11 @@ export class SteamUser {
       return false
     }
 
+    // quick 261011-rj0: captured BEFORE the connect attempt, exactly as the
+    // probe pass does (pass.ts). A sign-in that completes while this logon is
+    // in flight bumps the epoch, and whatever the CM then says about the OLD
+    // token is refused by `applySignInVerdict` as stale (T-49-10).
+    const epochAtStart = captureSignInEpoch('steam')
     const start = Date.now()
     if (!this.connectingPromise) {
       this.connectingPromise = this.connectSteamUserClient(
@@ -305,7 +379,14 @@ export class SteamUser {
       LogPrefix.Steam
     )
 
-    if (this.client?.steamID) return true
+    if (this.client?.steamID) {
+      // The CM accepted the stored credential: that disproves any latched
+      // `credentialsMissing`, whether the `absent` branch above or a previous
+      // refusal set it. Fenced and write-if-changed, so a clean flag costs
+      // nothing here.
+      this.reportLogonVerdict('healthy', epochAtStart)
+      return true
+    }
 
     // steam-sync-false-failed-banner: if the CM already ended this attempt with
     // a terminal 'error' (AccessDenied for a refresh token Steam no longer
@@ -329,6 +410,19 @@ export class SteamUser {
           'steam-user schedules no retry after this, so not waiting out the reconnect grace window',
         LogPrefix.Steam
       )
+      // quick 261011-rj0: a refusal of the CREDENTIAL (AccessDenied for a
+      // revoked/expired refresh token) is a sign-in problem, and belongs on the
+      // sign-in surface with the Sign in action -- not behind the generic
+      // "Couldn't sync / Retry" banner, whose Retry would replay this exact
+      // refusal. Latching here, before returning, means library.ts's
+      // `failed/logon-rejected` emit (exit path 1) always follows the flag on
+      // the same stdout pipe, so the renderer sees `credentialsMissing` before
+      // the status and D-19 suppresses the banner with no flicker. A terminal
+      // error that is NOT about the credential (LogonSessionReplaced, a rate
+      // limit) latches nothing: for those the generic banner is the truth.
+      if (this.isCredentialRefusal(rejection)) {
+        this.reportLogonVerdict('expired', epochAtStart)
+      }
       return false
     }
 
@@ -363,6 +457,18 @@ export class SteamUser {
       `[Timing] SteamUser.ensureConnected: grace-window wait took an additional ${Date.now() - graceStart}ms, connected=${connectedLate}`,
       LogPrefix.Steam
     )
+    // quick 261011-rj0: the grace window's own `once('error')` is the only
+    // other place a credential refusal can first be seen (a logon that was
+    // still in flight at the 15 s fallback and was then refused). Same
+    // verdict, same fence.
+    if (connectedLate) {
+      this.reportLogonVerdict('healthy', epochAtStart)
+    } else {
+      const lateRejection = this.getLogonFailure()
+      if (lateRejection && this.isCredentialRefusal(lateRejection)) {
+        this.reportLogonVerdict('expired', epochAtStart)
+      }
+    }
     return connectedLate
   }
 
