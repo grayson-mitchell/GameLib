@@ -42,8 +42,11 @@
   // as a JSX literal, so the plural of each count stays its own string.
   .WinetricksStickyBar .WinetricksStickyBar__failed {
     // A failed outcome exists, so this fragment may be red (D-14); the word
-    // "failed" carries the meaning, the colour is not the only signal.
-    color: var(--danger, #cc3333);
+    // "failed" carries the meaning, the colour is not the only signal. Red
+    // comes from the tab's derived danger colour (261011-kqx), not the bare
+    // alias, which resolves under 4.5:1 on this bar's own surface in 9 of 10
+    // themes.
+    color: var(--winetricks-danger-text, var(--danger, #cc3333));
 
     &::before {
       content: ' · ';

@@ -1289,3 +1289,495 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
     ])
   })
 })
+
+const WINETRICKS_INDEX_SCSS =
+  'src/frontend/screens/Settings/sections/WinetricksSettings/index.scss'
+const WINETRICKS_ROW_SCSS =
+  'src/frontend/screens/Settings/sections/WinetricksSettings/Row/index.scss'
+const WINETRICKS_LOG_PANEL_SCSS =
+  'src/frontend/screens/Settings/sections/WinetricksSettings/LogPanel/index.scss'
+
+/**
+ * Mixes two colours already resolved to a `toRgb`-acceptable literal, channel
+ * by channel, as `weightA·a + (1-weightA)·b` (weightA a 0-1 fraction).
+ * Rounded to the nearest integer per channel and returned as a 6-digit
+ * lowercase hex string. Shared by the `color-mix(in srgb, ...)` resolver
+ * below and by the hovered-row-surface compositing in `rowSurfaces`, which is
+ * the same arithmetic applied to an opacity/`currentColor` composite instead
+ * of an authored percentage.
+ */
+const mixSrgb = (a: string, b: string, weightA: number): string => {
+  const rgbA = toRgb(a)
+  const rgbB = toRgb(b)
+  if (!rgbA || !rgbB) {
+    throw new Error(`mixSrgb: uncomparable colours: ${a} / ${b}`)
+  }
+  const mixed = rgbA.map((channelA, i) =>
+    Math.round(channelA * weightA + rgbB[i] * (1 - weightA))
+  )
+  return (
+    '#' + mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('')
+  )
+}
+
+/**
+ * Splits a `color-mix()` argument list on TOP-LEVEL commas only, tracking
+ * paren depth so a `var(--x, fallback)` fallback's own comma never ends an
+ * argument early.
+ */
+const splitTopLevelCommas = (source: string): string[] => {
+  const out: string[] = []
+  let depth = 0
+  let buf = ''
+  for (const ch of source) {
+    if (ch === '(') depth++
+    else if (ch === ')') depth--
+    if (ch === ',' && depth === 0) {
+      out.push(buf)
+      buf = ''
+    } else {
+      buf += ch
+    }
+  }
+  out.push(buf)
+  return out
+}
+
+/** A colour argument of `color-mix()`: a colour expression plus an optional trailing `NN%`. */
+const parseColourMixArg = (
+  arg: string
+): { colourExpr: string; weight: number | null } => {
+  const trimmed = arg.trim()
+  const m = /^([\s\S]+?)\s+(\d+)%$/.exec(trimmed)
+  if (m) return { colourExpr: m[1], weight: Number(m[2]) }
+  return { colourExpr: trimmed, weight: null }
+}
+
+/**
+ * Resolves a `var()` chain exactly as `resolveValue` does, and additionally
+ * resolves a `color-mix(in srgb, A p%, B)` expression (the `--winetricks-
+ * danger-text` shape) down to a literal hex colour, reimplementing the CSS
+ * weight rules: one percentage given means the other is `100 - p`; none given
+ * means 50/50; both given means normalised by their sum. Each colour argument
+ * is resolved recursively (so a `color-mix()` nested inside a `var()`
+ * fallback also resolves) and must itself be a hex or named colour `toRgb`
+ * accepts -- a bare `transparent` or `currentColor` argument throws rather
+ * than silently mis-resolving, because neither is a fixed colour outside a
+ * known compositing surface.
+ */
+const resolveColour = (
+  value: string,
+  scope: Map<string, string>,
+  globals: Map<string, string>
+): string | null => {
+  const resolved = resolveValue(value, scope, globals)
+  if (resolved === null) return null
+  if (!resolved.startsWith('color-mix(')) return resolved
+
+  const inner = resolved.slice('color-mix('.length, resolved.length - 1).trim()
+  const args = splitTopLevelCommas(inner)
+  if (args.length !== 3) {
+    throw new Error(
+      `expected 3 color-mix() arguments, found ${args.length}: ${resolved}`
+    )
+  }
+  const [colourSpace, argA, argB] = args
+  if (colourSpace.trim() !== 'in srgb') {
+    throw new Error(
+      `expected 'in srgb' color-mix(), found '${colourSpace.trim()}'`
+    )
+  }
+
+  const a = parseColourMixArg(argA)
+  const b = parseColourMixArg(argB)
+  const colourA = resolveColour(a.colourExpr, scope, globals)
+  const colourB = resolveColour(b.colourExpr, scope, globals)
+  if (colourA === null || !toRgb(colourA)) {
+    throw new Error(
+      `color-mix() argument is not a resolvable colour: ${a.colourExpr} -> ${colourA}`
+    )
+  }
+  if (colourB === null || !toRgb(colourB)) {
+    throw new Error(
+      `color-mix() argument is not a resolvable colour: ${b.colourExpr} -> ${colourB}`
+    )
+  }
+
+  let weightA: number
+  if (a.weight !== null && b.weight !== null) {
+    const sum = a.weight + b.weight
+    weightA = sum === 0 ? 50 : (a.weight / sum) * 100
+  } else if (a.weight !== null) {
+    weightA = a.weight
+  } else if (b.weight !== null) {
+    weightA = 100 - b.weight
+  } else {
+    weightA = 50
+  }
+
+  return mixSrgb(colourA, colourB, weightA / 100)
+}
+
+/**
+ * The tab root's own custom properties (`WinetricksSettings/index.scss`'s
+ * `.WinetricksSettings {` block) overlaid on top of the theme's tokens: the
+ * tab root is a descendant of `body`, so a custom property it declares wins
+ * over the theme's, exactly as the cascade resolves it in the browser.
+ */
+const winetricksScope = (
+  themesScss: string,
+  selector: string,
+  indexScss: string
+): Map<string, string> => {
+  const merged = new Map(themeTokens(themesScss, selector))
+  for (const [k, v] of customProps(cssBlock(indexScss, '.WinetricksSettings')))
+    merged.set(k, v)
+  return merged
+}
+
+/**
+ * The body of the depth-0 nested rule of `body` whose selector equals
+ * `selector` exactly, via `nestedRules`. Throws, naming the selector, when
+ * absent -- a renamed selector fails loudly instead of the gate quietly
+ * measuring nothing.
+ */
+const nestedRule = (body: string, selector: string): string => {
+  const rule = nestedRules(body).find((r) => r.selector === selector)
+  if (!rule) throw new Error(`no rule '${selector}' found`)
+  return rule.body
+}
+
+/**
+ * The `.WinetricksRow` depth-0 `color`'s resolved value, taken once per
+ * census call. Returns both rest surfaces (`--modal-background`,
+ * `--body-background`) and, for each, the hovered-row composite: the row's
+ * `&:hover` rule paints `color-mix(in srgb, currentColor <p>%, transparent)`
+ * over the surface beneath, so the same `mixSrgb` arithmetic that resolves
+ * `color-mix()` above also resolves the opacity-free hover composite -- `p`
+ * is read from the authored rule, never hardcoded, so a future change to the
+ * hover opacity cannot silently go unmeasured.
+ */
+const rowSurfaces = (
+  rowScss: string,
+  scope: Map<string, string>,
+  globals: Map<string, string>
+): { label: string; colour: string }[] => {
+  const rowBody = cssBlock(rowScss, '.WinetricksRow')
+  const rowColourDecl = declsAtDepthZero(rowBody, 'color')[0]
+  const rowColour = resolveValue(rowColourDecl ?? '', scope, globals)
+  if (rowColour === null) throw new Error('unresolved .WinetricksRow color')
+
+  const hoverBody = nestedRule(rowBody, '&:hover')
+  const hoverBgDecl = declsAtDepthZero(hoverBody, 'background')[0] ?? ''
+  const pctMatch = /currentColor\s+(\d+)%/.exec(hoverBgDecl)
+  if (!pctMatch) {
+    throw new Error(
+      `could not find a currentColor percentage in &:hover background: ${hoverBgDecl}`
+    )
+  }
+  const p = Number(pctMatch[1]) / 100
+
+  const rest: { label: string; value: string }[] = [
+    { label: 'modal', value: 'var(--modal-background)' },
+    { label: 'body', value: 'var(--body-background)' }
+  ]
+  const out: { label: string; colour: string }[] = []
+  for (const { label, value } of rest) {
+    const surface = resolveValue(value, scope, globals)
+    if (surface === null) throw new Error(`unresolved row surface: ${label}`)
+    out.push({ label, colour: surface })
+    out.push({
+      label: `hovered ${label}`,
+      colour: mixSrgb(rowColour, surface, p)
+    })
+  }
+  return out
+}
+
+const dangerTagColourDecl = (rowScss: string): string => {
+  const tagBody = cssBlock(rowScss, '.WinetricksRow__tag')
+  const erroredBody = nestedRule(tagBody, '&--errored')
+  const decls = declsAtDepthZero(erroredBody, 'color')
+  if (decls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 color in the Row tag errored rule, found ${decls.length}`
+    )
+  }
+  return decls[0]
+}
+
+const dangerIconColourDecl = (rowScss: string): string => {
+  const iconBody = cssBlock(rowScss, '.WinetricksRow__icon')
+  const erroredBody = nestedRule(iconBody, '&--errored')
+  const decls = declsAtDepthZero(erroredBody, 'color')
+  if (decls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 color in the Row icon errored rule, found ${decls.length}`
+    )
+  }
+  return decls[0]
+}
+
+const dangerFailedCountColourDecl = (stickyBarScss: string): string => {
+  const failedBody = cssBlock(
+    stickyBarScss,
+    '.WinetricksStickyBar .WinetricksStickyBar__failed'
+  )
+  const decls = declsAtDepthZero(failedBody, 'color')
+  if (decls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 color in the StickyBar failed rule, found ${decls.length}`
+    )
+  }
+  return decls[0]
+}
+
+const dangerLogErrorColourDecl = (logPanelScss: string): string => {
+  const errorBody = cssBlock(logPanelScss, '.WinetricksLogPanel .log-error')
+  const decls = declsAtDepthZero(errorBody, 'color')
+  if (decls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 color in the LogPanel log-error rule, found ${decls.length}`
+    )
+  }
+  return decls[0]
+}
+
+/**
+ * Per-theme WCAG census for the Winetricks failed-state danger text family
+ * (todo 2026-10-11, live gate 45-12 G7: tag 3.56:1 nord-light / 2.84:1
+ * midnightMirage; bar `1 failed` 3.03:1 nord-light / 1.95:1 midnightMirage;
+ * danger icon 2.84:1 midnightMirage). Returns one failure string per miss, so
+ * a failing case names the element, the resolved colours, the surface and the
+ * bar it missed, rather than a bare boolean.
+ *
+ * Lives here, not beside the stylesheets, because the cross-theme `var()`
+ * resolver, `cssBlock`/`nestedRules` and the contrast helpers above are
+ * module-private to this file -- the gpn Apply census above is the direct
+ * precedent for a Winetricks-specific describe living in this shared file.
+ *
+ * Row TEXT (the tag) is held at >= 4.5:1 on BOTH the rest and the hovered row
+ * surface, because G7 holds hover TEXT to 4.5:1 and only makes hover FILL
+ * record-only. The danger icon is non-text (3:1) and is held at rest only.
+ *
+ * Like every census in this file it cannot see a pixel: no CSS engine runs
+ * under the node test environment, so a live capture still adjudicates
+ * appearance. NOT LIVE-VERIFIED: a capture is owed at the next 45-12 re-run.
+ */
+const dangerTextFailures = ({
+  indexScss,
+  rowScss,
+  stickyBarScss,
+  logPanelScss,
+  themesScss,
+  globals,
+  selector
+}: {
+  indexScss: string
+  rowScss: string
+  stickyBarScss: string
+  logPanelScss: string
+  themesScss: string
+  globals: Map<string, string>
+  selector: string
+}): string[] => {
+  const scope = winetricksScope(themesScss, selector, indexScss)
+  const failures: string[] = []
+
+  const checkAgainst = (
+    label: string,
+    fgDecl: string,
+    bar: number,
+    surfaces: { label: string; colour: string }[]
+  ) => {
+    const fg = resolveColour(fgDecl, scope, globals)
+    if (fg === null) {
+      failures.push(`${label} unresolved`)
+      return
+    }
+    for (const { label: surfaceLabel, colour: bg } of surfaces) {
+      const ratio = contrastRatio(fg, bg)
+      if (ratio < bar) {
+        failures.push(
+          `${label} ${fg} on ${bg} (${surfaceLabel}) = ${ratio.toFixed(2)} < ${bar}`
+        )
+      }
+    }
+  }
+
+  const allRowSurfaces = rowSurfaces(rowScss, scope, globals)
+  const restRowSurfaces = allRowSurfaces.filter(
+    (s) => !s.label.startsWith('hovered')
+  )
+
+  checkAgainst('tag', dangerTagColourDecl(rowScss), 4.5, allRowSurfaces)
+  checkAgainst('icon', dangerIconColourDecl(rowScss), 3, restRowSurfaces)
+
+  const barSurface = resolveValue('var(--input-background)', scope, globals)
+  if (barSurface === null) {
+    failures.push('bar surface unresolved')
+  } else {
+    checkAgainst(
+      'failed count',
+      dangerFailedCountColourDecl(stickyBarScss),
+      4.5,
+      [{ label: 'sticky-bar', colour: barSurface }]
+    )
+    checkAgainst('log error', dangerLogErrorColourDecl(logPanelScss), 4.5, [
+      { label: 'log-panel', colour: barSurface }
+    ])
+  }
+
+  return failures
+}
+
+describe('Winetricks failed-state danger text contrast in every theme (45-12 G7, 261011-kqx)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const indexScss = read(WINETRICKS_INDEX_SCSS)
+  const rowScss = read(WINETRICKS_ROW_SCSS)
+  const stickyBarScss = read(WINETRICKS_STICKY_BAR_SCSS)
+  const logPanelScss = read(WINETRICKS_LOG_PANEL_SCSS)
+  const globals = globalTokens()
+
+  it('non-vacuity: globals, the derived danger-text custom property, its four consumers, and the row/bar surfaces all resolve', () => {
+    expect(globals.size).toBeGreaterThan(0)
+
+    const rootBody = cssBlock(indexScss, '.WinetricksSettings')
+    const dangerTextDecl = customProps(rootBody).get('--winetricks-danger-text')
+    expect(dangerTextDecl).not.toBeUndefined()
+    expect((dangerTextDecl as string).startsWith('color-mix(')).toBe(true)
+    expect(dangerTextDecl).toMatch(/var\(--danger/)
+    expect(dangerTextDecl).toMatch(/var\(--text-default/)
+
+    for (const decl of [
+      dangerTagColourDecl(rowScss),
+      dangerIconColourDecl(rowScss),
+      dangerFailedCountColourDecl(stickyBarScss),
+      dangerLogErrorColourDecl(logPanelScss)
+    ]) {
+      expect(decl).toMatch(/^var\(--winetricks-danger-text,/)
+      expect(decl).toMatch(/var\(--danger/)
+    }
+
+    const rowBody = cssBlock(rowScss, '.WinetricksRow')
+    const rowColourDecl = declsAtDepthZero(rowBody, 'color')[0]
+    const scope = winetricksScope(themesScss, 'body.nord-light', indexScss)
+    expect(resolveValue(rowColourDecl ?? '', scope, globals)).not.toBeNull()
+    const hoverBody = nestedRule(rowBody, '&:hover')
+    expect(declsAtDepthZero(hoverBody, 'background')[0]).toBe(
+      'color-mix(in srgb, currentColor 10%, transparent)'
+    )
+
+    const stickyBarBody = cssBlock(stickyBarScss, '.WinetricksStickyBar')
+    expect(declsAtDepthZero(stickyBarBody, 'background')[0]).toMatch(
+      /^var\(--input-background/
+    )
+    const logPanelBody = cssBlock(logPanelScss, '.WinetricksLogPanel')
+    expect(declsAtDepthZero(logPanelBody, 'background')[0]).toMatch(
+      /^var\(--input-background/
+    )
+  })
+
+  it('colour-mix arithmetic', () => {
+    const noScope = new Map<string, string>()
+    const noGlobals = new Map<string, string>()
+    expect(
+      resolveColour(
+        'color-mix(in srgb, #ff0000 40%, #0000ff)',
+        noScope,
+        noGlobals
+      )
+    ).toBe('#660099')
+    expect(
+      resolveColour('color-mix(in srgb, #ff0000, #0000ff)', noScope, noGlobals)
+    ).toBe('#800080')
+    expect(
+      resolveColour(
+        'color-mix( in srgb, #ff0000 40%, #0000ff )',
+        noScope,
+        noGlobals
+      )
+    ).toBe('#660099')
+    expect(() =>
+      resolveColour(
+        'color-mix(in srgb, transparent 50%, #000000)',
+        noScope,
+        noGlobals
+      )
+    ).toThrow()
+    expect(() =>
+      resolveColour(
+        'color-mix(in srgb, currentColor 10%, #000000)',
+        noScope,
+        noGlobals
+      )
+    ).toThrow()
+  })
+
+  it.each(themeSelectors)(
+    '%s paints failed-state danger text >= 4.5:1 and the danger icon >= 3:1',
+    (selector) => {
+      const failures = dangerTextFailures({
+        indexScss,
+        rowScss,
+        stickyBarScss,
+        logPanelScss,
+        themesScss,
+        globals,
+        selector
+      })
+      // Object form so a failure names the theme and every miss.
+      expect({ theme: selector, failures }).toEqual({
+        theme: selector,
+        failures: []
+      })
+    }
+  )
+
+  it('the pre-fix pair fails where the live gate measured it', () => {
+    const OLD_DANGER = 'var(--danger, #cc3333)'
+    for (const selector of ['body.nord-light', 'body.midnightMirage']) {
+      const scope = winetricksScope(themesScss, selector, indexScss)
+      const fg = resolveColour(OLD_DANGER, scope, globals)
+      const rowSurface = resolveValue('var(--modal-background)', scope, globals)
+      const barSurface = resolveValue('var(--input-background)', scope, globals)
+      expect(fg).not.toBeNull()
+      expect(rowSurface).not.toBeNull()
+      expect(barSurface).not.toBeNull()
+      const rowRatio = contrastRatio(fg as string, rowSurface as string)
+      const barRatio = contrastRatio(fg as string, barSurface as string)
+      // Object form so a failure names the theme and both measured ratios.
+      expect({
+        selector,
+        rowRatio,
+        barRatio,
+        failsBoth: rowRatio < 4.5 && barRatio < 4.5
+      }).toEqual({
+        selector,
+        rowRatio,
+        barRatio,
+        failsBoth: true
+      })
+    }
+  })
+
+  it('checker can fail, in memory only', () => {
+    // The tokenCensus.test.ts sabotage idiom: mutate a STRING copy, never the
+    // file on disk. Count first, so the sabotage is not vacuous.
+    const rootBody = cssBlock(indexScss, '.WinetricksSettings')
+    expect((rootBody.match(/40%/g) ?? []).length).toBe(1)
+    const sabotagedIndexScss = indexScss.replace('40%', '100%')
+    for (const selector of ['body.nord-light', 'body.midnightMirage']) {
+      const failures = dangerTextFailures({
+        indexScss: sabotagedIndexScss,
+        rowScss,
+        stickyBarScss,
+        logPanelScss,
+        themesScss,
+        globals,
+        selector
+      })
+      expect(failures.length).toBeGreaterThan(0)
+    }
+  })
+})

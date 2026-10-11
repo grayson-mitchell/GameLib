@@ -131,7 +131,7 @@
     }
 
     &--errored {
-      color: var(--danger, #cc3333);
+      color: var(--winetricks-danger-text, var(--danger, #cc3333));
     }
   }
 
@@ -242,7 +242,7 @@
     }
 
     &--errored {
-      color: var(--danger, #cc3333);
+      color: var(--winetricks-danger-text, var(--danger, #cc3333));
     }
   }
 

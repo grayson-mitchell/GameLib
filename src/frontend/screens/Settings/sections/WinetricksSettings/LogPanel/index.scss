@@ -8,7 +8,8 @@
 // (`overflow-wrap: anywhere`) instead of scrolling sideways (E9-overflow).
 //
 // Red is reserved for lines the backend classified as errors (D-14): the error
-// rule below is the only place in this file that reaches for the danger alias.
+// rule below is the only place in this file that reaches for the tab's
+// derived danger colour (261011-kqx).
 // Wine noise is muted, never red (D-15). Every rule is scoped under
 // `.WinetricksSettings` and every `var()` carries a fallback (D-21; enforced by
 // `__tests__/tokenCensus.test.ts`).
@@ -77,7 +78,7 @@
   }
 
   .WinetricksLogPanel .log-error {
-    color: var(--danger, #cc3333);
+    color: var(--winetricks-danger-text, var(--danger, #cc3333));
   }
 
   .WinetricksLogPanel .log-warning,

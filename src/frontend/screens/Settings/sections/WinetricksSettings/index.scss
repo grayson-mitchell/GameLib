@@ -20,6 +20,37 @@
 // are either theme-inconsistent or measured-invisible in prior incidents (see
 // the `gamelib-conventions` skill, CSS scope traps).
 .WinetricksSettings {
+  // 261011-kqx: a theme-adaptive derived colour for failed-state red, read by
+  // the Row tag, the Row danger icon, the StickyBar failed count and the
+  // LogPanel error line. The bare `--danger` alias they used to read
+  // resolves under 4.5:1 on the row surface in 7 of 10 themes (nord-light
+  // 3.55, midnightMirage 2.84) and on the sticky-bar surface in 9 of 10
+  // (nord-light 3.03, midnightMirage 1.95); live gate 45-12 G7 measured both
+  // misses.
+  //
+  // `--text-default` is the mix partner because it is each theme's own
+  // high-contrast pole: dark in nord-light, light in the 9 dark themes -- one
+  // rule darkens or lightens as each theme needs, with no per-theme hex.
+  //
+  // 40% is the gruvbox_dark binding value: its dark danger hex on a hovered
+  // row gives 4.69:1 at 40%, under 4.5 at 45% or 50%.
+  //
+  // Not a `themes.scss` change: `--danger` has 28 other uses across 17 files
+  // (24 of them in 14 files outside this tab), many of them fills and
+  // outlines rather than text, and none of them are measured by this census.
+  //
+  // The derived red is paler than the bare alias, and in midnightMirage
+  // (whose text pole is cyan) it reads as a dusty rose rather than red. D-14
+  // and the UI-SPEC non-colour rule both hold: the icon plus the word
+  // "failed" carry the meaning, the colour is never the sole signal.
+  //
+  // NOT LIVE-VERIFIED: contrast arithmetic only; a capture is owed at the
+  // next 45-12 re-run.
+  --winetricks-danger-text: color-mix(
+    in srgb,
+    var(--danger, #cc3333) 40%,
+    var(--text-default, #caf3fd)
+  );
   display: flex;
   flex-direction: column;
   min-width: 0;
