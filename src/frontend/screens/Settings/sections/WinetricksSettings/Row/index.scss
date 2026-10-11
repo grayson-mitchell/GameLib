@@ -291,6 +291,20 @@
     line-height: 1;
     cursor: pointer;
 
+    // gruvbox_dark's accent `#b57614` is a mid-tone. Its own `--background`
+    // `#1d2021` measures 4.35:1 against it, under 4.5. Only near-black
+    // clears it, and `--neutral-01` measures 5.26:1.
+    //
+    // It is the same theme-scoped override Apply carries
+    // (`StickyBar/index.scss`), and like NavTabs' `body.nord-light &`
+    // precedent it is a measured per-theme collision, not a general rule.
+    //
+    // `:not(:disabled)` keeps the disabled arm (cursor and opacity only, no
+    // colour of its own) exactly as it paints today.
+    body.gruvbox_dark &:not(:disabled) {
+      color: var(--neutral-01, #070a0b);
+    }
+
     &:focus-visible {
       outline: 2px solid var(--accent, #0080ff);
       outline-offset: 2px;

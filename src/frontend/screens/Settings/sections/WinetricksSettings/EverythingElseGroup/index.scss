@@ -106,6 +106,14 @@
     line-height: 1;
     cursor: pointer;
 
+    // See Row/index.scss's `.WinetricksRow__retry` comment for the
+    // gruvbox_dark arithmetic (4.35:1 base, 5.26:1 via `--neutral-01`).
+    // Clear has no disabled arm today, so `:not(:disabled)` keeps any
+    // future one out of this override's reach.
+    body.gruvbox_dark &:not(:disabled) {
+      color: var(--neutral-01, #070a0b);
+    }
+
     &:focus-visible {
       outline: 2px solid var(--accent, #0080ff);
       outline-offset: 2px;

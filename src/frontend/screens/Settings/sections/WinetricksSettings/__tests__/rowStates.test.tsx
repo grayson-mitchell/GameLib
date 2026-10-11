@@ -375,14 +375,41 @@ describe('compiled stylesheet (fixed metrics, scope)', () => {
     )
   })
 
+  // A `body.<theme>` ancestor above the tab root narrows the match: it
+  // cannot leak a rule out of `.WinetricksSettings`. The pattern admits
+  // exactly one such optional leading ancestor (261011-pjv, the Retry
+  // gruvbox_dark override). Held in a shared const so the scope test and
+  // the can-fail proof below it cannot drift apart.
+  const SCOPED_ROOT_PATTERN = /^(?:body\.[\w-]+\s+)?\.WinetricksSettings\b/
+
   it('scopes every rule under the tab root so nothing leaks app-wide', () => {
     const selectors = [...compiled.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
       m[2].trim()
     )
     expect(selectors.length).toBeGreaterThan(5)
     for (const selector of selectors) {
-      expect(selector).toMatch(/^\.WinetricksSettings\b/)
+      expect(selector).toMatch(SCOPED_ROOT_PATTERN)
     }
+  })
+
+  it('theme-scoped rules are enumerated and the scope pattern can still fail', () => {
+    const selectors = [...compiled.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
+      m[2].trim()
+    )
+    const themeScoped = selectors.filter((selector) =>
+      selector.startsWith('body.')
+    )
+    // Adding a theme-scoped rule must be a conscious edit here, not a free
+    // pass through the relaxed pattern above.
+    expect(themeScoped).toEqual([
+      'body.gruvbox_dark .WinetricksSettings .WinetricksRow__retry:not(:disabled)'
+    ])
+    // In-memory can-fail proof: the amended pattern still rejects both an
+    // ancestor-scoped selector missing the tab root and an unscoped one.
+    expect('body.gruvbox_dark .WinetricksRow__retry').not.toMatch(
+      SCOPED_ROOT_PATTERN
+    )
+    expect('.WinetricksRow__retry').not.toMatch(SCOPED_ROOT_PATTERN)
   })
 
   it('declares a visible keyboard focus ring', () => {

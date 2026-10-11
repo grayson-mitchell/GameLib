@@ -905,13 +905,6 @@ const WINETRICKS_APPLY_SELECTOR =
   '.WinetricksStickyBar .WinetricksStickyBar__apply'
 
 /**
- * The `color:` the ENABLED Apply button paints in `themeClass`, as authored.
- * Mirrors `selectedTabColourDecl`: a nested `body.<theme> &:not(:disabled)`
- * override inside the Apply block wins over the block's own depth-0 `color`.
- * No `s` flag: the inner capture is a negated character class, which already
- * spans newlines (see the TS1501 note above `selectedTabColourDecl`).
- */
-/**
  * Every nested selector inside the Apply block body that scopes to a theme
  * (`body.<theme> ...`) but does NOT end with `&:not(:disabled)` -- i.e.
  * would also apply to the disabled Apply button. An empty array means every
@@ -925,22 +918,37 @@ const themeOverridesMissingNotDisabled = (applyBody: string): string[] =>
     .filter((selector) => selector.startsWith('body.'))
     .filter((selector) => !selector.endsWith('&:not(:disabled)'))
 
-const applyTextColourDecl = (applyBody: string, themeClass: string): string => {
+/**
+ * The `color:` an ENABLED accent-filled control paints in `themeClass`, as
+ * authored. Mirrors `selectedTabColourDecl`: a nested `body.<theme> &...`
+ * override inside the control's block wins over the block's own depth-0
+ * `color`. The override selector may carry zero or more leading
+ * `:not(<simple selector>)` compounds (e.g. `.button.is-text`'s
+ * `:not(.is-link)`) ahead of the final, required `:not(:disabled)`. No `s`
+ * flag: the inner capture is a negated character class, which already spans
+ * newlines (see the TS1501 note above `selectedTabColourDecl`). Generalized
+ * (261011-pjv) from an Apply-only picker to serve every control in this
+ * accent-fill family: Apply, Retry, Clear and `.button.is-text`.
+ */
+const applyTextColourDecl = (
+  controlBody: string,
+  themeClass: string
+): string => {
   const scoped = new RegExp(
-    `body\\.${themeClass}\\s*&:not\\(:disabled\\)\\s*\\{([^}]*)\\}`
-  ).exec(applyBody)
+    `body\\.${themeClass}\\s*&(?::not\\([^()]+\\))*:not\\(:disabled\\)\\s*\\{([^}]*)\\}`
+  ).exec(controlBody)
   if (scoped) {
     const decls = declsAtDepthZero(scoped[1], 'color')
     if (decls.length !== 1)
       throw new Error(
-        `expected exactly one depth-0 color in the ${themeClass} Apply override, found ${decls.length}`
+        `expected exactly one depth-0 color in the ${themeClass} override, found ${decls.length}`
       )
     return decls[0]
   }
-  const base = declsAtDepthZero(applyBody, 'color')
+  const base = declsAtDepthZero(controlBody, 'color')
   if (base.length !== 1)
     throw new Error(
-      `expected exactly one depth-0 base color in the Apply block, found ${base.length}`
+      `expected exactly one depth-0 base color in the block, found ${base.length}`
     )
   return base[0]
 }
@@ -2247,4 +2255,126 @@ describe('Winetricks checkbox, button and search indicators and the search place
       expect(failures.length).toBeGreaterThan(0)
     }
   })
+})
+
+const BUTTONS_SCSS = 'src/frontend/styles/_buttons.scss'
+
+/**
+ * The three remaining members of the accent-fill family Apply belongs to:
+ * Retry, Clear and `.button.is-text`. `path` is one of the already-declared
+ * stylesheet path constants (WINETRICKS_ROW_SCSS,
+ * WINETRICKS_EVERYTHING_ELSE_SCSS, BUTTONS_SCSS). `gruvboxOverride` is the
+ * exact nested selector each control's gruvbox_dark override carries,
+ * matching the shape `applyTextColourDecl` now accepts.
+ */
+const ACCENT_FILL_CONTROLS: {
+  control: string
+  path: string
+  selector: string
+  gruvboxOverride: string
+}[] = [
+  {
+    control: 'Retry',
+    path: WINETRICKS_ROW_SCSS,
+    selector: '.WinetricksRow__retry',
+    gruvboxOverride: 'body.gruvbox_dark &:not(:disabled)'
+  },
+  {
+    control: 'Clear',
+    path: WINETRICKS_EVERYTHING_ELSE_SCSS,
+    selector: '.WinetricksEverythingElse__clear',
+    gruvboxOverride: 'body.gruvbox_dark &:not(:disabled)'
+  },
+  {
+    control: '.button.is-text',
+    path: BUTTONS_SCSS,
+    selector: '.button.is-text',
+    gruvboxOverride: 'body.gruvbox_dark &:not(.is-link):not(:disabled)'
+  }
+]
+
+/**
+ * Per-theme WCAG 1.4.3 census for the three remaining members of the
+ * accent-fill family Apply belongs to: Retry, Clear and `.button.is-text`
+ * (todo 2026-10-11, gruvbox_dark 4.35:1).
+ *
+ * Lives here for the same reason the Apply census does: the resolver
+ * (`themeTokens`, `globalTokens`, `resolveValue`, `contrastRatio`) is
+ * module-private to this file.
+ *
+ * Reads the authored declarations FROM each stylesheet on every run, never
+ * a hardcoded copy of them.
+ *
+ * Like every census in this file it cannot see a pixel: no CSS engine runs
+ * under the node test environment, so a live capture still adjudicates
+ * appearance.
+ */
+describe('Accent-filled Retry, Clear and .button.is-text text contrast in every theme (261011-pjv)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const globals = globalTokens()
+  const blocks = new Map(
+    ACCENT_FILL_CONTROLS.map(({ control, path, selector }) => [
+      control,
+      cssBlock(read(path), selector)
+    ])
+  )
+
+  const pairs = ACCENT_FILL_CONTROLS.flatMap(({ control }) =>
+    themeSelectors.map((selector) => ({ control, selector }))
+  )
+
+  it.each(ACCENT_FILL_CONTROLS.map(({ control }) => control))(
+    'non-vacuity: %s resolves one accent background, one background-derived base color, and its gruvbox override',
+    (control) => {
+      expect(globals.size).toBeGreaterThan(0)
+      const entry = ACCENT_FILL_CONTROLS.find((c) => c.control === control)
+      if (!entry)
+        throw new Error(`no ACCENT_FILL_CONTROLS entry for ${control}`)
+      const block = blocks.get(control) as string
+      expect(block.length).toBeGreaterThan(0)
+      const bgDecls = declsAtDepthZero(block, 'background')
+      expect(bgDecls).toHaveLength(1)
+      expect(bgDecls[0]).toMatch(/var\(\s*--accent/)
+      const colourDecls = declsAtDepthZero(block, 'color')
+      expect(colourDecls).toHaveLength(1)
+      expect(colourDecls[0]).toMatch(/var\(\s*--background/)
+      const overrideRule = nestedRules(block).find(
+        (rule) => rule.selector === entry.gruvboxOverride
+      )
+      expect(overrideRule).not.toBeUndefined()
+      expect(
+        declsAtDepthZero(
+          (overrideRule as { selector: string; body: string }).body,
+          'color'
+        )
+      ).toHaveLength(1)
+    }
+  )
+
+  it.each(pairs)(
+    '$control paints enabled text at >= 4.5:1 against its own accent fill in $selector',
+    ({ control, selector }) => {
+      const theme = selector.replace(/^body\./, '')
+      const block = blocks.get(control) as string
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(applyTextColourDecl(block, theme), scope, globals)
+      const bg = resolveValue(
+        declsAtDepthZero(block, 'background')[0] ?? '',
+        scope,
+        globals
+      )
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      // Object form so a failure names the control, the theme and the ratio.
+      expect({ control, theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        control,
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
 })
