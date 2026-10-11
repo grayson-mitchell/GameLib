@@ -441,7 +441,6 @@
                 "heading": "Epic Store 浏览功能尚不支持应用内使用"
             },
             "platform": {
-                "body": "GameLib 的应用内商店和 wiki 浏览功能目前仅支持 macOS。此平台尚不支持该功能。",
                 "heading": "此平台尚不支持应用内商店和 wiki 浏览功能"
             }
         },

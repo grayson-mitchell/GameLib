@@ -448,8 +448,7 @@
                 "heading": "Navigarea Epic Store nu este încă disponibilă în aplicație"
             },
             "platform": {
-                "heading": "Navigarea magazinului și a wiki-ului în aplicație nu este încă disponibilă pe această platformă",
-                "body": "Magazinul din aplicație și navigarea wiki din GameLib sunt disponibile pe macOS. Nu sunt încă disponibile pe această platformă."
+                "heading": "Navigarea magazinului și a wiki-ului în aplicație nu este încă disponibilă pe această platformă"
             }
         },
         "embedPlaceholder": {

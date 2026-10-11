@@ -179,6 +179,51 @@ describe('WebviewUnavailablePanel — reason="platform" (D-02, REQ-40-12)', () =
     button?.props.onClick?.()
     expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
   })
+
+  // quick 261012-f25: the platform reason is reachable on EVERY OS (the D-34 deep-link escape
+  // hatch renders the panel with no `reason`), so its body copy must name no OS.
+  const OS_NEUTRAL_BODY =
+    "GameLib can't open this page in its in-app store and wiki browser."
+
+  it('renders an OS-neutral body: no macOS / Linux / Windows anywhere in the platform panel', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'platform'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).not.toMatch(/\b(macOS|Linux|Windows)\b/)
+  })
+
+  it('renders the exact OS-neutral body copy', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'platform'
+    }) as AnyReactElement
+
+    expect(collectText(element)).toContain(OS_NEUTRAL_BODY)
+  })
+
+  it('the en catalogue body equals the component default (they cannot drift apart)', () => {
+    const gamelib = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'public',
+          'locales',
+          'en',
+          'gamelib.json'
+        ),
+        'utf-8'
+      )
+    ) as { webview: { unavailable: { platform: { body: string } } } }
+
+    expect(gamelib.webview.unavailable.platform.body).toBe(OS_NEUTRAL_BODY)
+  })
 })
 
 describe('WebviewUnavailablePanel — reason="epic" (D-05/D-08, REQ-40-12)', () => {
