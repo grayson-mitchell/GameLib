@@ -7,6 +7,7 @@ import { getInstallProgress } from 'frontend/state/InstallProgress'
 import {
   appendSample,
   emptySamples,
+  keepsSampling,
   SAMPLE_INTERVAL_MS,
   SpeedPoint as Point
 } from './speedSample'
@@ -60,6 +61,14 @@ export default function ProgressHeader(props: {
     // Sample once up front so a state change (running -> paused) shows on the
     // chart immediately rather than a full interval later.
     takeSample()
+
+    // Then keep ticking ONLY while running. A paused download has already
+    // recorded its drop to 0 MB/s above; letting the interval run on would
+    // keep pushing zeros into the window and scroll the whole trace off the
+    // left edge while nothing is transferring (keepsSampling's doc comment).
+    if (!keepsSampling(state)) {
+      return
+    }
     const timer = setInterval(takeSample, SAMPLE_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [state, appName, runner])
