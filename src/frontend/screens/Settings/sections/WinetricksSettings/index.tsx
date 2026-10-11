@@ -290,16 +290,16 @@ export default function WinetricksSettings() {
         setLoadingAvailable(false)
         return
       }
-      latestRun.current = stateResult.value.run
-      setQueueState(stateResult.value)
-      seedLogFrom(stateResult.value.run)
+      // 261011-nqe: a push can beat this read to the tab while it is still
+      // in flight (the mount effect's own awaits above take time), so it is
+      // routed through the same revision guard as every other state source
+      // -- a stale remount read must not regress a run a push already
+      // advanced (test 5).
       // D-18: a remounted tab rebuilds failed rows from the state the backend
       // still holds. The installed list above is already fresh, so a finished
       // run found here needs no further re-read.
-      setErroredVerbs((current) =>
-        foldRunOutcomes(current, stateResult.value.run)
-      )
-      if (stateResult.value.run?.status === 'done') {
+      const appliedMountRead = takeQueueState(stateResult.value)
+      if (appliedMountRead && stateResult.value.run?.status === 'done') {
         reloadedRunId.current = stateResult.value.run.runId
       }
 
@@ -330,14 +330,18 @@ export default function WinetricksSettings() {
     ) {
       if (state.runner !== runner || state.appName !== appName) return
       takeQueueState(state)
-      // Task 2 (261011-nqe) moves this check to read `latestRun.current`
-      // rather than this push's own `state.run`, so a stale done push cannot
-      // be the thing deciding whether to reload.
+      // 261011-nqe: read the newest APPLIED run, from `latestRun.current`,
+      // not this push's own `state.run`. A stale done push can be dropped by
+      // the guard above after a fresher reply already applied the done
+      // state (test 6) -- the one re-read per finished run must still fire,
+      // so it is keyed off what the tab actually holds, not off whichever
+      // message just arrived.
+      const newestRun = latestRun.current
       if (
-        state.run?.status === 'done' &&
-        reloadedRunId.current !== state.run.runId
+        newestRun?.status === 'done' &&
+        reloadedRunId.current !== newestRun.runId
       ) {
-        reloadedRunId.current = state.run.runId
+        reloadedRunId.current = newestRun.runId
         void reloadInstalled()
       }
     }
@@ -411,10 +415,20 @@ export default function WinetricksSettings() {
     if (result.value.accepted) {
       takeQueueState(result.value.state)
       setSelection([])
+      // 261011-nqe: captured AFTER takeQueueState, so a dropped (stale)
+      // reply still folds the newest run's OWN outcomes, not the reply's
+      // (test 2 / F5: the run can finish, and report a failure, before this
+      // reply is even read).
+      const newestRun = latestRun.current
       // A fresh attempt started for these verbs, so a previous failure no
-      // longer applies (D-15). Cleared only once the backend accepted the run:
-      // a refused Retry leaves the row failed.
-      setErroredVerbs((current) => verbs.reduce(clearVerbError, current))
+      // longer applies (D-15). Cleared only once the backend accepted the
+      // run: a refused Retry leaves the row failed. The newest run is then
+      // folded back over the clear, so a failure newer than this reply
+      // survives it -- for a fresh reply this fold is a no-op beyond what
+      // D-15 already did.
+      setErroredVerbs((current) =>
+        foldRunOutcomes(verbs.reduce(clearVerbError, current), newestRun)
+      )
     }
     // On refusal (busy/invalid), keep the current selection untouched.
   }
@@ -428,8 +442,10 @@ export default function WinetricksSettings() {
       call: () => window.api.winetricksCancelRemaining(safeRunner, appName)
     })
     if (result.ok) {
-      latestRun.current = result.value.run
-      setQueueState(result.value)
+      // 261011-nqe: guarded like every other state source, so a stale
+      // cancel reply cannot regress a run a fresher push already finished
+      // or advanced (test 4).
+      takeQueueState(result.value)
     }
   }
 

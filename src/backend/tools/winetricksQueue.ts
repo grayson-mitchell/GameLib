@@ -181,7 +181,6 @@ async function apply(
     }
     currentRun = run
 
-    const state = getState(runner, appName)
     sendGameStatusUpdate({ appName, runner, status: 'winetricks' })
     pushState(run)
 
@@ -195,6 +194,18 @@ async function apply(
         LogPrefix.WineTricks
       )
     })
+
+    // 261011-nqe (fix a, planning_findings F1/F5): snapshotted here, AFTER
+    // `runLoop`'s synchronous prefix has already marked the first verb
+    // `installing` and pushed it (`runLoop` :99-107 run to completion before
+    // its first `await` at :113, since calling an async function runs its
+    // body synchronously up to that point). The reply is therefore never
+    // OLDER than a push already sent for this run -- when it wins the race,
+    // the tab shows Installing at once instead of Queued for the few ms
+    // until that push lands. Ordering against LATER pushes (the run
+    // finishing before this reply is even read, F5) is the renderer's
+    // revision guard's job, not this statement's.
+    const state = getState(runner, appName)
 
     return { accepted: true, state }
   } finally {

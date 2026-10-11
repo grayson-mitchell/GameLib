@@ -24,6 +24,7 @@ import {
 import {
   buildCatalog,
   capturedQueueChangedListener,
+  idleStateWith,
   installApi,
   makeApi,
   mountTab,
@@ -276,5 +277,315 @@ describe('Winetricks queue state revision ordering (261011-nqe, 45-12 G3)', () =
       1
     )
     expect(cancelButton(afterPushes).props.disabled).toBe(false)
+  })
+
+  it('a stale apply reply dropped after the run already finished does not erase the failure it reported (F5)', async () => {
+    const { promise, resolve } = deferred<{
+      accepted: true
+      state: WinetricksQueueState
+    }>()
+    api.winetricksApply.mockImplementation(() => promise)
+
+    const settled = await mountTab(WinetricksSettings)
+    const checkbox = checkboxFor(settled, 'vcrun2019')
+    ;(checkbox.props.onClick as () => void)()
+
+    const afterToggle = rerender(WinetricksSettings)
+    const apply = applyButton(afterToggle)
+    ;(apply.props.onClick as () => void)()
+    await flush()
+
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        1,
+        queueStateWith(
+          { verbs: ['vcrun2019'], outcomes: { vcrun2019: 'pending' } },
+          true
+        )
+      )
+    )
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        2,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019'],
+            outcomes: { vcrun2019: 'installing' },
+            currentVerb: 'vcrun2019'
+          },
+          true
+        )
+      )
+    )
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        4,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019'],
+            outcomes: { vcrun2019: 'failed' },
+            currentVerb: ''
+          },
+          true
+        )
+      )
+    )
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        5,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019'],
+            outcomes: { vcrun2019: 'failed' },
+            currentVerb: '',
+            status: 'done'
+          },
+          false
+        )
+      )
+    )
+
+    // The reply, carrying the run's PRE-RUN snapshot, lands last and is
+    // older than every push the run already sent -- including the done
+    // push that reported the failure.
+    resolve({
+      accepted: true,
+      state: atRevision(
+        3,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019'],
+            outcomes: { vcrun2019: 'installing' },
+            currentVerb: 'vcrun2019'
+          },
+          true
+        )
+      )
+    })
+    await flush()
+
+    const tree = rerender(WinetricksSettings)
+    expect(findByClass(tree, 'WinetricksStickyBar--done')).toHaveLength(1)
+    expect(collectText(tree)).toContain('1 failed')
+    expect(findByClass(tree, 'WinetricksStickyBar--inFlight')).toHaveLength(0)
+    expect(findByClass(tree, 'WinetricksRow--errored')).toHaveLength(1)
+    expect(findByClass(tree, 'WinetricksRow__retry')).toHaveLength(1)
+  })
+
+  it('a stale cancel reply cannot regress a run a fresher push already finished (test 4)', async () => {
+    api.winetricksListAvailable.mockImplementation(() =>
+      Promise.resolve(
+        buildCatalog().filter((c) => ['vcrun2019', 'xact'].includes(c.verb))
+      )
+    )
+    const { promise, resolve } = deferred<WinetricksQueueState>()
+    api.winetricksCancelRemaining.mockImplementation(() => promise)
+
+    await mountTab(WinetricksSettings)
+
+    // Held state by push only -- no Apply press needed for this race.
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        3,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installing', xact: 'pending' },
+            currentVerb: 'vcrun2019'
+          },
+          true
+        )
+      )
+    )
+
+    const beforeCancel = rerender(WinetricksSettings)
+    ;(cancelButton(beforeCancel).props.onClick as () => void)()
+    await flush()
+
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        4,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installing', xact: 'cancelled' },
+            currentVerb: 'vcrun2019',
+            cancelRequested: true
+          },
+          true
+        )
+      )
+    )
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        6,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installed', xact: 'cancelled' },
+            currentVerb: '',
+            cancelRequested: true
+          },
+          true
+        )
+      )
+    )
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        7,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installed', xact: 'cancelled' },
+            currentVerb: '',
+            cancelRequested: true,
+            status: 'done'
+          },
+          false
+        )
+      )
+    )
+
+    // The cancel reply resolves last, carrying the revision-4 content
+    // (still installing, one revision number newer than that push).
+    resolve(
+      atRevision(
+        5,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installing', xact: 'cancelled' },
+            currentVerb: 'vcrun2019',
+            cancelRequested: true
+          },
+          true
+        )
+      )
+    )
+    await flush()
+
+    const tree = rerender(WinetricksSettings)
+    expect(findByClass(tree, 'WinetricksStickyBar--done')).toHaveLength(1)
+    expect(collectText(tree)).toContain('1 installed')
+    expect(findByClass(tree, 'WinetricksStickyBar--inFlight')).toHaveLength(0)
+    expect(findByClass(tree, 'WinetricksRow--installed')).toHaveLength(1)
+    expect(api.winetricksListInstalled).toHaveBeenCalledTimes(2)
+  })
+
+  it('a stale remount read cannot regress a run already advanced by a push (test 5)', async () => {
+    const { promise, resolve } = deferred<WinetricksQueueState>()
+    api.winetricksQueueState.mockImplementation(() => promise)
+
+    await mountTab(WinetricksSettings)
+
+    // Delivered while the mount read is still pending.
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        7,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019'],
+            outcomes: { vcrun2019: 'installing' },
+            currentVerb: 'vcrun2019'
+          },
+          true
+        )
+      )
+    )
+
+    // The mount read resolves last but carries an OLDER revision -- it was
+    // dispatched before the push above, and only its I/O was slow.
+    resolve(atRevision(6, idleStateWith({})))
+    await flush()
+
+    const tree = rerender(WinetricksSettings)
+    expect(findByClass(tree, 'WinetricksStickyBar--inFlight')).toHaveLength(1)
+    expect(cancelButton(tree).props.disabled).toBe(false)
+    expect(findByClass(tree, 'WinetricksRow--installing')).toHaveLength(1)
+  })
+
+  it('a dropped stale done push still triggers the one installed-list reload (test 6)', async () => {
+    api.winetricksListAvailable.mockImplementation(() =>
+      Promise.resolve(
+        buildCatalog().filter((c) => ['vcrun2019', 'xact'].includes(c.verb))
+      )
+    )
+    const { promise, resolve } = deferred<WinetricksQueueState>()
+    api.winetricksCancelRemaining.mockImplementation(() => promise)
+
+    await mountTab(WinetricksSettings)
+
+    // Hold the revision-3 running state, same as test 4.
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        3,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installing', xact: 'pending' },
+            currentVerb: 'vcrun2019'
+          },
+          true
+        )
+      )
+    )
+
+    const beforeCancel = rerender(WinetricksSettings)
+    ;(cancelButton(beforeCancel).props.onClick as () => void)()
+    await flush()
+
+    // The cancel reply resolves FIRST, at revision 7, already done.
+    resolve(
+      atRevision(
+        7,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installed', xact: 'cancelled' },
+            currentVerb: '',
+            cancelRequested: true,
+            status: 'done'
+          },
+          false
+        )
+      )
+    )
+    await flush()
+
+    // Then the stale done push for the same run arrives, at the OLDER
+    // revision 6 -- it is dropped, but the one reload it would have
+    // triggered must still fire, off the newest run the reply already
+    // applied.
+    capturedQueueChangedListener(api)(
+      {},
+      atRevision(
+        6,
+        queueStateWith(
+          {
+            verbs: ['vcrun2019', 'xact'],
+            outcomes: { vcrun2019: 'installed', xact: 'cancelled' },
+            currentVerb: '',
+            cancelRequested: true,
+            status: 'done'
+          },
+          false
+        )
+      )
+    )
+    await flush()
+
+    const tree = rerender(WinetricksSettings)
+    expect(api.winetricksListInstalled).toHaveBeenCalledTimes(2)
+    expect(findByClass(tree, 'WinetricksStickyBar--done')).toHaveLength(1)
   })
 })
