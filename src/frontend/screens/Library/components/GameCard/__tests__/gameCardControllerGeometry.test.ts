@@ -315,3 +315,94 @@ describe('GameCard height is content and controller mode never resizes it (sourc
     }
   })
 })
+
+describe('just-played hero: neighbour height by construction, letterboxed art (261011-vl0 D-02, D-03)', () => {
+  const HERO_IMG = '.gameCard.justPlayed .justPlayedImg'
+
+  it('H1: the hero has no geometry of its own: no card height rule, no bar size or padding override', () => {
+    const rules = parseTopLevelRules(readGameCardCss())
+    const offenders: string[] = []
+    for (const rule of rules) {
+      const own =
+        rule.selectors.length === 1 &&
+        rule.selectors[0] === '.gameCard.justPlayed'
+      if (own) {
+        for (const prop of CARD_HEIGHT_PROPS) {
+          if (rule.declarations.has(prop)) {
+            offenders.push(`.gameCard.justPlayed { ${prop} }`)
+          }
+        }
+      }
+      if (
+        rule.selectors.some((s) =>
+          s.startsWith('.gameCard.justPlayed > .icons')
+        )
+      ) {
+        for (const prop of rule.declarations.keys()) {
+          if (
+            prop === 'block-size' ||
+            prop === 'height' ||
+            SPACING_PROP.test(prop)
+          ) {
+            offenders.push(`${rule.selectors.join(', ')} { ${prop} }`)
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('H2: the hero art box is one portrait art height tall, shows the whole art over the card gradient', () => {
+    const rule = findRule(parseTopLevelRules(readGameCardCss()), HERO_IMG)
+    expect(requireDecl(rule, HERO_IMG, 'display')).toBe('block')
+    expect(requireDecl(rule, HERO_IMG, 'block-size')).toBe(
+      'var(--game-card-art-height)'
+    )
+    expect(requireDecl(rule, HERO_IMG, 'object-fit')).toBe('contain')
+    expect(requireDecl(rule, HERO_IMG, 'background-image')).toBe(
+      'var(--gradient-gamecard)'
+    )
+    expect(rule.declarations.has('aspect-ratio')).toBe(false)
+  })
+
+  it('H3: the hero art block-size is the art term of the placeholder height, so hero height = neighbour height at every probed width', () => {
+    const rules = parseTopLevelRules(readGameCardCss())
+    const heroArt = requireDecl(
+      findRule(rules, HERO_IMG),
+      HERO_IMG,
+      'block-size'
+    )
+    const placeholder = requireDecl(findRule(rules, EMPTY), EMPTY, 'block-size')
+    expect(placeholder).toContain(heroArt)
+
+    const bar = resolveBarHeight(rules)
+    expect(bar).toBe(51)
+    const imgRatio = parseRatio(
+      requireDecl(findRule(rules, IMG), IMG, 'aspect-ratio'),
+      `${IMG} aspect-ratio`
+    )
+    for (const w of [
+      LIBRARY_TILE_WIDTH_MIN,
+      LIBRARY_TILE_WIDTH_DEFAULT,
+      188,
+      200,
+      280,
+      LIBRARY_TILE_WIDTH_MAX
+    ]) {
+      const neighbour = w / imgRatio + bar
+      // The hero's art box is the same --game-card-art-height term (H2/H3
+      // above) and it shares the same pinned bar (H1, G4).
+      const hero = w / imgRatio + bar
+      expect(hero - neighbour).toBeCloseTo(0, 6)
+    }
+  })
+
+  it('H4: the placeholder-art fallback still shows the hero art whole (object-fit: contain)', () => {
+    const rules = parseTopLevelRules(readGameCardCss())
+    const grouped = rules.find((r) =>
+      r.selectors.includes(`${HERO_IMG}.usingFallback`)
+    )
+    expect(grouped).toBeDefined()
+    expect(grouped?.declarations.get('object-fit')).toBe('contain')
+  })
+})

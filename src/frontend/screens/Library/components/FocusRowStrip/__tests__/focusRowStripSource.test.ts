@@ -306,15 +306,13 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
       FOCUS_ROW_CSS_PATH,
       'the strip hero hover/focus transform: scale()'
     )
-    const heroRatioMatch = cssBlock(gameCard, '.gameCard.justPlayed').match(
-      /aspect-ratio:\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*;/
-    )
-    if (!heroRatioMatch) {
-      throw new Error(
-        `${GAME_CARD_CSS_PATH}: no .gameCard.justPlayed aspect-ratio`
+
+    it("the hero's height is its neighbours' height h(w) by construction: its art box is one portrait art height and no rule sizes the hero card (261011-vl0 D-02)", () => {
+      expect(cssBlock(gameCard, '.gameCard.justPlayed .justPlayedImg')).toMatch(
+        /block-size:\s*var\(--game-card-art-height\)\s*;/
       )
-    }
-    const heroRatio = Number(heroRatioMatch[1]) / Number(heroRatioMatch[2])
+      expect(gameCard).not.toMatch(/\.gameCard\.justPlayed\s*{/)
+    })
 
     it('the strip hero scale is strictly below the grid scale and carries no !important', () => {
       expect(heroBlocks).toHaveLength(1)
@@ -348,7 +346,7 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
       const [k, b] = [Number(m[2]), Number(m[3])]
       for (const w of [minWidth, supremumWidth]) {
         expect(k * w + b).toBeGreaterThanOrEqual(
-          reach(heroSide(w) / heroRatio, heroScale)
+          reach(cardHeight(w), heroScale)
         )
       }
     })

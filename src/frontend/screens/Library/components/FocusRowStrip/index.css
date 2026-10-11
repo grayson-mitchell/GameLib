@@ -115,8 +115,9 @@
 /* 261011-ulj D-01 (operator decision 2026-10-11, "Restore wide hero"): the
    just-played hero is the first card of the Recently played and Favourites
    strips, and its slot is two tile widths plus one gap, mirroring
-   `grid-column: span 2` in the grid's 1.5rem-gap columns. GameCard already
-   renders the 16:10 art and the PLAY label for it; only the slot was wrong.
+   `grid-column: span 2` in the grid's 1.5rem-gap columns. GameCard
+   renders the hero's wide art (letterboxed, 261011-vl0) and its PLAY label;
+   this rule only sizes the slot.
    Both arms are needed. The pre-reveal GameCard is the `.gameCard.justPlayed`
    div itself, a direct list child. The revealed GameCard is a plain div, then
    ContextMenu's own div, then `.gameCard.justPlayed`, so the `:has` must be a
@@ -129,11 +130,11 @@
    `grid-gap`. The hero is only ever the list's first rendered card (GamesList
    marks index 0 of those two views), and its slot plus the following gap is
    exactly two pitches, so every later card stays on a grid column. Height:
-   against GameCard's untouched 275/205 hero ratio and the 173/275 portrait
-   ratio the heights are equal near a 181px tile; the hero is +4.1px at 140,
-   +2.5px at 156, -0.7px at 188 and -13.7px at 320, the same residual the old
-   span-2 lane had. The width is pinned as well as the basis for the same
-   G-48-11b reason as the rule above. */
+   equal to its neighbours at every tile width by construction (261011-vl0):
+   GameCard sizes the hero's art box to --game-card-art-height, one strip
+   card's portrait art height, and the hero shares the pinned icons bar. The width
+   is pinned as well as the basis for the same G-48-11b reason as the rule
+   above. */
 .focusRowTrack .gameList > :is(.justPlayed, :has(.justPlayed)) {
   flex: 0 0 calc(2 * var(--focus-row-card-width, 156px) + 1.5rem);
   width: calc(2 * var(--focus-row-card-width, 156px) + 1.5rem);

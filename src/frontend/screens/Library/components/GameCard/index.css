@@ -65,10 +65,8 @@
    2026-10-07 (Phase 48 gap G-48-8a). Controller mode changes neither term of
    the card height: the art is derived from the width, and the bar's
    `block-size` is pinned (see `.gameCard > .icons`). Gated by
-   `__tests__/gameCardControllerGeometry.test.ts`. */
-.gameCard.justPlayed {
-  aspect-ratio: 275/205;
-}
+   `__tests__/gameCardControllerGeometry.test.ts`. The just-played hero has
+   no geometry rule either (261011-vl0 D-02): see `.justPlayedImg` below. */
 
 /* Hover and focus are now deliberately the SAME ring for grid tiles. Quick
    260926-acw had split them (subtle 2px hover, loud focus) so a mouse ring
@@ -257,10 +255,29 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   display: block;
 }
 
+/* The hero's art box is the hero slot's width (two tile widths plus one gap,
+   in the strip) by one portrait card's art height, so the hero (art plus the
+   shared pinned bar) is exactly its neighbours' height at every tile width
+   (261011-vl0 D-02). This replaces a fixed ratio that matched only near a
+   181px tile.
+   `contain` shows the whole wide store art, letterboxed (D-03, the operator's
+   choice over a crop and a blurred backdrop). A Steam 460x215 header gets
+   bands of about 22px at a 140px tile, 25px at 156 and 58px at 320. Art
+   narrower than the box gets side bands instead.
+   The bands are painted here because the `.gameCard` rule's
+   `background-color: var(--gradient-gamecard)` paints nothing: a gradient is
+   not a color.
+   `display: block` because CachedImage renders a bare inline `<img>`. Its
+   baseline gap would make the hero a few px taller than its neighbours now
+   that height is content.
+   `.gameCard.justPlayed.hidden` still dims the art to 0.2, and the bands with
+   it. */
 .gameCard.justPlayed .justPlayedImg {
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+  display: block;
+  block-size: var(--game-card-art-height);
+  object-fit: contain;
   width: 100%;
+  background-image: var(--gradient-gamecard);
 }
 
 /* Placeholder art (no cover available) is sized to fit the tile whole —
