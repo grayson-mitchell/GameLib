@@ -1097,3 +1097,143 @@ describe('Winetricks enabled Apply text contrast in every theme (45-12 G7)', () 
     ])
   })
 })
+
+const LIBRARY_SIGN_IN_NOTICE_SCSS =
+  'src/frontend/screens/Library/components/LibrarySignInNotice/index.scss'
+
+/**
+ * The body of the rule reached by walking `path` down from the
+ * `.LibrarySignInNotice` block: each step selects the depth-0 nested rule whose
+ * selector equals that string exactly. Throws, naming the joined path, when a
+ * step finds no rule -- a renamed selector fails loudly instead of the gate
+ * quietly measuring nothing.
+ */
+const signInNoticeRule = (noticeScss: string, path: string[]): string => {
+  let body = cssBlock(noticeScss, '.LibrarySignInNotice')
+  for (const selector of path) {
+    const next = nestedRules(body).find((rule) => rule.selector === selector)
+    if (!next)
+      throw new Error(`no rule ${path.join(' ')} in the sign-in notice`)
+    body = next.body
+  }
+  return body
+}
+
+/**
+ * Every foreground the sign-in row paints, and the single value it must carry
+ * so that the row's own text colour governs it: the store logo, the footer
+ * button label and the dismiss glyph inherit, and the in-row footer button is
+ * transparent so its label sits on the banner whichever stylesheet loaded
+ * first.
+ */
+const SIGN_IN_ROW_FOREGROUNDS: readonly {
+  path: string[]
+  prop: string
+  want: string
+}[] = [
+  { path: ['&__row', '.button.is-footer'], prop: 'color', want: 'inherit' },
+  {
+    path: ['&__row', '.button.is-footer'],
+    prop: 'background-color',
+    want: 'transparent'
+  },
+  {
+    path: ['&__row--notConnected', '.LibrarySignInNotice__icon'],
+    prop: 'color',
+    want: 'inherit'
+  },
+  { path: ['&__dismiss'], prop: 'color', want: 'inherit' }
+]
+
+/**
+ * The foregrounds in SIGN_IN_ROW_FOREGROUNDS that do NOT carry their required
+ * value, as `<path> <prop>` strings in table order. Takes the whole stylesheet
+ * string so a test can hand it an in-memory sabotaged copy.
+ */
+const signInForegroundsNotInheriting = (noticeScss: string): string[] =>
+  SIGN_IN_ROW_FOREGROUNDS.filter(
+    ({ path, prop, want }) =>
+      JSON.stringify(
+        declsAtDepthZero(signInNoticeRule(noticeScss, path), prop)
+      ) !== JSON.stringify([want])
+  ).map(({ path, prop }) => `${path.join(' ')} ${prop}`)
+
+/**
+ * Per-theme WCAG 1.4.3 census for the Library sign-in row (F-49-R1-6, Phase 49
+ * macOS live gate Run 1 item 10b): nord_light's not-connected row read as
+ * black text on a dark banner, while midnightMirage, gruvbox_dark and dracula
+ * were judged pass.
+ *
+ * nord-light is the one theme whose navbar surface is dark against a light
+ * page, so a BODY text token painted on that surface fails there
+ * structurally -- the other nine pass only because their navbar and body
+ * surfaces are both dark. This is the shape G-48-7 recorded for the FOCUS ROW
+ * divider.
+ *
+ * It reads the authored declarations FROM the stylesheet on every run, never a
+ * hardcoded copy of them, and it holds every foreground on the row to
+ * inheriting the one measured colour.
+ *
+ * Like every census in this file it cannot see a pixel, so the operator's next
+ * macOS launch adjudicates appearance.
+ */
+describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const noticeScss = read(LIBRARY_SIGN_IN_NOTICE_SCSS)
+  const globals = globalTokens()
+  const rowBody = signInNoticeRule(noticeScss, ['&__row'])
+
+  it('non-vacuity: global tokens, the authored row pair, and no modifier that repaints the row', () => {
+    expect(globals.size).toBeGreaterThan(0)
+    expect(declsAtDepthZero(rowBody, 'background')).toEqual([
+      'var(--navbar-background)'
+    ])
+    expect(declsAtDepthZero(rowBody, 'background-color')).toEqual([])
+    expect(declsAtDepthZero(rowBody, 'color')).toEqual([
+      'var(--navbar-inactive, var(--navbar-accent))'
+    ])
+    const notConnected = signInNoticeRule(noticeScss, ['&__row--notConnected'])
+    expect(declsAtDepthZero(notConnected, 'color')).toEqual([])
+    expect(declsAtDepthZero(notConnected, 'background')).toEqual([])
+    expect(declsAtDepthZero(notConnected, 'background-color')).toEqual([])
+    expect(
+      nestedRules(cssBlock(noticeScss, '.LibrarySignInNotice'))
+        .map((rule) => rule.selector)
+        .filter((selector) => selector.startsWith('&__row--expired'))
+    ).toEqual(['&__row--expired > svg'])
+  })
+
+  it.each(themeSelectors)(
+    '%s paints the sign-in row text at >= 4.5:1 against the banner',
+    (selector) => {
+      const theme = selector.replace(/^body\./, '')
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(
+        declsAtDepthZero(rowBody, 'color')[0] ?? '',
+        scope,
+        globals
+      )
+      const bg = resolveValue(
+        declsAtDepthZero(rowBody, 'background')[0] ?? '',
+        scope,
+        globals
+      )
+      // An unresolved token fails the case; it never skips it.
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      // Object form so a failure names the theme and the measured ratio.
+      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it("every foreground on the row inherits the row's text colour", () => {
+    expect(signInForegroundsNotInheriting(noticeScss)).toEqual([])
+  })
+})
