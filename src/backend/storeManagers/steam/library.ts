@@ -940,14 +940,26 @@ export default class SteamLibraryManager implements LibraryManager {
     const connected = await SteamUser.ensureConnected()
     const client = SteamUser.getClient()
     if (!connected || !client || !client.steamID) {
+      // steam-sync-false-failed-banner: "not ready" is not one condition. When
+      // the CM answered the logon with a terminal error (AccessDenied for a
+      // refresh token Steam no longer accepts), steam-user has disconnected and
+      // schedules NO retry -- this is not a reconnect in flight, and repeating
+      // the sync replays the same refusal. Name it, so neither the log nor the
+      // payload reads as a readiness race (that misreading is what the
+      // "benign reconnect window" todo was filed on). Both branches stay on
+      // exit path 1 and emit exactly once: D-07's four-exit-path contract is
+      // unchanged, only the reason vocabulary gained a member.
+      const rejection = SteamUser.getLogonFailure()
       logWarning(
-        'Steam client not ready, skipping library refresh',
+        rejection
+          ? `Steam rejected the stored-credential logon (${rejection.message}), skipping library refresh`
+          : 'Steam client not ready, skipping library refresh',
         LogPrefix.Steam
       )
       // 34.15 D-07 exit path 1 of 4.
       sendFrontendMessage('steamSyncStatus', {
         status: 'failed',
-        reason: 'client-not-ready'
+        reason: rejection ? 'logon-rejected' : 'client-not-ready'
       })
       return null
     }

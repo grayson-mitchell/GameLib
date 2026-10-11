@@ -803,6 +803,43 @@ describe('SteamLibraryManager', () => {
       ])
     })
 
+    it('exit path 1 (CM rejected the logon): still ONE failed emit, but names it logon-rejected so it never reads as a readiness race', async () => {
+      // steam-sync-false-failed-banner: AccessDenied is terminal in steam-user
+      // (no retry is scheduled), so this is not a reconnect in flight. The
+      // four-exit-path census is unchanged -- same exit, same single emit --
+      // only the reason differs.
+      // `jest.mocked(SteamUser).x` rather than `jest.mocked(SteamUser.x)`:
+      // the latter is a bare method reference and trips unbound-method, and
+      // this repo's lint ceiling for tests is exact.
+      const user = jest.mocked(SteamUser)
+      user.ensureConnected.mockResolvedValue(false)
+      user.getLogonFailure.mockReturnValue({
+        message: 'AccessDenied',
+        eresult: 15
+      })
+
+      const result = await manager.refresh()
+
+      expect(result).toBeNull()
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'failed', reason: 'logon-rejected' }
+      ])
+    })
+
+    it('exit path 1 (no rejection recorded): an unreadable/absent/slow connect keeps the generic client-not-ready reason', async () => {
+      const user = jest.mocked(SteamUser)
+      user.ensureConnected.mockResolvedValue(false)
+      user.getLogonFailure.mockReturnValue(null)
+
+      await manager.refresh()
+
+      expect(steamSyncEmits()).toEqual([
+        { status: 'syncing' },
+        { status: 'failed', reason: 'client-not-ready' }
+      ])
+    })
+
     it('exit path 2 (getUserOwnedApps throws): emits [syncing, failed/owned-apps-failed] AFTER cached games are pushed', async () => {
       const cachedGames = [
         { runner: 'steam', app_name: '570', title: 'Dota 2' } as any,

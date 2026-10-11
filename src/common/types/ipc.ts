@@ -659,6 +659,9 @@ interface AsyncIPCFunctions {
 // failure (Claude's Discretion under D-07), chosen so the inline notice can
 // say something more useful than "failed":
 //   - 'client-not-ready': the Steam session could not be re-established.
+//   - 'logon-rejected': the CM was reached and REFUSED the stored-credential
+//     logon (e.g. AccessDenied). Terminal, not a reconnect in flight:
+//     steam-user schedules no retry after it, so a repeat replays the refusal.
 //   - 'owned-apps-failed': the CM was reached but the owned-app list did not
 //     arrive -- the cached library is being served instead.
 //   - 'sync-failed': the owned-app list arrived but hydration threw.
@@ -676,6 +679,7 @@ export type SteamSyncStatus = 'idle' | 'syncing' | 'failed'
 // does not apply here.
 type SteamSyncFailureReason =
   | 'client-not-ready'
+  | 'logon-rejected'
   | 'owned-apps-failed'
   | 'sync-failed'
 
