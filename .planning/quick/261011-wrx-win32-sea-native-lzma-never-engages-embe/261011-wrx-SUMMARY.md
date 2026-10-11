@@ -56,6 +56,14 @@ The driver port (STEP 1) was done. `npx tsc --noEmit` over it is clean, and `--f
 ## Live run (2026-10-12, operator-triggered after the executor returned)
 
 The operator closed the app and ran `pnpm build:sidecar-sea`; the orchestrator then ran the driver. `RESULT label=native-win32 pass=20/20 expectNativeWorkers=2`: every run `nativeWorkers=2`, `exit=0`, `decode=ok match=true`, wall 1.80-2.20 s. The engaged line appears in all 20 run logs; zero logs carry the import-failure warning. Temp census: 0 before, 40 after (2 per process: one with both files at 966 KB, one addon-only at 816 KB because the process had already mapped liblzma.dll by name from the first dir and the finally unlinked the unmapped second copy; 35 MB total), all `LEFT BEHIND`, removed by hand afterwards. Logs and census are in `measurement/`. The binary grew 120,994,304 to 121,159,680 bytes.
+Live Steam depot install on win32, dev build (2026-10-12 05:25): Avernum 5 (appId 206040) with
+"Download Steam games directly in GameLib" on. 1460 files, 92,315,962 bytes, 16.7 s download, badge
+flipped to installed. `gamelib.log` carries the engaged line 8 times (one per decode worker) and zero
+fallback or import-failure warnings. This was the `pnpm tauri:dev` shell with the sidecar under plain
+node, so lzma-native loaded from node_modules and no SEA extraction happened (temp census 0). It
+proves the depot path and native engagement on Windows, not the SEA embedding; item 2 (the same
+install in the packaged app, expecting the `SEA extraction dir` sentence and 2 temp dirs) stays owed.
+
 ## Deviations from Plan
 
 None to the code. The todo was closed via the plan's "skipped" branch (unit evidence only), with the Resolution stating plainly that the real-SEA run is owed. The follow-up accumulation todo was filed because STEP 3 did not run.

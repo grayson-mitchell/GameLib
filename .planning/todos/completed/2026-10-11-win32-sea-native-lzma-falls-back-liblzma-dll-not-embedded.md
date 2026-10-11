@@ -111,3 +111,11 @@ Cold `pnpm build:sidecar-sea` with the app closed, then the driver exactly as ab
 - The rebuilt binary grew from 120,994,304 to 121,159,680 bytes, consistent with the embedded DLL.
 
 Still owed: item 2 (a live Steam depot install in the packaged Windows app) and item 3.
+
+Live Steam depot install on win32, dev build (2026-10-12 05:25): Avernum 5 (appId 206040) with
+"Download Steam games directly in GameLib" on. 1460 files, 92,315,962 bytes, 16.7 s download, badge
+flipped to installed. `gamelib.log` carries the engaged line 8 times (one per decode worker) and zero
+fallback or import-failure warnings. This was the `pnpm tauri:dev` shell with the sidecar under plain
+node, so lzma-native loaded from node_modules and no SEA extraction happened (temp census 0). It
+proves the depot path and native engagement on Windows, not the SEA embedding; item 2 (the same
+install in the packaged app, expecting the `SEA extraction dir` sentence and 2 temp dirs) stays owed.
