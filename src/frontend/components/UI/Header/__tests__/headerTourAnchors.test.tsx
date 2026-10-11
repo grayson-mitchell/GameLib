@@ -235,6 +235,14 @@ jest.mock('../../NavShell/components/FilterMoreGroup', () => ({
   })
 }))
 
+jest.mock('../../NavShell/components/LibraryTileSizeSlider', () => ({
+  __esModule: true,
+  default: (props: Record<string, unknown>) => ({
+    type: 'mock-librarytilesizeslider',
+    props
+  })
+}))
+
 jest.mock('frontend/screens/Library/components/AddGameButton', () => ({
   __esModule: true,
   default: (props: Record<string, unknown>) => ({
@@ -276,6 +284,7 @@ import FilterFocusRow from '../../NavShell/components/FilterFocusRow'
 import FilterStoreFacet from '../../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../../NavShell/components/FilterMoreGroup'
+import LibraryTileSizeSlider from '../../NavShell/components/LibraryTileSizeSlider'
 import FormControl from '../../FormControl'
 import AddGameButton from 'frontend/screens/Library/components/AddGameButton'
 import TourButton from 'frontend/components/Tour/TourButton'
@@ -430,6 +439,16 @@ describe('Header tour anchors (34.12-02, D-09; extended 261002-hx0)', () => {
       (el) => el.type === FormControl
     )
     expect(formControlEls).toHaveLength(0)
+  })
+
+  it('the last top-level child of Header__footer is the LibraryTileSizeSlider, by identity (261011-t4y, D-02)', () => {
+    const tree = renderHeader()
+    const footer = topLevelChildren(tree)[5]
+    const footerChildren = topLevelChildren(footer)
+    expect(footerChildren[0].props?.className).toBe('Header__footerRow')
+    expect(footerChildren[footerChildren.length - 1].type).toBe(
+      LibraryTileSizeSlider
+    )
   })
 
   it('Header__footer renders AddGameButton, by identity', () => {

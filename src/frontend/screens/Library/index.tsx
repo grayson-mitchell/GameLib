@@ -67,6 +67,7 @@ import {
   buildGridPipeline,
   collectionIsStale
 } from './engineWiring'
+import { applyLibraryTileWidth, readLibraryTileWidth } from './libraryTileSize'
 
 const storage = window.localStorage
 
@@ -118,6 +119,15 @@ export default React.memo(function Library(): JSX.Element {
     storage.setItem('layout', layout)
     setLayout(layout)
   }
+
+  // Restore the saved tile width before the first Library paint so nothing
+  // flashes at the default. The slider writes the same property on change.
+  useLayoutEffect(() => {
+    applyLibraryTileWidth(
+      document.documentElement,
+      readLibraryTileWidth(storage)
+    )
+  }, [])
 
   // D-05: single-select view. A format guard in the shape of
   // migrateFilterMode below -- an unrecognised or absent value falls back

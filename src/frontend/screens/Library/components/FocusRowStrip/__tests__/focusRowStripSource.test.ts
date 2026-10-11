@@ -11,7 +11,11 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { GRID_CARD_MIN_WIDTH } from '../focusRowOverflow'
+import {
+  LIBRARY_TILE_WIDTH_DEFAULT,
+  LIBRARY_TILE_WIDTH_MAX,
+  LIBRARY_TILE_WIDTH_MIN
+} from '../../../libraryTileSize'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..', '..')
 
@@ -104,7 +108,6 @@ describe('FocusRowStrip/index.css -- .focusRowTrack .gameList', () => {
 const GAME_CARD_CSS_PATH =
   'src/frontend/screens/Library/components/GameCard/index.css'
 const THEMES_SCSS_PATH = 'src/frontend/themes.scss'
-const TYPOGRAPHY_SCSS_PATH = 'src/frontend/styles/_typography.scss'
 
 /** Every top-level block whose selector text matches `selector` (whitespace
  * tolerant), brace-counted. */
@@ -145,18 +148,18 @@ function parsed(
   return n
 }
 
-describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-48-8c)', () => {
+describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-48-8c, retargeted 261011-t4y)', () => {
   // The first card at scrollLeft 0 and the last at the end of travel need room
-  // for a scaled card's ring. G-48-8c widened the cards to the grid's column
-  // width: the 9.15px reach at 156px becomes 13.65px horizontally and 18.60px
-  // vertically at the 336px supremum (one column, just before a second fits).
-  // So the list pads 15px inline: that covers 13.65 with 1.35px to spare, stays
-  // under the strip's 16px gutter (Test H), and stays a px value so Tests F-H
-  // keep parsing px and keep bleed = padding. The vertical room scales with the
-  // card instead (Test V): a fixed 19px would add 3px above and below the strip
-  // at every width for a band only single-column windows reach. The viewport
-  // bleeds out by the list padding so cards keep their x-position over the grid.
-  // Every number below is parsed from the shipped stylesheets, never restated.
+  // for a scaled card's ring. Tile width is now chosen by the Library tile-size
+  // slider, so a card is never narrower than LIBRARY_TILE_WIDTH_MIN nor wider
+  // than LIBRARY_TILE_WIDTH_MAX: the reach runs 8.75px to 13.25px horizontally
+  // and 10.81px to 17.97px vertically. So the list pads 15px inline: that
+  // covers 13.25 with 1.75px to spare, stays under the strip's 16px gutter
+  // (Test H), and stays a px value so Tests F-H keep parsing px and keep
+  // bleed = padding. The vertical room scales with the card instead (Test V).
+  // The viewport bleeds out by the list padding so cards keep their x-position
+  // over the grid. The bounds are proven at zoom 1. Every number below is
+  // parsed from the shipped stylesheets or imported, never restated.
   const css = read(FOCUS_ROW_CSS_PATH)
   const list = cssBlock(css, '.focusRowTrack .gameList')
   const viewport = cssBlock(css, '.focusRowStrip__viewport')
@@ -169,33 +172,12 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
     viewport.match(/margin-inline:\s*-(\d+(?:\.\d+)?)px\s*;/)?.[1]
   )
 
-  const gridBlock = cssBlock(read(LIBRARY_CSS_PATH), '.gameList')
   const gameCard = read(GAME_CARD_CSS_PATH)
   const themes = read(THEMES_SCSS_PATH)
-  const typography = read(TYPOGRAPHY_SCSS_PATH)
 
-  const minWidth = parsed(
-    gridBlock,
-    /minmax\(\s*(\d+(?:\.\d+)?)px,\s*1fr\s*\)/,
-    LIBRARY_CSS_PATH,
-    'the .gameList minmax() floor'
-  )
-  const rootPx = parsed(
-    typography,
-    /font-size:\s*(\d+(?:\.\d+)?)px\s*;/,
-    TYPOGRAPHY_SCSS_PATH,
-    'the root px font-size'
-  )
-  const gapPx =
-    parsed(
-      gridBlock,
-      /grid-gap:\s*(\d+(?:\.\d+)?)rem\s*;/,
-      LIBRARY_CSS_PATH,
-      'the .gameList grid-gap in rem'
-    ) * rootPx
-  // One column, just before a second fits: the column is at most C and
-  // C < 2 x min + gap, so a grid card is never wider than this.
-  const supremumWidth = 2 * minWidth + gapPx
+  const minWidth = LIBRARY_TILE_WIDTH_MIN
+  // The widest card a slider position can produce.
+  const supremumWidth = LIBRARY_TILE_WIDTH_MAX
 
   const ringDecls = themes.match(/--focus-ring-width:\s*(\d+(?:\.\d+)?)px/g)
   if (ringDecls?.length !== 1) {
@@ -238,25 +220,24 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
   const reach = (side: number) =>
     (side / 2 + ringWidth + ringOffset) * scale - side / 2
 
-  it('non-vacuity: the parsed geometry is the shipped one (336px supremum, 13.65 and 18.60 reach)', () => {
-    expect(minWidth).toBe(156)
-    expect(gapPx).toBe(24)
-    expect(supremumWidth).toBe(336)
+  it('non-vacuity: the parsed geometry is the shipped one (140px floor, 320px ceiling, 13.25 and 17.97 reach)', () => {
+    expect(minWidth).toBe(140)
+    expect(supremumWidth).toBe(320)
     expect(ringWidth).toBe(3)
     expect(ringOffset).toBe(2)
     expect(scale).toBe(1.05)
-    expect(reach(supremumWidth)).toBeCloseTo(13.65, 2)
-    expect(reach(supremumWidth / cardRatio)).toBeCloseTo(18.6, 1)
+    expect(reach(supremumWidth)).toBeCloseTo(13.25, 2)
+    expect(reach(supremumWidth / cardRatio)).toBeCloseTo(17.97, 2)
   })
 
-  it('Test F: the list declares width: max-content, padding-block: 0 and padding-inline covering the ring reach at the widest grid card', () => {
+  it('Test F: the list declares width: max-content, padding-block: 0 and padding-inline covering the ring reach at the widest slider tile', () => {
     expect(list).toMatch(/width:\s*max-content\s*;/)
     expect(list).toMatch(/padding-block:\s*0\s*;/)
     expect(Number.isFinite(inlinePadding)).toBe(true)
     expect(inlinePadding).toBeGreaterThanOrEqual(reach(supremumWidth))
   })
 
-  it('Test V: the list block margin scales with the card and covers the vertical reach at the floor and the supremum', () => {
+  it('Test V: the list block margin scales with the card and covers the vertical reach at the slider minimum and maximum', () => {
     const m = list.match(
       /margin-block:\s*max\(\s*var\(--space-md\)\s*,\s*calc\(\s*var\(--focus-row-card-width,\s*(\d+(?:\.\d+)?)px\)\s*\*\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)px\s*\)\s*\)\s*;/
     )
@@ -266,7 +247,7 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
       )
     }
     const [fallback, k, b] = [Number(m[1]), Number(m[2]), Number(m[3])]
-    expect(fallback).toBe(minWidth)
+    expect(fallback).toBe(LIBRARY_TILE_WIDTH_DEFAULT)
     for (const w of [minWidth, supremumWidth]) {
       expect(k * w + b).toBeGreaterThanOrEqual(reach(w / cardRatio))
     }
@@ -302,11 +283,11 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
   })
 })
 
-describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > * (G-48-8c)', () => {
+describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > * (G-48-8c, retargeted 261011-t4y)', () => {
   // The 2026-10-07 ruling "match the grid" amends D-01: the card width is no
-  // longer a constant. It is the grid's column width, written as
-  // --focus-row-card-width by createStripCardWidthSync; 156px is the grid's
-  // floor and the pre-measurement fallback.
+  // longer a constant. It is the library tile width, aliased onto
+  // --focus-row-card-width on .focusRowTrack; 156px is the default tile width
+  // and the fallback.
   const css = read(FOCUS_ROW_CSS_PATH)
   const block = cssBlock(css, '.focusRowTrack .gameList > *')
   const gridBlock = cssBlock(read(LIBRARY_CSS_PATH), '.gameList')
@@ -316,18 +297,20 @@ describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > * (G-48-8c)', ()
       /flex:\s*0\s+0\s+var\(--focus-row-card-width,\s*(\d+(?:\.\d+)?)px\)\s*;/
     )?.[1]
   )
-  const gridMin = Number(
-    gridBlock.match(/minmax\(\s*(\d+(?:\.\d+)?)px,\s*1fr\s*\)/)?.[1]
+  const gridDefault = Number(
+    gridBlock.match(
+      /grid-template-columns:\s*repeat\(\s*auto-fill,\s*var\(--library-tile-css-width,\s*(\d+(?:\.\d+)?)px\)\s*\)/
+    )?.[1]
   )
 
   it('sizes the card from the derived custom property: flex: 0 0 var(--focus-row-card-width, Npx)', () => {
     expect(Number.isFinite(fallback)).toBe(true)
   })
 
-  it('the fallback N equals the grid minmax() floor parsed from Library/index.css and the exported GRID_CARD_MIN_WIDTH', () => {
-    expect(Number.isFinite(gridMin)).toBe(true)
-    expect(fallback).toBe(gridMin)
-    expect(GRID_CARD_MIN_WIDTH).toBe(gridMin)
+  it('the fallback N equals the grid column fallback parsed from Library/index.css and the default tile width', () => {
+    expect(Number.isFinite(gridDefault)).toBe(true)
+    expect(fallback).toBe(gridDefault)
+    expect(LIBRARY_TILE_WIDTH_DEFAULT).toBe(gridDefault)
   })
 
   it('never uses minmax( or 1fr -- flex-grow and flex-shrink stay 0, so the derived width is exact', () => {
@@ -474,15 +457,6 @@ describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
 
   it("focusRowOverflow.ts writes the property by string literal at the call site (cssTokenSweep's detector needs it)", () => {
     expect(overflow).toMatch(/setProperty\('--focus-row-card-width'/)
-  })
-})
-
-describe('Library/index.css -- the grid stylesheet is untouched', () => {
-  it('still declares .gameList with the unfractioned auto-fill grid', () => {
-    const css = read(LIBRARY_CSS_PATH)
-    expect(css).toMatch(
-      /\.gameList\s*{[^}]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(156px,\s*1fr\)\)/
-    )
   })
 })
 

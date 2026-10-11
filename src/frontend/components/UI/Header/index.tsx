@@ -36,6 +36,7 @@ import FilterFocusRow from '../NavShell/components/FilterFocusRow'
 import FilterStoreFacet from '../NavShell/components/FilterStoreFacet'
 import FilterRunnabilityFacet from '../NavShell/components/FilterRunnabilityFacet'
 import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
+import LibraryTileSizeSlider from '../NavShell/components/LibraryTileSizeSlider'
 import './index.css'
 
 type Props = {
@@ -397,6 +398,8 @@ export default function Header({ list, totalGames }: Props) {
             })}
           </span>
         )}
+        {/* Tile size slider (261011-t4y, D-02): the panel floor, last child. */}
+        <LibraryTileSizeSlider />
       </div>
     </div>
   )

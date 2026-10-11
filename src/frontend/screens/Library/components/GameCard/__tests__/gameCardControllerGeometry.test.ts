@@ -33,6 +33,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
+import { LIBRARY_TILE_WIDTH_MIN } from 'frontend/screens/Library/libraryTileSize'
 
 interface CssRule {
   selectors: string[]
@@ -127,26 +128,10 @@ const SIZING_PROPS = [
   'flex-basis'
 ]
 
-// G-48-8c (operator ruling 2026-10-07 "match the grid", amending D-01): the
-// focus-row strip no longer pins cards at 156px, it tracks the grid's column
-// width. So the grid's own `minmax()` floor is the narrowest card in either
-// row, and the binding case. Parsed from Library/index.css, not restated.
-function readGridFloor(): number {
-  // __tests__ -> GameCard -> components -> Library
-  const grid = readFileSync(
-    join(__dirname, '..', '..', '..', 'index.css'),
-    'utf8'
-  )
-  const floor = stripSourceComments(grid).match(
-    /minmax\(\s*(\d+(?:\.\d+)?)px,\s*1fr\s*\)/
-  )?.[1]
-  if (floor === undefined) {
-    throw new Error('Library/index.css: no minmax(Npx, 1fr) grid floor found')
-  }
-  return Number(floor)
-}
-
-const CARD_WIDTH = readGridFloor()
+// 261011-t4y: tile width is now chosen by the Library tile-size slider, so the
+// narrowest card in either row (grid or focus-row strip) is the slider
+// minimum, and that is the binding case. Imported, not restated.
+const CARD_WIDTH = LIBRARY_TILE_WIDTH_MIN
 
 describe('GameCard controller mode never resizes a card (source gate, G-48-8a)', () => {
   it('no rule whose selector mentions .gamepad declares a sizing property', () => {
@@ -219,7 +204,7 @@ describe('GameCard controller mode never resizes a card (source gate, G-48-8a)',
     return { cardRatio, barHeight, imgRatio }
   }
 
-  it('a grid-floor controller-mode card is tall enough for its art above the 35px badge bar', () => {
+  it('a slider-minimum controller-mode card is tall enough for its art above the 35px badge bar', () => {
     const { cardRatio, barHeight, imgRatio } = readControllerGeometry()
     const cardHeight = CARD_WIDTH / cardRatio
     const artHeight = CARD_WIDTH / imgRatio
@@ -227,7 +212,7 @@ describe('GameCard controller mode never resizes a card (source gate, G-48-8a)',
     expect(cardHeight - barHeight).toBeGreaterThanOrEqual(artHeight)
   })
 
-  it('every card wider than the grid floor fits its art too: the margin grows with width (G-48-8c)', () => {
+  it('every card wider than the slider minimum fits its art too: the margin grows with width (G-48-8c)', () => {
     // Card height and art height are both linear in width, so the margin
     // (cardHeight - barHeight - artHeight) is w x (1/cardRatio - 1/imgRatio)
     // - barHeight. A positive slope means the floor is the binding case, and the

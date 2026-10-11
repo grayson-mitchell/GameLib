@@ -260,7 +260,11 @@
             "signedOutTitle": "Your Steam sign-in expired",
             "syncing": "Syncing your Steam library…"
         },
-        "storeOther": "Other"
+        "storeOther": "Other",
+        "tileSize": {
+            "label": "Tile size",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Sign-in expired — Reconnect",

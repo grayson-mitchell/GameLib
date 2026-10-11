@@ -1,7 +1,14 @@
 .gameList {
   color: var(--text-secondary);
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  /* Tile width comes from the Library tile-size slider (261011-t4y); window
+     width only changes how many columns fit, and leftover width collects at
+     the inline end. Fixed tracks, not minmax(.., 1fr), so tiles never grow. */
+  grid-template-columns: repeat(
+    auto-fill,
+    var(--library-tile-css-width, 156px)
+  );
+  justify-content: start;
   grid-gap: 1.5rem;
   padding: 0 var(--space-md-fixed) var(--space-3xl);
   margin: var(--space-md) 0;
@@ -80,6 +87,7 @@
 }
 
 .listing {
+  --library-tile-css-width: var(--library-tile-width, 156px);
   display: flex;
   flex-direction: column;
   flex-grow: 1;
