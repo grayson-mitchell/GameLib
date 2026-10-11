@@ -41,12 +41,26 @@
     margin: 0;
     padding: var(--space-xs, 0.5rem) var(--space-sm, 0.75rem);
     background: var(--body-background, #070a0b);
-    // The unchecked-checkbox border step, not the generic border-colour
-    // token, which resolves to an invisible grey in 10 of 13 themes.
-    border: 1px solid var(--neutral-05, #a8aeaf);
+    // The theme's secondary text step, not the global neutral-scale step:
+    // `--neutral-05` resolves to an invisible grey in many themes, and the
+    // sibling unchecked-checkbox border (Row/index.scss) measured under 3:1
+    // on this same value (261011-kqx, 45-12 G7). `--text-secondary` tracks
+    // each theme's own secondary-text pole instead.
+    border: 1px solid var(--text-secondary, #a8aeaf);
     border-radius: var(--space-3xs, 0.25rem);
     color: var(--text-default, #caf3fd);
     font-size: var(--text-md, 1rem);
+
+    // The UA default placeholder (`darkgray`, #a9a9a9) measured 2.04:1
+    // against this input's own `--body-background` in nord-light (live gate
+    // 45-12 G7), under the 4.5:1 text floor. An explicit `--text-secondary`
+    // carries the same guarantee as every other secondary-text use in this
+    // tab; `opacity: 1` is explicit so no UA default opacity on the
+    // pseudo-element can dim it further.
+    &::placeholder {
+      color: var(--text-secondary, #a8aeaf);
+      opacity: 1;
+    }
 
     &:focus-visible {
       outline: 2px solid var(--accent, #0080ff);

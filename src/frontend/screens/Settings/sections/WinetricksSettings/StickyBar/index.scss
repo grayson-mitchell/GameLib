@@ -112,16 +112,27 @@
       color: var(--neutral-01, #070a0b);
     }
 
+    // The disabled outline is the theme's secondary text step, not the
+    // global neutral-scale step: `--neutral-05` measured 1.66:1 on this
+    // bar's own surface in nord-light (live gate 45-12 G7), under the 3:1
+    // non-text floor. `--text-secondary` is each theme's own secondary-text
+    // pole, so it tracks the theme instead of a fixed neutral step.
     &:disabled {
-      border-color: var(--neutral-05, #a8aeaf);
+      border-color: var(--text-secondary, #a8aeaf);
       background: transparent;
       color: var(--text-secondary, #a8aeaf);
     }
   }
 
-  // Cancel remaining is neutral: neither accent nor danger.
+  // Cancel remaining is neutral: neither accent nor danger. Same
+  // `--text-secondary` substitution as the disabled Apply border above and
+  // for the same measured reason (261011-kqx, 45-12 G7); NOT LIVE-VERIFIED
+  // specifically on this button -- the live gate measured the sibling
+  // disabled-Apply and unchecked-checkbox borders, which share this rule's
+  // old `--neutral-05` value and surface pairing, but did not sample Cancel
+  // itself.
   .WinetricksStickyBar .WinetricksStickyBar__cancel {
-    border: 1px solid var(--neutral-05, #a8aeaf);
+    border: 1px solid var(--text-secondary, #a8aeaf);
     background: transparent;
     color: var(--text-default, #caf3fd);
 

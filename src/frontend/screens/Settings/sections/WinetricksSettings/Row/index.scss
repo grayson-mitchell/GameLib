@@ -86,9 +86,34 @@
       opacity: 0.5;
     }
 
-    // The unchecked border is the global neutral-scale step, not
-    // the generic border-colour token, which resolves to an invisible grey in 10
-    // of 13 themes.
+    // Queued (checked AND disabled): an outlined-accent tick at full
+    // opacity, not the generic dimmed-disabled treatment above (261011-kqx,
+    // 45-12 G7). No opacity value composited over a row surface can clear
+    // the 3:1 non-text floor in every theme -- gruvbox_dark's own accent is
+    // only 3.91:1 against its row surface at FULL opacity, so at the
+    // generic `&:disabled` 0.5 it measured 1.97:1 there, and nord-light
+    // measured 2.51:1. The attribute selector gives this rule one more
+    // specificity component than the plain `&:disabled` above, so its
+    // `opacity: 1` wins regardless of source order; it is placed after it
+    // only to read as "disabled, except when also checked".
+    &:disabled[aria-checked='true'] {
+      opacity: 1;
+
+      .WinetricksRow__box {
+        background: transparent;
+
+        &::after {
+          border-color: var(--accent, #0080ff);
+        }
+      }
+    }
+
+    // The unchecked border is the theme's secondary text step, not the
+    // global neutral-scale step: `--neutral-05` measured 1.95:1 on the row
+    // surface and 1.66:1 on the sticky-bar surface in nord-light (live gate
+    // 45-12 G7), both well under the 3:1 non-text floor. `--text-secondary`
+    // is each theme's own secondary-text pole, so it tracks the theme
+    // instead of a fixed neutral step.
     &[aria-checked='true'] .WinetricksRow__box {
       background: var(--accent, #0080ff);
       border-color: var(--accent, #0080ff);
@@ -115,7 +140,7 @@
     box-sizing: border-box;
     width: 14px;
     height: 14px;
-    border: 1px solid var(--neutral-05, #a8aeaf);
+    border: 1px solid var(--text-secondary, #a8aeaf);
     border-radius: var(--space-3xs, 0.25rem);
   }
 

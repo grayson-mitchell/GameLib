@@ -1781,3 +1781,470 @@ describe('Winetricks failed-state danger text contrast in every theme (45-12 G7,
     }
   })
 })
+
+const WINETRICKS_EVERYTHING_ELSE_SCSS =
+  'src/frontend/screens/Settings/sections/WinetricksSettings/EverythingElseGroup/index.scss'
+
+/**
+ * The UA default placeholder colour this project has never overridden before
+ * this fix: WebKit/Chromium's `::placeholder` default (`darkgray`, `#a9a9a9`),
+ * used as the pre-fix literal in the RED-phase/pre-fix test below. Never read
+ * from a stylesheet -- there is nothing in source to read before the fix adds
+ * an explicit `&::placeholder` rule.
+ */
+const UA_PLACEHOLDER = '#a9a9a9'
+
+/**
+ * The REAL top-level `.WinetricksRow__box` rule, found by exact selector
+ * match among `.WinetricksSettings`'s own depth-0 nested rules -- never by
+ * `cssBlock`'s naive substring search, which would instead match the FIRST
+ * literal occurrence of `.WinetricksRow__box {` in the file: the nested
+ * `&[aria-checked='true'] .WinetricksRow__box {` selector inside
+ * `.WinetricksRow__checkbox` (and, post-fix, a second nested occurrence
+ * inside the Queued `&:disabled[aria-checked='true']` rule), both of which
+ * appear earlier in the source than the real top-level rule.
+ */
+const winetricksRowBoxBody = (rowScss: string): string =>
+  nestedRule(cssBlock(rowScss, '.WinetricksSettings'), '.WinetricksRow__box')
+
+/**
+ * A rule's border colour: prefers a depth-0 `border-color`, falling back to
+ * the colour clause of a depth-0 `border` shorthand (`1px solid var(...)`,
+ * sliced from its first `var(`). Throws when neither exists, naming neither
+ * -- a renamed/removed border fails loudly instead of the gate quietly
+ * measuring nothing.
+ */
+const borderColourDecl = (ruleBody: string): string => {
+  const borderColourDecls = declsAtDepthZero(ruleBody, 'border-color')
+  if (borderColourDecls.length > 0) return borderColourDecls[0]
+  const borderDecls = declsAtDepthZero(ruleBody, 'border')
+  for (const decl of borderDecls) {
+    const idx = decl.indexOf('var(')
+    if (idx !== -1) return decl.slice(idx)
+  }
+  throw new Error('no border or border-color declaration found')
+}
+
+/**
+ * The Queued checkbox's non-text indicator, as colour + alpha, read from
+ * whichever shape the Row checkbox rule is currently authored in.
+ *
+ * Post-fix: a dedicated `&:disabled[aria-checked='true']` rule exists, nested
+ * inside `.WinetricksRow__checkbox`; its own depth-0 `opacity` is the alpha,
+ * and its nested `.WinetricksRow__box &::after` tick's `border-color` is the
+ * colour -- the mechanism this fix introduces.
+ *
+ * Pre-fix: no such rule exists yet, so the Queued box renders through the
+ * generic `&[aria-checked='true'] .WinetricksRow__box` background at the
+ * generic `&:disabled` opacity -- the dimmed-accent mechanism this fix
+ * replaces, because no opacity value composited over a row surface can clear
+ * 3:1 in every theme (gruvbox_dark's own accent is only 3.91:1 at FULL
+ * opacity).
+ */
+const queuedIndicator = (
+  rowScss: string
+): { colourDecl: string; alphaDecl: string } => {
+  const checkboxBody = cssBlock(rowScss, '.WinetricksRow__checkbox')
+  const queuedRule = nestedRules(checkboxBody).find(
+    (rule) => rule.selector === "&:disabled[aria-checked='true']"
+  )
+  if (queuedRule) {
+    const alphaDecls = declsAtDepthZero(queuedRule.body, 'opacity')
+    if (alphaDecls.length !== 1) {
+      throw new Error(
+        `expected exactly one depth-0 opacity in the queued rule, found ${alphaDecls.length}`
+      )
+    }
+    const boxBody = nestedRule(queuedRule.body, '.WinetricksRow__box')
+    const afterBody = nestedRule(boxBody, '&::after')
+    const colourDecls = declsAtDepthZero(afterBody, 'border-color')
+    if (colourDecls.length !== 1) {
+      throw new Error(
+        `expected exactly one depth-0 border-color in the queued tick, found ${colourDecls.length}`
+      )
+    }
+    return { colourDecl: colourDecls[0], alphaDecl: alphaDecls[0] }
+  }
+  const checkedBody = nestedRule(
+    checkboxBody,
+    "&[aria-checked='true'] .WinetricksRow__box"
+  )
+  const colourDecls = declsAtDepthZero(checkedBody, 'background')
+  if (colourDecls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 background in the checked rule, found ${colourDecls.length}`
+    )
+  }
+  const disabledBody = nestedRule(checkboxBody, '&:disabled')
+  const alphaDecls = declsAtDepthZero(disabledBody, 'opacity')
+  if (alphaDecls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 opacity in &:disabled, found ${alphaDecls.length}`
+    )
+  }
+  return { colourDecl: colourDecls[0], alphaDecl: alphaDecls[0] }
+}
+
+/**
+ * The search input's placeholder colour. Returns the UA default when no
+ * `&::placeholder` rule exists yet (the pre-fix state), so the same
+ * `indicatorFailures` call works before and after the fix.
+ */
+const placeholderColourDecl = (inputBody: string): string => {
+  const placeholderRule = nestedRules(inputBody).find(
+    (rule) => rule.selector === '&::placeholder'
+  )
+  if (!placeholderRule) return UA_PLACEHOLDER
+  const decls = declsAtDepthZero(placeholderRule.body, 'color')
+  if (decls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 color in &::placeholder, found ${decls.length}`
+    )
+  }
+  return decls[0]
+}
+
+/**
+ * Per-theme WCAG census for the Winetricks tab's non-text indicators (WCAG
+ * 2.2 SC 1.4.11, 3:1) and the search placeholder (SC 1.4.3, 4.5:1) -- the
+ * second half of 45-12 G7 (todo 2026-10-11): the unchecked checkbox border,
+ * the Queued checkbox's dimmed-accent tick, the Cancel button border, the
+ * disabled Apply button border, and the search input's border and
+ * placeholder.
+ *
+ * The Queued checkbox is measured through `queuedIndicator`, composited over
+ * the rest row surfaces at whatever alpha is authored -- pre-fix that is the
+ * generic `&:disabled` opacity (0.5), post-fix it is 1 (fully opaque, no
+ * compositing). Every other non-text pair is measured at rest (alpha 1):
+ * none of the unchecked box, Cancel or disabled-Apply borders, or the search
+ * input border, is ever painted at reduced opacity.
+ *
+ * Like every census in this file it cannot see a pixel: no CSS engine runs
+ * under the node test environment, so a live capture still adjudicates
+ * appearance. NOT LIVE-VERIFIED: a capture is owed at the next 45-12 re-run.
+ */
+const indicatorFailures = ({
+  rowScss,
+  stickyBarScss,
+  everythingElseScss,
+  indexScss,
+  themesScss,
+  globals,
+  selector
+}: {
+  rowScss: string
+  stickyBarScss: string
+  everythingElseScss: string
+  indexScss: string
+  themesScss: string
+  globals: Map<string, string>
+  selector: string
+}): string[] => {
+  const scope = winetricksScope(themesScss, selector, indexScss)
+  const failures: string[] = []
+
+  const checkNonText = (
+    label: string,
+    colourDecl: string,
+    alpha: number,
+    surfaces: { label: string; colour: string }[],
+    bar: number
+  ) => {
+    const resolved = resolveColour(colourDecl, scope, globals)
+    if (resolved === null) {
+      failures.push(`${label} unresolved`)
+      return
+    }
+    for (const { label: surfaceLabel, colour: bg } of surfaces) {
+      const composited = alpha >= 1 ? resolved : mixSrgb(resolved, bg, alpha)
+      const ratio = contrastRatio(composited, bg)
+      if (ratio < bar) {
+        failures.push(
+          `${label} ${composited} on ${bg} (${surfaceLabel}) = ${ratio.toFixed(2)} < ${bar}`
+        )
+      }
+    }
+  }
+
+  const restRowSurfaces = rowSurfaces(rowScss, scope, globals).filter(
+    (s) => !s.label.startsWith('hovered')
+  )
+
+  const boxBody = winetricksRowBoxBody(rowScss)
+  checkNonText(
+    'unchecked box border',
+    borderColourDecl(boxBody),
+    1,
+    restRowSurfaces,
+    3
+  )
+
+  const queued = queuedIndicator(rowScss)
+  const queuedAlphaResolved = resolveValue(queued.alphaDecl, scope, globals)
+  const queuedAlpha = Number(queuedAlphaResolved ?? queued.alphaDecl)
+  checkNonText('queued box', queued.colourDecl, queuedAlpha, restRowSurfaces, 3)
+
+  const barSurface = resolveValue('var(--input-background)', scope, globals)
+  if (barSurface === null) {
+    failures.push('bar surface unresolved')
+  } else {
+    // NOT cssBlock: its naive substring search matches the FIRST literal
+    // occurrence of `.WinetricksStickyBar .WinetricksStickyBar__cancel {`,
+    // which is the comma-joined `&__apply,\n &__cancel {` shared box-model
+    // rule (no border there) -- the dedicated, bordered cancel rule comes
+    // later. nestedRule's exact-selector match is immune: the shared rule's
+    // own selector string is the whole joined pair, not this exact text.
+    const cancelBody = nestedRule(
+      cssBlock(stickyBarScss, '.WinetricksSettings'),
+      '.WinetricksStickyBar .WinetricksStickyBar__cancel'
+    )
+    checkNonText(
+      'cancel border',
+      borderColourDecl(cancelBody),
+      1,
+      [{ label: 'sticky-bar', colour: barSurface }],
+      3
+    )
+
+    const applyBody = cssBlock(
+      stickyBarScss,
+      '.WinetricksStickyBar .WinetricksStickyBar__apply'
+    )
+    const applyDisabledBody = nestedRule(applyBody, '&:disabled')
+    const applyBorderColourDecls = declsAtDepthZero(
+      applyDisabledBody,
+      'border-color'
+    )
+    if (applyBorderColourDecls.length !== 1) {
+      throw new Error(
+        `expected exactly one depth-0 border-color in the disabled Apply rule, found ${applyBorderColourDecls.length}`
+      )
+    }
+    checkNonText(
+      'disabled apply border',
+      applyBorderColourDecls[0],
+      1,
+      [{ label: 'sticky-bar', colour: barSurface }],
+      3
+    )
+  }
+
+  const searchBody = cssBlock(
+    everythingElseScss,
+    '.WinetricksEverythingElse__search'
+  )
+  const searchSurfaceDecl = declsAtDepthZero(searchBody, 'background')[0] ?? ''
+  const searchSurface = resolveValue(searchSurfaceDecl, scope, globals)
+  const inputBody = cssBlock(
+    everythingElseScss,
+    '.WinetricksEverythingElse__input'
+  )
+  const inputSurfaceDecl = declsAtDepthZero(inputBody, 'background')[0] ?? ''
+  const inputSurface = resolveValue(inputSurfaceDecl, scope, globals)
+  if (searchSurface === null || inputSurface === null) {
+    failures.push('search surfaces unresolved')
+  } else {
+    checkNonText(
+      'search input border',
+      borderColourDecl(inputBody),
+      1,
+      [
+        { label: 'search wrapper', colour: searchSurface },
+        { label: 'input', colour: inputSurface }
+      ],
+      3
+    )
+
+    const placeholderDecl = placeholderColourDecl(inputBody)
+    const fg = resolveColour(placeholderDecl, scope, globals)
+    if (fg === null) {
+      failures.push('placeholder unresolved')
+    } else {
+      const ratio = contrastRatio(fg, inputSurface)
+      if (ratio < 4.5) {
+        failures.push(
+          `placeholder ${fg} on ${inputSurface} (input) = ${ratio.toFixed(2)} < 4.5`
+        )
+      }
+    }
+  }
+
+  return failures
+}
+
+describe('Winetricks checkbox, button and search indicators and the search placeholder in every theme (45-12 G7, 261011-kqx)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const indexScss = read(WINETRICKS_INDEX_SCSS)
+  const rowScss = read(WINETRICKS_ROW_SCSS)
+  const stickyBarScss = read(WINETRICKS_STICKY_BAR_SCSS)
+  const everythingElseScss = read(WINETRICKS_EVERYTHING_ELSE_SCSS)
+  const globals = globalTokens()
+
+  it('non-vacuity: the queued-checkbox mechanism, the checked rule, the placeholder rule, and all four border declarations resolve', () => {
+    expect(globals.size).toBeGreaterThan(0)
+
+    const checkboxBody = cssBlock(rowScss, '.WinetricksRow__checkbox')
+    const queuedRule = nestedRules(checkboxBody).find(
+      (rule) => rule.selector === "&:disabled[aria-checked='true']"
+    )
+    expect(queuedRule).not.toBeUndefined()
+    const queuedOpacity = declsAtDepthZero(
+      (queuedRule as { selector: string; body: string }).body,
+      'opacity'
+    )
+    expect(queuedOpacity).toEqual(['1'])
+    const queuedBoxBody = nestedRule(
+      (queuedRule as { selector: string; body: string }).body,
+      '.WinetricksRow__box'
+    )
+    expect(declsAtDepthZero(queuedBoxBody, 'background')).toEqual([
+      'transparent'
+    ])
+    const queuedAfterBody = nestedRule(queuedBoxBody, '&::after')
+    expect(declsAtDepthZero(queuedAfterBody, 'border-color')[0]).toMatch(
+      /^var\(--accent/
+    )
+
+    const checkedBody = nestedRule(
+      checkboxBody,
+      "&[aria-checked='true'] .WinetricksRow__box"
+    )
+    expect(declsAtDepthZero(checkedBody, 'border-color')[0]).toMatch(
+      /^var\(--accent/
+    )
+
+    const inputBody = cssBlock(
+      everythingElseScss,
+      '.WinetricksEverythingElse__input'
+    )
+    const placeholderRule = nestedRules(inputBody).find(
+      (rule) => rule.selector === '&::placeholder'
+    )
+    expect(placeholderRule).not.toBeUndefined()
+    expect(
+      declsAtDepthZero(
+        (placeholderRule as { selector: string; body: string }).body,
+        'color'
+      )
+    ).toHaveLength(1)
+    expect(
+      declsAtDepthZero(
+        (placeholderRule as { selector: string; body: string }).body,
+        'opacity'
+      )
+    ).toEqual(['1'])
+
+    expect(borderColourDecl(winetricksRowBoxBody(rowScss))).toMatch(
+      /^var\(--text-secondary/
+    )
+    expect(
+      borderColourDecl(
+        nestedRule(
+          cssBlock(stickyBarScss, '.WinetricksSettings'),
+          '.WinetricksStickyBar .WinetricksStickyBar__cancel'
+        )
+      )
+    ).toMatch(/^var\(--text-secondary/)
+    const applyBody = cssBlock(
+      stickyBarScss,
+      '.WinetricksStickyBar .WinetricksStickyBar__apply'
+    )
+    expect(
+      declsAtDepthZero(nestedRule(applyBody, '&:disabled'), 'border-color')[0]
+    ).toMatch(/^var\(--text-secondary/)
+    expect(borderColourDecl(inputBody)).toMatch(/^var\(--text-secondary/)
+  })
+
+  it.each(themeSelectors)(
+    '%s paints every non-text indicator >= 3:1 and the placeholder >= 4.5:1',
+    (selector) => {
+      const failures = indicatorFailures({
+        rowScss,
+        stickyBarScss,
+        everythingElseScss,
+        indexScss,
+        themesScss,
+        globals,
+        selector
+      })
+      // Object form so a failure names the theme and every miss.
+      expect({ theme: selector, failures }).toEqual({
+        theme: selector,
+        failures: []
+      })
+    }
+  )
+
+  it('the pre-fix pairs fail where the live gate measured them', () => {
+    const scope = winetricksScope(themesScss, 'body.nord-light', indexScss)
+    const rowSurface = resolveValue('var(--modal-background)', scope, globals)
+    const barSurface = resolveValue('var(--input-background)', scope, globals)
+    const bodySurface = resolveValue('var(--body-background)', scope, globals)
+    expect(rowSurface).not.toBeNull()
+    expect(barSurface).not.toBeNull()
+    expect(bodySurface).not.toBeNull()
+
+    const neutralBorder = resolveColour(
+      'var(--neutral-05, #a8aeaf)',
+      scope,
+      globals
+    )
+    expect(neutralBorder).not.toBeNull()
+    const neutralOnRow = contrastRatio(
+      neutralBorder as string,
+      rowSurface as string
+    )
+    const neutralOnBar = contrastRatio(
+      neutralBorder as string,
+      barSurface as string
+    )
+
+    const accent = resolveColour('var(--accent, #0080ff)', scope, globals)
+    expect(accent).not.toBeNull()
+    const accentAtHalf = mixSrgb(accent as string, rowSurface as string, 0.5)
+    const queuedRatio = contrastRatio(accentAtHalf, rowSurface as string)
+
+    const placeholderRatio = contrastRatio(
+      UA_PLACEHOLDER,
+      bodySurface as string
+    )
+
+    // Object form so a failure names every measured ratio.
+    expect({
+      neutralOnRow,
+      neutralOnBar,
+      queuedRatio,
+      placeholderRatio,
+      allFail:
+        neutralOnRow < 3 &&
+        neutralOnBar < 3 &&
+        queuedRatio < 3 &&
+        placeholderRatio < 4.5
+    }).toEqual({
+      neutralOnRow,
+      neutralOnBar,
+      queuedRatio,
+      placeholderRatio,
+      allFail: true
+    })
+  })
+
+  it('checker can fail: restoring the pre-fix queued opacity is caught, in memory only', () => {
+    // The tokenCensus.test.ts sabotage idiom: mutate a STRING copy, never the
+    // file on disk. Count first, so the sabotage is not vacuous.
+    expect((rowScss.match(/opacity:\s*1;/g) ?? []).length).toBe(1)
+    const sabotagedRowScss = rowScss.replace('opacity: 1;', 'opacity: 0.5;')
+    for (const selector of ['body.nord-light', 'body.gruvbox_dark']) {
+      const failures = indicatorFailures({
+        rowScss: sabotagedRowScss,
+        stickyBarScss,
+        everythingElseScss,
+        indexScss,
+        themesScss,
+        globals,
+        selector
+      })
+      expect(failures.length).toBeGreaterThan(0)
+    }
+  })
+})
