@@ -87,7 +87,14 @@
 }
 
 .listing {
-  --library-tile-css-width: var(--library-tile-width, 156px);
+  /* The slider value is what reaches the screen at any Accessibility zoom: the
+     webview zoom scales every CSS px, so the tile's CSS width is divided by the
+     zoom factor actually applied (--webview-zoom, published by the preload
+     after setZoom resolves; absent means 1). Text and other content still zoom,
+     and the 1.5rem gap stays zoom-scaled by choice. */
+  --library-tile-css-width: calc(
+    var(--library-tile-width, 156px) / var(--webview-zoom, 1)
+  );
   display: flex;
   flex-direction: column;
   flex-grow: 1;

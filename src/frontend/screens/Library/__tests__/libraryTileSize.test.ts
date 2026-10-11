@@ -194,10 +194,10 @@ describe('Library/index.css -- fixed-width tile columns (source gate)', () => {
     expect(block).not.toMatch(/1fr/)
   })
 
-  it('.listing derives --library-tile-css-width from --library-tile-width', () => {
+  it('.listing derives --library-tile-css-width as the slider value divided by the applied webview zoom (D-04)', () => {
     const block = cssBlock(css, '.listing')
     const m = block.match(
-      /--library-tile-css-width:\s*var\(--library-tile-width,\s*(\d+(?:\.\d+)?)px\)\s*;/
+      /--library-tile-css-width:\s*calc\(\s*var\(--library-tile-width,\s*(\d+(?:\.\d+)?)px\)\s*\/\s*var\(--webview-zoom,\s*1\)\s*\)\s*;/
     )
     expect(m).not.toBeNull()
     expect(Number(m?.[1])).toBe(LIBRARY_TILE_WIDTH_DEFAULT)
@@ -208,6 +208,13 @@ describe('library tile width wiring (source gate)', () => {
   it('libraryTileSize.ts writes the property by string literal at the call site (cssTokenSweep needs it)', () => {
     expect(read(TILE_SIZE_TS_PATH)).toContain(
       "setProperty('--library-tile-width'"
+    )
+  })
+
+  it('tauriWindowChrome.ts publishes --webview-zoom by string literal at the call site (cssTokenSweep needs it)', () => {
+    // Read as text, not imported: the module pulls in the Tauri window API.
+    expect(read('src/preload/api/tauriWindowChrome.ts')).toContain(
+      "setProperty('--webview-zoom'"
     )
   })
 

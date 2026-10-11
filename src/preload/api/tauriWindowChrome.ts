@@ -122,6 +122,13 @@ export const tauriIsFrameless = (): Promise<boolean> => {
  * the on-screen result matches what Electron's `setZoomLevel(level)` would have
  * produced. Dropping the `Math.pow` conversion and passing `level` straight to
  * `setZoom` silently mis-scales the whole UI -- verified by test.
+ *
+ * The factor actually applied is also published as the `--webview-zoom` custom property
+ * on the document root, but only after `setZoom` resolves, so the property tracks the zoom
+ * really in effect (Tauri exposes no zoom getter). The Library divides its tile width by
+ * it, so Accessibility zoom does not resize tiles (quick 261011-t4y). The property is
+ * absent, and so reads as 1, until the first apply -- which matches today's boot, where no
+ * saved zoom is re-applied.
  */
 export const tauriSetZoomFactor = (zoomFactor: string): void => {
   const parsed = parseFloat(zoomFactor)
@@ -129,9 +136,31 @@ export const tauriSetZoomFactor = (zoomFactor: string): void => {
   const screenW = window.screen.availWidth
   const k = screenW < 1200 ? screenW / 1200 : 1
   const level = (f * k - 1) / 0.2
+  const factor = Math.pow(1.2, level)
   void getCurrentWebview()
-    .setZoom(Math.pow(1.2, level))
+    .setZoom(factor)
+    .then(() => publishWebviewZoom(factor))
     .catch((error) => warn('setZoomFactor', error))
+}
+
+/**
+ * Publishes the applied webview zoom factor as `--webview-zoom` on the document root
+ * (quick 261011-t4y, D-04). Deliberately NOT exported: the "other nine window-only
+ * exports" test enumerates this module's exports. T-261011-t4y-02: only a finite,
+ * positive number is ever written, as `String(number)` under a literal property name.
+ */
+function publishWebviewZoom(factor: number): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+  if (!Number.isFinite(factor) || factor <= 0) {
+    return
+  }
+  try {
+    document.documentElement.style.setProperty('--webview-zoom', String(factor))
+  } catch (error) {
+    warn('publishWebviewZoom', error)
+  }
 }
 
 /**

@@ -236,6 +236,62 @@ describe('tauriWindowChrome (REQ-34.1-01)', () => {
 })
 
 /**
+ * Quick 261011-t4y (D-04): the applied webview zoom is published as `--webview-zoom` so the
+ * Library can divide its tile width by it. Published only after `setZoom` resolves, and only
+ * for a finite positive factor.
+ */
+describe('webview zoom publication (261011-t4y)', () => {
+  const setProperty = jest.fn()
+  const flush = async () => {
+    for (let i = 0; i < 4; i++) {
+      await Promise.resolve()
+    }
+  }
+
+  beforeEach(() => {
+    getCurrentWebview.mockReturnValue(mockWebview)
+    mockWebview.setZoom.mockResolvedValue(undefined)
+    setProperty.mockReset()
+    ;(globalThis as unknown as { document?: unknown }).document = {
+      documentElement: { style: { setProperty } }
+    }
+    Object.defineProperty(window.screen, 'availWidth', {
+      value: 1920,
+      configurable: true
+    })
+  })
+
+  afterEach(() => {
+    delete (globalThis as unknown as { document?: unknown }).document
+  })
+
+  it('Z1: publishes exactly the factor passed to setZoom once setZoom resolves', async () => {
+    tauriSetZoomFactor('1.5')
+    await flush()
+    const [applied] = mockWebview.setZoom.mock.calls[0]
+    expect(applied).toBeCloseTo(Math.pow(1.2, 2.5), 9)
+    expect(setProperty).toHaveBeenCalledTimes(1)
+    expect(setProperty).toHaveBeenCalledWith('--webview-zoom', String(applied))
+  })
+
+  it('Z2: publishes nothing when setZoom rejects', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+    mockWebview.setZoom.mockRejectedValue(new Error('no webview'))
+    tauriSetZoomFactor('1.5')
+    await flush()
+    expect(setProperty).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
+  it('Z3: with no document global it still calls setZoom and does not throw', async () => {
+    delete (globalThis as unknown as { document?: unknown }).document
+    expect(() => tauriSetZoomFactor('1.5')).not.toThrow()
+    await flush()
+    expect(mockWebview.setZoom).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
  * CR-03 (Phase 34.1 code review): the `maximized`/`unmaximized` PRODUCER.
  *
  * Before this fix nothing under Tauri emitted these two pushes, so
