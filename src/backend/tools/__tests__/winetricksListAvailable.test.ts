@@ -18,10 +18,12 @@ const mockGetWineFromProton = jest.fn()
 const mockExecAsync = jest.fn()
 const mockStat = jest.fn()
 const mockReadFile = jest.fn()
+const mockExecFile = jest.fn()
 
 jest.mock('child_process', () => ({
   ...jest.requireActual('child_process'),
-  spawn: (...args: unknown[]) => mockSpawn(...args)
+  spawn: (...args: unknown[]) => mockSpawn(...args),
+  execFile: (...args: unknown[]) => mockExecFile(...args)
 }))
 
 jest.mock('fs/promises', () => ({
@@ -80,6 +82,7 @@ jest.mock('backend/logger', () => {
 
 import { logWarning } from 'backend/logger'
 import { parseWinetricksMetadata } from 'common/winetricks/metadata'
+import { getEnvironmentReport } from '../winetricksEnvironment'
 import { Winetricks } from '../index'
 
 const FIXTURE_SCRIPT = readFileSync(
@@ -153,6 +156,19 @@ beforeEach(() => {
       ? Promise.resolve(FIXTURE_SCRIPT)
       : actual.readFile(path, ...rest)
   )
+  // Default: a supported wine, synchronous callback. Every pre-existing test
+  // (none of which know about the probe) therefore records nothing and logs
+  // nothing new -- resetMocks strips this before every test, so it is set
+  // fresh here rather than at module scope.
+  mockExecFile.mockImplementation((...args: unknown[]) => {
+    const callback = args[args.length - 1] as (
+      error: unknown,
+      stdout: string,
+      stderr: string
+    ) => void
+    callback(null, 'wine-9.0\n', '')
+    return undefined
+  })
 })
 
 async function flushMicrotasks(times = 20): Promise<void> {
@@ -162,8 +178,8 @@ async function flushMicrotasks(times = 20): Promise<void> {
 }
 
 // Runs one `listAvailable` against a fake `winetricks list-all` that prints `stdout`.
-async function listAvailableWith(stdout: string) {
-  const list = Winetricks.listAvailable('gog', 'game')
+async function listAvailableWith(stdout: string, appName = 'game') {
+  const list = Winetricks.listAvailable('gog', appName)
   await flushMicrotasks()
   const child = children[children.length - 1]
   child.stdout.emit('data', stdout)
@@ -279,5 +295,73 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
     await listAvailableWith(LIST_ALL)
 
     expect(scriptReads()).toBe(2)
+  })
+})
+
+describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
+  it('records the wine version from a wine --version probe before any install runs', async () => {
+    mockExecFile.mockImplementation((...args: unknown[]) => {
+      const callback = args[args.length - 1] as (
+        error: unknown,
+        stdout: string,
+        stderr: string
+      ) => void
+      callback(null, 'wine-7.7 (Game Porting Toolkit 1.1)\n', '')
+      return undefined
+    })
+
+    const result = await listAvailableWith(LIST_ALL, 'gptk-bottle')
+    await flushMicrotasks()
+
+    expect(result.map((component) => component.verb)).toEqual([
+      'vcrun2019',
+      'gdiplus_winxp',
+      'fontsmooth=rgb'
+    ])
+    expect(
+      getEnvironmentReport('gog', 'gptk-bottle').unsupportedWineVersion
+    ).toBe('7.7')
+  })
+
+  it("probes with the list-all child's wine binary and the same env (including overrides)", async () => {
+    await listAvailableWith(LIST_ALL, 'env-probe')
+    await flushMicrotasks()
+
+    expect(mockExecFile).toHaveBeenCalledTimes(1)
+    const [bin, probeArgs, options] = mockExecFile.mock.calls[0] as [
+      string,
+      string[],
+      { env: Record<string, string> }
+    ]
+    expect(bin).toBe('/fake/wine/bin/wine')
+    expect(probeArgs).toEqual(['--version'])
+    expect(options.env.WINEDEBUG).toBe('-all')
+    expect(options.env.LANG).toBe('C')
+    expect(options.env.WINEPREFIX).toBe('/fake/prefix')
+  })
+
+  it('still resolves the list, with the report left null, when the probe fails with ENOENT', async () => {
+    mockExecFile.mockImplementation((...args: unknown[]) => {
+      const callback = args[args.length - 1] as (
+        error: unknown,
+        stdout: string,
+        stderr: string
+      ) => void
+      callback(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }), '', '')
+      return undefined
+    })
+
+    const result = await listAvailableWith(LIST_ALL, 'enoent-bottle')
+    await flushMicrotasks()
+
+    expect(result.map((component) => component.verb)).toEqual([
+      'vcrun2019',
+      'gdiplus_winxp',
+      'fontsmooth=rgb'
+    ])
+    expect(
+      getEnvironmentReport('gog', 'enoent-bottle').unsupportedWineVersion
+    ).toBeNull()
+    expect(logWarning).toHaveBeenCalledTimes(1)
   })
 })

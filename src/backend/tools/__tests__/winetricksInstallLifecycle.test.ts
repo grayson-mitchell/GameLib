@@ -22,6 +22,7 @@ const mockGetWineFromProton = jest.fn()
 const mockExecAsync = jest.fn()
 const mockRecordMissingDependencies = jest.fn()
 const mockRecordUnsupportedWine = jest.fn()
+const mockExecFile = jest.fn()
 
 jest.mock('../winetricksEnvironment', () => ({
   recordMissingDependencies: (...args: unknown[]) =>
@@ -30,9 +31,15 @@ jest.mock('../winetricksEnvironment', () => ({
     mockRecordUnsupportedWine(...args)
 }))
 
+// mockExecFile is given NO default implementation below: it never calls its callback, so the
+// wine-version probe (261011-iel, D-16) never settles and records or logs nothing. This file
+// pins winetricks' event lifecycle and its logDebug/logError counts on a list run, not the
+// probe -- and the header's "NO REAL WINE OR WINETRICKS IS SPAWNED" claim stays true now that a
+// list run also probes wine.
 jest.mock('child_process', () => ({
   ...jest.requireActual('child_process'),
-  spawn: (...args: unknown[]) => mockSpawn(...args)
+  spawn: (...args: unknown[]) => mockSpawn(...args),
+  execFile: (...args: unknown[]) => mockExecFile(...args)
 }))
 
 jest.mock('../../storeManagers', () => ({

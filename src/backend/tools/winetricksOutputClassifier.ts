@@ -16,7 +16,11 @@ import type { WinetricksLogLine } from 'common/types'
 //    arrives as `warning:` and the EXIT CODE (not the text) decides failure;
 //  - `w_try` failures say `Note: command ... returned status N. Aborting.`;
 //  - the wine-version notice is `warning: Your version of wine <X> is no longer
-//    supported upstream. You should upgrade to 8.x`.
+//    supported upstream. You should upgrade to 8.x`;
+//  - the version string itself is derived by `winetricks_wine_setup` exactly as
+//    `parseWineVersionOutput`/`isUnsupportedWineVersion` below reproduce: script
+//    lines 5104 (`WINETRICKS_WINE_VERSION`), 5114 (`_wine_version_stripped`) and
+//    5118 (`w_wine_version_in ,7.99`).
 
 const CURL_HEADER_RE = /^\s*%\s+Total\b/
 const CURL_SUBHEADER_RE = /^\s*Dload\s+Upload\b/
@@ -42,6 +46,48 @@ const MAX_LINE_CHARS = 2000
 export function parseUnsupportedWineVersion(line: string): string | null {
   const match = UNSUPPORTED_WINE_RE.exec(line)
   return match ? match[1] : null
+}
+
+// Reproduces winetricks' own derivation of `_wine_version_stripped` (script
+// L5104/L5114) from the raw output of `wine --version`, step for step, so the
+// list-all probe (261011-iel, D-16) can never disagree with the install-time
+// `warning: Your version of wine X ...` notice for the same binary.
+export function parseWineVersionOutput(raw: string): string | null {
+  // `winetricks_early_wine` strips \r; take the first non-empty line.
+  const line = raw
+    .replace(/\r/g, '')
+    .split('\n')
+    .find((candidate) => candidate !== '')
+  if (line === undefined) {
+    return null
+  }
+  // sed 's/.*wine/wine/': greedy, so this matches up to the LAST lowercase
+  // "wine" on the line.
+  const afterSed = line.replace(/.*wine/, 'wine')
+  // cut -d ' ' -f1
+  const firstField = afterSed.split(' ')[0]
+  // sed -e 's/wine-//' -e 's/-rc.*//'
+  const stripped = firstField.replace('wine-', '').replace(/-rc.*/, '')
+  return /^\d/.test(stripped) ? stripped : null
+}
+
+// winetricks' `w_wine_version_in ,7.99`: a numeric, field-by-field
+// `sort -t. -k1,1n -k2,2n -k3,3n` comparison against (7, 99, 0), never a
+// string comparison -- so '10.0' sorts above '7.99', not below it.
+export function isUnsupportedWineVersion(version: string): boolean {
+  const fields = version.split('.').slice(0, 3)
+  const [major, minor, patch] = [0, 1, 2].map((i) => {
+    const parsed = parseInt(fields[i] ?? '0', 10)
+    return Number.isNaN(parsed) ? 0 : parsed
+  })
+  const threshold = [7, 99, 0]
+  const actual = [major, minor, patch]
+  for (let i = 0; i < 3; i++) {
+    if (actual[i] !== threshold[i]) {
+      return actual[i] < threshold[i]
+    }
+  }
+  return true
 }
 
 export function classifyWinetricksLine(line: string): WinetricksLogLine | null {

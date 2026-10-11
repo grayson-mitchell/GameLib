@@ -21,7 +21,7 @@ import {
   rmSync
 } from 'graceful-fs'
 
-import { spawn } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import {
   axiosClient,
   downloadFile,
@@ -74,7 +74,9 @@ import { filterVisibleCatalog } from 'common/winetricks/visibility'
 import {
   appendLogLine,
   classifyWinetricksLine,
+  isUnsupportedWineVersion,
   parseUnsupportedWineVersion,
+  parseWineVersionOutput,
   splitOutputChunk
 } from './winetricksOutputClassifier'
 import {
@@ -535,6 +537,58 @@ type ScriptMetadata = {
 }
 let scriptMetadataCache: { key: string; value: ScriptMetadata } | null = null
 
+// 261011-iel (D-16): bounds for the `wine --version` probe `checkWineVersion`
+// runs at list-all time. Measured on the GPTK bottle wine64, 2026-10-11: 36
+// bytes stdout, 0 bytes stderr, ~15 ms warm (3 runs) -- so 5 s and 16 KiB are
+// generous, not tight, ceilings.
+const WINE_VERSION_PROBE_TIMEOUT_MS = 5_000
+const WINE_VERSION_PROBE_MAX_BUFFER = 16 * 1024
+
+// Wraps execFile's callback form in a Promise. Resolves `{ stdout }` on
+// success and `{ error }` on any failure (async callback error OR a
+// synchronous throw) -- never rejects, so the fire-and-forget call site below
+// needs only a `.catch` for its OWN logic, not for this.
+//
+// Does not use util.promisify: execFile's native promisify hook is what
+// resolves `{ stdout, stderr }` in production; a jest stand-in has no such
+// hook and would resolve a bare string, so tests and production would see
+// different shapes. Does not use execAsync/exec either -- those run through a
+// shell, and a wine path containing a quote would break the same
+// `'${wineBin}'` quoting the compatibility_layers.ts exec sites rely on.
+function readWineVersionOutput(
+  wineBin: string,
+  envs: Record<string, string>
+): Promise<{ stdout: string } | { error: unknown }> {
+  return new Promise((resolve) => {
+    try {
+      // The returned ChildProcess is intentionally never touched, and never
+      // unref'd: it is bounded (5 s, SIGKILL), it runs beside the list-all
+      // child (itself referenced, with no timeout), and the Rust shell's
+      // process-group kill reaps it at app exit.
+      execFile(
+        wineBin,
+        ['--version'],
+        {
+          env: { ...envs, WINEDEBUG: '-all' },
+          encoding: 'utf8',
+          timeout: WINE_VERSION_PROBE_TIMEOUT_MS,
+          killSignal: 'SIGKILL',
+          maxBuffer: WINE_VERSION_PROBE_MAX_BUFFER
+        },
+        (error, stdout) => {
+          if (error) {
+            resolve({ error })
+          } else {
+            resolve({ stdout: String(stdout) })
+          }
+        }
+      )
+    } catch (error) {
+      resolve({ error })
+    }
+  })
+}
+
 function catalogCacheKey(runner: Runner, appName: string): string {
   return `${runner}:${appName}`
 }
@@ -753,6 +807,29 @@ export const Winetricks = {
           LogPrefix.WineTricks
         )
       })
+
+      // 261011-iel (D-16): (1) list-all is the one run where winetricks skips
+      // its own unsupported-wine check -- `_W_wine_not_needed=1` at script
+      // L5471 makes `winetricks_wine_setup` return before its version check
+      // at L5119. (2) Install runs DO print winetricks' own warning, already
+      // recorded by the `environment` branch of `handleLine` above, so they
+      // are not probed here -- probing them too would just re-derive the
+      // same string a second way. (3) Fire-and-forget, like
+      // `checkDependencies` above: the record reaches the tab through
+      // `onEnvironmentChanged` (which pushes `winetricksQueueChanged`), or
+      // through the tab's own `winetricksQueueState` read after
+      // `listAvailable` resolves. (4) Only `listAvailable` passes
+      // `returnOutput = true`, so this never runs on an install (`-q`) call.
+      if (returnOutput) {
+        Winetricks.checkWineVersion(runner, appName, wineBin, envs).catch(
+          (error) => {
+            logWarning(
+              ['Winetricks wine version check failed:', error],
+              LogPrefix.WineTricks
+            )
+          }
+        )
+      }
 
       logInfo(`Running ${winetricks} ${args.join(' ')}`, LogPrefix.WineTricks)
 
@@ -1050,6 +1127,47 @@ export const Winetricks = {
     // D-16: the exact missing subset (an empty one clears an earlier record)
     // feeds the environment banner, once per check.
     recordMissingDependencies(runner, appName, [...missingDeps].sort())
+  },
+  // 261011-iel (D-16): winetricks sets `_W_wine_not_needed=1` for every
+  // `list*` verb except `list-installed` (script L5471), so its own
+  // unsupported-wine check (L5119) never runs -- and never prints the
+  // `warning: Your version of wine ...` line the `environment` branch of
+  // `handleLine` relies on -- for the tab-open list-all run. This probes the
+  // bottle's own wine binary directly, so the banner is reachable before any
+  // install.
+  checkWineVersion: async (
+    runner: Runner,
+    appName: string,
+    wineBin: string,
+    envs: Record<string, string>
+  ) => {
+    const result = await readWineVersionOutput(wineBin, envs)
+    if ('error' in result) {
+      logWarning(
+        [
+          'Could not read the wine version for the winetricks environment banner:',
+          result.error
+        ],
+        LogPrefix.WineTricks
+      )
+      return
+    }
+    const version = parseWineVersionOutput(result.stdout)
+    if (version === null) {
+      logWarning(
+        [
+          'Could not parse the wine version for the winetricks environment banner:',
+          result.stdout.slice(0, 200)
+        ],
+        LogPrefix.WineTricks
+      )
+      return
+    }
+    // Task 2 (261011-iel) adds the supported branch, clearing a stale record.
+    // Log nothing on success.
+    if (isUnsupportedWineVersion(version)) {
+      recordUnsupportedWine(runner, appName, version)
+    }
   }
 }
 
