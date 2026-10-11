@@ -199,13 +199,19 @@ describe('Everything else, expanded', () => {
     ).toHaveLength(0)
   })
 
-  it('renders a plain search input in a sticky wrapper, with the placeholder as its accessible name', async () => {
+  it('renders a plain text searchbox in a sticky wrapper, with the placeholder as its accessible name', async () => {
     const group = everything(await openEverything())
     const wrapper = findByClass(group, 'WinetricksEverythingElse__search')
     expect(wrapper).toHaveLength(1)
 
     const input = searchInput(again())
-    expect(input.props.type).toBe('search')
+    // `type="search"` is the one value this must never be: WKWebView renders it
+    // as a native search field whose recent-searches chip sat over the first
+    // row's checkbox (Phase 45 live gate 45-12). `role="searchbox"` keeps the
+    // accessible role that `type="search"` would have implied.
+    expect(input.props.type).toBe('text')
+    expect(input.props.role).toBe('searchbox')
+    expect(input.props.autoComplete).toBe('off')
     expect(input.props.placeholder).toBe('Search components…')
     expect(input.props['aria-label']).toBe('Search components…')
     expect(findAll(wrapper[0], (el) => el.type === 'input')).toHaveLength(1)

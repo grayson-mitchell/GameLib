@@ -25,11 +25,17 @@ const SEARCH_MIN_CHARS = 2
 // in the tab, keyed by verb, so a verb ticked while filtered stays ticked after
 // the search is cleared or the group is collapsed (Interaction Contract 3).
 //
-// The input is a plain `<input type="search">`, not `SearchBar`: SearchBar's
-// suggestions overlay is a `display: none` panel that only renders on
-// `:focus-within`, and a plain input removes that hazard entirely (Interaction
-// Contract 4). Every catalog row renders; there is no virtualisation because no
-// measured number justifies it (Phase 44 D-07, still binding).
+// The input is a plain `<input type="text" role="searchbox">`, not `SearchBar`:
+// SearchBar's suggestions overlay is a `display: none` panel that only renders
+// on `:focus-within`, and a plain input removes that hazard entirely
+// (Interaction Contract 4). It is deliberately NOT `type="search"`: on macOS
+// WKWebView renders that as a native search field whose recent-searches chip
+// pops up under the input and sat over the first row's checkbox, intercepting
+// the click (Phase 45 live gate 45-12, 2026-10-10). `role="searchbox"` keeps
+// the accessible role `type="search"` implied, and `autoComplete="off"` keeps
+// the text autofill popover from taking its place. Every catalog row renders;
+// there is no virtualisation because no measured number justifies it (Phase 44
+// D-07, still binding).
 export default function EverythingElseGroup({ components, renderRow }: Props) {
   const { t: tGamelib } = useTranslation('gamelib')
   const [expanded, setExpanded] = useState(false)
@@ -70,7 +76,9 @@ export default function EverythingElseGroup({ components, renderRow }: Props) {
           <>
             <div className="WinetricksEverythingElse__search">
               <input
-                type="search"
+                type="text"
+                role="searchbox"
+                autoComplete="off"
                 className="WinetricksEverythingElse__input"
                 value={query}
                 placeholder={searchLabel}
