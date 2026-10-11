@@ -28,6 +28,37 @@ operator's own Steam sign-in and Mac, so it cannot be done from code.
 3. **Not Mac-specific:** read CI's first ubuntu-latest result for `lzmaNativeSeaRealBuild.test.ts`
    with native ON (the first linux-x64 real-SEA native run), and record it.
 
+## Measured 2026-10-12 (item 2, codec half: done)
+
+Decode of spike 023's real-bytes 1 MiB VZ chunk (`fixtures/real-vz-chunk.bin`, sha1
+`2e461366…`) through the shipped code path (`decompressChunk()` + `loadLzmaModule()`, toggled by
+`setNativeLzmaDecodeEnabledForTests`), 15 timed runs per arm after 3 warm-ups, both arm orders
+twice, sha1 match on every arm, darwin-arm64:
+
+| `lzma-native` binary loaded                                  | liblzma | native ms | pure-JS ms | speedup   |
+| ------------------------------------------------------------ | ------- | --------- | ---------- | --------- |
+| `prebuilds/darwin-arm64/node.napi.node` (the one SEA embeds) | 5.4.3   | 14.3-15.1 | 88.0-90.3  | 5.95-6.24x |
+| `build/Release/lzma_native.node` (local source build)        | 5.2.3   | 32.4-34.5 | 81.3-83.5  | 2.42-2.52x |
+
+- **The adapter costs nothing.** Raw `createStream('aloneDecoder')` on the 5.2.3 build with the
+  size field already `0xFF×8` takes 32.7 ms, the same as through the adapter.
+- **The spike-023 tension was the library version.** Spike 023's `node_modules` has no
+  `build/Release`, so `node-gyp-build` loaded the 5.4.3 prebuild. The repo's `node_modules` on this
+  Mac has a source build (dated 2026-08-23, origin unrecorded). `node-gyp-build` prefers it. The
+  two prebuilds are byte-identical (sha1 `d7e21980…`). 5.4.3 also decodes the known-size+EOS
+  header that 5.2.3 rejects, so `b79765af2` was needed only for that local source build.
+  `lzma-native` is not in `pnpm-workspace.yaml`'s `onlyBuiltDependencies`, so a fresh install
+  never produces `build/Release`.
+- **What this means for item 1:** a `pnpm tauri:dev` install on this Mac runs the slower
+  5.2.3 build. Only a SEA build (or deleting `node_modules/lzma-native/build/`) exercises the
+  5.4.3 binary that ships.
+- The engaged `logInfo` and the `NATIVE_LZMA_DECODE_ENABLED` doc comment in `lzmaLoader.ts`
+  were corrected to these figures.
+
+Still open: item 1 (live install, end-to-end throughput) and item 3. On 2026-10-12, native-ON
+(`7255c2507`) was not yet an ancestor of `origin/main`, and `test.yml` runs only on pushes to
+`main`/`stable` and on PRs, so there is no linux-x64 result to read yet.
+
 ## If a decode hang recurs
 
 Capture full system state first (thermal, memory pressure, concurrent I/O, not just CPU load; that
