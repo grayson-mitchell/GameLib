@@ -64,7 +64,8 @@
         "navLabel": "Donate"
     },
     "downloadManager": {
-        "progressPaused": "Paused"
+        "progressPaused": "Paused",
+        "upNext": "Up Next"
     },
     "edit-game": {
         "sgdb": {

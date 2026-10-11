@@ -90,6 +90,8 @@
     "src/frontend/screens/Discounts/components/DiscountCard/index.tsx",
     "src/frontend/screens/Discounts/components/DiscountFilters/index.tsx",
     "src/frontend/screens/Discounts/index.tsx",
+    "src/frontend/screens/DownloadManager/components/DownloadHero/heroModel.ts",
+    "src/frontend/screens/DownloadManager/components/DownloadHero/index.tsx",
     "src/frontend/screens/DownloadManager/components/DownloadManagerItem/index.tsx",
     "src/frontend/screens/DownloadManager/components/DownloadManagerItem/status.ts",
     "src/frontend/screens/DownloadManager/components/ProgressHeader/index.tsx",
