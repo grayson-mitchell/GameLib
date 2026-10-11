@@ -7,7 +7,7 @@
  * the 40 put the channel name on the following line — a single-line-only regex finds fewer),
  * and asserts:
  *
- *   1. The extracted channel count is exactly 43, with the exact per-module tally 10/15/4/14.
+ *   1. The extracted channel count is exactly 45, with the exact per-module tally 10/15/6/14.
  *   2. Every channel classified RETURNS (declared non-void in `AsyncIPCFunctions`, NOT on the
  *      explicit VOID-PARITY allow-list below) has a `return` statement inside its own handler
  *      body -- so a future edit that silently drops a `return` is caught here, not live.
@@ -50,7 +50,7 @@ const MODULES: ModuleSpec[] = [
   {
     name: 'shortcuts',
     path: join(__dirname, '../shortcutsFlowRegistration.ts'),
-    expectedCount: 4
+    expectedCount: 6
   },
   {
     name: 'runnerMisc',
@@ -170,10 +170,13 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 45 Plan 01 (2026-10-10): 40 -> 43, the same +3 recorded on the `wineTools` module spec
   // above (`winetricksApply`, `winetricksQueueState`, `winetricksCancelRemaining`; all three are
   // invoke-kind, D-11).
+  // Quick 261012-f05 (2026-10-12): 43 -> 45, the same +2 recorded on the `shortcuts` module spec
+  // above (`addShortcut`, `removeShortcut`; kind-swapped send -> invoke, so the sweep now sees them
+  // and both handlers contain a literal `return`).
   // This total and the per-module counts must always move together -- if they ever disagree, the
   // extraction is wrong and neither number should be adjusted until that is understood.
-  it('extracts exactly 43 channels total', () => {
-    expect(allChannels).toHaveLength(43)
+  it('extracts exactly 45 channels total', () => {
+    expect(allChannels).toHaveLength(45)
   })
 
   it.each(MODULES)('$name has exactly $expectedCount channels', (spec) => {

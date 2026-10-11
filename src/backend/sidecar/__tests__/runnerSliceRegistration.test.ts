@@ -551,9 +551,10 @@ describe("containment pin — each module registers only its own declared channe
 // the property under test here is the union across all four, not any one module in isolation.
 const SEND_CHANNELS = [
   'logoutGOG',
-  'addShortcut',
-  'processShortcut',
-  'removeShortcut'
+  'processShortcut'
+  // Quick 261012-f05 (2026-10-12): `addShortcut` and `removeShortcut` kind-swapped send -> invoke
+  // so GameSubMenu can read the write outcome (4 -> 2 send, 65 -> 67 invoke; membership of
+  // SHORTCUTS_CHANNELS is unchanged).
   // Phase 34.6 Plan 07 (D-11) added `winetricksInstall` here as send-kind; Phase 45 Plan 02
   // (D-11 promote, 2026-10-10) retired it outright — removed from this list, 5 -> 4. See
   // RETIRED_SINCE_CENSUS in Describe 11 below for the historical-document cross-check this
@@ -568,7 +569,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 65 channels are handle-kind and exactly 4 are listen-kind (Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 67 channels are handle-kind and exactly 2 are listen-kind (quick 261012-f05: 65/4 -> 67/2, addShortcut/removeShortcut kind-swapped, not added; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -582,11 +583,13 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // invoke, 5+0=5 send. Measured (jest failure ACTUAL: Received 65) and re-derived — agree.
     // Phase 45 Plan 02 (2026-10-10): `winetricksInstall` (send-kind) was deleted entirely, not
     // kind-swapped — handle count is unaffected (65), listen count drops by exactly 1 (5 -> 4).
-    expect(handleChannels.length).toBe(65)
-    expect(listenChannels.length).toBe(4)
+    // Quick 261012-f05 (2026-10-12): addShortcut/removeShortcut kind-swapped send -> invoke, so
+    // handle 65 -> 67 and listen 4 -> 2. Measured (jest failure Received: 67) and re-derived.
+    expect(handleChannels.length).toBe(67)
+    expect(listenChannels.length).toBe(2)
   })
 
-  it('the send set is precisely the 4 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
+  it('the send set is precisely the 2 named channels — set equality, not a size-only check (a size-only check would pass if two channels swapped kinds)', () => {
     const listenChannels = new Set(
       [...listenerRegistry.entries()]
         .filter(([, listeners]) => listeners.length > 0)

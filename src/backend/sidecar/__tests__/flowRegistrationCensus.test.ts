@@ -86,7 +86,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'runnerMiscFlowRegistration.ts': { invoke: 14, send: 0 },
   'settingsFlowRegistration.ts': { invoke: 11, send: 1 },
   'shellFilesFlowRegistration.ts': { invoke: 3, send: 17 },
-  'shortcutsFlowRegistration.ts': { invoke: 4, send: 3 },
+  // Quick 261012-f05 (2026-10-12): invoke 4 -> 6, send 3 -> 1 -- addShortcut/removeShortcut
+  // kind-swapped send to invoke so GameSubMenu can read the write outcome; channel total
+  // unchanged at 7.
+  'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },
   'steamAuthFlowRegistration.ts': { invoke: 18, send: 1 },
   // Quick 260908-ci2 (2026-09-08): send 0 -> 1 -- `shellWindowFocused`, restoring the
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover

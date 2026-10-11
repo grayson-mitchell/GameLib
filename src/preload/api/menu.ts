@@ -1,7 +1,7 @@
-import { makeHandlerInvoker, makeListenerCaller } from '../ipc'
+import { makeHandlerInvoker } from '../ipc'
 
-export const removeShortcut = makeListenerCaller('removeShortcut')
-export const addShortcut = makeListenerCaller('addShortcut')
+export const removeShortcut = makeHandlerInvoker('removeShortcut')
+export const addShortcut = makeHandlerInvoker('addShortcut')
 export const moveInstall = makeHandlerInvoker('moveInstall')
 export const changeInstallPath = makeHandlerInvoker('changeInstallPath')
 export const enableEosOverlay = makeHandlerInvoker('enableEosOverlay')

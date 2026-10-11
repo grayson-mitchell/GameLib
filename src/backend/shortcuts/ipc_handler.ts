@@ -1,5 +1,5 @@
 import { existsSync } from 'graceful-fs'
-import { addListener, addHandler } from 'backend/ipc'
+import { addHandler } from 'backend/ipc'
 import i18next from 'i18next'
 import {
   addNonSteamGame,
@@ -12,15 +12,18 @@ import { isMac } from 'backend/constants/environment'
 import { getGame } from '../utils'
 import { logWarning, LogPrefix } from 'backend/logger'
 
-addListener('addShortcut', async (event, appName, runner, fromMenu) => {
-  void getGame(appName, runner)
-    .addShortcuts(fromMenu)
-    .catch((error) =>
-      logWarning(
-        ['Could not add shortcuts for', appName, error],
-        LogPrefix.Backend
-      )
+// Quick 261012-f05: invoke-kind, resolves true only once the write succeeded, so the renderer
+// (GameSubMenu) flips its label from the outcome. Parity copy of the sidecar's registration.
+addHandler('addShortcut', async (event, appName, runner, fromMenu) => {
+  try {
+    await getGame(appName, runner).addShortcuts(fromMenu)
+  } catch (error) {
+    logWarning(
+      ['Could not add shortcuts for', appName, error],
+      LogPrefix.Backend
     )
+    return false
+  }
 
   const body = i18next.t(
     'box.shortcuts.message',
@@ -36,6 +39,7 @@ addListener('addShortcut', async (event, appName, runner, fromMenu) => {
     body: isMac ? bodyMac : body,
     title: i18next.t('box.shortcuts.title', 'Shortcuts')
   })
+  return true
 })
 
 addHandler('shortcutsExists', (event, appName, runner) => {
@@ -62,8 +66,16 @@ addHandler('shortcutsExists', (event, appName, runner) => {
   return existsSync(desktopFile ?? '') || existsSync(menuFile ?? '')
 })
 
-addListener('removeShortcut', async (event, appName, runner) => {
-  getGame(appName, runner).removeShortcuts()
+addHandler('removeShortcut', async (event, appName, runner) => {
+  try {
+    await getGame(appName, runner).removeShortcuts()
+  } catch (error) {
+    logWarning(
+      ['Could not remove shortcuts for', appName, error],
+      LogPrefix.Backend
+    )
+    return false
+  }
 
   const body = i18next.t(
     'box.shortcuts.message-remove',
@@ -80,6 +92,7 @@ addListener('removeShortcut', async (event, appName, runner) => {
     // Shared key: catalog 'Shortcuts' wins; the body names the removal.
     title: i18next.t('box.shortcuts.title', 'Shortcuts')
   })
+  return true
 })
 
 addHandler('addToSteam', async (event, appName, runner) => {

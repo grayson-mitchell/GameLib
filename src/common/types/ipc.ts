@@ -119,8 +119,6 @@ interface SyncIPCFunctions {
   processShortcut: (combination: string) => void
   addNewApp: (args: GameInfo) => void
   showLogFileInFolder: (args: GetLogFileArgs) => void
-  addShortcut: (appName: string, runner: Runner, fromMenu: boolean) => void
-  removeShortcut: (appName: string, runner: Runner) => void
   removeFromDMQueue: (appName: string) => void
   clearDMFinished: () => void
   abort: (id: string) => void
@@ -526,6 +524,13 @@ interface AsyncIPCFunctions {
   removeWineVersion: (release: WineVersionInfo) => Promise<void>
   'wine.isValidVersion': (release: WineInstallation) => Promise<boolean>
   shortcutsExists: (appName: string, runner: Runner) => boolean
+  // Resolve true only once the shortcut write/remove succeeded (quick 261012-f05)
+  addShortcut: (
+    appName: string,
+    runner: Runner,
+    fromMenu: boolean
+  ) => Promise<boolean>
+  removeShortcut: (appName: string, runner: Runner) => Promise<boolean>
   addToSteam: (appName: string, runner: Runner) => Promise<boolean>
   removeFromSteam: (appName: string, runner: Runner) => Promise<void>
   isAddedToSteam: (appName: string, runner: Runner) => Promise<boolean>
