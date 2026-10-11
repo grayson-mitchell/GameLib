@@ -9,7 +9,7 @@ found_by: "quick-261011-wrx"
 files: [src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts]
 ---
 
-## Defect (predicted, not yet measured)
+## Defect (measured 2026-10-12)
 
 Quick 261011-wrx makes native decode engage in the win32 SEA sidecar. The binding extracts the
 addon and `liblzma.dll` into a private `gamelib-lzma-native-<pid>-XXXXXX` directory under
@@ -19,9 +19,9 @@ directory is expected to be LEFT BEHIND (the failure is swallowed by design). Ev
 sidecar process that engages native decode would leave one directory.
 
 Sizes to expect per directory: `node.napi.node` 815,616 B plus `liblzma.dll` 150,528 B, about
-966 KB. No directories-per-run number exists yet, because the cold win32 SEA build and the
-native-win32 driver run did not happen in 261011-wrx (a live `gamelib-shell.exe` was running, so the
-precondition was unmet). The measured figure is owed.
+966 KB. Measured 2026-10-12 with the 261011-wrx driver on the cold win32 SEA build: 20 runs left 40
+directories (before 0, after 40), two per sidecar process, one per worker: the first worker's dir keeps both files (966 KB); the second worker's dir keeps only `node.napi.node` (816 KB), because Windows had already mapped `liblzma.dll` by name from the first dir and reused it, so the second copy was never mapped and the `finally` unlinked it. 35 MB
+in total. Every engaged line said `was LEFT BEHIND`. Those 40 were removed by hand afterwards.
 
 ## How to measure
 

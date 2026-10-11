@@ -28,7 +28,7 @@ actuals:
 completed: 2026-10-12
 ---
 
-# Quick 261011-wrx: win32 SEA native LZMA engages (unit-verified; real-SEA run owed)
+# Quick 261011-wrx: win32 SEA native LZMA engages (unit-verified; real win32 SEA run 20/20 on 2026-10-12)
 
 The win32 SEA now embeds `liblzma.dll` as a second asset, and the binding extracts it beside the addon in one private `mkdtemp` directory before `dlopen`. This is verified by unit tests only. The cold win32 SEA build, the 20-run native-win32 driver arm and a live Steam depot install were NOT run.
 
@@ -53,13 +53,16 @@ The precondition was unmet. `tasklist` matched a live `gamelib-shell.exe` (pid 1
 
 The driver port (STEP 1) was done. `npx tsc --noEmit` over it is clean, and `--file-info` confirms its path is prettier-ignored.
 
+## Live run (2026-10-12, operator-triggered after the executor returned)
+
+The operator closed the app and ran `pnpm build:sidecar-sea`; the orchestrator then ran the driver. `RESULT label=native-win32 pass=20/20 expectNativeWorkers=2`: every run `nativeWorkers=2`, `exit=0`, `decode=ok match=true`, wall 1.80-2.20 s. The engaged line appears in all 20 run logs; zero logs carry the import-failure warning. Temp census: 0 before, 40 after (2 per process: one with both files at 966 KB, one addon-only at 816 KB because the process had already mapped liblzma.dll by name from the first dir and the finally unlinked the unmapped second copy; 35 MB total), all `LEFT BEHIND`, removed by hand afterwards. Logs and census are in `measurement/`. The binary grew 120,994,304 to 121,159,680 bytes.
 ## Deviations from Plan
 
 None to the code. The todo was closed via the plan's "skipped" branch (unit evidence only), with the Resolution stating plainly that the real-SEA run is owed. The follow-up accumulation todo was filed because STEP 3 did not run.
 
 ## Owed to the operator
 
-1. With the app closed: `pnpm build:sidecar-sea`, then the native-win32 driver run (exact command in the closed todo's Resolution). Expect 20/20 at `nativeWorkers:2`, the engaged line in every run log, and `native-win32-tmpdir-extracts.txt` listing the left-behind directories. If it shows `nativeWorkers:0` with the import-failure warning, the fix is refuted: reopen the todo.
+1. DONE 2026-10-12: cold build plus the native-win32 driver run, 20/20 at `nativeWorkers:2`, engaged line in every log, no import-failure warning (see Live run above).
 2. A live Steam depot install in the packaged Windows app (`gamelib.log` should show the engaged line with its `SEA extraction dir` sentence).
 3. The accumulate-or-sweep decision: `.planning/todos/pending/2026-10-12-win32-native-lzma-extraction-dirs-accumulate-in-temp.md`.
 4. ubuntu CI's `lzmaNativeSeaRealBuild.test.ts` (unedited) is the first linux real-SEA run of the mkdtemp path.

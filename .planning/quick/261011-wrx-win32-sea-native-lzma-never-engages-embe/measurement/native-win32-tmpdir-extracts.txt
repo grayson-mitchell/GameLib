@@ -1,0 +1,84 @@
+tmpdir=C:\Users\grays\AppData\Local\Temp
+before (0):
+after (40):
+  gamelib-lzma-native-11824-F64TxJ
+  gamelib-lzma-native-11824-w2uvuV
+  gamelib-lzma-native-17432-U4D6GX
+  gamelib-lzma-native-17432-siEh0B
+  gamelib-lzma-native-18176-2PgdaG
+  gamelib-lzma-native-18176-EI8aJV
+  gamelib-lzma-native-21584-UpjFWm
+  gamelib-lzma-native-21584-X4mn6x
+  gamelib-lzma-native-23832-FxfyzV
+  gamelib-lzma-native-23832-ZGFNne
+  gamelib-lzma-native-26740-8j286i
+  gamelib-lzma-native-26740-pvNEiZ
+  gamelib-lzma-native-29032-E2uLyA
+  gamelib-lzma-native-29032-cCTEpv
+  gamelib-lzma-native-30660-7bHK92
+  gamelib-lzma-native-30660-ZRSlqR
+  gamelib-lzma-native-30984-Yp2Xhi
+  gamelib-lzma-native-30984-yNB67j
+  gamelib-lzma-native-32560-0KwfJx
+  gamelib-lzma-native-32560-kijkc8
+  gamelib-lzma-native-32616-5rv0Rs
+  gamelib-lzma-native-32616-ejCieU
+  gamelib-lzma-native-33076-JPUIg6
+  gamelib-lzma-native-33076-jOwxK0
+  gamelib-lzma-native-33232-dGhSxz
+  gamelib-lzma-native-33232-vKo6K1
+  gamelib-lzma-native-34264-UWmN1k
+  gamelib-lzma-native-34264-csPq10
+  gamelib-lzma-native-35180-klqUxR
+  gamelib-lzma-native-35180-rzwN52
+  gamelib-lzma-native-35848-eMZy9U
+  gamelib-lzma-native-35848-omkV4d
+  gamelib-lzma-native-35904-emMpsp
+  gamelib-lzma-native-35904-oHApyR
+  gamelib-lzma-native-36680-LX0ZQA
+  gamelib-lzma-native-36680-jiAyzz
+  gamelib-lzma-native-37104-LAKRB6
+  gamelib-lzma-native-37104-ndwAy1
+  gamelib-lzma-native-8048-2fykUv
+  gamelib-lzma-native-8048-aVPA8x
+new = after minus before (40):
+  gamelib-lzma-native-11824-F64TxJ  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-11824-w2uvuV  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-17432-U4D6GX  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-17432-siEh0B  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-18176-2PgdaG  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-18176-EI8aJV  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-21584-UpjFWm  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-21584-X4mn6x  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-23832-FxfyzV  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-23832-ZGFNne  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-26740-8j286i  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-26740-pvNEiZ  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-29032-E2uLyA  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-29032-cCTEpv  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-30660-7bHK92  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-30660-ZRSlqR  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-30984-Yp2Xhi  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-30984-yNB67j  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-32560-0KwfJx  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-32560-kijkc8  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-32616-5rv0Rs  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-32616-ejCieU  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-33076-JPUIg6  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-33076-jOwxK0  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-33232-dGhSxz  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-33232-vKo6K1  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-34264-UWmN1k  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-34264-csPq10  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-35180-klqUxR  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-35180-rzwN52  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-35848-eMZy9U  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-35848-omkV4d  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-35904-emMpsp  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-35904-oHApyR  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-36680-LX0ZQA  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-36680-jiAyzz  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-37104-LAKRB6  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-37104-ndwAy1  (directory) children: liblzma.dll=150528, node.napi.node=815616
+  gamelib-lzma-native-8048-2fykUv  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-8048-aVPA8x  (directory) children: liblzma.dll=150528, node.napi.node=815616

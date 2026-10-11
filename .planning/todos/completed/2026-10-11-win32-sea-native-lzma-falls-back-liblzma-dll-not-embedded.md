@@ -94,3 +94,20 @@ Owed to the operator:
 
 Linux note: ubuntu CI's `lzmaNativeSeaRealBuild.test.ts` (unedited) is the first linux real-SEA run
 of the mkdtemp path.
+
+## Live verification (2026-10-12, operator ran it after closing the app)
+
+Cold `pnpm build:sidecar-sea` with the app closed, then the driver exactly as above. Result:
+
+- `RESULT label=native-win32 pass=20/20 expectNativeWorkers=2`; every run `nativeWorkers=2`,
+  `exit=0`, `SELFTEST decode=ok bytes=65536 match=true`, wall 1.80-2.20 s.
+- The engaged line is present in all 20 run logs (once per worker process) and ends with
+  `SEA extraction dir C:\Users\...\Temp\gamelib-lzma-native-<pid>-XXXXXX was LEFT BEHIND`.
+- Zero run logs contain `The specified module could not be found` or any lzmaNativeBinding failure
+  warning. Item 1 above is discharged; the fix is confirmed on the real win32 SEA.
+- Accumulation measured: `native-win32-tmpdir-extracts.txt` before 0, after 40, so 2 directories
+  per sidecar process, one per worker: the first worker's dir keeps both files (966 KB); the second worker's dir keeps only `node.napi.node` (816 KB), because Windows had already mapped `liblzma.dll` by name from the first dir and reused it, so the second copy was never mapped and the `finally` unlinked it. 35 MB for the 20 runs. The 40 were removed by
+  hand after the run (no process held them). The decision stays with the accumulation todo.
+- The rebuilt binary grew from 120,994,304 to 121,159,680 bytes, consistent with the embedded DLL.
+
+Still owed: item 2 (a live Steam depot install in the packaged Windows app) and item 3.
