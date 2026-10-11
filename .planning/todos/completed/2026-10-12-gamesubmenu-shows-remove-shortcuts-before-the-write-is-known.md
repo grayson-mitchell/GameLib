@@ -45,3 +45,61 @@ Line numbers as of the HEAD of quick 261012-9t1. Found by reading the code while
 Windows shortcuts todo; no live run was made, and the failure path itself was exercised only
 through the sidecar's own result (`{ ok: false }` and the toast mapping), never through the
 renderer.
+
+## Fix (2026-10-12, quick 261012-ca6)
+
+**Decision.** Option 1 combined with option 2: `addShortcut` and `removeShortcut` are now
+invoke-kind and each resolves the `shortcutsExists` predicate, evaluated in the sidecar AFTER the
+work has settled. Option 2 alone (re-query from the renderer) cannot work with a send-kind channel:
+the transport resolves a send once the Rust shell has accepted the frame and the sidecar runs
+listeners fire-and-forget, so nothing in the renderer can observe when the write finished. Option 3
+(a pushed outcome event) needs a new frontend message, appName/runner filtering and a
+subscribe/unsubscribe lifecycle, all to rebuild a reply that invoke already provides. The return
+value is "do shortcuts exist now", not "did the call succeed": a partial add shows "Remove
+shortcuts" because a removable shortcut exists, and an add that wrote nothing does not flip.
+
+**Fix.** Two commits.
+
+- `f36b7e64f` (tracer): `src/common/types/ipc.ts` (both channels move to `AsyncIPCFunctions`,
+  `Promise<boolean>`), `src/preload/api/menu.ts` (`makeHandlerInvoker`),
+  `src/backend/sidecar/shortcutsFlowRegistration.ts` (invoke handlers, shared
+  `shortcutsExistOnDisk`, toast chosen from the outcome), `src/backend/shortcuts/ipc_handler.ts`
+  (the Electron-era copy, kept typechecking), the new
+  `src/frontend/screens/Game/GameSubMenu/shortcutsToggle.ts` (state set from `result === true`,
+  unchanged on rejection, busy released in `finally`), `GameSubMenu/index.tsx` (`handleShortcuts`
+  delegates, spinner while busy), and the four pins that count kinds
+  (`shortcutsFlows`, `runnerSliceRegistration`, `flowRegistrationCensus`,
+  `invokeReturnValueSweep`).
+- `2716f525e`: `src/backend/shortcuts/shortcuts/shortcuts.ts` (`removeShortcuts` awaits
+  `fs/promises` `unlink`/`rm`, ENOENT counts as removed, other failures go to `logError` and are not
+  rethrown), `shortcutsFlowRegistration.ts` (the removal toast only when nothing remains, else the
+  new `box.shortcuts.error-remove`), `public/locales/en/translation.json` (en only, as for
+  `box.shortcuts.error`), plus tests. The never-reject contract protects the four uninstall callers
+  that await `removeShortcuts` (gog, legendary, nile, zoom) and the one that does not (sideload).
+
+**Tests.** RED first. Task 1: `shortcutsToggle` failed to load (module missing), and
+`shortcutsFlows` had 7 failures besides the known containment one (2 registration-kind, 5 outcome).
+Task 2: `removeShortcutsOutcome` 3 failed / 1 passed (the ENOENT case already held), and 2 new
+`shortcutsFlows` toast cases failed. GREEN, local (Windows): `shortcutsToggle` 9/9,
+`removeShortcutsOutcome` 4/4, `addShortcutsOutcome` 4/4, `shortcutsExistsFallback` 6/6,
+`runnerSliceRegistration` 95/95, `flowRegistrationCensus` 72/72, `invokeReturnValueSweep` 7/7.
+`shortcutsFlows`: 30 passed / 1 failed (the known OneDrive containment test) / 4 skipped, six
+`261012-ca6` cases among the passes. Describe 5 of `shortcutsFlows` is darwin-only and was NOT run
+on this box; only its invocation changed (it now awaits the invoke handler), and `pnpm codecheck`
+is the only local check of that edit. `pnpm codecheck` exits 0, `pnpm lint` PASS on both ceilings,
+scoped eslint and `prettier --check` clean.
+
+**Not exercised (operator-only).** A live click in the running app; the busy spinner's render; the
+toasts' render; the invoke-bound (60 s) rejection path in a real shell.
+
+**Side finding.** The pre-existing `260905-mv5 (no regression)` test created
+`%USERPROFILE%\OneDrive\Desktop\260905-mv5 Site 4 No-Regression Game.lnk`, an empty directory dated
+2026-10-08, on the operator's real Desktop. It now runs under the containment home. The leaked
+directory itself was left for the operator to delete.
+
+**Stale docs, not edited.** `.planning/IPC-PORT-INVENTORY.md` and `34.5-PORTED-CHANNELS.md` still
+list the two channels as send-kind. They are historical records.
+
+**CLOSED 2026-10-12 (quick 261012-ca6):** the menu entry flips only from the sidecar's disk answer.
+A failed add leaves it reading "Add shortcut", proven by the helper test and by the handler
+resolving false; the real Desktop has no `261012-ca6` entry after the runs.
