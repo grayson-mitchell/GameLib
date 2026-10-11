@@ -17,3 +17,7 @@ live check on its own.
 - It needs a live check on its own (no code hypothesis yet).
 
 Evidence: `/tmp/gamelib-gate-45-20261010T194049Z/terminal.log`.
+
+## Resolution (2026-10-12)
+
+Premise refuted by debug session `winetricks-window-not-resizable`. The NSWindow is drag-resizable (launch-4 frames show 1280 -> 87 -> 1319 pt, an operator drag). What did not follow the edge was the in-page Settings dialog, whose paper had `min-width: fit-content`; fixed by 682a20ac7 (261011-hh5) and 70fde4672 (261011-jj1). "Three widths" are two real widths (1280, 1319 pt) plus window-shadow margin. Not re-verified with a live drag on a current build.
