@@ -514,3 +514,63 @@ Contract defects found while running it, each scored on the criterion as written
 3. **G9's narrow arm assumed the window can be narrowed.** The operator could not resize it by dragging; captures show the window at three different widths across launches 3-4 (2784 / 2696 / 2862 px at 2x), so the window is not fixed-size, but no narrow arm was established. Recorded, not explained.
 4. **The capture standard's `tee -a` transcript works** for the inner binary launched from a terminal; a backgrounded `screencapture -v` must be given a fixed `-V` duration (a stop signal discards the file - one recording was lost that way) and `screencapture -l <CGWindowID>` plus a colour histogram is a workable pixel-sampling method without pyobjc or ffmpeg.
 5. **Operator-visible facts the contract did not anticipate:** `gdiplus` and `gdiplus_winxp` share the upstream title "MS GDI+" and the row shows no verb id; the "Everything else" group searches the entire catalog; WebKit's native recent-searches chip appears under the `type=search` input and intercepted a checkbox click; the first verb of a run intermittently renders as Queued with Cancel disabled until the verb boundary.
+
+## Re-run checklist (drafted 2026-10-12)
+
+> Checklist only. No result is recorded here, and the rule at the top of this file still holds:
+> nothing in it may be filled in by an agent. The operator observes; an agent only transcribes the
+> operator's resume message. The first-verb race fix under re-test is quick `261011-nqe`. The
+> contract above is unchanged.
+
+### 0. Build, once
+
+- [ ] Quit any `tauri dev` / Vite: `pgrep -fl 'tauri|vite|gamelib-shell'` prints nothing.
+- [ ] HEAD includes the fixes: `nqe` (race), `hh5` + `jj1` (dialog width), `gpn` + `kqx` + `sxg` + `pjv` (contrast), `iel` (banner), `txc` (dock and UX).
+- [ ] Build the packaged release with `APPLE_SIGNING_IDENTITY` set: `pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build --bundles app` (exit 1 after bundling is expected: no updater key).
+- [ ] Empty-diff check: `git diff --name-only <build_sha> HEAD -- src src-tauri package.json vite.config.ts` prints nothing. Record the new `build_sha` in a new dated section, not by editing the table above.
+- [ ] Launch the inner binary from a terminal with `tee -a` so `gamelib.log` is captured.
+- [ ] Blank window: use the `ditto` + re-sign recipe above. A build artefact, not a finding.
+- [ ] Game: Alan Wake (GOG, GPTK wine-7.7).
+
+### 1. Preconditions that were blocked last time
+
+- [ ] Narrow width (500 CSS px content): drag the window edge narrower, window-id capture at the narrowest width, record the measured width. The resize todo's refutation (dialog now follows the edge) is not yet re-checked on a current build.
+- [ ] CrossOver game (G8): none existed. Set one up, or record the arm blocked again.
+- [ ] Five-tool missing-dependencies condition (items 15, 16): launch once with PATH stripped.
+
+### 2. Items that need a new run (item 3 re-score owed; items 1, 6, 7, 13)
+
+Use `screencapture -l <window id>` for every frame and `sample.swift` / `contrast.sh` for contrast. Spot-check one light theme (nord-light) and one dark (midnightMirage).
+
+- [ ] G3, Cancel remaining (item 3): three-verb run (physx, d3dcompiler_47, d3dx11_43). Cancel enabled and the first row Installing (spinner + phase word), not Queued. Press Cancel during verb 1: in-flight verb finishes, the rest return to tickable. Repeat 3 or more times; the original race was intermittent.
+- [ ] G1, multi-verb Apply (item 1): three verbs, tab mounted throughout. Open Show details mid-run: dialog stays inside the window, Cancel remaining not clipped. Frame-stepped recording for the 0 px claim.
+- [ ] G6, GPTK banner (item 6): present on first opening the tab, before any Apply; version 7.7; info-styled, not red; German copy one line.
+- [ ] G7, contrast (item 7): re-sample the failed cells. nord-light: Apply text, Install failed, bar failed count, checkbox border, queued box, placeholder, Cancel/Apply borders. midnightMirage: Apply text, Install failed, bar failed count. Not reached last time: midnightMirage header hover text and fill.
+- [ ] Sticky bar overlap (item 13): the opaque dock + divider no longer overlaps the MEDIA & CODECS header or the last row's Installed badge.
+
+### 3. Items blocked by the dialog overflow, now observable
+
+- [ ] Items 11, 12: remount mid-run and read Show details. Check the first verb's progress lines and percent show from the very start (the race fix may bear on item 12).
+- [ ] Items 24, 26, 27: long log lines wrap inside the 160 px panel; bar text truncates before it pushes the controls; in en and in de.
+
+### 4. Backstops that need the narrow width (items 17-23, 25)
+
+- [ ] Suggested rows truncate with a native tooltip (hover to confirm).
+- [ ] Translated group names truncate; count badge and caret stay visible.
+- [ ] A 60-character search query wraps inside the panel (last time: 34).
+- [ ] Row height and status slot hold with the widest content.
+- [ ] A 95-character upstream title fits one 44 px line (pick such a verb from the catalog beforehand).
+- [ ] In-flight bar truncates in de.
+- [ ] Missing-dependencies banner wraps in en and de (from section 1).
+
+### 5. Optional, not required to close
+
+- [ ] Induced arm for item 14 (environment-report failure).
+- [ ] Items 4, 5, 10 passed last time and are not re-scored unless a relaunch is itself under test; a cheap D-15 ERROR-line recount on the new logs is worthwhile.
+
+### 6. Close-out
+
+- [ ] Operator sends a resume message; an agent transcribes it into `45-UAT.md` and this file without inferring or rounding.
+- [ ] Follow the UAT item shape (`### N.` at column 0, inline `expected:`, `result:` opening with a status word).
+- [ ] `/gsd-verify-work`, then `phase.complete`; run the planning gates before pushing (`phase.complete` has advanced STATE.md in a way that fails the anchor gate).
+- [ ] File a todo (`severity:`, `platform:`, `ready:`) for each new `issue`.
