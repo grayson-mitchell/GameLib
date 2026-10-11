@@ -20,6 +20,7 @@ import { showSteamSubMenuInstallOptions } from 'frontend/helpers/steamInstallOpt
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { reportRepairFailure } from './repairFailure'
+import { toggleShortcuts } from './shortcutToggle'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import {
   callOrDeclare,
@@ -205,14 +206,8 @@ export default function GamesSubmenu({
     })
   }
 
-  function handleShortcuts() {
-    if (hasShortcuts) {
-      window.api.removeShortcut(appName, runner)
-      return setHasShortcuts(false)
-    }
-    window.api.addShortcut(appName, runner, true)
-
-    return setHasShortcuts(true)
+  async function handleShortcuts() {
+    await toggleShortcuts({ appName, runner, hasShortcuts, setHasShortcuts })
   }
 
   function handleEdit() {
@@ -519,7 +514,7 @@ export default function GamesSubmenu({
                   : t('button.edit-game', 'Edit Game')}
               </button>{' '}
               <button
-                onClick={() => handleShortcuts()}
+                onClick={async () => handleShortcuts()}
                 className="link button is-text is-link buttonWithIcon"
               >
                 <ShortcutIcon />
