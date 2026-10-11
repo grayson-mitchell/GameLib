@@ -184,7 +184,11 @@
             "signedOutTitle": "Deine Steam-Anmeldung ist abgelaufen",
             "syncing": "Deine Steam-Bibliothek wird synchronisiert…"
         },
-        "storeOther": "Andere"
+        "storeOther": "Andere",
+        "tileSize": {
+            "label": "Kachelgröße",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Anmeldung abgelaufen — Erneut verbinden",

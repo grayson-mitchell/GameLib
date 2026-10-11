@@ -243,7 +243,11 @@
             "signedOutTitle": "A sua sessão no Steam expirou",
             "syncing": "A sincronizar a sua biblioteca Steam…"
         },
-        "storeOther": "Outro"
+        "storeOther": "Outro",
+        "tileSize": {
+            "label": "Tamanho dos mosaicos",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Sessão expirada — Reconectar",

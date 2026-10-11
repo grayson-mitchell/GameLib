@@ -250,7 +250,11 @@
             "signedOutTitle": "Platnost přihlášení ke Steam vypršela",
             "syncing": "Synchronizuje se vaše knihovna Steam…"
         },
-        "storeOther": "Ostatní"
+        "storeOther": "Ostatní",
+        "tileSize": {
+            "label": "Velikost dlaždic",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Platnost přihlášení vypršela — Připojit znovu",

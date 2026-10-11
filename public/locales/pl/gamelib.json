@@ -250,7 +250,11 @@
             "signedOutTitle": "Twoje logowanie do Steam wygasło",
             "syncing": "Synchronizowanie biblioteki Steam…"
         },
-        "storeOther": "Inne"
+        "storeOther": "Inne",
+        "tileSize": {
+            "label": "Rozmiar kafelków",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Logowanie wygasło — Połącz ponownie",

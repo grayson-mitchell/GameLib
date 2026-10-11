@@ -236,7 +236,11 @@
             "signedOutTitle": "การลงชื่อเข้าใช้ Steam ของคุณหมดอายุแล้ว",
             "syncing": "กำลังซิงค์ไลบรารี Steam ของคุณ…"
         },
-        "storeOther": "อื่นๆ"
+        "storeOther": "อื่นๆ",
+        "tileSize": {
+            "label": "ขนาดช่อง",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "การลงชื่อเข้าใช้หมดอายุ — เชื่อมต่อใหม่",

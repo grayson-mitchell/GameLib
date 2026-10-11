@@ -236,7 +236,11 @@
             "signedOutTitle": "Sesi masuk Steam Anda telah berakhir",
             "syncing": "Menyinkronkan pustaka Steam Anda…"
         },
-        "storeOther": "Lainnya"
+        "storeOther": "Lainnya",
+        "tileSize": {
+            "label": "Ukuran ubin",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Sesi masuk berakhir — Hubungkan ulang",

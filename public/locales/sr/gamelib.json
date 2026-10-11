@@ -243,7 +243,11 @@
             "signedOutTitle": "Пријава на Steam је истекла",
             "syncing": "Синхронизација Steam библиотеке…"
         },
-        "storeOther": "Остало"
+        "storeOther": "Остало",
+        "tileSize": {
+            "label": "Величина плочица",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Пријава је истекла — Поново се повежите",

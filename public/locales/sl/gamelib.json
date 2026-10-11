@@ -250,7 +250,11 @@
             "signedOutTitle": "Vaša prijava v Steam je potekla",
             "syncing": "Sinhroniziranje vaše knjižnice Steam …"
         },
-        "storeOther": "Drugo"
+        "storeOther": "Drugo",
+        "tileSize": {
+            "label": "Velikost ploščic",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Prijava je potekla — Ponovno poveži",

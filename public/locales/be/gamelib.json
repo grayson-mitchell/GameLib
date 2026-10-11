@@ -250,7 +250,11 @@
             "signedOutTitle": "Тэрмін дзеяння вашага ўваходу ў Steam скончыўся",
             "syncing": "Сінхранізацыя бібліятэкі Steam…"
         },
-        "storeOther": "Іншае"
+        "storeOther": "Іншае",
+        "tileSize": {
+            "label": "Памер плітак",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Тэрмін уваходу скончыўся — Пераўключыцца",

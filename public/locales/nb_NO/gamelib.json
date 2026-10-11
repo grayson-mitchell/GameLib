@@ -236,7 +236,11 @@
             "signedOutTitle": "Steam-innloggingen din er utløpt",
             "syncing": "Synkroniserer Steam-biblioteket ditt …"
         },
-        "storeOther": "Annen"
+        "storeOther": "Annen",
+        "tileSize": {
+            "label": "Flisestørrelse",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Innlogging utløpt — Koble til på nytt",

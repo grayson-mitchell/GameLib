@@ -236,7 +236,11 @@
             "signedOutTitle": "Din inloggning på Steam har gått ut",
             "syncing": "Synkar ditt Steam-bibliotek…"
         },
-        "storeOther": "Övrigt"
+        "storeOther": "Övrigt",
+        "tileSize": {
+            "label": "Rutstorlek",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Inloggning har gått ut — Återanslut",

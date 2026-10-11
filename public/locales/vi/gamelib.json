@@ -236,7 +236,11 @@
             "signedOutTitle": "Phiên đăng nhập Steam của bạn đã hết hạn",
             "syncing": "Đang đồng bộ thư viện Steam của bạn…"
         },
-        "storeOther": "Khác"
+        "storeOther": "Khác",
+        "tileSize": {
+            "label": "Kích Thước Ô",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Phiên đăng nhập đã hết hạn — Kết nối lại",

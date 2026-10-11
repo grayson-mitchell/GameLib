@@ -190,7 +190,11 @@
             "signedOutTitle": "Votre connexion Steam a expiré",
             "syncing": "Synchronisation de votre bibliothèque Steam…"
         },
-        "storeOther": "Autre"
+        "storeOther": "Autre",
+        "tileSize": {
+            "label": "Taille des vignettes",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Connexion expirée — Reconnecter",

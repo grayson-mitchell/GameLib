@@ -250,7 +250,11 @@
             "signedOutTitle": "Термін дії входу в Steam закінчився",
             "syncing": "Синхронізація бібліотеки Steam…"
         },
-        "storeOther": "Інше"
+        "storeOther": "Інше",
+        "tileSize": {
+            "label": "Розмір плиток",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Термін входу закінчився — Перепідключитися",

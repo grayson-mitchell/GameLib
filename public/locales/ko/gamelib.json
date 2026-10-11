@@ -236,7 +236,11 @@
             "signedOutTitle": "Steam 로그인이 만료되었습니다",
             "syncing": "Steam 라이브러리 동기화 중…"
         },
-        "storeOther": "기타"
+        "storeOther": "기타",
+        "tileSize": {
+            "label": "타일 크기",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "로그인 만료됨 — 다시 연결",

@@ -236,7 +236,11 @@
             "signedOutTitle": "Din Steam-login er udløbet",
             "syncing": "Synkroniserer dit Steam-bibliotek…"
         },
-        "storeOther": "Andet"
+        "storeOther": "Andet",
+        "tileSize": {
+            "label": "Flisestørrelse",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Login udløbet — Genopret forbindelse",

@@ -236,7 +236,11 @@
             "signedOutTitle": "A túa sesión de Steam caducou",
             "syncing": "Sincronizando a túa biblioteca de Steam…"
         },
-        "storeOther": "Outro"
+        "storeOther": "Outro",
+        "tileSize": {
+            "label": "Tamaño dos mosaicos",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Sesión caducada — Reconectar",

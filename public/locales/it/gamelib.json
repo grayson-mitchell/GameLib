@@ -243,7 +243,11 @@
             "signedOutTitle": "L'accesso a Steam è scaduto",
             "syncing": "Sincronizzazione della libreria Steam in corso…"
         },
-        "storeOther": "Altro"
+        "storeOther": "Altro",
+        "tileSize": {
+            "label": "Dimensione delle tessere",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Accesso scaduto — Riconnetti",

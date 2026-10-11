@@ -243,7 +243,11 @@
             "signedOutTitle": "Seu login no Steam expirou",
             "syncing": "Sincronizando sua biblioteca Steam…"
         },
-        "storeOther": "Outros"
+        "storeOther": "Outros",
+        "tileSize": {
+            "label": "Tamanho das capas",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Login expirado — Reconectar",

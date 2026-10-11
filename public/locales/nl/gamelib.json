@@ -236,7 +236,11 @@
             "signedOutTitle": "Je Steam-aanmelding is verlopen",
             "syncing": "Je Steam-bibliotheek wordt gesynchroniseerd…"
         },
-        "storeOther": "Overig"
+        "storeOther": "Overig",
+        "tileSize": {
+            "label": "Tegelgrootte",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Aanmelding verlopen — Opnieuw verbinden",

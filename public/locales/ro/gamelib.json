@@ -243,7 +243,11 @@
             "signedOutTitle": "Sesiunea ta Steam a expirat",
             "syncing": "Se sincronizează biblioteca ta Steam…"
         },
-        "storeOther": "Altele"
+        "storeOther": "Altele",
+        "tileSize": {
+            "label": "Mărimea dalelor",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Sesiune expirată — Reconectează-te",

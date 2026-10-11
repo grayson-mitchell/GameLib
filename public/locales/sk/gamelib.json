@@ -250,7 +250,11 @@
             "signedOutTitle": "Platnosť vášho prihlásenia do Steam vypršala",
             "syncing": "Synchronizuje sa vaša knižnica Steam…"
         },
-        "storeOther": "Iné"
+        "storeOther": "Iné",
+        "tileSize": {
+            "label": "Veľkosť dlaždic",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Platnosť prihlásenia vypršala — Znova pripojiť",

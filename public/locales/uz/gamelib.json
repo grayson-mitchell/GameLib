@@ -236,7 +236,11 @@
             "signedOutTitle": "Steam'ga kirish muddati tugadi",
             "syncing": "Steam kutubxonangiz sinxronlanmoqda…"
         },
-        "storeOther": "Boshqa"
+        "storeOther": "Boshqa",
+        "tileSize": {
+            "label": "Plita hajmi",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Kirish muddati tugadi — Qayta ulanish",

@@ -250,7 +250,11 @@
             "signedOutTitle": "Jūsų Steam prisijungimo galiojimas baigėsi",
             "syncing": "Sinchronizuojama jūsų Steam biblioteka…"
         },
-        "storeOther": "Kita/-s/-i"
+        "storeOther": "Kita/-s/-i",
+        "tileSize": {
+            "label": "Plytelių dydis",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Prisijungimo galiojimas baigėsi — prisijungti iš naujo",

@@ -236,7 +236,11 @@
             "signedOutTitle": "Steamのサインインの有効期限が切れました",
             "syncing": "Steamライブラリを同期中…"
         },
-        "storeOther": "その他"
+        "storeOther": "その他",
+        "tileSize": {
+            "label": "タイルサイズ",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "サインインの有効期限切れ — 再接続",

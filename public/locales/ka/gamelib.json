@@ -236,7 +236,11 @@
             "signedOutTitle": "თქვენი Steam შესვლის ვადა ამოიწურა",
             "syncing": "თქვენი Steam ბიბლიოთეკის სინქრონიზაცია…"
         },
-        "storeOther": "სხვა"
+        "storeOther": "სხვა",
+        "tileSize": {
+            "label": "ფილის ზომა",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "შესვლის ვადა ამოიწურა — ხელახლა დაკავშირება",

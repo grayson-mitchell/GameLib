@@ -243,7 +243,11 @@
             "signedOutTitle": "תוקף ההתחברות שלך ל-Steam פג",
             "syncing": "מסנכרן את ספריית Steam שלך…"
         },
-        "storeOther": "אחר"
+        "storeOther": "אחר",
+        "tileSize": {
+            "label": "גודל האריחים",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "תוקף ההתחברות פג — התחבר מחדש",

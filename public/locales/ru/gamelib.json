@@ -250,7 +250,11 @@
             "signedOutTitle": "Срок входа в Steam истёк",
             "syncing": "Синхронизация библиотеки Steam…"
         },
-        "storeOther": "Другое"
+        "storeOther": "Другое",
+        "tileSize": {
+            "label": "Размер плиток",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Срок входа истёк — Переподключиться",

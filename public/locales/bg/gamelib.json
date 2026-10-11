@@ -236,7 +236,11 @@
             "signedOutTitle": "Сесията ви в Steam е изтекла",
             "syncing": "Синхронизиране на библиотеката ви в Steam…"
         },
-        "storeOther": "Други"
+        "storeOther": "Други",
+        "tileSize": {
+            "label": "Размер на плочките",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Сесията е изтекла — Повторно свързване",

@@ -236,7 +236,11 @@
             "signedOutTitle": "Steam girişinizin müddəti bitdi",
             "syncing": "Steam kitabxananız sinxronlaşdırılır…"
         },
-        "storeOther": "Digər"
+        "storeOther": "Digər",
+        "tileSize": {
+            "label": "Plitə ölçüsü",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Giriş müddəti bitib — Yenidən qoşul",

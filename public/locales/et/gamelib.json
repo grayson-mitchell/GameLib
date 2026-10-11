@@ -236,7 +236,11 @@
             "signedOutTitle": "Sinu Steami sisselogimine aegus",
             "syncing": "Sinu Steami teegi sünkimine…"
         },
-        "storeOther": "Muu"
+        "storeOther": "Muu",
+        "tileSize": {
+            "label": "Plaadi suurus",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Sisselogimine aegunud — Ühenda uuesti",

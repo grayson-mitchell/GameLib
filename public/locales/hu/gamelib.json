@@ -236,7 +236,11 @@
             "syncing": "Steam könyvtár szinkronizálása…",
             "signedOutAction": "Jelentkezz be a Steam-be"
         },
-        "storeOther": "Egyéb"
+        "storeOther": "Egyéb",
+        "tileSize": {
+            "label": "Csempe mérete",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "A bejelentkezés lejárt — Újracsatlakozás",

@@ -236,7 +236,11 @@
             "signedOutTitle": "നിങ്ങളുടെ Steam സൈൻ-ഇൻ കാലഹരണപ്പെട്ടു",
             "syncing": "നിങ്ങളുടെ Steam ലൈബ്രറി സമന്വയിപ്പിക്കുന്നു…"
         },
-        "storeOther": "മറ്റുള്ളവ"
+        "storeOther": "മറ്റുള്ളവ",
+        "tileSize": {
+            "label": "ടൈൽ വലുപ്പം",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "സൈൻ-ഇൻ കാലഹരണപ്പെട്ടു — വീണ്ടും ബന്ധിപ്പിക്കുക",

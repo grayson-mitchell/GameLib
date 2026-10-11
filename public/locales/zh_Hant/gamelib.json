@@ -236,7 +236,11 @@
             "signedOutTitle": "您的 Steam 登入已過期",
             "syncing": "正在同步您的 Steam 資料庫…"
         },
-        "storeOther": "其它"
+        "storeOther": "其它",
+        "tileSize": {
+            "label": "磚大小",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "登入已過期 — 重新連接",

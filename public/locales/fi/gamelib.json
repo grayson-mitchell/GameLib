@@ -236,7 +236,11 @@
             "syncing": "Synkronoidaan Steam-kirjastoasi…",
             "signedOutAction": "Kirjaudu Steamiin"
         },
-        "storeOther": "Muu"
+        "storeOther": "Muu",
+        "tileSize": {
+            "label": "Laatan koko",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen",

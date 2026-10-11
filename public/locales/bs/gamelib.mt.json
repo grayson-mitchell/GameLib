@@ -180,6 +180,8 @@
     "library.steamSync.signedOutTitle",
     "library.steamSync.syncing",
     "library.storeOther",
+    "library.tileSize.label",
+    "library.tileSize.valueText",
     "login.amazonReconnect",
     "login.connected",
     "login.epicReconnect",

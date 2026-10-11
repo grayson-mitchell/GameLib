@@ -257,7 +257,11 @@
             "signedOutTitle": "Chuaigh do shíniú isteach Steam in éag",
             "syncing": "Do leabharlann Steam á sioncronú…"
         },
-        "storeOther": "Eile"
+        "storeOther": "Eile",
+        "tileSize": {
+            "label": "Méid na tíleanna",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Síniú isteach in éag — Ceangail arís",

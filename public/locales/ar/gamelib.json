@@ -264,7 +264,11 @@
             "signedOutTitle": "انتهت صلاحية تسجيل دخولك إلى Steam",
             "syncing": "جارٍ مزامنة مكتبة Steam الخاصة بك…"
         },
-        "storeOther": "آخر"
+        "storeOther": "آخر",
+        "tileSize": {
+            "label": "حجم العناصر",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "انتهت صلاحية تسجيل الدخول — إعادة الاتصال",

@@ -236,7 +236,11 @@
             "signedOutTitle": "உங்கள் Steam உள்நுழைவு காலாவதியானது",
             "syncing": "உங்கள் Steam நூலகத்தை ஒத்திசைக்கிறது…"
         },
-        "storeOther": "மற்றவை"
+        "storeOther": "மற்றவை",
+        "tileSize": {
+            "label": "ஓடுகளின் அளவு",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "உள்நுழைவு காலாவதியானது — மீண்டும் இணைக்கவும்",

@@ -243,7 +243,11 @@
             "signedOutTitle": "La teva sessió de Steam ha caducat",
             "syncing": "Sincronitzant la teva biblioteca de Steam…"
         },
-        "storeOther": "Altres"
+        "storeOther": "Altres",
+        "tileSize": {
+            "label": "Mida dels mosaics",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Sessió caducada — Reconnecta",

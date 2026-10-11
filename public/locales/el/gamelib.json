@@ -236,7 +236,11 @@
             "signedOutTitle": "Η σύνδεση σας στο Steam έληξε",
             "syncing": "Συγχρονισμός της βιβλιοθήκης Steam…"
         },
-        "storeOther": "Άλλα"
+        "storeOther": "Άλλα",
+        "tileSize": {
+            "label": "Μέγεθος πλακιδίων",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Η σύνδεση έληξε — Επανασύνδεση",

@@ -257,7 +257,11 @@
             "signedOutTitle": "Aet eo da get ho kevreadur Steam",
             "syncing": "Goubredañ ho lyrjad Steam..."
         },
-        "storeOther": "All"
+        "storeOther": "All",
+        "tileSize": {
+            "label": "Ment an tuiloù",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Aet da get ar c'hevreañ — Adkevreañ",

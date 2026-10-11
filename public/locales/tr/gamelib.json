@@ -236,7 +236,11 @@
             "signedOutTitle": "Steam oturumunuzun süresi doldu",
             "syncing": "Steam kitaplığınız senkronize ediliyor…"
         },
-        "storeOther": "Diğer"
+        "storeOther": "Diğer",
+        "tileSize": {
+            "label": "Kutucuk boyutu",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Oturum süresi doldu — Yeniden bağlan",

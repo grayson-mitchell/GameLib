@@ -243,7 +243,11 @@
             "signedOutTitle": "Vaša Steam prijava je istekla",
             "syncing": "Sinhronizacija vaše Steam biblioteke…"
         },
-        "storeOther": "Drugi"
+        "storeOther": "Drugi",
+        "tileSize": {
+            "label": "Veličina pločica",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Prijava je istekla — Ponovo poveži",

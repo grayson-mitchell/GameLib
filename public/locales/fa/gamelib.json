@@ -236,7 +236,11 @@
             "signedOutTitle": "ورود شما به Steam منقضی شده است",
             "syncing": "در حال همگام‌سازی کتابخانه Steam شما…"
         },
-        "storeOther": "بقیه"
+        "storeOther": "بقیه",
+        "tileSize": {
+            "label": "اندازه کاشی‌ها",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "ورود منقضی شده — اتصال مجدد",

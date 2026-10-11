@@ -236,7 +236,11 @@
             "signedOutTitle": "Zure Steam saioa iraungi da",
             "syncing": "Zure Steam liburutegia sinkronizatzen…"
         },
-        "storeOther": "Bestela"
+        "storeOther": "Bestela",
+        "tileSize": {
+            "label": "Lauzen tamaina",
+            "valueText": "{{width}} px"
+        }
     },
     "login": {
         "amazonReconnect": "Saioa iraungi da — Berrkonektatu",
