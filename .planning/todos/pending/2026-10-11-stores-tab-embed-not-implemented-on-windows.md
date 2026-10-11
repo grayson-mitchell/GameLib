@@ -157,3 +157,21 @@ Open observations for the operator, NOT decided here:
   zoom is a webview zoom, and the slot rect is CSS px.
 
 What remains: an operator live gate on Windows. This file stays in `pending/` and is NOT closed.
+
+## Live results (2026-10-12, operator, Windows, `pnpm tauri:dev` at `36d88c94d`)
+
+Dev build, not the packaged app. Results are as the operator reported them; nothing was captured.
+
+- W1 PASS: Steam renders in the slot.
+- W2 PASS: GOG renders.
+- W3 PASS: navigating inside the embed updates the host label.
+- W4 PASS: drag-resize tracks the slot.
+- W5 PASS: a round trip through the Library hides the embed and shows it again.
+- W6 PASS: GOG -> Epic -> GOG puts the embed back at the slot.
+- W7 PASS: a NavShell popover hides the embed, and it returns afterwards.
+- Epic shows the unavailable panel, as expected (D-05 scope-out on every platform). The other stores
+  load.
+
+Still open: W8 (non-100% Accessibility Zoom), W9 (the packaged NSIS build repeats W1-W2), W10
+(`38-E01` P1-P5 against the shipped app, recorded in `38-VERIFICATION.md`). The macOS and Linux
+compile of this change is also unverified. This file stays `ready: live-gate` in `pending/`.
