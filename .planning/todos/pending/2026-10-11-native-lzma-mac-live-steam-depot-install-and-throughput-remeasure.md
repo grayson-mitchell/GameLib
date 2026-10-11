@@ -67,8 +67,9 @@ loaded the 5.4.3 prebuild, the same binary the SEA embeds. Two macOS depots (257
 2465 files, 3,901,662,055 bytes on disk, buildid 23534562.
 
 - **Engaged line: 10, not 1.** It is logged once per decode-worker isolate (module-scope memo per
-  isolate), and the pool is `size=10`. "Exactly once per process" in this todo and in the
-  log line's own text should read "once per decode worker". Zero fallback or disabled warnings.
+  isolate), and the pool is `size=10`. Item 1's "exactly once per process" was wrong; the log
+  line and the header comment in `lzmaLoader.ts` now say "once per isolate". Zero fallback or
+  disabled warnings.
 - **Completed and verified:** `percent=100%`, `StateFlags=4`, the badge flipped to installed,
   and `verifyMacArchGroundTruth` resolved `mac_arch '64'`. Zero `sha1_mismatch`, `size_mismatch`,
   `ChunkDecodeError` or `Data is corrupt` lines. `inline=false` throughout.

@@ -32,8 +32,10 @@
 // evidence trail). The `logInfo` on the SUCCESS path below is therefore just
 // as load-bearing as the `logWarning` on the failure path -- a log line that
 // only speaks when something breaks cannot prove that nothing broke. Both
-// fire EXACTLY ONCE per process (module-scope memoization, mirroring
-// `getLzma()`'s prior once-per-isolate cache discipline).
+// fire EXACTLY ONCE per isolate (module-scope memoization, mirroring
+// `getLzma()`'s prior once-per-isolate cache discipline). Every decode
+// worker is its own isolate, so a pooled install logs one line per worker:
+// a live install on 2026-10-12 logged 10 for `pool[size=10]`.
 
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import type { LzmaModule } from './decompress'
@@ -477,9 +479,10 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
         'through this adapter; ~2.5x with a liblzma 5.2.3 source build;',
         "CONTEXT.md's live measurement found",
         "decode, not network, was this codebase's actual",
-        'throughput bottleneck). This line is logged exactly once per',
-        "process -- its ABSENCE from a run's gamelib.log, with only the",
-        'fallback warning below present instead, is how a silently-degraded',
+        'throughput bottleneck). This line is logged once per isolate, so',
+        "once per decode worker -- its ABSENCE from a run's gamelib.log,",
+        'with only the fallback warning below present instead, is how a',
+        'silently-degraded',
         "decode path (this debug arc's own prior defect, closed for the",
         "worker pool via decompressPool.ts's DecompressPool.init() logging)",
         'is caught without another forensic round-trip.',
