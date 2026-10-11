@@ -16,6 +16,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import {
   POWERSHELL_ARGS,
+  SHELL_LINK_CSHARP,
   WRITE_SHORTCUT_SCRIPT,
   WRITE_SHORTCUT_TIMEOUT_MS,
   buildShortcutEnv,
@@ -23,6 +24,10 @@ import {
 } from '../shortcuts/windowsShortcut'
 
 const HOSTILE_TITLE = `Jörg's "Quest" $(calc) \`whoami\`; & 日本語 'x'`
+// The same title with only the characters Windows forbids in a file NAME removed
+// (`<>:"/\|?*`), for the one test that creates a real file. It keeps `$(...)`, the backtick,
+// the apostrophe and the CJK run, which is what the file-creating test is about.
+const HOSTILE_FILE_TITLE = HOSTILE_TITLE.replace(/[<>:"/\\|?*]/g, '')
 const HOSTILE_LNK = `C:\\Users\\Jörg\\OneDrive\\Desktop\\${HOSTILE_TITLE}.lnk`
 
 type FakeChild = EventEmitter & {
@@ -42,22 +47,96 @@ function fakeChild(): FakeChild {
   return child
 }
 
+const IShellLinkW_MEMBERS = [
+  'GetPath',
+  'GetIDList',
+  'SetIDList',
+  'GetDescription',
+  'SetDescription',
+  'GetWorkingDirectory',
+  'SetWorkingDirectory',
+  'GetArguments',
+  'SetArguments',
+  'GetHotkey',
+  'SetHotkey',
+  'GetShowCmd',
+  'SetShowCmd',
+  'GetIconLocation',
+  'SetIconLocation',
+  'SetRelativePath',
+  'Resolve',
+  'SetPath'
+]
+
+describe('SHELL_LINK_CSHARP', () => {
+  it('is a single line with no single quote and no // comment', () => {
+    expect(SHELL_LINK_CSHARP).not.toMatch(/[\r\n]/)
+    expect(SHELL_LINK_CSHARP).not.toContain("'")
+    expect(SHELL_LINK_CSHARP).not.toContain('//')
+  })
+
+  it('declares the shell-link COM types and the Write entry point', () => {
+    expect(SHELL_LINK_CSHARP).toContain('namespace GameLibLnk')
+    expect(SHELL_LINK_CSHARP).toContain('00021401-0000-0000-C000-000000000046')
+    expect(SHELL_LINK_CSHARP).toContain('000214F9-0000-0000-C000-000000000046')
+    expect(SHELL_LINK_CSHARP).toContain('IPersistFile')
+    expect(SHELL_LINK_CSHARP).toContain(
+      'public static void Write(string lnk, string target, string args, string icon, int iconIndex)'
+    )
+  })
+
+  it('declares the 18 IShellLinkW members once each, in COM vtable order', () => {
+    let previous = -1
+    for (const name of IShellLinkW_MEMBERS) {
+      const needle = `void ${name}(`
+      const first = SHELL_LINK_CSHARP.indexOf(needle)
+      expect(first).toBeGreaterThan(previous)
+      expect(SHELL_LINK_CSHARP.indexOf(needle, first + 1)).toBe(-1)
+      previous = first
+    }
+  })
+})
+
 describe('WRITE_SHORTCUT_SCRIPT', () => {
-  it('reads every value from $env:, and is one statement per line for -Command -', () => {
-    expect(WRITE_SHORTCUT_SCRIPT).toContain(
-      'CreateShortcut($env:GAMELIB_LNK_PATH)'
-    )
-    expect(WRITE_SHORTCUT_SCRIPT).toContain(
-      '$lnk.TargetPath = $env:GAMELIB_LNK_TARGET'
-    )
-    expect(WRITE_SHORTCUT_SCRIPT).toContain('$lnk.Save()')
-    expect(WRITE_SHORTCUT_SCRIPT).toContain('exit 1')
+  it('no longer goes through WScript.Shell, whose ANSI conversion loses CJK', () => {
+    expect(WRITE_SHORTCUT_SCRIPT).not.toContain('WScript.Shell')
+    expect(WRITE_SHORTCUT_SCRIPT).not.toContain('-ComObject')
+  })
+
+  it('is exactly four one-statement lines, for -Command - which parses stdin line by line', () => {
     const lines = WRITE_SHORTCUT_SCRIPT.split('\r\n').filter(Boolean)
     expect(lines).toEqual([
       "$ErrorActionPreference = 'Stop'",
-      expect.stringMatching(/^try \{.*\} catch \{.*\}$/),
+      `$src = '${SHELL_LINK_CSHARP}'`,
+      expect.stringMatching(
+        /^try \{ Add-Type -TypeDefinition \$src; \[GameLibLnk\.Writer\]::Write\(.*\) \} catch \{.*exit 1 \}$/
+      ),
       'exit 0'
     ])
+    expect(WRITE_SHORTCUT_SCRIPT.endsWith('\r\n')).toBe(true)
+  })
+
+  it('has no here-string opener, which -Command - silently stops at', () => {
+    expect(WRITE_SHORTCUT_SCRIPT).not.toContain("@'")
+    expect(WRITE_SHORTCUT_SCRIPT).not.toContain('@"')
+  })
+
+  it('passes the five values to the writer only through $env:', () => {
+    expect(WRITE_SHORTCUT_SCRIPT).toContain(
+      '[GameLibLnk.Writer]::Write($env:GAMELIB_LNK_PATH, $env:GAMELIB_LNK_TARGET, $env:GAMELIB_LNK_ARGS, $env:GAMELIB_LNK_ICON, [int]$env:GAMELIB_LNK_ICON_INDEX)'
+    )
+    const names = new Set(
+      [...WRITE_SHORTCUT_SCRIPT.matchAll(/\$env:(\w+)/g)].map((m) => m[1])
+    )
+    expect([...names].sort()).toEqual(
+      [
+        'GAMELIB_LNK_ARGS',
+        'GAMELIB_LNK_ICON',
+        'GAMELIB_LNK_ICON_INDEX',
+        'GAMELIB_LNK_PATH',
+        'GAMELIB_LNK_TARGET'
+      ].sort()
+    )
   })
 })
 
@@ -116,7 +195,12 @@ describe('writeWindowsShortcut', () => {
   })
 
   it('spawns powershell.exe with a fixed argv, no shell, and feeds the constant script on stdin', async () => {
-    const lnk = join(dir, `${HOSTILE_TITLE}.lnk`)
+    expect(HOSTILE_FILE_TITLE).toContain('$(calc)')
+    expect(HOSTILE_FILE_TITLE).toContain('`')
+    expect(HOSTILE_FILE_TITLE).toContain("'")
+    expect(HOSTILE_FILE_TITLE).toContain('日本語')
+    expect(HOSTILE_FILE_TITLE).not.toMatch(/[<>:"/\\|?*]/)
+    const lnk = join(dir, `${HOSTILE_FILE_TITLE}.lnk`)
     const child = fakeChild()
     mockSpawn.mockReturnValue(child)
 
