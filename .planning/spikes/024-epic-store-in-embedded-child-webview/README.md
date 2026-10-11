@@ -3,10 +3,10 @@ spike: 024
 name: epic-store-in-embedded-child-webview
 type: standard
 validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected Tauri globals PRESENT, then observe whether Talon/Cloudflare blocks STORE browsing the way it blocks the LOGIN endpoint"
-verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers. Run 11 (2026-10-11): a Safari Private Window on the SAME IP and engine, cold jar, rendered both hosts twice — the discriminator is the embedded webview itself, not the IP, the UA or the jar. Runs 12–16 (2026-10-12), a PRISTINE raw WKWebView (zero Tauri injection, no add_child, cold ephemeral store) in the same harness process was challenged 0 of 10 Epic arms (6 rendered, 4 stalled mid-parse on the real store document) while the Tauri child webview in the same five runs was challenged 10 of 10 — the gate is Tauri's webview construction, and /store/epic has an in-app path in a pristine window. Runs 17–19 (2026-10-12), the same raw WKWebView attached as a subview INSIDE the main window at the embed's rect, beside Tauri's own webview, was challenged 0 of 6 and rendered 4 of 6 by 120 s while the child embed was challenged 6 of 6 alongside it — the attachment is not the trigger, the embed shape exists without Tauri's multiwebview, and the open defect is a cold-load stall (half-parsed store document, 5 of 16 arms at 40 s, 2 of 6 still blank at 120 s)
+verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers. Run 11 (2026-10-11): a Safari Private Window on the SAME IP and engine, cold jar, rendered both hosts twice — the discriminator is the embedded webview itself, not the IP, the UA or the jar. Runs 12–16 (2026-10-12), a PRISTINE raw WKWebView (zero Tauri injection, no add_child, cold ephemeral store) in the same harness process was challenged 0 of 10 Epic arms (6 rendered, 4 stalled mid-parse on the real store document) while the Tauri child webview in the same five runs was challenged 10 of 10 — the gate is Tauri's webview construction, and /store/epic has an in-app path in a pristine window. Runs 17–19 (2026-10-12), the same raw WKWebView attached as a subview INSIDE the main window at the embed's rect, beside Tauri's own webview, was challenged 0 of 6 and rendered 4 of 6 by 120 s while the child embed was challenged 6 of 6 alongside it — the attachment is not the trigger, the embed shape exists without Tauri's multiwebview, and the open defect is a cold-load stall (half-parsed store document, 5 of 16 arms at 40 s, 2 of 6 still blank at 120 s). Runs 20–23 (2026-10-12): the probe was extended to list in-flight head resources and NO head resource is pending on a blank arm — every blank arm captured has the whole 1.12 M store document, 9 of 9 head scripts and 4 of 4 stylesheets fetched, readyState complete, 113 k of body, and nothing painted; raising an opaque occluder over the host window reproduces that state on demand (Steam too) and removing it makes the store boot and paint within the next sample, so the blank is WebKit suspending rendering updates for a window the window server reports as not visible, not a load stall; the earlier mid-parse variant (readyState loading at ~938 k) did not recur in 8 arms and is NOT produced by occlusion, so it stays open and narrower
 run_date: 2026-09-15
 rerun_date: 2026-10-12
-runs: 19
+runs: 23
 related: [013, 016, 017, 018]
 tags: [tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, macos]
 ---
@@ -287,6 +287,94 @@ it — the embed shape, with no Tauri child webview involved.
   arm to see which head resource is holding the parser. Filed as
   `2026-10-12-which-in-flight-head-resource-holds-the-stalled-epic-store-load.md`.
 
+### Runs 20–23 — no head resource is pending; the blank is an occluded window (2026-10-12, quick `261012-97a`)
+
+**The question the stall todo asked has a measured answer: nothing.** The probe gained
+`inflight` (resource entries with `responseEnd === 0`), `pendingScripts` / `pendingStyles`
+(every `script[src]` and `link[rel=stylesheet]` in the document whose URL has no Resource
+Timing entry — the real in-flight set, since Resource Timing only adds an entry once a fetch
+*finishes*, which `inflight` now shows from a measurement rather than a reading of the spec:
+empty on every arm), `nav.responseEnd` / transfer sizes, `counts`, `tail` and `lastEl` (where
+the parser is sitting), and every title read gained the host window's `occlusionState`,
+`isKeyWindow`, `NSApp.isActive` and the view's hidden/in-window flags. Same in-main raw
+`WKWebView`, same cold `nonPersistentDataStore()`, no UA override, `LONG=1`.
+
+| Run | Arm | Occluder | 20 s | 40 s | 120 s | Probe at ~125 s |
+|---|---|---|---|---|---|---|
+| 20 | `www…/store/en-US/` | none (natural) | RENDERED | — | — | complete, 113 k body, 9/9 scripts, 4/4 styles |
+| 20 | `store…/en-US/` | none (natural) | **short title, not loading** | same | same, **unpainted** | **complete, 113 k body, 9/9, 4/4, `inflight: []`, `pending: []`** |
+| 21 | `www…` | raised ~0 ms after create, removed at 40 s | `occluded:true`, **Turnstile** | same | `occluded:false`, card **painted** | challenge document (25.8 k) |
+| 21 | `store…` | none, host focused | RENDERED | — | — | complete |
+| 22 | Steam | raised ~0 ms after create | served, **painted** at 40 s (first paint beat the occluder) | | painted | complete, 20/20 |
+| 22 | `www…` | raised ~0 ms after create, removed at 40 s | `occluded:true`, short title, not loading | same, **unpainted** (1 colour) | `occluded:false`, **app title, painted** | complete, 113 k, 9/9, 4/4 |
+| 22 | `store…` | none, host focused | RENDERED | — | — | complete |
+| 23 | Steam | raised **1.5 s before** create (`occluded:true` before load) | served title, loading done | **unpainted** (1 colour) | **painted** after removal | complete, 20/20 |
+| 23 | `www…` | raised 1.5 s before create | short title, not loading | **unpainted** | **app title, painted** | complete, 113 k, 9/9, 4/4 |
+| 23 | `store…` | none, host focused | RENDERED | — | — | complete |
+
+Eight raw-`WKWebView` Epic arms: 4 un-occluded control arms rendered by 20 s, 4 of 4; 1 natural
+blank; 3 occluded (1 challenged, 2 blank-then-recovered). Raw Epic arms across runs 12–23 are now
+24, challenged **1** (run 21, under the occluder — n=1, most likely this IP's accrued reputation
+after ~50 store hits in a day with the child embed challenged in every run; not attributed to
+occlusion). Steam served 8 of 8 in these runs; the child embed was challenged 8 of 8 alongside.
+
+**What the new fields say about a blank arm** (run 20 `store…`, natural; runs 22 and 23
+`www…`, occluded — same reading all three times):
+
+- `readyState: complete`, `isLoading: false` from the 20 s read on, `bodyLen` 112 946–112 969
+  (the rendered arms read 112 969), `docLen` ≈ 1.121 M (rendered: the same), `nav.responseEnd`
+  79–302 ms, `counts: {scripts: 9, scriptsDone: 9, styles: 4}`, `pendingScripts: []`,
+  `pendingStyles: []`, `inflight: []`, `tail` ends `</style></body></html>`. The whole document is
+  in and every head resource has been fetched. **No head resource holds anything.**
+- `document.title` is the server's `Epic Games Store | Official Site`; a rendered arm's is the
+  app's long title. The store's client app has not booted — a `requestAnimationFrame`-gated step
+  never ran.
+- The embed rect in the 40 s and 120 s shots is **one colour, `#1e1e1e`** — the host's background,
+  nothing painted by the raw view at all. (Run 18's stall shot was one colour too, but **white**:
+  that arm had painted an empty page once. Different signature; see below.) Rendered arms show
+  84–86 k distinct colours in the same rect.
+
+**The occluder reproduces it, and removing it ends it.** A bare, undecorated, always-on-top
+`tauri::WindowBuilder` window over the host's outer frame flips the host's `occlusionState` from
+`8194` to `8192` (loses `NSWindowOcclusionStateVisible`) within a second. Under it, Epic reads
+exactly like the natural blank arm (runs 22, 23) and **Steam does the same** when the occluder is
+up before the load (run 23: served title at 20 s, one-colour rect at 40 s) — so this is WebKit,
+not Epic: a `WKWebView` whose window the window server reports as not visible gets no rendering
+updates (no paint, no rAF). Epic adds one thing on top: its app boot waits on a rendering
+update, so the title never changes either. Removing the occluder and focusing the host: the
+next sample (≤80 s later) has the app title and the painted store in 2 of 2 store arms, and the
+painted challenge card in the challenged arm. The natural evidence agrees: in runs 22 and 23 the
+control arm's 120 s read found `occluded:true, appActive:false` — the operator had switched
+away — and the already-painted page kept its last frame.
+
+**What is NOT reproduced: the mid-parse stall.** Runs 15, 16, 18 and 19 showed a different
+state — `readyState: loading`, `isLoading: true`, `document.body` empty, `docLen` 938 382 /
+938 383 (one day) and 938 544 / 938 545 (the next), both hosts, key-art preloads still arriving.
+It did not recur in these 8 Epic arms, and occlusion does **not** cause it: both Epic arms that
+loaded under the occluder (one through the whole parse) reached `isLoading: false` with the
+full document. Its offset is the same to ±1 character within a day and moves by ~160 across a
+~15 k document change between days, so it is a fixed point in the document — the parser's first
+yield, a streaming-SSR flush boundary, or a specific element — but which is unmeasured. The
+document cannot be inspected from outside a webview: `curl` with WebKit's own UA gets the
+Cloudflare challenge (`403`, `cf-mitigated: challenge`) on every try. The narrower follow-up
+names the measurement (a probe window around the offset on a rendered arm, plus
+`nav.responseEnd` on the next stall if one recurs).
+
+Observations not pursued: Tauri's own webview in the same window kept painting under the
+occluder (its event stream advanced between the 20 s and 40 s shots) while the raw subview did
+not — how wry's view differs was not measured. The shipped `is_epic_login` pristine window
+(`open_pristine_epic_login_window`) is a separate NSWindow and would be subject to the same
+occlusion rule.
+
+Shots: `shot-pristine-INMAIN-epic-alt-UNPAINTED-complete-document-at-120s-run20.png` (natural),
+`shot-pristine-INMAIN-epic-configured-OCCLUDED-unpainted-at-40s-run22.png` and
+`…-UNOCCLUDED-painted-at-120s-run22.png` (the pair),
+`shot-pristine-INMAIN-steam-PREOCCLUDED-unpainted-at-40s-run23.png` and
+`…-epic-configured-PREOCCLUDED-unpainted-at-40s-run23.png`,
+`shot-pristine-INMAIN-epic-configured-OCCLUDED-challenge-painted-after-unocclusion-run21.png`
+(session id and IP blacked out). Logs `run-20.log` … `run-23.log`, challenge-card session ids
+and IPs redacted in both the plain and the URL-encoded probe copies.
+
 ## What IS established
 
 1. **The block is not the login fingerprint.** The injected globals — `isTauri`, `__TAURI__`,
@@ -319,6 +407,14 @@ it — the embed shape, with no Tauri child webview involved.
    left is what wry puts on the webview itself — the init scripts and its message/scheme
    handlers — which the public builder cannot strip, and which the product does not need
    stripped: a Rust-managed raw `WKWebView` is the embed.
+8. **The blank store is an occluded window, not a stalled load** (runs 20–23, 2026-10-12). On
+   every blank arm captured with the extended probe the whole document is in, all 9 head
+   scripts and 4 stylesheets are fetched and nothing is painted; an opaque occluder over the
+   host window reproduces the state on demand, for Steam as well as Epic, and removing it makes
+   the store boot and paint within the next sample. WebKit suspends rendering updates for a
+   window the window server reports as not visible; Epic's app boot waits on one. By
+   definition the user is not looking at an occluded window, and the page recovers when they
+   are. The mid-parse variant (runs 15–19) is a different state, not reproduced, still open.
 
 ## What is NOT established
 
@@ -349,10 +445,13 @@ it — the embed shape, with no Tauri child webview involved.
   them. **Separated by runs 17–19: the attachment is out.** What is left is wry's per-webview
   setup (init scripts, message handlers, scheme handlers), not separable with the public
   builder and not needed to be.
-- **Why cold loads stall** with the real store document half-parsed (`readyState=loading`,
-  empty body, 938 k document): 5 of 16 raw-WKWebView arms at 40 s across runs 12–19; of 3
-  sampled at 120 s, 1 completed and 2 had not. Both UAs, both hosts, both attachments; never a
-  challenge document. Which head resource holds the parser is the next measurement (filed).
+- ~~**Why cold loads stall** with the real store document half-parsed~~ — **split by runs 20–23.**
+  The blank-with-a-complete-document state is measured and explained: no head resource is
+  pending; the host window is occluded and WebKit is not rendering; it recovers on un-occlusion
+  (established #8). What remains is the **mid-parse stall** of runs 15, 16, 18 and 19
+  (`readyState=loading`, `isLoading=true`, 938 k parsed, empty body): 0 of 8 Epic arms in runs
+  20–23, not caused by occlusion (two arms parsed to completion under the occluder), fixed
+  document offset to ±1 character within a day, cause unmeasured. Filed narrower.
 
 ## Method notes worth keeping
 
@@ -402,6 +501,17 @@ In-main arm (quick `261012-8gu`, runs 17–19): `SPIKE_PRISTINE_INMAIN=1` attach
 a window (close = `removeFromSuperview`; shots target the main window). `SPIKE_PRISTINE_LONG=1`
 adds a 120 s read + shot on the Epic arms (`…-120s.png`).
 
+Occlusion arm (quick `261012-97a`, runs 20–23): the probe now also reports `inflight`,
+`pendingScripts`, `pendingStyles`, `counts`, `tail`, `lastEl`, `sw`, `currentScript` and
+`nav.responseEnd`/sizes, and every title read carries the host window's `occlusionState`,
+`occluded`, `keyWindow`, `appActive`, `onActiveSpace` and the view's hidden/in-window flags.
+`SPIKE_PRISTINE_OCCLUDE=1` raises an opaque always-on-top occluder over the host right after
+the Steam and `www…` arms are created and removes it after the 40 s read (the 120 s read is
+then the recovery sample; with `LONG=1` the Steam arm gets the 120 s read too);
+`SPIKE_PRISTINE_OCCLUDE=pre` raises it 1.5 s *before* the webview exists and logs the host's
+occlusion before the load. The `store…` arm is always the un-occluded, focused control.
+`curl` cannot stand in for the webview here: WebKit's own UA from the shell is challenged.
+
 ## Consequence for `/store/epic`
 
 **The gate stays; the reason for it changed.** Nothing shippable moved: the Tauri child embed is
@@ -424,8 +534,13 @@ multiwebview — a Rust-managed raw `WKWebView` subview — and the separate-win
 unless the subview is rejected on other grounds. What is open now is (a) the design decision:
 D-05 said "Tauri child webview", and this is a different construction with its own bounds-sync,
 cookie and navigation plumbing on the Rust side, macOS-only as written; and (b) the **cold-load
-stall**, 5 of 16 raw-WKWebView loads blank at 40 s and 2 of 3 sampled still blank at 120 s,
-which is a shipping blocker for either shape until its blocking resource is named (todo filed).
-The 2026-09-15 sign-in-button todo is awake on (a). An earlier draft of this section said
+blank**, which quick `261012-97a` (runs 20–23) split in two: the state that recurs is an
+**occluded host window** — the document and every head resource are in, WebKit is not rendering
+because the window server says the window is not visible, and it boots and paints when the window
+is uncovered — which is **not a shipping blocker** for either shape (the user is not looking at an
+occluded window, and a product subview would inherit the same rule as any WKWebView); and the
+mid-parse stall of runs 15–19, which did not recur in 8 arms, is not caused by occlusion, and
+stays open as a narrower todo with the next measurement named. The 2026-09-15 sign-in-button
+todo is awake on (a) and no longer waits on (b). An earlier draft of this section said
 "permanently"; two earlier drafts stated reopen conditions that fired within a day. Re-run more
 than once and keep the Steam control.

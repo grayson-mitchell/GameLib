@@ -233,12 +233,37 @@ fn probe_script(tag: &str) -> String {
     var res = [];
     try {{ res = performance.getEntriesByType('resource').slice(-6).map(function(e){{ return e.name.replace(/^https?:\/\//,'').slice(0,70); }}); }} catch (e) {{}}
     var nav = null;
-    try {{ var n = performance.getEntriesByType('navigation')[0]; nav = n ? {{ status: n.responseStatus, type: n.type, redirects: n.redirectCount }} : null; }} catch (e) {{}}
+    try {{ var n = performance.getEntriesByType('navigation')[0]; nav = n ? {{ status: n.responseStatus, type: n.type, redirects: n.redirectCount,
+             responseEnd: Math.round(n.responseEnd), transfer: n.transferSize, encoded: n.encodedBodySize, decoded: n.decodedBodySize }} : null; }} catch (e) {{}}
+    // Quick 261012-97a (spike 024 runs 20+): which head resource holds the parser on a stalled
+    // load. `inflight` is the todo's `responseEnd === 0` filter, kept as a measurement even though
+    // Resource Timing only adds an entry once a fetch FINISHES (expected empty). `pending*` is the
+    // real in-flight set: head scripts/stylesheets with no timing entry yet. `tail`/`lastEl` is
+    // where the parser is sitting. `nav.responseEnd === 0` = main document still streaming.
+    var inflight = [], pendingScripts = [], pendingStyles = [], counts = {{}}, tail = '', lastEl = '', sw = null;
+    try {{
+      var all = performance.getEntriesByType('resource');
+      var done = {{}};
+      all.forEach(function(e){{ done[e.name] = 1; }});
+      inflight = all.filter(function(e){{ return e.responseEnd === 0; }}).map(function(e){{ return e.name.slice(0,120); }});
+      var scripts = Array.prototype.slice.call(document.querySelectorAll('script[src]'));
+      var styles = Array.prototype.slice.call(document.querySelectorAll('link[rel=stylesheet]'));
+      counts = {{ res: all.length, scripts: scripts.length, styles: styles.length,
+                 scriptsDone: scripts.filter(function(s){{ return done[s.src]; }}).length }};
+      pendingScripts = scripts.filter(function(s){{ return !done[s.src]; }}).map(function(s){{
+        return (s.async ? '[async] ' : '') + (s.defer ? '[defer] ' : '') + (s.type ? '[' + s.type + '] ' : '') + s.src.slice(0,140); }});
+      pendingStyles = styles.filter(function(l){{ return !done[l.href]; }}).map(function(l){{ return l.href.slice(0,140); }});
+      tail = document.documentElement.outerHTML.slice(-500).replace(/\s+/g,' ');
+      var le = document.documentElement; while (le.lastElementChild) le = le.lastElementChild;
+      lastEl = le.outerHTML.slice(0,300).replace(/\s+/g,' ');
+      sw = (navigator.serviceWorker && navigator.serviceWorker.controller) ? navigator.serviceWorker.controller.scriptURL : null;
+    }} catch (e) {{ counts = {{ err: String(e) }}; }}
     out = {{ href: location.href, title: document.title, globals: present,
              plugins: plug, textHead: t, bodyLen: (document.body ? document.body.innerHTML.length : 0),
              ready: document.readyState, docLen: document.documentElement.outerHTML.length,
              head: (document.head ? document.head.innerHTML : '').replace(/\s+/g,' ').slice(0,900),
-             nav: nav, res: res }};
+             nav: nav, res: res, inflight: inflight, pendingScripts: pendingScripts, pendingStyles: pendingStyles,
+             counts: counts, tail: tail, lastEl: lastEl, sw: sw, currentScript: !!document.currentScript }};
   }} catch (e) {{ out = {{ err: String(e) }}; }}
   location.href = 'http://localhost:17913/report?tag={tag}&ua=' + encodeURIComponent(navigator.userAgent) + '&probe=' + encodeURIComponent(JSON.stringify(out));
 }})();"#
@@ -314,17 +339,94 @@ fn pristine_create(app: &AppHandle, label: &str, url: &str, user_agent: Option<&
     }))
 }
 
+/// MAIN THREAD ONLY. Quick 261012-97a (runs 21+): the host window's visibility as WebKit sees
+/// it. WKWebView derives the page's `IsVisible` activity state from the view hierarchy and the
+/// window's `occlusionState`; a page WebKit considers not visible gets no rendering updates
+/// (no paint, no `requestAnimationFrame`, and the HTML parser's yield-resume rides the same
+/// scheduler). `NSWindowOcclusionStateVisible` is bit 1 (value 2).
+#[cfg(target_os = "macos")]
+fn window_visibility(window: &tauri::Window, webview: Option<&objc2_web_kit::WKWebView>) -> serde_json::Value {
+    use objc2::runtime::AnyObject;
+    let mut v = match webview {
+        Some(webview) => serde_json::json!({
+            "viewHidden": webview.isHidden(),
+            "viewHiddenOrAncestor": webview.isHiddenOrHasHiddenAncestor(),
+            "viewInWindow": webview.window().is_some(),
+        }),
+        None => serde_json::json!({}),
+    };
+    if let Ok(ptr) = window.ns_window() {
+        let obj = ptr as *mut AnyObject;
+        // SAFETY: a live NSWindow of a window we hold a handle to, on the main thread.
+        let occ: usize = unsafe { objc2::msg_send![&*obj, occlusionState] };
+        let visible: bool = unsafe { objc2::msg_send![&*obj, isVisible] };
+        let key: bool = unsafe { objc2::msg_send![&*obj, isKeyWindow] };
+        let on_space: bool = unsafe { objc2::msg_send![&*obj, isOnActiveSpace] };
+        v["occlusionState"] = occ.into();
+        v["occluded"] = (occ & 2 == 0).into();
+        v["windowVisible"] = visible.into();
+        v["keyWindow"] = key.into();
+        v["onActiveSpace"] = on_space.into();
+    }
+    let cls = objc2::class!(NSApplication);
+    let ns_app: *mut AnyObject = unsafe { objc2::msg_send![cls, sharedApplication] };
+    if !ns_app.is_null() {
+        let active: bool = unsafe { objc2::msg_send![&*ns_app, isActive] };
+        v["appActive"] = active.into();
+    }
+    v
+}
+
+/// MAIN THREAD ONLY. Quick 261012-97a: an opaque, undecorated, always-on-top window covering the
+/// pristine arm's host window exactly, so the window server reports the host as NOT visible
+/// (`occlusionState` loses `NSWindowOcclusionStateVisible`). A bare `tauri::WindowBuilder` window
+/// has an opaque default background and no webview.
+#[cfg(target_os = "macos")]
+fn occluder_create(app: &AppHandle, host: Option<tauri::Window>) -> serde_json::Value {
+    let host = host.or_else(|| PRISTINE.with(|slot| slot.borrow().as_ref().map(|(w, _, _)| w.clone())));
+    let Some(host) = host else { return serde_json::json!({ "error": "no pristine host window" }) };
+    let scale = host.scale_factor().unwrap_or(1.0);
+    let (Ok(pos), Ok(size)) = (host.outer_position(), host.outer_size()) else {
+        return serde_json::json!({ "error": "host outer frame unavailable" });
+    };
+    let (x, y) = (pos.x as f64 / scale, pos.y as f64 / scale);
+    let (w, h) = (size.width as f64 / scale, size.height as f64 / scale);
+    match tauri::WindowBuilder::new(app, "occluder")
+        .position(x, y)
+        .inner_size(w, h)
+        .decorations(false)
+        .always_on_top(true)
+        .focused(false)
+        .title("occluder")
+        .build()
+    {
+        Ok(win) => serde_json::json!({ "ok": true, "frame": { "x": x, "y": y, "w": w, "h": h }, "windowNumber": ns_window_number(&win) }),
+        Err(e) => serde_json::json!({ "error": format!("occluder build failed: {e}") }),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn occluder_close(app: &AppHandle) -> serde_json::Value {
+    match app.get_window("occluder") {
+        Some(w) => match w.close() {
+            Ok(()) => serde_json::json!({ "closed": true }),
+            Err(e) => serde_json::json!({ "error": e.to_string() }),
+        },
+        None => serde_json::json!({ "error": "no occluder" }),
+    }
+}
+
 /// MAIN THREAD ONLY. What the Rust side can see without touching the page: `title` and `URL`.
 #[cfg(target_os = "macos")]
 fn pristine_read() -> serde_json::Value {
     PRISTINE.with(|slot| match &*slot.borrow() {
-        Some((_, webview, _)) => {
+        Some((window, webview, _)) => {
             let title = unsafe { webview.title() }.map(|s| s.to_string());
             let url = unsafe { webview.URL() }
                 .and_then(|u| u.absoluteString())
                 .map(|s| s.to_string());
             let loading = unsafe { webview.isLoading() };
-            serde_json::json!({ "title": title, "url": url, "isLoading": loading })
+            serde_json::json!({ "title": title, "url": url, "isLoading": loading, "window": window_visibility(window, Some(webview)) })
         }
         None => serde_json::json!({ "error": "no pristine webview" }),
     })
@@ -794,10 +896,24 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         let run = std::env::var("SPIKE_RUN").unwrap_or_else(|_| "x".into());
         let in_main = matches!(std::env::var("SPIKE_PRISTINE_INMAIN").as_deref(), Ok("1") | Ok("true"));
         let long_sample = matches!(std::env::var("SPIKE_PRISTINE_LONG").as_deref(), Ok("1") | Ok("true"));
+        // Quick 261012-97a (runs 21+): the occlusion experiment. Run 20 showed the "stall" is not
+        // a pending head resource (every head script had a timing entry; one blank arm even read
+        // `readyState=complete` with a full body) -- the webview is not RENDERING, which on macOS
+        // WebKit ties to the host window's occlusion state. `SPIKE_PRISTINE_OCCLUDE=1` makes the
+        // first Epic arm load under an opaque always-on-top occluder for the 20 s and 40 s reads,
+        // then removes it and focuses the host before the 120 s read (recovery), and loads the
+        // second Epic arm with the host focused and nothing on top (control).
+        // Run 23+: `SPIKE_PRISTINE_OCCLUDE=pre` raises the occluder BEFORE the webview is created
+        // and waits for the window server to report the host occluded, so the whole load -- the
+        // 1.1 MB document's parse included -- happens under occlusion. Run 22's occluder went up
+        // ~0 ms after the load started and took effect late enough that the parser had finished.
+        let occlude_env = std::env::var("SPIKE_PRISTINE_OCCLUDE").unwrap_or_default();
+        let occlude_pre = occlude_env.trim() == "pre";
+        let occlude = occlude_pre || matches!(occlude_env.trim(), "1" | "true");
         log.log(
             "autorun",
             "=== PHASE P (024 runs 12+): PRISTINE raw WKWebView, cold nonPersistent store, zero Tauri injection ===",
-            serde_json::json!({ "uaOverride": ua, "run": run, "inMain": in_main, "longSample": long_sample }),
+            serde_json::json!({ "uaOverride": ua, "run": run, "inMain": in_main, "longSample": long_sample, "occlude": occlude, "occludePre": occlude_pre }),
         );
         for (tag, url, note) in [
             ("steam", STEAM_STORE_URL, "POSITIVE CONTROL: known-good in the child embed (spike 016) and in Safari"),
@@ -806,6 +922,20 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         ] {
             let label = format!("pristine-{tag}");
             log.log("autorun", "--- PHASE P arm ---", serde_json::json!({ "arm": tag, "url": url, "note": note }));
+            let pre_occluded_arm = occlude_pre && in_main && tag != "epic-alt";
+            if pre_occluded_arm {
+                let v = on_main(Box::new(|app| {
+                    let host = app.get_window("main");
+                    occluder_create(&app, host)
+                }));
+                step(&format!("Pa0[{tag}] OCCLUDER raised BEFORE the webview exists"), &v);
+                std::thread::sleep(Duration::from_millis(1500));
+                let v = on_main(Box::new(|app| match app.get_window("main") {
+                    Some(w) => window_visibility(&w, None),
+                    None => serde_json::json!({ "error": "no main window" }),
+                }));
+                step(&format!("Pa0[{tag}] host visibility 1.5 s later (expect occluded:true BEFORE load)"), &v);
+            }
             let (l, u, ua2) = (label.clone(), url.to_string(), ua.clone());
             let v = on_main(Box::new(move |app| match pristine_create(&app, &l, &u, ua2.as_deref(), in_main) {
                 Ok(v) => v,
@@ -816,6 +946,29 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
                 continue;
             }
             let number = v.get("windowNumber").and_then(|n| n.as_i64()).map(|n| n as isize);
+
+            // Run 22+: the Steam arm is occluded too -- a 280 k document with no hydration step
+            // says whether an occluded WKWebView stalls its PARSER generically or only Epic's app.
+            let occluded_arm = occlude && tag != "epic-alt";
+            if pre_occluded_arm {
+                // Already up; nothing to raise.
+            } else if occluded_arm {
+                let v = on_main(Box::new(|app| occluder_create(&app, None)));
+                step(&format!("Pa2[{tag}] OCCLUDER over the host window (expect occluded:true at 20 s and 40 s)"), &v);
+            } else if occlude {
+                let v = on_main(Box::new(|_app| {
+                    PRISTINE.with(|slot| match &*slot.borrow() {
+                        Some((w, _, _)) => match w.set_focus() {
+                            Ok(()) => serde_json::json!({ "focused": true }),
+                            Err(e) => serde_json::json!({ "error": e.to_string() }),
+                        },
+                        None => serde_json::json!({ "error": "no pristine window" }),
+                    })
+                }));
+                step(&format!("Pa2[{tag}] host window FOCUSED, nothing on top (control arm)"), &v);
+            }
+            let v = on_main(Box::new(|_app| pristine_read()));
+            step(&format!("Pa3[{tag}] title/url + window visibility right after create"), &v);
 
             // Same generous settle as the embed arm, then a second sample at ~40 s: run 11 read
             // the Safari title at 25 s and 45 s, and runs 2-3 were still on the interstitial at
@@ -834,7 +987,23 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
 
             // Quick 261012-8gu: runs 12-16 left 4 of 10 Epic loads half-parsed at 40 s and never
             // looked again. A third sample at 120 s says whether a stall completes or is terminal.
-            if long_sample && tag != "steam" {
+            if long_sample && (tag != "steam" || occluded_arm) {
+                if occluded_arm {
+                    let v = on_main(Box::new(|app| occluder_close(&app)));
+                    step(&format!("Pc3[{tag}] OCCLUDER removed after the 40 s read"), &v);
+                    let v = on_main(Box::new(|_app| {
+                        PRISTINE.with(|slot| match &*slot.borrow() {
+                            Some((w, _, _)) => match w.set_focus() {
+                                Ok(()) => serde_json::json!({ "focused": true }),
+                                Err(e) => serde_json::json!({ "error": e.to_string() }),
+                            },
+                            None => serde_json::json!({ "error": "no pristine window" }),
+                        })
+                    }));
+                    step(&format!("Pc3[{tag}] host window focused -- does the load RESUME by 120 s?"), &v);
+                    let v = on_main(Box::new(|_app| pristine_read()));
+                    step(&format!("Pc3[{tag}] title/url + visibility right after un-occluding"), &v);
+                }
                 std::thread::sleep(Duration::from_secs(80));
                 let v = on_main(Box::new(|_app| pristine_read()));
                 step(&format!("Pc2[{tag}] title/url at 120 s"), &v);
