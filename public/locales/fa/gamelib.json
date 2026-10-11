@@ -462,6 +462,7 @@
         "curatedGroup": "معمولاً لازم",
         "emptyBody": "فراداده‌های Winetricks برای این bottle بار نشد.",
         "emptyHeading": "هیچ مؤلفه‌ای موجود نیست",
+        "installedHeading": "نصب‌شده",
         "installFailedTag": "نصب ناموفق بود",
         "installedTag": "نصب‌شده",
         "retry": "تلاش دوباره",

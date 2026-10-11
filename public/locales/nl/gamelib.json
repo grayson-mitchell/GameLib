@@ -462,6 +462,7 @@
         "curatedGroup": "Vaak nodig",
         "emptyBody": "Winetricks-metagegevens konden niet worden geladen voor deze bottle.",
         "emptyHeading": "Geen onderdelen beschikbaar",
+        "installedHeading": "Geïnstalleerd",
         "installFailedTag": "Installatie mislukt",
         "installedTag": "Geïnstalleerd",
         "retry": "Opnieuw proberen",

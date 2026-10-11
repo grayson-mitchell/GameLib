@@ -462,6 +462,7 @@
         "curatedGroup": "Usein tarvitut",
         "emptyBody": "Winetricks-metatietoja ei voitu latata tälle bottlelle.",
         "emptyHeading": "Ei saatavilla olevia komponentteja",
+        "installedHeading": "Asennettu",
         "installFailedTag": "Asennus epäonnistui",
         "installedTag": "Asennettu",
         "retry": "Yritä uudelleen",

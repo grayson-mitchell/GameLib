@@ -459,6 +459,7 @@
         "curatedGroup": "Sageli vajalikud",
         "emptyBody": "Selle bottle'i jaoks ei õnnestunud Winetricksi metaandmeid laadida.",
         "emptyHeading": "Komponente ei ole saadaval",
+        "installedHeading": "Installitud",
         "installFailedTag": "Installimine ebaõnnestus",
         "installedTag": "Installitud",
         "retry": "Proovi uuesti",

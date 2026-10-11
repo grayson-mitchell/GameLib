@@ -6,9 +6,17 @@ import type { RenderWinetricksRow } from '../Row'
 import './index.scss'
 
 type Props = {
-  // The whole visible catalog, in parser order (D-07: task groups are shortcut
-  // views, so every verb they show is also here).
+  // The verbs no tier above shows (Suggested + the five task groups), in
+  // parser order -- the unsearched list and the badge (261011-txc).
+  // Installed-group members are NOT subtracted: Installed is a status view,
+  // not a partition.
   components: WinetricksComponent[]
+  // The whole visible catalog, in parser order -- the search domain. A search
+  // stays catalog-wide on purpose: live gate 45-12 found `gdiplus` by id
+  // through it, and a search hit carries its category tag (`showCategory` is
+  // `searching`), so a hit that duplicates a row shown above is identifiable
+  // (261011-txc).
+  catalog: WinetricksComponent[]
   renderRow: RenderWinetricksRow
 }
 
@@ -16,21 +24,34 @@ type Props = {
 // catalog of about 500 visible verbs.
 const SEARCH_MIN_CHARS = 2
 
-// D-05/D-07: the long tail, collapsed by default, with a search that filters
-// ONLY this group's flat list -- never Suggested or the task groups, which are
-// curated views, so a search hit cannot silently reorder or duplicate a row
-// that is already visible elsewhere.
+// D-05/D-07: the long tail, collapsed by default. Unsearched it lists only
+// `components` -- the verbs no tier above shows (261011-txc). The search
+// stays catalog-wide on purpose: live gate 45-12 found `gdiplus` by id
+// through it, even though `gdiplus` is a task-group member and so is absent
+// from the unsearched list; a search hit carries its category tag
+// (`showCategory` is `searching`), so a hit that duplicates a row shown above
+// is identifiable, not silently ambiguous.
 //
 // The query is this component's only state besides `expanded`. Selection lives
 // in the tab, keyed by verb, so a verb ticked while filtered stays ticked after
 // the search is cleared or the group is collapsed (Interaction Contract 3).
 //
-// The input is a plain `<input type="search">`, not `SearchBar`: SearchBar's
-// suggestions overlay is a `display: none` panel that only renders on
-// `:focus-within`, and a plain input removes that hazard entirely (Interaction
-// Contract 4). Every catalog row renders; there is no virtualisation because no
-// measured number justifies it (Phase 44 D-07, still binding).
-export default function EverythingElseGroup({ components, renderRow }: Props) {
+// The input is a plain `<input type="text" role="searchbox">`, not `SearchBar`:
+// SearchBar's suggestions overlay is a `display: none` panel that only renders
+// on `:focus-within`, and a plain input removes that hazard entirely
+// (Interaction Contract 4). It is deliberately NOT `type="search"`: on macOS
+// WKWebView renders that as a native search field whose recent-searches chip
+// pops up under the input and sat over the first row's checkbox, intercepting
+// the click (Phase 45 live gate 45-12, 2026-10-10). `role="searchbox"` keeps
+// the accessible role `type="search"` implied, and `autoComplete="off"` keeps
+// the text autofill popover from taking its place. Every catalog row renders;
+// there is no virtualisation because no measured number justifies it (Phase 44
+// D-07, still binding).
+export default function EverythingElseGroup({
+  components,
+  catalog,
+  renderRow
+}: Props) {
   const { t: tGamelib } = useTranslation('gamelib')
   const [expanded, setExpanded] = useState(false)
   const [query, setQuery] = useState('')
@@ -40,7 +61,7 @@ export default function EverythingElseGroup({ components, renderRow }: Props) {
   const needle = trimmed.toLowerCase()
   const searching = trimmed.length >= SEARCH_MIN_CHARS
   const visible = searching
-    ? components.filter(
+    ? catalog.filter(
         (component) =>
           component.verb.toLowerCase().includes(needle) ||
           component.title.toLowerCase().includes(needle)
@@ -70,7 +91,9 @@ export default function EverythingElseGroup({ components, renderRow }: Props) {
           <>
             <div className="WinetricksEverythingElse__search">
               <input
-                type="search"
+                type="text"
+                role="searchbox"
+                autoComplete="off"
                 className="WinetricksEverythingElse__input"
                 value={query}
                 placeholder={searchLabel}

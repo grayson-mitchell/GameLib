@@ -153,6 +153,12 @@ import { safeStorage } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { logInfo, logWarning, logError } from 'backend/logger'
 import { setTokenStore, ElectronTokenStore, TokenStore } from '../tokenStore'
+import { sendFrontendMessage } from 'backend/ipc'
+import {
+  __resetSignInEpochsForTests,
+  bumpSignInEpoch
+} from 'backend/signInProbe/sessionEpoch'
+import { __resetSignInProbeOutcomesForTests } from 'backend/signInProbe/outcomes'
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('SteamUser', () => {
@@ -1409,6 +1415,172 @@ describe('SteamUser', () => {
       clientB.handlers['loggedOn']?.({}, {})
       await flush()
       expect(await secondPending).toBe(true)
+    })
+  })
+
+  // ── quick 261011-rj0: a CM credential refusal reaches the sign-in surface ──
+  //
+  // Phase 49 D-21 made the Steam boot probe presence-only (it reads the keyring
+  // and never opens the CM), so a token that is PRESENT but REFUSED by the CM
+  // (AccessDenied for a revoked/expired refresh token) left `credentialsMissing`
+  // unset and the Library showed the generic "Couldn't sync / Retry" banner --
+  // wrong on both counts: Steam is reachable and Retry replays the refusal.
+  // ensureConnected() now reports the CM's own verdict through the same fenced
+  // `applySignInVerdict` the probe pass uses, so the D-19 expired row renders
+  // and `resolveSteamSyncIndicator` suppresses the banner.
+  describe('ensureConnected() — a CM credential refusal reaches the sign-in surface (quick 261011-rj0)', () => {
+    const sendMock = sendFrontendMessage as unknown as jest.Mock
+
+    const stageStoredToken = (extra: Record<string, unknown> = {}) =>
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'isLoggedIn') return true
+        if (key === 'refreshToken') return 'stored-plaintext-token'
+        if (key in extra) return extra[key]
+        return undefined
+      })
+
+    const flush = async () => {
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setImmediate(r))
+      }
+    }
+
+    const rejectLogonWith = (message: string, eresult: number) => {
+      const err = Object.assign(new Error(message), { eresult })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => steamUserOnHandlers['error']?.(err))
+      })
+    }
+
+    const credentialsMissingSets = () =>
+      mockConfigStore.set.mock.calls.filter(
+        ([key]: [string]) => key === 'credentialsMissing'
+      )
+    const credentialsMissingDeletes = () =>
+      mockConfigStore.delete.mock.calls.filter(
+        ([key]: [string]) => key === 'credentialsMissing'
+      )
+    const outcomePublishes = () =>
+      sendMock.mock.calls.filter(
+        ([channel]) => channel === 'signInProbeOutcomes'
+      )
+
+    const savedSteamID = mockSteamUserInstance.steamID
+
+    beforeEach(async () => {
+      await SteamUser.logout()
+      __resetSignInEpochsForTests()
+      __resetSignInProbeOutcomesForTests()
+      // logout() itself deletes credentialsMissing and publishes a sign-out;
+      // start every case from a clean ledger so only ensureConnected() counts.
+      mockConfigStore.set.mockClear()
+      mockConfigStore.delete.mockClear()
+      sendMock.mockClear()
+      mockSteamUserInstance.steamID = null
+    })
+
+    afterEach(() => {
+      mockSteamUserInstance.steamID = savedSteamID
+      jest.useRealTimers()
+    })
+
+    test('A: AccessDenied latches credentialsMissing and publishes steam=expired, and still settles false at once', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      stageStoredToken()
+      rejectLogonWith('AccessDenied', 15)
+
+      let settled: boolean | undefined
+      const pending = SteamUser.ensureConnected().then((r) => {
+        settled = r
+        return r
+      })
+      await flush()
+      expect(settled).toBe(false)
+
+      expect(credentialsMissingSets()).toEqual([['credentialsMissing', true]])
+      expect(outcomePublishes()).toEqual([
+        ['signInProbeOutcomes', { outcomes: { steam: 'expired' } }]
+      ])
+
+      await jest.advanceTimersByTimeAsync(20001)
+      await pending
+    })
+
+    test('B (control): a terminal error that is NOT a credential refusal (LogonSessionReplaced) latches nothing and publishes nothing', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      stageStoredToken()
+      rejectLogonWith('LogonSessionReplaced', 34)
+
+      let settled: boolean | undefined
+      const pending = SteamUser.ensureConnected().then((r) => {
+        settled = r
+        return r
+      })
+      await flush()
+      expect(settled).toBe(false)
+
+      expect(credentialsMissingSets()).toEqual([])
+      expect(outcomePublishes()).toEqual([])
+
+      await jest.advanceTimersByTimeAsync(20001)
+      await pending
+    })
+
+    test('C: a sign-in that completes while the logon is in flight moves the epoch, and the refusal is then stale -- no latch, no publish (T-49-10)', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      stageStoredToken()
+      const accessDenied = Object.assign(new Error('AccessDenied'), {
+        eresult: 15
+      })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        // The fresh sign-in lands first (noteSignInSucceeded bumps the epoch),
+        // then the OLD attempt's refusal arrives.
+        bumpSignInEpoch('steam')
+        process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
+      })
+
+      const pending = SteamUser.ensureConnected()
+      await flush()
+
+      expect(credentialsMissingSets()).toEqual([])
+      expect(outcomePublishes()).toEqual([])
+
+      await jest.advanceTimersByTimeAsync(20001)
+      expect(await pending).toBe(false)
+    })
+
+    test('D: a successful cold-connect logon clears a latched credentialsMissing and publishes steam=healthy', async () => {
+      stageStoredToken({ credentialsMissing: true })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          mockSteamUserInstance.steamID = savedSteamID
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(result).toBe(true)
+      expect(credentialsMissingDeletes()).toEqual([['credentialsMissing']])
+      expect(outcomePublishes()).toEqual([
+        ['signInProbeOutcomes', { outcomes: { steam: 'healthy' } }]
+      ])
+    })
+
+    test('E (control): a successful cold-connect logon with nothing latched writes nothing and publishes nothing', async () => {
+      stageStoredToken()
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          mockSteamUserInstance.steamID = savedSteamID
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+
+      const result = await SteamUser.ensureConnected()
+
+      expect(result).toBe(true)
+      expect(credentialsMissingDeletes()).toEqual([])
+      expect(outcomePublishes()).toEqual([])
     })
   })
 

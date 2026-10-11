@@ -490,6 +490,7 @@
         "curatedGroup": "المطلوبة غالبًا",
         "emptyBody": "تعذّر تحميل بيانات Winetricks لهذه الزجاجة.",
         "emptyHeading": "لا تتوفر مكوّنات",
+        "installedHeading": "مثبَّت",
         "installFailedTag": "فشل التثبيت",
         "installedTag": "مثبَّت",
         "retry": "إعادة المحاولة",

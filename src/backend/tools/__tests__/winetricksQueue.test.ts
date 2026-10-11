@@ -176,6 +176,9 @@ interface QueuePushPayload {
     unsupportedWineVersion: string | null
     missingDependencies: string[]
   }
+  // 261011-nqe: a process-wide, strictly increasing snapshot sequence
+  // number -- see `WinetricksQueueState.revision` in `common/types.ts`.
+  revision: number
 }
 
 function queueChangedPushes(appName?: string): QueuePushPayload[] {
@@ -515,5 +518,88 @@ describe('WinetricksQueue run log (D-18 / E9)', () => {
     expect(queueChangedPushes('push-game')).toHaveLength(before)
 
     await finishChild(0, 0)
+  })
+})
+
+// 261011-nqe: `getState()`'s module-level revision counter gives the
+// renderer a total order across the reply (invoke path) and the pushes
+// (event path) for one run, which travel independent channels with no
+// ordering guarantee between them otherwise. Each test here uses a fresh
+// appName -- the counter is module-level and every other test in this file
+// advances it too, so only RELATIVE revisions are asserted.
+describe('WinetricksQueue state revisions (261011-nqe)', () => {
+  it("the apply reply's revision is never older than a push the run already sent (fix a)", async () => {
+    const result = await WinetricksQueue.apply('gog', 'revision-apply-game', [
+      'xact',
+      'corefonts'
+    ])
+    if (!result.accepted) {
+      throw new Error('expected apply to be accepted -- test proves nothing')
+    }
+    await spawned(1)
+
+    const pushes = queueChangedPushes('revision-apply-game')
+    expect(pushes.length).toBeGreaterThanOrEqual(2)
+    const pushA = pushes[0]
+    const pushB = pushes.find(
+      (push) => push.run?.outcomes.xact === 'installing'
+    )
+    expect(pushA.run?.outcomes.xact).toBe('pending')
+    expect(pushB).toBeDefined()
+
+    // The reply's own content: by the time it is snapshotted, the loop's
+    // synchronous prefix has already marked the first verb installing.
+    expect(result.state.run?.currentVerb).toBe('xact')
+    expect(result.state.run?.outcomes.xact).toBe('installing')
+
+    // The reply's revision is never older than either push already sent.
+    expect(result.state.revision).toBeGreaterThan(pushA.revision)
+    expect(result.state.revision).toBeGreaterThan(pushB!.revision)
+
+    await finishChild(0, 0)
+    await spawned(2)
+    await finishChild(1, 0)
+
+    // Every push's revision strictly increases in send order, no push
+    // shares the reply's revision, and every push sent after B (i.e. after
+    // the reply was taken) has a revision greater than the reply's.
+    const after = queueChangedPushes('revision-apply-game')
+    for (let i = 1; i < after.length; i++) {
+      expect(after[i].revision).toBeGreaterThan(after[i - 1].revision)
+    }
+    expect(after.some((push) => push.revision === result.state.revision)).toBe(
+      false
+    )
+    const indexOfB = after.indexOf(pushB!)
+    for (const push of after.slice(indexOfB + 1)) {
+      expect(push.revision).toBeGreaterThan(result.state.revision)
+    }
+  })
+
+  it('the cancel reply is newer than the push it causes (pin)', async () => {
+    const result = await WinetricksQueue.apply('gog', 'revision-cancel-game', [
+      'xact',
+      'corefonts'
+    ])
+    expect(result.accepted).toBe(true)
+    await spawned(1)
+
+    const cancelled = WinetricksQueue.cancelRemaining(
+      'gog',
+      'revision-cancel-game'
+    )
+    const pushes = queueChangedPushes('revision-cancel-game')
+    const lastPush = pushes[pushes.length - 1]
+    expect(lastPush.run?.outcomes.corefonts).toBe('cancelled')
+    expect(cancelled.run?.cancelRequested).toBe(true)
+    expect(cancelled.revision).toBeGreaterThan(lastPush.revision)
+
+    await finishChild(0, 0)
+  })
+
+  it('two consecutive getState calls for two different games return strictly increasing revisions (pin)', () => {
+    const first = WinetricksQueue.getState('gog', 'revision-order-game-a')
+    const second = WinetricksQueue.getState('gog', 'revision-order-game-b')
+    expect(second.revision).toBeGreaterThan(first.revision)
   })
 })

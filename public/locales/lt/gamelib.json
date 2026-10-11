@@ -476,6 +476,7 @@
         "curatedGroup": "Dažniausiai reikalingi",
         "emptyBody": "Nepavyko įkelti Winetricks metaduomenų šiam bottle.",
         "emptyHeading": "Nėra pasiekiamų komponentų",
+        "installedHeading": "Įdiegta",
         "installFailedTag": "Diegimas nepavyko",
         "installedTag": "Įdiegta",
         "retry": "Bandyti iš naujo",

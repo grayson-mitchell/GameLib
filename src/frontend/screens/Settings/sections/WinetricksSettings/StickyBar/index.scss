@@ -103,8 +103,9 @@
     // specificity beats `&:disabled` and paints near-black text on the
     // transparent disabled button.
     //
-    // Retry and Clear share this 4.35:1 collision too, recorded in a
-    // follow-up todo.
+    // Retry, Clear and `.button.is-text` now carry this same gruvbox_dark
+    // override too (quick 261011-pjv). `.button.is-text` additionally
+    // excludes `.is-link`, which this button has no equivalent of.
     //
     // NOT LIVE-VERIFIED: contrast arithmetic; a capture is owed at the next
     // 45-12 re-run.

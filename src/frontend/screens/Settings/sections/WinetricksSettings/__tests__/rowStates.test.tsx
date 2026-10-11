@@ -172,9 +172,12 @@ describe('each derived state renders its slot (D-10)', () => {
     expect(checkboxes(tree)).toHaveLength(0)
   })
 
-  it('errored: a danger icon, the Install failed tag and a Retry button, no checkbox', () => {
+  it('errored: an unchecked enabled checkbox, the danger icon, the Install failed tag and Retry', () => {
     const tree = mount(baseProps('errored'))
-    expect(checkboxes(tree)).toHaveLength(0)
+    const boxes = checkboxes(tree)
+    expect(boxes).toHaveLength(1)
+    expect(boxes[0].props['aria-checked']).toBe(false)
+    expect(boxes[0].props.disabled).toBeFalsy()
     expect(icons(tree)).toContain('circle-exclamation')
     expect(collectText(tree)).toContain('Install failed')
     expect(findByClass(tree, 'WinetricksRow__retry')).toHaveLength(1)
@@ -193,14 +196,14 @@ describe('each derived state renders its slot (D-10)', () => {
     }
   })
 
-  it('only the installed state has no checkbox among the five that could show one', () => {
+  it('only installed and installing have no checkbox among the six states (261011-txc: errored is now tickable)', () => {
     // Sanity: the generator produced the states it claims to, so the D-10
     // assertion above is not vacuous.
     expect(ALL_STATES).toHaveLength(6)
     const withBox = ALL_STATES.filter(
       (state) => checkboxes(mount(baseProps(state))).length === 1
     )
-    expect(withBox).toEqual(['available', 'selected', 'queued'])
+    expect(withBox).toEqual(['available', 'selected', 'queued', 'errored'])
   })
 })
 
@@ -215,6 +218,11 @@ describe('locked (a run is in flight or the backend is busy)', () => {
     expect(findByClass(tree, 'WinetricksRow__retry')[0].props.disabled).toBe(
       true
     )
+  })
+
+  it('disables an errored row checkbox (261011-txc)', () => {
+    const boxes = checkboxes(mount(baseProps('errored', { locked: true })))
+    expect(boxes[0].props.disabled).toBe(true)
   })
 
   it('leaves Retry enabled when not locked', () => {
@@ -273,6 +281,17 @@ describe('templates (E6 / E7)', () => {
 
   it('exposes the verb on the row root so a selection is identifiable by verb (D-07)', () => {
     expect(mount(baseProps('available')).props['data-verb']).toBe('vcrun2019')
+  })
+
+  it('shows the verb id as a text node in the title line, beside the title (261011-txc)', () => {
+    for (const state of ['available', 'errored', 'installed'] as const) {
+      const tree = mount(baseProps(state))
+      const titleLine = findByClass(tree, 'WinetricksRow__titleLine')[0]
+      const verbSpans = findByClass(titleLine, 'WinetricksRow__verb')
+      expect(verbSpans).toHaveLength(1)
+      expect(collectText(verbSpans[0])).toBe('vcrun2019')
+      expect(tree.props['data-verb']).toBe('vcrun2019')
+    }
   })
 })
 
@@ -375,14 +394,41 @@ describe('compiled stylesheet (fixed metrics, scope)', () => {
     )
   })
 
+  // A `body.<theme>` ancestor above the tab root narrows the match: it
+  // cannot leak a rule out of `.WinetricksSettings`. The pattern admits
+  // exactly one such optional leading ancestor (261011-pjv, the Retry
+  // gruvbox_dark override). Held in a shared const so the scope test and
+  // the can-fail proof below it cannot drift apart.
+  const SCOPED_ROOT_PATTERN = /^(?:body\.[\w-]+\s+)?\.WinetricksSettings\b/
+
   it('scopes every rule under the tab root so nothing leaks app-wide', () => {
     const selectors = [...compiled.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
       m[2].trim()
     )
     expect(selectors.length).toBeGreaterThan(5)
     for (const selector of selectors) {
-      expect(selector).toMatch(/^\.WinetricksSettings\b/)
+      expect(selector).toMatch(SCOPED_ROOT_PATTERN)
     }
+  })
+
+  it('theme-scoped rules are enumerated and the scope pattern can still fail', () => {
+    const selectors = [...compiled.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
+      m[2].trim()
+    )
+    const themeScoped = selectors.filter((selector) =>
+      selector.startsWith('body.')
+    )
+    // Adding a theme-scoped rule must be a conscious edit here, not a free
+    // pass through the relaxed pattern above.
+    expect(themeScoped).toEqual([
+      'body.gruvbox_dark .WinetricksSettings .WinetricksRow__retry:not(:disabled)'
+    ])
+    // In-memory can-fail proof: the amended pattern still rejects both an
+    // ancestor-scoped selector missing the tab root and an unscoped one.
+    expect('body.gruvbox_dark .WinetricksRow__retry').not.toMatch(
+      SCOPED_ROOT_PATTERN
+    )
+    expect('.WinetricksRow__retry').not.toMatch(SCOPED_ROOT_PATTERN)
   })
 
   it('declares a visible keyboard focus ring', () => {

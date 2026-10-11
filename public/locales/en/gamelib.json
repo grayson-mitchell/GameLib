@@ -544,6 +544,7 @@
         "hideDetails": "Hide details",
         "installedCount_one": "{{count}} installed",
         "installedCount_other": "{{count}} installed",
+        "installedHeading": "Installed",
         "installedTag": "Installed",
         "installFailedTag": "Install failed",
         "installingBar": "Installing {{current}} of {{total}} · {{title}}",

@@ -905,42 +905,63 @@ const WINETRICKS_APPLY_SELECTOR =
   '.WinetricksStickyBar .WinetricksStickyBar__apply'
 
 /**
- * The `color:` the ENABLED Apply button paints in `themeClass`, as authored.
- * Mirrors `selectedTabColourDecl`: a nested `body.<theme> &:not(:disabled)`
- * override inside the Apply block wins over the block's own depth-0 `color`.
- * No `s` flag: the inner capture is a negated character class, which already
- * spans newlines (see the TS1501 note above `selectedTabColourDecl`).
+ * The shape every correctly-guarded theme override selector must end in: an
+ * `&` followed by zero or more `:not(<simple selector>)` compounds (e.g.
+ * `.button.is-text`'s `:not(.is-link)`) and then a final, required
+ * `:not(:disabled)`. Shared between `themeOverridesMissingNotDisabled` (a
+ * full-selector match, anchored with `$`) and `applyTextColourDecl`
+ * (embedded ahead of the opening `{`) so the two helpers cannot drift onto
+ * different definitions of "guarded" (261011-pjv).
  */
+const GUARDED_OVERRIDE_TAIL = '&(?::not\\([^()]+\\))*:not\\(:disabled\\)'
+
 /**
- * Every nested selector inside the Apply block body that scopes to a theme
- * (`body.<theme> ...`) but does NOT end with `&:not(:disabled)` -- i.e.
- * would also apply to the disabled Apply button. An empty array means every
- * theme override is correctly guarded. Factored out so Test C (the real
- * stylesheet) and Test D (an in-memory-sabotaged copy, no file mutation)
- * share one checker, and Test D proves Test C can actually fail.
+ * Every nested selector inside a control's block body that scopes to a
+ * theme (`body.<theme> ...`) but does NOT end in the guarded shape above --
+ * i.e. would also apply to the disabled control. An empty array means
+ * every theme override is correctly guarded. Factored out so Test C (the
+ * real stylesheet) and Test D (an in-memory-sabotaged copy, no file
+ * mutation) share one checker, and Test D proves Test C can actually fail.
  */
-const themeOverridesMissingNotDisabled = (applyBody: string): string[] =>
-  nestedRules(applyBody)
+const themeOverridesMissingNotDisabled = (applyBody: string): string[] => {
+  const guarded = new RegExp(`${GUARDED_OVERRIDE_TAIL}$`)
+  return nestedRules(applyBody)
     .map((rule) => rule.selector)
     .filter((selector) => selector.startsWith('body.'))
-    .filter((selector) => !selector.endsWith('&:not(:disabled)'))
+    .filter((selector) => !guarded.test(selector))
+}
 
-const applyTextColourDecl = (applyBody: string, themeClass: string): string => {
+/**
+ * The `color:` an ENABLED accent-filled control paints in `themeClass`, as
+ * authored. Mirrors `selectedTabColourDecl`: a nested `body.<theme> &...`
+ * override inside the control's block wins over the block's own depth-0
+ * `color`. The override selector may carry zero or more leading
+ * `:not(<simple selector>)` compounds (e.g. `.button.is-text`'s
+ * `:not(.is-link)`) ahead of the final, required `:not(:disabled)`. No `s`
+ * flag: the inner capture is a negated character class, which already spans
+ * newlines (see the TS1501 note above `selectedTabColourDecl`). Generalized
+ * (261011-pjv) from an Apply-only picker to serve every control in this
+ * accent-fill family: Apply, Retry, Clear and `.button.is-text`.
+ */
+const applyTextColourDecl = (
+  controlBody: string,
+  themeClass: string
+): string => {
   const scoped = new RegExp(
-    `body\\.${themeClass}\\s*&:not\\(:disabled\\)\\s*\\{([^}]*)\\}`
-  ).exec(applyBody)
+    `body\\.${themeClass}\\s*${GUARDED_OVERRIDE_TAIL}\\s*\\{([^}]*)\\}`
+  ).exec(controlBody)
   if (scoped) {
     const decls = declsAtDepthZero(scoped[1], 'color')
     if (decls.length !== 1)
       throw new Error(
-        `expected exactly one depth-0 color in the ${themeClass} Apply override, found ${decls.length}`
+        `expected exactly one depth-0 color in the ${themeClass} override, found ${decls.length}`
       )
     return decls[0]
   }
-  const base = declsAtDepthZero(applyBody, 'color')
+  const base = declsAtDepthZero(controlBody, 'color')
   if (base.length !== 1)
     throw new Error(
-      `expected exactly one depth-0 base color in the Apply block, found ${base.length}`
+      `expected exactly one depth-0 base color in the block, found ${base.length}`
     )
   return base[0]
 }
@@ -1111,7 +1132,12 @@ const LIBRARY_SIGN_IN_NOTICE_SCSS =
 const signInNoticeRule = (noticeScss: string, path: string[]): string => {
   let body = cssBlock(noticeScss, '.LibrarySignInNotice')
   for (const selector of path) {
-    const next = nestedRules(body).find((rule) => rule.selector === selector)
+    // Selector lists are compared with their whitespace collapsed, so the
+    // prettier-wrapped `&:hover,\n&:focus-visible` is addressed as
+    // `&:hover, &:focus-visible`.
+    const next = nestedRules(body).find(
+      (rule) => rule.selector.replace(/\s+/g, ' ') === selector
+    )
     if (!next)
       throw new Error(`no rule ${path.join(' ')} in the sign-in notice`)
     body = next.body
@@ -1124,7 +1150,10 @@ const signInNoticeRule = (noticeScss: string, path: string[]): string => {
  * so that the row's own text colour governs it: the store logo, the footer
  * button label and the dismiss glyph inherit, and the in-row footer button is
  * transparent so its label sits on the banner whichever stylesheet loaded
- * first.
+ * first. The button's hover and focus-visible arm (quick 261011-sxg) is held
+ * to the same pair: the notice owns that state at (0,4,0), above the Settings
+ * footer-button rule, and signals it with an underline rather than a hue the
+ * ten themes cannot all clear.
  */
 const SIGN_IN_ROW_FOREGROUNDS: readonly {
   path: string[]
@@ -1134,6 +1163,16 @@ const SIGN_IN_ROW_FOREGROUNDS: readonly {
   { path: ['&__row', '.button.is-footer'], prop: 'color', want: 'inherit' },
   {
     path: ['&__row', '.button.is-footer'],
+    prop: 'background-color',
+    want: 'transparent'
+  },
+  {
+    path: ['&__row', '.button.is-footer', '&:hover, &:focus-visible'],
+    prop: 'color',
+    want: 'inherit'
+  },
+  {
+    path: ['&__row', '.button.is-footer', '&:hover, &:focus-visible'],
     prop: 'background-color',
     want: 'transparent'
   },
@@ -1157,6 +1196,36 @@ const signInForegroundsNotInheriting = (noticeScss: string): string[] =>
         declsAtDepthZero(signInNoticeRule(noticeScss, path), prop)
       ) !== JSON.stringify([want])
   ).map(({ path, prop }) => `${path.join(' ')} ${prop}`)
+
+const SIGN_IN_EXPIRED_TRIANGLE_PATH = ['&__row--expired > svg']
+const SIGN_IN_TRIANGLE_BASE_COLOUR = 'var(--status-danger, orange)'
+const SIGN_IN_DISMISS_HOVER_PATH = ['&__dismiss', '&:hover']
+
+/**
+ * The `color:` the expired row's triangle paints in `themeClass`, as authored.
+ * Mirrors `dividerColourDecl`: a nested rule whose selector LIST names
+ * `body.<theme> &` wins over the base rule's depth-0 `color`, and the list is
+ * split on commas and compared whole so `nord-light` can never match a
+ * `body.nord-dark &` entry.
+ */
+const expiredTriangleColourDecl = (
+  noticeScss: string,
+  themeClass: string
+): string => {
+  const block = signInNoticeRule(noticeScss, SIGN_IN_EXPIRED_TRIANGLE_PATH)
+  const override = nestedRules(block).find((rule) =>
+    rule.selector
+      .split(',')
+      .map((s) => s.trim())
+      .includes(`body.${themeClass} &`)
+  )
+  const decls = declsAtDepthZero(override ? override.body : block, 'color')
+  if (decls.length !== 1)
+    throw new Error(
+      `expected exactly one depth-0 color in the ${themeClass} expired triangle rule, found ${decls.length}`
+    )
+  return decls[0]
+}
 
 /**
  * Per-theme WCAG 1.4.3 census for the Library sign-in row (F-49-R1-6, Phase 49
@@ -1237,6 +1306,143 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
     expect(signInForegroundsNotInheriting(noticeScss)).toEqual([])
   })
 
+  // Quick 261011-sxg: the three states j8z left as residuals, all nord-light.
+  // The dismiss glyph and the triangle are non-text UI components, so WCAG
+  // 1.4.11's 3:1 is their floor; the button label is text and stays at 4.5
+  // through the inherit table above.
+
+  it('non-vacuity: the hovered dismiss hue, the triangle base colour and its one-theme override set', () => {
+    expect(
+      declsAtDepthZero(
+        signInNoticeRule(noticeScss, SIGN_IN_DISMISS_HOVER_PATH),
+        'color'
+      )
+    ).toEqual(['var(--navbar-active, var(--navbar-accent))'])
+    expect(
+      declsAtDepthZero(
+        signInNoticeRule(noticeScss, SIGN_IN_EXPIRED_TRIANGLE_PATH),
+        'color'
+      )
+    ).toEqual([SIGN_IN_TRIANGLE_BASE_COLOUR])
+    const overridden = themeSelectors
+      .map((s) => s.replace(/^body\./, ''))
+      .filter(
+        (t) =>
+          expiredTriangleColourDecl(noticeScss, t) !==
+          SIGN_IN_TRIANGLE_BASE_COLOUR
+      )
+    expect(overridden).toEqual(['nord-light'])
+  })
+
+  it.each(themeSelectors)(
+    '%s paints the hovered dismiss glyph at >= 3:1 against the banner',
+    (selector) => {
+      const theme = selector.replace(/^body\./, '')
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(
+        declsAtDepthZero(
+          signInNoticeRule(noticeScss, SIGN_IN_DISMISS_HOVER_PATH),
+          'color'
+        )[0] ?? '',
+        scope,
+        globals
+      )
+      const bg = resolveValue(
+        declsAtDepthZero(rowBody, 'background')[0] ?? '',
+        scope,
+        globals
+      )
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({ theme, fg, bg, ratio, passes: ratio >= 3 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it.each(themeSelectors)(
+    '%s paints the expired triangle at >= 3:1 against the banner',
+    (selector) => {
+      const theme = selector.replace(/^body\./, '')
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(
+        expiredTriangleColourDecl(noticeScss, theme),
+        scope,
+        globals
+      )
+      const bg = resolveValue(
+        declsAtDepthZero(rowBody, 'background')[0] ?? '',
+        scope,
+        globals
+      )
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({ theme, fg, bg, ratio, passes: ratio >= 3 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it('the in-row footer button owns its hover and focus-visible state above the Settings rule', () => {
+    // Settings/index.css paints `--text-hover` on `--background-darker` with a
+    // 3px `--danger` ring at (0,3,0), tying the notice's button rule on source
+    // order. The nested arm compiles to (0,4,0) and must also neutralise the
+    // ring, or Settings' box-shadow still lands on the banner.
+    const hover = signInNoticeRule(noticeScss, [
+      '&__row',
+      '.button.is-footer',
+      '&:hover, &:focus-visible'
+    ])
+    expect(declsAtDepthZero(hover, 'box-shadow')).toEqual(['none'])
+    expect(declsAtDepthZero(hover, 'text-decoration')).toEqual(['underline'])
+    const focus = signInNoticeRule(noticeScss, [
+      '&__row',
+      '.button.is-footer',
+      '&:focus-visible'
+    ])
+    expect(declsAtDepthZero(focus, 'outline')).toEqual([
+      '2px solid currentColor'
+    ])
+  })
+
+  it("the pre-fix hover and triangle pairs reproduce the todo's nord-light fails", () => {
+    // The LITERAL pre-fix values the 261011-sxg todo measured (dismiss hover
+    // 1.52, triangle 2.82 in nord-light; dracula 4.27 and 3.50 pass), resolved
+    // through the same path the gates above use. Only the side of 3 matters.
+    const OLD_DISMISS_HOVER = 'var(--text-secondary, var(--text-default))'
+    const background = declsAtDepthZero(rowBody, 'background')[0] ?? ''
+    const expected = [
+      ['body.nord-light', OLD_DISMISS_HOVER, 'fail'],
+      ['body.dracula', OLD_DISMISS_HOVER, 'pass'],
+      ['body.nord-light', SIGN_IN_TRIANGLE_BASE_COLOUR, 'fail'],
+      ['body.dracula', SIGN_IN_TRIANGLE_BASE_COLOUR, 'pass']
+    ] as const
+    for (const [selector, colour, verdict] of expected) {
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(colour, scope, globals)
+      const bg = resolveValue(background, scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({
+        selector,
+        colour,
+        ratio,
+        verdict: ratio >= 3 ? 'pass' : 'fail'
+      }).toEqual({ selector, colour, ratio, verdict })
+    }
+  })
+
   it("the pre-fix pair reproduces the operator's live verdicts", () => {
     // The LITERAL pre-fix colour, resolved against the row's authored
     // background through the SAME themeTokens + globals + resolveValue path the
@@ -1271,13 +1477,14 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
     // The tokenCensus.test.ts sabotage idiom: mutate a STRING copy, never the
     // file on disk. split/join rather than replaceAll so the tsconfig lib
     // target cannot matter. The counts first, so the sabotage is not vacuous.
-    expect(noticeScss.split('color: inherit').length - 1).toBe(3)
-    expect(noticeScss.split('background-color: transparent').length - 1).toBe(1)
+    expect(noticeScss.split('color: inherit').length - 1).toBe(4)
+    expect(noticeScss.split('background-color: transparent').length - 1).toBe(2)
     const colourSabotaged = noticeScss
       .split('color: inherit')
       .join('color: var(--text-default)')
     expect(signInForegroundsNotInheriting(colourSabotaged)).toEqual([
       '&__row .button.is-footer color',
+      '&__row .button.is-footer &:hover, &:focus-visible color',
       '&__row--notConnected .LibrarySignInNotice__icon color',
       '&__dismiss color'
     ])
@@ -1285,7 +1492,8 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
       .split('background-color: transparent')
       .join('background-color: var(--primary)')
     expect(signInForegroundsNotInheriting(fillSabotaged)).toEqual([
-      '&__row .button.is-footer background-color'
+      '&__row .button.is-footer background-color',
+      '&__row .button.is-footer &:hover, &:focus-visible background-color'
     ])
   })
 })
@@ -2246,5 +2454,297 @@ describe('Winetricks checkbox, button and search indicators and the search place
       })
       expect(failures.length).toBeGreaterThan(0)
     }
+  })
+})
+
+const BUTTONS_SCSS = 'src/frontend/styles/_buttons.scss'
+
+/**
+ * The three remaining members of the accent-fill family Apply belongs to:
+ * Retry, Clear and `.button.is-text`. `path` is one of the already-declared
+ * stylesheet path constants (WINETRICKS_ROW_SCSS,
+ * WINETRICKS_EVERYTHING_ELSE_SCSS, BUTTONS_SCSS). `gruvboxOverride` is the
+ * exact nested selector each control's gruvbox_dark override carries,
+ * matching the shape `applyTextColourDecl` now accepts.
+ */
+const ACCENT_FILL_CONTROLS: {
+  control: string
+  path: string
+  selector: string
+  gruvboxOverride: string
+}[] = [
+  {
+    control: 'Retry',
+    path: WINETRICKS_ROW_SCSS,
+    selector: '.WinetricksRow__retry',
+    gruvboxOverride: 'body.gruvbox_dark &:not(:disabled)'
+  },
+  {
+    control: 'Clear',
+    path: WINETRICKS_EVERYTHING_ELSE_SCSS,
+    selector: '.WinetricksEverythingElse__clear',
+    gruvboxOverride: 'body.gruvbox_dark &:not(:disabled)'
+  },
+  {
+    control: '.button.is-text',
+    path: BUTTONS_SCSS,
+    selector: '.button.is-text',
+    gruvboxOverride: 'body.gruvbox_dark &:not(.is-link):not(:disabled)'
+  }
+]
+
+/**
+ * Every nested selector inside `.button.is-text`'s block body that scopes
+ * to a theme (`body.<theme> ...`) but does NOT carry `:not(.is-link)`.
+ * An empty array means the override cannot reach an `.is-link` consumer
+ * (Planner finding 1, 261011-pjv): without it, a bare override would
+ * outrank `.gameConfigContainer .game-actions .gameTools .link` and repaint
+ * the 22 `.is-text.is-link` game-menu render sites.
+ */
+const themeOverridesReachingIsLink = (isTextBody: string): string[] =>
+  nestedRules(isTextBody)
+    .map((rule) => rule.selector)
+    .filter((selector) => selector.startsWith('body.'))
+    .filter((selector) => !selector.includes(':not(.is-link)'))
+
+/**
+ * Per-theme WCAG 1.4.3 census for the three remaining members of the
+ * accent-fill family Apply belongs to: Retry, Clear and `.button.is-text`
+ * (todo 2026-10-11, gruvbox_dark 4.35:1).
+ *
+ * Lives here for the same reason the Apply census does: the resolver
+ * (`themeTokens`, `globalTokens`, `resolveValue`, `contrastRatio`) is
+ * module-private to this file.
+ *
+ * Reads the authored declarations FROM each stylesheet on every run, never
+ * a hardcoded copy of them.
+ *
+ * Like every census in this file it cannot see a pixel: no CSS engine runs
+ * under the node test environment, so a live capture still adjudicates
+ * appearance.
+ */
+describe('Accent-filled Retry, Clear and .button.is-text text contrast in every theme (261011-pjv)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const globals = globalTokens()
+  const blocks = new Map(
+    ACCENT_FILL_CONTROLS.map(({ control, path, selector }) => [
+      control,
+      cssBlock(read(path), selector)
+    ])
+  )
+
+  const pairs = ACCENT_FILL_CONTROLS.flatMap(({ control }) =>
+    themeSelectors.map((selector) => ({ control, selector }))
+  )
+
+  it.each(ACCENT_FILL_CONTROLS.map(({ control }) => control))(
+    'non-vacuity: %s resolves one accent background, one background-derived base color, and its gruvbox override',
+    (control) => {
+      expect(globals.size).toBeGreaterThan(0)
+      const entry = ACCENT_FILL_CONTROLS.find((c) => c.control === control)
+      if (!entry)
+        throw new Error(`no ACCENT_FILL_CONTROLS entry for ${control}`)
+      const block = blocks.get(control) as string
+      expect(block.length).toBeGreaterThan(0)
+      const bgDecls = declsAtDepthZero(block, 'background')
+      expect(bgDecls).toHaveLength(1)
+      expect(bgDecls[0]).toMatch(/var\(\s*--accent/)
+      const colourDecls = declsAtDepthZero(block, 'color')
+      expect(colourDecls).toHaveLength(1)
+      expect(colourDecls[0]).toMatch(/var\(\s*--background/)
+      const overrideRule = nestedRules(block).find(
+        (rule) => rule.selector === entry.gruvboxOverride
+      )
+      expect(overrideRule).not.toBeUndefined()
+      expect(
+        declsAtDepthZero(
+          (overrideRule as { selector: string; body: string }).body,
+          'color'
+        )
+      ).toHaveLength(1)
+    }
+  )
+
+  it.each(pairs)(
+    '$control paints enabled text at >= 4.5:1 against its own accent fill in $selector',
+    ({ control, selector }) => {
+      const theme = selector.replace(/^body\./, '')
+      const block = blocks.get(control) as string
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(applyTextColourDecl(block, theme), scope, globals)
+      const bg = resolveValue(
+        declsAtDepthZero(block, 'background')[0] ?? '',
+        scope,
+        globals
+      )
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      // Object form so a failure names the control, the theme and the ratio.
+      expect({ control, theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        control,
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it.each(ACCENT_FILL_CONTROLS.map(({ control }) => control))(
+    'the gruvbox_dark override is load-bearing on every control: %s',
+    (control) => {
+      // The depth-0 BASE color, deliberately NOT the override, against the
+      // base background. If this resolves >= 4.5, gruvbox's tokens changed
+      // and the override (and this test) should be deleted, not re-pinned.
+      // Option (b), if ever taken, is exactly what turns this red.
+      const block = blocks.get(control) as string
+      const scope = themeTokens(themesScss, 'body.gruvbox_dark')
+      const baseColour = declsAtDepthZero(block, 'color')[0]
+      const baseBackground = declsAtDepthZero(block, 'background')[0]
+      const fg = resolveValue(baseColour, scope, globals)
+      const bg = resolveValue(baseBackground, scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({
+        control,
+        ratio,
+        passes: ratio < 4.5,
+        note: "if this goes red, gruvbox's tokens changed so the base pair now passes -- delete the override and this test, do not re-pin it"
+      }).toEqual({
+        control,
+        ratio,
+        passes: true,
+        note: "if this goes red, gruvbox's tokens changed so the base pair now passes -- delete the override and this test, do not re-pin it"
+      })
+    }
+  )
+
+  it.each(ACCENT_FILL_CONTROLS.map(({ control }) => control))(
+    'a theme override cannot reach a disabled control: %s',
+    (control) => {
+      const entry = ACCENT_FILL_CONTROLS.find((c) => c.control === control)
+      if (!entry)
+        throw new Error(`no ACCENT_FILL_CONTROLS entry for ${control}`)
+      const block = blocks.get(control) as string
+      const themeOverrideSelectors = nestedRules(block)
+        .map((rule) => rule.selector)
+        .filter((selector) => selector.startsWith('body.'))
+      expect(themeOverrideSelectors).toContain(entry.gruvboxOverride)
+      expect(themeOverridesMissingNotDisabled(block)).toEqual([])
+
+      if (control === 'Retry') {
+        const disabledRule = nestedRules(block).find(
+          (rule) => rule.selector === '&:disabled'
+        )
+        expect(disabledRule).not.toBeUndefined()
+        const disabledBody = (
+          disabledRule as { selector: string; body: string }
+        ).body
+        expect(declsAtDepthZero(disabledBody, 'opacity')).toEqual(['0.5'])
+        expect(declsAtDepthZero(disabledBody, 'color')).toEqual([])
+        expect(declsAtDepthZero(disabledBody, 'background')).toEqual([])
+      } else if (control === 'Clear') {
+        const disabledRule = nestedRules(block).find(
+          (rule) => rule.selector === '&:disabled'
+        )
+        expect(disabledRule).toBeUndefined()
+      } else {
+        // `.button.is-text` has no disabled arm of its own; disabled is
+        // painted by the global `.button:disabled` rule. That literal
+        // selector appears TWICE in _buttons.scss (a cursor-only block and
+        // a colour block), so allBlocksFor -- not cssBlock -- is used here.
+        const disabledBlocks = allBlocksFor(
+          read(BUTTONS_SCSS),
+          '.button:disabled'
+        )
+        const withColour = disabledBlocks.filter(
+          (body) => declsAtDepthZero(body, 'color').length > 0
+        )
+        expect(withColour).toHaveLength(1)
+        expect(declsAtDepthZero(withColour[0], 'color')).toEqual([
+          'var(--text-secondary)'
+        ])
+        expect(declsAtDepthZero(withColour[0], 'background')).toEqual([
+          'var(--disabled-button)'
+        ])
+      }
+    }
+  )
+
+  it('the .button.is-text override cannot reach an .is-link consumer', () => {
+    const block = blocks.get('.button.is-text') as string
+    expect(themeOverridesReachingIsLink(block)).toEqual([])
+    // Structural reason `.is-text.is-link` text never came from
+    // `--background`: `.button.is-link` declares its own depth-0 `color`,
+    // at the same specificity and later in the file.
+    const isLinkBlock = cssBlock(read(BUTTONS_SCSS), '.button.is-link')
+    expect(declsAtDepthZero(isLinkBlock, 'color')).toHaveLength(1)
+  })
+
+  it('checkers can fail, in memory only', () => {
+    // The tokenCensus.test.ts sabotage idiom: mutate a STRING copy, never
+    // the file on disk.
+    const retryBlock = blocks.get('Retry') as string
+    const sabotagedRetry = retryBlock.replace('&:not(:disabled)', '&')
+    expect(themeOverridesMissingNotDisabled(sabotagedRetry)).toEqual([
+      'body.gruvbox_dark &'
+    ])
+
+    const isTextBlock = blocks.get('.button.is-text') as string
+    const missingNotDisabled = isTextBlock.replace(
+      '&:not(.is-link):not(:disabled)',
+      '&:not(.is-link)'
+    )
+    expect(themeOverridesMissingNotDisabled(missingNotDisabled)).toEqual([
+      'body.gruvbox_dark &:not(.is-link)'
+    ])
+
+    const missingNotIsLink = isTextBlock.replace(
+      '&:not(.is-link):not(:disabled)',
+      '&:not(:disabled)'
+    )
+    expect(themeOverridesReachingIsLink(missingNotIsLink)).toEqual([
+      'body.gruvbox_dark &:not(:disabled)'
+    ])
+  })
+
+  it('the override does not regress .button.is-text:hover in gruvbox_dark', () => {
+    const isTextBlock = blocks.get('.button.is-text') as string
+    const hoverBlock = cssBlock(read(BUTTONS_SCSS), '.button.is-text:hover')
+    const scope = themeTokens(themesScss, 'body.gruvbox_dark')
+    const hoverBg = resolveValue(
+      declsAtDepthZero(hoverBlock, 'background')[0] ?? '',
+      scope,
+      globals
+    )
+    const overrideFg = resolveValue(
+      applyTextColourDecl(isTextBlock, 'gruvbox_dark'),
+      scope,
+      globals
+    )
+    const baseFg = resolveValue(
+      declsAtDepthZero(isTextBlock, 'color')[0] ?? '',
+      scope,
+      globals
+    )
+    expect(hoverBg).not.toBeNull()
+    expect(overrideFg).not.toBeNull()
+    expect(baseFg).not.toBeNull()
+    const overrideRatio = contrastRatio(overrideFg as string, hoverBg as string)
+    const baseRatio = contrastRatio(baseFg as string, hoverBg as string)
+    // Object form so a failure names both ratios: the override must clear
+    // 4.5 AND not regress the base-text hover ratio (expected 7.38 vs 6.09).
+    expect({
+      overrideRatio,
+      baseRatio,
+      passes: overrideRatio >= 4.5 && overrideRatio >= baseRatio
+    }).toEqual({
+      overrideRatio,
+      baseRatio,
+      passes: true
+    })
   })
 })

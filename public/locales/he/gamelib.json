@@ -469,6 +469,7 @@
         "curatedGroup": "נדרשים בדרך כלל",
         "emptyBody": "לא ניתן היה לטעון את נתוני העל של Winetricks עבור ה-bottle הזה.",
         "emptyHeading": "אין רכיבים זמינים",
+        "installedHeading": "מותקן",
         "installFailedTag": "ההתקנה נכשלה",
         "installedTag": "מותקן",
         "retry": "ניסיון חוזר",

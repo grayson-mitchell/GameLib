@@ -590,6 +590,7 @@ describe("GamesSettings section floor vs the tab's groups (261011-jj1)", () => {
 
   it.each([
     'WinetricksSuggested',
+    'WinetricksInstalled',
     'WinetricksTaskGroup',
     'WinetricksEverythingElse'
   ])('the real index.scss beats the floor for %s', (group) => {
@@ -597,10 +598,11 @@ describe("GamesSettings section floor vs the tab's groups (261011-jj1)", () => {
     expect(beatsSectionFloor(css, group, floor)).toBe(true)
   })
 
-  it('the override declares min-width only, leaving padding-top to the floor', () => {
+  it("the override declares min-width: 0 and padding-top: 0, releasing the floor's leaked padding (261011-txc)", () => {
     const css = sass.compile(join(TAB_DIR, 'index.scss')).css
     const groups = [
       'WinetricksSuggested',
+      'WinetricksInstalled',
       'WinetricksTaskGroup',
       'WinetricksEverythingElse'
     ]
@@ -622,8 +624,34 @@ describe("GamesSettings section floor vs the tab's groups (261011-jj1)", () => {
     )
     expect(matches.length).toBeGreaterThanOrEqual(1)
     for (const rule of matches) {
-      expect(rule.decls).toEqual({ 'min-width': '0' })
+      expect(rule.decls).toEqual({ 'min-width': '0', 'padding-top': '0' })
     }
+  })
+})
+
+describe('dock paints above the sticky search (261011-txc)', () => {
+  it('the dock is opaque with a top divider and z-index 2, strictly above the Everything else search box at z-index 1', () => {
+    const dockCss = sass.compile(join(TAB_DIR, 'index.scss')).css
+    const dockDecls = effectiveDecls(
+      parseRules(dockCss),
+      '.WinetricksSettings__dock'
+    )
+    expect(dockDecls['z-index']).toBe('2')
+    expect(dockDecls['background']).toContain('--body-background')
+    expect('box-shadow' in dockDecls).toBe(true)
+
+    const searchCss = sass.compile(
+      join(TAB_DIR, 'EverythingElseGroup', 'index.scss')
+    ).css
+    const searchDecls = effectiveDecls(
+      parseRules(searchCss),
+      '.WinetricksSettings .WinetricksEverythingElse__search'
+    )
+    expect(searchDecls['z-index']).toBe('1')
+
+    expect(Number(dockDecls['z-index'])).toBeGreaterThan(
+      Number(searchDecls['z-index'])
+    )
   })
 })
 
@@ -695,12 +723,12 @@ describe('cached badge yields instead of overflowing (261011-jj1)', () => {
     expect('text-overflow' in decls).toBe(false)
   })
 
-  it('the status slot is unchanged: flex 0 0 auto, width 12rem', () => {
+  it('the status slot: flex 0 0 auto, width 13rem (261011-txc: room for icon, failed tag and Retry)', () => {
     const decls = effectiveDecls(
       parseRules(rowCss),
       '.WinetricksSettings .WinetricksRow__status'
     )
     expect(decls['flex']).toBe('0 0 auto')
-    expect(decls['width']).toBe('12rem')
+    expect(decls['width']).toBe('13rem')
   })
 })

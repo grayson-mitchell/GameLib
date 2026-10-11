@@ -159,6 +159,27 @@ button {
   padding: var(--space-xs);
   margin-inline-start: var(--space-sm);
   margin-bottom: var(--space-sm);
+
+  // gruvbox_dark's accent `#b57614` is a mid-tone: the base pair above
+  // measures 4.35:1 here, under 4.5, and `--neutral-01` measures 5.26:1
+  // (same arithmetic as Retry and Clear, quick 261011-pjv).
+  //
+  // `:not(:disabled)` is load-bearing: without it the override outranks
+  // the global `.button:disabled` rule below and paints near-black text on
+  // `--disabled-button`.
+  //
+  // `:not(.is-link)` is load-bearing too. Most `.is-text` render sites
+  // also carry `.is-link`, which takes its text colour from
+  // `.button.is-link` and, in the game menu, from
+  // `.gameConfigContainer .game-actions .gameTools .link` at (0,4,0) on
+  // `--navbar-background`. An override without this exclusion would
+  // outrank that rule and measure 1.51:1 on gruvbox_dark's `#32302f`.
+  //
+  // On hover the fill becomes `--primary-hover`, where the override text
+  // measures 7.38:1 (base 6.09:1) -- this does not regress hover.
+  body.gruvbox_dark &:not(.is-link):not(:disabled) {
+    color: var(--neutral-01, #070a0b);
+  }
 }
 
 .button.is-text:hover {

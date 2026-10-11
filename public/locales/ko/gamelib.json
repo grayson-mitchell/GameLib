@@ -462,6 +462,7 @@
         "curatedGroup": "일반적으로 필요함",
         "emptyBody": "이 bottle의 Winetricks 메타데이터를 불러올 수 없습니다.",
         "emptyHeading": "사용 가능한 구성 요소가 없습니다",
+        "installedHeading": "설치됨",
         "installFailedTag": "설치 실패",
         "installedTag": "설치됨",
         "retry": "다시 시도",

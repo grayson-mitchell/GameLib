@@ -462,6 +462,7 @@
         "curatedGroup": "Tez-tez lazım olanlar",
         "emptyBody": "Bu bottle üçün Winetricks məlumatları yüklənə bilmədi.",
         "emptyHeading": "Heç bir komponent mövcud deyil",
+        "installedHeading": "Quraşdırılıb",
         "installFailedTag": "Quraşdırma alınmadı",
         "installedTag": "Quraşdırılıb",
         "retry": "Yenidən cəhd et",

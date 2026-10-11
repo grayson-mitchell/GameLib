@@ -469,6 +469,7 @@
         "curatedGroup": "Necesarios habitualmente",
         "emptyBody": "No se han podido cargar los metadatos de Winetricks para esta bottle.",
         "emptyHeading": "No hay componentes disponibles",
+        "installedHeading": "Instalado",
         "installFailedTag": "Error al instalar",
         "installedTag": "Instalado",
         "retry": "Reintentar",

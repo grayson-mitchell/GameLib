@@ -462,6 +462,7 @@
         "curatedGroup": "常用元件",
         "emptyBody": "無法載入此 bottle 的 Winetricks 元資料。",
         "emptyHeading": "沒有可用的元件",
+        "installedHeading": "已安裝",
         "installFailedTag": "安裝失敗",
         "installedTag": "已安裝",
         "retry": "重試",

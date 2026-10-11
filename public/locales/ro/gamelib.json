@@ -469,6 +469,7 @@
         "curatedGroup": "Necesare frecvent",
         "emptyBody": "Metadatele Winetricks nu au putut fi încărcate pentru acest bottle.",
         "emptyHeading": "Nu există componente disponibile",
+        "installedHeading": "Instalat",
         "installFailedTag": "Instalarea a eșuat",
         "installedTag": "Instalat",
         "retry": "Reîncearcă",

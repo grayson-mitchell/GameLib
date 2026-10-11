@@ -919,6 +919,12 @@ export interface WinetricksQueueState {
   run: WinetricksQueueRun | null
   busy: boolean
   environment: WinetricksEnvironmentReport
+  // 261011-nqe: a process-wide snapshot sequence number, strictly increasing
+  // with every `getState()` call. The reply (invoke path) and the pushes
+  // (event path) for the same run arrive by two independent channels with no
+  // ordering between them -- a renderer holding two states for one game can
+  // use this to tell which is newer, whichever order they arrived in.
+  revision: number
 }
 
 export type WinetricksApplyResult =

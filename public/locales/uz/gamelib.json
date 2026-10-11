@@ -462,6 +462,7 @@
         "curatedGroup": "Ko'pincha kerak bo'ladiganlar",
         "emptyBody": "Bu bottle uchun Winetricks metama'lumotlarini yuklab bo'lmadi.",
         "emptyHeading": "Mavjud komponentlar yo'q",
+        "installedHeading": "O'rnatilgan",
         "installFailedTag": "O'rnatish amalga oshmadi",
         "installedTag": "O'rnatilgan",
         "retry": "Qayta urinish",

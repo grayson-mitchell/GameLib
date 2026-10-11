@@ -462,6 +462,7 @@
         "curatedGroup": "Thường cần thiết",
         "emptyBody": "Không thể tải siêu dữ liệu Winetricks cho bottle này.",
         "emptyHeading": "Không có thành phần khả dụng",
+        "installedHeading": "Đã cài đặt",
         "installFailedTag": "Cài đặt không thành công",
         "installedTag": "Đã cài đặt",
         "retry": "Thử lại",

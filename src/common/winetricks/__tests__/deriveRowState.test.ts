@@ -82,7 +82,7 @@ describe('deriveRowState precedence', () => {
     ).toBe('queued')
   })
 
-  it('rule 4: errored beats selected', () => {
+  it('rule 4: selected beats errored (a tick on a failed verb re-batches it)', () => {
     expect(
       deriveRowState({
         verb: 'vcrun2019',
@@ -91,19 +91,19 @@ describe('deriveRowState precedence', () => {
         run: null,
         erroredVerbs: flagged('vcrun2019')
       })
-    ).toBe('errored')
+    ).toBe('selected')
   })
 
-  it('rule 5: selected when ticked and nothing outranks it', () => {
+  it('rule 5: errored when flagged and not ticked', () => {
     expect(
       deriveRowState({
         verb: 'vcrun2019',
         installed: [],
-        selected: true,
+        selected: false,
         run: null,
-        erroredVerbs: {}
+        erroredVerbs: flagged('vcrun2019')
       })
-    ).toBe('selected')
+    ).toBe('errored')
   })
 
   it('rule 6: available when nothing applies', () => {

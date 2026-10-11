@@ -149,9 +149,9 @@ describe('Suggested for this game (E3, D-06)', () => {
     const group = suggested(tree)
 
     expect(rowVerbs(group)).toEqual(CURATED_ORDER)
-    expect(collectText(findByClass(group, 'WinetricksGroupHeader')[0])).toBe(
-      'Suggested for this game'
-    )
+    expect(
+      collectText(findByClass(group, 'WinetricksGroupHeader__label')[0])
+    ).toBe('Suggested for this game')
     expect(
       collectText(findByClass(group, 'WinetricksSuggested__sub')[0])
     ).toContain('Commonly needed')
@@ -160,10 +160,22 @@ describe('Suggested for this game (E3, D-06)', () => {
     ).toContain("won't launch")
   })
 
-  it('is always open: its header is a static heading, never a disclosure button', async () => {
-    const group = suggested(await mount())
-    expect(findAll(group, (el) => 'aria-expanded' in el.props)).toHaveLength(0)
-    expect(findByClass(group, 'WinetricksGroupHeader--static')).toHaveLength(1)
+  it('is expanded by default and collapsible: a disclosure button with aria-expanded true, toggling hides the rows (261011-txc)', async () => {
+    const tree = await mount()
+    const group = suggested(tree)
+    const header = disclosure(group)
+
+    expect(header.props['aria-expanded']).toBe(true)
+    expect(
+      collectText(findByClass(group, 'WinetricksGroupHeader__count')[0])
+    ).toBe(String(CURATED_ORDER.length))
+    expect(rowVerbs(group)).toEqual(CURATED_ORDER)
+    ;(header.props.onClick as () => void)()
+    const collapsed = suggested(again())
+    expect(disclosure(collapsed).props['aria-expanded']).toBe(false)
+    expect(rowVerbs(collapsed)).toEqual([])
+    ;(disclosure(collapsed).props.onClick as () => void)()
+    expect(rowVerbs(suggested(again()))).toEqual(CURATED_ORDER)
   })
 
   it('renders game-specific rows first (known fixes, then Direct3D), then the curated 8 minus those', async () => {
@@ -349,6 +361,78 @@ describe('task groups (E4, D-05, D-07)', () => {
   })
 })
 
+describe('Installed group (261011-txc)', () => {
+  function topSectionOrder(tree: ElementLike): string[] {
+    return findAll(
+      tree,
+      (el) =>
+        typeof el.props.className === 'string' &&
+        [
+          'WinetricksSuggested',
+          'WinetricksInstalled',
+          'WinetricksTaskGroup'
+        ].includes(el.props.className.split(/\s+/)[0])
+    ).map((el) => (el.props.className as string).split(/\s+/)[0])
+  }
+
+  it('renders nothing when nothing is installed (A-45-01)', async () => {
+    const tree = await mount()
+    expect(findByClass(tree, 'WinetricksInstalled')).toHaveLength(0)
+  })
+
+  it('sits between Suggested and the first task group, collapsed with a member-count badge, and expands into installed rows with no checkbox', async () => {
+    api.winetricksListInstalled.mockImplementation(() =>
+      Promise.resolve(['vcrun2019', 'foobar2000'])
+    )
+    const tree = await mount()
+    const order = topSectionOrder(tree)
+    const suggestedIndex = order.indexOf('WinetricksSuggested')
+    const installedIndex = order.indexOf('WinetricksInstalled')
+    const firstTaskGroupIndex = order.indexOf('WinetricksTaskGroup')
+    expect(suggestedIndex).toBeLessThan(installedIndex)
+    expect(installedIndex).toBeLessThan(firstTaskGroupIndex)
+
+    const group = findByClass(tree, 'WinetricksInstalled')[0]
+    const header = disclosure(group)
+    expect(header.props['aria-expanded']).toBe(false)
+    expect(
+      collectText(findByClass(group, 'WinetricksGroupHeader__count')[0])
+    ).toBe('2')
+    expect(rowVerbs(group)).toEqual([])
+    ;(header.props.onClick as () => void)()
+    const open = findByClass(again(), 'WinetricksInstalled')[0]
+    expect(rowVerbs(open)).toEqual(['vcrun2019', 'foobar2000'])
+    for (const row of findByClass(open, 'WinetricksRow')) {
+      expect(String(row.props.className)).toContain('WinetricksRow--installed')
+      expect(checkboxIn(row)).toBeUndefined()
+    }
+  })
+
+  it('appears once a run finishes installing a verb, without a remount', async () => {
+    const tree = await mount()
+    expect(findByClass(tree, 'WinetricksInstalled')).toHaveLength(0)
+
+    capturedQueueChangedListener(api)(
+      {},
+      queueStateWith({
+        verbs: ['vcrun2019'],
+        outcomes: { vcrun2019: 'installed' },
+        status: 'done'
+      })
+    )
+    api.winetricksListInstalled.mockImplementation(() =>
+      Promise.resolve(['vcrun2019'])
+    )
+    await flush()
+
+    const group = findByClass(again(), 'WinetricksInstalled')[0]
+    expect(group).toBeDefined()
+    expect(
+      collectText(findByClass(group, 'WinetricksGroupHeader__count')[0])
+    ).toBe('1')
+  })
+})
+
 describe('one selection keyed by verb (D-07, E4-partial)', () => {
   async function openRuntimes(): Promise<ElementLike> {
     const tree = await mount()
@@ -521,6 +605,38 @@ describe('run state on the rows (D-10, D-12, D-13, D-18)', () => {
     expect(
       String(rowFor(suggested(again()), 'vcrun2019').props.className)
     ).not.toContain('WinetricksRow--errored')
+  })
+
+  it('a failed row is tickable: ticking re-batches it with another verb, unticking returns it to failed (261011-txc)', async () => {
+    await mount()
+    capturedQueueChangedListener(api)(
+      {},
+      queueStateWith({
+        verbs: ['vcrun2019'],
+        outcomes: { vcrun2019: 'failed' },
+        status: 'done'
+      })
+    )
+    tick(rowFor(suggested(again()), 'vcrun2019'))
+    expect(
+      String(rowFor(suggested(again()), 'vcrun2019').props.className)
+    ).toContain('WinetricksRow--selected')
+
+    tick(rowFor(suggested(again()), 'vcrun2019'))
+    expect(
+      String(rowFor(suggested(again()), 'vcrun2019').props.className)
+    ).toContain('WinetricksRow--errored')
+
+    tick(rowFor(suggested(again()), 'vcrun2019'))
+    tick(rowFor(suggested(again()), 'vcrun2013'))
+    ;(applyButton(again()).props.onClick as () => void)()
+    await flush()
+
+    expect(api.winetricksApply).toHaveBeenCalledTimes(1)
+    expect(api.winetricksApply).toHaveBeenCalledWith('legendary', 'fake-app', [
+      'vcrun2019',
+      'vcrun2013'
+    ])
   })
 
   it('a refused Retry leaves the row failed', async () => {

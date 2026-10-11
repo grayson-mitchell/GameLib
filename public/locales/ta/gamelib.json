@@ -462,6 +462,7 @@
         "curatedGroup": "பொதுவாகத் தேவைப்படுபவை",
         "emptyBody": "இந்த bottle-க்கான Winetricks மேலான தரவை ஏற்ற முடியவில்லை.",
         "emptyHeading": "கூறுகள் எதுவும் இல்லை",
+        "installedHeading": "நிறுவப்பட்டது",
         "installFailedTag": "நிறுவல் தோல்வியடைந்தது",
         "installedTag": "நிறுவப்பட்டது",
         "retry": "மீண்டும் முயற்சிக்கவும்",

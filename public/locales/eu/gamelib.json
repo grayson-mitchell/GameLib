@@ -462,6 +462,7 @@
         "curatedGroup": "Sarritan behar direnak",
         "emptyBody": "Ezin izan dira Winetricks-en metadatuak kargatu botila honentzat.",
         "emptyHeading": "Ez dago osagairik eskuragarri",
+        "installedHeading": "Instalatuta",
         "installFailedTag": "Instalazioak huts egin du",
         "installedTag": "Instalatuta",
         "retry": "Saiatu berriro",

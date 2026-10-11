@@ -36,6 +36,7 @@ import {
 } from 'frontend/helpers/declaredUnavailable'
 import SuggestedGroup from './SuggestedGroup'
 import TaskGroup from './TaskGroup'
+import InstalledGroup from './InstalledGroup'
 import EverythingElseGroup from './EverythingElseGroup'
 import WinetricksRow from './Row'
 import StickyBar from './StickyBar'
@@ -86,7 +87,8 @@ function emptyQueueState(
     appName,
     run: null,
     busy: false,
-    environment: { unsupportedWineVersion: null, missingDependencies: [] }
+    environment: { unsupportedWineVersion: null, missingDependencies: [] },
+    revision: 0
   }
 }
 
@@ -152,6 +154,10 @@ export default function WinetricksSettings() {
   // seeded for without re-subscribing.
   const latestRun = useRef<WinetricksQueueRun | null>(null)
   const seededRunId = useRef<number | null>(null)
+  // 261011-nqe: the highest `WinetricksQueueState.revision` this tab has
+  // applied. All four state sources (mount read, push, apply reply, cancel
+  // reply) go through `takeQueueState` below, which refuses to regress it.
+  const appliedRevision = useRef(0)
 
   // Mirrors `Tools/index.tsx`'s own early return: the parent
   // (`GamesSettings`) only mounts this component when `shouldShowWinetricksTab`
@@ -181,6 +187,28 @@ export default function WinetricksSettings() {
         ? { verb: run.currentVerb, percent: signal }
         : null
     )
+  }
+
+  // 261011-nqe: the one guard every state source (mount read, push, apply
+  // reply, cancel reply) goes through. The reply is snapshotted before the
+  // run's own pushes (planning_findings F1) and the two arrive by
+  // independent paths (invoke reply vs. `winetricksQueueChanged` event), so
+  // either order is possible at the renderer. A state whose `revision` is
+  // below what this tab has already applied is a stale message racing a
+  // fresher one that already won -- it is dropped. Equal revisions ARE
+  // applied: in production only the same snapshot can share a number, and
+  // every existing fixture carries revision 0, so this is a no-op for every
+  // state source that predates 261011-nqe.
+  function takeQueueState(state: WinetricksQueueState): boolean {
+    if (state.revision < appliedRevision.current) {
+      return false
+    }
+    appliedRevision.current = state.revision
+    latestRun.current = state.run
+    setQueueState(state)
+    seedLogFrom(state.run)
+    setErroredVerbs((current) => foldRunOutcomes(current, state.run))
+    return true
   }
 
   // C-1 / D-17 (Phase 44 remount lesson): this mount's ONLY condition is
@@ -263,16 +291,16 @@ export default function WinetricksSettings() {
         setLoadingAvailable(false)
         return
       }
-      latestRun.current = stateResult.value.run
-      setQueueState(stateResult.value)
-      seedLogFrom(stateResult.value.run)
+      // 261011-nqe: a push can beat this read to the tab while it is still
+      // in flight (the mount effect's own awaits above take time), so it is
+      // routed through the same revision guard as every other state source
+      // -- a stale remount read must not regress a run a push already
+      // advanced (test 5).
       // D-18: a remounted tab rebuilds failed rows from the state the backend
       // still holds. The installed list above is already fresh, so a finished
       // run found here needs no further re-read.
-      setErroredVerbs((current) =>
-        foldRunOutcomes(current, stateResult.value.run)
-      )
-      if (stateResult.value.run?.status === 'done') {
+      const appliedMountRead = takeQueueState(stateResult.value)
+      if (appliedMountRead && stateResult.value.run?.status === 'done') {
         reloadedRunId.current = stateResult.value.run.runId
       }
 
@@ -302,15 +330,19 @@ export default function WinetricksSettings() {
       state: WinetricksQueueState
     ) {
       if (state.runner !== runner || state.appName !== appName) return
-      latestRun.current = state.run
-      setQueueState(state)
-      seedLogFrom(state.run)
-      setErroredVerbs((current) => foldRunOutcomes(current, state.run))
+      takeQueueState(state)
+      // 261011-nqe: read the newest APPLIED run, from `latestRun.current`,
+      // not this push's own `state.run`. A stale done push can be dropped by
+      // the guard above after a fresher reply already applied the done
+      // state (test 6) -- the one re-read per finished run must still fire,
+      // so it is keyed off what the tab actually holds, not off whichever
+      // message just arrived.
+      const newestRun = latestRun.current
       if (
-        state.run?.status === 'done' &&
-        reloadedRunId.current !== state.run.runId
+        newestRun?.status === 'done' &&
+        reloadedRunId.current !== newestRun.runId
       ) {
-        reloadedRunId.current = state.run.runId
+        reloadedRunId.current = newestRun.runId
         void reloadInstalled()
       }
     }
@@ -382,14 +414,22 @@ export default function WinetricksSettings() {
     })
     if (!result.ok) return
     if (result.value.accepted) {
-      latestRun.current = result.value.state.run
-      setQueueState(result.value.state)
-      seedLogFrom(result.value.state.run)
+      takeQueueState(result.value.state)
       setSelection([])
+      // 261011-nqe: captured AFTER takeQueueState, so a dropped (stale)
+      // reply still folds the newest run's OWN outcomes, not the reply's
+      // (test 2 / F5: the run can finish, and report a failure, before this
+      // reply is even read).
+      const newestRun = latestRun.current
       // A fresh attempt started for these verbs, so a previous failure no
-      // longer applies (D-15). Cleared only once the backend accepted the run:
-      // a refused Retry leaves the row failed.
-      setErroredVerbs((current) => verbs.reduce(clearVerbError, current))
+      // longer applies (D-15). Cleared only once the backend accepted the
+      // run: a refused Retry leaves the row failed. The newest run is then
+      // folded back over the clear, so a failure newer than this reply
+      // survives it -- for a fresh reply this fold is a no-op beyond what
+      // D-15 already did.
+      setErroredVerbs((current) =>
+        foldRunOutcomes(verbs.reduce(clearVerbError, current), newestRun)
+      )
     }
     // On refusal (busy/invalid), keep the current selection untouched.
   }
@@ -403,8 +443,10 @@ export default function WinetricksSettings() {
       call: () => window.api.winetricksCancelRemaining(safeRunner, appName)
     })
     if (result.ok) {
-      latestRun.current = result.value.run
-      setQueueState(result.value)
+      // 261011-nqe: guarded like every other state source, so a stale
+      // cancel reply cannot regress a run a fresher push already finished
+      // or advanced (test 4).
+      takeQueueState(result.value)
     }
   }
 
@@ -483,6 +525,25 @@ export default function WinetricksSettings() {
     direct3DVersions
   })
 
+  // Locked item 1: the five task groups are resolved ONCE per render here,
+  // feeding both the TaskGroup map below and `shownAbove`, so Everything
+  // else's unsearched list is exactly the verbs no tier above shows (Suggested
+  // + the five task groups). Installed-group members are deliberately NOT
+  // subtracted -- the locked set is Suggested + task groups only; Installed is
+  // a status view, not a partition (see InstalledGroup's own header comment).
+  const taskGroupComponents = TASK_GROUP_IDS.map(
+    (id) => [id, resolveTaskGroup(allComponents, id)] as const
+  )
+  const shownAbove = new Set<string>()
+  for (const component of [...suggested.gameSpecific, ...suggested.curated]) {
+    shownAbove.add(component.verb)
+  }
+  for (const [, components] of taskGroupComponents) {
+    for (const component of components) {
+      shownAbove.add(component.verb)
+    }
+  }
+
   // D-11/D-12: rest until a run starts; in flight while it runs; done once it
   // ends and stays done until the selection changes again.
   const barMode: 'rest' | 'inFlight' | 'done' = isRunning
@@ -560,16 +621,23 @@ export default function WinetricksSettings() {
             curated={suggested.curated}
             renderRow={renderRow}
           />
-          {TASK_GROUP_IDS.map((id) => (
+          <InstalledGroup
+            components={allComponents.filter((c) =>
+              installedForRows.includes(c.verb)
+            )}
+            renderRow={renderRow}
+          />
+          {taskGroupComponents.map(([id, components]) => (
             <TaskGroup
               key={id}
               id={id}
-              components={resolveTaskGroup(allComponents, id)}
+              components={components}
               renderRow={renderRow}
             />
           ))}
           <EverythingElseGroup
-            components={allComponents}
+            components={allComponents.filter((c) => !shownAbove.has(c.verb))}
+            catalog={allComponents}
             renderRow={renderRow}
           />
           <div className="WinetricksSettings__dock">

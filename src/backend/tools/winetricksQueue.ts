@@ -36,6 +36,15 @@ import { appendLogLine } from './winetricksOutputClassifier'
 let currentRun: WinetricksQueueRun | null = null
 let nextRunId = 1
 let applyInFlight = false
+// 261011-nqe (planning_findings F1): bumped once per `getState()` snapshot,
+// process-wide and shared across every game. The reply (invoke path) and the
+// pushes (event path) for the same run travel independent channels with no
+// ordering guarantee between them, so the renderer cannot tell which of two
+// states it holds is newer from their content alone. This counter gives it a
+// total order to compare against. The sidecar is spawned once per app
+// lifetime (F7 -- `src-tauri/src/main.rs`'s single `spawn_sidecar` call exits
+// the app on a failed spawn), so it never resets under a living renderer.
+let snapshotRevision = 0
 
 // D-16: a single listener, registered once at module load, mirrors an
 // environment-report change into a `winetricksQueueChanged` push for that
@@ -78,7 +87,10 @@ function getState(runner: Runner, appName: string): WinetricksQueueState {
         }
       : null,
     busy: isBusy(),
-    environment: getEnvironmentReport(runner, appName)
+    environment: getEnvironmentReport(runner, appName),
+    // 261011-nqe: one snapshot, one new revision, taken synchronously in this
+    // process -- so the order of these numbers IS the backend's real order.
+    revision: ++snapshotRevision
   }
 }
 
@@ -169,7 +181,6 @@ async function apply(
     }
     currentRun = run
 
-    const state = getState(runner, appName)
     sendGameStatusUpdate({ appName, runner, status: 'winetricks' })
     pushState(run)
 
@@ -183,6 +194,18 @@ async function apply(
         LogPrefix.WineTricks
       )
     })
+
+    // 261011-nqe (fix a, planning_findings F1/F5): snapshotted here, AFTER
+    // `runLoop`'s synchronous prefix has already marked the first verb
+    // `installing` and pushed it (`runLoop` :99-107 run to completion before
+    // its first `await` at :113, since calling an async function runs its
+    // body synchronously up to that point). The reply is therefore never
+    // OLDER than a push already sent for this run -- when it wins the race,
+    // the tab shows Installing at once instead of Queued for the few ms
+    // until that push lands. Ordering against LATER pushes (the run
+    // finishing before this reply is even read, F5) is the renderer's
+    // revision guard's job, not this statement's.
+    const state = getState(runner, appName)
 
     return { accepted: true, state }
   } finally {

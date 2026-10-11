@@ -462,6 +462,7 @@
         "curatedGroup": "ที่ต้องใช้บ่อย",
         "emptyBody": "ไม่สามารถโหลดข้อมูลเมทาของ Winetricks สำหรับ bottle นี้ได้",
         "emptyHeading": "ไม่มีคอมโพเนนต์ที่ใช้ได้",
+        "installedHeading": "ติดตั้งแล้ว",
         "installFailedTag": "การติดตั้งล้มเหลว",
         "installedTag": "ติดตั้งแล้ว",
         "retry": "ลองใหม่",

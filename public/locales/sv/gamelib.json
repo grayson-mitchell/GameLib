@@ -462,6 +462,7 @@
         "curatedGroup": "Ofta behövda",
         "emptyBody": "Winetricks-metadata kunde inte läsas in för denna bottle.",
         "emptyHeading": "Inga komponenter tillgängliga",
+        "installedHeading": "Installerad",
         "installFailedTag": "Installationen misslyckades",
         "installedTag": "Installerad",
         "retry": "Försök igen",

@@ -29,7 +29,11 @@ import {
   rerender,
   type MockApi
 } from './tabFixtures'
-import { TASK_GROUP_IDS } from 'common/winetricks/verbs'
+import {
+  CURATED_WINETRICKS_VERBS,
+  TASK_GROUP_IDS,
+  TASK_GROUP_MEMBERS
+} from 'common/winetricks/verbs'
 
 jest.mock('../index.scss', () => ({}), { virtual: true })
 jest.mock('../Row/index.scss', () => ({}), { virtual: true })
@@ -57,6 +61,12 @@ jest.mock('@fortawesome/react-fontawesome', () =>
 import WinetricksSettings from '../index'
 
 const CATALOG = buildCatalog()
+
+// 261011-txc: the verbs no tier above shows -- not a task-group member and
+// not curated. Every CURATED_WINETRICKS_VERBS entry is itself a task-group
+// member (see the sanity case below), so subtracting task groups alone
+// already removes Suggested's curated set too.
+const UNGROUPED = ['foobar2000', 'gdiplus_winxp']
 
 let api: MockApi
 
@@ -148,6 +158,21 @@ function taskGroup(tree: ElementLike, id: string): ElementLike {
   return found
 }
 
+describe('UNGROUPED sanity (261011-txc)', () => {
+  it('equals the catalog minus every task-group member minus every curated verb', () => {
+    const allTaskGroupMembers = new Set(
+      TASK_GROUP_IDS.flatMap((id) => TASK_GROUP_MEMBERS[id])
+    )
+    for (const verb of CURATED_WINETRICKS_VERBS) {
+      expect(allTaskGroupMembers.has(verb)).toBe(true)
+    }
+    const derived = CATALOG.filter((c) => !allTaskGroupMembers.has(c.verb)).map(
+      (c) => c.verb
+    )
+    expect(derived).toEqual(UNGROUPED)
+  })
+})
+
 describe('Everything else, collapsed (E5, D-05)', () => {
   it('is the last of the three tiers, after Suggested and the five task groups', async () => {
     const tree = await mount()
@@ -167,7 +192,7 @@ describe('Everything else, collapsed (E5, D-05)', () => {
     ])
   })
 
-  it('is collapsed by default with the catalog count as its badge and no rows or search box', async () => {
+  it('is collapsed by default with the ungrouped count as its badge and no rows or search box', async () => {
     const group = everything(await mount())
     const header = disclosure(group)
 
@@ -178,18 +203,18 @@ describe('Everything else, collapsed (E5, D-05)', () => {
     ).toBe('Everything else')
     expect(
       collectText(findByClass(group, 'WinetricksGroupHeader__count')[0])
-    ).toBe(String(CATALOG.length))
+    ).toBe(String(UNGROUPED.length))
     expect(rowVerbs(group)).toEqual([])
     expect(findAll(group, (el) => el.type === 'input')).toHaveLength(0)
   })
 })
 
 describe('Everything else, expanded', () => {
-  it('shows every catalog verb as a one-line row in parser order with no category tags and no results heading', async () => {
+  it('shows only the ungrouped verbs as one-line rows in parser order with no category tags and no results heading', async () => {
     const group = everything(await openEverything())
 
     expect(disclosure(group).props['aria-expanded']).toBe(true)
-    expect(rowVerbs(group)).toEqual(CATALOG.map((c) => c.verb))
+    expect(rowVerbs(group)).toEqual(UNGROUPED)
     for (const el of findByClass(group, 'WinetricksRow')) {
       expect(String(el.props.className)).toContain('WinetricksRow--oneLine')
     }
@@ -199,13 +224,19 @@ describe('Everything else, expanded', () => {
     ).toHaveLength(0)
   })
 
-  it('renders a plain search input in a sticky wrapper, with the placeholder as its accessible name', async () => {
+  it('renders a plain text searchbox in a sticky wrapper, with the placeholder as its accessible name', async () => {
     const group = everything(await openEverything())
     const wrapper = findByClass(group, 'WinetricksEverythingElse__search')
     expect(wrapper).toHaveLength(1)
 
     const input = searchInput(again())
-    expect(input.props.type).toBe('search')
+    // `type="search"` is the one value this must never be: WKWebView renders it
+    // as a native search field whose recent-searches chip sat over the first
+    // row's checkbox (Phase 45 live gate 45-12). `role="searchbox"` keeps the
+    // accessible role that `type="search"` would have implied.
+    expect(input.props.type).toBe('text')
+    expect(input.props.role).toBe('searchbox')
+    expect(input.props.autoComplete).toBe('off')
     expect(input.props.placeholder).toBe('Search components…')
     expect(input.props['aria-label']).toBe('Search components…')
     expect(findAll(wrapper[0], (el) => el.type === 'input')).toHaveLength(1)
@@ -222,7 +253,7 @@ describe('Everything else, expanded', () => {
   it('a one-character query leaves the full list untouched (threshold)', async () => {
     await openEverything()
     const group = everything(type('v'))
-    expect(rowVerbs(group)).toEqual(CATALOG.map((c) => c.verb))
+    expect(rowVerbs(group)).toEqual(UNGROUPED)
     expect(
       findByClass(group, 'WinetricksEverythingElse__results')
     ).toHaveLength(0)
@@ -269,7 +300,7 @@ describe('Everything else, expanded', () => {
     expect(clear).toHaveLength(1)
     ;(clear[0].props.onClick as () => void)()
     const cleared = everything(again())
-    expect(rowVerbs(cleared)).toEqual(CATALOG.map((c) => c.verb))
+    expect(rowVerbs(cleared)).toEqual(UNGROUPED)
     expect(searchInput(again()).props.value).toBe('')
     expect(findByClass(cleared, 'WinetricksEverythingElse__zero')).toHaveLength(
       0
@@ -285,6 +316,17 @@ describe('Everything else, expanded', () => {
 
     expect(collectText(row(group, 'foobar2000'))).toContain('Installed')
     expect(checkbox(group, 'foobar2000')).toBeUndefined()
+  })
+
+  it('a task-group member is absent from the unsearched list and present once a search matches it (261011-txc)', async () => {
+    const unsearched = everything(await openEverything())
+    expect(rowVerbs(unsearched)).not.toContain('vcrun2019')
+
+    const group = everything(type('vcrun2019'))
+    expect(rowVerbs(group)).toContain('vcrun2019')
+    expect(
+      findByClass(row(group, 'vcrun2019'), 'WinetricksRow__category')
+    ).toHaveLength(1)
   })
 })
 
