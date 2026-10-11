@@ -1,0 +1,26 @@
+tmpdir=C:\Users\grays\AppData\Local\Temp
+before (16):
+  gamelib-lzma-native-37008-02O1hK
+  gamelib-lzma-native-37008-02byZz
+  gamelib-lzma-native-37008-3JYAPg
+  gamelib-lzma-native-37008-4AGjOk
+  gamelib-lzma-native-37008-5pvp45
+  gamelib-lzma-native-37008-7K2l3B
+  gamelib-lzma-native-37008-7NW1ku
+  gamelib-lzma-native-37008-A4EsuC
+  gamelib-lzma-native-37008-FFX4vf
+  gamelib-lzma-native-37008-cAXik3
+  gamelib-lzma-native-37008-eNNwaZ
+  gamelib-lzma-native-37008-g8JKRk
+  gamelib-lzma-native-37008-hnUOQv
+  gamelib-lzma-native-37008-oLdp6L
+  gamelib-lzma-native-37008-s6F5ol
+  gamelib-lzma-native-37008-sRUc9e
+after (2):
+  gamelib-lzma-native-36912-unXJJK
+  gamelib-lzma-native-36912-v7y3CE
+new = after minus before (2):
+  gamelib-lzma-native-36912-unXJJK  (directory) children: node.napi.node=815616
+  gamelib-lzma-native-36912-v7y3CE  (directory) children: liblzma.dll=150528, node.napi.node=815616
+
+cleanup after verification (branch i): removed 2 after-list dir(s) whose pid probes ESRCH, 1781760 bytes deleted

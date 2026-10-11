@@ -1,0 +1,25 @@
+
+  ..\..\AppData\Local\Temp\gamelib-runts-LNmauY\measure-selftest.cjs  13.2kb
+
+Done in 22ms
+run 1/20 pass=true wall=2618ms exit=0 nativeWorkers=2
+run 2/20 pass=true wall=1838ms exit=0 nativeWorkers=2
+run 3/20 pass=true wall=1788ms exit=0 nativeWorkers=2
+run 4/20 pass=true wall=1855ms exit=0 nativeWorkers=2
+run 5/20 pass=true wall=1813ms exit=0 nativeWorkers=2
+run 6/20 pass=true wall=1944ms exit=0 nativeWorkers=2
+run 7/20 pass=true wall=1911ms exit=0 nativeWorkers=2
+run 8/20 pass=true wall=2060ms exit=0 nativeWorkers=2
+run 9/20 pass=true wall=1899ms exit=0 nativeWorkers=2
+run 10/20 pass=true wall=1944ms exit=0 nativeWorkers=2
+run 11/20 pass=true wall=1861ms exit=0 nativeWorkers=2
+run 12/20 pass=true wall=1868ms exit=0 nativeWorkers=2
+run 13/20 pass=true wall=1840ms exit=0 nativeWorkers=2
+run 14/20 pass=true wall=1924ms exit=0 nativeWorkers=2
+run 15/20 pass=true wall=1879ms exit=0 nativeWorkers=2
+run 16/20 pass=true wall=1861ms exit=0 nativeWorkers=2
+run 17/20 pass=true wall=1877ms exit=0 nativeWorkers=2
+run 18/20 pass=true wall=2002ms exit=0 nativeWorkers=2
+run 19/20 pass=true wall=2115ms exit=0 nativeWorkers=2
+run 20/20 pass=true wall=2011ms exit=0 nativeWorkers=2
+RESULT label=sweep-win32 pass=20/20 expectNativeWorkers=2
