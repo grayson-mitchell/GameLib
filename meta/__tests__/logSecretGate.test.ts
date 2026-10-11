@@ -409,10 +409,13 @@ describe('logSecretGate', () => {
       expect(report.scannedFiles).toBeGreaterThan(200)
     })
 
-    it('carries exactly 12 exemptions — adding a 13th must be a conscious act', () => {
+    // 13th added 2026-10-12: `wine --version` stdout in tools/index.ts's
+    // winetricks banner probe. A version string, not an auth command, and the
+    // raw value is what a parser fix for an unrecognised wine build needs.
+    it('carries exactly 13 exemptions — adding a 14th must be a conscious act', () => {
       const report = auditReport()
 
-      expect(report.exemptions).toHaveLength(12)
+      expect(report.exemptions).toHaveLength(13)
     })
 
     it('pins WHICH files hold them, so a silent swap at the same count still fails', () => {
@@ -425,6 +428,7 @@ describe('logSecretGate', () => {
         'src/backend/storeManagers/legendary/library.ts',
         'src/backend/storeManagers/steam/bottle.ts',
         'src/backend/storeManagers/zoom/games.ts',
+        'src/backend/tools/index.ts',
         'src/backend/utils.ts'
       ])
     })

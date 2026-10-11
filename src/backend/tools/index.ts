@@ -1154,6 +1154,7 @@ export const Winetricks = {
     }
     const version = parseWineVersionOutput(result.stdout)
     if (version === null) {
+      // log-secret-gate-exempt: stdout of `wine --version` (a version string), not an auth command
       logWarning(
         [
           'Could not parse the wine version for the winetricks environment banner:',
