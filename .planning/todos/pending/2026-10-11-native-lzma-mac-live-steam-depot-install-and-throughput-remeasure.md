@@ -59,6 +59,32 @@ Still open: item 1 (live install, end-to-end throughput) and item 3. On 2026-10-
 (`7255c2507`) was not yet an ancestor of `origin/main`, and `test.yml` runs only on pushes to
 `main`/`stable` and on PRs, so there is no linux-x64 result to read yet.
 
+## Live install 2026-10-12 (item 1: done)
+
+Baldur's Gate II: Enhanced Edition (appId 257350), installed natively under `pnpm tauri:dev`
+(vault mode) on darwin-arm64. The local 5.2.3 `build/` was moved aside first, so `node-gyp-build`
+loaded the 5.4.3 prebuild, the same binary the SEA embeds. Two macOS depots (257352, 257354),
+2465 files, 3,901,662,055 bytes on disk, buildid 23534562.
+
+- **Engaged line: 10, not 1.** It is logged once per decode-worker isolate (module-scope memo per
+  isolate), and the pool is `size=10`. "Exactly once per process" in this todo and in the
+  log line's own text should read "once per decode worker". Zero fallback or disabled warnings.
+- **Completed and verified:** `percent=100%`, `StateFlags=4`, the badge flipped to installed,
+  and `verifyMacArchGroundTruth` resolved `mac_arch '64'`. Zero `sha1_mismatch`, `size_mismatch`,
+  `ChunkDecodeError` or `Data is corrupt` lines. `inline=false` throughout.
+- **Throughput:** about 285 s from first bytes (10:15:20) to `percent=100%` (10:20:05), about
+  13 MiB/s average. 5946 attempts, 97 timeouts, 99 rotations, 6 hosts.
+- **Decode is not the bottleneck on this link.** `avgDecodeMs` was 17-26 against `avgNetMs`
+  1166-2375. The pool showed 9-10 of 10 workers idle in every stats line.
+
+**Item 2 end-to-end is effectively answered without a pure-JS reinstall.** At ~6x, pure-JS
+decode would be roughly 100-150 ms per chunk. That is still about 10% of a ~1.2 s fetch, and
+10 workers were almost always idle. On this connection a pure-JS run would finish in about the
+same wall time, so the ~6x is a CPU and latency win, not a throughput one. A pure-JS reinstall
+only becomes worth doing on a link fast enough to keep the pool busy. One caveat: the log does
+not count VZ versus VSZa (zstd) chunks, so the LZMA share of `avgDecodeMs` is not separated
+out.
+
 ## If a decode hang recurs
 
 Capture full system state first (thermal, memory pressure, concurrent I/O, not just CPU load; that
