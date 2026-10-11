@@ -344,6 +344,42 @@ async function resolvePureJs(): Promise<LzmaModule> {
     mod) as unknown as LzmaModule
 }
 
+/**
+ * 261011-wrx: one sentence describing where the SEA binding extracted the
+ * native addon (and, on win32, `liblzma.dll`) and whether the directory was
+ * removed, or `undefined` when nothing was extracted (dev or unbundled runs)
+ * or the record is malformed. Appended to the engaged line so an operator can
+ * measure Windows temp-dir accumulation from gamelib.log alone.
+ *
+ * The binding writes the record (`lzmaNativeBinding.ts`
+ * `LZMA_NATIVE_EXTRACTION_RECORD_KEY`). It crosses via a `globalThis`
+ * registry rather than a `require` of the binding, because `build:sidecar`
+ * bundles with `--packages=external` and no node-gyp-build alias: a static
+ * require would pull the binding, and its try-guarded require of the
+ * gitignored `lzmaNativeResolvedPaths.generated.cjs`, into a bundle graph
+ * that does not contain it today. The registry is isolate-scoped, matching
+ * the per-worker extraction. Never throws: the loader never rejects.
+ */
+function describeNativeExtraction(): string | undefined {
+  const record = (globalThis as unknown as Record<symbol, unknown>)[
+    Symbol.for('gamelib.lzmaNative.extraction')
+  ]
+  if (typeof record !== 'object' || record === null) {
+    return undefined
+  }
+  const { dir, leftover } = record as { dir?: unknown; leftover?: unknown }
+  if (typeof dir !== 'string' || typeof leftover !== 'boolean') {
+    return undefined
+  }
+  return leftover
+    ? `SEA extraction dir ${dir} was LEFT BEHIND: Windows cannot unlink a ` +
+        'loaded addon or the liblzma.dll it maps while this process runs, ' +
+        'so each worker of each sidecar process that engages native decode ' +
+        'leaves one gamelib-lzma-native-* dir in the OS temp dir ' +
+        '(261011-wrx); count them there to measure accumulation.'
+    : `SEA extraction dir ${dir} was removed after load.`
+}
+
 async function resolveLzmaModule(): Promise<LzmaModule> {
   if (!isNativeLzmaDecodeEnabled()) {
     decoderKind = 'pure-js'
@@ -376,6 +412,7 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
     await smokeTest(adapter)
 
     decoderKind = 'native'
+    const extraction = describeNativeExtraction()
     logInfo(
       [
         'lzmaLoader: native lzma-native decoder engaged for Steam VZ depot',
@@ -388,7 +425,8 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
         'fallback warning below present instead, is how a silently-degraded',
         "decode path (this debug arc's own prior defect, closed for the",
         "worker pool via decompressPool.ts's DecompressPool.init() logging)",
-        'is caught without another forensic round-trip.'
+        'is caught without another forensic round-trip.',
+        ...(extraction ? [extraction] : [])
       ],
       LogPrefix.Steam
     )
@@ -403,9 +441,10 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
         "(materially slower than native, see decompressWorker.ts's own",
         'header comment) but installs will still complete -- this fallback',
         'is a locked requirement, not a defect by itself. If unexpected,',
-        'check that the lzma_native.node SEA asset embedded correctly',
-        "(meta/buildSidecarSea.ts's native-asset step) and that this",
-        'platform/arch ships an lzma-native prebuild.',
+        'check that the lzma_native.node SEA asset (and, on win32, the',
+        'liblzma.dll companion SEA asset the addon imports at dlopen)',
+        "embedded correctly (meta/buildSidecarSea.ts's native-asset step)",
+        'and that this platform/arch ships an lzma-native prebuild.',
         `Cause: ${(err as Error)?.message ?? String(err)}.`
       ],
       LogPrefix.Steam

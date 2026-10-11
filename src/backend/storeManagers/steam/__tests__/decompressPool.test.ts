@@ -997,3 +997,81 @@ describe('lzmaLoader native-decode switch (default-on since 2026-10-11, off path
     expect(lzmaDecoderKind()).toBe('native')
   })
 })
+
+// 261011-wrx: the engaged line carries the SEA extraction directory and
+// whether it was removed or LEFT BEHIND, read from the per-isolate registry
+// the binding writes. The key is read from the binding's own static so a
+// literal drift between binding and loader turns these red.
+describe('lzmaLoader engaged line: native extraction directory fragment (261011-wrx)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const bindingStatics = require('../depot/lzmaNativeBinding') as {
+    LZMA_NATIVE_EXTRACTION_RECORD_KEY: string
+  }
+  const registry = globalThis as unknown as Record<symbol, unknown>
+  const recordSymbol = Symbol.for(
+    bindingStatics.LZMA_NATIVE_EXTRACTION_RECORD_KEY
+  )
+  const D = path.join(
+    process.platform === 'win32' ? 'C:\\Temp' : '/tmp',
+    'gamelib-lzma-native-4242-AbCdEf'
+  )
+
+  beforeEach(() => {
+    resetLzmaLoaderForTests()
+    setNativeLzmaDecodeEnabledForTests(true)
+    mockedLogger.logInfo.mockClear()
+    mockedLogger.logWarning.mockClear()
+  })
+
+  afterEach(() => {
+    delete registry[recordSymbol]
+    resetLzmaLoaderForTests()
+  })
+
+  function engagedText(): string {
+    expect(mockedLogger.logInfo).toHaveBeenCalledTimes(1)
+    expect(mockedLogger.logWarning).not.toHaveBeenCalled()
+    return mockedLogger.logInfo.mock.calls[0].flat(Infinity).join(' ')
+  }
+
+  it('L1: a LEFT BEHIND record names the dir and says LEFT BEHIND, in the single engaged logInfo call', async () => {
+    registry[recordSymbol] = { dir: D, leftover: true }
+    await loadLzmaModule()
+
+    const text = engagedText()
+    expect(text).toContain(D)
+    expect(text).toContain('LEFT BEHIND')
+    expect(text).toContain('gamelib-lzma-native-')
+  })
+
+  it('L2: a removed record names the dir and says "removed after load", never LEFT BEHIND', async () => {
+    registry[recordSymbol] = { dir: D, leftover: false }
+    await loadLzmaModule()
+
+    const text = engagedText()
+    expect(text).toContain(D)
+    expect(text).toContain('removed after load')
+    expect(text).not.toContain('LEFT BEHIND')
+  })
+
+  it('L3: with no record (dev or unbundled run) the line has no extraction fragment', async () => {
+    await loadLzmaModule()
+
+    const text = engagedText()
+    expect(text).not.toContain('SEA extraction dir')
+    expect(text).not.toContain('LEFT BEHIND')
+  })
+
+  it.each([['nope'], [{ dir: 42, leftover: 'x' }]])(
+    'L4: a malformed record (%j) is ignored and the loader still resolves the native decoder',
+    async (bad) => {
+      registry[recordSymbol] = bad
+      await expect(loadLzmaModule()).resolves.toBeDefined()
+
+      expect(lzmaDecoderKind()).toBe('native')
+      const text = engagedText()
+      expect(text).not.toContain('SEA extraction dir')
+      expect(text).not.toContain('LEFT BEHIND')
+    }
+  )
+})
