@@ -561,6 +561,12 @@ export default function WebView() {
   // was deliberately untouched (D-07). None of this is a flat accusation that Epic blocks
   // in-app browsing, and the mechanism is not fully explained. The Epic tile stays (D-08,
   // `NavShell/components/StoresPanel/index.tsx`) -- it now lands on the panel instead.
+  // Decided 2026-10-12 (quick 261012-d5g), the D-05 call: Option A -- adopt the Rust-managed raw
+  // WKWebView subview for /store/epic, macOS first, owned by Phase 50 (ROADMAP.md `### Phase 50`).
+  // The cold-load stall above is explained (spike 024 README, established #8 and #9), not a
+  // blocker. This guard stays on EVERY platform until Phase 50 lands, then becomes darwin-only.
+  // Decision record, in `.planning/todos/completed/`:
+  // `2026-10-12-make-the-d-05-call-epic-store-embed-as-a-rust-managed-raw-wkwebview-subview.md`
   if (store === 'epic') {
     window.api.logInfo(
       '[WebView] store=epic: /store/epic is scoped out of the embed on every platform (D-05)'

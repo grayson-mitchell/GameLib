@@ -57,8 +57,14 @@ interface Props {
  *   stays correct for the embed. Runs 17-19 (quick 261012-8gu) then
  *   attached that raw WKWebView INSIDE the main window at the embed's
  *   rect: 0 of 6 challenged, 4 of 6 rendered by 120 s, so the embed shape
- *   exists as a Rust-managed raw WKWebView -- a design decision, plus a
- *   cold-load stall todo, stand between that and this panel going away.
+ *   exists as a Rust-managed raw WKWebView. The D-05 call was made on
+ *   2026-10-12 (quick 261012-d5g): Option A, adopt that subview, macOS
+ *   first, owned by Phase 50 (ROADMAP.md `### Phase 50`). The cold-load
+ *   stall is explained (spike README, established #8 and #9), not a
+ *   blocker. Until Phase 50 lands this panel stays the `/store/epic`
+ *   answer on every platform; after it, on Windows and Linux only, where
+ *   Phase 50 re-reads this copy for truth. Decision record:
+ *   `.planning/todos/completed/2026-10-12-make-the-d-05-call-*`.
  *   The copy stays restrained, never an accusation that Epic blocks
  *   in-app browsing -- run 1 rendered the store fully; this edit does not
  *   change the user-facing copy. The Epic tile stays in
