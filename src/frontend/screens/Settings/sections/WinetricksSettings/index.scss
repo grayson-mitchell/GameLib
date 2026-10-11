@@ -147,3 +147,30 @@
 .InstallModal__dialog:has(.WinetricksSettings) {
   min-width: 0;
 }
+
+// 261011-jj1: GamesSettings/index.scss nests `section:not(:nth-of-type(0))
+// { padding-top: var(--space-xl); min-width: 500px; }` under
+// `.settingsDialogContent, .settingsWrapper`. That compiles to two
+// specificity-0,2,1 selectors, which out-specify this tab's own three
+// group `min-width: 0` declarations (specificity 0,2,0) -- `.WinetricksSuggested`,
+// `.WinetricksTaskGroup` (above) and `.WinetricksEverythingElse`
+// (`EverythingElseGroup/index.scss`). Below ~500px of paper width the groups
+// can no longer shrink and the dialog content scrolls sideways instead of
+// wrapping.
+//
+// This rule's selector scores 0,3,0, strictly above the floor's 0,2,1 in any
+// stylesheet load order -- a same-specificity 0,2,1 shape would tie the
+// floor and win only by load order, which this plan does not control. Its
+// ancestor pair mirrors the floor's own, so the release applies exactly
+// where the floor does.
+//
+// `padding-top` is deliberately NOT overridden here: whether the groups want
+// that leaked spacing, or it is an unrelated carry-over, is an open design
+// question recorded in the 261011-jj1 todo, not answered by this fix.
+//
+// Pinned by `__tests__/tokenCensus.test.ts`.
+:is(.settingsDialogContent, .settingsWrapper)
+  .WinetricksSettings
+  :is(.WinetricksSuggested, .WinetricksTaskGroup, .WinetricksEverythingElse) {
+  min-width: 0;
+}
