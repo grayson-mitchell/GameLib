@@ -163,3 +163,73 @@ flash, icon in Explorer, real double-click launch, toast render.
 The `GameSubMenu` optimistic flip to "Remove shortcuts" (send-kind `addShortcut` channel, no reply,
 corrected only on remount via `shortcutsExists`) is still open and outside this gate. NO pending
 todo carries it, so it must be filed separately to stay visible in triage.
+
+## Fix and re-gate (2026-10-12, quick 261012-9t1)
+
+**Fix.** Commit `a92897514` replaces `WScript.Shell` in `windowsShortcut.ts` with an `IShellLinkW`
++ `IPersistFile` helper that PowerShell compiles with `Add-Type`. The C# travels as one
+single-quoted line (`SHELL_LINK_CSHARP`) because `powershell.exe -Command -` parses stdin line by
+line and silently stops, with exit 0 and nothing on stderr, at a here-string opener. The argv, the
+five `GAMELIB_LNK_*` env names, the 30 s timeout, `windowsHide: true` and the exit-0-AND-`existsSync`
+success contract are unchanged. `windowsShortcut.test.ts` pins the new shape: no `WScript.Shell`,
+a one-line quote-free comment-free C#, the 18 `IShellLinkW` members in vtable order, exactly four
+one-statement stdin lines, no here-string opener, and only the five `$env:` names. It was observed
+RED first (6 failed, 10 passed) and is GREEN now (16/16; with `addShortcutsOutcome` 20/20). The
+hostile-filename spawn test now uses a Windows-legal name, so it passes on Windows.
+
+**Method.** The same two-arm design as 9aa, re-created in `scratchpad/` and deleted afterwards.
+Read-back is now a separate read-only `IShellLinkW` reader (`WScript.Shell` cannot read CJK back).
+Arguments and icon paths outside code page 1252 are also confirmed as UTF-16LE in the `.lnk` bytes.
+Every ANSI-only case is read by 9aa's `WScript.Shell` reader as well and must agree. The isolated
+arm ran twice back to back under `createFakeHomeProfile()` (profiles disposed, H1: real Desktop and
+Start Menu gained nothing). The named real-profile arm (OneDrive-redirected Desktop and real Start
+Menu Programs folder, which no fake HOME redirects) wrote four throwaway `GameLib-live-gate-*`
+shortcuts, read them back and deleted them; an independent scan from outside the script found
+nothing left in either folder.
+
+**One line per remaining check.**
+1. **PASS.** `GameLib-live-gate-Baldur's Gate — 幻想 ñ` was written in the Desktop and in the Start
+   Menu (R1D 341 ms, R1M 394 ms) and the ANSI control title likewise (R1Da 369 ms, R1Ma 393 ms);
+   all four read back and removed. Console flash: `windowsHide: true` is present (R3); the visual
+   is operator-only and not claimed.
+2. **PASS as a substitute; NOT exercised.** Double-clicking a shortcut to launch a game was NOT
+   done. Substitute: TargetPath reads back as `%SystemRoot%\explorer.exe` with the
+   `gamelib://launch?...` URL as Arguments (I1, I2, D4, R1D, R1M, R1Da, R1Ma). `gamelib` is
+   registered in HKCU and HKCR (URL Protocol present) and the open command's
+   `%USERPROFILE%\AppData\Local\GameLib\gamelib-shell.exe` exists (R2).
+3. **PASS.** The icon inside `Install Dir ñ 幻想\game.exe` reads back exactly as `<icon>,0`, is
+   extractable, and its path is present as UTF-16LE in the file's bytes (I1, I2, D5; both runs).
+   `notepad.exe,0` is unchanged (D1 to D4, R1*). Explorer rendering is operator-only.
+4. **PASS.** `Baldur's Gate — 幻想 ñ` (I2) and the bare `幻想` title (D4) are written with their
+   exact NFC filename; a non-URL target in the CJK directory reads back exactly (I4; the directory
+   name is in the bytes as UTF-16LE); a CJK argument reads back as `<url> --profile 幻想` and is in
+   the bytes (D8). The hostile ``Gate $(Get-Date) `t end`` title is still data with its exact
+   filename (I3), and the `ñ`, em dash and apostrophe controls still pass and agree with the
+   `WScript.Shell` reader (D1 to D3, D6, D7). D9 (Cyrillic, Hangul, non-BMP) is INFO: written,
+   filename round-trips.
+5. **PASS.** Unchanged: the Desktop is `%OneDrive%\Desktop`; `getPath('desktop')` equals
+   `[Environment]::GetFolderPath('Desktop')`, the registry answered, and the `.lnk` files landed
+   there (R0, R1D, R1Da). The Start Menu path matched `GetFolderPath('Programs')`.
+6. **PASS for the failure result; toast rendering operator-only.** A nonexistent parent (F1) and a
+   deny-write ACE (F2; ACE removed, exit 0) each return `{ ok: false }` with no file; the error now
+   reads `powershell exited 1: Exception calling "Write" with "5" argument(s): "The system cannot
+   find the path specified. ..."` (F1) and `"Access is denied. ... E_ACCESSDENIED"` (F2). F3 (folder
+   read-only attribute) still writes the `.lnk` (INFO). Scoped jest, local: `windowsShortcut`
+   16/16 and `addShortcutsOutcome` 4/4; `shortcutsFlows` 26 passed, 1 failed (the containment test)
+   and 4 skipped, with the `box.shortcuts.error` toast assertion among the passes.
+
+**Before to after (9aa to 9t1).** I1 FAIL to PASS; I2 FAIL to PASS; I4 FAIL to PASS; D4
+`{ ok: false }` to PASS; D5 `??` to PASS; D8 `??` to PASS; R1D FAIL to PASS; R1M FAIL to PASS. No
+regression in the controls (I3, D1 to D3, D6, D7, R1Da, R1Ma, F1, F2, H1). INFO: median write time
+480 ms and 483 ms on the two isolated runs (13 writes each) and 381 ms in the real arm, against
+9aa's about 470 ms; the `Add-Type` cost is not visible at this resolution. The `shortcutsFlows`
+containment failure ("resolves under the structurally redirected home ...") is an artifact of a
+OneDrive-redirected Desktop defeating the test's assumption, out of scope here.
+
+**CLOSED 2026-10-12 (quick 261012-9t1):** every measurable check passes on both isolated runs and
+in the real-profile arm. Residual operator-only observations, not claimed: console flash, icon
+rendering in Explorer, a real double-click launch, and the failure toast's render. The frontmatter
+is left as recorded.
+
+The `GameSubMenu` optimistic flip to "Remove shortcuts" is now carried by
+`.planning/todos/pending/2026-10-12-gamesubmenu-shows-remove-shortcuts-before-the-write-is-known.md`.
