@@ -1243,6 +1243,252 @@ describe('SteamUser', () => {
     })
   })
 
+  // ── steam-sync-false-failed-banner: a terminal CM logon rejection ──────────
+  //
+  // steam-user 5.3.0 `_handleLogOnResponse`'s default arm (AccessDenied et al.)
+  // does `_disconnect(true)` + `emit('error')` and schedules NO retry. Before
+  // this fix ensureConnected() attached its post-cold-connect grace listeners
+  // AFTER that 'error' had already fired -- they could only time out, so every
+  // rejected logon cost exactly 20 s (gamelib.log: "grace-window wait took an
+  // additional 20002ms, connected=false") and was then reported as a generic
+  // "client not ready".
+  describe('ensureConnected() — terminal CM logon rejection (steam-sync-false-failed-banner)', () => {
+    const stageStoredToken = () =>
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'isLoggedIn') return true
+        if (key === 'refreshToken') return 'stored-plaintext-token'
+        return undefined
+      })
+
+    // Lets every already-queued microtask / nextTick settle WITHOUT advancing
+    // any faked timer (setImmediate is excluded from the fake clock below).
+    const flush = async () => {
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setImmediate(r))
+      }
+    }
+
+    const makeFakeClient = () => {
+      const handlers: Record<string, (...args: any[]) => any> = {}
+      return {
+        handlers,
+        steamID: null as any,
+        logOn: jest.fn(),
+        logOff: jest.fn(),
+        getPersonas: jest.fn().mockResolvedValue({ personas: {} }),
+        once: jest.fn((event: string, cb: (...args: any[]) => any) => {
+          handlers[event] = cb
+        }),
+        on: jest.fn((event: string, cb: (...args: any[]) => any) => {
+          handlers[event] = cb
+        })
+      }
+    }
+
+    const savedSteamID = mockSteamUserInstance.steamID
+
+    beforeEach(async () => {
+      await SteamUser.logout()
+      // The real client nulls steamID in _disconnect(true) before emitting
+      // 'error'; the shared mock instance defaults it to a truthy id.
+      mockSteamUserInstance.steamID = null
+    })
+
+    afterEach(() => {
+      mockSteamUserInstance.steamID = savedSteamID
+      jest.useRealTimers()
+    })
+
+    test('AccessDenied during logOn -> ensureConnected() settles false WITHOUT waiting out the 20 s grace window', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      stageStoredToken()
+      const accessDenied = Object.assign(new Error('AccessDenied'), {
+        eresult: 15
+      })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
+      })
+
+      let settled: boolean | undefined
+      const pending = SteamUser.ensureConnected().then((r) => {
+        settled = r
+        return r
+      })
+      // No timer is advanced: a result here can only come from the rejection
+      // itself, never from the 20 s grace timeout.
+      await flush()
+      expect(settled).toBe(false)
+
+      // Drain so the test leaves no live timer behind either way.
+      await jest.advanceTimersByTimeAsync(20001)
+      await pending
+    })
+
+    test('getLogonFailure() names the rejection for the current client, and a new connect attempt clears it', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      stageStoredToken()
+      const accessDenied = Object.assign(new Error('AccessDenied'), {
+        eresult: 15
+      })
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => steamUserOnHandlers['error']?.(accessDenied))
+      })
+
+      expect(SteamUser.getLogonFailure()).toBeNull()
+      const first = SteamUser.ensureConnected()
+      await flush()
+      expect(SteamUser.getLogonFailure()).toEqual({
+        message: 'AccessDenied',
+        eresult: 15
+      })
+      await jest.advanceTimersByTimeAsync(20001)
+      await first
+
+      // A fresh logon attempt that does not fail must not inherit the old
+      // verdict.
+      mockSteamUserInstance.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          mockSteamUserInstance.steamID = { getSteamID64: () => '1' }
+          steamUserOnHandlers['loggedOn']?.({}, {})
+        })
+      })
+      const second = SteamUser.ensureConnected()
+      await flush()
+      expect(SteamUser.getLogonFailure()).toBeNull()
+      expect(await second).toBe(true)
+    })
+
+    test('a logoff-time error from a REPLACED client does not poison the current attempt, and its late loggedOn inside the grace window still succeeds', async () => {
+      // Guard against an over-eager fix: the 34.9 live gate shows a stale
+      // client's `LogonSessionReplaced` error arriving while a newer client is
+      // still logging on. That error is the OLD client's, and the grace window
+      // exists precisely for the NEW client's slow-but-successful logon.
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      stageStoredToken()
+      const clientA = makeFakeClient()
+      const clientB = makeFakeClient()
+      MockSteamUserLib.mockImplementationOnce(() => clientA)
+      MockSteamUserLib.mockImplementationOnce(() => clientB)
+
+      // Attempt 1: client A logs on normally.
+      clientA.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          clientA.steamID = { getSteamID64: () => '1' }
+          clientA.handlers['loggedOn']?.({}, {})
+        })
+      })
+      const firstPending = SteamUser.ensureConnected()
+      await flush()
+      expect(await firstPending).toBe(true)
+
+      // Attempt 2: A's socket silently dropped (steamID cleared, no error);
+      // a cold connect starts client B. While B is still logging on, A emits
+      // its stale error, then B never answers within connect's own 15 s guard.
+      clientA.steamID = null
+      clientB.logOn.mockImplementation(() => {
+        process.nextTick(() =>
+          clientA.handlers['error']?.(new Error('LogonSessionReplaced'))
+        )
+      })
+      let secondResult: boolean | undefined
+      const secondPending = SteamUser.ensureConnected().then((r) => {
+        secondResult = r
+        return r
+      })
+      await flush()
+      expect(SteamUser.getLogonFailure()).toBeNull()
+
+      // 15 s: connect's fallback resolves; ensureConnected enters the grace
+      // window (still unsettled -- no false-positive rejection short-circuit).
+      await jest.advanceTimersByTimeAsync(15001)
+      await flush()
+      expect(secondResult).toBeUndefined()
+
+      // B finally logs on inside the grace window.
+      clientB.steamID = { getSteamID64: () => '2' }
+      clientB.handlers['loggedOn']?.({}, {})
+      await flush()
+      expect(await secondPending).toBe(true)
+    })
+  })
+
+  describe('ensureConnected() — a replaced client cannot erase the current rejection (steam-sync-false-failed-banner)', () => {
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    test("a stale client's error landing right after the current client's AccessDenied leaves the rejection (and the immediate false) intact", async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] })
+      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
+        if (key === 'isLoggedIn') return true
+        if (key === 'refreshToken') return 'stored-plaintext-token'
+        return undefined
+      })
+      const makeClient = () => {
+        const handlers: Record<string, (...args: any[]) => any> = {}
+        return {
+          handlers,
+          steamID: null as any,
+          logOn: jest.fn(),
+          logOff: jest.fn(),
+          getPersonas: jest.fn().mockResolvedValue({ personas: {} }),
+          once: jest.fn((e: string, cb: (...args: any[]) => any) => {
+            handlers[e] = cb
+          }),
+          on: jest.fn((e: string, cb: (...args: any[]) => any) => {
+            handlers[e] = cb
+          })
+        }
+      }
+      await SteamUser.logout()
+      const clientA = makeClient()
+      const clientB = makeClient()
+      MockSteamUserLib.mockImplementationOnce(() => clientA)
+      MockSteamUserLib.mockImplementationOnce(() => clientB)
+      const flushAll = async () => {
+        for (let i = 0; i < 10; i++) {
+          await new Promise((r) => setImmediate(r))
+        }
+      }
+
+      clientA.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          clientA.steamID = { getSteamID64: () => '1' }
+          clientA.handlers['loggedOn']?.({}, {})
+        })
+      })
+      const first = SteamUser.ensureConnected()
+      await flushAll()
+      expect(await first).toBe(true)
+
+      // A's socket drops silently; the cold connect starts B, which the CM
+      // refuses -- and in the same tick A's own stale error is delivered.
+      clientA.steamID = null
+      clientB.logOn.mockImplementation(() => {
+        process.nextTick(() => {
+          clientB.handlers['error']?.(
+            Object.assign(new Error('AccessDenied'), { eresult: 15 })
+          )
+          clientA.handlers['error']?.(new Error('LogonSessionReplaced'))
+        })
+      })
+      let result: boolean | undefined
+      const second = SteamUser.ensureConnected().then((r) => {
+        result = r
+        return r
+      })
+      await flushAll()
+
+      expect(result).toBe(false)
+      expect(SteamUser.getLogonFailure()).toEqual({
+        message: 'AccessDenied',
+        eresult: 15
+      })
+      await jest.advanceTimersByTimeAsync(20001)
+      await second
+    })
+  })
+
   // ── quick-260814-r2d: unreadable read is not logged-out ────────────────────
   //
   // Installs a fake TokenStore through the real setTokenStore() seam, matching

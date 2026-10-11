@@ -51,6 +51,19 @@ export class SteamUser {
   private static client: InstanceType<typeof SteamUserLib> | null = null
   private static session: InstanceType<typeof LoginSession> | null = null
   private static connectingPromise: Promise<string> | null = null
+  // steam-sync-false-failed-banner: the terminal 'error' the CM ended the most
+  // recent logon attempt with (e.g. AccessDenied for a refresh token Steam no
+  // longer accepts). Tagged with the client it belongs to so an error from a
+  // REPLACED client (the old one's LogonSessionReplaced arriving while a newer
+  // client is still logging on, seen in the 34.9 live gate) can never be
+  // mistaken for the current attempt's verdict. Reset at the start of every
+  // connectSteamUserClient(). Read through getLogonFailure(), which hands out
+  // only message + eresult -- never the client, never the token.
+  private static logonFailure: {
+    client: InstanceType<typeof SteamUserLib>
+    message: string
+    eresult?: number
+  } | null = null
   private static qrSessionState: {
     status: 'waiting' | 'done' | 'error'
     username?: string
@@ -129,6 +142,21 @@ export class SteamUser {
   }
 
   // ── LIB-01: Reconnect on startup ───────────────────────────────────────────
+
+  /**
+   * The terminal CM error the CURRENT client's most recent logon attempt ended
+   * with, or null when there is none (never attempted, still in flight, or the
+   * attempt succeeded). Lets a caller whose ensureConnected() returned false
+   * tell "Steam refused this logon" (AccessDenied: steam-user schedules no
+   * retry, so waiting or retrying the same token replays the refusal) from
+   * "not connected yet". Carries message + eresult only: no client handle, no
+   * token. See the `logonFailure` field doc.
+   */
+  static getLogonFailure(): { message: string; eresult?: number } | null {
+    const failure = this.logonFailure
+    if (!failure || failure.client !== this.client) return null
+    return { message: failure.message, eresult: failure.eresult }
+  }
 
   /**
    * Ensure a live, authenticated steam-user client exists. The client is an
@@ -279,6 +307,31 @@ export class SteamUser {
 
     if (this.client?.steamID) return true
 
+    // steam-sync-false-failed-banner: if the CM already ended this attempt with
+    // a terminal 'error' (AccessDenied for a refresh token Steam no longer
+    // accepts, InvalidPassword, ...), there is nothing left to wait for. The
+    // grace window below listens for a FUTURE 'loggedOn'/'error', but that
+    // 'error' has already fired -- it is the very event connectSteamUserClient
+    // resolved on -- so the listeners would only ever time out: a guaranteed
+    // 20 s of dead wait (gamelib.log: "grace-window wait took an additional
+    // 20002ms, connected=false"). steam-user schedules no retry after such an
+    // error either (09-logon.js _handleLogOnResponse default arm:
+    // _disconnect(true) + emit('error'), no _enqueueLogonAttempt), so this is
+    // not a reconnect in progress.
+    //
+    // The grace window below is NOT removed: it still serves the case it was
+    // written for -- connectSteamUserClient's 15 s guard resolving its
+    // fallback BEFORE any event, with the logon genuinely still in flight.
+    const rejection = this.getLogonFailure()
+    if (rejection) {
+      logWarning(
+        `Steam: the CM rejected the stored-credential logon (${rejection.message}) — ` +
+          'steam-user schedules no retry after this, so not waiting out the reconnect grace window',
+        LogPrefix.Steam
+      )
+      return false
+    }
+
     // debug/steam-relogin-no-autorefresh: connectSteamUserClient's own 15s
     // timeout is calibrated for the LOGIN UX (give up waiting for a persona
     // name and show a placeholder) — it resolves via a fallback the instant
@@ -346,6 +399,7 @@ export class SteamUser {
     // re-login does not await a stale QR-connect promise (Rule 1 — logout must
     // reset all connection state).
     this.connectingPromise = null
+    this.logonFailure = null
     this.session = null
     this.qrSessionState = { status: 'waiting' }
     this.qrLastLoggedStatus = null
@@ -428,6 +482,9 @@ export class SteamUser {
 
     const client = new SteamUserLib({ enablePicsCache: false })
     this.client = client
+    // A new attempt starts with a clean slate: a verdict from a previous
+    // attempt must never be reported against this one.
+    this.logonFailure = null
 
     return new Promise<string>((resolve) => {
       const timeout = setTimeout(() => {
@@ -485,6 +542,15 @@ export class SteamUser {
           ['Steam client error, username unavailable:', err],
           LogPrefix.Steam
         )
+        // Only the CURRENT client's error is this attempt's verdict -- see the
+        // logonFailure field doc for the replaced-client case.
+        if (this.client === client) {
+          this.logonFailure = {
+            client,
+            message: err.message,
+            eresult: (err as Error & { eresult?: number }).eresult
+          }
+        }
         resolve('Steam User')
       })
 
