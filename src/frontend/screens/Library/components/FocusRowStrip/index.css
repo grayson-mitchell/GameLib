@@ -68,7 +68,8 @@
    its own padding inside its border box, which every engine counts. Logical
    properties: this app ships RTL locales (ar, fa, he).
    `scrollFocusedCardIntoViewHorizontally` reads this padding at call time (D-06,
-   no code change: it follows to 15px). */
+   no code change: it follows to 15px). The wide hero is cleared by its own
+   hover scale (the hero ring rule below), not by this padding. */
 .focusRowTrack .gameList {
   display: flex;
   flex-wrap: nowrap;
@@ -121,6 +122,29 @@
 .focusRowTrack .gameList > :is(.justPlayed, :has(.justPlayed)) {
   flex: 0 0 calc(2 * var(--focus-row-card-width, 156px) + 1.5rem);
   width: calc(2 * var(--focus-row-card-width, 156px) + 1.5rem);
+}
+
+/* 261011-ulj hero ring clearance (Claude's discretion). At the grid's 1.05
+   scale a hovered or focused hero of width W = 2w + 24 has a 3px ring at +2px
+   offset that reaches 0.025W + 5.25 = 0.05w + 5.85px past its unscaled edge:
+   12.85 / 13.65 / 15.25 / 21.85px at 140 / 156 / 188 / 320. The list's 15px
+   inline padding is short above a 183px tile, and padding cannot fix it: the
+   viewport's start bleed must equal the padding to keep the grid alignment, and
+   `.App .content` clips at the outer edge of the strip's 16px gutter, so no
+   padding can buy more than 16px (5.85px short at 320). So the hero scales less
+   inside the strip. At 1.025 the reach is 0.0125W + 5.125 = 0.025w + 5.425:
+   8.93 / 9.33 / 10.13 / 13.43px, within 0.175px of a single tile's own reach,
+   and the hero grows by the same number of pixels per side as its neighbours.
+   The hero is cleared by its own scale, not by the list padding above.
+   Specificity: this rule is (0,4,0). It beats `.gameCard:hover` and
+   `.gameCard:focus-within` at (0,2,0), and it loses to the `body.controllerLayout`
+   and `body.keyboardNav` `.gameCard:hover:not(:focus-within)` resets at (0,4,1)
+   and to the mouse-only stale-focus reset at (0,7,1). Every existing
+   `transform: none` therefore still wins, and only the scale value changes. No
+   `!important`. */
+.focusRowTrack .gameCard.justPlayed:hover,
+.focusRowTrack .gameCard.justPlayed:focus-within {
+  transform: scale(1.025);
 }
 
 .focusRowStrip .libraryHeader {

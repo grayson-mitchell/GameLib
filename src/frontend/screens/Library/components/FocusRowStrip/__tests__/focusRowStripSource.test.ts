@@ -217,8 +217,8 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
 
   // How far past an unscaled edge the ring reaches when a length `side` (the
   // card's width or height) is scaled about its centre.
-  const reach = (side: number) =>
-    (side / 2 + ringWidth + ringOffset) * scale - side / 2
+  const reach = (side: number, atScale: number = scale) =>
+    (side / 2 + ringWidth + ringOffset) * atScale - side / 2
 
   it('non-vacuity: the parsed geometry is the shipped one (140px floor, 320px ceiling, 13.25 and 17.97 reach)', () => {
     expect(minWidth).toBe(140)
@@ -254,6 +254,70 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
     // The slope dominates the reach's slope, so the claim holds at every
     // width between and beyond, not only at the two probed.
     expect(k).toBeGreaterThanOrEqual((scale - 1) / 2 / cardRatio)
+  })
+
+  describe('hero ring clearance (261011-ulj, operator-delegated)', () => {
+    // The hero is two tile widths plus one gap wide. 24 is the 1.5rem gap at the
+    // 16px root `styles/_typography.scss` sets on `:root` (the same convention
+    // `focusRowOverflow.ts`'s FALLBACK_CARD_GAP comment uses).
+    const HERO_GAP = 24
+    const heroSide = (w: number) => 2 * w + HERO_GAP
+    const heroBlocks = cssBlocks(
+      css,
+      /\.focusRowTrack \.gameCard\.justPlayed:hover,\s*\.focusRowTrack \.gameCard\.justPlayed:focus-within/
+    )
+    const heroScale = parsed(
+      heroBlocks.find((b) => /transform:/.test(b)) ?? '',
+      /transform:\s*scale\(\s*(\d+(?:\.\d+)?)\s*\)/,
+      FOCUS_ROW_CSS_PATH,
+      'the strip hero hover/focus transform: scale()'
+    )
+    const heroRatioMatch = cssBlock(gameCard, '.gameCard.justPlayed').match(
+      /aspect-ratio:\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*;/
+    )
+    if (!heroRatioMatch) {
+      throw new Error(
+        `${GAME_CARD_CSS_PATH}: no .gameCard.justPlayed aspect-ratio`
+      )
+    }
+    const heroRatio = Number(heroRatioMatch[1]) / Number(heroRatioMatch[2])
+
+    it('the strip hero scale is strictly below the grid scale and carries no !important', () => {
+      expect(heroBlocks).toHaveLength(1)
+      expect(heroScale).toBeGreaterThan(1)
+      expect(heroScale).toBeLessThan(scale)
+      expect(heroBlocks[0]).not.toMatch(/!important/)
+    })
+
+    it('the hero ring reach at the widest slider tile fits the list inline padding', () => {
+      expect(heroSide(supremumWidth)).toBe(664)
+      expect(reach(heroSide(supremumWidth), heroScale)).toBeCloseTo(13.425, 3)
+      expect(reach(heroSide(supremumWidth), heroScale)).toBeLessThanOrEqual(
+        inlinePadding
+      )
+    })
+
+    it('non-vacuity: at the grid scale the same hero would reach past the 16px gutter, so no padding could clear it', () => {
+      expect(reach(heroSide(supremumWidth))).toBeCloseTo(21.85, 2)
+      expect(reach(heroSide(supremumWidth))).toBeGreaterThan(16)
+    })
+
+    it('the hero vertical reach is covered by the list margin-block at both slider bounds', () => {
+      const m = list.match(
+        /margin-block:\s*max\(\s*var\(--space-md\)\s*,\s*calc\(\s*var\(--focus-row-card-width,\s*(\d+(?:\.\d+)?)px\)\s*\*\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)px\s*\)\s*\)\s*;/
+      )
+      if (!m) {
+        throw new Error(
+          'no linear margin-block term on .focusRowTrack .gameList'
+        )
+      }
+      const [k, b] = [Number(m[2]), Number(m[3])]
+      for (const w of [minWidth, supremumWidth]) {
+        expect(k * w + b).toBeGreaterThanOrEqual(
+          reach(heroSide(w) / heroRatio, heroScale)
+        )
+      }
+    })
   })
 
   it('WR-04: the track declares scroll-padding-inline equal to the list padding, so a Tab-focused edge card keeps its ring clear of the clip and the chevron', () => {
