@@ -256,6 +256,12 @@ export function useStoreEmbedHost({
 
     let trailingHandle: ReturnType<typeof setTimeout> | null = null
     let lastFlushAt = 0
+    // The zoom factor the most recent flush converted with, so the MutationObserver below can
+    // tell a real zoom publish from an unrelated write to the root's style attribute.
+    let lastSentFactor = 1
+    // Set by the cleanup. The open follow-up below resolves asynchronously and must not schedule
+    // a send for a slot this effect no longer owns.
+    let disposed = false
 
     // The ONLY place in the renderer that reads a rect and sends bounds (grep-checked by this
     // plan's own acceptance criteria). `slot.getBoundingClientRect()` is the sole SOURCE of both
@@ -265,10 +271,9 @@ export function useStoreEmbedHost({
     // logical px Rust positions in (quick 261012-gn8, W8). It is a unit conversion, read fresh on
     // every flush and never cached, and it never supplies a rect of its own.
     const flush = () => {
-      const bounds = scaleRectForZoom(
-        slot.getBoundingClientRect(),
-        readWebviewZoomFactor()
-      )
+      const factor = readWebviewZoomFactor()
+      lastSentFactor = factor
+      const bounds = scaleRectForZoom(slot.getBoundingClientRect(), factor)
       if (!openedRef.current) {
         openedRef.current = true
         // CR-02: seed here so a slot that arrives AFTER a start-url change (e.g. cold start on
@@ -278,9 +283,23 @@ export function useStoreEmbedHost({
         // has not already recorded as current, and this line records it in the same render pass,
         // before that effect's own equality check runs.
         previousUrlRef.current = startUrl
-        window.api.storeEmbedOpen(startUrl, bounds, storeKey).catch((error) => {
-          logNavCallFailure('storeEmbedOpen', error)
-        })
+        window.api
+          .storeEmbedOpen(startUrl, bounds, storeKey)
+          // Follow every successful open with a throttled bounds send (W8, quick 261012-gn8). On
+          // macOS and Windows, `src-tauri/src/main.rs` `store_embed_open`'s existing-embed branch
+          // shows and navigates but does not apply the rect, and on every return to a store route
+          // the remount's only ResizeObserver observation is consumed by this very open. Without
+          // this, a zoom change or window resize made while away from the route leaves the embed
+          // at stale geometry. Rust's zero-area guard on `store_embed_set_bounds` still drops a
+          // 0x0 rect. On a fresh create, and on Linux (which re-applies the rect inside open),
+          // this re-sends the same rect, which is harmless. It goes through `scheduleFlush` ->
+          // `flush`, so it is not a second `storeEmbedSetBounds` call site.
+          .then((result) => {
+            if (!disposed && result?.status === 'ok') scheduleFlush()
+          })
+          .catch((error) => {
+            logNavCallFailure('storeEmbedOpen', error)
+          })
       } else {
         window.api.storeEmbedSetBounds(bounds)
       }
@@ -346,8 +365,33 @@ export function useStoreEmbedHost({
     window.addEventListener('resize', scheduleFlush)
     window.addEventListener('scroll', scheduleFlush, true)
 
+    // Re-send when the webview zoom is PUBLISHED (W8, quick 261012-gn8). The trigger is the
+    // property write, not `resize`/the ResizeObserver: `publishWebviewZoom` writes
+    // `--webview-zoom` only after `setZoom` resolves, so a zoom-caused resize can run first and
+    // read the stale factor. Fires only when the factor actually changed since the last send, so
+    // an unrelated write to the root's style (theme, font) sends nothing, and every send still
+    // goes through the 40 ms throttle. Guarded because node-env harnesses
+    // (`storeEmbedReloadLoop.test.tsx`) run the real hook with no DOM; both globals always exist
+    // in a webview.
+    let zoomObserver: MutationObserver | null = null
+    if (
+      typeof MutationObserver === 'function' &&
+      typeof document !== 'undefined' &&
+      document.documentElement
+    ) {
+      zoomObserver = new MutationObserver(() => {
+        if (readWebviewZoomFactor() !== lastSentFactor) scheduleFlush()
+      })
+      zoomObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['style']
+      })
+    }
+
     return () => {
+      disposed = true
       observer.disconnect()
+      zoomObserver?.disconnect()
       window.removeEventListener('resize', scheduleFlush)
       window.removeEventListener('scroll', scheduleFlush, true)
       if (trailingHandle !== null) clearTimeout(trailingHandle)

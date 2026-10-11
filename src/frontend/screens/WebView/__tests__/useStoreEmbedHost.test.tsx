@@ -146,6 +146,34 @@ class MockResizeObserver {
   globalThis as unknown as { ResizeObserver: typeof MockResizeObserver }
 ).ResizeObserver = MockResizeObserver
 
+// Stand-in for the DOM's MutationObserver (quick 261012-gn8), absent under `testEnvironment:
+// 'node'`. Unlike the ResizeObserver stub, `observe()` does NOT auto-fire: a real
+// MutationObserver reports only LATER mutations, never the current state.
+class MockMutationObserver {
+  static instances: MockMutationObserver[] = []
+  callback: () => void
+  observed: unknown = null
+  options: unknown = null
+  disconnected = false
+  constructor(callback: () => void) {
+    this.callback = callback
+    MockMutationObserver.instances.push(this)
+  }
+  observe(target?: unknown, options?: unknown): void {
+    this.observed = target ?? null
+    this.options = options ?? null
+  }
+  disconnect(): void {
+    this.disconnected = true
+  }
+  trigger(): void {
+    this.callback()
+  }
+}
+;(
+  globalThis as unknown as { MutationObserver: typeof MockMutationObserver }
+).MutationObserver = MockMutationObserver
+
 // A minimal real event registry (not a jest.fn() stub) so `beforeunload`/`resize`/`scroll`
 // listeners the hook registers can actually be dispatched by name from within a test, mirroring
 // `window`'s real addEventListener/removeEventListener contract closely enough for this hook's
@@ -195,15 +223,17 @@ function dispatchWindowEvent(type: string): void {
 // not a constant, because later tests mutate it mid-test to model the preload publishing
 // `--webview-zoom` after `setZoom` resolves.
 let rootZoomValue = ''
+// One stable object, so a test can prove which element the MutationObserver is bound to.
+const rootStub = {
+  style: {
+    getPropertyValue: (name: string) =>
+      name === '--webview-zoom' ? rootZoomValue : ''
+  }
+}
 function setRootZoom(value: string): void {
   rootZoomValue = value
   ;(globalThis as unknown as { document: unknown }).document = {
-    documentElement: {
-      style: {
-        getPropertyValue: (name: string) =>
-          name === '--webview-zoom' ? rootZoomValue : ''
-      }
-    }
+    documentElement: rootStub
   }
 }
 
@@ -1178,7 +1208,30 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
   describe('zoom-aware bounds (quick 261012-gn8, W8)', () => {
     const R = { x: 10, y: 20, width: 300, height: 400 }
 
+    type Sent = { x: number; y: number; w: number; h: number }
+    const lastBounds = (): Sent => {
+      const calls = mockApi.storeEmbedSetBounds.mock.calls as unknown as [
+        Sent
+      ][]
+      return calls[calls.length - 1][0]
+    }
+    const firstOpenBounds = (): Sent => {
+      const calls = mockApi.storeEmbedOpen.mock.calls as unknown as [
+        string,
+        Sent,
+        string
+      ][]
+      return calls[0][1]
+    }
+    const expectBounds = (got: Sent, want: Sent): void => {
+      expect(got.x).toBeCloseTo(want.x)
+      expect(got.y).toBeCloseTo(want.y)
+      expect(got.w).toBeCloseTo(want.w)
+      expect(got.h).toBeCloseTo(want.h)
+    }
+
     beforeEach(() => {
+      MockMutationObserver.instances = []
       setRootZoom('')
     })
 
@@ -1212,16 +1265,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       jest.advanceTimersByTime(40)
 
       expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
-      const bounds = mockApi.storeEmbedOpen.mock.calls[0][1] as {
-        x: number
-        y: number
-        w: number
-        h: number
-      }
-      expect(bounds.x).toBeCloseTo(12)
-      expect(bounds.y).toBeCloseTo(24)
-      expect(bounds.w).toBeCloseTo(360)
-      expect(bounds.h).toBeCloseTo(480)
+      expectBounds(firstOpenBounds(), { x: 12, y: 24, w: 360, h: 480 })
     })
 
     // Z2. Observed-red mutation: scaling only the open branch (leaving `setBounds` on the raw
@@ -1239,16 +1283,146 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       jest.advanceTimersByTime(40)
 
       expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
-      const bounds = mockApi.storeEmbedSetBounds.mock.calls[0][0] as {
-        x: number
-        y: number
-        w: number
-        h: number
-      }
-      expect(bounds.x).toBeCloseTo(6)
-      expect(bounds.y).toBeCloseTo(18)
-      expect(bounds.w).toBeCloseTo(768)
-      expect(bounds.h).toBeCloseTo(576)
+      expectBounds(lastBounds(), { x: 6, y: 18, w: 768, h: 576 })
+    })
+
+    // Z3. The preload publishes `--webview-zoom` only AFTER `setZoom` resolves, and the zoom
+    // change is made on another screen, so with the store route mounted there may be NO
+    // ResizeObserver tick at all. Observed-red mutation: deleting the MutationObserver (relying on
+    // resize/RO alone) turns this red -- nothing would re-send after the publish.
+    it('Z3. a zoom publish while mounted re-sends scaled bounds with no ResizeObserver tick', () => {
+      setRootZoom('1')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+      mockApi.storeEmbedSetBounds.mockClear()
+
+      setRootZoom('1.2')
+      MockMutationObserver.instances[0].trigger()
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedSetBounds).toHaveBeenCalled()
+      expectBounds(lastBounds(), { x: 12, y: 24, w: 360, h: 480 })
+    })
+
+    // Z3b. A resize caused by the zoom change can be observed BEFORE the factor is published, and
+    // then reads the stale factor. Observed-red mutation: keying the re-flush on `resize`/RO
+    // instead of on the property write itself leaves the last send at R2 x 1 -- red.
+    it('Z3b. a send made with a stale factor is corrected once the new factor is published', () => {
+      setRootZoom('1')
+      const { ref, setRect } = makeSlot(R)
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+
+      setRect({ x: 5, y: 15, width: 640, height: 480 })
+      MockResizeObserver.instances[0].trigger() // still the stale factor 1
+      expectBounds(lastBounds(), { x: 5, y: 15, w: 640, h: 480 })
+
+      setRootZoom('1.2')
+      MockMutationObserver.instances[0].trigger()
+      jest.advanceTimersByTime(40)
+
+      expectBounds(lastBounds(), { x: 6, y: 18, w: 768, h: 576 })
+    })
+
+    // Z4. Observed-red mutation: deleting the `factor !== lastSentFactor` comparison in the MO
+    // callback (always `scheduleFlush`) turns this red -- a theme or font write on the root would
+    // re-send bounds for no reason (T-261012-gn8-03).
+    it('Z4. a root style mutation that leaves the factor unchanged sends nothing', () => {
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(100)
+      mockApi.storeEmbedSetBounds.mockClear()
+
+      MockMutationObserver.instances[0].trigger()
+      jest.advanceTimersByTime(100)
+
+      expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
+    })
+
+    // Z5. Observed-red mutation: dropping `attributeFilter`, observing another node, or omitting
+    // `mo.disconnect()` from the cleanup turns this red (mirrors properties 20/21 for the RO).
+    it('Z5. the MutationObserver watches the root style attribute and is disconnected on unmount and on slot replacement', () => {
+      const a = makeSlot(R)
+      const options: MountOptions = { slotRef: a.ref }
+      mount(options)
+
+      expect(MockMutationObserver.instances).toHaveLength(1)
+      const first = MockMutationObserver.instances[0]
+      expect(first.observed).toBe(rootStub)
+      expect(first.options).toEqual({
+        attributes: true,
+        attributeFilter: ['style']
+      })
+
+      reinvoke({
+        ...options,
+        slotRef: { current: null } as RefObject<HTMLDivElement>
+      })
+      expect(first.disconnected).toBe(true)
+      expect(
+        MockMutationObserver.instances.filter((o) => !o.disconnected)
+      ).toHaveLength(0)
+
+      const b = makeSlot(R)
+      reinvoke({ ...options, slotRef: b.ref })
+      const live = MockMutationObserver.instances.filter((o) => !o.disconnected)
+      expect(live).toHaveLength(1)
+
+      harness().__unmount()
+      expect(live[0].disconnected).toBe(true)
+    })
+
+    // Z6. On macOS/Windows the Rust existing-embed open arm shows and navigates but drops the
+    // rect, and the remount's only RO observation is consumed by that open. Observed-red mutation:
+    // deleting the `.then(() => scheduleFlush())` follow-up turns this red -- the rect changed
+    // while away (R3) would never be applied.
+    it('Z6. a successful open is followed by one throttled setBounds carrying the current scaled rect', async () => {
+      setRootZoom('1.2')
+      const { ref, setRect } = makeSlot(R)
+      mount({ slotRef: ref })
+
+      setRect({ x: 20, y: 30, width: 500, height: 250 }) // R3, no RO tick
+      await Promise.resolve()
+      await Promise.resolve()
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
+      expectBounds(lastBounds(), { x: 24, y: 36, w: 600, h: 300 })
+    })
+
+    // Z7. Observed-red mutation: deleting the disposed check in the follow-up turns this red -- a
+    // detached slot's zero rect would be scheduled after unmount (T-261012-gn8-05).
+    it('Z7. no follow-up is sent once the effect was disposed before the open resolved', async () => {
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+      harness().__unmount()
+
+      await Promise.resolve()
+      await Promise.resolve()
+      jest.advanceTimersByTime(100)
+
+      expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
+    })
+
+    // Z8. Observed-red mutation: deleting the `status === 'ok'` check turns this red -- a failed
+    // open would still be chased by a setBounds at an embed that does not exist.
+    it('Z8. an open that resolves with status error is not followed by setBounds', async () => {
+      mockApi.storeEmbedOpen.mockResolvedValue({
+        status: 'error' as const,
+        error: 'x'
+      })
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+
+      await Promise.resolve()
+      await Promise.resolve()
+      jest.advanceTimersByTime(100)
+
+      expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
     })
   })
 })
