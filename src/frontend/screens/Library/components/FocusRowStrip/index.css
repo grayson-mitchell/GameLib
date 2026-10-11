@@ -96,6 +96,33 @@
   width: var(--focus-row-card-width, 156px);
 }
 
+/* 261011-ulj D-01 (operator decision 2026-10-11, "Restore wide hero"): the
+   just-played hero is the first card of the Recently played and Favourites
+   strips, and its slot is two tile widths plus one gap, mirroring
+   `grid-column: span 2` in the grid's 1.5rem-gap columns. GameCard already
+   renders the 16:10 art and the PLAY label for it; only the slot was wrong.
+   Both arms are needed. The pre-reveal GameCard is the `.gameCard.justPlayed`
+   div itself, a direct list child. The revealed GameCard is a plain div, then
+   ContextMenu's own div, then `.gameCard.justPlayed`, so the `:has` must be a
+   descendant test, never a child-combinator one, exactly like the grid's span-2
+   rule in Library/index.css. `:is()` takes a forgiving selector list, so an
+   engine without `:has()` keeps the pre-reveal arm instead of dropping the
+   whole rule. Specificity is (0,3,0) because `:is()` takes its most specific
+   argument, (0,1,0); that beats the `> *` rule's (0,2,0) whatever the source
+   order. The 1.5rem must stay the same text as the list's `gap` and the grid's
+   `grid-gap`. The hero is only ever the list's first rendered card (GamesList
+   marks index 0 of those two views), and its slot plus the following gap is
+   exactly two pitches, so every later card stays on a grid column. Height:
+   against GameCard's untouched 275/205 hero ratio and the 173/275 portrait
+   ratio the heights are equal near a 181px tile; the hero is +4.1px at 140,
+   +2.5px at 156, -0.7px at 188 and -13.7px at 320, the same residual the old
+   span-2 lane had. The width is pinned as well as the basis for the same
+   G-48-11b reason as the rule above. */
+.focusRowTrack .gameList > :is(.justPlayed, :has(.justPlayed)) {
+  flex: 0 0 calc(2 * var(--focus-row-card-width, 156px) + 1.5rem);
+  width: calc(2 * var(--focus-row-card-width, 156px) + 1.5rem);
+}
+
 .focusRowStrip .libraryHeader {
   overflow: hidden;
   text-overflow: ellipsis;

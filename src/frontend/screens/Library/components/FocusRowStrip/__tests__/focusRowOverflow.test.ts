@@ -425,6 +425,40 @@ describe('measureCardPitch', () => {
     )
     expect(pitch).toBe(224)
   })
+
+  it('measures the second child, not a double-width hero first card (261011-ulj D-02)', () => {
+    const track = {
+      firstElementChild: {
+        firstElementChild: {
+          getBoundingClientRect: () => ({ width: 336 }),
+          nextElementSibling: {
+            getBoundingClientRect: () => ({ width: 156 })
+          }
+        }
+      }
+    }
+    expect(
+      measureCardPitch(track as unknown as Element, () => ({
+        columnGap: '24px'
+      }))
+    ).toBe(180)
+  })
+
+  it('falls back to a lone first child when there is no sibling (261011-ulj D-02)', () => {
+    const track = {
+      firstElementChild: {
+        firstElementChild: {
+          getBoundingClientRect: () => ({ width: 156 }),
+          nextElementSibling: null
+        }
+      }
+    }
+    expect(
+      measureCardPitch(track as unknown as Element, () => ({
+        columnGap: '24px'
+      }))
+    ).toBe(180)
+  })
 })
 
 describe('next-frame runner (G-48-11a, WR-01)', () => {

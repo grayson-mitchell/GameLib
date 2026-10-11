@@ -331,6 +331,79 @@ describe('FocusRowStrip/index.css -- .focusRowTrack .gameList > * (G-48-8c, reta
   })
 })
 
+describe('FocusRowStrip/index.css -- wide just-played hero slot (261011-ulj D-01)', () => {
+  // GamesList marks index 0 of the Recently played and Favourites views
+  // `justPlayed`, and GameCard already renders the 16:10 art and the PLAY label
+  // for it. The strip only has to give it two tile widths plus one gap.
+  //
+  // The `:has` MUST be a descendant test. Pre-reveal, GameCard returns the
+  // `.gameCard.justPlayed` div as the list's direct child. Once revealed, it is
+  // a plain div wrapping ContextMenu's own div wrapping `.gameCard.justPlayed`,
+  // so a child-combinator `:has` would miss the revealed form. The grid's
+  // span-2 rule in Library/index.css uses the descendant form for the same
+  // reason.
+  const css = read(FOCUS_ROW_CSS_PATH)
+  const HERO_SELECTOR =
+    '.focusRowTrack .gameList > :is(.justPlayed, :has(.justPlayed))'
+  const block = cssBlock(css, HERO_SELECTOR)
+  const cardBlock = cssBlock(css, '.focusRowTrack .gameList > *')
+  const stripList = cssBlock(css, '.focusRowTrack .gameList')
+  const gridList = cssBlock(read(LIBRARY_CSS_PATH), '.gameList')
+
+  const CALC =
+    /calc\(\s*2\s*\*\s*var\(--focus-row-card-width,\s*(\d+(?:\.\d+)?)px\)\s*\+\s*([^)]+?)\s*\)/
+  const flexCalc = block.match(
+    new RegExp(`flex:\\s*0\\s+0\\s+(${CALC.source})\\s*;`)
+  )
+  const widthCalc = block.match(
+    new RegExp(`(?:^|[;\\s])width:\\s*(${CALC.source})\\s*;`)
+  )
+
+  it('declares flex and width as calc(2 * var(--focus-row-card-width, Npx) + G)', () => {
+    expect(flexCalc).not.toBeNull()
+    expect(widthCalc).not.toBeNull()
+  })
+
+  it('the flex and width calc text is identical', () => {
+    expect(flexCalc?.[1]).toBeDefined()
+    expect(flexCalc?.[1]).toBe(widthCalc?.[1])
+  })
+
+  it('N equals the > * rule fallback and the default tile width', () => {
+    const cardFallback = Number(
+      cardBlock.match(
+        /flex:\s*0\s+0\s+var\(--focus-row-card-width,\s*(\d+(?:\.\d+)?)px\)\s*;/
+      )?.[1]
+    )
+    expect(Number.isFinite(cardFallback)).toBe(true)
+    expect(Number(flexCalc?.[2])).toBe(cardFallback)
+    expect(Number(flexCalc?.[2])).toBe(LIBRARY_TILE_WIDTH_DEFAULT)
+  })
+
+  it('G equals the strip list gap text and the grid grid-gap text', () => {
+    const stripGap = stripList.match(/(?:^|[\s;])gap:\s*([^;]+);/)?.[1]?.trim()
+    const gridGap = gridList.match(/grid-gap:\s*([^;]+);/)?.[1]?.trim()
+    expect(gridGap).toBeDefined()
+    expect(flexCalc?.[3]?.trim()).toBe(stripGap)
+    expect(flexCalc?.[3]?.trim()).toBe(gridGap)
+  })
+
+  it('every :has( argument opens with .justPlayed (the descendant form)', () => {
+    const all = css.match(/:has\(/g)?.length ?? 0
+    const descendant = css.match(/:has\(\.justPlayed\)/g)?.length ?? 0
+    expect(descendant).toBeGreaterThan(0)
+    expect(all).toBe(descendant)
+    expect(css).toMatch(
+      /\.gameList\s*>\s*:is\(\.justPlayed,\s*:has\(\.justPlayed\)\)\s*{/
+    )
+  })
+
+  it('never uses minmax( or 1fr -- the slot is exact', () => {
+    expect(block).not.toMatch(/minmax\(/)
+    expect(block).not.toMatch(/1fr/)
+  })
+})
+
 describe('FocusRowStrip/index.css -- strip/grid parity (G-48-8c)', () => {
   // The strip derives the grid's column from the same inputs, so the inputs
   // must be the same: gap and inline gutter are compared against the grid

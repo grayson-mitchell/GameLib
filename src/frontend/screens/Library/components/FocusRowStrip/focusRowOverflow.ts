@@ -86,9 +86,17 @@ export function canScrollBack(m: TrackMeasurement): boolean {
 
 /**
  * Card pitch (card width + inter-card gap), read from the live track rather
- * than restated: `track.firstElementChild` is the `.gameList`, whose first
- * child is a card wrapper. The gap comes from the list's computed style so
- * the CSS stays the one place the value is written.
+ * than restated: `track.firstElementChild` is the `.gameList`. The gap comes
+ * from the list's computed style so the CSS stays the one place the value is
+ * written.
+ *
+ * The card measured is the list's SECOND child when one exists. In the Recently
+ * played and Favourites views the first child is the double-width hero
+ * (261011-ulj D-01), so measuring it would double the pitch and page by an even
+ * number of columns, one short whenever the grid's column count is odd. Every
+ * other child is a uniform card. A strip with only one card falls back to it: a
+ * lone hero only overflows when the grid fits one column, and an oversized
+ * pitch then pages to the end of travel, which the browser clamps.
  */
 export function measureCardPitch(
   track: Element | null,
@@ -98,7 +106,8 @@ export function measureCardPitch(
       : { columnGap: '' }
 ): number {
   const list = track?.firstElementChild ?? null
-  const card = list?.firstElementChild ?? null
+  const first = list?.firstElementChild ?? null
+  const card = first?.nextElementSibling ?? first
   const measured = card ? card.getBoundingClientRect().width : NaN
   const gap = list ? parseFloat(getStyle(list).columnGap) : NaN
   return (
