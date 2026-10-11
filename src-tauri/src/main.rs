@@ -6079,12 +6079,15 @@ fn wake_lock_release_all() {
 //
 // A single child webview, created via the `unstable`-gated child-window constructor (see the
 // one call site inside `store_embed_open` below) on the existing config-created `main` window
-// (no window restructuring on macOS -- D-01). Every symbol below is macOS + Linux only per
-// D-03's target-gated `unstable` feature (`src-tauri/Cargo.toml`: a macOS table, and since quick
-// 260930-blh a Linux table); on Linux the layout is the application's own gtk Overlay/Fixed
-// (`linux_store_embed_layout`, todo decision (a), spikes 028/029). Windows dispatch arms below
-// return a legible error rather than compiling this section out silently (a silently-absent arm
-// is indistinguishable from a dead channel).
+// (no window restructuring on macOS -- D-01). Every symbol below is macOS + Linux + Windows only
+// per D-03's target-gated `unstable` feature (`src-tauri/Cargo.toml`: a macOS table, since quick
+// 260930-blh a Linux table, and since quick 261012-f25 a Windows table); on Linux the layout is
+// the application's own gtk Overlay/Fixed (`linux_store_embed_layout`, todo decision (a), spikes
+// 028/029). Windows uses the macOS positioning path (`set_position`/`set_size`): spike 027 found
+// WebView2 child webviews are real `WS_CHILD` HWNDs positioned by an unconditional
+// `SetWindowPos`. A target outside those three gets a legible `:unsupported-platform` error from
+// the dispatch arms below rather than compiling this section out silently (a silently-absent
+// arm is indistinguishable from a dead channel); no shipped target compiles those arms.
 //
 // The API surface this section is written against was verified from vendored crate source, not
 // documentation, in `40-EMBED-API-VERIFICATION.md` (D-25) -- most importantly: neither
@@ -6093,7 +6096,7 @@ fn wake_lock_release_all() {
 
 /// Fixed, non-`main`, non-`about` label for the store/wiki embed child webview (T-40-02-02:
 /// never derived from a caller-supplied URL).
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 const STORE_EMBED_LABEL: &str = "store-embed";
 
 /// Chrome UA sent by the store/wiki embed's child webview (D-17). MAINTAINED VALUE: this must
@@ -6102,7 +6105,7 @@ const STORE_EMBED_LABEL: &str = "store-embed";
 /// store/wiki origin doing UA sniffing. Reviewed: 2026-09-04. Matches the `Chrome/142.0`
 /// convention already used by this file's own reveal/clear-storage test fixtures
 /// (`valid_reveal_args`/`valid_clear_storage_args`).
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
      AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
@@ -6112,7 +6115,7 @@ const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_
 /// `store_embed_take_nav_events` drains. Oldest-dropped rather than newest-dropped because the
 /// renderer only ever applies the LAST event -- discarding the freshest state to preserve a
 /// stale one would defeat the drain entirely.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 const STORE_EMBED_NAV_EVENTS_CAP: usize = 50;
 
 /// Ordered main-frame URL history for the store/wiki embed (D-22). Neither
@@ -6132,7 +6135,7 @@ const STORE_EMBED_NAV_EVENTS_CAP: usize = 50;
 /// `/store/gog`, which starts on `af.gog.com` and lands on `www.gog.com`). The queue lives
 /// INSIDE this struct, behind the same one `Mutex`, deliberately: an outboard queue would be a
 /// second source of truth for a cursor position this struct already owns.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 #[derive(Default)]
 struct StoreEmbedState {
     history: Vec<String>,
@@ -6153,7 +6156,7 @@ struct StoreEmbedState {
     suppress_next_push: bool,
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 impl StoreEmbedState {
     /// PURE: record a main-frame URL from `on_page_load`, OR consume a one-shot suppression
     /// armed by a history-driven navigation this code itself issued.
@@ -6267,7 +6270,7 @@ impl StoreEmbedState {
 /// to synchronously ask, so this state IS the read. Field names match
 /// `StoreEmbedNavEvent` (`src/backend/store/storeEmbedSeam.ts`) exactly: `url`, `host`,
 /// `canGoBack`, `canGoForward`.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_nav_state_json(state: &StoreEmbedState) -> Value {
     let url = state.current_url().unwrap_or_default();
     let host = tauri::Url::parse(&url)
@@ -6282,17 +6285,17 @@ fn store_embed_nav_state_json(state: &StoreEmbedState) -> Value {
     })
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 static STORE_EMBED_STATE: OnceLock<Mutex<StoreEmbedState>> = OnceLock::new();
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_state() -> &'static Mutex<StoreEmbedState> {
     STORE_EMBED_STATE.get_or_init(|| Mutex::new(StoreEmbedState::default()))
 }
 
 /// Parse `store_embed_open`'s `{ url, x, y, w, h }` args. Extracted pure-parse, same discipline
 /// as `reveal_post_args`/`clear_storage_args` above: the decision is testable without a window.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f64), String> {
     let obj = args
         .first()
@@ -6328,7 +6331,7 @@ fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f
 /// enum rather than a bare `bool` so the `Handoff` case (steam://) is impossible to confuse with
 /// plain `Allow` at the call site -- both return `false` to `on_navigation`'s underlying `bool`
 /// contract, but only `Handoff` carries the side effect of opening the URL externally.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 #[derive(Debug, PartialEq, Eq)]
 enum StoreEmbedNavigationDecision {
     /// Allow the navigation to proceed inside the embed. Ordinary `http`/`https` (D-28): no
@@ -6369,7 +6372,7 @@ enum StoreEmbedNavigationDecision {
 /// including the default when no page has loaded yet. An iframe embedded IN a Valve page can still
 /// trigger a hand-off -- the caller's `STORE_EMBED_STEAM_THROTTLE` caps that at one per
 /// `STORE_EMBED_HANDOFF_MIN_GAP`.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_navigation_policy(
     url: &tauri::Url,
     top_level_host: Option<&str>,
@@ -6409,7 +6412,7 @@ fn store_embed_navigation_policy(
 /// Whether `host` is Valve's store or community site (or a subdomain of either) -- the pages
 /// whose own buttons legitimately produce `steam:` links. Exact apex or a `.`-prefixed suffix,
 /// so `evilsteampowered.com` does not match.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_is_valve_host(host: &str) -> bool {
     ["steampowered.com", "steamcommunity.com"]
         .iter()
@@ -6419,18 +6422,18 @@ fn store_embed_is_valve_host(host: &str) -> bool {
 /// Minimum gap between two hand-offs of the same kind out of the store embed (a `steam:` URL to
 /// the Steam client, or a `window.open` popup to the system browser). Neither hook carries a user
 /// gesture, so a page -- or an ad frame inside it -- could otherwise fire them in a loop.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 const STORE_EMBED_HANDOFF_MIN_GAP: Duration = Duration::from_secs(2);
 
 /// Admits at most one hand-off per `min_gap`. Pure apart from its own `last` field, so the
 /// rate-limit decision is unit-testable with constructed `Instant`s.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 #[derive(Debug, Default)]
 struct HandoffThrottle {
     last: Option<std::time::Instant>,
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 impl HandoffThrottle {
     fn admit(&mut self, now: std::time::Instant, min_gap: Duration) -> bool {
         if let Some(last) = self.last {
@@ -6443,22 +6446,22 @@ impl HandoffThrottle {
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 static STORE_EMBED_STEAM_THROTTLE: Mutex<HandoffThrottle> =
     Mutex::new(HandoffThrottle { last: None });
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 static STORE_EMBED_POPUP_THROTTLE: Mutex<HandoffThrottle> =
     Mutex::new(HandoffThrottle { last: None });
 
 /// The embed's current top-level host, recorded from `on_page_load` (main frame only) and read
 /// by the `on_navigation` closure for `store_embed_navigation_policy`'s `steam:` gate.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 static STORE_EMBED_TOP_LEVEL_HOST: Mutex<Option<String>> = Mutex::new(None);
 
 /// Take one admission from `throttle`, failing CLOSED on a poisoned lock: a refused hand-off is
 /// the safe direction for a gate whose job is to stop unrequested ones.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_handoff_admitted(throttle: &Mutex<HandoffThrottle>) -> bool {
     match throttle.lock() {
         Ok(mut guard) => guard.admit(std::time::Instant::now(), STORE_EMBED_HANDOFF_MIN_GAP),
@@ -6469,7 +6472,7 @@ fn store_embed_handoff_admitted(throttle: &Mutex<HandoffThrottle>) -> bool {
 /// Create (or, if already open, navigate) the store/wiki embed child webview on `main`
 /// (D-01/D-25). Idempotent: a second `store_embed_open` while one already exists under
 /// `STORE_EMBED_LABEL` navigates it rather than creating a second child under the same label.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (url, x, y, w, h) = store_embed_open_args(args)?;
 
@@ -6483,7 +6486,8 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // measured already correct on this path (`storeEmbedShow()` alone repainted the embed
         // with no bounds flush), so re-applying a rect here would import the zero-rect hazard
         // `store_embed_linux_rect_is_zero_area` exists to contain, onto a platform with no
-        // measured need for it.
+        // measured need for it. Windows (quick 261012-f25) takes the macOS path: show + navigate,
+        // no rect re-apply. That is unmeasured live on Windows.
         #[cfg(target_os = "linux")]
         {
             let rect = store_embed_linux_gtk_rect(x, y, w, h)
@@ -6643,7 +6647,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
 }
 
 /// Parse `store_embed_set_bounds`'s `{ x, y, w, h }` args, all logical px.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_set_bounds_args(args: &[Value]) -> Result<(f64, f64, f64, f64), String> {
     let obj = args
         .first()
@@ -6727,6 +6731,10 @@ fn store_embed_linux_rect_is_zero_area(rect: (i32, i32, i32, i32)) -> bool {
 /// converted `i32` one (macOS takes the rect verbatim -- see `store_embed_linux_gtk_rect`'s own
 /// note that rounding is a Linux-only consequence of GTK's integer API).
 ///
+/// Since quick 261012-f25 this guard covers Windows too: a 0x0 rect would be applied verbatim by
+/// WebView2's `SetWindowPos`, the same hazard measured on macOS. The Windows half is by
+/// construction and unmeasured live.
+///
 /// Measured live on macOS 2026-10-01 (quick 261001-svm), AFTER that task's `show()` fix had
 /// already landed: `/store/gog` -> `/store/epic` -> `/store/gog` left the embed invisible even
 /// though it was by then being SHOWN. `window.api.storeEmbedShow()` did not bring it back and a
@@ -6745,7 +6753,7 @@ fn store_embed_linux_rect_is_zero_area(rect: (i32, i32, i32, i32)) -> bool {
 /// conversion step to reject them in, so this is where they stop. Spelled with `is_finite` and
 /// `<=` rather than the shorter `!(w > 0.0)` -- that form also catches `NaN`, but clippy's
 /// `neg_cmp_op_on_partial_ord` fires on it twice and the crate's warning ceiling is pinned.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn store_embed_rect_is_zero_area(w: f64, h: f64) -> bool {
     !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0
 }
@@ -6795,7 +6803,12 @@ fn store_embed_linux_settled_line(
 /// rect on macOS. `Webview::set_position`/`set_size` are never called on Linux: wry's `set_bounds`
 /// is a silent no-op there unless the widget's parent is already a fixed container, so calling
 /// them would be both dead and a second writer.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+///
+/// On Windows the sole writer is the same `set_position`/`set_size` pair as macOS (quick
+/// 261012-f25). wry's WebView2 `set_bounds` is an unconditional `SetWindowPos` (spike 027 README,
+/// step 5), measured at 0 px error at scale 1.25 on the spike harness. It has not yet been
+/// measured in the shipped app.
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (x, y, w, h) = store_embed_set_bounds_args(args)?;
     #[cfg(target_os = "linux")]
@@ -6815,12 +6828,13 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
         linux_store_embed_layout::apply_bounds(&webview, linux_rect)?;
         return Ok(Value::Null);
     }
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         if store_embed_rect_is_zero_area(w, h) {
             eprintln!(
-                "[shell] store_embed(macos): ignored zero-area bounds (slot unmounted); \
-                 keeping the last real geometry"
+                "[shell] store_embed({}): ignored zero-area bounds (slot unmounted); \
+                 keeping the last real geometry",
+                std::env::consts::OS
             );
             return Ok(Value::Null);
         }
@@ -7055,7 +7069,7 @@ mod linux_store_embed_layout {
 
 /// D-21: hide on route leave, never close -- the embed's state and history registry survive.
 /// Returns a distinguishable error when the label is absent, never a silent `Ok`.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_hide(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -7068,7 +7082,7 @@ fn store_embed_hide(app: &AppHandle) -> Result<Value, String> {
 
 /// D-21: show after a prior hide. Returns a distinguishable error when the label is absent,
 /// never a silent `Ok`.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_show(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -7082,7 +7096,7 @@ fn store_embed_show(app: &AppHandle) -> Result<Value, String> {
 /// D-21: close only at teardown -- unlike `store_embed_hide`, this also clears the history
 /// registry (D-22), since a closed embed's history is not meant to survive into the next open.
 /// Returns a distinguishable error when the label is absent, never a silent `Ok`.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -7107,7 +7121,7 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
 /// deliberate: a failed push loses one event, while a failed drain that resolved `[]` would be
 /// indistinguishable from a healthy idle channel -- exactly the F-34.4.2-19 defect class this
 /// seam's per-field coercion exists to prevent one layer up.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_take_nav_events() -> Result<Value, String> {
     let mut state = store_embed_state()
         .lock()
@@ -7116,7 +7130,7 @@ fn store_embed_take_nav_events() -> Result<Value, String> {
 }
 
 /// Parse `store_embed_navigate`'s `{ url }` arg.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_navigate_args(args: &[Value]) -> Result<tauri::Url, String> {
     let obj = args
         .first()
@@ -7140,7 +7154,7 @@ fn store_embed_navigate_args(args: &[Value]) -> Result<tauri::Url, String> {
 /// confirmed fingerprint vector -- D-22 makes avoiding it a hard rule for every arm in this
 /// section, not a preference, and this comment is the reason a future reader reaching for
 /// `eval` here should stop.
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -7164,7 +7178,7 @@ fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
 
 /// The mirror of `store_embed_back` -- see its doc comment for the shared rationale (D-22/D-25,
 /// ZERO page-side JS injection via `Webview::navigate(Url)`, never `eval`).
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -7191,7 +7205,7 @@ fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
 /// entry for the same URL -- reload must leave the stack unchanged. Calls `Webview::reload()`,
 /// never `eval('location.reload()')` (D-22's zero-page-side-JS-injection rule, see
 /// `store_embed_back`'s doc comment).
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -7217,7 +7231,7 @@ fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
 /// flag so that same Finished event (which WILL still fire for this navigation) does not
 /// double-push the URL this call already recorded. Pushing truncates any forward entries past
 /// the cursor, exactly like a user-initiated navigation (D-22).
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let url = store_embed_navigate_args(args)?;
     let webview = app
@@ -9801,55 +9815,56 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             Ok(Value::Null)
         }
         // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS + Linux
-        // (quick 260930-blh) per D-03's target-gated `unstable` feature; the Windows branch
-        // returns a legible error rather than silently compiling this section out (see the
-        // section doc comment above `STORE_EMBED_LABEL` for the full rationale). ----
+        // (quick 260930-blh) + Windows (quick 261012-f25) per D-03's target-gated `unstable`
+        // feature; a target outside those three returns a legible error rather than silently
+        // compiling this section out (see the section doc comment above `STORE_EMBED_LABEL` for
+        // the full rationale). No shipped target compiles that branch. ----
         "store_embed_open" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_open(app, args)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_open:unsupported-platform".to_string())
             }
         }
         "store_embed_set_bounds" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_set_bounds(app, args)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_set_bounds:unsupported-platform".to_string())
             }
         }
         "store_embed_hide" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_hide(app)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_hide:unsupported-platform".to_string())
             }
         }
         "store_embed_show" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_show(app)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_show:unsupported-platform".to_string())
             }
         }
         "store_embed_close" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_close(app)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_close:unsupported-platform".to_string())
             }
@@ -9860,11 +9875,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // embed moved this process's cursor while the renderer's `canGoBack` stayed false
         // forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
         "store_embed_take_nav_events" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_take_nav_events()
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_take_nav_events:unsupported-platform".to_string())
             }
@@ -9874,41 +9889,41 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // no `canGoBack()`-style handle to query, so this pushed/returned state IS the read
         // (control inverts: Rust pushes, the frontend never polls).
         "store_embed_back" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_back(app)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_back:unsupported-platform".to_string())
             }
         }
         "store_embed_forward" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_forward(app)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_forward:unsupported-platform".to_string())
             }
         }
         "store_embed_reload" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_reload(app)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_reload:unsupported-platform".to_string())
             }
         }
         "store_embed_navigate" => {
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
             {
                 store_embed_navigate(app, args)
             }
-            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
             {
                 Err("store_embed_navigate:unsupported-platform".to_string())
             }
@@ -13554,7 +13569,7 @@ mod tests {
             .clone()
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_wire_contract_open_parses_the_shipped_payload() {
         let (url, x, y, w, h) = store_embed_open_args(&wire_args("store_embed_open"))
@@ -13563,7 +13578,7 @@ mod tests {
         assert_eq!((x, y, w, h), (12.5, 64.0, 1280.25, 800.0));
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_wire_contract_set_bounds_parses_the_shipped_payload() {
         let (x, y, w, h) = store_embed_set_bounds_args(&wire_args("store_embed_set_bounds"))
@@ -13571,7 +13586,7 @@ mod tests {
         assert_eq!((x, y, w, h), (10.5, -3.0, 799.999, 0.0));
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_wire_contract_navigate_parses_the_shipped_payload() {
         let url = store_embed_navigate_args(&wire_args("store_embed_navigate"))
@@ -13581,7 +13596,7 @@ mod tests {
 
     // The regression direction: the POSITIONAL shape that actually shipped must be REJECTED, so a
     // revert to it cannot pass. A "does it parse" test alone would be blind to this.
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_wire_contract_rejects_the_positional_shape_that_shipped() {
         let positional = vec![
@@ -18460,7 +18475,7 @@ mod tests {
     // closure inside `store_embed_open`, not here -- this function is pure by construction so
     // it can be driven without a live `AppHandle`.
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_blocks_the_apps_own_scheme() {
         // T-40-04-02: the sharpest edge in the phase. A store page must never be able to drive
@@ -18472,7 +18487,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_allows_https_freely() {
         // D-28 forbids an origin allowlist -- ordinary https navigation (e.g. a GOG checkout
@@ -18491,7 +18506,7 @@ mod tests {
         }
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_allows_http_freely() {
         let url = tauri::Url::parse("http://example.com/").unwrap();
@@ -18501,7 +18516,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_hands_off_steam_scheme() {
         // A store page's own "launch"/"install" button can produce a steam:// URL. It must
@@ -18514,7 +18529,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_blocks_steam_unless_the_top_level_page_is_valve() {
         // todo 2026-10-05: `on_navigation` cannot tell an ad iframe from the main frame, so a
@@ -18547,7 +18562,7 @@ mod tests {
         }
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_https_is_unaffected_by_the_top_level_host() {
         // The steam: gate must not leak into D-28's free https navigation.
@@ -18558,7 +18573,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn handoff_throttle_admits_one_per_gap() {
         let gap = Duration::from_secs(2);
@@ -18577,7 +18592,7 @@ mod tests {
         assert!(!throttle.admit(t0 + gap + Duration::from_millis(1), gap));
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn handoff_throttle_refusals_do_not_extend_the_window() {
         // A page spamming refused requests must not lock out the next legitimate one forever.
@@ -18591,7 +18606,7 @@ mod tests {
         assert!(throttle.admit(t0 + gap, gap));
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_navigation_policy_default_denies_unknown_schemes() {
         // T-40-04-03: default-deny on anything outside the enumerated set, not an allowlist of
@@ -18619,7 +18634,7 @@ mod tests {
     // history API exists on either `tauri::webview::Webview` or `wry::WebView` -- this stack IS
     // the feature, not a convenience wrapper around one.
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_state_default_has_no_back_or_forward() {
         let state = StoreEmbedState::default();
@@ -18628,7 +18643,7 @@ mod tests {
         assert_eq!(state.current_url(), None);
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_state_push_three_then_back_twice_lands_on_first() {
         let mut state = StoreEmbedState::default();
@@ -18649,7 +18664,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_state_forward_once_after_back_returns_to_the_skipped_entry() {
         let mut state = StoreEmbedState::default();
@@ -18661,7 +18676,7 @@ mod tests {
         assert!(!state.can_go_forward());
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_state_push_from_middle_truncates_forward_entries() {
         // T-40-07-05: a fresh user-initiated push from a back-ed-up position (not a
@@ -18699,7 +18714,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_state_reload_does_not_push_a_duplicate_entry() {
         let mut state = StoreEmbedState::default();
@@ -18715,7 +18730,7 @@ mod tests {
         assert_eq!(state.current_url().as_deref(), Some("https://a.example/"));
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_state_back_moves_the_cursor_it_does_not_append_a_new_entry() {
         // Regression test for a defect class encountered while implementing this: a `go_back`
@@ -18745,7 +18760,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_nav_state_json_reports_full_url_host_and_availability() {
         let mut state = StoreEmbedState::default();
@@ -18764,7 +18779,7 @@ mod tests {
         assert_eq!(json["canGoForward"], true);
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_nav_state_json_on_empty_state_is_all_empty_never_panics() {
         let state = StoreEmbedState::default();
@@ -18783,7 +18798,7 @@ mod tests {
     // against the pre-fix code (no `pending_nav_events` field at all, so they did not compile
     // -- the strongest possible red for an absent mechanism).
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_push_enqueues_a_nav_event_carrying_the_post_push_cursor_state() {
         // THE GAP-D REGRESSION TEST. An in-embed link click reaches `push()` via
@@ -18815,7 +18830,7 @@ mod tests {
         assert_eq!(events[1]["canGoForward"], false);
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_suppressed_push_enqueues_nothing() {
         // The confirming Finished event of a back/forward/reload this process itself issued.
@@ -18834,7 +18849,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_take_nav_events_drains_rather_than_peeks() {
         let mut state = StoreEmbedState::default();
@@ -18848,7 +18863,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_nav_event_queue_is_capped_oldest_dropped() {
         // T-34.4.1-09's shape, restated for this queue: a page navigating in a loop must not
@@ -18871,7 +18886,7 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_clear_empties_the_nav_event_queue() {
         // D-21 teardown: leaving events behind would let the NEXT embed drain a previous
@@ -18968,8 +18983,10 @@ mod tests {
     /// macOS sibling of the test above (quick 261001-svm). The 0x0 case is the one actually
     /// measured live -- the slot's final ResizeObserver report once the Epic panel has replaced
     /// it -- and before this guard existed it was applied verbatim and left the embed invisible
-    /// at zero size until a genuine window resize.
-    #[cfg(target_os = "macos")]
+    /// at zero size until a genuine window resize. Since quick 261012-f25 this also guards the
+    /// WebView2 branch, which shares the same guard (wry's `SetWindowPos` would apply a 0x0 rect
+    /// verbatim); the test keeps its name to avoid churn.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
     #[test]
     fn store_embed_macos_zero_area_rect_is_recognised() {
         // The measured case: slot unmounted, every field zero.

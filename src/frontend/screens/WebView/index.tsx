@@ -485,9 +485,9 @@ export default function WebView() {
   // Phase 40 Plan 08 (D-01/D-02/D-24): logged unconditionally, before the platform gate below,
   // so this line stays the store/wiki arm's own unconditional first statement -- plan 40-01's
   // inverted structural gate (`WebviewUnavailablePanel.test.tsx`) asserts nothing guards this
-  // arm ahead of it. On macOS this is now the embed's mount log; on every other platform it
-  // reads exactly as plan 40-01 left it (D-05's deferral note), which is why the message and its
-  // meaning both still hold true for the non-macOS branch immediately below.
+  // arm ahead of it. On macOS, Linux and Windows this is the embed's mount log; on any other
+  // platform value it reads exactly as plan 40-01 left it (D-05's deferral note), which is why
+  // the message and its meaning both still hold true for the fallback branch immediately below.
   window.api.logInfo(
     `[WebView] store/wiki route pathname=${pathname} startUrl=${startUrl}`
   )
@@ -503,17 +503,21 @@ export default function WebView() {
     return <WebviewUnavailablePanel url={deepLinkUrl ?? undefined} />
   }
 
-  // D-01/D-02: the live embed runs on macOS and Linux (Linux per the positioning todo's
-  // 2026-09-28 decision (a): a real GTK-box-native embed rather than none). Reuses `platform`
-  // from `ContextProvider` (the same source `App.tsx`'s own `isMac` check reads) rather than
-  // `process.platform` or `navigator.platform` -- both are wrong here: `process` is
+  // D-01/D-02: the live embed runs on macOS, Linux and Windows (Linux per the positioning todo's
+  // 2026-09-28 decision (a): a real GTK-box-native embed rather than none; Windows per quick
+  // 261012-f25: WebView2 `add_child` through the macOS positioning path, spike 027). Reuses
+  // `platform` from `ContextProvider` (the same source `App.tsx`'s own `isMac` check reads)
+  // rather than `process.platform` or `navigator.platform` -- both are wrong here: `process` is
   // Node/main-process-only, and `navigator.platform` under WKWebView doesn't reflect the actual
-  // host OS this app runs on (`tauri-chromium-only-web-apis` project gotcha). Every other
-  // platform (Windows) falls through to the `WebviewUnavailablePanel`, reworded by plan 40-10
-  // (D-02) to name the platform reason.
-  if (platform !== 'darwin' && platform !== 'linux') {
+  // host OS this app runs on (`tauri-chromium-only-web-apis` project gotcha).
+  // `src/preload/tauriAttach.ts` only ever assigns 'darwin' | 'win32' | 'linux' to
+  // `window.platform`, so under the shipped preload this branch is a defensive fallback, reached
+  // only by ContextProvider's 'unknown' default or a future platform value. It is kept so a
+  // platform the shell cannot embed on gets the `WebviewUnavailablePanel` (reworded by plan
+  // 40-10 (D-02) to name the platform reason) rather than a dead slot.
+  if (platform !== 'darwin' && platform !== 'linux' && platform !== 'win32') {
     window.api.logInfo(
-      `[WebView] platform=${platform}: in-app store/wiki browsing is macOS and Linux only (D-02)`
+      `[WebView] platform=${platform}: in-app store/wiki browsing is macOS, Linux and Windows only (D-02)`
     )
     return <WebviewUnavailablePanel url={startUrl} reason="platform" />
   }

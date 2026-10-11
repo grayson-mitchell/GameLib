@@ -29,12 +29,13 @@ tauri-build = { version = "2", features = [] }
 # in-app store/wiki embed (`Window::add_child`, also `unstable`-gated -- see
 # `tauri-2.11.5/src/window/mod.rs:1127`, verified in
 # `40-EMBED-API-VERIFICATION.md`) to macOS only; quick 260930-blh added a Linux table below that
-# unions `unstable` in for a Linux target too. Target-gating the feature itself means a
-# future Tauri release that breaks `unstable`'s API can only break the macOS and Linux build
-# legs, never the Windows leg, which compiles against neither `add_child` nor
-# `open_pristine_epic_login_window`'s webview-less `WindowBuilder`. This is compile-time
-# only and adds no binary payload on any platform -- see Task 2's `cargo tree -e features`
-# proof in `40-02-SUMMARY.md` for both a macOS and a non-macOS target.
+# unions `unstable` in for a Linux target too, and quick 261012-f25 added a Windows table after
+# it. All three shipped desktop targets therefore now union `unstable` (so a future Tauri
+# release that breaks `unstable`'s API would break all three build legs). The per-target tables
+# are kept, rather than folding `unstable` back into the base line, so each platform's reason
+# stays next to its own declaration and a target outside the three still never sees `unstable`.
+# This is compile-time only and adds no binary payload on any platform -- see Task 2's
+# `cargo tree -e features` proof in `40-02-SUMMARY.md` for both a macOS and a non-macOS target.
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
@@ -122,15 +123,18 @@ tauri-plugin-deep-link = "2"
 # Phase 40 Plan 02 (D-03): the `unstable` feature, moved here from the unconditional
 # `[dependencies]` `tauri = {...}` line above (see that line's own comment for the full
 # rationale history -- pristine-webview `WindowBuilder` access, now also the in-app store/wiki
-# embed's `Window::add_child`; the Linux table further down repeats this declaration for a Linux
-# target). Cargo unifies a dependency declared in both `[dependencies]`
+# embed's `Window::add_child`; the Linux and Windows tables further down repeat this
+# declaration for a Linux / Windows target). Cargo unifies a dependency declared in both
+# `[dependencies]`
 # and a `[target.'cfg(...)'.dependencies]` table for the same crate: the base `tauri` request
 # above always resolves, and this table's `features` list is UNIONED into that resolution
-# only when the active target matches `cfg(target_os = "macos")` -- so a non-macOS build
-# never sees `unstable` at all. Proven by measurement, not assumed: `cargo tree -e features`
-# run once with `--target x86_64-pc-windows-msvc` (no `unstable` on `tauri`) and once with no
-# `--target` on this macOS host (`unstable` present) -- both outputs are pasted verbatim into
-# `40-02-SUMMARY.md`. Declaring only `features`, with no `version`, would still union with the
+# only when the active target matches `cfg(target_os = "macos")` -- so a target matching none
+# of the three tables never sees `unstable` at all. Proven by measurement, not assumed:
+# `cargo tree -e features` run once with `--target x86_64-pc-windows-msvc` (no `unstable` on
+# `tauri`) and once with no `--target` on this macOS host (`unstable` present) -- both outputs
+# are pasted verbatim into `40-02-SUMMARY.md`. HISTORICAL: the Windows half of that measurement
+# was superseded by quick 261012-f25, which added the Windows table below; a Windows target now
+# DOES see `unstable`. Declaring only `features`, with no `version`, would still union with the
 # same `tauri` dependency graph node; `version = "2"` is repeated here anyway so this table
 # reads standalone and matches every other entry's own explicit-`version` convention.
 tauri = { version = "2", features = ["unstable"] }
@@ -249,7 +253,8 @@ libc = "0.2.186"
 # `PlatformWebview::inner`), and patch neither `tauri-runtime-wry` nor `wry` (spikes 028/029 found
 # and measured the lever). `Window::add_child` and `Manager::get_window`/`get_webview` are
 # `unstable`-gated, exactly as on macOS above, so this table unions `unstable` into the base
-# `tauri` request for a Linux target only -- a Windows build still never sees it.
+# `tauri` request for a Linux target (the Windows table directly below does the same for a
+# Windows target, since quick 261012-f25).
 #
 # `gtk` is pinned to the exact version `Cargo.lock` already resolves through `wry`, so this app's
 # `gtk::Widget` IS wry's `gtk::Widget` (one type, no conversion) and no new crate NAME enters the
@@ -261,6 +266,28 @@ libc = "0.2.186"
 [target.'cfg(target_os = "linux")'.dependencies]
 tauri = { version = "2", features = ["unstable"] }
 gtk = "0.18.2"
+
+# Quick 261012-f25 (`.planning/todos/pending/2026-10-11-stores-tab-embed-not-implemented-on-
+# windows.md`): the Windows half of the in-app store/wiki embed. `Window::add_child` and
+# `Manager::get_window`/`get_webview` are `unstable`-gated exactly as on macOS and Linux above,
+# so this table unions `unstable` into the base `tauri` request for a Windows target, declaring
+# what this crate's own code directly needs in the same style as its siblings.
+#
+# Windows needs NO platform-specific embed code. Spike 027
+# (`.planning/spikes/027-windows-add-child-crosscheck/README.md`, step 5) read wry's WebView2
+# backend: a child webview is a real `WS_CHILD` HWND and `set_bounds` is an unconditional
+# `SetWindowPos`, which puts Windows in macOS's "real absolutely-positioned child" family, not
+# Linux's GtkBox-packing family. The spike's live sitting-13 run drove the embed with exactly
+# the macOS calls (`set_position(LogicalPosition)` + `set_size(LogicalSize)`) at scale 1.25 and
+# measured 0 px placement error across three rects. So Windows positions through the same
+# `set_position`/`set_size` path as macOS, with no Windows-only code and no new crate.
+#
+# `unstable` adds no crate: `Cargo.lock` is unchanged by this table, so `cargoFeatures.test.ts`'s
+# crate-name pin is unaffected. WebView2 shares the ONE process-wide cookie jar (spike 027
+# measured the per-store data-store identifier as a silent no-op on WebView2); none is set
+# anywhere, and nothing here claims isolation.
+[target.'cfg(target_os = "windows")'.dependencies]
+tauri = { version = "2", features = ["unstable"] }
 
 # Phase 46 (D-44-A's Windows half): the Windows single-instance guard (`CreateMutexW` decision,
 # `CreateNamedPipeW` transport, `ConvertStringSecurityDescriptorToSecurityDescriptorW` DACL) needs
