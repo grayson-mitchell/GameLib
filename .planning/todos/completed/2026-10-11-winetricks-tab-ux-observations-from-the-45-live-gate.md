@@ -45,3 +45,21 @@ because several are design decisions, not fixes. Split into code todos once deci
 
 Evidence: `/tmp/gamelib-gate-45-20261010T194049Z/terminal.log` ("Operator observation",
 "Operator improvement requests", "G4 attempt-2 BLOCKED", "G5 attempt-1").
+
+## Resolution (2026-10-11, quick 261011-txc)
+
+1. Everything else lists only verbs no tier above shows when not searching; search stays
+   catalog-wide (`eef7f6918`).
+2. Every row shows its verb id beside the title (`432689f0c`).
+3. An errored row is tickable, selected outranks errored, Retry kept (`432689f0c`).
+4. The leaked 3em section padding-top is released, the tab's 0.75em gap spaces the groups
+   (`eef7f6918`).
+5. New collapsed Installed group after Suggested (`eef7f6918`).
+6. Suggested is a disclosure, expanded by default (`eef7f6918`).
+7. The dock paints opaque with a top divider above the sticky search, 45-UAT item 13 annotated,
+   re-capture owed at the next 45-12 run (`eef7f6918`).
+8. Kept, recorded: `Done` is this run's live feedback, `Installed` is the steady state, both stay.
+   No code change.
+9. Split to `.planning/todos/pending/2026-10-11-winetricks-settings-window-not-resizable-by-drag-on-macos.md`.
+
+Nothing here is live-verified: items 1-7 owe a look at the next 45-12 run.
