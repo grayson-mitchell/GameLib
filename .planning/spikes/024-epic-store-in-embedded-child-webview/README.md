@@ -631,3 +631,17 @@ answer is a load timeout with a reload affordance on the embed, the same as any 
 webview code. The 2026-09-15 sign-in-button todo is awake on (a) and no longer waits on (b). An earlier draft of this section said
 "permanently"; two earlier drafts stated reopen conditions that fired within a day. Re-run more
 than once and keep the Steam control.
+
+**Decided 2026-10-12 (quick `261012-d5g`) — the D-05 call is made and (a) above is closed.** Option
+A: ship `/store/epic` as a Rust-managed raw `WKWebView` subview, macOS first, as **Phase 50**
+(`ROADMAP.md` `### Phase 50`). Keeping the route gated for good was rejected by the same reasoning
+the 2026-09-29 Linux decision recorded (a store off the embed is against the one-launcher core
+value); the separate pristine window was folded in, not shipped as an interim — the
+`humble_login_open` arm is a login-seam window (single-flight, cancel sentinel, fixed 900×700) and
+reusing it for browsing is a misuse, not the "no code" path the todo described. Locked with it:
+no interception or hiding of Epic's Sign in button (the subview is the same non-injected
+construction as the shipped pristine login window; Phase 50's live gate measures it, hand-off only
+if that arm is challenged), the shared default data store (so the gate carries a warm signed-in
+arm — every run above was a cold `nonPersistentDataStore`), Turnstile-host detection falling back
+to the panel, and a load timeout + reload for #9. Decision record:
+`.planning/todos/completed/2026-10-12-make-the-d-05-call-epic-store-embed-as-a-rust-managed-raw-wkwebview-subview.md`.
