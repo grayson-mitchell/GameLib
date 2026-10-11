@@ -1,0 +1,14 @@
+[PASS] .planning\phases\34.2-tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid\currency-gate.py
+[PASS] .planning\phases\34.3-tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics\ported-channels-gate.py
+[PASS] .planning\phases\34.4-tauri-ipc-re-plumb-slice-7-steam-completion-and-humble\ported-channels-gate.py
+[PASS] .planning\phases\34.4.1-tauri-embedded-browser-login-seam-replace-the-electron-webvi\ported-channels-gate.py
+[PASS] .planning\phases\34.4.1-tauri-embedded-browser-login-seam-replace-the-electron-webvi\seam-parity-sweep-gate.py
+[PASS] .planning\phases\34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc\ported-channels-gate.py
+[PASS] .planning\phases\34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc\preload-surface-gate.py
+[PASS] .planning\phases\40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we\model-a-retirement-gate.py
+[PASS] .planning\planning-envelope-tag-gate.py
+[PASS] .planning\planning-frontmatter-gate.py
+[PASS] .planning\state-sdk-field-anchor-gate.py
+[PASS] .planning\todos\todo-frontmatter-gate.py
+
+12/12 planning gates passed.
