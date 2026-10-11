@@ -534,6 +534,26 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
     await expect(
       handlerRegistry.get('removeShortcut')?.(null, 'app', 'legendary')
     ).resolves.toBe(false)
+
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect([
+      'box.shortcuts.message-remove',
+      'box.shortcuts.message-remove-mac'
+    ]).toContain(mockNotify.mock.calls[0][0].body)
+  })
+
+  it('261012-ca6 removeShortcut: removeShortcuts resolves but the .app remains -> resolves true and shows the remove error toast, not the success one', async () => {
+    const title = '261012-ca6 Remove Remains Game'
+    const app = containedApp(title)
+    mkdirSync(app, { recursive: true })
+    mockGetGame.mockReturnValue(outcomeGame(title, {}))
+
+    await expect(
+      handlerRegistry.get('removeShortcut')?.(null, 'app', 'legendary')
+    ).resolves.toBe(true)
+
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error-remove')
   })
 
   it('261012-ca6 removeShortcut: removeShortcuts rejects and the .app remains -> resolves true, logs, never rejects', async () => {
@@ -555,6 +575,8 @@ describe('261012-ca6 add/remove resolve whether shortcuts exist once the work ha
         JSON.stringify(call).includes('removeShortcut')
       )
     ).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error-remove')
   })
 })
 

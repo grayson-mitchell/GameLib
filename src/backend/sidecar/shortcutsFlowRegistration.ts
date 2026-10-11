@@ -242,7 +242,10 @@ export function registerShortcutsFlows(): void {
 
   // Quick task 261012-ca6: invoke-kind for the same reason as `addShortcut` above. Resolves the
   // `shortcutsExists` predicate after `removeShortcuts` has settled, so the renderer keeps showing
-  // "Remove shortcuts" when a removal did not take.
+  // "Remove shortcuts" when a removal did not take. `removeShortcuts` awaits its deletions and
+  // never rejects for a failed one (it logs it), so the disk is read only once the work is done and
+  // the toast follows what the disk says: the removal toast only when no shortcut remains, the
+  // error toast otherwise.
   ipcMain.handle(
     'removeShortcut',
     async (_event: unknown, ...args: unknown[]) => {
@@ -253,24 +256,42 @@ export function registerShortcutsFlows(): void {
         await getGame(appName, runner).removeShortcuts()
       } catch (error) {
         logChannelFailure('removeShortcut', error)
+        notify({
+          body: t(
+            'box.shortcuts.error-remove',
+            'Shortcuts could not be removed. See the log for details.'
+          ),
+          title: t('box.shortcuts.title', 'Shortcuts')
+        })
         return shortcutsExistOnDisk(appName, runner)
       }
 
-      const body = i18next.t(
-        'box.shortcuts.message-remove',
-        'Shortcuts were removed from Desktop and Start Menu'
-      )
-      const bodyMac = i18next.t(
-        'box.shortcuts.message-remove-mac',
-        'Shortcuts were removed from the Applications folder'
-      )
+      const exists = shortcutsExistOnDisk(appName, runner)
+      if (!exists) {
+        const body = i18next.t(
+          'box.shortcuts.message-remove',
+          'Shortcuts were removed from Desktop and Start Menu'
+        )
+        const bodyMac = i18next.t(
+          'box.shortcuts.message-remove-mac',
+          'Shortcuts were removed from the Applications folder'
+        )
 
-      notify({
-        body: isMac ? bodyMac : body,
-        // Shared key: catalog 'Shortcuts' wins; the body names the removal.
-        title: i18next.t('box.shortcuts.title', 'Shortcuts')
-      })
-      return shortcutsExistOnDisk(appName, runner)
+        notify({
+          body: isMac ? bodyMac : body,
+          // Shared key: catalog 'Shortcuts' wins; the body names the removal.
+          title: i18next.t('box.shortcuts.title', 'Shortcuts')
+        })
+      } else {
+        notify({
+          body: t(
+            'box.shortcuts.error-remove',
+            'Shortcuts could not be removed. See the log for details.'
+          ),
+          title: t('box.shortcuts.title', 'Shortcuts')
+        })
+      }
+      return exists
     }
   )
 
