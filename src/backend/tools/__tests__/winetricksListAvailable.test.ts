@@ -82,7 +82,10 @@ jest.mock('backend/logger', () => {
 
 import { logWarning } from 'backend/logger'
 import { parseWinetricksMetadata } from 'common/winetricks/metadata'
-import { getEnvironmentReport } from '../winetricksEnvironment'
+import {
+  getEnvironmentReport,
+  onEnvironmentChanged
+} from '../winetricksEnvironment'
 import { Winetricks } from '../index'
 
 const FIXTURE_SCRIPT = readFileSync(
@@ -246,12 +249,21 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
     expect(result.map((component) => component.verb)).toEqual(['vcrun2019'])
   })
 
-  it('invokes the winetricks process exactly once per call (list-all only, no second metadata spawn)', async () => {
+  it('invokes the winetricks process exactly once per call (list-all only, no second metadata spawn) plus exactly one wine --version probe (execFile, not a winetricks spawn)', async () => {
     await listAvailableWith(LIST_ALL)
+    await flushMicrotasks()
 
     expect(mockSpawn).toHaveBeenCalledTimes(1)
     const [, spawnArgs] = mockSpawn.mock.calls[0] as [string, string[]]
     expect(spawnArgs).toEqual(['list-all'])
+
+    expect(mockExecFile).toHaveBeenCalledTimes(1)
+    const [probeBin, probeArgs] = mockExecFile.mock.calls[0] as [
+      string,
+      string[]
+    ]
+    expect(probeBin).toBe('/fake/wine/bin/wine')
+    expect(probeArgs).toEqual(['--version'])
   })
 
   it('returns components unannotated but still category-filtered, with one warning, when the script is unreadable', async () => {
@@ -284,9 +296,12 @@ describe('Winetricks.listAvailable metadata merge and visibility filter (D-09/D-
   it('does not re-read the script while its mtime and size are unchanged', async () => {
     await listAvailableWith(LIST_ALL)
     await listAvailableWith(LIST_ALL)
+    await flushMicrotasks()
 
     expect(scriptReads()).toBe(1)
     expect(mockSpawn).toHaveBeenCalledTimes(2)
+    // The probe is NOT cached: a bottle's wine can change between tab opens.
+    expect(mockExecFile).toHaveBeenCalledTimes(2)
   })
 
   it('re-reads the script once its mtime changes', async () => {
@@ -363,5 +378,125 @@ describe('unsupported-wine probe at list-all time (261011-iel, D-16)', () => {
       getEnvironmentReport('gog', 'enoent-bottle').unsupportedWineVersion
     ).toBeNull()
     expect(logWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears a stale record once the bottle is switched to a supported wine, and never fires the listener on a no-op', async () => {
+    const listener = jest.fn()
+    onEnvironmentChanged(listener)
+
+    const answerWith = (probeStdout: string) => {
+      mockExecFile.mockImplementation((...args: unknown[]) => {
+        const callback = args[args.length - 1] as (
+          error: unknown,
+          stdout: string,
+          stderr: string
+        ) => void
+        callback(null, probeStdout, '')
+        return undefined
+      })
+    }
+
+    answerWith('wine-9.0\n')
+    await listAvailableWith(LIST_ALL, 'switch-bottle')
+    await flushMicrotasks()
+    expect(listener).not.toHaveBeenCalled()
+    expect(
+      getEnvironmentReport('gog', 'switch-bottle').unsupportedWineVersion
+    ).toBeNull()
+
+    answerWith('wine-7.7 (Game Porting Toolkit 1.1)\n')
+    await listAvailableWith(LIST_ALL, 'switch-bottle')
+    await flushMicrotasks()
+    expect(listener).toHaveBeenCalledTimes(1)
+    expect(
+      getEnvironmentReport('gog', 'switch-bottle').unsupportedWineVersion
+    ).toBe('7.7')
+
+    // The same 7.7 again -- still once (recordUnsupportedWine's existing
+    // equality early-return).
+    await listAvailableWith(LIST_ALL, 'switch-bottle')
+    await flushMicrotasks()
+    expect(listener).toHaveBeenCalledTimes(1)
+
+    answerWith('wine-9.0\n')
+    await listAvailableWith(LIST_ALL, 'switch-bottle')
+    await flushMicrotasks()
+    expect(listener).toHaveBeenCalledTimes(2)
+    expect(
+      getEnvironmentReport('gog', 'switch-bottle').unsupportedWineVersion
+    ).toBeNull()
+  })
+
+  it('never clears an existing record when the probe result is unknown (empty stdout)', async () => {
+    mockExecFile.mockImplementation((...args: unknown[]) => {
+      const callback = args[args.length - 1] as (
+        error: unknown,
+        stdout: string,
+        stderr: string
+      ) => void
+      callback(null, 'wine-7.7 (Game Porting Toolkit 1.1)\n', '')
+      return undefined
+    })
+    await listAvailableWith(LIST_ALL, 'unknown-bottle')
+    await flushMicrotasks()
+    expect(
+      getEnvironmentReport('gog', 'unknown-bottle').unsupportedWineVersion
+    ).toBe('7.7')
+
+    mockExecFile.mockImplementation((...args: unknown[]) => {
+      const callback = args[args.length - 1] as (
+        error: unknown,
+        stdout: string,
+        stderr: string
+      ) => void
+      callback(null, '', '')
+      return undefined
+    })
+    await listAvailableWith(LIST_ALL, 'unknown-bottle')
+    await flushMicrotasks()
+
+    expect(
+      getEnvironmentReport('gog', 'unknown-bottle').unsupportedWineVersion
+    ).toBe('7.7')
+    expect(logWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('resolves the list and leaves the report unchanged when the probe throws synchronously', async () => {
+    mockExecFile.mockImplementation(() => {
+      throw new Error('synchronous boom')
+    })
+
+    const result = await listAvailableWith(LIST_ALL, 'throw-bottle')
+    await flushMicrotasks()
+
+    expect(result.map((component) => component.verb)).toEqual([
+      'vcrun2019',
+      'gdiplus_winxp',
+      'fontsmooth=rgb'
+    ])
+    expect(
+      getEnvironmentReport('gog', 'throw-bottle').unsupportedWineVersion
+    ).toBeNull()
+    expect(logWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('bounds the probe with a 5s timeout, SIGKILL, a 16 KiB maxBuffer and utf8 encoding', async () => {
+    await listAvailableWith(LIST_ALL, 'bounds-bottle')
+    await flushMicrotasks()
+
+    const [, , options] = mockExecFile.mock.calls[0] as [
+      string,
+      string[],
+      {
+        timeout: number
+        killSignal: string
+        maxBuffer: number
+        encoding: string
+      }
+    ]
+    expect(options.timeout).toBe(5000)
+    expect(options.killSignal).toBe('SIGKILL')
+    expect(options.maxBuffer).toBe(16384)
+    expect(options.encoding).toBe('utf8')
   })
 })

@@ -55,10 +55,16 @@ export function recordMissingDependencies(
   changeListener?.(runner, appName)
 }
 
+// `version` is `string | null` (261011-iel, D-16): null means "this bottle's
+// wine is supported," and only the list-all probe (`Winetricks.checkWineVersion`)
+// ever writes null -- the install-time `environment` classifier branch always
+// writes a real version string, since it only runs off winetricks' own
+// unsupported-wine warning. The equality early-return below already makes a
+// null -> null call a no-op, so the listener does not fire for it.
 export function recordUnsupportedWine(
   runner: Runner,
   appName: string,
-  version: string
+  version: string | null
 ): void {
   const k = key(runner, appName)
   const current = reports.get(k) ?? emptyReport()

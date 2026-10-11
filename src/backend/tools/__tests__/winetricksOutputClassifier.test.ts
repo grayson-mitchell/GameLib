@@ -14,7 +14,9 @@ import type { WinetricksLogLine } from 'common/types'
 import {
   appendLogLine,
   classifyWinetricksLine,
+  isUnsupportedWineVersion,
   parseUnsupportedWineVersion,
+  parseWineVersionOutput,
   splitOutputChunk
 } from '../winetricksOutputClassifier'
 
@@ -169,6 +171,70 @@ describe('parseUnsupportedWineVersion', () => {
     )
     expect(parseUnsupportedWineVersion('')).toBe(null)
   })
+})
+
+describe('parseWineVersionOutput (261011-iel, D-16)', () => {
+  it.each([
+    ['wine-7.7 (Game Porting Toolkit 1.1)\n', '7.7'],
+    ['wine-7.7\n', '7.7'],
+    ['wine-1.9.22 (Debian 1.9.22-1)\n', '1.9.22'],
+    ['wine-1.9.22 (Staging)\n', '1.9.22'],
+    ['wine-2.0 (Debian 2.0-1)\n', '2.0'],
+    ['wine-2.0-rc1\n', '2.0'],
+    ['wine-9.0\r\n', '9.0'],
+    ['wine-10.0\n', '10.0'],
+    ['\nwine-8.0\n', '8.0'],
+    ['prefix junk wine-7.7\n', '7.7'],
+    ['', null],
+    ['\n\n', null],
+    ['not a version\n', null]
+  ])('parses %j as %j', (raw, expected) => {
+    expect(parseWineVersionOutput(raw)).toBe(expected)
+  })
+
+  describe('parity with parseUnsupportedWineVersion', () => {
+    const versionYieldingRows = [
+      'wine-7.7 (Game Porting Toolkit 1.1)\n',
+      'wine-7.7\n',
+      'wine-1.9.22 (Debian 1.9.22-1)\n',
+      'wine-1.9.22 (Staging)\n',
+      'wine-2.0 (Debian 2.0-1)\n',
+      'wine-2.0-rc1\n',
+      'wine-9.0\r\n',
+      'wine-10.0\n',
+      '\nwine-8.0\n',
+      'prefix junk wine-7.7\n'
+    ]
+
+    it.each(versionYieldingRows)(
+      'the probe and the install-time notice agree for %j',
+      (raw) => {
+        const v = parseWineVersionOutput(raw)
+        expect(v).not.toBeNull()
+        expect(
+          parseUnsupportedWineVersion(
+            `warning: Your version of wine ${v} is no longer supported upstream. You should upgrade to 8.x`
+          )
+        ).toBe(v)
+      }
+    )
+  })
+})
+
+describe('isUnsupportedWineVersion (261011-iel, D-16)', () => {
+  it.each(['7.7', '1.9.22', '2.0', '7.99', '7'])(
+    '%s is unsupported',
+    (version) => {
+      expect(isUnsupportedWineVersion(version)).toBe(true)
+    }
+  )
+
+  it.each(['8.0', '8.21', '9.0', '10.0', '7.99.1'])(
+    '%s is supported',
+    (version) => {
+      expect(isUnsupportedWineVersion(version)).toBe(false)
+    }
+  )
 })
 
 describe('splitOutputChunk', () => {

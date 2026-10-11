@@ -444,10 +444,24 @@ describe('environment recording (D-16)', () => {
       'warning: Your version of wine 7.7 is no longer supported upstream. You should upgrade to 8.x\n'
     )
     expect(mockRecordUnsupportedWine).toHaveBeenCalledWith('gog', 'game', '7.7')
+    // 261011-iel: a list-all run ALSO fires the wine --version probe, beside
+    // (not instead of) the classifier recording above.
+    expect(mockExecFile).toHaveBeenCalledTimes(1)
+    expect((mockExecFile.mock.calls[0] as unknown[])[1]).toEqual(['--version'])
 
     children[0].emit('exit', 0)
     children[0].emit('close', 0)
     await run
+  })
+
+  it('does not probe the wine version on an install (-q) run', async () => {
+    const install = Winetricks.install('gog', 'game', 'vcrun2019')
+    await spawned(1)
+    children[0].emit('exit', 0)
+    children[0].emit('close', 0)
+    await install
+
+    expect(mockExecFile).not.toHaveBeenCalled()
   })
 
   it('records the sorted missing subset of the five host dependencies', async () => {

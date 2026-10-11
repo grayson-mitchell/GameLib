@@ -1163,11 +1163,24 @@ export const Winetricks = {
       )
       return
     }
-    // Task 2 (261011-iel) adds the supported branch, clearing a stale record.
-    // Log nothing on success.
-    if (isUnsupportedWineVersion(version)) {
-      recordUnsupportedWine(runner, appName, version)
-    }
+    // A supported wine CLEARS a stale record (null), rather than leaving one
+    // written by a previous, older bottle in place:
+    // - the probe runs against the bottle's CURRENT wine at every tab open;
+    // - it uses winetricks' own derivation and threshold (see
+    //   winetricksOutputClassifier.ts), so for one binary it cannot disagree
+    //   with the install-time `environment`-branch record;
+    // - without clearing, switching a bottle from GPTK 7.7 to a supported
+    //   wine would leave a false banner for the whole sidecar life;
+    // - `recordMissingDependencies` already clears on an empty subset, so
+    //   this mirrors an existing precedent rather than inventing one.
+    // A failed, timed-out, oversized or unparseable probe (the branches
+    // above, which `return` before reaching here) never clears: absence of
+    // evidence is not evidence. Log nothing on success.
+    recordUnsupportedWine(
+      runner,
+      appName,
+      isUnsupportedWineVersion(version) ? version : null
+    )
   }
 }
 
