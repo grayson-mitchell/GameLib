@@ -188,6 +188,323 @@ fn thread_kind() -> &'static str {
     }
 }
 
+
+// ─────────────── spike 024 runs 12+ (quick 261012-7f2): PRISTINE raw WKWebView arm ───────────────
+//
+// Run 11 (quick 261011-ws7) left ONE candidate standing: the Tauri-managed child webview itself.
+// The cheapest test of candidate 1 (Tauri's injected init scripts) is the construction the
+// shipped app already uses for Epic's LOGIN window -- `open_pristine_epic_login_window`
+// (`src-tauri/src/main.rs`): a webview-less `tauri::WindowBuilder` window with a raw `WKWebView`
+// attached by hand, so NO Tauri initialization script ever reaches the page. Ported here (minus
+// its OAuth-capture delegate and Cmd+V plumbing, which are irrelevant to a storefront) with one
+// deliberate difference: the store is `nonPersistentDataStore()`, fresh per window, so every arm
+// is a COLD jar by construction -- the shipped window's `defaultDataStore()` on this machine holds
+// the operator's signed-in Epic session, and a render there would be the warm-jar confound run 11
+// was built to exclude. Same ephemeral shape as run 11's Safari Private Window.
+
+/// `SPIKE_PRISTINE=1` enables PHASE P in the autorun.
+fn autorun_pristine() -> bool {
+    matches!(std::env::var("SPIKE_PRISTINE").as_deref(), Ok("1") | Ok("true"))
+}
+
+#[cfg(target_os = "macos")]
+thread_local! {
+    /// Main-thread-only slot for the live pristine arm: `Retained<WKWebView>` is not `Send`, and
+    /// every touch (build, read, probe, close) happens inside an `on_main` closure anyway.
+    /// Third field: whether PHASE P built the window itself (close it) or borrowed the MAIN
+    /// window (`SPIKE_PRISTINE_INMAIN=1`, quick 261012-8gu -- remove the subview, keep the window).
+    static PRISTINE: std::cell::RefCell<Option<(tauri::Window, objc2::rc::Retained<objc2_web_kit::WKWebView>, bool)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// The 024 probe body, shared by the child-embed arm (`probe_embed`) and the pristine arm.
+/// Exfiltrates by top-level navigation, never `fetch` (see `probe_embed`'s doc comment).
+fn probe_script(tag: &str) -> String {
+    format!(
+        r#"(function(){{
+  var out;
+  try {{
+    var names = ['isTauri','__TAURI__','__TAURI_INTERNALS__','ipc'];
+    var present = names.filter(function(k){{ return k in window; }});
+    var plug = Object.keys(window).filter(function(k){{
+      return k.indexOf('__TAURI_PLUGIN_') === 0 || k.indexOf('__TAURI_IIFE__') === 0;
+    }});
+    var t = ((document.body && document.body.innerText) || '').replace(/\s+/g,' ').trim().slice(0,300);
+    var res = [];
+    try {{ res = performance.getEntriesByType('resource').slice(-6).map(function(e){{ return e.name.replace(/^https?:\/\//,'').slice(0,70); }}); }} catch (e) {{}}
+    var nav = null;
+    try {{ var n = performance.getEntriesByType('navigation')[0]; nav = n ? {{ status: n.responseStatus, type: n.type, redirects: n.redirectCount,
+             responseEnd: Math.round(n.responseEnd), transfer: n.transferSize, encoded: n.encodedBodySize, decoded: n.decodedBodySize }} : null; }} catch (e) {{}}
+    // Quick 261012-97a (spike 024 runs 20+): which head resource holds the parser on a stalled
+    // load. `inflight` is the todo's `responseEnd === 0` filter, kept as a measurement even though
+    // Resource Timing only adds an entry once a fetch FINISHES (expected empty). `pending*` is the
+    // real in-flight set: head scripts/stylesheets with no timing entry yet. `tail`/`lastEl` is
+    // where the parser is sitting. `nav.responseEnd === 0` = main document still streaming.
+    var inflight = [], pendingScripts = [], pendingStyles = [], counts = {{}}, tail = '', lastEl = '', sw = null;
+    // Quick 261012-ago (runs 24+): what sits at the mid-parse stall offset. Runs 15/16/18/19 parked
+    // at docLen 938 382/383 and 938 544/545 -- a fixed point in the document. On a RENDERED arm
+    // `at938` is the serialised document around that offset and `tagsAround` names the tag opens
+    // either side of it; on a stalled arm `tail` already sits there. `headEnd`/`bodyAt` place the
+    // offset relative to the head/body boundary.
+    var at938 = '', headEnd = -1, bodyAt = -1, tagsAround = [], scriptAt = null;
+    try {{
+      var all = performance.getEntriesByType('resource');
+      var done = {{}};
+      all.forEach(function(e){{ done[e.name] = 1; }});
+      inflight = all.filter(function(e){{ return e.responseEnd === 0; }}).map(function(e){{ return e.name.slice(0,120); }});
+      var scripts = Array.prototype.slice.call(document.querySelectorAll('script[src]'));
+      var styles = Array.prototype.slice.call(document.querySelectorAll('link[rel=stylesheet]'));
+      counts = {{ res: all.length, scripts: scripts.length, styles: styles.length,
+                 scriptsDone: scripts.filter(function(s){{ return done[s.src]; }}).length }};
+      pendingScripts = scripts.filter(function(s){{ return !done[s.src]; }}).map(function(s){{
+        return (s.async ? '[async] ' : '') + (s.defer ? '[defer] ' : '') + (s.type ? '[' + s.type + '] ' : '') + s.src.slice(0,140); }});
+      pendingStyles = styles.filter(function(l){{ return !done[l.href]; }}).map(function(l){{ return l.href.slice(0,140); }});
+      tail = document.documentElement.outerHTML.slice(-500).replace(/\s+/g,' ');
+      var le = document.documentElement; while (le.lastElementChild) le = le.lastElementChild;
+      lastEl = le.outerHTML.slice(0,300).replace(/\s+/g,' ');
+      var full = document.documentElement.outerHTML;
+      at938 = full.slice(937800, 939200);
+      var sa = full.lastIndexOf('<script', 938500), se = full.indexOf('</script>', 938500);
+      scriptAt = sa < 0 ? null : {{ start: sa, end: se < 0 ? -1 : se + 9, textEnd: se, head: full.slice(sa, sa + 60) }};
+      headEnd = full.indexOf('</head>'); bodyAt = full.indexOf('<body');
+      var re = /<(script|link|style|meta|template|div|noscript|title|html|head|body)\b[^>]{{0,160}}>/g, m, before = [], after = [];
+      while ((m = re.exec(full))) {{
+        if (m.index < 938450) {{ before.push(m.index + ':' + m[0].slice(0,100)); if (before.length > 6) before.shift(); }}
+        else {{ after.push(m.index + ':' + m[0].slice(0,100)); if (after.length >= 4) break; }}
+      }}
+      tagsAround = before.concat(['<<938450>>'], after);
+      sw = (navigator.serviceWorker && navigator.serviceWorker.controller) ? navigator.serviceWorker.controller.scriptURL : null;
+    }} catch (e) {{ counts = {{ err: String(e) }}; }}
+    out = {{ href: location.href, title: document.title, globals: present,
+             plugins: plug, textHead: t, bodyLen: (document.body ? document.body.innerHTML.length : 0),
+             ready: document.readyState, docLen: document.documentElement.outerHTML.length,
+             head: (document.head ? document.head.innerHTML : '').replace(/\s+/g,' ').slice(0,900),
+             nav: nav, res: res, inflight: inflight, pendingScripts: pendingScripts, pendingStyles: pendingStyles,
+             counts: counts, tail: tail, lastEl: lastEl, sw: sw, currentScript: !!document.currentScript,
+             at938: at938, headEnd: headEnd, bodyAt: bodyAt, tagsAround: tagsAround, scriptAt: scriptAt }};
+  }} catch (e) {{ out = {{ err: String(e) }}; }}
+  location.href = 'http://localhost:17913/report?tag={tag}&ua=' + encodeURIComponent(navigator.userAgent) + '&probe=' + encodeURIComponent(JSON.stringify(out));
+}})();"#
+    )
+}
+
+/// MAIN THREAD ONLY. Builds the pristine window + raw WKWebView, loads `url`, parks both in
+/// `PRISTINE`. Returns the window number for `screencapture -l`.
+#[cfg(target_os = "macos")]
+fn pristine_create(app: &AppHandle, label: &str, url: &str, user_agent: Option<&str>, in_main: bool) -> Result<serde_json::Value, String> {
+    use objc2_foundation::{NSPoint, NSRect, NSSize, NSString, NSURLRequest, NSURL};
+    use objc2_web_kit::{WKWebView, WKWebViewConfiguration, WKWebsiteDataStore};
+
+    let mtm = objc2::MainThreadMarker::new().ok_or("pristine_create: not on main thread")?;
+    // Quick 261012-8gu (runs 17+): `in_main` attaches the raw WKWebView as a subview of the MAIN
+    // window's content view -- beside Tauri's own webview, at the child embed's exact rect -- so
+    // the attachment variable is put back while the injection variable stays removed. The two
+    // were confirmed as a pair by runs 12-16; this separates them, and it is also the embed shape
+    // the product wants.
+    let window = if in_main {
+        app.get_window("main").ok_or("pristine_create: no main window")?
+    } else {
+        tauri::WindowBuilder::new(app, label)
+            .inner_size(900.0, 700.0)
+            .center()
+            .focused(true)
+            .theme(Some(tauri::Theme::Light))
+            .title(format!("pristine · {label}"))
+            .build()
+            .map_err(|e| format!("pristine_create: window build failed: {e}"))?
+    };
+    let ns_view_ptr = window.ns_view().map_err(|e| format!("pristine_create: ns_view failed: {e}"))?;
+    // SAFETY: the content view of a window we hold a live handle to, on the main thread.
+    let ns_view: &objc2_app_kit::NSView = unsafe { &*(ns_view_ptr as *const objc2_app_kit::NSView) };
+    let frame = if in_main {
+        // The child embed's rect (`290,96 760x560` logical, top-left origin). AppKit content
+        // views are bottom-left unless flipped; tao's view may be either, so ask.
+        let bounds = ns_view.bounds();
+        let (x, y, w, h) = (290.0, 96.0, 760.0, 560.0);
+        let origin_y = if ns_view.isFlipped() { y } else { bounds.size.height - y - h };
+        NSRect::new(NSPoint::new(x, origin_y), NSSize::new(w, h))
+    } else {
+        ns_view.frame()
+    };
+
+    let config = unsafe { WKWebViewConfiguration::new(mtm) };
+    let store = unsafe { WKWebsiteDataStore::nonPersistentDataStore(mtm) };
+    unsafe { config.setWebsiteDataStore(&store) };
+    let webview = unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
+    if !in_main {
+        webview.setAutoresizingMask(
+            objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable
+                | objc2_app_kit::NSAutoresizingMaskOptions::ViewHeightSizable,
+        );
+    }
+    if let Some(ua) = user_agent {
+        unsafe { webview.setCustomUserAgent(Some(&NSString::from_str(ua))) };
+    }
+    ns_view.addSubview(&webview);
+
+    let nsurl = NSURL::URLWithString(&NSString::from_str(url)).ok_or("pristine_create: bad url")?;
+    let request = NSURLRequest::requestWithURL(&nsurl);
+    unsafe { webview.loadRequest(&request) };
+
+    let number = ns_window_number(&window);
+    let frame_json = serde_json::json!({ "x": frame.origin.x, "y": frame.origin.y, "w": frame.size.width, "h": frame.size.height, "flipped": ns_view.isFlipped() });
+    PRISTINE.with(|slot| *slot.borrow_mut() = Some((window, webview, !in_main)));
+    Ok(serde_json::json!({
+        "label": label, "url": url, "uaOverride": user_agent, "isolatedStore": "nonPersistentDataStore",
+        "tauriInjection": "none (raw WKWebView, no WebviewBuilder)", "windowNumber": number,
+        "attachment": if in_main { "subview of the MAIN window's content view" } else { "own WindowBuilder window" },
+        "frame": frame_json,
+    }))
+}
+
+/// MAIN THREAD ONLY. Quick 261012-97a (runs 21+): the host window's visibility as WebKit sees
+/// it. WKWebView derives the page's `IsVisible` activity state from the view hierarchy and the
+/// window's `occlusionState`; a page WebKit considers not visible gets no rendering updates
+/// (no paint, no `requestAnimationFrame`, and the HTML parser's yield-resume rides the same
+/// scheduler). `NSWindowOcclusionStateVisible` is bit 1 (value 2).
+#[cfg(target_os = "macos")]
+fn window_visibility(window: &tauri::Window, webview: Option<&objc2_web_kit::WKWebView>) -> serde_json::Value {
+    use objc2::runtime::AnyObject;
+    let mut v = match webview {
+        Some(webview) => serde_json::json!({
+            "viewHidden": webview.isHidden(),
+            "viewHiddenOrAncestor": webview.isHiddenOrHasHiddenAncestor(),
+            "viewInWindow": webview.window().is_some(),
+        }),
+        None => serde_json::json!({}),
+    };
+    if let Ok(ptr) = window.ns_window() {
+        let obj = ptr as *mut AnyObject;
+        // SAFETY: a live NSWindow of a window we hold a handle to, on the main thread.
+        let occ: usize = unsafe { objc2::msg_send![&*obj, occlusionState] };
+        let visible: bool = unsafe { objc2::msg_send![&*obj, isVisible] };
+        let key: bool = unsafe { objc2::msg_send![&*obj, isKeyWindow] };
+        let on_space: bool = unsafe { objc2::msg_send![&*obj, isOnActiveSpace] };
+        v["occlusionState"] = occ.into();
+        v["occluded"] = (occ & 2 == 0).into();
+        v["windowVisible"] = visible.into();
+        v["keyWindow"] = key.into();
+        v["onActiveSpace"] = on_space.into();
+    }
+    let cls = objc2::class!(NSApplication);
+    let ns_app: *mut AnyObject = unsafe { objc2::msg_send![cls, sharedApplication] };
+    if !ns_app.is_null() {
+        let active: bool = unsafe { objc2::msg_send![&*ns_app, isActive] };
+        v["appActive"] = active.into();
+    }
+    v
+}
+
+/// MAIN THREAD ONLY. Quick 261012-97a: an opaque, undecorated, always-on-top window covering the
+/// pristine arm's host window exactly, so the window server reports the host as NOT visible
+/// (`occlusionState` loses `NSWindowOcclusionStateVisible`). A bare `tauri::WindowBuilder` window
+/// has an opaque default background and no webview.
+#[cfg(target_os = "macos")]
+fn occluder_create(app: &AppHandle, host: Option<tauri::Window>) -> serde_json::Value {
+    let host = host.or_else(|| PRISTINE.with(|slot| slot.borrow().as_ref().map(|(w, _, _)| w.clone())));
+    let Some(host) = host else { return serde_json::json!({ "error": "no pristine host window" }) };
+    let scale = host.scale_factor().unwrap_or(1.0);
+    let (Ok(pos), Ok(size)) = (host.outer_position(), host.outer_size()) else {
+        return serde_json::json!({ "error": "host outer frame unavailable" });
+    };
+    let (x, y) = (pos.x as f64 / scale, pos.y as f64 / scale);
+    let (w, h) = (size.width as f64 / scale, size.height as f64 / scale);
+    match tauri::WindowBuilder::new(app, "occluder")
+        .position(x, y)
+        .inner_size(w, h)
+        .decorations(false)
+        .always_on_top(true)
+        .focused(false)
+        .title("occluder")
+        .build()
+    {
+        Ok(win) => serde_json::json!({ "ok": true, "frame": { "x": x, "y": y, "w": w, "h": h }, "windowNumber": ns_window_number(&win) }),
+        Err(e) => serde_json::json!({ "error": format!("occluder build failed: {e}") }),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn occluder_close(app: &AppHandle) -> serde_json::Value {
+    match app.get_window("occluder") {
+        Some(w) => match w.close() {
+            Ok(()) => serde_json::json!({ "closed": true }),
+            Err(e) => serde_json::json!({ "error": e.to_string() }),
+        },
+        None => serde_json::json!({ "error": "no occluder" }),
+    }
+}
+
+/// MAIN THREAD ONLY. What the Rust side can see without touching the page: `title` and `URL`.
+#[cfg(target_os = "macos")]
+fn pristine_read() -> serde_json::Value {
+    PRISTINE.with(|slot| match &*slot.borrow() {
+        Some((window, webview, _)) => {
+            let title = unsafe { webview.title() }.map(|s| s.to_string());
+            let url = unsafe { webview.URL() }
+                .and_then(|u| u.absoluteString())
+                .map(|s| s.to_string());
+            let loading = unsafe { webview.isLoading() };
+            serde_json::json!({ "title": title, "url": url, "isLoading": loading, "window": window_visibility(window, Some(webview)) })
+        }
+        None => serde_json::json!({ "error": "no pristine webview" }),
+    })
+}
+
+/// MAIN THREAD ONLY. Runs the 024 probe in the pristine page (navigation exfil to `/report`).
+#[cfg(target_os = "macos")]
+fn pristine_probe(tag: &str) -> serde_json::Value {
+    use objc2_foundation::NSString;
+    PRISTINE.with(|slot| match &*slot.borrow() {
+        Some((_, webview, _)) => {
+            let js = NSString::from_str(&probe_script(tag));
+            unsafe { webview.evaluateJavaScript_completionHandler(&js, None) };
+            serde_json::json!({ "ok": true })
+        }
+        None => serde_json::json!({ "error": "no pristine webview" }),
+    })
+}
+
+/// MAIN THREAD ONLY. Closes the pristine window and drops the webview (and its ephemeral store).
+#[cfg(target_os = "macos")]
+fn pristine_close() -> serde_json::Value {
+    match PRISTINE.with(|slot| slot.borrow_mut().take()) {
+        Some((window, webview, owns_window)) => {
+            if !owns_window {
+                // Borrowed MAIN window: detach the subview, leave the window alone.
+                webview.removeFromSuperview();
+                drop(webview);
+                return serde_json::json!({ "closed": true, "detached": "removeFromSuperview" });
+            }
+            drop(webview);
+            match window.close() {
+                Ok(()) => serde_json::json!({ "closed": true }),
+                Err(e) => serde_json::json!({ "error": e.to_string() }),
+            }
+        }
+        None => serde_json::json!({ "error": "no pristine window" }),
+    }
+}
+
+/// Worker-thread helper: photograph a window by number into the spike directory.
+fn screenshot_window(number: Option<isize>, file_stem: &str) -> serde_json::Value {
+    let Some(number) = number else {
+        return serde_json::json!({ "error": "no window number" });
+    };
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join(format!("{file_stem}.png"));
+    let status = std::process::Command::new("screencapture")
+        .args(["-l", &number.to_string(), "-x", "-o"])
+        .arg(&path)
+        .status();
+    match status {
+        Ok(st) if st.success() => serde_json::json!({ "path": path.display().to_string() }),
+        Ok(st) => serde_json::json!({ "error": format!("screencapture exited {st}") }),
+        Err(e) => serde_json::json!({ "error": e.to_string() }),
+    }
+}
+
 // ─────────────────────────── commands ───────────────────────────
 
 struct State {
@@ -256,7 +573,11 @@ fn create_embed(
             );
         });
     if spoof_ua {
-        builder = builder.user_agent(CHROME_UA);
+        // Quick 261011-w8j: `SPIKE_UA=<string>` substitutes an explicit UA for the Chrome
+        // one so other identities (the login window's `EpicGamesLauncher`, a full Safari
+        // string) can be measured through the same path. Unset keeps runs 1-5 behaviour.
+        let ua = std::env::var("SPIKE_UA").ok().filter(|v| !v.trim().is_empty());
+        builder = builder.user_agent(ua.as_deref().unwrap_or(CHROME_UA));
     }
     if isolated_store {
         builder = builder.data_store_identifier(*b"gamelibspike016\0");
@@ -267,6 +588,7 @@ fn create_embed(
         "add_child",
         serde_json::json!({
             "url": url, "spoofUa": spoof_ua, "isolatedStore": isolated_store,
+            "uaOverride": if spoof_ua { std::env::var("SPIKE_UA").ok() } else { None },
             "requested": { "x": x, "y": y, "w": w, "h": h },
             "thread": thread_kind(),
         }),
@@ -386,22 +708,7 @@ fn probe_embed(app: AppHandle, label: &str, tag: &str) -> Result<(), String> {
     let webview = app
         .get_webview(label)
         .ok_or_else(|| format!("no webview '{label}'"))?;
-    let script = format!(
-        r#"(function(){{
-  var out;
-  try {{
-    var names = ['isTauri','__TAURI__','__TAURI_INTERNALS__','ipc'];
-    var present = names.filter(function(k){{ return k in window; }});
-    var plug = Object.keys(window).filter(function(k){{
-      return k.indexOf('__TAURI_PLUGIN_') === 0 || k.indexOf('__TAURI_IIFE__') === 0;
-    }});
-    var t = ((document.body && document.body.innerText) || '').replace(/\s+/g,' ').trim().slice(0,300);
-    out = {{ href: location.href, title: document.title, globals: present,
-             plugins: plug, textHead: t, bodyLen: (document.body ? document.body.innerHTML.length : 0) }};
-  }} catch (e) {{ out = {{ err: String(e) }}; }}
-  location.href = 'http://localhost:17913/report?tag={tag}&probe=' + encodeURIComponent(JSON.stringify(out));
-}})();"#
-    );
+    let script = probe_script(tag);
     webview.eval(&script).map_err(|e| e.to_string())
 }
 
@@ -563,6 +870,16 @@ fn control_origin() -> String {
 // human clicking. The interactive control panel still exists for the visual
 // verification (compositing, input, scrolling) that a log cannot capture.
 
+/// `SPIKE_SPOOF_UA` -- unset or anything but `0`/`false` keeps the historical behaviour
+/// (Chrome 131 UA, what runs 1-5 all sent). `0`/`false` leaves `WebviewBuilder::user_agent`
+/// untouched so the embed presents WKWebView's default `Version/x Safari/x` string.
+fn autorun_spoof_ua() -> bool {
+    match std::env::var("SPIKE_SPOOF_UA") {
+        Ok(v) => !matches!(v.trim(), "0" | "false" | "FALSE" | "no"),
+        Err(_) => true,
+    }
+}
+
 fn autorun(app: AppHandle, log: Arc<Logger>) {
     // Helpers hop to the main thread like the real backend would; add_child
     // does its own internal main-thread dispatch either way (window/mod.rs:1129).
@@ -587,13 +904,158 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
     }));
     step("0a list_webviews before anything (expect exactly ['main'])", &v);
 
-    log.log("autorun", "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===", serde_json::json!({}));
+    // ── SPIKE 024 runs 12+ (quick 261012-7f2) ── PHASE P: the pristine arm. Runs BEFORE the
+    // child-embed phases so the embed's known challenge stays in the same run as a same-session
+    // NEGATIVE control, and the Steam control comes first so a dead network or broken harness
+    // cannot be misread as a pass. Each arm is its own window on its own fresh ephemeral store.
+    #[cfg(target_os = "macos")]
+    if autorun_pristine() {
+        let ua = std::env::var("SPIKE_PRISTINE_UA").ok().filter(|v| !v.trim().is_empty());
+        let run = std::env::var("SPIKE_RUN").unwrap_or_else(|_| "x".into());
+        let in_main = matches!(std::env::var("SPIKE_PRISTINE_INMAIN").as_deref(), Ok("1") | Ok("true"));
+        let long_sample = matches!(std::env::var("SPIKE_PRISTINE_LONG").as_deref(), Ok("1") | Ok("true"));
+        // Quick 261012-ago (runs 24+): `SPIKE_PRISTINE_FOCUS=1` focuses the host right after each arm
+        // is created when no occluder is in play -- the un-occluded condition that produced the
+        // mid-parse stall (runs 17-19), with the host explicitly key so a blank arm cannot be a
+        // natural occlusion in disguise.
+        let focus_host = matches!(std::env::var("SPIKE_PRISTINE_FOCUS").as_deref(), Ok("1") | Ok("true"));
+        // Quick 261012-97a (runs 21+): the occlusion experiment. Run 20 showed the "stall" is not
+        // a pending head resource (every head script had a timing entry; one blank arm even read
+        // `readyState=complete` with a full body) -- the webview is not RENDERING, which on macOS
+        // WebKit ties to the host window's occlusion state. `SPIKE_PRISTINE_OCCLUDE=1` makes the
+        // first Epic arm load under an opaque always-on-top occluder for the 20 s and 40 s reads,
+        // then removes it and focuses the host before the 120 s read (recovery), and loads the
+        // second Epic arm with the host focused and nothing on top (control).
+        // Run 23+: `SPIKE_PRISTINE_OCCLUDE=pre` raises the occluder BEFORE the webview is created
+        // and waits for the window server to report the host occluded, so the whole load -- the
+        // 1.1 MB document's parse included -- happens under occlusion. Run 22's occluder went up
+        // ~0 ms after the load started and took effect late enough that the parser had finished.
+        let occlude_env = std::env::var("SPIKE_PRISTINE_OCCLUDE").unwrap_or_default();
+        let occlude_pre = occlude_env.trim() == "pre";
+        let occlude = occlude_pre || matches!(occlude_env.trim(), "1" | "true");
+        log.log(
+            "autorun",
+            "=== PHASE P (024 runs 12+): PRISTINE raw WKWebView, cold nonPersistent store, zero Tauri injection ===",
+            serde_json::json!({ "uaOverride": ua, "run": run, "inMain": in_main, "longSample": long_sample, "occlude": occlude, "occludePre": occlude_pre, "focusHost": focus_host }),
+        );
+        for (tag, url, note) in [
+            ("steam", STEAM_STORE_URL, "POSITIVE CONTROL: known-good in the child embed (spike 016) and in Safari"),
+            ("epic-configured", EPIC_STORE_CONFIGURED_URL, "SUBJECT (the URL that would actually ship, www.epicgames.com)"),
+            ("epic-alt", EPIC_STORE_URL, "SUBJECT (store.epicgames.com -- the host run 1 measured)"),
+        ] {
+            let label = format!("pristine-{tag}");
+            log.log("autorun", "--- PHASE P arm ---", serde_json::json!({ "arm": tag, "url": url, "note": note }));
+            let pre_occluded_arm = occlude_pre && in_main && tag != "epic-alt";
+            if pre_occluded_arm {
+                let v = on_main(Box::new(|app| {
+                    let host = app.get_window("main");
+                    occluder_create(&app, host)
+                }));
+                step(&format!("Pa0[{tag}] OCCLUDER raised BEFORE the webview exists"), &v);
+                std::thread::sleep(Duration::from_millis(1500));
+                let v = on_main(Box::new(|app| match app.get_window("main") {
+                    Some(w) => window_visibility(&w, None),
+                    None => serde_json::json!({ "error": "no main window" }),
+                }));
+                step(&format!("Pa0[{tag}] host visibility 1.5 s later (expect occluded:true BEFORE load)"), &v);
+            }
+            let (l, u, ua2) = (label.clone(), url.to_string(), ua.clone());
+            let v = on_main(Box::new(move |app| match pristine_create(&app, &l, &u, ua2.as_deref(), in_main) {
+                Ok(v) => v,
+                Err(e) => serde_json::json!({ "error": e }),
+            }));
+            step(&format!("Pa[{tag}] pristine_create (WindowBuilder + raw WKWebView, nonPersistentDataStore)"), &v);
+            if v.get("error").is_some() {
+                continue;
+            }
+            let number = v.get("windowNumber").and_then(|n| n.as_i64()).map(|n| n as isize);
+
+            // Run 22+: the Steam arm is occluded too -- a 280 k document with no hydration step
+            // says whether an occluded WKWebView stalls its PARSER generically or only Epic's app.
+            let occluded_arm = occlude && tag != "epic-alt";
+            if pre_occluded_arm {
+                // Already up; nothing to raise.
+            } else if occluded_arm {
+                let v = on_main(Box::new(|app| occluder_create(&app, None)));
+                step(&format!("Pa2[{tag}] OCCLUDER over the host window (expect occluded:true at 20 s and 40 s)"), &v);
+            } else if occlude || focus_host {
+                let v = on_main(Box::new(|_app| {
+                    PRISTINE.with(|slot| match &*slot.borrow() {
+                        Some((w, _, _)) => match w.set_focus() {
+                            Ok(()) => serde_json::json!({ "focused": true }),
+                            Err(e) => serde_json::json!({ "error": e.to_string() }),
+                        },
+                        None => serde_json::json!({ "error": "no pristine window" }),
+                    })
+                }));
+                step(&format!("Pa2[{tag}] host window FOCUSED, nothing on top ({})", if occlude { "control arm" } else { "SPIKE_PRISTINE_FOCUS" }), &v);
+            }
+            let v = on_main(Box::new(|_app| pristine_read()));
+            step(&format!("Pa3[{tag}] title/url + window visibility right after create"), &v);
+
+            // Same generous settle as the embed arm, then a second sample at ~40 s: run 11 read
+            // the Safari title at 25 s and 45 s, and runs 2-3 were still on the interstitial at
+            // 21 s -- two samples separate "slow" from "challenged".
+            std::thread::sleep(Duration::from_secs(20));
+            let v = on_main(Box::new(|_app| pristine_read()));
+            step(&format!("Pb[{tag}] title/url at 20 s"), &v);
+            let v = screenshot_window(number, &format!("shot-pristine-{tag}-run{run}-20s"));
+            step(&format!("Pb[{tag}] screenshot at 20 s"), &v);
+
+            std::thread::sleep(Duration::from_secs(20));
+            let v = on_main(Box::new(|_app| pristine_read()));
+            step(&format!("Pc[{tag}] title/url at 40 s"), &v);
+            let v = screenshot_window(number, &format!("shot-pristine-{tag}-run{run}-40s"));
+            step(&format!("Pc[{tag}] screenshot at 40 s"), &v);
+
+            // Quick 261012-8gu: runs 12-16 left 4 of 10 Epic loads half-parsed at 40 s and never
+            // looked again. A third sample at 120 s says whether a stall completes or is terminal.
+            if long_sample && (tag != "steam" || occluded_arm) {
+                if occluded_arm {
+                    let v = on_main(Box::new(|app| occluder_close(&app)));
+                    step(&format!("Pc3[{tag}] OCCLUDER removed after the 40 s read"), &v);
+                    let v = on_main(Box::new(|_app| {
+                        PRISTINE.with(|slot| match &*slot.borrow() {
+                            Some((w, _, _)) => match w.set_focus() {
+                                Ok(()) => serde_json::json!({ "focused": true }),
+                                Err(e) => serde_json::json!({ "error": e.to_string() }),
+                            },
+                            None => serde_json::json!({ "error": "no pristine window" }),
+                        })
+                    }));
+                    step(&format!("Pc3[{tag}] host window focused -- does the load RESUME by 120 s?"), &v);
+                    let v = on_main(Box::new(|_app| pristine_read()));
+                    step(&format!("Pc3[{tag}] title/url + visibility right after un-occluding"), &v);
+                }
+                std::thread::sleep(Duration::from_secs(80));
+                let v = on_main(Box::new(|_app| pristine_read()));
+                step(&format!("Pc2[{tag}] title/url at 120 s"), &v);
+                let v = screenshot_window(number, &format!("shot-pristine-{tag}-run{run}-120s"));
+                step(&format!("Pc2[{tag}] screenshot at 120 s"), &v);
+            }
+
+            let t = format!("pristine-{tag}");
+            let v = on_main(Box::new(move |_app| pristine_probe(&t)));
+            step(&format!("Pd[{tag}] probe (evaluateJavaScript + navigation exfil)"), &v);
+            std::thread::sleep(Duration::from_secs(5));
+
+            let v = on_main(Box::new(|_app| pristine_close()));
+            step(&format!("Pe[{tag}] close"), &v);
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    }
+
+    log.log("autorun", "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===", serde_json::json!({ "spoofUa": autorun_spoof_ua(), "spoofUaEnv": std::env::var("SPIKE_SPOOF_UA").ok() }));
     let v = on_main(Box::new(|app| {
         let state = app.state::<State>();
+        // Quick 261011-w8j: the UA spoof was a CONSTANT across runs 1-5 (always `true`
+        // here, always ticked in the panel) and the README never named it as a variable.
+        // `SPIKE_SPOOF_UA=0` sends WKWebView's own UA instead so the two can be separated.
+        let spoof_ua = autorun_spoof_ua();
         match create_embed(
             app.clone(), state,
             format!("{}/set", control_server::ORIGIN),
-            true, false,
+            spoof_ua, false,
             290.0, 96.0, 760.0, 560.0,
         ) {
             Ok(v) => v,

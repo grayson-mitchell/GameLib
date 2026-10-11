@@ -523,7 +523,7 @@ export default function WebView() {
   // (`urls` map, `useStoreEmbedHost`, `storeEmbedOrigins.ts`'s `embeddable: false` flag -- that
   // flag is consulted only by the deep-link/restore path above, never by this direct route) ever
   // stopped `/store/epic` from reaching the live embed render below -- this one guard is the
-  // whole mechanism. Spike 024 measured why, across five runs, and closed the question
+  // whole mechanism. Spike 024 measured why, across ten runs, and closed the question
   // (`.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`): the gate is a
   // Cloudflare Turnstile challenge, not a bare 403. The injected globals (`isTauri`, `__TAURI__`,
   // `__TAURI_INTERNALS__`, `ipc`, `__TAURI_IIFE__`), read from inside the loaded Epic page, were
@@ -536,16 +536,37 @@ export default function WebView() {
   // rendered in all three, so no run is a dead harness. Interactive run 5 (2026-09-15, quick
   // `260915-hza`), at a pixel-verified 986x630: a human clicked the verify box and the challenge
   // was RE-ISSUED rather than cleared, twice; run 4 is discarded -- a harness defect squeezed the
-  // embed to 969x58. The scope-out is PERMANENT, not "for now" -- the follow-up todo closed
-  // WONTFIX on 2026-09-15; what would reopen it is a change in Epic's posture, not a change in
-  // our code. Three honest limits survive the measurement: run 1 rendered, so this is not a
-  // capability question -- the store CAN render in a Tauri-managed child webview; all five runs
-  // share one residential IP, so "the Tauri webview is blocked" cannot be separated from "this
-  // IP's reputation is spent" here, and testing that needs a different network, not a product
-  // decision, since the gate cannot be conditional on a user's IP; and anything behind sign-in
+  // embed to 969x58. The scope-out is MEASURED, not "for now": the follow-up todo closed
+  // WONTFIX on 2026-09-15, and quick 261011-w8j re-probed on 2026-10-11 with the Chrome UA spoof
+  // OFF (runs 6-8), an `EpicGamesLauncher` UA (run 9) and a full Safari UA (run 10) -- every run
+  // was challenged, so the user agent is ruled out as the cause. Run 11 (quick 261011-ws7,
+  // same day) then ran the cold-jar control: a Safari Private Window on the SAME machine, IP
+  // and WebKit rendered the store twice. So the IP and the jar are ruled out too, and the
+  // discriminator is this embedded webview itself -- the gate is webview-side, not Epic's
+  // posture. Quick 261012-7f2 (runs 12-16, 2026-10-12) then ran a PRISTINE raw WKWebView -- no
+  // Tauri init scripts, no add_child, cold ephemeral store -- in the same harness process: it was
+  // challenged 0 of 10 Epic arms and rendered 6 (the other 4 stalled mid-parse on the real store
+  // document, a separate unexplained observation), while the Tauri child embed in the same five
+  // runs was challenged 10 of 10. So the gate is Tauri's webview construction, this guard is
+  // still correct for THIS embed, and /store/epic has an in-app path in a separate pristine
+  // window. Quick 261012-8gu (runs 17-19, same day) then attached that raw WKWebView INSIDE the
+  // main window at the embed's rect: challenged 0 of 6, rendered 4 of 6 by 120 s, child embed
+  // challenged 6 of 6 alongside -- so the attachment is not the trigger, and the embed shape
+  // exists as a Rust-managed raw WKWebView subview (a different construction from D-05's "Tauri
+  // child webview", its own decision). Shipping either shape waits on the cold-load stall (5 of
+  // 16 raw loads blank at 40 s, todo filed). None of it touches this guard. Two honest limits
+  // survive: run 1
+  // rendered, so this is not a capability question -- the store CAN render in a Tauri-managed
+  // child webview; and anything behind sign-in
   // was deliberately untouched (D-07). None of this is a flat accusation that Epic blocks
   // in-app browsing, and the mechanism is not fully explained. The Epic tile stays (D-08,
   // `NavShell/components/StoresPanel/index.tsx`) -- it now lands on the panel instead.
+  // Decided 2026-10-12 (quick 261012-d5g), the D-05 call: Option A -- adopt the Rust-managed raw
+  // WKWebView subview for /store/epic, macOS first, owned by Phase 50 (ROADMAP.md `### Phase 50`).
+  // The cold-load stall above is explained (spike 024 README, established #8 and #9), not a
+  // blocker. This guard stays on EVERY platform until Phase 50 lands, then becomes darwin-only.
+  // Decision record, in `.planning/todos/completed/`:
+  // `2026-10-12-make-the-d-05-call-epic-store-embed-as-a-rust-managed-raw-wkwebview-subview.md`
   if (store === 'epic') {
     window.api.logInfo(
       '[WebView] store=epic: /store/epic is scoped out of the embed on every platform (D-05)'

@@ -63,17 +63,28 @@ export type LzmaDecoderKind = 'native' | 'pure-js' | 'unresolved'
  * darwin-arm64, with `b79765af2` (the liblzma 5.2.3 known-size+EOS alone
  * stream fix in `createNativeAdapter()`) in the build. That proves
  * correctness for the self-test's synthetic 64 KiB VZ chunk on one machine.
- * It does NOT prove real depot bytes, other platforms, or speed: the
- * ~5.8-6.6x figure quoted in the engaged log line has not been re-measured
- * through the post-`b79765af2` adapter (the spike-023 tension).
+ * It does NOT prove real depot bytes or other platforms.
+ *
+ * SPEED, re-measured 2026-10-12 through this adapter (`decompressChunk()` +
+ * `loadLzmaModule()`, 15 timed runs per arm, both arm orders, sha1 match) on
+ * spike 023's real-bytes 1 MiB VZ chunk, darwin-arm64: the
+ * `prebuilds/darwin-arm64/node.napi.node` the SEA embeds links liblzma 5.4.3
+ * and decodes in ~14-15 ms vs ~88-90 ms pure-JS (5.95-6.24x), so the
+ * spike-023 figure holds and the adapter adds no measurable cost. A
+ * source-built `node_modules/lzma-native/build/Release/lzma_native.node`
+ * links the bundled liblzma 5.2.3 and decodes in ~32-34 ms (2.42-2.52x);
+ * `node-gyp-build` prefers that file over the prebuild, so a dev sidecar or
+ * jest run on a machine that has one measures the slower library. That
+ * library version, not the adapter, was the spike-023 tension.
  *
  * WIN32 CAVEAT (a static fact, measured 2026-10-11): the win32-x64 lzma-native
  * prebuild imports a separate `liblzma.dll` that the SEA build does not
  * embed. The runtime outcome is recorded in quick 261011-mza's SUMMARY
  * (`.planning/quick/261011-mza-re-enable-native-lzma-depot-decode-opera/`).
  *
- * STILL OWED: the operator's live Steam depot install on the Mac and the
- * native-vs-pure-JS throughput re-measurement, tracked by
+ * STILL OWED: the operator's live Steam depot install on the Mac (engaged
+ * line, completion, end-to-end throughput) and CI's first linux-x64 result,
+ * tracked by
  * `.planning/todos/pending/2026-10-11-native-lzma-mac-live-steam-depot-install-and-throughput-remeasure.md`.
  *
  * HOW TO TURN IT BACK OFF. First, capture diagnostics at the moment of the
@@ -461,9 +472,10 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
     logInfo(
       [
         'lzmaLoader: native lzma-native decoder engaged for Steam VZ depot',
-        'chunk decode (the 23.1-01 spike measured ~5.8-6.6x real-chunk',
-        'speedup over the pure-JS path on darwin-arm64, NOT yet re-measured',
-        "through the current adapter; CONTEXT.md's live measurement found",
+        'chunk decode (~6x real-chunk speedup over the pure-JS path on',
+        'darwin-arm64 with the liblzma 5.4.3 prebuild, re-measured 2026-10-12',
+        'through this adapter; ~2.5x with a liblzma 5.2.3 source build;',
+        "CONTEXT.md's live measurement found",
         "decode, not network, was this codebase's actual",
         'throughput bottleneck). This line is logged exactly once per',
         "process -- its ABSENCE from a run's gamelib.log, with only the",

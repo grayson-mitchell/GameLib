@@ -5845,6 +5845,96 @@ the equivalent split for Epic/GOG/Amazon/Steam before locking the design.
 localisation across the repo's 49 locale catalogues (Phase 48's `48-01-PLAN.md` is the most recent
 worked example of landing keys across all of them). This is a phase, not a quick task.
 
+### Phase 50: Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic
+
+**Goal:** Render the Epic Games Store inside the Stores tab on macOS, where Phase 40's
+`/store/epic` route today lands on `WebviewUnavailablePanel reason="epic"`. The construction is
+the one spike 024 found serves: a raw `WKWebView` built from Rust with no wry setup at all,
+attached as a subview of the main window at the embed slot's rect — challenged 0 of 22 Epic arms
+across runs 17–27 while the Tauri-managed child webview was challenged alongside it every time.
+This is the **D-05 call, made 2026-10-12** (quick `261012-d5g`, closing
+`.planning/todos/completed/2026-10-12-make-the-d-05-call-epic-store-embed-as-a-rust-managed-raw-wkwebview-subview.md`):
+Option A, adopt the subview; Option B (keep `/store/epic` gated for good) rejected by the same
+reasoning the 2026-09-29 Linux decision recorded — keeping a store off the embed is against the
+one-launcher core value; Option C (a separate pristine window) folded in, not shipped as an
+interim — `humble_login_open`'s `is_epic_login` branch is a login-seam arm (sheet single-flight,
+login-cancel sentinel, `LOGIN_WINDOW_EVENTS`, fixed 900×700) and reusing it for browsing is a
+misuse, and the spike's own consequence section calls the separate-window question moot once the
+subview exists. Precedent for a second, Rust-owned WKWebView construction scoped to Epic already
+ships: `open_pristine_epic_login_window` (F-34.5-G6-01).
+
+**Requirements**: TBD (run `/gsd-spec-phase 50` or `/gsd-discuss-phase 50` to mint). The
+sub-decisions below are LOCKED inputs to that spec, not gray areas to reopen.
+**Depends on:** Phase 40 (the embed host — `useStoreEmbedHost`, `StoreEmbedControls`, the
+`store_embed_navigation_policy` scheme allow-list and the `resolveStoreForUrl` origin gate in
+`WebView/index.tsx`) and spike 024
+(`.planning/spikes/024-epic-store-in-embedded-child-webview/app/src/main.rs` is the reference
+construction; its README's `## What IS established` #6–#9 are the measurements this phase stands
+on and must not re-derive). **Not** Phase 49, which `phase.add` defaulted to by positional guess —
+the offline banner and this subview share no files.
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 50 to break down)
+
+**Scope (ships):**
+
+- A Rust-owned raw `WKWebView` (`WKWebViewConfiguration` built by hand, no `WebviewBuilder`,
+  no init scripts, no message or scheme handlers) added as a subview of the main `NSWindow`'s
+  content view at the embed slot's rect, macOS only (`#[cfg(target_os = "macos")]`).
+- Bounds sync with the React slot (the same rect `useStoreEmbedHost` already measures for the
+  Tauri embed), show/hide on route change, and teardown when the Stores tab unmounts — no
+  subview may outlive its route.
+- Back / forward / current-URL reporting into the existing `StoreEmbedControls`, via a
+  `WKNavigationDelegate` on the Rust side; the same scheme allow-list and configured-origin
+  semantics the Tauri embed enforces (`store_embed_navigation_policy` + the origin gate), so an
+  arbitrary https origin is still not loadable through this surface.
+- Load timeout with a visible reload affordance (spike established #9: the one recurring blank
+  was an upstream document-stream stall, 0 of 16 arms since run 19 — the embed's answer is a
+  timeout, not webview code).
+- Graceful degradation: a navigation to `challenges.cloudflare.com` is detected in the delegate
+  and the route falls back to the existing `WebviewUnavailablePanel` with its open-in-browser
+  button, so a challenged load is never a blank rectangle.
+- The `store === 'epic'` guard in `WebView/index.tsx` becomes darwin-only; the
+  `embeddable: false` flag on the epic entry of `storeEmbedOrigins.ts` is revisited so the
+  deep-link and last-URL restore paths route Epic URLs into this surface on macOS.
+- The `reason="epic"` copy in `WebviewUnavailablePanel` stays for Windows and Linux and is
+  re-read for truth once macOS ships.
+
+**Locked sub-decisions (from the D-05 call):**
+
+1. **Sign in button — no interception, no DOM hiding.** The subview is the same non-injected
+   construction as the shipped pristine Epic login window, which completes Epic login today, so
+   the 2026-09-15 sign-in todo's premise (a Talon 403 against a Tauri-*injected* webview) does
+   not apply. The live gate measures the button in place; a hand-off to the pristine login
+   window becomes a task of this phase ONLY if that arm is challenged or 403s.
+2. **Platform scope — macOS only here.** Windows has no Stores-tab embed at all
+   (`.planning/todos/pending/2026-10-11-stores-tab-embed-not-implemented-on-windows.md`) and
+   Linux would need a WebKitGTK equivalent; both keep the panel.
+3. **Jar — the shared default `WKWebsiteDataStore`**, the same one every shipped embed and the
+   login windows run on (`data_store_identifier` has 0 hits in `src-tauri/src`; the 2026-09-29
+   Linux one-jar decision). The spike measured a COLD `nonPersistentDataStore` only, so the live
+   gate MUST carry a warm, signed-in-jar arm.
+4. **Challenge reputation — accepted, unquantified.** 1 of 32 raw arms was challenged after ~50
+   store hits a day from one IP with the child embed challenged alongside every time; a shipped
+   subview exercises the store far less. No Chrome UA spoof (runs 6–10 ruled the UA out both
+   ways).
+
+**Live gate arms (minimum):** cold jar; warm signed-in jar; the Sign in button; occlusion
+recovery (cover the window, uncover it, the store boots and paints — established #8); the
+timeout → reload path; back/forward/URL parity with the GOG embed; and the Steam embed as the
+positive control in the same session.
+
+**Does NOT ship:** Epic on Windows or Linux; any change to the login seam or
+`open_pristine_epic_login_window`; the sign-in hand-off (conditional, see 1); per-store jar
+isolation; anything behind sign-in beyond what the Sign in arm measures (D-07's boundary holds).
+
+**Do not re-derive** (spike 024 README, `## What IS established`): not the IP, UA or jar (runs
+6–11); not the attachment (runs 17–19); not occlusion (runs 20–23, #8); not a WebKit parse defect
+(runs 24–27, #9). The public wry builder cannot strip the init scripts and handlers, so a
+Tauri-managed webview is not a candidate under any flag.
+
 ---
 
 ## Parked / Superseded Phases

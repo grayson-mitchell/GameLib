@@ -35,19 +35,39 @@ interface Props {
  *   unbuilt (filed as Phase 38 ledger items, D-04; the macOS evidence is
  *   still 016/017/018).
  * - `reason="epic"` (D-05/D-08): `/store/epic` is scoped out of the embed on
- *   EVERY platform, including macOS. Spike 024 measured why, across five
- *   runs, and closed the question
+ *   EVERY platform, including macOS. Spike 024 measured why, across eleven
+ *   runs (five on 2026-09-05/15, five on 2026-10-11 with the Chrome UA
+ *   spoof off and two other UA identities, and a Safari Private Window
+ *   control the same day), and closed the question
  *   (`.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`):
  *   the gate is a Cloudflare Turnstile challenge. The injected globals, read
  *   from inside the loaded Epic page, were present in the run that rendered
  *   fine as well as in the runs that were challenged, so the 2026-08-03
  *   Talon login-endpoint mechanism is REFUTED, not confirmed -- it does not
- *   explain the store gate. This is measured and permanent, not predicted:
- *   the follow-up todo closed WONTFIX on 2026-09-15. The copy stays
- *   restrained, never an accusation that Epic blocks in-app browsing -- run
- *   1 rendered the store fully and all five runs share one residential IP,
- *   leaving reputation-vs-webview unseparated; this edit does not change
- *   the user-facing copy. The Epic tile stays in
+ *   explain the store gate, and the user agent does not either (quick
+ *   261011-w8j). A cold Safari Private Window on the same IP and WebKit
+ *   rendered the store twice (run 11, quick 261011-ws7), so the IP and the
+ *   jar are out as well: the gate is specific to the embedded webview. This
+ *   is measured, not predicted; the follow-up todo closed WONTFIX on
+ *   2026-09-15 and the 2026-10-11 runs appended to it. Runs 12-16 (quick
+ *   261012-7f2, 2026-10-12) then put a PRISTINE raw WKWebView -- no Tauri
+ *   injection, no add_child, cold store -- in the same process: challenged
+ *   0 of 10, rendered 6 of 10, while this child embed was challenged 10 of
+ *   10 alongside it. The gate is Tauri's webview construction; this panel
+ *   stays correct for the embed. Runs 17-19 (quick 261012-8gu) then
+ *   attached that raw WKWebView INSIDE the main window at the embed's
+ *   rect: 0 of 6 challenged, 4 of 6 rendered by 120 s, so the embed shape
+ *   exists as a Rust-managed raw WKWebView. The D-05 call was made on
+ *   2026-10-12 (quick 261012-d5g): Option A, adopt that subview, macOS
+ *   first, owned by Phase 50 (ROADMAP.md `### Phase 50`). The cold-load
+ *   stall is explained (spike README, established #8 and #9), not a
+ *   blocker. Until Phase 50 lands this panel stays the `/store/epic`
+ *   answer on every platform; after it, on Windows and Linux only, where
+ *   Phase 50 re-reads this copy for truth. Decision record:
+ *   `.planning/todos/completed/2026-10-12-make-the-d-05-call-*`.
+ *   The copy stays restrained, never an accusation that Epic blocks
+ *   in-app browsing -- run 1 rendered the store fully; this edit does not
+ *   change the user-facing copy. The Epic tile stays in
  *   `NavShell/components/StoresPanel/index.tsx` (D-08): a tile leading to a
  *   working open-in-browser escape hatch beats no tile.
  *
