@@ -1243,16 +1243,22 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- [2026-08-17] [auth] "Humble's two keyring slots still read unattended at bootstrap — 260817-d61 deferred one slot of three, so the boot-… — [todo file](.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md)
 - [2026-08-23] [general] "F-9 — a generic RPC timeout fired live; co-occurrence with a cookie op is UNDETERMINED" — [todo file](.planning/todos/pending/2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md)
 - [2026-09-11] [planning-records] "`audit-uat` reads YAML blocks in document BODIES too — the 652-field body population is MEASURED (51 f… — [todo file](.planning/todos/pending/2026-09-11-audit-uat-reads-block-scalars-in-document-bodies.md)
 - [2026-09-14] [build] 'Windows releases ship UNSIGNED — no Windows code-signing cert is enrolled, so SmartScreen warns on every d… — [todo file](.planning/todos/pending/2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md)
 - [2026-09-15] [webview/store-embed] 'Epic''s in-embed "Sign in" button has no decided behaviour — intercept and hand off, fail visi… — [todo file](.planning/todos/pending/2026-09-15-epic-in-embed-sign-in-button-has-no-decided-behaviour.md)
 - [2026-09-17] [build] "Packaged .app renders blank — FIXED: the data router rendered its initial-load state as nothing; empty-ro… — [todo file](.planning/todos/pending/2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md)
 - [2026-10-01] [ui] Library game tiles stretch with window width — consider a fixed or user-selectable tile size — [todo file](.planning/todos/pending/2026-10-01-library-tiles-stretch-with-window-width-consider-a-set-size.md)
-- [2026-10-02] [ui] "--border-color resolves to #272f31 and measures 1.08-1.48:1 in 10 of 13 theme selectors, so all 7 of its con… — [todo file](.planning/todos/pending/2026-10-02-border-color-resolves-to-an-invisible-grey-in-ten-themes.md)
-- [2026-10-02] [i18n] "genI18nGateScope is RED on 10 pre-existing drifted files — committed i18nForkTouchedFiles.json is 214, the LIVE der… — [todo file](.planning/todos/pending/2026-10-02-i18n-fork-touched-snapshot-drifted-by-ten-files.md)
 - [2026-10-03] [ui] Library sorting is title-only — add a sort-field menu, with Playnite's sort list as the reference set — [todo file](.planning/todos/pending/2026-10-03-library-sorting-is-title-only-add-a-sort-field-menu-playnite.md)
+- [2026-10-03] [ui] Login sheet's injected title bar shows a light wedge in the scrollbar gutter at the rounded top-right co… — [todo file](.planning/todos/pending/2026-10-03-login-sheet-title-bar-has-a-light-wedge-at-the-rounded-corner.md)
+- [2026-10-05] [i18n] Orphaned library-top-section locale keys (and soon setting.maxRecentGames) — decide whether to rem… — [todo file](.planning/todos/pending/2026-10-05-orphaned-library-top-section-locale-keys-removal-needs-a-decision.md)
+- [2026-10-05] [shortcuts] "Windows desktop/Start Menu shortcuts are never written — shell.writeShortcutLink is a stub returnin… — [todo file](.planning/todos/pending/2026-10-05-windows-desktop-and-start-menu-shortcuts-are-never-written.md)
+- [2026-10-09] [auth] 'Amazon expiry strings (A3/A6) untested: nile tokens are encrypted, induction needs server-side device deregistration' — [todo file](.planning/todos/pending/2026-10-10-amazon-expiry-strings-need-a-real-induction.md)
+- [2026-10-11] [ui] "`.button.is-text`'s 22 `.is-link` render sites and its own `:hover` state are unexamined for contrast" — [todo file](.planning/todos/pending/2026-10-11-button-is-text-hover-and-is-link-pairs-miss-4-5-to-1.md)
+- [2026-10-11] [steam] "Native LZMA decode is back ON: run a live Steam depot install on the Mac and re-measure native v… — [todo file](.planning/todos/pending/2026-10-11-native-lzma-mac-live-steam-depot-install-and-throughput-remeasure.md)
+- [2026-10-11] [webview/store-embed] 'Re-probe spike 024 with the Chrome UA spoof OFF — all five Epic-store runs stamped a Ch… — [todo file](.planning/todos/pending/2026-10-11-re-probe-spike-024-epic-store-embed-with-the-chrome-ua-spoof.md)
+- [2026-10-11] [steam] "win32 SEA native LZMA never engages: the win32-x64 addon imports liblzma.dll, which the SEA does not emb… — [todo file](.planning/todos/pending/2026-10-11-win32-sea-native-lzma-falls-back-liblzma-dll-not-embedded.md)
+- [2026-10-11] [ui] Winetricks settings window not resizable by dragging on macOS, yet captures show three distinct widths — [todo file](.planning/todos/pending/2026-10-11-winetricks-settings-window-not-resizable-by-drag-on-macos.md)
 
 ### Blockers/Concerns
 
