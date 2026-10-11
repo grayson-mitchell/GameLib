@@ -637,13 +637,6 @@
         "gamemode": "استفاده از GameMode (Feral Game Mode باید نصب شده باشد)",
         "hideChangelogsOnStartup": "عدم نمایش تغییرات در هنگام اجرا",
         "language": "انتخاب زبان نرم افزار",
-        "library_top_option": {
-            "disabled": "غیر فعال",
-            "favourites": "بازی های مورد علاقه",
-            "recently_played": "بازی های اخیرا اجرا شده",
-            "recently_played_installed": "بازی های اخیرا اجرا شده (فقط نصب شده)"
-        },
-        "library_top_section": "قسمت بالایی کتابخانه",
         "log": {
             "copy-to-clipboard": "کپی کردن محتوای لاگ در کليپ بورد",
             "current-log": "لاگ اخیر",
@@ -702,7 +695,6 @@
             "title": "همگامسازی دستی ذخیرهها",
             "upload": "آپلود"
         },
-        "maxRecentGames": "اخیرا بازی شده برای نمایش",
         "maxworkers": "بیسترین تعداد ورکر هنگام دانلود",
         "minimize-on-launch": "کوچک کردن GameLib بعد از اجرای بازی",
         "offlinemode": "اجرای آفلاین بازی",

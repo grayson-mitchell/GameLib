@@ -637,13 +637,6 @@
         "gamemode": "Gebruik GameMode (Feral Game Mode moet geïnstalleerd zijn)",
         "hideChangelogsOnStartup": "Laat wijzigingslogboeken niet zien bij Opstarten",
         "language": "Selecteer App taal",
-        "library_top_option": {
-            "disabled": "Uitgeschakeld",
-            "favourites": "Favoriete Games",
-            "recently_played": "Recentelijk Gespeelde Games",
-            "recently_played_installed": "Recentelijk Gespeelde Games (Alleen Geïnstalleerd)"
-        },
-        "library_top_section": "Bibliotheek Top-Sectie",
         "log": {
             "copy-to-clipboard": "Copy log content to clipboard",
             "current-log": "Current Log",
@@ -702,7 +695,6 @@
             "title": "Handmatige synchronisatie van saves",
             "upload": "Upload"
         },
-        "maxRecentGames": "Recente spellen om te tonen",
         "maxworkers": "Maximale Hoeveelheid van Werkers tijdens het downloaden",
         "minimize-on-launch": "GameLib minimaliseren Na Opstarten Spel",
         "offlinemode": "Spel Offline Draaien",

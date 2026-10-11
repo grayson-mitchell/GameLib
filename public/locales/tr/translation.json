@@ -645,13 +645,6 @@
         "gamemode": "GameMode Kullan (Feral Game Mode kurulu olmalıdır)",
         "hideChangelogsOnStartup": "Başlangıçta değişiklik günlüklerini gösterme",
         "language": "Uygulama Dilini Seç",
-        "library_top_option": {
-            "disabled": "Devre dışı",
-            "favourites": "Favori Oyunlar",
-            "recently_played": "Son Oynanan Oyunlar",
-            "recently_played_installed": "Son Oynanan Oyunlar (Yalnızca Kurulu Olanlar)"
-        },
-        "library_top_section": "Kütüphane Üst Bölümü",
         "log": {
             "copy-to-clipboard": "Günlük içeriğini panoya kopyala",
             "current-log": "Geçerli Günlük",
@@ -710,7 +703,6 @@
             "title": "Kayıtları El İle Eşitle",
             "upload": "Yükle"
         },
-        "maxRecentGames": "Gösterilecek Son Oynananlar",
         "maxworkers": "İndirme sırasında en yüksek bağlantı noktaları",
         "minimize-on-launch": "Oyun Başlatıldıktan Sonra GameLib'i Simge Durumuna Küçült",
         "offlinemode": "Oyunu Çevrim Dışı Çalıştır",

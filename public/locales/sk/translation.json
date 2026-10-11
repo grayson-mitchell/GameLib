@@ -637,13 +637,6 @@
         "gamemode": "Použite GameMode (je potrebné nainštalovať režim Feral Game)",
         "hideChangelogsOnStartup": "Don't show changelogs on Startup",
         "language": "Choose App Language",
-        "library_top_option": {
-            "disabled": "Disabled",
-            "favourites": "Favourite Games",
-            "recently_played": "Recently Played Games",
-            "recently_played_installed": "Recently Played Games (Only Installed)"
-        },
-        "library_top_section": "Library Top Section",
         "log": {
             "copy-to-clipboard": "Copy log content to clipboard.",
             "current-log": "Current log",
@@ -702,7 +695,6 @@
             "title": "Select EXE to Run",
             "upload": "Nahrať"
         },
-        "maxRecentGames": "Recent Games to Show",
         "maxworkers": "Maximálny počet pracovníkov pri sťahovaní",
         "minimize-on-launch": "Minimize GameLib After Game Launch",
         "offlinemode": "Spustite hru offline",

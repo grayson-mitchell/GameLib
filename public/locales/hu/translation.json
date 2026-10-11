@@ -647,13 +647,6 @@
         "gamemode": "GameMode használata (a Feral Game Mode-nak telepítve kell lennie)",
         "hideChangelogsOnStartup": "Ne jelenítse meg a változásnaplókat indításkor",
         "language": "Alkalmazás nyelvének kiválasztása",
-        "library_top_option": {
-            "disabled": "Tiltva",
-            "favourites": "Kedvenc játékok",
-            "recently_played": "Nemrég játszott játékok",
-            "recently_played_installed": "Nemrég játszott játékok (csak telepített)"
-        },
-        "library_top_section": "Könyvtár felső szakasza",
         "log": {
             "copy-to-clipboard": "Napló tartalmának vágólapra másolása",
             "current-log": "Jelenlegi napló",
@@ -712,7 +705,6 @@
             "title": "Mentések kézi szinkronizálása",
             "upload": "Feltöltés"
         },
-        "maxRecentGames": "Nemrég játszottak megjelenítése",
         "maxworkers": "Feldolgozók legnagyobb száma letöltéskor",
         "minimize-on-launch": "A GameLib minimalizálása játékindítás után",
         "offlinemode": "Játék futtatása offline",

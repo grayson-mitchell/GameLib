@@ -638,13 +638,6 @@
         "gamemode": "Använd GameMode (Feral Game Mode måste vara installerat)",
         "hideChangelogsOnStartup": "Visa inte ändringsloggen vid uppstart",
         "language": "Välj språk",
-        "library_top_option": {
-            "disabled": "Deaktiverad",
-            "favourites": "Favoritspel",
-            "recently_played": "Nyligen spelade",
-            "recently_played_installed": "Nyligen spelade spel (endast installerade)"
-        },
-        "library_top_section": "Bibliotek topplista",
         "log": {
             "copy-to-clipboard": "Kopiera loggen till urklipp/klippbord",
             "current-log": "Aktuell logg",
@@ -703,7 +696,6 @@
             "title": "Synkronisera sparfiler manuellt",
             "upload": "Ladda upp"
         },
-        "maxRecentGames": "Visa nyligen spelat",
         "maxworkers": "Maximalt antal samtida nedladdningar",
         "minimize-on-launch": "Minimera GameLib efter spelstart",
         "offlinemode": "Kör spelet offline",

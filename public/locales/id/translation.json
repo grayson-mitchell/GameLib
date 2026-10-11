@@ -640,13 +640,6 @@
         "gamemode": "Gunakan GameMode (Feral Game Mode perlu diinstal)",
         "hideChangelogsOnStartup": "Jangan tampilkan daftar ubahan saat memulai",
         "language": "Pilih Bahasa",
-        "library_top_option": {
-            "disabled": "Matikan",
-            "favourites": "Gim Favorit",
-            "recently_played": "Gim yang Baru Dimainkan",
-            "recently_played_installed": "Gim yang Baru Dimainkan (Hanya yang terinstal)"
-        },
-        "library_top_section": "Bagian Atas Pustaka",
         "log": {
             "copy-to-clipboard": "Salin konten log ke papan klip",
             "current-log": "Log Saat Ini",
@@ -705,7 +698,6 @@
             "title": "Sinkronisasi Penyimpanan Secara Manual",
             "upload": "Unggah"
         },
-        "maxRecentGames": "Gim yang Dimainkan Baru-Baru Ini",
         "maxworkers": "Jumlah Maksimum Worker saat mengunduh",
         "minimize-on-launch": "Minimalkan Jendela GameLib Setelah Gim Diluncurkan",
         "offlinemode": "Jalankan Game Secara Luring",

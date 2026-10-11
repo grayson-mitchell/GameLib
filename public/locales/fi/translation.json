@@ -638,13 +638,6 @@
         "gamemode": "Käytä GameModea (Feral Game Mode tulee olla asennettu)",
         "hideChangelogsOnStartup": "Älä näytä muutoskirjauksia käynnistyksen yhteydessä",
         "language": "Valitse sovelluksen kieli",
-        "library_top_option": {
-            "disabled": "Kytketty pois",
-            "favourites": "Lempipelit",
-            "recently_played": "Hiljattain pelatut",
-            "recently_played_installed": "Hiljattain pelatut (vain asennetut)"
-        },
-        "library_top_section": "Kirjaston yläosio",
         "log": {
             "copy-to-clipboard": "Kopioi lokin sisältö leikepöydälle",
             "current-log": "Nykyinen loki",
@@ -703,7 +696,6 @@
             "title": "Manuaalinen tallennusten synkronointi",
             "upload": "Lähetä"
         },
-        "maxRecentGames": "Viimeksi pelatut näkyvillä",
         "maxworkers": "Työstäjien enimmäismäärä ladattaessa",
         "minimize-on-launch": "Pienennä GameLib palkkiin pelin käynnistämisen jälkeen",
         "offlinemode": "Käynnistä peli offline-tilassa",

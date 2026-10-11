@@ -648,13 +648,6 @@
         "gamemode": "Usar GameMode (Feral Game Mode debe estar instalado)",
         "hideChangelogsOnStartup": "No mostrar los registros de cambios en el inicio",
         "language": "Elija el idioma de la aplicación",
-        "library_top_option": {
-            "disabled": "Desactivada",
-            "favourites": "Juegos Favoritos",
-            "recently_played": "Juegos Jugados Recientemente",
-            "recently_played_installed": "Juegos jugados recientemente (sólo instalados)"
-        },
-        "library_top_section": "Sección superior de la biblioteca",
         "log": {
             "copy-to-clipboard": "Copiar el contenido del registro en el portapapeles",
             "current-log": "Registro actual",
@@ -713,7 +706,6 @@
             "title": "Sincronización manual de guardados",
             "upload": "Subida"
         },
-        "maxRecentGames": "Cantidad de jugados recientemente a mostrar",
         "maxworkers": "Número máximo de procesos al descargar",
         "minimize-on-launch": "Minimizar GameLib al ejecutar un juego",
         "offlinemode": "Ejecutar juego sin conexión",

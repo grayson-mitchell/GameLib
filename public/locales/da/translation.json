@@ -384,12 +384,6 @@
         "autovkd3d": "Autoinstallér/Opdatér VKD3D på Præfiks",
         "change-target-exe": "Vælg en alternativ EXE at køre",
         "customWineProton": "Brugerdefinerede vin-/protonstier",
-        "library_top_option": {
-            "recently_played_installed": "Senest spillede spil (kun installeret)",
-            "disabled": "Slå Fra",
-            "favourites": "Yndlingsspil",
-            "recently_played": "Nyligt spillede spil"
-        },
         "log": {
             "instructions_title": "Hvordan rapporterer man et problem?",
             "show-in-folder": "Vis logfil i mappe",
@@ -510,8 +504,6 @@
         "fsync": "Aktiver Fsync",
         "gamemode": "Brug GameMode (Feral Game Mode skal installeres)",
         "language": "Vælg appsprog",
-        "library_top_section": "Bibliotekets øverste sektion",
-        "maxRecentGames": "Spillede for nylig for at vise",
         "maxworkers": "Maksimalt antal arbejdere ved download",
         "minimize-on-launch": "Minimer heroisk efter spilstart",
         "offlinemode": "Kør spil offline",

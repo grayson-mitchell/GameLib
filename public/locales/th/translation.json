@@ -435,12 +435,6 @@
             "cancelInstall": "",
             "removeConfirmTitle": ""
         },
-        "library_top_option": {
-            "disabled": "ปิดใช้งานแล้ว",
-            "favourites": "",
-            "recently_played_installed": "",
-            "recently_played": ""
-        },
         "WoW64": "",
         "frameless-window": {
             "confirmation": {
@@ -522,7 +516,6 @@
         "hdr": "",
         "custom_themes_path": "",
         "autodxvknvapi": "",
-        "library_top_section": "",
         "savefolder": {
             "placeholder": "",
             "warning": "",
@@ -602,7 +595,6 @@
             "warning": ""
         },
         "select_theme": "",
-        "maxRecentGames": "",
         "default-install-path": "",
         "enableFSRHack": "",
         "autoUpdateGames": "",

@@ -646,13 +646,6 @@
         "gamemode": "Utiliser GameMode (Feral GameMode doit être installé)",
         "hideChangelogsOnStartup": "Ne pas afficher le journal des changements au démarrage",
         "language": "Choix de la langue",
-        "library_top_option": {
-            "disabled": "Désactivé",
-            "favourites": "Jeux préférés",
-            "recently_played": "Jeux lancés récemment",
-            "recently_played_installed": "Jeux lancés récemment (Seulement ceux qui sont installés)"
-        },
-        "library_top_section": "Section supérieure de la bibliothèque",
         "log": {
             "copy-to-clipboard": "Copier le contenu du rapport dans le presse-papier",
             "current-log": "Log actuel",
@@ -711,7 +704,6 @@
             "title": "Synchronisation manuelle des sauvegardes",
             "upload": "Téléverser"
         },
-        "maxRecentGames": "Nombre de jeux lancés récemment à afficher",
         "maxworkers": "Nombre maximum de processus pendant le téléchargement",
         "minimize-on-launch": "Minimiser GameLib après le lancement d'un jeu",
         "offlinemode": "Lancer le jeu hors ligne",

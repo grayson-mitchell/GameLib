@@ -637,13 +637,6 @@
         "gamemode": "Erabili GameMode (Feral Game Mode instalatu behar da)",
         "hideChangelogsOnStartup": "Don't show changelogs on Startup",
         "language": "Aukeratu aplikazioaren hizkuntza",
-        "library_top_option": {
-            "disabled": "Desgaituta",
-            "favourites": "Joko gogokoenak",
-            "recently_played": "Duela gutxi jokatutako jokoak",
-            "recently_played_installed": "Duela gutxi jokatutako jokoak (bakarrik instalatuta)"
-        },
-        "library_top_section": "Liburutegiaren Goiko Atala",
         "log": {
             "copy-to-clipboard": "Kopiatu erregistroko edukia arbelean",
             "current-log": "Uneko erregistroa",
@@ -702,7 +695,6 @@
             "title": "Eskuzko sinkronizazioa gordetzen du",
             "upload": "Kargatu"
         },
-        "maxRecentGames": "Duela gutxi erreproduzitu da erakusteko",
         "maxworkers": "Gehienezko Langile kopurua deskargatzerakoan",
         "minimize-on-launch": "Minimizatu Heroikoa Jokoa abiarazi ondoren",
         "offlinemode": "Exekutatu jokoa lineaz kanpo",

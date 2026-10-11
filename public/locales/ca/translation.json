@@ -648,13 +648,6 @@
         "gamemode": "Utilitza el GameMode (cal que el Feral Game Mode estigui instal·lat)",
         "hideChangelogsOnStartup": "No mostris el registre de canvis a l'inici",
         "language": "Tria la llengua de l'aplicació",
-        "library_top_option": {
-            "disabled": "Desactivat",
-            "favourites": "Jocs preferits",
-            "recently_played": "Jocs jugats fa poc",
-            "recently_played_installed": "Jocs jugats fa poc (només els instal·lats)"
-        },
-        "library_top_section": "Secció superior de la biblioteca",
         "log": {
             "copy-to-clipboard": "Copia el registre al porta-retalls",
             "current-log": "Registre actual",
@@ -713,7 +706,6 @@
             "title": "Sincronització manual de partides desades",
             "upload": "Puja"
         },
-        "maxRecentGames": "Jugats fa poc a mostrar",
         "maxworkers": "Nombre màxim de processos en baixar",
         "minimize-on-launch": "Minimitza el GameLib després d'executar un joc",
         "offlinemode": "Executa el joc sense connexió",

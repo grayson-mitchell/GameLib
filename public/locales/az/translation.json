@@ -636,13 +636,6 @@
         "gamemode": "GameMode istifadə edin (Feral Game Mode quraşdırılmalıdır)",
         "hideChangelogsOnStartup": "Don't show changelogs on Startup",
         "language": "Tətbiq dilini seçin",
-        "library_top_option": {
-            "disabled": "Əlil",
-            "favourites": "Sevimli Oyunlar",
-            "recently_played": "Son Oynanan Oyunlar",
-            "recently_played_installed": "Son Oynanan Oyunlar (Yalnız Quraşdırılıb)"
-        },
-        "library_top_section": "Kitabxananın yuxarı bölməsi",
         "log": {
             "copy-to-clipboard": "Giriş məzmununu panoya kopyalayın",
             "current-log": "Cari Qeyd",
@@ -701,7 +694,6 @@
             "title": "Manual Sync Saves",
             "upload": "Yükləmək"
         },
-        "maxRecentGames": "Göstərmək üçün bu yaxınlarda oynanılıb",
         "maxworkers": "Yükləyərkən İşçilərin Maksimum Sayı",
         "minimize-on-launch": "Oyun Başladıqdan Sonra Qəhrəmanlığı minimuma endirin",
         "offlinemode": "Oyunu Oflayn Çalışın",

@@ -648,13 +648,6 @@
         "gamemode": "Usar o GameMode (precisa estar instalado)",
         "hideChangelogsOnStartup": "Não mostrar listas de mudanças ao inicializar",
         "language": "Selecione o idioma do app",
-        "library_top_option": {
-            "disabled": "Desabilitada",
-            "favourites": "Jogos favoritos",
-            "recently_played": "Jogados recentemente",
-            "recently_played_installed": "Jogos jogados recentemente (somente instalados)"
-        },
-        "library_top_section": "Coluna de destaque da biblioteca",
         "log": {
             "copy-to-clipboard": "Copiar log para a área de transferência",
             "current-log": "Log atual",
@@ -713,7 +706,6 @@
             "title": "Sincronizar manualmente os saves",
             "upload": "Upload"
         },
-        "maxRecentGames": "Máximo de jogos em Jogados recentemente",
         "maxworkers": "Número máximo de workers ao baixar",
         "minimize-on-launch": "Minimizar GameLib ao iniciar um jogo",
         "offlinemode": "Iniciar o jogo offline",

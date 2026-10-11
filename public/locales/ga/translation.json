@@ -316,12 +316,6 @@
             "updateNow": "Nuashonrú",
             "updating": "Ag nuashonrú..."
         },
-        "library_top_option": {
-            "disabled": "Díchumasaigh",
-            "favourites": "Cluichí is Fearr Leat",
-            "recently_played": "Cluichí a Imríodh Le Déanaí",
-            "recently_played_installed": "Cluichí a Imríodh Le Déanaí (Suiteáilte Amháin)"
-        },
         "winecrossoverbottle": "Buidéal CrossOver",
         "adddesktopshortcuts": "Cuir aicearraí deisce leis go huathoibríoch",
         "addgamestoapplications": "Cuir cluichí le Feidhmchláir go huathoibríoch",
@@ -398,7 +392,6 @@
         "hideChangelogsOnStartup": "Ná taispeáin logaí athraithe ar an Tosaithe",
         "ignoreGameUpdates": "Déan neamhaird de nuashonruithe cluiche",
         "language": "Roghnaigh Teanga an Aipe",
-        "library_top_section": "An Roinn Uachtarach sa Leabharlann",
         "log": {
             "descriptiveNames": {
                 "game-log": "Log cluiche {{gameTitle}}",
@@ -454,7 +447,6 @@
             "title": "Sábhálacha Sioncrónaithe Láimhe",
             "upload": "Uaslódáil"
         },
-        "maxRecentGames": "Imríodh le déanaí le taispeáint",
         "maxworkers": "Uasmhéid na nOibrithe agus iad á n-íoslódáil",
         "minimize-on-launch": "Íoslaghdaigh Laochra Tar éis Seoladh Cluiche",
         "msync": "Cumasaigh Msync",

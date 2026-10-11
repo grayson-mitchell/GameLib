@@ -650,13 +650,6 @@
         "gamemode": "Использовать GameMode (Нужен Feral GameMode)",
         "hideChangelogsOnStartup": "Не показывать список изменений при запуске",
         "language": "Выберите язык приложения",
-        "library_top_option": {
-            "disabled": "Отключить",
-            "favourites": "Избранные игры",
-            "recently_played": "Недавние игры",
-            "recently_played_installed": "Недавние игры (Только установленные)"
-        },
-        "library_top_section": "Верхний раздел библиотеки",
         "log": {
             "copy-to-clipboard": "Копировать содержимое журнала в буфер обмена",
             "current-log": "Текущий журнал",
@@ -715,7 +708,6 @@
             "title": "Ручная синхронизация сохранений",
             "upload": "Загрузить"
         },
-        "maxRecentGames": "Показывать недавно запускавшиеся игры",
         "maxworkers": "Максимальное количество потоков при скачивании",
         "minimize-on-launch": "Сворачивать GameLib в трей при запуске игры",
         "offlinemode": "Запускать игру в офлайн-режиме",

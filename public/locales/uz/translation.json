@@ -682,13 +682,6 @@
         "hideChangelogsOnStartup": "Ishga tushirishda o'zgarishlar jurnallarini ko'rsatmang",
         "ignoreGameUpdates": "O'yin yangilanishlariga e'tibor bermang",
         "language": "Ilova tilini tanlang",
-        "library_top_option": {
-            "disabled": "O'chirilgan",
-            "favourites": "Sevimli o'yinlar",
-            "recently_played": "Yaqinda o'ynagan o'yinlar",
-            "recently_played_installed": "Yaqinda oʻynagan oʻyinlar (faqat oʻrnatilgan)"
-        },
-        "library_top_section": "Kutubxonaning yuqori qismi",
         "log": {
             "copy-to-clipboard": "Jurnal tarkibini vaqtinchalik xotiraga nusxalash",
             "current-log": "Joriy jurnal",
@@ -747,7 +740,6 @@
             "title": "Qo'lda sinxronlashni saqlash",
             "upload": "Yuklash"
         },
-        "maxRecentGames": "Ko'rsatish uchun yaqinda o'ynadi",
         "maxworkers": "Yuklab olishda maksimal ishchilar soni",
         "minimize-on-launch": "O'yin boshlanganidan keyin qahramonlikni minimallashtiring",
         "offlinemode": "O'yinni oflayn rejimda ishga tushiring",

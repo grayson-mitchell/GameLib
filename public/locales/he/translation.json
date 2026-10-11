@@ -349,12 +349,6 @@
             "removeConfirmTitle": "אשר הורדת שכבת העל",
             "updating": "מעדכן..."
         },
-        "library_top_option": {
-            "disabled": "מושבת",
-            "favourites": "משחקים מועדפים",
-            "recently_played": "משחקים שהופעלו לאחרונה",
-            "recently_played_installed": "משחקים שהופעלו לאחרונה (רק כאלה שעוד מותקנים)"
-        },
         "wineversion": "גרסת Wine",
         "adddesktopshortcuts": "הוסף קיצורי דרך בשולחן העבודה באופן אוטומטי",
         "addgamestoapplications": "הוסף משחקים לאפליקציות באופן אוטומטי",
@@ -377,7 +371,6 @@
         "hideChangelogsOnStartup": "אל תציג שינויים בסטארט-אפ",
         "ignoreGameUpdates": "התעלם מעדכוני המשחק",
         "language": "בחירת שפה",
-        "library_top_section": "החלק העליון של הספרייה",
         "log": {
             "copy-to-clipboard": "העתק תוכן לוג",
             "instructions_title": "איך לדווח על בעיה?",
@@ -436,7 +429,6 @@
             "sync": "סנכרן",
             "syncing": "מסנכרן"
         },
-        "maxRecentGames": "משחקים ששוחקו לאחרונה כדי להראות ש",
         "maxworkers": "מספר מקסימלי של עובדים(בתוכנה) בזמן ההורדה",
         "offlinemode": "הפעל משחק ללא חיבור לרשת",
         "prefered_language": "שפה מועדפת (Language Code)",

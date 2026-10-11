@@ -653,13 +653,6 @@
         "gamemode": "Použít GameMode (Feral GameMode musí být nainstalován)",
         "hideChangelogsOnStartup": "Nezobrazovat seznamy změn při spuštění systému",
         "language": "Vybrat jazyk aplikace",
-        "library_top_option": {
-            "disabled": "Zakázáno",
-            "favourites": "Oblíbené hry",
-            "recently_played": "Nedávno hrané hry",
-            "recently_played_installed": "Nedávno hrané hry (pouze nainstalované)"
-        },
-        "library_top_section": "Horní část knihovny",
         "log": {
             "copy-to-clipboard": "Zkopírovat obsah protokolu do schránky",
             "current-log": "Aktuální protokol",
@@ -718,7 +711,6 @@
             "title": "Ručně synchronizovat uložené soubory",
             "upload": "Nahrát"
         },
-        "maxRecentGames": "Max. nedávno hraných her k zobrazení",
         "maxworkers": "Maximální počet vláken při stahování",
         "minimize-on-launch": "Minimalizovat GameLib po spuštění hry",
         "offlinemode": "Spustit hru offline",
