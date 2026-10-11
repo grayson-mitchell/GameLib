@@ -10,6 +10,8 @@
  * constant with `FOCUS_ROW_MAX_CARDS`, which is R3's display cap on cards.
  */
 
+import { LIBRARY_TILE_WIDTH_DEFAULT } from '../../libraryTileSize'
+
 export interface TrackMeasurement {
   clientWidth: number
   scrollWidth: number
@@ -21,34 +23,10 @@ export interface TrackMeasurement {
 // nothing is worse than a disabled one.
 const SUBPIXEL_EPSILON = 1
 
-/**
- * The grid's `minmax()` floor: `Library/index.css` `.gameList` declares
- * `repeat(auto-fill, minmax(156px, 1fr))`. Mirrored here because JS cannot read
- * a stylesheet rule; `focusRowStripSource.test.ts` pins it equal to that
- * stylesheet (and to the strip's own CSS fallback), so the two cannot drift.
- * Also `measureCardPitch`'s no-measurement width.
- */
-export const GRID_CARD_MIN_WIDTH = 156
-
 // 1.5rem at the 16px root `styles/_typography.scss` sets on `:root`. The
 // grid's `grid-gap` and the strip's `gap` both read 1.5rem; this is only the
 // fallback when the computed gap is unreadable.
 const FALLBACK_CARD_GAP = 24
-
-// A derived width within this of the element's own inline value is not
-// rewritten: a sub-pixel jitter in the measurement must not become a style
-// write (and so a ResizeObserver delivery) on every frame (T-48-36).
-const WIDTH_WRITE_EPSILON = 0.5
-
-// A write that would undo the write before last within this window is held
-// (T-48-36). Real scrollbar oscillation completes A to B to A in about two
-// frames (about 33ms); a human drag round trip takes far longer.
-const FLIP_WINDOW_MS = 250
-
-const defaultNow = (): number =>
-  typeof performance !== 'undefined' && typeof performance.now === 'function'
-    ? performance.now()
-    : Date.now()
 
 const isFiniteMeasurement = (m: TrackMeasurement): boolean =>
   Number.isFinite(m.clientWidth) &&
@@ -64,14 +42,16 @@ const maxScrollLeft = (m: TrackMeasurement): number =>
  * the back direction. Floored to one card so a control can never be a
  * live-looking no-op, and always finite.
  *
- * The track is the viewport box, which bleeds 15px out each side (index.css),
- * so its `clientWidth` is the grid's content width C plus 30px, i.e. `n x pitch
- * + 6` for the `n` columns the grid fits (`n x pitch = C + 24`): 6px of slack,
- * and a bare `floor(clientWidth / pitch)` already returns `n`. The
- * `SUBPIXEL_EPSILON` tolerance is kept as a defence for the zero-slack case
- * (`clientWidth = n x pitch` read back integer-rounded, which a bare floor
- * pages one card short at about half of all widths): a card short of fitting
- * by under a pixel counts as visible, so a page is exactly one grid row.
+ * Tiles are fixed-width, so a page is the whole cards that fit the track. The
+ * track is the viewport box, which bleeds 15px out each side (index.css), so
+ * its `clientWidth` is the grid's content width C plus 30px, i.e. `n x pitch
+ * + 6` for the `n` columns the grid fits (`n x pitch = C + 24`): 6px of slack
+ * wider than the grid's content box, so a bare `floor(clientWidth / pitch)`
+ * returns the grid's column count or one more. The `SUBPIXEL_EPSILON`
+ * tolerance is kept as a defence for the zero-slack case (`clientWidth = n x
+ * pitch` read back integer-rounded, which a bare floor pages one card short at
+ * about half of all widths): a card short of fitting by under a pixel counts
+ * as visible.
  */
 export function pageScrollDelta(
   m: TrackMeasurement,
@@ -124,270 +104,27 @@ export function measureCardPitch(
   return (
     (Number.isFinite(measured) && measured > 0
       ? measured
-      : GRID_CARD_MIN_WIDTH) + (Number.isFinite(gap) ? gap : FALLBACK_CARD_GAP)
+      : LIBRARY_TILE_WIDTH_DEFAULT) +
+    (Number.isFinite(gap) ? gap : FALLBACK_CARD_GAP)
   )
-}
-
-const sanitiseMin = (minWidth: number): number =>
-  Number.isFinite(minWidth) && minWidth > 0 ? minWidth : GRID_CARD_MIN_WIDTH
-
-const sanitiseGap = (gap: number): number =>
-  Number.isFinite(gap) && gap >= 0 ? gap : FALLBACK_CARD_GAP
-
-/**
- * Column count of `repeat(auto-fill, minmax(minWidth, 1fr))` over a content
- * box of `contentWidth` with `gap` between columns: the largest n with
- * `n x minWidth + (n - 1) x gap <= contentWidth`, at least 1. No epsilon:
- * CSS Grid decides the repetition count at exact equality, and an epsilon
- * would disagree with the browser across a whole 1px band instead of at a
- * single point. A non-finite or non-positive width is one column.
- */
-export function gridColumnCount(
-  contentWidth: number,
-  minWidth: number = GRID_CARD_MIN_WIDTH,
-  gap: number = FALLBACK_CARD_GAP
-): number {
-  const min = sanitiseMin(minWidth)
-  const g = sanitiseGap(gap)
-  if (!Number.isFinite(contentWidth) || contentWidth <= 0) {
-    return 1
-  }
-  return Math.max(1, Math.floor((contentWidth + g) / (min + g)))
-}
-
-/**
- * Width of one grid column over `contentWidth`: the `1fr` share left after the
- * gaps, never under the minimum (a box narrower than the minimum overflows at
- * the floor, as the grid does). Always finite.
- */
-export function gridColumnWidth(
-  contentWidth: number,
-  minWidth: number = GRID_CARD_MIN_WIDTH,
-  gap: number = FALLBACK_CARD_GAP
-): number {
-  const min = sanitiseMin(minWidth)
-  const g = sanitiseGap(gap)
-  if (!Number.isFinite(contentWidth) || contentWidth <= 0) {
-    return min
-  }
-  const n = gridColumnCount(contentWidth, min, g)
-  return Math.max(min, (contentWidth - (n - 1) * g) / n)
-}
-
-/**
- * What the strip needs to know about the surrounding library to hold the grid's
- * scrollbar allowance (G-48-11c). Injected so the sync stays a pure function.
- * `gridShown` mirrors the grid's mount condition; `scrollbarAllowance` is the
- * scroller's vertical-bar width, `readScrollerAllowance` in the app.
- */
-export interface StripLayoutContext {
-  gridShown: () => boolean
-  scrollbarAllowance: (track: HTMLElement) => number
-}
-
-/**
- * The layout width the `main.content` scroller's vertical scrollbar takes:
- * `offsetWidth - clientWidth` less the element's own side borders, which are
- * not bar. 0 when there is no scroller, no bar, a non-finite or negative result
- * or any throw. Borders are read only where `getComputedStyle` exists.
- */
-export function readScrollerAllowance(track: HTMLElement): number {
-  try {
-    const scroller = track.closest<HTMLElement>('main.content')
-    if (!scroller) {
-      return 0
-    }
-    const borders =
-      typeof getComputedStyle === 'function'
-        ? (() => {
-            const cs = getComputedStyle(scroller)
-            return (
-              (parseFloat(cs.borderLeftWidth) || 0) +
-              (parseFloat(cs.borderRightWidth) || 0)
-            )
-          })()
-        : 0
-    const allowance = scroller.offsetWidth - scroller.clientWidth - borders
-    return Number.isFinite(allowance) && allowance > 0 ? allowance : 0
-  } catch {
-    return 0
-  }
-}
-
-interface StripWidthStyle {
-  paddingLeft: string
-  paddingRight: string
-  columnGap: string
-}
-
-/**
- * G-48-8c, and the operator's 2026-10-07 ruling "match the grid" that amends
- * D-01: a focus-row strip card is the width one grid column takes. Returns a
- * `syncCardWidth(track, getStyle?, context?: StripLayoutContext)` that derives
- * that width and writes it as the inline `--focus-row-card-width` on
- * `.focusRowTrack`, which the stylesheet consumes as the card's flex basis
- * (156px, the grid's floor, until the first write and whenever measurement is
- * impossible).
- *
- * It DERIVES the width by the grid's own arithmetic rather than reading the
- * rendered grid:
- *  1. Same input, so identical by construction. `.focusRowStrip` and the
- *     grid's `.gameList` are both direct children of `.listing` and both pad
- *     inline by `--space-md-fixed`; the viewport bleeds out by exactly the
- *     list's padding, so the content box C below is the grid's content box.
- *  2. Reading the grid would tie the strip to grid state. The grid is not
- *     mounted for a zero-result filter, during a refresh, or in list layout,
- *     and SPEC R4 makes the focus row independent of filter state. "The width
- *     a grid column would have" while the grid is hidden therefore means the
- *     width it had as last laid out when the grid showed, INCLUDING the grid's
- *     own scrollbar state (G-48-11c): `.App .content` is the scroller and its
- *     10px bar takes layout width, an empty grid no longer overflows, the bar
- *     goes, and the container, hence the derived column, widens by 10 / n
- *     (48-15 B7: +2 CSS px at 5 columns, measured again in WebKit by 48-17).
- *     So the sync also reads the scroller's vertical-bar allowance
- *     (`context.scrollbarAllowance`): while `context.gridShown()` it uses C
- *     live and remembers that allowance per track; while it is hidden it uses
- *     C - (remembered - current), which keeps the content box the grid had yet
- *     still follows a real change of the track width (a window resize). With no
- *     remembered allowance (a track that never saw the grid) C is live. A
- *     throwing context is read as "grid shown, allowance 0" for the width and
- *     leaves the remembered allowance alone. No context is the old behaviour.
- *  3. It is provable at the desk: a pure function plus a stubbed element.
- *
- * C is the track's border-box width (a fractional `getBoundingClientRect`, not
- * the integer-rounded `clientWidth`) less the list's two inline paddings.
- * Total: no track, no list, an unmeasurable width or a throwing `getStyle` is
- * `null` with no write and no throw (T-48-37). A derived width within
- * `WIDTH_WRITE_EPSILON` of the element's own inline value is not rewritten
- * (T-48-36); the comparison is against each element's own value, so a
- * remounted track is never left on the fallback.
- *
- * Resize feedback guard (T-48-36), the mechanism in order. Card height follows
- * width (`aspect-ratio`). `.App .content` scrolls with `overflow-y: auto` and a
- * 10px styled scrollbar that takes layout space. A library whose content height
- * sits within a few px of the viewport can toggle that scrollbar as the strip's
- * height changes: a wider strip leads to a scrollbar, narrower cards, no
- * scrollbar, wider cards again. The ResizeObserver delivers each toggle a frame
- * late, as a `ResizeObserver loop` error, every frame. So a write that would
- * undo the write before last (the derived width is within the write epsilon of
- * it) within `FLIP_WINDOW_MS` is held: real oscillation completes A to B to A
- * in about two frames (about 33ms), while a human round trip takes longer than
- * 250ms. The cost of a hold: the strip stays at the narrower width, about 10/n
- * px under the grid (2px at 5 columns), only inside that band and only until
- * the next real resize. The history is per track element, so a remounted track
- * starts clean. `now` is injectable for tests and defaults to
- * `performance.now()`.
- *
- * The property name is a string literal at the `setProperty` call on purpose:
- * `cssTokenSweep` only counts a custom property as declared when it sees
- * `setProperty('--name'`, and would otherwise report the CSS's
- * `var(--focus-row-card-width, ...)` as undefined.
- */
-export function createStripCardWidthSync(now: () => number = defaultNow) {
-  let lastTrack: HTMLElement | null = null
-  let writes: Array<{ width: number; at: number }> = []
-  // The scroller's bar allowance when the grid last showed on `lastTrack`;
-  // undefined until it has (G-48-11c). Reset beside `writes`.
-  let reference: number | undefined
-
-  return function syncCardWidth(
-    track: HTMLElement | null,
-    getStyle: (el: Element) => StripWidthStyle = (el) =>
-      typeof getComputedStyle === 'function'
-        ? getComputedStyle(el)
-        : { paddingLeft: '', paddingRight: '', columnGap: '' },
-    context?: StripLayoutContext
-  ): number | null {
-    try {
-      const list = track?.firstElementChild ?? null
-      if (!track || !list) {
-        return null
-      }
-      const style = getStyle(list)
-      const content =
-        track.getBoundingClientRect().width -
-        clearanceFrom(style.paddingLeft) -
-        clearanceFrom(style.paddingRight)
-      if (!Number.isFinite(content) || content <= 0) {
-        return null
-      }
-      if (track !== lastTrack) {
-        lastTrack = track
-        writes = []
-        reference = undefined
-      }
-      let held = content
-      if (context) {
-        try {
-          const shown = context.gridShown()
-          const allowance = context.scrollbarAllowance(track)
-          const bar =
-            Number.isFinite(allowance) && allowance > 0 ? allowance : 0
-          if (shown) {
-            reference = bar
-          } else if (reference !== undefined) {
-            held = content - (reference - bar)
-          }
-        } catch {
-          held = content
-        }
-      }
-      const width = gridColumnWidth(
-        held,
-        GRID_CARD_MIN_WIDTH,
-        parseFloat(style.columnGap)
-      )
-      const inline = parseFloat(
-        track.style.getPropertyValue('--focus-row-card-width')
-      )
-      if (
-        Number.isFinite(inline) &&
-        Math.abs(inline - width) < WIDTH_WRITE_EPSILON
-      ) {
-        return inline
-      }
-      const at = now()
-      const older = writes.length === 2 ? writes[0] : undefined
-      if (
-        older &&
-        Number.isFinite(inline) &&
-        Math.abs(older.width - width) < WIDTH_WRITE_EPSILON &&
-        at - older.at <= FLIP_WINDOW_MS
-      ) {
-        return inline
-      }
-      const rounded = Number(width.toFixed(3))
-      track.style.setProperty('--focus-row-card-width', `${rounded}px`)
-      writes = [...writes, { width: rounded, at }].slice(-2)
-      return rounded
-    } catch {
-      return null
-    }
-  }
 }
 
 /**
  * G-48-11a, 48-REVIEW.md WR-01. Runs `run` on the next animation frame, never
  * synchronously, at most once per frame, cancellable.
  *
- * Why it exists: the strip's `ResizeObserver` used to call `syncCardWidth`
- * inside its callback. That writes `--focus-row-card-width` on the observed
- * `.focusRowTrack`, card height follows width (`aspect-ratio`), so the track's
- * own size changed inside the delivery that had just reported it. The browser
- * has no way to deliver that new size in the same frame and dispatches
- * `ResizeObserver loop completed with undelivered notifications` (27 and 25
- * in two live launches of UAT item 11's resize sweep). Moving the write to the
- * next frame puts it outside any delivery, so there is nothing undelivered.
+ * Its work is a deferred re-measure. The strip's `ResizeObserver` callback only
+ * reads and requests; the state update that follows runs in the frame instead
+ * of inside the delivery that reported the size, so the browser has no
+ * undelivered notifications to report as `ResizeObserver loop completed with
+ * undelivered notifications` (27 and 25 in two live launches of UAT item 11's
+ * resize sweep).
  *
- * The first-paint write stays in the component's `useLayoutEffect`; only the
- * resize path is deferred. 48-12's flip-hold keeps working because the sync
- * reads its clock when it writes, which is now inside the frame.
- *
- * Total, like `createStripCardWidthSync`: a throwing `run` neither escapes the
- * frame callback nor leaves the runner stuck, and `cancel` is idempotent. A
- * frame callback that fires after `cancel` (a stub or a browser that ignores
- * the cancel) does nothing. Without `requestAnimationFrame` (the `node` jest
- * project) it falls back to `setTimeout(cb, 0)`.
+ * Total: a throwing `run` neither escapes the frame callback nor leaves the
+ * runner stuck, and `cancel` is idempotent. A frame callback that fires after
+ * `cancel` (a stub or a browser that ignores the cancel) does nothing. Without
+ * `requestAnimationFrame` (the `node` jest project) it falls back to
+ * `setTimeout(cb, 0)`.
  */
 export function createNextFrameRunner(
   run: () => void,
@@ -415,7 +152,7 @@ export function createNextFrameRunner(
         try {
           run()
         } catch {
-          // a failed sync must not break the next one
+          // a failed re-measure must not break the next one
         }
       })
     },

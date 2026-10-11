@@ -355,29 +355,46 @@ describe('FocusRowStrip/index.css -- strip/grid parity (G-48-8c)', () => {
   })
 })
 
-describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
+describe('FocusRowStrip -- strip cards follow the library tile width (261011-t4y)', () => {
   const tsx = read(FOCUS_ROW_TSX_PATH)
   const overflow = read(
     'src/frontend/screens/Library/components/FocusRowStrip/focusRowOverflow.ts'
   )
 
-  it('index.tsx imports createStripCardWidthSync from ./focusRowOverflow and useLayoutEffect from react', () => {
-    expect(tsx).toMatch(
-      /import\s*{[^}]*\bcreateStripCardWidthSync\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
-    )
-    expect(tsx).toMatch(
-      /import\s+React,\s*{[^}]*\buseLayoutEffect\b[^}]*}\s*from\s*'react'/
-    )
+  it('(a) index.tsx carries no width sync, no gridShown prop and no --focus-row-card-width write', () => {
+    expect(tsx).not.toMatch(/syncCardWidth/)
+    expect(tsx).not.toMatch(/gridShown/)
+    expect(tsx).not.toMatch(/readScrollerAllowance/)
+    expect(tsx).not.toMatch(/--focus-row-card-width/)
   })
 
-  it('syncs inside a useLayoutEffect, so the first painted frame is already matched', () => {
-    expect(tsx).toMatch(
-      /useLayoutEffect\(\s*\(\)\s*=>\s*{[^}]*syncCardWidth\(trackRef\.current,\s*undefined,\s*layoutContext\)/
-    )
+  it('(b) focusRowOverflow.ts writes no style property and exports none of the retired width-sync names', () => {
+    expect(overflow).not.toMatch(/setProperty\(/)
+    for (const name of [
+      'GRID_CARD_MIN_WIDTH',
+      'gridColumnCount',
+      'gridColumnWidth',
+      'readScrollerAllowance',
+      'createStripCardWidthSync',
+      'StripLayoutContext'
+    ]) {
+      expect(overflow).not.toMatch(
+        new RegExp(`export\\s+(?:function|interface|const)\\s+${name}\\b`)
+      )
+    }
   })
 
-  // G-48-11a / WR-01: a style write inside the ResizeObserver callback resizes
-  // the observed track inside the delivery, and the browser reports a
+  it('(c) .focusRowTrack aliases --focus-row-card-width to the library tile width, with the default as fallback', () => {
+    const track = cssBlock(read(FOCUS_ROW_CSS_PATH), '.focusRowTrack')
+    const m = track.match(
+      /--focus-row-card-width:\s*var\(--library-tile-css-width,\s*(\d+(?:\.\d+)?)px\)\s*;/
+    )
+    expect(m).not.toBeNull()
+    expect(Number(m?.[1])).toBe(LIBRARY_TILE_WIDTH_DEFAULT)
+  })
+
+  // G-48-11a / WR-01: a state update inside the ResizeObserver callback's own
+  // delivery can resize the observed track and be reported as a
   // `ResizeObserver loop` error. The callback only reads and requests.
   const brace = (source: string, from: number): string => {
     let depth = 0
@@ -393,27 +410,27 @@ describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
     throw new Error('unterminated block')
   }
 
-  it('G-48-11a, WR-01: the ResizeObserver callback writes no width and requests a deferred sync', () => {
+  it('(d) G-48-11a, WR-01: the ResizeObserver callback writes no width and requests a deferred re-measure', () => {
     const start = tsx.indexOf('new ResizeObserver(')
     expect(start).not.toBe(-1)
     const body = brace(tsx, start)
-    expect(body).not.toMatch(/syncCardWidth\(/)
+    expect(body).not.toMatch(/setProperty\(/)
     expect(body).toMatch(/\.request\(\)/)
     expect(tsx).not.toMatch(/new ResizeObserver\(readMeasurement\)/)
   })
 
-  it('G-48-11a, WR-01: the deferred run is a createNextFrameRunner whose work syncs the width then re-reads', () => {
+  it('(d) G-48-11a, WR-01: the deferred run is a createNextFrameRunner whose work re-reads the measurement', () => {
     expect(tsx).toMatch(
       /import\s*{[^}]*\bcreateNextFrameRunner\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
     )
     const start = tsx.indexOf('createNextFrameRunner(')
     expect(start).not.toBe(-1)
     const body = brace(tsx, start)
-    expect(body).toMatch(/syncCardWidth\(track,\s*undefined,\s*layoutContext\)/)
     expect(body).toMatch(/readMeasurement\(\)/)
+    expect(body).not.toMatch(/setProperty\(/)
   })
 
-  it('G-48-11a, WR-01: the effect cleanup cancels the pending frame beside the disconnect', () => {
+  it('(d) G-48-11a, WR-01: the effect cleanup cancels the pending frame beside the disconnect', () => {
     const cleanup = tsx.indexOf(
       'return () => {',
       tsx.indexOf('new ResizeObserver(')
@@ -423,63 +440,24 @@ describe('FocusRowStrip -- width sync wiring (G-48-8c)', () => {
     expect(body).toMatch(/\.cancel\(\)/)
     expect(body).toMatch(/observer\?\.disconnect\(\)/)
   })
-
-  // G-48-11c: while no grid is shown the strip holds the grid's scrollbar
-  // allowance. `gridShown` reaches the sync through a ref so the observer's
-  // next-frame runner (created once per effect run) reads the live value.
-  it('G-48-11c: gridShown is a prop, read through a ref assigned in a useLayoutEffect declared before the sync effect', () => {
-    expect(tsx).toMatch(/gridShown:\s*boolean/)
-    expect(tsx).toMatch(/useRef\(gridShown\)/)
-    const assign = tsx.indexOf('gridShownRef.current = gridShown')
-    expect(assign).not.toBe(-1)
-    expect(tsx.slice(0, assign)).toMatch(
-      /useLayoutEffect\(\s*\(\)\s*=>\s*{\s*$/
-    )
-    expect(assign).toBeLessThan(tsx.indexOf('syncCardWidth(trackRef.current'))
-  })
-
-  it('G-48-11c: one stable layout context carries gridShown and readScrollerAllowance', () => {
-    expect(tsx).toMatch(
-      /import\s*{[^}]*\breadScrollerAllowance\b[^}]*}\s*from\s*'\.\/focusRowOverflow'/
-    )
-    expect(tsx).toMatch(
-      /useState\(\s*\(\)\s*:?[^=]*=>\s*\(?{\s*gridShown:\s*\(\)\s*=>\s*gridShownRef\.current,\s*scrollbarAllowance:\s*readScrollerAllowance\s*}/
-    )
-  })
-
-  it('G-48-11c: gridShown is in the sync layout effect dependency array', () => {
-    const start = tsx.indexOf('syncCardWidth(trackRef.current')
-    expect(start).not.toBe(-1)
-    const deps = tsx.slice(start).match(/}\s*,\s*\[([^\]]*)\]/)
-    expect(deps).not.toBeNull()
-    expect(deps?.[1]).toMatch(/\bgridShown\b/)
-  })
-
-  it("focusRowOverflow.ts writes the property by string literal at the call site (cssTokenSweep's detector needs it)", () => {
-    expect(overflow).toMatch(/setProperty\('--focus-row-card-width'/)
-  })
 })
 
 describe('Library/index.tsx -- the lane replacement', () => {
   const source = read(LIBRARY_TSX_PATH)
 
-  it('G-48-11c, IN-08: <FocusRowStrip passes gridShown= built from the same gridMounted constant that gates the GamesList mount', () => {
+  it('IN-08 (261011-t4y): <FocusRowStrip carries no gridShown= attribute; gridMounted is the one GamesList mount condition', () => {
     const start = source.indexOf('<FocusRowStrip')
     expect(start).not.toBe(-1)
     const tag = source.slice(start, source.indexOf('/>', start))
-    const attr = tag.match(/gridShown=\{([^]*)\}/)
-    expect(attr).not.toBeNull()
-    expect(attr?.[1]).toContain('gridMounted')
-    expect(attr?.[1]).toContain("layout === 'grid'")
-    // The one definition carries every clause of the mount condition,
-    // including the refreshing one the old attribute check never pinned.
+    expect(tag).not.toMatch(/gridShown=/)
+    // The one definition carries every clause of the mount condition.
     const def = source.match(/const gridMounted =([^]*?)return \(/)
     expect(def).not.toBeNull()
     expect(def?.[1]).toContain('libraryToShow.length > 0')
     expect(def?.[1]).toContain('!refreshing || refreshingInTheBackground')
     // ...and the GamesList mount is gated on that same constant.
     expect(source).toMatch(/\{gridMounted && \(\s*<GamesList/)
-    expect(source.split('gridMounted').length - 1).toBe(3)
+    expect(source.split('gridMounted').length - 1).toBe(2)
   })
 
   it('mounts FocusRowStrip exactly once', () => {

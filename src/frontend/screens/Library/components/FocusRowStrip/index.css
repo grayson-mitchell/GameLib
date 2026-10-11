@@ -36,6 +36,11 @@
      padding-inline below; the two must stay equal (pinned in
      focusRowStripSource.test.ts). Logical property: RTL locales ship. */
   scroll-padding-inline: 15px;
+  /* Strip card = one grid column = the library tile width (261011-t4y). The
+     grid's columns are fixed-width now, so aliasing the strip's card width to
+     the same variable keeps "match the grid" true by construction, with no
+     script measuring the grid. 156px is the default tile width. */
+  --focus-row-card-width: var(--library-tile-css-width, 156px);
 }
 
 .focusRowTrack::-webkit-scrollbar {
@@ -48,15 +53,14 @@
    their ring (the debug session measured the scaled body cut at x 12.1 against
    the track's 16). A hovered card's 3px ring at +2px offset, scaled 1.05,
    reaches (w/2 + 5) x 1.05 - w/2 = 0.025w + 5.25 past the unscaled edge, which
-   grows with the card. Cards now follow the grid's column width, so w runs from
-   156px to a supremum of 2 x 156 + 24 = 336px (one column, just before a second
-   fits): 9.15px at 156px, 13.65px horizontally at 336px, and over the card's
-   taller edge 11.45px and 18.60px vertically. 15px of inline padding clears the
-   horizontal reach with 1.35px to spare and stays under the 16px gutter (the
-   bleed on `.focusRowStrip__viewport` equals it, so the cards still line up
-   with the grid to the pixel). The vertical room scales with the card instead
-   of being a fixed 19px, which would add 3px above and below the strip at every
-   width for a band only single-column windows reach: it is `max(1em, 0.04 x
+   grows with the card. Cards follow the library tile width, so w now runs from
+   140px to 320px (the tile-size slider's range): 8.75px to 13.25px
+   horizontally, and over the card's taller edge 10.81px to 17.97px vertically.
+   15px of inline padding clears the horizontal reach with 1.75px to spare at
+   the widest tile and stays under the 16px gutter (the bleed on
+   `.focusRowStrip__viewport` equals it, so the cards still line up with the
+   grid to the pixel). These bounds are proven at zoom 1. The vertical room
+   scales with the card instead of being a fixed 19px: it is `max(1em, 0.04 x
    card width + 6.5px)`, which is 1em wherever the card is under about 237px.
    `width: max-content` because padding on a block-width flex list whose items
    overflow it does not reliably extend the track's scroll width in both
@@ -79,12 +83,10 @@
 }
 
 /* G-48-8c (operator ruling 2026-10-07, "match the grid", amending D-01): a
-   strip card is the width one grid column takes, not a constant. The variable
-   is written inline on .focusRowTrack by createStripCardWidthSync from the
-   grid's own auto-fill/minmax arithmetic over the strip's content box.
-   156px is the grid's floor (Library/index.css minmax(156px, 1fr)) and the
-   fallback before the first measurement or when none is possible. flex-grow
-   and flex-shrink stay 0, so the derived width is exact. */
+   strip card is the width one grid column takes. The variable is aliased on
+   .focusRowTrack above to the library tile width, not written by script, and
+   156px is its fallback. flex-grow and flex-shrink stay 0, so the width is
+   exact. */
 .focusRowTrack .gameList > * {
   flex: 0 0 var(--focus-row-card-width, 156px);
   /* G-48-11b: the list is width: max-content, and WKWebView sizes it from the

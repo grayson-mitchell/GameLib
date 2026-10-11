@@ -5,18 +5,18 @@
  * or a hand-built event stub rather than a live element.
  */
 import {
-  GRID_CARD_MIN_WIDTH,
   canScrollBack,
   canScrollForward,
   createNextFrameRunner,
-  createStripCardWidthSync,
-  gridColumnCount,
-  gridColumnWidth,
   measureCardPitch,
   pageScrollDelta,
-  readScrollerAllowance,
   scrollFocusedCardIntoViewHorizontally
 } from '../focusRowOverflow'
+import {
+  LIBRARY_TILE_WIDTH_DEFAULT,
+  LIBRARY_TILE_WIDTH_MAX,
+  LIBRARY_TILE_WIDTH_MIN
+} from '../../../libraryTileSize'
 
 const m = (clientWidth: number, scrollWidth: number, scrollLeft: number) => ({
   clientWidth,
@@ -67,42 +67,38 @@ describe('pageScrollDelta', () => {
     expect(pageScrollDelta(m(600, 2000, 300), 180)).toBeGreaterThan(0)
   })
 
-  it('P1: pages exactly one grid row in the shipped geometry (G-48-8c)', () => {
-    // The track is the viewport box, which bleeds 15px each side, so its
-    // clientWidth is C + 30 = n x pitch + 6 (n x pitch = C + 24): 6px of slack,
-    // and clientWidth is an integer-rounded read of it.
+  it('P1: pages the whole cards that fit, at every fixed tile width (261011-t4y)', () => {
+    // Tiles are fixed-width, so the grid fits n = floor((C + 24) / pitch)
+    // columns over a content box C (n x pitch <= C + 24). The track is the
+    // viewport box, which bleeds 15px each side, so its clientWidth is C + 30
+    // (6px of slack over n x pitch at most), integer-rounded; the zero-slack
+    // read C + 24 is the epsilon defence. A page is n cards, or n + 1 where
+    // the slack admits one more.
     const bad: string[] = []
-    for (let i = 0; 156 + i * 0.37 <= 3000; i++) {
-      const c = 156 + i * 0.37
-      const n = gridColumnCount(c)
-      const pitch = gridColumnWidth(c) + 24
-      for (const clientWidth of [Math.round(c + 30), Math.floor(c + 30)]) {
-        const got = pageScrollDelta(m(clientWidth, 99999, 0), pitch)
-        if (Math.abs(got - n * pitch) > 1e-6) {
-          bad.push(
-            `C=${c} clientWidth=${clientWidth} got ${got} want ${n * pitch}`
-          )
-        }
-      }
-    }
-    expect(bad).toEqual([])
-  })
-
-  it('P1b: the epsilon tolerance still pages one grid row in the zero-slack geometry (defence)', () => {
-    // clientWidth = n x pitch read back integer-rounded. A bare
-    // floor(clientWidth / pitch) paged n - 1 cards at about half of all widths
-    // (desk sweep: 4951 mismatches with no tolerance).
-    const bad: string[] = []
-    for (let i = 0; 156 + i * 0.37 <= 3000; i++) {
-      const c = 156 + i * 0.37
-      const n = gridColumnCount(c)
-      const pitch = gridColumnWidth(c) + 24
-      for (const clientWidth of [Math.round(c + 24), Math.floor(c + 24)]) {
-        const got = pageScrollDelta(m(clientWidth, 99999, 0), pitch)
-        if (Math.abs(got - n * pitch) > 1e-6) {
-          bad.push(
-            `C=${c} clientWidth=${clientWidth} got ${got} want ${n * pitch}`
-          )
+    for (const w of [
+      LIBRARY_TILE_WIDTH_MIN,
+      LIBRARY_TILE_WIDTH_DEFAULT,
+      LIBRARY_TILE_WIDTH_MAX
+    ]) {
+      const pitch = w + 24
+      for (let i = 0; w + i * 0.37 <= 3000; i++) {
+        const c = w + i * 0.37
+        const n = Math.max(1, Math.floor((c + 24) / pitch))
+        for (const clientWidth of [
+          Math.round(c + 30),
+          Math.floor(c + 30),
+          Math.round(c + 24),
+          Math.floor(c + 24)
+        ]) {
+          const cards = pageScrollDelta(m(clientWidth, 99999, 0), pitch) / pitch
+          if (
+            Math.abs(cards - Math.round(cards)) > 1e-9 ||
+            (Math.round(cards) !== n && Math.round(cards) !== n + 1)
+          ) {
+            bad.push(
+              `W=${w} C=${c} clientWidth=${clientWidth} got ${cards} cards, want ${n} or ${n + 1}`
+            )
+          }
         }
       }
     }
@@ -413,13 +409,13 @@ describe('measureCardPitch', () => {
     expect(pitch).toBe(180)
   })
 
-  it('falls back to the grid minimum + 24 for an empty track (G-48-8c)', () => {
+  it('falls back to the default tile width + 24 for an empty track (261011-t4y)', () => {
     expect(measureCardPitch(null, () => ({ columnGap: '24px' }))).toBe(
-      GRID_CARD_MIN_WIDTH + 24
+      LIBRARY_TILE_WIDTH_DEFAULT + 24
     )
     expect(
       measureCardPitch({ firstElementChild: null } as unknown as Element)
-    ).toBe(GRID_CARD_MIN_WIDTH + 24)
+    ).toBe(LIBRARY_TILE_WIDTH_DEFAULT + 24)
   })
 
   it('falls back per-measurement when only the gap is unreadable', () => {
@@ -428,453 +424,6 @@ describe('measureCardPitch', () => {
       () => ({ columnGap: 'normal' })
     )
     expect(pitch).toBe(224)
-  })
-})
-
-describe('grid column arithmetic (G-48-8c)', () => {
-  // repeat(auto-fill, minmax(156px, 1fr)) over a content box C with a 24px gap.
-  it('W1: 958 wide (UAT item 4 macOS, window 1280) is 5 columns of 172.4', () => {
-    expect(gridColumnCount(958, 156, 24)).toBe(5)
-    expect(gridColumnWidth(958, 156, 24)).toBeCloseTo(172.4, 9)
-  })
-
-  it('W2: 198 wide (window 520) is 1 column of 198', () => {
-    expect(gridColumnCount(198, 156, 24)).toBe(1)
-    expect(gridColumnWidth(198, 156, 24)).toBe(198)
-  })
-
-  it('W3: narrower than the minimum, the grid overflows at its floor', () => {
-    expect(gridColumnWidth(100, 156, 24)).toBe(156)
-    expect(gridColumnCount(100, 156, 24)).toBe(1)
-  })
-
-  it('W4: the second column fits at exact equality, not a pixel before', () => {
-    expect(gridColumnCount(336, 156, 24)).toBe(2)
-    expect(gridColumnWidth(336, 156, 24)).toBe(156)
-    expect(gridColumnCount(335.9, 156, 24)).toBe(1)
-    expect(gridColumnWidth(335.9, 156, 24)).toBe(335.9)
-  })
-
-  it('W5: the columns fill the box exactly and one more would not fit, 156 to 4000', () => {
-    const bad: string[] = []
-    for (let i = 0; 156 + i * 0.37 <= 4000; i++) {
-      const c = 156 + i * 0.37
-      const n = gridColumnCount(c, 156, 24)
-      const w = gridColumnWidth(c, 156, 24)
-      if (Math.abs(n * w + (n - 1) * 24 - c) > 1e-6) bad.push(`fill C=${c}`)
-      if (w < 156) bad.push(`floor C=${c}`)
-      if (!((n + 1) * 156 + n * 24 > c)) bad.push(`more C=${c}`)
-    }
-    expect(bad).toEqual([])
-  })
-
-  it('W6: a non-finite, zero or negative width is the minimum; a bad gap is the 24px fallback', () => {
-    for (const c of [NaN, Infinity, -Infinity, 0, -5]) {
-      expect(gridColumnWidth(c, 156, 24)).toBe(156)
-      expect(gridColumnCount(c, 156, 24)).toBe(1)
-    }
-    expect(gridColumnWidth(958, 156, NaN)).toBeCloseTo(172.4, 9)
-    expect(gridColumnWidth(958, 156, -4)).toBeCloseTo(172.4, 9)
-    expect(Number.isFinite(gridColumnWidth(NaN, NaN, NaN))).toBe(true)
-  })
-
-  it('defaults to the exported grid minimum and the 24px gap', () => {
-    expect(GRID_CARD_MIN_WIDTH).toBe(156)
-    expect(gridColumnWidth(958)).toBeCloseTo(172.4, 9)
-  })
-})
-
-describe('strip card width sync (G-48-8c)', () => {
-  const PROP = '--focus-row-card-width'
-
-  const makeTrack = (width: number, inline = '') => {
-    const store = new Map<string, string>()
-    if (inline) store.set(PROP, inline)
-    const setProperty = jest.fn((k: string, v: string) => {
-      store.set(k, v)
-    })
-    return {
-      getBoundingClientRect: () => ({ width }),
-      firstElementChild: {},
-      style: {
-        getPropertyValue: (k: string) => store.get(k) ?? '',
-        setProperty
-      },
-      setProperty
-    }
-  }
-  const asEl = (t: unknown) => t as HTMLElement
-  const style = () => ({
-    paddingLeft: '12px',
-    paddingRight: '12px',
-    columnGap: '24px'
-  })
-
-  it('S1: writes the derived width once and returns it (982 - 2 x 12 = 958 -> 172.4)', () => {
-    const sync = createStripCardWidthSync()
-    const track = makeTrack(982)
-    const got = sync(asEl(track), style)
-    expect(track.setProperty).toHaveBeenCalledTimes(1)
-    expect(track.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
-    expect(got).toBe(172.4)
-  })
-
-  it.each([
-    ['172.4px', 172.4],
-    ['172.2px', 172.2]
-  ])(
-    'S2: an inline value within 0.5px (%s) is not rewritten',
-    (inline, want) => {
-      const sync = createStripCardWidthSync()
-      const track = makeTrack(982, inline)
-      expect(sync(asEl(track), style)).toBe(want)
-      expect(track.setProperty).not.toHaveBeenCalled()
-    }
-  )
-
-  it('S2: an inline value 0.5px or more away is rewritten', () => {
-    const sync = createStripCardWidthSync()
-    const track = makeTrack(982, '156px')
-    expect(sync(asEl(track), style)).toBe(172.4)
-    expect(track.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
-  })
-
-  it('S3: is total -- null track, no list, unmeasurable width, throwing getStyle', () => {
-    const sync = createStripCardWidthSync()
-    expect(sync(null, style)).toBeNull()
-
-    const noList = makeTrack(982)
-    noList.firstElementChild = null as unknown as Record<string, never>
-    expect(sync(asEl(noList), style)).toBeNull()
-    expect(noList.setProperty).not.toHaveBeenCalled()
-
-    for (const width of [0, NaN, -10, 20]) {
-      const t = makeTrack(width)
-      expect(sync(asEl(t), style)).toBeNull()
-      expect(t.setProperty).not.toHaveBeenCalled()
-    }
-
-    const throwing = makeTrack(982)
-    expect(
-      sync(asEl(throwing), () => {
-        throw new Error('no style')
-      })
-    ).toBeNull()
-    expect(throwing.setProperty).not.toHaveBeenCalled()
-  })
-
-  it('S3: an unreadable gap uses the 24px fallback', () => {
-    const sync = createStripCardWidthSync()
-    const track = makeTrack(982)
-    expect(
-      sync(asEl(track), () => ({
-        paddingLeft: '12px',
-        paddingRight: '12px',
-        columnGap: 'normal'
-      }))
-    ).toBe(172.4)
-  })
-
-  it('S4: two track elements with identical geometry each get their own write', () => {
-    const sync = createStripCardWidthSync()
-    const first = makeTrack(982)
-    const second = makeTrack(982)
-    sync(asEl(first), style)
-    sync(asEl(second), style)
-    expect(first.setProperty).toHaveBeenCalledTimes(1)
-    expect(second.setProperty).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('strip card width resize feedback guard (G-48-8c, T-48-36)', () => {
-  // A wider strip can raise the main scroller's 10px scrollbar, which narrows
-  // the strip, which removes the scrollbar, which widens it again. Width A
-  // (982) and B (972) are a 10px scrollbar's worth of track: 172.4 versus
-  // 170.4 at 5 columns.
-  const PROP = '--focus-row-card-width'
-  const A = 982
-  const B = 972
-  const D = 1200 // a distinct width: 6 columns of 176
-
-  const makeTrack = () => {
-    const store = new Map<string, string>()
-    const setProperty = jest.fn((k: string, v: string) => {
-      store.set(k, v)
-    })
-    return {
-      width: A,
-      getBoundingClientRect() {
-        return { width: this.width }
-      },
-      firstElementChild: {},
-      style: {
-        getPropertyValue: (k: string) => store.get(k) ?? '',
-        setProperty
-      },
-      setProperty
-    }
-  }
-  const style = () => ({
-    paddingLeft: '12px',
-    paddingRight: '12px',
-    columnGap: '24px'
-  })
-  const setup = () => {
-    let t = 0
-    const sync = createStripCardWidthSync(() => t)
-    const at = (
-      time: number,
-      track: ReturnType<typeof makeTrack>,
-      width: number
-    ) => {
-      t = time
-      track.width = width
-      return sync(track as unknown as HTMLElement, style)
-    }
-    return { at }
-  }
-
-  it('G1: A, B, then A again within 250ms is held and returns the current width', () => {
-    const { at } = setup()
-    const track = makeTrack()
-    expect(at(0, track, A)).toBe(172.4)
-    expect(at(16, track, B)).toBe(170.4)
-    expect(at(33, track, A)).toBe(170.4)
-    expect(track.setProperty).toHaveBeenCalledTimes(2)
-    expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '170.4px')
-  })
-
-  it('G2: A, B, then A again after the window is a deliberate round trip and is written', () => {
-    const { at } = setup()
-    const track = makeTrack()
-    at(0, track, A)
-    at(16, track, B)
-    expect(at(400, track, A)).toBe(172.4)
-    expect(track.setProperty).toHaveBeenCalledTimes(3)
-    expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '172.4px')
-  })
-
-  it('G3: A, B, then a distinct C inside the window is written', () => {
-    const { at } = setup()
-    const track = makeTrack()
-    at(0, track, A)
-    at(16, track, B)
-    expect(at(33, track, D)).toBe(176)
-    expect(track.setProperty).toHaveBeenCalledTimes(3)
-    expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '176px')
-  })
-
-  it('G4: a later distinct width is written after a hold', () => {
-    const { at } = setup()
-    const track = makeTrack()
-    at(0, track, A)
-    at(16, track, B)
-    at(33, track, A) // held
-    expect(at(50, track, D)).toBe(176)
-    expect(track.setProperty).toHaveBeenCalledTimes(3)
-  })
-
-  it('G4: a different track element resets the history, so A, B on one then A on another writes A', () => {
-    const { at } = setup()
-    const first = makeTrack()
-    const second = makeTrack()
-    at(0, first, A)
-    at(16, first, B)
-    expect(at(33, second, A)).toBe(172.4)
-    expect(second.setProperty).toHaveBeenCalledTimes(1)
-    expect(second.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
-  })
-})
-
-describe('strip card width -- scrollbar allowance hold (G-48-11c)', () => {
-  // The main scroller's 10px vertical bar takes layout width, so an empty grid
-  // (no overflow, no bar) leaves the strip's container 10px wider and the
-  // derived column 10 / n wider. While no grid is shown the strip keeps the
-  // content box the grid had. 982 / 992 are the track widths with / without the
-  // bar (958 / 968 content over a 12px padding each side).
-  const PROP = '--focus-row-card-width'
-
-  const makeTrack = (width: number) => {
-    const store = new Map<string, string>()
-    const setProperty = jest.fn((k: string, v: string) => {
-      store.set(k, v)
-    })
-    return {
-      width,
-      getBoundingClientRect() {
-        return { width: this.width }
-      },
-      firstElementChild: {},
-      style: {
-        getPropertyValue: (k: string) => store.get(k) ?? '',
-        setProperty
-      },
-      setProperty
-    }
-  }
-  const asEl = (t: unknown) => t as HTMLElement
-  const style = () => ({
-    paddingLeft: '12px',
-    paddingRight: '12px',
-    columnGap: '24px'
-  })
-  const ctx = (gridShown: boolean, allowance: number) => ({
-    gridShown: () => gridShown,
-    scrollbarAllowance: () => allowance
-  })
-  // A clock that always reads far past the flip window, so the 250ms hold
-  // (a different mechanism, pinned by G1-G4) never interferes.
-  const makeSync = () => {
-    let t = 0
-    return createStripCardWidthSync(() => (t += 1000))
-  }
-
-  it('Z1: grid shown at allowance 10 is the column over the live content, identical to the two-argument call', () => {
-    const withCtx = makeTrack(982)
-    const plain = makeTrack(982)
-    const got = makeSync()(asEl(withCtx), style, ctx(true, 10))
-    expect(got).toBe(172.4)
-    expect(got).toBe(makeSync()(asEl(plain), style))
-    expect(withCtx.setProperty).toHaveBeenCalledWith(PROP, '172.4px')
-  })
-
-  it('Z2: the grid hidden, allowance 0, the track 10px wider keeps Z1 width and writes nothing new', () => {
-    const sync = makeSync()
-    const track = makeTrack(982)
-    expect(sync(asEl(track), style, ctx(true, 10))).toBe(172.4)
-    track.width = 992
-    expect(sync(asEl(track), style, ctx(false, 0))).toBeCloseTo(172.4, 3)
-    expect(track.setProperty).toHaveBeenCalledTimes(1)
-  })
-
-  it('Z3: the grid hidden on a track that never saw a grid is the live content, no compensation', () => {
-    const track = makeTrack(992)
-    expect(makeSync()(asEl(track), style, ctx(false, 0))).toBe(174.4)
-    expect(track.setProperty).toHaveBeenCalledWith(PROP, '174.4px')
-  })
-
-  it('Z4: after Z2, a track 100px narrower with the grid still hidden follows it (column over live content - 10)', () => {
-    const sync = makeSync()
-    const track = makeTrack(982)
-    sync(asEl(track), style, ctx(true, 10))
-    track.width = 992
-    sync(asEl(track), style, ctx(false, 0))
-    track.width = 892
-    // live content 892 - 24 = 868; less the 10px the grid's bar would take
-    const want = gridColumnWidth(858, GRID_CARD_MIN_WIDTH, 24)
-    expect(want).toBeCloseTo(196.5, 3)
-    expect(sync(asEl(track), style, ctx(false, 0))).toBeCloseTo(want, 3)
-  })
-
-  it('Z5: the grid shown again refreshes the reference', () => {
-    const sync = makeSync()
-    const track = makeTrack(982)
-    sync(asEl(track), style, ctx(true, 10))
-    track.width = 992
-    // the grid returns without a bar: reference becomes 0 and the live width is written
-    expect(sync(asEl(track), style, ctx(true, 0))).toBe(174.4)
-    // hidden again at the same geometry: no compensation against the old 10
-    expect(sync(asEl(track), style, ctx(false, 0))).toBe(174.4)
-    expect(track.setProperty).toHaveBeenCalledTimes(2)
-  })
-
-  it('Z6: a different track element starts with no reference', () => {
-    const sync = makeSync()
-    const first = makeTrack(982)
-    sync(asEl(first), style, ctx(true, 10))
-    const second = makeTrack(992)
-    expect(sync(asEl(second), style, ctx(false, 0))).toBe(174.4)
-  })
-
-  it('Z7: a throwing gridShown or scrollbarAllowance is treated as shown at allowance 0 and writes the live width', () => {
-    const throwShown = {
-      gridShown: () => {
-        throw new Error('no ref')
-      },
-      scrollbarAllowance: () => 10
-    }
-    const throwAllowance = {
-      gridShown: () => false,
-      scrollbarAllowance: () => {
-        throw new Error('no scroller')
-      }
-    }
-    for (const bad of [throwShown, throwAllowance]) {
-      const sync = makeSync()
-      const track = makeTrack(982)
-      sync(asEl(track), style, ctx(true, 10))
-      track.width = 992
-      let got: number | null = null
-      expect(() => {
-        got = sync(asEl(track), style, bad)
-      }).not.toThrow()
-      expect(got).toBe(174.4)
-      expect(track.setProperty).toHaveBeenLastCalledWith(PROP, '174.4px')
-    }
-  })
-
-  it('Z8: no third argument behaves exactly as before', () => {
-    const sync = makeSync()
-    const track = makeTrack(982)
-    expect(sync(asEl(track), style)).toBe(172.4)
-    track.width = 992
-    expect(sync(asEl(track), style)).toBe(174.4)
-    expect(track.setProperty).toHaveBeenCalledTimes(2)
-  })
-})
-
-describe('readScrollerAllowance (G-48-11c)', () => {
-  const globals = globalThis as unknown as { getComputedStyle?: unknown }
-  const original = globals.getComputedStyle
-  afterEach(() => {
-    if (original === undefined) {
-      delete globals.getComputedStyle
-    } else {
-      globals.getComputedStyle = original
-    }
-  })
-  const withBorders = (left: string, right: string) => {
-    globals.getComputedStyle = () => ({
-      borderLeftWidth: left,
-      borderRightWidth: right
-    })
-  }
-  const trackIn = (scroller: unknown) =>
-    ({
-      closest: (selector: string) =>
-        selector === 'main.content' ? scroller : null
-    }) as unknown as HTMLElement
-
-  it('R1: no main.content ancestor gives 0', () => {
-    expect(readScrollerAllowance(trackIn(null))).toBe(0)
-  })
-
-  it('R2: offsetWidth 1050, clientWidth 1040, zero borders gives 10; borders are not counted as bar', () => {
-    withBorders('0px', '0px')
-    expect(
-      readScrollerAllowance(trackIn({ offsetWidth: 1050, clientWidth: 1040 }))
-    ).toBe(10)
-    withBorders('1px', '1px')
-    expect(
-      readScrollerAllowance(trackIn({ offsetWidth: 1052, clientWidth: 1040 }))
-    ).toBe(10)
-  })
-
-  it('R3: a non-finite or negative result gives 0, and a throwing read gives 0', () => {
-    withBorders('0px', '0px')
-    expect(
-      readScrollerAllowance(trackIn({ offsetWidth: 1040, clientWidth: 1050 }))
-    ).toBe(0)
-    expect(
-      readScrollerAllowance(trackIn({ offsetWidth: NaN, clientWidth: 1040 }))
-    ).toBe(0)
-    expect(
-      readScrollerAllowance({
-        closest: () => {
-          throw new Error('detached')
-        }
-      } as unknown as HTMLElement)
-    ).toBe(0)
   })
 })
 

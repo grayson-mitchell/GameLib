@@ -1073,10 +1073,7 @@ export default React.memo(function Library(): JSX.Element {
   }
 
   // IN-08: the one statement of when the grid (`GamesList`) is mounted. The
-  // strip's `gridShown` ANDs the grid layout onto it (GamesList switches
-  // layouts internally, so the mount itself is layout-independent). Two copies
-  // of this condition would let the strip hold a stale scrollbar allowance when
-  // one drifts (the +2px column drift G-48-11c fixed).
+  // mount itself is layout-independent: GamesList switches layouts internally.
   const gridMounted =
     libraryToShow.length > 0 && (!refreshing || refreshingInTheBackground)
 
@@ -1192,7 +1189,6 @@ export default React.memo(function Library(): JSX.Element {
           libraryUnion={libraryUnion}
           deps={engineDeps}
           showHidden={showHidden}
-          gridShown={gridMounted && layout === 'grid'}
           handleModal={handleModal}
         />
 
