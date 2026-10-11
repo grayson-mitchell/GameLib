@@ -12,7 +12,7 @@
  * their returned React-element object graphs are inspected without a DOM,
  * following this phase's established idiom. `react` (`useContext`,
  * `useEffect`), `react-router-dom`, `react-i18next`, `@mui/material`,
- * `@fortawesome/react-fontawesome`, `NavItem`, `QuitButton`, `DownloadsRing`,
+ * `@fortawesome/react-fontawesome`, `NavItem`, `QuitButton`,
  * `GamesPanel`, `HeroicVersion` and every colocated stylesheet/image import
  * are mocked so this file exercises only assembly and destination content --
  * each child's own deeper behaviour already has its own suite
@@ -145,11 +145,6 @@ jest.mock('../components/QuitButton', () => ({
   default: () => ({ type: 'mock-quitbutton', props: {} })
 }))
 
-jest.mock('../components/DownloadsRing', () => ({
-  __esModule: true,
-  default: () => ({ type: 'mock-downloadsring', props: {} })
-}))
-
 jest.mock('../components/GamesPanel', () => ({
   __esModule: true,
   default: () => ({ type: 'mock-gamespanel', props: {} })
@@ -269,6 +264,7 @@ describe('Destination coverage -- the settled tree', () => {
       'Accounts',
       'Library',
       'Stores',
+      'Downloads',
       'Settings',
       'Store Search',
       'Amazon Luna',
@@ -350,7 +346,14 @@ describe('Community links (re-homed from the deleted suite)', () => {
 })
 
 describe('Version mount (re-homed from the deleted suite)', () => {
-  it.each(['accounts', 'games', 'stores', 'settings', null] as const)(
+  it.each([
+    'accounts',
+    'games',
+    'stores',
+    'downloads',
+    'settings',
+    null
+  ] as const)(
     "HeroicVersion is present in the tier-2 column of NavShell()'s tree for activeTab %s",
     (tab) => {
       pathname =
@@ -360,9 +363,11 @@ describe('Version mount (re-homed from the deleted suite)', () => {
             ? '/'
             : tab === 'stores'
               ? '/store/epic'
-              : tab === 'settings'
-                ? '/settings/general'
-                : '/download-manager'
+              : tab === 'downloads'
+                ? '/download-manager'
+                : tab === 'settings'
+                  ? '/settings/general'
+                  : '/nowhere'
       contextValue = permissiveContextValue()
 
       const tree = NavShell() as unknown as AnyElement

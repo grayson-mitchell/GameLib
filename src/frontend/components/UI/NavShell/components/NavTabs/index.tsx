@@ -11,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
+import DownloadsTabIcon from '../DownloadsTabIcon'
 import {
   NAV_TAB_INDEX,
   resolveActiveTab,
@@ -21,29 +22,31 @@ import './index.scss'
 /**
  * Tier-1 route-driven tab strip (34.10-04, REQ-34.10-02/06/11/14).
  *
- * Promotes four destinations off the retired `SidebarLinks`
+ * Promotes five destinations: four off the retired `SidebarLinks`
  * (`Sidebar/components/SidebarLinks/index.tsx`) -- the GameLib library item,
  * the Stores item (with its default-store cascade), the Settings item, and
- * the separate Manage Accounts item -- onto a reskinned MUI `<Tabs>`.
+ * the separate Manage Accounts item -- plus Downloads (quick 261012-dhs),
+ * onto a reskinned MUI `<Tabs>`.
  *
- * Quick task 260815-lta: the strip now reads ACCOUNTS / LIBRARY / STORES /
- * SETTINGS. The first two labels are re-keyed content (`nav.tabs.accounts`,
- * `nav.tabs.library`); the all-caps presentation is applied by the colocated
- * stylesheet's `text-transform: uppercase`, not by any string here.
+ * Quick task 260815-lta: the strip reads ACCOUNTS / LIBRARY / STORES /
+ * SETTINGS; quick 261012-dhs inserts DOWNLOADS before SETTINGS. The first two
+ * labels are re-keyed content (`nav.tabs.accounts`, `nav.tabs.library`); the
+ * all-caps presentation is applied by the colocated stylesheet's
+ * `text-transform: uppercase`, not by any string here.
  *
  * MUI is used **only** as the accessibility primitive here: roving
  * `tabIndex`, arrow-key navigation, `role="tablist"`/`role="tab"`,
  * `aria-selected`. `<Tabs>` here carries no controlled-selection handler --
  * `value` is derived purely from `resolveActiveTab(location.pathname)`, so
- * the strip is route-driven, not state-driven. When the route has no owning
- * tab (currently only
- * `/download-manager`), `resolveActiveTab` returns `null`, which is coerced
- * to MUI's `false` no-selection sentinel -- the Downloads ring carries the
- * active signal there instead (navigation-shell.md §6).
+ * the strip is route-driven, not state-driven. `/download-manager` now
+ * selects the Downloads tab (quick 261012-dhs, a user decision reversing
+ * navigation-shell.md §6); only an unrouted path, for which
+ * `resolveActiveTab` returns `null`, is coerced to MUI's `false`
+ * no-selection sentinel.
  *
  * No redundant `aria-label` is set on `<Tabs>` -- each `<Tab>` already
- * carries its own accessible name via `label`, so inventing a fifth
- * translatable string here would be redundant with the four that already
+ * carries its own accessible name via `label`, so inventing a sixth
+ * translatable string here would be redundant with the five that already
  * exist.
  */
 export default function NavTabs() {
@@ -120,6 +123,17 @@ export default function NavTabs() {
         iconPosition="start"
         disableRipple
         data-tour="nav-stores"
+      />
+      <Tab
+        component={NavLink}
+        to="/download-manager"
+        value="downloads"
+        id={`tab-${NAV_TAB_INDEX.downloads}`}
+        label={t('download-manager.link', 'Downloads')}
+        icon={<DownloadsTabIcon />}
+        iconPosition="start"
+        disableRipple
+        data-tour="nav-downloads"
       />
       <Tab
         component={NavLink}

@@ -87,9 +87,8 @@
   // this fix serves the Electron/Chromium shell only. The ACTIVE drag path
   // under Tauri is `tauriWindowChrome.ts`'s `closest('.NavShell__navbar')`
   // selector fallback (REQ-34.10-04), which this task does not touch and
-  // must not be treated as superseded by this CSS. `.NavTabs` and
-  // `.NavShell__navRight`'s interactive children below carry `no-drag` so
-  // this region does not swallow their clicks (T-34.11-07).
+  // must not be treated as superseded by this CSS. `.NavTabs` below carries
+  // `no-drag` so this region does not swallow its clicks (T-34.11-07).
   -webkit-app-region: drag;
   display: flex;
   // Tabs sit on the baseline -- this is what makes the card-tab seam land
@@ -181,7 +180,7 @@
 }
 
 // D-05: reserve room for `WindowControls` so it never overlaps the
-// nav-right cluster, mirroring the hack deleted from `Header/index.css:14-18`
+// tab strip, mirroring the hack deleted from `Header/index.css:14-18`
 // in plan 34.10-06. `WindowControls` itself is untouched here -- plan
 // 34.1-09 re-anchored its `grid-area` from `content` to `navbar`, moving it
 // into the SAME grid row as `.NavShell__navbar`, so this reserve rule now
@@ -194,7 +193,7 @@
 // `env(titlebar-area-width)` fallback), and `App.tsx` (34.1-11 Task 1) stops
 // rendering `WindowControls` entirely on macOS, in BOTH titlebar states --
 // so without this exclusion the rule would reserve 120px of trailing
-// padding for buttons that are not there, pushing the nav-right cluster
+// padding for buttons that are not there, pushing the tab strip
 // left for no reason. This selector is correct even though
 // `.macOverlayTitlebar` is the NARROWER (`isMac && isFrameless`) hook
 // rather than a plain platform check: the rule already requires
@@ -221,21 +220,6 @@
 // strip would swallow every tab click (T-34.11-07).
 .NavTabs {
   -webkit-app-region: no-drag;
-}
-
-.NavShell__navRight {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-inline-start: auto;
-
-  // D-32 / CR-02. Scoped to the actual clickable descendant (DownloadsRing's
-  // own root, a <Link>) rather than the whole .NavShell__navRight container,
-  // matching how .NavTabs above is excluded at its own root -- the drag
-  // region above must not swallow this click target.
-  .DownloadsRing {
-    -webkit-app-region: no-drag;
-  }
 }
 
 .NavShell__tier2 {

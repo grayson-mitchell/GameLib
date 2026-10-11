@@ -5,7 +5,6 @@ import classNames from 'classnames'
 import { Tier2PortalContext } from './Tier2PortalContext'
 import { resolveActiveTab } from './navTabs'
 import NavTabs from './components/NavTabs'
-import DownloadsRing from './components/DownloadsRing'
 import GamesPanel from './components/GamesPanel'
 import StoresPanel from './components/StoresPanel'
 import SettingsPanel from './components/SettingsPanel'
@@ -56,9 +55,12 @@ export default function NavShell() {
   // therefore its portalled `<Header>`) isn't mounted. Collapse is a CSS
   // width transition on a permanently-mounted element (plan 34.10-02), not
   // an unmount -- that is what lets the version slot below survive it.
+  // Downloads has no tier-2 panel (quick 261012-dhs), so it collapses like
+  // Manage Accounts.
   const tier2Collapsed =
     activeTab === null ||
     activeTab === 'accounts' ||
+    activeTab === 'downloads' ||
     (activeTab === 'games' && !filled)
 
   let tier2Panel: ReactNode = null
@@ -74,9 +76,6 @@ export default function NavShell() {
     <>
       <header className="NavShell__navbar">
         <NavTabs />
-        <div className="NavShell__navRight">
-          <DownloadsRing />
-        </div>
       </header>
       <aside
         className={classNames('NavShell__tier2', {
