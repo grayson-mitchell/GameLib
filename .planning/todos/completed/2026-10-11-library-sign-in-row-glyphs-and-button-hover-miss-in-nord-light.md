@@ -9,6 +9,9 @@ found_by: "quick 261011-j8z token-level census, 2026-10-11"
 files:
   - src/frontend/screens/Library/components/LibrarySignInNotice/index.scss
   - src/frontend/screens/Settings/index.css
+
+completed: 2026-10-11
+status: "RESOLVED 2026-10-11 in quick task 261011-sxg: the hovered dismiss glyph paints var(--navbar-active, var(--navbar-accent)), nord-light 1.52:1 to 5.43:1 (dracula 3.79:1 the lowest of ten, 3:1 floor); the expired triangle keeps --status-danger and gains a body.nord-light override to #ffb3b8, 2.82:1 to 4.35:1 (3:1 floor, nine themes unchanged at 3.50 to 7.25); the in-row footer button owns :hover and :focus-visible at (0,4,0) above the Settings rule, keeping the row pair (inherit, transparent, >= 4.87:1 in every theme) with box-shadow none, an underline on hover and a currentColor outline on focus-visible -- the first fix option, with no hue shift because --navbar-active is 3.79:1 in dracula against the 4.5 text floor; themes.scss and Settings/index.css untouched; gated for all 10 themes in themeTokens.test.ts; the live nord-light look is still owed; commits e8f47555d (RED gate) and 9cb2945b1 (fix)"
 ---
 
 # nord_light: three sign-in row states still miss their floor
