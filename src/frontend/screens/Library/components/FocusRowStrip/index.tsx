@@ -26,6 +26,7 @@ import {
   canScrollForward,
   createNextFrameRunner,
   measureCardPitch,
+  measureFitAllowance,
   pageScrollDelta,
   scrollFocusedCardIntoViewHorizontally
 } from './focusRowOverflow'
@@ -168,7 +169,9 @@ function FocusRowStrip({
       scrollLeft: track.scrollLeft
     }
     track.scrollBy({
-      left: direction * pageScrollDelta(m, measureCardPitch(track)),
+      left:
+        direction *
+        pageScrollDelta(m, measureCardPitch(track), measureFitAllowance(track)),
       behavior: 'smooth'
     })
   }

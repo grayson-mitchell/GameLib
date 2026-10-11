@@ -2,16 +2,28 @@
   padding: 0 var(--space-md-fixed) var(--space-md-fixed);
 }
 
-/* G-48-8a / G-48-8b / G-48-8c (strip-end clipping): the viewport bleeds out
-   15px each side, equal and opposite to the 15px inline padding the list adds
-   inward in `.focusRowTrack .gameList` below, so the strip's cards keep their
-   x-position over the grid's 16px gutter to the pixel (`.focusRowStrip` keeps
-   its padding; the header is outside the viewport and does not move). The
-   controls are positioned against this box, so they sit 15px further out over
-   less art. Logical property: this app ships RTL locales (ar, fa, he). */
+/* G-48-8a / G-48-8b / G-48-8c (strip-end clipping), D-03 amended 261011-ulj.
+   Start side: the viewport bleeds out 15px, equal and opposite to the 15px
+   leading padding the list adds inward in `.focusRowTrack .gameList` below, so
+   the first card stays on grid column 1 to the pixel and keeps its ring room
+   (`.focusRowStrip` keeps its padding; the header is outside the viewport and
+   does not move). End side: no bleed, so the track's end clip is
+   `.focusRowStrip`'s content edge. That is the grid's content edge, because
+   both boxes carry the same `--space-md-fixed` inline padding inside
+   `.listing`. At scrollLeft 0, card k is then fully visible exactly when
+   k x pitch + w <= C, which is the grid's own placement test: the 15px window
+   that showed a column the grid cannot fit is gone. Ring clearance at the end
+   of travel still comes from the list's trailing padding (G-48-8a/b/c).
+   Consequence for the controls: `canScrollForward` now reads clientWidth =
+   C + 15, so they mount when the cards plus their 15px trailing ring room pass
+   the grid content edge. The band where every card is visible yet the forward
+   control nudges by up to 15px keeps its width; it moves from a card span in
+   (C+1, C+15] to (C-14, C+1]. The controls are positioned against this box.
+   Logical properties: this app ships RTL locales (ar, fa, he). */
 .focusRowStrip__viewport {
   position: relative;
-  margin-inline: -15px;
+  margin-inline-start: -15px;
+  margin-inline-end: 0;
 }
 
 /* G-48-4b / G-48-9: a hovered or focused edge card painted over the chevron
@@ -57,7 +69,7 @@
    140px to 320px (the tile-size slider's range): 8.75px to 13.25px
    horizontally, and over the card's taller edge 10.81px to 17.97px vertically.
    15px of inline padding clears the horizontal reach with 1.75px to spare at
-   the widest tile and stays under the 16px gutter (the bleed on
+   the widest tile and stays under the 16px gutter (the START bleed on
    `.focusRowStrip__viewport` equals it, so the cards still line up with the
    grid to the pixel). These bounds are proven at zoom 1. The vertical room
    scales with the card instead of being a fixed 19px: it is `max(1em, 0.04 x
@@ -191,8 +203,13 @@
   inset-inline-start: 0;
 }
 
+/* The viewport no longer bleeds at the end (261011-ulj D-03), so this offset
+   puts the disc back at the same physical spot as before: it ends 15px past the
+   content edge, 1px inside the 16px gutter. Nothing clips it: the viewport and
+   `.focusRowStrip` are not overflow-clipped, and `.App .content` clips only at
+   the gutter's outer edge. The back control is unchanged (the start bleed is). */
 .focusRowStrip__control--forward {
-  inset-inline-end: 0;
+  inset-inline-end: -15px;
 }
 
 /* Outset ring, not the panel's inset recipe: these are not inside the

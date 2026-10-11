@@ -9,6 +9,7 @@ import {
   canScrollForward,
   createNextFrameRunner,
   measureCardPitch,
+  measureFitAllowance,
   pageScrollDelta,
   scrollFocusedCardIntoViewHorizontally
 } from '../focusRowOverflow'
@@ -67,42 +68,105 @@ describe('pageScrollDelta', () => {
     expect(pageScrollDelta(m(600, 2000, 300), 180)).toBeGreaterThan(0)
   })
 
-  it('P1: pages the whole cards that fit, at every fixed tile width (261011-t4y)', () => {
-    // Tiles are fixed-width, so the grid fits n = floor((C + 24) / pitch)
-    // columns over a content box C (n x pitch <= C + 24). The track is the
-    // viewport box, which bleeds 15px each side, so its clientWidth is C + 30
-    // (6px of slack over n x pitch at most), integer-rounded; the zero-slack
-    // read C + 24 is the epsilon defence. A page is n cards, or n + 1 where
-    // the slack admits one more.
+  it('pages one short on the bare count and exactly the grid column count with the fit allowance (261011-ulj D-02)', () => {
+    // C = 516 is an exact 3-column fit at a 156px tile (3 x 180 = 540 = C + 24),
+    // so the track's clientWidth is C + 15 = 531.
+    expect(pageScrollDelta(m(531, 2000, 0), 180)).toBe(360)
+    expect(pageScrollDelta(m(531, 2000, 0), 180, 9)).toBe(540)
+  })
+
+  it('treats a non-finite fit allowance as 0', () => {
+    expect(pageScrollDelta(m(531, 2000, 0), 180, NaN)).toBe(360)
+    expect(pageScrollDelta(m(531, 2000, 0), 180, Infinity)).toBe(360)
+    expect(pageScrollDelta(m(531, 2000, 0), 180, -Infinity)).toBe(360)
+  })
+
+  // The track is the viewport box, which bleeds 15px at the start only, so its
+  // clientWidth is the grid content width C plus 15, integer-rounded. The grid
+  // fits n = floor((C + 24) / pitch) columns. With allowance 9 (gap 24 minus
+  // lead padding 15) a page is n cards, or n + 1 only inside a 1.5px rounding
+  // band.
+  const sweepP1 = (allowance: number): { bad: string[]; short: number } => {
     const bad: string[] = []
+    let short = 0
     for (const w of [
       LIBRARY_TILE_WIDTH_MIN,
       LIBRARY_TILE_WIDTH_DEFAULT,
+      188,
       LIBRARY_TILE_WIDTH_MAX
     ]) {
       const pitch = w + 24
       for (let i = 0; w + i * 0.37 <= 3000; i++) {
         const c = w + i * 0.37
-        const n = Math.max(1, Math.floor((c + 24) / pitch))
-        for (const clientWidth of [
-          Math.round(c + 30),
-          Math.floor(c + 30),
-          Math.round(c + 24),
-          Math.floor(c + 24)
-        ]) {
-          const cards = pageScrollDelta(m(clientWidth, 99999, 0), pitch) / pitch
+        const n = Math.floor((c + 24) / pitch)
+        for (const clientWidth of [Math.round(c + 15), Math.floor(c + 15)]) {
+          const cards =
+            pageScrollDelta(m(clientWidth, 99999, 0), pitch, allowance) / pitch
+          const whole = Math.round(cards)
+          if (whole === n - 1) {
+            short++
+          }
           if (
-            Math.abs(cards - Math.round(cards)) > 1e-9 ||
-            (Math.round(cards) !== n && Math.round(cards) !== n + 1)
+            Math.abs(cards - whole) > 1e-9 ||
+            whole < n ||
+            whole > n + 1 ||
+            (whole === n + 1 && (n + 1) * pitch - (c + 24) > 1.5)
           ) {
             bad.push(
-              `W=${w} C=${c} clientWidth=${clientWidth} got ${cards} cards, want ${n} or ${n + 1}`
+              `W=${w} C=${c} clientWidth=${clientWidth} got ${cards} cards, want ${n} (or ${n + 1} within 1.5px)`
             )
           }
         }
       }
     }
-    expect(bad).toEqual([])
+    return { bad, short }
+  }
+
+  it('P1: pages the grid column count at every tile width, including the 188px live tile (261011-ulj)', () => {
+    expect(sweepP1(9).bad).toEqual([])
+  })
+
+  it('P1 non-vacuity: the same sweep without the allowance pages one short at least once', () => {
+    expect(sweepP1(0).short).toBeGreaterThan(0)
+    expect(sweepP1(9).short).toBe(0)
+  })
+})
+
+describe('measureFitAllowance', () => {
+  const makeTrack = (list: unknown) =>
+    ({ firstElementChild: list }) as unknown as Element
+  const style =
+    (columnGap: string, paddingLeft: string, paddingRight: string) => () => ({
+      columnGap,
+      paddingLeft,
+      paddingRight
+    })
+
+  it('is the gap minus the inline padding (24 - 15 = 9)', () => {
+    expect(
+      measureFitAllowance(makeTrack({}), style('24px', '15px', '15px'))
+    ).toBe(9)
+  })
+
+  it('is 0 for no track or no list', () => {
+    expect(measureFitAllowance(null, style('24px', '15px', '15px'))).toBe(0)
+    expect(
+      measureFitAllowance(makeTrack(null), style('24px', '15px', '15px'))
+    ).toBe(0)
+  })
+
+  it('is 0 for an unreadable gap', () => {
+    expect(
+      measureFitAllowance(makeTrack({}), style('normal', '15px', '15px'))
+    ).toBe(0)
+  })
+
+  it('is 0, not a throw, when getStyle throws', () => {
+    expect(
+      measureFitAllowance(makeTrack({}), () => {
+        throw new Error('boom')
+      })
+    ).toBe(0)
   })
 })
 

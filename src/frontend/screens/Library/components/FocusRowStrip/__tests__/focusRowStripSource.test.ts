@@ -157,9 +157,12 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
   // covers 13.25 with 1.75px to spare, stays under the strip's 16px gutter
   // (Test H), and stays a px value so Tests F-H keep parsing px and keep
   // bleed = padding. The vertical room scales with the card instead (Test V).
-  // The viewport bleeds out by the list padding so cards keep their x-position
-  // over the grid. The bounds are proven at zoom 1. Every number below is
-  // parsed from the shipped stylesheets or imported, never restated.
+  // The viewport bleeds out by the list padding at the START side only, so the
+  // first card keeps its x-position over the grid; the END side has no bleed
+  // (261011-ulj D-03), so the track's end clip is the grid's content edge and
+  // the strip never shows a full card in a column the grid cannot fit. The
+  // bounds are proven at zoom 1. Every number below is parsed from the shipped
+  // stylesheets or imported, never restated.
   const css = read(FOCUS_ROW_CSS_PATH)
   const list = cssBlock(css, '.focusRowTrack .gameList')
   const viewport = cssBlock(css, '.focusRowStrip__viewport')
@@ -169,7 +172,7 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
     list.match(/padding-inline:\s*(\d+(?:\.\d+)?)px\s*;/)?.[1]
   )
   const bleed = Number(
-    viewport.match(/margin-inline:\s*-(\d+(?:\.\d+)?)px\s*;/)?.[1]
+    viewport.match(/margin-inline-start:\s*-(\d+(?:\.\d+)?)px\s*;/)?.[1]
   )
 
   const gameCard = read(GAME_CARD_CSS_PATH)
@@ -334,12 +337,31 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
     expect(list).not.toMatch(/(^|[\s;])padding:/)
   })
 
-  it('Test G: the viewport bleeds out by exactly the list padding, so cards stay aligned with the grid', () => {
+  it('Test G: the viewport bleeds out at the start by exactly the list padding, so the first card stays aligned with the grid', () => {
     expect(Number.isFinite(bleed)).toBe(true)
     expect(bleed).toBe(inlinePadding)
   })
 
-  it('Test H: the strip keeps its 16px gutter, and the bleed stays inside it', () => {
+  it('Test G2: the viewport has no end bleed -- its end clip is the grid content edge (261011-ulj D-03)', () => {
+    expect(viewport).toMatch(/margin-inline-end:\s*0\s*;/)
+    expect(viewport).not.toMatch(/(^|[\s;])margin-inline:/)
+    expect(viewport).not.toMatch(/margin-(left|right):/)
+  })
+
+  it('chevron offset: the forward control sits at -bleed so it stays where it sat when the viewport bled at both ends, and the back control is unchanged (261011-ulj D-04)', () => {
+    const forward = cssBlock(css, '.focusRowStrip__control--forward')
+    const offset = Number(
+      forward.match(/inset-inline-end:\s*-(\d+(?:\.\d+)?)px\s*;/)?.[1]
+    )
+    expect(Number.isFinite(offset)).toBe(true)
+    expect(offset).toBe(bleed)
+    expect(cssBlock(css, '.focusRowStrip__control--back')).toMatch(
+      /inset-inline-start:\s*0\s*;/
+    )
+    expect(forward).not.toMatch(/(^|[\s;])(left|right):/)
+  })
+
+  it('Test H: the strip keeps its 16px gutter, and the start bleed stays inside it', () => {
     expect(strip).toMatch(
       /padding:\s*0\s+var\(--space-md-fixed\)\s+var\(--space-md-fixed\)\s*;/
     )
@@ -705,6 +727,7 @@ describe('FocusRowStrip/index.tsx -- overflow controls (Plan 48-04)', () => {
 
   it('pages with scrollBy over pageScrollDelta, smooth', () => {
     expect(source).toMatch(/pageScrollDelta\(/)
+    expect(source).toMatch(/measureFitAllowance\(track\)/)
     expect(source).toMatch(/scrollBy\(/)
     expect(source).toMatch(/behavior:\s*'smooth'/)
   })
@@ -734,7 +757,7 @@ describe('FocusRowStrip/index.css -- overflow controls (Plan 48-04)', () => {
       /inset-inline-start:\s*0/
     )
     expect(cssBlock(css, '.focusRowStrip__control--forward')).toMatch(
-      /inset-inline-end:\s*0/
+      /inset-inline-end:\s*-\d+(?:\.\d+)?px/
     )
     expect(cssBlock(css, '.focusRowStrip__control--back')).not.toMatch(
       /\bleft:/

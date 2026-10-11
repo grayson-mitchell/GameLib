@@ -43,19 +43,21 @@ const maxScrollLeft = (m: TrackMeasurement): number =>
  * live-looking no-op, and always finite.
  *
  * Tiles are fixed-width, so a page is the whole cards that fit the track. The
- * track is the viewport box, which bleeds 15px out each side (index.css), so
- * its `clientWidth` is the grid's content width C plus 30px, i.e. `n x pitch
- * + 6` for the `n` columns the grid fits (`n x pitch = C + 24`): 6px of slack
- * wider than the grid's content box, so a bare `floor(clientWidth / pitch)`
- * returns the grid's column count or one more. The `SUBPIXEL_EPSILON`
- * tolerance is kept as a defence for the zero-slack case (`clientWidth = n x
- * pitch` read back integer-rounded, which a bare floor pages one card short at
- * about half of all widths): a card short of fitting by under a pixel counts
- * as visible.
+ * track is the viewport box, which bleeds out 15px at the START side only
+ * (index.css, 261011-ulj D-03), so its `clientWidth` is the grid's content
+ * width C plus 15px. The whole cards visible from the list's leading padding
+ * are `floor((clientWidth - lead + gap) / pitch)`, which equals the grid's
+ * column count `n = floor((C + 24) / pitch)`. `fitAllowance` is `gap - lead`
+ * (24 - 15 = 9, from `measureFitAllowance`). The bare count
+ * `floor((clientWidth + 1) / pitch)` pages one card short in an 8px band per
+ * pitch. The `SUBPIXEL_EPSILON` tolerance still defends the integer-rounded
+ * read, at the cost of paging `n + 1` only when card `n + 1` is within about
+ * 1.5px of fitting. A non-finite allowance counts as 0, the bare count.
  */
 export function pageScrollDelta(
   m: TrackMeasurement,
-  cardPitch: number
+  cardPitch: number,
+  fitAllowance = 0
 ): number {
   if (!Number.isFinite(cardPitch) || cardPitch <= 0) {
     return 0
@@ -63,9 +65,12 @@ export function pageScrollDelta(
   if (!Number.isFinite(m.clientWidth) || m.clientWidth <= 0) {
     return cardPitch
   }
+  const allowance = Number.isFinite(fitAllowance) ? fitAllowance : 0
   return (
-    Math.max(1, Math.floor((m.clientWidth + SUBPIXEL_EPSILON) / cardPitch)) *
-    cardPitch
+    Math.max(
+      1,
+      Math.floor((m.clientWidth + allowance + SUBPIXEL_EPSILON) / cardPitch)
+    ) * cardPitch
   )
 }
 
@@ -116,6 +121,43 @@ export function measureCardPitch(
       : LIBRARY_TILE_WIDTH_DEFAULT) +
     (Number.isFinite(gap) ? gap : FALLBACK_CARD_GAP)
   )
+}
+
+/**
+ * The `fitAllowance` argument of `pageScrollDelta`: the list's inter-card gap
+ * minus its larger inline padding, read from the live list so the CSS stays the
+ * one place both are written (the same rule `measureCardPitch` follows). The
+ * inline padding is a single symmetric `padding-inline` value (pinned by the
+ * source gate), so the left value equals the inline-start one in LTR and RTL.
+ * Total: no track, no list, a non-finite gap or a throwing `getStyle` all give
+ * 0, which is the bare count.
+ */
+export function measureFitAllowance(
+  track: Element | null,
+  getStyle: (el: Element) => {
+    columnGap: string
+    paddingLeft: string
+    paddingRight: string
+  } = (el) =>
+    typeof getComputedStyle === 'function'
+      ? getComputedStyle(el)
+      : { columnGap: '', paddingLeft: '', paddingRight: '' }
+): number {
+  const list = track?.firstElementChild ?? null
+  if (!list) {
+    return 0
+  }
+  try {
+    const style = getStyle(list)
+    const gap = parseFloat(style.columnGap)
+    if (!Number.isFinite(gap)) {
+      return 0
+    }
+    const { left, right } = readEdgeClearance(list, () => style)
+    return gap - Math.max(left, right)
+  } catch {
+    return 0
+  }
 }
 
 /**
