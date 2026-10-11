@@ -5,7 +5,10 @@ area: webview/store-embed
 severity: medium
 platform: any
 ready: human
-status: OPEN
+status: completed
+resolution: decided-option-a-rust-managed-raw-wkwebview-subview-macos-first
+resolved: 2026-10-12
+resolved_by: "quick-261012-d5g"
 found_by: 'quick 261012-ago closeout (2026-10-12) — spike 024 is finished; what is left is a decision'
 files:
   - .planning/phases/40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we/40-CONTEXT.md
@@ -79,3 +82,51 @@ occlusion rule. Could be the interim for A.
   re-opening any of these.
 - The public wry builder cannot strip the init scripts and handlers; a Tauri-managed webview is
   not a candidate under any flag.
+
+## Decision (2026-10-12)
+
+**a. The call — Option A.** Adopt the Rust-managed raw `WKWebView` subview for `/store/epic`,
+macOS first. Owner: Phase 50 — `.planning/ROADMAP.md` `### Phase 50: Epic store in-app on macOS:
+a Rust-managed raw WKWebView subview for /store/epic` is the canonical statement (scope, live-gate
+arms, does-not-ship list), recorded by quick `261012-d5g`. In-repo precedent: a second Rust-owned
+`WKWebView` construction scoped to Epic already ships — `open_pristine_epic_login_window`
+(F-34.5-G6-01).
+
+**b. Option B rejected, by precedent.** The 2026-09-29 Linux decision (quick `260929-9qr`,
+`.planning/todos/completed/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`,
+"Why not keeping Linux off the embed", resting on quick `260928-upj`'s option (a)) rejected
+keeping a platform off the embed as against the one-launcher core value; keeping a store off the
+embed is the same class of call. Spike 024 runs 17-27 also found the construction that is served
+(0 of 22 Epic arms challenged; README `## What IS established` #7-#9), so there is no longer a
+measurement for "gated by decision" copy to rest on.
+
+**c. Option C folded into A, not shipped as an interim.**
+
+**d. Correction — this todo's own Option C text was wrong.** Its claim that the existing pristine
+window could open the store "today with no code" does not hold. `is_epic_login` is a host check
+(`url.host_str() == Some(EPIC_LOGIN_HOST)`, `EPIC_LOGIN_HOST` = `www.epicgames.com`) inside
+`humble_login_open` — the LOGIN seam. Sending a browse URL down that arm inherits machinery built
+for a sign-in sheet: the sheet single-flight guard, the login-cancel navigation sentinel, the
+`LOGIN_WINDOW_EVENTS` queue, and `open_pristine_epic_login_window`'s fixed 900x700 `inner_size`.
+Using it for browsing is a misuse of a login arm, not a no-code path. The spike README's
+`## Consequence for /store/epic` already called the separate-window question moot once the
+subview exists.
+
+**e. The four locked sub-decisions.**
+
+1. Sign in button — no interception, no DOM hiding; the subview is the same non-injected
+   construction as the shipped pristine Epic login window, which completes Epic login today, so
+   the sign-in todo's premise (a Talon 403 against a Tauri-injected webview) does not apply;
+   Phase 50's live gate measures the button in place and a hand-off becomes a Phase 50 task ONLY
+   if that arm is challenged or 403s
+   (`.planning/todos/pending/2026-09-15-epic-in-embed-sign-in-button-has-no-decided-behaviour.md`).
+2. Platform — macOS only in Phase 50; Windows and Linux keep `WebviewUnavailablePanel
+   reason="epic"`; `2026-10-11-stores-tab-embed-not-implemented-on-windows.md` is untouched.
+3. Jar — the shared default `WKWebsiteDataStore` (0 `data_store_identifier` hits in
+   `src-tauri/src`; the Linux one-jar decision); the spike measured COLD only, so Phase 50's live
+   gate must carry a warm, signed-in-jar arm.
+4. Challenge / reputation — accepted, unquantified; Phase 50 ships Turnstile-host detection
+   falling back to the panel, plus a load timeout with reload (README established #9); no Chrome
+   UA spoof.
+
+**f.** This todo is closed by decision; the work is Phase 50's.
