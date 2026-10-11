@@ -57,3 +57,40 @@ Rebuild cold on Windows and run the 261011-mza driver
 (`.planning/quick/261011-mza-re-enable-native-lzma-depot-decode-opera/measure-selftest.ts`, label
 `native-win32`, `--expect-native-workers 2`): expect 20/20 at `nativeWorkers:2` and the engaged
 line in every run log, and record the temp-dir leftovers.
+
+## Resolution (2026-10-12, quick 261011-wrx)
+
+Closed on unit evidence only. The real-SEA verification is owed (see below), not done.
+
+- `b0ee1fd29` fix(steam): the build embeds `liblzma.dll` as a second SEA asset
+  (`LZMA_NATIVE_DLL_ASSET_KEY`) for `x86_64-pc-windows-msvc` only, and a missing DLL is a
+  `COMPILE GATE FAILED`. The binding extracts the addon (plus the DLL on win32) into ONE private
+  `mkdtempSync` directory (chmod 0o700), `dlopen`s from it, removes the directory in a `finally`,
+  swallows the Windows unlink-while-mapped failure, and records `{ dir, leftover }` per isolate.
+- `095973577` feat(steam): `lzmaLoader.ts` appends the extraction directory and whether it was
+  removed or LEFT BEHIND to its single engaged `logInfo` line, and the failure warning now names the
+  win32 `liblzma.dll` companion SEA asset.
+- Unit suites on this Windows box, by path: Task 1 RED was 24 failed / 78 passed (102 tests,
+  `lzmaNativeBinding.test.ts` + `buildSidecarSea.test.ts`), GREEN 102/102. Task 2 RED was 2 failed
+  (L1, L2) / 45 passed in `decompressPool.test.ts`, GREEN 149/149 across the three targeted suites.
+  Includes a real-filesystem round trip (R6) and a real `node_modules` sibling-library drift guard
+  (B7). `pnpm codecheck`, scoped eslint, `pnpm find-deadcode` and scoped prettier are green.
+- Real win32 SEA: NOT RUN. The Task 3 precondition was unmet: a live `gamelib-shell.exe`
+  (`src-tauri/target/debug`, with a `node.exe` child) was running, so the cold build, which replaces
+  `src-tauri/binaries/gamelib-sidecar-x86_64-pc-windows-msvc.exe`, was skipped and nothing was killed.
+  See `.planning/quick/261011-wrx-win32-sea-native-lzma-never-engages-embe/measurement/build-native-win32.txt`.
+
+Owed to the operator:
+
+1. With the app closed, the cold rebuild plus the native-win32 driver run itself. From the repo root:
+   `pnpm build:sidecar-sea`, then
+   `node meta/runTs.cjs --bundle --platform=node --target=node22 .planning/quick/261011-wrx-win32-sea-native-lzma-never-engages-embe/measure-selftest.ts --label native-win32 --runs 20 --expect-native-workers 2 --out .planning/quick/261011-wrx-win32-sea-native-lzma-never-engages-embe/measurement`.
+   Expect 20/20 at `nativeWorkers:2` and the engaged line in every run log. If any run shows
+   `nativeWorkers:0` with the import-failure warning, this fix is refuted: reopen this todo.
+2. A live Steam depot install in the packaged Windows app. `gamelib.log` should show the engaged line
+   with its `SEA extraction dir ...` sentence.
+3. The accumulation decision, tracked in
+   `.planning/todos/pending/2026-10-12-win32-native-lzma-extraction-dirs-accumulate-in-temp.md`.
+
+Linux note: ubuntu CI's `lzmaNativeSeaRealBuild.test.ts` (unedited) is the first linux real-SEA run
+of the mkdtemp path.

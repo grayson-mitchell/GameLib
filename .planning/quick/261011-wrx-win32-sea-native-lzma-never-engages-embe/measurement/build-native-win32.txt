@@ -1,0 +1,24 @@
+win32 SEA build not run: Task 3 precondition unmet (quick 261011-wrx, 2026-10-12)
+
+Precondition: no gamelib-sidecar-* or tauri process may be running, because a
+running sidecar locks the .exe on Windows and the cold build replaces it.
+The plan's check (tasklist | grep -i -E 'gamelib|tauri') matched a live process,
+so per the plan the process was NOT killed and STEPs 2-5 were skipped.
+
+Observed (Get-CimInstance Win32_Process, read-only):
+  pid 16704  gamelib-shell.exe   C:\Users\grays\Projects\GameLib\src-tauri\target\debug\gamelib-shell.exe
+  pid 8340   msedgewebview2.exe  (child of 16704)
+  pid 8620   node.exe           (child of 16704; presumably the dev sidecar run under node, not the SEA .exe)
+
+src-tauri/binaries/gamelib-sidecar-x86_64-pc-windows-msvc.exe was left untouched
+(mtime Oct 11 20:46, 120994304 bytes). None of the six SEA build outputs were removed.
+
+The cold win32 SEA build and the native-win32 driver run are therefore OWED to the
+operator, with the app closed. Exact commands, from the repo root:
+
+  pnpm build:sidecar-sea
+  node meta/runTs.cjs --bundle --platform=node --target=node22 .planning/quick/261011-wrx-win32-sea-native-lzma-never-engages-embe/measure-selftest.ts --label native-win32 --runs 20 --expect-native-workers 2 --out .planning/quick/261011-wrx-win32-sea-native-lzma-never-engages-embe/measurement
+
+Expected: build log contains 'liblzma.dll companion embedded as SEA asset "liblzma.dll"';
+20/20 pass at nativeWorkers:2; the engaged line in every run log; native-win32-tmpdir-extracts.txt
+lists the gamelib-lzma-native-* directories left behind (new = after minus before).
