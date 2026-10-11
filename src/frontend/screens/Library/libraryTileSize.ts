@@ -13,10 +13,11 @@
  */
 
 /**
- * Narrowest tile, in CSS px at zoom 1. Bound by the controller-mode art-fit
- * gate (`gameCardControllerGeometry.test.ts`): the art must clear the 35px
- * badge bar, `w * (275/173 - 4/3) >= 35`, so `w >= 136.6px`. 140 is the first
- * step-aligned value above that.
+ * Narrowest tile, in CSS px at zoom 1. 140 was chosen as the first
+ * step-aligned value above the old fixed-ratio controller art-fit bound
+ * (136.6px). Since 261011-vl0 the card height is the art plus a pinned bar, so
+ * no tile width crops art and that bound no longer applies. 140 stays as the
+ * slider floor; the operator kept the 140-320 range in 261011-vl0.
  */
 export const LIBRARY_TILE_WIDTH_MIN = 140
 

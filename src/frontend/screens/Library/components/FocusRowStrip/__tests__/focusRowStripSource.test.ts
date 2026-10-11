@@ -108,6 +108,7 @@ describe('FocusRowStrip/index.css -- .focusRowTrack .gameList', () => {
 const GAME_CARD_CSS_PATH =
   'src/frontend/screens/Library/components/GameCard/index.css'
 const THEMES_SCSS_PATH = 'src/frontend/themes.scss'
+const SPACING_SCSS_PATH = 'src/frontend/styles/_spacing.scss'
 
 /** Every top-level block whose selector text matches `selector` (whitespace
  * tolerant), brace-counted. */
@@ -153,7 +154,8 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
   // for a scaled card's ring. Tile width is now chosen by the Library tile-size
   // slider, so a card is never narrower than LIBRARY_TILE_WIDTH_MIN nor wider
   // than LIBRARY_TILE_WIDTH_MAX: the reach runs 8.75px to 13.25px horizontally
-  // and 10.81px to 17.97px vertically. So the list pads 15px inline: that
+  // and 11.19px to 17.19px vertically (card height = 3:4 art + the pinned 51px
+  // bar, 261011-vl0). So the list pads 15px inline: that
   // covers 13.25 with 1.75px to spare, stays under the strip's 16px gutter
   // (Test H), and stays a px value so Tests F-H keep parsing px and keep
   // bleed = padding. The vertical room scales with the card instead (Test V).
@@ -210,27 +212,56 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
     GAME_CARD_CSS_PATH,
     'the grouped hover/focus transform: scale()'
   )
-  const ratioMatch = cssBlock(gameCard, '.gameCard').match(
+  // 261011-vl0: a card's height is content, not a ratio of its width: the 3:4
+  // art plus one pinned icons bar. The bar is resolved from the shipped
+  // stylesheets the way gameCardControllerGeometry.test.ts resolves it.
+  const imgRatioMatch = cssBlock(gameCard, '.gameCard .gameImg').match(
     /aspect-ratio:\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*;/
   )
-  if (!ratioMatch) {
-    throw new Error(`${GAME_CARD_CSS_PATH}: no .gameCard aspect-ratio`)
+  if (!imgRatioMatch) {
+    throw new Error(`${GAME_CARD_CSS_PATH}: no .gameCard .gameImg aspect-ratio`)
   }
-  const cardRatio = Number(ratioMatch[1]) / Number(ratioMatch[2])
+  const imgRatio = Number(imgRatioMatch[1]) / Number(imgRatioMatch[2])
+  const barCalc = cssBlock(gameCard, '.gameCard').match(
+    /--game-card-bar-height:\s*calc\(\s*(\d+(?:\.\d+)?)px\s*\+\s*2\s*\*\s*var\(--space-xs-fixed\)\s*\)\s*;/
+  )
+  if (!barCalc) {
+    throw new Error(
+      `${GAME_CARD_CSS_PATH}: .gameCard declares no --game-card-bar-height: calc(Npx + 2 * var(--space-xs-fixed))`
+    )
+  }
+  const spacing = read(SPACING_SCSS_PATH)
+  const spaceUnit = parsed(
+    spacing,
+    /--space-unit-fixed:\s*(\d+(?:\.\d+)?)px/,
+    SPACING_SCSS_PATH,
+    '--space-unit-fixed'
+  )
+  const spaceXsFactor = parsed(
+    spacing,
+    /--space-xs-fixed:\s*calc\(\s*(\d+(?:\.\d+)?)\s*\*\s*var\(--space-unit-fixed\)\s*\)/,
+    SPACING_SCSS_PATH,
+    '--space-xs-fixed'
+  )
+  const barHeight = Number(barCalc[1]) + 2 * spaceXsFactor * spaceUnit
+  // Card height at tile width w.
+  const cardHeight = (w: number) => w / imgRatio + barHeight
 
   // How far past an unscaled edge the ring reaches when a length `side` (the
   // card's width or height) is scaled about its centre.
   const reach = (side: number, atScale: number = scale) =>
     (side / 2 + ringWidth + ringOffset) * atScale - side / 2
 
-  it('non-vacuity: the parsed geometry is the shipped one (140px floor, 320px ceiling, 13.25 and 17.97 reach)', () => {
+  it('non-vacuity: the parsed geometry is the shipped one (140px floor, 320px ceiling, 51px bar, 13.25 and 11.19 to 17.19 reach)', () => {
     expect(minWidth).toBe(140)
     expect(supremumWidth).toBe(320)
     expect(ringWidth).toBe(3)
     expect(ringOffset).toBe(2)
     expect(scale).toBe(1.05)
     expect(reach(supremumWidth)).toBeCloseTo(13.25, 2)
-    expect(reach(supremumWidth / cardRatio)).toBeCloseTo(17.97, 2)
+    expect(barHeight).toBe(51)
+    expect(reach(cardHeight(supremumWidth))).toBeCloseTo(17.19, 2)
+    expect(reach(cardHeight(minWidth))).toBeCloseTo(11.19, 2)
   })
 
   it('Test F: the list declares width: max-content, padding-block: 0 and padding-inline covering the ring reach at the widest slider tile', () => {
@@ -252,11 +283,11 @@ describe('FocusRowStrip/index.css -- strip-end clearance (G-48-8a / G-48-8b / G-
     const [fallback, k, b] = [Number(m[1]), Number(m[2]), Number(m[3])]
     expect(fallback).toBe(LIBRARY_TILE_WIDTH_DEFAULT)
     for (const w of [minWidth, supremumWidth]) {
-      expect(k * w + b).toBeGreaterThanOrEqual(reach(w / cardRatio))
+      expect(k * w + b).toBeGreaterThanOrEqual(reach(cardHeight(w)))
     }
     // The slope dominates the reach's slope, so the claim holds at every
     // width between and beyond, not only at the two probed.
-    expect(k).toBeGreaterThanOrEqual((scale - 1) / 2 / cardRatio)
+    expect(k).toBeGreaterThanOrEqual((scale - 1) / 2 / imgRatio)
   })
 
   describe('hero ring clearance (261011-ulj, operator-delegated)', () => {

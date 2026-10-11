@@ -67,7 +67,10 @@
    reaches (w/2 + 5) x 1.05 - w/2 = 0.025w + 5.25 past the unscaled edge, which
    grows with the card. Cards follow the library tile width, so w now runs from
    140px to 320px (the tile-size slider's range): 8.75px to 13.25px
-   horizontally, and over the card's taller edge 10.81px to 17.97px vertically.
+   horizontally, and over the card's height (3:4 art plus GameCard's pinned
+   51px icons bar, 261011-vl0) 11.19px to 17.19px vertically. The linear
+   margin term below clears that reach at both slider bounds (12.10 against
+   11.19, 19.30 against 17.19).
    15px of inline padding clears the horizontal reach with 1.75px to spare at
    the widest tile and stays under the 16px gutter (the START bleed on
    `.focusRowStrip__viewport` equals it, so the cards still line up with the

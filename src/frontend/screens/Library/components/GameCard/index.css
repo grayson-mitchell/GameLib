@@ -38,7 +38,21 @@
   flex-direction: column;
   border-radius: var(--space-3xs);
   animation: fade-in 0.1s ease-in;
-  aspect-ratio: 173/275;
+  /* Card height is CONTENT: the 3:4 art plus one icons bar, so the bar sits
+     directly under the art at every tile size. The fixed 173/275 ratio this
+     replaces left card - art - bar = 0.2563w - 51px: the bar overlapped the
+     art below a 199px tile and a gap opened above it, which are the
+     operator's 2026-10-11 observations (261011-vl0 D-01).
+     51px is the store badge (35px, `.gameCard .store-icon`, always rendered by
+     StoreLogos) plus `--space-xs-fixed` (8px) above and below.
+     The art height term is one card's art height in whichever row the card
+     sits in. In the strip it reads `--focus-row-card-width`, which is declared
+     only on `.focusRowTrack`; in the grid it falls back to the tile width;
+     156px is the default. */
+  --game-card-art-height: calc(
+    var(--focus-row-card-width, var(--library-tile-css-width, 156px)) * 4 / 3
+  );
+  --game-card-bar-height: calc(35px + 2 * var(--space-xs-fixed));
 }
 
 /* Controller mode deliberately has NO geometry override here. A 3/4
@@ -48,7 +62,9 @@
    store badge in that bar, so the override cropped 35px of art, and because
    the `gamepad` class flips on every mouse/controller handoff every card
    visibly jumped 40px. Removed globally (strip and grid) by operator ruling
-   2026-10-07 (Phase 48 gap G-48-8a). Gated by
+   2026-10-07 (Phase 48 gap G-48-8a). Controller mode changes neither term of
+   the card height: the art is derived from the width, and the bar's
+   `block-size` is pinned (see `.gameCard > .icons`). Gated by
    `__tests__/gameCardControllerGeometry.test.ts`. */
 .gameCard.justPlayed {
   aspect-ratio: 275/205;
@@ -220,8 +236,18 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   display: block;
   position: relative;
   width: 100%;
-  height: 100%;
   overflow: hidden;
+}
+
+/* GameCard's pre-reveal placeholder: the empty div `index.tsx` renders until
+   `cardVisibility.ts` reveals it. It must already be the revealed card's
+   height so the observer sees a real box and grid rows keep their size.
+   Reveal must cause no layout shift, and a collapsed placeholder would let
+   every card intersect at once. `:empty` never matches a revealed card,
+   because a revealed card always has children. The hero placeholder gets the
+   same height, which is its neighbours' height. */
+.gameCard:empty {
+  block-size: calc(var(--game-card-art-height) + var(--game-card-bar-height));
 }
 
 .gameCard .gameImg {
@@ -292,6 +318,11 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
   grid-template-columns: 1fr 1fr 1fr 1fr;
   grid-template-areas: 'play update settings store';
   padding: var(--space-xs-fixed);
+  /* Border-box comes from App.css. The pinned size makes the bar the same
+     height in mouse mode, in controller mode (buttons hidden), on the hero
+     (whose play control is a text label), and on viewports where the svg
+     buttons' `clamp(28px, 1vw, 36px)` passes 35px. */
+  block-size: var(--game-card-bar-height);
 }
 
 .gameCard.justPlayed > .icons {
@@ -309,15 +340,12 @@ body.keyboardNav .gameCard:hover:not(:focus-within) {
    selection, so those buttons are noise. The store badge now lives in this
    bar too, and it is INFORMATION rather than an action, so hiding the bar
    outright would have made every store badge in the library vanish the
-   moment a controller was plugged in. The bar therefore survives, flattened
-   to nothing but the badge: the action buttons go, and the bar's own
-   background and padding go with them so no new strip appears across the
-   bottom of every card. The card keeps its mouse-mode ratio in controller
-   mode, so the flattened 35px badge bar fits under the art (248 - 35 = 213
-   against 208 at 156px); gameCardControllerGeometry.test.ts gates it. */
+   moment a controller was plugged in. In controller mode only the action
+   buttons and the bar's background go. The padding and the pinned block-size
+   stay, so a mouse/controller handoff moves neither the card's edge nor the
+   badge. gameCardControllerGeometry.test.ts gates it. */
 .gameCard.gamepad > .icons {
   background: transparent;
-  padding: 0;
 }
 
 .gameCard.gamepad > .icons > .svg-button {

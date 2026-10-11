@@ -1,39 +1,41 @@
 /**
- * Source-text gate: controller mode never resizes a GameCard (Phase 48 plan
- * 48-09, gap G-48-8a).
+ * Source-text gate: a GameCard's height is its content, and controller mode
+ * never changes it (Phase 48 plan 48-09 gap G-48-8a, reworked by quick
+ * 261011-vl0 D-01).
  *
- * What this proves: (1) no stylesheet rule whose selector mentions
- * `.gamepad` declares a sizing property, so switching between mouse and
- * controller input cannot change a card's box; (2) as arithmetic over values
- * PARSED OUT of the shipped stylesheet (nothing restated here), a regular
- * 156px card in controller mode is tall enough to hold its cover art above the
- * flattened 35px store-badge bar.
+ * What this proves, all parsed out of the shipped stylesheet (nothing
+ * restated here): (1) the card declares no height of its own, so its height is
+ * the 3:4 art plus one icons bar, and the bar sits directly under the art at
+ * every tile width; (2) the bar's block-size is pinned to one custom property
+ * whose value is derived from the store badge and the bar padding, so mouse
+ * mode, controller mode, the just-played hero and very wide viewports all share
+ * one bar height; (3) no rule that mentions `.gamepad` declares a sizing,
+ * padding or margin property, so a mouse/controller handoff can move neither the
+ * card's edge nor the badge; (4) the pre-reveal placeholder is built from the
+ * same two custom properties, so it is exactly the height of the card it
+ * becomes and reveal causes no layout shift.
  *
  * What this cannot prove: rendered pixels. The Frontend jest project runs with
- * `testEnvironment: 'node'` and has no CSS engine, so this reads source text.
- * Whether the art is really uncropped is UAT's job (the plan's human-check).
+ * `testEnvironment: 'node'` and has no CSS engine, so this reads source text and
+ * does arithmetic over what it parsed. Whether the bar really sits flush under
+ * the art at 140/188/200/280/320 is UAT's job (the 261011-vl0 owed live check).
  *
- * Root cause, in two sentences. `.gameCard.gamepad` (3/4) and
- * `.gameCard.gamepad.justPlayed` (328/205) overrode the base ratios whenever
- * `activeController` was set, shortening a 156px card from 248 to 208px; the
- * store badge kept in the controller-mode icons bar (commit 16560dbdd) then
- * cropped 35px of art from that art-sized card, and because the `gamepad`
- * class flips on every mouse/controller handoff every card visibly jumped.
- * Operator ruling 2026-10-07: removed globally (strip and grid), not only in
- * the focus-row strip.
- *
- * Baseline note, so nobody adds an assertion the pre-phase baseline already
- * fails. This gate is a CONTROLLER-MODE claim only. No mouse-mode art
- * assertion is made for the regular card: the 51px action bar leaves 197px
- * for 208px of art (about 11px cropped). No just-played (landscape) card
- * assertion is made either: its 16/10 art is cropped by the icons bar in mouse
- * mode too (116 - 51 = 65 against 97.5), and after this fix controller mode
- * crops it less than mouse mode (116 - 35 = 81). Both predate this phase.
+ * History, in three sentences. `.gameCard` used to carry `aspect-ratio:
+ * 173/275`, so card - art - bar was 0.2563w - 51px: an overlap below a 199px
+ * tile and a growing gap above it, which the operator reported on 2026-10-11.
+ * Before that, `.gameCard.gamepad` (3/4) and `.gameCard.gamepad.justPlayed`
+ * (328/205) overrode the ratios in controller mode and every card jumped 40px on
+ * each handoff (operator ruling 2026-10-07, G-48-8a). Both are the same root
+ * cause: a fixed ratio standing in for a height that is really content.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import { LIBRARY_TILE_WIDTH_MIN } from 'frontend/screens/Library/libraryTileSize'
+import {
+  LIBRARY_TILE_WIDTH_DEFAULT,
+  LIBRARY_TILE_WIDTH_MAX,
+  LIBRARY_TILE_WIDTH_MIN
+} from 'frontend/screens/Library/libraryTileSize'
 
 interface CssRule {
   selectors: string[]
@@ -42,6 +44,14 @@ interface CssRule {
 
 function readGameCardCss(): string {
   const raw = readFileSync(join(__dirname, '..', 'index.css'), 'utf8')
+  return stripSourceComments(raw)
+}
+
+function readSpacingScss(): string {
+  const raw = readFileSync(
+    join(__dirname, '..', '..', '..', '..', '..', 'styles', '_spacing.scss'),
+    'utf8'
+  )
   return stripSourceComments(raw)
 }
 
@@ -110,12 +120,12 @@ function parseRatio(value: string, where: string): number {
 }
 
 function parsePx(value: string, where: string): number {
-  if (value === '0') return 0
   const m = value.match(/^(\d+(?:\.\d+)?)px$/)
   if (!m) throw new Error(`${where}: cannot parse px from "${value}"`)
   return Number(m[1])
 }
 
+// Every way a rule can give a box a size, physical and logical.
 const SIZING_PROPS = [
   'aspect-ratio',
   'width',
@@ -124,100 +134,184 @@ const SIZING_PROPS = [
   'max-width',
   'min-height',
   'max-height',
+  'inline-size',
+  'block-size',
+  'min-inline-size',
+  'max-inline-size',
+  'min-block-size',
+  'max-block-size',
   'flex',
   'flex-basis'
 ]
 
-// 261011-t4y: tile width is now chosen by the Library tile-size slider, so the
-// narrowest card in either row (grid or focus-row strip) is the slider
-// minimum, and that is the binding case. Imported, not restated.
-const CARD_WIDTH = LIBRARY_TILE_WIDTH_MIN
+// The card's own height declarations: a card's height must be its content.
+const CARD_HEIGHT_PROPS = [
+  'aspect-ratio',
+  'height',
+  'block-size',
+  'min-height',
+  'min-block-size'
+]
 
-describe('GameCard controller mode never resizes a card (source gate, G-48-8a)', () => {
-  it('no rule whose selector mentions .gamepad declares a sizing property', () => {
-    const rules = parseTopLevelRules(readGameCardCss())
-    const offenders: string[] = []
-    for (const rule of rules) {
-      if (!rule.selectors.some((s) => s.includes('.gamepad'))) continue
-      for (const prop of SIZING_PROPS) {
-        if (rule.declarations.has(prop)) {
-          offenders.push(`${rule.selectors.join(', ')} { ${prop} }`)
-        }
-      }
-    }
+const SPACING_PROP = /^(padding|margin)(-|$)/
 
+const CARD = '.gameCard'
+const LINK = '.gameCard > a'
+const IMG = '.gameCard .gameImg'
+const STORE = '.gameCard .store-icon'
+const BAR = '.gameCard > .icons'
+const BAR_GAMEPAD = '.gameCard.gamepad > .icons'
+const EMPTY = '.gameCard:empty'
+
+/** Occurrences of a custom-property declaration anywhere in the stylesheet. */
+function countDecl(css: string, name: string): number {
+  return css.split(`${name}:`).length - 1
+}
+
+/**
+ * The icons bar height in px, resolved from the shipped stylesheets: the store
+ * badge height (the bar's tallest child) plus the bar padding twice, where the
+ * padding is `--space-xs-fixed` = factor x `--space-unit-fixed` in
+ * `styles/_spacing.scss`. Nothing is restated: the 35px, the 8px and the 16px
+ * all come from the files that own them.
+ */
+function resolveBarHeight(rules: CssRule[]): number {
+  const spacing = readSpacingScss()
+  const unit = parsePx(
+    spacing.match(/--space-unit-fixed:\s*([^;]+);/)?.[1].trim() ?? '',
+    '_spacing.scss --space-unit-fixed'
+  )
+  const factor = Number(
+    spacing.match(
+      /--space-xs-fixed:\s*calc\(\s*(\d+(?:\.\d+)?)\s*\*\s*var\(--space-unit-fixed\)\s*\)/
+    )?.[1]
+  )
+  if (!Number.isFinite(factor)) {
+    throw new Error('_spacing.scss: cannot parse --space-xs-fixed')
+  }
+  const store = parsePx(
+    requireDecl(findRule(rules, STORE), STORE, 'height'),
+    `${STORE} height`
+  )
+  return store + 2 * factor * unit
+}
+
+describe('GameCard height is content and controller mode never resizes it (source gate, G-48-8a / 261011-vl0 D-01)', () => {
+  it('G1: the .gameCard rule declares no aspect-ratio, height, block-size or min-height of its own', () => {
+    const rule = findRule(parseTopLevelRules(readGameCardCss()), CARD)
+    const offenders = CARD_HEIGHT_PROPS.filter((p) => rule.declarations.has(p))
     expect(offenders).toEqual([])
   })
 
-  it('non-vacuity: the walk saw the surviving .gamepad icons rules and the base ratios', () => {
+  it('G2: the .gameCard > a rule declares neither height nor block-size, so the art defines the link', () => {
+    const rule = findRule(parseTopLevelRules(readGameCardCss()), LINK)
+    expect(rule.declarations.has('height')).toBe(false)
+    expect(rule.declarations.has('block-size')).toBe(false)
+  })
+
+  it('G3: --game-card-bar-height is declared once, on .gameCard, as the store badge height plus twice the bar padding', () => {
+    const css = readGameCardCss()
+    const rules = parseTopLevelRules(css)
+    expect(countDecl(css, '--game-card-bar-height')).toBe(1)
+
+    const store = requireDecl(findRule(rules, STORE), STORE, 'height')
+    const padding = requireDecl(findRule(rules, BAR), BAR, 'padding')
+    // Non-vacuity: the two operands are the shipped ones, not empty strings.
+    expect(store).toBe('35px')
+    expect(padding).toBe('var(--space-xs-fixed)')
+
+    expect(
+      requireDecl(findRule(rules, CARD), CARD, '--game-card-bar-height')
+    ).toBe(`calc(${store} + 2 * ${padding})`)
+  })
+
+  it('G4: the icons bar pins its block-size to --game-card-bar-height', () => {
+    const rule = findRule(parseTopLevelRules(readGameCardCss()), BAR)
+    expect(requireDecl(rule, BAR, 'block-size')).toBe(
+      'var(--game-card-bar-height)'
+    )
+  })
+
+  it('G5: --game-card-art-height is declared once, on .gameCard, as one portrait card art height', () => {
+    const css = readGameCardCss()
+    const rules = parseTopLevelRules(css)
+    expect(countDecl(css, '--game-card-art-height')).toBe(1)
+
+    const value = requireDecl(
+      findRule(rules, CARD),
+      CARD,
+      '--game-card-art-height'
+    )
+    const m = value.match(
+      /^calc\( ?var\(--focus-row-card-width, var\(--library-tile-css-width, (\d+(?:\.\d+)?)px\)\) \* (\d+(?:\.\d+)?) \/ (\d+(?:\.\d+)?) ?\)$/
+    )
+    if (!m) {
+      throw new Error(`cannot parse --game-card-art-height from "${value}"`)
+    }
+    expect(Number(m[1])).toBe(LIBRARY_TILE_WIDTH_DEFAULT)
+    const imgRatio = parseRatio(
+      requireDecl(findRule(rules, IMG), IMG, 'aspect-ratio'),
+      `${IMG} aspect-ratio`
+    )
+    // The art height term is width / imgRatio: 4/3 for a 3/4 image.
+    expect(Number(m[2]) / Number(m[3])).toBeCloseTo(1 / imgRatio, 10)
+  })
+
+  it('G6: the .gameCard:empty placeholder is exactly art + bar tall, built from the same two properties', () => {
+    const rule = findRule(parseTopLevelRules(readGameCardCss()), EMPTY)
+    expect(requireDecl(rule, EMPTY, 'block-size')).toBe(
+      'calc(var(--game-card-art-height) + var(--game-card-bar-height))'
+    )
+  })
+
+  it('G7: no rule that mentions .gamepad declares a sizing, padding or margin property (controller invariance)', () => {
     const rules = parseTopLevelRules(readGameCardCss())
     const gamepadRules = rules.filter((r) =>
       r.selectors.some((s) => s.includes('.gamepad'))
     )
+    const offenders: string[] = []
+    for (const rule of gamepadRules) {
+      for (const prop of rule.declarations.keys()) {
+        if (SIZING_PROPS.includes(prop) || SPACING_PROP.test(prop)) {
+          offenders.push(`${rule.selectors.join(', ')} { ${prop} }`)
+        }
+      }
+    }
+    expect(offenders).toEqual([])
 
+    // Non-vacuity: the walk saw the surviving controller rules, and the bar
+    // rule is the one that flattens the background only.
     expect(gamepadRules.length).toBeGreaterThanOrEqual(2)
     expect(
-      requireDecl(findRule(rules, '.gameCard'), '.gameCard', 'aspect-ratio')
-    ).toBe('173/275')
-    expect(
-      requireDecl(
-        findRule(rules, '.gameCard.justPlayed'),
-        '.gameCard.justPlayed',
-        'aspect-ratio'
-      )
-    ).toBe('275/205')
+      requireDecl(findRule(rules, BAR_GAMEPAD), BAR_GAMEPAD, 'background')
+    ).toBe('transparent')
   })
 
-  // Ratios and the badge bar, parsed from the shipped stylesheet.
-  function readControllerGeometry() {
+  it('G8: card height = 3:4 art + 51px bar = placeholder height at every probed tile width, in mouse and controller mode alike', () => {
     const rules = parseTopLevelRules(readGameCardCss())
+    const bar = resolveBarHeight(rules)
+    expect(bar).toBe(51)
 
-    // Ratio a `.gameCard.gamepad` card gets, the way the cascade resolves it
-    // for these two rules: an exact `.gameCard.gamepad` override if one
-    // exists, else the `.gameCard` ratio.
-    const override = rules.find(
-      (r) => r.selectors.length === 1 && r.selectors[0] === '.gameCard.gamepad'
-    )
-    const cardRatio = parseRatio(
-      override?.declarations.get('aspect-ratio') ??
-        requireDecl(findRule(rules, '.gameCard'), '.gameCard', 'aspect-ratio'),
-      'card aspect-ratio'
-    )
-
-    const storeSel = '.gameCard .store-icon'
-    const storeHeight = parsePx(
-      requireDecl(findRule(rules, storeSel), storeSel, 'height'),
-      `${storeSel} height`
-    )
-    const barSel = '.gameCard.gamepad > .icons'
-    const barPadding = parsePx(
-      requireDecl(findRule(rules, barSel), barSel, 'padding'),
-      `${barSel} padding`
-    )
-    const barHeight = storeHeight + 2 * barPadding
-
-    const imgSel = '.gameCard .gameImg'
     const imgRatio = parseRatio(
-      requireDecl(findRule(rules, imgSel), imgSel, 'aspect-ratio'),
-      `${imgSel} aspect-ratio`
+      requireDecl(findRule(rules, IMG), IMG, 'aspect-ratio'),
+      `${IMG} aspect-ratio`
     )
-    return { cardRatio, barHeight, imgRatio }
-  }
-
-  it('a slider-minimum controller-mode card is tall enough for its art above the 35px badge bar', () => {
-    const { cardRatio, barHeight, imgRatio } = readControllerGeometry()
-    const cardHeight = CARD_WIDTH / cardRatio
-    const artHeight = CARD_WIDTH / imgRatio
-
-    expect(cardHeight - barHeight).toBeGreaterThanOrEqual(artHeight)
-  })
-
-  it('every card wider than the slider minimum fits its art too: the margin grows with width (G-48-8c)', () => {
-    // Card height and art height are both linear in width, so the margin
-    // (cardHeight - barHeight - artHeight) is w x (1/cardRatio - 1/imgRatio)
-    // - barHeight. A positive slope means the floor is the binding case, and the
-    // strip's wider matched cards cannot crop art the floor does not.
-    const { cardRatio, imgRatio } = readControllerGeometry()
-    expect(1 / cardRatio - 1 / imgRatio).toBeGreaterThan(0)
+    // Controller mode has these same values: G4 pins the bar's block-size
+    // outside any mode, and G7 leaves every .gamepad rule without a size,
+    // padding or margin, so neither term of the height reads the input mode.
+    const expected = new Map<number, number>([
+      [LIBRARY_TILE_WIDTH_MIN, 237.67],
+      [LIBRARY_TILE_WIDTH_DEFAULT, 259],
+      [188, 301.67],
+      [200, 317.67],
+      [280, 424.33],
+      [LIBRARY_TILE_WIDTH_MAX, 477.67]
+    ])
+    for (const [w, height] of expected) {
+      const revealed = w / imgRatio + bar
+      const placeholder = w / imgRatio + bar // same two terms as G6
+      expect(revealed).toBeCloseTo(height, 2)
+      expect(placeholder).toBeCloseTo(revealed, 6)
+    }
   })
 })
