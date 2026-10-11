@@ -9,8 +9,8 @@
  * argv-builders and assert their output shape without invoking the real
  * node/postject toolchain.
  */
-import { readFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import {
   buildSeaConfigPath,
   buildSeaBlobArgv,
@@ -21,9 +21,12 @@ import {
   buildSeaConfig,
   SEA_WORKER_ASSET_KEY,
   LZMA_NATIVE_ASSET_KEY,
+  LZMA_NATIVE_DLL_ASSET_KEY,
   NATIVE_LZMA_REQUIRED_TRIPLES,
   lzmaNativePrebuildDir,
   lzmaNativePrebuildPath,
+  lzmaNativeDllPath,
+  resolveNativeLzmaAssets,
   sidecarOutputPath,
   hostTriple,
   resolveTriple,
@@ -635,6 +638,139 @@ describe('lzmaNativePrebuildPath (pure, triple-driven, no process.platform/proce
   test('throws on an unsupported triple (delegates to lzmaNativePrebuildDir)', () => {
     expect(() => lzmaNativePrebuildPath('mips-unknown-none')).toThrow()
   })
+})
+
+const WIN32_TRIPLE = 'x86_64-pc-windows-msvc'
+
+describe('lzmaNativeDllPath (win32-only companion library, 261011-wrx)', () => {
+  test('B1: the win32 triple maps to the prebuild dir liblzma.dll', () => {
+    expect(lzmaNativeDllPath(WIN32_TRIPLE)).toBe(
+      join(
+        'node_modules',
+        'lzma-native',
+        'prebuilds',
+        'win32-x64',
+        'liblzma.dll'
+      )
+    )
+  })
+
+  test('B1: every other triple has no DLL', () => {
+    for (const triple of [
+      'aarch64-apple-darwin',
+      'x86_64-unknown-linux-gnu',
+      'x86_64-apple-darwin',
+      'aarch64-unknown-linux-gnu'
+    ]) {
+      expect(lzmaNativeDllPath(triple)).toBeUndefined()
+    }
+  })
+
+  test('B8: LZMA_NATIVE_DLL_ASSET_KEY is the literal "liblzma.dll"', () => {
+    expect(LZMA_NATIVE_DLL_ASSET_KEY).toBe('liblzma.dll')
+  })
+})
+
+describe('buildSeaConfig with the win32 DLL companion (261011-wrx)', () => {
+  test('B2: addon + dll => exactly three asset keys', () => {
+    const config = buildSeaConfig('some/addon.node', 'some/liblzma.dll')
+    expect(Object.keys(config.assets).sort()).toEqual(
+      [
+        SEA_WORKER_ASSET_KEY,
+        LZMA_NATIVE_ASSET_KEY,
+        LZMA_NATIVE_DLL_ASSET_KEY
+      ].sort()
+    )
+    expect(config.assets[LZMA_NATIVE_ASSET_KEY]).toBe('some/addon.node')
+    expect(config.assets[LZMA_NATIVE_DLL_ASSET_KEY]).toBe('some/liblzma.dll')
+  })
+
+  test('B2: addon only => two keys, no DLL key', () => {
+    const config = buildSeaConfig('some/addon.node')
+    expect(Object.keys(config.assets)).toHaveLength(2)
+    expect(config.assets).not.toHaveProperty(LZMA_NATIVE_DLL_ASSET_KEY)
+  })
+
+  test('B2: a DLL is never embedded without its addon', () => {
+    const config = buildSeaConfig(undefined, 'some/liblzma.dll')
+    expect(Object.keys(config.assets)).toEqual([SEA_WORKER_ASSET_KEY])
+  })
+})
+
+describe('resolveNativeLzmaAssets (addon + win32 companion DLL gate, 261011-wrx)', () => {
+  test('B3: win32 with everything present returns addon and dll paths', async () => {
+    await expect(
+      resolveNativeLzmaAssets(WIN32_TRIPLE, () => true)
+    ).resolves.toEqual({
+      addonPath: lzmaNativePrebuildPath(WIN32_TRIPLE),
+      dllPath: lzmaNativeDllPath(WIN32_TRIPLE)
+    })
+  })
+
+  test('B4: win32 with the DLL missing fails the compile gate naming the DLL and the triple', async () => {
+    const error = await resolveNativeLzmaAssets(
+      WIN32_TRIPLE,
+      (p) => !p.endsWith('liblzma.dll')
+    ).then(
+      () => undefined,
+      (e: unknown) => e as Error
+    )
+    expect(error).toBeInstanceOf(Error)
+    expect(error?.message).toMatch(/COMPILE GATE FAILED/)
+    expect(error?.message).toContain('liblzma.dll')
+    expect(error?.message).toContain(WIN32_TRIPLE)
+  })
+
+  test.each(['aarch64-apple-darwin', 'x86_64-unknown-linux-gnu'])(
+    'B5: %s embeds no DLL and never even looks for one',
+    async (triple) => {
+      const exists = jest.fn((_p: string) => true)
+      const result = await resolveNativeLzmaAssets(triple, exists)
+      expect(result?.dllPath).toBeUndefined()
+      expect(result?.addonPath).toBe(lzmaNativePrebuildPath(triple))
+      for (const call of exists.mock.calls) {
+        expect(call[0].endsWith('liblzma.dll')).toBe(false)
+      }
+    }
+  )
+
+  test('B6: the existing addon gate is kept (everything missing still fails naming the addon prebuild)', async () => {
+    await expect(
+      resolveNativeLzmaAssets(WIN32_TRIPLE, () => false)
+    ).rejects.toThrow(/COMPILE GATE FAILED[\s\S]*node\.napi\.node/)
+  })
+
+  test('a non-required triple with nothing on disk warns and resolves undefined', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      await expect(
+        resolveNativeLzmaAssets('x86_64-apple-darwin', () => false)
+      ).resolves.toBeUndefined()
+      expect(warn).toHaveBeenCalledTimes(1)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+})
+
+describe('lzma-native prebuild tree drift guard (B7, real node_modules)', () => {
+  test.each([...NATIVE_LZMA_REQUIRED_TRIPLES])(
+    '%s: the only files beside the addons are exactly the DLL the build embeds (if any)',
+    (triple) => {
+      const addonAbs = join(
+        __dirname,
+        '..',
+        '..',
+        lzmaNativePrebuildPath(triple)
+      )
+      const siblings = readdirSync(dirname(addonAbs))
+        .filter((f) => f !== 'node.napi.node' && f !== 'electron.napi.node')
+        .sort()
+      expect(siblings).toEqual(
+        lzmaNativeDllPath(triple) !== undefined ? ['liblzma.dll'] : []
+      )
+    }
+  )
 })
 
 describe('NATIVE_LZMA_REQUIRED_TRIPLES (reconciled against the 23.1-01 prebuild inventory)', () => {

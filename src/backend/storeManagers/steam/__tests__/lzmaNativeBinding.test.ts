@@ -11,22 +11,63 @@
 // reaches `node:sea` -- a guarded runtime `require()` with a type cast, not
 // an ES `import`.
 
-import { join } from 'node:path'
+import { existsSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join } from 'node:path'
 
-import { LZMA_NATIVE_ASSET_KEY } from '../../../../../meta/buildSidecarSea'
+import {
+  LZMA_NATIVE_ASSET_KEY,
+  LZMA_NATIVE_DLL_ASSET_KEY
+} from '../../../../../meta/buildSidecarSea'
 
 type LzmaNativeBindingResolver = {
   (dir: string): unknown
   LZMA_NATIVE_SEA_ASSET_KEY: string
   LZMA_NATIVE_ADDON_FILENAME: string
-  nativeAddonTempPath: () => string
+  LZMA_NATIVE_DLL_SEA_ASSET_KEY: string
+  LZMA_NATIVE_WIN32_DLL_FILENAME: string
+  LZMA_NATIVE_EXTRACTION_RECORD_KEY: string
+  nativeExtractDirPrefix: () => string
 }
+
+// The REAL host platform, captured before any test pins process.platform.
+const HOST_PLATFORM = process.platform
+const REAL_PLATFORM_DESCRIPTOR = Object.getOwnPropertyDescriptor(
+  process,
+  'platform'
+) as PropertyDescriptor
 
 const MODULE_PATH = '../depot/lzmaNativeBinding'
 
 function loadFresh(): LzmaNativeBindingResolver {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require(MODULE_PATH) as LzmaNativeBindingResolver
+}
+
+// Pins process.platform for one test; afterEach restores the saved
+// descriptor. The binding reads process.platform at CALL time, so pinning
+// after the module is loaded is sufficient.
+function pinPlatform(platform: NodeJS.Platform): void {
+  Object.defineProperty(process, 'platform', {
+    value: platform,
+    configurable: true
+  })
+}
+
+function extractionRecordSymbol(): symbol {
+  return Symbol.for(loadFresh().LZMA_NATIVE_EXTRACTION_RECORD_KEY)
+}
+
+function readExtractionRecord(): unknown {
+  return (globalThis as unknown as Record<symbol, unknown>)[
+    extractionRecordSymbol()
+  ]
+}
+
+function clearExtractionRecord(): void {
+  delete (globalThis as unknown as Record<symbol, unknown>)[
+    extractionRecordSymbol()
+  ]
 }
 
 const REAL_LZMA_NATIVE_DIR = join('some', 'root', 'node_modules', 'lzma-native')
@@ -115,14 +156,26 @@ describe('lzmaNativeBinding no longer gates on dir (Phase 23.1 plan 05)', () => 
 
 describe('lzmaNativeBinding SEA branch', () => {
   afterEach(() => {
+    Object.defineProperty(process, 'platform', REAL_PLATFORM_DESCRIPTOR)
+    clearExtractionRecord()
     jest.resetModules()
     jest.dontMock('node:sea')
     jest.restoreAllMocks()
   })
 
-  it('calls getRawAsset with the exact asset-key literal, then process.dlopen, and never getAsset', () => {
+  // Shared setup: SEA mocked on, the fs calls spied as no-ops through
+  // `require()`. Spying on the ESM namespace binding
+  // (`import * as nodeFs from 'node:fs'`) throws "Cannot redefine property"
+  // under this repo's ts-jest CJS transform (confirmed by hand); `require()`
+  // returns the mutable CJS module object jest.spyOn can patch. existsSync is
+  // deliberately NOT spied: jest's own module resolution may read it.
+  const FAKE_DIR = join(tmpdir(), 'gamelib-lzma-native-1234-AbCdEf')
+  function setupSea(
+    getRawAsset: (key: string) => ArrayBuffer = jest.fn(
+      () => new ArrayBuffer(4)
+    )
+  ) {
     const getAssetSpy = jest.fn()
-    const getRawAsset = jest.fn(() => new ArrayBuffer(4))
     jest.doMock('node:sea', () => ({
       isSea: () => true,
       getRawAsset,
@@ -134,106 +187,248 @@ describe('lzmaNativeBinding SEA branch', () => {
       lzmaNativeBinding = loadFresh()
     })
 
-    // Spying on the ESM namespace binding (`import * as nodeFs from 'node:fs'`) throws
-    // "Cannot redefine property" under this repo's ts-jest CJS transform (confirmed by
-    // hand); `require()` returns the mutable CJS module object jest.spyOn can patch.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
+    const nodeFs = require('node:fs')
+    const mkdtempSyncSpy = jest
+      .spyOn(nodeFs, 'mkdtempSync')
+      .mockImplementation(() => FAKE_DIR)
+    const chmodSyncSpy = jest
+      .spyOn(nodeFs, 'chmodSync')
+      .mockImplementation(() => undefined)
     const writeFileSyncSpy = jest
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
-      .spyOn(require('node:fs'), 'writeFileSync')
+      .spyOn(nodeFs, 'writeFileSync')
       .mockImplementation(() => undefined)
     const rmSyncSpy = jest
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
-      .spyOn(require('node:fs'), 'rmSync')
+      .spyOn(nodeFs, 'rmSync')
       .mockImplementation(() => undefined)
     const dlopenSpy = jest
       .spyOn(process, 'dlopen')
       .mockImplementation(() => undefined)
 
-    lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
-
-    expect(getRawAsset).toHaveBeenCalledWith(
-      lzmaNativeBinding!.LZMA_NATIVE_SEA_ASSET_KEY
-    )
-    expect(dlopenSpy).toHaveBeenCalledTimes(1)
-    expect(getAssetSpy).not.toHaveBeenCalled()
-
-    writeFileSyncSpy.mockRestore()
-    rmSyncSpy.mockRestore()
-  })
-
-  // Shared setup for the temp-file cleanup tests below: SEA mocked on, the fs
-  // calls spied as no-ops through `require()` (see the comment in the test
-  // above for why the ESM namespace cannot be spied).
-  function setupSeaCleanup() {
-    jest.doMock('node:sea', () => ({
-      isSea: () => true,
-      getRawAsset: jest.fn(() => new ArrayBuffer(4))
-    }))
-
-    let lzmaNativeBinding: LzmaNativeBindingResolver
-    jest.isolateModules(() => {
-      lzmaNativeBinding = loadFresh()
-    })
-
-    const writeFileSyncSpy = jest
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
-      .spyOn(require('node:fs'), 'writeFileSync')
-      .mockImplementation(() => undefined)
-    const rmSyncSpy = jest
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- see comment above
-      .spyOn(require('node:fs'), 'rmSync')
-      .mockImplementation(() => undefined)
-    const dlopenSpy = jest.spyOn(process, 'dlopen')
-
     return {
       lzmaNativeBinding: lzmaNativeBinding!,
+      getRawAsset,
+      getAssetSpy,
+      mkdtempSyncSpy,
+      chmodSyncSpy,
       writeFileSyncSpy,
       rmSyncSpy,
       dlopenSpy
     }
   }
 
-  it('removes the temp .node and rethrows the ORIGINAL error when process.dlopen throws', () => {
-    const { lzmaNativeBinding, writeFileSyncSpy, rmSyncSpy, dlopenSpy } =
-      setupSeaCleanup()
-    dlopenSpy.mockImplementation(() => {
-      throw new Error('dlopen boom')
-    })
+  it('R1: on win32 reads both assets, makes ONE private dir, writes DLL then addon into it, then dlopens the addon from it', () => {
+    pinPlatform('win32')
+    const s = setupSea()
 
-    expect(() => lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toThrow('dlopen boom')
+    s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
 
-    expect(writeFileSyncSpy).toHaveBeenCalledTimes(1)
-    expect(rmSyncSpy).toHaveBeenCalledTimes(1)
-    expect(rmSyncSpy.mock.calls[0][0]).toBe(writeFileSyncSpy.mock.calls[0][0])
+    expect(s.getRawAsset).toHaveBeenCalledWith(
+      s.lzmaNativeBinding.LZMA_NATIVE_SEA_ASSET_KEY
+    )
+    expect(s.getRawAsset).toHaveBeenCalledWith(
+      s.lzmaNativeBinding.LZMA_NATIVE_DLL_SEA_ASSET_KEY
+    )
+    expect(s.getAssetSpy).not.toHaveBeenCalled()
+    expect(s.mkdtempSyncSpy).toHaveBeenCalledTimes(1)
+    expect(s.mkdtempSyncSpy).toHaveBeenCalledWith(
+      s.lzmaNativeBinding.nativeExtractDirPrefix()
+    )
+    expect(s.chmodSyncSpy).toHaveBeenCalledWith(FAKE_DIR, 0o700)
+
+    expect(s.writeFileSyncSpy).toHaveBeenCalledTimes(2)
+    const [first, second] = s.writeFileSyncSpy.mock.calls
+    expect(dirname(first[0] as string)).toBe(FAKE_DIR)
+    expect(dirname(second[0] as string)).toBe(FAKE_DIR)
+    expect(basename(first[0] as string)).toBe('liblzma.dll')
+    expect(basename(second[0] as string)).toBe(
+      s.lzmaNativeBinding.LZMA_NATIVE_ADDON_FILENAME
+    )
+    expect((first[2] as { mode: number }).mode).toBe(0o600)
+    expect((second[2] as { mode: number }).mode).toBe(0o600)
+
+    expect(s.dlopenSpy).toHaveBeenCalledTimes(1)
+    expect(s.dlopenSpy.mock.calls[0][1]).toBe(
+      join(FAKE_DIR, s.lzmaNativeBinding.LZMA_NATIVE_ADDON_FILENAME)
+    )
+    const dlopenOrder = s.dlopenSpy.mock.invocationCallOrder[0]
+    for (const order of s.writeFileSyncSpy.mock.invocationCallOrder) {
+      expect(order).toBeLessThan(dlopenOrder)
+    }
   })
 
-  it('never lets a cleanup failure mask the dlopen error', () => {
-    const { lzmaNativeBinding, rmSyncSpy, dlopenSpy } = setupSeaCleanup()
-    dlopenSpy.mockImplementation(() => {
+  it('R2: on linux the DLL asset is never read; only the addon is written, into the mkdtemp dir', () => {
+    pinPlatform('linux')
+    const s = setupSea()
+
+    s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
+
+    expect(s.getRawAsset).not.toHaveBeenCalledWith(
+      s.lzmaNativeBinding.LZMA_NATIVE_DLL_SEA_ASSET_KEY
+    )
+    expect(s.writeFileSyncSpy).toHaveBeenCalledTimes(1)
+    const target = s.writeFileSyncSpy.mock.calls[0][0] as string
+    expect(dirname(target)).toBe(FAKE_DIR)
+    expect(basename(target)).toBe(
+      s.lzmaNativeBinding.LZMA_NATIVE_ADDON_FILENAME
+    )
+    expect(s.dlopenSpy.mock.calls[0][1]).toBe(target)
+  })
+
+  it('R3: on success removes the extraction DIR exactly once, recursively, AFTER process.dlopen', () => {
+    pinPlatform('win32')
+    const s = setupSea()
+
+    s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
+
+    expect(s.rmSyncSpy).toHaveBeenCalledTimes(1)
+    expect(s.rmSyncSpy).toHaveBeenCalledWith(FAKE_DIR, {
+      recursive: true,
+      force: true
+    })
+    expect(s.rmSyncSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
+      s.dlopenSpy.mock.invocationCallOrder[0]
+    )
+  })
+
+  it('R3: removes the dir and rethrows the ORIGINAL error when process.dlopen throws', () => {
+    pinPlatform('win32')
+    const s = setupSea()
+    s.dlopenSpy.mockImplementation(() => {
       throw new Error('dlopen boom')
     })
-    rmSyncSpy.mockImplementation(() => {
+
+    expect(() => s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toThrow(
+      'dlopen boom'
+    )
+
+    expect(s.rmSyncSpy).toHaveBeenCalledTimes(1)
+    expect(s.rmSyncSpy.mock.calls[0][0]).toBe(FAKE_DIR)
+  })
+
+  it('R3: a cleanup failure never masks the dlopen error', () => {
+    pinPlatform('win32')
+    const s = setupSea()
+    s.dlopenSpy.mockImplementation(() => {
+      throw new Error('dlopen boom')
+    })
+    s.rmSyncSpy.mockImplementation(() => {
       throw new Error('EBUSY')
     })
 
-    expect(() => lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toThrow('dlopen boom')
-
-    expect(rmSyncSpy).toHaveBeenCalledTimes(1)
-  })
-
-  it('on success removes the temp .node exactly once, AFTER process.dlopen', () => {
-    const { lzmaNativeBinding, writeFileSyncSpy, rmSyncSpy, dlopenSpy } =
-      setupSeaCleanup()
-    dlopenSpy.mockImplementation(() => undefined)
-
-    lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
-
-    expect(rmSyncSpy).toHaveBeenCalledTimes(1)
-    expect(rmSyncSpy.mock.calls[0][0]).toBe(writeFileSyncSpy.mock.calls[0][0])
-    expect(rmSyncSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
-      dlopenSpy.mock.invocationCallOrder[0]
+    expect(() => s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toThrow(
+      'dlopen boom'
     )
+    expect(s.rmSyncSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('R3: an EBUSY on the success path (Windows cannot unlink a mapped image) is swallowed and the binding is still returned', () => {
+    pinPlatform('win32')
+    const s = setupSea()
+    s.dlopenSpy.mockImplementation((mod) => {
+      ;(mod as { exports: unknown }).exports = { marker: 'binding' }
+    })
+    s.rmSyncSpy.mockImplementation(() => {
+      throw new Error('EBUSY')
+    })
+
+    expect(s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toEqual({
+      marker: 'binding'
+    })
+  })
+
+  it('R4: records { dir, leftover: false } when the removal succeeds', () => {
+    pinPlatform('win32')
+    const s = setupSea()
+    s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
+    expect(readExtractionRecord()).toEqual({ dir: FAKE_DIR, leftover: false })
+  })
+
+  it('R4: records { dir, leftover: true } when the removal throws', () => {
+    pinPlatform('win32')
+    const s = setupSea()
+    s.rmSyncSpy.mockImplementation(() => {
+      throw new Error('EBUSY')
+    })
+    s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)
+    expect(readExtractionRecord()).toEqual({ dir: FAKE_DIR, leftover: true })
+  })
+
+  it('R5: a missing DLL asset on win32 throws BEFORE any directory is created', () => {
+    pinPlatform('win32')
+    let dllKey = ''
+    const getRawAsset = jest.fn((key: string) => {
+      if (key === dllKey) {
+        throw new Error('no such asset')
+      }
+      return new ArrayBuffer(4)
+    })
+    const s = setupSea(getRawAsset)
+    dllKey = s.lzmaNativeBinding.LZMA_NATIVE_DLL_SEA_ASSET_KEY
+
+    expect(() => s.lzmaNativeBinding(REAL_LZMA_NATIVE_DIR)).toThrow(
+      'no such asset'
+    )
+    expect(s.mkdtempSyncSpy).not.toHaveBeenCalled()
+    expect(s.writeFileSyncSpy).not.toHaveBeenCalled()
+    expect(s.dlopenSpy).not.toHaveBeenCalled()
+  })
+
+  // R6: REAL filesystem, no fs spies. dlopen is stubbed by an implementation
+  // that looks at what is actually on disk at the moment the addon would be
+  // loaded -- the property the Windows import resolution depends on.
+  describe.each([
+    ['win32', ['liblzma.dll', 'node.napi.node']],
+    ['linux', ['node.napi.node']]
+  ] as const)(
+    'R6 real filesystem round trip (platform pinned %s)',
+    (platform, expected) => {
+      it('has exactly the expected files in one private tmpdir child at dlopen time, and leaves nothing behind', () => {
+        jest.doMock('node:sea', () => ({
+          isSea: () => true,
+          getRawAsset: () => new ArrayBuffer(8)
+        }))
+        let lzmaNativeBinding: LzmaNativeBindingResolver
+        jest.isolateModules(() => {
+          lzmaNativeBinding = loadFresh()
+        })
+        pinPlatform(platform)
+
+        let seenDir = ''
+        let listing: string[] = []
+        let mode: number | undefined
+        jest.spyOn(process, 'dlopen').mockImplementation((_mod, path) => {
+          seenDir = dirname(path)
+          listing = readdirSync(seenDir).sort()
+          if (HOST_PLATFORM !== 'win32') {
+            mode = statSync(seenDir).mode & 0o777
+          }
+        })
+
+        try {
+          lzmaNativeBinding!(REAL_LZMA_NATIVE_DIR)
+
+          expect(listing).toEqual([...expected])
+          expect(dirname(seenDir)).toBe(tmpdir())
+          expect(basename(seenDir).startsWith('gamelib-lzma-native-')).toBe(
+            true
+          )
+          if (HOST_PLATFORM !== 'win32') {
+            expect(mode).toBe(0o700)
+          }
+          expect(existsSync(seenDir)).toBe(false)
+          expect(readExtractionRecord()).toEqual({
+            dir: seenDir,
+            leftover: false
+          })
+        } finally {
+          if (seenDir) {
+            rmSync(seenDir, { recursive: true, force: true })
+          }
+        }
+      })
+    }
+  )
 })
 
 describe('lzmaNativeBinding dev branch', () => {
@@ -322,14 +517,13 @@ describe('lzmaNativeBinding memoization', () => {
   })
 })
 
-describe('lzmaNativeBinding.nativeAddonTempPath', () => {
-  it('two calls return different strings and both contain the process pid', () => {
+describe('lzmaNativeBinding.nativeExtractDirPrefix', () => {
+  it('R7: is a prefix under the OS temp dir carrying the pid, whose basename marks it as ours', () => {
     const lzmaNativeBinding = loadFresh()
-    const a = lzmaNativeBinding.nativeAddonTempPath()
-    const b = lzmaNativeBinding.nativeAddonTempPath()
-    expect(a).not.toBe(b)
-    expect(a).toContain(String(process.pid))
-    expect(b).toContain(String(process.pid))
+    const prefix = lzmaNativeBinding.nativeExtractDirPrefix()
+    expect(prefix.startsWith(tmpdir())).toBe(true)
+    expect(prefix).toContain(String(process.pid))
+    expect(basename(prefix).startsWith('gamelib-lzma-native-')).toBe(true)
   })
 })
 
@@ -338,6 +532,13 @@ describe('lzmaNativeBinding asset-key drift guard', () => {
     const lzmaNativeBinding = loadFresh()
     expect(lzmaNativeBinding.LZMA_NATIVE_SEA_ASSET_KEY).toBe(
       LZMA_NATIVE_ASSET_KEY
+    )
+  })
+
+  it("R8: LZMA_NATIVE_DLL_SEA_ASSET_KEY strictly equals meta/buildSidecarSea.ts's LZMA_NATIVE_DLL_ASSET_KEY", () => {
+    const lzmaNativeBinding = loadFresh()
+    expect(lzmaNativeBinding.LZMA_NATIVE_DLL_SEA_ASSET_KEY).toBe(
+      LZMA_NATIVE_DLL_ASSET_KEY
     )
   })
 })

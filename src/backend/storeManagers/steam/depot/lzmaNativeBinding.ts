@@ -79,10 +79,20 @@
  * them anyway, a fact this exact live-hardware finding demonstrates
  * directly (two different real builds, two different collapsed values,
  * neither meaningful).
+ *
+ * 261011-wrx (2026-10-11): the win32 prebuild `node.napi.node` is not
+ * self-contained. 261011-mza measured its import table as exactly
+ * `KERNEL32.dll` + `liblzma.dll`, and Windows resolves the latter BY NAME from
+ * the addon's own directory first. The SEA used to embed only the addon and
+ * write it loose into `os.tmpdir()`, so `dlopen` failed with "The specified
+ * module could not be found." in 21 of 21 runs (`nativeWorkers:0`). The build
+ * now embeds `liblzma.dll` as a second SEA asset (win32 only), and this file
+ * extracts the addon plus the DLL into ONE private `mkdtempSync` directory --
+ * never the shared temp root, because a writable directory beside a loaded
+ * addon is a DLL-planting surface (the shared root is exactly that).
  */
 
-import { writeFileSync, rmSync } from 'node:fs'
-import { randomBytes } from 'node:crypto'
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -109,22 +119,47 @@ const LZMA_NATIVE_SEA_ASSET_KEY = 'lzma_native.node'
 const LZMA_NATIVE_ADDON_FILENAME = 'node.napi.node'
 
 /**
- * Pure path builder for the SEA branch's `dlopen()` target -- exported (as a
- * property of the callable default below) so a test can assert
- * unpredictability directly.
- *
- * SECURITY (T-23.1-03-01): a fixed or predictable filename in the
- * world-writable `os.tmpdir()` would let a local attacker pre-place a
- * hostile `.node` at that exact path and have the sidecar `dlopen()` it. The
- * pid + 8 random bytes make the path unpredictable per invocation; the
- * Node docs' own `myaddon.node` fixed-name example is deliberately NOT
- * copied here.
+ * 261011-wrx: SEA dictionary key of the win32 companion `liblzma.dll` --
+ * MUST equal `meta/buildSidecarSea.ts`'s `LZMA_NATIVE_DLL_ASSET_KEY`
+ * verbatim. Duplicated (not imported) because `src/` cannot import from
+ * `meta/`; guarded by a two-sided literal test like the addon key above.
  */
-function nativeAddonTempPath(): string {
-  return join(
-    tmpdir(),
-    `gamelib-lzma-native-${process.pid}-${randomBytes(8).toString('hex')}.node`
-  )
+const LZMA_NATIVE_DLL_SEA_ASSET_KEY = 'liblzma.dll'
+
+/**
+ * 261011-wrx: the on-disk name the extracted DLL must carry. Load-bearing:
+ * Windows resolves the addon's `liblzma.dll` import BY NAME from the addon's
+ * own directory, so this must equal the name in `node.napi.node`'s import
+ * table (measured by 261011-mza: `KERNEL32.dll` + `liblzma.dll`).
+ */
+const LZMA_NATIVE_WIN32_DLL_FILENAME = 'liblzma.dll'
+
+/**
+ * 261011-wrx: `Symbol.for(...)` key under which the SEA branch records
+ * `{ dir, leftover }` on `globalThis`, per isolate. `lzmaLoader.ts` reads the
+ * record to put the extraction directory and its fate in the engaged log
+ * line. It is a `globalThis` registry rather than an import because the
+ * loader never imports this file (it imports `lzma-native`, which reaches
+ * this file only through the esbuild alias).
+ */
+const LZMA_NATIVE_EXTRACTION_RECORD_KEY = 'gamelib.lzmaNative.extraction'
+
+/**
+ * `mkdtempSync` prefix for the SEA branch's private extraction directory --
+ * exported (as a property of the callable default below) so a test can
+ * assert it directly.
+ *
+ * SECURITY (T-23.1-03-01, rewritten 261011-wrx): a fixed or predictable
+ * path in the world-writable `os.tmpdir()` would let a local attacker
+ * pre-place a hostile `.node` (or, now that the addon imports a sibling
+ * `liblzma.dll`, a hostile DLL) and have the sidecar load it. Unpredictability
+ * and exclusivity now come from `mkdtempSync`'s atomic create-NEW-directory:
+ * it cannot succeed on a pre-existing path. The old per-file random name
+ * loose in the shared temp root is retired -- the DLL must sit next to the
+ * addon, and the shared root is exactly the planting surface.
+ */
+function nativeExtractDirPrefix(): string {
+  return join(tmpdir(), `gamelib-lzma-native-${process.pid}-`)
 }
 
 /**
@@ -219,27 +254,56 @@ function resolveNativeBinding(_dir: string): unknown {
     // through it (via writeFileSync below) and never writes into it,
     // guaranteeing it cannot corrupt other assets sharing the blob
     // (T-23.1-03-04).
+    //
+    // Read BOTH assets before any filesystem write, so a missing asset
+    // throws without creating a directory.
     const raw = sea.getRawAsset(LZMA_NATIVE_SEA_ASSET_KEY)
-    const addonPath = nativeAddonTempPath()
-    writeFileSync(addonPath, Buffer.from(raw), { mode: 0o600 })
+    const dllRaw =
+      process.platform === 'win32'
+        ? sea.getRawAsset(LZMA_NATIVE_DLL_SEA_ASSET_KEY)
+        : undefined
+
+    // ONE private directory per extraction (T-23.1-03-01, 261011-wrx).
+    // Outside the try: if mkdtemp itself throws there is nothing to clean.
+    const dir = mkdtempSync(nativeExtractDirPrefix())
+    const addonPath = join(dir, LZMA_NATIVE_ADDON_FILENAME)
+    let leftover = false
 
     const nativeModule: { exports: unknown } = { exports: {} }
     try {
+      // mkdtemp's requested 0700 is masked by the umask (umask 0277 yields
+      // 0500), so the chmod restores owner-write; it is not redundant. On
+      // Windows the per-user temp-root ACL is the real control and 0o700
+      // only clears the read-only bit.
+      chmodSync(dir, 0o700)
+      if (dllRaw !== undefined) {
+        writeFileSync(
+          join(dir, LZMA_NATIVE_WIN32_DLL_FILENAME),
+          Buffer.from(dllRaw),
+          { mode: 0o600 }
+        )
+      }
+      writeFileSync(addonPath, Buffer.from(raw), { mode: 0o600 })
       process.dlopen(nativeModule, addonPath)
     } finally {
       // Runs on BOTH paths so a failed dlopen cannot leave an executable
-      // .node behind in os.tmpdir(). The dlopen error still propagates (no
-      // catch here) and `cachedBinding` stays unassigned, so a later call
-      // retries.
+      // .node (or its DLL) behind in os.tmpdir(). The dlopen error still
+      // propagates (no catch here) and `cachedBinding` stays unassigned, so
+      // a later call retries.
       try {
-        rmSync(addonPath)
+        rmSync(dir, { recursive: true, force: true })
       } catch {
         // Expected/ignorable on Windows, where a file backing a currently
-        // loaded native module cannot be unlinked while it is still mapped
-        // into the process. On the throw path nothing is mapped, so removal
-        // succeeds on every OS; this catch exists for the success path on
-        // Windows.
+        // loaded native module (the addon, or the liblzma.dll it maps)
+        // cannot be unlinked while it is still mapped into the process. On
+        // the throw path nothing is mapped, so removal succeeds on every OS;
+        // this catch exists for the success path on Windows. Recorded below
+        // so the loader can surface the leftover.
+        leftover = true
       }
+      ;(globalThis as unknown as Record<symbol, unknown>)[
+        Symbol.for(LZMA_NATIVE_EXTRACTION_RECORD_KEY)
+      ] = { dir, leftover }
     }
 
     cachedBinding = nativeModule.exports
@@ -278,13 +342,21 @@ interface LzmaNativeBindingResolver {
   (dir: string): unknown
   LZMA_NATIVE_SEA_ASSET_KEY: string
   LZMA_NATIVE_ADDON_FILENAME: string
-  nativeAddonTempPath: () => string
+  LZMA_NATIVE_DLL_SEA_ASSET_KEY: string
+  LZMA_NATIVE_WIN32_DLL_FILENAME: string
+  LZMA_NATIVE_EXTRACTION_RECORD_KEY: string
+  nativeExtractDirPrefix: () => string
 }
 
 const lzmaNativeBinding = resolveNativeBinding as LzmaNativeBindingResolver
 lzmaNativeBinding.LZMA_NATIVE_SEA_ASSET_KEY = LZMA_NATIVE_SEA_ASSET_KEY
 lzmaNativeBinding.LZMA_NATIVE_ADDON_FILENAME = LZMA_NATIVE_ADDON_FILENAME
-lzmaNativeBinding.nativeAddonTempPath = nativeAddonTempPath
+lzmaNativeBinding.LZMA_NATIVE_DLL_SEA_ASSET_KEY = LZMA_NATIVE_DLL_SEA_ASSET_KEY
+lzmaNativeBinding.LZMA_NATIVE_WIN32_DLL_FILENAME =
+  LZMA_NATIVE_WIN32_DLL_FILENAME
+lzmaNativeBinding.LZMA_NATIVE_EXTRACTION_RECORD_KEY =
+  LZMA_NATIVE_EXTRACTION_RECORD_KEY
+lzmaNativeBinding.nativeExtractDirPrefix = nativeExtractDirPrefix
 
 // CJS export-assignment shape, deliberately NOT `export = `/`export default`
 // -- see this file's header comment for the full rationale (TS1203 under
