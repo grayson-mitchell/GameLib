@@ -469,6 +469,7 @@
         "curatedGroup": "Necessari habitualment",
         "emptyBody": "No s'han pogut carregar les metadades de Winetricks per a aquesta bottle.",
         "emptyHeading": "No hi ha components disponibles",
+        "installedHeading": "Instal·lat",
         "installFailedTag": "La instal·lació ha fallat",
         "installedTag": "Instal·lat",
         "retry": "Torna-ho a provar",

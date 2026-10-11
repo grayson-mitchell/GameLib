@@ -462,6 +462,7 @@
         "curatedGroup": "Ofte nødvendige",
         "emptyBody": "Winetricks-metadata kunne ikke lastes for denne bottlen.",
         "emptyHeading": "Ingen komponenter tilgjengelig",
+        "installedHeading": "Installert",
         "installFailedTag": "Installasjonen mislyktes",
         "installedTag": "Installert",
         "retry": "Prøv igjen",

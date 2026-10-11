@@ -6,9 +6,17 @@ import type { RenderWinetricksRow } from '../Row'
 import './index.scss'
 
 type Props = {
-  // The whole visible catalog, in parser order (D-07: task groups are shortcut
-  // views, so every verb they show is also here).
+  // The verbs no tier above shows (Suggested + the five task groups), in
+  // parser order -- the unsearched list and the badge (261011-txc).
+  // Installed-group members are NOT subtracted: Installed is a status view,
+  // not a partition.
   components: WinetricksComponent[]
+  // The whole visible catalog, in parser order -- the search domain. A search
+  // stays catalog-wide on purpose: live gate 45-12 found `gdiplus` by id
+  // through it, and a search hit carries its category tag (`showCategory` is
+  // `searching`), so a hit that duplicates a row shown above is identifiable
+  // (261011-txc).
+  catalog: WinetricksComponent[]
   renderRow: RenderWinetricksRow
 }
 
@@ -16,10 +24,13 @@ type Props = {
 // catalog of about 500 visible verbs.
 const SEARCH_MIN_CHARS = 2
 
-// D-05/D-07: the long tail, collapsed by default, with a search that filters
-// ONLY this group's flat list -- never Suggested or the task groups, which are
-// curated views, so a search hit cannot silently reorder or duplicate a row
-// that is already visible elsewhere.
+// D-05/D-07: the long tail, collapsed by default. Unsearched it lists only
+// `components` -- the verbs no tier above shows (261011-txc). The search
+// stays catalog-wide on purpose: live gate 45-12 found `gdiplus` by id
+// through it, even though `gdiplus` is a task-group member and so is absent
+// from the unsearched list; a search hit carries its category tag
+// (`showCategory` is `searching`), so a hit that duplicates a row shown above
+// is identifiable, not silently ambiguous.
 //
 // The query is this component's only state besides `expanded`. Selection lives
 // in the tab, keyed by verb, so a verb ticked while filtered stays ticked after
@@ -36,7 +47,11 @@ const SEARCH_MIN_CHARS = 2
 // the text autofill popover from taking its place. Every catalog row renders;
 // there is no virtualisation because no measured number justifies it (Phase 44
 // D-07, still binding).
-export default function EverythingElseGroup({ components, renderRow }: Props) {
+export default function EverythingElseGroup({
+  components,
+  catalog,
+  renderRow
+}: Props) {
   const { t: tGamelib } = useTranslation('gamelib')
   const [expanded, setExpanded] = useState(false)
   const [query, setQuery] = useState('')
@@ -46,7 +61,7 @@ export default function EverythingElseGroup({ components, renderRow }: Props) {
   const needle = trimmed.toLowerCase()
   const searching = trimmed.length >= SEARCH_MIN_CHARS
   const visible = searching
-    ? components.filter(
+    ? catalog.filter(
         (component) =>
           component.verb.toLowerCase().includes(needle) ||
           component.title.toLowerCase().includes(needle)

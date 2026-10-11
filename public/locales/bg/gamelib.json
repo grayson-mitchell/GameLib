@@ -462,6 +462,7 @@
         "curatedGroup": "Често необходими",
         "emptyBody": "Метаданните на Winetricks не можаха да се заредят за тази bottle.",
         "emptyHeading": "Няма налични компоненти",
+        "installedHeading": "Инсталиран",
         "installFailedTag": "Инсталирането е неуспешно",
         "installedTag": "Инсталиран",
         "retry": "Нов опит",

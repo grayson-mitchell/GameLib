@@ -9,12 +9,12 @@ type Props = {
   label: string
   // Bare member count, no plural word (E4-zero-one-many).
   count?: number
-  // Absent means a static, non-collapsible header (the Suggested group). Present
-  // means a disclosure: `onToggle` is then required in practice.
-  expanded?: boolean
-  onToggle?: () => void
+  // Every group's header is a disclosure button now (261011-txc: Suggested
+  // lost its static, non-collapsible branch, the last holdout).
+  expanded: boolean
+  onToggle: () => void
   // `id` of the body this header governs, for `aria-controls`.
-  controlsId?: string
+  controlsId: string
 }
 
 // The `FilterFacetGroup` disclosure CONTRACT (caret rotation, uppercase
@@ -37,21 +37,13 @@ export default function GroupHeader({
 }: Props) {
   const activate = useMouseDownActivate()
 
-  if (expanded === undefined) {
-    return (
-      <h3 className="WinetricksGroupHeader WinetricksGroupHeader--static">
-        <span className="WinetricksGroupHeader__label">{label}</span>
-      </h3>
-    )
-  }
-
   return (
     <button
       type="button"
       className="WinetricksGroupHeader WinetricksGroupHeader--button"
       aria-expanded={expanded}
       aria-controls={controlsId}
-      {...activate(() => onToggle?.())}
+      {...activate(() => onToggle())}
     >
       <span className="WinetricksGroupHeader__label" title={label}>
         {label}

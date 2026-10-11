@@ -476,6 +476,7 @@
         "curatedGroup": "Často potrebné",
         "emptyBody": "Metadáta Winetricks sa pre túto bottle nepodarilo načítať.",
         "emptyHeading": "Nie sú k dispozícii žiadne komponenty",
+        "installedHeading": "Nainštalované",
         "installFailedTag": "Inštalácia zlyhala",
         "installedTag": "Nainštalované",
         "retry": "Skúsiť znova",

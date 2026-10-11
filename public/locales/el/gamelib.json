@@ -462,6 +462,7 @@
         "curatedGroup": "Συχνά απαιτούμενα",
         "emptyBody": "Δεν ήταν δυνατή η φόρτωση των μεταδεδομένων του Winetricks για αυτό το bottle.",
         "emptyHeading": "Δεν υπάρχουν διαθέσιμα στοιχεία",
+        "installedHeading": "Εγκατεστημένο",
         "installFailedTag": "Η εγκατάσταση απέτυχε",
         "installedTag": "Εγκατεστημένο",
         "retry": "Δοκιμάστε ξανά",

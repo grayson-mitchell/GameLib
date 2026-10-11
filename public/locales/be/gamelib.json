@@ -476,6 +476,7 @@
         "curatedGroup": "Часта патрэбныя",
         "emptyBody": "Не ўдалося загрузіць метаданыя Winetricks для гэтай бутэлькі.",
         "emptyHeading": "Няма даступных кампанентаў",
+        "installedHeading": "Установлена",
         "installFailedTag": "Установка не ўдалася",
         "installedTag": "Установлена",
         "retry": "Паўторыць",

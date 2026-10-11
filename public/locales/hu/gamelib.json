@@ -462,6 +462,7 @@
         "curatedGroup": "Gyakran szükséges",
         "emptyBody": "A Winetricks metaadatait nem sikerült betölteni ehhez a bottle-hoz.",
         "emptyHeading": "Nincs elérhető összetevő",
+        "installedHeading": "Telepítve",
         "installFailedTag": "A telepítés sikertelen",
         "installedTag": "Telepítve",
         "retry": "Újra",

@@ -462,6 +462,7 @@
         "curatedGroup": "സാധാരണയായി ആവശ്യമുള്ളവ",
         "emptyBody": "ഈ bottle-നായി Winetricks മെറ്റാഡാറ്റ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല.",
         "emptyHeading": "ലഭ്യമായ ഘടകങ്ങളില്ല",
+        "installedHeading": "ഇൻസ്റ്റാൾ ചെയ്തു",
         "installFailedTag": "ഇൻസ്റ്റാൾ പരാജയപ്പെട്ടു",
         "installedTag": "ഇൻസ്റ്റാൾ ചെയ്തു",
         "retry": "വീണ്ടും ശ്രമിക്കുക",

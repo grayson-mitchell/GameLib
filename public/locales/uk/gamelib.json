@@ -476,6 +476,7 @@
         "curatedGroup": "Часто потрібні",
         "emptyBody": "Не вдалося завантажити метадані Winetricks для цієї bottle.",
         "emptyHeading": "Немає доступних компонентів",
+        "installedHeading": "Встановлено",
         "installFailedTag": "Встановлення не вдалося",
         "installedTag": "Встановлено",
         "retry": "Повторити",

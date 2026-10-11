@@ -217,6 +217,7 @@
     "src/frontend/screens/Settings/sections/WinetricksSettings/EnvironmentBanner/index.tsx",
     "src/frontend/screens/Settings/sections/WinetricksSettings/EverythingElseGroup/index.tsx",
     "src/frontend/screens/Settings/sections/WinetricksSettings/GroupHeader/index.tsx",
+    "src/frontend/screens/Settings/sections/WinetricksSettings/InstalledGroup/index.tsx",
     "src/frontend/screens/Settings/sections/WinetricksSettings/LogPanel/index.tsx",
     "src/frontend/screens/Settings/sections/WinetricksSettings/Row/index.tsx",
     "src/frontend/screens/Settings/sections/WinetricksSettings/StickyBar/index.tsx",

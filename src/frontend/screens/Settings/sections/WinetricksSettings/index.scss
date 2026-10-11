@@ -65,6 +65,7 @@
   }
 
   .WinetricksSuggested,
+  .WinetricksInstalled,
   .WinetricksTaskGroup {
     display: flex;
     flex-direction: column;
@@ -72,6 +73,7 @@
   }
 
   .WinetricksSuggested__body,
+  .WinetricksInstalled__body,
   .WinetricksTaskGroup__body {
     display: flex;
     flex-direction: column;
@@ -81,6 +83,8 @@
   // A collapsed body stays in the DOM so the header's `aria-controls` always
   // points at a real element; the `hidden` attribute is what removes it from
   // layout, and this rule keeps a theme's `display` reset from undoing that.
+  .WinetricksSuggested__body[hidden],
+  .WinetricksInstalled__body[hidden],
   .WinetricksTaskGroup__body[hidden] {
     display: none;
   }
@@ -149,12 +153,23 @@
   // bottom of the Settings page. `position: sticky` never opens a second scroll
   // region of its own -- it pins the dock to whichever ancestor is actually
   // scrolling (`.App .content`).
+  //
+  // Live gate 45-12 (45-UAT.md item 13) captured rows and a group header
+  // showing through the docked bar as content scrolled beneath it. The dock
+  // now paints opaque with a top divider so that content reads as docked, not
+  // overlapped; `z-index: 2` because the Everything else search box is sticky
+  // at `z-index: 1` (`EverythingElseGroup/index.scss`), and the dock, being
+  // visually below it on the page, must still paint above it.
   &__dock {
     position: sticky;
     bottom: 0;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    background: var(--body-background, #070a0b);
+    box-shadow: 0 -1px 0
+      var(--divider, color-mix(in srgb, currentColor 14%, transparent));
   }
 }
 
@@ -182,12 +197,12 @@
 // 261011-jj1: GamesSettings/index.scss nests `section:not(:nth-of-type(0))
 // { padding-top: var(--space-xl); min-width: 500px; }` under
 // `.settingsDialogContent, .settingsWrapper`. That compiles to two
-// specificity-0,2,1 selectors, which out-specify this tab's own three
+// specificity-0,2,1 selectors, which out-specify this tab's own four
 // group `min-width: 0` declarations (specificity 0,2,0) -- `.WinetricksSuggested`,
-// `.WinetricksTaskGroup` (above) and `.WinetricksEverythingElse`
-// (`EverythingElseGroup/index.scss`). Below ~500px of paper width the groups
-// can no longer shrink and the dialog content scrolls sideways instead of
-// wrapping.
+// `.WinetricksInstalled`, `.WinetricksTaskGroup` (above) and
+// `.WinetricksEverythingElse` (`EverythingElseGroup/index.scss`). Below
+// ~500px of paper width the groups can no longer shrink and the dialog
+// content scrolls sideways instead of wrapping.
 //
 // This rule's selector scores 0,3,0, strictly above the floor's 0,2,1 in any
 // stylesheet load order -- a same-specificity 0,2,1 shape would tie the
@@ -195,13 +210,23 @@
 // ancestor pair mirrors the floor's own, so the release applies exactly
 // where the floor does.
 //
-// `padding-top` is deliberately NOT overridden here: whether the groups want
-// that leaked spacing, or it is an unrelated carry-over, is an open design
-// question recorded in the 261011-jj1 todo, not answered by this fix.
+// `padding-top` IS overridden here (quick 261011-txc): the leaked
+// `padding-top: var(--space-xl)` (3em) above every group was the "huge"
+// whitespace the operator measured between collapsed headers in live gate
+// 45-12 (todo 2026-10-11, item 4). It is now released to `0`, and the tab's
+// own `gap: var(--space-sm)` (0.75em, roughly half the group header's own
+// ~1.6em of built-in spacing) carries the visual separation between groups
+// instead.
 //
 // Pinned by `__tests__/tokenCensus.test.ts`.
 :is(.settingsDialogContent, .settingsWrapper)
   .WinetricksSettings
-  :is(.WinetricksSuggested, .WinetricksTaskGroup, .WinetricksEverythingElse) {
+  :is(
+    .WinetricksSuggested,
+    .WinetricksInstalled,
+    .WinetricksTaskGroup,
+    .WinetricksEverythingElse
+  ) {
   min-width: 0;
+  padding-top: 0;
 }

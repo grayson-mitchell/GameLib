@@ -462,6 +462,7 @@
         "curatedGroup": "ხშირად საჭირო",
         "emptyBody": "ამ bottle-ისთვის Winetricks-ის მეტამონაცემების ჩატვირთვა ვერ მოხერხდა.",
         "emptyHeading": "კომპონენტები არ არის ხელმისაწვდომი",
+        "installedHeading": "დაინსტალირებული",
         "installFailedTag": "ინსტალაცია ვერ მოხერხდა",
         "installedTag": "დაინსტალირებული",
         "retry": "თავიდან ცდა",

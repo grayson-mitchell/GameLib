@@ -462,6 +462,7 @@
         "curatedGroup": "Umumnya diperlukan",
         "emptyBody": "Metadata Winetricks tidak dapat dimuat untuk bottle ini.",
         "emptyHeading": "Tidak ada komponen yang tersedia",
+        "installedHeading": "Terpasang",
         "installFailedTag": "Pemasangan gagal",
         "installedTag": "Terpasang",
         "retry": "Coba lagi",

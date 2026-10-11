@@ -462,6 +462,7 @@
         "curatedGroup": "よく必要になるもの",
         "emptyBody": "このボトルのWinetricksメタデータを読み込めませんでした。",
         "emptyHeading": "利用可能なコンポーネントがありません",
+        "installedHeading": "インストール済み",
         "installFailedTag": "インストールに失敗しました",
         "installedTag": "インストール済み",
         "retry": "再試行",

@@ -462,6 +462,7 @@
         "curatedGroup": "Sık gereken",
         "emptyBody": "Bu bottle için Winetricks meta verileri yüklenemedi.",
         "emptyHeading": "Kullanılabilir bileşen yok",
+        "installedHeading": "Yüklendi",
         "installFailedTag": "Yükleme başarısız oldu",
         "installedTag": "Yüklendi",
         "retry": "Yeniden dene",

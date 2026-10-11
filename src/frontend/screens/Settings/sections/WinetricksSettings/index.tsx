@@ -36,6 +36,7 @@ import {
 } from 'frontend/helpers/declaredUnavailable'
 import SuggestedGroup from './SuggestedGroup'
 import TaskGroup from './TaskGroup'
+import InstalledGroup from './InstalledGroup'
 import EverythingElseGroup from './EverythingElseGroup'
 import WinetricksRow from './Row'
 import StickyBar from './StickyBar'
@@ -524,6 +525,25 @@ export default function WinetricksSettings() {
     direct3DVersions
   })
 
+  // Locked item 1: the five task groups are resolved ONCE per render here,
+  // feeding both the TaskGroup map below and `shownAbove`, so Everything
+  // else's unsearched list is exactly the verbs no tier above shows (Suggested
+  // + the five task groups). Installed-group members are deliberately NOT
+  // subtracted -- the locked set is Suggested + task groups only; Installed is
+  // a status view, not a partition (see InstalledGroup's own header comment).
+  const taskGroupComponents = TASK_GROUP_IDS.map(
+    (id) => [id, resolveTaskGroup(allComponents, id)] as const
+  )
+  const shownAbove = new Set<string>()
+  for (const component of [...suggested.gameSpecific, ...suggested.curated]) {
+    shownAbove.add(component.verb)
+  }
+  for (const [, components] of taskGroupComponents) {
+    for (const component of components) {
+      shownAbove.add(component.verb)
+    }
+  }
+
   // D-11/D-12: rest until a run starts; in flight while it runs; done once it
   // ends and stays done until the selection changes again.
   const barMode: 'rest' | 'inFlight' | 'done' = isRunning
@@ -601,16 +621,23 @@ export default function WinetricksSettings() {
             curated={suggested.curated}
             renderRow={renderRow}
           />
-          {TASK_GROUP_IDS.map((id) => (
+          <InstalledGroup
+            components={allComponents.filter((c) =>
+              installedForRows.includes(c.verb)
+            )}
+            renderRow={renderRow}
+          />
+          {taskGroupComponents.map(([id, components]) => (
             <TaskGroup
               key={id}
               id={id}
-              components={resolveTaskGroup(allComponents, id)}
+              components={components}
               renderRow={renderRow}
             />
           ))}
           <EverythingElseGroup
-            components={allComponents}
+            components={allComponents.filter((c) => !shownAbove.has(c.verb))}
+            catalog={allComponents}
             renderRow={renderRow}
           />
           <div className="WinetricksSettings__dock">

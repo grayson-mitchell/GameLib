@@ -469,6 +469,7 @@
         "curatedGroup": "Često potrebno",
         "emptyBody": "Metapodatke za Winetricks nije bilo moguće učitati za ovu bottle.",
         "emptyHeading": "Nema dostupnih komponenti",
+        "installedHeading": "Instalirano",
         "installFailedTag": "Instalacija nije uspjela",
         "installedTag": "Instalirano",
         "retry": "Pokušaj ponovno",

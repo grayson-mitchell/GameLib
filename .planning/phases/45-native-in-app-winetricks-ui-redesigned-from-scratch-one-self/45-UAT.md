@@ -97,7 +97,7 @@ Evidence: Show details capture, gamelib-launch-N.log. Launch ordinal: record. Ca
 
 ### 13. Carry-forward - Sticky bar holds inside .App .content (45-08)
 expected: With the Everything else group expanded and scrolled, the bar stays docked at the bottom of the visible area at the narrow width and the normal width and in both themes, never scrolling away or overlapping the last row's status slot.
-result: issue - at the natural width the bar stayed docked at the bottom of the visible area in both themes, but it overlaps content: in G1-launch1-shot4.png it sits over the MEDIA & CODECS header and in burst-light-26.png over the last visible row's Installed badge. Narrow width not reached. Launch ordinals: 1, 2.
+result: issue - at the natural width the bar stayed docked at the bottom of the visible area in both themes, but it overlaps content: in G1-launch1-shot4.png it sits over the MEDIA & CODECS header and in burst-light-26.png over the last visible row's Installed badge. Narrow width not reached. Launch ordinals: 1, 2. Quick 261011-txc paints the dock opaque with a top divider above the sticky search; re-capture owed at the next 45-12 run.
 
 Evidence: window captures. Launch ordinal: record. Carried from 45-08 and 45-11 Next Phase Readiness.
 
