@@ -42,7 +42,7 @@ per the contract). The `--danger` family is the recurring offender (memory:
 Evidence: `/tmp/gamelib-gate-45-20261010T194049Z/terminal.log`, captures `G7-light-F-after.png`,
 `burst2-light-016.png`, `burst2-light-071.png`, `burst3-085.png`, `burst3-125.png`, `burst6-007.png`.
 
-## Fix (2026-10-11, quick 261011-kqx, commits 20ab561a2 28c607015)
+## Fix (2026-10-11, quick 261011-kqx, commits 65f359bb5 e89c0237f)
 
 **Colour strategy.** Two theme-adaptive aliases replace the two offending tokens, neither of
 which needed a `themes.scss` change -- both are derived or substituted purely in the Winetricks

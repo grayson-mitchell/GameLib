@@ -2,8 +2,8 @@
 status: complete
 quick_task: 261011-kqx
 branch: quick-261002-b63
-plan_head_before: a4fd8505d
-plan_head_after: f8c790ad2
+plan_head_before: 2015660bb
+plan_head_after: 198da0104
 commits: 3
 ---
 
@@ -17,17 +17,17 @@ and an independent standalone cross-check script as evidence.
 ## Tasks
 
 1. **Tracer (tdd=true)** — derive `--winetricks-danger-text` and wire it into the Row failed tag;
-   commit `20ab561a2`.
+   commit `65f359bb5`.
 2. **Auto (tdd=true)** — extend the fix to the remaining danger-text consumers (StickyBar failed
    count, Row danger icon, LogPanel error line) and substitute `--text-secondary` for the
-   non-text borders and search placeholder; commit `28c607015`.
+   non-text borders and search placeholder; commit `e89c0237f`.
 3. **Auto** — standalone contrast-table script, full verification battery, todo closure, residual
-   todo filing, docs commit; commit `f8c790ad2`.
+   todo filing, docs commit; commit `198da0104`.
 
 ## Test counts
 
 - Task 1 RED (pre-fix, intentional): 7 failed / 130 passed / 137 total.
-- Task 1-2 GREEN (post-fix): 137/137 passing at the time of commit `28c607015`.
+- Task 1-2 GREEN (post-fix): 137/137 passing at the time of commit `e89c0237f`.
 - Final re-run at Task 3 (full scope: all 14 Winetricks + themeTokens suites):
   **14 suites passed / 14 total, 363 tests passed / 363 total.**
 
@@ -115,11 +115,11 @@ all clearing their bar).
 
 ## Commits
 
-- `20ab561a2` — fix(winetricks): derive a theme-adaptive danger text colour so failed-state reds clear 4.5:1 in every theme (261011-kqx) [Task 1]
-- `28c607015` — fix(winetricks): fix non-text indicator and placeholder contrast misses in nord-light and three others (261011-kqx) [Task 2]
-- `f8c790ad2` — docs(quick-261011-kqx): add the contrast table script and close the Winetricks contrast-misses todo [Task 3]
+- `65f359bb5` — fix(winetricks): derive a theme-adaptive danger text colour so failed-state reds clear 4.5:1 in every theme (261011-kqx) [Task 1]
+- `e89c0237f` — fix(winetricks): fix non-text indicator and placeholder contrast misses in nord-light and three others (261011-kqx) [Task 2]
+- `198da0104` — docs(quick-261011-kqx): add the contrast table script and close the Winetricks contrast-misses todo [Task 3]
 
-Branch: `quick-261002-b63`. `plan_head_before: a4fd8505d`, `plan_head_after: f8c790ad2`.
+Branch: `quick-261002-b63`. `plan_head_before: a4fd8505d`, `plan_head_after: 198da0104`.
 
 ## Deviations from Plan
 
@@ -169,6 +169,10 @@ None.
 - `.planning/quick/261011-kqx-winetricks-tab-contrast-misses-in-nord-l/261011-kqx-contrast-table.mjs` — FOUND
 - `.planning/todos/completed/2026-10-11-winetricks-tab-contrast-misses-below-the-45-and-3-bars.md` — FOUND
 - `.planning/todos/pending/2026-10-11-winetricks-disabled-apply-border-reads-1-36-live-in-midnightmirage-but-6-07-by-token.md` — FOUND
-- `20ab561a2` — FOUND in `git log`
-- `28c607015` — FOUND in `git log`
-- `f8c790ad2` — FOUND in `git log`
+- `65f359bb5` — FOUND in `git log`
+- `e89c0237f` — FOUND in `git log`
+- `198da0104` — FOUND in `git log`
+
+## Rebase note
+
+Rebased onto `2015660bb` (four sibling Steam-backend commits pushed to `origin/quick-261002-b63` mid-task) before push; all four commit hashes above are the post-rebase ones. `plan_head_before` was `a4fd8505d` at execution time.
