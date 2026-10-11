@@ -349,7 +349,9 @@ async function resolvePureJs(): Promise<LzmaModule> {
  * native addon (and, on win32, `liblzma.dll`) and whether the directory was
  * removed, or `undefined` when nothing was extracted (dev or unbundled runs)
  * or the record is malformed. Appended to the engaged line so an operator can
- * measure Windows temp-dir accumulation from gamelib.log alone.
+ * see the Windows temp-dir fate from gamelib.log alone. A LEFT BEHIND dir is
+ * not permanent (261012-82w): the next sidecar process's first native load
+ * sweeps the dirs of exited processes (see `describeStaleExtractionSweep`).
  *
  * The binding writes the record (`lzmaNativeBinding.ts`
  * `LZMA_NATIVE_EXTRACTION_RECORD_KEY`). It crosses via a `globalThis`
@@ -376,8 +378,50 @@ function describeNativeExtraction(): string | undefined {
         'loaded addon or the liblzma.dll it maps while this process runs, ' +
         'so each worker of each sidecar process that engages native decode ' +
         'leaves one gamelib-lzma-native-* dir in the OS temp dir ' +
-        '(261011-wrx); count them there to measure accumulation.'
+        '(261011-wrx); a later sidecar process removes them on its first ' +
+        'native load once this one has exited (261012-82w).'
     : `SEA extraction dir ${dir} was removed after load.`
+}
+
+/**
+ * 261012-82w: one sentence reporting how many stale extraction directories
+ * the binding's win32 sweep removed before this load, or `undefined` when
+ * nothing was removed, no sweep ran (dev, unbundled, non-win32), or the
+ * record is malformed. Appended to the existing engaged `logInfo` call and the
+ * import-failure `logWarning` call, so the number of log calls is unchanged
+ * and a sweep that deleted files is never silent.
+ *
+ * Crosses from the binding the same way as the extraction record
+ * (`describeNativeExtraction` above): a `globalThis` registry read by
+ * literal, because the loader never imports the binding. The key must equal
+ * the binding's `LZMA_NATIVE_STALE_SWEEP_RECORD_KEY` (a test reads the key
+ * from the binding static so drift turns it red). Never throws.
+ */
+function describeStaleExtractionSweep(): string | undefined {
+  const record = (globalThis as unknown as Record<symbol, unknown>)[
+    Symbol.for('gamelib.lzmaNative.staleSweep')
+  ]
+  if (typeof record !== 'object' || record === null) {
+    return undefined
+  }
+  const { examined, removed } = record as {
+    examined?: unknown
+    removed?: unknown
+  }
+  if (
+    typeof examined !== 'number' ||
+    typeof removed !== 'number' ||
+    !Number.isInteger(examined) ||
+    !Number.isInteger(removed) ||
+    examined < 0 ||
+    removed <= 0
+  ) {
+    return undefined
+  }
+  return (
+    `Swept ${removed} stale gamelib-lzma-native-* dir(s) from the OS temp ` +
+    `dir whose owning process had exited (${examined} probed; 261012-82w).`
+  )
 }
 
 async function resolveLzmaModule(): Promise<LzmaModule> {
@@ -413,6 +457,7 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
 
     decoderKind = 'native'
     const extraction = describeNativeExtraction()
+    const sweep = describeStaleExtractionSweep()
     logInfo(
       [
         'lzmaLoader: native lzma-native decoder engaged for Steam VZ depot',
@@ -426,13 +471,15 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
         "decode path (this debug arc's own prior defect, closed for the",
         "worker pool via decompressPool.ts's DecompressPool.init() logging)",
         'is caught without another forensic round-trip.',
-        ...(extraction ? [extraction] : [])
+        ...(extraction ? [extraction] : []),
+        ...(sweep ? [sweep] : [])
       ],
       LogPrefix.Steam
     )
     return adapter
   } catch (err) {
     decoderKind = 'pure-js'
+    const failureSweep = describeStaleExtractionSweep()
     logWarning(
       [
         'lzmaLoader: lzma-native failed to load or smoke-test-decode --',
@@ -445,7 +492,8 @@ async function resolveLzmaModule(): Promise<LzmaModule> {
         'liblzma.dll companion SEA asset the addon imports at dlopen)',
         "embedded correctly (meta/buildSidecarSea.ts's native-asset step)",
         'and that this platform/arch ships an lzma-native prebuild.',
-        `Cause: ${(err as Error)?.message ?? String(err)}.`
+        `Cause: ${(err as Error)?.message ?? String(err)}.`,
+        ...(failureSweep ? [failureSweep] : [])
       ],
       LogPrefix.Steam
     )

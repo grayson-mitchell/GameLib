@@ -1075,3 +1075,108 @@ describe('lzmaLoader engaged line: native extraction directory fragment (261011-
     }
   )
 })
+
+// 261012-82w: when the binding's win32 stale-extraction sweep removed dirs, the
+// engaged line (and the import-failure warning) say so, inside the existing
+// single log call. The key is read from the binding's own static so a literal
+// drift between binding and loader turns these red.
+describe('lzmaLoader log lines: stale extraction sweep sentence (261012-82w)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const bindingStatics = require('../depot/lzmaNativeBinding') as {
+    LZMA_NATIVE_STALE_SWEEP_RECORD_KEY: string
+  }
+  const registry = globalThis as unknown as Record<symbol, unknown>
+  const sweepSymbol = Symbol.for(
+    bindingStatics.LZMA_NATIVE_STALE_SWEEP_RECORD_KEY
+  )
+
+  beforeEach(() => {
+    resetLzmaLoaderForTests()
+    setNativeLzmaDecodeEnabledForTests(true)
+    mockedLogger.logInfo.mockClear()
+    mockedLogger.logWarning.mockClear()
+  })
+
+  afterEach(() => {
+    delete registry[sweepSymbol]
+    jest.resetModules()
+    jest.dontMock('lzma-native')
+    resetLzmaLoaderForTests()
+  })
+
+  function engagedText(): string {
+    expect(mockedLogger.logInfo).toHaveBeenCalledTimes(1)
+    expect(mockedLogger.logWarning).not.toHaveBeenCalled()
+    return mockedLogger.logInfo.mock.calls[0].flat(Infinity).join(' ')
+  }
+
+  it('K1: a { examined: 3, removed: 2 } record puts the sweep sentence in the single engaged logInfo call', async () => {
+    registry[sweepSymbol] = { examined: 3, removed: 2 }
+    await loadLzmaModule()
+
+    const text = engagedText()
+    expect(text).toContain('Swept 2 stale gamelib-lzma-native-* dir(s)')
+    expect(text).toContain('3 probed')
+  })
+
+  it.each([
+    ['removed: 0', { examined: 5, removed: 0 }],
+    ['no record', undefined]
+  ])('K2: %s leaves no sweep sentence', async (_label, record) => {
+    if (record !== undefined) {
+      registry[sweepSymbol] = record
+    }
+    await loadLzmaModule()
+
+    expect(engagedText()).not.toContain('stale gamelib-lzma-native-')
+  })
+
+  it.each([
+    ['x'],
+    [{ examined: '1', removed: 1 }],
+    [{ examined: 1, removed: -1 }],
+    [{ examined: 1, removed: 1.5 }]
+  ])(
+    'K3: a malformed record (%j) is ignored and the decoder is still native',
+    async (bad) => {
+      registry[sweepSymbol] = bad
+      await expect(loadLzmaModule()).resolves.toBeDefined()
+
+      expect(lzmaDecoderKind()).toBe('native')
+      expect(engagedText()).not.toContain('stale gamelib-lzma-native-')
+    }
+  )
+
+  it('K4: on the import-failure fallback path the sweep sentence is in the single logWarning call', async () => {
+    registry[sweepSymbol] = { examined: 1, removed: 1 }
+    jest.doMock('lzma-native', () => {
+      throw new Error('simulated lzma-native import failure')
+    })
+
+    let isolatedLoadLzmaModule: (() => Promise<LzmaModule>) | undefined
+    let isolatedLogWarning: jest.Mock | undefined
+
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const logger = require('backend/logger') as { logWarning: jest.Mock }
+      isolatedLogWarning = logger.logWarning
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const loader = require('../depot/lzmaLoader') as {
+        loadLzmaModule: () => Promise<LzmaModule>
+        setNativeLzmaDecodeEnabledForTests: (
+          enabled: boolean | undefined
+        ) => void
+      }
+      loader.setNativeLzmaDecodeEnabledForTests(true)
+      isolatedLoadLzmaModule = loader.loadLzmaModule
+    })
+
+    await isolatedLoadLzmaModule?.()
+
+    expect(isolatedLogWarning).toHaveBeenCalledTimes(1)
+    const text = (isolatedLogWarning?.mock.calls[0] ?? [])
+      .flat(Infinity)
+      .join(' ')
+    expect(text).toContain('Swept 1 stale gamelib-lzma-native-* dir(s)')
+  })
+})
