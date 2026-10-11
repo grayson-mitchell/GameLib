@@ -796,16 +796,15 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
     resetLzmaLoaderForTests()
   })
 
-  // ── Phase 23.1 plan 05, THIRD finding: native decode is now gated OFF by
-  // default (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- a real
-  // packaged SEA binary showed native resolution succeeding but a real-sized
-  // decode hanging, a failure class the smoke test below cannot catch. See
+  // ── Native decode is the SHIPPED DEFAULT (NATIVE_LZMA_DECODE_ENABLED=true,
+  // lzmaLoader.ts) since the operator's 2026-10-11 revision of the
+  // 2026-08-18 standing decision. The tests below that exercise the NATIVE
+  // adapter itself (byte-equivalence, the error path, decoderKind reporting
+  // 'native') still set the override to `true` explicitly, so they keep
+  // proving the adapter even if the switch is ever turned back off. The
+  // switch's own default-on and off-path behaviour is covered by its own
+  // dedicated describe block further below. History:
   // .planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md.
-  // The tests below that exercise the NATIVE adapter itself (byte-equivalence, the
-  // error path, decoderKind reporting 'native') explicitly re-enable it via
-  // setNativeLzmaDecodeEnabledForTests(true) -- proving the ADAPTER remains
-  // correct without flipping the shipped default. The gate's own default-off
-  // behavior is covered by its own dedicated describe block further below.
 
   it('loadLzmaModule() resolves an LzmaModule whose decompressChunk output is byte-identical to the pure-JS lzma package (native re-enabled for this test)', async () => {
     setNativeLzmaDecodeEnabledForTests(true)
@@ -926,15 +925,14 @@ describe('lzmaLoader (native-first decode with pure-JS fallback)', () => {
   })
 })
 
-// ── Phase 23.1 plan 05, THIRD finding: the native-decode kill switch itself
-// (NATIVE_LZMA_DECODE_ENABLED, lzmaLoader.ts) -- coordinator/human-operator
-// directed, 2026-08-18, after a real packaged SEA binary showed native
-// resolution succeeding but a real-sized decode hanging. Covers exactly the
-// property the plan's own fix depends on: by DEFAULT (no test override),
-// loadLzmaModule() must resolve to the pure-JS path WITHOUT ever attempting
-// to import/smoke-test lzma-native at all. See
+// ── The native-decode switch itself (NATIVE_LZMA_DECODE_ENABLED,
+// lzmaLoader.ts). Gated OFF on 2026-08-18 (coordinator/human-operator
+// directed), turned back ON by the operator's 2026-10-11 revision of that
+// standing decision. These tests pin the SHIPPED default (native, with no
+// override) and keep the off path covered through the test-only override, so
+// the lever documented in lzmaLoader.ts stays proven. History:
 // .planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md.
-describe('lzmaLoader native-decode kill switch (default-off, Phase 23.1 plan 05)', () => {
+describe('lzmaLoader native-decode switch (default-on since 2026-10-11, off path via test override)', () => {
   beforeEach(() => {
     resetLzmaLoaderForTests()
     mockedLogger.logInfo.mockClear()
@@ -945,14 +943,17 @@ describe('lzmaLoader native-decode kill switch (default-off, Phase 23.1 plan 05)
     resetLzmaLoaderForTests()
   })
 
-  it('loadLzmaModule() resolves to the pure-JS decoder by DEFAULT, with no override, even though native decode is available and importable on this dev machine', async () => {
+  it('loadLzmaModule() resolves to the NATIVE decoder by DEFAULT, with no override, logging the engaged line via logInfo exactly once and never logWarning', async () => {
     const resolved = await loadLzmaModule()
 
     expect(resolved).toBeDefined()
-    expect(lzmaDecoderKind()).toBe('pure-js')
+    expect(lzmaDecoderKind()).toBe('native')
+    expect(mockedLogger.logInfo).toHaveBeenCalledTimes(1)
+    expect(mockedLogger.logWarning).not.toHaveBeenCalled()
   })
 
-  it('the default-off gate logs via logWarning exactly once, naming the kill switch and the debug file, never logInfo (the native-success line must not fire while gated off)', async () => {
+  it('with the override set to false, the off path logs via logWarning exactly once, naming the switch and the debug file, never logInfo (the native-success line must not fire while off)', async () => {
+    setNativeLzmaDecodeEnabledForTests(false)
     await loadLzmaModule()
 
     expect(mockedLogger.logWarning).toHaveBeenCalledTimes(1)
@@ -963,16 +964,17 @@ describe('lzmaLoader native-decode kill switch (default-off, Phase 23.1 plan 05)
       .join(' ')
     expect(loggedText).toMatch(/NATIVE_LZMA_DECODE_ENABLED/)
     expect(loggedText).toMatch(/sea-native-lzma-real-chunk-decode-hang\.md/)
-    // Distinguishes the GATE's own message from the (still-real,
+    // Distinguishes the switch's own message from the (still-real,
     // still-tested-above) import/smoke-test-failure message -- a future
     // reader grepping gamelib.log must be able to tell "deliberately
     // disabled" apart from "tried and failed".
     expect(loggedText).not.toMatch(/failed to load or smoke-test-decode/)
   })
 
-  it('a real, correctly-formed VZ chunk still decodes correctly through the gated-off (pure-JS) path -- the kill switch must not break installs, only skip native', async () => {
+  it('a real, correctly-formed VZ chunk still decodes correctly through the switched-off (pure-JS) path -- the off switch must not break installs, only skip native', async () => {
+    setNativeLzmaDecodeEnabledForTests(false)
     const data = Buffer.from(
-      'kill-switch pure-JS round-trip fixture. '.repeat(20),
+      'off-switch pure-JS round-trip fixture. '.repeat(20),
       'utf8'
     )
     const compressed = await compressAsync(data)
@@ -981,15 +983,17 @@ describe('lzmaLoader native-decode kill switch (default-off, Phase 23.1 plan 05)
     const out = await decompressChunk(vzChunk, await loadLzmaModule())
 
     expect(out.equals(data)).toBe(true)
+    // Without this the round-trip could pass vacuously on native.
+    expect(lzmaDecoderKind()).toBe('pure-js')
   })
 
-  it('setNativeLzmaDecodeEnabledForTests(true) overrides the default for that test only, and resetLzmaLoaderForTests() clears the override back to off', async () => {
-    setNativeLzmaDecodeEnabledForTests(true)
+  it('setNativeLzmaDecodeEnabledForTests(false) overrides the default for that test only, and resetLzmaLoaderForTests() clears the override back to the shipped default (native)', async () => {
+    setNativeLzmaDecodeEnabledForTests(false)
     await loadLzmaModule()
-    expect(lzmaDecoderKind()).toBe('native')
+    expect(lzmaDecoderKind()).toBe('pure-js')
 
     resetLzmaLoaderForTests()
     await loadLzmaModule()
-    expect(lzmaDecoderKind()).toBe('pure-js')
+    expect(lzmaDecoderKind()).toBe('native')
   })
 })

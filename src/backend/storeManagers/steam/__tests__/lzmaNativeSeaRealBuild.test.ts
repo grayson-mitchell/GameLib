@@ -61,6 +61,12 @@
 // entry for the full record -- the gate is still a real, worthwhile fix
 // (lzma-native's own resolution is now provably correct), but it does NOT
 // make a packaged SEA install's worker-pool decode path safe end-to-end.
+//
+// 2026-10-11: the switch went back ON by operator revision of the
+// 2026-08-18 standing decision ("re-enable it, I'll do the Mac install
+// after"). The root cause of the 2026-08-18 hang is still unknown; the
+// details, the evidence and the turn-off steps are in `lzmaLoader.ts`'s
+// `NATIVE_LZMA_DECODE_ENABLED` doc comment.
 
 import type { ChildProcess } from 'node:child_process'
 import { execFileSync, spawn } from 'node:child_process'
@@ -209,19 +215,19 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // liveChildren/reapLiveChildren doc comment above for what this does and does not cover.
   afterAll(reapLiveChildren)
 
-  // Phase 23.1 plan 05, THIRD finding's own follow-up (coordinator/human-
-  // operator directed, 2026-08-18, same session): native decode is now
-  // gated OFF by default (NATIVE_LZMA_DECODE_ENABLED, lzmaLoader.ts) --
-  // see
+  // Native decode is ON by default again (2026-10-11 operator revision of
+  // the 2026-08-18 standing decision; NATIVE_LZMA_DECODE_ENABLED,
+  // lzmaLoader.ts -- see
   // `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`
-  // for why, and this file's own second test below (skipped when this comment
-  // was written; un-skipped and green since 2026-09-12) for the
-  // original finding this test used to assert against directly. With the
-  // gate in place, a real compiled SEA binary's pool must still spawn
-  // cleanly (the FIRST round's fix, unaffected by this gate) but must now
-  // report `nativeWorkers:0` -- proving the kill switch is honored
-  // end-to-end inside a genuinely compiled binary, not just in a jest mock.
-  test("the REAL compiled SEA binary's worker pool spawns cleanly, with native decode correctly gated OFF (inlineFallback=false, nativeWorkers=0)", async () => {
+  // for the history). A real compiled SEA binary's pool must spawn cleanly
+  // (the FIRST round's fix) AND report native engaged on every worker:
+  // `nativeWorkers` equal to the pool size. This asserts the shipped
+  // default end-to-end inside a genuinely compiled binary, not just in a
+  // jest mock. A SEA load fallback (pure-JS, e.g. the addon failing to
+  // dlopen) leaves `nativeWorkers` below `size` and turns this red. If the
+  // switch is ever turned back off, this expectation goes back to
+  // `toBe(0)` in the same commit (see lzmaLoader.ts's turn-off steps).
+  test("the REAL compiled SEA binary's worker pool spawns cleanly with native decode engaged on every worker (inlineFallback=false, nativeWorkers=size)", async () => {
     const result = await spawnCapture(
       binaryPath,
       [],
@@ -237,10 +243,7 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
 
     // Before round 1's fix, this self-test reported inlineFallback=true
     // (the worker-thread logger crash -- the pool never spawned at all).
-    // Before this gate landed, a fixed pool + fixed identity guard
-    // reported nativeWorkers=size (see this test's own prior assertion,
-    // git history) -- genuinely true, but native then hung on a
-    // real-sized decode (the still-open finding the gate exists for).
+    // With the switch ON, a healthy build reports nativeWorkers=size.
     expect(poolLine).toBeDefined()
     const stats = JSON.parse(poolLine!.slice('SELFTEST pool='.length)) as {
       size: number
@@ -248,7 +251,8 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
       nativeWorkers: number
     }
     expect(stats.inlineFallback).toBe(false)
-    expect(stats.nativeWorkers).toBe(0)
+    expect(stats.size).toBeGreaterThan(0)
+    expect(stats.nativeWorkers).toBe(stats.size)
   }, 30000)
 
   // CRITICAL CORRECTION, found while writing THIS test (2026-08-18, same
@@ -309,7 +313,14 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // whatever environmental signal is present instead. A skipped test could
   // never deliver that signal, which is the main reason this one is back
   // on.
-  test('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the gated (pure-JS) path', async () => {
+  //
+  // 2026-10-11: this test asserts NO codec -- it is the codec-agnostic
+  // recurrence detector for the 2026-08-18 hang, whichever decoder engages.
+  // With native ON this binary no longer exercises pure-JS. There is
+  // deliberately no env override, so the real-SEA pure-JS path is now
+  // covered only at unit level (`decompressPool.test.ts`'s off-path tests
+  // and the import-failure fallback tests).
+  test('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk (codec-agnostic recurrence detector for the 2026-08-18 hang)', async () => {
     const result = await spawnCapture(
       binaryPath,
       [],
@@ -378,56 +389,37 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   //     a genuinely compiled, postject-injected SEA binary process
   //     succeeded instead of reproducing it.
   //
-  // Left as `test.skip`, NOT deleted and NOT weakened to pass: per this
-  // debug arc's own standing lesson (a green suite is not evidence), this
-  // assertion set is the correct, still-true target -- it is the exact
-  // shape the coordinator asked this suite to prove. Skipping (rather than
-  // continuing to iterate blind against a ~15-20s-per-attempt real SEA
-  // rebuild cycle, or shipping an unverified guess-fix) is the honest
-  // record of where this investigation currently stands. Un-skip once a
-  // fix for THIS defect lands and is verified the same way (real compiled
-  // SEA binary, real self-test, real green run) -- not before.
+  // (The three paragraphs above and the isolation list are the HISTORICAL
+  // record of the investigation, kept because the arc matters. Everything
+  // below describes the current state.)
   //
-  // Full investigation narrative (this comment's own content, preserved),
-  // current status, and the criteria for safely re-enabling native decode
-  // (which this test's own pass is part of):
-  // `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`.
-  // That file is also linked directly from lzmaLoader.ts's own
-  // `NATIVE_LZMA_DECODE_ENABLED` kill-switch doc comment -- the two must be
-  // updated together if either changes.
+  // Full investigation narrative, current status, and the turn-off steps:
+  // `.planning/debug/resolved/sea-native-lzma-real-chunk-decode-hang.md`
+  // and lzmaLoader.ts's `NATIVE_LZMA_DECODE_ENABLED` doc comment. That file
+  // is linked from both -- the two must be updated together if either
+  // changes.
   //
-  // Requires native decode to be forced back on to even attempt
-  // reproducing the original finding (the gate above now makes the pool's
-  // OWN nativeWorkers read 0 unconditionally) -- there is deliberately no
-  // env-var override for the shipping kill switch (see lzmaLoader.ts's own
-  // doc comment for why), so exercising this specific case again requires
-  // a temporary, local, uncommitted flip of NATIVE_LZMA_DECODE_ENABLED to
-  // `true` before rebuilding, same as any other investigation step
-  // described in the debug file.
-  // STAYS SKIPPED 2026-09-12, and NOT for the reason above. Its sibling
-  // (the pure-JS case) was un-skipped on the same day after 20/20 green,
-  // so "KNOWN FAILING" is no longer why this one is off. Two independent
-  // reasons hold it:
+  // UN-SKIPPED 2026-10-11. This test used to be `test.skip` for two reasons
+  // (a standing operator decision keeping the switch false, and the
+  // liblzma 5.2.3 known-size+EOS alone-stream defect fixed in `b79765af2`
+  // but never exercised inside a real compiled SEA binary). Both are gone:
+  // the operator revised the decision on 2026-10-11 ("re-enable it, I'll do
+  // the Mac install after"), so native is the shipped default and no local
+  // flip is needed to run this; and `b79765af2`'s fix is now in the
+  // shipping path. The 2026-10-08 darwin-arm64 run (quick 261008-jvw)
+  // passed this exact case 20/20 at `nativeWorkers:2`.
   //
-  //   1. Running it at all requires a local, uncommitted flip of
-  //      `NATIVE_LZMA_DECODE_ENABLED` to `true`. That flip is under a
-  //      STANDING OPERATOR DECISION (2026-08-18, coordinator-directed):
-  //      the kill switch stays false and is not to be flipped without a
-  //      fresh recurrence and fresh diagnostics. A test cannot un-make
-  //      that decision, so this is not a measurement question.
-  //   2. The native path carries its own SEPARATE, later-diagnosed defect:
-  //      lzma-native@8.0.6 bundles liblzma 5.2.3, whose
-  //      `lzma_alone_decoder` rejects the known-size+EOS alone stream that
-  //      is the ONLY shape this codebase produces. Fixed in `b79765af2`
-  //      inside `createNativeAdapter()` -- but that fix has never been
-  //      exercised end-to-end inside a real compiled SEA binary, because
-  //      the kill switch has masked this path throughout.
+  // Distinct from the codec-agnostic test above: it also parses the
+  // `SELFTEST pool=` line and requires native engaged on EVERY worker in the
+  // SAME run as the real-sized decode, so a silent pure-JS fallback cannot
+  // pass it.
   //
-  // So the honest status is "gated off by decision, and unverified behind
-  // the gate", not "known failing". Re-enabling native decode needs both:
-  // the operator's call on the kill switch, AND a real green run of this
-  // test against a build that includes `b79765af2`.
-  test.skip('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path once the kill switch is (locally, temporarily) forced back on -- SKIPPED BY OPERATOR DECISION on NATIVE_LZMA_DECODE_ENABLED, not by known failure; see comment above', async () => {
+  // IF THIS GOES RED, IT IS NOT A FLAKE TO RETRY. A `decode=fail` /
+  // `decompress_pool_timeout` is the fresh recurrence of the 2026-08-18
+  // hang; capture diagnostics at that moment (full system state), then
+  // follow the turn-off steps. `nativeWorkers` below `size` with a passing
+  // decode is a native LOAD fallback, a different defect.
+  test('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path, with native engaged on every worker', async () => {
     const result = await spawnCapture(
       binaryPath,
       [],
@@ -437,10 +429,21 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
       })
     )
 
+    const poolLine = result.stdout
+      .split('\n')
+      .find((line) => line.startsWith('SELFTEST pool='))
     const decodeLine = result.stdout
       .split('\n')
       .find((line) => line.startsWith('SELFTEST decode='))
 
+    expect(poolLine).toBeDefined()
+    const stats = JSON.parse(poolLine!.slice('SELFTEST pool='.length)) as {
+      size: number
+      inlineFallback: boolean
+      nativeWorkers: number
+    }
+    expect(stats.size).toBeGreaterThan(0)
+    expect(stats.nativeWorkers).toBe(stats.size)
     expect(decodeLine).toBeDefined()
     expect(decodeLine).toContain('decode=ok')
     expect(decodeLine).toContain('match=true')

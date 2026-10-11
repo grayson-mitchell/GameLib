@@ -1,0 +1,14 @@
+label=native-win32 runs=20 expectNativeWorkers=2
+timestamp=2026-10-11T07:46:08.107Z
+HEAD=7255c2507b048e4ac05417a96905f443fd4fec4a
+git diff --stat -- src:
+(empty -- src matches HEAD)
+binary=C:\Users\grays\Projects\GameLib\src-tauri\binaries\gamelib-sidecar-x86_64-pc-windows-msvc.exe
+size=120994304 mtime=2026-10-11T07:46:01.074Z
+tmpdir=C:\Users\grays\AppData\Local\Temp
+tmpAddonsBefore=0
+| run | wall ms | exit | signal | nativeWorkers | inlineFallback | tmpAddons | decode line |
+| --- | ------- | ---- | ------ | ------------- | -------------- | --------- | ----------- |
+| 1 | 2753 | 0 | - | 0 | false | 0 | SELFTEST decode=ok bytes=65536 match=true |
+
+RESULT label=native-win32 pass=0/20 expectNativeWorkers=2

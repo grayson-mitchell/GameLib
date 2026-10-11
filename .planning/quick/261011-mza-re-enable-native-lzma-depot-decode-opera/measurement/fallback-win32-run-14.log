@@ -1,0 +1,19 @@
+run=14 wallMs=2297 exit=0 signal=null pass=true tmpAddons=0
+--- stdout ---
+[downloadQueueFlowRegistration] boot-time download-queue auto-resume is ENABLED (Phase 35 plan 11) and runs from appShellFlowRegistration.ts, not from this module — logger not yet initialized in this process, falling back to console
+SELFTEST pool={"size":2,"busy":0,"idle":2,"queued":0,"inlineFallback":false,"nativeWorkers":0}
+SELFTEST decode=ok bytes=65536 match=true
+
+--- stderr ---
+(node:8272) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-x86_64-pc-windows-msvc --trace-deprecation ...` to show where the warning was created)
+(node:8272) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-x86_64-pc-windows-msvc --trace-deprecation ...` to show where the warning was created)
+(node:8272) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+(Use `gamelib-sidecar-x86_64-pc-windows-msvc --trace-deprecation ...` to show where the warning was created)
+
+--- lzma/DecompressPool lines from *.log under the fake profile ---
+gamelib.log: (20:46:53) [WARNING]: [Steam]:           lzmaLoader: lzma-native failed to load or smoke-test-decode -- falling back to the pure-JS lzma package for THE REST OF THIS PROCESS. Decode will run at the pure-JS package's throughput (materially slower than native, see decompressWorker.ts's own header comment) but installs will still complete -- this fallback is a locked requirement, not a defect by itself. If unexpected, check that the lzma_native.node SEA asset embedded correctly (meta/buildSidecarSea.ts's native-asset step) and that this platform/arch ships an lzma-native prebuild. Cause: The specified module could not be found.
+gamelib.log: C:\Users\grays\AppData\Local\Temp\gamelib-lzma-native-8272-8f42b6b4965ce0ce.node.
+gamelib.log: (20:46:54) [WARNING]: [Steam]:           lzmaLoader: lzma-native failed to load or smoke-test-decode -- falling back to the pure-JS lzma package for THE REST OF THIS PROCESS. Decode will run at the pure-JS package's throughput (materially slower than native, see decompressWorker.ts's own header comment) but installs will still complete -- this fallback is a locked requirement, not a defect by itself. If unexpected, check that the lzma_native.node SEA asset embedded correctly (meta/buildSidecarSea.ts's native-asset step) and that this platform/arch ships an lzma-native prebuild. Cause: The specified module could not be found.
+gamelib.log: C:\Users\grays\AppData\Local\Temp\gamelib-lzma-native-8272-4100330bca5aabf6.node.

@@ -1,0 +1,7 @@
+os.tmpdir()=C:\Users\grays\AppData\Local\Temp
+gamelib-lzma-native-*.node before (pre-task, planning): 0
+before native-win32 run 1 (driver tmpAddonsBefore): 0
+after native arm (1 run, load failed): tmpAddons=0 (loader removes the extracted copy on the failure path)
+after fallback arm (20 runs): tmpAddons=0 every run
+after jest attempt: 0 files
+deleted by this task: 0

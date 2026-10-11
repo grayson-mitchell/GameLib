@@ -132,3 +132,15 @@ root_cause: "UNKNOWN / UNCONFIRMED -- NOT DISPROVEN. The original hang (`decompr
 fix: "None applied. The conservative kill-switch (`NATIVE_LZMA_DECODE_ENABLED=false` in `src/backend/storeManagers/steam/depot/lzmaLoader.ts`) is left in place, unchanged, as the shipped default. This routes all decode through the pure-JS `lzma` codec, which closes the narrower 'native binding resolves, then hangs' framing this arc started with (round 2's identity-guard fix is real and correct) but, per the evidence above, does NOT itself guarantee the pure-JS path is immune to the same unreproduced hang -- the pure-JS configuration also failed to reproduce it, but also never proved it structurally cannot occur. `lzmaNativeSeaRealBuild.test.ts`'s second test remains skipped, matching the kill-switch's own re-enable criteria (not all criteria items are satisfied -- see that file's own doc comment)."
 verification: "N/A -- closing as unreproduced, not as fixed. No behavioral change was shipped, so there is nothing to verify against the original symptoms. Standing recommendation for whoever reopens this: capture full system state (thermal, memory pressure, concurrent I/O, not just CPU load average) the next time `decompress_pool_timeout` is observed against a real packaged SEA binary in the field, since 40/40 brute-force reproduction attempts across two sessions could not recreate the original conditions."
 files_changed: []
+
+## Addendum (2026-10-11)
+
+Native LZMA decode was re-enabled by the operator's revision of the 2026-08-18 standing decision
+(quick 261011-mza, commit `7255c2507`: `NATIVE_LZMA_DECODE_ENABLED = true`, tests moved with it).
+The root cause of this hang is still UNKNOWN; this record stays `closed_unreproduced`, and
+re-enabling native does not claim otherwise (the hang reproduced with native off, so the switch
+never guarded against it). See the `## Resolution (2026-10-11)` section of
+`.planning/todos/completed/2026-10-08-native-lzma-decode-reenable-or-delete-needs-operator-decision.md`
+for the evidence and what is not claimed. The reopen instruction is unchanged: at the next
+`decompress_pool_timeout` against a real packaged SEA binary, capture full system state (thermal,
+memory pressure, concurrent I/O, not just CPU load) before anything else.
