@@ -190,6 +190,23 @@ function dispatchWindowEvent(type: string): void {
   windowListeners.get(type)?.forEach((cb) => cb())
 }
 
+// Zoom stub (quick 261012-gn8). Properties 1-25 run with NO `document` global; only the
+// zoom-aware describe block installs one, through `setRootZoom`. `rootZoomValue` is a variable,
+// not a constant, because later tests mutate it mid-test to model the preload publishing
+// `--webview-zoom` after `setZoom` resolves.
+let rootZoomValue = ''
+function setRootZoom(value: string): void {
+  rootZoomValue = value
+  ;(globalThis as unknown as { document: unknown }).document = {
+    documentElement: {
+      style: {
+        getPropertyValue: (name: string) =>
+          name === '--webview-zoom' ? rootZoomValue : ''
+      }
+    }
+  }
+}
+
 // D-30 persistence tests (below) need a real read/write surface: `localStorage` does not exist
 // under this project's `testEnvironment: 'node'` jest config at all (confirmed empirically --
 // referencing the bare identifier throws `ReferenceError: localStorage is not defined`), which
@@ -1149,5 +1166,89 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(fakeLocalStorage.get('last-url-gog')).toBe(
       'https://www.gog.com/en/game/foo'
     )
+  })
+
+  // ── Zoom-aware bounds (quick 261012-gn8, W8) ───────────────────────────────────────────────
+  //
+  // Windows live gate W8 (2026-10-12, zoom 120%): the embed sat displaced over the enlarged chrome.
+  // The renderer measures the slot in CSS px; Rust positions the child webview in LOGICAL px, and
+  // under webview zoom f, logical = CSS x f. Properties 1-25 run with NO `document` global at all
+  // (as the real `storeEmbedReloadLoop` suite does) and must stay unchanged; this block installs a
+  // stub document carrying a MUTABLE `--webview-zoom`, and removes it afterwards.
+  describe('zoom-aware bounds (quick 261012-gn8, W8)', () => {
+    const R = { x: 10, y: 20, width: 300, height: 400 }
+
+    beforeEach(() => {
+      setRootZoom('')
+    })
+
+    afterEach(() => {
+      delete (globalThis as unknown as { document?: unknown }).document
+    })
+
+    // Z0 control. Observed-red mutation: normalising an absent property to anything other than 1
+    // (e.g. 0, which would zero the rect) turns this red -- the 100% payload must be exactly what
+    // it was before this fix.
+    it('Z0. with the property absent the open payload is the unscaled rect, exactly', () => {
+      const { ref } = makeSlot(R)
+
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedOpen).toHaveBeenCalledWith(
+        'https://store.steampowered.com/',
+        { x: 10, y: 20, w: 300, h: 400 },
+        'steam'
+      )
+    })
+
+    // Z1. Observed-red mutation: sending `{ x: rect.x, ... }` verbatim (the pre-fix `flush()`) turns
+    // this red -- the open would carry the CSS rect at 120% zoom.
+    it('Z1. at zoom 1.2 the open payload is the CSS rect x 1.2', () => {
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+      const bounds = mockApi.storeEmbedOpen.mock.calls[0][1] as {
+        x: number
+        y: number
+        w: number
+        h: number
+      }
+      expect(bounds.x).toBeCloseTo(12)
+      expect(bounds.y).toBeCloseTo(24)
+      expect(bounds.w).toBeCloseTo(360)
+      expect(bounds.h).toBeCloseTo(480)
+    })
+
+    // Z2. Observed-red mutation: scaling only the open branch (leaving `setBounds` on the raw
+    // rect) turns this red -- the embed would be right on entry and wrong after the first resize.
+    it('Z2. at zoom 1.2 a later resize sends the new CSS rect x 1.2', () => {
+      setRootZoom('1.2')
+      const { ref, setRect } = makeSlot(R)
+
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+      mockApi.storeEmbedSetBounds.mockClear()
+
+      setRect({ x: 5, y: 15, width: 640, height: 480 })
+      MockResizeObserver.instances[0].trigger()
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
+      const bounds = mockApi.storeEmbedSetBounds.mock.calls[0][0] as {
+        x: number
+        y: number
+        w: number
+        h: number
+      }
+      expect(bounds.x).toBeCloseTo(6)
+      expect(bounds.y).toBeCloseTo(18)
+      expect(bounds.w).toBeCloseTo(768)
+      expect(bounds.h).toBeCloseTo(576)
+    })
   })
 })

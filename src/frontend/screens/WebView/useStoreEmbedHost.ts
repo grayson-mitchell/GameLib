@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
+import { readWebviewZoomFactor, scaleRectForZoom } from './storeEmbedZoom'
 
 /**
  * Store embed host hook (Phase 40 Plan 08, D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03).
@@ -18,8 +19,14 @@ import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
  * silently, so the only defence is structural, not a runtime check. This hook contains the ONE
  * `storeEmbedSetBounds` call site in the entire renderer (T-40-08-03), fed by nothing but
  * `slot.getBoundingClientRect()`. There is no fallback rect anywhere in this file: a missing slot
- * element sends nothing at all and only logs — computing a rect from `window.innerWidth/innerHeight`,
- * a CSS custom property, or a parent element's box would be a second writer wearing a disguise.
+ * element sends nothing at all and only logs.
+ *
+ * The rect's ONLY source is still that one call. Each field is then converted from CSS px to the
+ * logical px Rust positions in, by multiplying by the applied webview zoom (`--webview-zoom`,
+ * quick 261012-gn8 / W8; spike 017's 1:1 mapping was measured at zoom 1). That factor is a UNIT
+ * CONVERSION, not a geometry source: it never supplies, substitutes or defaults a rect. Computing
+ * the rect itself from `window.innerWidth/innerHeight`, a CSS custom property, or a parent
+ * element's box would still be the second writer wearing a disguise that D-18 forbids.
  */
 
 // Spike 017's measured bounds-sync interval (`tauri-embedded-store-browser.md`, "Bounds sync"
@@ -251,13 +258,17 @@ export function useStoreEmbedHost({
     let lastFlushAt = 0
 
     // The ONLY place in the renderer that reads a rect and sends bounds (grep-checked by this
-    // plan's own acceptance criteria). `slot.getBoundingClientRect()` is the sole input to both
-    // the initial `open()` and every later `setBounds()` — never `window.innerWidth/innerHeight`,
-    // a CSS custom property, or a parent element's box, not even as a fallback for a momentarily
-    // zero-sized slot.
+    // plan's own acceptance criteria). `slot.getBoundingClientRect()` is the sole SOURCE of both
+    // the initial `open()` and every later `setBounds()` rect — never `window.innerWidth/
+    // innerHeight` or a parent element's box, not even as a fallback for a momentarily zero-sized
+    // slot. The applied webview zoom (`--webview-zoom`) then converts that CSS-px rect into the
+    // logical px Rust positions in (quick 261012-gn8, W8). It is a unit conversion, read fresh on
+    // every flush and never cached, and it never supplies a rect of its own.
     const flush = () => {
-      const rect = slot.getBoundingClientRect()
-      const bounds = { x: rect.x, y: rect.y, w: rect.width, h: rect.height }
+      const bounds = scaleRectForZoom(
+        slot.getBoundingClientRect(),
+        readWebviewZoomFactor()
+      )
       if (!openedRef.current) {
         openedRef.current = true
         // CR-02: seed here so a slot that arrives AFTER a start-url change (e.g. cold start on
