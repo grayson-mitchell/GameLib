@@ -172,9 +172,12 @@ describe('each derived state renders its slot (D-10)', () => {
     expect(checkboxes(tree)).toHaveLength(0)
   })
 
-  it('errored: a danger icon, the Install failed tag and a Retry button, no checkbox', () => {
+  it('errored: an unchecked enabled checkbox, the danger icon, the Install failed tag and Retry', () => {
     const tree = mount(baseProps('errored'))
-    expect(checkboxes(tree)).toHaveLength(0)
+    const boxes = checkboxes(tree)
+    expect(boxes).toHaveLength(1)
+    expect(boxes[0].props['aria-checked']).toBe(false)
+    expect(boxes[0].props.disabled).toBeFalsy()
     expect(icons(tree)).toContain('circle-exclamation')
     expect(collectText(tree)).toContain('Install failed')
     expect(findByClass(tree, 'WinetricksRow__retry')).toHaveLength(1)
@@ -193,14 +196,14 @@ describe('each derived state renders its slot (D-10)', () => {
     }
   })
 
-  it('only the installed state has no checkbox among the five that could show one', () => {
+  it('only installed and installing have no checkbox among the six states (261011-txc: errored is now tickable)', () => {
     // Sanity: the generator produced the states it claims to, so the D-10
     // assertion above is not vacuous.
     expect(ALL_STATES).toHaveLength(6)
     const withBox = ALL_STATES.filter(
       (state) => checkboxes(mount(baseProps(state))).length === 1
     )
-    expect(withBox).toEqual(['available', 'selected', 'queued'])
+    expect(withBox).toEqual(['available', 'selected', 'queued', 'errored'])
   })
 })
 
@@ -215,6 +218,11 @@ describe('locked (a run is in flight or the backend is busy)', () => {
     expect(findByClass(tree, 'WinetricksRow__retry')[0].props.disabled).toBe(
       true
     )
+  })
+
+  it('disables an errored row checkbox (261011-txc)', () => {
+    const boxes = checkboxes(mount(baseProps('errored', { locked: true })))
+    expect(boxes[0].props.disabled).toBe(true)
   })
 
   it('leaves Retry enabled when not locked', () => {
@@ -273,6 +281,17 @@ describe('templates (E6 / E7)', () => {
 
   it('exposes the verb on the row root so a selection is identifiable by verb (D-07)', () => {
     expect(mount(baseProps('available')).props['data-verb']).toBe('vcrun2019')
+  })
+
+  it('shows the verb id as a text node in the title line, beside the title (261011-txc)', () => {
+    for (const state of ['available', 'errored', 'installed'] as const) {
+      const tree = mount(baseProps(state))
+      const titleLine = findByClass(tree, 'WinetricksRow__titleLine')[0]
+      const verbSpans = findByClass(titleLine, 'WinetricksRow__verb')
+      expect(verbSpans).toHaveLength(1)
+      expect(collectText(verbSpans[0])).toBe('vcrun2019')
+      expect(tree.props['data-verb']).toBe('vcrun2019')
+    }
   })
 })
 

@@ -192,6 +192,20 @@
     font-weight: var(--bold, 700);
   }
 
+  // Live gate 45-12 G5: two upstream rows both title as "MS GDI+" (`gdiplus`
+  // and `gdiplus_winxp`); the operator installed the wrong one. The verb id
+  // is the only unambiguous identifier, so every row shows it (261011-txc).
+  .WinetricksRow__verb {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: monospace;
+    font-size: var(--text-xs, 0.6875rem);
+    color: var(--text-secondary, #a8aeaf);
+  }
+
   .WinetricksRow__meta {
     flex: 0 3 auto;
     min-width: 0;
@@ -204,7 +218,7 @@
 
   // 261011-jj1: the badge shrinks at the title's weight rather than staying
   // rigid, so a long localised label (German is about 42 characters)
-  // truncates instead of painting over the fixed 12rem status slot. A lower
+  // truncates instead of painting over the fixed 13rem status slot. A lower
   // shrink factor would drive the title to zero width first, because the
   // title's own floor is `min-width: 0` -- the badge would then absorb the
   // whole remaining deficit while the title shows nothing. The full label
@@ -236,15 +250,16 @@
     color: var(--text-secondary, #a8aeaf);
   }
 
-  // Trailing status slot: fixed width sized to its widest content (the failed
-  // tag plus the Retry button) so no state ever reflows the row horizontally.
+  // Trailing status slot: fixed width sized to its widest content -- the
+  // danger icon, the failed tag and the Retry button -- so no state ever
+  // reflows the row horizontally.
   .WinetricksRow__status {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
     justify-content: flex-end;
     gap: var(--space-xs, 0.5rem);
-    width: 12rem;
+    width: 13rem;
     min-width: 0;
     font-size: var(--text-sm, 0.875rem);
     white-space: nowrap;

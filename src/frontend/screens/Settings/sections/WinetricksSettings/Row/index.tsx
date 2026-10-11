@@ -96,23 +96,28 @@ export default function WinetricksRow({
   let lead: ReactNode = null
   let status: ReactNode = null
 
+  // Shared checkbox lead, used by the available/selected/queued/errored
+  // states (the four states that can carry a tick). `aria-checked` and
+  // `disabled` differ per caller; everything else is identical.
+  const checkbox = (ariaChecked: boolean, disabled: boolean): ReactNode => (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={ariaChecked}
+      aria-labelledby={titleId}
+      disabled={disabled}
+      className="WinetricksRow__checkbox"
+      {...activate(() => onToggle(component.verb))}
+    >
+      <span className="WinetricksRow__box" aria-hidden="true" />
+    </button>
+  )
+
   switch (rowState) {
     case 'available':
     case 'selected':
     case 'queued': {
-      lead = (
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={rowState !== 'available'}
-          aria-labelledby={titleId}
-          disabled={rowState === 'queued' || locked}
-          className="WinetricksRow__checkbox"
-          {...activate(() => onToggle(component.verb))}
-        >
-          <span className="WinetricksRow__box" aria-hidden="true" />
-        </button>
-      )
+      lead = checkbox(rowState !== 'available', rowState === 'queued' || locked)
       break
     }
 
@@ -154,14 +159,16 @@ export default function WinetricksRow({
     }
 
     case 'errored': {
-      lead = (
-        <FontAwesomeIcon
-          icon={faCircleExclamation}
-          className="WinetricksRow__icon WinetricksRow__icon--errored"
-        />
-      )
+      // Tickable (261011-txc): a tick re-batches the verb for the next Apply
+      // (deriveRowState rule 4 -- selected now outranks errored); unticking
+      // returns it to errored because the error flag is untouched.
+      lead = checkbox(false, locked)
       status = (
         <>
+          <FontAwesomeIcon
+            icon={faCircleExclamation}
+            className="WinetricksRow__icon WinetricksRow__icon--errored"
+          />
           <span className="WinetricksRow__tag WinetricksRow__tag--errored">
             {tGamelib('winetricksBrowse.installFailedTag', 'Install failed')}
           </span>
@@ -209,6 +216,7 @@ export default function WinetricksRow({
           >
             {displayTitle(component.title)}
           </span>
+          <span className="WinetricksRow__verb">{component.verb}</span>
           {meta && <span className="WinetricksRow__meta">{meta}</span>}
           {component.cached && rowState !== 'installed' && (
             <span className="WinetricksRow__cached" title={cachedLabel}>

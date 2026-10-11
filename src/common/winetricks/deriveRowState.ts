@@ -59,14 +59,16 @@ export function deriveRowState(input: {
     return 'queued'
   }
 
-  // (4) Flagged by a prior run's failed outcome.
-  if (erroredVerbs[verb]) {
-    return 'errored'
-  }
-
-  // (5) Ticked for the next batch.
+  // (4) Ticked for the next batch -- a tick means "will be installed on
+  // Apply", so it outranks a prior failure; unticking returns the row to
+  // errored because the flag is untouched (quick 261011-txc).
   if (selected) {
     return 'selected'
+  }
+
+  // (5) Flagged by a prior run's failed outcome.
+  if (erroredVerbs[verb]) {
+    return 'errored'
   }
 
   // (6) Default.

@@ -695,12 +695,12 @@ describe('cached badge yields instead of overflowing (261011-jj1)', () => {
     expect('text-overflow' in decls).toBe(false)
   })
 
-  it('the status slot is unchanged: flex 0 0 auto, width 12rem', () => {
+  it('the status slot: flex 0 0 auto, width 13rem (261011-txc: room for icon, failed tag and Retry)', () => {
     const decls = effectiveDecls(
       parseRules(rowCss),
       '.WinetricksSettings .WinetricksRow__status'
     )
     expect(decls['flex']).toBe('0 0 auto')
-    expect(decls['width']).toBe('12rem')
+    expect(decls['width']).toBe('13rem')
   })
 })

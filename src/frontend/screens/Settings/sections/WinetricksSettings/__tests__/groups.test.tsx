@@ -523,6 +523,38 @@ describe('run state on the rows (D-10, D-12, D-13, D-18)', () => {
     ).not.toContain('WinetricksRow--errored')
   })
 
+  it('a failed row is tickable: ticking re-batches it with another verb, unticking returns it to failed (261011-txc)', async () => {
+    await mount()
+    capturedQueueChangedListener(api)(
+      {},
+      queueStateWith({
+        verbs: ['vcrun2019'],
+        outcomes: { vcrun2019: 'failed' },
+        status: 'done'
+      })
+    )
+    tick(rowFor(suggested(again()), 'vcrun2019'))
+    expect(
+      String(rowFor(suggested(again()), 'vcrun2019').props.className)
+    ).toContain('WinetricksRow--selected')
+
+    tick(rowFor(suggested(again()), 'vcrun2019'))
+    expect(
+      String(rowFor(suggested(again()), 'vcrun2019').props.className)
+    ).toContain('WinetricksRow--errored')
+
+    tick(rowFor(suggested(again()), 'vcrun2019'))
+    tick(rowFor(suggested(again()), 'vcrun2013'))
+    ;(applyButton(again()).props.onClick as () => void)()
+    await flush()
+
+    expect(api.winetricksApply).toHaveBeenCalledTimes(1)
+    expect(api.winetricksApply).toHaveBeenCalledWith('legendary', 'fake-app', [
+      'vcrun2019',
+      'vcrun2013'
+    ])
+  })
+
   it('a refused Retry leaves the row failed', async () => {
     api.winetricksApply.mockImplementation(() =>
       Promise.resolve({ accepted: false, reason: 'busy', detail: 'busy' })
