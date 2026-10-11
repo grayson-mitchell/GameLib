@@ -86,7 +86,8 @@ function emptyQueueState(
     appName,
     run: null,
     busy: false,
-    environment: { unsupportedWineVersion: null, missingDependencies: [] }
+    environment: { unsupportedWineVersion: null, missingDependencies: [] },
+    revision: 0
   }
 }
 
@@ -152,6 +153,10 @@ export default function WinetricksSettings() {
   // seeded for without re-subscribing.
   const latestRun = useRef<WinetricksQueueRun | null>(null)
   const seededRunId = useRef<number | null>(null)
+  // 261011-nqe: the highest `WinetricksQueueState.revision` this tab has
+  // applied. All four state sources (mount read, push, apply reply, cancel
+  // reply) go through `takeQueueState` below, which refuses to regress it.
+  const appliedRevision = useRef(0)
 
   // Mirrors `Tools/index.tsx`'s own early return: the parent
   // (`GamesSettings`) only mounts this component when `shouldShowWinetricksTab`
@@ -181,6 +186,28 @@ export default function WinetricksSettings() {
         ? { verb: run.currentVerb, percent: signal }
         : null
     )
+  }
+
+  // 261011-nqe: the one guard every state source (mount read, push, apply
+  // reply, cancel reply) goes through. The reply is snapshotted before the
+  // run's own pushes (planning_findings F1) and the two arrive by
+  // independent paths (invoke reply vs. `winetricksQueueChanged` event), so
+  // either order is possible at the renderer. A state whose `revision` is
+  // below what this tab has already applied is a stale message racing a
+  // fresher one that already won -- it is dropped. Equal revisions ARE
+  // applied: in production only the same snapshot can share a number, and
+  // every existing fixture carries revision 0, so this is a no-op for every
+  // state source that predates 261011-nqe.
+  function takeQueueState(state: WinetricksQueueState): boolean {
+    if (state.revision < appliedRevision.current) {
+      return false
+    }
+    appliedRevision.current = state.revision
+    latestRun.current = state.run
+    setQueueState(state)
+    seedLogFrom(state.run)
+    setErroredVerbs((current) => foldRunOutcomes(current, state.run))
+    return true
   }
 
   // C-1 / D-17 (Phase 44 remount lesson): this mount's ONLY condition is
@@ -302,10 +329,10 @@ export default function WinetricksSettings() {
       state: WinetricksQueueState
     ) {
       if (state.runner !== runner || state.appName !== appName) return
-      latestRun.current = state.run
-      setQueueState(state)
-      seedLogFrom(state.run)
-      setErroredVerbs((current) => foldRunOutcomes(current, state.run))
+      takeQueueState(state)
+      // Task 2 (261011-nqe) moves this check to read `latestRun.current`
+      // rather than this push's own `state.run`, so a stale done push cannot
+      // be the thing deciding whether to reload.
       if (
         state.run?.status === 'done' &&
         reloadedRunId.current !== state.run.runId
@@ -382,9 +409,7 @@ export default function WinetricksSettings() {
     })
     if (!result.ok) return
     if (result.value.accepted) {
-      latestRun.current = result.value.state.run
-      setQueueState(result.value.state)
-      seedLogFrom(result.value.state.run)
+      takeQueueState(result.value.state)
       setSelection([])
       // A fresh attempt started for these verbs, so a previous failure no
       // longer applies (D-15). Cleared only once the backend accepted the run:

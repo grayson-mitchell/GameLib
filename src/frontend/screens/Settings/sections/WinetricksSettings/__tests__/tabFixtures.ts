@@ -63,6 +63,7 @@ function emptyQueueState(): WinetricksQueueState {
   return {
     runner: RUNNER,
     appName: 'fake-app',
+    revision: 0,
     run: null,
     busy: false,
     environment: { unsupportedWineVersion: null, missingDependencies: [] }
