@@ -188,6 +188,172 @@ fn thread_kind() -> &'static str {
     }
 }
 
+
+// ─────────────── spike 024 runs 12+ (quick 261012-7f2): PRISTINE raw WKWebView arm ───────────────
+//
+// Run 11 (quick 261011-ws7) left ONE candidate standing: the Tauri-managed child webview itself.
+// The cheapest test of candidate 1 (Tauri's injected init scripts) is the construction the
+// shipped app already uses for Epic's LOGIN window -- `open_pristine_epic_login_window`
+// (`src-tauri/src/main.rs`): a webview-less `tauri::WindowBuilder` window with a raw `WKWebView`
+// attached by hand, so NO Tauri initialization script ever reaches the page. Ported here (minus
+// its OAuth-capture delegate and Cmd+V plumbing, which are irrelevant to a storefront) with one
+// deliberate difference: the store is `nonPersistentDataStore()`, fresh per window, so every arm
+// is a COLD jar by construction -- the shipped window's `defaultDataStore()` on this machine holds
+// the operator's signed-in Epic session, and a render there would be the warm-jar confound run 11
+// was built to exclude. Same ephemeral shape as run 11's Safari Private Window.
+
+/// `SPIKE_PRISTINE=1` enables PHASE P in the autorun.
+fn autorun_pristine() -> bool {
+    matches!(std::env::var("SPIKE_PRISTINE").as_deref(), Ok("1") | Ok("true"))
+}
+
+#[cfg(target_os = "macos")]
+thread_local! {
+    /// Main-thread-only slot for the live pristine arm: `Retained<WKWebView>` is not `Send`, and
+    /// every touch (build, read, probe, close) happens inside an `on_main` closure anyway.
+    static PRISTINE: std::cell::RefCell<Option<(tauri::Window, objc2::rc::Retained<objc2_web_kit::WKWebView>)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// The 024 probe body, shared by the child-embed arm (`probe_embed`) and the pristine arm.
+/// Exfiltrates by top-level navigation, never `fetch` (see `probe_embed`'s doc comment).
+fn probe_script(tag: &str) -> String {
+    format!(
+        r#"(function(){{
+  var out;
+  try {{
+    var names = ['isTauri','__TAURI__','__TAURI_INTERNALS__','ipc'];
+    var present = names.filter(function(k){{ return k in window; }});
+    var plug = Object.keys(window).filter(function(k){{
+      return k.indexOf('__TAURI_PLUGIN_') === 0 || k.indexOf('__TAURI_IIFE__') === 0;
+    }});
+    var t = ((document.body && document.body.innerText) || '').replace(/\s+/g,' ').trim().slice(0,300);
+    var res = [];
+    try {{ res = performance.getEntriesByType('resource').slice(-6).map(function(e){{ return e.name.replace(/^https?:\/\//,'').slice(0,70); }}); }} catch (e) {{}}
+    var nav = null;
+    try {{ var n = performance.getEntriesByType('navigation')[0]; nav = n ? {{ status: n.responseStatus, type: n.type, redirects: n.redirectCount }} : null; }} catch (e) {{}}
+    out = {{ href: location.href, title: document.title, globals: present,
+             plugins: plug, textHead: t, bodyLen: (document.body ? document.body.innerHTML.length : 0),
+             ready: document.readyState, docLen: document.documentElement.outerHTML.length,
+             head: (document.head ? document.head.innerHTML : '').replace(/\s+/g,' ').slice(0,900),
+             nav: nav, res: res }};
+  }} catch (e) {{ out = {{ err: String(e) }}; }}
+  location.href = 'http://localhost:17913/report?tag={tag}&ua=' + encodeURIComponent(navigator.userAgent) + '&probe=' + encodeURIComponent(JSON.stringify(out));
+}})();"#
+    )
+}
+
+/// MAIN THREAD ONLY. Builds the pristine window + raw WKWebView, loads `url`, parks both in
+/// `PRISTINE`. Returns the window number for `screencapture -l`.
+#[cfg(target_os = "macos")]
+fn pristine_create(app: &AppHandle, label: &str, url: &str, user_agent: Option<&str>) -> Result<serde_json::Value, String> {
+    use objc2_foundation::{NSString, NSURLRequest, NSURL};
+    use objc2_web_kit::{WKWebView, WKWebViewConfiguration, WKWebsiteDataStore};
+
+    let mtm = objc2::MainThreadMarker::new().ok_or("pristine_create: not on main thread")?;
+    let window = tauri::WindowBuilder::new(app, label)
+        .inner_size(900.0, 700.0)
+        .center()
+        .focused(true)
+        .theme(Some(tauri::Theme::Light))
+        .title(format!("pristine · {label}"))
+        .build()
+        .map_err(|e| format!("pristine_create: window build failed: {e}"))?;
+    let ns_view_ptr = window.ns_view().map_err(|e| format!("pristine_create: ns_view failed: {e}"))?;
+    // SAFETY: the content view of a window we hold a live handle to, on the main thread.
+    let ns_view: &objc2_app_kit::NSView = unsafe { &*(ns_view_ptr as *const objc2_app_kit::NSView) };
+    let frame = ns_view.frame();
+
+    let config = unsafe { WKWebViewConfiguration::new(mtm) };
+    let store = unsafe { WKWebsiteDataStore::nonPersistentDataStore(mtm) };
+    unsafe { config.setWebsiteDataStore(&store) };
+    let webview = unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
+    webview.setAutoresizingMask(
+        objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable
+            | objc2_app_kit::NSAutoresizingMaskOptions::ViewHeightSizable,
+    );
+    if let Some(ua) = user_agent {
+        unsafe { webview.setCustomUserAgent(Some(&NSString::from_str(ua))) };
+    }
+    ns_view.addSubview(&webview);
+
+    let nsurl = NSURL::URLWithString(&NSString::from_str(url)).ok_or("pristine_create: bad url")?;
+    let request = NSURLRequest::requestWithURL(&nsurl);
+    unsafe { webview.loadRequest(&request) };
+
+    let number = ns_window_number(&window);
+    PRISTINE.with(|slot| *slot.borrow_mut() = Some((window, webview)));
+    Ok(serde_json::json!({
+        "label": label, "url": url, "uaOverride": user_agent, "isolatedStore": "nonPersistentDataStore",
+        "tauriInjection": "none (raw WKWebView, no WebviewBuilder)", "windowNumber": number,
+    }))
+}
+
+/// MAIN THREAD ONLY. What the Rust side can see without touching the page: `title` and `URL`.
+#[cfg(target_os = "macos")]
+fn pristine_read() -> serde_json::Value {
+    PRISTINE.with(|slot| match &*slot.borrow() {
+        Some((_, webview)) => {
+            let title = unsafe { webview.title() }.map(|s| s.to_string());
+            let url = unsafe { webview.URL() }
+                .and_then(|u| u.absoluteString())
+                .map(|s| s.to_string());
+            let loading = unsafe { webview.isLoading() };
+            serde_json::json!({ "title": title, "url": url, "isLoading": loading })
+        }
+        None => serde_json::json!({ "error": "no pristine webview" }),
+    })
+}
+
+/// MAIN THREAD ONLY. Runs the 024 probe in the pristine page (navigation exfil to `/report`).
+#[cfg(target_os = "macos")]
+fn pristine_probe(tag: &str) -> serde_json::Value {
+    use objc2_foundation::NSString;
+    PRISTINE.with(|slot| match &*slot.borrow() {
+        Some((_, webview)) => {
+            let js = NSString::from_str(&probe_script(tag));
+            unsafe { webview.evaluateJavaScript_completionHandler(&js, None) };
+            serde_json::json!({ "ok": true })
+        }
+        None => serde_json::json!({ "error": "no pristine webview" }),
+    })
+}
+
+/// MAIN THREAD ONLY. Closes the pristine window and drops the webview (and its ephemeral store).
+#[cfg(target_os = "macos")]
+fn pristine_close() -> serde_json::Value {
+    match PRISTINE.with(|slot| slot.borrow_mut().take()) {
+        Some((window, webview)) => {
+            drop(webview);
+            match window.close() {
+                Ok(()) => serde_json::json!({ "closed": true }),
+                Err(e) => serde_json::json!({ "error": e.to_string() }),
+            }
+        }
+        None => serde_json::json!({ "error": "no pristine window" }),
+    }
+}
+
+/// Worker-thread helper: photograph a window by number into the spike directory.
+fn screenshot_window(number: Option<isize>, file_stem: &str) -> serde_json::Value {
+    let Some(number) = number else {
+        return serde_json::json!({ "error": "no window number" });
+    };
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join(format!("{file_stem}.png"));
+    let status = std::process::Command::new("screencapture")
+        .args(["-l", &number.to_string(), "-x", "-o"])
+        .arg(&path)
+        .status();
+    match status {
+        Ok(st) if st.success() => serde_json::json!({ "path": path.display().to_string() }),
+        Ok(st) => serde_json::json!({ "error": format!("screencapture exited {st}") }),
+        Err(e) => serde_json::json!({ "error": e.to_string() }),
+    }
+}
+
 // ─────────────────────────── commands ───────────────────────────
 
 struct State {
@@ -391,22 +557,7 @@ fn probe_embed(app: AppHandle, label: &str, tag: &str) -> Result<(), String> {
     let webview = app
         .get_webview(label)
         .ok_or_else(|| format!("no webview '{label}'"))?;
-    let script = format!(
-        r#"(function(){{
-  var out;
-  try {{
-    var names = ['isTauri','__TAURI__','__TAURI_INTERNALS__','ipc'];
-    var present = names.filter(function(k){{ return k in window; }});
-    var plug = Object.keys(window).filter(function(k){{
-      return k.indexOf('__TAURI_PLUGIN_') === 0 || k.indexOf('__TAURI_IIFE__') === 0;
-    }});
-    var t = ((document.body && document.body.innerText) || '').replace(/\s+/g,' ').trim().slice(0,300);
-    out = {{ href: location.href, title: document.title, globals: present,
-             plugins: plug, textHead: t, bodyLen: (document.body ? document.body.innerHTML.length : 0) }};
-  }} catch (e) {{ out = {{ err: String(e) }}; }}
-  location.href = 'http://localhost:17913/report?tag={tag}&ua=' + encodeURIComponent(navigator.userAgent) + '&probe=' + encodeURIComponent(JSON.stringify(out));
-}})();"#
-    );
+    let script = probe_script(tag);
     webview.eval(&script).map_err(|e| e.to_string())
 }
 
@@ -601,6 +752,63 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         list_webviews(app.clone(), state)
     }));
     step("0a list_webviews before anything (expect exactly ['main'])", &v);
+
+    // ── SPIKE 024 runs 12+ (quick 261012-7f2) ── PHASE P: the pristine arm. Runs BEFORE the
+    // child-embed phases so the embed's known challenge stays in the same run as a same-session
+    // NEGATIVE control, and the Steam control comes first so a dead network or broken harness
+    // cannot be misread as a pass. Each arm is its own window on its own fresh ephemeral store.
+    #[cfg(target_os = "macos")]
+    if autorun_pristine() {
+        let ua = std::env::var("SPIKE_PRISTINE_UA").ok().filter(|v| !v.trim().is_empty());
+        let run = std::env::var("SPIKE_RUN").unwrap_or_else(|_| "x".into());
+        log.log(
+            "autorun",
+            "=== PHASE P (024 runs 12+): PRISTINE raw WKWebView, cold nonPersistent store, zero Tauri injection ===",
+            serde_json::json!({ "uaOverride": ua, "run": run }),
+        );
+        for (tag, url, note) in [
+            ("steam", STEAM_STORE_URL, "POSITIVE CONTROL: known-good in the child embed (spike 016) and in Safari"),
+            ("epic-configured", EPIC_STORE_CONFIGURED_URL, "SUBJECT (the URL that would actually ship, www.epicgames.com)"),
+            ("epic-alt", EPIC_STORE_URL, "SUBJECT (store.epicgames.com -- the host run 1 measured)"),
+        ] {
+            let label = format!("pristine-{tag}");
+            log.log("autorun", "--- PHASE P arm ---", serde_json::json!({ "arm": tag, "url": url, "note": note }));
+            let (l, u, ua2) = (label.clone(), url.to_string(), ua.clone());
+            let v = on_main(Box::new(move |app| match pristine_create(&app, &l, &u, ua2.as_deref()) {
+                Ok(v) => v,
+                Err(e) => serde_json::json!({ "error": e }),
+            }));
+            step(&format!("Pa[{tag}] pristine_create (WindowBuilder + raw WKWebView, nonPersistentDataStore)"), &v);
+            if v.get("error").is_some() {
+                continue;
+            }
+            let number = v.get("windowNumber").and_then(|n| n.as_i64()).map(|n| n as isize);
+
+            // Same generous settle as the embed arm, then a second sample at ~40 s: run 11 read
+            // the Safari title at 25 s and 45 s, and runs 2-3 were still on the interstitial at
+            // 21 s -- two samples separate "slow" from "challenged".
+            std::thread::sleep(Duration::from_secs(20));
+            let v = on_main(Box::new(|_app| pristine_read()));
+            step(&format!("Pb[{tag}] title/url at 20 s"), &v);
+            let v = screenshot_window(number, &format!("shot-pristine-{tag}-run{run}-20s"));
+            step(&format!("Pb[{tag}] screenshot at 20 s"), &v);
+
+            std::thread::sleep(Duration::from_secs(20));
+            let v = on_main(Box::new(|_app| pristine_read()));
+            step(&format!("Pc[{tag}] title/url at 40 s"), &v);
+            let v = screenshot_window(number, &format!("shot-pristine-{tag}-run{run}-40s"));
+            step(&format!("Pc[{tag}] screenshot at 40 s"), &v);
+
+            let t = format!("pristine-{tag}");
+            let v = on_main(Box::new(move |_app| pristine_probe(&t)));
+            step(&format!("Pd[{tag}] probe (evaluateJavaScript + navigation exfil)"), &v);
+            std::thread::sleep(Duration::from_secs(5));
+
+            let v = on_main(Box::new(|_app| pristine_close()));
+            step(&format!("Pe[{tag}] close"), &v);
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    }
 
     log.log("autorun", "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===", serde_json::json!({ "spoofUa": autorun_spoof_ua(), "spoofUaEnv": std::env::var("SPIKE_SPOOF_UA").ok() }));
     let v = on_main(Box::new(|app| {

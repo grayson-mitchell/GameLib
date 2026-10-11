@@ -19,3 +19,22 @@ serde_json = "1"
 # Already in the tree via wry — used only to read NSWindow.windowNumber so the
 # autorun can hand `screencapture -l<id>` an exact window to photograph.
 objc2 = "0.6"
+# Quick 261012-7f2 (spike 024 runs 12+): a PRISTINE raw `WKWebView` arm -- the shipped
+# `open_pristine_epic_login_window` construction (`src-tauri/src/main.rs`) ported here on a
+# `nonPersistentDataStore()` so every window is a cold jar. Same crates, same pinned versions and
+# the same `default-features = false` discipline as `src-tauri/Cargo.toml`; all three are ALREADY
+# resolved in the shared `CARGO_TARGET_DIR`.
+objc2-foundation = "0.3.2"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+    "NSView",
+    "NSWindow",
+    "NSResponder",
+] }
+objc2-web-kit = { version = "0.3.2", default-features = false, features = [
+    "WKWebView",
+    "WKWebViewConfiguration",
+    "WKWebsiteDataStore",
+    "WKNavigation",
+    "block2",
+    "objc2-app-kit",
+] }

@@ -49,9 +49,14 @@ interface Props {
  *   rendered the store twice (run 11, quick 261011-ws7), so the IP and the
  *   jar are out as well: the gate is specific to the embedded webview. This
  *   is measured, not predicted; the follow-up todo closed WONTFIX on
- *   2026-09-15 and the 2026-10-11 runs appended to it, with the next step
- *   (the pristine login WKWebView pointed at the store) filed as its own
- *   todo. The copy stays restrained, never an accusation that Epic blocks
+ *   2026-09-15 and the 2026-10-11 runs appended to it. Runs 12-16 (quick
+ *   261012-7f2, 2026-10-12) then put a PRISTINE raw WKWebView -- no Tauri
+ *   injection, no add_child, cold store -- in the same process: challenged
+ *   0 of 10, rendered 6 of 10, while this child embed was challenged 10 of
+ *   10 alongside it. The gate is Tauri's webview construction; this panel
+ *   stays correct for the embed, and a separate pristine window is an
+ *   in-app path whose UX nobody has decided yet (filed). The copy stays
+ *   restrained, never an accusation that Epic blocks
  *   in-app browsing -- run 1 rendered the store fully; this edit does not
  *   change the user-facing copy. The Epic tile stays in
  *   `NavShell/components/StoresPanel/index.tsx` (D-08): a tile leading to a

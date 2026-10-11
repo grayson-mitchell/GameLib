@@ -75,3 +75,14 @@ have to move together, deliberately.
   as long as the gate stands. If Epic is ever un-gated they go inert — but **do not delete the keys
   from `public/locales/`**: `meta/i18nCatalogChurnGuard.ts` rejects any non-`gamelib.json` change
   there and asserts it against the live tree in `pnpm test:ci`.
+
+## 2026-10-12 — the blocker is now a decision, not a measurement (quick `261012-7f2`)
+
+Spike 024 runs 12–16: a pristine raw `WKWebView` (no Tauri injection, no `add_child`, cold store)
+renders the Epic store — 0 of 10 challenged, 6 rendered — with the `Sign in` button painted in
+the header (`shot-pristine-epic-configured-RENDERED-run13.png`), while the Tauri child embed is
+still challenged 10 of 10. So Epic browsing has an in-app path in a *separate pristine window*,
+not in this embed. This todo wakes only if that window (or a raw-WKWebView subview of the main
+window, the filed follow-up) is adopted for `/store/epic`; until someone decides that, `blocked`
+is still right. If it is adopted, the question here is unchanged but the surface is a raw
+`WKWebView`, so "intercept" means a native navigation delegate, not an `on_navigation` closure.

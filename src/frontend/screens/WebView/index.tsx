@@ -543,9 +543,15 @@ export default function WebView() {
   // same day) then ran the cold-jar control: a Safari Private Window on the SAME machine, IP
   // and WebKit rendered the store twice. So the IP and the jar are ruled out too, and the
   // discriminator is this embedded webview itself -- the gate is webview-side, not Epic's
-  // posture. The question is live again as a webview question; the next step is the pristine
-  // login WKWebView pointed at the store (todo 2026-10-11-epic-store-in-the-pristine-login-
-  // wkwebview-...), which does not touch this guard. Two honest limits survive: run 1
+  // posture. Quick 261012-7f2 (runs 12-16, 2026-10-12) then ran a PRISTINE raw WKWebView -- no
+  // Tauri init scripts, no add_child, cold ephemeral store -- in the same harness process: it was
+  // challenged 0 of 10 Epic arms and rendered 6 (the other 4 stalled mid-parse on the real store
+  // document, a separate unexplained observation), while the Tauri child embed in the same five
+  // runs was challenged 10 of 10. So the gate is Tauri's webview construction, this guard is
+  // still correct for THIS embed, and /store/epic has an in-app path in a separate pristine
+  // window -- whether that is acceptable UX is an open product decision, and whether a raw
+  // WKWebView subview of the MAIN window renders (the real embed shape) is the next filed todo.
+  // None of it touches this guard. Two honest limits survive: run 1
   // rendered, so this is not a capability question -- the store CAN render in a Tauri-managed
   // child webview; and anything behind sign-in
   // was deliberately untouched (D-07). None of this is a flat accusation that Epic blocks

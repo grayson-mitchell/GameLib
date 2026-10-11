@@ -3,10 +3,10 @@ spike: 024
 name: epic-store-in-embedded-child-webview
 type: standard
 validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected Tauri globals PRESENT, then observe whether Talon/Cloudflare blocks STORE browsing the way it blocks the LOGIN endpoint"
-verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers. Run 11 (2026-10-11): a Safari Private Window on the SAME IP and engine, cold jar, rendered both hosts twice — the discriminator is the embedded webview itself, not the IP, the UA or the jar
+verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers. Run 11 (2026-10-11): a Safari Private Window on the SAME IP and engine, cold jar, rendered both hosts twice — the discriminator is the embedded webview itself, not the IP, the UA or the jar. Runs 12–16 (2026-10-12), a PRISTINE raw WKWebView (zero Tauri injection, no add_child, cold ephemeral store) in the same harness process was challenged 0 of 10 Epic arms (6 rendered, 4 stalled mid-parse on the real store document) while the Tauri child webview in the same five runs was challenged 10 of 10 — the gate is Tauri's webview construction, and /store/epic has an in-app path in a pristine window
 run_date: 2026-09-15
-rerun_date: 2026-10-11
-runs: 11
+rerun_date: 2026-10-12
+runs: 16
 related: [013, 016, 017, 018]
 tags: [tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, macos]
 ---
@@ -177,6 +177,71 @@ one-off over `CGWindowListCopyWindowInfo`.
   `2026-10-11-epic-store-in-the-pristine-login-wkwebview-the-embed-challenge-is-webview-side`.
 
 
+### Runs 12–16 — the PRISTINE arm (2026-10-12, quick `261012-7f2`)
+
+**Never challenged. Zero of ten.** The todo run 11 filed asked for the shipped
+`open_pristine_epic_login_window` construction pointed at the store. The shipped window attaches
+to the process-durable `defaultDataStore()`, which on this machine is the operator's signed-in
+Epic jar — a render there would be the warm-jar confound run 11 was built to exclude — so the
+harness app got a port of that construction instead (`SPIKE_PRISTINE=1`, PHASE P): a webview-less
+`tauri::WindowBuilder` window, a raw `WKWebView` attached by hand via `objc2-web-kit`, on a fresh
+`nonPersistentDataStore()` per window. No `WebviewBuilder`, no `add_child`, no Tauri
+initialization script, no wry delegates. Same process, same IP, and the child-embed phases still
+run afterwards in the same run as a same-session negative control. Steam first, every time.
+
+| Run | `customUserAgent` | Steam (pristine) | `www.epicgames.com/store/en-US/` | `store.epicgames.com/en-US/` | Child embed, same run |
+|---|---|---|---|---|---|
+| 12 | Chrome 142 — the shipped `standardBrowserUserAgent()` stub | served | **stalled** (below) | **stalled** | challenged ×2 |
+| 13 | none (bare WebKit, no `Version/`, no `Safari/`) | served | **RENDERED** `bodyLen=127915`, `complete` | **RENDERED** `bodyLen=127809` | challenged ×2 |
+| 14 | none | served | **RENDERED** `bodyLen=127809` | **RENDERED** `bodyLen=127937`, `complete` | challenged ×2 |
+| 15 | Chrome 142 | served | **RENDERED** `bodyLen=121318`, `complete` | **stalled** | challenged ×2 |
+| 16 | none | served | **RENDERED** `bodyLen=127937`, `complete` | **stalled** | challenged ×2 |
+
+Ten pristine Epic arms: **0 challenged, 6 rendered, 4 stalled.** Ten child-embed Epic arms in the
+same five runs: **10 challenged** (`Just a moment...`, `bodyLen` 18.4 k, Turnstile navs). Steam
+served in all 20 arms. `shot-pristine-epic-configured-RENDERED-run13.png` and
+`shot-pristine-epic-alt-RENDERED-run14.png` are the store — header, `Sign in`, `Download`,
+`Discover ⌄`, the Kernel Hearts / Galactic Racer carousels, NZ$ prices;
+`shot-pristine-steam-control-run13.png` is the control. Titles and URLs were read from Rust
+(`WKWebView.title`/`URL`) at 20 s and 40 s before the probe touched the page; the rendered arms
+already carried the real title at 20 s.
+
+**The stall is not a challenge document, and it is not understood.** `shot-pristine-epic-alt-STALLED-blank-run16.png`
+is a white window. The probe read the real store document — `<meta name="host"
+content="store-web-…">`, `egstore-cache-hit`, `docLen` 938 k — with `document.readyState ===
+'loading'`, `document.body` empty (`bodyLen=0`), `isLoading` true, and the resource timeline still
+receiving `cdn2.unrealengine.com` key-art preloads at 40 s. The parser had not reached `<body>`.
+The initial `<title>` is `Epic Games Store | Official Site`; the rendered pages carry the long
+title the app sets after boot, which is how the two states are told apart from the title alone.
+A challenge document is 25.9 k with the `Just a moment...` title; this is a different thing. It
+hit both UAs and both hosts (`store.epicgames.com/en-US/` 3 of 5, the configured URL 1 of 5).
+Whether it completes given longer than 40 s was **not measured**.
+
+Two smaller things: a cold jar is redirected to `store.epicgames.com/?lang=en-US`, not the
+`/en-US/` the (warm-container) embed lands on — a first-visit locale hop, not a gate. And the UA
+is irrelevant in *both* directions now: the Chrome string rendered (run 15) and the bare WebKit
+string rendered (13, 14, 16), while runs 6–10 showed no UA saves the embed.
+
+**What this settles:**
+
+- **The gate is on Tauri's side of the webview.** Same process, same IP, same WebKit, cold jar
+  in both: the raw `WKWebView` is never challenged, the Tauri-managed child always is. Candidate 2
+  from run 11 (WKWebView-vs-Safari environment tells) is **refuted** — the pristine window is
+  still a `WKWebView` with no `window.safari`, sending WebKit's bare UA, and it is served.
+- **Candidates 1 and 3 are confirmed as a pair, not separated.** The pristine construction removes
+  Tauri's initialization scripts (`__TAURI__`, `__TAURI_INTERNALS__`, `ipc`, `isTauri`,
+  `__TAURI_IIFE__`) *and* the `add_child` attachment *and* wry's own delegates, script message
+  handlers and custom scheme handlers, all at once. The todo's result table called a render
+  "candidate 1 confirmed by elimination"; that is one step too far. The cheap separating test is a
+  raw `WKWebView` added as a subview of the **main** window's content view, beside Tauri's own
+  webview — which is also exactly the embed shape the product wants, so it is filed as the next
+  todo rather than a curiosity.
+- **`/store/epic` has an in-app path today**: a pristine window. D-05's *embed* decision stands on
+  its own terms (the Tauri child embed is still challenged 10 of 10); what is new is that a
+  separate pristine window renders the store, and whether that is acceptable Epic store UX is a
+  product decision nobody has taken. The 2026-09-15 sign-in-button todo's blocker is therefore a
+  decision, not a measurement.
+
 ## What IS established
 
 1. **The block is not the login fingerprint.** The injected globals — `isTauri`, `__TAURI__`,
@@ -197,6 +262,12 @@ one-off over `CGWindowListCopyWindowInfo`.
    WebKit, cold jar, real Safari: served, twice. Not the IP, not the UA (runs 6–10), not the jar
    (run 3 vs run 11). Item 1 above stands as a *fact* (globals present in the run that passed)
    but no longer as a *refutation* — see run 11 for why.
+6. **The challenge is specific to the Tauri-managed webview construction, not to WKWebView**
+   (runs 12–16, 2026-10-12). A raw `WKWebView` in the same process — no Tauri injection, no
+   `add_child`, no wry delegates, cold ephemeral store — was challenged 0 of 10 while the child
+   embed in the same runs was challenged 10 of 10. Six of the ten rendered the full store; the
+   other four stalled mid-parse on the real store document, which is a separate, unexplained
+   observation, not a challenge.
 
 ## What is NOT established
 
@@ -218,9 +289,16 @@ one-off over `CGWindowListCopyWindowInfo`.
   measurement defect as a known limitation does not stop it contaminating the next run.
 - ~~**Whether a different IP would clear it.**~~ — **moot after run 11.** A cold jar on *this*
   IP in real Safari is served, so the IP is not what is being judged. Runs 6–10 ruled the user
-  agent out. What is NOT established is **which property of the Tauri-managed child webview**
+  agent out. ~~What is NOT established is **which property of the Tauri-managed child webview**
   trips the challenge — the three candidates and the one-config-change test are listed under run
-  11.
+  11.~~ — **narrowed by runs 12–16.** Candidate 2 (WKWebView-vs-Safari tells) is out. Candidates
+  1 (Tauri's init scripts) and 3 (the `add_child` attachment and the rest of wry's webview
+  setup) are confirmed *together*; which of the two it is, or whether both are needed, is the
+  remaining question, and the raw-subview-in-the-main-window test under runs 12–16 separates
+  them.
+- **Why 4 of 10 pristine loads stalled** with the real store document half-parsed at 40 s
+  (`readyState=loading`, empty body, 938 k document), and whether they complete given longer.
+  Both UAs, both hosts; never a challenge document. Not measured past 40 s.
 
 ## Method notes worth keeping
 
@@ -255,6 +333,16 @@ Screenshots are window-targeted: read `windowNumber` from the run log, then
 `screencapture -l<id> -x shot.png` during the 6 s `SCREENSHOT WINDOW NOW` pause each arm logs.
 Change `identifier` in `tauri.conf.json` to force a fresh WKWebsiteDataStore.
 
+Pristine arm (quick `261012-7f2`, runs 12–16): `SPIKE_PRISTINE=1` adds PHASE P before the embed
+phases — Steam, then both Epic hosts, each in its own `WindowBuilder` window with a raw
+`WKWebView` on a fresh `nonPersistentDataStore()`. `SPIKE_PRISTINE_UA='<string>'` sets
+`customUserAgent` (unset = WebKit's own). `SPIKE_RUN=<n>` names the shots, which PHASE P takes
+itself (`screencapture -l`) at 20 s and 40 s into the spike directory as
+`shot-pristine-<arm>-run<n>-{20,40}s.png`. The probe reads title, URL, `readyState`, `docLen`,
+the head and the last six resource entries as well as the original fields. The logs committed
+as `run-12.log` … `run-16.log` have the IP and session ids redacted by hand; `events-export.json`
+is NOT updated by these runs (it carries the raw IP).
+
 ## Consequence for `/store/epic`
 
 **The gate stays; the reason for it changed.** Nothing shippable moved: the Tauri child embed is
@@ -265,10 +353,15 @@ challenged in 9 of 10 cold runs across four UAs (runs 2–10), so `/store/epic` 
 What is retired is the *explanation*. The 2026-09-15 WONTFIX rested on "the Turnstile cannot be
 cleared and the cause is Epic's posture or this IP"; quick `261011-w8j` ruled the UA out and quick
 `261011-ws7`'s run 11 ruled the IP and the jar out — a cold Safari Private Window on the same IP
-renders the store. **The discriminator is on our side**, in the embedded webview. The question is
-therefore live again, as a **webview-side** question, and the next step is one config change in
-code that already exists: point `open_pristine_epic_login_window` at the store URL (todo
-`2026-10-11-epic-store-in-the-pristine-login-wkwebview-…`). If that renders, Epic in-app browsing
-has a path (a pristine window, not the child embed, so D-05's embed decision still stands on its
-own terms). An earlier draft of this section said "permanently"; two earlier drafts stated
-reopen conditions that fired within a day. Re-run more than once and keep the Steam control.
+renders the store. **The discriminator is on our side**, in the embedded webview. Quick
+`261012-7f2` (runs 12–16, 2026-10-12) then ran the pristine construction — a raw `WKWebView` with
+no Tauri injection and no `add_child`, cold store — in the same harness process: **challenged 0 of
+10, rendered 6 of 10**, with the child embed challenged 10 of 10 alongside it. So Epic in-app
+browsing **has a path today**: a pristine window, not the child embed. D-05's embed decision
+still stands on its own terms. Two things are open, and both are filed: whether a separate
+pristine window is acceptable Epic store UX (a product decision, which is also what now blocks
+the 2026-09-15 sign-in-button todo), and whether a raw `WKWebView` added as a subview of the
+**main** window renders too — that is both the test that separates Tauri's init scripts from the
+`add_child` attachment and the embed shape the product actually wants. An earlier draft of this
+section said "permanently"; two earlier drafts stated reopen conditions that fired within a day.
+Re-run more than once and keep the Steam control.
