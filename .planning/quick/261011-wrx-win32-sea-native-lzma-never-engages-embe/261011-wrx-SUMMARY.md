@@ -64,6 +64,15 @@ node, so lzma-native loaded from node_modules and no SEA extraction happened (te
 proves the depot path and native engagement on Windows, not the SEA embedding; item 2 (the same
 install in the packaged app, expecting the `SEA extraction dir` sentence and 2 temp dirs) stays owed.
 
+Live Steam depot install on win32, PACKAGED release app (2026-10-12 05:39, `target/release/gamelib-shell.exe`
+with the SEA `gamelib-sidecar.exe`, pid 37008): Avernum: Escape From the Pit (appId 208400), 167,212,244
+bytes in 27.4 s, StateFlags=4 manifest written, badge flipped to installed. `gamelib.log` carries the
+engaged line 16 times (one per decode worker), every one ending `SEA extraction dir
+<TEMP>/gamelib-lzma-native-37008-XXXXXX was LEFT BEHIND`, and zero fallback or import-failure
+warnings. Temp afterwards: 16 `gamelib-lzma-native-37008-*` dirs, one with both files and 15
+addon-only, about 13 MB for the process lifetime. Item 2 is discharged; the fix is confirmed end to
+end on the packaged Windows app.
+
 ## Deviations from Plan
 
 None to the code. The todo was closed via the plan's "skipped" branch (unit evidence only), with the Resolution stating plainly that the real-SEA run is owed. The follow-up accumulation todo was filed because STEP 3 did not run.
@@ -71,7 +80,7 @@ None to the code. The todo was closed via the plan's "skipped" branch (unit evid
 ## Owed to the operator
 
 1. DONE 2026-10-12: cold build plus the native-win32 driver run, 20/20 at `nativeWorkers:2`, engaged line in every log, no import-failure warning (see Live run above).
-2. A live Steam depot install in the packaged Windows app (`gamelib.log` should show the engaged line with its `SEA extraction dir` sentence).
+2. DONE 2026-10-12: Avernum: Escape From the Pit depot-installed in the packaged release app, 16/16 workers engaged via the SEA extraction dir, no fallback (see Live run above).
 3. The accumulate-or-sweep decision: `.planning/todos/pending/2026-10-12-win32-native-lzma-extraction-dirs-accumulate-in-temp.md`.
 4. ubuntu CI's `lzmaNativeSeaRealBuild.test.ts` (unedited) is the first linux real-SEA run of the mkdtemp path.
 

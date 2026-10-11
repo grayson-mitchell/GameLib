@@ -23,6 +23,11 @@ Sizes to expect per directory: `node.napi.node` 815,616 B plus `liblzma.dll` 150
 directories (before 0, after 40), two per sidecar process, one per worker: the first worker's dir keeps both files (966 KB); the second worker's dir keeps only `node.napi.node` (816 KB), because Windows had already mapped `liblzma.dll` by name from the first dir and reused it, so the second copy was never mapped and the `finally` unlinked it. 35 MB
 in total. Every engaged line said `was LEFT BEHIND`. Those 40 were removed by hand afterwards.
 
+Real-app figure (packaged release app, 2026-10-12): one depot install spun up 16 decode workers in the
+single sidecar process (pool = min(os.cpus().length, DECOMPRESS_POOL_MAX_WORKERS) on a 20-core box), so
+16 directories (one with both files, 15 addon-only), about 13 MB, per app session that decodes a depot.
+They stay until the sidecar exits and are never reclaimed by the app.
+
 ## How to measure
 
 Run the 261011-wrx driver (command in the closed todo's Resolution). It writes

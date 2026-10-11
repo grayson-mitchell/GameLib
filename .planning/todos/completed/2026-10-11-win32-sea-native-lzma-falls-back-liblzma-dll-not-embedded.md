@@ -110,7 +110,7 @@ Cold `pnpm build:sidecar-sea` with the app closed, then the driver exactly as ab
   hand after the run (no process held them). The decision stays with the accumulation todo.
 - The rebuilt binary grew from 120,994,304 to 121,159,680 bytes, consistent with the embedded DLL.
 
-Still owed: item 2 (a live Steam depot install in the packaged Windows app) and item 3.
+Item 2 discharged below; item 3 (the accumulation decision) stays with its todo.
 
 Live Steam depot install on win32, dev build (2026-10-12 05:25): Avernum 5 (appId 206040) with
 "Download Steam games directly in GameLib" on. 1460 files, 92,315,962 bytes, 16.7 s download, badge
@@ -119,3 +119,12 @@ fallback or import-failure warnings. This was the `pnpm tauri:dev` shell with th
 node, so lzma-native loaded from node_modules and no SEA extraction happened (temp census 0). It
 proves the depot path and native engagement on Windows, not the SEA embedding; item 2 (the same
 install in the packaged app, expecting the `SEA extraction dir` sentence and 2 temp dirs) stays owed.
+
+Live Steam depot install on win32, PACKAGED release app (2026-10-12 05:39, `target/release/gamelib-shell.exe`
+with the SEA `gamelib-sidecar.exe`, pid 37008): Avernum: Escape From the Pit (appId 208400), 167,212,244
+bytes in 27.4 s, StateFlags=4 manifest written, badge flipped to installed. `gamelib.log` carries the
+engaged line 16 times (one per decode worker), every one ending `SEA extraction dir
+<TEMP>/gamelib-lzma-native-37008-XXXXXX was LEFT BEHIND`, and zero fallback or import-failure
+warnings. Temp afterwards: 16 `gamelib-lzma-native-37008-*` dirs, one with both files and 15
+addon-only, about 13 MB for the process lifetime. Item 2 is discharged; the fix is confirmed end to
+end on the packaged Windows app.
