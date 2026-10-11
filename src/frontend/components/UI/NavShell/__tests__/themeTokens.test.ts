@@ -1236,4 +1236,56 @@ describe('Library sign-in row text contrast in every theme (F-49-R1-6)', () => {
   it("every foreground on the row inherits the row's text colour", () => {
     expect(signInForegroundsNotInheriting(noticeScss)).toEqual([])
   })
+
+  it("the pre-fix pair reproduces the operator's live verdicts", () => {
+    // The LITERAL pre-fix colour, resolved against the row's authored
+    // background through the SAME themeTokens + globals + resolveValue path the
+    // gate above uses. nord_light was judged fail on the live gate;
+    // midnightMirage, gruvbox_dark and dracula were judged pass. Only the side
+    // of 4.5 matters, not the exact ratio a pixel capture would give.
+    const OLD_ROW_COLOR = 'var(--text-default)'
+    const background = declsAtDepthZero(rowBody, 'background')[0] ?? ''
+    const expected = [
+      ['body.nord-light', 'fail'],
+      ['body.midnightMirage', 'pass'],
+      ['body.gruvbox_dark', 'pass'],
+      ['body.dracula', 'pass']
+    ] as const
+    for (const [selector, verdict] of expected) {
+      const scope = themeTokens(themesScss, selector)
+      const fg = resolveValue(OLD_ROW_COLOR, scope, globals)
+      const bg = resolveValue(background, scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      // Object form so a failure names the theme and the measured ratio.
+      expect({
+        selector,
+        ratio,
+        verdict: ratio >= 4.5 ? 'pass' : 'fail'
+      }).toEqual({ selector, ratio, verdict })
+    }
+  })
+
+  it('checker can fail: restoring a pre-fix foreground is caught, in memory only', () => {
+    // The tokenCensus.test.ts sabotage idiom: mutate a STRING copy, never the
+    // file on disk. split/join rather than replaceAll so the tsconfig lib
+    // target cannot matter. The counts first, so the sabotage is not vacuous.
+    expect(noticeScss.split('color: inherit').length - 1).toBe(3)
+    expect(noticeScss.split('background-color: transparent').length - 1).toBe(1)
+    const colourSabotaged = noticeScss
+      .split('color: inherit')
+      .join('color: var(--text-default)')
+    expect(signInForegroundsNotInheriting(colourSabotaged)).toEqual([
+      '&__row .button.is-footer color',
+      '&__row--notConnected .LibrarySignInNotice__icon color',
+      '&__dismiss color'
+    ])
+    const fillSabotaged = noticeScss
+      .split('background-color: transparent')
+      .join('background-color: var(--primary)')
+    expect(signInForegroundsNotInheriting(fillSabotaged)).toEqual([
+      '&__row .button.is-footer background-color'
+    ])
+  })
 })
