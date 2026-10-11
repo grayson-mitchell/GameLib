@@ -5,7 +5,8 @@
  * No jsdom / react-test-renderer is installed in this project (see
  * `src/frontend/jest.config.js` docstring) -- `Dropdown` is invoked directly
  * as a plain function against a hand-rolled `useState` harness (the pattern
- * established by `NavShell/__tests__/DownloadsRing.test.tsx`), and its
+ * established by the since-deleted `NavShell/__tests__/DownloadsRing.test.tsx`,
+ * now carried by `DownloadsTabIcon.test.tsx`), and its
  * returned React-element object graph is inspected without a DOM. The
  * `tsconfig.json` `jsx: "react-jsx"` automatic runtime means JSX element
  * creation goes through `react/jsx-runtime`, not the mocked `react` module,

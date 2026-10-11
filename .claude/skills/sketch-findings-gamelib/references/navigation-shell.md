@@ -91,6 +91,8 @@ Downloads has live progress and an active count. It is **not** a tab and **not**
 it sits top-right as a conic-gradient progress ring with a count beside it. You glance at it; you
 do not browse to it.
 
+> **Reversed 2026-10-12 by user decision (quick task 261012-dhs).** Downloads is now a tier-1 tab, the fourth, between Stores and Settings (`tab-3`; Settings moved to `tab-4`). The navbar ring (`DownloadsRing`) is deleted. The tab carries a queue-count badge (`NavShell/components/DownloadsTabIcon`). Live progress moved onto the Download Manager page as a Steam-style cover-art hero under one edge-to-edge progress bar. `/download-manager` lights the Downloads tab and collapses tier 2, which has no panel for it. The paragraph above is kept as the original decision record; do not restore the ring or re-argue the tab without a new user decision.
+
 ### 7. A "More" overflow menu was rejected
 
 Promoting five tabs and hiding nine behind `⋯` is the simplest build, but navigating into a hidden
@@ -175,6 +177,8 @@ background, and `top: 1px` pulls it down over the navbar's bottom border.
 
 ### Downloads progress ring
 
+Retired 2026-10-12 (quick 261012-dhs): the component is deleted; the recipe is kept for the record only.
+
 Pure CSS, no SVG. The `::after` inset must be filled with the **navbar** colour, so it changes
 with the theme.
 
@@ -256,7 +260,7 @@ matching `id="tab-{index}"`.
 - **Do not add a `⋯` overflow menu** — it produces a state with no tab lit.
 - **Do not "fix" the 204px shift on Manage Accounts.** It is a recorded decision; the fix
   (always-populated panels) permanently narrows the Games grid.
-- **Do not make Downloads a tab.** Ambient progress ≠ destination.
+- **Downloads IS a tab (reversed 2026-10-12, quick 261012-dhs, user decision)** — the fourth tier-1 tab, `tab-3`. Do not reintroduce the navbar ring.
 - **Do not introduce a new tab library.** MUI `<Tabs>/<Tab>` is already a dependency and already
   in use; `components/UI/TabPanel/index.tsx` already exists.
 - **Do not test only in `midnightMirage`.** Two of three sketch themes exist to catch what it hides.
