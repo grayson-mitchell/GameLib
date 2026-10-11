@@ -4,7 +4,7 @@ title: 'Epic''s in-embed "Sign in" button has no decided behaviour — intercept
 area: webview/store-embed
 severity: minor
 platform: any
-ready: blocked
+ready: human
 status: OPEN
 found_by: 'quick-260915-hza, 2026-09-15 — split out of the /store/epic Turnstile todo when that closed WONTFIX. It was the "second decision, separable" in that todo and was deliberately never actioned there.'
 blocked_by: '/store/epic is gated off the embed entirely (WONTFIX, 2026-09-15). This surface is UNREACHABLE by users today, so there is nothing to fix and nothing to verify. Unblocks only if Epic browsing is un-gated — see "What would unblock this".'
@@ -86,3 +86,12 @@ not in this embed. This todo wakes only if that window (or a raw-WKWebView subvi
 window, the filed follow-up) is adopted for `/store/epic`; until someone decides that, `blocked`
 is still right. If it is adopted, the question here is unchanged but the surface is a raw
 `WKWebView`, so "intercept" means a native navigation delegate, not an `on_navigation` closure.
+
+## 2026-10-12 — awake, `ready: human` (quick `261012-8gu`)
+
+Spike 024 runs 17–19: the raw `WKWebView` renders the Epic store **inside the main window** at the
+embed rect, 0 of 6 challenged, `Sign in` painted. The embed shape exists; what it waits on is the
+decision to adopt a Rust-managed raw `WKWebView` for `/store/epic` (a different construction from
+D-05's wording) and the cold-load stall todo. If adopted, "intercept" here is a native
+`WKNavigationDelegate` on that subview — the `open_pristine_epic_login_window` delegate is the
+in-repo precedent — not an `on_navigation` closure.

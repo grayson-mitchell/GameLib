@@ -211,7 +211,9 @@ fn autorun_pristine() -> bool {
 thread_local! {
     /// Main-thread-only slot for the live pristine arm: `Retained<WKWebView>` is not `Send`, and
     /// every touch (build, read, probe, close) happens inside an `on_main` closure anyway.
-    static PRISTINE: std::cell::RefCell<Option<(tauri::Window, objc2::rc::Retained<objc2_web_kit::WKWebView>)>> =
+    /// Third field: whether PHASE P built the window itself (close it) or borrowed the MAIN
+    /// window (`SPIKE_PRISTINE_INMAIN=1`, quick 261012-8gu -- remove the subview, keep the window).
+    static PRISTINE: std::cell::RefCell<Option<(tauri::Window, objc2::rc::Retained<objc2_web_kit::WKWebView>, bool)>> =
         const { std::cell::RefCell::new(None) };
 }
 
@@ -246,32 +248,52 @@ fn probe_script(tag: &str) -> String {
 /// MAIN THREAD ONLY. Builds the pristine window + raw WKWebView, loads `url`, parks both in
 /// `PRISTINE`. Returns the window number for `screencapture -l`.
 #[cfg(target_os = "macos")]
-fn pristine_create(app: &AppHandle, label: &str, url: &str, user_agent: Option<&str>) -> Result<serde_json::Value, String> {
-    use objc2_foundation::{NSString, NSURLRequest, NSURL};
+fn pristine_create(app: &AppHandle, label: &str, url: &str, user_agent: Option<&str>, in_main: bool) -> Result<serde_json::Value, String> {
+    use objc2_foundation::{NSPoint, NSRect, NSSize, NSString, NSURLRequest, NSURL};
     use objc2_web_kit::{WKWebView, WKWebViewConfiguration, WKWebsiteDataStore};
 
     let mtm = objc2::MainThreadMarker::new().ok_or("pristine_create: not on main thread")?;
-    let window = tauri::WindowBuilder::new(app, label)
-        .inner_size(900.0, 700.0)
-        .center()
-        .focused(true)
-        .theme(Some(tauri::Theme::Light))
-        .title(format!("pristine · {label}"))
-        .build()
-        .map_err(|e| format!("pristine_create: window build failed: {e}"))?;
+    // Quick 261012-8gu (runs 17+): `in_main` attaches the raw WKWebView as a subview of the MAIN
+    // window's content view -- beside Tauri's own webview, at the child embed's exact rect -- so
+    // the attachment variable is put back while the injection variable stays removed. The two
+    // were confirmed as a pair by runs 12-16; this separates them, and it is also the embed shape
+    // the product wants.
+    let window = if in_main {
+        app.get_window("main").ok_or("pristine_create: no main window")?
+    } else {
+        tauri::WindowBuilder::new(app, label)
+            .inner_size(900.0, 700.0)
+            .center()
+            .focused(true)
+            .theme(Some(tauri::Theme::Light))
+            .title(format!("pristine · {label}"))
+            .build()
+            .map_err(|e| format!("pristine_create: window build failed: {e}"))?
+    };
     let ns_view_ptr = window.ns_view().map_err(|e| format!("pristine_create: ns_view failed: {e}"))?;
     // SAFETY: the content view of a window we hold a live handle to, on the main thread.
     let ns_view: &objc2_app_kit::NSView = unsafe { &*(ns_view_ptr as *const objc2_app_kit::NSView) };
-    let frame = ns_view.frame();
+    let frame = if in_main {
+        // The child embed's rect (`290,96 760x560` logical, top-left origin). AppKit content
+        // views are bottom-left unless flipped; tao's view may be either, so ask.
+        let bounds = ns_view.bounds();
+        let (x, y, w, h) = (290.0, 96.0, 760.0, 560.0);
+        let origin_y = if ns_view.isFlipped() { y } else { bounds.size.height - y - h };
+        NSRect::new(NSPoint::new(x, origin_y), NSSize::new(w, h))
+    } else {
+        ns_view.frame()
+    };
 
     let config = unsafe { WKWebViewConfiguration::new(mtm) };
     let store = unsafe { WKWebsiteDataStore::nonPersistentDataStore(mtm) };
     unsafe { config.setWebsiteDataStore(&store) };
     let webview = unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
-    webview.setAutoresizingMask(
-        objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable
-            | objc2_app_kit::NSAutoresizingMaskOptions::ViewHeightSizable,
-    );
+    if !in_main {
+        webview.setAutoresizingMask(
+            objc2_app_kit::NSAutoresizingMaskOptions::ViewWidthSizable
+                | objc2_app_kit::NSAutoresizingMaskOptions::ViewHeightSizable,
+        );
+    }
     if let Some(ua) = user_agent {
         unsafe { webview.setCustomUserAgent(Some(&NSString::from_str(ua))) };
     }
@@ -282,10 +304,13 @@ fn pristine_create(app: &AppHandle, label: &str, url: &str, user_agent: Option<&
     unsafe { webview.loadRequest(&request) };
 
     let number = ns_window_number(&window);
-    PRISTINE.with(|slot| *slot.borrow_mut() = Some((window, webview)));
+    let frame_json = serde_json::json!({ "x": frame.origin.x, "y": frame.origin.y, "w": frame.size.width, "h": frame.size.height, "flipped": ns_view.isFlipped() });
+    PRISTINE.with(|slot| *slot.borrow_mut() = Some((window, webview, !in_main)));
     Ok(serde_json::json!({
         "label": label, "url": url, "uaOverride": user_agent, "isolatedStore": "nonPersistentDataStore",
         "tauriInjection": "none (raw WKWebView, no WebviewBuilder)", "windowNumber": number,
+        "attachment": if in_main { "subview of the MAIN window's content view" } else { "own WindowBuilder window" },
+        "frame": frame_json,
     }))
 }
 
@@ -293,7 +318,7 @@ fn pristine_create(app: &AppHandle, label: &str, url: &str, user_agent: Option<&
 #[cfg(target_os = "macos")]
 fn pristine_read() -> serde_json::Value {
     PRISTINE.with(|slot| match &*slot.borrow() {
-        Some((_, webview)) => {
+        Some((_, webview, _)) => {
             let title = unsafe { webview.title() }.map(|s| s.to_string());
             let url = unsafe { webview.URL() }
                 .and_then(|u| u.absoluteString())
@@ -310,7 +335,7 @@ fn pristine_read() -> serde_json::Value {
 fn pristine_probe(tag: &str) -> serde_json::Value {
     use objc2_foundation::NSString;
     PRISTINE.with(|slot| match &*slot.borrow() {
-        Some((_, webview)) => {
+        Some((_, webview, _)) => {
             let js = NSString::from_str(&probe_script(tag));
             unsafe { webview.evaluateJavaScript_completionHandler(&js, None) };
             serde_json::json!({ "ok": true })
@@ -323,7 +348,13 @@ fn pristine_probe(tag: &str) -> serde_json::Value {
 #[cfg(target_os = "macos")]
 fn pristine_close() -> serde_json::Value {
     match PRISTINE.with(|slot| slot.borrow_mut().take()) {
-        Some((window, webview)) => {
+        Some((window, webview, owns_window)) => {
+            if !owns_window {
+                // Borrowed MAIN window: detach the subview, leave the window alone.
+                webview.removeFromSuperview();
+                drop(webview);
+                return serde_json::json!({ "closed": true, "detached": "removeFromSuperview" });
+            }
             drop(webview);
             match window.close() {
                 Ok(()) => serde_json::json!({ "closed": true }),
@@ -761,10 +792,12 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
     if autorun_pristine() {
         let ua = std::env::var("SPIKE_PRISTINE_UA").ok().filter(|v| !v.trim().is_empty());
         let run = std::env::var("SPIKE_RUN").unwrap_or_else(|_| "x".into());
+        let in_main = matches!(std::env::var("SPIKE_PRISTINE_INMAIN").as_deref(), Ok("1") | Ok("true"));
+        let long_sample = matches!(std::env::var("SPIKE_PRISTINE_LONG").as_deref(), Ok("1") | Ok("true"));
         log.log(
             "autorun",
             "=== PHASE P (024 runs 12+): PRISTINE raw WKWebView, cold nonPersistent store, zero Tauri injection ===",
-            serde_json::json!({ "uaOverride": ua, "run": run }),
+            serde_json::json!({ "uaOverride": ua, "run": run, "inMain": in_main, "longSample": long_sample }),
         );
         for (tag, url, note) in [
             ("steam", STEAM_STORE_URL, "POSITIVE CONTROL: known-good in the child embed (spike 016) and in Safari"),
@@ -774,7 +807,7 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
             let label = format!("pristine-{tag}");
             log.log("autorun", "--- PHASE P arm ---", serde_json::json!({ "arm": tag, "url": url, "note": note }));
             let (l, u, ua2) = (label.clone(), url.to_string(), ua.clone());
-            let v = on_main(Box::new(move |app| match pristine_create(&app, &l, &u, ua2.as_deref()) {
+            let v = on_main(Box::new(move |app| match pristine_create(&app, &l, &u, ua2.as_deref(), in_main) {
                 Ok(v) => v,
                 Err(e) => serde_json::json!({ "error": e }),
             }));
@@ -798,6 +831,16 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
             step(&format!("Pc[{tag}] title/url at 40 s"), &v);
             let v = screenshot_window(number, &format!("shot-pristine-{tag}-run{run}-40s"));
             step(&format!("Pc[{tag}] screenshot at 40 s"), &v);
+
+            // Quick 261012-8gu: runs 12-16 left 4 of 10 Epic loads half-parsed at 40 s and never
+            // looked again. A third sample at 120 s says whether a stall completes or is terminal.
+            if long_sample && tag != "steam" {
+                std::thread::sleep(Duration::from_secs(80));
+                let v = on_main(Box::new(|_app| pristine_read()));
+                step(&format!("Pc2[{tag}] title/url at 120 s"), &v);
+                let v = screenshot_window(number, &format!("shot-pristine-{tag}-run{run}-120s"));
+                step(&format!("Pc2[{tag}] screenshot at 120 s"), &v);
+            }
 
             let t = format!("pristine-{tag}");
             let v = on_main(Box::new(move |_app| pristine_probe(&t)));

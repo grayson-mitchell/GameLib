@@ -54,9 +54,12 @@ interface Props {
  *   injection, no add_child, cold store -- in the same process: challenged
  *   0 of 10, rendered 6 of 10, while this child embed was challenged 10 of
  *   10 alongside it. The gate is Tauri's webview construction; this panel
- *   stays correct for the embed, and a separate pristine window is an
- *   in-app path whose UX nobody has decided yet (filed). The copy stays
- *   restrained, never an accusation that Epic blocks
+ *   stays correct for the embed. Runs 17-19 (quick 261012-8gu) then
+ *   attached that raw WKWebView INSIDE the main window at the embed's
+ *   rect: 0 of 6 challenged, 4 of 6 rendered by 120 s, so the embed shape
+ *   exists as a Rust-managed raw WKWebView -- a design decision, plus a
+ *   cold-load stall todo, stand between that and this panel going away.
+ *   The copy stays restrained, never an accusation that Epic blocks
  *   in-app browsing -- run 1 rendered the store fully; this edit does not
  *   change the user-facing copy. The Epic tile stays in
  *   `NavShell/components/StoresPanel/index.tsx` (D-08): a tile leading to a

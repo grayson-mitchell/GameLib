@@ -549,9 +549,13 @@ export default function WebView() {
   // document, a separate unexplained observation), while the Tauri child embed in the same five
   // runs was challenged 10 of 10. So the gate is Tauri's webview construction, this guard is
   // still correct for THIS embed, and /store/epic has an in-app path in a separate pristine
-  // window -- whether that is acceptable UX is an open product decision, and whether a raw
-  // WKWebView subview of the MAIN window renders (the real embed shape) is the next filed todo.
-  // None of it touches this guard. Two honest limits survive: run 1
+  // window. Quick 261012-8gu (runs 17-19, same day) then attached that raw WKWebView INSIDE the
+  // main window at the embed's rect: challenged 0 of 6, rendered 4 of 6 by 120 s, child embed
+  // challenged 6 of 6 alongside -- so the attachment is not the trigger, and the embed shape
+  // exists as a Rust-managed raw WKWebView subview (a different construction from D-05's "Tauri
+  // child webview", its own decision). Shipping either shape waits on the cold-load stall (5 of
+  // 16 raw loads blank at 40 s, todo filed). None of it touches this guard. Two honest limits
+  // survive: run 1
   // rendered, so this is not a capability question -- the store CAN render in a Tauri-managed
   // child webview; and anything behind sign-in
   // was deliberately untouched (D-07). None of this is a flat accusation that Epic blocks

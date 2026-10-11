@@ -5,7 +5,10 @@ area: webview/store-embed
 severity: medium
 platform: macos
 ready: live-gate
-status: OPEN
+status: completed
+resolution: measured-rendered-in-main-never-challenged
+resolved: 2026-10-12
+resolved_by: "quick-261012-8gu"
 found_by: 'quick 261012-7f2, spike 024 runs 12-16 (pristine WKWebView arm, 2026-10-12)'
 files:
   - .planning/spikes/024-epic-store-in-embedded-child-webview/app/src/main.rs
@@ -13,6 +16,28 @@ files:
   - src-tauri/src/main.rs
   - src/frontend/screens/WebView/index.tsx
 ---
+
+## RESOLUTION — rendered inside the main window, never challenged, 2026-10-12 (quick `261012-8gu`)
+
+**Row 1 fired.** Spike 024 runs 17–19 (`SPIKE_PRISTINE_INMAIN=1 SPIKE_PRISTINE_LONG=1`, no UA
+override): the raw `WKWebView` as a subview of the main window's content view at the embed rect
+(`290,96 760×560`, AppKit origin `290,244`, content view not flipped), beside Tauri's own webview,
+fresh `nonPersistentDataStore()`. Six Epic arms: **0 challenged, 4 rendered by 120 s, 2 still
+blank at 120 s.** Child embed in the same runs: 6 of 6 challenged. Steam served in all 12.
+`shot-pristine-INMAIN-epic-configured-RENDERED-run17.png` is the store painted in the harness's
+`#slot` region with the sidebar around it.
+
+- **Attachment is not the trigger.** What remains is wry's per-webview setup (init scripts,
+  message handlers, scheme handlers), which the public builder cannot strip and the product does
+  not need stripped: a Rust-managed raw `WKWebView` IS the embed.
+- **The 120 s sample** (the second ask): of 3 stalls sampled, 1 completed between 40 and 120 s,
+  2 had not by 120 s. Same terminal-looking state every time (real store document,
+  `readyState=loading`, empty body, 938 k parsed). Not a challenge. Filed as
+  `2026-10-12-which-in-flight-head-resource-holds-the-stalled-epic-store-load.md` — it is the
+  shipping blocker for either shape now.
+- **Decisions opened.** D-05 said "Tauri child webview"; this is a different construction
+  (raw subview, Rust-side bounds-sync/cookies/navigation delegate, macOS-only as written). The
+  2026-09-15 sign-in-button todo moved `blocked` → `human` on it.
 
 ## Problem
 
