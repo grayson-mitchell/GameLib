@@ -1,5 +1,5 @@
 import { existsSync } from 'graceful-fs'
-import { addListener, addHandler } from 'backend/ipc'
+import { addHandler } from 'backend/ipc'
 import i18next from 'i18next'
 import {
   addNonSteamGame,
@@ -11,34 +11,12 @@ import { notify } from 'backend/dialog/dialog'
 import { isMac } from 'backend/constants/environment'
 import { getGame } from '../utils'
 import { logWarning, LogPrefix } from 'backend/logger'
+import type { Runner } from 'common/types'
 
-addListener('addShortcut', async (event, appName, runner, fromMenu) => {
-  void getGame(appName, runner)
-    .addShortcuts(fromMenu)
-    .catch((error) =>
-      logWarning(
-        ['Could not add shortcuts for', appName, error],
-        LogPrefix.Backend
-      )
-    )
-
-  const body = i18next.t(
-    'box.shortcuts.message',
-    'Shortcuts were created on Desktop and Start Menu'
-  )
-
-  const bodyMac = i18next.t(
-    'box.shortcuts.message-mac',
-    'Shortcuts were created on the Applications folder'
-  )
-
-  notify({
-    body: isMac ? bodyMac : body,
-    title: i18next.t('box.shortcuts.title', 'Shortcuts')
-  })
-})
-
-addHandler('shortcutsExists', (event, appName, runner) => {
+// Quick task 261012-ca6: `addShortcut` and `removeShortcut` are invoke-kind and resolve whether
+// shortcuts exist on disk once the work has settled. This file is the Electron-era original; the
+// shipped path is `sidecar/shortcutsFlowRegistration.ts`.
+function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
   const { title } = getGame(appName, runner).getGameInfo()
 
   // Quick task 260905-mv5 (site 3, D-03): getGameInfo() can return
@@ -60,10 +38,51 @@ addHandler('shortcutsExists', (event, appName, runner) => {
   const [desktopFile, menuFile] = shortcutFiles(title)
 
   return existsSync(desktopFile ?? '') || existsSync(menuFile ?? '')
+}
+
+addHandler('addShortcut', async (event, appName, runner, fromMenu) => {
+  try {
+    await getGame(appName, runner).addShortcuts(fromMenu)
+  } catch (error) {
+    logWarning(
+      ['Could not add shortcuts for', appName, error],
+      LogPrefix.Backend
+    )
+    return shortcutsExistOnDisk(appName, runner)
+  }
+
+  const body = i18next.t(
+    'box.shortcuts.message',
+    'Shortcuts were created on Desktop and Start Menu'
+  )
+
+  const bodyMac = i18next.t(
+    'box.shortcuts.message-mac',
+    'Shortcuts were created on the Applications folder'
+  )
+
+  notify({
+    body: isMac ? bodyMac : body,
+    title: i18next.t('box.shortcuts.title', 'Shortcuts')
+  })
+
+  return shortcutsExistOnDisk(appName, runner)
 })
 
-addListener('removeShortcut', async (event, appName, runner) => {
-  getGame(appName, runner).removeShortcuts()
+addHandler('shortcutsExists', (event, appName, runner) =>
+  shortcutsExistOnDisk(appName, runner)
+)
+
+addHandler('removeShortcut', async (event, appName, runner) => {
+  try {
+    await getGame(appName, runner).removeShortcuts()
+  } catch (error) {
+    logWarning(
+      ['Could not remove shortcuts for', appName, error],
+      LogPrefix.Backend
+    )
+    return shortcutsExistOnDisk(appName, runner)
+  }
 
   const body = i18next.t(
     'box.shortcuts.message-remove',
@@ -80,6 +99,8 @@ addListener('removeShortcut', async (event, appName, runner) => {
     // Shared key: catalog 'Shortcuts' wins; the body names the removal.
     title: i18next.t('box.shortcuts.title', 'Shortcuts')
   })
+
+  return shortcutsExistOnDisk(appName, runner)
 })
 
 addHandler('addToSteam', async (event, appName, runner) => {
