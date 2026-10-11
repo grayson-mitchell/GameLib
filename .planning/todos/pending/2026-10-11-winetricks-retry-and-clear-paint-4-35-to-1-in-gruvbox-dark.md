@@ -48,3 +48,27 @@ load-bearing") would go red to say so — but `--accent` drives many other gruvb
 this is a design decision, not a desk-only fix.
 
 Either way, a live capture of Retry, Clear, and `.button.is-text` in gruvbox_dark is still owed.
+
+## Also measured by quick 261011-kqx (token-resolved)
+
+Fixing the Queued (checked + disabled) checkbox for 261011-kqx (drawn as a full-opacity outlined
+accent tick, `border-color: var(--accent)`, instead of a dimmed fill -- no opacity value
+composited over a row surface clears 3:1 in every theme) ran the accent-vs-row-surface pair
+through the same resolver in gruvbox_dark specifically because it is this todo's own binding
+theme for the accent/background collision:
+
+- `var(--accent, #0080ff)` (`#b57614` in gruvbox_dark) against the rest row surface
+  (`var(--modal-background)`, `#282828`): **3.91:1**. That is exactly the gruvbox_dark Queued
+  checkbox's worst case across all 10 themes in 261011-kqx's all-10 census -- still above the
+  3:1 non-text floor the Queued checkbox is held to, but closer to it than any other theme.
+- The same accent against the *hovered* row surface (10% `.WinetricksRow` colour composited over
+  `--modal-background`, `#3b3b3b`): **2.97:1**, under 3:1. The Queued checkbox is not currently
+  held to a hovered-row bar (D-14/non-colour rule aside, a locked checkbox carries no text), so
+  this is record-only for now -- but it is the same accent-is-a-mid-tone-in-gruvbox_dark fact
+  this todo already tracks, one surface further from the one Apply, Retry and Clear collide on.
+
+This reinforces fix option (b) above: a theme-level change to gruvbox_dark's `--accent` (or its
+`--background`/`--modal-background` pair) would move all four of these collisions --
+Apply/Retry/Clear's 4.35:1 text pair and the Queued checkbox's 3.91:1/2.97:1 non-text pair -- at
+once, where four separate per-component overrides each move one. Still a design decision, not
+desk-only; not acted on by 261011-kqx.
