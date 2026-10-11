@@ -11,6 +11,9 @@ files:
   - src/frontend/screens/Library/components/SteamSyncNotice/index.tsx
   - src/backend/storeManagers/steam/library.ts
   - src/backend/storeManagers/steam/user.ts
+completed: 2026-10-11
+status: "RESOLVED 2026-10-11 (premise refuted; code half fixed; sign-in handoff split out). Debug session .planning/debug/steam-sync-false-failed-banner.md: the log shows no reconnect in flight. Steam CM refused the stored-refresh-token logon with AccessDenied, which steam-user 5.3.0 treats as terminal (no retry scheduled), so the failed banner was a true report, not a race. Two code defects were fixed: ensureConnected() attached its grace-window listeners after the terminal error had already fired and waited out the full 20 s (331988302), and library.ts exit path 1 reported the opaque client-not-ready reason; it now emits logon-rejected via SteamUser.getLogonFailure() (b08c6c2ec). Both fix directions proposed here were eliminated: retry replays the refusal, routing to syncing resurrects the never-ending spinner 34.15 D-06 killed. Remaining product defect (banner copy/Retry wrong for a refused token; refusal never reaches the sign-in surface) filed as 2026-10-11-steam-cm-refused-token-never-reaches-sign-in-surface.md. Live confirmation of the new log lines pending on macOS."
+resolved_by: 331988302 b08c6c2ec
 ---
 
 # SteamSyncNotice shows a generic "failed" banner during a benign post-login CM reconnect
