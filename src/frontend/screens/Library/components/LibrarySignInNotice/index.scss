@@ -64,13 +64,37 @@
     //   dropped out and near-black text sat on the banner at 1.55:1.
     // - The Settings stylesheet, once loaded, painted the body text token on
     //   the banner: 2.11:1 in nord-light.
-    // Its hover state still comes from that Settings rule on an
-    // equal-specificity tie; that is recorded as a follow-up todo.
     .button.is-footer {
       margin-block: 0;
       padding-block: var(--space-2xs);
       background-color: transparent;
       color: inherit;
+
+      // Hover and focus-visible are owned here too (quick 261011-sxg). The
+      // Settings stylesheet's `.button.is-footer:hover, :focus-visible` is
+      // (0,3,0) and tied this rule on source order; when it won, nord-light
+      // painted `--text-hover` on `--background-darker` at 3.50:1, and the
+      // six themes with no `--text-hover` left the label at whatever the
+      // chunk order gave. This arm compiles to (0,4,0) and wins regardless.
+      // It keeps the row's measured pair (>= 4.87:1 in every theme, lowest
+      // marine) rather than shifting hue: the one navbar hue that passes nine
+      // themes, `--navbar-active`, is 3.79:1 in dracula against the 4.5 text
+      // floor, and a `--navbar-active-background` fill drops the pair under
+      // 4.5 in four themes. Hover is signalled by the underline instead.
+      // `box-shadow: none` is load-bearing: Settings' 3px `--danger` ring is
+      // not otherwise overridden and would still land on the banner.
+      &:hover,
+      &:focus-visible {
+        background-color: transparent;
+        color: inherit;
+        box-shadow: none;
+        text-decoration: underline;
+      }
+
+      &:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+      }
     }
   }
 
@@ -79,6 +103,21 @@
   // some themes (`dracula` most severely), never against an assumed dark band.
   &__row--expired > svg {
     color: var(--status-danger, orange);
+
+    // nord-light is the one theme whose banner is a mid grey (#4c566a), and
+    // the global `--status-danger` (#f97881) is 2.82:1 on it against the 3:1
+    // non-text floor; the other nine themes read 3.50 (dracula) to 7.25. A
+    // lighter tint of the same red clears it at 4.35:1. A theme-scoped
+    // override rather than a token change, following the NavTabs and
+    // FilterFocusRow `body.nord-light &` precedent: `--status-danger` paints
+    // many unmeasured surfaces, and nord-light declares no light red token
+    // (`--danger` #bf616a is 1.80:1 here). Gated for all 10 themes in
+    // `themeTokens.test.ts`.
+    // NOT LIVE-VERIFIED: contrast arithmetic; the operator's next nord-light
+    // look owes the appearance.
+    body.nord-light & {
+      color: #ffb3b8;
+    }
   }
 
   // Never-connected is information, not a failure (P4): neutral border, icon
@@ -128,8 +167,15 @@
     color: inherit;
     cursor: pointer;
 
+    // The hovered glyph takes the navbar surface's own active-row hue, the
+    // same chain the row text comes from, not the body surface's secondary
+    // text token: that token is dark in nord-light and sat on the dark banner
+    // at 1.52:1 (quick 261011-sxg), nearly erasing the glyph on hover.
+    // Non-text 3:1 floor, token census: nord-light 5.43, dracula 3.79 at the
+    // lowest, the rest 4.87 to 18.73. Gated per theme in
+    // `themeTokens.test.ts`.
     &:hover {
-      color: var(--text-secondary, var(--text-default));
+      color: var(--navbar-active, var(--navbar-accent));
     }
 
     &:focus-visible {
