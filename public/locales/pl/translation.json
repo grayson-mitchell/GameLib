@@ -647,13 +647,6 @@
         "gamemode": "Użyj GameMode (wymagany zainstalowany Feral GameMode)",
         "hideChangelogsOnStartup": "Nie pokazuj listy zmian po uruchomieniu",
         "language": "Wybierz język aplikacji",
-        "library_top_option": {
-            "disabled": "Wyłączona",
-            "favourites": "Ulubione gry",
-            "recently_played": "Ostatnio uruchamiane gry",
-            "recently_played_installed": "Ostatnio uruchamiane gry (tylko zainstalowane)"
-        },
-        "library_top_section": "Górna sekcja biblioteki",
         "log": {
             "copy-to-clipboard": "Skopiuj log do schowka",
             "current-log": "Ostatni Log",
@@ -712,7 +705,6 @@
             "title": "Synchronizuj zapisy ręcznie",
             "upload": "Wyślij"
         },
-        "maxRecentGames": "Pokaż ostatnio uruchamiane",
         "maxworkers": "Maksymalna liczba wątków przy pobieraniu",
         "minimize-on-launch": "Minimalizuj GameLib po uruchomieniu gry",
         "offlinemode": "Uruchom grę w trybie bez dostępu do internetu",

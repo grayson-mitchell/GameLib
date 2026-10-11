@@ -439,12 +439,6 @@
             "removeConfirmTitle": "Patvirtinti perdangos pašalinimą",
             "notInstalled": "„EOS“ perdanga nėra įdiegta"
         },
-        "library_top_option": {
-            "disabled": "Išjungta/Neįgalinta (-as/-i)",
-            "favourites": "Mėgstamiausi žaidimai",
-            "recently_played": "Neseniai žaisti žaidimai",
-            "recently_played_installed": "Neseniai žaisti žaidimai (tik įdiegti)"
-        },
         "winecrossoverbottle": "„CrossOver butelis“",
         "wineversion": "„Wine“ versija",
         "allow_installation_broken_anticheat": {
@@ -543,7 +537,6 @@
         "showfps": "Rodyti kdr./sek. („DX9/10/11“)",
         "steamruntime": "Naudoti „Steam“ vykdantįjį",
         "language": "Pasirinkti programos kalbą",
-        "library_top_section": "Viršutinis bibliotekos skyrius",
         "ignoreGameUpdates": "Ignoruoti žaidimų atnaujinimus",
         "adddesktopshortcuts": "Pridėti darbalaukio nuorodas automatiškai",
         "addgamestoapplications": "Automatiškai pridėti žaidimus prie programų sąrašo",
@@ -560,7 +553,6 @@
             "warningFlatpak": "Negalėjome rasti palaikomos „Gamescope“ versijos. Įdiekite „Gamescope“ „flatpak“ paketą su vykdomuoju – {{runtimeVersion}} ir perleiskite „GameLib“."
         },
         "hideChangelogsOnStartup": "Nerodyti keitinių žurnalo paleidime",
-        "maxRecentGames": "Rodyti neseniai žaistus",
         "maxworkers": "Didžiausias darbuotojų skaičius, kai siunčiamasi",
         "autodxvk": "Automatiškai įdiegti/atnaujinti „DXVK“ ant prielinksnio/priešdėlio",
         "autodxvknvapi": "Automatiškai įdiegti/atnaujinti „DXVK-NVAPI“ ant prielinksnio/priešdėlio",

@@ -637,13 +637,6 @@
         "gamemode": "Sử Dụng GameMode (Cần cài đặt Feral Game Mode)",
         "hideChangelogsOnStartup": "Không hiển thị nhật ký thay đổi khi Khởi Động",
         "language": "Chọn ngôn ngữ ứng dụng",
-        "library_top_option": {
-            "disabled": "Tắt",
-            "favourites": "Trò chơi ưa thích",
-            "recently_played": "Trò Chơi Đã Chơi Gần Đây",
-            "recently_played_installed": "Trò Chơi Đã Chơi Gần Đây (Chỉ Được Cài Đặt)"
-        },
-        "library_top_section": "Phần Trên Cùng Của Thư Viện",
         "log": {
             "copy-to-clipboard": "Sao chép nội dung log vào bộ nhớ tạm",
             "current-log": "Log hiện tại",
@@ -702,7 +695,6 @@
             "title": "Lưu Đồng Bộ Hóa Thủ Công",
             "upload": "Tải Lên"
         },
-        "maxRecentGames": "Đã Chơi Gần Đây để Hiển Thị",
         "maxworkers": "Số Lượng Công Nhân Tối Đa khi tải xuống",
         "minimize-on-launch": "Thu Nhỏ GameLib Sau Khi Khởi Chạy Trò Chơi",
         "offlinemode": "Chạy Trò Chơi Ngoại Tuyến",

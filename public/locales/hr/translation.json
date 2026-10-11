@@ -637,13 +637,6 @@
         "gamemode": "Koristi GameMode(Feral Game Mode mora biti instaliran)",
         "hideChangelogsOnStartup": "Don't show changelogs on Startup",
         "language": "Odaberi Jezik",
-        "library_top_option": {
-            "disabled": "Disabled",
-            "favourites": "Favourite Games",
-            "recently_played": "Recently Played Games",
-            "recently_played_installed": "Recently Played Games (Only Installed)"
-        },
-        "library_top_section": "Library Top Section",
         "log": {
             "copy-to-clipboard": "Kopiraj sadržaj dnevnika u međuspremnik",
             "current-log": "Current log",
@@ -702,7 +695,6 @@
             "title": "Manualna sinkronizacija podataka",
             "upload": "Prebaci"
         },
-        "maxRecentGames": "Recent Games to Show",
         "maxworkers": "Maksimalan broj radnika za preuzimanje",
         "minimize-on-launch": "Minimize GameLib After Game Launch",
         "offlinemode": "Pokreni igre bez internetske veze",

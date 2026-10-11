@@ -647,13 +647,6 @@
         "gamemode": "Bruk GameMode (Feral Game Mode må installeres)",
         "hideChangelogsOnStartup": "Ikke vis endringslogger ved oppstart",
         "language": "Velg programspråk",
-        "library_top_option": {
-            "disabled": "Deaktivert",
-            "favourites": "Favorittspill",
-            "recently_played": "Nylig spilte spill",
-            "recently_played_installed": "Nylig spilte spill (kun installert)"
-        },
-        "library_top_section": "Bibliotekets øverste seksjon",
         "log": {
             "copy-to-clipboard": "Kopier logginnhold til utklippstavlen",
             "current-log": "Gjeldende logg",
@@ -712,7 +705,6 @@
             "title": "Manuell synkronisering av lagringsfiler",
             "upload": "Last opp"
         },
-        "maxRecentGames": "Antall \"Nylig spilt\" å vise",
         "maxworkers": "Maksimalt antall arbeidere ved nedlasting",
         "minimize-on-launch": "Minimer GameLib etter spillstart",
         "offlinemode": "Kjør spillet frakoblet",

@@ -92,7 +92,14 @@
  * addon is a DLL-planting surface (the shared root is exactly that).
  */
 
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  lstatSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -159,7 +166,134 @@ const LZMA_NATIVE_EXTRACTION_RECORD_KEY = 'gamelib.lzmaNative.extraction'
  * addon, and the shared root is exactly the planting surface.
  */
 function nativeExtractDirPrefix(): string {
-  return join(tmpdir(), `gamelib-lzma-native-${process.pid}-`)
+  return join(tmpdir(), `${LZMA_NATIVE_EXTRACT_DIR_NAME_PREFIX}${process.pid}-`)
+}
+
+/**
+ * 261012-82w: the fixed leading part of every extraction directory name.
+ * `nativeExtractDirPrefix()` (the minting side) and `STALE_EXTRACT_DIR_NAME`
+ * (the sweep side) both build from this one constant, so the pattern the
+ * sweep matches and the names the binding mints cannot drift apart.
+ */
+const LZMA_NATIVE_EXTRACT_DIR_NAME_PREFIX = 'gamelib-lzma-native-'
+
+/**
+ * 261012-82w: upper bound on liveness probes (and therefore lstats and
+ * removals) per sweep call. Bounds boot cost against a pathological temp dir.
+ */
+const LZMA_NATIVE_STALE_SWEEP_MAX_DIRS = 64
+
+/**
+ * 261012-82w: `Symbol.for(...)` key under which the SEA branch records the
+ * sweep's `{ examined, removed }` on `globalThis`, per isolate. `lzmaLoader.ts`
+ * reads it by the same literal to put a sentence in its engaged log line --
+ * the same `globalThis`-registry design (and the same reason) as
+ * `LZMA_NATIVE_EXTRACTION_RECORD_KEY`.
+ */
+const LZMA_NATIVE_STALE_SWEEP_RECORD_KEY = 'gamelib.lzmaNative.staleSweep'
+
+/**
+ * A name `mkdtempSync(nativeExtractDirPrefix())` could have minted: the
+ * prefix, a decimal pid, a dash, and mkdtemp's six-character alphanumeric
+ * suffix (measured: 200 of 200 on the dev box). Anchored at both ends.
+ */
+const STALE_EXTRACT_DIR_NAME = new RegExp(
+  `^${LZMA_NATIVE_EXTRACT_DIR_NAME_PREFIX}(\\d{1,10})-[A-Za-z0-9]{6}$`
+)
+
+/**
+ * 261012-82w: removes extraction directories left in `root` by sidecar
+ * processes that have exited, and returns `{ examined, removed }`. Called on
+ * win32 only, immediately before this binding's own `mkdtempSync`, because on
+ * Windows a loaded addon (and the `liblzma.dll` it maps) cannot be unlinked
+ * while its process runs, so every decode worker of every native-engaged
+ * sidecar leaves one directory behind (measured 261011-wrx: 16 per
+ * packaged-app session). The operator chose this sweep over a once-per-
+ * process extraction.
+ *
+ * Why each guard exists:
+ * - The snapshot (`readdirSync`) comes BEFORE the probe, and that ordering is
+ *   load-bearing. Every name in the snapshot was minted by a process holding
+ *   that pid before the snapshot was taken. An ESRCH afterwards therefore
+ *   proves that process has exited; a pid reused since can only make the
+ *   probe SUCCEED, which means skip.
+ * - Own pid is skipped (at no cost to the budget): sibling decode worker
+ *   threads share `process.pid`, and their directories are live.
+ * - Pid 0 and pids above 0x7fffffff are skipped. `process.kill(0, 0)` targets
+ *   the process group on POSIX and did not throw on win32 when measured.
+ * - The cap (`LZMA_NATIVE_STALE_SWEEP_MAX_DIRS`) bounds boot cost.
+ * - Synchronous only. This is the sidecar exit contract: the sidecar exits by
+ *   event-loop drain at stdin EOF, so nothing may be added to the loop -- no
+ *   timer, no promise, no async fs.
+ * - A fresh `lstatSync` at delete time mirrors `reapStaleRoots()` in
+ *   `src/backend/jest.globalSetup.js`: a symlink or junction planted at a
+ *   matching name is never followed, a non-directory is never removed, and an
+ *   entry a sibling worker already removed (lstat returns undefined) is not
+ *   counted twice.
+ * - Only ESRCH deletes. Measured 2026-10-12 on Node v24.19.0 (win32), main
+ *   thread and a `worker_threads` Worker alike: a dead pid throws ESRCH, pid 4
+ *   (System) throws EPERM, the own pid does not throw, and pid 0 does not
+ *   throw. EPERM or any other outcome means the owner may be alive: keep.
+ * - Every error is swallowed. A sweep failure must never stop the extraction,
+ *   `dlopen` or the `finally` cleanup that follow it.
+ */
+function sweepStaleExtractDirs(root: string = tmpdir()): {
+  examined: number
+  removed: number
+} {
+  let examined = 0
+  let removed = 0
+  try {
+    let names: string[]
+    try {
+      names = readdirSync(root)
+    } catch {
+      return { examined: 0, removed: 0 }
+    }
+    for (const name of names) {
+      const match = STALE_EXTRACT_DIR_NAME.exec(name)
+      if (!match) {
+        continue
+      }
+      const pid = Number(match[1])
+      if (!Number.isSafeInteger(pid) || pid <= 0 || pid > 0x7fffffff) {
+        continue
+      }
+      if (pid === process.pid) {
+        continue
+      }
+      if (examined >= LZMA_NATIVE_STALE_SWEEP_MAX_DIRS) {
+        break
+      }
+      examined++
+      try {
+        process.kill(pid, 0)
+        continue // probe succeeded: the owner is alive
+      } catch (probeErr) {
+        const code =
+          typeof probeErr === 'object' && probeErr !== null
+            ? (probeErr as { code?: unknown }).code
+            : undefined
+        if (code !== 'ESRCH') {
+          continue
+        }
+      }
+      try {
+        const full = join(root, name)
+        const stats = lstatSync(full, { throwIfNoEntry: false })
+        if (!stats || !stats.isDirectory() || stats.isSymbolicLink()) {
+          continue
+        }
+        rmSync(full, { recursive: true, force: true })
+        removed++
+      } catch {
+        // Skip this entry; the next one is independent.
+      }
+    }
+  } catch {
+    // Unexpected: report the counts reached so far, never throw.
+  }
+  return { examined, removed }
 }
 
 /**
@@ -263,6 +397,18 @@ function resolveNativeBinding(_dir: string): unknown {
         ? sea.getRawAsset(LZMA_NATIVE_DLL_SEA_ASSET_KEY)
         : undefined
 
+    // 261012-82w: reclaim directories left by exited processes before minting
+    // our own. win32 only: on POSIX the `finally` unlink below succeeds, so
+    // nothing accumulates, and /tmp there can be shared across users and pid
+    // namespaces where ESRCH does not prove the owner is gone. %TEMP% on
+    // Windows is per-user and pids are system-global. (Operator-chosen sweep,
+    // option 2 of the accumulation todo's "Decision the operator owes".)
+    if (process.platform === 'win32') {
+      ;(globalThis as unknown as Record<symbol, unknown>)[
+        Symbol.for(LZMA_NATIVE_STALE_SWEEP_RECORD_KEY)
+      ] = sweepStaleExtractDirs(tmpdir())
+    }
+
     // ONE private directory per extraction (T-23.1-03-01, 261011-wrx).
     // Outside the try: if mkdtemp itself throws there is nothing to clean.
     const dir = mkdtempSync(nativeExtractDirPrefix())
@@ -346,6 +492,9 @@ interface LzmaNativeBindingResolver {
   LZMA_NATIVE_WIN32_DLL_FILENAME: string
   LZMA_NATIVE_EXTRACTION_RECORD_KEY: string
   nativeExtractDirPrefix: () => string
+  sweepStaleExtractDirs: typeof sweepStaleExtractDirs
+  LZMA_NATIVE_STALE_SWEEP_MAX_DIRS: number
+  LZMA_NATIVE_STALE_SWEEP_RECORD_KEY: string
 }
 
 const lzmaNativeBinding = resolveNativeBinding as LzmaNativeBindingResolver
@@ -357,6 +506,11 @@ lzmaNativeBinding.LZMA_NATIVE_WIN32_DLL_FILENAME =
 lzmaNativeBinding.LZMA_NATIVE_EXTRACTION_RECORD_KEY =
   LZMA_NATIVE_EXTRACTION_RECORD_KEY
 lzmaNativeBinding.nativeExtractDirPrefix = nativeExtractDirPrefix
+lzmaNativeBinding.sweepStaleExtractDirs = sweepStaleExtractDirs
+lzmaNativeBinding.LZMA_NATIVE_STALE_SWEEP_MAX_DIRS =
+  LZMA_NATIVE_STALE_SWEEP_MAX_DIRS
+lzmaNativeBinding.LZMA_NATIVE_STALE_SWEEP_RECORD_KEY =
+  LZMA_NATIVE_STALE_SWEEP_RECORD_KEY
 
 // CJS export-assignment shape, deliberately NOT `export = `/`export default`
 // -- see this file's header comment for the full rationale (TS1203 under

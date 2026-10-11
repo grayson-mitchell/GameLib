@@ -647,13 +647,6 @@
         "gamemode": "使用 GameMode（需要已安装 Feral Game Mode）",
         "hideChangelogsOnStartup": "启动程序时不显示变更日志",
         "language": "选择应用语言",
-        "library_top_option": {
-            "disabled": "已禁用",
-            "favourites": "最爱的游戏",
-            "recently_played": "最近玩过的游戏",
-            "recently_played_installed": "最近玩过的游戏 (仅已安装）"
-        },
-        "library_top_section": "仓库顶区",
         "log": {
             "copy-to-clipboard": "复制日志内容到剪贴板",
             "current-log": "当前日志",
@@ -712,7 +705,6 @@
             "title": "手动同步存档",
             "upload": "上传"
         },
-        "maxRecentGames": "要显示的最近玩过的游戏",
         "maxworkers": "下载时的最大线程数量",
         "minimize-on-launch": "游戏启动后最小化 GameLib",
         "offlinemode": "离线运行游戏",

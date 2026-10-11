@@ -16,6 +16,62 @@ files:
 resolves_phase: null
 ---
 
+## CLOSED 2026-10-12 — item D measured under gsd-core 1.15.0 (quick 261012-8tl)
+
+This section governs where it contradicts every section below; nothing below was edited.
+
+1. Verdict. Item D is CLOSED on measurement. `23.2-HUMAN-UAT.md`'s body block scalars parse
+   cleanly under `@opengsd/gsd-core` 1.15.0. Its absence from `audit-uat` is the milestone-window
+   filter, not a parse defect. Item A was closed in the PARKED 2026-09-18 section. The 2026-09-26
+   NOTE placed `17-UAT.md` and `18-UAT.md` inside the window and narrowed item D to 23.2. So
+   nothing in this todo remains open.
+2. Method, attributed. The orchestrator of quick 261012-8tl ran it on 2026-10-12 with
+   `node ~/.claude/gsd-core/bin/gsd-tools.cjs --cwd=<scratch> audit-uat --raw`, against a scratch
+   copy of `.planning/` with `spikes/` and `graphs/` excluded, kept under the session scratchpad.
+   The scratch copy was disposable and is not committed; the figures in this section are the
+   record. On the copy, the baseline reproduced the live run exactly: 59 files / 446 items,
+   parse_gap_files 0.
+3. EXP A. The item-1 flip in place (`result: pass` changed to `result: pending`, file left in its
+   own phase dir). Output stayed at 59 files / 446 items and 23.2 did not surface. The directory
+   `23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/` is outside the window.
+4. EXP B. The flipped file planted in the in-window phase 23 dir as `23-HUMAN-UAT.md`:
+   60 files / 448 items, parse_gap_files 0, status `complete`, 2 items. Test 1 read as
+   `result: pending`, `category: pending`, with its full `expected:` text intact. Gap G-23.2-01
+   read as `result: routed ...` at category `unknown`. The body block scalars (`method: |`,
+   `proven_by: |`, `honesty_limits: |`, `steam_adoption_confirmed: |`, `supersedes_note: |`,
+   `changes_made: |`, `amendment_recorded: |`, `triage_so_far: |`, among others) corrupted
+   nothing and suppressed nothing.
+5. EXP C. The unmodified file planted the same way: 60 files / 447 items, parse_gap_files 0,
+   exactly 1 item (G-23.2-01, category `unknown`). This ties back to the 2026-09-26 NOTE item 3's
+   "1 item, still absent": the 1 item is G-23.2-01 (EXP C), and "absent" is the window filter
+   (EXP A).
+6. The trigger. PARKED item 5's unpark trigger has NOT fired: `.planning/STATE.md` line 3 still
+   reads milestone: v0.8. Closure is on measurement, not on the trigger. PARKED item 5's three
+   requirements, one by one:
+   - measured: done, for 23.2, which is all that remained after the 2026-09-26 narrowing.
+   - severity re-graded: stays `minor`. The latent trap is now measured as not a trap.
+   - `ready:` restored to a live value: not applicable. The file is closed, not unparked.
+7. Frontmatter left byte-unchanged on purpose. That includes ready: blocked and the title's
+   "PARKED pending the v0.8 milestone advancing" clause; this section supersedes both. Reasons:
+   the `ready:` vocabulary (`code`, `live-gate`, `human`, `blocked`) has no completed value;
+   `.planning/todos/todo-frontmatter-gate.py` scans `pending/` only; and
+   `grep -l '^ready: done' .planning/todos/completed/*.md` matched 0 of the 348 completed todos
+   (counted before this move) that carry ready: done. The move to `.planning/todos/completed/`
+   is what carries the closed state.
+8. Not established, recorded as unknown. Why 23.2's directory sits outside the milestone window
+   while its parent phase 23 is inside. Phase 23.2 is declared under `## v0.7 Phase Details` at
+   ROADMAP.md line 880. Phases 17/18 sit under v0.5, yet `17-UAT.md` is emitted. This does not
+   bear on closure: EXP B and EXP C show the file parses correctly whenever it is in the window,
+   so it behaves correctly whether or not it ever enters.
+9. Residue, named and not fixed. `audit-uat` renders a gap whose `result:` is `routed` as
+   category `unknown` (G-23.2-01 in EXP B and C). This is an audit-uat vocabulary quirk outside
+   this todo's scope, and the live run already shows it for other files. No todo is filed for it
+   here.
+10. What this closure did not do. It edited no UAT file, `ROADMAP.md` or `STATE.md`. It added no
+    CI coverage: `audit-uat` runs only from the global gsd-core install, which CI does not have.
+    So PARKED item 6's statement that nothing in CI covers the body block-scalar population is
+    unchanged.
+
 ## NOTE 2026-09-26 — gate retired, suppression defect gone under gsd-core, item D narrowed to 23.2 (quick `260926-ky9`)
 
 This note governs where it contradicts the sections below; nothing below was edited.

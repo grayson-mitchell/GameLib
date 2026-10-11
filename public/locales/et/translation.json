@@ -646,13 +646,6 @@
         "gamemode": "Kasuta GameMode'i (Feral Game Mode peab olema paigaldatud)",
         "hideChangelogsOnStartup": "Ära näita käivitamisel muutuste nimekirjasid",
         "language": "Valige rakenduse keel",
-        "library_top_option": {
-            "disabled": "Keelatud",
-            "favourites": "Lemmikmängud",
-            "recently_played": "Hiljuti mängitud mängud",
-            "recently_played_installed": "Hiljuti mängitud mängud (ainult paigaldatud)"
-        },
-        "library_top_section": "Teegi ülemine osa",
         "log": {
             "copy-to-clipboard": "Kopeeri logi sisu lõikelauale",
             "current-log": "Praegune logi",
@@ -711,7 +704,6 @@
             "title": "Käsitsi salvestuste sünkroonimine",
             "upload": "Laadi üles"
         },
-        "maxRecentGames": "Hiljuti mängitud mängu, mida näidata",
         "maxworkers": "Töötajate maksimaalne arv allalaadimisel",
         "minimize-on-launch": "Minimeeri GameLib pärast mängu käivitamist",
         "offlinemode": "Käivita mäng võrguühenduseta",

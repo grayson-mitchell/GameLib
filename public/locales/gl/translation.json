@@ -647,13 +647,6 @@
         "gamemode": "Usar GameMode (Feral Game Mode debe estar instalado)",
         "hideChangelogsOnStartup": "Non amosar os rexistros de cambios ao inicio",
         "language": "Seleccionar o idioma da aplicación",
-        "library_top_option": {
-            "disabled": "Desactivado",
-            "favourites": "Xogos favoritos",
-            "recently_played": "Xogos xogados recentemente",
-            "recently_played_installed": "Xogos xogados recentemente (só instalados)"
-        },
-        "library_top_section": "Sección superior da biblioteca",
         "log": {
             "copy-to-clipboard": "Copy log content to clipboard",
             "current-log": "Current Log",
@@ -712,7 +705,6 @@
             "title": "Sincronización manual de partidas gardadas",
             "upload": "Subir"
         },
-        "maxRecentGames": "Xogados recentemente para mostrar",
         "maxworkers": "Número máximo de descargas",
         "minimize-on-launch": "Minimizar GameLib ao lanzar un xogo",
         "offlinemode": "Executar xogo sen conexión",

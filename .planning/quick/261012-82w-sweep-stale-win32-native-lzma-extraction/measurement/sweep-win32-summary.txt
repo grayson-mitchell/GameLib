@@ -1,0 +1,32 @@
+RESULT label=sweep-win32 pass=20/20 expectNativeWorkers=2
+
+tmpExtracts column (post-run census per run; 261011-wrx measured 2,4,...,40): 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
+
+| run | engaged lines | failed-to-load lines | Swept N total |
+| --- | --- | --- | --- |
+| 1 | 2 | 0 | 16 |
+| 2 | 2 | 0 | 2 |
+| 3 | 2 | 0 | 2 |
+| 4 | 2 | 0 | 2 |
+| 5 | 2 | 0 | 2 |
+| 6 | 2 | 0 | 2 |
+| 7 | 2 | 0 | 2 |
+| 8 | 2 | 0 | 2 |
+| 9 | 2 | 0 | 2 |
+| 10 | 2 | 0 | 2 |
+| 11 | 2 | 0 | 2 |
+| 12 | 2 | 0 | 2 |
+| 13 | 2 | 0 | 2 |
+| 14 | 2 | 0 | 2 |
+| 15 | 2 | 0 | 2 |
+| 16 | 2 | 0 | 2 |
+| 17 | 2 | 0 | 2 |
+| 18 | 2 | 0 | 2 |
+| 19 | 2 | 0 | 2 |
+| 20 | 2 | 0 | 2 |
+
+Swept total over runs 1-20: 54
+Failure Causes: none
+
+after list (2): gamelib-lzma-native-36912-unXJJK, gamelib-lzma-native-36912-v7y3CE
+ESRCH before-entries surviving in the after list: none (all 16 cleared)

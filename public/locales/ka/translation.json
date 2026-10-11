@@ -194,12 +194,6 @@
             "notInstalled": "",
             "removeConfirmTitle": ""
         },
-        "library_top_option": {
-            "disabled": "გათიშულია",
-            "favourites": "რჩეულები",
-            "recently_played_installed": "",
-            "recently_played": ""
-        },
         "log": {
             "upload": {
                 "actions": "ქმედებები",
@@ -282,7 +276,6 @@
         "hdr": "",
         "custom_themes_path": "",
         "autodxvknvapi": "",
-        "library_top_section": "",
         "savefolder": {
             "placeholder": "",
             "warning": "",
@@ -358,7 +351,6 @@
         "discordRPC": "",
         "gamemode": "",
         "select_theme": "",
-        "maxRecentGames": "",
         "default-install-path": "",
         "enableFSRHack": "",
         "autoUpdateGames": "",

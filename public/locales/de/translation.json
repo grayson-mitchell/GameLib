@@ -647,13 +647,6 @@
         "gamemode": "GameMode verwenden (Feral GameMode muss installiert sein)",
         "hideChangelogsOnStartup": "Änderungsprotokolle beim Start nicht anzeigen",
         "language": "Anwendungssprache auswählen",
-        "library_top_option": {
-            "disabled": "Deaktiviert",
-            "favourites": "Lieblingsspiele",
-            "recently_played": "Zuletzt gespielte Spiele",
-            "recently_played_installed": "Zuletzt gespielte Spiele (nur installierte)"
-        },
-        "library_top_section": "Oberer Abschnitt der Bibliothek",
         "log": {
             "copy-to-clipboard": "Log-Inhalt in Zwischenablage kopieren",
             "current-log": "Aktueller Log",
@@ -712,7 +705,6 @@
             "title": "Spielstände manuell synchronisieren",
             "upload": "Upload"
         },
-        "maxRecentGames": "Zuletzt gespielte Spiele anzeigen",
         "maxworkers": "Maximale Anzahl gleichzeitiger Downloads",
         "minimize-on-launch": "GameLib nach Spielstart minimieren",
         "offlinemode": "Spiel offline ausführen",

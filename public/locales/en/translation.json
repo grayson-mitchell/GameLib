@@ -894,13 +894,6 @@
         "hideChangelogsOnStartup": "Don't show changelogs on Startup",
         "ignoreGameUpdates": "Ignore game updates",
         "language": "Choose App Language",
-        "library_top_option": {
-            "disabled": "Disabled",
-            "favourites": "Favourite Games",
-            "recently_played": "Recently Played Games",
-            "recently_played_installed": "Recently Played Games (Only Installed)"
-        },
-        "library_top_section": "Library Top Section",
         "log": {
             "descriptiveNames": {
                 "game-log": "Game log of {{gameTitle}}",
@@ -956,7 +949,6 @@
             "title": "Manual Sync Saves",
             "upload": "Upload"
         },
-        "maxRecentGames": "Played Recently to Show",
         "maxworkers": "Maximum Number of Workers when downloading",
         "minimize-on-launch": "Minimize GameLib After Game Launch",
         "msync": "Enable Msync",

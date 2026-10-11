@@ -637,13 +637,6 @@
         "gamemode": "Utilizați GameMode (Feral GameMode trebuie instalat)",
         "hideChangelogsOnStartup": "Don't show changelogs on Startup",
         "language": "Alegeți Limba aplicației",
-        "library_top_option": {
-            "disabled": "Dezactivat",
-            "favourites": "Jocuri preferate",
-            "recently_played": "Jocuri jucate recent",
-            "recently_played_installed": "Jocuri jucate recent (numai instalate)"
-        },
-        "library_top_section": "Secțiunea de sus a bibliotecii",
         "log": {
             "copy-to-clipboard": "Copiați conținutul jurnalului în clipboard",
             "current-log": "Jurnal curent",
@@ -702,7 +695,6 @@
             "title": "Salvări cu sincronizare manuală",
             "upload": "Încărcați"
         },
-        "maxRecentGames": "Jocuri recente de afișat",
         "maxworkers": "Numărul maxim de lucrători la descărcare",
         "minimize-on-launch": "Minimizați eroicul după lansarea jocului",
         "offlinemode": "Rulați jocul offline",
