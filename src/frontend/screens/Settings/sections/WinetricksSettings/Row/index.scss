@@ -151,8 +151,9 @@
     line-height: 1.5;
   }
 
-  // Ellipsis lands on the title, never on the category tag (E7-long-text), so
-  // the title shrinks first and the trailing tags keep their natural width.
+  // E7-long-text: ellipsis never lands on the category tag, which keeps its
+  // natural width. The cached badge shares the title's shrink weight instead
+  // (see its rule below).
   .WinetricksRow__title {
     flex: 0 1 auto;
     min-width: 0;
@@ -176,7 +177,23 @@
     color: var(--text-secondary, #a8aeaf);
   }
 
-  .WinetricksRow__cached,
+  // 261011-jj1: the badge shrinks at the title's weight rather than staying
+  // rigid, so a long localised label (German is about 42 characters)
+  // truncates instead of painting over the fixed 12rem status slot. A lower
+  // shrink factor would drive the title to zero width first, because the
+  // title's own floor is `min-width: 0` -- the badge would then absorb the
+  // whole remaining deficit while the title shows nothing. The full label
+  // is recoverable on the span's `title`.
+  .WinetricksRow__cached {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-xs, 0.6875rem);
+    color: var(--text-secondary, #a8aeaf);
+  }
+
   .WinetricksRow__category {
     flex: 0 0 auto;
     white-space: nowrap;

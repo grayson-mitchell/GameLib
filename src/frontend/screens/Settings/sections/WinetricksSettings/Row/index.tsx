@@ -88,6 +88,11 @@ export default function WinetricksRow({
     meta = publisher || year || null
   }
 
+  const cachedLabel = tGamelib(
+    'winetricksBrowse.cachedTag',
+    'Cached (installs offline)'
+  )
+
   let lead: ReactNode = null
   let status: ReactNode = null
 
@@ -206,11 +211,8 @@ export default function WinetricksRow({
           </span>
           {meta && <span className="WinetricksRow__meta">{meta}</span>}
           {component.cached && rowState !== 'installed' && (
-            <span className="WinetricksRow__cached">
-              {tGamelib(
-                'winetricksBrowse.cachedTag',
-                'Cached (installs offline)'
-              )}
+            <span className="WinetricksRow__cached" title={cachedLabel}>
+              {cachedLabel}
             </span>
           )}
           {showCategory && (

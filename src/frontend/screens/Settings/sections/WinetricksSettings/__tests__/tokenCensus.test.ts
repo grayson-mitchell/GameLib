@@ -294,10 +294,7 @@ function parseRules(
 
 // Merges, in order, the decls of every rule whose selector list contains
 // `selector` exactly. Later rules win -- the normal CSS cascade-order rule
-// for two rules tied on specificity. Unused until Task 2's
-// `cachedBadgeYields`; defined here so the specificity/rule-parsing helpers
-// stay together.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// for two rules tied on specificity.
 function effectiveDecls(
   rules: { selectors: string[]; decls: Record<string, string> }[],
   selector: string
@@ -333,6 +330,22 @@ function beatsSectionFloor(
     }
   }
   return false
+}
+
+// True iff `.WinetricksSettings .WinetricksRow__cached`'s effective decls
+// shrink the badge with an ellipsis instead of staying rigid (261011-jj1).
+function cachedBadgeYields(css: string): boolean {
+  const decls = effectiveDecls(
+    parseRules(css),
+    '.WinetricksSettings .WinetricksRow__cached'
+  )
+  return (
+    decls['flex'] === '0 1 auto' &&
+    decls['min-width'] === '0' &&
+    decls['overflow'] === 'hidden' &&
+    decls['text-overflow'] === 'ellipsis' &&
+    decls['white-space'] === 'nowrap'
+  )
 }
 
 function scssFiles(dir: string): string[] {
@@ -611,5 +624,83 @@ describe("GamesSettings section floor vs the tab's groups (261011-jj1)", () => {
     for (const rule of matches) {
       expect(rule.decls).toEqual({ 'min-width': '0' })
     }
+  })
+})
+
+describe('cached badge yields instead of overflowing (261011-jj1)', () => {
+  const rowCss = sass.compile(join(TAB_DIR, 'Row', 'index.scss')).css
+
+  it('rejects the pre-fix shared rule (flex: 0 0 auto)', () => {
+    const sample = [
+      '.WinetricksSettings .WinetricksRow__cached, .WinetricksSettings .WinetricksRow__category {',
+      '  flex: 0 0 auto;',
+      '  white-space: nowrap;',
+      '}'
+    ].join('\n')
+    expect(cachedBadgeYields(sample)).toBe(false)
+  })
+
+  it('rejects a shrinkable badge with no text-overflow: ellipsis (clips with no truncation cue)', () => {
+    const sample = [
+      '.WinetricksSettings .WinetricksRow__cached {',
+      '  flex: 0 1 auto;',
+      '  min-width: 0;',
+      '  overflow: hidden;',
+      '  white-space: nowrap;',
+      '}'
+    ].join('\n')
+    expect(cachedBadgeYields(sample)).toBe(false)
+  })
+
+  it('accepts the full shape', () => {
+    const sample = [
+      '.WinetricksSettings .WinetricksRow__cached {',
+      '  flex: 0 1 auto;',
+      '  min-width: 0;',
+      '  overflow: hidden;',
+      '  text-overflow: ellipsis;',
+      '  white-space: nowrap;',
+      '}'
+    ].join('\n')
+    expect(cachedBadgeYields(sample)).toBe(true)
+  })
+
+  it('the real Row/index.scss yields instead of overflowing', () => {
+    expect(cachedBadgeYields(rowCss)).toBe(true)
+  })
+
+  it('parity: the badge and the title share the same effective flex, 0 1 auto', () => {
+    const rules = parseRules(rowCss)
+    const cachedFlex = effectiveDecls(
+      rules,
+      '.WinetricksSettings .WinetricksRow__cached'
+    )['flex']
+    const titleFlex = effectiveDecls(
+      rules,
+      '.WinetricksSettings .WinetricksRow__title'
+    )['flex']
+    expect(cachedFlex).toBe('0 1 auto')
+    expect(titleFlex).toBe('0 1 auto')
+    expect(cachedFlex).toBe(titleFlex)
+  })
+
+  it('the category tag stays rigid (E7-long-text): no overflow or text-overflow key', () => {
+    const decls = effectiveDecls(
+      parseRules(rowCss),
+      '.WinetricksSettings .WinetricksRow__category'
+    )
+    expect(decls['flex']).toBe('0 0 auto')
+    expect(decls['white-space']).toBe('nowrap')
+    expect('overflow' in decls).toBe(false)
+    expect('text-overflow' in decls).toBe(false)
+  })
+
+  it('the status slot is unchanged: flex 0 0 auto, width 12rem', () => {
+    const decls = effectiveDecls(
+      parseRules(rowCss),
+      '.WinetricksSettings .WinetricksRow__status'
+    )
+    expect(decls['flex']).toBe('0 0 auto')
+    expect(decls['width']).toBe('12rem')
   })
 })

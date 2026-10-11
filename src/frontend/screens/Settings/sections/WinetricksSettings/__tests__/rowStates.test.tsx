@@ -323,6 +323,20 @@ describe('cached is an orthogonal badge', () => {
     ).not.toContain('Cached')
     expect(collectText(mount(baseProps('available')))).not.toContain('Cached')
   })
+
+  it('a truncated badge stays recoverable on hover: the span carries the full text as its title (261011-jj1)', () => {
+    for (const state of ALL_STATES.filter((s) => s !== 'installed')) {
+      const tree = mount(baseProps(state, { component: cached }))
+      const spans = findAll(
+        tree,
+        (el) => el.props.className === 'WinetricksRow__cached'
+      )
+      expect(spans).toHaveLength(1)
+      const text = collectText(spans[0])
+      expect(text).toBe('Cached (installs offline)')
+      expect(spans[0].props.title).toBe(text)
+    }
+  })
 })
 
 describe('T-45-20: upstream strings are text nodes only', () => {
