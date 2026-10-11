@@ -256,7 +256,11 @@ fn create_embed(
             );
         });
     if spoof_ua {
-        builder = builder.user_agent(CHROME_UA);
+        // Quick 261011-w8j: `SPIKE_UA=<string>` substitutes an explicit UA for the Chrome
+        // one so other identities (the login window's `EpicGamesLauncher`, a full Safari
+        // string) can be measured through the same path. Unset keeps runs 1-5 behaviour.
+        let ua = std::env::var("SPIKE_UA").ok().filter(|v| !v.trim().is_empty());
+        builder = builder.user_agent(ua.as_deref().unwrap_or(CHROME_UA));
     }
     if isolated_store {
         builder = builder.data_store_identifier(*b"gamelibspike016\0");
@@ -267,6 +271,7 @@ fn create_embed(
         "add_child",
         serde_json::json!({
             "url": url, "spoofUa": spoof_ua, "isolatedStore": isolated_store,
+            "uaOverride": if spoof_ua { std::env::var("SPIKE_UA").ok() } else { None },
             "requested": { "x": x, "y": y, "w": w, "h": h },
             "thread": thread_kind(),
         }),
@@ -399,7 +404,7 @@ fn probe_embed(app: AppHandle, label: &str, tag: &str) -> Result<(), String> {
     out = {{ href: location.href, title: document.title, globals: present,
              plugins: plug, textHead: t, bodyLen: (document.body ? document.body.innerHTML.length : 0) }};
   }} catch (e) {{ out = {{ err: String(e) }}; }}
-  location.href = 'http://localhost:17913/report?tag={tag}&probe=' + encodeURIComponent(JSON.stringify(out));
+  location.href = 'http://localhost:17913/report?tag={tag}&ua=' + encodeURIComponent(navigator.userAgent) + '&probe=' + encodeURIComponent(JSON.stringify(out));
 }})();"#
     );
     webview.eval(&script).map_err(|e| e.to_string())
@@ -563,6 +568,16 @@ fn control_origin() -> String {
 // human clicking. The interactive control panel still exists for the visual
 // verification (compositing, input, scrolling) that a log cannot capture.
 
+/// `SPIKE_SPOOF_UA` -- unset or anything but `0`/`false` keeps the historical behaviour
+/// (Chrome 131 UA, what runs 1-5 all sent). `0`/`false` leaves `WebviewBuilder::user_agent`
+/// untouched so the embed presents WKWebView's default `Version/x Safari/x` string.
+fn autorun_spoof_ua() -> bool {
+    match std::env::var("SPIKE_SPOOF_UA") {
+        Ok(v) => !matches!(v.trim(), "0" | "false" | "FALSE" | "no"),
+        Err(_) => true,
+    }
+}
+
 fn autorun(app: AppHandle, log: Arc<Logger>) {
     // Helpers hop to the main thread like the real backend would; add_child
     // does its own internal main-thread dispatch either way (window/mod.rs:1129).
@@ -587,13 +602,17 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
     }));
     step("0a list_webviews before anything (expect exactly ['main'])", &v);
 
-    log.log("autorun", "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===", serde_json::json!({}));
+    log.log("autorun", "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===", serde_json::json!({ "spoofUa": autorun_spoof_ua(), "spoofUaEnv": std::env::var("SPIKE_SPOOF_UA").ok() }));
     let v = on_main(Box::new(|app| {
         let state = app.state::<State>();
+        // Quick 261011-w8j: the UA spoof was a CONSTANT across runs 1-5 (always `true`
+        // here, always ticked in the panel) and the README never named it as a variable.
+        // `SPIKE_SPOOF_UA=0` sends WKWebView's own UA instead so the two can be separated.
+        let spoof_ua = autorun_spoof_ua();
         match create_embed(
             app.clone(), state,
             format!("{}/set", control_server::ORIGIN),
-            true, false,
+            spoof_ua, false,
             290.0, 96.0, 760.0, 560.0,
         ) {
             Ok(v) => v,

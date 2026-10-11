@@ -35,19 +35,21 @@ interface Props {
  *   unbuilt (filed as Phase 38 ledger items, D-04; the macOS evidence is
  *   still 016/017/018).
  * - `reason="epic"` (D-05/D-08): `/store/epic` is scoped out of the embed on
- *   EVERY platform, including macOS. Spike 024 measured why, across five
- *   runs, and closed the question
+ *   EVERY platform, including macOS. Spike 024 measured why, across ten
+ *   runs (five on 2026-09-05/15, five more on 2026-10-11 with the Chrome
+ *   UA spoof off and two other UA identities), and closed the question
  *   (`.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`):
  *   the gate is a Cloudflare Turnstile challenge. The injected globals, read
  *   from inside the loaded Epic page, were present in the run that rendered
  *   fine as well as in the runs that were challenged, so the 2026-08-03
  *   Talon login-endpoint mechanism is REFUTED, not confirmed -- it does not
- *   explain the store gate. This is measured and permanent, not predicted:
- *   the follow-up todo closed WONTFIX on 2026-09-15. The copy stays
- *   restrained, never an accusation that Epic blocks in-app browsing -- run
- *   1 rendered the store fully and all five runs share one residential IP,
- *   leaving reputation-vs-webview unseparated; this edit does not change
- *   the user-facing copy. The Epic tile stays in
+ *   explain the store gate, and the user agent does not either (quick
+ *   261011-w8j). This is measured, not predicted: the follow-up todo closed
+ *   WONTFIX on 2026-09-15 and the 2026-10-11 re-probe appended to it. The
+ *   copy stays restrained, never an accusation that Epic blocks in-app
+ *   browsing -- run 1 rendered the store fully and all ten runs share one
+ *   residential IP, leaving cold-jar-reputation-vs-webview unseparated;
+ *   this edit does not change the user-facing copy. The Epic tile stays in
  *   `NavShell/components/StoresPanel/index.tsx` (D-08): a tile leading to a
  *   working open-in-browser escape hatch beats no tile.
  *

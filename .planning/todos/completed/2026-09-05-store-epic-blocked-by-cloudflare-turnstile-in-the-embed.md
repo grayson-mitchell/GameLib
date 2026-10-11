@@ -150,3 +150,14 @@ Pick it up as a `/gsd-quick` once the interactive question above is answered.
   re-probed, do it more than once and keep the Steam control.
 - Epic's posture is a service-side variable: it throttled this account on 2026-08-04 producing
   symptoms unrelated to any code change. A bad run here is not necessarily a regression.
+
+## Addendum 2026-10-11 — the UA arm (quick `261011-w8j`)
+
+Runs 1–5 all sent a Chrome 131 UA from WebKit; the spike never named it as a variable. Quick
+`261011-w8j` re-ran the autorun on five more fresh containers: no UA override (runs 6–8), the
+`EpicGamesLauncher` string (run 9) and a complete Safari 26.6 string (run 10). **Every run was
+challenged; the Steam control rendered every time.** The user agent is ruled out. A warm, signed-in
+Safari jar on the same IP was served in the same session, so the surviving question is "cold jar on
+this IP" vs "the embedded webview itself" — a Safari Private Window control or a different network
+would separate them. WONTFIX stands; nothing here reopens it. Details in the spike README,
+`### Runs 6–10`.

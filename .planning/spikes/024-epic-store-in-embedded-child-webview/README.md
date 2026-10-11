@@ -3,9 +3,10 @@ spike: 024
 name: epic-store-in-embedded-child-webview
 type: standard
 validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected Tauri globals PRESENT, then observe whether Talon/Cloudflare blocks STORE browsing the way it blocks the LOGIN endpoint"
-verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely
+verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers
 run_date: 2026-09-15
-runs: 5
+rerun_date: 2026-10-11
+runs: 10
 related: [013, 016, 017, 018]
 tags: [tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, macos]
 ---
@@ -75,6 +76,67 @@ evidence there is — which is exactly why run 4's contamination was invisible i
 wrong** — it generalised from a single sample of a service whose posture is known to vary. Runs 2
 and 3 were what caught it.
 
+### Runs 6–10 — the UA arm (2026-10-11, quick `261011-w8j`)
+
+**Runs 1–5 all sent a Chrome 131 UA from WebKit, and this file never named that as a variable.**
+The harness builder did `builder.user_agent(CHROME_UA)` whenever `spoof_ua` was true; the autorun
+hardcoded `true` and the panel checkbox defaulted to ticked (`grep '"spoofUa":' run*.log` →
+12 × `true`, 0 × `false`). A Chrome UA on a Safari TLS/JS fingerprint is a textbook bot-management
+signal, so the cheaper explanation had never been tested. Todo
+`2026-10-11-re-probe-spike-024-epic-store-embed-with-the-chrome-ua-spoof` asked for the same
+harness with that one flag flipped.
+
+| Run | Container | UA presented (server-side oracle at `/probe`) | Embed viewport | Turnstile navs | Epic (both hosts) | Steam control |
+|---|---|---|---|---|---|---|
+| **6** | fresh `spike024e` | **none** — `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)` | 986×630 synced, **pixel-verified** | 2 | `Just a moment...`, `bodyLen` 18447 / 18383, "One more step" | rendered, 304406 |
+| **7** | fresh `spike024f` | none (as run 6) | log-only | 2 | challenged, 18447 / 18383 | rendered, 273117 |
+| **8** | fresh `spike024g` | none (as run 6) | log-only | 2 | challenged, 18469 / 18383 | rendered, 273117 |
+| **9** | fresh `spike024h` | `Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher` — the string the pristine login window passes Talon with | 760×560 (add_child size), **pixel-verified** | 2 | challenged, 18469 / 18298 | rendered, 273119 |
+| **10** | fresh `spike024i` | `… AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Safari/605.1.15` — a complete Safari 26.6 string | 760×560, **pixel-verified** | 2 | challenged, 18490 / 18447 | rendered, 273117 |
+
+Logs: `run-6.log` … `run-10.log` (IP and Cloudflare session ID redacted — the challenge card's
+text is now exfiltrated via `textHead`, so the raw logs carried both). Shots:
+`shot-epic-NOSPOOF-challenge-run6.png`, `shot-epic-EGLUA-challenge-run9.png`,
+`shot-epic-SAFARIUA-challenge-run10.png`, each with the card foot black-barred as run 5's was.
+`SPIKE_SPOOF_UA=0` / `SPIKE_UA=<string>` are the two new harness knobs (see *How to reproduce*);
+the log's PHASE 1 header and `add_child` record carry `spoofUa` / `uaOverride` so each run is
+self-describing.
+
+⚠️ **Read the shots against the log, not the panel.** The panel's `spoof Chrome UA` checkbox is
+visibly ticked in all three shots because the autorun ignores the panel and the env var ruled —
+`"spoofUa":false` at the PHASE 1 header is the authoritative record for runs 6–8.
+
+⚠️ **Two viewport shapes, both valid.** Runs 6–8 show the embed synced to the slot (986×630);
+runs 9–10 show it at the `add_child` size (760×560) because the panel's `ResizeObserver` sync had
+not fired by capture. Neither is the 58 px squeeze that invalidated run 4; the widget is at full
+size in every verified shot.
+
+**What this arm settles:**
+
+1. **The user agent is not the discriminator.** Four UA identities — Chrome 131 (runs 1–5), WebKit's
+   own default (6–8), `EpicGamesLauncher` (9) and a complete Safari string (10) — are all challenged
+   on fresh containers. The Steam control rendered in all five new runs, so none is a harness or
+   network failure.
+2. **The todo's premise about WKWebView's default UA was wrong, usefully.** With no
+   `applicationNameForUserAgent`, WKWebView sends a *bare* `AppleWebKit/605.1.15 (KHTML, like
+   Gecko)` with **no `Version/` and no `Safari/` token** — itself an unusual string. Run 10 exists
+   to close that gap, and it was challenged too.
+3. **Same machine, same IP, same engine, real Safari: served.** Opened during the same session;
+   CGWindowList reported the window title `Epic Games Store | Download & Play PC Games, Mods, DLC &
+   More – Epic Games` and the Discover page rendered. **Confound:** that Safari is signed in to an
+   Epic account, so its jar is warm (very likely holding `cf_clearance`); it is a cold-jar-vs-warm-jar
+   comparison, not a webview-vs-browser one. The shot is deliberately **not** committed (it shows the
+   account and the operator's tab bar). AppleScript to Safari was not authorised from this session,
+   so a Private Window control was not run.
+
+**What survives, sharpened.** The IP is not blanket-blocked — a warm jar on it is served. What is
+challenged every time is a **cold jar from this IP in this embedded webview**, with the UA now
+irrelevant. The two candidates left are (a) per-IP reputation applied to cold visitors, and (b)
+something about the embedded `WKWebView` itself (Tauri's injected scripts, custom-scheme origin,
+missing TLS session state). One of two cheap controls separates them, and both need an operator:
+a **Safari Private Window** on this machine (cold jar, real browser — renders ⇒ (b), challenged ⇒
+(a)), or a run of this harness on a **different network**.
+
 ## What IS established
 
 1. **The block is not the login fingerprint.** The injected globals — `isTauri`, `__TAURI__`,
@@ -110,11 +172,13 @@ and 3 were what caught it.
 - ~~Full-viewport layout: the embed had shrunk to ~`986×117` logical by capture time.~~ — **fixed
   in `35309eb4e`**, but only after this exact defect silently invalidated run 4. Recording a
   measurement defect as a known limitation does not stop it contaminating the next run.
-- **Whether a different IP would clear it.** Runs 4–5 share one residential IP with runs 1–3, so
-  they cannot separate "Tauri webview is blocked" from "this IP's reputation is spent". Run 1
-  remains the only unchallenged contact and it was this IP's first. Testing this
-  needs a different network, not another run here — and it does not change the product decision,
-  since the gate cannot be conditional on a user's IP reputation.
+- **Whether a different IP would clear it.** Runs 4–10 share one residential IP with runs 1–3, so
+  they cannot separate "Tauri webview is blocked" from "a cold jar on this IP is challenged". Run 1
+  remains the only unchallenged contact and it was this IP's first. Runs 6–10 ruled the **user
+  agent** out and showed a warm signed-in Safari jar on the same IP is served (see the runs 6–10
+  section). Testing the remainder needs a Safari Private Window control or a different network,
+  not another run of this arm — and it does not change the product decision, since the gate
+  cannot be conditional on a user's IP reputation.
 
 ## Method notes worth keeping
 
@@ -139,18 +203,28 @@ SPIKE_AUTORUN=1 SPIKE_AUTORUN_EXIT=1 CARGO_TARGET_DIR=../../../../src-tauri/targ
 Drop `SPIKE_AUTORUN` for the interactive panel — that is the mode needed to answer the open
 question above, since it lets a human click the Turnstile widget.
 
+UA knobs (quick `261011-w8j`): `SPIKE_SPOOF_UA=0` sends no `user_agent()` override at all (runs
+6–8); `SPIKE_UA='<string>'` substitutes an explicit string for the Chrome one when the spoof is on
+(runs 9–10). Both apply to the autorun's PHASE 1 `create_embed` only; the panel checkbox still
+governs panel-created embeds. `tauri.conf.json`'s `identifier` is baked in by
+`generate_context!()`, so a fresh container needs a rebuild, not just an edit.
+
 Screenshots are window-targeted: read `windowNumber` from the run log, then
 `screencapture -l<id> -x shot.png` during the 6 s `SCREENSHOT WINDOW NOW` pause each arm logs.
 Change `identifier` in `tauri.conf.json` to force a fresh WKWebsiteDataStore.
 
 ## Consequence for `/store/epic`
 
-**Keep it scoped out — permanently, not "for now".** D-05's decision stands and is now backed by
-the interactive measurement rather than by an unanswered question. `/store/epic` stays gated
-(`embeddable: false`, the `store === 'epic'` guard in `WebView/index.tsx`, and
+**Keep it scoped out — on measurement, not "for now".** D-05's decision stands and is backed by
+ten runs: the interactive measurement (runs 4–5) and the UA arm (runs 6–10). `/store/epic` stays
+gated (`embeddable: false`, the `store === 'epic'` guard in `WebView/index.tsx`, and
 `WebviewUnavailablePanel reason="epic"`); the panel copy is already honest about it.
 
-The follow-up todo closed WONTFIX on 2026-09-15 (quick `260915-hza`) with runs 4–5 attached. What
-would reopen it is a change in Epic's posture, not a change in our code — so re-probe only if
-there is a reason to think Cloudflare's configuration moved, and re-run the interactive arm more
-than once when you do.
+The follow-up todo closed WONTFIX on 2026-09-15 (quick `260915-hza`) with runs 4–5 attached, and
+quick `261011-w8j` appended runs 6–10 on 2026-10-11 without reopening it. An earlier draft of this
+section said "permanently" and "only a change in Epic's posture could reopen it"; that overstated
+what five runs with a constant UA could show. What would reopen it now is specific: a **cold-jar
+control that renders** — a Safari Private Window on this machine, or this harness on a different
+network. If either renders, the discriminator is on our side and the question is live again; if
+both are challenged, the IP-reputation reading stands with nothing left untested on this machine.
+Either way, re-run more than once and keep the Steam control.

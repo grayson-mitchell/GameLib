@@ -523,7 +523,7 @@ export default function WebView() {
   // (`urls` map, `useStoreEmbedHost`, `storeEmbedOrigins.ts`'s `embeddable: false` flag -- that
   // flag is consulted only by the deep-link/restore path above, never by this direct route) ever
   // stopped `/store/epic` from reaching the live embed render below -- this one guard is the
-  // whole mechanism. Spike 024 measured why, across five runs, and closed the question
+  // whole mechanism. Spike 024 measured why, across ten runs, and closed the question
   // (`.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`): the gate is a
   // Cloudflare Turnstile challenge, not a bare 403. The injected globals (`isTauri`, `__TAURI__`,
   // `__TAURI_INTERNALS__`, `ipc`, `__TAURI_IIFE__`), read from inside the loaded Epic page, were
@@ -536,13 +536,17 @@ export default function WebView() {
   // rendered in all three, so no run is a dead harness. Interactive run 5 (2026-09-15, quick
   // `260915-hza`), at a pixel-verified 986x630: a human clicked the verify box and the challenge
   // was RE-ISSUED rather than cleared, twice; run 4 is discarded -- a harness defect squeezed the
-  // embed to 969x58. The scope-out is PERMANENT, not "for now" -- the follow-up todo closed
-  // WONTFIX on 2026-09-15; what would reopen it is a change in Epic's posture, not a change in
-  // our code. Three honest limits survive the measurement: run 1 rendered, so this is not a
-  // capability question -- the store CAN render in a Tauri-managed child webview; all five runs
-  // share one residential IP, so "the Tauri webview is blocked" cannot be separated from "this
-  // IP's reputation is spent" here, and testing that needs a different network, not a product
-  // decision, since the gate cannot be conditional on a user's IP; and anything behind sign-in
+  // embed to 969x58. The scope-out is MEASURED, not "for now": the follow-up todo closed
+  // WONTFIX on 2026-09-15, and quick 261011-w8j re-probed on 2026-10-11 with the Chrome UA spoof
+  // OFF (runs 6-8), an `EpicGamesLauncher` UA (run 9) and a full Safari UA (run 10) -- every run
+  // was challenged, so the user agent is ruled out as the cause. What would reopen it is a
+  // cold-jar control that renders (a Safari Private Window on the same machine, or a different
+  // network), not a change in our code. Three honest limits survive the measurement: run 1
+  // rendered, so this is not a capability question -- the store CAN render in a Tauri-managed
+  // child webview; all ten runs share one residential IP, so "the Tauri webview is blocked"
+  // cannot be separated from "a cold jar on this IP is challenged" here (a warm, signed-in
+  // Safari jar on the same IP IS served), and the gate cannot be conditional on a user's IP
+  // reputation anyway; and anything behind sign-in
   // was deliberately untouched (D-07). None of this is a flat accusation that Epic blocks
   // in-app browsing, and the mechanism is not fully explained. The Epic tile stays (D-08,
   // `NavShell/components/StoresPanel/index.tsx`) -- it now lands on the panel instead.

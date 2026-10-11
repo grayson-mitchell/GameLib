@@ -5,7 +5,10 @@ area: webview/store-embed
 severity: medium
 platform: macos
 ready: live-gate
-status: OPEN
+status: completed
+resolution: measured-still-challenged
+resolved: 2026-10-11
+resolved_by: "quick-261011-w8j"
 found_by: 'Session review 2026-10-11, re-reading spike 024 against its own harness code and run logs after the question "have we exhausted options before moving on"'
 files:
   - .planning/spikes/024-epic-store-in-embedded-child-webview/README.md:146-156
@@ -17,6 +20,36 @@ files:
   - src/frontend/screens/WebView/storeEmbedOrigins.ts:48
   - src/backend/storeManagers/legendary/games.ts:137
 ---
+
+## RESOLUTION — measured, still challenged, 2026-10-11 (quick `261011-w8j`)
+
+**Arm 1 ran; the outcome is the table's second row.** Three fresh-container autoruns with no UA
+override (runs 6–8), plus the optional second arm as two more fresh containers — the login window's
+`EpicGamesLauncher` string (run 9) and a complete Safari 26.6 string (run 10) — were **all
+challenged**, with the Steam positive control rendering in every run. The user agent is ruled out.
+WONTFIX stands with better evidence; the runs are appended to the spike README (`### Runs 6–10`)
+and to the WONTFIX todo, not reopened.
+
+Two corrections to this todo's own text, recorded so the next reader does not inherit them:
+
+- WKWebView's default UA does **not** carry `Version/x Safari/x`. With no
+  `applicationNameForUserAgent` it is a bare `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+  AppleWebKit/605.1.15 (KHTML, like Gecko)`. Run 10 sent the full Safari string to cover that.
+- "IP reputation is the surviving candidate" is now sharper: a warm, signed-in Safari jar on the
+  same IP and engine **was served** during the same session (CGWindowList title = the real store
+  title). So the IP is not blanket-blocked; what is challenged is a cold jar from this IP in this
+  embedded webview. Separating "cold jar on this IP" from "the embedded webview itself" needs a
+  Safari Private Window control or a different network — operator work, not run here (AppleScript
+  to Safari was not authorised from the session).
+
+The interactive arm was **not** run: with every unattended arm challenged there was no new
+condition for a human to click under, and runs 4–5 already measured the click.
+
+Part 2 (wording) landed: README consequence section, the `store === 'epic'` guard comment in
+`WebView/index.tsx`, and the `reason="epic"` docstring in `WebviewUnavailablePanel.tsx` now say
+"measured" with the reopen condition stated, not "permanent". Part 3's two alternatives (native
+Epic storefront via the GraphQL catalog; the store in the pristine login `WKWebView`) remain
+recorded below and unactioned.
 
 ## Problem
 
