@@ -905,18 +905,31 @@ const WINETRICKS_APPLY_SELECTOR =
   '.WinetricksStickyBar .WinetricksStickyBar__apply'
 
 /**
- * Every nested selector inside the Apply block body that scopes to a theme
- * (`body.<theme> ...`) but does NOT end with `&:not(:disabled)` -- i.e.
- * would also apply to the disabled Apply button. An empty array means every
- * theme override is correctly guarded. Factored out so Test C (the real
- * stylesheet) and Test D (an in-memory-sabotaged copy, no file mutation)
- * share one checker, and Test D proves Test C can actually fail.
+ * The shape every correctly-guarded theme override selector must end in: an
+ * `&` followed by zero or more `:not(<simple selector>)` compounds (e.g.
+ * `.button.is-text`'s `:not(.is-link)`) and then a final, required
+ * `:not(:disabled)`. Shared between `themeOverridesMissingNotDisabled` (a
+ * full-selector match, anchored with `$`) and `applyTextColourDecl`
+ * (embedded ahead of the opening `{`) so the two helpers cannot drift onto
+ * different definitions of "guarded" (261011-pjv).
  */
-const themeOverridesMissingNotDisabled = (applyBody: string): string[] =>
-  nestedRules(applyBody)
+const GUARDED_OVERRIDE_TAIL = '&(?::not\\([^()]+\\))*:not\\(:disabled\\)'
+
+/**
+ * Every nested selector inside a control's block body that scopes to a
+ * theme (`body.<theme> ...`) but does NOT end in the guarded shape above --
+ * i.e. would also apply to the disabled control. An empty array means
+ * every theme override is correctly guarded. Factored out so Test C (the
+ * real stylesheet) and Test D (an in-memory-sabotaged copy, no file
+ * mutation) share one checker, and Test D proves Test C can actually fail.
+ */
+const themeOverridesMissingNotDisabled = (applyBody: string): string[] => {
+  const guarded = new RegExp(`${GUARDED_OVERRIDE_TAIL}$`)
+  return nestedRules(applyBody)
     .map((rule) => rule.selector)
     .filter((selector) => selector.startsWith('body.'))
-    .filter((selector) => !selector.endsWith('&:not(:disabled)'))
+    .filter((selector) => !guarded.test(selector))
+}
 
 /**
  * The `color:` an ENABLED accent-filled control paints in `themeClass`, as
@@ -935,7 +948,7 @@ const applyTextColourDecl = (
   themeClass: string
 ): string => {
   const scoped = new RegExp(
-    `body\\.${themeClass}\\s*&(?::not\\([^()]+\\))*:not\\(:disabled\\)\\s*\\{([^}]*)\\}`
+    `body\\.${themeClass}\\s*${GUARDED_OVERRIDE_TAIL}\\s*\\{([^}]*)\\}`
   ).exec(controlBody)
   if (scoped) {
     const decls = declsAtDepthZero(scoped[1], 'color')
@@ -2294,6 +2307,20 @@ const ACCENT_FILL_CONTROLS: {
 ]
 
 /**
+ * Every nested selector inside `.button.is-text`'s block body that scopes
+ * to a theme (`body.<theme> ...`) but does NOT carry `:not(.is-link)`.
+ * An empty array means the override cannot reach an `.is-link` consumer
+ * (Planner finding 1, 261011-pjv): without it, a bare override would
+ * outrank `.gameConfigContainer .game-actions .gameTools .link` and repaint
+ * the 22 `.is-text.is-link` game-menu render sites.
+ */
+const themeOverridesReachingIsLink = (isTextBody: string): string[] =>
+  nestedRules(isTextBody)
+    .map((rule) => rule.selector)
+    .filter((selector) => selector.startsWith('body.'))
+    .filter((selector) => !selector.includes(':not(.is-link)'))
+
+/**
  * Per-theme WCAG 1.4.3 census for the three remaining members of the
  * accent-fill family Apply belongs to: Retry, Clear and `.button.is-text`
  * (todo 2026-10-11, gruvbox_dark 4.35:1).
@@ -2377,4 +2404,160 @@ describe('Accent-filled Retry, Clear and .button.is-text text contrast in every 
       })
     }
   )
+
+  it.each(ACCENT_FILL_CONTROLS.map(({ control }) => control))(
+    'the gruvbox_dark override is load-bearing on every control: %s',
+    (control) => {
+      // The depth-0 BASE color, deliberately NOT the override, against the
+      // base background. If this resolves >= 4.5, gruvbox's tokens changed
+      // and the override (and this test) should be deleted, not re-pinned.
+      // Option (b), if ever taken, is exactly what turns this red.
+      const block = blocks.get(control) as string
+      const scope = themeTokens(themesScss, 'body.gruvbox_dark')
+      const baseColour = declsAtDepthZero(block, 'color')[0]
+      const baseBackground = declsAtDepthZero(block, 'background')[0]
+      const fg = resolveValue(baseColour, scope, globals)
+      const bg = resolveValue(baseBackground, scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({
+        control,
+        ratio,
+        passes: ratio < 4.5,
+        note: "if this goes red, gruvbox's tokens changed so the base pair now passes -- delete the override and this test, do not re-pin it"
+      }).toEqual({
+        control,
+        ratio,
+        passes: true,
+        note: "if this goes red, gruvbox's tokens changed so the base pair now passes -- delete the override and this test, do not re-pin it"
+      })
+    }
+  )
+
+  it.each(ACCENT_FILL_CONTROLS.map(({ control }) => control))(
+    'a theme override cannot reach a disabled control: %s',
+    (control) => {
+      const entry = ACCENT_FILL_CONTROLS.find((c) => c.control === control)
+      if (!entry)
+        throw new Error(`no ACCENT_FILL_CONTROLS entry for ${control}`)
+      const block = blocks.get(control) as string
+      const themeOverrideSelectors = nestedRules(block)
+        .map((rule) => rule.selector)
+        .filter((selector) => selector.startsWith('body.'))
+      expect(themeOverrideSelectors).toContain(entry.gruvboxOverride)
+      expect(themeOverridesMissingNotDisabled(block)).toEqual([])
+
+      if (control === 'Retry') {
+        const disabledRule = nestedRules(block).find(
+          (rule) => rule.selector === '&:disabled'
+        )
+        expect(disabledRule).not.toBeUndefined()
+        const disabledBody = (
+          disabledRule as { selector: string; body: string }
+        ).body
+        expect(declsAtDepthZero(disabledBody, 'opacity')).toEqual(['0.5'])
+        expect(declsAtDepthZero(disabledBody, 'color')).toEqual([])
+        expect(declsAtDepthZero(disabledBody, 'background')).toEqual([])
+      } else if (control === 'Clear') {
+        const disabledRule = nestedRules(block).find(
+          (rule) => rule.selector === '&:disabled'
+        )
+        expect(disabledRule).toBeUndefined()
+      } else {
+        // `.button.is-text` has no disabled arm of its own; disabled is
+        // painted by the global `.button:disabled` rule. That literal
+        // selector appears TWICE in _buttons.scss (a cursor-only block and
+        // a colour block), so allBlocksFor -- not cssBlock -- is used here.
+        const disabledBlocks = allBlocksFor(
+          read(BUTTONS_SCSS),
+          '.button:disabled'
+        )
+        const withColour = disabledBlocks.filter(
+          (body) => declsAtDepthZero(body, 'color').length > 0
+        )
+        expect(withColour).toHaveLength(1)
+        expect(declsAtDepthZero(withColour[0], 'color')).toEqual([
+          'var(--text-secondary)'
+        ])
+        expect(declsAtDepthZero(withColour[0], 'background')).toEqual([
+          'var(--disabled-button)'
+        ])
+      }
+    }
+  )
+
+  it('the .button.is-text override cannot reach an .is-link consumer', () => {
+    const block = blocks.get('.button.is-text') as string
+    expect(themeOverridesReachingIsLink(block)).toEqual([])
+    // Structural reason `.is-text.is-link` text never came from
+    // `--background`: `.button.is-link` declares its own depth-0 `color`,
+    // at the same specificity and later in the file.
+    const isLinkBlock = cssBlock(read(BUTTONS_SCSS), '.button.is-link')
+    expect(declsAtDepthZero(isLinkBlock, 'color')).toHaveLength(1)
+  })
+
+  it('checkers can fail, in memory only', () => {
+    // The tokenCensus.test.ts sabotage idiom: mutate a STRING copy, never
+    // the file on disk.
+    const retryBlock = blocks.get('Retry') as string
+    const sabotagedRetry = retryBlock.replace('&:not(:disabled)', '&')
+    expect(themeOverridesMissingNotDisabled(sabotagedRetry)).toEqual([
+      'body.gruvbox_dark &'
+    ])
+
+    const isTextBlock = blocks.get('.button.is-text') as string
+    const missingNotDisabled = isTextBlock.replace(
+      '&:not(.is-link):not(:disabled)',
+      '&:not(.is-link)'
+    )
+    expect(themeOverridesMissingNotDisabled(missingNotDisabled)).toEqual([
+      'body.gruvbox_dark &:not(.is-link)'
+    ])
+
+    const missingNotIsLink = isTextBlock.replace(
+      '&:not(.is-link):not(:disabled)',
+      '&:not(:disabled)'
+    )
+    expect(themeOverridesReachingIsLink(missingNotIsLink)).toEqual([
+      'body.gruvbox_dark &:not(:disabled)'
+    ])
+  })
+
+  it('the override does not regress .button.is-text:hover in gruvbox_dark', () => {
+    const isTextBlock = blocks.get('.button.is-text') as string
+    const hoverBlock = cssBlock(read(BUTTONS_SCSS), '.button.is-text:hover')
+    const scope = themeTokens(themesScss, 'body.gruvbox_dark')
+    const hoverBg = resolveValue(
+      declsAtDepthZero(hoverBlock, 'background')[0] ?? '',
+      scope,
+      globals
+    )
+    const overrideFg = resolveValue(
+      applyTextColourDecl(isTextBlock, 'gruvbox_dark'),
+      scope,
+      globals
+    )
+    const baseFg = resolveValue(
+      declsAtDepthZero(isTextBlock, 'color')[0] ?? '',
+      scope,
+      globals
+    )
+    expect(hoverBg).not.toBeNull()
+    expect(overrideFg).not.toBeNull()
+    expect(baseFg).not.toBeNull()
+    const overrideRatio = contrastRatio(overrideFg as string, hoverBg as string)
+    const baseRatio = contrastRatio(baseFg as string, hoverBg as string)
+    // Object form so a failure names both ratios: the override must clear
+    // 4.5 AND not regress the base-text hover ratio (expected 7.38 vs 6.09).
+    expect({
+      overrideRatio,
+      baseRatio,
+      passes: overrideRatio >= 4.5 && overrideRatio >= baseRatio
+    }).toEqual({
+      overrideRatio,
+      baseRatio,
+      passes: true
+    })
+  })
 })
