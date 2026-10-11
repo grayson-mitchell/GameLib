@@ -241,6 +241,12 @@ fn probe_script(tag: &str) -> String {
     // real in-flight set: head scripts/stylesheets with no timing entry yet. `tail`/`lastEl` is
     // where the parser is sitting. `nav.responseEnd === 0` = main document still streaming.
     var inflight = [], pendingScripts = [], pendingStyles = [], counts = {{}}, tail = '', lastEl = '', sw = null;
+    // Quick 261012-ago (runs 24+): what sits at the mid-parse stall offset. Runs 15/16/18/19 parked
+    // at docLen 938 382/383 and 938 544/545 -- a fixed point in the document. On a RENDERED arm
+    // `at938` is the serialised document around that offset and `tagsAround` names the tag opens
+    // either side of it; on a stalled arm `tail` already sits there. `headEnd`/`bodyAt` place the
+    // offset relative to the head/body boundary.
+    var at938 = '', headEnd = -1, bodyAt = -1, tagsAround = [], scriptAt = null;
     try {{
       var all = performance.getEntriesByType('resource');
       var done = {{}};
@@ -256,6 +262,17 @@ fn probe_script(tag: &str) -> String {
       tail = document.documentElement.outerHTML.slice(-500).replace(/\s+/g,' ');
       var le = document.documentElement; while (le.lastElementChild) le = le.lastElementChild;
       lastEl = le.outerHTML.slice(0,300).replace(/\s+/g,' ');
+      var full = document.documentElement.outerHTML;
+      at938 = full.slice(937800, 939200);
+      var sa = full.lastIndexOf('<script', 938500), se = full.indexOf('</script>', 938500);
+      scriptAt = sa < 0 ? null : {{ start: sa, end: se < 0 ? -1 : se + 9, textEnd: se, head: full.slice(sa, sa + 60) }};
+      headEnd = full.indexOf('</head>'); bodyAt = full.indexOf('<body');
+      var re = /<(script|link|style|meta|template|div|noscript|title|html|head|body)\b[^>]{{0,160}}>/g, m, before = [], after = [];
+      while ((m = re.exec(full))) {{
+        if (m.index < 938450) {{ before.push(m.index + ':' + m[0].slice(0,100)); if (before.length > 6) before.shift(); }}
+        else {{ after.push(m.index + ':' + m[0].slice(0,100)); if (after.length >= 4) break; }}
+      }}
+      tagsAround = before.concat(['<<938450>>'], after);
       sw = (navigator.serviceWorker && navigator.serviceWorker.controller) ? navigator.serviceWorker.controller.scriptURL : null;
     }} catch (e) {{ counts = {{ err: String(e) }}; }}
     out = {{ href: location.href, title: document.title, globals: present,
@@ -263,7 +280,8 @@ fn probe_script(tag: &str) -> String {
              ready: document.readyState, docLen: document.documentElement.outerHTML.length,
              head: (document.head ? document.head.innerHTML : '').replace(/\s+/g,' ').slice(0,900),
              nav: nav, res: res, inflight: inflight, pendingScripts: pendingScripts, pendingStyles: pendingStyles,
-             counts: counts, tail: tail, lastEl: lastEl, sw: sw, currentScript: !!document.currentScript }};
+             counts: counts, tail: tail, lastEl: lastEl, sw: sw, currentScript: !!document.currentScript,
+             at938: at938, headEnd: headEnd, bodyAt: bodyAt, tagsAround: tagsAround, scriptAt: scriptAt }};
   }} catch (e) {{ out = {{ err: String(e) }}; }}
   location.href = 'http://localhost:17913/report?tag={tag}&ua=' + encodeURIComponent(navigator.userAgent) + '&probe=' + encodeURIComponent(JSON.stringify(out));
 }})();"#
@@ -896,6 +914,11 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         let run = std::env::var("SPIKE_RUN").unwrap_or_else(|_| "x".into());
         let in_main = matches!(std::env::var("SPIKE_PRISTINE_INMAIN").as_deref(), Ok("1") | Ok("true"));
         let long_sample = matches!(std::env::var("SPIKE_PRISTINE_LONG").as_deref(), Ok("1") | Ok("true"));
+        // Quick 261012-ago (runs 24+): `SPIKE_PRISTINE_FOCUS=1` focuses the host right after each arm
+        // is created when no occluder is in play -- the un-occluded condition that produced the
+        // mid-parse stall (runs 17-19), with the host explicitly key so a blank arm cannot be a
+        // natural occlusion in disguise.
+        let focus_host = matches!(std::env::var("SPIKE_PRISTINE_FOCUS").as_deref(), Ok("1") | Ok("true"));
         // Quick 261012-97a (runs 21+): the occlusion experiment. Run 20 showed the "stall" is not
         // a pending head resource (every head script had a timing entry; one blank arm even read
         // `readyState=complete` with a full body) -- the webview is not RENDERING, which on macOS
@@ -913,7 +936,7 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         log.log(
             "autorun",
             "=== PHASE P (024 runs 12+): PRISTINE raw WKWebView, cold nonPersistent store, zero Tauri injection ===",
-            serde_json::json!({ "uaOverride": ua, "run": run, "inMain": in_main, "longSample": long_sample, "occlude": occlude, "occludePre": occlude_pre }),
+            serde_json::json!({ "uaOverride": ua, "run": run, "inMain": in_main, "longSample": long_sample, "occlude": occlude, "occludePre": occlude_pre, "focusHost": focus_host }),
         );
         for (tag, url, note) in [
             ("steam", STEAM_STORE_URL, "POSITIVE CONTROL: known-good in the child embed (spike 016) and in Safari"),
@@ -955,7 +978,7 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
             } else if occluded_arm {
                 let v = on_main(Box::new(|app| occluder_create(&app, None)));
                 step(&format!("Pa2[{tag}] OCCLUDER over the host window (expect occluded:true at 20 s and 40 s)"), &v);
-            } else if occlude {
+            } else if occlude || focus_host {
                 let v = on_main(Box::new(|_app| {
                     PRISTINE.with(|slot| match &*slot.borrow() {
                         Some((w, _, _)) => match w.set_focus() {
@@ -965,7 +988,7 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
                         None => serde_json::json!({ "error": "no pristine window" }),
                     })
                 }));
-                step(&format!("Pa2[{tag}] host window FOCUSED, nothing on top (control arm)"), &v);
+                step(&format!("Pa2[{tag}] host window FOCUSED, nothing on top ({})", if occlude { "control arm" } else { "SPIKE_PRISTINE_FOCUS" }), &v);
             }
             let v = on_main(Box::new(|_app| pristine_read()));
             step(&format!("Pa3[{tag}] title/url + window visibility right after create"), &v);

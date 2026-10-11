@@ -3,10 +3,10 @@ spike: 024
 name: epic-store-in-embedded-child-webview
 type: standard
 validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected Tauri globals PRESENT, then observe whether Talon/Cloudflare blocks STORE browsing the way it blocks the LOGIN endpoint"
-verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers. Run 11 (2026-10-11): a Safari Private Window on the SAME IP and engine, cold jar, rendered both hosts twice — the discriminator is the embedded webview itself, not the IP, the UA or the jar. Runs 12–16 (2026-10-12), a PRISTINE raw WKWebView (zero Tauri injection, no add_child, cold ephemeral store) in the same harness process was challenged 0 of 10 Epic arms (6 rendered, 4 stalled mid-parse on the real store document) while the Tauri child webview in the same five runs was challenged 10 of 10 — the gate is Tauri's webview construction, and /store/epic has an in-app path in a pristine window. Runs 17–19 (2026-10-12), the same raw WKWebView attached as a subview INSIDE the main window at the embed's rect, beside Tauri's own webview, was challenged 0 of 6 and rendered 4 of 6 by 120 s while the child embed was challenged 6 of 6 alongside it — the attachment is not the trigger, the embed shape exists without Tauri's multiwebview, and the open defect is a cold-load stall (half-parsed store document, 5 of 16 arms at 40 s, 2 of 6 still blank at 120 s). Runs 20–23 (2026-10-12): the probe was extended to list in-flight head resources and NO head resource is pending on a blank arm — every blank arm captured has the whole 1.12 M store document, 9 of 9 head scripts and 4 of 4 stylesheets fetched, readyState complete, 113 k of body, and nothing painted; raising an opaque occluder over the host window reproduces that state on demand (Steam too) and removing it makes the store boot and paint within the next sample, so the blank is WebKit suspending rendering updates for a window the window server reports as not visible, not a load stall; the earlier mid-parse variant (readyState loading at ~938 k) did not recur in 8 arms and is NOT produced by occlusion, so it stays open and narrower
+verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely. Runs 6–10 (2026-10-11) ruled the user agent OUT as the cause — no override, `EpicGamesLauncher` and a full Safari string are all challenged on fresh containers. Run 11 (2026-10-11): a Safari Private Window on the SAME IP and engine, cold jar, rendered both hosts twice — the discriminator is the embedded webview itself, not the IP, the UA or the jar. Runs 12–16 (2026-10-12), a PRISTINE raw WKWebView (zero Tauri injection, no add_child, cold ephemeral store) in the same harness process was challenged 0 of 10 Epic arms (6 rendered, 4 stalled mid-parse on the real store document) while the Tauri child webview in the same five runs was challenged 10 of 10 — the gate is Tauri's webview construction, and /store/epic has an in-app path in a pristine window. Runs 17–19 (2026-10-12), the same raw WKWebView attached as a subview INSIDE the main window at the embed's rect, beside Tauri's own webview, was challenged 0 of 6 and rendered 4 of 6 by 120 s while the child embed was challenged 6 of 6 alongside it — the attachment is not the trigger, the embed shape exists without Tauri's multiwebview, and the open defect is a cold-load stall (half-parsed store document, 5 of 16 arms at 40 s, 2 of 6 still blank at 120 s). Runs 20–23 (2026-10-12): the probe was extended to list in-flight head resources and NO head resource is pending on a blank arm — every blank arm captured has the whole 1.12 M store document, 9 of 9 head scripts and 4 of 4 stylesheets fetched, readyState complete, 113 k of body, and nothing painted; raising an opaque occluder over the host window reproduces that state on demand (Steam too) and removing it makes the store boot and paint within the next sample, so the blank is WebKit suspending rendering updates for a window the window server reports as not visible, not a load stall; the earlier mid-parse variant (readyState loading at ~938 k) did not recur in 8 arms and is NOT produced by occlusion, so it stays open and narrower. Runs 24–27 (2026-10-12): on documents of exactly the stalled runs' lengths the stall offset lands 149–150 characters into the inline analytics-worker script, inside a string literal — mid character token, no element or resource boundary — so the document stream had stopped arriving at a fixed transfer position; a stalled upstream response, not a webview defect, 0 of 16 arms since run 19
 run_date: 2026-09-15
 rerun_date: 2026-10-12
-runs: 23
+runs: 27
 related: [013, 016, 017, 018]
 tags: [tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, macos]
 ---
@@ -375,6 +375,74 @@ Shots: `shot-pristine-INMAIN-epic-alt-UNPAINTED-complete-document-at-120s-run20.
 (session id and IP blacked out). Logs `run-20.log` … `run-23.log`, challenge-card session ids
 and IPs redacted in both the plain and the URL-encoded probe copies.
 
+### Runs 24–27 — the stall offset is mid-string-literal inside an inline script: the document stream stopped there (2026-10-12, quick `261012-ago`)
+
+**What sits at ~938 k is nothing the parser would stop for.** The probe gained `at938` (the raw
+serialised document from offset 937 800 to 939 200), `headEnd` / `bodyAt`, `tagsAround` (the tag
+opens either side of offset 938 450) and `scriptAt` (the bounds of the inline `<script>` that
+contains offset 938 500). Same in-main raw `WKWebView`, cold `nonPersistentDataStore()`, no UA
+override, `LONG=1`, no occluder; `SPIKE_PRISTINE_FOCUS=1` made the host key right after each arm
+was created so a blank arm could not be a natural occlusion.
+
+| Run | Steam | `www…` 20 s / 40 s / 120 s | `store…` 20 s / 40 s / 120 s | Probes | Embed |
+|---|---|---|---|---|---|
+| 24 | served | RENDERED / — / — | RENDERED / — / — | complete, 1.121 M, 9/9, 4/4 both | challenged ×2 |
+| 25 | served | RENDERED / — / — | RENDERED / — / — | complete, 9/9, 4/4 both (host not key — operator away; `occluded:false`) | challenged ×2 |
+| 26 | served | RENDERED / — / — | RENDERED / — / — | complete, **1 121 252** (run 18's document length), 9/9, 4/4 | challenged ×2 |
+| 27 | served | RENDERED / — / — | RENDERED / — / — | complete, **1 121 253** (run 19's), 9/9, 4/4 | challenged ×2 |
+
+**Rate.** 0 of 8 mid-parse stalls in these runs; 0 of 16 across runs 20–27; the 4 probed stalls
+(plus run 19's 40 s blank that completed by 120 s) all sit in runs 12–19. Raw Epic arms across
+runs 12–27: 32, challenged 1. Steam 12 of 12 in these runs; the child embed challenged 8 of 8
+alongside.
+
+**The offset reading.** Every rendered arm has the same two inline scripts straddling the stall
+offset: the service-worker registration script and, right after it, the analytics
+`SharedWorker` bootstrap, followed by the `async defer` hCaptcha loader. Runs 26 and 27 served a
+document of exactly run 18's and run 19's lengths (1 121 252 / 1 121 253), so run 18's stalled
+`docLen` (938 545 on `www…`, 938 544 on `store…`) maps onto them directly. `docLen` is
+`outerHTML.length` of the partial DOM; with the parser inside a head script and no body yet
+(`bodyLen 0`), the serialiser appends `</script></head></html>` — 23 characters — so the parse
+position is 938 522 / 938 521, which is **149–150 characters into the analytics script
+element** (run 26: element at 938 372–939 035; run 27: 938 373–939 036):
+
+```
+var statsWorker = new SharedWorker('/epic-analytics-worker.js', 'epic|-analytics-worker');
+```
+
+The parser was parked inside the string literal `'epic-analytics-worker'`, in the middle of a
+single character token. There is no element boundary, no `</head>` (that is at 1 008 7xx), no
+parser-blocking external script (the only sync one, `fonts.egstore-site`, is ~1 k earlier and
+had been fetched on every stalled arm's own `res` list), nothing a tokenizer yields on. The one
+thing that stops an HTML tokenizer mid-character-run is **the end of its input**: the main
+document's response body had stopped arriving at that byte. A fixed decoded offset that is the
+same to ±1 across both hosts (the hosts differ by one character in the head) and shifts by
+~160 with a ~15 k document change between days is the signature of a fixed position in the
+**transfer** stream — a chunk or compression-block boundary — not of anything in the DOM.
+Run 19's instance completing between 40 s and 120 s is a stream that resumed.
+
+So the discriminator the todo named resolves to the stream-stall side, by position rather than
+by `nav.responseEnd`: `responseEnd` read `0` on two of the eight *rendered* `store…` arms here
+(runs 24 and 27, `readyState complete`), so it is not reliable on its own in this WebKit;
+`nav.decoded` is `0` on every `www…` arm regardless. The 23-character serialiser assumption
+moves the position by at most a few characters either way — still inside the same script text.
+
+**Consequence.** The mid-parse stall is a stalled main-document response, not a WebKit parser
+or rendering defect and not something the embed's construction causes; it is upstream of the
+webview (Epic's edge, Cloudflare, or the path to it) and would hit Safari the same way. It is
+rare now (0 of 16 since run 19) but when it happens the raw embed shows a white page with no
+feedback — the shipped embed wants the same thing any browser gives: a load timeout with a
+reload affordance, not a code change to the webview. Not a blocker for the raw-subview design.
+
+Observations not pursued: why `nav.transferSize`/`encodedBodySize`/`decodedBodySize` are 0 on
+the `www…` host and populated on `store…` (same document, one redirect vs none); whether Safari
+reproduces the stream stall on a cold load (never seen there, n small); whether the position is
+a brotli block or an HTTP chunk boundary (not readable from JS; `curl` is challenged).
+
+Logs `run-24.log` … `run-27.log`, challenge-card session ids and IPs redacted in plain and
+URL-encoded copies. No new shots kept: every arm rendered, and the 20 s / 40 s / 120 s captures
+show the painted store already on file from runs 17–23.
+
 ## What IS established
 
 1. **The block is not the login fingerprint.** The injected globals — `isTauri`, `__TAURI__`,
@@ -414,7 +482,14 @@ and IPs redacted in both the plain and the URL-encoded probe copies.
    the store boot and paint within the next sample. WebKit suspends rendering updates for a
    window the window server reports as not visible; Epic's app boot waits on one. By
    definition the user is not looking at an occluded window, and the page recovers when they
-   are. The mid-parse variant (runs 15–19) is a different state, not reproduced, still open.
+   are. The mid-parse variant (runs 15–19) is a different state — see #9.
+9. **The mid-parse stall is a stalled document stream, not a parser or resource wait** (runs
+   24–27, 2026-10-12). On documents of exactly the stalled runs' lengths, the stalled offset
+   lands 149–150 characters into the inline analytics-worker `<script>`, inside the string
+   literal `'epic-analytics-worker'` — mid character token, no element or resource boundary,
+   `</head>` 70 k further on. Only the end of input stops a tokenizer there: the response body
+   had stopped arriving at a fixed transfer position. 0 of 16 arms since run 19 reproduced it.
+   Upstream of the webview; the embed's answer is a load timeout + reload, not webview code.
 
 ## What is NOT established
 
@@ -451,7 +526,10 @@ and IPs redacted in both the plain and the URL-encoded probe copies.
   (established #8). What remains is the **mid-parse stall** of runs 15, 16, 18 and 19
   (`readyState=loading`, `isLoading=true`, 938 k parsed, empty body): 0 of 8 Epic arms in runs
   20–23, not caused by occlusion (two arms parsed to completion under the occluder), fixed
-  document offset to ±1 character within a day, cause unmeasured. Filed narrower.
+  document offset to ±1 character within a day. **Placed by runs 24–27:** the offset is inside
+  a string literal in an inline script — the document stream stopped there (established #9).
+  What is still not established: whether it is a brotli block or an HTTP chunk boundary, and
+  whether Safari sees it on a cold load; 0 of 16 arms since run 19 have reproduced it.
 
 ## Method notes worth keeping
 
@@ -512,6 +590,13 @@ then the recovery sample; with `LONG=1` the Steam arm gets the 120 s read too);
 occlusion before the load. The `store…` arm is always the un-occluded, focused control.
 `curl` cannot stand in for the webview here: WebKit's own UA from the shell is challenged.
 
+Offset arm (quick `261012-ago`, runs 24+): the probe also reports `at938` (the serialised
+document from offset 937 800 to 939 200, where runs 15/16/18/19 parked), `headEnd` and `bodyAt`
+(`indexOf('</head>')` / `indexOf('<body')`), and `tagsAround` (the six tag opens before offset
+938 450 and the four after, as `offset:<tag>`) and `scriptAt` (start/end of the inline `<script>`
+containing offset 938 500), so a rendered arm names what sits at the stall offset. `SPIKE_PRISTINE_FOCUS=1` focuses the host right after each arm is created when no
+occluder is in play — the un-occluded condition of runs 17–19, with the host explicitly key.
+
 ## Consequence for `/store/epic`
 
 **The gate stays; the reason for it changed.** Nothing shippable moved: the Tauri child embed is
@@ -539,8 +624,10 @@ blank**, which quick `261012-97a` (runs 20–23) split in two: the state that re
 because the window server says the window is not visible, and it boots and paints when the window
 is uncovered — which is **not a shipping blocker** for either shape (the user is not looking at an
 occluded window, and a product subview would inherit the same rule as any WKWebView); and the
-mid-parse stall of runs 15–19, which did not recur in 8 arms, is not caused by occlusion, and
-stays open as a narrower todo with the next measurement named. The 2026-09-15 sign-in-button
-todo is awake on (a) and no longer waits on (b). An earlier draft of this section said
+mid-parse stall of runs 15–19, which quick `261012-ago` (runs 24–27) placed: the stalled offset
+is inside a string literal in an inline head script — the document stream had stopped arriving
+at a fixed transfer position, upstream of the webview, 0 of 16 arms since run 19. Its product
+answer is a load timeout with a reload affordance on the embed, the same as any browser, not
+webview code. The 2026-09-15 sign-in-button todo is awake on (a) and no longer waits on (b). An earlier draft of this section said
 "permanently"; two earlier drafts stated reopen conditions that fired within a day. Re-run more
 than once and keep the Steam control.

@@ -5,7 +5,9 @@ area: webview/store-embed
 severity: medium
 platform: macos
 ready: live-gate
-status: OPEN
+status: RESOLVED
+resolved: 2026-10-12
+resolved_by: 'quick 261012-ago, spike 024 runs 24-27'
 found_by: 'quick 261012-97a, spike 024 runs 20-23 (2026-10-12), splitting the stall todo'
 files:
   - .planning/spikes/024-epic-store-in-embedded-child-webview/app/src/main.rs
@@ -62,3 +64,29 @@ rate is bounded:
   Timing only lists finished fetches; the set-difference `pending*` is the real test).
 - Not occlusion (two occluded arms parsed to completion).
 - `WKWebView.title` at 20 s still separates rendered from not: server title vs app title.
+
+## RESOLUTION (2026-10-12, quick `261012-ago`, spike 024 runs 24–27)
+
+**Measured.** Four runs, 8 raw Epic arms, 0 mid-parse stalls (0 of 16 since run 19). The
+rendered arms carry the offset reading, and runs 26 and 27 served documents of exactly run 18's
+and run 19's lengths (1 121 252 / 1 121 253), so run 18's stalled `docLen` maps onto them
+directly: parse position 938 522 / 938 521 after the serialiser's `</script></head></html>`,
+which is **149–150 characters into the inline analytics `SharedWorker` script, inside the
+string literal `'epic-analytics-worker'`**. Mid character token — no element boundary, no
+`</head>` (1 008 7xx), no parser-blocking resource (the only sync external script is ~1 k
+earlier and was on every stalled arm's own resource list). The one thing that stops a tokenizer
+there is the end of its input: the main-document response had stopped arriving at a fixed
+transfer position (chunk or compression-block boundary — hence ±1 across hosts and a ~160
+shift with a ~15 k document change between days). Run 19's instance completing by 120 s is a
+stream that resumed.
+
+**Decision from the todo's own discriminator:** stream stall, upstream of the webview (Epic's
+edge / Cloudflare / the path), not a WebKit yield — by position, because `nav.responseEnd` read
+`0` on two rendered `store…` arms and `nav.decoded` is `0` on every `www…` arm, so neither is a
+reliable tell alone in this WebKit. Not a webview defect and not a shipping blocker for the
+raw-subview design; the product answer is a load timeout with a reload affordance on the
+embed, the same as any browser.
+
+**Not established:** brotli block vs HTTP chunk boundary (not readable from JS; `curl` is
+challenged); whether Safari reproduces it on a cold load. README `### Runs 24–27`, established
+#9; `run-24.log` … `run-27.log`.
