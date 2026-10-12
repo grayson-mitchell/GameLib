@@ -404,7 +404,7 @@
             },
             "timeout": {
                 "message": "Načítanie Epic chvíľu trvá",
-                "reload": "Reload"
+                "reload": "Obnoviť"
             }
         },
         "login": {

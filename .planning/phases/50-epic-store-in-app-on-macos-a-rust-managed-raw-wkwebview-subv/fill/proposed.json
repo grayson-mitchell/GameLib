@@ -289,7 +289,7 @@
   },
   "sk": {
     "webview.epicEmbed.timeout.message": "Načítanie Epic chvíľu trvá",
-    "webview.epicEmbed.timeout.reload": "Reload",
+    "webview.epicEmbed.timeout.reload": "Obnoviť",
     "webview.epicEmbed.launcherBlocked.message": "Nainštalujte namiesto toho z vašej knižnice — toto zobrazenie nemôže otvoriť Epic Games Launcher.",
     "webview.unavailable.epic-challenged.heading": "Prehliadanie Epic Store je dočasne blokované",
     "webview.unavailable.epic-challenged.body": "Epic požiadal o bezpečnostnú kontrolu, ktorú toto zobrazenie nemôže dokončiť.",
