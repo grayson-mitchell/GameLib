@@ -93,7 +93,7 @@ pub(crate) fn is_selected() -> bool {
 /// D-18, "single geometry oracle": no autoresizing mask, no Rust-side resize heuristic) into an
 /// `NSRect` in `ns_view`'s own coordinate space. Ported verbatim from spike 024's own conditional
 /// -- `NSView`'s coordinate origin is bottom-left UNLESS the view opts into `isFlipped() == true`
-/// (top-left, matching web/CSS convention), and `addSubview`'s content-view target's flip state
+/// (top-left, matching web/CSS convention), and the subview-attach target's flip state
 /// is not assumed either way here.
 fn rect_to_ns_rect(ns_view: &NSView, x: f64, y: f64, w: f64, h: f64) -> NSRect {
     let bounds = ns_view.bounds();
@@ -244,7 +244,7 @@ pub(crate) fn open(
                 webview.setNavigationDelegate(Some(ProtocolObject::from_ref(&*delegate)));
             }
 
-            // The ONLY `addSubview` call site in this module.
+            // The ONLY subview-attach call site in this module.
             ns_view.addSubview(&webview);
 
             let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
