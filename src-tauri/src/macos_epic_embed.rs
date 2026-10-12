@@ -1213,6 +1213,12 @@ define_class!(
             navigation_response: &WKNavigationResponse,
             handler: &block2::Block<dyn Fn(WKNavigationResponsePolicy)>,
         ) {
+            // Phase 50 review (T-40-04-04 parity): a download -- any frame -- is the one response
+            // this hook DOES cancel; `epic_embed_route_download` hands it to the system browser.
+            if epic_embed_route_download(&self.ivars().app, navigation_response) {
+                (*handler).call((WKNavigationResponsePolicy::Cancel,));
+                return;
+            }
             // A subframe response (e.g. Epic's own sign-in form's Turnstile widget) is never
             // evaluated at all -- RESEARCH Pitfall 2.
             if unsafe { navigation_response.isForMainFrame() } {
@@ -1271,6 +1277,13 @@ define_class!(
             // `challenged` is `true` -- hiding the subview above is this module's job, not
             // WebKit's.
             (*handler).call((WKNavigationResponsePolicy::Allow,));
+        }
+
+        // Phase 50 review: without this hook a WebContent crash left a blank surface with no
+        // event and no timeout. See `epic_embed_handle_content_process_termination`.
+        #[unsafe(method(webViewWebContentProcessDidTerminate:))]
+        fn web_content_process_did_terminate(&self, webview: &WKWebView) {
+            epic_embed_handle_content_process_termination(webview);
         }
     }
 
@@ -1473,6 +1486,82 @@ fn epic_embed_record_launcher_scheme_block(webview: &WKWebView, what: &str) {
         guard.enqueue_nav_event(event);
     } else {
         eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+    }
+}
+
+/// Download routing for the raw view (Phase 50 review, T-40-04-04 parity with the Tauri embed's
+/// `on_download`, main.rs): returns `true` when `navigation_response` is a download
+/// (`navigation_response_is_download`: a type the view cannot show, or an `attachment`
+/// disposition), in which case the caller cancels it. Before returning, the URL is handed to the
+/// system browser through `open_external` -- but only if the shared popup policy would hand it
+/// off (http(s) only, so a page cannot reach `open_external`'s `steam`/`mailto` arms this way)
+/// and the shared `STORE_EMBED_POPUP_THROTTLE` admits it, since a frame could otherwise loop
+/// downloads into browser tabs. Everything else is dropped with a scheme-free log line.
+fn epic_embed_route_download(app: &AppHandle, navigation_response: &WKNavigationResponse) -> bool {
+    use crate::store_embed_handoff_policy::{
+        navigation_response_is_download, store_embed_browser_handoff_policy,
+        StoreEmbedBrowserHandoffDecision,
+    };
+    let can_show_mime_type = unsafe { navigation_response.canShowMIMEType() };
+    let response = unsafe { navigation_response.response() };
+    let url_string = response
+        .URL()
+        .and_then(|u| u.absoluteString())
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    let content_disposition = response
+        .downcast::<NSHTTPURLResponse>()
+        .ok()
+        .and_then(|http_response| {
+            http_response.valueForHTTPHeaderField(&NSString::from_str("Content-Disposition"))
+        })
+        .map(|v| v.to_string());
+    if !navigation_response_is_download(can_show_mime_type, content_disposition.as_deref()) {
+        return false;
+    }
+    if store_embed_browser_handoff_policy(&url_string)
+        != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
+    {
+        eprintln!(
+            "[shell] macos_epic_embed: denied in-embed download from a non-http(s) URL -- not \
+             routed to the system browser"
+        );
+    } else if crate::store_embed_handoff_admitted(&crate::STORE_EMBED_POPUP_THROTTLE) {
+        eprintln!(
+            "[shell] macos_epic_embed: denied in-embed download, routing to the system browser \
+             (T-40-04-04)"
+        );
+        if let Err(e) = crate::open_external(url_string, app.clone()) {
+            eprintln!("[shell] macos_epic_embed: download hand-off to open_external failed: {e}");
+        }
+    } else {
+        eprintln!(
+            "[shell] macos_epic_embed: denied in-embed download, rate-limited -- not routed to \
+             the system browser"
+        );
+    }
+    true
+}
+
+/// `webViewWebContentProcessDidTerminate:` (Phase 50 review): reloads, matching wry's -- and so
+/// the Tauri embed's -- default, and queues a nav event so the renderer is never left waiting on a
+/// load that will not report. It also re-arms the load-timeout clock (bumping `nav_generation`
+/// like a fresh `didStartProvisionalNavigation`), so if the reload never starts -- `reload()` is
+/// a no-op on a view that never committed a URL -- the 45 s timeout banner and its Try again
+/// still surface instead of a silently blank rectangle.
+fn epic_embed_handle_content_process_termination(webview: &WKWebView) {
+    eprintln!("[shell] macos_epic_embed: WebContent process terminated -- reloading");
+    if let Ok(mut guard) = surface().lock() {
+        guard.nav_generation = guard.nav_generation.wrapping_add(1);
+        guard.nav_started_at = Some(Instant::now());
+        guard.load_timed_out = false;
+        let event = nav_state_json(webview);
+        guard.enqueue_nav_event(event);
+    } else {
+        eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+    }
+    unsafe {
+        webview.reload();
     }
 }
 

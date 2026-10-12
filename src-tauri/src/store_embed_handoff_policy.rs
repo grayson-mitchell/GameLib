@@ -50,6 +50,105 @@ pub(crate) fn store_embed_browser_handoff_policy(url: &str) -> StoreEmbedBrowser
     }
 }
 
+/// Whether a navigation response is a download the raw Epic `WKWebView` must not keep (Phase 50
+/// review): a MIME type the view cannot render (`WKNavigationResponse.canShowMIMEType == false`,
+/// e.g. the launcher `.dmg`), or a `Content-Disposition` whose disposition type is `attachment`
+/// (case-insensitive token before the first `;`, RFC 6266). The Tauri embed gets the same outcome
+/// from wry's `on_download` hook; the raw view has no such hook, so its response-policy delegate
+/// asks this and the caller cancels and hands the URL to the system browser (T-40-04-04 parity).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn navigation_response_is_download(
+    can_show_mime_type: bool,
+    content_disposition: Option<&str>,
+) -> bool {
+    !can_show_mime_type
+        || content_disposition.is_some_and(|value| {
+            value
+                .split(';')
+                .next()
+                .is_some_and(|disposition| disposition.trim().eq_ignore_ascii_case("attachment"))
+        })
+}
+
+#[cfg(test)]
+mod navigation_response_is_download_tests {
+    use super::*;
+
+    #[test]
+    fn a_type_the_view_cannot_show_is_a_download() {
+        assert!(navigation_response_is_download(false, None));
+        assert!(navigation_response_is_download(false, Some("inline")));
+    }
+
+    #[test]
+    fn an_attachment_disposition_is_a_download_even_for_a_showable_type() {
+        assert!(navigation_response_is_download(true, Some("attachment")));
+        assert!(navigation_response_is_download(
+            true,
+            Some("Attachment; filename=\"EpicInstaller.dmg\"")
+        ));
+        assert!(navigation_response_is_download(
+            true,
+            Some("  ATTACHMENT ;filename=x")
+        ));
+    }
+
+    #[test]
+    fn an_ordinary_page_is_not_a_download() {
+        assert!(!navigation_response_is_download(true, None));
+        assert!(!navigation_response_is_download(true, Some("inline")));
+        assert!(!navigation_response_is_download(
+            true,
+            Some("inline; filename=x.pdf")
+        ));
+        // Token match, not a prefix match.
+        assert!(!navigation_response_is_download(true, Some("attachments")));
+        assert!(!navigation_response_is_download(true, Some("")));
+    }
+
+    /// Source-text check (the glue is macOS-only): the Epic surface classifies responses,
+    /// cancels downloads and hands them off through the shared policy + throttle, and implements
+    /// the WebContent-process-termination hook.
+    #[test]
+    fn the_epic_surface_routes_downloads_and_handles_content_process_termination() {
+        let source = include_str!("macos_epic_embed.rs");
+        let start = source
+            .find("fn decide_policy_for_navigation_response(")
+            .expect("response hook");
+        let body = &source[start..(start + 1000).min(source.len())];
+        let route = body
+            .find("epic_embed_route_download(")
+            .expect("response hook must route downloads first");
+        let cancel = body
+            .find("WKNavigationResponsePolicy::Cancel")
+            .expect("response hook must cancel a download");
+        assert!(route < cancel);
+        let handoff = source
+            .find("fn epic_embed_route_download(")
+            .expect("download routing fn");
+        let handoff_body = &source[handoff..(handoff + 2500).min(source.len())];
+        for needle in [
+            "canShowMIMEType()",
+            "\"Content-Disposition\"",
+            "navigation_response_is_download(",
+            "crate::open_external(",
+        ] {
+            assert!(
+                handoff_body.contains(needle),
+                "download routing missing {needle}"
+            );
+        }
+        let policy = handoff_body
+            .find("store_embed_browser_handoff_policy(")
+            .expect("download hand-off must use the shared scheme policy");
+        let throttle = handoff_body
+            .find("store_embed_handoff_admitted(")
+            .expect("download hand-off must be throttled");
+        assert!(policy < throttle);
+        assert!(source.contains("webViewWebContentProcessDidTerminate:"));
+    }
+}
+
 #[cfg(test)]
 mod store_embed_browser_handoff_policy_tests {
     use super::*;
