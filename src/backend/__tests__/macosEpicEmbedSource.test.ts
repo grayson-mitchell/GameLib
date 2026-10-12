@@ -168,3 +168,37 @@ describe("finding 14 — the subview carries wry's child autoresizing mask", () 
     expect(code).not.toMatch(/View(Width|Height)Sizable/)
   })
 })
+
+describe('finding 12 — KVO on URL/canGoBack/canGoForward, added and removed', () => {
+  test('the three key paths live in one shared table both add and remove iterate', () => {
+    expect(code).toMatch(
+      /const EPIC_EMBED_KVO_KEY_PATHS: \[&str; 3\] = \["URL", "canGoBack", "canGoForward"\];/
+    )
+    for (const name of ['add_nav_observers', 'remove_nav_observers']) {
+      expect({
+        name,
+        iterates: fnBody(code, name).includes('in EPIC_EMBED_KVO_KEY_PATHS')
+      }).toEqual({ name, iterates: true })
+    }
+  })
+
+  test('observers are added in open() and removed in close() before the delegate is dropped', () => {
+    expect(fnBody(code, 'open')).toContain('add_nav_observers(')
+    const close = fnBody(code, 'close')
+    const removed = close.indexOf('remove_nav_observers(')
+    expect(removed).toBeGreaterThan(-1)
+    expect(removed).toBeLessThan(close.indexOf('drop(delegate)'))
+    expect(fnBody(code, 'add_nav_observers')).toContain(
+      'addObserver_forKeyPath_options_context('
+    )
+    expect(fnBody(code, 'remove_nav_observers')).toContain(
+      'removeObserver_forKeyPath_context('
+    )
+  })
+
+  test('the KVO callback queues through the bounded, de-duplicated path', () => {
+    const body = fnBody(code, 'observe_value_for_key_path')
+    expect(body).toContain('epic_kvo_event_is_new(')
+    expect(body).toContain('enqueue_nav_event(')
+  })
+})

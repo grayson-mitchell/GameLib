@@ -43,11 +43,12 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use objc2::rc::Retained;
-use objc2::runtime::{Bool, NSObject, ProtocolObject};
+use objc2::runtime::{AnyObject, Bool, NSObject, ProtocolObject};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{NSAutoresizingMaskOptions, NSView};
 use objc2_foundation::{
-    NSError, NSHTTPURLResponse, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    NSError, NSHTTPURLResponse, NSKeyValueObservingOptions, NSNumber,
+    NSObjectNSKeyValueObserverRegistration, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
     NSURLRequest, NSURL,
 };
 use objc2_web_kit::{
@@ -58,7 +59,9 @@ use objc2_web_kit::{
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
 
-use crate::epic_embed_state::{epic_nav_state_with_flags, EpicEmbedNavFlags, EpicEmbedVisibility};
+use crate::epic_embed_state::{
+    epic_kvo_event_is_new, epic_nav_state_with_flags, EpicEmbedNavFlags, EpicEmbedVisibility,
+};
 
 /// The `storeKey` value `store_embed_open_args` (main.rs) parses that routes to THIS module
 /// instead of the existing `tauri::WebviewBuilder` embed path -- `store_embed_open`'s own routing
@@ -324,6 +327,57 @@ fn rect_to_ns_rect(ns_view: &NSView, x: f64, y: f64, w: f64, h: f64) -> NSRect {
         bounds.size.height - y - h
     };
     NSRect::new(NSPoint::new(x, origin_y), NSSize::new(w, h))
+}
+
+/// Review finding 12: the `WKWebView` properties observed with KVO. WebKit fires NONE of the
+/// navigation-delegate callbacks for a same-document navigation (`history.pushState`/
+/// `replaceState`, fragment changes) -- exactly how Epic's client-side router changes pages -- so
+/// without these the renderer's URL, Back/Forward state and `last-url-epic` froze on the last
+/// full load. KVO, not an injected page script: the native properties are observable as-is, and
+/// nothing is added to Epic's page (the same no-injection reason D-22's native-history choice
+/// rests on).
+const EPIC_EMBED_KVO_KEY_PATHS: [&str; 3] = ["URL", "canGoBack", "canGoForward"];
+
+/// Tag for this module's own KVO registrations: `observeValueForKeyPath:` forwards any other
+/// context to `super`, per Apple's KVO contract. Only its ADDRESS is used.
+static EPIC_EMBED_KVO_CONTEXT: u8 = 0;
+
+fn epic_embed_kvo_context() -> *mut c_void {
+    std::ptr::addr_of!(EPIC_EMBED_KVO_CONTEXT) as *mut c_void
+}
+
+/// Registers `delegate` for `EPIC_EMBED_KVO_KEY_PATHS` on `webview`. Exactly one call site, in
+/// `open()`'s cold path, paired with exactly one `remove_nav_observers` in `close()` -- KVO keeps
+/// an UNRETAINED observer pointer, so the delegate must never be released while registered.
+fn add_nav_observers(webview: &WKWebView, delegate: &EpicEmbedNavDelegate) {
+    for key in EPIC_EMBED_KVO_KEY_PATHS {
+        // SAFETY: `delegate` implements `observeValueForKeyPath:ofObject:change:context:` (see
+        // `EpicEmbedNavDelegate`), and the context is a 'static address.
+        unsafe {
+            webview.addObserver_forKeyPath_options_context(
+                delegate,
+                &NSString::from_str(key),
+                NSKeyValueObservingOptions::New,
+                epic_embed_kvo_context(),
+            );
+        }
+    }
+}
+
+/// The inverse of `add_nav_observers` -- called by `close()` while both objects are still alive,
+/// before either is released.
+fn remove_nav_observers(webview: &WKWebView, delegate: &EpicEmbedNavDelegate) {
+    for key in EPIC_EMBED_KVO_KEY_PATHS {
+        // SAFETY: removes exactly the registrations `add_nav_observers` made (same observer, key
+        // path and context).
+        unsafe {
+            webview.removeObserver_forKeyPath_context(
+                delegate,
+                &NSString::from_str(key),
+                epic_embed_kvo_context(),
+            );
+        }
+    }
 }
 
 /// Review finding 14: the autoresizing mask that keeps the subview's TOP edge where the renderer
@@ -678,9 +732,19 @@ pub(crate) fn open(
             guard.top_level_host = None;
             guard.enqueue_nav_event(event);
             drop(guard);
-            // SAFETY: `webview_ptr` is the `+1` just parked above; nothing can release it before
-            // this same main-thread closure returns.
-            apply_visibility(unsafe { &*(webview_ptr as *const WKWebView) }, hidden);
+            // SAFETY: both are the `+1`s just parked above; nothing can release them before this
+            // same main-thread closure returns, and `close()` removes the observers before it
+            // releases either.
+            let (webview, delegate) = unsafe {
+                (
+                    &*(webview_ptr as *const WKWebView),
+                    &*(delegate_ptr as *const EpicEmbedNavDelegate),
+                )
+            };
+            // Registered with the surface lock NOT held: a KVO callback runs synchronously inside
+            // whichever WebKit call changed the property, and it takes that lock itself.
+            add_nav_observers(webview, delegate);
+            apply_visibility(webview, hidden);
             // The ONLY `spawn_load_timeout_monitor` call site -- see its own doc comment for why
             // exactly one monitor thread must exist per surface, regardless of navigation count.
             spawn_load_timeout_monitor(app_for_monitor);
@@ -940,20 +1004,23 @@ pub(crate) fn close(app: &AppHandle) -> Result<Value, String> {
                 (webview_ptr, delegate_ptr)
             };
 
-            if let Some(ptr) = webview_ptr {
-                // SAFETY: see this function's doc comment above.
-                if let Some(webview) = unsafe { Retained::from_raw(ptr.0 as *mut WKWebView) } {
-                    webview.removeFromSuperview();
-                    drop(webview);
+            // SAFETY: see this function's doc comment above.
+            let webview =
+                webview_ptr.and_then(|ptr| unsafe { Retained::from_raw(ptr.0 as *mut WKWebView) });
+            // SAFETY: see this function's doc comment above.
+            let delegate = delegate_ptr
+                .and_then(|ptr| unsafe { Retained::from_raw(ptr.0 as *mut EpicEmbedNavDelegate) });
+            if let Some(webview) = webview {
+                // Review finding 12: KVO holds the delegate UNRETAINED -- deregister while both
+                // are alive, before either is released below.
+                if let Some(delegate) = &delegate {
+                    remove_nav_observers(&webview, delegate);
                 }
+                webview.removeFromSuperview();
+                drop(webview);
             }
-            if let Some(ptr) = delegate_ptr {
-                // SAFETY: see this function's doc comment above.
-                if let Some(delegate) =
-                    unsafe { Retained::from_raw(ptr.0 as *mut EpicEmbedNavDelegate) }
-                {
-                    drop(delegate);
-                }
+            if let Some(delegate) = delegate {
+                drop(delegate);
             }
             Ok(())
         })();
@@ -1176,6 +1243,52 @@ define_class!(
     struct EpicEmbedNavDelegate;
 
     unsafe impl NSObjectProtocol for EpicEmbedNavDelegate {}
+
+    impl EpicEmbedNavDelegate {
+        // Review finding 12: the KVO sink for `EPIC_EMBED_KVO_KEY_PATHS` (see
+        // `add_nav_observers`). Queues through the SAME bounded ring (`enqueue_nav_event`,
+        // oldest dropped at `EPIC_EMBED_NAV_EVENTS_CAP`) every delegate callback uses, and skips
+        // a state identical to the newest one already queued -- one `pushState` notifies up to
+        // three keys, and every ordinary navigation notifies them alongside the delegate
+        // callbacks.
+        #[unsafe(method(observeValueForKeyPath:ofObject:change:context:))]
+        fn observe_value_for_key_path(
+            &self,
+            key_path: Option<&NSString>,
+            object: Option<&AnyObject>,
+            change: Option<&AnyObject>,
+            context: *mut c_void,
+        ) {
+            if context != epic_embed_kvo_context() {
+                // SAFETY: forwards an observation this class did not register to `NSObject`'s own
+                // implementation, with the exact arguments received -- Apple's KVO contract.
+                unsafe {
+                    let _: () = msg_send![
+                        super(self),
+                        observeValueForKeyPath: key_path,
+                        ofObject: object,
+                        change: change,
+                        context: context
+                    ];
+                }
+                return;
+            }
+            let Some(webview) = object.and_then(|o| o.downcast_ref::<WKWebView>()) else {
+                return;
+            };
+            let event = nav_state_json(webview);
+            if let Ok(mut guard) = surface().lock() {
+                let flagged = epic_nav_state_with_flags(event.clone(), guard.nav_flags());
+                if epic_kvo_event_is_new(guard.pending_nav_events.last(), &flagged) {
+                    guard.enqueue_nav_event(event);
+                }
+            } else {
+                eprintln!(
+                    "[shell] WARN: macos_epic_embed surface registry poisoned -- continuing"
+                );
+            }
+        }
+    }
 
     unsafe impl WKNavigationDelegate for EpicEmbedNavDelegate {
         #[unsafe(method(webView:decidePolicyForNavigationAction:decisionHandler:))]

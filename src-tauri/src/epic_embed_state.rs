@@ -114,6 +114,15 @@ pub(crate) fn epic_nav_state_with_flags(mut event: Value, flags: EpicEmbedNavFla
     event
 }
 
+/// Review finding 12: KVO on `URL`/`canGoBack`/`canGoForward` fires once per key for one
+/// same-document navigation (three callbacks for one `history.pushState`), and again for every
+/// ordinary navigation the delegate callbacks already report. Skipping an event identical to the
+/// newest one already queued keeps the observer from flooding the bounded ring with duplicates;
+/// the ring's own oldest-dropped cap stays the hard bound.
+pub(crate) fn epic_kvo_event_is_new(last_queued: Option<&Value>, event: &Value) -> bool {
+    last_queued != Some(event)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,5 +271,19 @@ mod tests {
             epic_nav_state_with_flags(Value::Null, EpicEmbedNavFlags::default()),
             Value::Null
         );
+    }
+
+    #[test]
+    fn a_kvo_event_identical_to_the_newest_queued_one_is_not_new() {
+        let event = serde_json::json!({ "url": "https://store.epicgames.com/p/a" });
+        assert!(!epic_kvo_event_is_new(Some(&event), &event));
+    }
+
+    #[test]
+    fn a_kvo_event_with_a_changed_url_or_an_empty_queue_is_new() {
+        let old = serde_json::json!({ "url": "https://store.epicgames.com/p/a" });
+        let new = serde_json::json!({ "url": "https://store.epicgames.com/p/b" });
+        assert!(epic_kvo_event_is_new(Some(&old), &new));
+        assert!(epic_kvo_event_is_new(None, &new));
     }
 }
