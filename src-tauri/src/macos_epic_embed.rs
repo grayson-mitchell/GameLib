@@ -43,15 +43,17 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use objc2::rc::Retained;
-use objc2::runtime::{NSObject, ProtocolObject};
-use objc2::{define_class, msg_send, MainThreadMarker, MainThreadOnly};
+use objc2::runtime::{Bool, NSObject, ProtocolObject};
+use objc2::{define_class, msg_send, DefinedClass, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::NSView;
 use objc2_foundation::{
-    NSError, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURLRequest, NSURL,
+    NSError, NSHTTPURLResponse, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    NSURLRequest, NSURL,
 };
 use objc2_web_kit::{
-    WKNavigation, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate, WKWebView,
-    WKWebViewConfiguration, WKWebsiteDataStore,
+    WKFrameInfo, WKNavigation, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate,
+    WKNavigationResponse, WKNavigationResponsePolicy, WKUIDelegate, WKWebView,
+    WKWebViewConfiguration, WKWebsiteDataStore, WKWindowFeatures,
 };
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
@@ -60,6 +62,14 @@ use tauri::{AppHandle, Manager};
 /// instead of the existing `tauri::WebviewBuilder` embed path -- `store_embed_open`'s own routing
 /// (D-02) compares the parsed key against this constant.
 pub(crate) const EPIC_EMBED_STORE_KEY: &str = "epic";
+
+/// Epic Games Launcher's own custom URL scheme (D-14). A navigation to it is blocked like any
+/// other scheme `store_embed_navigation_policy` (main.rs) does not recognize -- this module's
+/// only addition is bumping `EpicEmbedSurface::blocked_launcher_scheme_count` specifically for
+/// this scheme, so the renderer can show the one-shot "Install from your Library instead" toast
+/// D-14 specifies rather than the generic blocked-navigation log line every other foreign scheme
+/// gets.
+const EPIC_GAMES_LAUNCHER_SCHEME: &str = "com.epicgames.launcher";
 
 /// Cap on `EpicEmbedSurface::pending_nav_events`, below -- mirrors `STORE_EMBED_NAV_EVENTS_CAP`'s
 /// (main.rs) oldest-dropped discipline: an unbounded queue would be a denial-of-service surface
@@ -114,6 +124,116 @@ mod epic_embed_load_timed_out_tests {
     }
 }
 
+/// The Cloudflare challenge host RESEARCH.md's Pattern 4 names as the fallback signal (D-09).
+/// Matched with the SAME exact-or-dot-suffix discipline `store_embed_is_valve_host` (main.rs)
+/// already uses -- never a substring test on the whole URL, which `store_embed_is_valve_host`'s
+/// own doc comment and T-50-06 both call out as the boundary mistake that shipped F-34.4.2-19.
+const EPIC_EMBED_CHALLENGE_HOST: &str = "challenges.cloudflare.com";
+
+/// The challenge-platform path prefix RESEARCH.md's Pattern 4 names as the other half of the
+/// fallback signal (D-09).
+const EPIC_EMBED_CHALLENGE_PATH_PREFIX: &str = "/cdn-cgi/challenge-platform/";
+
+/// Pure classifier for whether a main-frame response is a Cloudflare challenge (Phase 50 Plan 02,
+/// D-09). Takes no `&AppHandle` and no webview -- only the already-extracted
+/// `cf-mitigated` header value (if any) and the response URL's already-parsed host/path -- so
+/// `cargo test` can cover every branch with plain string literals, exactly as
+/// `epic_embed_load_timed_out` (above) and `store_embed_is_valve_host` (main.rs) are factored.
+///
+/// The PRIMARY signal is `header_value`: `true` only for a case-insensitive exact match on the
+/// literal `"challenge"`, `false` for any other value including absent. The host/path match is a
+/// FALLBACK, consulted ONLY when `header_value` is `None` -- this ordering is load-bearing, not
+/// incidental: Epic's own sign-in form embeds a Cloudflare Turnstile widget as a SUBFRAME
+/// resource load to `challenges.cloudflare.com`, so treating that host as a REQUEST-level signal
+/// trips on every normal sign-in (RESEARCH.md Pitfall 2; the spike's nav log recorded exactly
+/// this pattern on runs that rendered fine). Promoting the header check to the only signal that
+/// matters whenever it is present, and reaching for the host/path check only in the header's
+/// total absence, is what keeps that false positive from reappearing here -- the caller is
+/// additionally responsible for only ever calling this with a MAIN-FRAME response's own
+/// properties (`isForMainFrame()`, checked by the one call site in
+/// `decide_policy_for_navigation_response`, below), never a subframe's.
+///
+/// `host`/`path` are matched exactly like `store_embed_is_valve_host`: an exact match or a
+/// dot-prefixed suffix match for the host (`host == apex || host.ends_with(".{apex}")`), and an
+/// exact prefix match for the path -- never a substring match anywhere on the whole URL string.
+fn epic_embed_response_is_challenged(header_value: Option<&str>, host: &str, path: &str) -> bool {
+    if let Some(value) = header_value {
+        return value.eq_ignore_ascii_case("challenge");
+    }
+    host == EPIC_EMBED_CHALLENGE_HOST
+        || host.ends_with(&format!(".{EPIC_EMBED_CHALLENGE_HOST}"))
+        || path.starts_with(EPIC_EMBED_CHALLENGE_PATH_PREFIX)
+}
+
+#[cfg(test)]
+mod epic_embed_response_is_challenged_tests {
+    use super::*;
+
+    #[test]
+    fn header_value_challenge_is_a_challenge() {
+        assert!(epic_embed_response_is_challenged(
+            Some("challenge"),
+            "store.epicgames.com",
+            "/en-US/"
+        ));
+    }
+
+    #[test]
+    fn header_value_challenge_in_mixed_case_is_a_challenge() {
+        assert!(epic_embed_response_is_challenged(
+            Some("ChAlLeNgE"),
+            "store.epicgames.com",
+            "/en-US/"
+        ));
+    }
+
+    #[test]
+    fn an_unrelated_header_value_is_not_a_challenge() {
+        assert!(!epic_embed_response_is_challenged(
+            Some("bypass"),
+            "store.epicgames.com",
+            "/en-US/"
+        ));
+    }
+
+    #[test]
+    fn header_absent_with_a_non_matching_host_and_path_is_not_a_challenge() {
+        assert!(!epic_embed_response_is_challenged(
+            None,
+            "store.epicgames.com",
+            "/en-US/"
+        ));
+    }
+
+    #[test]
+    fn header_absent_with_the_cloudflare_challenge_host_is_a_challenge() {
+        assert!(epic_embed_response_is_challenged(
+            None,
+            "challenges.cloudflare.com",
+            "/en-US/"
+        ));
+    }
+
+    #[test]
+    fn header_absent_with_the_challenge_platform_path_prefix_is_a_challenge() {
+        assert!(epic_embed_response_is_challenged(
+            None,
+            "store.epicgames.com",
+            "/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1"
+        ));
+    }
+
+    #[test]
+    fn a_host_that_merely_ends_with_the_challenge_hosts_characters_without_a_dot_boundary_is_not_a_challenge(
+    ) {
+        assert!(!epic_embed_response_is_challenged(
+            None,
+            "notchallenges.cloudflare.com",
+            "/en-US/"
+        ));
+    }
+}
+
 // SAFETY: a raw pointer value is not normally `Send`, but every address wrapped here is a bare
 // address, reconstructed into a live reference (or into an owning `Retained<T>` via
 // `Retained::from_raw`) only from within a main-thread closure -- identical shape and rationale
@@ -154,10 +274,21 @@ struct EpicEmbedSurface {
     /// either failure hook (D-11: every load starts fresh, and a genuine failure is not a
     /// timeout).
     load_timed_out: bool,
-    /// Cleared by `didStartProvisionalNavigation` now (D-11: every load starts fresh); Task 3
-    /// adds the one call site that sets it `true` (the main-frame challenge-response hook) and
-    /// the second clear site (`navigate()`).
+    /// `true` once the delegate's `webView:decidePolicyForNavigationResponse:` hook (Phase 50
+    /// Plan 02, D-09) has classified the current main-frame response as a Cloudflare challenge
+    /// -- see `epic_embed_response_is_challenged`'s own doc comment for the detection rule.
+    /// Cleared by `didStartProvisionalNavigation` and by `navigate()` (D-11: every load starts
+    /// fresh, and Try again must not stay stuck showing the panel); set `true` by NOTHING else.
     challenged: bool,
+    /// Monotonic count of navigations blocked specifically because their scheme was
+    /// `EPIC_GAMES_LAUNCHER_SCHEME` (Phase 50 Plan 02, D-14) -- bumped in the
+    /// `decidePolicyForNavigationAction` hook's `Block` arm, never decremented, never reset while
+    /// the subview lives. A counter rather than a boolean, deliberately: the renderer DRAINS the
+    /// nav-event ring and applies only the LAST event (`take_nav_events`), so a one-shot boolean
+    /// flag could be coalesced away between two drains and the user would silently miss the
+    /// notice. A counter that only ever increases lets the renderer show exactly one toast per
+    /// increment it has not yet shown, even across a coalesced drain.
+    blocked_launcher_scheme_count: u64,
 }
 
 static EPIC_EMBED_SURFACE: OnceLock<Mutex<EpicEmbedSurface>> = OnceLock::new();
@@ -239,15 +370,21 @@ impl EpicEmbedSurface {
     /// callable identically on a locked `MutexGuard` (auto-deref) and on a bare, lock-free
     /// struct value in a unit test -- see `epic_embed_enqueue_nav_event_tests`, below.
     ///
-    /// Merges the surface's current `loadTimedOut` flag (Phase 50 Plan 02) onto `event` right
-    /// before pushing, so every one of this module's several enqueue call sites automatically
-    /// carries current flag state without each one separately threading it through its own
-    /// `nav_state_json()` call. `event` is always the `Value::Object` `nav_state_json()` builds;
-    /// a non-object would mean a future call site stopped using that constructor, so this merges
-    /// unconditionally into an object and leaves any other shape untouched.
+    /// Merges the surface's current `loadTimedOut`/`challenged`/`blockedLauncherSchemeCount`
+    /// flags (Phase 50 Plan 02) onto `event` right before pushing, so every one of this module's
+    /// several enqueue call sites automatically carries current flag state without each one
+    /// separately threading it through its own `nav_state_json()` call. `event` is always the
+    /// `Value::Object` `nav_state_json()` builds; a non-object would mean a future call site
+    /// stopped using that constructor, so this merges unconditionally into an object and leaves
+    /// any other shape untouched.
     fn enqueue_nav_event(&mut self, mut event: Value) {
         if let Some(map) = event.as_object_mut() {
             map.insert("loadTimedOut".to_string(), Value::Bool(self.load_timed_out));
+            map.insert("challenged".to_string(), Value::Bool(self.challenged));
+            map.insert(
+                "blockedLauncherSchemeCount".to_string(),
+                Value::Number(self.blocked_launcher_scheme_count.into()),
+            );
         }
         self.pending_nav_events.push(event);
         if self.pending_nav_events.len() > EPIC_EMBED_NAV_EVENTS_CAP {
@@ -367,6 +504,11 @@ pub(crate) fn open(
     // Cloned up front so the cold path below can hand an OWNED `AppHandle` to
     // `spawn_load_timeout_monitor` -- the monitor thread outlives this whole call.
     let app_for_monitor = app.clone();
+    // Same reason, separately: `app.clone()` directly inside the `move ||` below would move the
+    // borrowed `app: &AppHandle` PARAMETER into the closure, not an owned value -- and
+    // `run_on_main_thread` requires `'static` (E0521). Clone to an owned value out here instead,
+    // for the delegate's own `AppHandle` (D-12's popup hook).
+    let app_for_delegate = app.clone();
 
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     if let Err(e) = app.run_on_main_thread(move || {
@@ -453,9 +595,14 @@ pub(crate) fn open(
                     msg_send![&*webview, setValue: &*draws_background_false, forKey: &*key];
             }
 
-            let delegate = EpicEmbedNavDelegate::new(mtm);
+            // The delegate's own `AppHandle` clone, for its `WKUIDelegate` popup hook (D-12) --
+            // separate from `app_for_monitor` above, which the monitor thread owns instead.
+            let delegate = EpicEmbedNavDelegate::new(mtm, app_for_delegate.clone());
             unsafe {
                 webview.setNavigationDelegate(Some(ProtocolObject::from_ref(&*delegate)));
+            }
+            unsafe {
+                webview.setUIDelegate(Some(ProtocolObject::from_ref(&*delegate)));
             }
 
             // The ONLY subview-attach call site in this module.
@@ -626,6 +773,15 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
             eprintln!("[shell] macos_epic_embed: navigate() given an unparsable URL");
             return;
         };
+        // D-11: every navigate() call starts fresh -- a challenge banner from the PREVIOUS page
+        // must not survive a `Try again`/new-URL load. Mirrors
+        // `did_start_provisional_navigation`'s own clear, for the page-initiated-navigation case
+        // this chrome-initiated one does not otherwise go through.
+        if let Ok(mut guard) = surface().lock() {
+            guard.challenged = false;
+        } else {
+            eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+        }
         let request = NSURLRequest::requestWithURL(&nsurl);
         unsafe {
             webview.loadRequest(&request);
@@ -888,7 +1044,14 @@ mod epic_embed_take_nav_events_tests {
     }
 }
 
-struct EpicEmbedNavDelegateIvars;
+/// Holds the `AppHandle` the delegate's `WKUIDelegate` popup hook (Phase 50 Plan 02, D-12) needs
+/// to call `crate::open_external` -- `open()`'s own `app: &AppHandle` parameter is already in
+/// scope at the one construction site (`EpicEmbedNavDelegate::new`, below), so this stores an
+/// owned clone the SAME way `EpicPristineNavDelegateIvars { event_label: String }` (main.rs)
+/// stores its own owned, non-`Copy` state via `set_ivars`.
+struct EpicEmbedNavDelegateIvars {
+    app: AppHandle,
+}
 
 define_class!(
     #[unsafe(super(NSObject))]
@@ -902,7 +1065,7 @@ define_class!(
         #[unsafe(method(webView:decidePolicyForNavigationAction:decisionHandler:))]
         fn navigation_policy(
             &self,
-            _webview: &WKWebView,
+            webview: &WKWebView,
             action: &WKNavigationAction,
             handler: &block2::Block<dyn Fn(WKNavigationActionPolicy)>,
         ) {
@@ -918,11 +1081,12 @@ define_class!(
                 .lock()
                 .ok()
                 .and_then(|guard| guard.top_level_host.clone());
+            let parsed_url = tauri::Url::parse(&url_string);
             // Calls the EXACT existing scheme-policy function `store_embed_navigation_policy`
             // (main.rs) uses for the Tauri-managed embed -- one navigation-policy decision
             // function for the whole app, not a second, competing implementation here.
-            let decision = match tauri::Url::parse(&url_string) {
-                Ok(url) => crate::store_embed_navigation_policy(&url, top_level_host.as_deref()),
+            let decision = match &parsed_url {
+                Ok(url) => crate::store_embed_navigation_policy(url, top_level_host.as_deref()),
                 Err(_) => {
                     eprintln!(
                         "[shell] macos_epic_embed: blocked an unparsable navigation URL"
@@ -932,7 +1096,38 @@ define_class!(
             };
             let policy = match decision {
                 crate::StoreEmbedNavigationDecision::Allow => WKNavigationActionPolicy::Allow,
-                crate::StoreEmbedNavigationDecision::Block => WKNavigationActionPolicy::Cancel,
+                crate::StoreEmbedNavigationDecision::Block => {
+                    // Phase 50 Plan 02 (D-14): a block whose URL's scheme is the Epic Games
+                    // Launcher's own custom scheme bumps a monotonic counter instead of (or
+                    // rather, in addition to) the ordinary blocked-navigation log line below --
+                    // see `EpicEmbedSurface::blocked_launcher_scheme_count`'s own doc comment for
+                    // why a counter. Every OTHER blocked scheme keeps the existing behaviour
+                    // unchanged: no counter bump, no extra nav event, just this cancel.
+                    let is_launcher_scheme = parsed_url
+                        .as_ref()
+                        .map(|u| u.scheme() == EPIC_GAMES_LAUNCHER_SCHEME)
+                        .unwrap_or(false);
+                    if is_launcher_scheme {
+                        // Scheme only, never the full URL -- matches
+                        // `open_external_scheme_check`'s (main.rs) T-28-04 logging convention.
+                        eprintln!(
+                            "[shell] macos_epic_embed: blocked a navigation to the Epic Games \
+                             Launcher scheme ('{EPIC_GAMES_LAUNCHER_SCHEME}') -- D-14"
+                        );
+                        if let Ok(mut guard) = surface().lock() {
+                            guard.blocked_launcher_scheme_count =
+                                guard.blocked_launcher_scheme_count.saturating_add(1);
+                            let event = nav_state_json(webview);
+                            guard.enqueue_nav_event(event);
+                        } else {
+                            eprintln!(
+                                "[shell] WARN: macos_epic_embed surface registry poisoned -- \
+                                 continuing"
+                            );
+                        }
+                    }
+                    WKNavigationActionPolicy::Cancel
+                }
                 // The Epic surface's top-level host is never a Valve host, so a `Handoff`
                 // decision is unreachable in practice here -- logged and cancelled rather than
                 // allowed, since there is no steam:// handoff path on this surface.
@@ -1021,6 +1216,184 @@ define_class!(
         ) {
             epic_embed_handle_navigation_failure(webview, error, "didFailProvisionalNavigation");
         }
+
+        // Phase 50 Plan 02 (D-09): the method chain below is the one RESEARCH.md's Pattern 4
+        // verified against the vendored crate sources this phase pinned -- see
+        // `epic_embed_response_is_challenged`'s own doc comment for the full detection rule and
+        // why the header check is primary and the host/path check is a fallback only.
+        #[unsafe(method(webView:decidePolicyForNavigationResponse:decisionHandler:))]
+        fn decide_policy_for_navigation_response(
+            &self,
+            webview: &WKWebView,
+            navigation_response: &WKNavigationResponse,
+            handler: &block2::Block<dyn Fn(WKNavigationResponsePolicy)>,
+        ) {
+            // A subframe response (e.g. Epic's own sign-in form's Turnstile widget) is never
+            // evaluated at all -- RESEARCH Pitfall 2.
+            if unsafe { navigation_response.isForMainFrame() } {
+                let response = unsafe { navigation_response.response() };
+                // Read the URL-derived host/path BEFORE downcasting -- `downcast()` below
+                // consumes `response` (it hands back the original `Retained` only on the `Err`
+                // arm, which the header read below discards via `.ok()`), so anything needed
+                // from the un-downcast `NSURLResponse` has to be read first.
+                let (host, path) = response
+                    .URL()
+                    .map(|nsurl| {
+                        let url_string = nsurl
+                            .absoluteString()
+                            .map(|s| s.to_string())
+                            .unwrap_or_default();
+                        tauri::Url::parse(&url_string)
+                            .map(|u| {
+                                (
+                                    u.host_str().unwrap_or_default().to_string(),
+                                    u.path().to_string(),
+                                )
+                            })
+                            .unwrap_or_default()
+                    })
+                    .unwrap_or_default();
+                let header_value = response
+                    .downcast::<NSHTTPURLResponse>()
+                    .ok()
+                    .and_then(|http_response| {
+                        let key = NSString::from_str("cf-mitigated");
+                        http_response.valueForHTTPHeaderField(&key)
+                    })
+                    .map(|v| v.to_string());
+                if epic_embed_response_is_challenged(header_value.as_deref(), &host, &path) {
+                    eprintln!(
+                        "[shell] macos_epic_embed: main-frame response flagged as challenged \
+                         (D-09)"
+                    );
+                    if let Ok(mut guard) = surface().lock() {
+                        guard.challenged = true;
+                        let event = nav_state_json(webview);
+                        guard.enqueue_nav_event(event);
+                    } else {
+                        eprintln!(
+                            "[shell] WARN: macos_epic_embed surface registry poisoned -- \
+                             continuing"
+                        );
+                    }
+                    // D-10: Rust owns the hide -- a visible subview would paint over the panel
+                    // the renderer is about to show in the same slot.
+                    webview.setHidden(true);
+                }
+            }
+            // This hook OBSERVES; it never blocks. Cancelling here would leave the user a blank
+            // rectangle instead of the `WebviewUnavailablePanel` the renderer shows once
+            // `challenged` is `true` -- hiding the subview above is this module's job, not
+            // WebKit's.
+            (*handler).call((WKNavigationResponsePolicy::Allow,));
+        }
+    }
+
+    unsafe impl WKUIDelegate for EpicEmbedNavDelegate {
+        // D-12: unlike `EpicPristineNavDelegate`'s own version of this hook (main.rs), which
+        // loads the popup's request IN PLACE because the login-seam rule keeps an OAuth popup
+        // inside the login window -- that rule does not apply to ordinary store browsing. Hands
+        // the request off to the system browser instead, through the SAME throttle the
+        // Tauri-managed embed's own `window.open` hook (`store_embed_open`'s `on_new_window`,
+        // main.rs) shares, so neither surface can double-admit against the other (T-50-05). Never
+        // creates a second window: always returns `None`.
+        #[unsafe(method_id(webView:createWebViewWithConfiguration:forNavigationAction:windowFeatures:))]
+        fn create_web_view_for_navigation_action(
+            &self,
+            _webview: &WKWebView,
+            _configuration: &WKWebViewConfiguration,
+            action: &WKNavigationAction,
+            _window_features: &WKWindowFeatures,
+        ) -> Option<Retained<WKWebView>> {
+            let url_string = unsafe {
+                action
+                    .request()
+                    .URL()
+                    .and_then(|u| u.absoluteString())
+                    .map(|s| s.to_string())
+                    .unwrap_or_default()
+            };
+            // No early `return` here (Rule 3): `define_class!`'s `method_id` expansion converts
+            // only the function body's TAIL expression to `RetainedReturnValue` -- an explicit
+            // `return None;` bypasses that conversion and fails to type-check. Both outcomes
+            // below therefore fall through to the single trailing `None`.
+            if crate::store_embed_handoff_admitted(&crate::STORE_EMBED_POPUP_THROTTLE) {
+                eprintln!(
+                    "[shell] macos_epic_embed: denied window.open request, routing to the system \
+                     browser (D-12)"
+                );
+                if let Err(e) = crate::open_external(url_string, self.ivars().app.clone()) {
+                    eprintln!(
+                        "[shell] macos_epic_embed: popup hand-off to open_external failed: {e}"
+                    );
+                }
+            } else {
+                eprintln!(
+                    "[shell] macos_epic_embed: denied window.open request, rate-limited -- not \
+                     routed to the system browser"
+                );
+            }
+            None
+        }
+
+        // D-13: calls the SAME shipped helper `EpicPristineNavDelegate` (main.rs) uses for its
+        // own pristine WKWebView -- one code path serves both raw WKWebViews, no AppKit dialog
+        // plumbing re-implemented here. Always calls the completion handler exactly once.
+        #[unsafe(method(webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:))]
+        fn run_js_alert(
+            &self,
+            _webview: &WKWebView,
+            message: &NSString,
+            _frame: &WKFrameInfo,
+            completion_handler: &block2::Block<dyn Fn()>,
+        ) {
+            if let Some(mtm) = MainThreadMarker::new() {
+                crate::present_native_js_alert(mtm, &message.to_string());
+            }
+            (*completion_handler).call(());
+        }
+
+        /// Same rationale as `run_js_alert` above, for JS `confirm()`. Always calls the
+        /// completion handler exactly once.
+        #[unsafe(method(webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:))]
+        fn run_js_confirm(
+            &self,
+            _webview: &WKWebView,
+            message: &NSString,
+            _frame: &WKFrameInfo,
+            completion_handler: &block2::Block<dyn Fn(Bool)>,
+        ) {
+            let confirmed = MainThreadMarker::new()
+                .map(|mtm| crate::present_native_js_confirm(mtm, &message.to_string()))
+                .unwrap_or(false);
+            (*completion_handler).call((Bool::from(confirmed),));
+        }
+
+        /// Same rationale as `run_js_alert` above, for JS `prompt()`. Always calls the completion
+        /// handler exactly once: the shipped helper's entered text on OK, `nil` on Cancel or if
+        /// no main-thread marker is available (never dropped either way) -- the dismiss answer,
+        /// matching `WKUIDelegate`'s own documented completion-handler contract.
+        #[unsafe(method(webView:runJavaScriptTextInputPanelWithPrompt:defaultText:initiatedByFrame:completionHandler:))]
+        fn run_js_prompt(
+            &self,
+            _webview: &WKWebView,
+            prompt: &NSString,
+            default_text: Option<&NSString>,
+            _frame: &WKFrameInfo,
+            completion_handler: &block2::Block<dyn Fn(*mut NSString)>,
+        ) {
+            let default_text_owned = default_text.map(|s| s.to_string()).unwrap_or_default();
+            let entered = MainThreadMarker::new().and_then(|mtm| {
+                crate::present_native_js_prompt(mtm, &prompt.to_string(), &default_text_owned)
+            });
+            match entered {
+                Some(text) => {
+                    let ns_text = NSString::from_str(&text);
+                    (*completion_handler).call((Retained::as_ptr(&ns_text) as *mut NSString,));
+                }
+                None => (*completion_handler).call((std::ptr::null_mut(),)),
+            }
+        }
     }
 );
 
@@ -1043,10 +1416,10 @@ fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, ca
 }
 
 impl EpicEmbedNavDelegate {
-    fn new(mtm: MainThreadMarker) -> Retained<Self> {
+    fn new(mtm: MainThreadMarker, app: AppHandle) -> Retained<Self> {
         let delegate = mtm
             .alloc::<EpicEmbedNavDelegate>()
-            .set_ivars(EpicEmbedNavDelegateIvars);
+            .set_ivars(EpicEmbedNavDelegateIvars { app });
         unsafe { msg_send![super(delegate), init] }
     }
 }

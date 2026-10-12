@@ -550,16 +550,19 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
     )
-    // `loadTimedOut` (Phase 50 Plan 02) is REQUIRED on every `surface: 'epic'` event as of this
-    // plan -- Task 1's original fixture (pre-Plan-02) omitted it and would now throw; updated
-    // here rather than left stale, since it is this same plan's own change that made it required.
+    // `loadTimedOut`/`challenged`/`blockedLauncherSchemeCount` (Phase 50 Plan 02) are each
+    // REQUIRED on every `surface: 'epic'` event as of this plan -- Task 1's original fixture
+    // (pre-Plan-02) omitted all three and would now throw; updated here rather than left stale,
+    // since it is this same plan's own change that made them required.
     const epicEvent = {
       url: 'https://store.epicgames.com/en-US/',
       host: 'store.epicgames.com',
       canGoBack: false,
       canGoForward: true,
       surface: 'epic',
-      loadTimedOut: false
+      loadTimedOut: false,
+      challenged: false,
+      blockedLauncherSchemeCount: 0
     }
     input.write(
       `${JSON.stringify({ id: frame?.id, ok: true, result: [epicEvent] })}\n`
@@ -677,6 +680,205 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     await expect(promise).rejects.toThrow(
       /store_embed_take_nav_events\[0\]: malformed response \(loadTimedOut is only valid when surface is 'epic'\)/
     )
+  })
+
+  // ── Phase 50 Plan 02, Task 3: `challenged` and `blockedLauncherSchemeCount` carry the SAME
+  // required-on-epic/forbidden-otherwise discipline as `loadTimedOut` above, plus
+  // `blockedLauncherSchemeCount` is additionally checked for being a non-negative integer. ──
+  it("takeNavEvents throws when a surface: 'epic' event is missing challenged", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://store.epicgames.com/en-US/',
+            host: 'store.epicgames.com',
+            canGoBack: false,
+            canGoForward: true,
+            surface: 'epic',
+            loadTimedOut: false,
+            blockedLauncherSchemeCount: 0
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(challenged must be a boolean when surface is 'epic'\)/
+    )
+  })
+
+  it("takeNavEvents throws when a surface: 'epic' event is missing blockedLauncherSchemeCount", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://store.epicgames.com/en-US/',
+            host: 'store.epicgames.com',
+            canGoBack: false,
+            canGoForward: true,
+            surface: 'epic',
+            loadTimedOut: false,
+            challenged: false
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(blockedLauncherSchemeCount must be a non-negative integer when surface is 'epic'\)/
+    )
+  })
+
+  it("takeNavEvents throws when a surface: 'epic' event carries a negative blockedLauncherSchemeCount", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://store.epicgames.com/en-US/',
+            host: 'store.epicgames.com',
+            canGoBack: false,
+            canGoForward: true,
+            surface: 'epic',
+            loadTimedOut: false,
+            challenged: false,
+            blockedLauncherSchemeCount: -1
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(blockedLauncherSchemeCount must be a non-negative integer when surface is 'epic'\)/
+    )
+  })
+
+  it("takeNavEvents throws when a surface: 'epic' event carries a non-integral blockedLauncherSchemeCount", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://store.epicgames.com/en-US/',
+            host: 'store.epicgames.com',
+            canGoBack: false,
+            canGoForward: true,
+            surface: 'epic',
+            loadTimedOut: false,
+            challenged: false,
+            blockedLauncherSchemeCount: 1.5
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(blockedLauncherSchemeCount must be a non-negative integer when surface is 'epic'\)/
+    )
+  })
+
+  it("takeNavEvents throws when a surface: 'tauri' event carries challenged", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://www.gog.com/',
+            host: 'www.gog.com',
+            canGoBack: false,
+            canGoForward: false,
+            surface: 'tauri',
+            challenged: false
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(challenged is only valid when surface is 'epic'\)/
+    )
+  })
+
+  it('takeNavEvents throws when a surface-less event carries blockedLauncherSchemeCount', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://www.gog.com/',
+            host: 'www.gog.com',
+            canGoBack: false,
+            canGoForward: false,
+            blockedLauncherSchemeCount: 2
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(blockedLauncherSchemeCount is only valid when surface is 'epic'\)/
+    )
+  })
+
+  it('takeNavEvents round-trips an Epic event carrying challenged and blockedLauncherSchemeCount', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    const epicEvent = {
+      url: 'https://store.epicgames.com/en-US/',
+      host: 'store.epicgames.com',
+      canGoBack: false,
+      canGoForward: true,
+      surface: 'epic',
+      loadTimedOut: false,
+      challenged: true,
+      blockedLauncherSchemeCount: 3
+    }
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: [epicEvent] })}\n`
+    )
+    await expect(promise).resolves.toEqual([epicEvent])
   })
 
   const SAMPLE_NAV_STATE = {

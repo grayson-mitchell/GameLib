@@ -158,6 +158,39 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
       `${channel}: malformed response (loadTimedOut is only valid when surface is 'epic'): ${JSON.stringify(result)}`
     )
   }
+  // `challenged` (Phase 50 Plan 02, D-09) and `blockedLauncherSchemeCount` (D-14) carry the SAME
+  // REQUIRED-on-`'epic'`/FORBIDDEN-otherwise discipline as `loadTimedOut`, above -- see
+  // `StoreEmbedNavEvent`'s own doc comment for why each cannot be allowed to default.
+  // `blockedLauncherSchemeCount` is additionally checked for being a non-negative INTEGER: the
+  // Rust side is a `u64` counter, so a fractional or negative wire value means the field no
+  // longer carries that counter's value, not a plausible count to accept.
+  if (candidate.surface === 'epic') {
+    if (typeof candidate.challenged !== 'boolean') {
+      throw new Error(
+        `${channel}: malformed response (challenged must be a boolean when surface is 'epic'): ${JSON.stringify(result)}`
+      )
+    }
+    if (
+      typeof candidate.blockedLauncherSchemeCount !== 'number' ||
+      !Number.isInteger(candidate.blockedLauncherSchemeCount) ||
+      candidate.blockedLauncherSchemeCount < 0
+    ) {
+      throw new Error(
+        `${channel}: malformed response (blockedLauncherSchemeCount must be a non-negative integer when surface is 'epic'): ${JSON.stringify(result)}`
+      )
+    }
+  } else {
+    if (candidate.challenged !== undefined) {
+      throw new Error(
+        `${channel}: malformed response (challenged is only valid when surface is 'epic'): ${JSON.stringify(result)}`
+      )
+    }
+    if (candidate.blockedLauncherSchemeCount !== undefined) {
+      throw new Error(
+        `${channel}: malformed response (blockedLauncherSchemeCount is only valid when surface is 'epic'): ${JSON.stringify(result)}`
+      )
+    }
+  }
   return {
     url: candidate.url,
     host: candidate.host,
@@ -167,7 +200,12 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
       ? { surface: candidate.surface as 'tauri' | 'epic' }
       : {}),
     ...(candidate.surface === 'epic'
-      ? { loadTimedOut: candidate.loadTimedOut as boolean }
+      ? {
+          loadTimedOut: candidate.loadTimedOut as boolean,
+          challenged: candidate.challenged as boolean,
+          blockedLauncherSchemeCount:
+            candidate.blockedLauncherSchemeCount as number
+        }
       : {})
   }
 }

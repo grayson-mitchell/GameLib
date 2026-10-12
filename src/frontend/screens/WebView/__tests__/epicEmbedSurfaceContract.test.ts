@@ -94,20 +94,29 @@ describe('coerceNavState — surface field validation (Phase 50 Plan 01, raw-sou
   })
 
   it('accepts a valid "epic" surface value and passes it through', () => {
+    // `loadTimedOut`/`challenged`/`blockedLauncherSchemeCount` are each REQUIRED on every
+    // `surface: 'epic'` event as of Phase 50 Plan 02 (Task 2 and Task 3 respectively) -- this
+    // fixture predates both and would otherwise throw; updated here rather than left stale.
     expect(
       coerceNavState('ch', {
         url: 'https://x',
         host: 'x',
         canGoBack: false,
         canGoForward: false,
-        surface: 'epic'
+        surface: 'epic',
+        loadTimedOut: false,
+        challenged: false,
+        blockedLauncherSchemeCount: 0
       })
     ).toEqual({
       url: 'https://x',
       host: 'x',
       canGoBack: false,
       canGoForward: false,
-      surface: 'epic'
+      surface: 'epic',
+      loadTimedOut: false,
+      challenged: false,
+      blockedLauncherSchemeCount: 0
     })
   })
 

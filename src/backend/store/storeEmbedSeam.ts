@@ -54,6 +54,22 @@ export interface StoreEmbedBounds {
  * `surface` is `'epic'` — a boolean the caller cannot tell apart from "not timed out" if it were
  * allowed to default — and FORBIDDEN on every other event, since no other surface tracks this
  * state. `coerceNavState` enforces both directions and throws rather than coercing either one.
+ *
+ * `challenged` (Phase 50 Plan 02, D-09/D-10) is `true` once a main-frame response has carried
+ * Cloudflare's `cf-mitigated: challenge` header (or matched the host/path fallback,
+ * `epic_embed_response_is_challenged` in `macos_epic_embed.rs`) — the signal the renderer uses
+ * to swap the subview for `WebviewUnavailablePanel`'s `'epic-challenged'` reason. Cleared by
+ * `navigate()` and by the next `didStartProvisionalNavigation` (D-11: no stickiness). Same
+ * REQUIRED-on-`'epic'`/FORBIDDEN-otherwise discipline as `loadTimedOut`, for the same reason: a
+ * defaulted `false` would be indistinguishable from "genuinely not challenged".
+ *
+ * `blockedLauncherSchemeCount` (Phase 50 Plan 02, D-14) is a MONOTONIC count of navigations
+ * blocked because their scheme was the Epic Games Launcher's own custom scheme -- see the
+ * Rust-side field's own doc comment (`EpicEmbedSurface::blocked_launcher_scheme_count`,
+ * `macos_epic_embed.rs`) for why a counter rather than a one-shot boolean. Same
+ * REQUIRED-on-`'epic'`/FORBIDDEN-otherwise discipline, plus `coerceNavState` additionally
+ * requires it be a non-negative integer -- a fractional or negative count would mean the wire
+ * value was no longer the Rust-side counter.
  */
 export interface StoreEmbedNavEvent {
   url: string
@@ -62,6 +78,8 @@ export interface StoreEmbedNavEvent {
   canGoForward: boolean
   surface?: 'tauri' | 'epic'
   loadTimedOut?: boolean
+  challenged?: boolean
+  blockedLauncherSchemeCount?: number
 }
 
 /**
