@@ -5,10 +5,10 @@ milestone_name: Phase Details
 current_phase: 50
 current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 status: executing
-stopped_at: Phase 50 UI-SPEC approved
+stopped_at: Phase 50 Plan 06 blocked on the live-gate precondition
 last_updated: "2026-10-12T04:18:28.899Z"
 last_activity: 2026-10-12
-last_activity_desc: Phase 50 execution started
+last_activity_desc: Phase 50 plans 01 through 05 complete across 3 waves (32 commits, cargo clean, 543 jest suites green with only the inherited library.tileSize red proven identical pre-phase). Plan 06 authored 50-UAT.md with 19 arms and filled 50-VALIDATION.md, then halted at a blocking-human gate — the live run needs a fresh build of HEAD because the running GameLib.app predates every phase-50 commit by 7 hours and belongs to another session. Phase 50 execution started
 state_head: 51da98d158cbd921aedde8a69ac72a0488c11721
 progress:
   total_phases: 45
@@ -75,9 +75,9 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 50 (Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 50
-Last activity: 2026-10-12 — Phase 50 execution started
+Plan: 5 of 6
+Status: Blocked — Plan 50-06 awaiting the live-gate precondition (fresh build of HEAD, stale orphan gone)
+Last activity: 2026-10-13 — Phase 50 plans 01-05 complete; 50-06 authored the 19-arm UAT and halted at a blocking-human gate
 
 Previous activity: 2026-10-11 - Completed quick task 261011-wik: filed the Windows Stores-tab embed implementation todo (store_embed_* macOS+Linux only; 38-E01 closed on the spike 027 harness, not the shipped app)
 
