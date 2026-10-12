@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'
 
-export interface StoreEmbedTimeoutBannerProps {
+interface StoreEmbedTimeoutBannerProps {
   /**
    * Pushed by the Rust-side load-timeout monitor (Phase 50 Plan 02); this
    * component never owns a timer of its own.

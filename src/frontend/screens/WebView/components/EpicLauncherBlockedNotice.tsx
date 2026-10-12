@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'
 
-export interface EpicLauncherBlockedNoticeProps {
+interface EpicLauncherBlockedNoticeProps {
   visible: boolean
   onDismissed: () => void
 }
