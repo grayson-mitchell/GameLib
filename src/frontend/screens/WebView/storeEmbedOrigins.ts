@@ -152,3 +152,23 @@ export function isEmbeddableOrigin(url: string, platform: string): boolean {
     config.embeddableOn.includes(platform as StoreEmbedPlatform)
   )
 }
+
+/**
+ * Enumerates the full configured-store table so `storeEmbedOrigins.test.ts`'s (store x platform)
+ * matrix test reads the REAL table instead of a hand-copied list of stores -- a seventh store
+ * added to `STORE_EMBED_ORIGINS` above with no platform decision then shows up in that test's
+ * enumeration automatically, rather than the test staying green because it never heard about it.
+ * Test-only: no renderer code calls this.
+ */
+// ts-prune-ignore-next
+export function listConfiguredStores(): ReadonlyArray<{
+  key: string
+  startUrl: string
+  embeddableOn: readonly StoreEmbedPlatform[]
+}> {
+  return STORE_EMBED_ORIGINS.map(({ key, startUrl, embeddableOn }) => ({
+    key,
+    startUrl,
+    embeddableOn
+  }))
+}

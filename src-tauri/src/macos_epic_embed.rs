@@ -441,6 +441,71 @@ pub(crate) fn deselect(app: &AppHandle) -> Result<Value, String> {
     Ok(result)
 }
 
+/// Disposition returned by `surface_for_store_key` -- which surface (D-02) should serve a given
+/// `storeKey` on macOS. Follows `store_embed_navigation_policy`'s (main.rs) precedent exactly:
+/// pure, side-effect-free, named, and unit-tested, because the real `AppHandle` plumbing around
+/// it (constructing a live `AppHandle` in a `#[test]`) cannot be.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum EpicEmbedSurfaceSelection {
+    /// The raw `WKWebView` surface this module owns.
+    EpicSurface,
+    /// The existing Tauri-managed `add_child` embed (`store_embed_open`'s own body, main.rs).
+    TauriEmbed,
+}
+
+/// Factored out of `store_embed_open`'s (main.rs) former inline `store_key ==
+/// EPIC_EMBED_STORE_KEY` comparison (Phase 50 Plan 01, Task 2) so the routing decision is a named,
+/// pure, unit-tested function rather than an unexercised `if` the caller's own tests cannot reach
+/// without an `AppHandle`. Takes a bare `&str`, not a `&AppHandle` or any wrapper -- the decision
+/// depends on nothing else.
+pub(crate) fn surface_for_store_key(store_key: &str) -> EpicEmbedSurfaceSelection {
+    // TODO(RED): placeholder -- always routes to the Tauri embed. The epic-key case is the one
+    // this stub gets wrong on purpose, so the test below fails for the right reason before the
+    // real comparison (GREEN, next commit) lands.
+    let _ = store_key;
+    EpicEmbedSurfaceSelection::TauriEmbed
+}
+
+#[cfg(test)]
+mod surface_for_store_key_tests {
+    use super::*;
+
+    #[test]
+    fn epic_key_routes_to_the_epic_surface() {
+        assert_eq!(
+            surface_for_store_key(EPIC_EMBED_STORE_KEY),
+            EpicEmbedSurfaceSelection::EpicSurface
+        );
+    }
+
+    #[test]
+    fn every_other_configured_store_key_routes_to_the_tauri_embed() {
+        for key in ["gog", "amazon", "zoom", "steam", "humble"] {
+            assert_eq!(
+                surface_for_store_key(key),
+                EpicEmbedSurfaceSelection::TauriEmbed,
+                "store key: {key}"
+            );
+        }
+    }
+
+    #[test]
+    fn empty_key_routes_to_the_tauri_embed() {
+        assert_eq!(
+            surface_for_store_key(""),
+            EpicEmbedSurfaceSelection::TauriEmbed
+        );
+    }
+
+    #[test]
+    fn unrecognised_key_routes_to_the_tauri_embed() {
+        assert_eq!(
+            surface_for_store_key("totally-unconfigured-store"),
+            EpicEmbedSurfaceSelection::TauriEmbed
+        );
+    }
+}
+
 /// Drains and returns the Epic surface's queued nav-state events. No `AppHandle` needed --
 /// mirrors `store_embed_take_nav_events`'s (main.rs) own `AppHandle`-free shape. Surfaces a
 /// poisoned lock as an error rather than silently returning an empty array, matching that

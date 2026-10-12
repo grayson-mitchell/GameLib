@@ -7,7 +7,15 @@
  * a longer label with the apex as a SUFFIX) plus scheme, path, and query-string traps — for every
  * configured store, not only the one named in the plan's examples.
  */
-import { resolveStoreForUrl, isEmbeddableOrigin } from '../storeEmbedOrigins'
+import {
+  resolveStoreForUrl,
+  isEmbeddableOrigin,
+  listConfiguredStores,
+  type StoreEmbedPlatform
+} from '../storeEmbedOrigins'
+
+/** The platform values this suite's matrix test crosses with every configured store. */
+const PLATFORMS: readonly StoreEmbedPlatform[] = ['darwin', 'win32', 'linux']
 
 interface StoreCase {
   key: string
@@ -178,4 +186,74 @@ describe('resolveStoreForUrl — named boundary cases from the plan (D-31)', () 
   it('isEmbeddableOrigin is false for an unresolvable origin', () => {
     expect(isEmbeddableOrigin('https://attacker.net/', 'linux')).toBe(false)
   })
+
+  it.each(PLATFORMS)(
+    'isEmbeddableOrigin is false for an unresolvable origin on %s',
+    (platform) => {
+      expect(isEmbeddableOrigin('https://attacker.net/', platform)).toBe(false)
+    }
+  )
+})
+
+/**
+ * Expected per-platform embeddability, by store key -- declared INDEPENDENTLY of
+ * `storeEmbedOrigins.ts`'s own table rather than derived from it, so this test actually asserts
+ * something: Epic's row is `['darwin']` today, so a future edit that drops `darwin` from it (or
+ * that reinstates a single static per-store boolean) diverges from the `true` pinned here and
+ * fails. A seventh store enumerated by `listConfiguredStores()` below with no matching entry here
+ * fails the lookup itself (`expected` is `undefined`), rather than the suite silently skipping it.
+ */
+const EXPECTED_EMBEDDABLE: Record<
+  string,
+  Record<StoreEmbedPlatform, boolean>
+> = {
+  epic: { darwin: true, win32: false, linux: false },
+  gog: { darwin: true, win32: true, linux: true },
+  amazon: { darwin: true, win32: true, linux: true },
+  zoom: { darwin: true, win32: true, linux: true },
+  steam: { darwin: true, win32: true, linux: true },
+  humble: { darwin: true, win32: true, linux: true }
+}
+
+describe('isEmbeddableOrigin — full (store x platform) matrix (Phase 50 Plan 01)', () => {
+  // Enumerated from the module's own table via `listConfiguredStores()`, not a hand-copied list
+  // of stores -- this is the invariant the assumption-delta checkpoint asked for: embeddability is
+  // a function of (store, platform), not a per-store boolean.
+  const stores = listConfiguredStores()
+
+  it('enumerates exactly the 6 configured stores x 3 platforms (18 pairs) -- a 7th store with no platform decision changes this count', () => {
+    expect(stores.length * PLATFORMS.length).toBe(18)
+  })
+
+  it.each(
+    stores.flatMap((store) =>
+      PLATFORMS.map((platform) => ({
+        key: store.key,
+        startUrl: store.startUrl,
+        platform
+      }))
+    )
+  )(
+    'isEmbeddableOrigin($startUrl, $platform) matches the declared matrix for $key',
+    ({ key, startUrl, platform }) => {
+      const expected = EXPECTED_EMBEDDABLE[key]?.[platform]
+      expect(expected).not.toBeUndefined()
+      expect(isEmbeddableOrigin(startUrl, platform)).toBe(expected)
+    }
+  )
+})
+
+describe('isEmbeddableOrigin — unknown platform strings deny every store (Phase 50 Plan 01)', () => {
+  // Also enumerated from the module, not a hand-copied list -- an unknown platform must be denied
+  // for EVERY configured store, not merely the one (Epic) the plan's own example names.
+  const stores = listConfiguredStores()
+
+  it.each(['freebsd', 'unknown', ''])(
+    '"%s" is embeddable for no configured store (allow-list, not deny-list)',
+    (unknownPlatform) => {
+      for (const store of stores) {
+        expect(isEmbeddableOrigin(store.startUrl, unknownPlatform)).toBe(false)
+      }
+    }
+  )
 })
