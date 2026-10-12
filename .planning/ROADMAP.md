@@ -5872,15 +5872,15 @@ sub-decisions below are LOCKED inputs to that spec, not gray areas to reopen.
 construction; its README's `## What IS established` #6–#9 are the measurements this phase stands
 on and must not re-derive). **Not** Phase 49, which `phase.add` defaulted to by positional guess —
 the offline banner and this subview share no files.
-**Plans:** 1/6 plans executed
+**Plans:** 3/6 plans executed
 
 Plans:
 **Wave 1**
 - [x] 50-01-PLAN.md — Tracer: Epic paints in the Stores-tab slot on macOS, every layer end to end
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 50-02-PLAN.md — Rust delegate completion: native history, 45s timeout, challenge detection, popups, JS dialogs, blocked launcher scheme, transparency
-- [ ] 50-03-PLAN.md — React chrome: slow-load banner, `epic-challenged` panel reason with Try again, blocked-launcher notice; mints the 6 English keys
+- [x] 50-02-PLAN.md — Rust delegate completion: native history, 45s timeout, challenge detection, popups, JS dialogs, blocked launcher scheme, transparency
+- [x] 50-03-PLAN.md — React chrome: slow-load banner, `epic-challenged` panel reason with Try again, blocked-launcher notice; mints the 6 English keys
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 50-04-PLAN.md — Fill the 6 new `gamelib` keys across all 48 non-English catalogues with provenance stamps
