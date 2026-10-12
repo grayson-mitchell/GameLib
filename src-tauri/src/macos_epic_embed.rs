@@ -524,6 +524,13 @@ pub(crate) fn open(
             let mtm = MainThreadMarker::new()
                 .ok_or_else(|| "epic_embed_open:not-on-main-thread".to_string())?;
 
+            // Review finding 10: every fallible step runs BEFORE the first view mutation. A nil
+            // NSURL used to surface only after the cold path had already `addSubview`ed a webview
+            // it then never parked in `surface()` (an orphan that intercepts clicks forever), or
+            // after the warm path had already re-shown a view it never re-selected.
+            let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
+                .ok_or_else(|| "epic_embed_open:bad-nsurl".to_string())?;
+
             // Resolve AND retain on the main thread -- see this function's doc comment above.
             let ns_view_ptr = window
                 .ns_view()
@@ -575,8 +582,6 @@ pub(crate) fn open(
                 };
                 apply_visibility(webview, hidden);
                 if load {
-                    let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
-                        .ok_or_else(|| "epic_embed_open:bad-nsurl".to_string())?;
                     let request = NSURLRequest::requestWithURL(&nsurl);
                     unsafe {
                         webview.loadRequest(&request);
@@ -631,21 +636,22 @@ pub(crate) fn open(
             // The ONLY subview-attach call site in this module.
             ns_view.addSubview(&webview);
 
-            let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
-                .ok_or_else(|| "epic_embed_open:bad-nsurl".to_string())?;
             let request = NSURLRequest::requestWithURL(&nsurl);
             unsafe {
                 webview.loadRequest(&request);
             }
 
             let event = nav_state_json(&webview);
+            // The one fallible step left after `addSubview` (finding 10): on a poisoned registry
+            // detach the subview again rather than leave an unparked orphan on the window.
+            let Ok(mut guard) = surface().lock() else {
+                webview.removeFromSuperview();
+                return Err("epic_embed_open:surface-poisoned".to_string());
+            };
             // Park the retained webview/delegate as raw addresses -- released only by `close()`
             // via `Retained::from_raw` (see that function's doc comment).
             let webview_ptr = Retained::into_raw(webview) as *mut c_void;
             let delegate_ptr = Retained::into_raw(delegate) as *mut c_void;
-            let mut guard = surface()
-                .lock()
-                .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
             guard.webview = Some(SendPtr(webview_ptr));
             guard.delegate = Some(SendPtr(delegate_ptr));
             let hidden = guard.visibility.open();

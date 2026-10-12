@@ -137,3 +137,19 @@ describe('finding 2 — direct nav-result returns carry the Epic flags', () => {
     )
   })
 })
+
+describe('finding 10 — open() builds the NSURL before mutating any view', () => {
+  test('URLWithString precedes the first setFrame/addSubview/apply_visibility in open()', () => {
+    const body = fnBody(code, 'open')
+    const nsurl = body.indexOf('URLWithString(')
+    expect(nsurl).toBeGreaterThan(-1)
+    for (const mutation of ['setFrame(', 'addSubview(', 'apply_visibility(']) {
+      const at = body.indexOf(mutation)
+      expect({ mutation, before: at === -1 || nsurl < at }).toEqual({
+        mutation,
+        before: true
+      })
+    }
+    expect(count(body, 'URLWithString(')).toBe(1)
+  })
+})
