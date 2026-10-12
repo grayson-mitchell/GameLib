@@ -1205,6 +1205,175 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     )
   })
 
+  // ── Epic nav-signal surfacing (Phase 50 Plan 05, D-07/D-10/D-11/D-14) ──────────────────────
+  //
+  // Plan 02 (Rust) emits three new OPTIONAL `StoreEmbedNavEvent` fields on an `'epic'` surface
+  // only: `loadTimedOut`, `challenged`, `blockedLauncherSchemeCount`. This hook's existing
+  // 250 ms drain (GAP-D, above) is the only thing that ever collects any nav event field, so it
+  // is the only thing that can surface these three too -- these properties pin that it does,
+  // without a second poll loop, a new `storeEmbedSetBounds`/`storeEmbedOpen` call site, or a
+  // plain boolean for the blocked-scheme signal (a coalescing drain applying only the LAST event
+  // per tick could otherwise collapse several blocked attempts into one, which is exactly why
+  // Rust counts rather than flags it -- see the implementation's own comment for the full
+  // reasoning once this turns green).
+
+  /** Drains one queued Epic nav event carrying one or more of the three new Plan 02 fields. */
+  async function drainEpicNavEvent(
+    options: MountOptions,
+    overrides: {
+      loadTimedOut?: boolean
+      challenged?: boolean
+      blockedLauncherSchemeCount?: number
+    }
+  ): Promise<StoreEmbedHostState> {
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      {
+        url: 'https://www.epicgames.com/store/en-US/',
+        host: 'www.epicgames.com',
+        canGoBack: true,
+        canGoForward: false,
+        surface: 'epic',
+        ...overrides
+      }
+    ])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    return reinvoke(options)
+  }
+
+  // Property 26. Observed-red mutation: deriving `loadTimedOut` from the LATEST drain tick
+  // instead of the latest NAV EVENT (e.g. resetting it whenever an empty array drains) turns
+  // this red -- an idle poll tick carries no event at all and must not erase a flag a real
+  // event already set.
+  it('26. an empty drain tick leaves a previously-surfaced loadTimedOut flag unchanged', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    const after = await drainEpicNavEvent(options, { loadTimedOut: true })
+    expect(after.loadTimedOut).toBe(true)
+
+    // The idle default (`mockResolvedValue([])` from `beforeEach`) drains an empty queue next --
+    // nothing is applied on an empty array (the pre-existing `if (latest) setNavState(latest)`
+    // guard), so the flag must still read true.
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    const final = reinvoke(options)
+
+    expect(final.loadTimedOut).toBe(true)
+  })
+
+  // Property 27. Observed-red mutation: never reading `navState.challenged` at all (e.g. a
+  // typo'd field name) turns this red -- `challenged` would stay `false` forever regardless of
+  // what Rust reports.
+  it('27. a surfaced challenged flag reflects the latest drained nav event', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+    const initial = mount(options)
+    jest.advanceTimersByTime(40)
+    expect(initial.challenged).toBe(false)
+
+    const after = await drainEpicNavEvent(options, { challenged: true })
+    expect(after.challenged).toBe(true)
+  })
+
+  // Property 28. Observed-red mutation: seeding the baseline from `0`/`undefined` instead of the
+  // first OBSERVED count turns this red -- a store whose count starts above zero (a restored
+  // session) would fire a spurious notice on its very first drain.
+  it('28. the first-ever drained blocked-launcher-scheme count seeds a null baseline, firing no notice', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    const after = await drainEpicNavEvent(options, {
+      blockedLauncherSchemeCount: 3
+    })
+
+    expect(after.launcherSchemeBlockedAt).toBeNull()
+  })
+
+  // Property 29. Observed-red mutation: comparing for inequality instead of strictly-greater
+  // (`count !== baseline`) turns this red -- a drain re-reporting the SAME count (a coalesced
+  // tick, not a new attempt) would fire a second notice for one attempt.
+  it('29. a later drain carrying a HIGHER blocked-launcher-scheme count fires a fresh notice; an EQUAL one does not', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    const seeded = await drainEpicNavEvent(options, {
+      blockedLauncherSchemeCount: 1
+    })
+    expect(seeded.launcherSchemeBlockedAt).toBeNull()
+
+    const fired = await drainEpicNavEvent(options, {
+      blockedLauncherSchemeCount: 2
+    })
+    expect(fired.launcherSchemeBlockedAt).not.toBeNull()
+
+    const unchanged = await drainEpicNavEvent(options, {
+      blockedLauncherSchemeCount: 2
+    })
+    expect(unchanged.launcherSchemeBlockedAt).toBe(
+      fired.launcherSchemeBlockedAt
+    )
+  })
+
+  // Property 30. Observed-red mutation: showing the embed BEFORE the navigate call resolves (or
+  // not navigating at all) turns this red -- D-10's retry must re-point the embed at the start
+  // URL first, so a stale challenged page is never shown for even one frame.
+  it('30. onTryAgain navigates to the start URL and re-shows the embed, in that order', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+    mockApi.storeEmbedNavigate.mockResolvedValueOnce({
+      status: 'ok',
+      navState: {
+        url: 'https://www.epicgames.com/store/en-US/',
+        host: 'www.epicgames.com',
+        canGoBack: false,
+        canGoForward: false
+      }
+    })
+    const state = mount(options)
+    jest.advanceTimersByTime(40)
+
+    state.onTryAgain()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(
+      'https://www.epicgames.com/store/en-US/'
+    )
+    expect(mockApi.storeEmbedShow).toHaveBeenCalled()
+    expect(mockApi.storeEmbedNavigate.mock.invocationCallOrder[0]).toBeLessThan(
+      mockApi.storeEmbedShow.mock.invocationCallOrder[0]
+    )
+  })
+
   // ── Zoom-aware bounds (quick 261012-gn8, W8) ───────────────────────────────────────────────
   //
   // Windows live gate W8 (2026-10-12, zoom 120%): the embed sat displaced over the enlarged chrome.
