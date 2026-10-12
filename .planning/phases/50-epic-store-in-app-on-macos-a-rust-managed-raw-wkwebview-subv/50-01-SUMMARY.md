@@ -201,3 +201,11 @@ None — no external service configuration required.
 ---
 *Phase: 50-epic-store-in-app-on-macos-a-rust-managed-raw-wkwebview-subv*
 *Completed: 2026-10-12*
+
+## Self-Check: PASSED
+
+All created/modified files confirmed present on disk (`src-tauri/src/macos_epic_embed.rs`,
+`src/frontend/screens/WebView/__tests__/epicEmbedSurfaceContract.test.ts`,
+`src/frontend/screens/WebView/storeEmbedOrigins.ts`, `.planning/ROADMAP.md`, this SUMMARY.md).
+All 6 commits confirmed present in `git log --oneline --all`: `56c6fb68a`, `c2e4ed081`,
+`8bbe6fb5c`, `b6817218c`, `a0f7ddcbf`, `2020466d3`.
