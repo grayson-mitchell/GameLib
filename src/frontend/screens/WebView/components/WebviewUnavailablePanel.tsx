@@ -3,24 +3,49 @@ import { useTranslation } from 'react-i18next'
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there
 // is no external consumer, so the export served no purpose).
-type WebviewUnavailableReason = 'platform' | 'epic'
+type WebviewUnavailableReason = 'platform' | 'epic' | 'epic-challenged'
 
 interface Props {
   url?: string
   /**
-   * Phase 40 Plan 10 (D-02/D-08, REQ-40-12): which of the two honest,
+   * Phase 40 Plan 10 (D-02/D-08, REQ-40-12): which of the three honest,
    * distinct reasons this panel is showing for. Defaults to `'platform'` --
    * the pre-existing D-34 deep-link-to-an-unconfigured-origin call site in
-   * `WebView/index.tsx` does not know or care which of the two applies, and
-   * `'platform'` is the more general of the two (it was this panel's ONLY
-   * reason before this plan minted the `'epic'` case).
+   * `WebView/index.tsx` does not know or care which applies, and
+   * `'platform'` is the most general of the three (it was this panel's ONLY
+   * reason before Phase 40 Plan 10 minted `'epic'`).
    */
   reason?: WebviewUnavailableReason
+  /**
+   * D-10 (Phase 50 Plan 03): retry callback for `reason="epic-challenged"`
+   * only -- wired to the Epic subview's navigate-to-start-URL-and-show
+   * command by the caller. Mirrors the `url &&` guard the Open in browser
+   * button already uses: when absent, the Try again button is not rendered
+   * at all (never rendered disabled), so the panel never shows a dead
+   * control.
+   */
+  onTryAgain?: () => void
 }
 
 /**
+ * D-10/D-11 (Phase 50 Plan 03, UI-SPEC Copywriting Contract): extends the
+ * pre-existing two-branch `reason === 'epic' ? ... : ...` ternaries to
+ * three. Deliberately NOT a `Record<WebviewUnavailableReason, ...>` lookup
+ * keyed by `reason` -- `i18next-parser` (see `i18next-parser.config.js`'s
+ * `lexers.functions: ['t', 'tGamelib']`) statically greps for a LITERAL
+ * string as `tGamelib`'s first argument; a call site like
+ * `tGamelib(copy.headingKey, ...)` has no literal for it to find, so the
+ * key would never get minted into `gamelib.json` at all (caught running
+ * this task's own `pnpm i18n` step: `epic-challenged.heading`/`.body` were
+ * silently absent from the diff while the sibling literal
+ * `tGamelib('webview.unavailable.epic-challenged.tryAgain', ...)` call a
+ * few lines below minted correctly). Every branch below is therefore its
+ * own literal `tGamelib(...)` call, not a table lookup.
+ */
+
+/**
  * D-06 (REQ-34.4.1-07), reworded by Phase 40 Plan 10 (D-02/D-08, REQ-40-12)
- * into two distinct, honest reasons for `/store/*`, `/wiki` and
+ * into three distinct, honest reasons for `/store/*`, `/wiki` and
  * `store-page?store-url=` routes under Tauri:
  *
  * - `reason="platform"` (D-02): macOS, Linux and Windows all embed (the
@@ -35,42 +60,32 @@ interface Props {
  *   which renders this panel with no `reason` (so the default applies) for
  *   a deep link to an unconfigured origin. That is why the body copy names
  *   no OS.
- * - `reason="epic"` (D-05/D-08): `/store/epic` is scoped out of the embed on
- *   EVERY platform, including macOS. Spike 024 measured why, across eleven
- *   runs (five on 2026-09-05/15, five on 2026-10-11 with the Chrome UA
- *   spoof off and two other UA identities, and a Safari Private Window
- *   control the same day), and closed the question
- *   (`.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`):
- *   the gate is a Cloudflare Turnstile challenge. The injected globals, read
- *   from inside the loaded Epic page, were present in the run that rendered
- *   fine as well as in the runs that were challenged, so the 2026-08-03
- *   Talon login-endpoint mechanism is REFUTED, not confirmed -- it does not
- *   explain the store gate, and the user agent does not either (quick
- *   261011-w8j). A cold Safari Private Window on the same IP and WebKit
- *   rendered the store twice (run 11, quick 261011-ws7), so the IP and the
- *   jar are out as well: the gate is specific to the embedded webview. This
- *   is measured, not predicted; the follow-up todo closed WONTFIX on
- *   2026-09-15 and the 2026-10-11 runs appended to it. Runs 12-16 (quick
- *   261012-7f2, 2026-10-12) then put a PRISTINE raw WKWebView -- no Tauri
- *   injection, no add_child, cold store -- in the same process: challenged
- *   0 of 10, rendered 6 of 10, while this child embed was challenged 10 of
- *   10 alongside it. The gate is Tauri's webview construction; this panel
- *   stays correct for the embed. Runs 17-19 (quick 261012-8gu) then
- *   attached that raw WKWebView INSIDE the main window at the embed's
- *   rect: 0 of 6 challenged, 4 of 6 rendered by 120 s, so the embed shape
- *   exists as a Rust-managed raw WKWebView. The D-05 call was made on
- *   2026-10-12 (quick 261012-d5g): Option A, adopt that subview, macOS
- *   first, owned by Phase 50 (ROADMAP.md `### Phase 50`). The cold-load
- *   stall is explained (spike README, established #8 and #9), not a
- *   blocker. Until Phase 50 lands this panel stays the `/store/epic`
- *   answer on every platform; after it, on Windows and Linux only, where
- *   Phase 50 re-reads this copy for truth. Decision record:
- *   `.planning/todos/completed/2026-10-12-make-the-d-05-call-*`.
- *   The copy stays restrained, never an accusation that Epic blocks
- *   in-app browsing -- run 1 rendered the store fully; this edit does not
- *   change the user-facing copy. The Epic tile stays in
- *   `NavShell/components/StoresPanel/index.tsx` (D-08): a tile leading to a
- *   working open-in-browser escape hatch beats no tile.
+ * - `reason="epic"` (D-05/D-08): as of Phase 50 (the D-05 call,
+ *   `.planning/todos/completed/2026-10-12-make-the-d-05-call-*`), `/store/epic`
+ *   embeds on macOS through the Rust-managed raw WKWebView subview Phase 50
+ *   shipped -- this reason no longer applies there. It still applies on
+ *   Windows and Linux, which have not adopted that subview. The history
+ *   behind why the ORIGINAL embedded-child-webview approach was scoped out
+ *   everywhere, and why a second, raw subview does not hit the same gate,
+ *   is measured in full in
+ *   `.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`
+ *   (eleven runs closing the question as a Cloudflare Turnstile challenge
+ *   specific to Tauri's embedded-child webview construction, then five
+ *   more runs proving a pristine/raw WKWebView subview does not hit it).
+ *   This doc comment update does not restate that measurement, only the
+ *   current rule it produced. The copy stays restrained, never an
+ *   accusation that Epic blocks in-app browsing -- this edit does not
+ *   change the user-facing copy, which stays true on Windows and Linux.
+ *   The Epic tile stays in `NavShell/components/StoresPanel/index.tsx`
+ *   (D-08): a tile leading to a working open-in-browser escape hatch beats
+ *   no tile.
+ * - `reason="epic-challenged"` (D-10/D-11, Phase 50 Plan 03): macOS-only,
+ *   rendered when the raw WKWebView subview itself reports a Cloudflare
+ *   challenge it cannot complete (Phase 50 Plan 02's challenge detection).
+ *   Unlike the other two reasons this one offers a Try again button
+ *   (`onTryAgain`) because a challenge is transient and retryable (D-11),
+ *   never sticky -- the panel introduces no colour override for it, since
+ *   nothing here is an error state.
  *
  * Until Phase 34.4.1 plan 05, this panel also covered the LOGIN case
  * (Humble/Epic/GOG/Amazon) with the same blanket "not available on this
@@ -91,30 +106,44 @@ interface Props {
  * resolves WITHOUT writing under Tauri's WKWebView, and never a raw
  * `shell.openExternal` call) -- T-34.4.1-26.
  */
-const WebviewUnavailablePanel = ({ url, reason = 'platform' }: Props) => {
+const WebviewUnavailablePanel = ({
+  url,
+  reason = 'platform',
+  onTryAgain
+}: Props) => {
   const { t: tGamelib } = useTranslation('gamelib')
 
   const heading =
-    reason === 'epic'
+    reason === 'epic-challenged'
       ? tGamelib(
-          'webview.unavailable.epic.heading',
-          "Epic Store browsing isn't available in-app yet"
+          'webview.unavailable.epic-challenged.heading',
+          'Epic Store browsing is temporarily blocked'
         )
-      : tGamelib(
-          'webview.unavailable.platform.heading',
-          "In-app store and wiki browsing isn't available on this platform yet"
-        )
+      : reason === 'epic'
+        ? tGamelib(
+            'webview.unavailable.epic.heading',
+            "Epic Store browsing isn't available in-app yet"
+          )
+        : tGamelib(
+            'webview.unavailable.platform.heading',
+            "In-app store and wiki browsing isn't available on this platform yet"
+          )
 
   const body =
-    reason === 'epic'
+    reason === 'epic-challenged'
       ? tGamelib(
-          'webview.unavailable.epic.body',
-          "GameLib doesn't yet embed Epic Store pages in-app."
+          'webview.unavailable.epic-challenged.body',
+          "Epic asked for a security check this view can't complete."
         )
-      : tGamelib(
-          'webview.unavailable.platform.body',
-          "GameLib can't open this page in its in-app store and wiki browser."
-        )
+      : reason === 'epic'
+        ? tGamelib(
+            'webview.unavailable.epic.body',
+            "GameLib doesn't yet embed Epic Store pages in-app."
+          )
+        : tGamelib(
+            'webview.unavailable.platform.body',
+            "GameLib can't open this page in its in-app store and wiki browser."
+          )
 
   const nextStep = tGamelib(
     'webview.unavailable.next-step',
@@ -127,11 +156,25 @@ const WebviewUnavailablePanel = ({ url, reason = 'platform' }: Props) => {
     'Open in browser'
   )
 
+  const tryAgainLabel = tGamelib(
+    'webview.unavailable.epic-challenged.tryAgain',
+    'Try again'
+  )
+
   return (
     <div className="WebView__unavailablePanel">
       <h2 className="WebView__unavailablePanel-heading">{heading}</h2>
       <p className="WebView__unavailablePanel-body">{body}</p>
       <p className="WebView__unavailablePanel-nextStep">{nextStep}</p>
+      {reason === 'epic-challenged' && onTryAgain && (
+        <button
+          type="button"
+          className="WebView__unavailablePanel-tryAgain"
+          onClick={() => onTryAgain()}
+        >
+          {tryAgainLabel}
+        </button>
+      )}
       {url && (
         <button
           type="button"

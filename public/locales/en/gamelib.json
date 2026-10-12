@@ -434,6 +434,15 @@
         "embedPlaceholder": {
             "message": "Paused while a window is open"
         },
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Install from your Library instead — this view can't open the Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic is taking a while to load",
+                "reload": "Reload"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Your sign-in cannot be completed yet: {{channel}} is not ported to this build. This lands in Phase 34.5.",
@@ -494,6 +503,11 @@
             "epic": {
                 "body": "GameLib doesn't yet embed Epic Store pages in-app.",
                 "heading": "Epic Store browsing isn't available in-app yet"
+            },
+            "epic-challenged": {
+                "body": "Epic asked for a security check this view can't complete.",
+                "heading": "Epic Store browsing is temporarily blocked",
+                "tryAgain": "Try again"
             },
             "next-step": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
             "open-in-browser": "Open in browser",

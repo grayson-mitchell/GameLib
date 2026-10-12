@@ -279,6 +279,132 @@ describe('WebviewUnavailablePanel — reason="epic" (D-05/D-08, REQ-40-12)', () 
   })
 })
 
+describe('WebviewUnavailablePanel — reason="epic-challenged" (D-10/D-11, Phase 50 Plan 03)', () => {
+  it('renders ONLY the epic-challenged heading, never the platform or epic heading', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'epic-challenged'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain('Epic Store browsing is temporarily blocked')
+    expect(text).not.toContain(
+      "In-app store and wiki browsing isn't available on this platform yet"
+    )
+    expect(text).not.toContain("Epic Store browsing isn't available in-app yet")
+  })
+
+  it('renders the locked body verbatim', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'epic-challenged'
+    }) as AnyReactElement
+
+    expect(collectText(element)).toContain(
+      "Epic asked for a security check this view can't complete."
+    )
+  })
+
+  it('the copy asserts no blocking/accusatory claim about Epic, and mentions neither signing in nor a specific OS', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'epic-challenged'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text.toLowerCase()).not.toMatch(
+      /epic[^.]*\b(blocks?|refuses?|prevents?|disallows?|forbids?)\b/
+    )
+    expect(text.toLowerCase()).not.toMatch(/sign in|signing in|login/)
+    expect(text).not.toMatch(/\b(macOS|Linux|Windows)\b/)
+  })
+
+  it('renders Try again before Open in browser, in that DOM order', () => {
+    const url = 'https://www.epicgames.com/store/en-US/'
+    const element = WebviewUnavailablePanel({
+      url,
+      reason: 'epic-challenged',
+      onTryAgain: jest.fn()
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain('Try again')
+    expect(text).toContain('Open in browser')
+    expect(text.indexOf('Try again')).toBeLessThan(
+      text.indexOf('Open in browser')
+    )
+  })
+
+  it('Try again calls onTryAgain exactly once and never window.api.openExternalUrl', () => {
+    const onTryAgain = jest.fn()
+    const url = 'https://www.epicgames.com/store/en-US/'
+    const element = WebviewUnavailablePanel({
+      url,
+      reason: 'epic-challenged',
+      onTryAgain
+    }) as AnyReactElement
+
+    const tryAgainButton = findByClassName(
+      element,
+      'WebView__unavailablePanel-tryAgain'
+    )
+    expect(tryAgainButton).not.toBeNull()
+    tryAgainButton?.props.onClick?.()
+
+    expect(onTryAgain).toHaveBeenCalledTimes(1)
+    expect(mockApi.openExternalUrl).not.toHaveBeenCalled()
+  })
+
+  it('Open in browser calls window.api.openExternalUrl with the exact url and never onTryAgain', () => {
+    const onTryAgain = jest.fn()
+    const url = 'https://www.epicgames.com/store/en-US/'
+    const element = WebviewUnavailablePanel({
+      url,
+      reason: 'epic-challenged',
+      onTryAgain
+    }) as AnyReactElement
+
+    const openInBrowserButton = findByClassName(
+      element,
+      'WebView__unavailablePanel-openInBrowser'
+    )
+    expect(openInBrowserButton).not.toBeNull()
+    openInBrowserButton?.props.onClick?.()
+
+    expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
+    expect(onTryAgain).not.toHaveBeenCalled()
+  })
+
+  it('renders no Try again button when onTryAgain is absent -- never a dead control', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'epic-challenged'
+    }) as AnyReactElement
+    const tryAgainButton = findByClassName(
+      element,
+      'WebView__unavailablePanel-tryAgain'
+    )
+
+    expect(tryAgainButton).toBeNull()
+  })
+
+  it('the existing two reasons never render a Try again button, even when onTryAgain is passed', () => {
+    const onTryAgain = jest.fn()
+
+    const platformElement = WebviewUnavailablePanel({
+      reason: 'platform',
+      onTryAgain
+    }) as AnyReactElement
+    const epicElement = WebviewUnavailablePanel({
+      reason: 'epic',
+      onTryAgain
+    }) as AnyReactElement
+
+    expect(
+      findByClassName(platformElement, 'WebView__unavailablePanel-tryAgain')
+    ).toBeNull()
+    expect(
+      findByClassName(epicElement, 'WebView__unavailablePanel-tryAgain')
+    ).toBeNull()
+  })
+})
+
 describe('WebviewUnavailablePanel — minted i18n keys (Task 1, gamelib.json only)', () => {
   const gamelibEnPath = join(
     __dirname,
@@ -320,7 +446,10 @@ describe('WebviewUnavailablePanel — minted i18n keys (Task 1, gamelib.json onl
     ['webview', 'unavailable', 'platform', 'heading'],
     ['webview', 'unavailable', 'platform', 'body'],
     ['webview', 'unavailable', 'epic', 'heading'],
-    ['webview', 'unavailable', 'epic', 'body']
+    ['webview', 'unavailable', 'epic', 'body'],
+    ['webview', 'unavailable', 'epic-challenged', 'heading'],
+    ['webview', 'unavailable', 'epic-challenged', 'body'],
+    ['webview', 'unavailable', 'epic-challenged', 'tryAgain']
   ]
 
   it.each(mintedKeyPaths)('gamelib.json has the minted key %s', (...path) => {
@@ -333,6 +462,22 @@ describe('WebviewUnavailablePanel — minted i18n keys (Task 1, gamelib.json onl
     (...path) => {
       const translation = JSON.parse(readFileSync(translationEnPath, 'utf-8'))
       expect(getPath(translation, path)).toBeUndefined()
+    }
+  )
+
+  const epicChallengedFallbacks: Record<string, string> = {
+    heading: 'Epic Store browsing is temporarily blocked',
+    body: "Epic asked for a security check this view can't complete.",
+    tryAgain: 'Try again'
+  }
+
+  it.each(Object.keys(epicChallengedFallbacks))(
+    "gamelib.json's webview.unavailable.epic-challenged.%s equals the component's own fallback",
+    (key) => {
+      const gamelib = JSON.parse(readFileSync(gamelibEnPath, 'utf-8'))
+      expect(
+        getPath(gamelib, ['webview', 'unavailable', 'epic-challenged', key])
+      ).toBe(epicChallengedFallbacks[key])
     }
   )
 })
