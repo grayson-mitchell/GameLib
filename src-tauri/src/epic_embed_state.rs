@@ -13,6 +13,8 @@
 //! (`user_hidden`, `challenged`) plus `selected` (D-02), and `hidden()` is the only answer anyone
 //! applies -- so neither cause can undo the other.
 
+use serde_json::Value;
+
 /// The three inputs the Epic subview's visibility is derived from. Every transition returns the
 /// resulting `hidden()` so the caller applies it in the SAME main-thread step that changed the
 /// state (review finding 13: `selected` and the visible flag must never be observed out of step).
@@ -81,6 +83,35 @@ impl EpicEmbedVisibility {
     pub(crate) fn reset(&mut self) {
         *self = Self::default();
     }
+}
+
+/// The Epic-only flags every `surface: 'epic'` nav state must carry -- `coerceNavState`
+/// (`storeEmbedFlowRegistration.ts`) REQUIRES all three on an Epic event and rejects the event
+/// otherwise.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct EpicEmbedNavFlags {
+    pub(crate) load_timed_out: bool,
+    pub(crate) challenged: bool,
+    pub(crate) blocked_launcher_scheme_count: u64,
+}
+
+/// Merges `flags` onto a `nav_state_json()` object (review finding 2). The ONE merge both the
+/// queued-event path (`EpicEmbedSurface::enqueue_nav_event`) and the direct-return path
+/// (`back`/`forward`/`reload`/`navigate`) go through, so no Epic nav state can leave Rust without
+/// the fields the renderer's coercion requires. A non-object is returned untouched.
+pub(crate) fn epic_nav_state_with_flags(mut event: Value, flags: EpicEmbedNavFlags) -> Value {
+    if let Some(map) = event.as_object_mut() {
+        map.insert(
+            "loadTimedOut".to_string(),
+            Value::Bool(flags.load_timed_out),
+        );
+        map.insert("challenged".to_string(), Value::Bool(flags.challenged));
+        map.insert(
+            "blockedLauncherSchemeCount".to_string(),
+            Value::Number(flags.blocked_launcher_scheme_count.into()),
+        );
+    }
+    event
 }
 
 #[cfg(test)]
@@ -189,5 +220,47 @@ mod tests {
         state.reset();
         assert!(!state.challenged());
         assert!(!state.open());
+    }
+
+    // Finding 2: the direct-return nav state must carry exactly the fields `coerceNavState`
+    // requires on a `surface: 'epic'` event.
+    #[test]
+    fn the_flag_merge_adds_all_three_epic_fields() {
+        let base = serde_json::json!({
+            "url": "https://store.epicgames.com/en-US/",
+            "host": "store.epicgames.com",
+            "canGoBack": true,
+            "canGoForward": false,
+            "surface": "epic",
+        });
+        let merged = epic_nav_state_with_flags(
+            base,
+            EpicEmbedNavFlags {
+                load_timed_out: true,
+                challenged: false,
+                blocked_launcher_scheme_count: 2,
+            },
+        );
+        assert_eq!(
+            merged,
+            serde_json::json!({
+                "url": "https://store.epicgames.com/en-US/",
+                "host": "store.epicgames.com",
+                "canGoBack": true,
+                "canGoForward": false,
+                "surface": "epic",
+                "loadTimedOut": true,
+                "challenged": false,
+                "blockedLauncherSchemeCount": 2,
+            })
+        );
+    }
+
+    #[test]
+    fn the_flag_merge_leaves_a_non_object_untouched() {
+        assert_eq!(
+            epic_nav_state_with_flags(Value::Null, EpicEmbedNavFlags::default()),
+            Value::Null
+        );
     }
 }

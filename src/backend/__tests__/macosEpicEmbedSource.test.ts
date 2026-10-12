@@ -123,3 +123,17 @@ describe('findings 5 + 7 — one derived-visibility writer', () => {
     expect(fnBody(code, 'open')).toContain('.visibility.open()')
   })
 })
+
+describe('finding 2 — direct nav-result returns carry the Epic flags', () => {
+  test('navigate_webview_on_main_thread never returns a bare nav_state_json()', () => {
+    const body = fnBody(code, 'navigate_webview_on_main_thread')
+    expect(body).not.toMatch(/Ok\(\s*nav_state_json\(/)
+    expect(body).toContain('epic_nav_state_with_flags(')
+  })
+
+  test('enqueue_nav_event merges through the same function', () => {
+    expect(fnBody(code, 'enqueue_nav_event')).toContain(
+      'epic_nav_state_with_flags('
+    )
+  })
+})

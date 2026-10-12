@@ -58,7 +58,7 @@ use objc2_web_kit::{
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
 
-use crate::epic_embed_state::EpicEmbedVisibility;
+use crate::epic_embed_state::{epic_nav_state_with_flags, EpicEmbedNavFlags, EpicEmbedVisibility};
 
 /// The `storeKey` value `store_embed_open_args` (main.rs) parses that routes to THIS module
 /// instead of the existing `tauri::WebviewBuilder` embed path -- `store_embed_open`'s own routing
@@ -380,25 +380,23 @@ impl EpicEmbedSurface {
     /// Merges the surface's current `loadTimedOut`/`challenged`/`blockedLauncherSchemeCount`
     /// flags (Phase 50 Plan 02) onto `event` right before pushing, so every one of this module's
     /// several enqueue call sites automatically carries current flag state without each one
-    /// separately threading it through its own `nav_state_json()` call. `event` is always the
-    /// `Value::Object` `nav_state_json()` builds; a non-object would mean a future call site
-    /// stopped using that constructor, so this merges unconditionally into an object and leaves
-    /// any other shape untouched.
-    fn enqueue_nav_event(&mut self, mut event: Value) {
-        if let Some(map) = event.as_object_mut() {
-            map.insert("loadTimedOut".to_string(), Value::Bool(self.load_timed_out));
-            map.insert(
-                "challenged".to_string(),
-                Value::Bool(self.visibility.challenged()),
-            );
-            map.insert(
-                "blockedLauncherSchemeCount".to_string(),
-                Value::Number(self.blocked_launcher_scheme_count.into()),
-            );
-        }
+    /// separately threading it through its own `nav_state_json()` call. The merge itself is
+    /// `epic_nav_state_with_flags` (`epic_embed_state.rs`) -- the SAME function the direct-return
+    /// path in `navigate_webview_on_main_thread` uses (review finding 2).
+    fn enqueue_nav_event(&mut self, event: Value) {
+        let event = epic_nav_state_with_flags(event, self.nav_flags());
         self.pending_nav_events.push(event);
         if self.pending_nav_events.len() > EPIC_EMBED_NAV_EVENTS_CAP {
             self.pending_nav_events.remove(0);
+        }
+    }
+
+    /// The flag values every Epic nav state carries, read at the instant it is built.
+    fn nav_flags(&self) -> EpicEmbedNavFlags {
+        EpicEmbedNavFlags {
+            load_timed_out: self.load_timed_out,
+            challenged: self.visibility.challenged(),
+            blocked_launcher_scheme_count: self.blocked_launcher_scheme_count,
         }
     }
 }
@@ -720,7 +718,12 @@ pub(crate) fn set_bounds(app: &AppHandle, x: f64, y: f64, w: f64, h: f64) -> Res
 /// `reload`/`navigate`) -- identical `mpsc`/`run_on_main_thread`/`recv_timeout` shape to
 /// `open()`/`set_bounds()`/`set_hidden()` above, factored out because all four arms do exactly
 /// the same three things: resolve the parked webview, run a native navigation call on it, and
-/// return the resulting `nav_state_json()`. `op` names the caller for the error prefix, same
+/// return the resulting `nav_state_json()` -- merged with the surface's current flags through
+/// `epic_nav_state_with_flags`, exactly as `enqueue_nav_event` merges a queued one. Review
+/// finding 2: this used to return the bare `nav_state_json()`, which has `surface: "epic"` but
+/// none of the flags `coerceNavState` (`storeEmbedFlowRegistration.ts`) requires on an Epic
+/// state, so every back/forward/reload/navigate result from this surface reached the renderer
+/// as `{ status: 'error' }`. `op` names the caller for the error prefix, same
 /// discipline as `set_hidden`'s own `op` parameter. `action` runs ENTIRELY on the main thread,
 /// inside the same closure that resolves the webview pointer -- never on the calling (worker)
 /// thread -- matching every other main-thread-marshalled call in this module.
@@ -743,7 +746,12 @@ fn navigate_webview_on_main_thread(
             // SAFETY: see `open()`'s warm path -- identical reasoning.
             let webview: &WKWebView = unsafe { &*(webview_ptr as *const WKWebView) };
             action(webview);
-            Ok(nav_state_json(webview))
+            let state = nav_state_json(webview);
+            let flags = surface()
+                .lock()
+                .map_err(|_| format!("{op_owned}:surface-poisoned"))?
+                .nav_flags();
+            Ok(epic_nav_state_with_flags(state, flags))
         })();
         let _ = tx.send(result);
     }) {
