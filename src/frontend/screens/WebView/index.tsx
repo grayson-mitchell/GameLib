@@ -17,6 +17,8 @@ import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
 import HumbleLoginSurface from './components/HumbleLoginSurface'
 import StoreEmbedPlaceholder from './components/StoreEmbedPlaceholder'
+import StoreEmbedTimeoutBanner from './components/StoreEmbedTimeoutBanner'
+import EpicLauncherBlockedNotice from './components/EpicLauncherBlockedNotice'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
 import type { OAuthLoginCompletionPayload } from './useTauriOAuthLogin'
 import { useStoreEmbedHost } from './useStoreEmbedHost'
@@ -330,6 +332,36 @@ export default function WebView() {
   })
   const embedSuppressed = useStoreEmbedSuppressed()
 
+  // Phase 50 Plan 05 (D-05/D-19): on macOS the raw Rust-managed Epic subview (`macos_epic_embed`,
+  // D-02) is a SEPARATE native layer from the Tauri-managed embed this slot div otherwise hosts --
+  // it is positioned by Rust directly and never passes through `useStoreEmbedSuppressed()`'s own
+  // show/hide bookkeeping, so the placeholder's existing `embedSuppressed` condition alone would
+  // leave this slot visibly empty under the raw subview whenever it has not yet painted. Widening
+  // to "epic surface, always" (below, at the final return) treats that surface the same way a
+  // not-yet-attached slot already is.
+  const isEpicSurface = storeKey === 'epic' && platform === 'darwin'
+
+  // D-14: `embedHost.launcherSchemeBlockedAt` is a fresh, distinct value per NEW blocked attempt
+  // (never on the first-ever drain -- see `useStoreEmbedHost.ts`'s own baseline-tracking effect),
+  // and stays `null` until the first one fires. This effect's only job is translating "a fresh
+  // identity arrived" into one visible notice; `EpicLauncherBlockedNotice`'s own auto-dismiss timer
+  // (not this effect) is what flips `launcherNoticeVisible` back to `false` again.
+  const lastLauncherNoticeAtRef = useRef<number | null>(null)
+  const [launcherNoticeVisible, setLauncherNoticeVisible] = useState(false)
+  useEffect(() => {
+    const at = embedHost.launcherSchemeBlockedAt
+    if (at === null || at === lastLauncherNoticeAtRef.current) return
+    lastLauncherNoticeAtRef.current = at
+    setLauncherNoticeVisible(true)
+  }, [embedHost.launcherSchemeBlockedAt])
+
+  // Phase 50 Plan 05 (T-50-12): one shared callback, reused by both StoreEmbedControls' and
+  // StoreEmbedTimeoutBanner's "Open in browser" affordance, rather than a second real external-
+  // open call-site literal -- keeps this file's single-chokepoint grep count (D-19) unchanged.
+  const openEmbedInBrowser = useCallback(() => {
+    window.api.openExternalUrl(embedHost.currentUrl)
+  }, [embedHost.currentUrl])
+
   useEffect(() => {
     if (pathname !== '/loginweb/nile') return
     // Quick task 260806-teb Task 1 / Phase 35 plan 17: this effect used to load Amazon
@@ -544,9 +576,12 @@ export default function WebView() {
   // D-24: the chrome renders ABOVE the slot, so the slot's rect is measured below (and never
   // includes) the chrome -- this is what keeps `useStoreEmbedHost`'s bounds arithmetic trivial
   // and is why NavShell needs no changes for this plan. The slot itself renders no children of
-  // its own except the placeholder (D-19): the native subview composites over it, so anything
-  // else drawn inside would either be invisibly covered or covered while still being hit-tested
-  // (this project's own WKWebView paint-vs-hit-test gotcha).
+  // its own beyond the placeholder (D-19) and, on a challenged Epic surface, the
+  // `'epic-challenged'` unavailable panel (Phase 50 Plan 05, D-10/D-11): the native subview
+  // composites over anything else drawn inside, so a non-exempt child would either be invisibly
+  // covered or covered while still being hit-tested (this project's own WKWebView paint-vs-hit-test
+  // gotcha) -- `'epic-challenged'` is the one exception because Rust hides the raw subview itself
+  // whenever `challenged` is true, so there is nothing left compositing over it at that moment.
   return (
     <div className="WebView WebView__embedContainer">
       <StoreEmbedControls
@@ -556,10 +591,25 @@ export default function WebView() {
         onBack={embedHost.onBack}
         onForward={embedHost.onForward}
         onReload={embedHost.onReload}
-        onOpenInBrowser={() => window.api.openExternalUrl(embedHost.currentUrl)}
+        onOpenInBrowser={openEmbedInBrowser}
+      />
+      <StoreEmbedTimeoutBanner
+        timedOut={embedHost.loadTimedOut}
+        onReload={embedHost.onReload}
+        onOpenInBrowser={openEmbedInBrowser}
+      />
+      <EpicLauncherBlockedNotice
+        visible={launcherNoticeVisible}
+        onDismissed={() => setLauncherNoticeVisible(false)}
       />
       <div className="WebView__embedSlot" ref={slotCallbackRef}>
-        {embedSuppressed && <StoreEmbedPlaceholder />}
+        {(embedSuppressed || isEpicSurface) && <StoreEmbedPlaceholder />}
+        {embedHost.challenged && (
+          <WebviewUnavailablePanel
+            reason="epic-challenged"
+            onTryAgain={embedHost.onTryAgain}
+          />
+        )}
       </div>
     </div>
   )
