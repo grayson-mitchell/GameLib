@@ -271,7 +271,7 @@ const computeRealStartUrl = new Function(
 // simulating a wiring the component no longer has.
 it('wires startUrl from the restore slice into useStoreEmbedHost the way the simulation does', () => {
   expect(indexSource).toMatch(
-    /useStoreEmbedHost\(\{\s*slotNode,\s*startUrl,\s*storeKey,\s*isStoreRoute,\s*platform\s*\}\)/
+    /useStoreEmbedHost\(\{\s*slotNode,\s*startUrl,\s*storeKey,\s*isStoreRoute,\s*platform,\s*signInState\s*\}\)/
   )
 })
 
@@ -481,7 +481,11 @@ class Sim {
       isStoreRoute: true,
       // Phase 50 Plan 01: `linux` keeps this suite's existing Epic-refused-target behaviour
       // (D-05) unchanged -- Epic is embeddable only on `darwin`.
-      platform: 'linux'
+      platform: 'linux',
+      // Phase 50 Plan 05 (D-04): this suite's `platform` is never `darwin`, so the hook's
+      // Epic-surface gate on the auth-triggered reload never arms here regardless of this
+      // value -- a fixed placeholder is sufficient.
+      signInState: 'not-connected'
     })
     this.renders.push(startUrl)
   }

@@ -31,6 +31,8 @@ import {
   ZOOM_LOGIN_URL
 } from './loginRoutes'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
+import { resolveSignInState } from 'common/signInState'
+import { collectSignInInputs } from 'frontend/helpers/signInInputs'
 
 // D-30: the key the last-URL restore reads/writes under, per store. Kept as a named helper
 // (not inlined at each of the two call sites) so the read side (below) and the write side
@@ -40,8 +42,17 @@ const lastUrlStorageKey = (storeKey: string) => `last-url-${storeKey}`
 export default function WebView() {
   const { i18n } = useTranslation()
   const { pathname, search } = useLocation()
-  const { epic, gog, amazon, zoom, completeOAuthLogin, platform } =
-    useContext(ContextProvider)
+  const {
+    epic,
+    gog,
+    amazon,
+    humble,
+    steam,
+    zoom,
+    completeOAuthLogin,
+    platform,
+    signInProbeOutcomes
+  } = useContext(ContextProvider)
   const navigate = useNavigate()
 
   // `store` is set to epic/gog/amazon depending on which storefront we're
@@ -323,12 +334,31 @@ export default function WebView() {
   const slotCallbackRef = useCallback((node: HTMLDivElement | null) => {
     setSlotNode(node)
   }, [])
+  // Phase 50 Plan 05 (D-04, D-16): the resolved four-value Epic sign-in state, reached through
+  // the shared rule table (`src/common/signInState.ts`) rather than an inlined flag comparison
+  // -- its branch order is load-bearing (Phase 49 D-06/D-07). Matches the argument shape
+  // `GlobalState.tsx` and `LibrarySignInNotice/index.tsx` already use for their own
+  // `collectSignInInputs(...)` call sites. Never a cookie (Phase 40 D-16).
+  const signInState = resolveSignInState(
+    collectSignInInputs(
+      {
+        epicUsername: epic.username,
+        gogUsername: gog.username,
+        amazonUserId: amazon.user_id,
+        humbleLoggedIn: humble?.isLoggedIn,
+        humbleExpired: humble?.expired,
+        steamUsername: steam?.username
+      },
+      signInProbeOutcomes
+    ).legendary
+  )
   const embedHost = useStoreEmbedHost({
     slotNode,
     startUrl,
     storeKey,
     isStoreRoute,
-    platform
+    platform,
+    signInState
   })
   const embedSuppressed = useStoreEmbedSuppressed()
 

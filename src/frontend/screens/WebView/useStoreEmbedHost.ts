@@ -117,6 +117,15 @@ interface UseStoreEmbedHostOptions {
    * from the same `ContextProvider` value `index.tsx` itself reads before rendering this hook.
    */
   platform: string
+  /**
+   * Phase 50 Plan 05 (D-04): the resolved four-value Epic sign-in state -- `resolveSignInState`
+   * applied to `collectSignInInputs(...)`'s `legendary` entry in `index.tsx`. This hook receives
+   * only the RESOLVED value, never a persisted expiry flag and never a cookie (Phase 40 D-16):
+   * `src/common/signInState.ts` is the one place the underlying rule table is written, and this
+   * hook's only use of the value is a single auth-triggered reload on return to the Epic surface
+   * (D-04) -- see `signInStateAtLoadRef` below.
+   */
+  signInState: string
 }
 
 export interface StoreEmbedHostState {
@@ -159,7 +168,8 @@ export function useStoreEmbedHost({
   startUrl,
   storeKey,
   isStoreRoute,
-  platform
+  platform,
+  signInState
 }: UseStoreEmbedHostOptions): StoreEmbedHostState {
   const [navState, setNavState] = useState<StoreEmbedNavState>(() => ({
     url: startUrl,
@@ -182,6 +192,12 @@ export function useStoreEmbedHost({
       `[useStoreEmbedHost] navigation call resolved with status=error error=${result.error}`
     )
   }, [])
+
+  // Phase 50 Plan 05 (D-04): gates the auth-triggered reload below to the Epic surface only, so
+  // the Tauri-embed stores keep their current instant-return semantics unchanged. Derived from
+  // the same two params `index.tsx`'s own (duplicate, render-condition) `isEpicSurface` uses --
+  // no new option is threaded in for it.
+  const isEpicSurface = storeKey === 'epic' && platform === 'darwin'
 
   // ── EPIC NAV-SIGNAL SURFACING (Phase 50 Plan 05, D-07/D-10/D-11/D-14) ──────────────────────
   //
@@ -325,6 +341,11 @@ export function useStoreEmbedHost({
   // see the seed at the `!openedRef.current` branch. The start-url effect further down is the
   // effect that actually CONSUMES this ref; it still reads/writes it the same way it always has.
   const previousUrlRef = useRef<string | null>(null)
+  // Phase 50 Plan 05 (D-04): the Epic sign-in state recorded at the last open/show. Seeded
+  // unconditionally in `flush()`'s open branch below, next to `previousUrlRef`'s own seed, so
+  // the first open records a baseline and reloads nothing. The two show branches further down
+  // compare the current `signInState` against this ref before issuing their show.
+  const signInStateAtLoadRef = useRef<string | null>(null)
 
   useEffect(() => {
     const slot = slotNode
@@ -364,6 +385,7 @@ export function useStoreEmbedHost({
         // has not already recorded as current, and this line records it in the same render pass,
         // before that effect's own equality check runs.
         previousUrlRef.current = startUrl
+        signInStateAtLoadRef.current = signInState
         window.api
           .storeEmbedOpen(startUrl, bounds, storeKey)
           // Follow every successful open with a throttled bounds send (W8, quick 261012-gn8). On
@@ -558,6 +580,20 @@ export function useStoreEmbedHost({
             error
           )
         })
+        // D-04: a show that follows a recorded sign-in-state change issues exactly one reload,
+        // on the Epic surface only -- see `signInStateAtLoadRef`'s own doc comment above.
+        if (isEpicSurface && signInStateAtLoadRef.current !== signInState) {
+          signInStateAtLoadRef.current = signInState
+          window.api
+            .storeEmbedReload()
+            .then(applyNavResult)
+            .catch((error) => {
+              logNavCallFailure(
+                'storeEmbedReload (auth-triggered, D-04)',
+                error
+              )
+            })
+        }
       }
     }
 
@@ -567,7 +603,14 @@ export function useStoreEmbedHost({
       .catch((error) => {
         logNavCallFailure('storeEmbedNavigate (start-url change)', error)
       })
-  }, [startUrl, applyNavResult, suppressed, platform])
+  }, [
+    startUrl,
+    applyNavResult,
+    suppressed,
+    platform,
+    isEpicSurface,
+    signInState
+  ])
 
   // ── SUPPRESSION (D-19/D-20, T-40-08-02) ─────────────────────────────────────────────────────
   const wasSuppressedRef = useRef(false)
@@ -586,9 +629,23 @@ export function useStoreEmbedHost({
         window.api.storeEmbedShow().catch((error) => {
           logNavCallFailure('storeEmbedShow (suppression)', error)
         })
+        // D-04: a show that follows a recorded sign-in-state change issues exactly one reload,
+        // on the Epic surface only -- see `signInStateAtLoadRef`'s own doc comment above.
+        if (isEpicSurface && signInStateAtLoadRef.current !== signInState) {
+          signInStateAtLoadRef.current = signInState
+          window.api
+            .storeEmbedReload()
+            .then(applyNavResult)
+            .catch((error) => {
+              logNavCallFailure(
+                'storeEmbedReload (auth-triggered, D-04)',
+                error
+              )
+            })
+        }
       }
     }
-  }, [suppressed, isStoreRoute])
+  }, [suppressed, isStoreRoute, isEpicSurface, signInState, applyNavResult])
 
   // ── ROUTE LIFECYCLE — hide on leave, close only at app teardown (D-21) ─────────────────────
   const tearingDownRef = useRef(false)
