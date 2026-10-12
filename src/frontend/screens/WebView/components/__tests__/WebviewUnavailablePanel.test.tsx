@@ -474,7 +474,7 @@ describe('WebviewUnavailablePanel — minted i18n keys (Task 1, gamelib.json onl
   it.each(Object.keys(epicChallengedFallbacks))(
     "gamelib.json's webview.unavailable.epic-challenged.%s equals the component's own fallback",
     (key) => {
-      const gamelib = JSON.parse(readFileSync(gamelibEnPath, 'utf-8'))
+      const gamelib: unknown = JSON.parse(readFileSync(gamelibEnPath, 'utf-8'))
       expect(
         getPath(gamelib, ['webview', 'unavailable', 'epic-challenged', key])
       ).toBe(epicChallengedFallbacks[key])

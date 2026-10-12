@@ -196,9 +196,7 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
     host: candidate.host,
     canGoBack: candidate.canGoBack,
     canGoForward: candidate.canGoForward,
-    ...(candidate.surface !== undefined
-      ? { surface: candidate.surface as 'tauri' | 'epic' }
-      : {}),
+    ...(candidate.surface !== undefined ? { surface: candidate.surface } : {}),
     ...(candidate.surface === 'epic'
       ? {
           loadTimedOut: candidate.loadTimedOut as boolean,
