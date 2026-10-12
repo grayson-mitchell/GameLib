@@ -68,8 +68,9 @@ pub(crate) const EPIC_EMBED_STORE_KEY: &str = "epic";
 /// only addition is bumping `EpicEmbedSurface::blocked_launcher_scheme_count` specifically for
 /// this scheme, so the renderer can show the one-shot "Install from your Library instead" toast
 /// D-14 specifies rather than the generic blocked-navigation log line every other foreign scheme
-/// gets.
-const EPIC_GAMES_LAUNCHER_SCHEME: &str = "com.epicgames.launcher";
+/// gets. Defined once in `store_embed_handoff_policy`, whose popup policy counts it too.
+const EPIC_GAMES_LAUNCHER_SCHEME: &str =
+    crate::store_embed_handoff_policy::EPIC_GAMES_LAUNCHER_SCHEME;
 
 /// Cap on `EpicEmbedSurface::pending_nav_events`, below -- mirrors `STORE_EMBED_NAV_EVENTS_CAP`'s
 /// (main.rs) oldest-dropped discipline: an unbounded queue would be a denial-of-service surface
@@ -1108,23 +1109,7 @@ define_class!(
                         .map(|u| u.scheme() == EPIC_GAMES_LAUNCHER_SCHEME)
                         .unwrap_or(false);
                     if is_launcher_scheme {
-                        // Scheme only, never the full URL -- matches
-                        // `open_external_scheme_check`'s (main.rs) T-28-04 logging convention.
-                        eprintln!(
-                            "[shell] macos_epic_embed: blocked a navigation to the Epic Games \
-                             Launcher scheme ('{EPIC_GAMES_LAUNCHER_SCHEME}') -- D-14"
-                        );
-                        if let Ok(mut guard) = surface().lock() {
-                            guard.blocked_launcher_scheme_count =
-                                guard.blocked_launcher_scheme_count.saturating_add(1);
-                            let event = nav_state_json(webview);
-                            guard.enqueue_nav_event(event);
-                        } else {
-                            eprintln!(
-                                "[shell] WARN: macos_epic_embed surface registry poisoned -- \
-                                 continuing"
-                            );
-                        }
+                        epic_embed_record_launcher_scheme_block(webview, "navigation");
                     }
                     WKNavigationActionPolicy::Cancel
                 }
@@ -1300,7 +1285,7 @@ define_class!(
         #[unsafe(method_id(webView:createWebViewWithConfiguration:forNavigationAction:windowFeatures:))]
         fn create_web_view_for_navigation_action(
             &self,
-            _webview: &WKWebView,
+            webview: &WKWebView,
             _configuration: &WKWebViewConfiguration,
             action: &WKNavigationAction,
             _window_features: &WKWindowFeatures,
@@ -1317,21 +1302,46 @@ define_class!(
             // only the function body's TAIL expression to `RetainedReturnValue` -- an explicit
             // `return None;` bypasses that conversion and fails to type-check. Both outcomes
             // below therefore fall through to the single trailing `None`.
-            if crate::store_embed_handoff_admitted(&crate::STORE_EMBED_POPUP_THROTTLE) {
-                eprintln!(
-                    "[shell] macos_epic_embed: denied window.open request, routing to the system \
-                     browser (D-12)"
-                );
-                if let Err(e) = crate::open_external(url_string, self.ivars().app.clone()) {
+            //
+            // Phase 50 review: the scheme policy is decided FIRST and the throttle is consulted
+            // only for a popup that would actually be handed off -- `open_external`'s own
+            // allowlist includes `steam`, so handing it everything let any frame
+            // `window.open('steam://...')` past `store_embed_navigation_policy`'s Valve gate.
+            // See `store_embed_browser_handoff_policy` for the full rule.
+            use crate::store_embed_handoff_policy::{
+                store_embed_browser_handoff_policy, StoreEmbedBrowserHandoffDecision as Popup,
+            };
+            match store_embed_browser_handoff_policy(&url_string) {
+                Popup::HandToSystemBrowser => {
+                    if crate::store_embed_handoff_admitted(&crate::STORE_EMBED_POPUP_THROTTLE) {
+                        eprintln!(
+                            "[shell] macos_epic_embed: denied window.open request, routing to \
+                             the system browser (D-12)"
+                        );
+                        if let Err(e) = crate::open_external(url_string, self.ivars().app.clone()) {
+                            eprintln!(
+                                "[shell] macos_epic_embed: popup hand-off to open_external \
+                                 failed: {e}"
+                            );
+                        }
+                    } else {
+                        eprintln!(
+                            "[shell] macos_epic_embed: denied window.open request, rate-limited \
+                             -- not routed to the system browser"
+                        );
+                    }
+                }
+                // D-14: a popup to the launcher scheme is the same user-visible attempt as a
+                // navigation to it, so it gets the same counter bump (and so the same toast).
+                Popup::RejectLauncherScheme => {
+                    epic_embed_record_launcher_scheme_block(webview, "window.open request");
+                }
+                Popup::Reject => {
                     eprintln!(
-                        "[shell] macos_epic_embed: popup hand-off to open_external failed: {e}"
+                        "[shell] macos_epic_embed: denied window.open request to a non-http(s) \
+                         or blank URL -- not routed to the system browser"
                     );
                 }
-            } else {
-                eprintln!(
-                    "[shell] macos_epic_embed: denied window.open request, rate-limited -- not \
-                     routed to the system browser"
-                );
             }
             None
         }
@@ -1409,6 +1419,24 @@ fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, ca
     if let Ok(mut guard) = surface().lock() {
         guard.nav_started_at = None;
         guard.load_timed_out = false;
+        guard.enqueue_nav_event(event);
+    } else {
+        eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+    }
+}
+
+/// D-14: counts one blocked Epic Games Launcher attempt and queues a nav event carrying the new
+/// count. Shared by the navigation-policy hook and the `window.open` popup hook (Phase 50
+/// review), so both entry points to the launcher scheme raise the same one-shot toast. `what`
+/// names the entry point for the log line -- scheme only, never the URL (T-28-04).
+fn epic_embed_record_launcher_scheme_block(webview: &WKWebView, what: &str) {
+    eprintln!(
+        "[shell] macos_epic_embed: blocked a {what} to the Epic Games Launcher scheme \
+         ('{EPIC_GAMES_LAUNCHER_SCHEME}') -- D-14"
+    );
+    if let Ok(mut guard) = surface().lock() {
+        guard.blocked_launcher_scheme_count = guard.blocked_launcher_scheme_count.saturating_add(1);
+        let event = nav_state_json(webview);
         guard.enqueue_nav_event(event);
     } else {
         eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
