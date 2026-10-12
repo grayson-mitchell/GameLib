@@ -5895,8 +5895,12 @@ Plans:
   no init scripts, no message or scheme handlers) added as a subview of the main `NSWindow`'s
   content view at the embed slot's rect, macOS only (`#[cfg(target_os = "macos")]`).
 - Bounds sync with the React slot (the same rect `useStoreEmbedHost` already measures for the
-  Tauri embed), show/hide on route change, and teardown when the Stores tab unmounts — no
-  subview may outlive its route.
+  Tauri embed), show/hide on route change; the invariant is no subview outlives the app, and a
+  hidden subview is never visible or hit-testable.
+  _Amended by D-01 (50-CONTEXT.md, recorded by 50-01): a cold Epic load is 10-40s, so re-loading
+  on every return was rejected — the subview stays alive and hidden instead, closing only at app
+  teardown, which gives the Epic subview the same Phase 40 D-21 parity the Steam and GOG embeds
+  already have._
 - Back / forward / current-URL reporting into the existing `StoreEmbedControls`, via a
   `WKNavigationDelegate` on the Rust side; the same scheme allow-list and configured-origin
   semantics the Tauri embed enforces (`store_embed_navigation_policy` + the origin gate), so an
