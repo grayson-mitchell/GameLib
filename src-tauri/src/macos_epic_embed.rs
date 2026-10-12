@@ -541,9 +541,7 @@ fn spawn_load_timeout_monitor(app: AppHandle) {
             }
             guard.load_timed_out = true;
             guard.nav_started_at = None;
-            eprintln!(
-                "[shell] macos_epic_embed: load timed out past {EPIC_EMBED_LOAD_TIMEOUT:?}"
-            );
+            eprintln!("[shell] macos_epic_embed: load timed out past {EPIC_EMBED_LOAD_TIMEOUT:?}");
             let webview_ptr = guard.webview.as_ref().map(|p| p.0);
             if let Some(ptr) = webview_ptr {
                 // SAFETY: see `open()`'s warm path -- identical reasoning; the lock just taken
@@ -694,8 +692,7 @@ pub(crate) fn open(
             unsafe {
                 let draws_background_false = NSNumber::new_bool(false);
                 let key = NSString::from_str("drawsBackground");
-                let _: () =
-                    msg_send![&*webview, setValue: &*draws_background_false, forKey: &*key];
+                let _: () = msg_send![&*webview, setValue: &*draws_background_false, forKey: &*key];
             }
 
             // The delegate's own `AppHandle` clone, for its `WKUIDelegate` popup hook (D-12) --
@@ -766,9 +763,12 @@ pub(crate) fn open(
 /// Re-applies a renderer-provided rect to the already-open Epic subview. Named, logged error on
 /// every failure path, same discipline as `store_embed_set_bounds` (main.rs).
 pub(crate) fn set_bounds(app: &AppHandle, x: f64, y: f64, w: f64, h: f64) -> Result<Value, String> {
-    let window = app
-        .get_window(crate::MAIN_WINDOW_LABEL)
-        .ok_or_else(|| format!("epic_embed_set_bounds:no-window:{}", crate::MAIN_WINDOW_LABEL))?;
+    let window = app.get_window(crate::MAIN_WINDOW_LABEL).ok_or_else(|| {
+        format!(
+            "epic_embed_set_bounds:no-window:{}",
+            crate::MAIN_WINDOW_LABEL
+        )
+    })?;
 
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     if let Err(e) = app.run_on_main_thread(move || {

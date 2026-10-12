@@ -6688,6 +6688,23 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             let app_handle = app.clone();
             move |_webview, event| {
                 if let tauri::webview::DownloadEvent::Requested { url, .. } = &event {
+                    // Phase 50 review: the same http(s)-only policy as `on_new_window` and the
+                    // raw Epic view's download path -- a download URL is page-chosen too, and
+                    // `open_external`'s own allowlist (`steam`, `mailto`, ...) is not what decides
+                    // what a store page may hand to the OS.
+                    use store_embed_handoff_policy::{
+                        store_embed_browser_handoff_policy, StoreEmbedBrowserHandoffDecision,
+                    };
+                    if store_embed_browser_handoff_policy(url.as_str())
+                        != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
+                    {
+                        eprintln!(
+                            "[shell] store_embed: denied in-embed download with scheme '{}' -- \
+                             not routed to the system browser",
+                            url.scheme()
+                        );
+                        return false;
+                    }
                     eprintln!(
                         "[shell] store_embed: denied in-embed download, routing to system \
                          browser (D-28)"

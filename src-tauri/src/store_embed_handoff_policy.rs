@@ -248,4 +248,23 @@ mod store_embed_browser_handoff_policy_tests {
             "Epic popup hook must count launcher-scheme popups (D-14)"
         );
     }
+
+    /// Source-text check: the Tauri embed's `on_download` consults the same policy before it
+    /// hands a download URL to `open_external`, so a page-chosen `steam:` (or any non-http(s))
+    /// download URL never reaches the OS.
+    #[test]
+    fn tauri_embed_on_download_decides_policy_before_open_external() {
+        let main_rs = include_str!("main.rs");
+        let start = main_rs
+            .find(".on_download({")
+            .expect("missing .on_download({");
+        let body = &main_rs[start..(start + 2500).min(main_rs.len())];
+        let policy = body
+            .find("store_embed_browser_handoff_policy(")
+            .expect("on_download: policy not consulted");
+        let open = body
+            .find("open_external(")
+            .expect("on_download: open_external not found");
+        assert!(policy < open, "on_download: open_external before policy");
+    }
 }
