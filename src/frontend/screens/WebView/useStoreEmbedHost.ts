@@ -78,6 +78,21 @@ function deriveInitialHost(url: string): string {
   }
 }
 
+/**
+ * Which native surface `store_embed_open` routes `storeKey` to (Phase 50 D-02): on macOS the
+ * Epic key goes to the raw `WKWebView` subview (`macos_epic_embed.rs`), every other key -- and
+ * every key on every other platform -- to the Tauri-managed child webview. Mirrors Rust's
+ * `macos_epic_embed::surface_for_store_key` plus its `#[cfg(target_os = "macos")]` gate.
+ */
+type StoreEmbedSurface = 'epic' | 'tauri'
+
+function embedSurfaceFor(
+  storeKey: string,
+  platform: string
+): StoreEmbedSurface {
+  return storeKey === 'epic' && platform === 'darwin' ? 'epic' : 'tauri'
+}
+
 function logNavCallFailure(label: string, error: unknown): void {
   window.api.logInfo(`[useStoreEmbedHost] ${label} threw: ${String(error)}`)
 }
@@ -197,7 +212,7 @@ export function useStoreEmbedHost({
   // the Tauri-embed stores keep their current instant-return semantics unchanged. Derived from
   // the same two params `index.tsx`'s own (duplicate, render-condition) `isEpicSurface` uses --
   // no new option is threaded in for it.
-  const isEpicSurface = storeKey === 'epic' && platform === 'darwin'
+  const isEpicSurface = embedSurfaceFor(storeKey, platform) === 'epic'
 
   // ── EPIC NAV-SIGNAL SURFACING (Phase 50 Plan 05, D-07/D-10/D-11/D-14) ──────────────────────
   //
@@ -346,6 +361,17 @@ export function useStoreEmbedHost({
   // the first open records a baseline and reloads nothing. The two show branches further down
   // compare the current `signInState` against this ref before issuing their show.
   const signInStateAtLoadRef = useRef<string | null>(null)
+  // Phase 50 review finding 1 (D-02): the surface the last `storeEmbedOpen` routed to, and a
+  // handle the start-URL effect uses to RE-OPEN when a store switch crosses surfaces. Set by the
+  // open/bounds effect below (which owns the slot element and the throttle state), null while no
+  // slot is attached.
+  const openedSurfaceRef = useRef<StoreEmbedSurface | null>(null)
+  const reopenRef = useRef<(() => void) | null>(null)
+  // The open branch in `flush()` reads the CURRENT render's values, not the ones captured when
+  // the slot attached: since finding 1 it can also run later, from a store switch, while the
+  // effect that created `flush()` (keyed on the slot element only) has not re-run.
+  const openArgsRef = useRef({ startUrl, storeKey, signInState, platform })
+  openArgsRef.current = { startUrl, storeKey, signInState, platform }
 
   useEffect(() => {
     const slot = slotNode
@@ -377,7 +403,10 @@ export function useStoreEmbedHost({
       lastSentFactor = factor
       const bounds = scaleRectForZoom(slot.getBoundingClientRect(), factor)
       if (!openedRef.current) {
+        const { startUrl, storeKey, signInState, platform } =
+          openArgsRef.current
         openedRef.current = true
+        openedSurfaceRef.current = embedSurfaceFor(storeKey, platform)
         // CR-02: seed here so a slot that arrives AFTER a start-url change (e.g. cold start on
         // `/store/epic`, then navigate to `/store/gog` before the slot ever attached) opens
         // directly at the then-current `startUrl` and is not ALSO immediately re-navigated to
@@ -453,6 +482,21 @@ export function useStoreEmbedHost({
       }
     }
 
+    // Finding 1: a store switch that crosses native surfaces must go through `storeEmbedOpen`
+    // with the new storeKey (only open routes between the surfaces in Rust), so the start-URL
+    // effect calls this instead of navigating. It re-runs `flush()`'s open branch immediately --
+    // a leading-edge flush, cancelling any pending trailing one -- so the re-open carries this
+    // slot's live rect and the same `.then(scheduleFlush)` follow-up as the first open.
+    reopenRef.current = () => {
+      openedRef.current = false
+      if (trailingHandle !== null) {
+        clearTimeout(trailingHandle)
+        trailingHandle = null
+      }
+      lastFlushAt = Date.now()
+      flush()
+    }
+
     const observer = new ResizeObserver(scheduleFlush)
     observer.observe(slot)
 
@@ -493,6 +537,7 @@ export function useStoreEmbedHost({
 
     return () => {
       disposed = true
+      reopenRef.current = null
       observer.disconnect()
       zoomObserver?.disconnect()
       window.removeEventListener('resize', scheduleFlush)
@@ -517,12 +562,12 @@ export function useStoreEmbedHost({
     // The plan 40-11 property is preserved: `startUrl` is deliberately EXCLUDED from these deps,
     // because adding it would re-create the observer on every same-store navigation. A same-store
     // URL change does not change the slot element's identity, so it never re-runs this effect (a
-    // URL change is handled by the dedicated start-url effect below -- a navigate, never a
-    // re-open).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // URL change is handled by the dedicated start-url effect below -- a navigate, or, only when
+    // the switch crosses native surfaces, a re-open through `reopenRef` (finding 1)). `flush()`
+    // reads its open arguments from `openArgsRef`, so nothing here depends on a stale render.
   }, [slotNode])
 
-  // ── SAME-STORE NAVIGATION ON A START-URL CHANGE — navigate, never re-open ──────────────────
+  // ── START-URL CHANGE — navigate within a surface, re-open across surfaces (finding 1) ─────
   // Latch set when a start-URL change was refused below (CR-01, D-05) because it targeted a
   // known-but-non-embeddable store. Cleared, and the embed re-shown, on the way back to an
   // embeddable target -- see the visibility-restore step in the effect below.
@@ -568,6 +613,25 @@ export function useStoreEmbedHost({
     // is current when the slot arrives (CR-02, Task 2 makes this reachable).
     if (!openedRef.current) return
 
+    // Phase 50 review finding 1 (D-02): a store switch that crosses native surfaces -- on darwin,
+    // Epic (raw `WKWebView`) <-> any other store (Tauri child webview) -- RE-OPENS with the new
+    // storeKey instead of navigating. `store_embed_navigate` navigates whichever surface is
+    // currently selected, so a navigate here loaded Epic into the Tauri webview (Turnstile-
+    // challenged every time, spike 024) or GOG into the raw Epic view, and never deselected
+    // either. Only `store_embed_open` routes by storeKey, hides the other surface and shows the
+    // target. A same-surface switch (gog -> steam) still navigates, below.
+    if (openedSurfaceRef.current !== embedSurfaceFor(storeKey, platform)) {
+      refusedTargetRef.current = false
+      const reopen = reopenRef.current
+      if (reopen) {
+        reopen()
+      } else {
+        // No slot attached right now: the open effect opens on the new surface when one arrives.
+        openedRef.current = false
+      }
+      return
+    }
+
     if (refusedTargetRef.current) {
       refusedTargetRef.current = false
       // D-19/D-20: only re-show when suppression is clear, so a hidden-then-restored embed
@@ -605,6 +669,7 @@ export function useStoreEmbedHost({
       })
   }, [
     startUrl,
+    storeKey,
     applyNavResult,
     suppressed,
     platform,

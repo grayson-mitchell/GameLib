@@ -6511,6 +6511,14 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     {
         match macos_epic_embed::surface_for_store_key(&store_key) {
             macos_epic_embed::EpicEmbedSurfaceSelection::EpicSurface => {
+                // Phase 50 review finding 1: symmetric with `deselect()` on the other arm -- hide
+                // the Tauri embed (if one exists) so a store switch to Epic never leaves it
+                // visible over or under the raw subview (D-01/D-02: never both at once).
+                if let Some(tauri_embed) = app.get_webview(STORE_EMBED_LABEL) {
+                    tauri_embed
+                        .hide()
+                        .map_err(|e| format!("store_embed_open:hide-tauri-embed-failed:{e}"))?;
+                }
                 return macos_epic_embed::open(app, &url, x, y, w, h);
             }
             macos_epic_embed::EpicEmbedSurfaceSelection::TauriEmbed => {
@@ -19229,6 +19237,68 @@ mod tests {
             "the Linux rect re-apply must stay INSIDE the #[cfg(target_os = \"linux\")] block -- \
              this fix converges the show step only, not the rect handling"
         );
+    }
+
+    /// The EpicSurface arm of `store_embed_open`'s macOS routing, sliced from main.rs source.
+    fn store_embed_open_epic_arm(source: &str) -> &str {
+        let fn_start = source
+            .find("fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {")
+            .expect("store_embed_open definition not found in main.rs");
+        let body = &source[fn_start..];
+        let arm_start = body
+            .find("macos_epic_embed::EpicEmbedSurfaceSelection::EpicSurface => {")
+            .expect("store_embed_open's EpicSurface arm not found");
+        let arm_end = body[arm_start..]
+            .find("macos_epic_embed::EpicEmbedSurfaceSelection::TauriEmbed => {")
+            .map(|p| p + arm_start)
+            .expect("store_embed_open's TauriEmbed arm not found after the EpicSurface arm");
+        &body[arm_start..arm_end]
+    }
+
+    fn epic_arm_hides_tauri_embed_before_opening(arm: &str) -> bool {
+        let (Some(hide_target), Some(open_pos)) = (
+            arm.find("app.get_webview(STORE_EMBED_LABEL)"),
+            arm.find("macos_epic_embed::open(app, &url, x, y, w, h)"),
+        ) else {
+            return false;
+        };
+        arm[hide_target..open_pos].contains(".hide()")
+    }
+
+    // ---- Phase 50 review finding 1: opening Epic hides the Tauri embed (source-text only) ----
+    //
+    // Same discipline as the test above: `store_embed_open` takes `&AppHandle` and its EpicSurface
+    // arm is `#[cfg(target_os = "macos")]`, so nothing here can drive it -- this reads the source
+    // and asserts STRUCTURE only: the arm hides the Tauri embed before handing off to
+    // `macos_epic_embed::open`, mirroring `deselect()` on the TauriEmbed arm. Whether the native
+    // view actually disappears is a live macOS check. RED before the fix: the arm was a bare
+    // `return macos_epic_embed::open(...)`, so a gog -> epic store switch left the Tauri child
+    // webview visible alongside the raw Epic subview.
+    #[test]
+    fn store_embed_open_epic_arm_hides_the_tauri_embed_before_opening_epic() {
+        let source = include_str!("main.rs");
+        let arm = store_embed_open_epic_arm(source);
+        assert!(
+            epic_arm_hides_tauri_embed_before_opening(arm),
+            "store_embed_open's EpicSurface arm must hide the Tauri embed (STORE_EMBED_LABEL) \
+             before calling macos_epic_embed::open -- symmetric with deselect() on the other arm"
+        );
+
+        // The other arm still deselects Epic, so each direction hides the surface it leaves.
+        let fn_start = source
+            .find("fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {")
+            .expect("store_embed_open definition not found in main.rs");
+        let tauri_arm_start = source[fn_start..]
+            .find("macos_epic_embed::EpicEmbedSurfaceSelection::TauriEmbed => {")
+            .map(|p| p + fn_start)
+            .expect("TauriEmbed arm not found");
+        let tauri_arm = &source[tauri_arm_start..tauri_arm_start + 200];
+        assert!(tauri_arm.contains("macos_epic_embed::deselect(app)?;"));
+
+        // Negative control: the pre-fix arm shape fails the same predicate.
+        let pre_fix = "macos_epic_embed::EpicEmbedSurfaceSelection::EpicSurface => {\n\
+                       return macos_epic_embed::open(app, &url, x, y, w, h);\n}";
+        assert!(!epic_arm_hides_tauri_embed_before_opening(pre_fix));
     }
 
     #[test]
