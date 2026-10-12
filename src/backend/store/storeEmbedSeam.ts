@@ -40,12 +40,19 @@ export interface StoreEmbedBounds {
  * back/forward/history API exists on `tauri::webview::Webview` or `wry::WebView`, so this shape
  * is fed by a Rust-side history stack driven by `on_page_load` + `navigate()` (plan `40-07`),
  * NOT a wrapper around a native browser history object.
+ *
+ * `surface` (Phase 50 Plan 01) distinguishes which Rust-side implementation emitted the event —
+ * the Tauri-managed `add_child` embed (`'tauri'`) every store used before Phase 50, or the raw
+ * `WKWebView` subview macOS now uses for Epic (`'epic'`, see `macos_epic_embed.rs`). Optional and
+ * never defaulted: every event the Tauri-managed embed emits predates this field and omits it,
+ * and `storeEmbedFlowRegistration.ts`'s `coerceNavState` only validates it when present.
  */
 export interface StoreEmbedNavEvent {
   url: string
   host: string
   canGoBack: boolean
   canGoForward: boolean
+  surface?: 'tauri' | 'epic'
 }
 
 /**
@@ -58,9 +65,10 @@ export interface StoreEmbedSeam {
   /**
    * Opens the store embed on `url` at `bounds`, or re-points an existing embed rather than
    * failing if one is already open (D-01 idempotency, matching the shipped Rust arm).
-   * `storeKey` identifies which store the caller is opening (e.g. `'steam'`) for the caller's
-   * own bookkeeping — the Rust arm this calls takes no such argument (`40-02-SUMMARY.md`), so
-   * it is not forwarded over the wire.
+   * `storeKey` identifies which store the caller is opening (e.g. `'steam'`, `'epic'`). As of
+   * Phase 50 Plan 01 it IS forwarded over the wire (`storeKey` on the `store_embed_open` RPC
+   * payload) — `store_embed_open_args` (main.rs) requires it to route macOS's Epic key to
+   * `macos_epic_embed::open` before the existing Tauri-managed embed body runs (D-02).
    */
   open(url: string, bounds: StoreEmbedBounds, storeKey: string): Promise<void>
   /**

@@ -18,6 +18,13 @@ interface StoreCase {
    * the same suffix mechanism against each store's own configured apex, not only gog's.
    */
   subdomain: string
+  /**
+   * Expected `isEmbeddableOrigin(url, 'linux')` result. `linux` is a fixed, arbitrary
+   * non-`darwin` platform for this suite's host-matching assertions -- it is unaffected by
+   * Phase 50 Plan 01's Epic-is-`darwin`-only carve-out (D-05's exclusion still holds on every
+   * OTHER platform). The full (store x platform) matrix is Task 2's `storeEmbedOrigins.test.ts`
+   * addition, pinning the `darwin` embeddable-Epic case this file deliberately does not cover.
+   */
   embeddable: boolean
 }
 
@@ -122,9 +129,9 @@ describe('resolveStoreForUrl / isEmbeddableOrigin — per-store adversarial matr
   )
 
   it.each(STORE_CASES)(
-    '$key: isEmbeddableOrigin for the exact apex matches the table’s embeddable flag ($embeddable)',
+    '$key: isEmbeddableOrigin(url, "linux") for the exact apex matches the table’s embeddable flag ($embeddable)',
     ({ apex, embeddable }) => {
-      expect(isEmbeddableOrigin(`https://${apex}/`)).toBe(embeddable)
+      expect(isEmbeddableOrigin(`https://${apex}/`, 'linux')).toBe(embeddable)
     }
   )
 })
@@ -156,16 +163,19 @@ describe('resolveStoreForUrl — named boundary cases from the plan (D-31)', () 
     expect(resolveStoreForUrl('')).toBeNull()
   })
 
-  it('keeps Epic’s entry in the table (known origin) but marks it not embeddable (D-05)', () => {
+  it('keeps Epic’s entry in the table (known origin) but marks it embeddable only on darwin (D-05, Phase 50)', () => {
     const config = resolveStoreForUrl('https://www.epicgames.com/store/en-US/')
     expect(config?.key).toBe('epic')
-    expect(config?.embeddable).toBe(false)
-    expect(isEmbeddableOrigin('https://www.epicgames.com/store/en-US/')).toBe(
-      false
-    )
+    expect(config?.embeddableOn).toEqual(['darwin'])
+    expect(
+      isEmbeddableOrigin('https://www.epicgames.com/store/en-US/', 'linux')
+    ).toBe(false)
+    expect(
+      isEmbeddableOrigin('https://www.epicgames.com/store/en-US/', 'darwin')
+    ).toBe(true)
   })
 
   it('isEmbeddableOrigin is false for an unresolvable origin', () => {
-    expect(isEmbeddableOrigin('https://attacker.net/')).toBe(false)
+    expect(isEmbeddableOrigin('https://attacker.net/', 'linux')).toBe(false)
   })
 })

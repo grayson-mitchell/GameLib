@@ -29,7 +29,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import * as ts from 'typescript'
-import { resolveStoreForUrl } from '../storeEmbedOrigins'
+import { resolveStoreForUrl, isEmbeddableOrigin } from '../storeEmbedOrigins'
 
 const indexPath = join(__dirname, '..', 'index.tsx')
 const rawSource = readFileSync(indexPath, 'utf-8')
@@ -72,23 +72,36 @@ const deepLinkStatements = extractRawBetween(
 
 const computeDeepLink = compileToFunction(
   deepLinkStatements,
-  ['pathname', 'search', 'store', 'startUrl', 'resolveStoreForUrl', 'useRef'],
+  [
+    'pathname',
+    'search',
+    'store',
+    'startUrl',
+    'resolveStoreForUrl',
+    'useRef',
+    'isEmbeddableOrigin',
+    'platform'
+  ],
   '{ deepLinkUrl: deepLinkUrl, deepLinkConfig: deepLinkConfig, deepLinkEmbeddable: deepLinkEmbeddable, deepLinkShouldOpenExternally: deepLinkShouldOpenExternally, startUrl: startUrl, storeKey: storeKey }'
 )
 
 interface DeepLinkResult {
   deepLinkUrl: string | null
-  deepLinkConfig: { key: string; embeddable: boolean } | null
+  deepLinkConfig: { key: string; embeddableOn: readonly string[] } | null
   deepLinkEmbeddable: boolean
   deepLinkShouldOpenExternally: boolean
   startUrl: string
   storeKey: string
 }
 
+// Phase 50 Plan 01: `platform` defaults to a non-`darwin` value so every existing outcome here
+// keeps testing the D-05 "known store, not embeddable on THIS platform" path unchanged -- the
+// macOS Epic-embeddable path is `platform = 'darwin'`, exercised by Task 2's own matrix test.
 function runDeepLink(
   pathname: string,
   search: string,
-  storeParam: string | undefined
+  storeParam: string | undefined,
+  platform = 'linux'
 ): DeepLinkResult {
   return computeDeepLink(
     pathname,
@@ -96,7 +109,9 @@ function runDeepLink(
     storeParam,
     'https://original-start-url.example/',
     resolveStoreForUrl,
-    () => ({ current: null })
+    () => ({ current: null }),
+    isEmbeddableOrigin,
+    platform
   ) as DeepLinkResult
 }
 

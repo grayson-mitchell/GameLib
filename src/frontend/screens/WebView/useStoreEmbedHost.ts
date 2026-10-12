@@ -110,6 +110,13 @@ interface UseStoreEmbedHostOptions {
    * rect is all zero, and the embed would never follow a window resize again.
    */
   slotNode: HTMLDivElement | null
+  /**
+   * `window.platform` (Phase 50 Plan 01) — threaded into `isEmbeddableOrigin` below so the
+   * CR-01/D-05 refused-target guard reflects the (store, platform) embeddability pair rather
+   * than a single store-wide flag. Required, not defaulted: every caller already resolves this
+   * from the same `ContextProvider` value `index.tsx` itself reads before rendering this hook.
+   */
+  platform: string
 }
 
 export interface StoreEmbedHostState {
@@ -127,7 +134,8 @@ export function useStoreEmbedHost({
   slotNode,
   startUrl,
   storeKey,
-  isStoreRoute
+  isStoreRoute,
+  platform
 }: UseStoreEmbedHostOptions): StoreEmbedHostState {
   const [navState, setNavState] = useState<StoreEmbedNavState>(() => ({
     url: startUrl,
@@ -451,7 +459,7 @@ export function useStoreEmbedHost({
     // and that route has no unavailable-panel fallback of its own.
     const resolvedTarget = resolveStoreForUrl(startUrl)
     const isRefusedTarget =
-      resolvedTarget !== null && !isEmbeddableOrigin(startUrl)
+      resolvedTarget !== null && !isEmbeddableOrigin(startUrl, platform)
 
     if (isRefusedTarget) {
       refusedTargetRef.current = true
@@ -486,7 +494,7 @@ export function useStoreEmbedHost({
       .catch((error) => {
         logNavCallFailure('storeEmbedNavigate (start-url change)', error)
       })
-  }, [startUrl, applyNavResult, suppressed])
+  }, [startUrl, applyNavResult, suppressed, platform])
 
   // ── SUPPRESSION (D-19/D-20, T-40-08-02) ─────────────────────────────────────────────────────
   const wasSuppressedRef = useRef(false)

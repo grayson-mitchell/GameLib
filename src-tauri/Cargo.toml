@@ -217,6 +217,21 @@ objc2-core-foundation = { version = "0.3.2", default-features = false, features 
     "std",
     "CFString",
 ] }
+# Phase 50 Plan 01: `macos_epic_embed`'s raw `WKWebView` subview reads `WKWebView::URL()` /
+# `canGoBack()` / `canGoForward()` for nav-state reporting (needs only the already-present
+# `WKWebView`/`WKNavigation`, no new feature) and builds its `WKWebViewConfiguration` with the
+# shared process-wide jar via `WKWebsiteDataStore::defaultDataStore(mtm)` -- the same type
+# `objc2-web-kit` already names above for `WKWebsiteDataRecord`'s use, but the `defaultDataStore`
+# constructor itself sits behind the `WKWebsiteDataStore` feature flag, not yet requested. This
+# task's own code does not name `WKNavigationResponse` -- it is requested now, ahead of use,
+# because Plan 02 adds a `decidePolicyForNavigationResponse:` handler to this same delegate and
+# the type needs to be in scope then. Both are ALREADY unioned in via wry's own request
+# (`wry-0.55.1/Cargo.toml`'s `objc2-web-kit` feature list includes both), same
+# "declare what your own code directly needs, even if already present" discipline as every
+# feature above -- `git diff --exit-code -- Cargo.lock` stays 0, no new crate enters the tree.
+# Deliberately NOT added: a back-forward-list feature. It is absent from wry's own request, so it
+# would be genuinely new compiled surface, and the bare `canGoBack`/`canGoForward`/`goBack`/
+# `goForward`/`URL` methods this module calls need no feature beyond `WKWebView`/`WKNavigation`.
 objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "WKWebsiteDataRecord",
     "WKWebView",
@@ -228,6 +243,8 @@ objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "WKFrameInfo",
     "WKWindowFeatures",
     "WKHTTPCookieStore",
+    "WKNavigationResponse",
+    "WKWebsiteDataStore",
     "objc2-app-kit",
 ] }
 

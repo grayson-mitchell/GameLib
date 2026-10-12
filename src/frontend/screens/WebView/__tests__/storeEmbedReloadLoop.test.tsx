@@ -271,7 +271,7 @@ const computeRealStartUrl = new Function(
 // simulating a wiring the component no longer has.
 it('wires startUrl from the restore slice into useStoreEmbedHost the way the simulation does', () => {
   expect(indexSource).toMatch(
-    /useStoreEmbedHost\(\{\s*slotNode,\s*startUrl,\s*storeKey,\s*isStoreRoute\s*\}\)/
+    /useStoreEmbedHost\(\{\s*slotNode,\s*startUrl,\s*storeKey,\s*isStoreRoute,\s*platform\s*\}\)/
   )
 })
 
@@ -478,7 +478,10 @@ class Sim {
       slotNode: this.haveSlot ? this.slot : null,
       startUrl,
       storeKey: this.store,
-      isStoreRoute: true
+      isStoreRoute: true,
+      // Phase 50 Plan 01: `linux` keeps this suite's existing Epic-refused-target behaviour
+      // (D-05) unchanged -- Epic is embeddable only on `darwin`.
+      platform: 'linux'
     })
     this.renders.push(startUrl)
   }

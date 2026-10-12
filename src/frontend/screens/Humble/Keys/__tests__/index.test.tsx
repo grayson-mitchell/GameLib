@@ -1510,7 +1510,7 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
         ) as string
       )
       expect(resolveStoreForUrl(url)?.key).toBe('humble')
-      expect(isEmbeddableOrigin(url)).toBe(true)
+      expect(isEmbeddableOrigin(url, 'linux')).toBe(true)
     })
   })
 })

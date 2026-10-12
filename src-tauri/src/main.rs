@@ -48,6 +48,14 @@ use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
 
+// Phase 50 Plan 01: the raw `WKWebView` Epic embed surface -- see that module's own doc comment
+// for why Epic alone gets a second, parallel surface instead of sharing `StoreEmbedState` below.
+// This is the first external-file `mod` declaration in this file; every other `mod` here is an
+// inline block, but this module's size (a `define_class!` delegate plus the full
+// open/set_bounds/hide/show/close/deselect surface lifecycle) makes an inline block impractical.
+#[cfg(target_os = "macos")]
+mod macos_epic_embed;
+
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
 
 /// Printed once by the sidecar on stdout when it has installed its Electron shims and
@@ -6293,10 +6301,16 @@ fn store_embed_state() -> &'static Mutex<StoreEmbedState> {
     STORE_EMBED_STATE.get_or_init(|| Mutex::new(StoreEmbedState::default()))
 }
 
-/// Parse `store_embed_open`'s `{ url, x, y, w, h }` args. Extracted pure-parse, same discipline
-/// as `reveal_post_args`/`clear_storage_args` above: the decision is testable without a window.
+/// Parse `store_embed_open`'s `{ url, x, y, w, h, storeKey }` args. Extracted pure-parse, same
+/// discipline as `reveal_post_args`/`clear_storage_args` above: the decision is testable without
+/// a window. `storeKey` (Phase 50 Plan 01) is read with the same `.and_then(...).ok_or_else(...)`
+/// chain as every other field here -- required, never defaulted -- so `store_embed_open` always
+/// knows which store is opening and can route macOS's Epic key to `macos_epic_embed::open`
+/// (D-02) before this parse result is used for anything else.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
-fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f64), String> {
+fn store_embed_open_args(
+    args: &[Value],
+) -> Result<(tauri::Url, f64, f64, f64, f64, String), String> {
     let obj = args
         .first()
         .and_then(|v| v.as_object())
@@ -6324,7 +6338,12 @@ fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f
         .get("h")
         .and_then(|v| v.as_f64())
         .ok_or_else(|| "store_embed_open:bad-args:h".to_string())?;
-    Ok((url, x, y, w, h))
+    let store_key = obj
+        .get("storeKey")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "store_embed_open:bad-args:storeKey".to_string())?
+        .to_string();
+    Ok((url, x, y, w, h, store_key))
 }
 
 /// Disposition returned by `store_embed_navigation_policy` (D-29, T-40-04-02/03/09). Kept as an
@@ -6474,7 +6493,25 @@ fn store_embed_handoff_admitted(throttle: &Mutex<HandoffThrottle>) -> bool {
 /// `STORE_EMBED_LABEL` navigates it rather than creating a second child under the same label.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
-    let (url, x, y, w, h) = store_embed_open_args(args)?;
+    let (url, x, y, w, h, store_key) = store_embed_open_args(args)?;
+
+    // Phase 50 Plan 01 (D-02): macOS routes the Epic store key to the raw-`WKWebView` surface
+    // instead of this function's own Tauri-managed `add_child` embed below -- see
+    // `macos_epic_embed`'s module doc comment for why. Every OTHER store key, on every platform,
+    // falls through to the existing body unchanged; on macOS specifically it also deselects the
+    // Epic surface first (hides it without destroying it) so switching the store tab away from
+    // Epic doesn't leave the raw subview visible underneath the Tauri-managed embed this function
+    // is about to create or reuse.
+    #[cfg(target_os = "macos")]
+    {
+        if store_key == macos_epic_embed::EPIC_EMBED_STORE_KEY {
+            return macos_epic_embed::open(app, &url, x, y, w, h);
+        }
+        macos_epic_embed::deselect(app)?;
+    }
+    // `store_key` is consulted above only under `#[cfg(target_os = "macos")]` -- referenced here
+    // unconditionally so Linux/Windows builds don't warn on an otherwise-unused binding.
+    let _ = &store_key;
 
     if let Some(existing) = app.get_webview(STORE_EMBED_LABEL) {
         // 260930-blh (2026-09-30, Linux) + 261001-svm (2026-10-01, macOS), both live-measured:
@@ -6811,6 +6848,16 @@ fn store_embed_linux_settled_line(
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (x, y, w, h) = store_embed_set_bounds_args(args)?;
+    // Phase 50 Plan 01 (D-18): when the Epic surface is selected, it is the sole owner of this
+    // rect -- route there and return, rather than also re-applying it to the (hidden) Tauri
+    // embed below, which would make `set_bounds` a second geometry writer for whichever surface
+    // isn't currently showing.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::set_bounds(app, x, y, w, h);
+        }
+    }
     #[cfg(target_os = "linux")]
     let linux_rect = store_embed_linux_gtk_rect(x, y, w, h)?;
     let webview = app
@@ -7071,6 +7118,14 @@ mod linux_store_embed_layout {
 /// Returns a distinguishable error when the label is absent, never a silent `Ok`.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_hide(app: &AppHandle) -> Result<Value, String> {
+    // Phase 50 Plan 01 (D-01/D-02): the Epic surface and the Tauri embed are never visible at
+    // once, so whichever one is selected owns this call exclusively -- route there and return.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::hide(app);
+        }
+    }
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_hide:no-webview:{STORE_EMBED_LABEL}"))?;
@@ -7084,6 +7139,13 @@ fn store_embed_hide(app: &AppHandle) -> Result<Value, String> {
 /// never a silent `Ok`.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_show(app: &AppHandle) -> Result<Value, String> {
+    // Phase 50 Plan 01 (D-01/D-02): symmetric with `store_embed_hide` above.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::show(app);
+        }
+    }
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_show:no-webview:{STORE_EMBED_LABEL}"))?;
@@ -7098,6 +7160,13 @@ fn store_embed_show(app: &AppHandle) -> Result<Value, String> {
 /// Returns a distinguishable error when the label is absent, never a silent `Ok`.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
+    // Phase 50 Plan 01 (D-01/D-02): app teardown closes BOTH surfaces, not whichever one is
+    // currently selected -- close the Epic surface first, then fall through to the existing
+    // Tauri-embed body below rather than returning early. Neither subview may outlive the app.
+    #[cfg(target_os = "macos")]
+    {
+        macos_epic_embed::close(app)?;
+    }
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_close:no-webview:{STORE_EMBED_LABEL}"))?;
@@ -13572,10 +13641,11 @@ mod tests {
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     #[test]
     fn store_embed_wire_contract_open_parses_the_shipped_payload() {
-        let (url, x, y, w, h) = store_embed_open_args(&wire_args("store_embed_open"))
+        let (url, x, y, w, h, store_key) = store_embed_open_args(&wire_args("store_embed_open"))
             .expect("the shipped open payload must parse");
         assert_eq!(url.as_str(), "https://store.steampowered.com/");
         assert_eq!((x, y, w, h), (12.5, 64.0, 1280.25, 800.0));
+        assert_eq!(store_key, "steam");
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]

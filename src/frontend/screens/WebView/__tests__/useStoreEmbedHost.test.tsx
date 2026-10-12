@@ -303,6 +303,12 @@ interface MountOptions {
   startUrl?: string
   storeKey?: string
   isStoreRoute?: boolean
+  /**
+   * Defaults to a non-`darwin` platform (Phase 50 Plan 01) so every existing test's Epic-refusal
+   * assertions keep testing the D-05 "known, non-embeddable-HERE store" path unchanged. Tests
+   * that need the macOS Epic-embeddable path pass `platform: 'darwin'` explicitly.
+   */
+  platform?: string
 }
 
 function invoke(options: MountOptions): StoreEmbedHostState {
@@ -321,7 +327,8 @@ function invoke(options: MountOptions): StoreEmbedHostState {
     slotNode: options.slotRef.current,
     startUrl: options.startUrl ?? 'https://store.steampowered.com/',
     storeKey: options.storeKey ?? 'steam',
-    isStoreRoute: options.isStoreRoute ?? true
+    isStoreRoute: options.isStoreRoute ?? true,
+    platform: options.platform ?? 'linux'
   })
 }
 

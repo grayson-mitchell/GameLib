@@ -130,11 +130,27 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
       `${channel}: malformed response (canGoForward must be a boolean): ${JSON.stringify(result)}`
     )
   }
+  // `surface` (Phase 50 Plan 01) is OPTIONAL and never defaulted -- the Tauri-managed embed's
+  // existing events predate this field and omit it entirely. When present it must be one of the
+  // two known values; a malformed-but-present value is a dead-or-mis-shaped Rust arm, not a
+  // value to silently coerce away.
+  if (
+    candidate.surface !== undefined &&
+    candidate.surface !== 'tauri' &&
+    candidate.surface !== 'epic'
+  ) {
+    throw new Error(
+      `${channel}: malformed response (surface must be 'tauri' or 'epic' when present): ${JSON.stringify(result)}`
+    )
+  }
   return {
     url: candidate.url,
     host: candidate.host,
     canGoBack: candidate.canGoBack,
-    canGoForward: candidate.canGoForward
+    canGoForward: candidate.canGoForward,
+    ...(candidate.surface !== undefined
+      ? { surface: candidate.surface as 'tauri' | 'epic' }
+      : {})
   }
 }
 
@@ -186,12 +202,13 @@ function assertFiniteBounds(bounds: StoreEmbedBounds): void {
  */
 export function createRustStoreEmbedSeam(): StoreEmbedSeam {
   return {
-    async open(url, bounds, _storeKey) {
-      // `_storeKey` is the caller's own bookkeeping (e.g. 'steam') -- the shipped Rust arm
-      // (`store_embed_open_args`, 40-02-SUMMARY.md) takes no such argument, so it never
-      // crosses the wire.
+    async open(url, bounds, storeKey) {
+      // Phase 50 Plan 01: `storeKey` now crosses the wire -- `store_embed_open_args` (main.rs)
+      // requires it to route macOS's Epic key to `macos_epic_embed::open` before the existing
+      // Tauri-managed embed body runs (D-02). Every other store key/platform combination falls
+      // through to the unchanged existing Rust body, which never reads the field for routing.
       const result = await requestRustInvoke(RUST_STORE_EMBED_OPEN, [
-        { url, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h }
+        { url, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h, storeKey }
       ])
       if (result !== null) {
         throw new Error(

@@ -21,7 +21,23 @@
  * HTTPS-ONLY (D-31): a store origin reached over http is not the store origin this table means --
  * the chrome's insecure-scheme handling is the only place a non-https store URL should ever
  * appear.
+ *
+ * EMBEDDABILITY IS PER-PLATFORM (Phase 50 Plan 01): it used to be a single static boolean field
+ * (true for every configured store except Epic, D-05, on every platform). Phase 50 gives
+ * macOS a Rust-managed raw `WKWebView` subview for Epic specifically (`macos_epic_embed.rs`), so
+ * "embeddable" stopped being a per-store constant and became a (store, platform) pair -- Epic is
+ * embeddable on `darwin` only; every other store is embeddable everywhere this screen already
+ * supports (`darwin`/`win32`/`linux`, matching `index.tsx`'s own platform gate).
  */
+
+/** The platform values `window.platform` (`src/preload/tauriAttach.ts`) ever assigns. */
+export type StoreEmbedPlatform = 'darwin' | 'win32' | 'linux'
+
+const ALL_EMBED_PLATFORMS: readonly StoreEmbedPlatform[] = [
+  'darwin',
+  'win32',
+  'linux'
+]
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there
@@ -33,8 +49,12 @@ interface StoreEmbedConfig {
   apexHosts: string[]
   /** The store's canonical start URL -- parity with `index.tsx`'s route map, informational only. */
   startUrl: string
-  /** False for Epic (D-05): still a KNOWN store origin for the deep-link/stored-URL checks, but never embedded. */
-  embeddable: boolean
+  /**
+   * The platforms this store is embeddable on. Epic (D-05, Phase 50) is `['darwin']` only --
+   * still a KNOWN store origin for the deep-link/stored-URL checks on every platform, but never
+   * embedded outside macOS. Every other store lists all three.
+   */
+  embeddableOn: readonly StoreEmbedPlatform[]
 }
 
 // Measured from the surviving route map (`index.tsx`'s `urls`) at plan time. GOG's start URL is
@@ -45,31 +65,31 @@ const STORE_EMBED_ORIGINS: readonly StoreEmbedConfig[] = [
     key: 'epic',
     apexHosts: ['epicgames.com'],
     startUrl: 'https://www.epicgames.com/store/en-US/',
-    embeddable: false
+    embeddableOn: ['darwin']
   },
   {
     key: 'gog',
     apexHosts: ['gog.com'],
     startUrl: 'https://af.gog.com?as=1838482841',
-    embeddable: true
+    embeddableOn: ALL_EMBED_PLATFORMS
   },
   {
     key: 'amazon',
     apexHosts: ['gaming.amazon.com'],
     startUrl: 'https://gaming.amazon.com',
-    embeddable: true
+    embeddableOn: ALL_EMBED_PLATFORMS
   },
   {
     key: 'zoom',
     apexHosts: ['zoom-platform.com'],
     startUrl: 'https://www.zoom-platform.com',
-    embeddable: true
+    embeddableOn: ALL_EMBED_PLATFORMS
   },
   {
     key: 'steam',
     apexHosts: ['store.steampowered.com'],
     startUrl: 'https://store.steampowered.com/',
-    embeddable: true
+    embeddableOn: ALL_EMBED_PLATFORMS
   },
   // Humble has no `/store/humble` ROUTE -- it is reachable only as a
   // `store-page?store-url=` deep link, from the Humble Keys screen's
@@ -89,7 +109,7 @@ const STORE_EMBED_ORIGINS: readonly StoreEmbedConfig[] = [
     key: 'humble',
     apexHosts: ['humblebundle.com'],
     startUrl: 'https://www.humblebundle.com/home/keys',
-    embeddable: true
+    embeddableOn: ALL_EMBED_PLATFORMS
   }
 ]
 
@@ -121,8 +141,14 @@ export function resolveStoreForUrl(url: string): StoreEmbedConfig | null {
   return null
 }
 
-/** `true` only for a URL that resolves to a KNOWN and EMBEDDABLE store (D-05 excludes Epic). */
-export function isEmbeddableOrigin(url: string): boolean {
+/**
+ * `true` only for a URL that resolves to a KNOWN store embeddable on `platform` (Phase 50 Plan
+ * 01: Epic is `darwin`-only, D-05; every other configured store is embeddable on all three).
+ */
+export function isEmbeddableOrigin(url: string, platform: string): boolean {
   const config = resolveStoreForUrl(url)
-  return config !== null && config.embeddable
+  return (
+    config !== null &&
+    config.embeddableOn.includes(platform as StoreEmbedPlatform)
+  )
 }
