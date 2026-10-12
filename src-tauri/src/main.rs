@@ -60,6 +60,10 @@ mod macos_epic_embed;
 // unlike the module above, so its decisions are unit-tested on Linux too.
 mod store_embed_handoff_policy;
 
+// Phase 50 review: the admission gate for the Epic surface's JS dialog sheets, kept out of the
+// macOS-only module above for the same reason.
+mod epic_embed_js_dialog;
+
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
 
 /// Printed once by the sidecar on stdout when it has installed its Electron shims and

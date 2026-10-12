@@ -1346,63 +1346,96 @@ define_class!(
             None
         }
 
-        // D-13: calls the SAME shipped helper `EpicPristineNavDelegate` (main.rs) uses for its
-        // own pristine WKWebView -- one code path serves both raw WKWebViews, no AppKit dialog
-        // plumbing re-implemented here. Always calls the completion handler exactly once.
+        // D-13, as hardened by the Phase 50 review (`epic_embed_js_dialog`'s module doc has the
+        // full rule and why native dialogs stay rather than wry's ignore-all): shown only for a
+        // main-frame dialog on the visible surface, one at a time, rate-limited, as a sheet on
+        // the main window titled with the page origin. A refused dialog gets wry's answer
+        // (alert just completes). Every path calls the completion handler exactly once -- now,
+        // or from the sheet's own completion handler.
         #[unsafe(method(webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:))]
         fn run_js_alert(
             &self,
-            _webview: &WKWebView,
+            webview: &WKWebView,
             message: &NSString,
-            _frame: &WKFrameInfo,
+            frame: &WKFrameInfo,
             completion_handler: &block2::Block<dyn Fn()>,
         ) {
-            if let Some(mtm) = MainThreadMarker::new() {
-                crate::present_native_js_alert(mtm, &message.to_string());
-            }
-            (*completion_handler).call(());
+            let Some((mtm, window, origin)) = epic_embed_js_dialog_admit(webview, frame, "alert")
+            else {
+                (*completion_handler).call(());
+                return;
+            };
+            let done = completion_handler.copy();
+            epic_embed_begin_js_dialog_sheet(
+                mtm,
+                &window,
+                &origin,
+                &message.to_string(),
+                false,
+                None,
+                move |_response, _text| (*done).call(()),
+            );
         }
 
-        /// Same rationale as `run_js_alert` above, for JS `confirm()`. Always calls the
-        /// completion handler exactly once.
+        /// Same rule as `run_js_alert` above, for JS `confirm()`; a refused one returns `false`.
         #[unsafe(method(webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:))]
         fn run_js_confirm(
             &self,
-            _webview: &WKWebView,
+            webview: &WKWebView,
             message: &NSString,
-            _frame: &WKFrameInfo,
+            frame: &WKFrameInfo,
             completion_handler: &block2::Block<dyn Fn(Bool)>,
         ) {
-            let confirmed = MainThreadMarker::new()
-                .map(|mtm| crate::present_native_js_confirm(mtm, &message.to_string()))
-                .unwrap_or(false);
-            (*completion_handler).call((Bool::from(confirmed),));
+            let Some((mtm, window, origin)) = epic_embed_js_dialog_admit(webview, frame, "confirm")
+            else {
+                (*completion_handler).call((Bool::NO,));
+                return;
+            };
+            let done = completion_handler.copy();
+            epic_embed_begin_js_dialog_sheet(
+                mtm,
+                &window,
+                &origin,
+                &message.to_string(),
+                true,
+                None,
+                move |confirmed, _text| (*done).call((Bool::from(confirmed),)),
+            );
         }
 
-        /// Same rationale as `run_js_alert` above, for JS `prompt()`. Always calls the completion
-        /// handler exactly once: the shipped helper's entered text on OK, `nil` on Cancel or if
-        /// no main-thread marker is available (never dropped either way) -- the dismiss answer,
-        /// matching `WKUIDelegate`'s own documented completion-handler contract.
+        /// Same rule as `run_js_alert` above, for JS `prompt()`: the entered text on OK, `nil`
+        /// on Cancel or when refused -- `WKUIDelegate`'s documented dismiss answer.
         #[unsafe(method(webView:runJavaScriptTextInputPanelWithPrompt:defaultText:initiatedByFrame:completionHandler:))]
         fn run_js_prompt(
             &self,
-            _webview: &WKWebView,
+            webview: &WKWebView,
             prompt: &NSString,
             default_text: Option<&NSString>,
-            _frame: &WKFrameInfo,
+            frame: &WKFrameInfo,
             completion_handler: &block2::Block<dyn Fn(*mut NSString)>,
         ) {
+            let Some((mtm, window, origin)) = epic_embed_js_dialog_admit(webview, frame, "prompt")
+            else {
+                (*completion_handler).call((std::ptr::null_mut(),));
+                return;
+            };
+            let done = completion_handler.copy();
             let default_text_owned = default_text.map(|s| s.to_string()).unwrap_or_default();
-            let entered = MainThreadMarker::new().and_then(|mtm| {
-                crate::present_native_js_prompt(mtm, &prompt.to_string(), &default_text_owned)
-            });
-            match entered {
-                Some(text) => {
-                    let ns_text = NSString::from_str(&text);
-                    (*completion_handler).call((Retained::as_ptr(&ns_text) as *mut NSString,));
-                }
-                None => (*completion_handler).call((std::ptr::null_mut(),)),
-            }
+            epic_embed_begin_js_dialog_sheet(
+                mtm,
+                &window,
+                &origin,
+                &prompt.to_string(),
+                true,
+                Some(&default_text_owned),
+                move |confirmed, text| match text.filter(|_| confirmed) {
+                    Some(text) => {
+                        let ns_text = NSString::from_str(&text);
+                        (*done).call((Retained::as_ptr(&ns_text) as *mut NSString,));
+                    }
+                    None => (*done).call((std::ptr::null_mut(),)),
+                },
+            );
         }
     }
 );
@@ -1441,6 +1474,108 @@ fn epic_embed_record_launcher_scheme_block(webview: &WKWebView, what: &str) {
     } else {
         eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
     }
+}
+
+/// Admission state for this surface's JS dialog sheets -- see `crate::epic_embed_js_dialog`.
+static EPIC_EMBED_JS_DIALOG_GATE: Mutex<crate::epic_embed_js_dialog::JsDialogGate> =
+    Mutex::new(crate::epic_embed_js_dialog::JsDialogGate::new());
+
+/// Gathers the facts `JsDialogGate::admit` decides on (main frame? surface selected, unhidden,
+/// in a visible window with no sheet already up? page origin showable?) and takes the one open
+/// slot. Returns the main-thread marker, the window to attach the sheet to and the origin to
+/// title it with; `None` (logged, kind only -- never the page text) means refused, and the
+/// caller answers WebKit with the wry-parity default.
+fn epic_embed_js_dialog_admit(
+    webview: &WKWebView,
+    frame: &WKFrameInfo,
+    kind: &str,
+) -> Option<(MainThreadMarker, Retained<objc2_app_kit::NSWindow>, String)> {
+    use crate::epic_embed_js_dialog::{js_dialog_origin_label, EPIC_EMBED_JS_DIALOG_MIN_GAP};
+    let mtm = MainThreadMarker::new()?;
+    let is_main_frame = unsafe { frame.isMainFrame() };
+    let window = webview
+        .window()
+        .filter(|w| w.isVisible() && w.attachedSheet().is_none());
+    let surface_visible =
+        window.is_some() && is_selected() && !webview.isHiddenOrHasHiddenAncestor();
+    let page_url = unsafe {
+        webview
+            .URL()
+            .and_then(|u| u.absoluteString())
+            .map(|s| s.to_string())
+            .unwrap_or_default()
+    };
+    let origin = js_dialog_origin_label(&page_url);
+    let admitted = origin.is_some()
+        && match EPIC_EMBED_JS_DIALOG_GATE.lock() {
+            Ok(mut gate) => gate.admit(
+                is_main_frame,
+                surface_visible,
+                Instant::now(),
+                EPIC_EMBED_JS_DIALOG_MIN_GAP,
+            ),
+            // Fail closed, like `store_embed_handoff_admitted` (main.rs).
+            Err(_) => false,
+        };
+    match (admitted, window, origin) {
+        (true, Some(window), Some(origin)) => Some((mtm, window, origin)),
+        _ => {
+            eprintln!(
+                "[shell] macos_epic_embed: refused a JS {kind} dialog (subframe, hidden surface, \
+                 opaque origin or rate limit) -- answered with the default"
+            );
+            None
+        }
+    }
+}
+
+/// Shows an admitted JS dialog as a sheet on `window` -- window-modal, never `runModal()`'s
+/// app-modal loop -- titled with `origin` and carrying the capped page text. OK only, or OK and
+/// Cancel when `with_cancel` (confirm/prompt); `prompt_default` adds the `prompt()` text field.
+/// `on_done(confirmed, entered_text)` runs exactly once, from the sheet's completion handler,
+/// after the gate slot is released.
+fn epic_embed_begin_js_dialog_sheet(
+    mtm: MainThreadMarker,
+    window: &objc2_app_kit::NSWindow,
+    origin: &str,
+    message: &str,
+    with_cancel: bool,
+    prompt_default: Option<&str>,
+    on_done: impl Fn(bool, Option<String>) + 'static,
+) {
+    use objc2_app_kit::{NSAlert, NSAlertFirstButtonReturn, NSModalResponse, NSTextField};
+    let alert = NSAlert::new(mtm);
+    alert.setMessageText(&NSString::from_str(&format!("{origin} says:")));
+    alert.setInformativeText(&NSString::from_str(
+        &crate::epic_embed_js_dialog::js_dialog_message_text(message),
+    ));
+    alert.addButtonWithTitle(&NSString::from_str("OK"));
+    if with_cancel {
+        alert.addButtonWithTitle(&NSString::from_str("Cancel"));
+    }
+    let text_field = prompt_default.map(|default_text| {
+        let frame = NSRect::new(NSPoint::new(0.0, 0.0), NSSize::new(300.0, 24.0));
+        let field = NSTextField::initWithFrame(mtm.alloc(), frame);
+        field.setStringValue(&NSString::from_str(default_text));
+        alert.setAccessoryView(Some(&field));
+        field
+    });
+    // The handler owns a reference to the alert until it runs, so the alert outlives its sheet
+    // however AppKit holds it; `take()` drops that reference inside the handler, so the
+    // alert -> handler -> alert cycle is broken once the sheet ends rather than leaking.
+    let keep_alert = std::cell::RefCell::new(Some(alert.clone()));
+    let handler = block2::RcBlock::new(move |response: NSModalResponse| {
+        let _alert = keep_alert.borrow_mut().take();
+        if let Ok(mut gate) = EPIC_EMBED_JS_DIALOG_GATE.lock() {
+            gate.close(Instant::now());
+        }
+        let confirmed = response == NSAlertFirstButtonReturn;
+        on_done(
+            confirmed,
+            text_field.as_ref().map(|f| f.stringValue().to_string()),
+        );
+    });
+    alert.beginSheetModalForWindow_completionHandler(window, Some(&handler));
 }
 
 impl EpicEmbedNavDelegate {
