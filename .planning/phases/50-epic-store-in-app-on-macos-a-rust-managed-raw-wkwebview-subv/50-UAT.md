@@ -1,0 +1,241 @@
+---
+status: draft
+phase: 50
+source: [50-01-SUMMARY.md, 50-02-SUMMARY.md, 50-03-SUMMARY.md, 50-04-SUMMARY.md, 50-05-SUMMARY.md, 50-CONTEXT.md, 50-UI-SPEC.md, ROADMAP.md]
+started:
+updated: 2026-10-13T00:44:00Z
+---
+
+## Protocol
+
+This is the blocking macOS live gate for Phase 50 — the native Rust-managed raw `WKWebView`
+subview that embeds the Epic Games Store inside GameLib's existing main window. No item below
+has been run yet; every `result:` is `pending`. This file is authored per
+`Skill("spike-findings-gamelib")`'s `live-gate-contract-authoring.md` reference and the UAT item
+shape in `Skill("gamelib-conventions")`.
+
+### Hard ordering constraints
+
+1. **Cold-before-warm, never via a jar clear.** Launch 1 (cold) and Launch 2 (warm) use **two
+   separate profiles** — a disposable, isolated `createFakeHomeProfile()` profile for Launch 1,
+   and the operator's real, already-signed-in profile for Launch 2 — never the same profile
+   transitioned from warm to cold by clearing cookies. Logging out of Epic (or clearing its
+   cookie jar) on this machine is a measured one-way door: a stale WebKit disk-cache entry
+   surviving a cookie-only clear previously locked the operator's Epic account for 8 hours
+   (`logging-out-of-epic-is-a-one-way-door-on-a-cold-jar.md`). "Cold" here means a profile that
+   never had a session, never a profile that had one removed.
+2. **Online arms before the timeout-induction arm.** All arms that depend on the Epic store
+   actually reaching the network (Launches 1–2) run before Launch 3's offline/timeout arm. The
+   timeout is induced via a **host-level block** (an `/etc/hosts` entry routing Epic's store
+   host to an unroutable address, reverted immediately after the arm), never by disabling the
+   machine's network interface wholesale — a host-level block is scoped and reversible without
+   touching WebKit's cookie jar or risking any Epic-side lockout, and it leaves every other arm
+   in the same launch unaffected.
+3. **Steam runs as the positive control in the same session as the Epic arms.** Item 7 (Steam
+   embed) is observed inside Launch 2, immediately alongside the Epic warm-jar arms — not on a
+   separate day or a separate launch — so it is a contemporaneous control for the shared
+   embedding mechanism (Rust-owned subview attach, compositor paint), ruling out "the whole
+   embed subsystem is broken" as an explanation for any Epic-specific failure.
+
+### Environment constraint
+
+**Quit any running `tauri dev` process before Launch 1.** A live `tauri dev` session relaunches
+on every commit and has previously consumed a live-gate's as-found profile fixture roughly 20
+minutes before a gate was run (`a-running-tauri-dev-consumes-a-live-gate-fixture-on-rebuild.md`).
+Confirm via `pgrep -f 'tauri dev'` returns empty before the first launch of this gate, and ask
+the operator to quit any IDE-attached dev session first if it is not.
+
+### Capture standard (dual-sink, append-and-archive)
+
+Implemented verbatim per `live-gate-contract-authoring.md` Section 3:
+
+- **One session directory**, created once: `/tmp/gamelib-gate-<ISO8601-UTC>/`.
+- **Terminal transcript is appended, never overwritten**: every terminal command for this gate
+  runs through `tee -a <session-dir>/terminal.log` — never a bare `tee`, never `>`.
+- **Exact per-launch delimiter**, greppable via `grep -n '^=== GATE LAUNCH'`:
+  ```
+  echo "=== GATE LAUNCH ${N} — $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a <session-dir>/terminal.log
+  ```
+- **`gamelib.log` is archived per launch, before the next launch's first write renames it to
+  `.old`** (`src/backend/logger/log_writer.ts:72-74`):
+  ```
+  cp ~/Library/Logs/GameLib/gamelib.log <session-dir>/gamelib-launch-${N}.log
+  ```
+  Any pre-existing `.old` file is archived once, on the very first pass, before Launch 1.
+- **Every item below records its launch ordinal** (see the per-launch grouping after the
+  Structural Reachability Review).
+- **Closing inventory**, captured during the run, not reconstructed after: `ls -la
+  <session-dir>/` and `wc -l <session-dir>/*`.
+- **Single-instance assertion**: `pgrep -f 'target/debug/gamelib-shell'` must be empty
+  immediately before each launch; record the PID once the window appears; record it again at
+  teardown. If the count is ever not exactly 1 at any check, **abort that launch and re-run it**
+  rather than scoring it.
+
+### Non-arms (explicit — does NOT ship, per ROADMAP.md)
+
+The following are out of scope for this gate and must not be exercised as if they were arms:
+Epic on Windows or Linux; any change to the login seam or `open_pristine_epic_login_window`; the
+sign-in hand-off beyond what the Sign in arm (Item 2) itself measures; per-store jar isolation;
+and anything behind sign-in beyond the Sign in arm's own boundary (D-07).
+
+---
+
+## Structural Reachability Review
+
+The seven defect-class tests from `live-gate-contract-authoring.md` Section 2 were applied to
+this draft before its first run. Findings specific to this gate, not a restatement of the
+methodology:
+
+**Test 1 (origin/scheme reachability).** Checked every induction mechanism below (host-level
+block, window occlusion, zoom-level change, popup trigger, custom-scheme navigation) against
+`storeEmbedOrigins.ts`'s actual gating: Epic's `embeddableOn` is `['darwin']` only (confirmed
+live, `storeEmbedOrigins.ts:68`), so every arm below is reachable on this machine without first
+needing a second platform. No arm here depends on an origin or scheme this build does not
+already recognize.
+
+**Test 2 (concurrency reachability).** The timeout, challenge, and navigation-failure arms
+(Items 5, 18, 19) all share one host-level-block induction mechanism within Launch 3. Confirmed
+this does not race the single-timeout-monitor-thread-per-surface invariant (T-50-07, `50-02-PLAN.md`):
+a host-level block does not spawn a second surface or a second monitor thread — it only starves
+the one Epic surface's existing monitor of a response, which is exactly the condition D-07/D-08
+are designed to detect.
+
+**Test 3 (log-line emitter reachability, the SINK clause).** Every arm anchored to a log literal
+below was checked against the actual emitter in `src-tauri/src/macos_epic_embed.rs` (exact line
+and literal text recorded per item) to confirm the specific operator gesture in that arm's
+`expected:` actually reaches the `eprintln!` call site that produces it, and that the sink
+(`~/Library/Logs/GameLib/gamelib.log`, via `log_writer.ts`) will receive it before this gate's
+per-launch archive step runs. This check surfaced that **D-13 (native JS alert/confirm/prompt)
+has no log emitter at all** — `present_native_js_alert`/`_confirm`/`_prompt` in `main.rs:4101-4116`
+only construct and run an `NSAlert`, with no logging — so Item 15 is marked visual-only evidence
+by design, not an oversight.
+
+**Test 4 (absence-observability).** For items whose pass criterion is an absence rather than a
+presence — Item 12 ("issues none when state unchanged", D-04) and Item 18's "not sticky" half
+(D-11) — the `expected:` text below states explicitly what proves the absence (a second,
+subsequent observation showing normal, un-reloaded or un-challenged rendering) rather than
+treating silence or "nothing visibly happened" as sufficient on its own.
+
+**Test 5 (requirement-interaction / PAIR reachability — RESTARTS / TRUNCATES-OVERWRITES / CLEARS
+/ RESETS / env-var-changes / one-shot-resource).** Three pair-defects were found and designed
+around in this draft, not discovered after the fact:
+- **CLEARS pair:** running the cold-jar arm (Item 1) and the warm-jar arm (Item 3) against the
+  *same* profile, reset between them, would both destroy the warm arm's premise and risk the
+  8-hour lockout. Resolved by using two separate profiles (Hard ordering constraint 1).
+- **TRUNCATES-OVERWRITES pair:** `log_writer.ts` renames the previous `gamelib.log` to `.old` on
+  the *next* process's first write. If the per-launch archive step ran once at the end of the
+  whole gate instead of after each launch, every launch before the last would have its evidence
+  silently overwritten. Resolved by archiving immediately after each launch (Capture standard,
+  above), before the next launch starts.
+- **ONE-SHOT-RESOURCE pair:** Item 12 (D-04, auth-triggered reload) manipulates GameLib's local
+  `legendary` credential file to flip the app's *resolved* Epic sign-in state. If run before
+  Item 3 (warm jar), it would consume/alter the exact "already signed in" baseline Item 3 needs
+  intact. Resolved by ordering Item 12 last within Launch 2, after Item 3 has already been
+  observed, and by using an isolated fixture copy of the credential file rather than editing the
+  operator's live one in place (see Item 12's own note on this).
+
+**Test 6 (pre-existing external-state reachability — unit of review = the item's PREMISE).**
+Item 3's premise ("the shared default WebKit store already holds a signed-in Epic session") is
+not assumed from memory — it is checked by the operator immediately before running Launch 2
+(e.g., confirming the Epic website is currently signed in via the normal system browser), since
+a long enough gap between plan authorship and the live run could let that premise go quietly
+false (natural session expiry) without anyone noticing until the arm "fails" for an unrelated
+reason.
+
+**Test 7 (UI-level reachability, distinct from backend-logic reachability — unit of review = the
+GESTURE SEQUENCE).** Three arms had their induction gesture made concrete rather than left vague:
+Item 13 (popup handoff) names that the operator must click a specific externally-opening control
+on Epic's page (not just "any link"), Item 16 (blocked launcher scheme) names that the operator
+must click Play/Launch on an **owned** game inside the embed specifically (the one path that
+issues a `com.epicgames.launcher://` navigation), and Item 15 (native JS dialog) requires the
+operator to first identify, on the day of the run, which specific on-page action currently
+triggers a native confirm/alert on Epic's live site, since this is driven entirely by Epic's own
+page and not by anything in this codebase.
+
+---
+
+## Tests
+
+### Launch 1 — cold, isolated profile (`createFakeHomeProfile()`, never previously signed in)
+
+### 1. Cold jar: Epic store boots and paints (launch 1)
+expected: On a disposable, never-used fake-HOME profile (`createFakeHomeProfile()`), opening Stores → Epic shows the Epic store's own page rendered inside the native subview — not a blank rect, not a one-colour unpainted frame — within the 45s load window (D-01).
+result: pending
+
+### 2. Sign in button reachable and in place (launch 1)
+expected: On the same cold profile, Epic's own "Sign in" control is visible and clickable in the embedded page (L-1). Clicking it is observed through to one of three outcomes — a completed sign-in, a Cloudflare/Turnstile challenge, or an HTTP 403 — and the outcome is recorded verbatim; this arm never instructs signing OUT of any account, only exercises the page's own sign-in entry point on a profile that never had a session to begin with.
+result: pending
+
+### 3. Subview transparency [ASSUMED] (launch 1)
+expected: The native subview's background, observed by eye against the surrounding GameLib chrome while Epic's page is loading and after it paints, behaves per D-06's `[ASSUMED]` call — recorded as either confirmed or refuted, since this assumption has not yet been checked live.
+result: pending
+
+### 4. Zoom-aware bounds at 120% and 80% (launch 1)
+expected: With the webview zoom control set to 120%, the Epic subview's bounds scale to match the measured slot rect with no clipping and no offset gap; repeating at 80% shows the same with no stale bounds left over from the 120% pass (`storeEmbedZoom.ts`, quick 261012-gn8's W8 property, previously PASS on Windows — this is its first macOS/Epic observation).
+result: pending
+
+### Launch 2 — warm, real profile (operator's existing, already-signed-in Epic session)
+
+### 5. Warm signed-in jar: Epic store boots and paints (launch 2)
+expected: Before this launch, confirm the premise is still true today (Test 6): the operator is currently signed in to Epic in their normal browser. Then, on the real profile (shared default `WKWebsiteDataStore`, L-3), opening Stores → Epic shows the store boot and paint using the existing session — no sign-in prompt appears, no action is taken to sign in or out.
+result: pending
+
+### 6. Steam embed positive control, same session (launch 2)
+expected: Immediately after Item 5, in the same launch, opening Stores → Steam renders the Steam embed normally — confirming the shared embedding mechanism itself (Rust-owned subview attach, compositor paint) is healthy and contemporaneous with the Epic observations in this launch.
+result: pending
+
+### 7. Occlusion recovery (launch 2)
+expected: With Epic's subview painted and visible, covering the GameLib window fully with another window and then uncovering it again shows the Epic store still boots and paints correctly — no stuck blank frame survives the occlusion (established #8).
+result: pending
+
+### 8. Minimize/restore and fullscreen survive (launch 2)
+expected: With Epic's subview visible, minimizing then restoring the window, and separately toggling fullscreen on and off, leaves the subview correctly tracking the measured slot rect afterward in both cases — it never outlives its route and never detaches from the window (D-02).
+result: pending
+
+### 9. Back/forward/URL parity with the GOG embed (launch 2)
+expected: Navigating three distinct pages deep inside the Epic embed and observing `StoreEmbedControls`' back/forward enabled/disabled state at each step, then repeating the identical three-page navigation inside the GOG embed, shows the same back/forward state-transition pattern in both — no Epic-specific divergence in the shared delegate-driven native state.
+result: pending
+
+### 10. Epic → Steam → Epic switch (launch 2)
+expected: Switching from the Stores → Epic tab to Stores → Steam and back to Stores → Epic shows the Epic subview correctly hidden while Steam is active and correctly shown again on return, with its prior state intact — it is never left visible behind Steam's subview and never torn down early (D-02).
+result: pending
+
+### 11. Popup → system browser handoff (launch 2)
+expected: Clicking the specific externally-opening control on Epic's page identified on the day of the run (Test 7 — not "any link"; `createWebViewWithConfiguration` only fires for a real `window.open()` call) is denied a second native in-app surface, the exact literal `[shell] macos_epic_embed: denied window.open request, routing to the system browser (D-12)` appears in `gamelib.log`, and the operator's default system browser opens to the target URL.
+result: pending
+
+### 12. Popup rate-limited, not handed off (launch 2)
+expected: Triggering the same popup-opening gesture from Item 11 repeatedly within the shared `STORE_EMBED_POPUP_THROTTLE` window shows the first admitted and handed off as in Item 11, and at least one subsequent attempt within the window denied with the exact literal `[shell] macos_epic_embed: denied window.open request, rate-limited -- not routed to the system browser` — and critically, no second browser window opens for the rate-limited attempt.
+result: pending
+
+### 13. Native JS dialog (launch 2)
+expected: Having first identified, on the day of the run, which specific on-page action on Epic's live site currently triggers a native confirm/alert/prompt (Test 7 — this is driven entirely by Epic's own page), performing that action presents a real native `NSAlert` modal to the main window, dismissible by the operator. No log literal exists for this path (D-13's delegate methods have no emitter — Test 3) — evidence here is a screenshot of the modal, by design, not a log line.
+result: pending
+
+### 14. Blocked Epic Games Launcher scheme notice (launch 2)
+expected: Clicking Play/Launch on a game the operator's Epic account actually owns, inside the embedded store (Test 7 — this is the one path that issues a `com.epicgames.launcher://` navigation), shows the navigation blocked, the exact literal `[shell] macos_epic_embed: blocked a navigation to the Epic Games Launcher scheme ('com.epicgames.launcher://') -- D-14` in `gamelib.log`, and `EpicLauncherBlockedNotice` rendered with its locked copy ("Install from your Library instead — this view can't open the Epic Games Launcher."), auto-dismissing. At the app's minimum window width the notice row's message and its accent/icon stay fully visible and wrapped, never clipped by the window edge (UI-SPEC E5, as actually shipped: a bounded-width row under `StoreEmbedControls`, not the floating-toast shape UI-SPEC's draft originally described before Plan 03's Option 2A decision superseded it); repeating with the longest of the 49 translations of this string shows the same — the notice grows vertically, never past its max width.
+result: pending
+
+### 15. One reload on return when Epic sign-in state changed (launch 2)
+expected: This arm manipulates only GameLib's local `legendary` credential fixture file (a disposable copy, not the operator's live credential), never the Epic account session or the embedded WebView's cookie jar, and is run last in this launch per the Structural Reachability Review's one-shot-resource finding (Test 5) so it cannot consume Item 5's warm-jar premise. Changing the fixture's resolved value between two visits to the Stores tab issues exactly one `storeEmbedReload()` of the Epic subview; a second, subsequent visit with no further change issues none — proving the "issues none when unchanged" half (Test 4, absence-observability) rather than assuming it from silence (D-04).
+result: pending
+
+### Launch 3 — host-level block induced, same real profile, reverted immediately after
+
+### 16. Timeout → reload path (launch 3)
+expected: With Epic's store host routed to an unroutable address via a scoped `/etc/hosts` entry (reverted immediately after this item), opening Stores → Epic shows no paint within 45s, the exact literal `[shell] macos_epic_embed: load timed out past 45s` in `gamelib.log`, and `StoreEmbedTimeoutBanner` rendered with both Reload and Open in browser visible on one row at the app's minimum window width (UI-SPEC E3) — repeating with the longest of the 49 translations of the banner's message shows the same single-row shape, message may ellipsise, actions never clip. Reverting the hosts entry and clicking Reload shows the store recover and paint normally (D-05/D-07/D-08).
+result: pending
+
+### 17. Navigation failure delegate literal (launch 3)
+expected: During the same host-level-block window as Item 16, the literal `[shell] macos_epic_embed: {caller} -- {description}` appears in `gamelib.log` with `{caller}` equal to either `didFailNavigation` or `didFailProvisionalNavigation` (whichever the native delegate actually reports for this failure mode) and `{description}` equal to the real `NSError.localizedDescription()` text — recorded verbatim, not paraphrased.
+result: pending
+
+### 18. Challenge fallback with Try again, not sticky (launch 3, CONDITIONAL)
+expected: If a Cloudflare/Turnstile challenge is encountered on Epic's main frame at any point in this gate (most likely during Item 2 or Item 16's induced conditions), the exact literal `[shell] macos_epic_embed: main-frame response flagged as challenged (D-09)` appears in `gamelib.log`, `WebviewUnavailablePanel` renders with `reason="epic-challenged"` (heading "Epic Store browsing is temporarily blocked", body "Epic asked for a security check this view can't complete.") and a Try again button. Clicking Try again re-attempts the load; if the challenge has cleared, the panel reverts to normal Epic rendering on the next successful load — proving "not sticky" (Test 4, absence-observability) by a second, subsequent observation rather than assuming it. This item is CONDITIONAL per the ROADMAP's locked "challenge reputation" decision: if no challenge is ever encountered during this gate, record this item as skipped with the reason, not as a failure.
+result: pending
+
+### Launch 4 — full quit and relaunch, same real profile
+
+### 19. Last-URL restore across app restart (launch 4)
+expected: With Epic's embed navigated to a specific sub-page (not the store's root), fully quitting GameLib and relaunching it shows the Epic embed restore to that same last URL via the validated restore path on its first load — not the store's root, and with no visible reload loop (D-03).
+result: pending
