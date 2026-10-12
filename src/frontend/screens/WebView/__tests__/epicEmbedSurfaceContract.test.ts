@@ -209,6 +209,10 @@ describe('WebView index.tsx — Epic nav-signal chrome wiring (Phase 50 Plan 05,
   it('wires StoreEmbedTimeoutBanner to embedHost.loadTimedOut/onReload and EpicLauncherBlockedNotice to the local notice state', () => {
     expect(finalReturnSource).toMatch(/timedOut=\{embedHost\.loadTimedOut\}/)
     expect(finalReturnSource).toMatch(/visible=\{launcherNoticeVisible\}/)
+    // Review finding 15: the notice's auto-dismiss effect is keyed on the attempt identity.
+    expect(finalReturnSource).toMatch(
+      /attemptKey=\{embedHost\.launcherSchemeBlockedAt\}/
+    )
     expect(finalReturnSource).toMatch(
       /onDismissed=\{\(\) => setLauncherNoticeVisible\(false\)\}/
     )

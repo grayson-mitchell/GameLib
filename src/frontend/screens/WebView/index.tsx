@@ -630,6 +630,7 @@ export default function WebView() {
       />
       <EpicLauncherBlockedNotice
         visible={launcherNoticeVisible}
+        attemptKey={embedHost.launcherSchemeBlockedAt}
         onDismissed={() => setLauncherNoticeVisible(false)}
       />
       <div className="WebView__embedSlot" ref={slotCallbackRef}>
