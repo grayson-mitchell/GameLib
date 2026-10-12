@@ -1326,16 +1326,19 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     })
     expect(seeded.launcherSchemeBlockedAt).toBeNull()
 
-    const fired = await drainEpicNavEvent(options, {
-      blockedLauncherSchemeCount: 2
-    })
-    expect(fired.launcherSchemeBlockedAt).not.toBeNull()
+    await drainEpicNavEvent(options, { blockedLauncherSchemeCount: 2 })
+    // The effect that fires the notice runs during THIS render pass, after this render's own
+    // `useState()` read already captured the pre-effect value -- exactly like real React, where
+    // a `setState` call inside `useEffect` only becomes visible on the FOLLOWING render. One
+    // more render (deps unchanged, so the effect itself does not re-run) is what surfaces it.
+    const settled = reinvoke(options)
+    expect(settled.launcherSchemeBlockedAt).not.toBeNull()
 
     const unchanged = await drainEpicNavEvent(options, {
       blockedLauncherSchemeCount: 2
     })
     expect(unchanged.launcherSchemeBlockedAt).toBe(
-      fired.launcherSchemeBlockedAt
+      settled.launcherSchemeBlockedAt
     )
   })
 

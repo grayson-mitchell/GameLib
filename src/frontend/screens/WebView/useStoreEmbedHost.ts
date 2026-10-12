@@ -124,10 +124,34 @@ export interface StoreEmbedHostState {
   host: string
   canGoBack: boolean
   canGoForward: boolean
+  /**
+   * Phase 50 Plan 05 (D-07/D-08/D-11): mirrors Rust's load-timeout monitor (Plan 02), surfaced
+   * through this hook's existing drain -- see the derivation below for why no new state slot or
+   * poll loop was needed.
+   */
+  loadTimedOut: boolean
+  /**
+   * Phase 50 Plan 05 (D-10/D-11): mirrors Rust's Cloudflare-challenge detection (Plan 02),
+   * surfaced through the same drain.
+   */
+  challenged: boolean
+  /**
+   * Phase 50 Plan 05 (D-14): a fresh, distinct value each time a NEW blocked-launcher-scheme
+   * attempt is observed (never on the first-ever drain, which only seeds the baseline); `null`
+   * until the first notice fires. See the baseline-tracking effect below for the monotonic-
+   * counter reasoning.
+   */
+  launcherSchemeBlockedAt: number | null
   onBack: () => void
   onForward: () => void
   onReload: () => void
   onNavigate: (url: string) => void
+  /**
+   * Phase 50 Plan 05 (D-10/D-11): retry for `reason="epic-challenged"` only -- navigates the
+   * live embed back to the route's start URL (never the current url: a challenge can leave the
+   * embed sitting on Cloudflare's own interstitial) and re-shows it.
+   */
+  onTryAgain: () => void
 }
 
 export function useStoreEmbedHost({
@@ -158,6 +182,55 @@ export function useStoreEmbedHost({
       `[useStoreEmbedHost] navigation call resolved with status=error error=${result.error}`
     )
   }, [])
+
+  // ── EPIC NAV-SIGNAL SURFACING (Phase 50 Plan 05, D-07/D-10/D-11/D-14) ──────────────────────
+  //
+  // Plan 02 (Rust) emits three new OPTIONAL `StoreEmbedNavEvent` fields on an `'epic'` surface
+  // only -- REQUIRED there, FORBIDDEN everywhere else (`coerceNavState` enforces this in
+  // `storeEmbedFlowRegistration.ts`), so `?? false` below is a safe default rather than a
+  // channel that could ever go dark on a store that actually emits it. `StoreEmbedNavState` is
+  // structurally identical to the exported `StoreEmbedNavEvent` -- no new type declaration is
+  // needed for either field, and the drain effect just below (unchanged) is the only thing that
+  // ever writes `navState`, so these two plain derivations need no state slot of their own.
+  const loadTimedOut = navState.loadTimedOut ?? false
+  const challenged = navState.challenged ?? false
+
+  // `blockedLauncherSchemeCount` is a MONOTONIC COUNTER, not a boolean, precisely because the
+  // drain effect below applies only the LAST queued event per tick (GAP-D coalescing): a single
+  // tick landing after several blocked `com.epicgames.launcher://` attempts would otherwise
+  // report just one of them, or -- with a boolean that was already `true` -- none at all. Rust
+  // increments the count every time its block fires; this hook's only job is noticing the count
+  // MOVED, never reading its absolute value.
+  const launcherSchemeBaselineRef = useRef<number | null>(null)
+  const [launcherSchemeBlockedAt, setLauncherSchemeBlockedAt] = useState<
+    number | null
+  >(null)
+
+  useEffect(() => {
+    const count = navState.blockedLauncherSchemeCount
+    if (count === undefined) return
+    const baseline = launcherSchemeBaselineRef.current
+    if (baseline === null) {
+      // First-ever observed count: this is the pre-existing baseline (possibly a restored
+      // session already above zero), not a new attempt -- seeding it here fires no notice
+      // (D-14: one toast per attempt, never one at mount).
+      launcherSchemeBaselineRef.current = count
+      return
+    }
+    if (count > baseline) {
+      launcherSchemeBaselineRef.current = count
+      setLauncherSchemeBlockedAt(Date.now())
+      return
+    }
+    if (count < baseline) {
+      // The surface closed and reopened (a fresh Epic session starts its own count over) --
+      // reseed silently. Nothing was blocked just now, so this is not a notice.
+      launcherSchemeBaselineRef.current = count
+    }
+    // count === baseline: no-op, and effectively unreachable -- React never re-runs this effect
+    // for an unchanged dependency value, so a coalesced drain re-reporting the same count never
+    // even gets here. Left explicit anyway: the no-op IS the contract this property pins.
+  }, [navState.blockedLauncherSchemeCount])
 
   // ── IN-EMBED NAVIGATION DRAIN (GAP-D, D-22, REQ-40-06) ─────────────────────────────────────
   //
@@ -576,14 +649,36 @@ export function useStoreEmbedHost({
     [applyNavResult]
   )
 
+  const onTryAgain = useCallback(() => {
+    // D-10/D-11: navigate FIRST, then show -- showing before the navigate resolves would flash
+    // the stale challenged content under the panel for one frame. Retries the route's START
+    // url, never `navState.url`/`onReload`'s current-url semantics: a challenge can leave the
+    // embed sitting on Cloudflare's own interstitial, which is not a url worth retrying.
+    window.api
+      .storeEmbedNavigate(startUrl)
+      .then((result) => {
+        applyNavResult(result)
+        window.api.storeEmbedShow().catch((error) => {
+          logNavCallFailure('storeEmbedShow (onTryAgain)', error)
+        })
+      })
+      .catch((error) => {
+        logNavCallFailure('storeEmbedNavigate (onTryAgain)', error)
+      })
+  }, [applyNavResult, startUrl])
+
   return {
     currentUrl: navState.url,
     host: navState.host,
     canGoBack: navState.canGoBack,
     canGoForward: navState.canGoForward,
+    loadTimedOut,
+    challenged,
+    launcherSchemeBlockedAt,
     onBack,
     onForward,
     onReload,
-    onNavigate
+    onNavigate,
+    onTryAgain
   }
 }
