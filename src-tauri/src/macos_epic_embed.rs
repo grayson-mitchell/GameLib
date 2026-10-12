@@ -27,18 +27,28 @@
 //! already tracks -- so `back()`/`forward()`/`reload()`/`navigate()` below call straight through
 //! to the native methods instead, and `nav_state_json()` reads `URL()`/`canGoBack()`/
 //! `canGoForward()` live off the webview itself.
+//!
+//! **Decision: the load-timeout timer keeps running while the tab is hidden** (Phase 50 Plan 02,
+//! answering RESEARCH.md Open Question 1). `spawn_load_timeout_monitor`'s loop consults nothing
+//! about visibility, and `hide()`/`deselect()` do not touch `nav_started_at`. This is deliberate,
+//! not an oversight: a timed-out banner that is already correct the instant the tab becomes
+//! visible again beats a reset that would silently extend a real stall for as long as the user
+//! leaves the tab hidden. Only `close()` ends the monitor thread.
 #![cfg(target_os = "macos")]
 
 use std::ffi::c_void;
 use std::sync::mpsc::channel as mpsc_channel;
 use std::sync::{Mutex, OnceLock};
-use std::time::Duration;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use objc2::rc::Retained;
 use objc2::runtime::{NSObject, ProtocolObject};
 use objc2::{define_class, msg_send, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::NSView;
-use objc2_foundation::{NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURLRequest, NSURL};
+use objc2_foundation::{
+    NSError, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURLRequest, NSURL,
+};
 use objc2_web_kit::{
     WKNavigation, WKNavigationAction, WKNavigationActionPolicy, WKNavigationDelegate, WKWebView,
     WKWebViewConfiguration, WKWebsiteDataStore,
@@ -57,6 +67,52 @@ pub(crate) const EPIC_EMBED_STORE_KEY: &str = "epic";
 /// queued event is dropped, never the newest -- the frontend always sees the most recent nav
 /// state, even if it has fallen behind.
 pub(crate) const EPIC_EMBED_NAV_EVENTS_CAP: usize = 50;
+
+/// Bound for the Epic surface's load-timeout flag (Phase 50 Plan 02). 45 seconds matches this
+/// project's existing bound idiom (Phase 49 D-01), clears nearly every observed healthy cold
+/// Epic load (spike 024: 11 of 16 runs rendered by 40 s), and surfaces the stopped-document-
+/// stream stall well before the 120 s the spike sampled at. `spawn_load_timeout_monitor` (below)
+/// is the ONLY consumer that reads this constant to decide when to raise
+/// `EpicEmbedSurface::load_timed_out` -- the frontend never re-derives this number, so there is
+/// exactly one place it lives. Declared as a `Duration`, not a raw integer, so every comparison
+/// site stays unit-correct with no secondary "seconds vs. millis" conversion to get wrong.
+pub(crate) const EPIC_EMBED_LOAD_TIMEOUT: Duration = Duration::from_secs(45);
+
+/// Pure boundary check for `EPIC_EMBED_LOAD_TIMEOUT` (Phase 50 Plan 02): `true` once `elapsed`
+/// has reached or passed `bound`, matching this project's existing `>=`-at-the-bound idiom
+/// (Phase 49 D-01) rather than a strict `>` that would leave the exact-boundary instant
+/// classified as "not yet timed out" for one more monitor tick. A free function -- no
+/// `&AppHandle`, no webview -- so `cargo test` can cover the boundary without a live `WKWebView`,
+/// exactly as `store_embed_navigation_policy` (main.rs) is factored. The one call site is
+/// `spawn_load_timeout_monitor`, below.
+fn epic_embed_load_timed_out(elapsed: Duration, bound: Duration) -> bool {
+    elapsed >= bound
+}
+
+#[cfg(test)]
+mod epic_embed_load_timed_out_tests {
+    use super::*;
+
+    #[test]
+    fn just_under_the_bound_is_not_timed_out() {
+        let elapsed = EPIC_EMBED_LOAD_TIMEOUT - Duration::from_millis(1);
+        assert!(!epic_embed_load_timed_out(elapsed, EPIC_EMBED_LOAD_TIMEOUT));
+    }
+
+    #[test]
+    fn exactly_at_the_bound_is_timed_out() {
+        assert!(epic_embed_load_timed_out(
+            EPIC_EMBED_LOAD_TIMEOUT,
+            EPIC_EMBED_LOAD_TIMEOUT
+        ));
+    }
+
+    #[test]
+    fn just_over_the_bound_is_timed_out() {
+        let elapsed = EPIC_EMBED_LOAD_TIMEOUT + Duration::from_millis(1);
+        assert!(epic_embed_load_timed_out(elapsed, EPIC_EMBED_LOAD_TIMEOUT));
+    }
+}
 
 // SAFETY: a raw pointer value is not normally `Send`, but every address wrapped here is a bare
 // address, reconstructed into a live reference (or into an owning `Retained<T>` via
@@ -80,6 +136,28 @@ struct EpicEmbedSurface {
     selected: bool,
     top_level_host: Option<String>,
     pending_nav_events: Vec<Value>,
+    /// Bumped on every `didStartProvisionalNavigation` (Phase 50 Plan 02). Read by
+    /// `spawn_load_timeout_monitor`'s main-thread re-check: if a newer navigation has bumped
+    /// this since the monitor's lock-only pre-check, the raise this tick was about to commit is
+    /// stale and must not land -- the overwritten `nav_started_at` alone would still mostly work,
+    /// but re-checking the generation under the SAME lock as the actual flag write closes the
+    /// narrow window where a pre-check and a landing `didStartProvisionalNavigation` interleave.
+    nav_generation: u64,
+    /// `Some(t)` while a main-frame navigation is in flight with no `didFinishNavigation`/failure
+    /// callback yet; `None` once one lands (success or failure), or freshly re-set to `Some` by
+    /// the next `didStartProvisionalNavigation`. Read by `spawn_load_timeout_monitor` to compute
+    /// elapsed time. Deliberately NOT touched by `hide()`/`show()`/`deselect()` -- see this
+    /// module's own "Timer while hidden" doc comment, above.
+    nav_started_at: Option<Instant>,
+    /// `true` once `spawn_load_timeout_monitor` has raised the flag for the navigation currently
+    /// in flight. Cleared by the next `didStartProvisionalNavigation` or by `didFinishNavigation`/
+    /// either failure hook (D-11: every load starts fresh, and a genuine failure is not a
+    /// timeout).
+    load_timed_out: bool,
+    /// Cleared by `didStartProvisionalNavigation` now (D-11: every load starts fresh); Task 3
+    /// adds the one call site that sets it `true` (the main-frame challenge-response hook) and
+    /// the second clear site (`navigate()`).
+    challenged: bool,
 }
 
 static EPIC_EMBED_SURFACE: OnceLock<Mutex<EpicEmbedSurface>> = OnceLock::new();
@@ -160,12 +238,103 @@ impl EpicEmbedSurface {
     /// rationale. A method (not a free function taking `&mut EpicEmbedSurface`) so it is
     /// callable identically on a locked `MutexGuard` (auto-deref) and on a bare, lock-free
     /// struct value in a unit test -- see `epic_embed_enqueue_nav_event_tests`, below.
-    fn enqueue_nav_event(&mut self, event: Value) {
+    ///
+    /// Merges the surface's current `loadTimedOut` flag (Phase 50 Plan 02) onto `event` right
+    /// before pushing, so every one of this module's several enqueue call sites automatically
+    /// carries current flag state without each one separately threading it through its own
+    /// `nav_state_json()` call. `event` is always the `Value::Object` `nav_state_json()` builds;
+    /// a non-object would mean a future call site stopped using that constructor, so this merges
+    /// unconditionally into an object and leaves any other shape untouched.
+    fn enqueue_nav_event(&mut self, mut event: Value) {
+        if let Some(map) = event.as_object_mut() {
+            map.insert("loadTimedOut".to_string(), Value::Bool(self.load_timed_out));
+        }
         self.pending_nav_events.push(event);
         if self.pending_nav_events.len() > EPIC_EMBED_NAV_EVENTS_CAP {
             self.pending_nav_events.remove(0);
         }
     }
+}
+
+/// Spawns the Epic surface's one load-timeout monitor thread (Phase 50 Plan 02). Exactly ONE
+/// call site -- inside `open()`'s cold path, right after a fresh subview is parked -- so a page
+/// that navigates in a loop can never spawn a second thread (T-50-07); the same thread serves
+/// every navigation for the life of the surface, and the loop exits only once the surface no
+/// longer holds a webview (i.e. after `close()`).
+///
+/// The loop sleeps 1 second, then takes a cheap LOCK-ONLY pre-check with NO webview touch --
+/// every `WKWebView` accessor is main-thread-only and this is a plain worker thread -- and reads
+/// `nav_started_at`/`load_timed_out` to decide whether a raise LOOKS needed, snapshotting the
+/// surface's current `nav_generation` alongside that decision.
+///
+/// A positive pre-check dispatches to the main thread via `run_on_main_thread` to RE-VALIDATE
+/// under the lock before committing the raise -- a double-checked-lock pattern, not a
+/// webview-touching one, since nothing here needs the webview itself until the very end (building
+/// the enqueued event). The re-check both recomputes elapsed time from whatever `nav_started_at`
+/// holds AT THAT MOMENT and compares `nav_generation` against the snapshot: re-deriving elapsed
+/// from the live value would already be self-consistent on its own (a newer
+/// `didStartProvisionalNavigation` overwrites `nav_started_at` with a fresh instant, so elapsed
+/// naturally stops looking timed-out), but comparing the generation too makes the supersede rule
+/// ("a navigation that starts while a previous one is still in flight supersedes it") an explicit,
+/// documented check rather than an emergent property of one field's overwrite semantics.
+fn spawn_load_timeout_monitor(app: AppHandle) {
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(1));
+
+        let (generation_snapshot, needs_raise) = match surface().lock() {
+            Ok(guard) => {
+                if guard.webview.is_none() {
+                    return;
+                }
+                let needs = !guard.load_timed_out
+                    && guard.nav_started_at.is_some_and(|t| {
+                        epic_embed_load_timed_out(t.elapsed(), EPIC_EMBED_LOAD_TIMEOUT)
+                    });
+                (guard.nav_generation, needs)
+            }
+            Err(_) => return,
+        };
+
+        if !needs_raise {
+            continue;
+        }
+
+        let _ = app.run_on_main_thread(move || {
+            let Ok(mut guard) = surface().lock() else {
+                return;
+            };
+            if guard.webview.is_none() {
+                return;
+            }
+            // "with an unchanged generation": a newer `didStartProvisionalNavigation` landing
+            // between the pre-check above and this dispatch running would have bumped
+            // `nav_generation`, and that is what makes this stale raise supersede rather than
+            // fire against the NEW navigation.
+            if guard.nav_generation != generation_snapshot {
+                return;
+            }
+            let still_timed_out = !guard.load_timed_out
+                && guard.nav_started_at.is_some_and(|t| {
+                    epic_embed_load_timed_out(t.elapsed(), EPIC_EMBED_LOAD_TIMEOUT)
+                });
+            if !still_timed_out {
+                return;
+            }
+            guard.load_timed_out = true;
+            guard.nav_started_at = None;
+            eprintln!(
+                "[shell] macos_epic_embed: load timed out past {EPIC_EMBED_LOAD_TIMEOUT:?}"
+            );
+            let webview_ptr = guard.webview.as_ref().map(|p| p.0);
+            if let Some(ptr) = webview_ptr {
+                // SAFETY: see `open()`'s warm path -- identical reasoning; the lock just taken
+                // guarantees `webview` is still the live pointer `open()`'s cold path parked.
+                let webview: &WKWebView = unsafe { &*(ptr as *const WKWebView) };
+                let event = nav_state_json(webview);
+                guard.enqueue_nav_event(event);
+            }
+        });
+    });
 }
 
 /// Opens (cold) or re-shows and re-navigates (warm) the Epic `WKWebView` subview.
@@ -195,6 +364,9 @@ pub(crate) fn open(
         .get_window(crate::MAIN_WINDOW_LABEL)
         .ok_or_else(|| format!("epic_embed_open:no-window:{}", crate::MAIN_WINDOW_LABEL))?;
     let url_string = url.to_string();
+    // Cloned up front so the cold path below can hand an OWNED `AppHandle` to
+    // `spawn_load_timeout_monitor` -- the monitor thread outlives this whole call.
+    let app_for_monitor = app.clone();
 
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     if let Err(e) = app.run_on_main_thread(move || {
@@ -264,6 +436,23 @@ pub(crate) fn open(
             let webview: Retained<WKWebView> =
                 unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
 
+            // [ASSUMED] (D-06, RESEARCH.md Assumptions Log A1): key-value coding with the
+            // drawing-background key set to a boxed `false` is standard, long-documented Apple
+            // KVC usage for making a WKWebView paint transparently so the styled placeholder
+            // shows through the slot until Epic's own page paints -- but it has NO in-repo
+            // precedent and `objc2-web-kit` exposes no typed method for it, so this reaches
+            // `objc2`'s raw `msg_send!` instead. If the key name or value type is wrong, this
+            // call SILENTLY NO-OPS rather than erroring, leaving the subview opaque. The live
+            // gate's cold-jar arm (plan 06) is the measurement for this, not a test; a no-op
+            // there should produce a todo recording the measurement, never a first-paint-signal
+            // mechanism, which D-06 already rules out as unnecessary.
+            unsafe {
+                let draws_background_false = NSNumber::new_bool(false);
+                let key = NSString::from_str("drawsBackground");
+                let _: () =
+                    msg_send![&*webview, setValue: &*draws_background_false, forKey: &*key];
+            }
+
             let delegate = EpicEmbedNavDelegate::new(mtm);
             unsafe {
                 webview.setNavigationDelegate(Some(ProtocolObject::from_ref(&*delegate)));
@@ -292,6 +481,10 @@ pub(crate) fn open(
             guard.selected = true;
             guard.top_level_host = None;
             guard.enqueue_nav_event(event);
+            drop(guard);
+            // The ONLY `spawn_load_timeout_monitor` call site -- see its own doc comment for why
+            // exactly one monitor thread must exist per surface, regardless of navigation count.
+            spawn_load_timeout_monitor(app_for_monitor);
             Ok(())
         })();
         let _ = tx.send(result);
@@ -770,6 +963,10 @@ define_class!(
             let event = nav_state_json(webview);
             if let Ok(mut guard) = surface().lock() {
                 guard.top_level_host = host;
+                // A genuine finish is NOT a timeout (Phase 50 Plan 02): clear both the
+                // in-flight clock and any flag a slow-but-eventually-successful load raised.
+                guard.nav_started_at = None;
+                guard.load_timed_out = false;
                 guard.enqueue_nav_event(event);
             } else {
                 eprintln!(
@@ -777,8 +974,73 @@ define_class!(
                 );
             }
         }
+
+        // Phase 50 Plan 02: the remaining three `WKNavigationDelegate` lifecycle hooks. All
+        // four (this one plus `did_finish_navigation`, above, and the two failure hooks, below)
+        // are main-frame-only by the delegate's own contract per RESEARCH.md's vendored-crate
+        // confirmation -- no extra frame filtering is added, and none of the four carry a
+        // frame-info parameter to filter on even if it were wanted.
+        #[unsafe(method(webView:didStartProvisionalNavigation:))]
+        fn did_start_provisional_navigation(
+            &self,
+            webview: &WKWebView,
+            _navigation: Option<&WKNavigation>,
+        ) {
+            let event = nav_state_json(webview);
+            if let Ok(mut guard) = surface().lock() {
+                guard.nav_generation = guard.nav_generation.wrapping_add(1);
+                guard.nav_started_at = Some(Instant::now());
+                guard.load_timed_out = false;
+                // D-11: every load starts fresh -- cleared here even though nothing yet sets
+                // this flag to `true` until Task 3's challenge-response hook lands.
+                guard.challenged = false;
+                guard.enqueue_nav_event(event);
+            } else {
+                eprintln!(
+                    "[shell] WARN: macos_epic_embed surface registry poisoned -- continuing"
+                );
+            }
+        }
+
+        #[unsafe(method(webView:didFailNavigation:withError:))]
+        fn did_fail_navigation(
+            &self,
+            webview: &WKWebView,
+            _navigation: Option<&WKNavigation>,
+            error: &NSError,
+        ) {
+            epic_embed_handle_navigation_failure(webview, error, "didFailNavigation");
+        }
+
+        #[unsafe(method(webView:didFailProvisionalNavigation:withError:))]
+        fn did_fail_provisional_navigation(
+            &self,
+            webview: &WKWebView,
+            _navigation: Option<&WKNavigation>,
+            error: &NSError,
+        ) {
+            epic_embed_handle_navigation_failure(webview, error, "didFailProvisionalNavigation");
+        }
     }
 );
+
+/// Shared body for the two navigation-failure hooks (Phase 50 Plan 02): a genuine failure is NOT
+/// a timeout -- it clears `nav_started_at`/`load_timed_out` rather than setting either -- and the
+/// user sees WebKit's own failure through the logged line, not a slow-load notice. Factored out
+/// because `didFailNavigation`/`didFailProvisionalNavigation` differ only in which delegate
+/// method called them, which `caller` names for the log line.
+fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, caller: &str) {
+    let description = error.localizedDescription().to_string();
+    eprintln!("[shell] macos_epic_embed: {caller} -- {description}");
+    let event = nav_state_json(webview);
+    if let Ok(mut guard) = surface().lock() {
+        guard.nav_started_at = None;
+        guard.load_timed_out = false;
+        guard.enqueue_nav_event(event);
+    } else {
+        eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+    }
+}
 
 impl EpicEmbedNavDelegate {
     fn new(mtm: MainThreadMarker) -> Retained<Self> {

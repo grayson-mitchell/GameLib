@@ -550,12 +550,16 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
     )
+    // `loadTimedOut` (Phase 50 Plan 02) is REQUIRED on every `surface: 'epic'` event as of this
+    // plan -- Task 1's original fixture (pre-Plan-02) omitted it and would now throw; updated
+    // here rather than left stale, since it is this same plan's own change that made it required.
     const epicEvent = {
       url: 'https://store.epicgames.com/en-US/',
       host: 'store.epicgames.com',
       canGoBack: false,
       canGoForward: true,
-      surface: 'epic'
+      surface: 'epic',
+      loadTimedOut: false
     }
     input.write(
       `${JSON.stringify({ id: frame?.id, ok: true, result: [epicEvent] })}\n`
@@ -587,6 +591,91 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     )
     await expect(promise).rejects.toThrow(
       /store_embed_take_nav_events\[0\]: malformed response \(canGoBack must be a boolean\)/
+    )
+  })
+
+  // ── Phase 50 Plan 02, Task 2: `loadTimedOut` is REQUIRED on `surface: 'epic'` and FORBIDDEN
+  // everywhere else -- both directions throw rather than coerce (same discipline as `surface`
+  // itself, Task 1). ──
+  it("takeNavEvents throws when a surface: 'epic' event is missing loadTimedOut", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://store.epicgames.com/en-US/',
+            host: 'store.epicgames.com',
+            canGoBack: false,
+            canGoForward: true,
+            surface: 'epic'
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(loadTimedOut must be a boolean when surface is 'epic'\)/
+    )
+  })
+
+  it("takeNavEvents throws when a surface: 'tauri' event carries loadTimedOut", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://www.gog.com/',
+            host: 'www.gog.com',
+            canGoBack: false,
+            canGoForward: false,
+            surface: 'tauri',
+            loadTimedOut: false
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(loadTimedOut is only valid when surface is 'epic'\)/
+    )
+  })
+
+  it('takeNavEvents throws when a surface-less event carries loadTimedOut', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://www.gog.com/',
+            host: 'www.gog.com',
+            canGoBack: false,
+            canGoForward: false,
+            loadTimedOut: false
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(loadTimedOut is only valid when surface is 'epic'\)/
     )
   })
 

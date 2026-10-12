@@ -143,6 +143,21 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
       `${channel}: malformed response (surface must be 'tauri' or 'epic' when present): ${JSON.stringify(result)}`
     )
   }
+  // `loadTimedOut` (Phase 50 Plan 02) is the Epic surface's load-timeout flag -- REQUIRED when
+  // `surface` is `'epic'` (a missing value cannot be told apart from "not timed out" if
+  // defaulted) and FORBIDDEN on every other event, since no other surface tracks this state.
+  // Both directions throw rather than coerce, matching this function's own documented contract.
+  if (candidate.surface === 'epic') {
+    if (typeof candidate.loadTimedOut !== 'boolean') {
+      throw new Error(
+        `${channel}: malformed response (loadTimedOut must be a boolean when surface is 'epic'): ${JSON.stringify(result)}`
+      )
+    }
+  } else if (candidate.loadTimedOut !== undefined) {
+    throw new Error(
+      `${channel}: malformed response (loadTimedOut is only valid when surface is 'epic'): ${JSON.stringify(result)}`
+    )
+  }
   return {
     url: candidate.url,
     host: candidate.host,
@@ -150,6 +165,9 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
     canGoForward: candidate.canGoForward,
     ...(candidate.surface !== undefined
       ? { surface: candidate.surface as 'tauri' | 'epic' }
+      : {}),
+    ...(candidate.surface === 'epic'
+      ? { loadTimedOut: candidate.loadTimedOut as boolean }
       : {})
   }
 }

@@ -46,6 +46,14 @@ export interface StoreEmbedBounds {
  * `WKWebView` subview macOS now uses for Epic (`'epic'`, see `macos_epic_embed.rs`). Optional and
  * never defaulted: every event the Tauri-managed embed emits predates this field and omits it,
  * and `storeEmbedFlowRegistration.ts`'s `coerceNavState` only validates it when present.
+ *
+ * `loadTimedOut` (Phase 50 Plan 02) is the Epic surface's load-timeout flag
+ * (`EPIC_EMBED_LOAD_TIMEOUT`, `macos_epic_embed.rs`): `true` once a navigation has been in
+ * flight past the bound with no `didFinishNavigation`/failure callback, reset on the next
+ * `didStartProvisionalNavigation` or a successful finish. REQUIRED (never optional) when
+ * `surface` is `'epic'` — a boolean the caller cannot tell apart from "not timed out" if it were
+ * allowed to default — and FORBIDDEN on every other event, since no other surface tracks this
+ * state. `coerceNavState` enforces both directions and throws rather than coercing either one.
  */
 export interface StoreEmbedNavEvent {
   url: string
@@ -53,6 +61,7 @@ export interface StoreEmbedNavEvent {
   canGoBack: boolean
   canGoForward: boolean
   surface?: 'tauri' | 'epic'
+  loadTimedOut?: boolean
 }
 
 /**
