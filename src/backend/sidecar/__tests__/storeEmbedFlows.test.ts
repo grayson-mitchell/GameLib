@@ -541,6 +541,55 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     )
   })
 
+  // ── Phase 50 Plan 02, Task 1: the Epic surface's `surface: 'epic'` nav events go through the
+  // SAME coercion as every Tauri-managed event above -- these two cases prove that end to end. ──
+  it("takeNavEvents round-trips an Epic-shaped event with `surface: 'epic'` preserved", async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    const epicEvent = {
+      url: 'https://store.epicgames.com/en-US/',
+      host: 'store.epicgames.com',
+      canGoBack: false,
+      canGoForward: true,
+      surface: 'epic'
+    }
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: [epicEvent] })}\n`
+    )
+    await expect(promise).resolves.toEqual([epicEvent])
+  })
+
+  it('takeNavEvents still throws on a non-boolean canGoBack when the event carries `surface: "epic"` -- the surface field does not bypass validation', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://store.epicgames.com/en-US/',
+            host: 'store.epicgames.com',
+            canGoBack: 'nope',
+            canGoForward: true,
+            surface: 'epic'
+          }
+        ]
+      })}\n`
+    )
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[0\]: malformed response \(canGoBack must be a boolean\)/
+    )
+  })
+
   const SAMPLE_NAV_STATE = {
     url: 'https://store.steampowered.com/app/440',
     host: 'store.steampowered.com',

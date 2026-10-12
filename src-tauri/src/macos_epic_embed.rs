@@ -518,6 +518,66 @@ pub(crate) fn take_nav_events() -> Result<Value, String> {
     Ok(Value::Array(std::mem::take(&mut guard.pending_nav_events)))
 }
 
+#[cfg(test)]
+mod epic_embed_enqueue_nav_event_tests {
+    use super::*;
+
+    // RED (Phase 50 Plan 02, Task 1): `EpicEmbedSurface::enqueue_nav_event` does not exist yet --
+    // `enqueue_event` below is still a free function taking `&mut EpicEmbedSurface`, matching the
+    // plan's OLDER naming. This test (and the module's own call sites) is written against the
+    // plan's literal target shape -- a method on the struct -- so it fails to compile until the
+    // GREEN commit restructures `enqueue_event` into `EpicEmbedSurface::enqueue_nav_event`.
+    #[test]
+    fn epic_embed_drops_the_oldest_entry_once_the_cap_is_exceeded() {
+        let mut surface_state = EpicEmbedSurface::default();
+        for i in 0..(EPIC_EMBED_NAV_EVENTS_CAP + 5) {
+            surface_state.enqueue_nav_event(serde_json::json!({ "i": i }));
+        }
+        assert_eq!(
+            surface_state.pending_nav_events.len(),
+            EPIC_EMBED_NAV_EVENTS_CAP
+        );
+        // The oldest 5 entries (i = 0..=4) were dropped -- the remaining window starts at 5 and
+        // ends at cap + 4, proving the NEWEST entry always survives.
+        assert_eq!(surface_state.pending_nav_events.first().unwrap()["i"], 5);
+        assert_eq!(
+            surface_state.pending_nav_events.last().unwrap()["i"],
+            EPIC_EMBED_NAV_EVENTS_CAP + 4
+        );
+    }
+}
+
+#[cfg(test)]
+mod epic_embed_take_nav_events_tests {
+    use super::*;
+
+    #[test]
+    fn epic_embed_a_second_drain_with_no_navigation_in_between_returns_empty_without_erroring() {
+        {
+            let mut guard = surface().lock().expect("surface lock");
+            guard.pending_nav_events.clear();
+            guard.enqueue_nav_event(serde_json::json!({ "url": "https://store.epicgames.com/" }));
+        }
+
+        let first = take_nav_events().expect("first drain succeeds");
+        assert_eq!(
+            first.as_array().expect("result is an array").len(),
+            1,
+            "first drain returns the one queued event"
+        );
+
+        // Idle drain: nothing navigated between the two calls. An empty array is the healthy
+        // idle state, not an error -- `take_nav_events` must not fail just because the queue
+        // happens to be empty.
+        let second = take_nav_events().expect("second drain succeeds without erroring");
+        assert_eq!(
+            second.as_array().expect("result is an array").len(),
+            0,
+            "idle drain returns an empty array, never an error"
+        );
+    }
+}
+
 struct EpicEmbedNavDelegateIvars;
 
 define_class!(
