@@ -179,6 +179,51 @@ describe('WebviewUnavailablePanel — reason="platform" (D-02, REQ-40-12)', () =
     button?.props.onClick?.()
     expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
   })
+
+  // quick 261012-f25: the platform reason is reachable on EVERY OS (the D-34 deep-link escape
+  // hatch renders the panel with no `reason`), so its body copy must name no OS.
+  const OS_NEUTRAL_BODY =
+    "GameLib can't open this page in its in-app store and wiki browser."
+
+  it('renders an OS-neutral body: no macOS / Linux / Windows anywhere in the platform panel', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'platform'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).not.toMatch(/\b(macOS|Linux|Windows)\b/)
+  })
+
+  it('renders the exact OS-neutral body copy', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'platform'
+    }) as AnyReactElement
+
+    expect(collectText(element)).toContain(OS_NEUTRAL_BODY)
+  })
+
+  it('the en catalogue body equals the component default (they cannot drift apart)', () => {
+    const gamelib = JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'public',
+          'locales',
+          'en',
+          'gamelib.json'
+        ),
+        'utf-8'
+      )
+    ) as { webview: { unavailable: { platform: { body: string } } } }
+
+    expect(gamelib.webview.unavailable.platform.body).toBe(OS_NEUTRAL_BODY)
+  })
 })
 
 describe('WebviewUnavailablePanel — reason="epic" (D-05/D-08, REQ-40-12)', () => {
@@ -523,5 +568,113 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
     ].join('\n')
 
     expect(hasTwoDistinctArms(reintroducedGuard)).toBe(false)
+  })
+})
+
+describe('WebView/index.tsx platform gate admits darwin, linux and win32 (quick 261012-f25)', () => {
+  const webViewIndexPath = join(__dirname, '..', '..', 'index.tsx')
+
+  /**
+   * Finds the `if (` whose block renders `reason="platform"` and returns its condition split on
+   * `&&` and trimmed, or `null` when the condition contains an `||` (a gate written with `||`
+   * would admit a platform the shell cannot embed on, or reject one it can, depending on the
+   * operands -- this gate is deliberately a pure `&&` chain of `!==` comparisons). Operates on
+   * comment-stripped source; whitespace and prettier line-wrapping are normalised.
+   */
+  function platformGateComparisons(strippedSource: string): string[] | null {
+    const reasonIdx = strippedSource.indexOf('reason="platform"')
+    if (reasonIdx === -1) return null
+    const ifIdx = strippedSource.lastIndexOf('if (', reasonIdx)
+    if (ifIdx === -1) return null
+    const parenStart = ifIdx + 'if '.length
+    let depth = 0
+    let end = -1
+    for (let i = parenStart; i < strippedSource.length; i++) {
+      if (strippedSource[i] === '(') depth++
+      else if (strippedSource[i] === ')') {
+        depth--
+        if (depth === 0) {
+          end = i
+          break
+        }
+      }
+    }
+    if (end === -1) return null
+    const condition = strippedSource
+      .slice(parenStart + 1, end)
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (condition.includes('||')) return null
+    return condition.split('&&').map((part) => part.trim())
+  }
+
+  function gateIsExactlyThreeOs(strippedSource: string): boolean {
+    const parts = platformGateComparisons(strippedSource)
+    if (parts === null) return false
+    const expected = [
+      "platform !== 'darwin'",
+      "platform !== 'linux'",
+      "platform !== 'win32'"
+    ]
+    return (
+      parts.length === expected.length &&
+      expected.every((comparison) => parts.includes(comparison))
+    )
+  }
+
+  it('the real source gate is exactly the three comparisons darwin / linux / win32', () => {
+    const stripped = stripSourceComments(
+      readFileSync(webViewIndexPath, 'utf-8')
+    )
+
+    expect(gateIsExactlyThreeOs(stripped)).toBe(true)
+  })
+
+  it('anti-vacuity: the real source renders reason="platform" exactly once', () => {
+    const stripped = stripSourceComments(
+      readFileSync(webViewIndexPath, 'utf-8')
+    )
+
+    expect(stripped.split('reason="platform"').length - 1).toBe(1)
+  })
+
+  it('self-test: the gate REJECTS a synthetic gate with only the darwin + linux comparisons (the pre-261012-f25 shape)', () => {
+    const twoOs = [
+      'function WebView() {',
+      "  if (platform !== 'darwin' && platform !== 'linux') {",
+      '    return <WebviewUnavailablePanel url={startUrl} reason="platform" />',
+      '  }',
+      '}'
+    ].join('\n')
+
+    expect(gateIsExactlyThreeOs(twoOs)).toBe(false)
+  })
+
+  it('self-test: the gate REJECTS a synthetic gate written with ||', () => {
+    const orGate = [
+      'function WebView() {',
+      "  if (platform !== 'darwin' || platform !== 'linux' || platform !== 'win32') {",
+      '    return <WebviewUnavailablePanel url={startUrl} reason="platform" />',
+      '  }',
+      '}'
+    ].join('\n')
+
+    expect(gateIsExactlyThreeOs(orGate)).toBe(false)
+  })
+
+  it('self-test: the gate ACCEPTS the exact three-comparison shape, wrapped across lines, in any order (positive control)', () => {
+    const threeOs = [
+      'function WebView() {',
+      '  if (',
+      "    platform !== 'win32' &&",
+      "    platform !== 'darwin' &&",
+      "    platform !== 'linux'",
+      '  ) {',
+      '    return <WebviewUnavailablePanel url={startUrl} reason="platform" />',
+      '  }',
+      '}'
+    ].join('\n')
+
+    expect(gateIsExactlyThreeOs(threeOs)).toBe(true)
   })
 })

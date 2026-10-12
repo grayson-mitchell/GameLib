@@ -32,7 +32,7 @@ const SEMIBOLD_TOKEN_PATTERN = /--semibold/
 const HEX_COLOUR_PATTERN = /#[0-9a-fA-F]{3,8}/
 const RETIRED_LABEL_KEY_PATTERN =
   /nav\.tabs\.games|userselector\.manageaccounts/
-const BAKED_CAPS_PATTERN = /'(ACCOUNTS|LIBRARY|STORES|SETTINGS)'/
+const BAKED_CAPS_PATTERN = /'(ACCOUNTS|LIBRARY|STORES|DOWNLOADS|SETTINGS)'/
 const TEXT_TRANSFORM_NONE_PATTERN = /text-transform:\s*none/
 
 type MockContextValue = {
@@ -115,6 +115,7 @@ jest.mock('@fortawesome/react-fontawesome', () => ({
 import { NavLink } from 'react-router-dom'
 import { Tab, Tabs } from '@mui/material'
 import NavTabs from '../components/NavTabs'
+import DownloadsTabIcon from '../components/DownloadsTabIcon'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -156,31 +157,33 @@ beforeEach(() => {
 })
 
 describe('NavTabs', () => {
-  it('renders exactly four tabs whose values are accounts, games, stores, settings in order', () => {
+  it('renders exactly five tabs whose values are accounts, games, stores, downloads, settings in order', () => {
     const root = callNavTabs()
     expect(root.type).toBe(Tabs)
 
     const tabs = tabsOf(root)
-    expect(tabs).toHaveLength(4)
+    expect(tabs).toHaveLength(5)
     expect(tabs.map((tab) => tab.props.value)).toEqual([
       'accounts',
       'games',
       'stores',
+      'downloads',
       'settings'
     ])
   })
 
-  it('resolves labels to Accounts, Library, Stores, Settings in that order', () => {
+  it('resolves labels to Accounts, Library, Stores, Downloads, Settings in that order', () => {
     const tabs = tabsOf(callNavTabs())
     expect(tabs.map((tab) => tab.props.label)).toEqual([
       'Accounts',
       'Library',
       'Stores',
+      'Downloads',
       'Settings'
     ])
   })
 
-  it('targets /login, /, /store/{default store}, /settings/general respectively', () => {
+  it('targets /login, /, /store/{default store}, /download-manager, /settings/general respectively', () => {
     contextValue = makeContextValue({
       gog: { username: 'TestUser', library: [] }
     })
@@ -189,17 +192,19 @@ describe('NavTabs', () => {
       '/login',
       '/',
       '/store/gog',
+      '/download-manager',
       '/settings/general'
     ])
   })
 
-  it('assigns ids tab-0 through tab-3 matching NAV_TAB_INDEX', () => {
+  it('assigns ids tab-0 through tab-4 matching NAV_TAB_INDEX', () => {
     const tabs = tabsOf(callNavTabs())
     expect(tabs.map((tab) => tab.props.id)).toEqual([
       'tab-0',
       'tab-1',
       'tab-2',
-      'tab-3'
+      'tab-3',
+      'tab-4'
     ])
   })
 
@@ -216,19 +221,38 @@ describe('NavTabs', () => {
     expect(root.props.value).toBe('settings')
   })
 
-  it("sets the Tabs value to false (no selection) for pathname '/download-manager', and no tab reports selected", () => {
+  it("sets the Tabs value to 'downloads' for pathname '/download-manager', with exactly one tab selected", () => {
     pathname = '/download-manager'
+    const root = callNavTabs()
+    expect(root.props.value).toBe('downloads')
+
+    const tabs = tabsOf(root)
+    expect(
+      tabs.filter((tab) => tab.props.value === root.props.value)
+    ).toHaveLength(1)
+  })
+
+  it('sets the Tabs value to false (no selection) for an unrouted pathname, and no tab reports selected', () => {
+    pathname = '/nowhere'
     const root = callNavTabs()
     expect(root.props.value).toBe(false)
 
     // MUI derives `selected` for each Tab by comparing the Tabs' `value`
-    // against the Tab's own `value` prop -- none of the four tab values
-    // ('accounts' | 'games' | 'stores' | 'settings') can ever equal `false`,
-    // so no tab is marked selected when the strip's value is `false`.
+    // against the Tab's own `value` prop -- none of the five tab values
+    // ('accounts' | 'games' | 'stores' | 'downloads' | 'settings') can ever
+    // equal `false`, so no tab is marked selected when the strip's value is
+    // `false`.
     const tabs = tabsOf(root)
     tabs.forEach((tab) => {
       expect(tab.props.value).not.toBe(root.props.value)
     })
+  })
+
+  it('the downloads tab icon is a DownloadsTabIcon element and its label is a plain string', () => {
+    const tab = tabsOf(callNavTabs()).find((t) => t.props.value === 'downloads')
+    const icon = tab?.props.icon as ReactElement | undefined
+    expect(icon?.type).toBe(DownloadsTabIcon)
+    expect(typeof tab?.props.label).toBe('string')
   })
 
   it('invokes refreshLibrary with { runInBackground: true, origin: "nav-tabs-games-tab" } via the Games tab onClick when a logged-in store has an empty library', async () => {
@@ -425,6 +449,11 @@ describe('NavTabs onboarding-tour anchors', () => {
     expect(tab?.props['data-tour']).toBe('nav-stores')
   })
 
+  it('the downloads tab carries data-tour="nav-downloads"', () => {
+    const tab = tabsOf(callNavTabs()).find((t) => t.props.value === 'downloads')
+    expect(tab?.props['data-tour']).toBe('nav-downloads')
+  })
+
   it('the settings tab carries data-tour="nav-settings"', () => {
     const tab = tabsOf(callNavTabs()).find((t) => t.props.value === 'settings')
     expect(tab?.props['data-tour']).toBe('nav-settings')
@@ -437,6 +466,6 @@ describe('NavTabs onboarding-tour anchors', () => {
       root.props['data-tour'],
       ...tabs.map((tab) => tab.props['data-tour'])
     ]
-    expect(new Set(values).size).toBe(5)
+    expect(new Set(values).size).toBe(6)
   })
 })

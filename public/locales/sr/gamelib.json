@@ -452,8 +452,7 @@
                 "heading": "Pregledanje Epic Store-a još uvek nije dostupno unutar aplikacije"
             },
             "platform": {
-                "heading": "Pregledanje prodavnice i wiki-ja unutar aplikacije još uvek nije dostupno na ovoj platformi",
-                "body": "Prikaz prodavnice i vikija u okviru aplikacije GameLib dostupan je na macOS. Na ovoj platformi to još uvek nije dostupno."
+                "heading": "Pregledanje prodavnice i wiki-ja unutar aplikacije još uvek nije dostupno na ovoj platformi"
             }
         },
         "embedPlaceholder": {

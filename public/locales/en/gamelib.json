@@ -64,7 +64,8 @@
         "navLabel": "Donate"
     },
     "downloadManager": {
-        "progressPaused": "Paused"
+        "progressPaused": "Paused",
+        "upNext": "Up Next"
     },
     "edit-game": {
         "sgdb": {
@@ -497,7 +498,7 @@
             "next-step": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
             "open-in-browser": "Open in browser",
             "platform": {
-                "body": "GameLib's in-app store and wiki browsing is available on macOS. It isn't available on this platform yet.",
+                "body": "GameLib can't open this page in its in-app store and wiki browser.",
                 "heading": "In-app store and wiki browsing isn't available on this platform yet"
             }
         }

@@ -182,7 +182,7 @@ describe('App shell layout (F-34.10-03 seam recipe, F-34.10-06 scroll relocation
     // own trailing padding must consume the SAME custom property so
     // WindowControls (grid-area: navbar, re-anchored by plan 34.1-09; see
     // windowControlsPlacement.test.ts) never draws over the nav-right
-    // cluster (Downloads ring / wordmark). This rule was previously
+    // cluster (the tab strip's trailing edge; the Downloads ring was retired in quick 261012-dhs). This rule was previously
     // guarding a collision that could not occur, because Phase 34.10 moved
     // WindowControls out of the navbar row without anyone auditing the
     // consumers -- plan 34.1-09 restored the co-location, so this gate is

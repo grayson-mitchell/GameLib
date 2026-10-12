@@ -128,6 +128,7 @@ import {
   writeFileSync,
   readdirSync,
   mkdirSync,
+  rmSync,
   statSync
 } from 'fs'
 import { homedir, tmpdir } from 'os'
@@ -265,9 +266,9 @@ afterAll(() => {
 
 // ── Describe 1: Registration kind ──────────────────────────────────────────────────────────────
 // Extended by plan 34.5-11: HANDLE_CHANNELS carried all 4 invoke channels (shortcutsExists from
-// plan 34.5-08, plus addToSteam/removeFromSteam/isAddedToSteam), completing the cluster at 7.
-// Quick 261012-f05 (2026-10-12): addShortcut/removeShortcut kind-swapped send -> invoke so the
-// renderer can read the write outcome, so the cluster is now 6 handle + 1 send (total still 7).
+// plan 34.5-08, plus addToSteam/removeFromSteam/isAddedToSteam from that plan), completing the
+// cluster at 7 (4 handle, 3 send). Quick 261012-ca6 then moved `addShortcut` and `removeShortcut`
+// from send to invoke so the renderer can learn the outcome: 6 handle, 1 send (`processShortcut`).
 describe('registration kind — the 7 channels are registered with the correct kind, both directions', () => {
   const HANDLE_CHANNELS = [
     'shortcutsExists',
@@ -354,16 +355,26 @@ describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 
   it('260905-mv5 (no regression): still calls shortcutFiles/existsSync and returns true when a real title is present', async () => {
     const title = '260905-mv5 Site 4 No-Regression Game'
     mockGetGame.mockReturnValue({ getGameInfo: () => ({ title }) })
-    const [desktopFile] = shortcutFiles(title)
-    mkdirSync(desktopFile, { recursive: true })
+    // 261012-ca6: forced to the darwin path (`<home>/Applications/<title>.app`) so the directory
+    // below lands under the containment home on every host. With no override this test used to
+    // create an empty directory on the real OneDrive Desktop on Windows, where the known-folder
+    // lookup resolves `getPath('desktop')` outside the containment home.
+    const originalPlatform = overrideProcessPlatform('darwin')
+    try {
+      const [desktopFile] = shortcutFiles(title)
+      expect(desktopFile.startsWith(homedir())).toBe(true)
+      mkdirSync(desktopFile, { recursive: true })
 
-    const handler = handlerRegistry.get('shortcutsExists')
-    expect(handler).toBeDefined()
+      const handler = handlerRegistry.get('shortcutsExists')
+      expect(handler).toBeDefined()
 
-    await expect(handler?.(undefined, 'AppName', 'legendary')).resolves.toBe(
-      true
-    )
-    expect(mockLogWarning).not.toHaveBeenCalled()
+      await expect(handler?.(undefined, 'AppName', 'legendary')).resolves.toBe(
+        true
+      )
+      expect(mockLogWarning).not.toHaveBeenCalled()
+    } finally {
+      overrideProcessPlatform(originalPlatform)
+    }
   })
 })
 
@@ -378,7 +389,10 @@ describe('containment — getPath(desktop) never resolves under the developer re
 })
 
 // ── Describe 3: Send-body safety ────────────────────────────────────────────────────────────────
-describe("send-body safety — processShortcut, the cluster's only send channel, guards its own promise; a removed guard would fail this suite via a real unhandledRejection event", () => {
+// `processShortcut` is the cluster's one remaining send-kind channel (261012-ca6 moved
+// `addShortcut`/`removeShortcut` to invoke; their failure paths are covered by the outcome
+// describe below).
+describe('send-body safety — the 1 send channel guards its own promise; a removed guard would fail this suite via a real unhandledRejection event', () => {
   it('processShortcut: a rejecting handleExit() (ctrl+q) never becomes an unhandled rejection, and logs the failure', async () => {
     const unhandled: unknown[] = []
     const onUnhandled = (reason: unknown): void => {
@@ -404,116 +418,165 @@ describe("send-body safety — processShortcut, the cluster's only send channel,
   })
 })
 
-// ── Describe 3b: invoke outcome (quick 261012-f05) ──────────────────────────────────────────────
+// ── Describe 3b: add/remove outcome (quick 261012-ca6) ─────────────────────────────────────────
 //
-// addShortcut/removeShortcut are invoke-kind and resolve a boolean write outcome so GameSubMenu can
-// flip its label from the RESULT rather than optimistically. The contract: resolve true after the
-// write settled and the success toast was sent; on a rejected write log through `logSendFailure`
-// and resolve false -- NEVER reject (a rejection would surface as the 60 s invoke bound or an
-// unhandled renderer rejection, not as a clean failure signal).
-describe('invoke outcome — addShortcut/removeShortcut resolve a boolean and never reject', () => {
-  async function withUnhandledWatch(
-    body: (unhandled: unknown[]) => Promise<void>
-  ): Promise<void> {
-    const unhandled: unknown[] = []
-    const onUnhandled = (reason: unknown): void => {
-      unhandled.push(reason)
+// `addShortcut`/`removeShortcut` are invoke-kind and resolve the `shortcutsExists` predicate
+// evaluated AFTER the work settled, so GameSubMenu can set `hasShortcuts` from the outcome.
+//
+// Safety: `process.platform` is forced to darwin, where `shortcutFiles(title)` is
+// `[<home>/Applications/<title>.app, same]` under the containment home, and every test asserts
+// that before it writes anything. On the operator's Windows box the un-overridden desktop path
+// resolves to the real OneDrive Desktop.
+describe('261012-ca6 add/remove resolve whether shortcuts exist once the work has settled', () => {
+  let originalPlatform: string
+  const created: string[] = []
+
+  beforeEach(() => {
+    originalPlatform = overrideProcessPlatform('darwin')
+  })
+
+  afterEach(() => {
+    overrideProcessPlatform(originalPlatform)
+    for (const path of created.splice(0)) {
+      rmSync(path, { recursive: true, force: true })
     }
-    process.on('unhandledRejection', onUnhandled)
-    try {
-      await body(unhandled)
-    } finally {
-      process.off('unhandledRejection', onUnhandled)
+  })
+
+  /** The contained `.app` path for `title`, asserted to sit under the jest containment home. */
+  function containedApp(title: string): string {
+    const [menuFile] = shortcutFiles(title)
+    expect(menuFile.startsWith(homedir())).toBe(true)
+    created.push(menuFile)
+    return menuFile
+  }
+
+  function outcomeGame(
+    title: string,
+    work: { add?: () => Promise<void>; remove?: () => Promise<void> }
+  ) {
+    return {
+      getGameInfo: () => makeGameInfo({ title }),
+      addShortcuts: jest.fn(work.add ?? (() => Promise.resolve())),
+      removeShortcuts: jest.fn(work.remove ?? (() => Promise.resolve()))
     }
   }
 
-  it('addShortcut: resolves true after addShortcuts(fromMenu) settles, and sends one success toast', async () => {
-    const addShortcuts = jest.fn().mockResolvedValue(undefined)
-    mockGetGame.mockReturnValue({
-      getGameInfo: () => makeGameInfo(),
-      addShortcuts,
-      removeShortcuts: jest.fn()
-    })
+  it('261012-ca6 addShortcut: addShortcuts rejects and nothing is on disk -> resolves false, logs, shows the error toast', async () => {
+    const title = '261012-ca6 Add Rejects Game'
+    containedApp(title)
+    mockGetGame.mockReturnValue(
+      outcomeGame(title, {
+        add: () => Promise.reject(new Error('boom-addShortcuts'))
+      })
+    )
 
     const handler = handlerRegistry.get('addShortcut')
     expect(handler).toBeDefined()
-    await expect(handler?.(null, 'app', 'legendary', true)).resolves.toBe(true)
+    await expect(handler?.(null, 'app', 'legendary', true)).resolves.toBe(false)
 
-    expect(addShortcuts).toHaveBeenCalledTimes(1)
-    expect(addShortcuts).toHaveBeenCalledWith(true)
-    expect(mockNotify).toHaveBeenCalledTimes(1)
-    expect(mockNotify.mock.calls[0][0].body).not.toBe('box.shortcuts.error')
-    expect(mockLogWarning).not.toHaveBeenCalled()
-  })
-
-  it('addShortcut: a rejecting addShortcuts() RESOLVES false (never rejects), logs the failure, and toasts the error exactly once', async () => {
-    await withUnhandledWatch(async (unhandled) => {
-      mockGetGame.mockReturnValue({
-        getGameInfo: () => makeGameInfo(),
-        addShortcuts: jest
-          .fn()
-          .mockRejectedValue(new Error('boom-addShortcuts')),
-        removeShortcuts: jest.fn()
-      })
-
-      const handler = handlerRegistry.get('addShortcut')
-      expect(handler).toBeDefined()
-      await expect(handler?.(null, 'app', 'legendary', false)).resolves.toBe(
-        false
-      )
-      await flush()
-
-      expect(unhandled).toHaveLength(0)
-      const found = mockLogWarning.mock.calls.some((call) =>
+    expect(
+      mockLogWarning.mock.calls.some((call) =>
         JSON.stringify(call).includes('addShortcut')
       )
-      expect(found).toBe(true)
-      // The failure is shown to the user; the "Shortcuts were created" toast is not. i18next
-      // is uninitialised in this suite, so `t()` returns the key.
-      expect(mockNotify).toHaveBeenCalledTimes(1)
-      expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error')
-    })
-  })
-
-  it('removeShortcut: resolves true after removeShortcuts() settles, and sends one success toast', async () => {
-    const removeShortcuts = jest.fn().mockResolvedValue(undefined)
-    mockGetGame.mockReturnValue({
-      getGameInfo: () => makeGameInfo(),
-      addShortcuts: jest.fn(),
-      removeShortcuts
-    })
-
-    const handler = handlerRegistry.get('removeShortcut')
-    expect(handler).toBeDefined()
-    await expect(handler?.(null, 'app', 'legendary')).resolves.toBe(true)
-
-    expect(removeShortcuts).toHaveBeenCalledTimes(1)
+    ).toBe(true)
     expect(mockNotify).toHaveBeenCalledTimes(1)
-    expect(mockLogWarning).not.toHaveBeenCalled()
+    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error')
   })
 
-  it('removeShortcut: a rejecting removeShortcuts() RESOLVES false (never rejects), logs the failure, and sends NO toast (existing behaviour kept)', async () => {
-    await withUnhandledWatch(async (unhandled) => {
-      mockGetGame.mockReturnValue({
-        getGameInfo: () => makeGameInfo(),
-        addShortcuts: jest.fn(),
-        removeShortcuts: jest
-          .fn()
-          .mockRejectedValue(new Error('boom-removeShortcuts'))
+  it('261012-ca6 addShortcut: addShortcuts creates the .app -> resolves true and shows the success toast', async () => {
+    const title = '261012-ca6 Add Succeeds Game'
+    const app = containedApp(title)
+    mockGetGame.mockReturnValue(
+      outcomeGame(title, {
+        add: () => {
+          mkdirSync(app, { recursive: true })
+          return Promise.resolve()
+        }
       })
+    )
 
-      const handler = handlerRegistry.get('removeShortcut')
-      expect(handler).toBeDefined()
-      await expect(handler?.(null, 'app', 'legendary')).resolves.toBe(false)
-      await flush()
+    await expect(
+      handlerRegistry.get('addShortcut')?.(null, 'app', 'legendary', true)
+    ).resolves.toBe(true)
 
-      expect(unhandled).toHaveLength(0)
-      const found = mockLogWarning.mock.calls.some((call) =>
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect(['box.shortcuts.message', 'box.shortcuts.message-mac']).toContain(
+      mockNotify.mock.calls[0][0].body
+    )
+  })
+
+  it('261012-ca6 addShortcut: addShortcuts resolves but writes nothing -> resolves false and shows the error toast, not the success one', async () => {
+    const title = '261012-ca6 Add Writes Nothing Game'
+    containedApp(title)
+    mockGetGame.mockReturnValue(outcomeGame(title, {}))
+
+    await expect(
+      handlerRegistry.get('addShortcut')?.(null, 'app', 'legendary', true)
+    ).resolves.toBe(false)
+
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error')
+  })
+
+  it('261012-ca6 removeShortcut: removeShortcuts deletes the .app -> resolves false', async () => {
+    const title = '261012-ca6 Remove Succeeds Game'
+    const app = containedApp(title)
+    mkdirSync(app, { recursive: true })
+    mockGetGame.mockReturnValue(
+      outcomeGame(title, {
+        remove: () => {
+          rmSync(app, { recursive: true, force: true })
+          return Promise.resolve()
+        }
+      })
+    )
+
+    await expect(
+      handlerRegistry.get('removeShortcut')?.(null, 'app', 'legendary')
+    ).resolves.toBe(false)
+
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect([
+      'box.shortcuts.message-remove',
+      'box.shortcuts.message-remove-mac'
+    ]).toContain(mockNotify.mock.calls[0][0].body)
+  })
+
+  it('261012-ca6 removeShortcut: removeShortcuts resolves but the .app remains -> resolves true and shows the remove error toast, not the success one', async () => {
+    const title = '261012-ca6 Remove Remains Game'
+    const app = containedApp(title)
+    mkdirSync(app, { recursive: true })
+    mockGetGame.mockReturnValue(outcomeGame(title, {}))
+
+    await expect(
+      handlerRegistry.get('removeShortcut')?.(null, 'app', 'legendary')
+    ).resolves.toBe(true)
+
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error-remove')
+  })
+
+  it('261012-ca6 removeShortcut: removeShortcuts rejects and the .app remains -> resolves true, logs, never rejects', async () => {
+    const title = '261012-ca6 Remove Rejects Game'
+    const app = containedApp(title)
+    mkdirSync(app, { recursive: true })
+    mockGetGame.mockReturnValue(
+      outcomeGame(title, {
+        remove: () => Promise.reject(new Error('boom-removeShortcuts'))
+      })
+    )
+
+    await expect(
+      handlerRegistry.get('removeShortcut')?.(null, 'app', 'legendary')
+    ).resolves.toBe(true)
+
+    expect(
+      mockLogWarning.mock.calls.some((call) =>
         JSON.stringify(call).includes('removeShortcut')
       )
-      expect(found).toBe(true)
-      expect(mockNotify).not.toHaveBeenCalled()
-    })
+    ).toBe(true)
+    expect(mockNotify).toHaveBeenCalledTimes(1)
+    expect(mockNotify.mock.calls[0][0].body).toBe('box.shortcuts.error-remove')
   })
 })
 
@@ -629,10 +692,12 @@ describeOnDarwin(
         '/Applications/GameLib Test.app/Contents/MacOS/GameLib'
       const title = 'Exe Pin Control Game'
 
-      const handler = handlerRegistry.get('addShortcut')
-      await expect(
-        handler?.(null, title, 'legendary', undefined)
-      ).resolves.toBe(true)
+      await handlerRegistry.get('addShortcut')?.(
+        null,
+        title,
+        'legendary',
+        undefined
+      )
 
       const [, menuFile] = shortcutFiles(title)
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
@@ -679,10 +744,12 @@ describeOnDarwin(
         )
       )
 
-      const handler = handlerRegistry.get('addShortcut')
-      await expect(
-        handler?.(null, title, 'legendary', undefined)
-      ).resolves.toBe(true)
+      await handlerRegistry.get('addShortcut')?.(
+        null,
+        title,
+        'legendary',
+        undefined
+      )
 
       const [, menuFile] = shortcutFiles(title)
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
@@ -703,16 +770,18 @@ describeOnDarwin(
       expect(withoutUrl).not.toContain('&')
     })
 
-    it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, resolves false (does not reject), and logs the failure', async () => {
+    it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, does not reject the listener, and logs the failure', async () => {
       delete process.env.GAMELIB_SHELL_EXE
       const title = 'Exe Pin Unset Game'
       const [, menuFile] = shortcutFiles(title)
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
 
-      const handler = handlerRegistry.get('addShortcut')
-      await expect(
-        handler?.(null, title, 'legendary', undefined)
-      ).resolves.toBe(false)
+      await handlerRegistry.get('addShortcut')?.(
+        null,
+        title,
+        'legendary',
+        undefined
+      )
 
       // PLAN-TIME CORRECTION: `generateMacOsApp` creates the `.app`/Resources/MacOS folders and
       // writes `Info.plist` BEFORE the `getPath('exe')` throw (the throw happens while building
@@ -730,16 +799,18 @@ describeOnDarwin(
       expect(found).toBe(true)
     })
 
-    it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — no run.sh, resolves false, logged failure', async () => {
+    it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — no run.sh, no reject, logged failure', async () => {
       process.env.GAMELIB_SHELL_EXE = ''
       const title = 'Exe Pin Empty Game'
       const [, menuFile] = shortcutFiles(title)
       const runShPath = `${menuFile}/Contents/MacOS/run.sh`
 
-      const handler = handlerRegistry.get('addShortcut')
-      await expect(
-        handler?.(null, title, 'legendary', undefined)
-      ).resolves.toBe(false)
+      await handlerRegistry.get('addShortcut')?.(
+        null,
+        title,
+        'legendary',
+        undefined
+      )
 
       expect(existsSync(runShPath)).toBe(false)
       const found = mockLogWarning.mock.calls.some(
@@ -754,12 +825,11 @@ describeOnDarwin(
 
 // ── Describe 6: addToSteam's GAMELIB_SHELL_EXE pin (plan 34.5-11) ─────────────────────────────
 //
-// This is the security-relevant test of THIS plan, and the counterpart to Describe 5's
-// `addShortcut` pin above (which this suite does not delete, merge or weaken). Same underlying
-// property (T-34.5-39/40, D-10 rejects `process.execPath`), two different observable shapes. Both
-// are invoke-kind since quick 261012-f05: `addShortcut` catches, logs via `logSendFailure`,
-// resolves `false` and writes nothing; `addToSteam` lets the throw REJECT to the caller and
-// writes nothing.
+// This is the security-relevant test of THIS plan, and the invoke-kind counterpart to Describe
+// 5's send-kind `addShortcut` pin above (which this suite does not delete, merge or weaken). Same
+// underlying property (T-34.5-39/40, D-10 rejects `process.execPath`), two different observable
+// shapes: `addShortcut` (send-kind) logs via `logSendFailure` and writes nothing; `addToSteam`
+// (invoke-kind) REJECTS to the caller and writes nothing.
 //
 // Drives the REAL `addNonSteamGame`/`removeNonSteamGame`/`isAddedToSteam` (`nonesteamgame.ts`,
 // left unmocked above) through the registered `addToSteam` handler in `handlerRegistry`, using a
@@ -767,7 +837,7 @@ describeOnDarwin(
 // own proven harness) -- never the developer's real Steam userdata directory, and never the
 // structurally redirected home either (this fixture is self-contained and cleaned up per test via
 // `tmpDir.removeCallback()`, independent of `jest.setupContainment.ts`'s home redirection).
-describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, rejecting counterpart to addShortcut's resolve-false pin above)", () => {
+describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, invoke-kind counterpart to addShortcut's send-kind pin above)", () => {
   let tmpDir: DirResult
   let steamUserConfigDir: string
   let shortcutsFile: string
@@ -783,7 +853,7 @@ describe("addToSteam's GAMELIB_SHELL_EXE pin (T-34.5-39/40, rejecting counterpar
   // pre-existing empty file sidesteps that branch entirely, so the load-bearing assertion below
   // (byte-identical content, no entry appended) proves the entry-append itself never happened,
   // mirroring plan 34.5-08's own "run.sh specifically absent" correction for the analogous
-  // addShortcut pin (resolve-false, quick 261012-f05).
+  // send-kind pin.
   const EMPTY_SHORTCUTS_VDF = Buffer.from([
     0, 115, 104, 111, 114, 116, 99, 117, 116, 115, 0, 8, 8
   ])
@@ -986,83 +1056,5 @@ describe('F-34.5-G6-08 discriminator — addToSteam over the REAL RPC frame path
     const mainRsPath = join(__dirname, '../../../../src-tauri/src/main.rs')
     const source = readFileSync(mainRsPath, 'utf-8')
     expect(source).toContain('unwrap_or(Value::Null)')
-  })
-})
-
-// ── Describe 8: addShortcut over the REAL RPC frame path (quick 261012-f05) ───────────────────
-//
-// Same harness shape as Describe 7. `getGame` is mocked so no file is written: the proof here is
-// that the boolean outcome survives framing -- `ok:true`, an OWN `result` key, and the right
-// value -- for BOTH the resolved write (true) and the rejected write (false). A rejected write
-// must come back as `ok:true, result:false`, NOT as `ok:false`: the handler never rejects.
-describe('addShortcut over the REAL RPC frame path — the boolean outcome survives framing (quick 261012-f05)', () => {
-  async function driveAddShortcutFrame(id: string) {
-    const { PassThrough } = await import('node:stream')
-    const { startRpcServer } = await import('../sidecarRpc')
-
-    const input = new PassThrough()
-    const output = new PassThrough()
-    const frames: Record<string, unknown>[] = []
-    let buffer = ''
-    output.on('data', (chunk: Buffer | string) => {
-      buffer += chunk.toString()
-      let newlineIndex = buffer.indexOf('\n')
-      while (newlineIndex !== -1) {
-        const line = buffer.slice(0, newlineIndex)
-        buffer = buffer.slice(newlineIndex + 1)
-        if (line.trim().length > 0) {
-          try {
-            frames.push(JSON.parse(line))
-          } catch {
-            // non-JSON diagnostic line, ignore
-          }
-        }
-        newlineIndex = buffer.indexOf('\n')
-      }
-    })
-
-    startRpcServer(input, output)
-
-    input.write(
-      `${JSON.stringify({
-        id,
-        kind: 'invoke',
-        channel: 'addShortcut',
-        args: ['RPC Frame Shortcut Game', 'legendary', true]
-      })}\n`
-    )
-    await flush()
-
-    return frames.find((f) => f.id === id)
-  }
-
-  it("a resolving write: the emitted frame has ok:true, an OWN 'result' key, and result === true", async () => {
-    mockGetGame.mockReturnValue({
-      getGameInfo: () => makeGameInfo(),
-      addShortcuts: jest.fn().mockResolvedValue(undefined),
-      removeShortcuts: jest.fn()
-    })
-
-    const frame = await driveAddShortcutFrame('f05-frame-true')
-
-    expect(frame).toBeDefined()
-    expect(frame?.ok).toBe(true)
-    expect(Object.prototype.hasOwnProperty.call(frame, 'result')).toBe(true)
-    expect(frame?.result).toBe(true)
-  })
-
-  it("a rejecting write: the emitted frame has ok:true (the handler never rejects), an OWN 'result' key, and result === false", async () => {
-    mockGetGame.mockReturnValue({
-      getGameInfo: () => makeGameInfo(),
-      addShortcuts: jest.fn().mockRejectedValue(new Error('boom-frame')),
-      removeShortcuts: jest.fn()
-    })
-
-    const frame = await driveAddShortcutFrame('f05-frame-false')
-
-    expect(frame).toBeDefined()
-    expect(frame?.ok).toBe(true)
-    expect(Object.prototype.hasOwnProperty.call(frame, 'result')).toBe(true)
-    expect(frame?.result).toBe(false)
   })
 })

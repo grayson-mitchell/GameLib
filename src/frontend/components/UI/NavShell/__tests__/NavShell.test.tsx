@@ -10,7 +10,7 @@
  * `window.api`, the PNG wordmark asset import, and every CSS-importing child
  * component are mocked so this file only exercises the shell root's own
  * assembly logic -- each child's own behavior is covered by its own suite
- * (NavTabsComponent.test.tsx, DownloadsRing.test.tsx, StoresPanel.test.tsx,
+ * (NavTabsComponent.test.tsx, DownloadsTabIcon.test.tsx, StoresPanel.test.tsx,
  * SettingsPanel.test.tsx, GamesPanel.test.tsx).
  *
  * No DOM-rendering or event-simulation helpers are used anywhere in this
@@ -46,10 +46,6 @@ jest.mock('../components/NavTabs', () => ({
   __esModule: true,
   default: () => ({ type: 'mock-navtabs', props: {} })
 }))
-jest.mock('../components/DownloadsRing', () => ({
-  __esModule: true,
-  default: () => ({ type: 'mock-downloadsring', props: {} })
-}))
 jest.mock('../components/GamesPanel', () => ({
   __esModule: true,
   default: () => ({ type: 'mock-gamespanel', props: {} })
@@ -78,7 +74,6 @@ jest.mock('../components/NavShellTour', () => ({
 // mocked bindings so tests can assert type identity (mirrors
 // NavTabsComponent.test.tsx / StoresPanel.test.tsx).
 import NavTabs from '../components/NavTabs'
-import DownloadsRing from '../components/DownloadsRing'
 import GamesPanel from '../components/GamesPanel'
 import StoresPanel from '../components/StoresPanel'
 import SettingsPanel from '../components/SettingsPanel'
@@ -162,38 +157,46 @@ describe('NavShell', () => {
     )
   })
 
-  it.each(['accounts', 'games', 'stores', 'settings', null] as const)(
-    'mounts HeroicVersion for activeTab %s',
-    (tab) => {
-      pathname =
-        tab === 'accounts'
-          ? '/login'
-          : tab === 'games'
-            ? '/'
-            : tab === 'stores'
-              ? '/store/epic'
+  it.each([
+    'accounts',
+    'games',
+    'stores',
+    'downloads',
+    'settings',
+    null
+  ] as const)('mounts HeroicVersion for activeTab %s', (tab) => {
+    pathname =
+      tab === 'accounts'
+        ? '/login'
+        : tab === 'games'
+          ? '/'
+          : tab === 'stores'
+            ? '/store/epic'
+            : tab === 'downloads'
+              ? '/download-manager'
               : tab === 'settings'
                 ? '/settings/general'
-                : '/download-manager'
+                : '/nowhere'
 
-      const { tier2 } = shellChildren()
-      const heroicVersionEl = collectElements(tier2.props.children).find(
-        (el) => el.type === HeroicVersion
-      )
-      expect(heroicVersionEl).toBeDefined()
-    }
-  )
+    const { tier2 } = shellChildren()
+    const heroicVersionEl = collectElements(tier2.props.children).find(
+      (el) => el.type === HeroicVersion
+    )
+    expect(heroicVersionEl).toBeDefined()
+  })
 
   it('the version slot carries hidden=true for every non-settings tab', () => {
-    ;['/login', '/', '/store/epic', '/download-manager'].forEach((path) => {
-      pathname = path
-      const { tier2 } = shellChildren()
-      const slot = collectElements(tier2.props.children).find(
-        (el) => el.props?.className === 'NavShell__versionSlot'
-      )
-      expect(slot).toBeDefined()
-      expect(slot?.props.hidden).toBe(true)
-    })
+    ;['/login', '/', '/store/epic', '/download-manager', '/nowhere'].forEach(
+      (path) => {
+        pathname = path
+        const { tier2 } = shellChildren()
+        const slot = collectElements(tier2.props.children).find(
+          (el) => el.props?.className === 'NavShell__versionSlot'
+        )
+        expect(slot).toBeDefined()
+        expect(slot?.props.hidden).toBe(true)
+      }
+    )
   })
 
   it('the version slot carries hidden=false on the settings tab', () => {
@@ -251,8 +254,23 @@ describe('NavShell', () => {
     )
   })
 
-  it('a null active tab collapses the tier-2 column', () => {
+  it('with activeTab downloads the tier-2 column contains no panel and carries the collapsed modifier', () => {
     pathname = '/download-manager'
+    const { tier2 } = shellChildren()
+    const panels = collectElements(tier2.props.children).filter((el) =>
+      [GamesPanel, StoresPanel, SettingsPanel].includes(
+        el.type as typeof GamesPanel
+      )
+    )
+
+    expect(panels).toHaveLength(0)
+    expect(tier2.props.className).toEqual(
+      expect.stringContaining('NavShell__tier2--collapsed')
+    )
+  })
+
+  it('a null active tab collapses the tier-2 column', () => {
+    pathname = '/nowhere'
     const { tier2 } = shellChildren()
 
     expect(tier2.props.className).toEqual(
@@ -285,18 +303,14 @@ describe('NavShell', () => {
     )
   })
 
-  it('the navbar renders NavTabs and DownloadsRing inside NavShell__navRight', () => {
+  it('the navbar renders NavTabs and no separate nav-right cluster', () => {
     const { navbar } = shellChildren()
     const all = collectElements(navbar.props.children)
 
     expect(all.some((el) => el.type === NavTabs)).toBe(true)
-
-    const navRight = all.find(
-      (el) => el.props?.className === 'NavShell__navRight'
+    expect(all.some((el) => el.props?.className === 'NavShell__navRight')).toBe(
+      false
     )
-    expect(navRight).toBeDefined()
-    const navRightChildren = collectElements(navRight?.props.children)
-    expect(navRightChildren.some((el) => el.type === DownloadsRing)).toBe(true)
   })
 
   it('subscribes to window.api.handleGoToScreen on mount and returns its unsubscribe from the effect', () => {

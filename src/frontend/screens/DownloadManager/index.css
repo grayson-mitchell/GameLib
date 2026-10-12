@@ -1,49 +1,53 @@
-.dmItemList > .gameListHeader {
-  padding: var(--space-md) 0;
-  grid-template-columns: 2fr 1fr 1fr 1fr 10%;
+.downloadManagerPage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-bottom: var(--space-xl);
 }
 
-.downloadManager
-  > .MuiTabs-root
-  > .MuiTabs-scroller
-  > .MuiTabs-flexContainer
-  > .MuiTab-root {
-  color: var(--text-default);
+.dmSection {
+  padding: var(--space-lg) var(--space-lg) 0;
 }
 
-.downloadManager
-  > .MuiTabs-root
-  > .MuiTabs-scroller
-  > .MuiTabs-flexContainer
-  > .Mui-selected {
-  color: var(--accent);
+/*
+ * The separator is drawn from --text-secondary, NOT --divider: --divider is
+ * declared in only 2 of the 10 theme blocks, and a var() with an undefined
+ * property and no fallback drops the whole declaration, so the line would
+ * vanish in the other 8 themes. --text-secondary is declared in the default
+ * body block and contrasts the body in both light and dark themes.
+ */
+.dmSection__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--text-secondary) 30%, transparent);
 }
 
-.downloadManager > .MuiTabs-root > .MuiTabs-scroller > .MuiTabs-indicator {
-  background-color: var(--accent);
-}
-
-.downloadManager {
-  padding: 0;
+.dmSection__title {
   margin: 0;
+  text-align: start;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--text-sm);
+  font-weight: var(--bold);
+  color: var(--text-secondary);
 }
 
-.downloadManagerCurrentSectionTitle {
-  margin: 0px;
-  text-align: initial;
-  padding-inline-start: 30px;
+.dmSection__count {
+  margin-inline-start: var(--space-2xs);
+  font-weight: var(--regular);
 }
 
-.downloadManagerQueuedSectionTitle {
-  margin: 30px 0px 0px;
-  text-align: initial;
-  padding-inline-start: 30px;
+.dmSection__list {
+  display: flex;
+  flex-direction: column;
 }
 
-.dmItemList {
-  border: solid 2px var(--input-background);
-  background-color: var(--input-background);
-  border-radius: 6px;
-  margin: var(--space-3xs) var(--space-lg);
-  padding: 0 var(--space-sm-fixed);
+/* Stops the row's own top border doubling the header line in the two themes
+   that define --divider. */
+.dmSection__list > .downloadManagerListItem:first-child {
+  border-top: none;
 }

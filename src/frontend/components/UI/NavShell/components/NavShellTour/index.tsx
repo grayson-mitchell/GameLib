@@ -14,7 +14,8 @@
  *
  * The old duplicate downloads-anchor defect (two different elements
  * sharing one selector under the retired sidebar) is resolved by
- * construction here -- `DownloadsRing` is the single element carrying
+ * construction here -- the Downloads tab in `NavTabs` (quick 261012-dhs;
+ * the ring this used to be is deleted) is the single element carrying
  * the downloads anchor.
  *
  * This file was renamed from its retired predecessor under the deleted

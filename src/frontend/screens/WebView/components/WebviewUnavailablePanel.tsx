@@ -23,17 +23,18 @@ interface Props {
  * into two distinct, honest reasons for `/store/*`, `/wiki` and
  * `store-page?store-url=` routes under Tauri:
  *
- * - `reason="platform"` (D-02): the live embed ships on macOS and Linux (the
+ * - `reason="platform"` (D-02): macOS, Linux and Windows all embed (the
  *   Linux arm per the positioning todo's 2026-09-28 decision (a): a real
- *   GTK-box-native embed rather than none). Windows alone now reaches this
- *   panel. The claim that the only embed evidence is Mac-restricted is
- *   stale: 025/026 validated a native Linux `add_child` and its GtkBox
- *   lever, and 028/029 then measured the GtkFixed reparent lever at
- *   100/100 allocation reliability; 027 cross-checked Windows and got a
- *   live Windows 11 PASS on 2026-09-30, discharging `38-E01` -- but that
- *   run was a HARNESS, not the shipped app, so Windows embedding remains
- *   unbuilt (filed as Phase 38 ledger items, D-04; the macOS evidence is
- *   still 016/017/018).
+ *   GTK-box-native embed rather than none; Windows since quick 261012-f25,
+ *   WebView2 `add_child` through the macOS positioning path -- spike 027
+ *   measured it on a harness, the shipped-app live run is still owed as
+ *   Phase 38 ledger items, D-04). `src/preload/tauriAttach.ts` yields only
+ *   those three platform values, so the branch in `WebView/index.tsx`'s
+ *   platform gate is a defensive fallback (an unknown platform value). This
+ *   reason is still reached on EVERY OS by the D-34 deep-link escape hatch,
+ *   which renders this panel with no `reason` (so the default applies) for
+ *   a deep link to an unconfigured origin. That is why the body copy names
+ *   no OS.
  * - `reason="epic"` (D-05/D-08): `/store/epic` is scoped out of the embed on
  *   EVERY platform, including macOS. Spike 024 measured why, across eleven
  *   runs (five on 2026-09-05/15, five on 2026-10-11 with the Chrome UA
@@ -112,8 +113,7 @@ const WebviewUnavailablePanel = ({ url, reason = 'platform' }: Props) => {
         )
       : tGamelib(
           'webview.unavailable.platform.body',
-          "GameLib's in-app store and wiki browsing is available on " +
-            "macOS. It isn't available on this platform yet."
+          "GameLib can't open this page in its in-app store and wiki browser."
         )
 
   const nextStep = tGamelib(

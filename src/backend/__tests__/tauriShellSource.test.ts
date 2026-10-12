@@ -425,10 +425,17 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // test named below is therefore HAND-RUN and CI-invisible, and THIS jest gate is the only
       // CI-visible proxy for these arms' existence. Read no green pipeline into any line here.
       //
-      // ALSO COMMON TO ALL TEN: each arm's non-macOS, non-Linux branch returns
-      // `:unsupported-platform` rather than compiling away, so a missing arm stays
-      // distinguishable from a dead channel. D-03's `unstable` feature gating (macOS, and since
-      // quick task `260930-blh` a Linux table too) was proven for macOS by a `cargo tree --target`
+      // CORRECTION (quick task `261012-f25`, 2026-10-12): the "CI runs no cargo step" paragraph
+      // above is no longer true. `.github/workflows/rust-test.yml` runs `cargo test --bin
+      // gamelib-shell` on windows-latest and macos-latest (no Linux leg), so its zero-hits grep
+      // claim no longer holds. That workflow's current green/red state is NOT claimed here.
+      //
+      // ALSO COMMON TO ALL TEN: each arm's branch for a target outside macOS/Linux/Windows
+      // returns `:unsupported-platform` rather than compiling away, so a missing arm stays
+      // distinguishable from a dead channel; since quick task `261012-f25` no shipped target
+      // compiles that branch. D-03's `unstable` feature gating (macOS, since quick task
+      // `260930-blh` a Linux table too, and since `261012-f25` a Windows table) was proven for
+      // macOS by a `cargo tree --target`
       // DIFF and NOT by a cross-target `cargo check`: only `aarch64-apple-darwin` is installed,
       // and the attempted `--target x86_64-pc-windows-msvc` run failed `E0463` in unrelated
       // crates before reaching this code. `40-02-SUMMARY.md` records that as an environment
@@ -444,6 +451,15 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // protected only by its statements being left inside their `#[cfg(target_os = "macos")]`
       // blocks unchanged. The live Linux run used a dev binary, an X11 session and the
       // DMABUF-DISABLED renderer path; the packaged AppImage, Wayland and HiDPI were not run.
+      //
+      // WINDOWS (quick task `261012-f25`): the Windows `unstable` gating is COMPILED natively on
+      // x86_64-pc-windows-msvc on the operator's Windows box -- `cargo check` and `cargo test
+      // --bin gamelib-shell` ran there. The `store_embed` Rust tests went from 1 passed (only
+      // the ungated source-text test) to 26 passed, and the full suite from 286 to 313. Windows
+      // positions the embed through the macOS `set_position`/`set_size` path (spike 027:
+      // WS_CHILD HWND, unconditional `SetWindowPos`). The shipped-app live Windows run is NOT
+      // done: the Phase 38 sitting-13 PASS was the spike 027 harness, not this app. macOS and
+      // Linux were NOT compiled by that change.
 
       // Plan 40-02 (D-01/D-03/D-17/D-18/D-21, REQ-40-02). PROOF STATUS -- SPLIT.
       // PROVEN (pure): `store_embed_open_args` and `store_embed_set_bounds_args` are covered by

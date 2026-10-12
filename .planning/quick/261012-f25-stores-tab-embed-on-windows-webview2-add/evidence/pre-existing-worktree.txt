@@ -1,0 +1,4 @@
+ M .planning/state.json
+?? .planning/debug/rust-test-ci-missing-sidecar.md
+?? .planning/milestone.lock
+?? .planning/quick/261012-f25-stores-tab-embed-on-windows-webview2-add/

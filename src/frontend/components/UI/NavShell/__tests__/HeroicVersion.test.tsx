@@ -6,7 +6,8 @@
  * No jsdom / react-test-renderer is installed in this project (see
  * `src/frontend/jest.config.js` docstring) -- `HeroicVersion` uses
  * `useState` (x4), `useEffect` (x2) and `useContext`, so it needs the
- * hand-rolled hooks harness (copied verbatim from `DownloadsRing.test.tsx`)
+ * hand-rolled hooks harness (originally copied from the since-deleted `DownloadsRing.test.tsx`;
+ * `DownloadsTabIcon.test.tsx` carries the same harness)
  * plus `useContext` mocked in the SAME `jest.mock('react', ...)` factory.
  *
  * The default export is `React.memo(function HeroicVersion() {...})`

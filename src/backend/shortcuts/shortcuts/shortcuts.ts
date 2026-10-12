@@ -4,12 +4,10 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
-  rm,
-  unlink,
   unlinkSync,
   writeFileSync
 } from 'graceful-fs'
-import { writeFile } from 'fs/promises'
+import { rm, unlink, writeFile } from 'fs/promises'
 import { IconIcns } from '@shockpkg/icon-encoder'
 import { join } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -147,6 +145,15 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
 
 /**
  * Removes a desktop shortcut from $HOME/Desktop and to $HOME/.local/share/applications
+ *
+ * Settles only after every deletion has finished, so a caller that reads the disk afterwards (the
+ * sidecar's `removeShortcut` channel does) sees the outcome and not a race. A file that is already
+ * gone counts as removed. A deletion that fails for any other reason is logged and the next file is
+ * still attempted, but it is NOT rethrown: four uninstall paths await this
+ * (`storeManagers/gog/games.ts`, `legendary/games.ts`, `nile/games.ts`, `zoom/games.ts`) and
+ * `sideload/games.ts` calls it un-awaited, so a new rejection would fail an uninstall over a stale
+ * shortcut, or surface as an unhandled rejection. The sidecar reads the outcome from the disk
+ * instead.
  * @async
  * @public
  */
@@ -156,21 +163,44 @@ async function removeShortcuts(game: Game) {
 
   const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
 
+  const removeFile = async (
+    file: string,
+    remove: () => Promise<void>,
+    removedMessage: string
+  ) => {
+    try {
+      await remove()
+      logInfo(removedMessage, LogPrefix.Backend)
+    } catch (error) {
+      // Already gone is the state we wanted.
+      if ((error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
+        return
+      }
+      logError([`Could not remove shortcut ${file}`, error], LogPrefix.Backend)
+    }
+  }
+
   if (desktopFile && !isMac) {
-    unlink(desktopFile, () =>
-      logInfo('Desktop shortcut removed', LogPrefix.Backend)
+    await removeFile(
+      desktopFile,
+      () => unlink(desktopFile),
+      'Desktop shortcut removed'
     )
   }
 
   if (menuFile) {
     if (isMac) {
-      rm(menuFile, { recursive: true, force: true }, () =>
-        logInfo('Applications shortcut removed', LogPrefix.Backend)
+      await removeFile(
+        menuFile,
+        () => rm(menuFile, { recursive: true, force: true }),
+        'Applications shortcut removed'
       )
       return
     }
-    unlink(menuFile, () =>
-      logInfo('Applications shortcut removed', LogPrefix.Backend)
+    await removeFile(
+      menuFile,
+      () => unlink(menuFile),
+      'Applications shortcut removed'
     )
   }
 }

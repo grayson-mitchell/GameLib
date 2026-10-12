@@ -323,4 +323,30 @@
       font-weight: var(--bold);
     }
   }
+
+  // Quick 261012-dhs: the Downloads tab's queue-count badge, replacing the
+  // count the deleted navbar ring carried. Tokens only.
+  .NavTabs__downloadsIcon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .NavTabs__downloadsCount {
+    position: absolute;
+    top: -0.6em;
+    inset-inline-end: -0.75em;
+    box-sizing: border-box;
+    min-width: 1.4em;
+    height: 1.4em;
+    padding: 0 0.35em;
+    border-radius: 0.7em;
+    background: var(--accent);
+    color: var(--body-background);
+    font-size: 0.65em;
+    font-weight: var(--bold);
+    line-height: 1.4em;
+    text-align: center;
+    pointer-events: none;
+  }
 }

@@ -49,6 +49,8 @@ const MODULES: ModuleSpec[] = [
   },
   {
     name: 'shortcuts',
+    // Quick 261012-ca6 (2026-10-12): 4 -> 6. `addShortcut` and `removeShortcut` moved from
+    // send-kind to invoke-kind and now resolve whether shortcuts exist on disk.
     path: join(__dirname, '../shortcutsFlowRegistration.ts'),
     expectedCount: 6
   },
@@ -170,9 +172,8 @@ describe('invoke-return-value sweep anti-rot gate (F-34.5-G6-08 / U-34.5-15)', (
   // Phase 45 Plan 01 (2026-10-10): 40 -> 43, the same +3 recorded on the `wineTools` module spec
   // above (`winetricksApply`, `winetricksQueueState`, `winetricksCancelRemaining`; all three are
   // invoke-kind, D-11).
-  // Quick 261012-f05 (2026-10-12): 43 -> 45, the same +2 recorded on the `shortcuts` module spec
-  // above (`addShortcut`, `removeShortcut`; kind-swapped send -> invoke, so the sweep now sees them
-  // and both handlers contain a literal `return`).
+  // Quick 261012-ca6 (2026-10-12): 43 -> 45, the same +2 recorded on the `shortcuts` module spec
+  // above (`addShortcut`, `removeShortcut`; both moved from send-kind to invoke-kind).
   // This total and the per-module counts must always move together -- if they ever disagree, the
   // extraction is wrong and neither number should be adjusted until that is understood.
   it('extracts exactly 45 channels total', () => {

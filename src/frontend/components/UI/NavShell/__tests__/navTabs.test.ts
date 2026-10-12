@@ -48,16 +48,23 @@ describe('navTabs', () => {
   })
 
   describe('NAV_TAB_IDS / NAV_TAB_INDEX', () => {
-    it('exposes the four tab ids in the documented order', () => {
-      expect(NAV_TAB_IDS).toEqual(['accounts', 'games', 'stores', 'settings'])
+    it('exposes the five tab ids in the documented order', () => {
+      expect(NAV_TAB_IDS).toEqual([
+        'accounts',
+        'games',
+        'stores',
+        'downloads',
+        'settings'
+      ])
     })
 
-    it('maps accounts, games, stores, settings to indices 0..3', () => {
+    it('maps accounts, games, stores, downloads, settings to indices 0..4', () => {
       expect(NAV_TAB_INDEX).toEqual({
         accounts: 0,
         games: 1,
         stores: 2,
-        settings: 3
+        downloads: 3,
+        settings: 4
       })
     })
   })
@@ -139,8 +146,8 @@ describe('navTabs', () => {
       expect(resolveActiveTab('/wiki')).toBe('settings')
     })
 
-    it("resolves '/download-manager' to null -- Downloads is ambient, not a tab", () => {
-      expect(resolveActiveTab('/download-manager')).toBeNull()
+    it("resolves '/download-manager' to downloads -- Downloads is a tab since quick 261012-dhs", () => {
+      expect(resolveActiveTab('/download-manager')).toBe('downloads')
     })
 
     it('resolves an unrouted path to null', () => {

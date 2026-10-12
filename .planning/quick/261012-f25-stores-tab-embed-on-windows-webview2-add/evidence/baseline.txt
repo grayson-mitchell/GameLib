@@ -1,0 +1,11 @@
+RUST_FULL=test result: ok. 286 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out
+RUST_STORE_EMBED=test result: ok. 1 passed; 0 failed
+RUSTFMT_CLEAN=yes
+CARGO_CHECK_WARNINGS=10
+UNSTABLE_ON_WINDOWS=0
+OLD_CFG_FORM=77
+UNSUPPORTED_ARMS=10
+PRESENCE_TOTAL_PAIRS=864
+LINT_GAMELIB_EXIT=0
+JEST_BASELINE=success=true suites=7 failedSuites=0 tests=675 failedTests=0
+JEST_GATE_RED=yes (1 failed, 32 passed: only the real-source three-OS assertion)

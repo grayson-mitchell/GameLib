@@ -77,7 +77,10 @@ feasibility 009–012), 2026-07-27 (Tauri login webview + cookies 013–015), 20
   `tauri-runtime-wry` recompile, ~11 s warm).
 - **The renderer is the ONLY owner of the embed's geometry** — a second bounds writer
   silently last-write-wins. JS `getBoundingClientRect()` maps 1:1 to child logical coords
-  (no titlebar offset at scale 1.0); fractional px round to whole logical px.
+  (no titlebar offset at scale 1.0) **only at webview zoom 1** -- under Accessibility zoom f
+  (`setZoom`), logical = CSS px x f, so scale the rect by the applied `--webview-zoom`
+  (`storeEmbedZoom.ts`, quick 261012-gn8; W8 PASS live on Windows at 120% and 80%, 2026-10-12);
+  fractional px round to whole logical px.
 - **Overlay UI cannot render above the embed** (native subview) — `hide()` it first.
 - **One default cookie jar per PROCESS across all windows AND children**;
   `data_store_identifier` genuinely partitions a child jar (macOS 14+).

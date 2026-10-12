@@ -66,7 +66,7 @@ are `.12s–.22s ease`; the one cubic-bezier is `cubic-bezier(.4,0,.2,1)` for pa
 
 | Area | Reference | Key Decision |
 |---|---|---|
-| Navigation shell | `references/navigation-shell.md` | Card/folder tabs won on **theme survival**, not looks; tier 2 is vertical; Downloads is an ambient progress ring, not a tab |
+| Navigation shell | `references/navigation-shell.md` | Card/folder tabs won on **theme survival**, not looks; tier 2 is vertical; Downloads was an ambient ring until 2026-10-12, when the user reversed it (quick 261012-dhs): it is now the fourth tier-1 tab |
 | Library filtering | `references/library-filtering.md` | Hybrid panel — views and collections one click, facets collapsed below, removable chips above the grid; facet counts **exclude their own facet** |
 
 ## Phase Mapping

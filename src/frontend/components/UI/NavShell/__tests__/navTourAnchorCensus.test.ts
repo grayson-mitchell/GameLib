@@ -6,8 +6,9 @@
  *
  * What this layer measures, and what it does NOT: Layer A (the
  * per-component assertions distributed across `NavItem.test.tsx`,
- * `SettingsPanel.test.tsx`, `NavTabsComponent.test.tsx`,
- * `DownloadsRing.test.tsx`, `libraryTourAnchors.test.tsx` and friends)
+ * `SettingsPanel.test.tsx`, `NavTabsComponent.test.tsx`
+ * (which now owns the downloads anchor's Layer A check, quick 261012-dhs),
+ * `libraryTourAnchors.test.tsx` and friends)
  * invokes each parent component directly and asserts a specific `nav-*` /
  * `library-*` string lands on a specific NAMED child, located by
  * `element.type` identity, not by string search. That is CORRECTNESS: it

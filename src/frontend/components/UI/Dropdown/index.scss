@@ -25,8 +25,8 @@
   // (#44475a, --navbar-background) -- the reported "black block". The
   // custom-property chain itself was confirmed fully healthy at all ten
   // measured DOM ancestors, so this is W1 (wrong token), not W2 (broken
-  // inheritance): the same fix DownloadsRing/index.scss's header comment
-  // records for its own mask fix applies here too -- remove the class of
+  // inheritance): the same fix the retired navbar ring (deleted in quick
+  // 261012-dhs) recorded for its mask applies here too -- remove the class of
   // bug rather than chase the symptom by swapping one absolute token for
   // another. Compositing transparently onto `.NavShell__tier2`'s own
   // surface leaves nothing to mismatch in any theme, including a future

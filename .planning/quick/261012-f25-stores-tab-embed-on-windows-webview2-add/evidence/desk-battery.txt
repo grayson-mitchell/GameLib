@@ -1,0 +1,13 @@
+# Task 1 desk battery (x86_64-pc-windows-msvc, native cargo, no --target)
+cargo check: clean (finished); warnings lines starting "warning:" = 10 (baseline 10)
+cargo fmt --check: exit 0
+Cargo.lock: git diff --quiet -> unchanged
+cargo test --bin gamelib-shell store_embed: BEFORE 1 passed -> AFTER 26 passed; 0 failed
+cargo test --bin gamelib-shell (full): BEFORE 286 passed -> AFTER 313 passed (+27); 0 failed; 3 ignored
+cargo tree -e features -i tauri 'tauri feature "unstable"' count: BEFORE 0 (native) -> AFTER native=1, x86_64-unknown-linux-gnu=1, aarch64-apple-darwin=1, x86_64-pc-windows-msvc=1
+two-OS cfg spelling (non-comment): 77 -> 0 ; three-OS spelling: 77
+:unsupported-platform arms (non-comment): 10 -> 10, all under cfg(not(any(macos,linux,windows))) (count 10)
+non-comment data_store_identifier: 0
+jest (5 files): success, 5 suites, 328 tests, 0 failed (baseline for 7 files: 7 suites, 675 tests)
+jest gate test observed RED (1 failed) then GREEN
+pnpm codecheck: clean; prettier --check on index.tsx, WebviewUnavailablePanel.test.tsx, tauriShellSource.test.ts: clean

@@ -7,8 +7,14 @@
  * inventing its own tab-id type or route-matching rules.
  */
 
-/** The four tier-1 tabs, in navbar left-to-right order. */
-export const NAV_TAB_IDS = ['accounts', 'games', 'stores', 'settings'] as const
+/** The five tier-1 tabs, in navbar left-to-right order. */
+export const NAV_TAB_IDS = [
+  'accounts',
+  'games',
+  'stores',
+  'downloads',
+  'settings'
+] as const
 
 // Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
 // flagged the previously-exported form as a used-in-module finding -- there
@@ -16,7 +22,7 @@ export const NAV_TAB_IDS = ['accounts', 'games', 'stores', 'settings'] as const
 type NavTabId = (typeof NAV_TAB_IDS)[number]
 
 /**
- * accounts -> 0, games -> 1, stores -> 2, settings -> 3.
+ * accounts -> 0, games -> 1, stores -> 2, downloads -> 3, settings -> 4.
  *
  * This index feeds the `id="tab-{index}"` attribute that
  * `components/UI/TabPanel/index.tsx`'s existing `aria-labelledby="tab-{index}"`
@@ -26,16 +32,16 @@ export const NAV_TAB_INDEX: Record<NavTabId, number> = {
   accounts: 0,
   games: 1,
   stores: 2,
-  settings: 3
+  downloads: 3,
+  settings: 4
 }
 
 /**
  * Resolves a hash-router pathname (`location.pathname`) to the tier-1 tab
- * that owns it, or `null` when the route has no tab -- currently only
- * `/download-manager`. That `null` is deliberate: per the settled design
- * (`navigation-shell.md` §6) Downloads is ambient state with its own
- * persistent progress ring, not a destination, so the tab strip legitimately
- * shows nothing lit there.
+ * that owns it, or `null` only for routes with no tab (unrouted paths).
+ * Quick task 261012-dhs reversed `navigation-shell.md` §6 by user decision:
+ * Downloads is now a destination tab, so `/download-manager` resolves to
+ * `'downloads'` (it was `null` in the ambient-ring era).
  */
 export function resolveActiveTab(pathname: string): NavTabId | null {
   if (pathname.includes('/login') || pathname.includes('/loginweb')) {
@@ -58,6 +64,10 @@ export function resolveActiveTab(pathname: string): NavTabId | null {
     pathname.includes('/humble-keys')
   ) {
     return 'stores'
+  }
+
+  if (pathname.includes('/download-manager')) {
+    return 'downloads'
   }
 
   if (

@@ -43,6 +43,8 @@
  *      SET EQUALITY (not size — a size-only check would pass if two channels swapped kinds)
  *      against `['logoutGOG', 'addShortcut', 'processShortcut', 'removeShortcut',
  *      'winetricksInstall']`, and per-module counts are pinned at 11/13/7/11/8, totalling 50.
+ *      (Historical figures. As of quick 261012-ca6 `addShortcut`/`removeShortcut` are invoke-kind
+ *      and the live send set is `['logoutGOG', 'processShortcut']`; see Describe 6 below.)
  *   7. SEAM Invariant B (Phase 34.5 Plan 13) — the 3 DROPPED Zoom channels (`authZoom`,
  *      `getZoomUserInfo`, `logoutZoom`) and the DEFERRED SteamGridDB channels (5 total as of
  *      Phase 34.6 Plan 08, winetricks and EOS overlay both having moved OUT of this deferred set
@@ -552,9 +554,8 @@ describe("containment pin — each module registers only its own declared channe
 const SEND_CHANNELS = [
   'logoutGOG',
   'processShortcut'
-  // Quick 261012-f05 (2026-10-12): `addShortcut` and `removeShortcut` kind-swapped send -> invoke
-  // so GameSubMenu can read the write outcome (4 -> 2 send, 65 -> 67 invoke; membership of
-  // SHORTCUTS_CHANNELS is unchanged).
+  // Quick 261012-ca6 (2026-10-12): `addShortcut` and `removeShortcut` were removed from this list
+  // (4 -> 2). They are invoke-kind now so the renderer can learn the outcome of a write.
   // Phase 34.6 Plan 07 (D-11) added `winetricksInstall` here as send-kind; Phase 45 Plan 02
   // (D-11 promote, 2026-10-10) retired it outright — removed from this list, 5 -> 4. See
   // RETIRED_SINCE_CENSUS in Describe 11 below for the historical-document cross-check this
@@ -569,7 +570,7 @@ describe('completeness — all 66 channels are registered with the right kind, a
     restoreCanonicalRegistrations()
   })
 
-  it('exactly 67 channels are handle-kind and exactly 2 are listen-kind (quick 261012-f05: 65/4 -> 67/2, addShortcut/removeShortcut kind-swapped, not added; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
+  it('exactly 67 channels are handle-kind and exactly 2 are listen-kind (Quick 261012-ca6, 2026-10-12: 65/4 -> 67/2, +2 invoke -2 send, kind-swapped not added, total channels unchanged; Phase 34.6 Plan 10: 59/5 -> 62/5, +3 invoke +0 send; Phase 45 Plan 01, 2026-10-10: 62/5 -> 65/5, +3 invoke winetricksApply/winetricksQueueState/winetricksCancelRemaining +0 send; Phase 45 Plan 02, 2026-10-10: 65/5 -> 65/4, +0 invoke -1 send — winetricksInstall retired outright, not kind-swapped)', () => {
     const handleChannels = [...handlerRegistry.keys()]
     const listenChannels = [...listenerRegistry.entries()]
       .filter(([, listeners]) => listeners.length > 0)
@@ -583,8 +584,8 @@ describe('completeness — all 66 channels are registered with the right kind, a
     // invoke, 5+0=5 send. Measured (jest failure ACTUAL: Received 65) and re-derived — agree.
     // Phase 45 Plan 02 (2026-10-10): `winetricksInstall` (send-kind) was deleted entirely, not
     // kind-swapped — handle count is unaffected (65), listen count drops by exactly 1 (5 -> 4).
-    // Quick 261012-f05 (2026-10-12): addShortcut/removeShortcut kind-swapped send -> invoke, so
-    // handle 65 -> 67 and listen 4 -> 2. Measured (jest failure Received: 67) and re-derived.
+    // Quick 261012-ca6: `addShortcut`/`removeShortcut` moved from send to invoke -- 65+2=67
+    // invoke, 4-2=2 send; the declared total of 66 is unchanged.
     expect(handleChannels.length).toBe(67)
     expect(listenChannels.length).toBe(2)
   })

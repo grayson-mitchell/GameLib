@@ -46,35 +46,68 @@ Windows shortcuts todo; no live run was made, and the failure path itself was ex
 through the sidecar's own result (`{ ok: false }` and the toast mapping), never through the
 renderer.
 
-## Resolution (2026-10-12, quick 261012-f05)
+## Fix (2026-10-12, quick 261012-ca6)
 
-Option 1 was taken: `addShortcut` and `removeShortcut` are invoke-kind and resolve a `Promise<boolean>`
-outcome. Option 2 (re-query `shortcutsExists`) was rejected because a send-kind channel has no
-settle signal to key the re-query on. Option 3 was not needed.
+**Decision.** Option 1 combined with option 2: `addShortcut` and `removeShortcut` are now
+invoke-kind and each resolves the `shortcutsExists` predicate, evaluated in the sidecar AFTER the
+work has settled. Option 2 alone (re-query from the renderer) cannot work with a send-kind channel:
+the transport resolves a send once the Rust shell has accepted the frame and the sidecar runs
+listeners fire-and-forget, so nothing in the renderer can observe when the write finished. Option 3
+(a pushed outcome event) needs a new frontend message, appName/runner filtering and a
+subscribe/unsubscribe lifecycle, all to rebuild a reply that invoke already provides. The return
+value is "do shortcuts exist now", not "did the call succeed": a partial add shows "Remove
+shortcuts" because a removable shortcut exists, and an add that wrote nothing does not flip.
 
-What changed. Backend and transport in `48cb42c3a`: both channels moved from `SyncIPCFunctions` to
-`AsyncIPCFunctions`, the preload builds them with `makeHandlerInvoker`, and the sidecar registers an
-`ipcMain.handle` pair. `addShortcut` resolves `true` after the write and the success toast, and
-`false` after `logSendFailure` and the existing `box.shortcuts.error` toast. `removeShortcut`
-resolves `true` after the success toast and `false` after `logSendFailure`, with no error toast as
-before. Neither rejects. The legacy `backend/shortcuts/ipc_handler.ts` parity copy moved to
-`addHandler` with the same contract. Renderer in `d7a5da8e6`: a new `toggleShortcuts` helper awaits
-the invoke and calls `setHasShortcuts` only on a strict `=== true`; `GameSubMenu` `handleShortcuts`
-delegates to it. A `false`, `null`, `undefined` or rejection leaves the label unchanged.
+**Fix.** Two commits.
 
-Pins that moved, each equal to the value derived in the plan once measured from jest Received output:
-census shortcuts `{invoke: 6, send: 1}`, invoke-return sweep shortcuts 6 and total 45, runnerSlice
-handle 67 and listen 2 (send set is `logoutGOG` and `processShortcut`). Per-module declared counts
-are unchanged at 66.
+- `f36b7e64f` (tracer): `src/common/types/ipc.ts` (both channels move to `AsyncIPCFunctions`,
+  `Promise<boolean>`), `src/preload/api/menu.ts` (`makeHandlerInvoker`),
+  `src/backend/sidecar/shortcutsFlowRegistration.ts` (invoke handlers, shared
+  `shortcutsExistOnDisk`, toast chosen from the outcome), `src/backend/shortcuts/ipc_handler.ts`
+  (the Electron-era copy, kept typechecking), the new
+  `src/frontend/screens/Game/GameSubMenu/shortcutsToggle.ts` (state set from `result === true`,
+  unchanged on rejection, busy released in `finally`), `GameSubMenu/index.tsx` (`handleShortcuts`
+  delegates, spinner while busy), and the four pins that count kinds
+  (`shortcutsFlows`, `runnerSliceRegistration`, `flowRegistrationCensus`,
+  `invokeReturnValueSweep`).
+- `2716f525e`: `src/backend/shortcuts/shortcuts/shortcuts.ts` (`removeShortcuts` awaits
+  `fs/promises` `unlink`/`rm`, ENOENT counts as removed, other failures go to `logError` and are not
+  rethrown), `shortcutsFlowRegistration.ts` (the removal toast only when nothing remains, else the
+  new `box.shortcuts.error-remove`), `public/locales/en/translation.json` (en only, as for
+  `box.shortcuts.error`), plus tests. The never-reject contract protects the four uninstall callers
+  that await `removeShortcuts` (gog, legendary, nile, zoom) and the one that does not (sideload).
 
-Tests added: handler true and false cases for both channels, real RPC frame cases proving `ok: true`,
-an own `result` key and `result` of `true` or `false` for `addShortcut`, and renderer cases for add
-and remove success, failure, a non-boolean result, rejection, no early flip, and a source guard on
-the call site.
+**Tests.** RED first. Task 1: `shortcutsToggle` failed to load (module missing), and
+`shortcutsFlows` had 7 failures besides the known containment one (2 registration-kind, 5 outcome).
+Task 2: `removeShortcutsOutcome` 3 failed / 1 passed (the ENOENT case already held), and 2 new
+`shortcutsFlows` toast cases failed. GREEN, local (Windows): `shortcutsToggle` 9/9,
+`removeShortcutsOutcome` 4/4, `addShortcutsOutcome` 4/4, `shortcutsExistsFallback` 6/6,
+`runnerSliceRegistration` 95/95, `flowRegistrationCensus` 72/72, `invokeReturnValueSweep` 7/7.
+`shortcutsFlows`: 30 passed / 1 failed (the known OneDrive containment test) / 4 skipped, six
+`261012-ca6` cases among the passes. Describe 5 of `shortcutsFlows` is darwin-only and was NOT run
+on this box; only its invocation changed (it now awaits the invoke handler), and `pnpm codecheck`
+is the only local check of that edit. `pnpm codecheck` exits 0, `pnpm lint` PASS on both ceilings,
+scoped eslint and `prettier --check` clean.
 
-Not verified. No live app run was made. The darwin-only cases in `shortcutsFlows.test.ts` ran on
-the executor host, which is macOS, so they are not skipped there; on a non-Mac host they skip. A
-transport rejection (the 60 s invoke bound, which these channels deliberately keep, like
-`addToSteam`) shows no toast and leaves the label unchanged. If the sidecar write then succeeds late,
-the label stays stale until remount. A double click during an in-flight add re-issues the add, which
-is idempotent on disk; no busy state was added.
+**Not exercised (operator-only).** A live click in the running app; the busy spinner's render; the
+toasts' render; the invoke-bound (60 s) rejection path in a real shell.
+
+**Side finding.** The pre-existing `260905-mv5 (no regression)` test created
+`%USERPROFILE%\OneDrive\Desktop\260905-mv5 Site 4 No-Regression Game.lnk`, an empty directory dated
+2026-10-08, on the operator's real Desktop. It now runs under the containment home. The leaked
+directory itself was left for the operator to delete.
+
+**Stale docs, not edited.** `.planning/IPC-PORT-INVENTORY.md` and `34.5-PORTED-CHANNELS.md` still
+list the two channels as send-kind. They are historical records.
+
+**CLOSED 2026-10-12 (quick 261012-ca6):** the menu entry flips only from the sidecar's disk answer.
+A failed add leaves it reading "Add shortcut", proven by the helper test and by the handler
+resolving false; the real Desktop has no `261012-ca6` entry after the runs.
+
+## Merge note (2026-10-12)
+
+Quick `261012-f05` landed the same fix independently in a second session on this branch
+(`48cb42c3a` backend/transport, `d7a5da8e6` renderer) with a resolve-the-call-outcome contract and
+a `GameSubMenu/shortcutToggle.ts` helper. At merge the `261012-ca6` implementation above was kept
+(disk-truth `shortcutsExists` return, busy state) and f05's two files were removed; f05's commits
+remain in history. Its summary lives under `.planning/quick/261012-f05-*/`.

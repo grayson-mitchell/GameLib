@@ -20,7 +20,7 @@ import { showSteamSubMenuInstallOptions } from 'frontend/helpers/steamInstallOpt
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { reportRepairFailure } from './repairFailure'
-import { toggleShortcuts } from './shortcutToggle'
+import { toggleShortcuts } from './shortcutsToggle'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import {
   callOrDeclare,
@@ -91,6 +91,7 @@ export default function GamesSubmenu({
   const [steamRefresh, setSteamRefresh] = useState<boolean>(false)
   const [addedToSteam, setAddedToSteam] = useState<boolean>(false)
   const [hasShortcuts, setHasShortcuts] = useState(false)
+  const [shortcutsBusy, setShortcutsBusy] = useState(false)
   const [eosOverlayEnabled, setEosOverlayEnabled] = useState<boolean>(false)
   const [eosOverlayRefresh, setEosOverlayRefresh] = useState<boolean>(false)
   const eosOverlayAppName = '98bc04bc842e4906993fd6d6644ffb8d'
@@ -206,8 +207,16 @@ export default function GamesSubmenu({
     })
   }
 
+  // The menu entry flips only from the sidecar's answer (whether a shortcut exists on disk once
+  // the add or remove has settled), never when the click fires. See `shortcutsToggle.ts`.
   async function handleShortcuts() {
-    await toggleShortcuts({ appName, runner, hasShortcuts, setHasShortcuts })
+    await toggleShortcuts({
+      hasShortcuts,
+      appName,
+      runner,
+      setHasShortcuts,
+      setBusy: setShortcutsBusy
+    })
   }
 
   function handleEdit() {
@@ -513,15 +522,19 @@ export default function GamesSubmenu({
                   ? t('button.sideload.edit', 'Edit App/Game')
                   : t('button.edit-game', 'Edit Game')}
               </button>{' '}
-              <button
-                onClick={async () => handleShortcuts()}
-                className="link button is-text is-link buttonWithIcon"
-              >
-                <ShortcutIcon />
-                {hasShortcuts
-                  ? t('submenu.removeShortcut', 'Remove shortcuts')
-                  : t('submenu.addShortcut', 'Add shortcut')}
-              </button>
+              {shortcutsBusy ? (
+                refreshCircle()
+              ) : (
+                <button
+                  onClick={async () => handleShortcuts()}
+                  className="link button is-text is-link buttonWithIcon"
+                >
+                  <ShortcutIcon />
+                  {hasShortcuts
+                    ? t('submenu.removeShortcut', 'Remove shortcuts')
+                    : t('submenu.addShortcut', 'Add shortcut')}
+                </button>
+              )}
               <button
                 onClick={async () => {
                   if (isSteam) {

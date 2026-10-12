@@ -146,6 +146,34 @@ class MockResizeObserver {
   globalThis as unknown as { ResizeObserver: typeof MockResizeObserver }
 ).ResizeObserver = MockResizeObserver
 
+// Stand-in for the DOM's MutationObserver (quick 261012-gn8), absent under `testEnvironment:
+// 'node'`. Unlike the ResizeObserver stub, `observe()` does NOT auto-fire: a real
+// MutationObserver reports only LATER mutations, never the current state.
+class MockMutationObserver {
+  static instances: MockMutationObserver[] = []
+  callback: () => void
+  observed: unknown = null
+  options: unknown = null
+  disconnected = false
+  constructor(callback: () => void) {
+    this.callback = callback
+    MockMutationObserver.instances.push(this)
+  }
+  observe(target?: unknown, options?: unknown): void {
+    this.observed = target ?? null
+    this.options = options ?? null
+  }
+  disconnect(): void {
+    this.disconnected = true
+  }
+  trigger(): void {
+    this.callback()
+  }
+}
+;(
+  globalThis as unknown as { MutationObserver: typeof MockMutationObserver }
+).MutationObserver = MockMutationObserver
+
 // A minimal real event registry (not a jest.fn() stub) so `beforeunload`/`resize`/`scroll`
 // listeners the hook registers can actually be dispatched by name from within a test, mirroring
 // `window`'s real addEventListener/removeEventListener contract closely enough for this hook's
@@ -188,6 +216,25 @@ const mockApi = {
 
 function dispatchWindowEvent(type: string): void {
   windowListeners.get(type)?.forEach((cb) => cb())
+}
+
+// Zoom stub (quick 261012-gn8). Properties 1-25 run with NO `document` global; only the
+// zoom-aware describe block installs one, through `setRootZoom`. `rootZoomValue` is a variable,
+// not a constant, because later tests mutate it mid-test to model the preload publishing
+// `--webview-zoom` after `setZoom` resolves.
+let rootZoomValue = ''
+// One stable object, so a test can prove which element the MutationObserver is bound to.
+const rootStub = {
+  style: {
+    getPropertyValue: (name: string) =>
+      name === '--webview-zoom' ? rootZoomValue : ''
+  }
+}
+function setRootZoom(value: string): void {
+  rootZoomValue = value
+  ;(globalThis as unknown as { document: unknown }).document = {
+    documentElement: rootStub
+  }
 }
 
 // D-30 persistence tests (below) need a real read/write surface: `localStorage` does not exist
@@ -1149,5 +1196,233 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(fakeLocalStorage.get('last-url-gog')).toBe(
       'https://www.gog.com/en/game/foo'
     )
+  })
+
+  // ── Zoom-aware bounds (quick 261012-gn8, W8) ───────────────────────────────────────────────
+  //
+  // Windows live gate W8 (2026-10-12, zoom 120%): the embed sat displaced over the enlarged chrome.
+  // The renderer measures the slot in CSS px; Rust positions the child webview in LOGICAL px, and
+  // under webview zoom f, logical = CSS x f. Properties 1-25 run with NO `document` global at all
+  // (as the real `storeEmbedReloadLoop` suite does) and must stay unchanged; this block installs a
+  // stub document carrying a MUTABLE `--webview-zoom`, and removes it afterwards.
+  describe('zoom-aware bounds (quick 261012-gn8, W8)', () => {
+    const R = { x: 10, y: 20, width: 300, height: 400 }
+
+    type Sent = { x: number; y: number; w: number; h: number }
+    const lastBounds = (): Sent => {
+      const calls = mockApi.storeEmbedSetBounds.mock.calls as unknown as [
+        Sent
+      ][]
+      return calls[calls.length - 1][0]
+    }
+    const firstOpenBounds = (): Sent => {
+      const calls = mockApi.storeEmbedOpen.mock.calls as unknown as [
+        string,
+        Sent,
+        string
+      ][]
+      return calls[0][1]
+    }
+    const expectBounds = (got: Sent, want: Sent): void => {
+      expect(got.x).toBeCloseTo(want.x)
+      expect(got.y).toBeCloseTo(want.y)
+      expect(got.w).toBeCloseTo(want.w)
+      expect(got.h).toBeCloseTo(want.h)
+    }
+
+    beforeEach(() => {
+      MockMutationObserver.instances = []
+      setRootZoom('')
+    })
+
+    afterEach(() => {
+      delete (globalThis as unknown as { document?: unknown }).document
+    })
+
+    // Z0 control. Observed-red mutation: normalising an absent property to anything other than 1
+    // (e.g. 0, which would zero the rect) turns this red -- the 100% payload must be exactly what
+    // it was before this fix.
+    it('Z0. with the property absent the open payload is the unscaled rect, exactly', () => {
+      const { ref } = makeSlot(R)
+
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedOpen).toHaveBeenCalledWith(
+        'https://store.steampowered.com/',
+        { x: 10, y: 20, w: 300, h: 400 },
+        'steam'
+      )
+    })
+
+    // Z1. Observed-red mutation: sending `{ x: rect.x, ... }` verbatim (the pre-fix `flush()`) turns
+    // this red -- the open would carry the CSS rect at 120% zoom.
+    it('Z1. at zoom 1.2 the open payload is the CSS rect x 1.2', () => {
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+      expectBounds(firstOpenBounds(), { x: 12, y: 24, w: 360, h: 480 })
+    })
+
+    // Z2. Observed-red mutation: scaling only the open branch (leaving `setBounds` on the raw
+    // rect) turns this red -- the embed would be right on entry and wrong after the first resize.
+    it('Z2. at zoom 1.2 a later resize sends the new CSS rect x 1.2', () => {
+      setRootZoom('1.2')
+      const { ref, setRect } = makeSlot(R)
+
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+      mockApi.storeEmbedSetBounds.mockClear()
+
+      setRect({ x: 5, y: 15, width: 640, height: 480 })
+      MockResizeObserver.instances[0].trigger()
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
+      expectBounds(lastBounds(), { x: 6, y: 18, w: 768, h: 576 })
+    })
+
+    // Z3. The preload publishes `--webview-zoom` only AFTER `setZoom` resolves, and the zoom
+    // change is made on another screen, so with the store route mounted there may be NO
+    // ResizeObserver tick at all. Observed-red mutation: deleting the MutationObserver (relying on
+    // resize/RO alone) turns this red -- nothing would re-send after the publish.
+    it('Z3. a zoom publish while mounted re-sends scaled bounds with no ResizeObserver tick', () => {
+      setRootZoom('1')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+      mockApi.storeEmbedSetBounds.mockClear()
+
+      setRootZoom('1.2')
+      MockMutationObserver.instances[0].trigger()
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedSetBounds).toHaveBeenCalled()
+      expectBounds(lastBounds(), { x: 12, y: 24, w: 360, h: 480 })
+    })
+
+    // Z3b. A resize caused by the zoom change can be observed BEFORE the factor is published, and
+    // then reads the stale factor. Observed-red mutation: keying the re-flush on `resize`/RO
+    // instead of on the property write itself leaves the last send at R2 x 1 -- red.
+    it('Z3b. a send made with a stale factor is corrected once the new factor is published', () => {
+      setRootZoom('1')
+      const { ref, setRect } = makeSlot(R)
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(40)
+
+      setRect({ x: 5, y: 15, width: 640, height: 480 })
+      MockResizeObserver.instances[0].trigger() // still the stale factor 1
+      expectBounds(lastBounds(), { x: 5, y: 15, w: 640, h: 480 })
+
+      setRootZoom('1.2')
+      MockMutationObserver.instances[0].trigger()
+      jest.advanceTimersByTime(40)
+
+      expectBounds(lastBounds(), { x: 6, y: 18, w: 768, h: 576 })
+    })
+
+    // Z4. Observed-red mutation: deleting the `factor !== lastSentFactor` comparison in the MO
+    // callback (always `scheduleFlush`) turns this red -- a theme or font write on the root would
+    // re-send bounds for no reason (T-261012-gn8-03).
+    it('Z4. a root style mutation that leaves the factor unchanged sends nothing', () => {
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+      jest.advanceTimersByTime(100)
+      mockApi.storeEmbedSetBounds.mockClear()
+
+      MockMutationObserver.instances[0].trigger()
+      jest.advanceTimersByTime(100)
+
+      expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
+    })
+
+    // Z5. Observed-red mutation: dropping `attributeFilter`, observing another node, or omitting
+    // `mo.disconnect()` from the cleanup turns this red (mirrors properties 20/21 for the RO).
+    it('Z5. the MutationObserver watches the root style attribute and is disconnected on unmount and on slot replacement', () => {
+      const a = makeSlot(R)
+      const options: MountOptions = { slotRef: a.ref }
+      mount(options)
+
+      expect(MockMutationObserver.instances).toHaveLength(1)
+      const first = MockMutationObserver.instances[0]
+      expect(first.observed).toBe(rootStub)
+      expect(first.options).toEqual({
+        attributes: true,
+        attributeFilter: ['style']
+      })
+
+      reinvoke({
+        ...options,
+        slotRef: { current: null } as RefObject<HTMLDivElement>
+      })
+      expect(first.disconnected).toBe(true)
+      expect(
+        MockMutationObserver.instances.filter((o) => !o.disconnected)
+      ).toHaveLength(0)
+
+      const b = makeSlot(R)
+      reinvoke({ ...options, slotRef: b.ref })
+      const live = MockMutationObserver.instances.filter((o) => !o.disconnected)
+      expect(live).toHaveLength(1)
+
+      harness().__unmount()
+      expect(live[0].disconnected).toBe(true)
+    })
+
+    // Z6. On macOS/Windows the Rust existing-embed open arm shows and navigates but drops the
+    // rect, and the remount's only RO observation is consumed by that open. Observed-red mutation:
+    // deleting the `.then(() => scheduleFlush())` follow-up turns this red -- the rect changed
+    // while away (R3) would never be applied.
+    it('Z6. a successful open is followed by one throttled setBounds carrying the current scaled rect', async () => {
+      setRootZoom('1.2')
+      const { ref, setRect } = makeSlot(R)
+      mount({ slotRef: ref })
+
+      setRect({ x: 20, y: 30, width: 500, height: 250 }) // R3, no RO tick
+      await Promise.resolve()
+      await Promise.resolve()
+      jest.advanceTimersByTime(40)
+
+      expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
+      expectBounds(lastBounds(), { x: 24, y: 36, w: 600, h: 300 })
+    })
+
+    // Z7. Observed-red mutation: deleting the disposed check in the follow-up turns this red -- a
+    // detached slot's zero rect would be scheduled after unmount (T-261012-gn8-05).
+    it('Z7. no follow-up is sent once the effect was disposed before the open resolved', async () => {
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+      harness().__unmount()
+
+      await Promise.resolve()
+      await Promise.resolve()
+      jest.advanceTimersByTime(100)
+
+      expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
+    })
+
+    // Z8. Observed-red mutation: deleting the `status === 'ok'` check turns this red -- a failed
+    // open would still be chased by a setBounds at an embed that does not exist.
+    it('Z8. an open that resolves with status error is not followed by setBounds', async () => {
+      mockApi.storeEmbedOpen.mockResolvedValue({
+        status: 'error' as const,
+        error: 'x'
+      })
+      setRootZoom('1.2')
+      const { ref } = makeSlot(R)
+      mount({ slotRef: ref })
+
+      await Promise.resolve()
+      await Promise.resolve()
+      jest.advanceTimersByTime(100)
+
+      expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
+    })
   })
 })

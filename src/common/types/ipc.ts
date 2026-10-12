@@ -524,12 +524,15 @@ interface AsyncIPCFunctions {
   removeWineVersion: (release: WineVersionInfo) => Promise<void>
   'wine.isValidVersion': (release: WineInstallation) => Promise<boolean>
   shortcutsExists: (appName: string, runner: Runner) => boolean
-  // Resolve true only once the shortcut write/remove succeeded (quick 261012-f05)
+  // Resolves whether shortcuts exist on disk once the add has settled (the `shortcutsExists`
+  // predicate), never before.
   addShortcut: (
     appName: string,
     runner: Runner,
     fromMenu: boolean
   ) => Promise<boolean>
+  // Resolves whether shortcuts exist on disk once the removal has settled (the `shortcutsExists`
+  // predicate), never before.
   removeShortcut: (appName: string, runner: Runner) => Promise<boolean>
   addToSteam: (appName: string, runner: Runner) => Promise<boolean>
   removeFromSteam: (appName: string, runner: Runner) => Promise<void>

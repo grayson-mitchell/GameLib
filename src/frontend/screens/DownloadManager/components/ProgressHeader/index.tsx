@@ -1,14 +1,13 @@
 import './index.css'
-import { hasProgress } from 'frontend/hooks/hasProgress'
 import { useEffect, useState } from 'react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
-import { Box, LinearProgress, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { DownloadManagerState, Runner } from 'common/types'
 import { getInstallProgress } from 'frontend/state/InstallProgress'
 import {
   appendSample,
   emptySamples,
+  keepsSampling,
   SAMPLE_INTERVAL_MS,
   SpeedPoint as Point
 } from './speedSample'
@@ -25,8 +24,6 @@ export default function ProgressHeader(props: {
 }) {
   const sampleSize = 100
   const { t } = useTranslation()
-  const { t: tGamelib } = useTranslation('gamelib')
-  const [progress] = hasProgress(props.appName, props.runner)
   const [avgSpeed, setAvgDownloadSpeed] = useState<Point[]>(
     emptySamples(sampleSize)
   )
@@ -64,96 +61,70 @@ export default function ProgressHeader(props: {
     // Sample once up front so a state change (running -> paused) shows on the
     // chart immediately rather than a full interval later.
     takeSample()
+
+    // Then keep ticking ONLY while running. A paused download has already
+    // recorded its drop to 0 MB/s above; letting the interval run on would
+    // keep pushing zeros into the window and scroll the whole trace off the
+    // left edge while nothing is transferring (keepsSampling's doc comment).
+    if (!keepsSampling(state)) {
+      return
+    }
     const timer = setInterval(takeSample, SAMPLE_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [state, appName, runner])
 
   return (
-    <>
-      <div className="progressHeader">
-        <div className="downloadRateStats">
-          <div className="downloadRateChart">
-            <div
-              style={{
-                width: '100%',
-                height: '100px',
-                position: 'absolute',
-                top: 0,
-                left: 0
-              }}
-            >
-              <ResponsiveContainer height={80}>
-                <AreaChart data={avgSpeed} margin={{ top: 0, right: 0 }}>
-                  <Area
-                    isAnimationActive={false}
-                    type="monotone"
-                    dataKey="download"
-                    strokeWidth="0px"
-                    fill="var(--accent)"
-                    fillOpacity={0.5}
-                  />
-                  <Area
-                    isAnimationActive={false}
-                    type="monotone"
-                    dataKey="disk"
-                    stroke="var(--primary)"
-                    strokeWidth="2px"
-                    fillOpacity={0}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+    <div className="progressHeader">
+      <div className="downloadRateStats">
+        <div className="downloadRateChart">
+          <div
+            style={{
+              width: '100%',
+              height: '100px',
+              position: 'absolute',
+              top: 0,
+              left: 0
+            }}
+          >
+            <ResponsiveContainer height={80}>
+              <AreaChart data={avgSpeed} margin={{ top: 0, right: 0 }}>
+                <Area
+                  isAnimationActive={false}
+                  type="monotone"
+                  dataKey="download"
+                  strokeWidth="0px"
+                  fill="var(--accent)"
+                  fillOpacity={0.5}
+                />
+                <Area
+                  isAnimationActive={false}
+                  type="monotone"
+                  dataKey="disk"
+                  stroke="var(--primary)"
+                  strokeWidth="2px"
+                  fillOpacity={0}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-          <div className="realtimeDownloadStatContainer">
-            <h5 className="realtimeDownloadStat">
-              {roundToNearestHundredth(avgSpeed.at(-1)?.download)} MB/s
-            </h5>
-            <div className="realtimeDownloadStatLabel downLabel">
-              {t('download-manager.label.speed', 'Download')}{' '}
-            </div>
+        </div>
+        <div className="realtimeDownloadStatContainer">
+          <h5 className="realtimeDownloadStat">
+            {roundToNearestHundredth(avgSpeed.at(-1)?.download)} MB/s
+          </h5>
+          <div className="realtimeDownloadStatLabel downLabel">
+            {t('download-manager.label.speed', 'Download')}{' '}
           </div>
-          <div className="realtimeDownloadStatContainer">
-            <h5 className="realtimeDownloadStat">
-              {roundToNearestHundredth(avgSpeed.at(-1)?.disk)} MB/s
-            </h5>
-            <div className="realtimeDownloadStatLabel diskLabel">
-              {t('download-manager.label.disk', 'Disk')}{' '}
-            </div>
+        </div>
+        <div className="realtimeDownloadStatContainer">
+          <h5 className="realtimeDownloadStat">
+            {roundToNearestHundredth(avgSpeed.at(-1)?.disk)} MB/s
+          </h5>
+          <div className="realtimeDownloadStatLabel diskLabel">
+            {t('download-manager.label.disk', 'Disk')}{' '}
           </div>
         </div>
       </div>
-      {props.state !== 'idle' && props.appName && progress.eta && (
-        <div className="downloadBar">
-          <div className="downloadProgressStats">
-            <p className="downloadStat" color="var(--text-default)">{`${
-              progress.percent ?? 0
-            }% [${progress.bytes ?? ''}] `}</p>
-          </div>
-          <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
-            <Box sx={{ width: '100%', mr: 1 }}>
-              <LinearProgress
-                style={{ height: 10 }}
-                variant="determinate"
-                className="linearProgress"
-                value={progress.percent || 0}
-              />
-            </Box>
-            <Box sx={{ minWidth: 35 }}>
-              <Typography
-                variant="subtitle1"
-                title={t('download-manager.ETA', 'Estimated Time')}
-              >
-                {props.state === 'running'
-                  ? (progress.eta ?? '00.00.00')
-                  : tGamelib(
-                      'gamelib:downloadManager.progressPaused',
-                      'Paused'
-                    )}
-              </Typography>
-            </Box>
-          </Box>
-        </div>
-      )}
-    </>
+    </div>
   )
 }

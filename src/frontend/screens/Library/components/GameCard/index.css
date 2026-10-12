@@ -669,7 +669,7 @@ body:not(.controllerLayout):not(.keyboardNav)
 /* The live value is set per-card in `index.tsx` on the <a> that wraps both
    images: 100% when idle, `125% - progress` while installing, so the tile
    colours in as the download advances. This is the idle value, declared for
-   the same reason DownloadsRing and WineItem declare theirs -- it documents
+   the same reason WineItem declares its own (as the retired navbar ring did) -- it documents
    the default and lets themes override.
 
    Scoped to the two card roots ON PURPOSE. `GamePicture` also renders

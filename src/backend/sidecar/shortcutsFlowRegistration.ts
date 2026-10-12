@@ -3,17 +3,19 @@
  * sidecar (Phase 34.5 Plans 34.5-08/34.5-11, REQ-34.5-05).
  *
  * Plan 34.5-08 filled in the desktop-shortcut trio (`addShortcut`/`removeShortcut`/
- * `shortcutsExists`) plus the app-shell hotkey channel `processShortcut`. THIS plan (34.5-11)
- * completes the cluster at 7 with the Steam-add/remove trio (`addToSteam`/`removeFromSteam`/
- * `isAddedToSteam`).
+ * `shortcutsExists`) plus the app-shell hotkey channel `processShortcut`. Plan 34.5-11 completed
+ * the cluster at 7 with the Steam-add/remove trio (`addToSteam`/`removeFromSteam`/
+ * `isAddedToSteam`). Quick task 261012-ca6 then moved `addShortcut` and `removeShortcut` from
+ * send-kind to invoke-kind (see the comment on their registrations below), so the cluster is now
+ * 6 invoke + 1 send; the total stays 7.
  *
  * Declared channel list, all 7 (verified against `shortcuts/ipc_handler.ts` and `main.ts` by
  * 34.5-RESEARCH.md and each plan's own `<interfaces>` block):
  *
  *   invoke (ipcMain.handle, 6):
  *     - `shortcutsExists`  -> shortcuts/ipc_handler.ts (plan 34.5-08)
- *     - `addShortcut`      -> shortcuts/ipc_handler.ts (plan 34.5-08; send -> invoke, quick 261012-f05)
- *     - `removeShortcut`   -> shortcuts/ipc_handler.ts (plan 34.5-08; send -> invoke, quick 261012-f05)
+ *     - `addShortcut`      -> shortcuts/ipc_handler.ts (plan 34.5-08; invoke since 261012-ca6)
+ *     - `removeShortcut`   -> shortcuts/ipc_handler.ts (plan 34.5-08; invoke since 261012-ca6)
  *     - `addToSteam`       -> shortcuts/ipc_handler.ts (plan 34.5-11)
  *     - `removeFromSteam`  -> shortcuts/ipc_handler.ts (plan 34.5-11)
  *     - `isAddedToSteam`   -> shortcuts/ipc_handler.ts (plan 34.5-11)
@@ -21,19 +23,13 @@
  *   send (ipcMain.on, 1):
  *     - `processShortcut` -> main.ts:1465 SEND (plan 34.5-08)
  *
- * Quick 261012-f05 (2026-10-12): `addShortcut`/`removeShortcut` were send-kind, so GameSubMenu
- * flipped its "Add shortcut"/"Remove shortcuts" label before the write's outcome was known and a
- * failed write left it lying. They are now invoke-kind and resolve a boolean: `true` once the write
- * settled and the success toast went out, `false` when it rejected (after `logSendFailure`, and for
- * `addShortcut` the error toast). They never reject -- the renderer reads `false` as failure.
- *
  * A `send` channel's rejection reaches NO caller (no reject, no timeout, no console line to the
- * renderer) -- `sidecar-send-channels-fail-silently` project memory. The one remaining send-kind
- * body, `processShortcut`, is wrapped in the `void (async () => { try {...} catch {...} })()`
- * fire-and-forget shape `humbleLoginFlowRegistration.ts` uses for its own `humbleStopLogin`
- * listener, since the Electron original (`main.ts:1465`) is itself an async body with no wrapping
- * try/catch -- Electron's own listener registrar catches handler exceptions for you; this
- * sidecar's `electronStub.ts` recorder does not.
+ * renderer) -- `sidecar-send-channels-fail-silently` project memory. `processShortcut`'s body is
+ * therefore wrapped in the `void (async () => { try {...} catch {...} })()` fire-and-forget shape
+ * `humbleLoginFlowRegistration.ts` uses for its own `humbleStopLogin` listener, since the Electron
+ * original (`main.ts:1465`) is itself an already-async body with no wrapping try/catch --
+ * Electron's own listener registrar catches handler exceptions for you; this sidecar's
+ * `electronStub.ts` recorder does not.
  *
  * EXE ATTRIBUTION, verified against source (this supersedes CONTEXT.md D-09 and
  * 34.5-RESEARCH.md's Correction 3, both of which originally filed `shortcuts.ts:227` under the
@@ -56,11 +52,10 @@
  * Neither call site has an existence check in the Electron original, because `app.getPath('exe')`
  * could not meaningfully fail there. Under the sidecar, an unset/empty `GAMELIB_SHELL_EXE` makes
  * `pathShim.getPath('exe')` throw loudly (plan 34.5-01) -- this module adds NO catch, fallback or
- * default launch-command string around either path. For `addShortcut` (invoke-kind since quick
- * 261012-f05), the throw is caught by its own channel-level `logSendFailure` guard, nothing is
- * written, and the handler resolves `false`, which the renderer reads as failure. For
+ * default launch-command string around either path. For `addShortcut` (invoke-kind), the throw is
+ * caught only by its own channel-level `logChannelFailure` guard and nothing is written. For
  * `addToSteam` (invoke-kind, this plan), the throw REJECTS to the caller -- no guard is added,
- * because a rejection reaching the caller is the correct, loud outcome for that channel.
+ * because a rejection reaching the caller is the correct, loud outcome for an invoke channel.
  * Writing nothing is the intended outcome for both: the alternative is a `.app` that launches
  * nothing, or a Steam VDF entry pointing at an empty string. Live-gate item 4 exercises BOTH
  * channels -- `addShortcut`'s `.app` path (plan 34.5-08) and `addToSteam`'s VDF path (this plan).
@@ -103,10 +98,7 @@ import { getMainWindow } from '../main_window'
 import { logWarning, LogPrefix } from '../logger'
 import type { Runner } from 'common/types'
 
-// Records a channel-level failure. Used by the send-kind `processShortcut` guard and, since quick
-// 261012-f05, by the `addShortcut`/`removeShortcut` invoke catch arms (the name and log text are
-// kept so `gamelib.log` lines stay stable).
-function logSendFailure(channel: string, error: unknown): void {
+function logChannelFailure(channel: string, error: unknown): void {
   logWarning(
     [
       `[shortcutsFlowRegistration] ${channel} failed:`,
@@ -117,6 +109,35 @@ function logSendFailure(channel: string, error: unknown): void {
 }
 
 /**
+ * Whether a shortcut for the game exists on disk right now. Shared by `shortcutsExists` and by the
+ * `addShortcut`/`removeShortcut` handlers, which evaluate it AFTER their work has settled so the
+ * renderer sets its state from the disk and never from an assumption (quick task 261012-ca6).
+ */
+function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
+  const { title } = getGame(appName, runner).getGameInfo()
+
+  // Quick task 260905-mv5 (site 4, D-03): getGameInfo() can return
+  // `{} as GameInfo` on a double cache miss (D-01), leaving `title`
+  // undefined. Unlike sites 1/2 (a display string), this title feeds a
+  // FILESYSTEM PATH component (shortcutFiles -> sanitize-filename), so
+  // a synthesized fallback title here would produce a plausible-looking
+  // path the app never actually wrote to. Return false and log instead
+  // of fabricating one -- mirrors the Electron original's identical
+  // guard in `backend/shortcuts/ipc_handler.ts`.
+  if (!title) {
+    logWarning(
+      `shortcutsExists: getGameInfo() returned no title for ${appName} (${runner}); skipping shortcut lookup`,
+      LogPrefix.Backend
+    )
+    return false
+  }
+
+  const [desktopFile, menuFile] = shortcutFiles(title)
+
+  return existsSync(desktopFile ?? '') || existsSync(menuFile ?? '')
+}
+
+/**
  * Registers all 7 of this cluster's channels (6 invoke + 1 send). Called once from `handlers.ts`
  * -- this module owns no side effects at import time beyond the imports above; the caller decides
  * when registration onto the handler registry happens.
@@ -124,7 +145,8 @@ function logSendFailure(channel: string, error: unknown): void {
  * Plan 34.5-08 registered the desktop-shortcut trio + hotkey channel (`shortcutsExists` invoke;
  * `addShortcut`/`removeShortcut`/`processShortcut` send). Plan 34.5-11 added the Steam-add/remove
  * trio (`addToSteam`/`removeFromSteam`/`isAddedToSteam`, all invoke), completing the cluster at 7.
- * Quick 261012-f05 kind-swapped `addShortcut`/`removeShortcut` to invoke (6 invoke + 1 send).
+ * Quick task 261012-ca6 moved `addShortcut`/`removeShortcut` to invoke-kind; `processShortcut` is
+ * the only send-kind channel left.
  *
  * Idempotence guard (Rule 1 fix, discovered by `__tests__/runnerSliceRegistration.test.ts`'s own
  * pre-existing "calling registerXFlows() twice does not throw or stack duplicate listeners" case,
@@ -150,92 +172,102 @@ export function registerShortcutsFlows(): void {
     async (_event: unknown, ...args: unknown[]) => {
       const appName = args[0] as string
       const runner = args[1] as Runner
-      const { title } = getGame(appName, runner).getGameInfo()
-
-      // Quick task 260905-mv5 (site 4, D-03): getGameInfo() can return
-      // `{} as GameInfo` on a double cache miss (D-01), leaving `title`
-      // undefined. Unlike sites 1/2 (a display string), this title feeds a
-      // FILESYSTEM PATH component (shortcutFiles -> sanitize-filename), so
-      // a synthesized fallback title here would produce a plausible-looking
-      // path the app never actually wrote to. Return false and log instead
-      // of fabricating one -- mirrors the Electron original's identical
-      // guard in `backend/shortcuts/ipc_handler.ts`.
-      if (!title) {
-        logWarning(
-          `shortcutsExists: getGameInfo() returned no title for ${appName} (${runner}); skipping shortcut lookup`,
-          LogPrefix.Backend
-        )
-        return false
-      }
-
-      const [desktopFile, menuFile] = shortcutFiles(title)
-
-      return existsSync(desktopFile ?? '') || existsSync(menuFile ?? '')
+      return shortcutsExistOnDisk(appName, runner)
     }
   )
 
-  // Repudiation surface (T-34.5-26, T-34.5-65, T-34.5-66). Invoke-kind since quick 261012-f05: the
-  // handler resolves a boolean write outcome so GameSubMenu flips its label only on `true`, and it
-  // NEVER rejects -- a rejection would surface as the 60 s invoke bound, not a clean failure.
-  // `Game.addShortcuts()` is async (it reaches `shortcuts.ts`'s `addShortcuts`, which on darwin
-  // calls `generateMacOsApp` -> `getPath('exe')`, per this module's own header comment), so the
-  // try/catch below is required, not stylistic.
+  // Quick task 261012-ca6 (todo `gamesubmenu-shows-remove-shortcuts-before-the-write-is-known`):
+  // invoke-kind, no longer send-kind. GameSubMenu used to flip its "Add shortcut"/"Remove
+  // shortcuts" entry the moment it fired this channel, before the write had happened or failed. A
+  // send-kind channel cannot report an outcome: the Tauri transport resolves a send once the shell
+  // has accepted the frame, and the sidecar runs listeners fire-and-forget. This handler therefore
+  // resolves the `shortcutsExists` predicate, evaluated AFTER `addShortcuts` has settled, so the
+  // renderer sets its state from what is actually on disk. A partial write (one of two files
+  // written, so `addShortcuts` rejects) still resolves true: a removable shortcut exists. A call
+  // that resolves without writing anything (a DLC, or no shortcut paths) resolves false.
+  //
+  // Failure path (T-34.5-26, T-34.5-65, T-34.5-66): `getGame().addShortcuts()` reaches
+  // `shortcuts.ts`'s `addShortcuts`, which on darwin calls `generateMacOsApp` -> `getPath('exe')`.
+  // That throws when `GAMELIB_SHELL_EXE` is unset or empty, and also when a shortcut file could not
+  // be written (a missing desktop folder, a failed Windows `.lnk`). No catch, fallback or default
+  // launch command is added upstream -- a failure that writes nothing is the correct outcome, and
+  // a `.app` pointing at an empty exe path would be worse. It is caught here, logged, and shown to
+  // the user as the error toast instead of the success one; the handler still answers with the disk
+  // state, so the call never rejects the renderer.
+  ipcMain.handle('addShortcut', async (_event: unknown, ...args: unknown[]) => {
+    const appName = args[0] as string
+    const runner = args[1] as Runner
+    const fromMenu = args[2] as boolean | undefined
+
+    try {
+      await getGame(appName, runner).addShortcuts(fromMenu)
+    } catch (error) {
+      logChannelFailure('addShortcut', error)
+      notify({
+        body: t(
+          'box.shortcuts.error',
+          'Shortcuts could not be created. See the log for details.'
+        ),
+        title: t('box.shortcuts.title', 'Shortcuts')
+      })
+      return shortcutsExistOnDisk(appName, runner)
+    }
+
+    const exists = shortcutsExistOnDisk(appName, runner)
+    if (exists) {
+      const body = i18next.t(
+        'box.shortcuts.message',
+        'Shortcuts were created on Desktop and Start Menu'
+      )
+      const bodyMac = i18next.t(
+        'box.shortcuts.message-mac',
+        'Shortcuts were created on the Applications folder'
+      )
+      notify({
+        body: isMac ? bodyMac : body,
+        title: i18next.t('box.shortcuts.title', 'Shortcuts')
+      })
+    } else {
+      // Resolving without writing anything is not a success.
+      notify({
+        body: t(
+          'box.shortcuts.error',
+          'Shortcuts could not be created. See the log for details.'
+        ),
+        title: t('box.shortcuts.title', 'Shortcuts')
+      })
+    }
+    return exists
+  })
+
+  // Quick task 261012-ca6: invoke-kind for the same reason as `addShortcut` above. Resolves the
+  // `shortcutsExists` predicate after `removeShortcuts` has settled, so the renderer keeps showing
+  // "Remove shortcuts" when a removal did not take. `removeShortcuts` awaits its deletions and
+  // never rejects for a failed one (it logs it), so the disk is read only once the work is done and
+  // the toast follows what the disk says: the removal toast only when no shortcut remains, the
+  // error toast otherwise.
   ipcMain.handle(
-    'addShortcut',
-    async (_event: unknown, ...args: unknown[]): Promise<boolean> => {
+    'removeShortcut',
+    async (_event: unknown, ...args: unknown[]) => {
+      const appName = args[0] as string
+      const runner = args[1] as Runner
+
       try {
-        const appName = args[0] as string
-        const runner = args[1] as Runner
-        const fromMenu = args[2] as boolean | undefined
-
-        await getGame(appName, runner).addShortcuts(fromMenu)
-
-        const body = i18next.t(
-          'box.shortcuts.message',
-          'Shortcuts were created on Desktop and Start Menu'
-        )
-        const bodyMac = i18next.t(
-          'box.shortcuts.message-mac',
-          'Shortcuts were created on the Applications folder'
-        )
-
-        notify({
-          body: isMac ? bodyMac : body,
-          title: i18next.t('box.shortcuts.title', 'Shortcuts')
-        })
-        return true
+        await getGame(appName, runner).removeShortcuts()
       } catch (error) {
-        // T-34.5-65/66: reached when `getPath('exe')` throws (unset/empty GAMELIB_SHELL_EXE) via
-        // either `shortcuts.ts:227` (this channel's own darwin `.app` run.sh path) or
-        // `nonesteamgame.ts:258` (via the `addSteamShortcuts` branch, `shortcuts.ts:43-45`). No
-        // catch/fallback/default launch command is added here or anywhere upstream -- a caught
-        // failure that writes nothing and resolves `false` is the correct outcome; a `.app`/VDF
-        // entry pointing at an empty exe path would be worse. `logSendFailure` is the record of
-        // this failure. `addShortcuts` also rejects when a shortcut file could not be written (a
-        // missing desktop folder, a failed Windows `.lnk`), so the user is told instead of shown
-        // the success toast above.
-        logSendFailure('addShortcut', error)
+        logChannelFailure('removeShortcut', error)
         notify({
           body: t(
-            'box.shortcuts.error',
-            'Shortcuts could not be created. See the log for details.'
+            'box.shortcuts.error-remove',
+            'Shortcuts could not be removed. See the log for details.'
           ),
           title: t('box.shortcuts.title', 'Shortcuts')
         })
-        return false
+        return shortcutsExistOnDisk(appName, runner)
       }
-    }
-  )
 
-  ipcMain.handle(
-    'removeShortcut',
-    async (_event: unknown, ...args: unknown[]): Promise<boolean> => {
-      try {
-        const appName = args[0] as string
-        const runner = args[1] as Runner
-
-        await getGame(appName, runner).removeShortcuts()
-
+      const exists = shortcutsExistOnDisk(appName, runner)
+      if (!exists) {
         const body = i18next.t(
           'box.shortcuts.message-remove',
           'Shortcuts were removed from Desktop and Start Menu'
@@ -250,12 +282,16 @@ export function registerShortcutsFlows(): void {
           // Shared key: catalog 'Shortcuts' wins; the body names the removal.
           title: i18next.t('box.shortcuts.title', 'Shortcuts')
         })
-        return true
-      } catch (error) {
-        // No error toast here (existing behaviour kept): the renderer keeps its label on `false`.
-        logSendFailure('removeShortcut', error)
-        return false
+      } else {
+        notify({
+          body: t(
+            'box.shortcuts.error-remove',
+            'Shortcuts could not be removed. See the log for details.'
+          ),
+          title: t('box.shortcuts.title', 'Shortcuts')
+        })
       }
+      return exists
     }
   )
 
@@ -345,7 +381,7 @@ export function registerShortcutsFlows(): void {
             break
         }
       } catch (error) {
-        logSendFailure('processShortcut', error)
+        logChannelFailure('processShortcut', error)
       }
     })()
   })

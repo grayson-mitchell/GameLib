@@ -51,6 +51,21 @@ export function nextSpeedSample(
 }
 
 /**
+ * Whether the ProgressHeader chart's sampling timer should keep ticking in
+ * this state.
+ *
+ * Only `running` keeps the timer alive. On `paused` the component takes ONE
+ * sample (which `nextSpeedSample` reports as 0 MB/s, so the trace visibly
+ * drops to the floor) and then stops: a paused download's chart must stand
+ * still, not keep scrolling a stream of zeros across the screen (operator
+ * report after quick 261012-dhs). `idle` never reaches the timer at all — the
+ * component resets the buffer instead.
+ */
+export function keepsSampling(state: DownloadManagerState): boolean {
+  return state === 'running'
+}
+
+/**
  * The chart's zero-filled starting buffer, also used for the reset on 'idle'.
  */
 export function emptySamples(sampleSize: number): SpeedPoint[] {

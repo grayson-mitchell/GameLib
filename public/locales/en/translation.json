@@ -147,6 +147,7 @@
         },
         "shortcuts": {
             "error": "Shortcuts could not be created. See the log for details.",
+            "error-remove": "Shortcuts could not be removed. See the log for details.",
             "message": "Shortcuts were created on Desktop and Start Menu",
             "message-mac": "Shortcuts were created on the Applications folder",
             "message-remove": "Shortcuts were removed from Desktop and Start Menu",

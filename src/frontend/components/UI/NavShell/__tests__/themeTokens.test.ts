@@ -219,9 +219,11 @@ describe('navbar app-region (CR-02, D-32)', () => {
     expect(block).toMatch(/-webkit-app-region:\s*drag/)
   })
 
-  it('has at least two no-drag declarations excluding interactive children', () => {
+  // Was 'at least two' while the navbar also carried the DownloadsRing; quick
+  // 261012-dhs deleted the ring, so the tab strip is the one interactive child.
+  it('has a no-drag declaration excluding the interactive tab strip', () => {
     const matches = navShellScss.match(/-webkit-app-region:\s*no-drag/g) ?? []
-    expect(matches.length).toBeGreaterThanOrEqual(2)
+    expect(matches.length).toBeGreaterThanOrEqual(1)
   })
 
   it('.NavShell__navbar itself does NOT also carry no-drag -- the drag region and its exclusions must be on different selectors, or the last one wins and the whole fix is inert', () => {

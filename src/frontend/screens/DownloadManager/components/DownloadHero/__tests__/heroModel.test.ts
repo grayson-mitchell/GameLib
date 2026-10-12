@@ -1,0 +1,70 @@
+import { heroArtSources, heroPercent } from '../heroModel'
+
+describe('heroArtSources', () => {
+  it('prefers art_background, then art_cover, then art_square as fallbacks', () => {
+    expect(
+      heroArtSources({ art_background: 'bg', art_cover: 'c', art_square: 's' })
+    ).toEqual({ src: 'bg', fallback: ['c', 's'] })
+  })
+
+  it('falls through to art_cover when art_background is absent', () => {
+    expect(heroArtSources({ art_cover: 'c', art_square: 's' })).toEqual({
+      src: 'c',
+      fallback: ['s']
+    })
+  })
+
+  it('skips an empty-string art_background the same way', () => {
+    expect(
+      heroArtSources({ art_background: '', art_cover: 'c', art_square: 's' })
+    ).toEqual({ src: 'c', fallback: ['s'] })
+  })
+
+  it('uses art_square alone when it is all there is', () => {
+    expect(heroArtSources({ art_square: 's' })).toEqual({
+      src: 's',
+      fallback: []
+    })
+  })
+
+  it('dedupes identical sources', () => {
+    expect(heroArtSources({ art_cover: 'x', art_square: 'x' })).toEqual({
+      src: 'x',
+      fallback: []
+    })
+  })
+
+  it('returns null for no game info', () => {
+    expect(heroArtSources(undefined)).toBeNull()
+  })
+
+  it('returns null when every source is empty', () => {
+    expect(heroArtSources({ art_cover: '', art_square: '' })).toBeNull()
+  })
+})
+
+describe('heroPercent', () => {
+  it('is 0 when there is no current element, whatever the percent', () => {
+    expect(heroPercent(false, 50)).toBe(0)
+  })
+
+  it('is 0 when the percent is undefined', () => {
+    expect(heroPercent(true, undefined)).toBe(0)
+  })
+
+  it('passes a fractional percent through', () => {
+    expect(heroPercent(true, 42.5)).toBe(42.5)
+  })
+
+  it('clamps above 100 down to 100', () => {
+    expect(heroPercent(true, 140)).toBe(100)
+  })
+
+  it('clamps below 0 up to 0', () => {
+    expect(heroPercent(true, -3)).toBe(0)
+  })
+
+  it('is 0 for NaN', () => {
+    expect(heroPercent(true, NaN)).toBe(0)
+  })
+})

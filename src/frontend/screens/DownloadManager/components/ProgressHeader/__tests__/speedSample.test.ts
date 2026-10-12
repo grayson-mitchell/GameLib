@@ -19,10 +19,30 @@ import { InstallProgress } from 'common/types'
 import {
   appendSample,
   emptySamples,
+  keepsSampling,
   nextSpeedSample,
   SAMPLE_INTERVAL_MS,
   SpeedPoint
 } from '../speedSample'
+
+// Regression (operator report after quick 261012-dhs): the chart kept
+// scrolling while paused. appendSample is owed a sample per CALL (pinned
+// below), so the decision whether to keep CALLING it on the timer has to live
+// in a separate predicate the component consults after its one up-front
+// sample. Only `running` keeps the timer alive.
+describe('keepsSampling', () => {
+  it('keeps the timer alive only while running', () => {
+    expect(keepsSampling('running')).toBe(true)
+  })
+
+  it('stops the timer while paused, so the trace freezes after its drop to zero', () => {
+    expect(keepsSampling('paused')).toBe(false)
+  })
+
+  it('stops the timer while idle (the component resets the buffer instead)', () => {
+    expect(keepsSampling('idle')).toBe(false)
+  })
+})
 
 describe('nextSpeedSample', () => {
   it('returns 0 MB/s (download and disk) when paused, ignoring the last speed', () => {
@@ -168,8 +188,10 @@ describe('appendSample', () => {
       )
     ]
 
-    // Keeps ticking while paused (samples accrue) and every one reads zero,
-    // so the chart walks down to the floor instead of freezing.
+    // A sample is owed per CALL even while paused, and every one reads zero.
+    // Whether the component keeps calling on its timer while paused is a
+    // separate decision — `keepsSampling` above says it does not, so in
+    // practice the chart records one zero and then stands still.
     expect(paused[0]).toHaveLength(3)
     expect(paused[1]).toHaveLength(4)
     expect(paused[0].at(-1)).toEqual({ download: 0, disk: 0 })
