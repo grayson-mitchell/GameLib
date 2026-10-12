@@ -391,6 +391,15 @@
         }
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Installez plutôt depuis votre bibliothèque — cette vue ne peut pas ouvrir l'Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic met un certain temps à charger",
+                "reload": "Recharger"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Votre connexion ne peut pas encore être finalisée : {{channel}} n'est pas encore porté sur cette version. Cela arrivera en Phase 34.5.",
@@ -445,6 +454,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic a demandé une vérification de sécurité que cette vue ne peut pas terminer.",
+                "heading": "La navigation sur l'Epic Store est temporairement bloquée",
+                "tryAgain": "Réessayer"
+            },
             "next-step": "Ceci fait l'objet d'un travail futur distinct -- pour l'instant, utilisez le bouton ci-dessous pour l'ouvrir dans votre navigateur système.",
             "open-in-browser": "Ouvrir dans un navigateur",
             "epic": {

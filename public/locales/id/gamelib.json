@@ -384,6 +384,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Instal dari Perpustakaan Anda — tampilan ini tidak dapat membuka Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic membutuhkan waktu agak lama untuk memuat",
+                "reload": "Muat Ulang"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Proses masuk Anda belum dapat diselesaikan: {{channel}} belum diportasi ke build ini. Ini akan hadir di Phase 34.5.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic meminta pemeriksaan keamanan yang tidak dapat diselesaikan oleh tampilan ini.",
+                "heading": "Penjelajahan Epic Store diblokir sementara",
+                "tryAgain": "Coba lagi"
+            },
             "next-step": "Ini dicatat sebagai pekerjaan mendatang tersendiri -- untuk saat ini, gunakan tombol di bawah untuk membukanya di peramban sistem Anda.",
             "open-in-browser": "Buka di peramban",
             "epic": {

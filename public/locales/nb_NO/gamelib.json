@@ -384,6 +384,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Installer fra biblioteket ditt i stedet — denne visningen kan ikke åpne Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic tar en stund med å laste",
+                "reload": "Last inn igjen"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Innloggingen din kan ikke fullføres ennå: {{channel}} er ikke portet til denne versjonen. Dette kommer i fase 34.5.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic ba om en sikkerhetskontroll som denne visningen ikke kan fullføre.",
+                "heading": "Nettlesing av Epic Store er midlertidig blokkert",
+                "tryAgain": "Prøv igjen"
+            },
             "next-step": "Dette er registrert som eget fremtidig arbeid -- inntil videre kan du bruke knappen under for å åpne det i systemets nettleser i stedet.",
             "open-in-browser": "Åpne i nettleseren",
             "epic": {

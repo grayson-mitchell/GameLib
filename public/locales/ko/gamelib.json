@@ -384,6 +384,15 @@
         "zombie": "좀비"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "대신 라이브러리에서 설치하세요 — 이 화면에서는 Epic Games Launcher를 열 수 없습니다."
+            },
+            "timeout": {
+                "message": "Epic을 불러오는 데 시간이 걸리고 있습니다",
+                "reload": "다시 로드"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "아직 로그인을 완료할 수 없습니다: {{channel}}은(는) 이 빌드에 포팅되지 않았습니다. 이 기능은 Phase 34.5에서 제공될 예정입니다.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic이 이 화면에서 완료할 수 없는 보안 검사를 요청했습니다.",
+                "heading": "Epic Store 탐색이 일시적으로 차단되었습니다",
+                "tryAgain": "다시 시도"
+            },
             "next-step": "이는 별도의 향후 작업으로 추적되고 있습니다. 지금은 아래 버튼을 사용해 시스템 브라우저에서 열어주세요.",
             "open-in-browser": "브라우저에서 열기",
             "epic": {

@@ -384,6 +384,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Instalatu zure liburutegitik horren ordez — ikuspegi honek ezin du Epic Games Launcher ireki."
+            },
+            "timeout": {
+                "message": "Epic kargatzen denbora pixka bat behar du",
+                "reload": "Berriz kargatu"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Zure saioa ezin da oraindik osatu: {{channel}} ez dago eraikuntza honetara migratuta. Hau 34.5 fasean iritsiko da.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic-ek segurtasun-egiaztapen bat eskatu du, eta ikuspegi honek ezin du osatu.",
+                "heading": "Epic Store nabigatzea aldi baterako blokeatuta dago",
+                "tryAgain": "Saiatu berriro"
+            },
             "next-step": "Hau etorkizuneko lan gisa jasota dago -- oraingoz, erabili beheko botoia zure sistemako arakatzailean irekitzeko.",
             "open-in-browser": "Ireki arakatzailean",
             "epic": {

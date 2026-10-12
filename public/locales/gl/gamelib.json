@@ -384,6 +384,15 @@
         "zombie": "Zombi"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Instala desde a túa biblioteca no seu lugar — esta vista non pode abrir o Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic está tardando un pouco en cargar",
+                "reload": "Recargar"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "O teu inicio de sesión non se pode completar aínda: {{channel}} non está adaptado a esta versión. Isto chegará na Fase 34.5.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic solicitou unha comprobación de seguridade que esta vista non pode completar.",
+                "heading": "A navegación de Epic Store está bloqueada temporalmente",
+                "tryAgain": "Tentar de novo"
+            },
             "next-step": "Isto está rexistrado como traballo futuro por separado -- por agora, usa o botón de abaixo para abrilo no teu navegador do sistema.",
             "open-in-browser": "Abrir no navegador",
             "epic": {

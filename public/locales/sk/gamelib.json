@@ -398,6 +398,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Nainštalujte namiesto toho z vašej knižnice — toto zobrazenie nemôže otvoriť Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Načítanie Epic chvíľu trvá",
+                "reload": "Reload"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Vaše prihlásenie zatiaľ nemožno dokončiť: {{channel}} nie je pre toto zostavenie portovaný. Táto funkcia príde vo Fáze 34.5.",
@@ -452,6 +461,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic požiadal o bezpečnostnú kontrolu, ktorú toto zobrazenie nemôže dokončiť.",
+                "heading": "Prehliadanie Epic Store je dočasne blokované",
+                "tryAgain": "Skúsiť znova"
+            },
             "next-step": "Toto je sledované ako samostatná budúca úloha -- zatiaľ použite tlačidlo nižšie na otvorenie v systémovom prehliadači.",
             "open-in-browser": "Otvoriť v prehliadači",
             "epic": {

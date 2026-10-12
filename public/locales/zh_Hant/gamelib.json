@@ -384,6 +384,15 @@
         "zombie": "殭屍"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "請改從您的資料庫安裝 — 此檢視畫面無法開啟 Epic Games Launcher。"
+            },
+            "timeout": {
+                "message": "Epic 載入需要一些時間",
+                "reload": "重新載入"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "您的登入尚無法完成：{{channel}} 尚未移植至此版本。此功能將於第 34.5 階段推出。",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic 要求進行此檢視畫面無法完成的安全檢查。",
+                "heading": "Epic Store 瀏覽功能暫時被封鎖",
+                "tryAgain": "重試"
+            },
             "next-step": "這已列入未來的獨立開發項目 -- 目前請使用下方按鈕改在您系統的瀏覽器中開啟。",
             "open-in-browser": "在瀏覽器中開啟",
             "epic": {

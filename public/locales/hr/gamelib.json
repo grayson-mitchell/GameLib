@@ -391,6 +391,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Instalirajte iz svoje knjižnice umjesto toga — ovaj prikaz ne može otvoriti Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epicu je potrebno malo vremena za učitavanje",
+                "reload": "Ponovno učitaj"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Prijava se još ne može dovršiti: {{channel}} nije prenesen u ovu verziju. Ovo stiže u fazi 34.5.",
@@ -445,6 +454,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic je zatražio sigurnosnu provjeru koju ovaj prikaz ne može dovršiti.",
+                "heading": "Pregledavanje Epic Store trgovine privremeno je blokirano",
+                "tryAgain": "Pokušaj ponovno"
+            },
             "next-step": "Ovo je zabilježeno kao zaseban budući zadatak -- za sada koristite gumb ispod kako biste to otvorili u sistemskom pretraživaču.",
             "open-in-browser": "Otvori u pretraživaću",
             "epic": {

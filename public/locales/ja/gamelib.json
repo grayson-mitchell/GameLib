@@ -384,6 +384,15 @@
         "zombie": "ゾンビ"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "代わりにライブラリからインストールしてください — このビューでは Epic Games Launcher を開けません。"
+            },
+            "timeout": {
+                "message": "Epic の読み込みに時間がかかっています",
+                "reload": "再読み込み"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "サインインはまだ完了できません: {{channel}} はこのビルドに移植されていません。これはPhase 34.5で対応予定です。",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic がセキュリティチェックを要求しましたが、このビューでは完了できません。",
+                "heading": "Epic Store の閲覧は一時的にブロックされています",
+                "tryAgain": "再試行"
+            },
             "next-step": "これは今後の対応課題として別途管理されています。現時点では、下のボタンからシステムのブラウザで開いてください。",
             "open-in-browser": "ブラウザで開く",
             "epic": {

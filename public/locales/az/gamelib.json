@@ -384,6 +384,15 @@
         "zombie": "Zombi"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Əvəzinə kitabxananızdan quraşdırın — bu görünüş Epic Games Launcher-i aça bilmir."
+            },
+            "timeout": {
+                "message": "Epic yüklənmək üçün bir az vaxt aparır",
+                "reload": "Yenidən yükləyin"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Girişiniz hələ tamamlana bilməz: {{channel}} bu buraxılışa köçürülməyib. Bu, Faza 34.5-də ediləcək.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic bu görünüşün tamamlaya bilmədiyi bir təhlükəsizlik yoxlaması istədi.",
+                "heading": "Epic Store-a baxış müvəqqəti olaraq bloklanıb",
+                "tryAgain": "Yenidən cəhd edin"
+            },
             "next-step": "Bu ayrıca gələcək iş kimi izlənilir -- hələlik onu sistem brauzerinizdə açmaq üçün aşağıdakı düymədən istifadə edin.",
             "open-in-browser": "Brauzerdə açın",
             "epic": {

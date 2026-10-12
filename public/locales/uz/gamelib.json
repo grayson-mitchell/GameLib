@@ -384,6 +384,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Buning o'rniga kutubxonangizdan o'rnating — bu ko'rinish Epic Games Launcher'ni ocha olmaydi."
+            },
+            "timeout": {
+                "message": "Epic yuklanishi biroz vaqt oladi",
+                "reload": "Qayta yuklash"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Tizimga kirishni hozircha yakunlab bo'lmaydi: {{channel}} ushbu build uchun moslashtirilmagan. Bu Faza 34.5 da qo'shiladi.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic bu ko'rinish bajara olmaydigan xavfsizlik tekshiruvini so'radi.",
+                "heading": "Epic Store'ni ko'rish vaqtincha bloklangan",
+                "tryAgain": "Qayta urinib ko'ring"
+            },
             "next-step": "Bu alohida kelajakdagi ish sifatida rejalashtirilgan -- hozircha, uni tizim brauzeringizda ochish uchun quyidagi tugmadan foydalaning.",
             "open-in-browser": "Brauzerda oching",
             "epic": {

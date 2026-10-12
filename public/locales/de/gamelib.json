@@ -384,6 +384,15 @@
         }
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Installiere stattdessen aus deiner Bibliothek — diese Ansicht kann den Epic Games Launcher nicht öffnen."
+            },
+            "timeout": {
+                "message": "Epic braucht etwas länger zum Laden",
+                "reload": "Neu laden"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Deine Anmeldung kann noch nicht abgeschlossen werden: {{channel}} ist noch nicht auf diesen Build portiert. Dies kommt in Phase 34.5.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic hat eine Sicherheitsprüfung angefordert, die diese Ansicht nicht abschließen kann.",
+                "heading": "Epic Store-Browsing ist vorübergehend blockiert",
+                "tryAgain": "Erneut versuchen"
+            },
             "open-in-browser": "Im Browser öffnen",
             "next-step": "Dies ist als eigenes zukünftiges Vorhaben vorgesehen -- verwende bis dahin den Button unten, um die Seite im System-Browser zu öffnen.",
             "epic": {

@@ -398,6 +398,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Zainstaluj z biblioteki — ten widok nie może otworzyć Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic potrzebuje chwili, aby się wczytać",
+                "reload": "Odśwież"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Twoje logowanie nie może zostać jeszcze ukończone: {{channel}} nie zostało przeniesione do tej wersji. Zostanie to dodane w Fazie 34.5.",
@@ -452,6 +461,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic zażądał weryfikacji bezpieczeństwa, której ten widok nie może zakończyć.",
+                "heading": "Przeglądanie Epic Store jest tymczasowo zablokowane",
+                "tryAgain": "Spróbuj ponownie"
+            },
             "next-step": "Jest to śledzone jako osobne zadanie na przyszłość -- na razie użyj poniższego przycisku, aby otworzyć to w przeglądarce systemowej.",
             "open-in-browser": "Otwórz w przeglądarce",
             "epic": {

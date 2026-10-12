@@ -384,6 +384,15 @@
         "zombie": "僵尸"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "请改为从您的资料库安装 — 此视图无法打开 Epic Games Launcher。"
+            },
+            "timeout": {
+                "message": "Epic 加载需要一些时间",
+                "reload": "重新加载"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "暂时无法完成登录：{{channel}} 尚未移植到此构建版本。此功能将在第 34.5 阶段上线。",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic 要求进行此视图无法完成的安全检查。",
+                "heading": "Epic Store 浏览功能暂时被屏蔽",
+                "tryAgain": "重试"
+            },
             "next-step": "这已被列为未来的独立工作项——目前请使用下方按钮在系统浏览器中打开。",
             "open-in-browser": "在浏览器中打开",
             "epic": {

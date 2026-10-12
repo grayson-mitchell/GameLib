@@ -384,6 +384,15 @@
         "zombie": "Zombi"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Telepítsd inkább a könyvtáradból — ez a nézet nem tudja megnyitni az Epic Games Launchert."
+            },
+            "timeout": {
+                "message": "Az Epic betöltése egy ideig tart",
+                "reload": "Újratöltés"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "A bejelentkezésed még nem fejezhető be: a(z) {{channel}} nincs átültetve erre a verzióra. Ez a 34.5-ös fázisban valósul meg.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Az Epic biztonsági ellenőrzést kért, amelyet ez a nézet nem tud elvégezni.",
+                "heading": "Az Epic Store böngészése átmenetileg blokkolva van",
+                "tryAgain": "Próbáld újra"
+            },
             "next-step": "Ezt külön jövőbeli feladatként tartjuk nyilván -- addig is használd az alábbi gombot, hogy a rendszer böngésződben nyisd meg.",
             "open-in-browser": "Megnyitás böngészőben",
             "epic": {

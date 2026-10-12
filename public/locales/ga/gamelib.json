@@ -405,6 +405,15 @@
         "zombie": "Zombaí"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Suiteáil ón leabharlann agat ina ionad sin — ní féidir leis an amharc seo Epic Games Launcher a oscailt."
+            },
+            "timeout": {
+                "message": "Tá Epic ag tógáil tamaill le lódú",
+                "reload": "Athlódáil"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Ní féidir do shíniú isteach a chríochnú go fóill: níl {{channel}} curtha in oiriúint don leagan seo. Tiocfaidh sé seo i gCéim 34.5.",
@@ -459,6 +468,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "D'iarr Epic seiceáil slándála nach féidir leis an amharc seo a chomhlánú.",
+                "heading": "Tá brabhsáil Epic Store coiscthe go sealadach",
+                "tryAgain": "Bain triail eile as"
+            },
             "next-step": "Táthar ag rianú seo mar obair ar leithligh amach anseo -- go dtí sin, úsáid an cnaipe thíos chun é a oscailt i mbrabhsálaí do chórais ina ionad.",
             "open-in-browser": "Oscail sa bhrabhsálaí",
             "epic": {

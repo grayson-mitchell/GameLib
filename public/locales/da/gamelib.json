@@ -384,6 +384,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Installer fra dit bibliotek i stedet — denne visning kan ikke åbne Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic tager et stykke tid om at indlæse",
+                "reload": "Genindlæs"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Din login kan ikke gennemføres endnu: {{channel}} er ikke porteret til denne build. Dette kommer i Fase 34.5.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic bad om et sikkerhedstjek, som denne visning ikke kan gennemføre.",
+                "heading": "Gennemsyn af Epic Store er midlertidigt blokeret",
+                "tryAgain": "Prøv igen"
+            },
             "next-step": "Dette er registreret som fremtidigt arbejde -- brug for nu knappen nedenfor til at åbne det i din systembrowser i stedet.",
             "open-in-browser": "Åbn i browser",
             "epic": {

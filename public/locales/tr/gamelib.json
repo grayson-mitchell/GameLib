@@ -384,6 +384,15 @@
         "zombie": "Zombi"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Bunun yerine Kitaplığınızdan yükleyin — bu görünüm Epic Games Launcher'ı açamıyor."
+            },
+            "timeout": {
+                "message": "Epic'in yüklenmesi biraz zaman alıyor",
+                "reload": "Yenile"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Oturum açma işleminiz henüz tamamlanamıyor: {{channel}} bu sürüme henüz aktarılmadı. Bu, Aşama 34.5'te gelecek.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic, bu görünümün tamamlayamadığı bir güvenlik denetimi istedi.",
+                "heading": "Epic Store gezinme geçici olarak engellendi",
+                "tryAgain": "Tekrar dene"
+            },
             "next-step": "Bu, ayrı bir gelecek çalışma olarak takip ediliyor -- şimdilik, bunun yerine sistem tarayıcınızda açmak için aşağıdaki düğmeyi kullanın.",
             "open-in-browser": "Tarayıcıda aç",
             "epic": {

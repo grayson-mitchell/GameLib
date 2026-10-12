@@ -391,6 +391,15 @@
         "zombie": "Zumbi"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Instale a partir da sua Biblioteca em alternativa — esta vista não consegue abrir o Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "A Epic está a demorar um pouco a carregar",
+                "reload": "Recarregar"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "O seu início de sessão ainda não pode ser concluído: {{channel}} não foi portado para esta versão. Isto chegará na Fase 34.5.",
@@ -445,6 +454,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "A Epic pediu uma verificação de segurança que esta vista não consegue concluir.",
+                "heading": "A navegação na Epic Store está temporariamente bloqueada",
+                "tryAgain": "Tentar novamente"
+            },
             "next-step": "Isto está registado como um trabalho futuro próprio -- por agora, use o botão abaixo para abrir no seu browser do sistema.",
             "open-in-browser": "Abrir no browser",
             "epic": {

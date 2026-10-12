@@ -405,6 +405,15 @@
         "zombie": "Zombi"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Staliit eus ho levraoueg kentoc'h — ne c'hell ket ar gwel-mañ digeriñ Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Pell zo o kargañ eo Epic",
+                "reload": "Adkargañ"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "N'haller ket peurechuiñ ho kevreañ c'hoazh: n'eo ket {{channel}} treuzdouget d'ar sevenadur-mañ. Dont a raio gant Fazenn 34.5.",
@@ -459,6 +468,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Goulennet ez eus bet gant Epic ur gwiriadur diogelroez n'hall ket ar gwel-mañ echuiñ.",
+                "heading": "Furchal e Epic Store a zo stanket evit ar mare",
+                "tryAgain": "Klask en-dro"
+            },
             "next-step": "Heuliet eo an dra-se evel ul labour dazont a-se -- evit ar mare, implijit an afell dindan evit e zigeriñ er merdeer reizhiad kentoc'h.",
             "open-in-browser": "Digeriñ er merdeer",
             "epic": {

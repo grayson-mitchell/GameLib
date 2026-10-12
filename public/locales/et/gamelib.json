@@ -381,6 +381,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Installi selle asemel oma raamatukogust — see vaade ei saa Epic Games Launcherit avada."
+            },
+            "timeout": {
+                "message": "Epicu laadimine võtab veidi aega",
+                "reload": "Laadi uuesti"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Sisselogimist ei saa veel lõpetada: {{channel}} pole sellesse versiooni üle kantud. See lisandub faasis 34.5.",
@@ -435,6 +444,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic küsis turvakontrolli, mida see vaade ei suuda lõpetada.",
+                "heading": "Epic Store sirvimine on ajutiselt blokeeritud",
+                "tryAgain": "Proovi uuesti"
+            },
             "next-step": "See on eraldi tulevase töö nimekirjas — praegu kasuta allolevat nuppu, et avada see hoopis oma süsteemi veebilehitsejas.",
             "open-in-browser": "Ava veebilehitsejas",
             "epic": {

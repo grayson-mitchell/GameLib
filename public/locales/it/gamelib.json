@@ -391,6 +391,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Installa invece dalla tua libreria — questa vista non può aprire l'Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic sta impiegando un po' di tempo a caricare",
+                "reload": "Ricarica"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "L'accesso non può ancora essere completato: {{channel}} non è stato portato su questa build. Sarà disponibile nella Fase 34.5.",
@@ -445,6 +454,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic ha richiesto un controllo di sicurezza che questa vista non può completare.",
+                "heading": "La navigazione dell'Epic Store è temporaneamente bloccata",
+                "tryAgain": "Riprova"
+            },
             "next-step": "Questo è tracciato come attività futura a sé stante -- per ora, usa il pulsante qui sotto per aprirla nel browser di sistema.",
             "open-in-browser": "Apri nel browser",
             "epic": {

@@ -391,6 +391,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Instalează din biblioteca ta în schimb — această vizualizare nu poate deschide Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic durează puțin mai mult să se încarce",
+                "reload": "Reîncărcați"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Autentificarea nu poate fi finalizată încă: {{channel}} nu este portat pe această versiune. Aceasta va fi disponibilă în Faza 34.5.",
@@ -445,6 +454,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic a solicitat o verificare de securitate pe care această vizualizare nu o poate finaliza.",
+                "heading": "Navigarea Epic Store este temporar blocată",
+                "tryAgain": "Încearcă din nou"
+            },
             "next-step": "Aceasta este urmărită ca o activitate viitoare separată -- deocamdată, folosește butonul de mai jos pentru a o deschide în browserul sistemului.",
             "open-in-browser": "Deschide în browser",
             "epic": {

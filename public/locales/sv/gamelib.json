@@ -384,6 +384,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Installera från ditt bibliotek istället — den här vyn kan inte öppna Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic tar en stund att läsa in",
+                "reload": "Ladda om"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Din inloggning kan inte slutföras ännu: {{channel}} är inte porterad till den här versionen. Detta kommer i fas 34.5.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic begärde en säkerhetskontroll som den här vyn inte kan slutföra.",
+                "heading": "Bläddring i Epic Store är tillfälligt blockerad",
+                "tryAgain": "Försök igen"
+            },
             "next-step": "Detta spåras som ett separat framtida arbete -- använd knappen nedan för att öppna det i din systemwebbläsare istället.",
             "open-in-browser": "Öppna i webbläsare",
             "epic": {

@@ -263,31 +263,67 @@ def check6_no_empties(report: Report, proposed):
 
 
 def check7_insertion_points(report: Report, non_english):
+    """Mirrors check2_key_set_per_locale's dual-state design: this check must
+    print a real result whether it runs BEFORE write_fill.py (pre-fill --
+    both new groups absent everywhere, so a landing point is computed) or
+    AFTER it (post-fill -- both new groups present everywhere, so there is
+    nothing left to land). Only a MIXED state -- present in some locales,
+    absent in others -- is an actual error, since that is what a partial or
+    colliding write would look like. An earlier version of this check
+    hardcoded the pre-fill assumption and reported 96 false errors when
+    re-run after write_fill.py succeeded; this is that fix (Rule 1)."""
     errors = []
     landing_report = {}
+    presence = {}  # locale -> group_path -> bool present
+
     for locale in non_english:
         cat_path = lib.LOCALES_DIR / locale / "gamelib.json"
         cat = json.loads(cat_path.read_text(encoding="utf-8"))
         rows = {}
         for group in lib.NEW_GROUPS:
+            group_path = f"{group['parent_path']}.{group['group_key']}"
             parent = lib.get_nested(cat, group["parent_path"])
             if not isinstance(parent, dict):
                 errors.append(
                     f"{locale}: parent object '{group['parent_path']}' is missing or not an object"
                 )
+                presence.setdefault(locale, {})[group_path] = None
                 continue
-            if group["group_key"] in parent:
-                errors.append(
-                    f"{locale}: '{group['parent_path']}.{group['group_key']}' already exists "
-                    "-- this plan expects it to be entirely new"
-                )
-                continue
-            landing = lib.insertion_landing_point(list(parent.keys()), group["group_key"])
-            rows[f"{group['parent_path']}.{group['group_key']}"] = landing or "(end of object)"
+            is_present = group["group_key"] in parent
+            presence.setdefault(locale, {})[group_path] = is_present
+            if not is_present:
+                landing = lib.insertion_landing_point(list(parent.keys()), group["group_key"])
+                rows[group_path] = landing or "(end of object)"
         landing_report[locale] = rows
 
-    sample = {k: landing_report[k] for k in list(landing_report)[:3]}
-    report.say(f"  computed landing points for {len(non_english)} locales x {len(lib.NEW_GROUPS)} groups, e.g. {sample}")
+    group_paths = [f"{g['parent_path']}.{g['group_key']}" for g in lib.NEW_GROUPS]
+    all_absent_everywhere = all(
+        presence.get(loc, {}).get(gp) is False for loc in non_english for gp in group_paths
+    )
+    all_present_everywhere = all(
+        presence.get(loc, {}).get(gp) is True for loc in non_english for gp in group_paths
+    )
+
+    if all_present_everywhere:
+        report.say(
+            f"  both new groups already present in all {len(non_english)} locales "
+            "(expected post-fill state) -- no landing points to compute"
+        )
+    elif all_absent_everywhere:
+        sample = {k: landing_report[k] for k in list(landing_report)[:3]}
+        report.say(
+            f"  computed landing points for {len(non_english)} locales x {len(lib.NEW_GROUPS)} "
+            f"groups, e.g. {sample}"
+        )
+    else:
+        for locale in non_english:
+            for gp in group_paths:
+                if presence.get(locale, {}).get(gp) is True:
+                    errors.append(
+                        f"{locale}: '{gp}' is present while other locales are not -- "
+                        "mixed pre/post-fill state, possible partial write"
+                    )
+
     report.check_done(7, "insertion point per (locale, key)", errors)
 
 

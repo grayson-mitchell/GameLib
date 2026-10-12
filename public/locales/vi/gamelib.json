@@ -384,6 +384,15 @@
         "zombie": "Zombie"
     },
     "webview": {
+        "epicEmbed": {
+            "launcherBlocked": {
+                "message": "Hãy cài đặt từ Thư viện của bạn — chế độ xem này không thể mở Epic Games Launcher."
+            },
+            "timeout": {
+                "message": "Epic đang tải mất một chút thời gian",
+                "reload": "Tải Lại"
+            }
+        },
         "login": {
             "blocked": {
                 "body": "Đăng nhập của bạn chưa thể hoàn tất: {{channel}} chưa được chuyển sang bản dựng này. Tính năng này sẽ có ở Phase 34.5.",
@@ -438,6 +447,11 @@
             }
         },
         "unavailable": {
+            "epic-challenged": {
+                "body": "Epic đã yêu cầu kiểm tra an ninh mà chế độ xem này không thể hoàn tất.",
+                "heading": "Duyệt Epic Store tạm thời bị chặn",
+                "tryAgain": "Thử lại"
+            },
             "next-step": "Đây được ghi nhận là một hạng mục công việc riêng trong tương lai -- hiện tại, hãy dùng nút bên dưới để mở trong trình duyệt hệ thống thay thế.",
             "open-in-browser": "Mở trong trình duyệt",
             "epic": {

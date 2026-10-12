@@ -1,0 +1,386 @@
+{
+  "ar": {
+    "webview.epicEmbed.timeout.message": "يستغرق Epic وقتًا طويلاً للتحميل",
+    "webview.epicEmbed.timeout.reload": "أعد التحميل",
+    "webview.epicEmbed.launcherBlocked.message": "ثبّت اللعبة من مكتبتك بدلاً من ذلك — لا يمكن لهذا العرض فتح Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "تصفح متجر Epic محظور مؤقتًا",
+    "webview.unavailable.epic-challenged.body": "طلب Epic فحص أمان لا يمكن لهذا العرض إتمامه.",
+    "webview.unavailable.epic-challenged.tryAgain": "حاول مرة أخرى"
+  },
+  "az": {
+    "webview.epicEmbed.timeout.message": "Epic yüklənmək üçün bir az vaxt aparır",
+    "webview.epicEmbed.timeout.reload": "Yenidən yükləyin",
+    "webview.epicEmbed.launcherBlocked.message": "Əvəzinə kitabxananızdan quraşdırın — bu görünüş Epic Games Launcher-i aça bilmir.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store-a baxış müvəqqəti olaraq bloklanıb",
+    "webview.unavailable.epic-challenged.body": "Epic bu görünüşün tamamlaya bilmədiyi bir təhlükəsizlik yoxlaması istədi.",
+    "webview.unavailable.epic-challenged.tryAgain": "Yenidən cəhd edin"
+  },
+  "be": {
+    "webview.epicEmbed.timeout.message": "Epic даволі доўга загружаецца",
+    "webview.epicEmbed.timeout.reload": "Перазагрузіць",
+    "webview.epicEmbed.launcherBlocked.message": "Усталюйце з вашай бібліятэкі — гэты прагляд не можа адкрыць Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Прагляд Epic Store часова заблакаваны",
+    "webview.unavailable.epic-challenged.body": "Epic запатрабаваў праверку бяспекі, якую гэты прагляд не можа завершыць.",
+    "webview.unavailable.epic-challenged.tryAgain": "Паспрабаваць зноў"
+  },
+  "bg": {
+    "webview.epicEmbed.timeout.message": "Epic отнема доста време за зареждане",
+    "webview.epicEmbed.timeout.reload": "Презареждане",
+    "webview.epicEmbed.launcherBlocked.message": "Инсталирайте от библиотеката си вместо това — този преглед не може да отвори Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Разглеждането на Epic Store е временно блокирано",
+    "webview.unavailable.epic-challenged.body": "Epic поиска проверка за сигурност, която този преглед не може да завърши.",
+    "webview.unavailable.epic-challenged.tryAgain": "Опитайте отново"
+  },
+  "br": {
+    "webview.epicEmbed.timeout.message": "Pell zo o kargañ eo Epic",
+    "webview.epicEmbed.timeout.reload": "Adkargañ",
+    "webview.epicEmbed.launcherBlocked.message": "Staliit eus ho levraoueg kentoc'h — ne c'hell ket ar gwel-mañ digeriñ Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Furchal e Epic Store a zo stanket evit ar mare",
+    "webview.unavailable.epic-challenged.body": "Goulennet ez eus bet gant Epic ur gwiriadur diogelroez n'hall ket ar gwel-mañ echuiñ.",
+    "webview.unavailable.epic-challenged.tryAgain": "Klask en-dro"
+  },
+  "bs": {
+    "webview.epicEmbed.timeout.message": "Epicu treba dosta vremena da se učita",
+    "webview.epicEmbed.timeout.reload": "Ponovo učitaj",
+    "webview.epicEmbed.launcherBlocked.message": "Instalirajte iz vaše biblioteke umjesto toga — ovaj prikaz ne može otvoriti Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Pregledavanje Epic Store-a je privremeno blokirano",
+    "webview.unavailable.epic-challenged.body": "Epic je zatražio sigurnosnu provjeru koju ovaj prikaz ne može završiti.",
+    "webview.unavailable.epic-challenged.tryAgain": "Pokušaj ponovo"
+  },
+  "ca": {
+    "webview.epicEmbed.timeout.message": "Epic està trigant una estona a carregar",
+    "webview.epicEmbed.timeout.reload": "Carrega de nou",
+    "webview.epicEmbed.launcherBlocked.message": "Instal·la des de la teva biblioteca — aquesta vista no pot obrir l'Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "La navegació per Epic Store està temporalment bloquejada",
+    "webview.unavailable.epic-challenged.body": "Epic ha demanat una comprovació de seguretat que aquesta vista no pot completar.",
+    "webview.unavailable.epic-challenged.tryAgain": "Torna-ho a provar"
+  },
+  "cs": {
+    "webview.epicEmbed.timeout.message": "Epicu chvíli trvá načtení",
+    "webview.epicEmbed.timeout.reload": "Obnovit",
+    "webview.epicEmbed.launcherBlocked.message": "Nainstalujte místo toho z vaší knihovny — toto zobrazení nemůže otevřít Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Procházení Epic Store je dočasně blokováno",
+    "webview.unavailable.epic-challenged.body": "Epic vyžádal bezpečnostní kontrolu, kterou toto zobrazení nemůže dokončit.",
+    "webview.unavailable.epic-challenged.tryAgain": "Zkusit znovu"
+  },
+  "da": {
+    "webview.epicEmbed.timeout.message": "Epic tager et stykke tid om at indlæse",
+    "webview.epicEmbed.timeout.reload": "Genindlæs",
+    "webview.epicEmbed.launcherBlocked.message": "Installer fra dit bibliotek i stedet — denne visning kan ikke åbne Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Gennemsyn af Epic Store er midlertidigt blokeret",
+    "webview.unavailable.epic-challenged.body": "Epic bad om et sikkerhedstjek, som denne visning ikke kan gennemføre.",
+    "webview.unavailable.epic-challenged.tryAgain": "Prøv igen"
+  },
+  "de": {
+    "webview.epicEmbed.timeout.message": "Epic braucht etwas länger zum Laden",
+    "webview.epicEmbed.timeout.reload": "Neu laden",
+    "webview.epicEmbed.launcherBlocked.message": "Installiere stattdessen aus deiner Bibliothek — diese Ansicht kann den Epic Games Launcher nicht öffnen.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store-Browsing ist vorübergehend blockiert",
+    "webview.unavailable.epic-challenged.body": "Epic hat eine Sicherheitsprüfung angefordert, die diese Ansicht nicht abschließen kann.",
+    "webview.unavailable.epic-challenged.tryAgain": "Erneut versuchen"
+  },
+  "el": {
+    "webview.epicEmbed.timeout.message": "Το Epic χρειάζεται λίγο χρόνο για να φορτώσει",
+    "webview.epicEmbed.timeout.reload": "Επαναφόρτωση",
+    "webview.epicEmbed.launcherBlocked.message": "Εγκαταστήστε από τη βιβλιοθήκη σας — αυτή η προβολή δεν μπορεί να ανοίξει το Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Η περιήγηση στο Epic Store είναι προσωρινά αποκλεισμένη",
+    "webview.unavailable.epic-challenged.body": "Το Epic ζήτησε έλεγχο ασφαλείας που αυτή η προβολή δεν μπορεί να ολοκληρώσει.",
+    "webview.unavailable.epic-challenged.tryAgain": "Δοκιμάστε ξανά"
+  },
+  "es": {
+    "webview.epicEmbed.timeout.message": "Epic está tardando un poco en cargar",
+    "webview.epicEmbed.timeout.reload": "Recarga",
+    "webview.epicEmbed.launcherBlocked.message": "Instala desde tu biblioteca en su lugar — esta vista no puede abrir el Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "La navegación por Epic Store está bloqueada temporalmente",
+    "webview.unavailable.epic-challenged.body": "Epic solicitó una verificación de seguridad que esta vista no puede completar.",
+    "webview.unavailable.epic-challenged.tryAgain": "Intentar de nuevo"
+  },
+  "et": {
+    "webview.epicEmbed.timeout.message": "Epicu laadimine võtab veidi aega",
+    "webview.epicEmbed.timeout.reload": "Laadi uuesti",
+    "webview.epicEmbed.launcherBlocked.message": "Installi selle asemel oma raamatukogust — see vaade ei saa Epic Games Launcherit avada.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store sirvimine on ajutiselt blokeeritud",
+    "webview.unavailable.epic-challenged.body": "Epic küsis turvakontrolli, mida see vaade ei suuda lõpetada.",
+    "webview.unavailable.epic-challenged.tryAgain": "Proovi uuesti"
+  },
+  "eu": {
+    "webview.epicEmbed.timeout.message": "Epic kargatzen denbora pixka bat behar du",
+    "webview.epicEmbed.timeout.reload": "Berriz kargatu",
+    "webview.epicEmbed.launcherBlocked.message": "Instalatu zure liburutegitik horren ordez — ikuspegi honek ezin du Epic Games Launcher ireki.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store nabigatzea aldi baterako blokeatuta dago",
+    "webview.unavailable.epic-challenged.body": "Epic-ek segurtasun-egiaztapen bat eskatu du, eta ikuspegi honek ezin du osatu.",
+    "webview.unavailable.epic-challenged.tryAgain": "Saiatu berriro"
+  },
+  "fa": {
+    "webview.epicEmbed.timeout.message": "بار شدن Epic کمی طول می‌کشد",
+    "webview.epicEmbed.timeout.reload": "بارگیری مجدد",
+    "webview.epicEmbed.launcherBlocked.message": "به‌جای آن از کتابخانه خود نصب کنید — این نما نمی‌تواند Epic Games Launcher را باز کند.",
+    "webview.unavailable.epic-challenged.heading": "مرور فروشگاه Epic موقتاً مسدود شده است",
+    "webview.unavailable.epic-challenged.body": "Epic یک بررسی امنیتی درخواست کرد که این نما نمی‌تواند آن را تکمیل کند.",
+    "webview.unavailable.epic-challenged.tryAgain": "تلاش مجدد"
+  },
+  "fi": {
+    "webview.epicEmbed.timeout.message": "Epicin lataaminen kestää hetken",
+    "webview.epicEmbed.timeout.reload": "Lataa uudelleen",
+    "webview.epicEmbed.launcherBlocked.message": "Asenna sen sijaan kirjastostasi — tämä näkymä ei voi avata Epic Games Launcheria.",
+    "webview.unavailable.epic-challenged.heading": "Epic Storen selaus on tilapäisesti estetty",
+    "webview.unavailable.epic-challenged.body": "Epic pyysi turvatarkistusta, jota tämä näkymä ei voi suorittaa loppuun.",
+    "webview.unavailable.epic-challenged.tryAgain": "Yritä uudelleen"
+  },
+  "fr": {
+    "webview.epicEmbed.timeout.message": "Epic met un certain temps à charger",
+    "webview.epicEmbed.timeout.reload": "Recharger",
+    "webview.epicEmbed.launcherBlocked.message": "Installez plutôt depuis votre bibliothèque — cette vue ne peut pas ouvrir l'Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "La navigation sur l'Epic Store est temporairement bloquée",
+    "webview.unavailable.epic-challenged.body": "Epic a demandé une vérification de sécurité que cette vue ne peut pas terminer.",
+    "webview.unavailable.epic-challenged.tryAgain": "Réessayer"
+  },
+  "ga": {
+    "webview.epicEmbed.timeout.message": "Tá Epic ag tógáil tamaill le lódú",
+    "webview.epicEmbed.timeout.reload": "Athlódáil",
+    "webview.epicEmbed.launcherBlocked.message": "Suiteáil ón leabharlann agat ina ionad sin — ní féidir leis an amharc seo Epic Games Launcher a oscailt.",
+    "webview.unavailable.epic-challenged.heading": "Tá brabhsáil Epic Store coiscthe go sealadach",
+    "webview.unavailable.epic-challenged.body": "D'iarr Epic seiceáil slándála nach féidir leis an amharc seo a chomhlánú.",
+    "webview.unavailable.epic-challenged.tryAgain": "Bain triail eile as"
+  },
+  "gl": {
+    "webview.epicEmbed.timeout.message": "Epic está tardando un pouco en cargar",
+    "webview.epicEmbed.timeout.reload": "Recargar",
+    "webview.epicEmbed.launcherBlocked.message": "Instala desde a túa biblioteca no seu lugar — esta vista non pode abrir o Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "A navegación de Epic Store está bloqueada temporalmente",
+    "webview.unavailable.epic-challenged.body": "Epic solicitou unha comprobación de seguridade que esta vista non pode completar.",
+    "webview.unavailable.epic-challenged.tryAgain": "Tentar de novo"
+  },
+  "he": {
+    "webview.epicEmbed.timeout.message": "ל-Epic נדרש זמן מה לטעינה",
+    "webview.epicEmbed.timeout.reload": "טען מחדש",
+    "webview.epicEmbed.launcherBlocked.message": "התקינו מהספרייה שלכם במקום — תצוגה זו לא יכולה לפתוח את Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "גלישה ב-Epic Store חסומה כרגע",
+    "webview.unavailable.epic-challenged.body": "Epic ביקשה בדיקת אבטחה שתצוגה זו לא יכולה להשלים.",
+    "webview.unavailable.epic-challenged.tryAgain": "נסה שוב"
+  },
+  "hr": {
+    "webview.epicEmbed.timeout.message": "Epicu je potrebno malo vremena za učitavanje",
+    "webview.epicEmbed.timeout.reload": "Ponovno učitaj",
+    "webview.epicEmbed.launcherBlocked.message": "Instalirajte iz svoje knjižnice umjesto toga — ovaj prikaz ne može otvoriti Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Pregledavanje Epic Store trgovine privremeno je blokirano",
+    "webview.unavailable.epic-challenged.body": "Epic je zatražio sigurnosnu provjeru koju ovaj prikaz ne može dovršiti.",
+    "webview.unavailable.epic-challenged.tryAgain": "Pokušaj ponovno"
+  },
+  "hu": {
+    "webview.epicEmbed.timeout.message": "Az Epic betöltése egy ideig tart",
+    "webview.epicEmbed.timeout.reload": "Újratöltés",
+    "webview.epicEmbed.launcherBlocked.message": "Telepítsd inkább a könyvtáradból — ez a nézet nem tudja megnyitni az Epic Games Launchert.",
+    "webview.unavailable.epic-challenged.heading": "Az Epic Store böngészése átmenetileg blokkolva van",
+    "webview.unavailable.epic-challenged.body": "Az Epic biztonsági ellenőrzést kért, amelyet ez a nézet nem tud elvégezni.",
+    "webview.unavailable.epic-challenged.tryAgain": "Próbáld újra"
+  },
+  "id": {
+    "webview.epicEmbed.timeout.message": "Epic membutuhkan waktu agak lama untuk memuat",
+    "webview.epicEmbed.timeout.reload": "Muat Ulang",
+    "webview.epicEmbed.launcherBlocked.message": "Instal dari Perpustakaan Anda — tampilan ini tidak dapat membuka Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Penjelajahan Epic Store diblokir sementara",
+    "webview.unavailable.epic-challenged.body": "Epic meminta pemeriksaan keamanan yang tidak dapat diselesaikan oleh tampilan ini.",
+    "webview.unavailable.epic-challenged.tryAgain": "Coba lagi"
+  },
+  "it": {
+    "webview.epicEmbed.timeout.message": "Epic sta impiegando un po' di tempo a caricare",
+    "webview.epicEmbed.timeout.reload": "Ricarica",
+    "webview.epicEmbed.launcherBlocked.message": "Installa invece dalla tua libreria — questa vista non può aprire l'Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "La navigazione dell'Epic Store è temporaneamente bloccata",
+    "webview.unavailable.epic-challenged.body": "Epic ha richiesto un controllo di sicurezza che questa vista non può completare.",
+    "webview.unavailable.epic-challenged.tryAgain": "Riprova"
+  },
+  "ja": {
+    "webview.epicEmbed.timeout.message": "Epic の読み込みに時間がかかっています",
+    "webview.epicEmbed.timeout.reload": "再読み込み",
+    "webview.epicEmbed.launcherBlocked.message": "代わりにライブラリからインストールしてください — このビューでは Epic Games Launcher を開けません。",
+    "webview.unavailable.epic-challenged.heading": "Epic Store の閲覧は一時的にブロックされています",
+    "webview.unavailable.epic-challenged.body": "Epic がセキュリティチェックを要求しましたが、このビューでは完了できません。",
+    "webview.unavailable.epic-challenged.tryAgain": "再試行"
+  },
+  "ka": {
+    "webview.epicEmbed.timeout.message": "Epic-ს ჩატვირთვას დრო სჭირდება",
+    "webview.epicEmbed.timeout.reload": "თავიდან ჩატვირთვა",
+    "webview.epicEmbed.launcherBlocked.message": "დაინსტალირეთ თქვენი ბიბლიოთეკიდან — ამ ხედს არ შეუძლია Epic Games Launcher-ის გახსნა.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store-ის დათვალიერება დროებით დაბლოკილია",
+    "webview.unavailable.epic-challenged.body": "Epic-მა მოითხოვა უსაფრთხოების შემოწმება, რომლის დასრულება ამ ხედს არ შეუძლია.",
+    "webview.unavailable.epic-challenged.tryAgain": "ცადეთ ხელახლა"
+  },
+  "ko": {
+    "webview.epicEmbed.timeout.message": "Epic을 불러오는 데 시간이 걸리고 있습니다",
+    "webview.epicEmbed.timeout.reload": "다시 로드",
+    "webview.epicEmbed.launcherBlocked.message": "대신 라이브러리에서 설치하세요 — 이 화면에서는 Epic Games Launcher를 열 수 없습니다.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store 탐색이 일시적으로 차단되었습니다",
+    "webview.unavailable.epic-challenged.body": "Epic이 이 화면에서 완료할 수 없는 보안 검사를 요청했습니다.",
+    "webview.unavailable.epic-challenged.tryAgain": "다시 시도"
+  },
+  "lt": {
+    "webview.epicEmbed.timeout.message": "„Epic“ įkėlimas užtrunka kiek ilgiau",
+    "webview.epicEmbed.timeout.reload": "Perleisti",
+    "webview.epicEmbed.launcherBlocked.message": "Įdiekite iš savo bibliotekos — šis rodinys negali atidaryti „Epic Games Launcher“.",
+    "webview.unavailable.epic-challenged.heading": "„Epic Store“ naršymas laikinai blokuojamas",
+    "webview.unavailable.epic-challenged.body": "„Epic“ paprašė atlikti saugumo patikrą, kurios šis rodinys negali užbaigti.",
+    "webview.unavailable.epic-challenged.tryAgain": "Bandyti dar kartą"
+  },
+  "ml": {
+    "webview.epicEmbed.timeout.message": "Epic ലോഡ് ചെയ്യാൻ കുറച്ച് സമയമെടുക്കുന്നു",
+    "webview.epicEmbed.timeout.reload": "വീണ്ടും എടുക്കൂ",
+    "webview.epicEmbed.launcherBlocked.message": "പകരം നിങ്ങളുടെ ലൈബ്രറിയിൽ നിന്ന് ഇൻസ്റ്റാൾ ചെയ്യുക — ഈ വ്യൂവിന് Epic Games Launcher തുറക്കാൻ കഴിയില്ല.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store ബ്രൗസിംഗ് താൽക്കാലികമായി തടഞ്ഞിരിക്കുന്നു",
+    "webview.unavailable.epic-challenged.body": "ഈ വ്യൂവിന് പൂർത്തിയാക്കാൻ കഴിയാത്ത ഒരു സുരക്ഷാ പരിശോധന Epic ആവശ്യപ്പെട്ടു.",
+    "webview.unavailable.epic-challenged.tryAgain": "വീണ്ടും ശ്രമിക്കുക"
+  },
+  "nb_NO": {
+    "webview.epicEmbed.timeout.message": "Epic tar en stund med å laste",
+    "webview.epicEmbed.timeout.reload": "Last inn igjen",
+    "webview.epicEmbed.launcherBlocked.message": "Installer fra biblioteket ditt i stedet — denne visningen kan ikke åpne Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Nettlesing av Epic Store er midlertidig blokkert",
+    "webview.unavailable.epic-challenged.body": "Epic ba om en sikkerhetskontroll som denne visningen ikke kan fullføre.",
+    "webview.unavailable.epic-challenged.tryAgain": "Prøv igjen"
+  },
+  "nl": {
+    "webview.epicEmbed.timeout.message": "Epic doet er even over om te laden",
+    "webview.epicEmbed.timeout.reload": "Herladen",
+    "webview.epicEmbed.launcherBlocked.message": "Installeer in plaats daarvan vanuit je bibliotheek — deze weergave kan de Epic Games Launcher niet openen.",
+    "webview.unavailable.epic-challenged.heading": "Bladeren door Epic Store is tijdelijk geblokkeerd",
+    "webview.unavailable.epic-challenged.body": "Epic heeft om een beveiligingscontrole gevraagd die deze weergave niet kan voltooien.",
+    "webview.unavailable.epic-challenged.tryAgain": "Opnieuw proberen"
+  },
+  "pl": {
+    "webview.epicEmbed.timeout.message": "Epic potrzebuje chwili, aby się wczytać",
+    "webview.epicEmbed.timeout.reload": "Odśwież",
+    "webview.epicEmbed.launcherBlocked.message": "Zainstaluj z biblioteki — ten widok nie może otworzyć Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Przeglądanie Epic Store jest tymczasowo zablokowane",
+    "webview.unavailable.epic-challenged.body": "Epic zażądał weryfikacji bezpieczeństwa, której ten widok nie może zakończyć.",
+    "webview.unavailable.epic-challenged.tryAgain": "Spróbuj ponownie"
+  },
+  "pt": {
+    "webview.epicEmbed.timeout.message": "A Epic está a demorar um pouco a carregar",
+    "webview.epicEmbed.timeout.reload": "Recarregar",
+    "webview.epicEmbed.launcherBlocked.message": "Instale a partir da sua Biblioteca em alternativa — esta vista não consegue abrir o Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "A navegação na Epic Store está temporariamente bloqueada",
+    "webview.unavailable.epic-challenged.body": "A Epic pediu uma verificação de segurança que esta vista não consegue concluir.",
+    "webview.unavailable.epic-challenged.tryAgain": "Tentar novamente"
+  },
+  "pt_BR": {
+    "webview.epicEmbed.timeout.message": "A Epic está demorando um pouco para carregar",
+    "webview.epicEmbed.timeout.reload": "Recarregar",
+    "webview.epicEmbed.launcherBlocked.message": "Instale pela sua Biblioteca em vez disso — esta visualização não pode abrir o Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "A navegação na Epic Store está temporariamente bloqueada",
+    "webview.unavailable.epic-challenged.body": "A Epic solicitou uma verificação de segurança que esta visualização não pode concluir.",
+    "webview.unavailable.epic-challenged.tryAgain": "Tentar novamente"
+  },
+  "ro": {
+    "webview.epicEmbed.timeout.message": "Epic durează puțin mai mult să se încarce",
+    "webview.epicEmbed.timeout.reload": "Reîncărcați",
+    "webview.epicEmbed.launcherBlocked.message": "Instalează din biblioteca ta în schimb — această vizualizare nu poate deschide Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Navigarea Epic Store este temporar blocată",
+    "webview.unavailable.epic-challenged.body": "Epic a solicitat o verificare de securitate pe care această vizualizare nu o poate finaliza.",
+    "webview.unavailable.epic-challenged.tryAgain": "Încearcă din nou"
+  },
+  "ru": {
+    "webview.epicEmbed.timeout.message": "Загрузка Epic занимает некоторое время",
+    "webview.epicEmbed.timeout.reload": "Перезагрузить",
+    "webview.epicEmbed.launcherBlocked.message": "Установите из вашей библиотеки — это окно не может открыть Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Просмотр Epic Store временно заблокирован",
+    "webview.unavailable.epic-challenged.body": "Epic запросил проверку безопасности, которую это окно не может выполнить.",
+    "webview.unavailable.epic-challenged.tryAgain": "Повторить"
+  },
+  "sk": {
+    "webview.epicEmbed.timeout.message": "Načítanie Epic chvíľu trvá",
+    "webview.epicEmbed.timeout.reload": "Reload",
+    "webview.epicEmbed.launcherBlocked.message": "Nainštalujte namiesto toho z vašej knižnice — toto zobrazenie nemôže otvoriť Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Prehliadanie Epic Store je dočasne blokované",
+    "webview.unavailable.epic-challenged.body": "Epic požiadal o bezpečnostnú kontrolu, ktorú toto zobrazenie nemôže dokončiť.",
+    "webview.unavailable.epic-challenged.tryAgain": "Skúsiť znova"
+  },
+  "sl": {
+    "webview.epicEmbed.timeout.message": "Epic se nalaga malce dlje",
+    "webview.epicEmbed.timeout.reload": "Znova naloži",
+    "webview.epicEmbed.launcherBlocked.message": "Namestite iz svoje knjižnice — ta pogled ne more odpreti Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Brskanje po Epic Store je trenutno blokirano",
+    "webview.unavailable.epic-challenged.body": "Epic je zahteval varnostno preverjanje, ki ga ta pogled ne more dokončati.",
+    "webview.unavailable.epic-challenged.tryAgain": "Poskusi znova"
+  },
+  "sr": {
+    "webview.epicEmbed.timeout.message": "Epic-u je potrebno malo vremena da se učita",
+    "webview.epicEmbed.timeout.reload": "Освежи",
+    "webview.epicEmbed.launcherBlocked.message": "Instalirajte iz svoje biblioteke umesto toga — ovaj prikaz ne može otvoriti Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Pregledanje Epic Store-a je privremeno blokirano",
+    "webview.unavailable.epic-challenged.body": "Epic je zatražio bezbednosnu proveru koju ovaj prikaz ne može da završi.",
+    "webview.unavailable.epic-challenged.tryAgain": "Pokušaj ponovo"
+  },
+  "sv": {
+    "webview.epicEmbed.timeout.message": "Epic tar en stund att läsa in",
+    "webview.epicEmbed.timeout.reload": "Ladda om",
+    "webview.epicEmbed.launcherBlocked.message": "Installera från ditt bibliotek istället — den här vyn kan inte öppna Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Bläddring i Epic Store är tillfälligt blockerad",
+    "webview.unavailable.epic-challenged.body": "Epic begärde en säkerhetskontroll som den här vyn inte kan slutföra.",
+    "webview.unavailable.epic-challenged.tryAgain": "Försök igen"
+  },
+  "ta": {
+    "webview.epicEmbed.timeout.message": "Epic ஏற்றப்பட அதிக நேரம் எடுக்கிறது",
+    "webview.epicEmbed.timeout.reload": "மீண்டும் ஏற்று",
+    "webview.epicEmbed.launcherBlocked.message": "அதற்குப் பதிலாக உங்கள் நூலகத்திலிருந்து நிறுவவும் — இந்தக் காட்சி Epic Games Launcher-ஐத் திறக்க முடியாது.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store உலாவல் தற்காலிகமாக தடுக்கப்பட்டுள்ளது",
+    "webview.unavailable.epic-challenged.body": "இந்தக் காட்சி முடிக்க முடியாத ஒரு பாதுகாப்பு சோதனையை Epic கேட்டது.",
+    "webview.unavailable.epic-challenged.tryAgain": "மீண்டும் முயற்சிக்கவும்"
+  },
+  "th": {
+    "webview.epicEmbed.timeout.message": "Epic กำลังใช้เวลาโหลดสักครู่",
+    "webview.epicEmbed.timeout.reload": "โหลดใหม่",
+    "webview.epicEmbed.launcherBlocked.message": "ติดตั้งจากไลบรารีของคุณแทน — มุมมองนี้ไม่สามารถเปิด Epic Games Launcher ได้",
+    "webview.unavailable.epic-challenged.heading": "การเรียกดู Epic Store ถูกบล็อกชั่วคราว",
+    "webview.unavailable.epic-challenged.body": "Epic ขอการตรวจสอบความปลอดภัยที่มุมมองนี้ไม่สามารถดำเนินการให้เสร็จสิ้นได้",
+    "webview.unavailable.epic-challenged.tryAgain": "ลองอีกครั้ง"
+  },
+  "tr": {
+    "webview.epicEmbed.timeout.message": "Epic'in yüklenmesi biraz zaman alıyor",
+    "webview.epicEmbed.timeout.reload": "Yenile",
+    "webview.epicEmbed.launcherBlocked.message": "Bunun yerine Kitaplığınızdan yükleyin — bu görünüm Epic Games Launcher'ı açamıyor.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store gezinme geçici olarak engellendi",
+    "webview.unavailable.epic-challenged.body": "Epic, bu görünümün tamamlayamadığı bir güvenlik denetimi istedi.",
+    "webview.unavailable.epic-challenged.tryAgain": "Tekrar dene"
+  },
+  "uk": {
+    "webview.epicEmbed.timeout.message": "Завантаження Epic займає певний час",
+    "webview.epicEmbed.timeout.reload": "Перезавантажити",
+    "webview.epicEmbed.launcherBlocked.message": "Установіть із вашої бібліотеки замість цього — це подання не може відкрити Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Перегляд Epic Store тимчасово заблоковано",
+    "webview.unavailable.epic-challenged.body": "Epic запросив перевірку безпеки, яку це подання не може завершити.",
+    "webview.unavailable.epic-challenged.tryAgain": "Спробувати ще раз"
+  },
+  "uz": {
+    "webview.epicEmbed.timeout.message": "Epic yuklanishi biroz vaqt oladi",
+    "webview.epicEmbed.timeout.reload": "Qayta yuklash",
+    "webview.epicEmbed.launcherBlocked.message": "Buning o'rniga kutubxonangizdan o'rnating — bu ko'rinish Epic Games Launcher'ni ocha olmaydi.",
+    "webview.unavailable.epic-challenged.heading": "Epic Store'ni ko'rish vaqtincha bloklangan",
+    "webview.unavailable.epic-challenged.body": "Epic bu ko'rinish bajara olmaydigan xavfsizlik tekshiruvini so'radi.",
+    "webview.unavailable.epic-challenged.tryAgain": "Qayta urinib ko'ring"
+  },
+  "vi": {
+    "webview.epicEmbed.timeout.message": "Epic đang tải mất một chút thời gian",
+    "webview.epicEmbed.timeout.reload": "Tải Lại",
+    "webview.epicEmbed.launcherBlocked.message": "Hãy cài đặt từ Thư viện của bạn — chế độ xem này không thể mở Epic Games Launcher.",
+    "webview.unavailable.epic-challenged.heading": "Duyệt Epic Store tạm thời bị chặn",
+    "webview.unavailable.epic-challenged.body": "Epic đã yêu cầu kiểm tra an ninh mà chế độ xem này không thể hoàn tất.",
+    "webview.unavailable.epic-challenged.tryAgain": "Thử lại"
+  },
+  "zh_Hans": {
+    "webview.epicEmbed.timeout.message": "Epic 加载需要一些时间",
+    "webview.epicEmbed.timeout.reload": "重新加载",
+    "webview.epicEmbed.launcherBlocked.message": "请改为从您的资料库安装 — 此视图无法打开 Epic Games Launcher。",
+    "webview.unavailable.epic-challenged.heading": "Epic Store 浏览功能暂时被屏蔽",
+    "webview.unavailable.epic-challenged.body": "Epic 要求进行此视图无法完成的安全检查。",
+    "webview.unavailable.epic-challenged.tryAgain": "重试"
+  },
+  "zh_Hant": {
+    "webview.epicEmbed.timeout.message": "Epic 載入需要一些時間",
+    "webview.epicEmbed.timeout.reload": "重新載入",
+    "webview.epicEmbed.launcherBlocked.message": "請改從您的資料庫安裝 — 此檢視畫面無法開啟 Epic Games Launcher。",
+    "webview.unavailable.epic-challenged.heading": "Epic Store 瀏覽功能暫時被封鎖",
+    "webview.unavailable.epic-challenged.body": "Epic 要求進行此檢視畫面無法完成的安全檢查。",
+    "webview.unavailable.epic-challenged.tryAgain": "重試"
+  }
+}
