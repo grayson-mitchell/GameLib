@@ -8,22 +8,30 @@
  *   2. `coerceNavState()` REJECTS rather than defaults a malformed `surface` value -- a silently
  *      coerced default would make a dead or mis-shaped Rust arm indistinguishable from a healthy
  *      one, the same F-34.4.2-19 defect class this project has already shipped once.
+ *   3. `WebView/index.tsx`'s final JSX return wires plan 02's nav signals (surfaced through plan
+ *      05's `useStoreEmbedHost` extension) into plan 03's three chrome components -- the slow-load
+ *      banner and blocked-launcher notice as rows above the embed slot, the `'epic-challenged'`
+ *      unavailable panel as the one sanctioned exception to the slot's "placeholder is its only
+ *      child" rule (D-19), and the placeholder's own render condition widened to fire
+ *      unconditionally on the Epic surface.
  *
  * WHY THIS RUNS THE REAL SOURCE, NOT A REIMPLEMENTATION
  *
  * `storeEmbedFlowRegistration.ts` cannot be imported here: it is a backend/sidecar module whose
  * import graph reaches platform shims (`heroicLogWriter`, `requestRustInvoke`) this frontend jest
- * project does not boot. Rather than hand-copy its logic as a second, drifting implementation,
- * this suite extracts the EXACT statements from the real source between markers -- the same
+ * project does not boot. `WebView/index.tsx` cannot be imported either -- no jsdom, and the module
+ * graph touches `window` at import time (see `WebViewOAuthNavigation.test.ts`'s own docstring).
+ * Rather than hand-copy either file's logic as a second, drifting implementation, this suite
+ * extracts the EXACT statements/JSX from the real sources between markers -- the same
  * `extractRawBetween`/`compileToFunction` technique `WebViewDeepLinkAndRestore.test.ts` uses for
  * `WebView/index.tsx` -- and either (a) executes the extracted `coerceNavState` as a real function
- * against synthetic inputs, or (b) asserts structurally on the extracted `open()` method's raw
- * text for the wire-payload shape, since that method's body calls the live `requestRustInvoke`
- * import and must not be executed.
+ * against synthetic inputs, or (b) asserts structurally on the extracted raw text (the `open()`
+ * method's wire-payload shape, or `index.tsx`'s final-return JSX), since neither can be executed
+ * in isolation here (the former calls the live `requestRustInvoke` import; the latter is JSX with
+ * no React runtime in scope).
  *
- * Self-tested against a synthetic regressed source (storyKey stripped from the payload literal)
- * per this project's anti-vacuity requirement: the negative control below proves the structural
- * assertion is not vacuously true.
+ * Self-tested against synthetic regressed sources per this project's anti-vacuity requirement:
+ * each negative control below proves its structural assertion is not vacuously true.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -164,5 +172,86 @@ describe('storeEmbedFlowRegistration — storeKey wire contract (Phase 50 Plan 0
     // unrelated reformat of the real file) cannot make this control vacuously pass.
     expect(regressedSource).not.toBe(openMethodSource)
     expect(regressedSource).not.toMatch(WIRE_PAYLOAD_SHAPE)
+  })
+})
+
+// ── `WebView/index.tsx`'s Epic nav-signal chrome wiring (Phase 50 Plan 05, raw-source) ───────
+// Not executed: this is JSX with no React runtime in scope. Asserted structurally on the
+// extracted raw text instead, the same way the `open()` wire-payload shape above is -- and the
+// same `extractRawBetween` technique `WebViewDeepLinkAndRestore.test.ts` uses for this same file.
+const indexPath = join(__dirname, '..', 'index.tsx')
+const indexSource = readFileSync(indexPath, 'utf-8')
+
+// From the final return's own root element through end-of-file -- this is the LAST statement in
+// the component, so there is no later marker to bound it with; slicing to EOF is exact.
+const finalReturnSource = indexSource.slice(
+  indexSource.indexOf('<div className="WebView WebView__embedContainer">')
+)
+
+describe('WebView index.tsx — Epic nav-signal chrome wiring (Phase 50 Plan 05, structural)', () => {
+  it('derives isEpicSurface from storeKey and platform', () => {
+    expect(indexSource).toMatch(
+      /const isEpicSurface = storeKey === 'epic' && platform === 'darwin'/
+    )
+  })
+
+  it('renders StoreEmbedTimeoutBanner and EpicLauncherBlockedNotice as notice rows between StoreEmbedControls and the embed slot', () => {
+    const controlsIdx = finalReturnSource.indexOf('<StoreEmbedControls')
+    const bannerIdx = finalReturnSource.indexOf('<StoreEmbedTimeoutBanner')
+    const noticeIdx = finalReturnSource.indexOf('<EpicLauncherBlockedNotice')
+    const slotIdx = finalReturnSource.indexOf('className="WebView__embedSlot"')
+    expect(controlsIdx).toBeGreaterThanOrEqual(0)
+    expect(bannerIdx).toBeGreaterThan(controlsIdx)
+    expect(noticeIdx).toBeGreaterThan(bannerIdx)
+    expect(slotIdx).toBeGreaterThan(noticeIdx)
+  })
+
+  it('wires StoreEmbedTimeoutBanner to embedHost.loadTimedOut/onReload and EpicLauncherBlockedNotice to the local notice state', () => {
+    expect(finalReturnSource).toMatch(/timedOut=\{embedHost\.loadTimedOut\}/)
+    expect(finalReturnSource).toMatch(/visible=\{launcherNoticeVisible\}/)
+    expect(finalReturnSource).toMatch(
+      /onDismissed=\{\(\) => setLauncherNoticeVisible\(false\)\}/
+    )
+  })
+
+  it('widens the placeholder condition to render unconditionally on the Epic surface', () => {
+    expect(finalReturnSource).toMatch(
+      /\{\(embedSuppressed \|\| isEpicSurface\) && <StoreEmbedPlaceholder \/>\}/
+    )
+  })
+
+  it('renders the epic-challenged WebviewUnavailablePanel as a child of the embed slot, gated on embedHost.challenged', () => {
+    const slotOpenIdx = finalReturnSource.indexOf(
+      'className="WebView__embedSlot"'
+    )
+    const panelIdx = finalReturnSource.indexOf(
+      'reason="epic-challenged"',
+      slotOpenIdx
+    )
+    expect(slotOpenIdx).toBeGreaterThanOrEqual(0)
+    expect(panelIdx).toBeGreaterThan(slotOpenIdx)
+    expect(finalReturnSource).toMatch(
+      /\{embedHost\.challenged && \(\s*<WebviewUnavailablePanel\s*reason="epic-challenged"\s*onTryAgain=\{embedHost\.onTryAgain\}/
+    )
+  })
+
+  it('negative control: a synthetic source with the challenged panel removed fails the slot-child assertion', () => {
+    const regressedSource = finalReturnSource.replace(
+      /\{embedHost\.challenged && \([\s\S]*?\)\}\n/,
+      ''
+    )
+    expect(regressedSource).not.toBe(finalReturnSource)
+    expect(regressedSource).not.toMatch(/reason="epic-challenged"/)
+  })
+
+  it('negative control: a synthetic source with the placeholder condition narrowed back to embedSuppressed-only fails the widened-condition assertion', () => {
+    const regressedSource = finalReturnSource.replace(
+      '{(embedSuppressed || isEpicSurface) && <StoreEmbedPlaceholder />}',
+      '{embedSuppressed && <StoreEmbedPlaceholder />}'
+    )
+    expect(regressedSource).not.toBe(finalReturnSource)
+    expect(regressedSource).not.toMatch(
+      /\{\(embedSuppressed \|\| isEpicSurface\) && <StoreEmbedPlaceholder \/>\}/
+    )
   })
 })
