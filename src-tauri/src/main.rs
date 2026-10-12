@@ -6502,12 +6502,21 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     // Epic surface first (hides it without destroying it) so switching the store tab away from
     // Epic doesn't leave the raw subview visible underneath the Tauri-managed embed this function
     // is about to create or reuse.
+    //
+    // The routing decision itself lives in `macos_epic_embed::surface_for_store_key` (Phase 50
+    // Plan 01, Task 2) -- a pure, `AppHandle`-free helper mirroring `store_embed_navigation_policy`
+    // below, unit-tested there because this call site, taking a real `AppHandle`, cannot be
+    // constructed in a `#[test]`.
     #[cfg(target_os = "macos")]
     {
-        if store_key == macos_epic_embed::EPIC_EMBED_STORE_KEY {
-            return macos_epic_embed::open(app, &url, x, y, w, h);
+        match macos_epic_embed::surface_for_store_key(&store_key) {
+            macos_epic_embed::EpicEmbedSurfaceSelection::EpicSurface => {
+                return macos_epic_embed::open(app, &url, x, y, w, h);
+            }
+            macos_epic_embed::EpicEmbedSurfaceSelection::TauriEmbed => {
+                macos_epic_embed::deselect(app)?;
+            }
         }
-        macos_epic_embed::deselect(app)?;
     }
     // `store_key` is consulted above only under `#[cfg(target_os = "macos")]` -- referenced here
     // unconditionally so Linux/Windows builds don't warn on an otherwise-unused binding.

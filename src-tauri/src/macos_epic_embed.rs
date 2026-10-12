@@ -459,11 +459,11 @@ pub(crate) enum EpicEmbedSurfaceSelection {
 /// without an `AppHandle`. Takes a bare `&str`, not a `&AppHandle` or any wrapper -- the decision
 /// depends on nothing else.
 pub(crate) fn surface_for_store_key(store_key: &str) -> EpicEmbedSurfaceSelection {
-    // TODO(RED): placeholder -- always routes to the Tauri embed. The epic-key case is the one
-    // this stub gets wrong on purpose, so the test below fails for the right reason before the
-    // real comparison (GREEN, next commit) lands.
-    let _ = store_key;
-    EpicEmbedSurfaceSelection::TauriEmbed
+    if store_key == EPIC_EMBED_STORE_KEY {
+        EpicEmbedSurfaceSelection::EpicSurface
+    } else {
+        EpicEmbedSurfaceSelection::TauriEmbed
+    }
 }
 
 #[cfg(test)]
