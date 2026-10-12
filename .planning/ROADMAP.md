@@ -5872,11 +5872,16 @@ sub-decisions below are LOCKED inputs to that spec, not gray areas to reopen.
 construction; its README's `## What IS established` #6–#9 are the measurements this phase stands
 on and must not re-derive). **Not** Phase 49, which `phase.add` defaulted to by positional guess —
 the offline banner and this subview share no files.
-**Plans:** 0 plans
+**Plans:** 6 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 50 to break down)
+- [ ] 50-01-PLAN.md — Tracer: Epic paints in the Stores-tab slot on macOS, every layer end to end
+- [ ] 50-02-PLAN.md — Rust delegate completion: native history, 45s timeout, challenge detection, popups, JS dialogs, blocked launcher scheme, transparency
+- [ ] 50-03-PLAN.md — React chrome: slow-load banner, `epic-challenged` panel reason with Try again, blocked-launcher notice; mints the 6 English keys
+- [ ] 50-04-PLAN.md — Fill the 6 new `gamelib` keys across all 48 non-English catalogues with provenance stamps
+- [ ] 50-05-PLAN.md — Renderer wiring: surface the Epic signals, render the three notices, one reload on return after an Epic auth change
+- [ ] 50-06-PLAN.md — Live gate: author `50-UAT.md`, fill `50-VALIDATION.md`, run the gate, dispose the folded Sign-in todo
 
 **Scope (ships):**
 
