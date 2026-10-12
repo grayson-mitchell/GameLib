@@ -309,6 +309,12 @@ interface MountOptions {
    * that need the macOS Epic-embeddable path pass `platform: 'darwin'` explicitly.
    */
   platform?: string
+  /**
+   * Phase 50 Plan 05 (D-04): the resolved Epic sign-in state. Defaults to a fixed, arbitrary
+   * value -- every existing test leaves this unchanged across its own `reinvoke` calls, so the
+   * hook's new auth-triggered reload never arms for them regardless of what the default is.
+   */
+  signInState?: string
 }
 
 function invoke(options: MountOptions): StoreEmbedHostState {
@@ -328,7 +334,8 @@ function invoke(options: MountOptions): StoreEmbedHostState {
     startUrl: options.startUrl ?? 'https://store.steampowered.com/',
     storeKey: options.storeKey ?? 'steam',
     isStoreRoute: options.isStoreRoute ?? true,
-    platform: options.platform ?? 'linux'
+    platform: options.platform ?? 'linux',
+    signInState: options.signInState ?? 'connected'
   })
 }
 
@@ -1375,6 +1382,145 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedNavigate.mock.invocationCallOrder[0]).toBeLessThan(
       mockApi.storeEmbedShow.mock.invocationCallOrder[0]
     )
+  })
+
+  // ── AUTH-TRIGGERED RELOAD ON RETURN (Phase 50 Plan 05, D-04) ──────────────────────────────
+  //
+  // Drives the suppression effect's show transition (`suppressionContextValue`, mirroring test
+  // 5's own toggle-and-`reinvoke` pattern) rather than the start-URL effect's refused-target
+  // path -- both are named in the plan as "a show already happens" sites and the hook wires the
+  // same compare-and-reload into each, so exercising one is sufficient to pin the shared logic;
+  // the other site is structurally identical.
+  function toggleSuppressionShow(options: MountOptions): void {
+    suppressionContextValue = {
+      suppressed: true,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    reinvoke(options)
+    suppressionContextValue = {
+      suppressed: false,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    reinvoke(options)
+  }
+
+  // Property 31. Observed-red mutation: seeding `signInStateAtLoadRef` from `null`/`undefined`
+  // instead of the OPTION's own value turns this red -- the very first show after mount would
+  // read a mismatch against any real `signInState` and fire a reload nobody asked for.
+  it('31. the first open seeds the sign-in-state baseline, and repeated show transitions with an unchanged state reload nothing', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      storeKey: 'epic',
+      platform: 'darwin',
+      isStoreRoute: true,
+      signInState: 'connected'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    toggleSuppressionShow(options)
+    toggleSuppressionShow(options)
+    toggleSuppressionShow(options)
+
+    expect(mockApi.storeEmbedReload).not.toHaveBeenCalled()
+  })
+
+  // Property 32. Observed-red mutation: a standalone effect keyed on `signInState` alone (the
+  // shape the plan explicitly forbids) turns this red -- it would reload the instant the value
+  // changes, while the panel is still visible, instead of waiting for the next show.
+  it('32. a sign-in-state change while the subview is visible reloads nothing; the next show transition then reloads exactly once', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      storeKey: 'epic',
+      platform: 'darwin',
+      isStoreRoute: true,
+      signInState: 'connected'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    // The value changes while nothing is hiding/showing -- no reload yet.
+    const changed: MountOptions = { ...options, signInState: 'expired' }
+    reinvoke(changed)
+    expect(mockApi.storeEmbedReload).not.toHaveBeenCalled()
+
+    // The next show transition carries the already-changed value -- exactly one reload, and it
+    // follows the show (D-10/D-11's own ordering requirement, mirrored here for the new reload).
+    toggleSuppressionShow(changed)
+
+    expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedShow.mock.invocationCallOrder[0]).toBeLessThan(
+      mockApi.storeEmbedReload.mock.invocationCallOrder[0]
+    )
+  })
+
+  // Property 33. Observed-red mutation: comparing with `===` instead of `!==` (or hardcoding one
+  // direction) turns this red -- a connected -> expired transition would be silently treated the
+  // same as no change at all.
+  it('33. a show transition carrying a connected-to-expired change reloads exactly once', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      storeKey: 'epic',
+      platform: 'darwin',
+      isStoreRoute: true,
+      signInState: 'connected'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    toggleSuppressionShow({ ...options, signInState: 'expired' })
+
+    expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
+  })
+
+  // Property 34. Observed-red mutation: a one-way check (e.g. only firing when the new value is
+  // `'expired'`) turns this red -- the trigger is any transition, not a move toward one specific
+  // value (direction-agnostic, mirroring property 33 in the opposite direction).
+  it('34. a show transition carrying an expired-to-connected change also reloads exactly once', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      storeKey: 'epic',
+      platform: 'darwin',
+      isStoreRoute: true,
+      signInState: 'expired'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    toggleSuppressionShow({ ...options, signInState: 'connected' })
+
+    expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
+  })
+
+  // Property 35. Observed-red mutation: dropping the `isEpicSurface` guard (reloading on any
+  // store's show transition) turns this red -- a Tauri-managed store would lose its instant-
+  // return semantics on every sign-in-state change, which this plan explicitly keeps unaffected.
+  it('35. the reload is gated to the Epic surface -- a non-Epic store reloads nothing even across a changed-state show transition', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      storeKey: 'steam',
+      platform: 'darwin',
+      isStoreRoute: true,
+      signInState: 'connected'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    toggleSuppressionShow({ ...options, signInState: 'expired' })
+
+    expect(mockApi.storeEmbedReload).not.toHaveBeenCalled()
   })
 
   // ── Zoom-aware bounds (quick 261012-gn8, W8) ───────────────────────────────────────────────
