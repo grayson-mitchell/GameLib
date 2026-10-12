@@ -43,11 +43,12 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use objc2::rc::Retained;
-use objc2::runtime::{Bool, NSObject, ProtocolObject};
+use objc2::runtime::{AnyObject, Bool, NSObject, ProtocolObject};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadMarker, MainThreadOnly};
-use objc2_app_kit::NSView;
+use objc2_app_kit::{NSAutoresizingMaskOptions, NSView};
 use objc2_foundation::{
-    NSError, NSHTTPURLResponse, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    NSError, NSHTTPURLResponse, NSKeyValueObservingOptions, NSNumber,
+    NSObjectNSKeyValueObserverRegistration, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
     NSURLRequest, NSURL,
 };
 use objc2_web_kit::{
@@ -57,6 +58,10 @@ use objc2_web_kit::{
 };
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
+
+use crate::epic_embed_state::{
+    epic_kvo_event_is_new, epic_nav_state_with_flags, EpicEmbedNavFlags, EpicEmbedVisibility,
+};
 
 /// The `storeKey` value `store_embed_open_args` (main.rs) parses that routes to THIS module
 /// instead of the existing `tauri::WebviewBuilder` embed path -- `store_embed_open`'s own routing
@@ -246,15 +251,18 @@ unsafe impl Send for SendPtr {}
 
 /// The Epic embed's whole state: the retained `WKWebView`/delegate (parked as raw addresses via
 /// `Retained::into_raw`, reconstructed via `Retained::from_raw` on `close()` to release them --
-/// see `close()`'s own doc comment), whether the surface is currently the one selected store
-/// embed, the last-observed top-level host (fed to `store_embed_navigation_policy`'s
+/// see `close()`'s own doc comment), the selection/visibility state machine
+/// (`EpicEmbedVisibility`, `epic_embed_state.rs`), the last-observed top-level host (fed to `store_embed_navigation_policy`'s
 /// `top_level_host` parameter exactly as `StoreEmbedState` feeds it for the Tauri-managed embed),
 /// and the queued nav-state events `take_nav_events` drains.
 #[derive(Default)]
 struct EpicEmbedSurface {
     webview: Option<SendPtr>,
     delegate: Option<SendPtr>,
-    selected: bool,
+    /// `selected` (D-02), the renderer's own hide, and `challenged` (D-09/D-10) -- the three
+    /// inputs the subview's `hidden` flag is DERIVED from (review findings 5/7/13). Changed only
+    /// on the main thread, in the same step that applies the result via `apply_visibility`.
+    visibility: EpicEmbedVisibility,
     top_level_host: Option<String>,
     pending_nav_events: Vec<Value>,
     /// Bumped on every `didStartProvisionalNavigation` (Phase 50 Plan 02). Read by
@@ -275,12 +283,6 @@ struct EpicEmbedSurface {
     /// either failure hook (D-11: every load starts fresh, and a genuine failure is not a
     /// timeout).
     load_timed_out: bool,
-    /// `true` once the delegate's `webView:decidePolicyForNavigationResponse:` hook (Phase 50
-    /// Plan 02, D-09) has classified the current main-frame response as a Cloudflare challenge
-    /// -- see `epic_embed_response_is_challenged`'s own doc comment for the detection rule.
-    /// Cleared by `didStartProvisionalNavigation` and by `navigate()` (D-11: every load starts
-    /// fresh, and Try again must not stay stuck showing the panel); set `true` by NOTHING else.
-    challenged: bool,
     /// Monotonic count of navigations blocked specifically because their scheme was
     /// `EPIC_GAMES_LAUNCHER_SCHEME` (Phase 50 Plan 02, D-14) -- bumped in the
     /// `decidePolicyForNavigationAction` hook's `Block` arm, never decremented, never reset while
@@ -306,13 +308,14 @@ fn surface() -> &'static Mutex<EpicEmbedSurface> {
 /// surface whose state cannot be trusted.
 pub(crate) fn is_selected() -> bool {
     match surface().lock() {
-        Ok(guard) => guard.selected && guard.webview.is_some(),
+        Ok(guard) => guard.visibility.selected() && guard.webview.is_some(),
         Err(_) => false,
     }
 }
 
 /// Converts a renderer-space rect (`useStoreEmbedHost`'s `flush()` is the ONLY rect source --
-/// D-18, "single geometry oracle": no autoresizing mask, no Rust-side resize heuristic) into an
+/// D-18, "single geometry oracle": no size-tracking autoresizing mask, no Rust-side resize
+/// heuristic; see `top_pinned_autoresizing_mask` for the one edge-pinning mask) into an
 /// `NSRect` in `ns_view`'s own coordinate space. Ported verbatim from spike 024's own conditional
 /// -- `NSView`'s coordinate origin is bottom-left UNLESS the view opts into `isFlipped() == true`
 /// (top-left, matching web/CSS convention), and the subview-attach target's flip state
@@ -325,6 +328,83 @@ fn rect_to_ns_rect(ns_view: &NSView, x: f64, y: f64, w: f64, h: f64) -> NSRect {
         bounds.size.height - y - h
     };
     NSRect::new(NSPoint::new(x, origin_y), NSSize::new(w, h))
+}
+
+/// Review finding 12: the `WKWebView` properties observed with KVO. WebKit fires NONE of the
+/// navigation-delegate callbacks for a same-document navigation (`history.pushState`/
+/// `replaceState`, fragment changes) -- exactly how Epic's client-side router changes pages -- so
+/// without these the renderer's URL, Back/Forward state and `last-url-epic` froze on the last
+/// full load. KVO, not an injected page script: the native properties are observable as-is, and
+/// nothing is added to Epic's page (the same no-injection reason D-22's native-history choice
+/// rests on).
+const EPIC_EMBED_KVO_KEY_PATHS: [&str; 3] = ["URL", "canGoBack", "canGoForward"];
+
+/// Tag for this module's own KVO registrations: `observeValueForKeyPath:` forwards any other
+/// context to `super`, per Apple's KVO contract. Only its ADDRESS is used.
+static EPIC_EMBED_KVO_CONTEXT: u8 = 0;
+
+fn epic_embed_kvo_context() -> *mut c_void {
+    std::ptr::addr_of!(EPIC_EMBED_KVO_CONTEXT) as *mut c_void
+}
+
+/// Registers `delegate` for `EPIC_EMBED_KVO_KEY_PATHS` on `webview`. Exactly one call site, in
+/// `open()`'s cold path, paired with exactly one `remove_nav_observers` in `close()` -- KVO keeps
+/// an UNRETAINED observer pointer, so the delegate must never be released while registered.
+fn add_nav_observers(webview: &WKWebView, delegate: &EpicEmbedNavDelegate) {
+    for key in EPIC_EMBED_KVO_KEY_PATHS {
+        // SAFETY: `delegate` implements `observeValueForKeyPath:ofObject:change:context:` (see
+        // `EpicEmbedNavDelegate`), and the context is a 'static address.
+        unsafe {
+            webview.addObserver_forKeyPath_options_context(
+                delegate,
+                &NSString::from_str(key),
+                NSKeyValueObservingOptions::New,
+                epic_embed_kvo_context(),
+            );
+        }
+    }
+}
+
+/// The inverse of `add_nav_observers` -- called by `close()` while both objects are still alive,
+/// before either is released.
+fn remove_nav_observers(webview: &WKWebView, delegate: &EpicEmbedNavDelegate) {
+    for key in EPIC_EMBED_KVO_KEY_PATHS {
+        // SAFETY: removes exactly the registrations `add_nav_observers` made (same observer, key
+        // path and context).
+        unsafe {
+            webview.removeObserver_forKeyPath_context(
+                delegate,
+                &NSString::from_str(key),
+                epic_embed_kvo_context(),
+            );
+        }
+    }
+}
+
+/// Review finding 14: the autoresizing mask that keeps the subview's TOP edge where the renderer
+/// put it while the window resizes between two throttled `flush()` rects -- what wry sets on its
+/// own child webviews (`ViewMinYMargin`, wry-0.55.1 `wkwebview/mod.rs`), the Tauri-managed
+/// sibling this subview sits next to. Without it, a non-flipped (bottom-left origin) parent keeps
+/// the subview's distance from the window BOTTOM, so on a resize/zoom/fullscreen it drifts
+/// against the slot until the next rect lands. Neither variant sets `ViewWidthSizable`/
+/// `ViewHeightSizable`: size never tracks the parent, so `flush()` stays the only geometry
+/// authority (D-18; this narrows, not reverses, RESEARCH.md Pitfall 4 -- which is about a
+/// size-tracking mask competing with the renderer). Flip-aware, like `rect_to_ns_rect`: in a
+/// flipped parent the top margin is the min-Y one, so the flexible margin is max-Y instead.
+fn top_pinned_autoresizing_mask(parent_is_flipped: bool) -> NSAutoresizingMaskOptions {
+    if parent_is_flipped {
+        NSAutoresizingMaskOptions::ViewMaxYMargin
+    } else {
+        NSAutoresizingMaskOptions::ViewMinYMargin
+    }
+}
+
+/// The ONE `setHidden` writer for the Epic subview (review findings 5/7). `hidden` is always an
+/// `EpicEmbedVisibility` transition's result -- never a caller's own boolean -- so the renderer's
+/// hide/show and the Rust-owned challenge hide (D-10) can no longer overwrite each other. Main
+/// thread only, like every `WKWebView` call here.
+fn apply_visibility(webview: &WKWebView, hidden: bool) {
+    webview.setHidden(hidden);
 }
 
 /// Builds the `{url, host, canGoBack, canGoForward, surface}` nav-state event for the Epic
@@ -374,22 +454,23 @@ impl EpicEmbedSurface {
     /// Merges the surface's current `loadTimedOut`/`challenged`/`blockedLauncherSchemeCount`
     /// flags (Phase 50 Plan 02) onto `event` right before pushing, so every one of this module's
     /// several enqueue call sites automatically carries current flag state without each one
-    /// separately threading it through its own `nav_state_json()` call. `event` is always the
-    /// `Value::Object` `nav_state_json()` builds; a non-object would mean a future call site
-    /// stopped using that constructor, so this merges unconditionally into an object and leaves
-    /// any other shape untouched.
-    fn enqueue_nav_event(&mut self, mut event: Value) {
-        if let Some(map) = event.as_object_mut() {
-            map.insert("loadTimedOut".to_string(), Value::Bool(self.load_timed_out));
-            map.insert("challenged".to_string(), Value::Bool(self.challenged));
-            map.insert(
-                "blockedLauncherSchemeCount".to_string(),
-                Value::Number(self.blocked_launcher_scheme_count.into()),
-            );
-        }
+    /// separately threading it through its own `nav_state_json()` call. The merge itself is
+    /// `epic_nav_state_with_flags` (`epic_embed_state.rs`) -- the SAME function the direct-return
+    /// path in `navigate_webview_on_main_thread` uses (review finding 2).
+    fn enqueue_nav_event(&mut self, event: Value) {
+        let event = epic_nav_state_with_flags(event, self.nav_flags());
         self.pending_nav_events.push(event);
         if self.pending_nav_events.len() > EPIC_EMBED_NAV_EVENTS_CAP {
             self.pending_nav_events.remove(0);
+        }
+    }
+
+    /// The flag values every Epic nav state carries, read at the instant it is built.
+    fn nav_flags(&self) -> EpicEmbedNavFlags {
+        EpicEmbedNavFlags {
+            load_timed_out: self.load_timed_out,
+            challenged: self.visibility.challenged(),
+            blocked_launcher_scheme_count: self.blocked_launcher_scheme_count,
         }
     }
 }
@@ -517,6 +598,13 @@ pub(crate) fn open(
             let mtm = MainThreadMarker::new()
                 .ok_or_else(|| "epic_embed_open:not-on-main-thread".to_string())?;
 
+            // Review finding 10: every fallible step runs BEFORE the first view mutation. A nil
+            // NSURL used to surface only after the cold path had already `addSubview`ed a webview
+            // it then never parked in `surface()` (an orphan that intercepts clicks forever), or
+            // after the warm path had already re-shown a view it never re-selected.
+            let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
+                .ok_or_else(|| "epic_embed_open:bad-nsurl".to_string())?;
+
             // Resolve AND retain on the main thread -- see this function's doc comment above.
             let ns_view_ptr = window
                 .ns_view()
@@ -544,16 +632,30 @@ pub(crate) fn open(
                 // under the same lock first, so a non-`None` value here is always still live.
                 let webview: &WKWebView = unsafe { &*(ptr as *const WKWebView) };
                 webview.setFrame(frame);
-                webview.setHidden(false);
                 let current_url = unsafe {
                     webview
                         .URL()
                         .and_then(|u| u.absoluteString())
                         .map(|s| s.to_string())
                 };
-                if current_url.as_deref() != Some(url_string.as_str()) {
-                    let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
-                        .ok_or_else(|| "epic_embed_open:bad-nsurl".to_string())?;
+                // D-11 ("no session memory of a challenge"): a route entry onto a surface still
+                // parked on a challenge loads fresh even when the URL is unchanged -- otherwise
+                // the derived visibility would keep it hidden behind the panel on every return.
+                // Without a standing challenge the warm path still navigates only on a URL change
+                // (D-04: a plain show reloads nothing).
+                let (load, hidden) = {
+                    let mut guard = surface()
+                        .lock()
+                        .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
+                    let challenged = guard.visibility.challenged();
+                    if challenged {
+                        guard.visibility.set_challenged(false);
+                    }
+                    let load = challenged || current_url.as_deref() != Some(url_string.as_str());
+                    (load, guard.visibility.open())
+                };
+                apply_visibility(webview, hidden);
+                if load {
                     let request = NSURLRequest::requestWithURL(&nsurl);
                     unsafe {
                         webview.loadRequest(&request);
@@ -563,7 +665,6 @@ pub(crate) fn open(
                 let mut guard = surface()
                     .lock()
                     .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
-                guard.selected = true;
                 guard.enqueue_nav_event(event);
                 return Ok(());
             }
@@ -578,6 +679,7 @@ pub(crate) fn open(
             }
             let webview: Retained<WKWebView> =
                 unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
+            webview.setAutoresizingMask(top_pinned_autoresizing_mask(ns_view.isFlipped()));
 
             // [ASSUMED] (D-06, RESEARCH.md Assumptions Log A1): key-value coding with the
             // drawing-background key set to a boxed `false` is standard, long-documented Apple
@@ -609,27 +711,41 @@ pub(crate) fn open(
             // The ONLY subview-attach call site in this module.
             ns_view.addSubview(&webview);
 
-            let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
-                .ok_or_else(|| "epic_embed_open:bad-nsurl".to_string())?;
             let request = NSURLRequest::requestWithURL(&nsurl);
             unsafe {
                 webview.loadRequest(&request);
             }
 
             let event = nav_state_json(&webview);
+            // The one fallible step left after `addSubview` (finding 10): on a poisoned registry
+            // detach the subview again rather than leave an unparked orphan on the window.
+            let Ok(mut guard) = surface().lock() else {
+                webview.removeFromSuperview();
+                return Err("epic_embed_open:surface-poisoned".to_string());
+            };
             // Park the retained webview/delegate as raw addresses -- released only by `close()`
             // via `Retained::from_raw` (see that function's doc comment).
             let webview_ptr = Retained::into_raw(webview) as *mut c_void;
             let delegate_ptr = Retained::into_raw(delegate) as *mut c_void;
-            let mut guard = surface()
-                .lock()
-                .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
             guard.webview = Some(SendPtr(webview_ptr));
             guard.delegate = Some(SendPtr(delegate_ptr));
-            guard.selected = true;
+            let hidden = guard.visibility.open();
             guard.top_level_host = None;
             guard.enqueue_nav_event(event);
             drop(guard);
+            // SAFETY: both are the `+1`s just parked above; nothing can release them before this
+            // same main-thread closure returns, and `close()` removes the observers before it
+            // releases either.
+            let (webview, delegate) = unsafe {
+                (
+                    &*(webview_ptr as *const WKWebView),
+                    &*(delegate_ptr as *const EpicEmbedNavDelegate),
+                )
+            };
+            // Registered with the surface lock NOT held: a KVO callback runs synchronously inside
+            // whichever WebKit call changed the property, and it takes that lock itself.
+            add_nav_observers(webview, delegate);
+            apply_visibility(webview, hidden);
             // The ONLY `spawn_load_timeout_monitor` call site -- see its own doc comment for why
             // exactly one monitor thread must exist per surface, regardless of navigation count.
             spawn_load_timeout_monitor(app_for_monitor);
@@ -693,7 +809,12 @@ pub(crate) fn set_bounds(app: &AppHandle, x: f64, y: f64, w: f64, h: f64) -> Res
 /// `reload`/`navigate`) -- identical `mpsc`/`run_on_main_thread`/`recv_timeout` shape to
 /// `open()`/`set_bounds()`/`set_hidden()` above, factored out because all four arms do exactly
 /// the same three things: resolve the parked webview, run a native navigation call on it, and
-/// return the resulting `nav_state_json()`. `op` names the caller for the error prefix, same
+/// return the resulting `nav_state_json()` -- merged with the surface's current flags through
+/// `epic_nav_state_with_flags`, exactly as `enqueue_nav_event` merges a queued one. Review
+/// finding 2: this used to return the bare `nav_state_json()`, which has `surface: "epic"` but
+/// none of the flags `coerceNavState` (`storeEmbedFlowRegistration.ts`) requires on an Epic
+/// state, so every back/forward/reload/navigate result from this surface reached the renderer
+/// as `{ status: 'error' }`. `op` names the caller for the error prefix, same
 /// discipline as `set_hidden`'s own `op` parameter. `action` runs ENTIRELY on the main thread,
 /// inside the same closure that resolves the webview pointer -- never on the calling (worker)
 /// thread -- matching every other main-thread-marshalled call in this module.
@@ -716,7 +837,12 @@ fn navigate_webview_on_main_thread(
             // SAFETY: see `open()`'s warm path -- identical reasoning.
             let webview: &WKWebView = unsafe { &*(webview_ptr as *const WKWebView) };
             action(webview);
-            Ok(nav_state_json(webview))
+            let state = nav_state_json(webview);
+            let flags = surface()
+                .lock()
+                .map_err(|_| format!("{op_owned}:surface-poisoned"))?
+                .nav_flags();
+            Ok(epic_nav_state_with_flags(state, flags))
         })();
         let _ = tx.send(result);
     }) {
@@ -778,10 +904,17 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
         // must not survive a `Try again`/new-URL load. Mirrors
         // `did_start_provisional_navigation`'s own clear, for the page-initiated-navigation case
         // this chrome-initiated one does not otherwise go through.
-        if let Ok(mut guard) = surface().lock() {
-            guard.challenged = false;
-        } else {
-            eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+        // Clearing it also un-hides the subview the challenge hid (D-10's "Try again ... shows
+        // it"), through the same derived visibility every other writer uses (review finding 7).
+        match surface().lock() {
+            Ok(mut guard) => {
+                let hidden = guard.visibility.set_challenged(false);
+                drop(guard);
+                apply_visibility(webview, hidden);
+            }
+            Err(_) => {
+                eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing")
+            }
         }
         let request = NSURLRequest::requestWithURL(&nsurl);
         unsafe {
@@ -792,22 +925,33 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
 
 /// Shared `hide`/`show` implementation -- `op` names the caller for the error prefix, mirroring
 /// `store_embed_hide`/`store_embed_show`'s (main.rs) separate named-error discipline without
-/// duplicating the whole dispatch body twice.
-fn set_hidden(app: &AppHandle, hidden: bool, op: &str) -> Result<Value, String> {
+/// duplicating the whole dispatch body twice. `user_hidden` is the RENDERER's request only: the
+/// applied flag is `EpicEmbedVisibility`'s derived answer, so `show()` cannot reveal a page the
+/// challenge hook hid (review finding 5, D-10).
+fn set_hidden(app: &AppHandle, user_hidden: bool, op: &str) -> Result<Value, String> {
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     let op_owned = op.to_string();
     if let Err(e) = app.run_on_main_thread(move || {
         let result: Result<(), String> = (|| {
-            let webview_ptr = surface()
-                .lock()
-                .map_err(|_| format!("{op_owned}:surface-poisoned"))?
-                .webview
-                .as_ref()
-                .map(|p| p.0)
-                .ok_or_else(|| format!("{op_owned}:no-webview"))?;
+            let (webview_ptr, hidden) = {
+                let mut guard = surface()
+                    .lock()
+                    .map_err(|_| format!("{op_owned}:surface-poisoned"))?;
+                let webview_ptr = guard
+                    .webview
+                    .as_ref()
+                    .map(|p| p.0)
+                    .ok_or_else(|| format!("{op_owned}:no-webview"))?;
+                let hidden = if user_hidden {
+                    guard.visibility.hide()
+                } else {
+                    guard.visibility.show()
+                };
+                (webview_ptr, hidden)
+            };
             // SAFETY: see `open()`'s warm path -- identical reasoning.
             let webview: &WKWebView = unsafe { &*(webview_ptr as *const WKWebView) };
-            webview.setHidden(hidden);
+            apply_visibility(webview, hidden);
             Ok(())
         })();
         let _ = tx.send(result);
@@ -855,26 +999,29 @@ pub(crate) fn close(app: &AppHandle) -> Result<Value, String> {
                     .map_err(|_| "epic_embed_close:surface-poisoned".to_string())?;
                 let webview_ptr = guard.webview.take();
                 let delegate_ptr = guard.delegate.take();
-                guard.selected = false;
+                guard.visibility.reset();
                 guard.top_level_host = None;
                 guard.pending_nav_events.clear();
                 (webview_ptr, delegate_ptr)
             };
 
-            if let Some(ptr) = webview_ptr {
-                // SAFETY: see this function's doc comment above.
-                if let Some(webview) = unsafe { Retained::from_raw(ptr.0 as *mut WKWebView) } {
-                    webview.removeFromSuperview();
-                    drop(webview);
+            // SAFETY: see this function's doc comment above.
+            let webview =
+                webview_ptr.and_then(|ptr| unsafe { Retained::from_raw(ptr.0 as *mut WKWebView) });
+            // SAFETY: see this function's doc comment above.
+            let delegate = delegate_ptr
+                .and_then(|ptr| unsafe { Retained::from_raw(ptr.0 as *mut EpicEmbedNavDelegate) });
+            if let Some(webview) = webview {
+                // Review finding 12: KVO holds the delegate UNRETAINED -- deregister while both
+                // are alive, before either is released below.
+                if let Some(delegate) = &delegate {
+                    remove_nav_observers(&webview, delegate);
                 }
+                webview.removeFromSuperview();
+                drop(webview);
             }
-            if let Some(ptr) = delegate_ptr {
-                // SAFETY: see this function's doc comment above.
-                if let Some(delegate) =
-                    unsafe { Retained::from_raw(ptr.0 as *mut EpicEmbedNavDelegate) }
-                {
-                    drop(delegate);
-                }
+            if let Some(delegate) = delegate {
+                drop(delegate);
             }
             Ok(())
         })();
@@ -896,16 +1043,52 @@ pub(crate) fn close(app: &AppHandle) -> Result<Value, String> {
 /// Tauri-managed embed that then opens. A cheap no-op (not an error) when the Epic surface has
 /// never been opened -- `store_embed_open` calls this unconditionally on EVERY non-Epic open,
 /// including the very first store any session ever opens, and that must never surface an error.
+///
+/// Review finding 13: the selection change and the hide happen in ONE main-thread step. The old
+/// shape hid on the main thread and then wrote `selected = false` back on the calling worker
+/// thread, so an Epic `open()` landing in between was left visible but marked unselected -- and
+/// every later hide/show/set_bounds then routed to the Tauri embed instead. Whether the surface
+/// is selected is decided inside the closure, never from a worker-thread pre-check.
 pub(crate) fn deselect(app: &AppHandle) -> Result<Value, String> {
-    if !is_selected() {
+    // The only worker-thread shortcut: a surface that has never been opened has nothing to hide,
+    // so the common non-Epic open pays no main-thread hop. Fails closed (no-op) on a poisoned
+    // lock, matching `is_selected()`.
+    if !surface()
+        .lock()
+        .map(|g| g.webview.is_some())
+        .unwrap_or(false)
+    {
         return Ok(Value::Null);
     }
-    let result = set_hidden(app, true, "epic_embed_deselect")?;
-    if let Ok(mut guard) = surface().lock() {
-        guard.selected = false;
-        guard.pending_nav_events.clear();
+    let (tx, rx) = mpsc_channel::<Result<(), String>>();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let result: Result<(), String> = (|| {
+            let (webview_ptr, hidden) = {
+                let mut guard = surface()
+                    .lock()
+                    .map_err(|_| "epic_embed_deselect:surface-poisoned".to_string())?;
+                let Some(hidden) = guard.visibility.deselect() else {
+                    return Ok(());
+                };
+                guard.pending_nav_events.clear();
+                (guard.webview.as_ref().map(|p| p.0), hidden)
+            };
+            if let Some(ptr) = webview_ptr {
+                // SAFETY: see `open()`'s warm path -- identical reasoning.
+                apply_visibility(unsafe { &*(ptr as *const WKWebView) }, hidden);
+            }
+            Ok(())
+        })();
+        let _ = tx.send(result);
+    }) {
+        return Err(format!("epic_embed_deselect:dispatch-failed:{e}"));
     }
-    Ok(result)
+
+    match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(Ok(())) => Ok(Value::Null),
+        Ok(Err(e)) => Err(e),
+        Err(_) => Err("epic_embed_deselect:main-thread-timeout".to_string()),
+    }
 }
 
 /// Disposition returned by `surface_for_store_key` -- which surface (D-02) should serve a given
@@ -1062,6 +1245,52 @@ define_class!(
 
     unsafe impl NSObjectProtocol for EpicEmbedNavDelegate {}
 
+    impl EpicEmbedNavDelegate {
+        // Review finding 12: the KVO sink for `EPIC_EMBED_KVO_KEY_PATHS` (see
+        // `add_nav_observers`). Queues through the SAME bounded ring (`enqueue_nav_event`,
+        // oldest dropped at `EPIC_EMBED_NAV_EVENTS_CAP`) every delegate callback uses, and skips
+        // a state identical to the newest one already queued -- one `pushState` notifies up to
+        // three keys, and every ordinary navigation notifies them alongside the delegate
+        // callbacks.
+        #[unsafe(method(observeValueForKeyPath:ofObject:change:context:))]
+        fn observe_value_for_key_path(
+            &self,
+            key_path: Option<&NSString>,
+            object: Option<&AnyObject>,
+            change: Option<&AnyObject>,
+            context: *mut c_void,
+        ) {
+            if context != epic_embed_kvo_context() {
+                // SAFETY: forwards an observation this class did not register to `NSObject`'s own
+                // implementation, with the exact arguments received -- Apple's KVO contract.
+                unsafe {
+                    let _: () = msg_send![
+                        super(self),
+                        observeValueForKeyPath: key_path,
+                        ofObject: object,
+                        change: change,
+                        context: context
+                    ];
+                }
+                return;
+            }
+            let Some(webview) = object.and_then(|o| o.downcast_ref::<WKWebView>()) else {
+                return;
+            };
+            let event = nav_state_json(webview);
+            if let Ok(mut guard) = surface().lock() {
+                let flagged = epic_nav_state_with_flags(event.clone(), guard.nav_flags());
+                if epic_kvo_event_is_new(guard.pending_nav_events.last(), &flagged) {
+                    guard.enqueue_nav_event(event);
+                }
+            } else {
+                eprintln!(
+                    "[shell] WARN: macos_epic_embed surface registry poisoned -- continuing"
+                );
+            }
+        }
+    }
+
     unsafe impl WKNavigationDelegate for EpicEmbedNavDelegate {
         #[unsafe(method(webView:decidePolicyForNavigationAction:decisionHandler:))]
         fn navigation_policy(
@@ -1171,10 +1400,14 @@ define_class!(
                 guard.nav_generation = guard.nav_generation.wrapping_add(1);
                 guard.nav_started_at = Some(Instant::now());
                 guard.load_timed_out = false;
-                // D-11: every load starts fresh -- cleared here even though nothing yet sets
-                // this flag to `true` until Task 3's challenge-response hook lands.
-                guard.challenged = false;
+                // D-11: every load starts fresh. Clearing the challenge also un-hides the
+                // subview the challenge hid, when nothing else keeps it hidden -- a challenge the
+                // page clears by navigating itself away no longer strands a hidden surface with
+                // no Try again (review finding 7).
+                let hidden = guard.visibility.set_challenged(false);
                 guard.enqueue_nav_event(event);
+                drop(guard);
+                apply_visibility(webview, hidden);
             } else {
                 eprintln!(
                     "[shell] WARN: macos_epic_embed surface registry poisoned -- continuing"
@@ -1257,19 +1490,22 @@ define_class!(
                         "[shell] macos_epic_embed: main-frame response flagged as challenged \
                          (D-09)"
                     );
+                    // D-10: Rust owns the hide -- a visible subview would paint over the panel
+                    // the renderer is about to show in the same slot. Applied as the derived
+                    // visibility, so a later `show()` cannot undo it (review finding 5).
                     if let Ok(mut guard) = surface().lock() {
-                        guard.challenged = true;
+                        let hidden = guard.visibility.set_challenged(true);
                         let event = nav_state_json(webview);
                         guard.enqueue_nav_event(event);
+                        drop(guard);
+                        apply_visibility(webview, hidden);
                     } else {
                         eprintln!(
                             "[shell] WARN: macos_epic_embed surface registry poisoned -- \
                              continuing"
                         );
+                        apply_visibility(webview, true);
                     }
-                    // D-10: Rust owns the hide -- a visible subview would paint over the panel
-                    // the renderer is about to show in the same slot.
-                    webview.setHidden(true);
                 }
             }
             // This hook OBSERVES; it never blocks. Cancelling here would leave the user a blank

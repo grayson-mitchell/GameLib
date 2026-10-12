@@ -923,6 +923,76 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     }
   )
 
+  // Phase 50 review finding 2. On macOS, back/forward/reload/navigate route to the raw Epic
+  // WKWebView whenever it is selected, and that arm's DIRECT return used to be a bare
+  // `nav_state_json()`: it had `surface: 'epic'` but none of the three flags `coerceNavState`
+  // requires on an Epic state, so every Epic chrome-nav result turned into
+  // `{ status: 'error' }`. Every fixture above is surface-less, so nothing here could see it.
+  // `EPIC_FLAGGED_NAV_STATE` is the exact object the Rust unit test
+  // `the_flag_merge_adds_all_three_epic_fields` (`src-tauri/src/epic_embed_state.rs`) asserts
+  // `epic_nav_state_with_flags` produces. That function is now the one merge both Epic return
+  // paths go through. Keep the two fixtures in step.
+  const EPIC_FLAGGED_NAV_STATE = {
+    url: 'https://store.epicgames.com/en-US/',
+    host: 'store.epicgames.com',
+    canGoBack: true,
+    canGoForward: false,
+    surface: 'epic',
+    loadTimedOut: true,
+    challenged: false,
+    blockedLauncherSchemeCount: 2
+  }
+  const {
+    loadTimedOut: _lt,
+    challenged: _ch,
+    blockedLauncherSchemeCount: _bl,
+    ...EPIC_BARE_NAV_STATE
+  } = EPIC_FLAGGED_NAV_STATE
+
+  it.each(NAV_REACHABILITY_CASES)(
+    "%s resolves a real surface: 'epic' reply carrying the merged flags (finding 2)",
+    async (_name, channel, invoke) => {
+      const { input, frames } = startTransport()
+      const promise = invoke()
+      await flush()
+      const frame = frames.find((f) => f.channel === channel)
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: EPIC_FLAGGED_NAV_STATE })}\n`
+      )
+      await expect(promise).resolves.toEqual(EPIC_FLAGGED_NAV_STATE)
+    }
+  )
+
+  it.each(NAV_REACHABILITY_CASES)(
+    "%s rejects the pre-fix bare surface: 'epic' reply rather than defaulting its flags (finding 2)",
+    async (_name, channel, invoke) => {
+      const { input, frames } = startTransport()
+      const promise = invoke()
+      await flush()
+      const frame = frames.find((f) => f.channel === channel)
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: EPIC_BARE_NAV_STATE })}\n`
+      )
+      await expect(promise).rejects.toThrow(/loadTimedOut must be a boolean/)
+    }
+  )
+
+  it("storeEmbedBack: the registered arm resolves { status: 'ok', navState } for a flagged Epic reply (finding 2)", async () => {
+    const { input, frames } = startTransport()
+    const resultPromise = handlerRegistry.get('storeEmbedBack')?.(
+      {}
+    ) as Promise<unknown>
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_BACK)
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: EPIC_FLAGGED_NAV_STATE })}\n`
+    )
+    await expect(resultPromise).resolves.toEqual({
+      status: 'ok',
+      navState: EPIC_FLAGGED_NAV_STATE
+    })
+  })
+
   it('store_embed_navigate: forwards the url argument on the wire, unchanged', async () => {
     const { input, frames } = startTransport()
     const promise = createRustStoreEmbedSeam().navigate(
