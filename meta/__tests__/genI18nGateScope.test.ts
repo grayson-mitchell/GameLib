@@ -311,6 +311,24 @@ const FIXTURE_DIFF_LINES = [
  * JSON files per the hand-edit precedent, scope 195 -> 193, fork-touched
  * 238 -> 235. The replacement tab, `WinetricksSettings/index.tsx`, is not
  * added to either artifact here; plan 45-11 mirrors the final file set.
+ *
+ * Phase 50 plan 03 (D-07/D-10/D-14): scope 209 -> 211, fork-touched
+ * 251 -> 257. Net +2 scope: the two new WebView chrome components this plan
+ * creates, `StoreEmbedTimeoutBanner.tsx` and `EpicLauncherBlockedNotice.tsx`,
+ * hand-inserted into both artifacts in sorted position (`generatedAt` held
+ * constant on the hand-curated scope file; `meta/i18nForkTouchedFiles.json`
+ * regenerated for real via `pnpm gen-i18n-gate-scope`, its routine, every-run
+ * artifact). That real regeneration also surfaced four files this plan did
+ * not touch and did not review -- `NavShell/components/LibraryTileSizeSlider/
+ * index.tsx`, `Game/GameSubMenu/shortcutsToggle.ts`, `Library/
+ * libraryTileSize.ts` and `WebView/storeEmbedZoom.ts` -- that had already
+ * landed fork-touched by other work after the 261012-dhs snapshot above and
+ * were never re-scanned. Declared here rather than promoted into
+ * `meta/i18nGateScope.json`: this plan has not read any of the four for
+ * translatable surface, and promoting an unreviewed file is exactly the
+ * "reflex regeneration that sweeps unrelated paths in" the generator's own
+ * docstring warns against. Net effect: +4 debt (these four) on top of the
+ * +2 scope promotion above.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -354,6 +372,13 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx',
   'src/frontend/state/InstallProgress.ts',
   'src/frontend/state/TourContext.tsx',
+  // Phase 50 plan 03: four files surfaced by a real `pnpm gen-i18n-gate-scope`
+  // run that this plan did not write and has not reviewed for translatable
+  // surface -- see the dated entry above this array's closing comment block.
+  'src/frontend/components/UI/NavShell/components/LibraryTileSizeSlider/index.tsx',
+  'src/frontend/screens/Game/GameSubMenu/shortcutsToggle.ts',
+  'src/frontend/screens/Library/libraryTileSize.ts',
+  'src/frontend/screens/WebView/storeEmbedZoom.ts',
   // 2026-10-07 (rebase of the phase-48 branch onto main): the branch's own
   // quick task 261003-s04 created `OAuthLogin/index.tsx` (the GOG tile moved
   // onto the in-app OAuth overlay). Fork-touched 229 -> 230. Measured, not
@@ -1065,9 +1090,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 209-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 251-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(209)
-    expect(forkTouchedSnapshot.files.length).toBe(251)
+  it('A0 fixture sanity: the seeded scope is the REAL 211-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 257-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(211)
+    expect(forkTouchedSnapshot.files.length).toBe(257)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1108,7 +1133,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 209 -> 251 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 211 -> 257 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1131,7 +1156,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 251', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 257', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1144,12 +1169,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(251)
+    expect(rewritten.files.length).toBe(257)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 251 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 257 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1162,7 +1187,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(251)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(257)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
