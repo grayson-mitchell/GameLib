@@ -58,24 +58,37 @@ interface Exemption {
   readonly anchors: readonly string[]
 }
 
-const EXEMPTIONS: readonly Exemption[] = [
-  {
-    file: 'src/frontend/screens/WebView/index.tsx',
-    matchSubstring: 'The injected globals (`isTauri`, `__TAURI__`',
-    reason:
-      'PROSE, not a reference. This names the globals Tauri injects into the ' +
-      'REMOTE Epic page, read from inside that page by spike 024 to test -- and ' +
-      'refute -- the Talon fingerprinting theory for the store Turnstile gate. ' +
-      'It is a different thing that merely shares a name with the predicate ' +
-      'Phase 35 Plan 17 deleted; it cannot reach dispatchInvoke(), which is the ' +
-      'whole failure mode this gate exists to catch. Rewording it would cost the ' +
-      'comment the literal global names the measurement actually observed.',
-    anchors: [
-      'the gate is a\n  // Cloudflare Turnstile challenge, not a bare 403.',
-      'Spike 024 measured why'
-    ]
-  }
-]
+/**
+ * EMPTY, and that is the intended end state -- not an unfinished table.
+ *
+ * The one entry this table ever held exempted a prose passage in
+ * `src/frontend/screens/WebView/index.tsx` that named the globals Tauri injects
+ * into the REMOTE Epic page (`isTauri`, `__TAURI__`, ...), recorded there by
+ * spike 024 while refuting the Talon fingerprinting theory for the store
+ * Turnstile gate. That passage documented a guard which blocked `/store/epic`
+ * from the embed on EVERY platform.
+ *
+ * Phase 50 Plan 01 narrowed that guard to `store === 'epic' && platform !==
+ * 'darwin'` so macOS falls through to the Rust-managed raw `WKWebView` subview
+ * (`macos_epic_embed.rs`), and rewrote the comment to describe the narrowed
+ * guard -- which dropped the exempted passage. The `anchors` mechanism did
+ * exactly what the note above promises: the exemption died loudly rather than
+ * silently licensing whatever replaced it.
+ *
+ * It was retired rather than restored because the passage described an
+ * every-platform block that no longer exists; re-adding it verbatim would
+ * document a guard the code no longer has. The measurement itself is not lost
+ * -- it lives in
+ * `.planning/spikes/024-epic-store-in-embedded-child-webview/README.md`, which
+ * the replacement comment cites.
+ *
+ * The gate keeps its teeth with an empty table: the sweep below still proves
+ * zero unexempted matches under src/, and the vacuity control still proves the
+ * invocation reaches a populated tree. Keep the `Exemption` machinery -- a
+ * future prose match should be justified in writing here, never regex-widened
+ * away.
+ */
+const EXEMPTIONS: readonly Exemption[] = []
 
 describe('D-01/D-00b: isTauri static zero-match completeness gate', () => {
   it('every declared exemption still describes the file it exempts', () => {
