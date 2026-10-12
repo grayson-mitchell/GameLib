@@ -153,3 +153,18 @@ describe('finding 10 — open() builds the NSURL before mutating any view', () =
     expect(count(body, 'URLWithString(')).toBe(1)
   })
 })
+
+describe("finding 14 — the subview carries wry's child autoresizing mask", () => {
+  test('a non-flipped parent gets ViewMinYMargin (wry), a flipped one ViewMaxYMargin', () => {
+    expect(fnBody(code, 'top_pinned_autoresizing_mask')).toMatch(
+      /if parent_is_flipped\s*\{\s*NSAutoresizingMaskOptions::ViewMaxYMargin\s*\}\s*else\s*\{\s*NSAutoresizingMaskOptions::ViewMinYMargin\s*\}/
+    )
+  })
+
+  test('the cold path applies it, and no size-tracking mask exists anywhere (D-18)', () => {
+    expect(fnBody(code, 'open')).toMatch(
+      /setAutoresizingMask\(\s*top_pinned_autoresizing_mask\(\s*ns_view\.isFlipped\(\)\s*\)\s*\)/
+    )
+    expect(code).not.toMatch(/View(Width|Height)Sizable/)
+  })
+})

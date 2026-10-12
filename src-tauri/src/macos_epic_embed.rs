@@ -45,7 +45,7 @@ use std::time::{Duration, Instant};
 use objc2::rc::Retained;
 use objc2::runtime::{Bool, NSObject, ProtocolObject};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadMarker, MainThreadOnly};
-use objc2_app_kit::NSView;
+use objc2_app_kit::{NSAutoresizingMaskOptions, NSView};
 use objc2_foundation::{
     NSError, NSHTTPURLResponse, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
     NSURLRequest, NSURL,
@@ -310,7 +310,8 @@ pub(crate) fn is_selected() -> bool {
 }
 
 /// Converts a renderer-space rect (`useStoreEmbedHost`'s `flush()` is the ONLY rect source --
-/// D-18, "single geometry oracle": no autoresizing mask, no Rust-side resize heuristic) into an
+/// D-18, "single geometry oracle": no size-tracking autoresizing mask, no Rust-side resize
+/// heuristic; see `top_pinned_autoresizing_mask` for the one edge-pinning mask) into an
 /// `NSRect` in `ns_view`'s own coordinate space. Ported verbatim from spike 024's own conditional
 /// -- `NSView`'s coordinate origin is bottom-left UNLESS the view opts into `isFlipped() == true`
 /// (top-left, matching web/CSS convention), and the subview-attach target's flip state
@@ -323,6 +324,24 @@ fn rect_to_ns_rect(ns_view: &NSView, x: f64, y: f64, w: f64, h: f64) -> NSRect {
         bounds.size.height - y - h
     };
     NSRect::new(NSPoint::new(x, origin_y), NSSize::new(w, h))
+}
+
+/// Review finding 14: the autoresizing mask that keeps the subview's TOP edge where the renderer
+/// put it while the window resizes between two throttled `flush()` rects -- what wry sets on its
+/// own child webviews (`ViewMinYMargin`, wry-0.55.1 `wkwebview/mod.rs`), the Tauri-managed
+/// sibling this subview sits next to. Without it, a non-flipped (bottom-left origin) parent keeps
+/// the subview's distance from the window BOTTOM, so on a resize/zoom/fullscreen it drifts
+/// against the slot until the next rect lands. Neither variant sets `ViewWidthSizable`/
+/// `ViewHeightSizable`: size never tracks the parent, so `flush()` stays the only geometry
+/// authority (D-18; this narrows, not reverses, RESEARCH.md Pitfall 4 -- which is about a
+/// size-tracking mask competing with the renderer). Flip-aware, like `rect_to_ns_rect`: in a
+/// flipped parent the top margin is the min-Y one, so the flexible margin is max-Y instead.
+fn top_pinned_autoresizing_mask(parent_is_flipped: bool) -> NSAutoresizingMaskOptions {
+    if parent_is_flipped {
+        NSAutoresizingMaskOptions::ViewMaxYMargin
+    } else {
+        NSAutoresizingMaskOptions::ViewMinYMargin
+    }
 }
 
 /// The ONE `setHidden` writer for the Epic subview (review findings 5/7). `hidden` is always an
@@ -605,6 +624,7 @@ pub(crate) fn open(
             }
             let webview: Retained<WKWebView> =
                 unsafe { WKWebView::initWithFrame_configuration(mtm.alloc(), frame, &config) };
+            webview.setAutoresizingMask(top_pinned_autoresizing_mask(ns_view.isFlipped()));
 
             // [ASSUMED] (D-06, RESEARCH.md Assumptions Log A1): key-value coding with the
             // drawing-background key set to a boxed `false` is standard, long-documented Apple
