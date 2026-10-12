@@ -93,6 +93,33 @@ function embedSurfaceFor(
   return storeKey === 'epic' && platform === 'darwin' ? 'epic' : 'tauri'
 }
 
+/**
+ * Phase 50 D-04 (review finding 9): the resolved sign-in state each store's page was last
+ * loaded or shown under, keyed by storeKey. MODULE-level, not a per-mount ref, because the real
+ * sign-in path unmounts this hook: from /store/epic the user goes to /login (the `WebView`
+ * unmounts, the embed is only hidden, D-21), signs in, and comes back to a fresh mount. A
+ * per-mount ref was re-seeded by that remount's own open, so the change was never seen, while
+ * Rust's warm open saw the same URL and did not navigate -- the signed-out header stayed. The
+ * hook only ever stores the RESOLVED four-value state here, never a cookie (Phase 40 D-16).
+ */
+const signInStateAtLoadByStore = new Map<string, string>()
+
+/**
+ * Records `signInState` as `storeKey`'s new baseline and reports whether it differs from a
+ * PREVIOUS baseline. The first record for a store reports no change: a first load is fresh by
+ * definition, so it is a baseline, never a reload.
+ */
+function recordSignInBaseline(storeKey: string, signInState: string): boolean {
+  const previous = signInStateAtLoadByStore.get(storeKey)
+  signInStateAtLoadByStore.set(storeKey, signInState)
+  return previous !== undefined && previous !== signInState
+}
+
+/** Test seam: the baseline outlives every mount by design, so each test starts from empty. */
+export function resetStoreEmbedSignInBaselines(): void {
+  signInStateAtLoadByStore.clear()
+}
+
 function logNavCallFailure(label: string, error: unknown): void {
   window.api.logInfo(`[useStoreEmbedHost] ${label} threw: ${String(error)}`)
 }
@@ -138,7 +165,7 @@ interface UseStoreEmbedHostOptions {
    * only the RESOLVED value, never a persisted expiry flag and never a cookie (Phase 40 D-16):
    * `src/common/signInState.ts` is the one place the underlying rule table is written, and this
    * hook's only use of the value is a single auth-triggered reload on return to the Epic surface
-   * (D-04) -- see `signInStateAtLoadRef` below.
+   * (D-04) -- see `signInStateAtLoadByStore` above.
    */
   signInState: string
 }
@@ -356,11 +383,10 @@ export function useStoreEmbedHost({
   // see the seed at the `!openedRef.current` branch. The start-url effect further down is the
   // effect that actually CONSUMES this ref; it still reads/writes it the same way it always has.
   const previousUrlRef = useRef<string | null>(null)
-  // Phase 50 Plan 05 (D-04): the Epic sign-in state recorded at the last open/show. Seeded
-  // unconditionally in `flush()`'s open branch below, next to `previousUrlRef`'s own seed, so
-  // the first open records a baseline and reloads nothing. The two show branches further down
-  // compare the current `signInState` against this ref before issuing their show.
-  const signInStateAtLoadRef = useRef<string | null>(null)
+  // Phase 50 Plan 05 (D-04): the sign-in state baseline is `signInStateAtLoadByStore` (module
+  // level, review finding 9). Recorded in `flush()`'s open branch below, next to
+  // `previousUrlRef`'s own seed -- comparing first, so a RE-open after signing in elsewhere
+  // reloads once -- and compared again by the two show branches further down.
   // Phase 50 review finding 1 (D-02): the surface the last `storeEmbedOpen` routed to, and a
   // handle the start-URL effect uses to RE-OPEN when a store switch crosses surfaces. Set by the
   // open/bounds effect below (which owns the slot element and the throttle state), null while no
@@ -414,7 +440,13 @@ export function useStoreEmbedHost({
         // has not already recorded as current, and this line records it in the same render pass,
         // before that effect's own equality check runs.
         previousUrlRef.current = startUrl
-        signInStateAtLoadRef.current = signInState
+        // D-04 (finding 9): an open is a "return to the Epic surface" too -- the remount after
+        // signing in on /login, or a store switch back to Epic (finding 1). A warm Rust open of
+        // the same URL does not navigate, so a changed state needs an explicit reload, issued
+        // once the open has resolved (reloading before it would hit the old surface).
+        const authChanged =
+          recordSignInBaseline(storeKey, signInState) &&
+          embedSurfaceFor(storeKey, platform) === 'epic'
         window.api
           .storeEmbedOpen(startUrl, bounds, storeKey)
           // Follow every successful open with a throttled bounds send (W8, quick 261012-gn8). On
@@ -427,7 +459,19 @@ export function useStoreEmbedHost({
           // this re-sends the same rect, which is harmless. It goes through `scheduleFlush` ->
           // `flush`, so it is not a second `storeEmbedSetBounds` call site.
           .then((result) => {
-            if (!disposed && result?.status === 'ok') scheduleFlush()
+            if (disposed || result?.status !== 'ok') return
+            scheduleFlush()
+            if (authChanged) {
+              window.api
+                .storeEmbedReload()
+                .then(applyNavResult)
+                .catch((error) => {
+                  logNavCallFailure(
+                    'storeEmbedReload (auth-triggered on open, D-04)',
+                    error
+                  )
+                })
+            }
           })
           .catch((error) => {
             logNavCallFailure('storeEmbedOpen', error)
@@ -565,6 +609,9 @@ export function useStoreEmbedHost({
     // URL change is handled by the dedicated start-url effect below -- a navigate, or, only when
     // the switch crosses native surfaces, a re-open through `reopenRef` (finding 1)). `flush()`
     // reads its open arguments from `openArgsRef`, so nothing here depends on a stale render.
+    // `applyNavResult` (the D-04 reload-on-open, finding 9) is a `useCallback` with no deps --
+    // stable for the hook's lifetime -- so it is left out rather than re-arming the observer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slotNode])
 
   // ── START-URL CHANGE — navigate within a surface, re-open across surfaces (finding 1) ─────
@@ -645,9 +692,8 @@ export function useStoreEmbedHost({
           )
         })
         // D-04: a show that follows a recorded sign-in-state change issues exactly one reload,
-        // on the Epic surface only -- see `signInStateAtLoadRef`'s own doc comment above.
-        if (isEpicSurface && signInStateAtLoadRef.current !== signInState) {
-          signInStateAtLoadRef.current = signInState
+        // on the Epic surface only -- see `signInStateAtLoadByStore`'s own doc comment above.
+        if (isEpicSurface && recordSignInBaseline(storeKey, signInState)) {
           window.api
             .storeEmbedReload()
             .then(applyNavResult)
@@ -695,9 +741,8 @@ export function useStoreEmbedHost({
           logNavCallFailure('storeEmbedShow (suppression)', error)
         })
         // D-04: a show that follows a recorded sign-in-state change issues exactly one reload,
-        // on the Epic surface only -- see `signInStateAtLoadRef`'s own doc comment above.
-        if (isEpicSurface && signInStateAtLoadRef.current !== signInState) {
-          signInStateAtLoadRef.current = signInState
+        // on the Epic surface only -- see `signInStateAtLoadByStore`'s own doc comment above.
+        if (isEpicSurface && recordSignInBaseline(storeKey, signInState)) {
           window.api
             .storeEmbedReload()
             .then(applyNavResult)
@@ -710,7 +755,14 @@ export function useStoreEmbedHost({
         }
       }
     }
-  }, [suppressed, isStoreRoute, isEpicSurface, signInState, applyNavResult])
+  }, [
+    suppressed,
+    isStoreRoute,
+    isEpicSurface,
+    storeKey,
+    signInState,
+    applyNavResult
+  ])
 
   // ── ROUTE LIFECYCLE — hide on leave, close only at app teardown (D-21) ─────────────────────
   const tearingDownRef = useRef(false)
