@@ -64,16 +64,24 @@
  * layout gotcha), and `useStoreEmbedHost`'s bounds sync needs the slot's measured rect to be
  * stable. No border is set on the slot for the same reason this project has already hit: a
  * hairline border on a fractional grid-track boundary never rasterises.
+ *
+ * Phase 50 (D-07/D-14, UAT item 14; review finding 8): three explicit `auto` chrome tracks, then
+ * the slot's `1fr`. Row 1 is `StoreEmbedControls`, rows 2-3 are the slow-load banner and the
+ * blocked-launcher notice. With the original two-track `auto 1fr`, the slot pinned to row 2 made
+ * auto-placement push those two rows into implicit rows 3/4 -- BELOW the store embed. A notice that
+ * renders `null` leaves its `auto` track at zero height, and the slot stays in the LAST track
+ * whichever rows are showing, so nothing can be auto-placed beneath it.
+ * `embedContainerGridRows.test.ts` re-runs the auto-placement over this file and `index.tsx`.
  */
 .WebView__embedContainer {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
   height: 100%;
   width: 100%;
 }
 
 .WebView__embedSlot {
-  grid-row: 2;
+  grid-row: 4;
   position: relative;
   min-height: 0;
   min-width: 0;

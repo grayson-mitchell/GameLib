@@ -16,7 +16,7 @@ import './index.css'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
 import HumbleLoginSurface from './components/HumbleLoginSurface'
-import StoreEmbedPlaceholder from './components/StoreEmbedPlaceholder'
+import StoreEmbedSlotContents from './components/StoreEmbedSlotContents'
 import StoreEmbedTimeoutBanner from './components/StoreEmbedTimeoutBanner'
 import EpicLauncherBlockedNotice from './components/EpicLauncherBlockedNotice'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
@@ -606,8 +606,10 @@ export default function WebView() {
   // D-24: the chrome renders ABOVE the slot, so the slot's rect is measured below (and never
   // includes) the chrome -- this is what keeps `useStoreEmbedHost`'s bounds arithmetic trivial
   // and is why NavShell needs no changes for this plan. The slot itself renders no children of
-  // its own beyond the placeholder (D-19) and, on a challenged Epic surface, the
-  // `'epic-challenged'` unavailable panel (Phase 50 Plan 05, D-10/D-11): the native subview
+  // its own beyond `StoreEmbedSlotContents`, which picks exactly ONE of the placeholder (D-19) or,
+  // on a challenged Epic surface, the `'epic-challenged'` unavailable panel (Phase 50 Plan 05,
+  // D-10/D-11; review finding 6 -- stacked after the full-height placeholder, the panel sat
+  // below the slot's visible rect): the native subview
   // composites over anything else drawn inside, so a non-exempt child would either be invisibly
   // covered or covered while still being hit-tested (this project's own WKWebView paint-vs-hit-test
   // gotcha) -- `'epic-challenged'` is the one exception because Rust hides the raw subview itself
@@ -630,16 +632,17 @@ export default function WebView() {
       />
       <EpicLauncherBlockedNotice
         visible={launcherNoticeVisible}
+        attemptKey={embedHost.launcherSchemeBlockedAt}
         onDismissed={() => setLauncherNoticeVisible(false)}
       />
       <div className="WebView__embedSlot" ref={slotCallbackRef}>
-        {(embedSuppressed || isEpicSurface) && <StoreEmbedPlaceholder />}
-        {embedHost.challenged && (
-          <WebviewUnavailablePanel
-            reason="epic-challenged"
-            onTryAgain={embedHost.onTryAgain}
-          />
-        )}
+        <StoreEmbedSlotContents
+          suppressed={embedSuppressed}
+          isEpicSurface={isEpicSurface}
+          challenged={embedHost.challenged}
+          url={embedHost.currentUrl}
+          onTryAgain={embedHost.onTryAgain}
+        />
       </div>
     </div>
   )

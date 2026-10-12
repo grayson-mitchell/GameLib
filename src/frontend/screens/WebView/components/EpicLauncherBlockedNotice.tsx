@@ -1,9 +1,17 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface EpicLauncherBlockedNoticeProps {
   visible: boolean
+  /**
+   * Identity of the blocked attempt this notice is reporting -- the host passes
+   * `useStoreEmbedHost`'s `launcherSchemeBlockedAt`, a fresh value per NEW attempt. The
+   * auto-dismiss timer is keyed on it, so a second attempt while the notice is still up restarts
+   * the full interval instead of inheriting the first attempt's remainder.
+   */
+  attemptKey: number | null
   onDismissed: () => void
 }
 
@@ -19,16 +27,17 @@ const AUTO_DISMISS_MS = 4000
  * navigation attempt the Rust-side `com.epicgames.launcher://` block (Phase
  * 50 Plan 02) rejects.
  *
- * Hookless beyond `useTranslation` (Phase 40 D-22/D-23 chrome discipline,
- * T-40-07-06): this component holds no timer-tracking state of its own.
- * While `visible` is true it schedules exactly one `setTimeout` call to
- * `onDismissed` per invocation, as a plain side effect of being called --
- * not inside a hook. The host owns the mount cadence (D-14's "one toast per
- * attempt"): it is expected to flip `visible` from `false` to `true` once
- * per blocked attempt, and back to `false` once this notice's own
- * `onDismissed` fires, rather than keeping `visible` true across repeated,
- * unrelated re-renders -- which would otherwise schedule a fresh timer on
- * every one of those renders.
+ * The auto-dismiss timer lives in ONE effect keyed on `[visible, attemptKey]`,
+ * with a cleanup that clears it (Phase 50 review finding 15). It used to be a
+ * bare `setTimeout` issued during render, which scheduled a fresh timer on
+ * EVERY render while visible -- and the host re-renders on every nav-state
+ * drain -- so stale timers from earlier renders dismissed a later attempt's
+ * notice early, breaking D-14's "one toast per attempt". Now an unrelated
+ * re-render schedules nothing, hiding clears the pending timer, and a new
+ * attempt restarts the full interval. `onDismissed` is read through a ref so
+ * the host's inline callback (a new identity each render) never re-arms it.
+ * Still no display state of its own (Phase 40 D-22/D-23 chrome discipline,
+ * T-40-07-06): `visible` stays the host's.
  *
  * Deferred idea, not this notice's job: mapping the Epic Games Launcher
  * links this notice reports onto GameLib's own Epic install flow is a NEW
@@ -37,16 +46,25 @@ const AUTO_DISMISS_MS = 4000
  */
 export default function EpicLauncherBlockedNotice({
   visible,
+  attemptKey,
   onDismissed
 }: EpicLauncherBlockedNoticeProps) {
   const { t: tGamelib } = useTranslation('gamelib')
 
+  const onDismissedRef = useRef(onDismissed)
+  onDismissedRef.current = onDismissed
+
+  useEffect(() => {
+    if (!visible) return undefined
+    const handle = setTimeout(() => {
+      const dismiss = onDismissedRef.current
+      if (typeof dismiss === 'function') dismiss()
+    }, AUTO_DISMISS_MS)
+    return () => clearTimeout(handle)
+  }, [visible, attemptKey])
+
   if (!visible) {
     return null
-  }
-
-  if (typeof onDismissed === 'function') {
-    setTimeout(onDismissed, AUTO_DISMISS_MS)
   }
 
   const message = tGamelib(

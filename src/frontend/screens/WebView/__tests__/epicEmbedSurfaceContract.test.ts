@@ -209,49 +209,57 @@ describe('WebView index.tsx — Epic nav-signal chrome wiring (Phase 50 Plan 05,
   it('wires StoreEmbedTimeoutBanner to embedHost.loadTimedOut/onReload and EpicLauncherBlockedNotice to the local notice state', () => {
     expect(finalReturnSource).toMatch(/timedOut=\{embedHost\.loadTimedOut\}/)
     expect(finalReturnSource).toMatch(/visible=\{launcherNoticeVisible\}/)
+    // Review finding 15: the notice's auto-dismiss effect is keyed on the attempt identity.
+    expect(finalReturnSource).toMatch(
+      /attemptKey=\{embedHost\.launcherSchemeBlockedAt\}/
+    )
     expect(finalReturnSource).toMatch(
       /onDismissed=\{\(\) => setLauncherNoticeVisible\(false\)\}/
     )
   })
 
-  it('widens the placeholder condition to render unconditionally on the Epic surface', () => {
-    expect(finalReturnSource).toMatch(
-      /\{\(embedSuppressed \|\| isEpicSurface\) && <StoreEmbedPlaceholder \/>\}/
-    )
+  // Review finding 6 (D-06/D-10/D-11/D-19): the slot's children are ONE component that picks
+  // exactly one of challenged panel / placeholder / nothing -- its choice is tested behaviourally
+  // in `components/__tests__/StoreEmbedSlotContents.test.tsx`. This half pins the WIRING, since
+  // the JSX here cannot be executed: every prop comes from the right source, `url` included (the
+  // challenged panel's Open in browser button renders only with it), and nothing else -- no
+  // placeholder or panel of its own -- is rendered inside the slot to stack against it.
+  const SLOT_CONTENTS_WIRING =
+    /<div className="WebView__embedSlot" ref=\{slotCallbackRef\}>\s*<StoreEmbedSlotContents\s+suppressed=\{embedSuppressed\}\s+isEpicSurface=\{isEpicSurface\}\s+challenged=\{embedHost\.challenged\}\s+url=\{embedHost\.currentUrl\}\s+onTryAgain=\{embedHost\.onTryAgain\}\s*\/>\s*<\/div>/
+
+  it("renders StoreEmbedSlotContents as the embed slot's only child, wired to the host state including url", () => {
+    expect(finalReturnSource).toMatch(SLOT_CONTENTS_WIRING)
   })
 
-  it('renders the epic-challenged WebviewUnavailablePanel as a child of the embed slot, gated on embedHost.challenged', () => {
-    const slotOpenIdx = finalReturnSource.indexOf(
-      'className="WebView__embedSlot"'
-    )
-    const panelIdx = finalReturnSource.indexOf(
-      'reason="epic-challenged"',
-      slotOpenIdx
-    )
-    expect(slotOpenIdx).toBeGreaterThanOrEqual(0)
-    expect(panelIdx).toBeGreaterThan(slotOpenIdx)
-    expect(finalReturnSource).toMatch(
-      /\{embedHost\.challenged && \(\s*<WebviewUnavailablePanel\s*reason="epic-challenged"\s*onTryAgain=\{embedHost\.onTryAgain\}/
-    )
+  it('renders no placeholder or unavailable panel of its own in the final return', () => {
+    expect(finalReturnSource).not.toMatch(/<StoreEmbedPlaceholder\b/)
+    expect(finalReturnSource).not.toMatch(/<WebviewUnavailablePanel\b/)
   })
 
-  it('negative control: a synthetic source with the challenged panel removed fails the slot-child assertion', () => {
+  it('negative control: the pre-fix slot (placeholder, then a url-less ungated panel) fails both assertions', () => {
     const regressedSource = finalReturnSource.replace(
-      /\{embedHost\.challenged && \([\s\S]*?\)\}\n/,
-      ''
+      SLOT_CONTENTS_WIRING,
+      `<div className="WebView__embedSlot" ref={slotCallbackRef}>
+        {(embedSuppressed || isEpicSurface) && <StoreEmbedPlaceholder />}
+        {embedHost.challenged && (
+          <WebviewUnavailablePanel
+            reason="epic-challenged"
+            onTryAgain={embedHost.onTryAgain}
+          />
+        )}
+      </div>`
     )
     expect(regressedSource).not.toBe(finalReturnSource)
-    expect(regressedSource).not.toMatch(/reason="epic-challenged"/)
+    expect(regressedSource).not.toMatch(SLOT_CONTENTS_WIRING)
+    expect(regressedSource).toMatch(/<StoreEmbedPlaceholder\b/)
   })
 
-  it('negative control: a synthetic source with the placeholder condition narrowed back to embedSuppressed-only fails the widened-condition assertion', () => {
+  it('negative control: dropping url from the wiring fails the wiring assertion', () => {
     const regressedSource = finalReturnSource.replace(
-      '{(embedSuppressed || isEpicSurface) && <StoreEmbedPlaceholder />}',
-      '{embedSuppressed && <StoreEmbedPlaceholder />}'
+      /(challenged=\{embedHost\.challenged\})\s+url=\{embedHost\.currentUrl\}/,
+      '$1'
     )
     expect(regressedSource).not.toBe(finalReturnSource)
-    expect(regressedSource).not.toMatch(
-      /\{\(embedSuppressed \|\| isEpicSurface\) && <StoreEmbedPlaceholder \/>\}/
-    )
+    expect(regressedSource).not.toMatch(SLOT_CONTENTS_WIRING)
   })
 })

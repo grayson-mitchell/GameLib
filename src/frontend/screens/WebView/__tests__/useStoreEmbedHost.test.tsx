@@ -261,6 +261,7 @@ const fakeLocalStorage = new Map<string, string>()
 // Imported after the mocks above (textual order -- this project's ts-jest setup does not hoist
 // jest.mock like babel-jest; see useDebouncedStoreSearch.test.ts / useTauriOAuthLogin.test.tsx).
 import {
+  resetStoreEmbedSignInBaselines,
   useStoreEmbedHost,
   type StoreEmbedHostState
 } from '../useStoreEmbedHost'
@@ -362,6 +363,9 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     MockResizeObserver.instances = []
     windowListeners.clear()
     fakeLocalStorage.clear()
+    // The D-04 sign-in baseline is module-level since review finding 9 (it must outlive an
+    // unmount), so each test starts from an empty one.
+    resetStoreEmbedSignInBaselines()
     mockApi.storeEmbedOpen.mockResolvedValue(okStatus)
     mockApi.storeEmbedHide.mockResolvedValue(okStatus)
     mockApi.storeEmbedShow.mockResolvedValue(okStatus)
@@ -1521,6 +1525,256 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     toggleSuppressionShow({ ...options, signInState: 'expired' })
 
     expect(mockApi.storeEmbedReload).not.toHaveBeenCalled()
+  })
+
+  // ── STORE SWITCH ACROSS SURFACES ON macOS (Phase 50 review finding 1, D-02) ───────────────
+  //
+  // `store/:store` is one route, so `/store/gog` -> `/store/epic` keeps the same mounted
+  // `WebView` AND (since Phase 50 removed the darwin Epic early return) the same slot element:
+  // the open effect does not re-run, and the start-URL effect is what sees the switch. On darwin
+  // the two stores live on DIFFERENT native surfaces (Tauri child webview vs the raw Epic
+  // `WKWebView`), and only `store_embed_open` (keyed by storeKey) switches between them --
+  // `store_embed_navigate` navigates whichever surface is currently selected. RED before the fix:
+  // both directions issued `storeEmbedNavigate(<other store's url>)` and no second open.
+  const GOG_URL = 'https://af.gog.com?as=1838482841'
+  const EPIC_URL = 'https://www.epicgames.com/store/en-US/'
+  const STEAM_URL = 'https://store.steampowered.com/'
+
+  it('36. darwin: switching gog -> epic in the mounted WebView re-opens with storeKey epic, never navigates', () => {
+    const { ref } = makeSlot({ x: 1, y: 2, width: 300, height: 400 })
+    const gog: MountOptions = {
+      slotRef: ref,
+      startUrl: GOG_URL,
+      storeKey: 'gog',
+      platform: 'darwin'
+    }
+
+    mount(gog)
+    jest.advanceTimersByTime(40)
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+
+    reinvoke({ ...gog, startUrl: EPIC_URL, storeKey: 'epic' })
+
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(2)
+    expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
+      EPIC_URL,
+      { x: 1, y: 2, w: 300, h: 400 },
+      'epic'
+    )
+    expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
+  })
+
+  it('37. darwin: switching epic -> gog in the mounted WebView re-opens with storeKey gog, never navigates', () => {
+    const { ref } = makeSlot({ x: 1, y: 2, width: 300, height: 400 })
+    const epic: MountOptions = {
+      slotRef: ref,
+      startUrl: EPIC_URL,
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+
+    mount(epic)
+    jest.advanceTimersByTime(40)
+    expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
+      EPIC_URL,
+      { x: 1, y: 2, w: 300, h: 400 },
+      'epic'
+    )
+
+    reinvoke({ ...epic, startUrl: GOG_URL, storeKey: 'gog' })
+
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(2)
+    expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
+      GOG_URL,
+      { x: 1, y: 2, w: 300, h: 400 },
+      'gog'
+    )
+    expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
+  })
+
+  it('38. darwin: a round trip gog -> epic -> gog re-opens on each surface change, and a second epic visit too', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const gog: MountOptions = {
+      slotRef: ref,
+      startUrl: GOG_URL,
+      storeKey: 'gog',
+      platform: 'darwin'
+    }
+
+    mount(gog)
+    jest.advanceTimersByTime(40)
+    reinvoke({ ...gog, startUrl: EPIC_URL, storeKey: 'epic' })
+    reinvoke(gog)
+    reinvoke({ ...gog, startUrl: EPIC_URL, storeKey: 'epic' })
+
+    const keys = (mockApi.storeEmbedOpen.mock.calls as unknown[][]).map(
+      (call) => call[2]
+    )
+    expect(keys).toEqual(['gog', 'epic', 'gog', 'epic'])
+    expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
+  })
+
+  it('39. darwin: a switch between two Tauri-embed stores (gog -> steam) still navigates, no re-open', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const gog: MountOptions = {
+      slotRef: ref,
+      startUrl: GOG_URL,
+      storeKey: 'gog',
+      platform: 'darwin'
+    }
+
+    mount(gog)
+    jest.advanceTimersByTime(40)
+    reinvoke({ ...gog, startUrl: STEAM_URL, storeKey: 'steam' })
+
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(STEAM_URL)
+  })
+
+  it('40. darwin: after a surface-switch re-open, later bounds still flow through the same observer', () => {
+    const { ref, setRect } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const gog: MountOptions = {
+      slotRef: ref,
+      startUrl: GOG_URL,
+      storeKey: 'gog',
+      platform: 'darwin'
+    }
+
+    mount(gog)
+    jest.advanceTimersByTime(40)
+    reinvoke({ ...gog, startUrl: EPIC_URL, storeKey: 'epic' })
+    jest.advanceTimersByTime(40)
+    mockApi.storeEmbedSetBounds.mockClear()
+
+    setRect({ x: 0, y: 0, width: 640, height: 480 })
+    MockResizeObserver.instances[0].trigger()
+    jest.advanceTimersByTime(40)
+
+    expect(MockResizeObserver.instances).toHaveLength(1)
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(2)
+    expect(mockApi.storeEmbedSetBounds).toHaveBeenLastCalledWith({
+      x: 0,
+      y: 0,
+      w: 640,
+      h: 480
+    })
+  })
+
+  // ── D-04 ACROSS AN UNMOUNT (Phase 50 review finding 9, UAT item 15) ───────────────────────
+  //
+  // The real sign-in path: the user is on /store/epic signed out, goes to /login (the WebView
+  // UNMOUNTS -- the embed is hidden, D-21), signs in, and comes back (a fresh mount, which calls
+  // `storeEmbedOpen` again). Rust's warm path sees the same URL and does not navigate, so only an
+  // auth-triggered reload replaces the stale signed-out header. RED before the fix: the baseline
+  // was a per-mount ref re-seeded by the remount's own open, so the change was never seen.
+  async function flushMicrotasks(): Promise<void> {
+    for (let i = 0; i < 4; i++) await Promise.resolve()
+  }
+
+  function epicOptions(signInState: string): MountOptions {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    return {
+      slotRef: ref,
+      startUrl: EPIC_URL,
+      storeKey: 'epic',
+      platform: 'darwin',
+      signInState
+    }
+  }
+
+  it('41. unmount -> sign in elsewhere -> remount on /store/epic reloads exactly once, after the open', async () => {
+    mount(epicOptions('signed-out'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    harness().__unmount()
+    expect(mockApi.storeEmbedReload).not.toHaveBeenCalled()
+
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(2)
+    expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedOpen.mock.invocationCallOrder[1]).toBeLessThan(
+      mockApi.storeEmbedReload.mock.invocationCallOrder[0]
+    )
+  })
+
+  it('42. a remount with an unchanged sign-in state reloads nothing (instant return kept)', async () => {
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    harness().__unmount()
+
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+
+    expect(mockApi.storeEmbedReload).not.toHaveBeenCalled()
+  })
+
+  it('43. the reload is one per change: a third visit with the same new state reloads nothing more', async () => {
+    mount(epicOptions('signed-out'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    harness().__unmount()
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    harness().__unmount()
+
+    mount(epicOptions('connected'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+
+    expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
+  })
+
+  it('44. a non-Epic store remounted across a sign-in-state change reloads nothing', async () => {
+    const gog = (signInState: string): MountOptions => ({
+      ...epicOptions(signInState),
+      startUrl: GOG_URL,
+      storeKey: 'gog'
+    })
+    mount(gog('signed-out'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    harness().__unmount()
+
+    mount(gog('connected'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+
+    expect(mockApi.storeEmbedReload).not.toHaveBeenCalled()
+  })
+
+  it('45. a gog -> epic switch in the mounted WebView after signing in reloads the re-opened Epic surface once', async () => {
+    mount(epicOptions('signed-out'))
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    harness().__unmount()
+
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const gog: MountOptions = {
+      slotRef: ref,
+      startUrl: GOG_URL,
+      storeKey: 'gog',
+      platform: 'darwin',
+      signInState: 'connected'
+    }
+    mount(gog)
+    jest.advanceTimersByTime(40)
+    await flushMicrotasks()
+    reinvoke({ ...gog, startUrl: EPIC_URL, storeKey: 'epic' })
+    await flushMicrotasks()
+
+    expect(mockApi.storeEmbedOpen).toHaveBeenLastCalledWith(
+      EPIC_URL,
+      { x: 0, y: 0, w: 100, h: 100 },
+      'epic'
+    )
+    expect(mockApi.storeEmbedReload).toHaveBeenCalledTimes(1)
   })
 
   // ── Zoom-aware bounds (quick 261012-gn8, W8) ───────────────────────────────────────────────
