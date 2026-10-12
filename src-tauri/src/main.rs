@@ -55,6 +55,11 @@ use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
 // open/set_bounds/hide/show/close/deselect surface lifecycle) makes an inline block impractical.
 #[cfg(target_os = "macos")]
 mod macos_epic_embed;
+// Phase 50 review fixes: the Epic surface's cfg-free selection/visibility state machine and
+// nav-state flag merge -- deliberately NOT macOS-gated so `cargo test` covers it on Linux. Only
+// `macos_epic_embed` calls it, hence `dead_code` is expected everywhere else.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod epic_embed_state;
 
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
 

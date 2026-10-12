@@ -58,6 +58,8 @@ use objc2_web_kit::{
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
 
+use crate::epic_embed_state::EpicEmbedVisibility;
+
 /// The `storeKey` value `store_embed_open_args` (main.rs) parses that routes to THIS module
 /// instead of the existing `tauri::WebviewBuilder` embed path -- `store_embed_open`'s own routing
 /// (D-02) compares the parsed key against this constant.
@@ -245,15 +247,18 @@ unsafe impl Send for SendPtr {}
 
 /// The Epic embed's whole state: the retained `WKWebView`/delegate (parked as raw addresses via
 /// `Retained::into_raw`, reconstructed via `Retained::from_raw` on `close()` to release them --
-/// see `close()`'s own doc comment), whether the surface is currently the one selected store
-/// embed, the last-observed top-level host (fed to `store_embed_navigation_policy`'s
+/// see `close()`'s own doc comment), the selection/visibility state machine
+/// (`EpicEmbedVisibility`, `epic_embed_state.rs`), the last-observed top-level host (fed to `store_embed_navigation_policy`'s
 /// `top_level_host` parameter exactly as `StoreEmbedState` feeds it for the Tauri-managed embed),
 /// and the queued nav-state events `take_nav_events` drains.
 #[derive(Default)]
 struct EpicEmbedSurface {
     webview: Option<SendPtr>,
     delegate: Option<SendPtr>,
-    selected: bool,
+    /// `selected` (D-02), the renderer's own hide, and `challenged` (D-09/D-10) -- the three
+    /// inputs the subview's `hidden` flag is DERIVED from (review findings 5/7/13). Changed only
+    /// on the main thread, in the same step that applies the result via `apply_visibility`.
+    visibility: EpicEmbedVisibility,
     top_level_host: Option<String>,
     pending_nav_events: Vec<Value>,
     /// Bumped on every `didStartProvisionalNavigation` (Phase 50 Plan 02). Read by
@@ -274,12 +279,6 @@ struct EpicEmbedSurface {
     /// either failure hook (D-11: every load starts fresh, and a genuine failure is not a
     /// timeout).
     load_timed_out: bool,
-    /// `true` once the delegate's `webView:decidePolicyForNavigationResponse:` hook (Phase 50
-    /// Plan 02, D-09) has classified the current main-frame response as a Cloudflare challenge
-    /// -- see `epic_embed_response_is_challenged`'s own doc comment for the detection rule.
-    /// Cleared by `didStartProvisionalNavigation` and by `navigate()` (D-11: every load starts
-    /// fresh, and Try again must not stay stuck showing the panel); set `true` by NOTHING else.
-    challenged: bool,
     /// Monotonic count of navigations blocked specifically because their scheme was
     /// `EPIC_GAMES_LAUNCHER_SCHEME` (Phase 50 Plan 02, D-14) -- bumped in the
     /// `decidePolicyForNavigationAction` hook's `Block` arm, never decremented, never reset while
@@ -305,7 +304,7 @@ fn surface() -> &'static Mutex<EpicEmbedSurface> {
 /// surface whose state cannot be trusted.
 pub(crate) fn is_selected() -> bool {
     match surface().lock() {
-        Ok(guard) => guard.selected && guard.webview.is_some(),
+        Ok(guard) => guard.visibility.selected() && guard.webview.is_some(),
         Err(_) => false,
     }
 }
@@ -324,6 +323,14 @@ fn rect_to_ns_rect(ns_view: &NSView, x: f64, y: f64, w: f64, h: f64) -> NSRect {
         bounds.size.height - y - h
     };
     NSRect::new(NSPoint::new(x, origin_y), NSSize::new(w, h))
+}
+
+/// The ONE `setHidden` writer for the Epic subview (review findings 5/7). `hidden` is always an
+/// `EpicEmbedVisibility` transition's result -- never a caller's own boolean -- so the renderer's
+/// hide/show and the Rust-owned challenge hide (D-10) can no longer overwrite each other. Main
+/// thread only, like every `WKWebView` call here.
+fn apply_visibility(webview: &WKWebView, hidden: bool) {
+    webview.setHidden(hidden);
 }
 
 /// Builds the `{url, host, canGoBack, canGoForward, surface}` nav-state event for the Epic
@@ -380,7 +387,10 @@ impl EpicEmbedSurface {
     fn enqueue_nav_event(&mut self, mut event: Value) {
         if let Some(map) = event.as_object_mut() {
             map.insert("loadTimedOut".to_string(), Value::Bool(self.load_timed_out));
-            map.insert("challenged".to_string(), Value::Bool(self.challenged));
+            map.insert(
+                "challenged".to_string(),
+                Value::Bool(self.visibility.challenged()),
+            );
             map.insert(
                 "blockedLauncherSchemeCount".to_string(),
                 Value::Number(self.blocked_launcher_scheme_count.into()),
@@ -543,14 +553,30 @@ pub(crate) fn open(
                 // under the same lock first, so a non-`None` value here is always still live.
                 let webview: &WKWebView = unsafe { &*(ptr as *const WKWebView) };
                 webview.setFrame(frame);
-                webview.setHidden(false);
                 let current_url = unsafe {
                     webview
                         .URL()
                         .and_then(|u| u.absoluteString())
                         .map(|s| s.to_string())
                 };
-                if current_url.as_deref() != Some(url_string.as_str()) {
+                // D-11 ("no session memory of a challenge"): a route entry onto a surface still
+                // parked on a challenge loads fresh even when the URL is unchanged -- otherwise
+                // the derived visibility would keep it hidden behind the panel on every return.
+                // Without a standing challenge the warm path still navigates only on a URL change
+                // (D-04: a plain show reloads nothing).
+                let (load, hidden) = {
+                    let mut guard = surface()
+                        .lock()
+                        .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
+                    let challenged = guard.visibility.challenged();
+                    if challenged {
+                        guard.visibility.set_challenged(false);
+                    }
+                    let load = challenged || current_url.as_deref() != Some(url_string.as_str());
+                    (load, guard.visibility.open())
+                };
+                apply_visibility(webview, hidden);
+                if load {
                     let nsurl = NSURL::URLWithString(&NSString::from_str(&url_string))
                         .ok_or_else(|| "epic_embed_open:bad-nsurl".to_string())?;
                     let request = NSURLRequest::requestWithURL(&nsurl);
@@ -562,7 +588,6 @@ pub(crate) fn open(
                 let mut guard = surface()
                     .lock()
                     .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
-                guard.selected = true;
                 guard.enqueue_nav_event(event);
                 return Ok(());
             }
@@ -625,10 +650,13 @@ pub(crate) fn open(
                 .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
             guard.webview = Some(SendPtr(webview_ptr));
             guard.delegate = Some(SendPtr(delegate_ptr));
-            guard.selected = true;
+            let hidden = guard.visibility.open();
             guard.top_level_host = None;
             guard.enqueue_nav_event(event);
             drop(guard);
+            // SAFETY: `webview_ptr` is the `+1` just parked above; nothing can release it before
+            // this same main-thread closure returns.
+            apply_visibility(unsafe { &*(webview_ptr as *const WKWebView) }, hidden);
             // The ONLY `spawn_load_timeout_monitor` call site -- see its own doc comment for why
             // exactly one monitor thread must exist per surface, regardless of navigation count.
             spawn_load_timeout_monitor(app_for_monitor);
@@ -777,10 +805,17 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
         // must not survive a `Try again`/new-URL load. Mirrors
         // `did_start_provisional_navigation`'s own clear, for the page-initiated-navigation case
         // this chrome-initiated one does not otherwise go through.
-        if let Ok(mut guard) = surface().lock() {
-            guard.challenged = false;
-        } else {
-            eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+        // Clearing it also un-hides the subview the challenge hid (D-10's "Try again ... shows
+        // it"), through the same derived visibility every other writer uses (review finding 7).
+        match surface().lock() {
+            Ok(mut guard) => {
+                let hidden = guard.visibility.set_challenged(false);
+                drop(guard);
+                apply_visibility(webview, hidden);
+            }
+            Err(_) => {
+                eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing")
+            }
         }
         let request = NSURLRequest::requestWithURL(&nsurl);
         unsafe {
@@ -791,22 +826,33 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
 
 /// Shared `hide`/`show` implementation -- `op` names the caller for the error prefix, mirroring
 /// `store_embed_hide`/`store_embed_show`'s (main.rs) separate named-error discipline without
-/// duplicating the whole dispatch body twice.
-fn set_hidden(app: &AppHandle, hidden: bool, op: &str) -> Result<Value, String> {
+/// duplicating the whole dispatch body twice. `user_hidden` is the RENDERER's request only: the
+/// applied flag is `EpicEmbedVisibility`'s derived answer, so `show()` cannot reveal a page the
+/// challenge hook hid (review finding 5, D-10).
+fn set_hidden(app: &AppHandle, user_hidden: bool, op: &str) -> Result<Value, String> {
     let (tx, rx) = mpsc_channel::<Result<(), String>>();
     let op_owned = op.to_string();
     if let Err(e) = app.run_on_main_thread(move || {
         let result: Result<(), String> = (|| {
-            let webview_ptr = surface()
-                .lock()
-                .map_err(|_| format!("{op_owned}:surface-poisoned"))?
-                .webview
-                .as_ref()
-                .map(|p| p.0)
-                .ok_or_else(|| format!("{op_owned}:no-webview"))?;
+            let (webview_ptr, hidden) = {
+                let mut guard = surface()
+                    .lock()
+                    .map_err(|_| format!("{op_owned}:surface-poisoned"))?;
+                let webview_ptr = guard
+                    .webview
+                    .as_ref()
+                    .map(|p| p.0)
+                    .ok_or_else(|| format!("{op_owned}:no-webview"))?;
+                let hidden = if user_hidden {
+                    guard.visibility.hide()
+                } else {
+                    guard.visibility.show()
+                };
+                (webview_ptr, hidden)
+            };
             // SAFETY: see `open()`'s warm path -- identical reasoning.
             let webview: &WKWebView = unsafe { &*(webview_ptr as *const WKWebView) };
-            webview.setHidden(hidden);
+            apply_visibility(webview, hidden);
             Ok(())
         })();
         let _ = tx.send(result);
@@ -854,7 +900,7 @@ pub(crate) fn close(app: &AppHandle) -> Result<Value, String> {
                     .map_err(|_| "epic_embed_close:surface-poisoned".to_string())?;
                 let webview_ptr = guard.webview.take();
                 let delegate_ptr = guard.delegate.take();
-                guard.selected = false;
+                guard.visibility.reset();
                 guard.top_level_host = None;
                 guard.pending_nav_events.clear();
                 (webview_ptr, delegate_ptr)
@@ -895,16 +941,52 @@ pub(crate) fn close(app: &AppHandle) -> Result<Value, String> {
 /// Tauri-managed embed that then opens. A cheap no-op (not an error) when the Epic surface has
 /// never been opened -- `store_embed_open` calls this unconditionally on EVERY non-Epic open,
 /// including the very first store any session ever opens, and that must never surface an error.
+///
+/// Review finding 13: the selection change and the hide happen in ONE main-thread step. The old
+/// shape hid on the main thread and then wrote `selected = false` back on the calling worker
+/// thread, so an Epic `open()` landing in between was left visible but marked unselected -- and
+/// every later hide/show/set_bounds then routed to the Tauri embed instead. Whether the surface
+/// is selected is decided inside the closure, never from a worker-thread pre-check.
 pub(crate) fn deselect(app: &AppHandle) -> Result<Value, String> {
-    if !is_selected() {
+    // The only worker-thread shortcut: a surface that has never been opened has nothing to hide,
+    // so the common non-Epic open pays no main-thread hop. Fails closed (no-op) on a poisoned
+    // lock, matching `is_selected()`.
+    if !surface()
+        .lock()
+        .map(|g| g.webview.is_some())
+        .unwrap_or(false)
+    {
         return Ok(Value::Null);
     }
-    let result = set_hidden(app, true, "epic_embed_deselect")?;
-    if let Ok(mut guard) = surface().lock() {
-        guard.selected = false;
-        guard.pending_nav_events.clear();
+    let (tx, rx) = mpsc_channel::<Result<(), String>>();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let result: Result<(), String> = (|| {
+            let (webview_ptr, hidden) = {
+                let mut guard = surface()
+                    .lock()
+                    .map_err(|_| "epic_embed_deselect:surface-poisoned".to_string())?;
+                let Some(hidden) = guard.visibility.deselect() else {
+                    return Ok(());
+                };
+                guard.pending_nav_events.clear();
+                (guard.webview.as_ref().map(|p| p.0), hidden)
+            };
+            if let Some(ptr) = webview_ptr {
+                // SAFETY: see `open()`'s warm path -- identical reasoning.
+                apply_visibility(unsafe { &*(ptr as *const WKWebView) }, hidden);
+            }
+            Ok(())
+        })();
+        let _ = tx.send(result);
+    }) {
+        return Err(format!("epic_embed_deselect:dispatch-failed:{e}"));
     }
-    Ok(result)
+
+    match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(Ok(())) => Ok(Value::Null),
+        Ok(Err(e)) => Err(e),
+        Err(_) => Err("epic_embed_deselect:main-thread-timeout".to_string()),
+    }
 }
 
 /// Disposition returned by `surface_for_store_key` -- which surface (D-02) should serve a given
@@ -1186,10 +1268,14 @@ define_class!(
                 guard.nav_generation = guard.nav_generation.wrapping_add(1);
                 guard.nav_started_at = Some(Instant::now());
                 guard.load_timed_out = false;
-                // D-11: every load starts fresh -- cleared here even though nothing yet sets
-                // this flag to `true` until Task 3's challenge-response hook lands.
-                guard.challenged = false;
+                // D-11: every load starts fresh. Clearing the challenge also un-hides the
+                // subview the challenge hid, when nothing else keeps it hidden -- a challenge the
+                // page clears by navigating itself away no longer strands a hidden surface with
+                // no Try again (review finding 7).
+                let hidden = guard.visibility.set_challenged(false);
                 guard.enqueue_nav_event(event);
+                drop(guard);
+                apply_visibility(webview, hidden);
             } else {
                 eprintln!(
                     "[shell] WARN: macos_epic_embed surface registry poisoned -- continuing"
@@ -1266,19 +1352,22 @@ define_class!(
                         "[shell] macos_epic_embed: main-frame response flagged as challenged \
                          (D-09)"
                     );
+                    // D-10: Rust owns the hide -- a visible subview would paint over the panel
+                    // the renderer is about to show in the same slot. Applied as the derived
+                    // visibility, so a later `show()` cannot undo it (review finding 5).
                     if let Ok(mut guard) = surface().lock() {
-                        guard.challenged = true;
+                        let hidden = guard.visibility.set_challenged(true);
                         let event = nav_state_json(webview);
                         guard.enqueue_nav_event(event);
+                        drop(guard);
+                        apply_visibility(webview, hidden);
                     } else {
                         eprintln!(
                             "[shell] WARN: macos_epic_embed surface registry poisoned -- \
                              continuing"
                         );
+                        apply_visibility(webview, true);
                     }
-                    // D-10: Rust owns the hide -- a visible subview would paint over the panel
-                    // the renderer is about to show in the same slot.
-                    webview.setHidden(true);
                 }
             }
             // This hook OBSERVES; it never blocks. Cancelling here would leave the user a blank
