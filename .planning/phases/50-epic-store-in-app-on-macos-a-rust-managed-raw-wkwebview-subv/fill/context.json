@@ -1,0 +1,386 @@
+{
+  "ar": {
+    "tryAgain": "حاول مرة أخرى",
+    "reload": "أعد التحميل",
+    "epic_heading": "تصفح متجر Epic غير متوفر بعد داخل التطبيق",
+    "epic_body": "لا يقوم GameLib بعد بتضمين صفحات متجر Epic داخل التطبيق.",
+    "platform_heading": "تصفح المتجر والويكي داخل التطبيق غير متوفر بعد على هذه المنصة",
+    "cooldown_other": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقيقة"
+  },
+  "az": {
+    "tryAgain": "Yenidən cəhd edin",
+    "reload": "Yenidən yükləyin",
+    "epic_heading": "Epic Store-a tətbiq daxilində baxış hələ mövcud deyil",
+    "epic_body": "GameLib hələ Epic Store səhifələrini tətbiq daxilində göstərmir.",
+    "platform_heading": "Tətbiq daxilində mağaza və wiki baxışı bu platformada hələ mövcud deyil",
+    "cooldown_other": "Müvəqqəti əlçatmazdır — {{count}} dəqiqə sonra yenidən cəhd edin"
+  },
+  "be": {
+    "tryAgain": "Паспрабаваць зноў",
+    "reload": "Перазагрузіць",
+    "epic_heading": "Прагляд Epic Store пакуль не даступны ў прыкладанні",
+    "epic_body": "GameLib пакуль не ўбудоўвае старонкі Epic Store ў прыкладанне.",
+    "platform_heading": "Убудаваны прагляд крамы і вікі пакуль не даступны на гэтай платформе",
+    "cooldown_other": "Часова недаступна — паўтарыце праз {{count}} хвіліны"
+  },
+  "bg": {
+    "tryAgain": "Опитайте отново",
+    "reload": "Презареждане",
+    "epic_heading": "Разглеждането на Epic Store все още не е налично в приложението",
+    "epic_body": "GameLib все още не вгражда страници на Epic Store в приложението.",
+    "platform_heading": "Разглеждането на магазина и уикито в приложението все още не е налично на тази платформа",
+    "cooldown_other": "Временно недостъпно — опитайте отново след {{count}} минути"
+  },
+  "br": {
+    "tryAgain": "Klask en-dro",
+    "reload": null,
+    "epic_heading": "N'eo ket hegerz c'hoazh furchal Epic Store en-diabarzh",
+    "epic_body": "N'emberc'h ket c'hoazh GameLib pajennoù Epic Store en-diabarzh.",
+    "platform_heading": "N'eo ket hegerz c'hoazh furchal ar stal hag ar wiki en-diabarzh war ar rummstal-mañ",
+    "cooldown_other": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} munutenn"
+  },
+  "bs": {
+    "tryAgain": "Pokušaj ponovo",
+    "reload": "Ponovo učitaj",
+    "epic_heading": "Pregledavanje Epic Store-a još nije dostupno unutar aplikacije",
+    "epic_body": "GameLib još uvijek ne prikazuje Epic Store stranice unutar aplikacije.",
+    "platform_heading": "Pregledavanje trgovine i wikija unutar aplikacije još nije dostupno na ovoj platformi",
+    "cooldown_other": "Privremeno nedostupno — pokušajte ponovo za {{count}} minuta"
+  },
+  "ca": {
+    "tryAgain": "Torna-ho a provar",
+    "reload": "Carrega de nou",
+    "epic_heading": "La navegació per Epic Store encara no està disponible dins l'aplicació",
+    "epic_body": "GameLib encara no incrusta pàgines d'Epic Store dins l'aplicació.",
+    "platform_heading": "La navegació per la botiga i el wiki dins l'aplicació encara no està disponible en aquesta plataforma",
+    "cooldown_other": "Temporalment no disponible — torna-ho a provar d'aquí a {{count}} minuts"
+  },
+  "cs": {
+    "tryAgain": "Zkusit znovu",
+    "reload": "Obnovit",
+    "epic_heading": "Procházení Epic Store v aplikaci zatím není dostupné",
+    "epic_body": "GameLib zatím nezobrazuje stránky Epic Store přímo v aplikaci.",
+    "platform_heading": "Procházení obchodu a wiki v aplikaci na této platformě zatím není dostupné",
+    "cooldown_other": "Dočasně nedostupné — zkuste to znovu za {{count}} minut"
+  },
+  "da": {
+    "tryAgain": "Prøv igen",
+    "reload": "Genindlæs",
+    "epic_heading": "Gennemsyn af Epic Store er endnu ikke tilgængeligt i appen",
+    "epic_body": "GameLib indlejrer endnu ikke Epic Store-sider i appen.",
+    "platform_heading": "Indbygget butik- og wiki-gennemsyn er endnu ikke tilgængeligt på denne platform",
+    "cooldown_other": "Midlertidigt utilgængelig — prøv igen om {{count}} minutter"
+  },
+  "de": {
+    "tryAgain": "Erneut versuchen",
+    "reload": "Neu laden",
+    "epic_heading": "Epic Store-Browsing ist in der App noch nicht verfügbar",
+    "epic_body": "GameLib bettet Epic Store-Seiten noch nicht in der App ein.",
+    "platform_heading": "In-App-Browsen von Store und Wiki ist auf dieser Plattform noch nicht verfügbar",
+    "cooldown_other": "Vorübergehend nicht verfügbar — erneuter Versuch in {{count}} Minuten"
+  },
+  "el": {
+    "tryAgain": "Δοκιμάστε ξανά",
+    "reload": "Επαναφόρτωση",
+    "epic_heading": "Η περιήγηση στο Epic Store δεν είναι ακόμα διαθέσιμη εντός της εφαρμογής",
+    "epic_body": "Το GameLib δεν ενσωματώνει ακόμα σελίδες του Epic Store εντός της εφαρμογής.",
+    "platform_heading": "Η περιήγηση στο κατάστημα και το wiki εντός της εφαρμογής δεν είναι ακόμα διαθέσιμη σε αυτήν την πλατφόρμα",
+    "cooldown_other": "Προσωρινά μη διαθέσιμο — δοκιμάστε ξανά σε {{count}} λεπτά"
+  },
+  "es": {
+    "tryAgain": "Intentar de nuevo",
+    "reload": "Recarga",
+    "epic_heading": "La navegación por Epic Store aún no está disponible en la aplicación",
+    "epic_body": "GameLib todavía no integra las páginas de Epic Store en la aplicación.",
+    "platform_heading": "La navegación por tienda y wiki dentro de la aplicación aún no está disponible en esta plataforma",
+    "cooldown_other": "Temporalmente no disponible — reintenta en {{count}} minutos"
+  },
+  "et": {
+    "tryAgain": "Proovi uuesti",
+    "reload": "Laadi uuesti",
+    "epic_heading": "Epic Store sirvimine pole rakenduses veel saadaval",
+    "epic_body": "GameLib ei kuva veel Epic Store lehti rakenduse sees.",
+    "platform_heading": "Rakendusesisene poe ja wiki sirvimine pole sellel platvormil veel saadaval",
+    "cooldown_other": "Ajutiselt pole saadaval — proovi uuesti {{count}} minuti pärast"
+  },
+  "eu": {
+    "tryAgain": "Saiatu berriro",
+    "reload": "Berriz kargatu",
+    "epic_heading": "Epic Store nabigatzea ez dago erabilgarri app barruan oraindik",
+    "epic_body": "GameLib-ek oraindik ez ditu Epic Store-ren orriak app barruan txertatzen.",
+    "platform_heading": "App barruko denda eta wiki nabigazioa ez dago erabilgarri plataforma honetan oraindik",
+    "cooldown_other": "Aldi baterako ez dago erabilgarri — saiatu berriro {{count}} minutu barru"
+  },
+  "fa": {
+    "tryAgain": "تلاش مجدد",
+    "reload": "بارگیری مجدد",
+    "epic_heading": "مرور فروشگاه Epic هنوز درون برنامه در دسترس نیست",
+    "epic_body": "GameLib هنوز صفحات فروشگاه Epic را درون برنامه جای‌گذاری نمی‌کند.",
+    "platform_heading": "مرور فروشگاه و ویکی درون برنامه هنوز روی این پلتفرم در دسترس نیست",
+    "cooldown_other": "موقتاً در دسترس نیست — {{count}} دقیقه دیگر دوباره تلاش کنید"
+  },
+  "fi": {
+    "tryAgain": "Yritä uudelleen",
+    "reload": "Lataa uudelleen",
+    "epic_heading": "Epic Storen selaus ei ole vielä käytettävissä sovelluksessa",
+    "epic_body": "GameLib ei vielä upota Epic Storen sivuja sovellukseen.",
+    "platform_heading": "Sovelluksen sisäinen kaupan ja wikin selaus ei ole vielä käytettävissä tällä alustalla",
+    "cooldown_other": "Väliaikaisesti ei saatavilla — yritä uudelleen {{count}} minuutin kuluttua"
+  },
+  "fr": {
+    "tryAgain": "Réessayer",
+    "reload": "Recharger",
+    "epic_heading": "La navigation sur l'Epic Store n'est pas encore disponible dans l'application",
+    "epic_body": "GameLib n'intègre pas encore les pages de l'Epic Store dans l'application.",
+    "platform_heading": "La navigation intégrée dans le magasin et le wiki n'est pas encore disponible sur cette plateforme",
+    "cooldown_other": "Temporairement indisponible — réessayez dans {{count}} minutes"
+  },
+  "ga": {
+    "tryAgain": "Bain triail eile as",
+    "reload": "Athlódáil",
+    "epic_heading": "Níl brabhsáil Epic Store ar fáil san aip fós",
+    "epic_body": "Níl leabaithe ag GameLib fós leathanaigh Epic Store san aip.",
+    "platform_heading": "Níl brabhsáil siopa agus vicí san aip ar fáil ar an ardán seo fós",
+    "cooldown_other": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad"
+  },
+  "gl": {
+    "tryAgain": "Tentar de novo",
+    "reload": "Recargar",
+    "epic_heading": "A navegación de Epic Store aínda non está dispoñible na aplicación",
+    "epic_body": "GameLib aínda non integra as páxinas de Epic Store na aplicación.",
+    "platform_heading": "A navegación pola tenda e a wiki dentro da aplicación aínda non está dispoñible nesta plataforma",
+    "cooldown_other": "Non dispoñible temporalmente — reintenta en {{count}} minutos"
+  },
+  "he": {
+    "tryAgain": "נסה שוב",
+    "reload": "טען מחדש",
+    "epic_heading": "גלישה ב-Epic Store עדיין לא זמינה בתוך האפליקציה",
+    "epic_body": "GameLib עדיין לא מטמיע עמודי Epic Store בתוך האפליקציה.",
+    "platform_heading": "גלישה בחנות ובוויקי בתוך האפליקציה עדיין לא זמינה בפלטפורמה הזו",
+    "cooldown_other": "לא זמין כרגע — נסו שוב בעוד {{count}} דקות"
+  },
+  "hr": {
+    "tryAgain": "Pokušaj ponovno",
+    "reload": "Ponovno učitaj",
+    "epic_heading": "Pregledavanje Epic Store trgovine još nije dostupno unutar aplikacije",
+    "epic_body": "GameLib još ne prikazuje stranice Epic Store trgovine unutar aplikacije.",
+    "platform_heading": "Pregledavanje trgovine i wikija unutar aplikacije još nije dostupno na ovoj platformi",
+    "cooldown_other": "Privremeno nedostupno — pokušajte ponovno za {{count}} minuta"
+  },
+  "hu": {
+    "tryAgain": "Próbáld újra",
+    "reload": "Újratöltés",
+    "epic_heading": "Az Epic Store böngészése még nem érhető el az alkalmazáson belül",
+    "epic_body": "A GameLib még nem ágyazza be az Epic Store oldalait az alkalmazáson belül.",
+    "platform_heading": "Az alkalmazáson belüli áruház- és wikiböngészés még nem érhető el ezen a platformon",
+    "cooldown_other": "Átmenetileg nem elérhető — próbáld újra {{count}} perc múlva"
+  },
+  "id": {
+    "tryAgain": "Coba lagi",
+    "reload": "Muat Ulang",
+    "epic_heading": "Penjelajahan Epic Store belum tersedia di dalam aplikasi",
+    "epic_body": "GameLib belum menyematkan halaman Epic Store di dalam aplikasi.",
+    "platform_heading": "Penjelajahan toko dan wiki dalam aplikasi belum tersedia di platform ini",
+    "cooldown_other": "Sementara tidak tersedia — coba lagi dalam {{count}} menit"
+  },
+  "it": {
+    "tryAgain": "Riprova",
+    "reload": "Ricarica",
+    "epic_heading": "La navigazione dell'Epic Store non è ancora disponibile nell'app",
+    "epic_body": "GameLib non integra ancora le pagine dell'Epic Store nell'app.",
+    "platform_heading": "La navigazione dello store e del wiki integrata non è ancora disponibile su questa piattaforma",
+    "cooldown_other": "Temporaneamente non disponibile — riprova tra {{count}} minuti"
+  },
+  "ja": {
+    "tryAgain": "再試行",
+    "reload": "再読み込み",
+    "epic_heading": "Epic Store の閲覧はまだアプリ内で利用できません",
+    "epic_body": "GameLib はまだ Epic Store のページをアプリ内に埋め込んでいません。",
+    "platform_heading": "アプリ内ストア・Wiki 閲覧はこのプラットフォームではまだ利用できません",
+    "cooldown_other": "一時的に利用できません — {{count}} 分後に再試行してください"
+  },
+  "ka": {
+    "tryAgain": "ცადეთ ხელახლა",
+    "reload": "თავიდან ჩატვირთვა",
+    "epic_heading": "Epic Store-ის დათვალიერება აპში ჯერ არ არის ხელმისაწვდომი",
+    "epic_body": "GameLib ჯერ არ აშენებს Epic Store-ის გვერდებს აპლიკაციაში.",
+    "platform_heading": "აპში მაღაზიისა და ვიკის დათვალიერება ამ პლატფორმაზე ჯერ არ არის ხელმისაწვდომი",
+    "cooldown_other": "დროებით მიუწვდომელია — ხელახლა სცადეთ {{count}} წუთში"
+  },
+  "ko": {
+    "tryAgain": "다시 시도",
+    "reload": "다시 로드",
+    "epic_heading": "Epic Store 탐색은 아직 앱 내에서 사용할 수 없습니다",
+    "epic_body": "GameLib는 아직 Epic Store 페이지를 앱 내에 표시하지 않습니다.",
+    "platform_heading": "이 플랫폼에서는 아직 앱 내 스토어 및 위키 탐색을 사용할 수 없습니다",
+    "cooldown_other": "일시적으로 사용할 수 없음 — {{count}}분 후 다시 시도"
+  },
+  "lt": {
+    "tryAgain": "Bandyti dar kartą",
+    "reload": "Perleisti",
+    "epic_heading": "„Epic Store“ naršymas programoje dar nepasiekiamas",
+    "epic_body": "GameLib dar neįterpia „Epic Store“ puslapių programoje.",
+    "platform_heading": "Parduotuvės ir wiki naršymas programoje šioje platformoje dar nepasiekiamas",
+    "cooldown_other": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minučių"
+  },
+  "ml": {
+    "tryAgain": "വീണ്ടും ശ്രമിക്കുക",
+    "reload": "വീണ്ടും എടുക്കൂ",
+    "epic_heading": "Epic Store ബ്രൗസിംഗ് ഇപ്പോഴും ആപ്പിനുള്ളിൽ ലഭ്യമല്ല",
+    "epic_body": "GameLib ഇതുവരെ Epic Store പേജുകൾ ആപ്പിനുള്ളിൽ ഉൾപ്പെടുത്തുന്നില്ല.",
+    "platform_heading": "ആപ്പിനുള്ളിലെ സ്റ്റോർ, വിക്കി ബ്രൗസിംഗ് ഈ പ്ലാറ്റ്‌ഫോമിൽ ഇപ്പോഴും ലഭ്യമല്ല",
+    "cooldown_other": "താൽക്കാലികമായി ലഭ്യമല്ല — {{count}} മിനിറ്റുകൾക്കുള്ളിൽ വീണ്ടും ശ്രമിക്കുക"
+  },
+  "nb_NO": {
+    "tryAgain": "Prøv igjen",
+    "reload": "Last inn igjen",
+    "epic_heading": "Nettlesing av Epic Store er ikke tilgjengelig i appen ennå",
+    "epic_body": "GameLib støtter ennå ikke innebygde Epic Store-sider i appen.",
+    "platform_heading": "Innebygd nettlesing av butikk og wiki er ikke tilgjengelig på denne plattformen ennå",
+    "cooldown_other": "Midlertidig utilgjengelig — prøv igjen om {{count}} minutter"
+  },
+  "nl": {
+    "tryAgain": "Opnieuw proberen",
+    "reload": "Herladen",
+    "epic_heading": "Bladeren door Epic Store is nog niet beschikbaar in de app",
+    "epic_body": "GameLib bevat nog geen ingesloten Epic Store-pagina's in de app.",
+    "platform_heading": "In-app store en wiki bladeren is nog niet beschikbaar op dit platform",
+    "cooldown_other": "Tijdelijk niet beschikbaar — probeer opnieuw over {{count}} minuten"
+  },
+  "pl": {
+    "tryAgain": "Spróbuj ponownie",
+    "reload": "Odśwież",
+    "epic_heading": "Przeglądanie Epic Store w aplikacji nie jest jeszcze dostępne",
+    "epic_body": "GameLib nie obsługuje jeszcze wyświetlania stron Epic Store w aplikacji.",
+    "platform_heading": "Przeglądanie sklepu i wiki w aplikacji nie jest jeszcze dostępne na tej platformie",
+    "cooldown_other": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minuty"
+  },
+  "pt": {
+    "tryAgain": "Tentar novamente",
+    "reload": "Recarregar",
+    "epic_heading": "A navegação na Epic Store ainda não está disponível na aplicação",
+    "epic_body": "O GameLib ainda não incorpora páginas da Epic Store na aplicação.",
+    "platform_heading": "A navegação na loja e wiki dentro da aplicação ainda não está disponível nesta plataforma",
+    "cooldown_other": "Temporariamente indisponível — tente novamente em {{count}} minutos"
+  },
+  "pt_BR": {
+    "tryAgain": "Tentar novamente",
+    "reload": "Recarregar o GameLib",
+    "epic_heading": "A navegação na Epic Store ainda não está disponível no aplicativo",
+    "epic_body": "O GameLib ainda não incorpora páginas da Epic Store no aplicativo.",
+    "platform_heading": "A navegação na loja e na wiki dentro do aplicativo ainda não está disponível nesta plataforma",
+    "cooldown_other": "Temporariamente indisponível — tente novamente em {{count}} minutos"
+  },
+  "ro": {
+    "tryAgain": "Încearcă din nou",
+    "reload": "Reîncărcați",
+    "epic_heading": "Navigarea Epic Store nu este încă disponibilă în aplicație",
+    "epic_body": "GameLib nu încorporează încă paginile Epic Store în aplicație.",
+    "platform_heading": "Navigarea magazinului și a wiki-ului în aplicație nu este încă disponibilă pe această platformă",
+    "cooldown_other": "Temporar indisponibil — reîncearcă în {{count}} de minute"
+  },
+  "ru": {
+    "tryAgain": "Повторить",
+    "reload": "Перезагрузить",
+    "epic_heading": "Просмотр Epic Store пока недоступен в приложении",
+    "epic_body": "GameLib пока не встраивает страницы Epic Store в приложение.",
+    "platform_heading": "Просмотр магазина и вики внутри приложения пока недоступен на этой платформе",
+    "cooldown_other": "Временно недоступно — повторите через {{count}} минут"
+  },
+  "sk": {
+    "tryAgain": "Skúsiť znova",
+    "reload": "Reload",
+    "epic_heading": "Prehliadanie Epic Store zatiaľ nie je dostupné v aplikácii",
+    "epic_body": "GameLib zatiaľ nezobrazuje stránky Epic Store priamo v aplikácii.",
+    "platform_heading": "Prehliadanie obchodu a wiki v aplikácii zatiaľ nie je na tejto platforme dostupné",
+    "cooldown_other": "Dočasne nedostupné — skúste znova o {{count}} minút"
+  },
+  "sl": {
+    "tryAgain": "Poskusi znova",
+    "reload": null,
+    "epic_heading": "Brskanje po Epic Store še ni na voljo v aplikaciji",
+    "epic_body": "GameLib še ne vgrajuje strani Epic Store v aplikacijo.",
+    "platform_heading": "Brskanje po trgovini in wikiju znotraj aplikacije na tej platformi še ni na voljo",
+    "cooldown_other": "Trenutno nedosegljivo — poskusite znova čez {{count}} minut"
+  },
+  "sr": {
+    "tryAgain": "Pokušaj ponovo",
+    "reload": "Освежи",
+    "epic_heading": "Pregledanje Epic Store-a još uvek nije dostupno unutar aplikacije",
+    "epic_body": "GameLib još uvek ne prikazuje Epic Store stranice unutar aplikacije.",
+    "platform_heading": "Pregledanje prodavnice i wiki-ja unutar aplikacije još uvek nije dostupno na ovoj platformi",
+    "cooldown_other": "Тренутно недоступно — покушајте поново за {{count}} минута"
+  },
+  "sv": {
+    "tryAgain": "Försök igen",
+    "reload": "Ladda om",
+    "epic_heading": "Bläddring i Epic Store är inte tillgängligt i appen ännu",
+    "epic_body": "GameLib bäddar ännu inte in Epic Store-sidor i appen.",
+    "platform_heading": "Bläddring i butik och wiki i appen är inte tillgänglig på den här plattformen ännu",
+    "cooldown_other": "Tillfälligt otillgänglig — försök igen om {{count}} minuter"
+  },
+  "ta": {
+    "tryAgain": "மீண்டும் முயற்சிக்கவும்",
+    "reload": "மீண்டும் ஏற்று",
+    "epic_heading": "Epic Store உலாவல் இன்னும் ஆப்பிற்குள் கிடைக்கவில்லை",
+    "epic_body": "GameLib இன்னும் Epic Store பக்கங்களை ஆப்பிற்குள் உட்பொதிக்கவில்லை.",
+    "platform_heading": "ஆப்பிற்குள் ஸ்டோர் மற்றும் விக்கி உலாவல் இந்த தளத்தில் இன்னும் கிடைக்கவில்லை",
+    "cooldown_other": "தற்காலிகமாக கிடைக்கவில்லை — {{count}} நிமிடங்களில் மீண்டும் முயற்சிக்கவும்"
+  },
+  "th": {
+    "tryAgain": "ลองอีกครั้ง",
+    "reload": "",
+    "epic_heading": "ยังไม่รองรับการเรียกดู Epic Store ในแอป",
+    "epic_body": "GameLib ยังไม่รองรับการฝังหน้า Epic Store ไว้ในแอป",
+    "platform_heading": "ยังไม่รองรับการเรียกดูร้านค้าและวิกิในแอปบนแพลตฟอร์มนี้",
+    "cooldown_other": "ใช้งานไม่ได้ชั่วคราว — ลองใหม่ในอีก {{count}} นาที"
+  },
+  "tr": {
+    "tryAgain": "Tekrar dene",
+    "reload": "Yenile",
+    "epic_heading": "Epic Store gezinme uygulama içinde henüz kullanılamıyor",
+    "epic_body": "GameLib henüz Epic Store sayfalarını uygulama içinde göstermiyor.",
+    "platform_heading": "Uygulama içi mağaza ve wiki gezinme bu platformda henüz kullanılamıyor",
+    "cooldown_other": "Geçici olarak kullanılamıyor — {{count}} dakika içinde yeniden deneyin"
+  },
+  "uk": {
+    "tryAgain": "Спробувати ще раз",
+    "reload": "Перезавантажити",
+    "epic_heading": "Перегляд Epic Store поки що недоступний у застосунку",
+    "epic_body": "GameLib поки що не вбудовує сторінки Epic Store в застосунок.",
+    "platform_heading": "Перегляд магазину та вікі у застосунку поки що недоступний на цій платформі",
+    "cooldown_other": "Тимчасово недоступно — повторіть спробу через {{count}} хвилини"
+  },
+  "uz": {
+    "tryAgain": "Qayta urinib ko'ring",
+    "reload": "Qayta yuklash",
+    "epic_heading": "Epic Store'ni ilova ichida ko'rish hali mavjud emas",
+    "epic_body": "GameLib hali Epic Store sahifalarini ilova ichida ko'rsatmaydi.",
+    "platform_heading": "Ilova ichida do'kon va vikini ko'rish bu platformada hali mavjud emas",
+    "cooldown_other": "Vaqtincha mavjud emas — {{count}} daqiqadan so'ng qayta urining"
+  },
+  "vi": {
+    "tryAgain": "Thử lại",
+    "reload": "Tải Lại",
+    "epic_heading": "Duyệt Epic Store trong ứng dụng chưa khả dụng",
+    "epic_body": "GameLib chưa hỗ trợ nhúng trang Epic Store trong ứng dụng.",
+    "platform_heading": "Duyệt cửa hàng và wiki trong ứng dụng chưa khả dụng trên nền tảng này",
+    "cooldown_other": "Tạm thời không khả dụng — thử lại sau {{count}} phút"
+  },
+  "zh_Hans": {
+    "tryAgain": "重试",
+    "reload": "重新加载",
+    "epic_heading": "Epic Store 浏览功能尚不支持应用内使用",
+    "epic_body": "GameLib 目前尚未在应用内嵌入 Epic Store 页面。",
+    "platform_heading": "此平台尚不支持应用内商店和 wiki 浏览功能",
+    "cooldown_other": "暂时不可用 — 请在 {{count}} 分钟后重试"
+  },
+  "zh_Hant": {
+    "tryAgain": "重試",
+    "reload": "重新載入",
+    "epic_heading": "Epic Store 瀏覽功能尚未在應用程式內提供",
+    "epic_body": "GameLib 目前尚未支援在應用程式內嵌入 Epic Store 頁面。",
+    "platform_heading": "此平台尚未提供應用程式內商店與 wiki 瀏覽功能",
+    "cooldown_other": "暫時無法使用 — 請於 {{count}} 分鐘後重試"
+  }
+}
