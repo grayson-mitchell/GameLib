@@ -7201,6 +7201,15 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
 /// seam's per-field coercion exists to prevent one layer up.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_take_nav_events() -> Result<Value, String> {
+    // Phase 50 Plan 02 (D-01/D-02): the Epic surface queues its OWN nav events
+    // (`macos_epic_embed::EpicEmbedSurface::pending_nav_events`) -- route there when it is the
+    // selected surface, symmetric with `store_embed_hide`/`show`/`close` above.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::take_nav_events();
+        }
+    }
     let mut state = store_embed_state()
         .lock()
         .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
@@ -7234,6 +7243,16 @@ fn store_embed_navigate_args(args: &[Value]) -> Result<tauri::Url, String> {
 /// `eval` here should stop.
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
+    // Phase 50 Plan 02 (D-01/D-02): the Epic surface owns its own NATIVE back/forward via
+    // `WKWebView::goBack()`/`canGoBack()` -- it tracks no Rust-side history stack (see
+    // `macos_epic_embed`'s module doc comment). Route there when it is the selected surface,
+    // symmetric with `store_embed_hide`/`show`/`close` above.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::back(app);
+        }
+    }
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_back:no-webview:{STORE_EMBED_LABEL}"))?;
@@ -7258,6 +7277,13 @@ fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
 /// ZERO page-side JS injection via `Webview::navigate(Url)`, never `eval`).
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
+    // Phase 50 Plan 02 (D-01/D-02): symmetric with `store_embed_back` above.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::forward(app);
+        }
+    }
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_forward:no-webview:{STORE_EMBED_LABEL}"))?;
@@ -7285,6 +7311,15 @@ fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
 /// `store_embed_back`'s doc comment).
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
+    // Phase 50 Plan 02 (D-01/D-02): symmetric with `store_embed_hide`/`show`/`close` above --
+    // the Epic surface's `reload()` re-issues the webview's own current URL, leaving
+    // `canGoBack`/`canGoForward` unchanged, matching this arm's own suppression discipline.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::reload(app);
+        }
+    }
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_reload:no-webview:{STORE_EMBED_LABEL}"))?;
@@ -7312,6 +7347,13 @@ fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let url = store_embed_navigate_args(args)?;
+    // Phase 50 Plan 02 (D-01/D-02): symmetric with `store_embed_hide`/`show`/`close` above.
+    #[cfg(target_os = "macos")]
+    {
+        if macos_epic_embed::is_selected() {
+            return macos_epic_embed::navigate(app, &url);
+        }
+    }
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_navigate:no-webview:{STORE_EMBED_LABEL}"))?;

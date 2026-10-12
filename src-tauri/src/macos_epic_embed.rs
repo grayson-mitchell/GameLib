@@ -15,6 +15,18 @@
 //! under `#[cfg(target_os = "macos")]` by construction; `#![cfg(target_os = "macos")]` is added
 //! here too, defensively, so this file self-gates even if that declaration attribute were ever
 //! dropped.
+//!
+//! **Why this surface tracks NO Rust-side history stack** (Phase 50 Plan 02, D-22): the
+//! Tauri-managed embed (`StoreEmbedState`, main.rs) needs its own `history: Vec<String>` +
+//! `cursor: usize` because `tauri::webview::Webview`/`wry::WebView` expose no native
+//! back/forward API at all (`40-EMBED-API-VERIFICATION.md` Q1/Q2) -- D-22's whole Rust-side
+//! stack exists to COMPENSATE for that absence. A raw `WKWebView` has the real thing:
+//! `canGoBack()`/`canGoForward()`/`goBack()`/`goForward()` read and drive Apple's own
+//! `WKBackForwardList` directly. Re-deriving a parallel Rust-side stack here would duplicate
+//! state two systems could disagree about, for strictly less information than the native list
+//! already tracks -- so `back()`/`forward()`/`reload()`/`navigate()` below call straight through
+//! to the native methods instead, and `nav_state_json()` reads `URL()`/`canGoBack()`/
+//! `canGoForward()` live off the webview itself.
 #![cfg(target_os = "macos")]
 
 use std::ffi::c_void;
@@ -111,7 +123,15 @@ fn rect_to_ns_rect(ns_view: &NSView, x: f64, y: f64, w: f64, h: f64) -> NSRect {
 /// branch beyond reading the new `surface` field this module adds. `host` is derived by parsing
 /// `webview.URL()`'s `absoluteString()` through `tauri::Url`, the same technique
 /// `store_embed_nav_state_json` itself uses, rather than any native `NSURL` host accessor.
-fn epic_nav_event_json(webview: &WKWebView) -> Value {
+///
+/// Deliberately reads `canGoBack()`/`canGoForward()` LIVE off the webview on every call, rather
+/// than requesting objc2-web-kit's `WKBackForwardList` feature and inspecting the list object --
+/// the two booleans are exactly what `WKBackForwardList.backItem`/`.forwardItem` being
+/// `nil`-or-not would tell us, at the cost of a whole extra Cargo feature and binding surface
+/// this module's own "no Rust-side history stack" doc comment (above) already explains is
+/// unnecessary: there is nothing this surface needs from the list beyond these two checks and
+/// `goBack()`/`goForward()`, which are already available on `WKWebView` itself.
+fn nav_state_json(webview: &WKWebView) -> Value {
     let url_string = unsafe {
         webview
             .URL()
@@ -134,12 +154,17 @@ fn epic_nav_event_json(webview: &WKWebView) -> Value {
     })
 }
 
-/// Pushes `event` onto the pending queue, dropping the OLDEST entry once `EPIC_EMBED_NAV_EVENTS_CAP`
-/// is exceeded -- see that constant's doc comment for the rationale.
-fn enqueue_event(guard: &mut EpicEmbedSurface, event: Value) {
-    guard.pending_nav_events.push(event);
-    if guard.pending_nav_events.len() > EPIC_EMBED_NAV_EVENTS_CAP {
-        guard.pending_nav_events.remove(0);
+impl EpicEmbedSurface {
+    /// Pushes `event` onto the pending queue, dropping the OLDEST entry once
+    /// `EPIC_EMBED_NAV_EVENTS_CAP` is exceeded -- see that constant's doc comment for the
+    /// rationale. A method (not a free function taking `&mut EpicEmbedSurface`) so it is
+    /// callable identically on a locked `MutexGuard` (auto-deref) and on a bare, lock-free
+    /// struct value in a unit test -- see `epic_embed_enqueue_nav_event_tests`, below.
+    fn enqueue_nav_event(&mut self, event: Value) {
+        self.pending_nav_events.push(event);
+        if self.pending_nav_events.len() > EPIC_EMBED_NAV_EVENTS_CAP {
+            self.pending_nav_events.remove(0);
+        }
     }
 }
 
@@ -219,12 +244,12 @@ pub(crate) fn open(
                         webview.loadRequest(&request);
                     }
                 }
-                let event = epic_nav_event_json(webview);
+                let event = nav_state_json(webview);
                 let mut guard = surface()
                     .lock()
                     .map_err(|_| "epic_embed_open:surface-poisoned".to_string())?;
                 guard.selected = true;
-                enqueue_event(&mut guard, event);
+                guard.enqueue_nav_event(event);
                 return Ok(());
             }
 
@@ -254,7 +279,7 @@ pub(crate) fn open(
                 webview.loadRequest(&request);
             }
 
-            let event = epic_nav_event_json(&webview);
+            let event = nav_state_json(&webview);
             // Park the retained webview/delegate as raw addresses -- released only by `close()`
             // via `Retained::from_raw` (see that function's doc comment).
             let webview_ptr = Retained::into_raw(webview) as *mut c_void;
@@ -266,7 +291,7 @@ pub(crate) fn open(
             guard.delegate = Some(SendPtr(delegate_ptr));
             guard.selected = true;
             guard.top_level_host = None;
-            enqueue_event(&mut guard, event);
+            guard.enqueue_nav_event(event);
             Ok(())
         })();
         let _ = tx.send(result);
@@ -321,6 +346,98 @@ pub(crate) fn set_bounds(app: &AppHandle, x: f64, y: f64, w: f64, h: f64) -> Res
         Ok(Err(e)) => Err(e),
         Err(_) => Err("epic_embed_set_bounds:main-thread-timeout".to_string()),
     }
+}
+
+/// Shared main-thread marshalling for the four navigation arms below (`back`/`forward`/
+/// `reload`/`navigate`) -- identical `mpsc`/`run_on_main_thread`/`recv_timeout` shape to
+/// `open()`/`set_bounds()`/`set_hidden()` above, factored out because all four arms do exactly
+/// the same three things: resolve the parked webview, run a native navigation call on it, and
+/// return the resulting `nav_state_json()`. `op` names the caller for the error prefix, same
+/// discipline as `set_hidden`'s own `op` parameter. `action` runs ENTIRELY on the main thread,
+/// inside the same closure that resolves the webview pointer -- never on the calling (worker)
+/// thread -- matching every other main-thread-marshalled call in this module.
+fn navigate_webview_on_main_thread(
+    app: &AppHandle,
+    op: &str,
+    action: impl FnOnce(&WKWebView) + Send + 'static,
+) -> Result<Value, String> {
+    let (tx, rx) = mpsc_channel::<Result<Value, String>>();
+    let op_owned = op.to_string();
+    if let Err(e) = app.run_on_main_thread(move || {
+        let result: Result<Value, String> = (|| {
+            let webview_ptr = surface()
+                .lock()
+                .map_err(|_| format!("{op_owned}:surface-poisoned"))?
+                .webview
+                .as_ref()
+                .map(|p| p.0)
+                .ok_or_else(|| format!("{op_owned}:no-webview"))?;
+            // SAFETY: see `open()`'s warm path -- identical reasoning.
+            let webview: &WKWebView = unsafe { &*(webview_ptr as *const WKWebView) };
+            action(webview);
+            Ok(nav_state_json(webview))
+        })();
+        let _ = tx.send(result);
+    }) {
+        return Err(format!("{op}:dispatch-failed:{e}"));
+    }
+
+    match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(Ok(json)) => Ok(json),
+        Ok(Err(e)) => Err(e),
+        Err(_) => Err(format!("{op}:main-thread-timeout")),
+    }
+}
+
+/// Moves to the previous entry in the native `WKBackForwardList`. A no-op (never an error)
+/// returning the CURRENT, unchanged nav state when `canGoBack()` is already `false` -- there is
+/// no Rust-side stack to consult, so "nothing to go back to" is read straight off the webview
+/// rather than from any local bookkeeping (see this module's own doc comment on why there is no
+/// history stack here).
+pub(crate) fn back(app: &AppHandle) -> Result<Value, String> {
+    navigate_webview_on_main_thread(app, "epic_embed_back", |webview| unsafe {
+        if webview.canGoBack() {
+            webview.goBack();
+        }
+    })
+}
+
+/// The mirror of `back()` -- see its doc comment for the shared no-op-when-unavailable
+/// rationale.
+pub(crate) fn forward(app: &AppHandle) -> Result<Value, String> {
+    navigate_webview_on_main_thread(app, "epic_embed_forward", |webview| unsafe {
+        if webview.canGoForward() {
+            webview.goForward();
+        }
+    })
+}
+
+/// Re-issues the webview's own current page via `WKWebView::reload()`. Never touches
+/// `canGoBack`/`canGoForward` -- a reload must leave the native back/forward list, and
+/// therefore the resulting nav state's availability flags, unchanged.
+pub(crate) fn reload(app: &AppHandle) -> Result<Value, String> {
+    navigate_webview_on_main_thread(app, "epic_embed_reload", |webview| unsafe {
+        webview.reload();
+    })
+}
+
+/// Loads `url` in the Epic subview via `WKWebView::loadRequest()` -- the same
+/// `NSURL`/`NSURLRequest` construction `open()` uses for both its cold and warm paths. A second,
+/// later `navigate()` call (or any ordinary link click) naturally makes the FIRST page
+/// `canGoBack`-reachable once the second one finishes loading -- the native back/forward list
+/// does this automatically, with nothing for this function to track.
+pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, String> {
+    let url_string = url.to_string();
+    navigate_webview_on_main_thread(app, "epic_embed_navigate", move |webview| {
+        let Some(nsurl) = NSURL::URLWithString(&NSString::from_str(&url_string)) else {
+            eprintln!("[shell] macos_epic_embed: navigate() given an unparsable URL");
+            return;
+        };
+        let request = NSURLRequest::requestWithURL(&nsurl);
+        unsafe {
+            webview.loadRequest(&request);
+        }
+    })
 }
 
 /// Shared `hide`/`show` implementation -- `op` names the caller for the error prefix, mirroring
@@ -650,10 +767,10 @@ define_class!(
             let host = tauri::Url::parse(&url_string)
                 .ok()
                 .and_then(|parsed| parsed.host_str().map(str::to_string));
-            let event = epic_nav_event_json(webview);
+            let event = nav_state_json(webview);
             if let Ok(mut guard) = surface().lock() {
                 guard.top_level_host = host;
-                enqueue_event(&mut guard, event);
+                guard.enqueue_nav_event(event);
             } else {
                 eprintln!(
                     "[shell] WARN: macos_epic_embed surface registry poisoned -- continuing"

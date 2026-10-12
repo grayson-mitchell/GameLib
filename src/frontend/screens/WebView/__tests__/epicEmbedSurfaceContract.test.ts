@@ -137,8 +137,12 @@ const openMethodSource = extractRawBetween(
   'async open(url, bounds, storeKey) {',
   'setBounds(bounds) {'
 )
+// No `s` (dotAll) flag: the pattern has no `.` metacharacter -- `[^}]*` already matches
+// newlines on its own -- so `s` was a no-op that only cost ES2018-target compatibility. Plain
+// `tsc --noEmit` (no `target` override) rejected it with TS1501 (Phase 50 Plan 02, Rule 3:
+// blocking issue for this plan's own `pnpm codecheck` gate, pre-existing from Plan 01).
 const WIRE_PAYLOAD_SHAPE =
-  /requestRustInvoke\(RUST_STORE_EMBED_OPEN,\s*\[\s*\{[^}]*storeKey[^}]*\}/s
+  /requestRustInvoke\(RUST_STORE_EMBED_OPEN,\s*\[\s*\{[^}]*storeKey[^}]*\}/
 
 describe('storeEmbedFlowRegistration — storeKey wire contract (Phase 50 Plan 01, structural)', () => {
   it("sends storeKey as part of store_embed_open's wire payload", () => {
