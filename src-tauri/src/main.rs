@@ -56,6 +56,14 @@ use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
 #[cfg(target_os = "macos")]
 mod macos_epic_embed;
 
+// Phase 50 review: the popup/download hand-off policy both store surfaces share. Not cfg-gated,
+// unlike the module above, so its decisions are unit-tested on Linux too.
+mod store_embed_handoff_policy;
+
+// Phase 50 review: the admission gate for the Epic surface's JS dialog sheets, kept out of the
+// macOS-only module above for the same reason.
+mod epic_embed_js_dialog;
+
 // ---- Contract mirror (keep in lockstep with src/common/types/sidecarTransport.ts) ----
 
 /// Printed once by the sidecar on stdout when it has installed its Electron shims and
@@ -6619,9 +6627,29 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
         // manager both work -- neither exists inside an in-app child webview (T-40-04-05).
         // Rate-limited (todo 2026-10-05): the hook carries no user gesture, so without a cap
         // any frame could open system-browser tabs in a loop.
+        //
+        // Phase 50 review: only http(s) popups are handed off -- see
+        // `store_embed_browser_handoff_policy` for why `steam:` (which `open_external` itself
+        // would accept) never is from a popup. Decided BEFORE the throttle, so a rejected or
+        // `about:blank` popup cannot use up the slot. A launcher-scheme popup is simply rejected
+        // here, as this embed's own navigation hook rejects that scheme (the D-14 counter exists
+        // only on the macOS Epic surface).
         .on_new_window({
             let app_handle = app.clone();
             move |url, _features| {
+                use store_embed_handoff_policy::{
+                    store_embed_browser_handoff_policy, StoreEmbedBrowserHandoffDecision,
+                };
+                if store_embed_browser_handoff_policy(url.as_str())
+                    != StoreEmbedBrowserHandoffDecision::HandToSystemBrowser
+                {
+                    eprintln!(
+                        "[shell] store_embed: denied window.open request to scheme '{}' -- not \
+                         routed to the system browser",
+                        url.scheme()
+                    );
+                    return tauri::webview::NewWindowResponse::Deny;
+                }
                 if !store_embed_handoff_admitted(&STORE_EMBED_POPUP_THROTTLE) {
                     eprintln!(
                         "[shell] store_embed: denied window.open request, rate-limited -- not \
