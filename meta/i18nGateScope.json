@@ -196,6 +196,7 @@
     "src/frontend/screens/StoreSearch/index.tsx",
     "src/frontend/screens/WebView/components/EpicLauncherBlockedNotice.tsx",
     "src/frontend/screens/WebView/components/StoreEmbedPlaceholder.tsx",
+    "src/frontend/screens/WebView/components/StoreEmbedSlotContents.tsx",
     "src/frontend/screens/WebView/components/StoreEmbedTimeoutBanner.tsx",
     "src/frontend/screens/WebView/components/TauriLoginPanel.tsx",
     "src/frontend/screens/WebView/components/WebviewUnavailablePanel.tsx",

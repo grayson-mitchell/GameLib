@@ -312,6 +312,14 @@ const FIXTURE_DIFF_LINES = [
  * 238 -> 235. The replacement tab, `WinetricksSettings/index.tsx`, is not
  * added to either artifact here; plan 45-11 mirrors the final file set.
  *
+ * Phase 50 code review (2026-10-12, finding 6): scope 211 -> 212, fork-touched
+ * 257 -> 258. One new WebView component, `StoreEmbedSlotContents.tsx` (the slot
+ * now renders exactly one of challenged panel / placeholder / nothing).
+ * Audit-scanned before promotion with `scanScope({ extraFiles: [it] })`: 0
+ * violations, comment-exempt set still only `bootErrorSurface.ts`, so it went
+ * into `meta/i18nGateScope.json` in sorted position, not into debt.
+ * `meta/i18nForkTouchedFiles.json` regenerated for real, `generatedAt` restored.
+ *
  * Phase 50 plan 03 (D-07/D-10/D-14): scope 209 -> 211, fork-touched
  * 251 -> 257. Net +2 scope: the two new WebView chrome components this plan
  * creates, `StoreEmbedTimeoutBanner.tsx` and `EpicLauncherBlockedNotice.tsx`,
@@ -1090,9 +1098,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 211-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 257-file fork-touched set verbatim', () => {
-    expect(scopeSnapshot.files.length).toBe(211)
-    expect(forkTouchedSnapshot.files.length).toBe(257)
+  it('A0 fixture sanity: the seeded scope is the REAL 212-file hand-curated snapshot, and the fresh-snapshot fixture carries the committed 258-file fork-touched set verbatim', () => {
+    expect(scopeSnapshot.files.length).toBe(212)
+    expect(forkTouchedSnapshot.files.length).toBe(258)
     // `freshSnapshot()` is a FIXTURE built from the committed artifact
     // (`files: [...forkTouchedSnapshot.files]`) -- NOT a live git derivation,
     // despite what this assertion used to claim. The live derivation is
@@ -1133,7 +1141,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 211 -> 257 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 212 -> 258 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -1156,7 +1164,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 257', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 258', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -1169,12 +1177,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(257)
+    expect(rewritten.files.length).toBe(258)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 257 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 258 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -1187,7 +1195,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(257)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(258)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
