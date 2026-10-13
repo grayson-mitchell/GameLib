@@ -8,21 +8,19 @@ updated: 2026-10-13T22:00:00Z
 
 ## Current Test
 
-number: 1
-name: Cold jar: Epic store boots and paints (launch 1)
+number: 2
+name: Sign in button reachable and in place (launch 1)
 expected: |
-  On the packaged build launched via `pnpm tauri:dev:packaged` — whose jar was re-measured at 0
-  `epicgames.com` entries on 2026-10-13 at session start — opening Stores → Epic shows the Epic
-  store's own page rendered inside the native subview, not a blank rect and not a one-colour
-  unpainted frame, within the 45s load window (D-01). A Cloudflare/Turnstile challenge instead of
-  the store is a real cold-jar outcome for this arm, not a flake to retry.
+  On the same cold packaged jar (Launch 1, pid 70842 still running), Epic's own "Sign in" control
+  is visible and clickable in the embedded page (L-1). Clicking it is observed through to one of
+  three outcomes — a completed sign-in, a Cloudflare/Turnstile challenge, or an HTTP 403 — and the
+  outcome is recorded verbatim. This arm never instructs signing OUT of any account.
 awaiting: user response
 
 ## Protocol
 
 This is the blocking macOS live gate for Phase 50 — the native Rust-managed raw `WKWebView`
-subview that embeds the Epic Games Store inside GameLib's existing main window. No item below
-has been run yet; every `result:` is `pending`. This file is authored per
+subview that embeds the Epic Games Store inside GameLib's existing main window. This file is authored per
 `Skill("spike-findings-gamelib")`'s `live-gate-contract-authoring.md` reference and the UAT item
 shape in `Skill("gamelib-conventions")`.
 
@@ -47,6 +45,22 @@ shape in `Skill("gamelib-conventions")`.
    | --- | --- | --- |
    | `~/Library/HTTPStorages/gamelib-shell.binarycookies` | `pnpm tauri:dev*` (dev binary) | 8 — **warm** |
    | `~/Library/HTTPStorages/com.gamelib.shell.binarycookies` | the packaged `.app` | 0 — **genuinely cold** |
+
+   **Re-measured 2026-10-13T08:49:05Z, immediately before Launch 1, after tearing down a leftover
+   dev session.** Both premises hold, and the warm count has MOVED:
+
+   | jar | entries | file mtime |
+   | --- | --- | --- |
+   | `gamelib-shell` (dev) | epic **13**, steam 3 | Oct 13 21:48:24 |
+   | `com.gamelib.shell` (packaged) | epic **0**, steam 4 | Oct 11 10:05:20 |
+
+   The dev jar rose 8 → 13 with an mtime equal to the second the dev process was killed: WebKit
+   flushes its cookie store on exit, so the five new entries are the tail of a dev-build Epic
+   browsing session that happened before this gate's first launch (see the mis-scored-arm note in
+   Item 1's result). This does not weaken either premise — the warm arm needs only a non-zero
+   count, and the packaged jar's mtime is two days stale, proving it was never touched. It does
+   mean **the warm figure to quote for Item 5 is 13, not 8**; Item 5's own criterion is written as
+   "must still be non-zero", which is what is actually load-bearing, so its text stands unchanged.
 
    So Launch 1 runs the **packaged** build and Launches 2–4 the **dev** build, which yields a real
    cold jar and a real warm jar with **no sign-out and no cache eviction anywhere in this gate**.
@@ -215,6 +229,35 @@ has no log emitter at all** — `present_native_js_alert`/`_confirm`/`_prompt` i
 only construct and run an `NSAlert`, with no logging — so Item 15 is marked visual-only evidence
 by design, not an oversight.
 
+**TEST 3 WAS WRONG ABOUT THE SINK — CORRECTED 2026-10-13, after Launch 1, before any
+literal-anchored arm ran.** The clause above names the sink as
+"`~/Library/Logs/GameLib/gamelib.log`, via `log_writer.ts`". That is false, and it would have cost
+this gate five false FAILs. Measured on the live Launch-1 process (pid 70842) and confirmed in
+source:
+
+| fact | evidence |
+| --- | --- |
+| the embed's literals are `eprintln!`, i.e. **stderr** | 25 `eprintln!` sites and **0** `shell_diag` calls in `macos_epic_embed.rs` |
+| `gamelib.log` is the **Node sidecar's** log, written by `log_writer.ts` | no Rust line can reach it; `grep -c '\[shell\]' gamelib.log` = **0** |
+| a **packaged** app's stderr is **discarded entirely** | `main.rs:11935` — "`shell_diag`, not `eprintln!`: LaunchServices discards a bundled app's stderr"; `main.rs:11269` says the same |
+| a **dev** run's stderr goes to the **terminal** | the only two files on this machine containing `[shell]` are `gamelib.scrollback.346-04.log` and `.346-12.log` — captured terminal scrollback, not `gamelib.log` |
+
+Consequences, both load-bearing:
+
+1. **The correct grep target for every literal-anchored arm is this gate's own
+   `<session-dir>/terminal.log`**, which the Capture standard already appends via `tee -a`. The
+   evidence was always being captured; the contract simply pointed at the wrong file. Items 11,
+   14, 16, 17 and 18 have been amended accordingly.
+2. **On a packaged launch those literals are unobservable at all.** This happens to cost nothing,
+   because Launch 1 is the only packaged launch and none of its four items (1–4) is anchored to a
+   log literal — they are all visual. Every literal-anchored arm sits in Launches 2–4, which run
+   the dev build. Had the launch split been drawn differently, this defect would have made those
+   arms unobservable rather than merely mis-addressed.
+
+`macos_epic_embed.rs` using `eprintln!` rather than `shell_diag` is a real observability gap in
+the shipped code, not just a documentation error — it is filed separately as a todo and is **not**
+scored by this gate, whose arms all run on the dev build where stderr is visible.
+
 **Test 4 (absence-observability).** For items whose pass criterion is an absence rather than a
 presence — Item 12 ("issues none when state unchanged", D-04) and Item 18's "not sticky" half
 (D-11) — the `expected:` text below states explicitly what proves the absence (a second,
@@ -265,7 +308,7 @@ page and not by anything in this codebase.
 
 ### 1. Cold jar: Epic store boots and paints (launch 1)
 expected: On the packaged build launched via `pnpm tauri:dev:packaged` — whose jar was measured at 0 `epicgames.com` entries on 2026-10-13 — opening Stores → Epic shows the Epic store's own page rendered inside the native subview, not a blank rect and not a one-colour unpainted frame, within the 45s load window (D-01). A Cloudflare/Turnstile challenge instead of the store is a real cold-jar outcome for this arm, not a flake to retry: record it verbatim and carry on to the challenge-fallback arm rather than re-running the launch.
-result: pending
+result: pass — 2026-10-13T08:52Z, packaged `--debug` bundle, pid 70842, cold jar. Operator observed the Epic store's own page rendered inside the native subview, well within the 45s window; no challenge, no blank rect, no one-colour frame. Evidence: single-instance assertion clean both before (both patterns empty) and after (exactly one packaged PID, dev empty); provenance tied by hash, `fcf59e2256c42b8368847331e591a3581e703e67ebd2e001f639bc73778d5d7e` identical for `target/debug/gamelib-shell` and the bundle's `Contents/MacOS/gamelib-shell`; loaded sidecar confirmed as child pid 70866 running `build/main/sidecar.js` (mtime 21:48, same build chain) rather than the bundled `gamelib-sidecar`, which is the documented `--debug` behaviour; jar `com.gamelib.shell` at 0 `epicgames.com` entries with a two-day-stale mtime, so the cold premise was real and untouched; `gamelib.log` corroborates with `[WebView] store/wiki route pathname=/store/epic startUrl=https://www.epicgames.com/store/en/` at 21:52:33; `grep -c 'CSP violation'` returned 0, which is meaningful here and only here, because this is the one launch of the gate running bundled HTML under a live policy. **A PRIOR `pass` ON THIS ITEM WAS REJECTED, 2026-10-13, and the rejection is kept deliberately** — an earlier operator `pass` was not scored, because the arm it names was never run. Measured at the moment of that report: zero packaged instances existed (`pgrep -f 'GameLib.app/Contents/MacOS/gamelib-shell'` empty), the only GameLib process was pid 26716 `target/debug/gamelib-shell` — the **dev** binary on the **warm** jar — and it was a child of a leftover Phase 49 `tauri dev` (pid 99626, started 07:58) that the Environment constraint above bars outright. Independently, provenance would have failed: the packaged bundle was then dated Oct 9 20:46 against a dev binary of Oct 13 16:54, and Oct 9 predates every Phase 50 commit, so that bundle did not contain the Epic embed at all — opening it would have produced a false FAIL rather than a pass. Corroborated afterwards by the jar re-measurement above (dev jar 8 → 13 Epic entries, flushed at the kill), which places the observed session on the warm dev build. Recorded because "the operator said pass" and "the arm ran" are different facts, and this gate has now produced one of each for the same item.
 
 ### 2. Sign in button reachable and in place (launch 1)
 expected: On the same cold packaged jar, Epic's own "Sign in" control is visible and clickable in the embedded page (L-1). Clicking it is observed through to one of three outcomes — a completed sign-in, a Cloudflare/Turnstile challenge, or an HTTP 403 — and the outcome is recorded verbatim; this arm never instructs signing OUT of any account, only exercises the page's own sign-in entry point on a jar that never had an Epic session to begin with. GameLib's own sign-in affordance is unaffected by jar state either way: it is sourced from the local `legendary` credential probe, not a cookie read.
@@ -306,7 +349,7 @@ expected: Switching from the Stores → Epic tab to Stores → Steam and back to
 result: pending
 
 ### 11. Popup → system browser handoff (launch 2)
-expected: Clicking the specific externally-opening control on Epic's page identified on the day of the run (Test 7 — not "any link"; `createWebViewWithConfiguration` only fires for a real `window.open()` call) is denied a second native in-app surface, the exact literal `[shell] macos_epic_embed: denied window.open request, routing to the system browser (D-12)` appears in `gamelib.log`, and the operator's default system browser opens to the target URL.
+expected: Clicking the specific externally-opening control on Epic's page identified on the day of the run (Test 7 — not "any link"; `createWebViewWithConfiguration` only fires for a real `window.open()` call) is denied a second native in-app surface, the exact literal `[shell] macos_epic_embed: denied window.open request, routing to the system browser (D-12)` appears in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction), and the operator's default system browser opens to the target URL.
 result: pending
 
 ### 12. Popup rate-limited, not handed off (launch 2)
@@ -318,7 +361,7 @@ expected: Having first identified, on the day of the run, which specific on-page
 result: pending
 
 ### 14. Blocked Epic Games Launcher scheme notice (launch 2)
-expected: Clicking Play/Launch on a game the operator's Epic account actually owns, inside the embedded store (Test 7 — this is the one path that issues a `com.epicgames.launcher://` navigation), shows the navigation blocked, the exact literal `[shell] macos_epic_embed: blocked a navigation to the Epic Games Launcher scheme ('com.epicgames.launcher://') -- D-14` in `gamelib.log`, and `EpicLauncherBlockedNotice` rendered with its locked copy ("Install from your Library instead — this view can't open the Epic Games Launcher."), auto-dismissing. At the app's minimum window width the notice row's message and its accent/icon stay fully visible and wrapped, never clipped by the window edge (UI-SPEC E5, as actually shipped: a bounded-width row under `StoreEmbedControls`, not the floating-toast shape UI-SPEC's draft originally described before Plan 03's Option 2A decision superseded it); repeating with the longest of the 49 translations of this string shows the same — the notice grows vertically, never past its max width.
+expected: Clicking Play/Launch on a game the operator's Epic account actually owns, inside the embedded store (Test 7 — this is the one path that issues a `com.epicgames.launcher://` navigation), shows the navigation blocked, the exact literal `[shell] macos_epic_embed: blocked a navigation to the Epic Games Launcher scheme ('com.epicgames.launcher://') -- D-14` in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction), and `EpicLauncherBlockedNotice` rendered with its locked copy ("Install from your Library instead — this view can't open the Epic Games Launcher."), auto-dismissing. At the app's minimum window width the notice row's message and its accent/icon stay fully visible and wrapped, never clipped by the window edge (UI-SPEC E5, as actually shipped: a bounded-width row under `StoreEmbedControls`, not the floating-toast shape UI-SPEC's draft originally described before Plan 03's Option 2A decision superseded it); repeating with the longest of the 49 translations of this string shows the same — the notice grows vertically, never past its max width.
 result: pending
 
 ### 15. One reload on return when Epic sign-in state changed (launch 2)
@@ -328,15 +371,15 @@ result: pending
 ### Launch 3 — host-level block induced, same real profile, reverted immediately after
 
 ### 16. Timeout → reload path (launch 3)
-expected: With Epic's store host routed to an unroutable address via a scoped `/etc/hosts` entry (reverted immediately after this item), opening Stores → Epic shows no paint within 45s, the exact literal `[shell] macos_epic_embed: load timed out past 45s` in `gamelib.log`, and `StoreEmbedTimeoutBanner` rendered with both Reload and Open in browser visible on one row at the app's minimum window width (UI-SPEC E3) — repeating with the longest of the 49 translations of the banner's message shows the same single-row shape, message may ellipsise, actions never clip. Reverting the hosts entry and clicking Reload shows the store recover and paint normally (D-05/D-07/D-08).
+expected: With Epic's store host routed to an unroutable address via a scoped `/etc/hosts` entry (reverted immediately after this item), opening Stores → Epic shows no paint within 45s, the exact literal `[shell] macos_epic_embed: load timed out past 45s` in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction), and `StoreEmbedTimeoutBanner` rendered with both Reload and Open in browser visible on one row at the app's minimum window width (UI-SPEC E3) — repeating with the longest of the 49 translations of the banner's message shows the same single-row shape, message may ellipsise, actions never clip. Reverting the hosts entry and clicking Reload shows the store recover and paint normally (D-05/D-07/D-08).
 result: pending
 
 ### 17. Navigation failure delegate literal (launch 3)
-expected: During the same host-level-block window as Item 16, the literal `[shell] macos_epic_embed: {caller} -- {description}` appears in `gamelib.log` with `{caller}` equal to either `didFailNavigation` or `didFailProvisionalNavigation` (whichever the native delegate actually reports for this failure mode) and `{description}` equal to the real `NSError.localizedDescription()` text — recorded verbatim, not paraphrased.
+expected: During the same host-level-block window as Item 16, the literal `[shell] macos_epic_embed: {caller} -- {description}` appears in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction) with `{caller}` equal to either `didFailNavigation` or `didFailProvisionalNavigation` (whichever the native delegate actually reports for this failure mode) and `{description}` equal to the real `NSError.localizedDescription()` text — recorded verbatim, not paraphrased.
 result: pending
 
 ### 18. Challenge fallback with Try again, not sticky (launch 3, CONDITIONAL)
-expected: If a Cloudflare/Turnstile challenge is encountered on Epic's main frame at any point in this gate (most likely during Item 2 or Item 16's induced conditions), the exact literal `[shell] macos_epic_embed: main-frame response flagged as challenged (D-09)` appears in `gamelib.log`, `WebviewUnavailablePanel` renders with `reason="epic-challenged"` (heading "Epic Store browsing is temporarily blocked", body "Epic asked for a security check this view can't complete.") and a Try again button. Clicking Try again re-attempts the load; if the challenge has cleared, the panel reverts to normal Epic rendering on the next successful load — proving "not sticky" (Test 4, absence-observability) by a second, subsequent observation rather than assuming it. This item is CONDITIONAL per the ROADMAP's locked "challenge reputation" decision: if no challenge is ever encountered during this gate, record this item as skipped with the reason, not as a failure.
+expected: If a Cloudflare/Turnstile challenge is encountered on Epic's main frame at any point in this gate (most likely during Item 2 or Item 16's induced conditions), the exact literal `[shell] macos_epic_embed: main-frame response flagged as challenged (D-09)` appears in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction), `WebviewUnavailablePanel` renders with `reason="epic-challenged"` (heading "Epic Store browsing is temporarily blocked", body "Epic asked for a security check this view can't complete.") and a Try again button. Clicking Try again re-attempts the load; if the challenge has cleared, the panel reverts to normal Epic rendering on the next successful load — proving "not sticky" (Test 4, absence-observability) by a second, subsequent observation rather than assuming it. This item is CONDITIONAL per the ROADMAP's locked "challenge reputation" decision: if no challenge is ever encountered during this gate, record this item as skipped with the reason, not as a failure.
 result: pending
 
 ### Launch 4 — full quit and relaunch, same real profile
@@ -348,9 +391,9 @@ result: pending
 ## Summary
 
 total: 19
-passed: 0
+passed: 1
 issues: 0
-pending: 19
+pending: 18
 skipped: 0
 blocked: 0
 
