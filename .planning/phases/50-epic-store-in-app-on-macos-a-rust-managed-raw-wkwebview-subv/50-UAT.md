@@ -8,12 +8,12 @@ updated: 2026-10-13T22:00:00Z
 
 ## Current Test
 
-number: 4
-name: Zoom-aware bounds at 120% and 80% (launch 1)
+number: 5
+name: Warm signed-in jar: Epic store boots and paints (launch 2)
 expected: |
-  With the webview zoom set to 120%, the Epic subview's bounds scale to match the
-  measured slot rect with no clipping and no offset gap; repeating at 80% shows the
-  same, with no stale bounds left over from the 120% pass.
+  On the dev build (pnpm tauri:dev:keyring), with the warm jar premise re-confirmed
+  non-zero immediately beforehand, opening Stores -> Epic boots and paints using the
+  existing session: no sign-in prompt appears, and no action is taken to sign in or out.
 awaiting: user response
 
 ## Protocol
@@ -68,6 +68,18 @@ shape in `Skill("gamelib-conventions")`.
    operator's Epic account for ~8 hours on 2026-09-28
    (`logging-out-of-epic-is-a-one-way-door-on-a-cold-jar.md`). "Cold" here means a jar that never
    had an Epic session — never one that had it removed.
+
+   **THE COLD JAR IS NOW SPENT — recorded 2026-10-13T09:21Z, after Launch 1.** The packaged
+   `com.gamelib.shell` jar went 0 -> 6 (Item 1's anonymous store load) -> **22** (Item 2's
+   completed sign-in) and now holds a real Epic session. There is therefore **no cold Epic jar
+   left on this machine**, and Item 1 and Item 2 are not re-runnable as written: a re-run would
+   silently measure the warm, signed-in path while claiming to measure the cold one. This is a
+   one-shot resource that has now been consumed, in the same class as the ONE-SHOT-RESOURCE pair
+   the Structural Reachability Review's Test 5 identified for Item 12 — but across sessions rather
+   than within one, which is why it is recorded here instead of being left to inference. Restoring
+   coldness is **prohibited** by Hard ordering constraint 1 above: clearing is what caused the
+   ~8-hour Epic lockout on 2026-09-28. A genuinely cold re-run needs a new WebKit identity (a
+   different bundle id or a different macOS user account), not a cleared jar.
 
    **Named confound.** This splits jar state across two build flavours, so Launch 1 differs from
    Launch 2 in more than its jar. The sharpest difference is CSP: it applies only to bundled HTML
@@ -321,7 +333,7 @@ reason: "the pre-paint transient is unobservably short on a warm page; re-armed 
 
 ### 4. Zoom-aware bounds at 120% and 80% (launch 1)
 expected: With the webview zoom control set to 120%, the Epic subview's bounds scale to match the measured slot rect with no clipping and no offset gap; repeating at 80% shows the same with no stale bounds left over from the 120% pass (`storeEmbedZoom.ts`, quick 261012-gn8's W8 property, previously PASS on Windows — this is its first macOS/Epic observation).
-result: pending
+result: pass — 2026-10-13T09:21Z, Launch 1, pid 70842, packaged `--debug` bundle. Operator set Accessibility -> Zoom to 120%, viewed Stores -> Epic, then repeated at 80%: the subview matched its slot rect at both stops, with no clipping, no offset gap against the surrounding GameLib chrome, and no stale bounds carried over from the 120% pass into the 80% pass. This is `storeEmbedZoom.ts`'s W8 property's FIRST macOS/Epic observation — it had previously passed only on Windows (quick 261012-gn8) — so it is new coverage rather than a regression check. Both stops are exact slider positions (the control is min 60 / max 200 / step 10), so neither reading depended on hitting an approximate value.
 
 ### Launch 2 — warm jar, dev build via `pnpm tauri:dev:keyring` (the operator's existing Epic session)
 
@@ -392,9 +404,9 @@ result: pending
 ## Summary
 
 total: 19
-passed: 2
+passed: 3
 issues: 0
-pending: 16
+pending: 15
 skipped: 0
 blocked: 1
 
