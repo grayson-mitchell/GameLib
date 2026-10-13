@@ -3,7 +3,7 @@ status: draft
 phase: 50
 source: [50-01-SUMMARY.md, 50-02-SUMMARY.md, 50-03-SUMMARY.md, 50-04-SUMMARY.md, 50-05-SUMMARY.md, 50-CONTEXT.md, 50-UI-SPEC.md, ROADMAP.md]
 started:
-updated: 2026-10-13T00:44:00Z
+updated: 2026-10-13T05:30:00Z
 ---
 
 ## Protocol
@@ -16,14 +16,40 @@ shape in `Skill("gamelib-conventions")`.
 
 ### Hard ordering constraints
 
-1. **Cold-before-warm, never via a jar clear.** Launch 1 (cold) and Launch 2 (warm) use **two
-   separate profiles** — a disposable, isolated `createFakeHomeProfile()` profile for Launch 1,
-   and the operator's real, already-signed-in profile for Launch 2 — never the same profile
-   transitioned from warm to cold by clearing cookies. Logging out of Epic (or clearing its
-   cookie jar) on this machine is a measured one-way door: a stale WebKit disk-cache entry
-   surviving a cookie-only clear previously locked the operator's Epic account for 8 hours
-   (`logging-out-of-epic-is-a-one-way-door-on-a-cold-jar.md`). "Cold" here means a profile that
-   never had a session, never a profile that had one removed.
+1. **Cold-before-warm, selected by BINARY FLAVOUR — never by a jar clear, and never by a fake
+   HOME.** The original draft of this constraint used a disposable `createFakeHomeProfile()`
+   profile for Launch 1. **That premise is refuted and must not be used.** WebKit resolves its
+   data store from the user account and the binary's own identity, not from `$HOME`, and the Epic
+   surface deliberately attaches to the shared persistent
+   `WKWebsiteDataStore::defaultDataStore()` (`src-tauri/src/macos_epic_embed.rs:674`; L-3 locked,
+   `nonPersistentDataStore` is spike-only and forbidden in production). A fake-HOME run therefore
+   reuses the operator's **real** WebKit session — measured 2026-10-08, when a Humble login sheet
+   on a throwaway HOME loaded an already-signed-in page and closed itself
+   (`fake-home-does-not-isolate-webkit-cookies.md`).
+
+   The lever that does work is **which binary you launch**: the dev binary keys its stores off its
+   process name, the packaged app off its bundle id. Measured 2026-10-13, read-only, by counting
+   domains in each jar:
+
+   | jar | launched by | `epicgames.com` entries |
+   | --- | --- | --- |
+   | `~/Library/HTTPStorages/gamelib-shell.binarycookies` | `pnpm tauri:dev*` (dev binary) | 8 — **warm** |
+   | `~/Library/HTTPStorages/com.gamelib.shell.binarycookies` | the packaged `.app` | 0 — **genuinely cold** |
+
+   So Launch 1 runs the **packaged** build and Launches 2–4 the **dev** build, which yields a real
+   cold jar and a real warm jar with **no sign-out and no cache eviction anywhere in this gate**.
+   Manufacturing coldness by clearing stays prohibited: a cookie-only clear on this machine left a
+   stale WebKit HTTP disk-cache entry that was replayed to the next cold attempt and locked the
+   operator's Epic account for ~8 hours on 2026-09-28
+   (`logging-out-of-epic-is-a-one-way-door-on-a-cold-jar.md`). "Cold" here means a jar that never
+   had an Epic session — never one that had it removed.
+
+   **Named confound.** This splits jar state across two build flavours, so Launch 1 differs from
+   Launch 2 in more than its jar. The sharpest difference is CSP: it applies only to bundled HTML
+   and there is **no policy at all** under `tauri dev`
+   (`tauri-csp-applies-only-to-bundled-html-and-its-style-nonce-nullifies-unsafe-inline.md`). Any
+   Launch-1-only failure must be re-checked on the dev build before it is attributed to the cold
+   jar, and `grep 'CSP violation' gamelib.log` is the first thing to read when one appears.
 2. **Online arms before the timeout-induction arm.** All arms that depend on the Epic store
    actually reaching the network (Launches 1–2) run before Launch 3's offline/timeout arm. The
    timeout is induced via a **host-level block** (an `/etc/hosts` entry routing Epic's store
@@ -43,7 +69,25 @@ shape in `Skill("gamelib-conventions")`.
 on every commit and has previously consumed a live-gate's as-found profile fixture roughly 20
 minutes before a gate was run (`a-running-tauri-dev-consumes-a-live-gate-fixture-on-rebuild.md`).
 Confirm via `pgrep -f 'tauri dev'` returns empty before the first launch of this gate, and ask
-the operator to quit any IDE-attached dev session first if it is not.
+the operator to quit any IDE-attached dev session first if it is not. This bars a **pre-existing**
+dev session owned by another window; it does not bar the gate's own dev launches below, which the
+gate starts itself and keeps commit-free for their duration.
+
+### Launch command (pinned — the command selects the jar)
+
+| launch | command | why this one |
+| ------ | ------- | ------------ |
+| 1 (cold jar) | `pnpm tauri:dev:packaged`, then open the bundled `GameLib.app` | runs `tauri build --debug`; the packaged identity `com.gamelib.shell` is the jar measured at **0** `epicgames.com` entries |
+| 2 (warm jar) | `pnpm tauri:dev:keyring` | dev identity `gamelib-shell` holds the **8** warm `epicgames.com` entries, plus the **3** `steampowered.com` entries Item 6's positive control needs |
+| 3 (host block) | `pnpm tauri:dev:keyring` | same warm jar as Launch 2, per constraint 2 |
+| 4 (quit + relaunch) | `pnpm tauri:dev:keyring` | same warm jar; the restart arm is about last-URL restore, not jar state |
+
+**Never `pnpm tauri:dev` (nor its `tauri:dev:vault` alias) for any arm of this gate.** That script
+sets `GAMELIB_DEV_SECRET_VAULT=1`, which swaps the real keyring for a dev vault
+(`src/backend/sidecar/devSecretVault.ts`), so Item 6's Steam positive control would read as signed
+out for a reason that has nothing to do with the embed — a green-check-proving-nothing arm in the
+one place this gate relies on a control. `tauri:dev:keyring` is the only dev variant that reads the
+real keyring.
 
 ### Capture standard (dual-sink, append-and-archive)
 
@@ -66,10 +110,19 @@ Implemented verbatim per `live-gate-contract-authoring.md` Section 3:
   Structural Reachability Review).
 - **Closing inventory**, captured during the run, not reconstructed after: `ls -la
   <session-dir>/` and `wc -l <session-dir>/*`.
-- **Single-instance assertion**: `pgrep -f 'target/debug/gamelib-shell'` must be empty
-  immediately before each launch; record the PID once the window appears; record it again at
-  teardown. If the count is ever not exactly 1 at any check, **abort that launch and re-run it**
-  rather than scoring it.
+- **Single-instance assertion — flavour-aware, BOTH patterns, before EVERY launch.** The two
+  flavours appear under different command lines, so one pattern cannot see the other and a
+  leftover instance of the wrong flavour would sit on the jar being measured:
+  ```
+  pgrep -f 'target/debug/gamelib-shell'            # dev binary (Launches 2-4)
+  pgrep -f 'GameLib.app/Contents/MacOS/GameLib'    # packaged bundle (Launch 1)
+  ```
+  **Both** must be empty immediately before each launch; after the window appears, exactly one of
+  them returns exactly one PID and the other stays empty. Record the PID once the window appears;
+  record it again at teardown. If either count is ever wrong at any check, **abort that launch and
+  re-run it** rather than scoring it. A launch absorbed by a cross-session orphan has happened here
+  before, and the window on screen was another pid
+  (`a-launch-can-be-absorbed-by-a-cross-session-orphan-instance.md`).
 
 ### Non-arms (explicit — does NOT ship, per ROADMAP.md)
 
@@ -156,14 +209,14 @@ page and not by anything in this codebase.
 
 ## Tests
 
-### Launch 1 — cold, isolated profile (`createFakeHomeProfile()`, never previously signed in)
+### Launch 1 — cold jar, packaged build (`com.gamelib.shell`, never had an Epic session)
 
 ### 1. Cold jar: Epic store boots and paints (launch 1)
-expected: On a disposable, never-used fake-HOME profile (`createFakeHomeProfile()`), opening Stores → Epic shows the Epic store's own page rendered inside the native subview — not a blank rect, not a one-colour unpainted frame — within the 45s load window (D-01).
+expected: On the packaged build launched via `pnpm tauri:dev:packaged` — whose jar was measured at 0 `epicgames.com` entries on 2026-10-13 — opening Stores → Epic shows the Epic store's own page rendered inside the native subview, not a blank rect and not a one-colour unpainted frame, within the 45s load window (D-01). A Cloudflare/Turnstile challenge instead of the store is a real cold-jar outcome for this arm, not a flake to retry: record it verbatim and carry on to the challenge-fallback arm rather than re-running the launch.
 result: pending
 
 ### 2. Sign in button reachable and in place (launch 1)
-expected: On the same cold profile, Epic's own "Sign in" control is visible and clickable in the embedded page (L-1). Clicking it is observed through to one of three outcomes — a completed sign-in, a Cloudflare/Turnstile challenge, or an HTTP 403 — and the outcome is recorded verbatim; this arm never instructs signing OUT of any account, only exercises the page's own sign-in entry point on a profile that never had a session to begin with.
+expected: On the same cold packaged jar, Epic's own "Sign in" control is visible and clickable in the embedded page (L-1). Clicking it is observed through to one of three outcomes — a completed sign-in, a Cloudflare/Turnstile challenge, or an HTTP 403 — and the outcome is recorded verbatim; this arm never instructs signing OUT of any account, only exercises the page's own sign-in entry point on a jar that never had an Epic session to begin with. GameLib's own sign-in affordance is unaffected by jar state either way: it is sourced from the local `legendary` credential probe, not a cookie read.
 result: pending
 
 ### 3. Subview transparency [ASSUMED] (launch 1)
@@ -174,10 +227,10 @@ result: pending
 expected: With the webview zoom control set to 120%, the Epic subview's bounds scale to match the measured slot rect with no clipping and no offset gap; repeating at 80% shows the same with no stale bounds left over from the 120% pass (`storeEmbedZoom.ts`, quick 261012-gn8's W8 property, previously PASS on Windows — this is its first macOS/Epic observation).
 result: pending
 
-### Launch 2 — warm, real profile (operator's existing, already-signed-in Epic session)
+### Launch 2 — warm jar, dev build via `pnpm tauri:dev:keyring` (the operator's existing Epic session)
 
 ### 5. Warm signed-in jar: Epic store boots and paints (launch 2)
-expected: Before this launch, confirm the premise is still true today (Test 6): the operator is currently signed in to Epic in their normal browser. Then, on the real profile (shared default `WKWebsiteDataStore`, L-3), opening Stores → Epic shows the store boot and paint using the existing session — no sign-in prompt appears, no action is taken to sign in or out.
+expected: Before this launch, confirm the premise is still true today (Test 6) — and confirm it against the jar this arm actually reads, not the operator's browser: `strings ~/Library/HTTPStorages/gamelib-shell.binarycookies | grep -c epicgames.com` must still be non-zero (it was 8 on 2026-10-13). Then, on the dev build (shared default `WKWebsiteDataStore`, L-3), opening Stores → Epic shows the store boot and paint using the existing session — no sign-in prompt appears, no action is taken to sign in or out. If that count has fallen to 0, this launch has no warm jar to measure: stop and re-establish the premise rather than scoring the arm.
 result: pending
 
 ### 6. Steam embed positive control, same session (launch 2)
