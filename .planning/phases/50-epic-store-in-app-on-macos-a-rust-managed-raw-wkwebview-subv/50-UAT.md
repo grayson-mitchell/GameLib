@@ -8,13 +8,12 @@ updated: 2026-10-13T22:00:00Z
 
 ## Current Test
 
-number: 2
-name: Sign in button reachable and in place (launch 1)
+number: 3
+name: Subview transparency [ASSUMED] (launch 1)
 expected: |
-  On the same cold packaged jar (Launch 1, pid 70842 still running), Epic's own "Sign in" control
-  is visible and clickable in the embedded page (L-1). Clicking it is observed through to one of
-  three outcomes — a completed sign-in, a Cloudflare/Turnstile challenge, or an HTTP 403 — and the
-  outcome is recorded verbatim. This arm never instructs signing OUT of any account.
+  During a fresh Epic load on Launch 1, the transparent subview lets the styled
+  StoreEmbedPlaceholder show through the slot; nothing flashes white in the dark
+  midnightMirage theme. Confirms or refutes D-06, which has never been checked live.
 awaiting: user response
 
 ## Protocol
@@ -312,10 +311,10 @@ result: pass — 2026-10-13T08:52Z, packaged `--debug` bundle, pid 70842, cold j
 
 ### 2. Sign in button reachable and in place (launch 1)
 expected: On the same cold packaged jar, Epic's own "Sign in" control is visible and clickable in the embedded page (L-1). Clicking it is observed through to one of three outcomes — a completed sign-in, a Cloudflare/Turnstile challenge, or an HTTP 403 — and the outcome is recorded verbatim; this arm never instructs signing OUT of any account, only exercises the page's own sign-in entry point on a jar that never had an Epic session to begin with. GameLib's own sign-in affordance is unaffected by jar state either way: it is sourced from the local `legendary` credential probe, not a cookie read.
-result: pending
+result: pass — 2026-10-13T09:06Z, same Launch-1 process (pid 70842, no relaunch between Items 1 and 2). Operator: "pass, normal login sequence" — i.e. the **completed sign-in** branch of the three permitted outcomes, not a challenge and not a 403. Evidence: the packaged jar's `epicgames.com` entry count rose 6 → **22** with mtime 22:04:38, which is session cookies landing; `grep -c 'flagged as challenged'` over the session transcript returned **0**; no `403` line anywhere in `gamelib.log`; 18 `store/wiki route pathname=/store/epic` lines accumulated across the launch. Worth stating because it is the risk this whole phase was built against: a real Epic sign-in completed inside the Rust-managed raw `WKWebView` on a jar that had never held an Epic session, **unchallenged**. Note the ordering dependency this creates: Item 1 needed the jar cold and Item 2 has now made it signed-in, so the two could not have been run in the other order.
 
 ### 3. Subview transparency [ASSUMED] (launch 1)
-expected: The native subview's background, observed by eye against the surrounding GameLib chrome while Epic's page is loading and after it paints, behaves per D-06's `[ASSUMED]` call — recorded as either confirmed or refuted, since this assumption has not yet been checked live.
+expected: The native subview's background, observed by eye against the surrounding GameLib chrome while Epic's page is loading and after it paints, behaves per D-06's `[ASSUMED]` call — recorded as either confirmed or refuted, since this assumption has not yet been checked live. **D-06's claim, stated concretely so this arm is observable (added 2026-10-13, before the arm ran — the original text named the decision without stating it, which left the operator nothing specific to look at):** the `WKWebView` is set non-opaque (`drawsBackground` off via `setValue:forKey:`), so in the window BEFORE Epic's first paint the styled `StoreEmbedPlaceholder` shows THROUGH the slot and is what the user sees (UI-SPEC E6), and specifically nothing flashes white — the dark-theme failure mode this decision exists to prevent. The active theme is the `midnightMirage` default (no `theme` key in `config.json`), which is dark, so a white flash would be unmistakable. The state is a TRANSIENT: force a fresh load (switch to another Stores tab and back, or press Reload) and watch the slot DURING the load, not after it.
 result: pending
 
 ### 4. Zoom-aware bounds at 120% and 80% (launch 1)
@@ -391,9 +390,9 @@ result: pending
 ## Summary
 
 total: 19
-passed: 1
+passed: 2
 issues: 0
-pending: 18
+pending: 17
 skipped: 0
 blocked: 0
 
