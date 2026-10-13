@@ -94,6 +94,34 @@ gate starts itself and keeps commit-free for their duration.
 | 3 (host block) | `pnpm tauri:dev:keyring` | same warm jar as Launch 2, per constraint 2 |
 | 4 (quit + relaunch) | `pnpm tauri:dev:keyring` | same warm jar; the restart arm is about last-URL restore, not jar state |
 
+**Launch 1 provenance — added 2026-10-13, before the first launch.** "Open the bundled
+`GameLib.app`" is under-specified in a way that has already produced a false FAIL on this repo. Two
+artifacts sit beside each other in `src-tauri/target/debug/bundle/`, and
+`GameLib.app.tar.gz` in `bundle/macos/` is the **updater** artifact, which `tauri build --debug`
+does **not** refresh (measured two days stale beside a minutes-old DMG —
+`tauri-dev-packaged-ships-a-stale-sea-sidecar.md`). On 2026-09-09 an equivalent ambiguity led to a
+four-day-stale tarball being un-tarred and scored, which would have filed a false FAIL against a
+correct fix (`tauri-build-deletes-the-app-after-bundling-the-dmg.md`). So, before scoring any
+Launch-1 item, tie provenance **by hash, never by timestamp** — a directory's own mtime moves on a
+rebuild while the artifact inside it stays stale:
+
+```
+shasum -a 256 src-tauri/target/debug/gamelib-shell \
+              src-tauri/target/debug/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell
+```
+
+Both must print the same digest. If they differ, recover the app from the DMG
+(`hdiutil attach src-tauri/target/debug/bundle/dmg/*.dmg -nobrowse -quiet -mountpoint "$T/m"`, then
+`ditto "$T/m/GameLib.app" "$T/GameLib.app"`, then `hdiutil detach "$T/m" -quiet`) and re-check the
+recovered copy's hash. Never un-tar `GameLib.app.tar.gz` for this gate.
+
+A further consequence worth stating because it bounds what Launch 1 can prove: a `--debug`
+"packaged" app is **not self-contained**. `use_dev_sidecar()` is `cfg!(debug_assertions)`, so the
+bundle spawns `node <repo>/build/main/sidecar.js` out of the working tree at its build-time absolute
+path, rather than the bundled `gamelib-sidecar`. Launch 1 is therefore a valid test of the
+**packaged WebKit jar identity** — which is the only thing this gate needs it for — and is *not* a
+stand-in for a release artifact.
+
 **Never `pnpm tauri:dev` (nor its `tauri:dev:vault` alias) for any arm of this gate.** That script
 sets `GAMELIB_DEV_SECRET_VAULT=1`, which swaps the real keyring for a dev vault
 (`src/backend/sidecar/devSecretVault.ts`), so Item 6's Steam positive control would read as signed
@@ -126,9 +154,21 @@ Implemented verbatim per `live-gate-contract-authoring.md` Section 3:
   flavours appear under different command lines, so one pattern cannot see the other and a
   leftover instance of the wrong flavour would sit on the jar being measured:
   ```
-  pgrep -f 'target/debug/gamelib-shell'            # dev binary (Launches 2-4)
-  pgrep -f 'GameLib.app/Contents/MacOS/GameLib'    # packaged bundle (Launch 1)
+  pgrep -f 'target/debug/gamelib-shell'                  # dev binary (Launches 2-4)
+  pgrep -f 'GameLib.app/Contents/MacOS/gamelib-shell'    # packaged bundle (Launch 1)
   ```
+  **CORRECTED 2026-10-13, before the first launch.** This file originally spelled the packaged
+  pattern `GameLib.app/Contents/MacOS/GameLib`. The bundle's executable is **`gamelib-shell`**, not
+  `GameLib` — verified live on this tree in all three bundles present
+  (`/Applications/GameLib.app`, `target/debug/bundle/macos`, `target/release/bundle/macos` each
+  contain `gamelib-shell` and `gamelib-sidecar`, no `GameLib`). `pgrep -f` is case-sensitive, so the
+  original pattern matched nothing and Launch 1's single-instance assertion would have been
+  vacuously green in both directions — it could neither have found a leftover packaged instance nor
+  confirmed exactly one after launch. This is the exact trap
+  `tauri-build-deletes-the-app-after-bundling-the-dmg.md` names: "plans that hard-code
+  `Contents/MacOS/GameLib` silently test nothing." The two patterns do not collide: the packaged
+  path under `target/debug/bundle/macos/...` contains `target/debug/` but never the literal
+  `target/debug/gamelib-shell`.
   **Both** must be empty immediately before each launch; after the window appears, exactly one of
   them returns exactly one PID and the other stays empty. Record the PID once the window appears;
   record it again at teardown. If either count is ever wrong at any check, **abort that launch and
