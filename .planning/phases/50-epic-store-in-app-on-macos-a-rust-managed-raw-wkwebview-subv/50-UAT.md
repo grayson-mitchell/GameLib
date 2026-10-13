@@ -8,12 +8,12 @@ updated: 2026-10-13T22:00:00Z
 
 ## Current Test
 
-number: 5
-name: Warm signed-in jar: Epic store boots and paints (launch 2)
+number: 11
+name: Popup -> system browser handoff (launch 2b)
 expected: |
-  On the dev build (pnpm tauri:dev:keyring), with the warm jar premise re-confirmed
-  non-zero immediately beforehand, opening Stores -> Epic boots and paints using the
-  existing session: no sign-in prompt appears, and no action is taken to sign in or out.
+  Clicking an externally-opening control on Epic's page (window.open OR target=_blank)
+  is denied a second in-app surface; the D-12 literal appears in the session transcript;
+  and the default system browser opens to the target URL.
 awaiting: user response
 
 ## Protocol
@@ -201,6 +201,48 @@ Implemented verbatim per `live-gate-contract-authoring.md` Section 3:
   before, and the window on screen was another pid
   (`a-launch-can-be-absorbed-by-a-cross-session-orphan-instance.md`).
 
+  **A THIRD PROCESS CAN BLOCK A DEV LAUNCH, AND NEITHER PATTERN ABOVE SEES IT — added
+  2026-10-13 after it bit this gate.** `pnpm tauri:dev:*` starts a `vite` dev server on port
+  **5173** as a `beforeDevCommand` child. Killing the `tauri dev` wrapper and the app binary does
+  **not** reap it. A leftover `vite` makes the NEXT dev launch die at startup with
+  `error when starting dev server: Error: Port 5173 is already in use`, after which
+  `beforeDevCommand` terminates non-zero and the whole launch exits — having already printed
+  `Running target/debug/gamelib-shell`, so the transcript looks as though the app started. Both
+  single-instance patterns are empty in that state, so the assertion above passes while there is
+  no app at all. Measured here: pids 76061 (`pnpm exec vite`) and 76074
+  (`./node_modules/.bin/vite`, holding `[::1]:5173 LISTEN`) survived the teardown of Launch 2 and
+  killed the first attempt at Launch 2b. Add to the pre-launch assertion, for dev launches only:
+  ```
+  lsof -nP -iTCP:5173            # must print no LISTEN row
+  pgrep -f 'bin/vite'            # must be empty
+  pgrep -f 'sidecar.js'          # must be empty (orphan sidecar holds an authenticated session)
+  ```
+  The exit-code reading is also a trap in its own right: the harness reported this failed launch as
+  "completed (exit code 0)", because the status came from the `tee` pipeline rather than from
+  `pnpm`. Read the transcript tail, not the exit status.
+
+  **A HARNESS-BACKGROUNDED LAUNCH CAN BE OOM-KILLED MID-ARM — added 2026-10-13 after it happened
+  to Launch 2b.** `pnpm tauri:dev:*` under an agent's background-task runner is subject to the
+  host's memory pressure, and Launch 2b was terminated with "stopped because the system is running
+  low on memory" while Item 11 was being set up. Every process went with it — dev binary,
+  `tauri dev`, `vite` and the sidecar were all gone in the same instant — so there was no partial
+  arm to salvage and nothing to score. Two consequences for whoever runs this gate next:
+  - **The transcript's last line is `[killed]`, not an error**, and the arm in flight has no
+    evidence either way. Check for it BEFORE reading an absent log literal as a FAIL: an absent
+    literal and a killed launch look identical at the grep, and only the transcript tail
+    distinguishes them.
+  - **Re-assert the single-instance patterns after any kill.** A kill is not a clean quit, so an
+    orphan `vite` on 5173 or an orphan `sidecar.js` holding an authenticated session is the
+    expected residue (see the preceding note). Measured here all four were in fact dead, but that
+    was luck rather than design.
+  Salvaged from the killed transcript, recorded because it is real evidence even though its own arm
+  was not running: `[shell] macos_epic_embed: didFailNavigation -- The operation couldn't be
+  completed. (NSURLErrorDomain error -999.)` confirms **Item 17's emitter, its
+  `{caller} -- {description}` format, and its sink all work**, ahead of that arm being formally
+  run. `-999` is `NSURLErrorCancelled` — a superseded navigation, not the network failure Item 17
+  induces — so it corroborates the SHAPE only, and Item 17 still needs its own run under the
+  Launch-3 host block.
+
 ### Non-arms (explicit — does NOT ship, per ROADMAP.md)
 
 The following are out of scope for this gate and must not be exercised as if they were arms:
@@ -339,32 +381,30 @@ result: pass — 2026-10-13T09:21Z, Launch 1, pid 70842, packaged `--debug` bund
 
 ### 5. Warm signed-in jar: Epic store boots and paints (launch 2)
 expected: Before this launch, confirm the premise is still true today (Test 6) — and confirm it against the jar this arm actually reads, not the operator's browser: the jar must hold an AUTHENTICATED session, which a domain count CANNOT establish — **this instrument was wrong and was corrected 2026-10-13 after it passed against a jar that was never signed in**. Count session cookies by NAME: `for n in EPIC_BEARER_TOKEN EPIC_SSO EPIC_SSO_RM; do strings ~/Library/HTTPStorages/gamelib-shell.binarycookies | grep -c "^$n$"; done` must be non-zero. The old check (`grep -c epicgames.com`, pinned at 8) returned 13 against a jar holding only `EPIC_SESSION_AP` and `EPIC_DEVICE` — anonymous device cookies — and so declared a signed-out jar warm. Then, on the dev build (shared default `WKWebsiteDataStore`, L-3), opening Stores → Epic shows the store boot and paint using the existing session — no sign-in prompt appears, no action is taken to sign in or out. If that count has fallen to 0, this launch has no warm jar to measure: stop and re-establish the premise rather than scoring the arm.
-result: blocked — 2026-10-13T09:27Z, Launch 2, dev pid 76106. **The premise was false, and the contract's own instrument is what hid it.** Operator: "opened, but not signed in". Half the criterion did pass and is worth keeping: the Epic store booted and painted on the dev build. The other half — "using the existing session, no sign-in prompt" — never armed, because there was no session in this jar to use. Measured directly by cookie NAME rather than by domain count: the dev jar holds `EPIC_BEARER_TOKEN`=0, `EPIC_SSO`=0, `EPIC_SSO_RM`=0, with only `EPIC_SESSION_AP`=1 and `EPIC_DEVICE`=1 — anonymous device cookies, not an authenticated session. The packaged jar, by contrast, holds `EPIC_BEARER_TOKEN`=1, `EPIC_SSO`=1, `EPIC_SSO_RM`=1 from Item 2's sign-in. Jars are keyed per binary identity, so that session cannot reach the dev build. The operator's observation is therefore CORRECT BEHAVIOUR, not a defect: nothing was signed in, so nothing could be restored. **REFINED after the re-arm sign-in:** the operator signed in by CLICKING ONLY, with no username or password required, which means Epic re-authenticated from what was already in the jar. So the precise state was a RECOVERABLE IDENTITY (`EPIC_SESSION_AP` + `EPIC_DEVICE`) without an ACTIVE SESSION (`EPIC_BEARER_TOKEN`/`EPIC_SSO`/`EPIC_SSO_RM` all absent) — not the blanker "never had a session" this result first said. Post-sign-in the dev jar holds all three of those plus `EPIC_EG1` and `EPIC_LOGIN_ID`, 21 `epicgames.com` entries, mtime 22:30:34. Recorded because the distinction is the whole reason the original domain-count instrument passed on a signed-out jar: a recoverable identity leaves cookies behind that look exactly like a session to anything counting domains. Also recorded because a FIRST attempt to re-measure this read as unchanged — the terminal output was collapsed as identical to the previous block — and only a re-measure in a different output shape showed the three tokens had in fact appeared.
-blocked_by: other
-reason: "no authenticated Epic session has ever existed in the dev-build jar, so the warm-session half of this arm cannot arm until one is established there. Re-arm: sign IN once on the dev build (permitted — Hard ordering constraint 1 prohibits signing OUT and clearing, never signing in), then quit and relaunch and observe that no prompt appears. That is a STRICTLY STRONGER test of the shared persistent WKWebsiteDataStore (L-3) than the original, which only ever asked whether a pre-existing session was reused. Item 14 independently requires a signed-in Epic account on the dev build to reach an owned game, so this re-arm unblocks two items rather than one."
+result: pass — 2026-10-13T09:50Z, Launch 2b, dev pid 79500, re-armed. Operator confirmed the Epic store boots, paints, and shows them SIGNED IN with no sign-in prompt and no click required. **This is a strictly stronger result than the item as written.** The original arm asked only whether a pre-existing session was reused; what was actually measured is that a session written by a PREVIOUS process survived a full application quit and was picked up on a cold start, which is a direct test of the shared persistent `WKWebsiteDataStore` (L-3) rather than of in-process state. Evidence: `EPIC_BEARER_TOKEN`/`EPIC_SSO`/`EPIC_SSO_RM` were all verified present in `~/Library/HTTPStorages/gamelib-shell.binarycookies` AFTER pid 76106 had exited and before pid 79500 started, so the carrier was the on-disk jar and nothing else; the relaunch asserted exactly one dev instance, zero packaged instances, and `GAMELIB_DEV_SECRET_VAULT` absent (real keyring, corroborated live by `[shell] keyring keyring_get account=steam-refresh-token outcome=found`). **HISTORY, kept deliberately — this item first recorded BLOCKED on a false premise:** 2026-10-13T09:27Z, Launch 2, dev pid 76106. **The premise was false, and the contract's own instrument is what hid it.** Operator: "opened, but not signed in". Half the criterion did pass and is worth keeping: the Epic store booted and painted on the dev build. The other half — "using the existing session, no sign-in prompt" — never armed, because there was no session in this jar to use. Measured directly by cookie NAME rather than by domain count: the dev jar holds `EPIC_BEARER_TOKEN`=0, `EPIC_SSO`=0, `EPIC_SSO_RM`=0, with only `EPIC_SESSION_AP`=1 and `EPIC_DEVICE`=1 — anonymous device cookies, not an authenticated session. The packaged jar, by contrast, holds `EPIC_BEARER_TOKEN`=1, `EPIC_SSO`=1, `EPIC_SSO_RM`=1 from Item 2's sign-in. Jars are keyed per binary identity, so that session cannot reach the dev build. The operator's observation is therefore CORRECT BEHAVIOUR, not a defect: nothing was signed in, so nothing could be restored. **REFINED after the re-arm sign-in:** the operator signed in by CLICKING ONLY, with no username or password required, which means Epic re-authenticated from what was already in the jar. So the precise state was a RECOVERABLE IDENTITY (`EPIC_SESSION_AP` + `EPIC_DEVICE`) without an ACTIVE SESSION (`EPIC_BEARER_TOKEN`/`EPIC_SSO`/`EPIC_SSO_RM` all absent) — not the blanker "never had a session" this result first said. Post-sign-in the dev jar holds all three of those plus `EPIC_EG1` and `EPIC_LOGIN_ID`, 21 `epicgames.com` entries, mtime 22:30:34. Recorded because the distinction is the whole reason the original domain-count instrument passed on a signed-out jar: a recoverable identity leaves cookies behind that look exactly like a session to anything counting domains. Also recorded because a FIRST attempt to re-measure this read as unchanged — the terminal output was collapsed as identical to the previous block — and only a re-measure in a different output shape showed the three tokens had in fact appeared.
 
 ### 6. Steam embed positive control, same session (launch 2)
 expected: Immediately after Item 5, in the same launch, opening Stores → Steam renders the Steam embed normally — confirming the shared embedding mechanism itself (Rust-owned subview attach, compositor paint) is healthy and contemporaneous with the Epic observations in this launch.
-result: pending
+result: pass — 2026-10-13T09:52Z, Launch 2b, dev pid 79500, same launch and same session as Item 5. Operator: "navigated to steam it renders normally". The control holds: the shared embedding mechanism (Rust-owned subview attach, compositor paint) is demonstrably healthy CONTEMPORANEOUSLY with this launch's Epic observations, so "the whole embed subsystem is broken" is ruled out as an explanation for any Epic-specific failure recorded later in this gate. Run against real credentials, not the dev vault: `GAMELIB_DEV_SECRET_VAULT` was asserted absent on pid 79500 and the keyring answered `[shell] keyring keyring_get account=steam-refresh-token outcome=found`, with 3 `steampowered.com` entries in the dev jar — which is exactly why the contract bars `pnpm tauri:dev` for this gate, since under the dev vault Steam would read as signed out for a reason unrelated to the embed and this control would prove nothing.
 
 ### 7. Occlusion recovery (launch 2)
 expected: With Epic's subview painted and visible, covering the GameLib window fully with another window and then uncovering it again shows the Epic store still boots and paints correctly — no stuck blank frame survives the occlusion (established #8).
-result: pending
+result: pass — 2026-10-13T09:53Z, Launch 2b, dev pid 79500. Operator fully occluded the GameLib window with another window and then uncovered it; the Epic subview was still painting correctly afterwards, with no stuck blank frame. Note what this arm does and does not claim: the non-render WHILE occluded is expected, established behaviour (spike 024 found 3/3 apparently stalled arms had fully loaded but gone unpainted purely because the window was occluded, and that an occluder reproduces it on demand) — so the pass condition measured here is the RECOVERY, not the absence of blanking during occlusion.
 
 ### 8. Minimize/restore and fullscreen survive (launch 2)
 expected: With Epic's subview visible, minimizing then restoring the window, and separately toggling fullscreen on and off, leaves the subview correctly tracking the measured slot rect afterward in both cases — it never outlives its route and never detaches from the window (D-02).
-result: pending
+result: pass — 2026-10-13T09:54Z, Launch 2b, dev pid 79500. BOTH halves exercised as separate gestures and both correct: minimize then restore, and separately fullscreen on then off. After each the Epic subview still tracked its measured slot rect — correctly sized and positioned, never detached from the window, never left painting where the slot no longer was (D-02). The two halves were called out explicitly to the operator rather than collapsed into one instruction, because a previous live gate on this repo nearly signed off a window-state criterion having omitted the minimize/restore half, which was the half that had already failed — fullscreen passing is not evidence about minimize.
 
 ### 9. Back/forward/URL parity with the GOG embed (launch 2)
 expected: Navigating three distinct pages deep inside the Epic embed and observing `StoreEmbedControls`' back/forward enabled/disabled state at each step, then repeating the identical three-page navigation inside the GOG embed, shows the same back/forward state-transition pattern in both — no Epic-specific divergence in the shared delegate-driven native state.
-result: pending
+result: pass — 2026-10-13T09:56Z, Launch 2b, dev pid 79500. Operator navigated three distinct pages deep in the Epic embed while watching `StoreEmbedControls`' back/forward enabled state at each step, then performed the same three-step navigation in the GOG embed: the state-transition pattern matched in both, with no Epic-specific divergence. The GOG half is what gives this arm its value — the two surfaces share the same delegate-driven native state, so GOG acts as a same-session reference for what the pattern should be, rather than the arm resting on the tester's expectation of correct back/forward behaviour.
 
 ### 10. Epic → Steam → Epic switch (launch 2)
 expected: Switching from the Stores → Epic tab to Stores → Steam and back to Stores → Epic shows the Epic subview correctly hidden while Steam is active and correctly shown again on return, with its prior state intact — it is never left visible behind Steam's subview and never torn down early (D-02).
-result: pending
+result: pass — 2026-10-13T09:59Z, Launch 2b, dev pid 79500. Switching Epic -> Steam -> Epic behaved correctly on all three counts: Epic's subview was fully hidden while Steam was active (no bleed-through and nothing painting behind Steam's subview — the relevant failure mode here, since native subviews are siblings in one window and a missed hide shows as one store painting over or under the other), it was shown again on return with its prior page state intact rather than reloaded to the store root, and it had not been torn down early. Distinct from Item 9: that measured navigation WITHIN a surface, this measures lifecycle ACROSS surfaces (D-02).
 
 ### 11. Popup → system browser handoff (launch 2)
-expected: Clicking the specific externally-opening control on Epic's page identified on the day of the run (Test 7 — not "any link"; `createWebViewWithConfiguration` only fires for a real `window.open()` call) is denied a second native in-app surface, the exact literal `[shell] macos_epic_embed: denied window.open request, routing to the system browser (D-12)` appears in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction), and the operator's default system browser opens to the target URL.
+expected: Clicking the specific externally-opening control on Epic's page identified on the day of the run (Test 7 — not "any link"; `createWebViewWithConfiguration` only fires for a real `window.open()` call) is denied a second native in-app surface, the exact literal `[shell] macos_epic_embed: denied window.open request, routing to the system browser (D-12)` appears in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction), and the operator's default system browser opens to the target URL. **CORRECTED 2026-10-13, before this arm ran:** the parenthetical above says `createWebViewWithConfiguration` "only fires for a real `window.open()` call", which is too strict and would send the operator hunting for a gesture that may not exist on Epic's current store page. WebKit routes ANY navigation whose `targetFrame` is nil through that delegate method, which includes a plain `target="_blank"` anchor as well as `window.open()`. Either gesture reaches the D-12 path, so an ordinary open-in-new-tab link (e.g. Epic's footer social links) is a valid and far more reachable induction. Also pinned from source so the literal is not mis-grepped: the emitter is `macos_epic_embed.rs:1567`, written with a Rust `\` line continuation, which strips the newline AND the next line's leading whitespace — so it concatenates to exactly the one-line literal quoted here. A grep for the literal as spelled in the SOURCE across two lines will not match; grep the concatenated form. The admission gate is `STORE_EMBED_HANDOFF_MIN_GAP` = **2 seconds**, and `STORE_EMBED_POPUP_THROTTLE` is a single GLOBAL static shared with the other store surfaces — so this arm's click arms the throttle that Item 12 then measures, and the two must be run as a timed pair.
 result: pending
 
 ### 12. Popup rate-limited, not handed off (launch 2)
@@ -406,11 +446,11 @@ result: pending
 ## Summary
 
 total: 19
-passed: 3
+passed: 9
 issues: 0
-pending: 14
+pending: 9
 skipped: 0
-blocked: 2
+blocked: 1
 
 ## Gaps
 
