@@ -1,10 +1,22 @@
 ---
-status: draft
+status: testing
 phase: 50
 source: [50-01-SUMMARY.md, 50-02-SUMMARY.md, 50-03-SUMMARY.md, 50-04-SUMMARY.md, 50-05-SUMMARY.md, 50-CONTEXT.md, 50-UI-SPEC.md, ROADMAP.md]
-started:
-updated: 2026-10-13T05:30:00Z
+started: 2026-10-13T22:00:00Z
+updated: 2026-10-13T22:00:00Z
 ---
+
+## Current Test
+
+number: 1
+name: Cold jar: Epic store boots and paints (launch 1)
+expected: |
+  On the packaged build launched via `pnpm tauri:dev:packaged` — whose jar was re-measured at 0
+  `epicgames.com` entries on 2026-10-13 at session start — opening Stores → Epic shows the Epic
+  store's own page rendered inside the native subview, not a blank rect and not a one-colour
+  unpainted frame, within the 45s load window (D-01). A Cloudflare/Turnstile challenge instead of
+  the store is a real cold-jar outcome for this arm, not a flake to retry.
+awaiting: user response
 
 ## Protocol
 
@@ -292,3 +304,16 @@ result: pending
 ### 19. Last-URL restore across app restart (launch 4)
 expected: With Epic's embed navigated to a specific sub-page (not the store's root), fully quitting GameLib and relaunching it shows the Epic embed restore to that same last URL via the validated restore path on its first load — not the store's root, and with no visible reload loop (D-03).
 result: pending
+
+## Summary
+
+total: 19
+passed: 0
+issues: 0
+pending: 19
+skipped: 0
+blocked: 0
+
+## Gaps
+
+[none yet]
