@@ -8,12 +8,12 @@ updated: 2026-10-13T22:00:00Z
 
 ## Current Test
 
-number: 3
-name: Subview transparency [ASSUMED] (launch 1)
+number: 4
+name: Zoom-aware bounds at 120% and 80% (launch 1)
 expected: |
-  During a fresh Epic load on Launch 1, the transparent subview lets the styled
-  StoreEmbedPlaceholder show through the slot; nothing flashes white in the dark
-  midnightMirage theme. Confirms or refutes D-06, which has never been checked live.
+  With the webview zoom set to 120%, the Epic subview's bounds scale to match the
+  measured slot rect with no clipping and no offset gap; repeating at 80% shows the
+  same, with no stale bounds left over from the 120% pass.
 awaiting: user response
 
 ## Protocol
@@ -315,7 +315,9 @@ result: pass — 2026-10-13T09:06Z, same Launch-1 process (pid 70842, no relaunc
 
 ### 3. Subview transparency [ASSUMED] (launch 1)
 expected: The native subview's background, observed by eye against the surrounding GameLib chrome while Epic's page is loading and after it paints, behaves per D-06's `[ASSUMED]` call — recorded as either confirmed or refuted, since this assumption has not yet been checked live. **D-06's claim, stated concretely so this arm is observable (added 2026-10-13, before the arm ran — the original text named the decision without stating it, which left the operator nothing specific to look at):** the `WKWebView` is set non-opaque (`drawsBackground` off via `setValue:forKey:`), so in the window BEFORE Epic's first paint the styled `StoreEmbedPlaceholder` shows THROUGH the slot and is what the user sees (UI-SPEC E6), and specifically nothing flashes white — the dark-theme failure mode this decision exists to prevent. The active theme is the `midnightMirage` default (no `theme` key in `config.json`), which is dark, so a white flash would be unmistakable. The state is a TRANSIENT: force a fresh load (switch to another Stores tab and back, or press Reload) and watch the slot DURING the load, not after it.
-result: pending
+result: blocked — 2026-10-13T09:19Z, Launch 1, pid 70842. The arm did not arm. Operator navigated away from the Epic tab and back and the page "instantly loaded", so the pre-paint window D-06 governs was too short to see; there was no interval in which a placeholder could have shown through, and no white flash could have been ruled in or out. Deliberately NOT scored as a pass: an unobservably brief transient is an induction failure, not evidence that the transparent-subview behaviour is correct — scoring it would be the green-check-proving-nothing shape this repo keeps stamping out. The cause is that the page is now warm: Item 1 consumed the cold jar and Items 1-2 populated WebKit's HTTP cache, so a same-launch reload paints essentially immediately.
+blocked_by: other
+reason: "the pre-paint transient is unobservably short on a warm page; re-armed in Launch 3 under the host-level block, which holds the attached-but-unpainted state open for the full 45s instead of a few milliseconds. Flavour is immaterial for this arm: `drawsBackground` is set in shared Rust (`macos_epic_embed.rs:694-695`), identically for the dev and packaged builds, so observing it on Launch 3's dev build tests the same code path. This does NOT violate Hard ordering constraint 2 — Item 3 moves INTO the timeout-induction launch rather than pulling induction forward into an online launch."
 
 ### 4. Zoom-aware bounds at 120% and 80% (launch 1)
 expected: With the webview zoom control set to 120%, the Epic subview's bounds scale to match the measured slot rect with no clipping and no offset gap; repeating at 80% shows the same with no stale bounds left over from the 120% pass (`storeEmbedZoom.ts`, quick 261012-gn8's W8 property, previously PASS on Windows — this is its first macOS/Epic observation).
@@ -392,9 +394,9 @@ result: pending
 total: 19
 passed: 2
 issues: 0
-pending: 17
+pending: 16
 skipped: 0
-blocked: 0
+blocked: 1
 
 ## Gaps
 
