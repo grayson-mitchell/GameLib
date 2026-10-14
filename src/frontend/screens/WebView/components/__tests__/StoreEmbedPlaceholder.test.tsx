@@ -151,4 +151,59 @@ describe('StoreEmbedPlaceholder (D-19)', () => {
 
     expect(value).toBeUndefined()
   })
+
+  // Operator decision (option 3 of the todo, locked 2026-10-14): withhold the message copy on the
+  // Epic-surface-only route, because that is the one call shape where no window is open and the
+  // sentence is false. Both suppression reasons keep a window open, so the sentence stays true
+  // there and the copy must not be touched.
+  it('the Epic surface alone renders the fill with no copy', () => {
+    const element = (
+      StoreEmbedPlaceholder as unknown as (props: {
+        reason?: string
+      }) => AnyReactElement
+    )({ reason: 'epic-surface' })
+
+    expect(element.props.className).toBe('WebView__embedPlaceholder')
+    expect(element.props['data-placeholder-reason']).toBe('epic-surface')
+    expect(collectText(element)).toBe('')
+    expect(JSON.stringify(element)).not.toContain(
+      'WebView__embedPlaceholder-message'
+    )
+  })
+
+  it('both suppression reasons still speak', () => {
+    const suppressedOnly = (
+      StoreEmbedPlaceholder as unknown as (props: {
+        reason?: string
+      }) => AnyReactElement
+    )({ reason: 'suppressed' })
+    const suppressedAndEpicSurface = (
+      StoreEmbedPlaceholder as unknown as (props: {
+        reason?: string
+      }) => AnyReactElement
+    )({ reason: 'suppressed+epic-surface' })
+
+    expect(collectText(suppressedOnly).length).toBeGreaterThan(0)
+    expect(collectText(suppressedAndEpicSurface).length).toBeGreaterThan(0)
+  })
+
+  it('exactly one reason value suppresses the copy', () => {
+    const reasons: (string | undefined)[] = [
+      undefined,
+      'suppressed',
+      'epic-surface',
+      'suppressed+epic-surface'
+    ]
+
+    const silent = reasons.filter((reason) => {
+      const element = (
+        StoreEmbedPlaceholder as unknown as (props: {
+          reason?: string
+        }) => AnyReactElement
+      )(reason === undefined ? {} : { reason })
+      return collectText(element) === ''
+    })
+
+    expect(silent).toEqual(['epic-surface'])
+  })
 })

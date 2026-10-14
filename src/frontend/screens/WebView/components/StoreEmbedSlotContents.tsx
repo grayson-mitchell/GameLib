@@ -31,11 +31,15 @@ interface Props {
  * event, and the gate keeps a stray flag from putting an Epic panel on another store's slot.
  *
  * `suppressed` and `isEpicSurface` are mechanistically unrelated (D-19 is a React refcount; D-06
- * is a static per-route boolean), but render the identical placeholder with identical copy --
- * this is exactly what made `.planning/debug/resolved/embed-suppression-sticks.md` look like a
- * suppression leak when it was actually a routine Epic navigation timeout. The `reason` passed
- * to `StoreEmbedPlaceholder` below is a diagnostic-only, dev/live-gate-inspectable attribute that
- * exists so this cannot be re-conflated silently again; it changes no pixel.
+ * is a static per-route boolean), but until 2026-10-14 rendered the identical placeholder with
+ * identical copy -- this is exactly what made
+ * `.planning/debug/resolved/embed-suppression-sticks.md` look like a suppression leak when it was
+ * actually a routine Epic navigation timeout. The `reason` passed to `StoreEmbedPlaceholder`
+ * below is still the anti-conflation diagnostic (dev/live-gate-inspectable via
+ * `data-placeholder-reason`), and as of the `2026-10-14-paused-while-a-window-is-open-...` todo
+ * (option 3) it ALSO decides whether the placeholder's copy renders -- withheld for the
+ * Epic-surface-only reason, kept for both suppression reasons. That is what stops the two cases
+ * looking identical to a human reader, not just to an inspector.
  *
  * Hookless (D-22/D-23 chrome discipline): a pure function of its props, invoked directly in its
  * own test, no jsdom required (see `src/frontend/jest.config.js`).
