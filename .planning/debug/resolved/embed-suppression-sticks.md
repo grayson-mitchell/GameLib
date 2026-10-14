@@ -278,6 +278,17 @@ verification: |
     correct needed one: the change is additive, non-visual, and fully covered by the jest-level
     guarantees above. A test for a diagnostic tag has nothing visual to go red against in a
     screenshot, which is why the jest-level red/green pair above is the evidence instead.
+  - **Lint (`npm run lint`, scoped src/tests ceilings in `meta/lintScoped.cjs`)** -- caught late,
+    reported here rather than glossed over: the first committed version of the `.map()` callback
+    in the second new `StoreEmbedSlotContents.test.tsx` test (`element?.props.reason`, `.props`
+    typed `any`) added 2 new `@typescript-eslint/no-unsafe-return` / `no-unsafe-member-access`
+    warnings, pushing the tests-scope count from 638 to 640 against `TESTS_CEILING = 638`, which
+    "sits at its exact measured warning count" with zero padding -- `npm run lint` read
+    `tests: FAIL`. Fixed in a follow-up commit by casting `element?.props as { reason?: string } |
+    undefined` before the member access, instead of widening the ceiling. Re-run of
+    `npm run lint:tests`: exit 0, exactly `638 problems (0 errors, 638 warnings)`. Re-run of the
+    full `npm run lint`: exit 0, `production: PASS | tests: PASS`. The jest and prettier results
+    above were re-confirmed against this exact post-fix file state (15/15 jest, prettier clean).
 
 files_changed:
   - "src/frontend/screens/WebView/components/StoreEmbedSlotContents.tsx (compute+pass reason prop at the render site; doc comment updated)"
