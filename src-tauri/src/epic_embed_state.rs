@@ -114,6 +114,35 @@ pub(crate) fn epic_nav_state_with_flags(mut event: Value, flags: EpicEmbedNavFla
     event
 }
 
+/// Which `WKNavigationDelegate` lifecycle hook is reporting the end of a navigation (G-50-16):
+/// one variant per hook in `macos_epic_embed.rs` that can end a navigation and so is a candidate
+/// to clear `load_timed_out`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum EpicEmbedNavLifecycle {
+    ProvisionalNavigationStarted,
+    NavigationFinished,
+    NavigationFailed,
+    ContentProcessTerminated,
+}
+
+/// Whether `event` may clear a `load_timed_out` raise (G-50-16: the banner never surfaced because
+/// a navigation failure cleared the flag before the renderer's drain ever saw it raised). `false`
+/// only for `NavigationFailed`: every navigation gets a `ProvisionalNavigationStarted` callback
+/// first, and that hook already clears the flag, so the only state in which the failure hook
+/// finds the flag SET is that the navigation which just failed is the one that timed out -- the
+/// hang's own conclusion, for which the timeout banner (Reload / Open in browser) is the correct
+/// UI, not a generic WebKit-failure message that gives the user no recovery action. This is the
+/// Rust half of the fix; the renderer's intra-batch merge in `useStoreEmbedHost.ts`'s GAP-D drain
+/// is the other half, and the one that actually makes the banner appear for the OBSERVED live
+/// sequence -- raise, then the `-999` failure, then the next `ProvisionalNavigationStarted`, all
+/// landing inside the renderer's same 250 ms drain batch. This change alone would still see only
+/// that later, legitimate clear in that batch; the renderer half is necessary and sufficient, this
+/// half is a real but secondary durability improvement (the case where the failure lands in a
+/// LATER batch than the raise).
+pub(crate) fn epic_embed_clears_load_timeout(event: EpicEmbedNavLifecycle) -> bool {
+    !matches!(event, EpicEmbedNavLifecycle::NavigationFailed)
+}
+
 /// Review finding 12: KVO on `URL`/`canGoBack`/`canGoForward` fires once per key for one
 /// same-document navigation (three callbacks for one `history.pushState`), and again for every
 /// ordinary navigation the delegate callbacks already report. Skipping an event identical to the
@@ -271,6 +300,43 @@ mod tests {
             epic_nav_state_with_flags(Value::Null, EpicEmbedNavFlags::default()),
             Value::Null
         );
+    }
+
+    // G-50-16: a provisional-navigation-start is every navigation's own fresh-start signal and
+    // already clears the flag unconditionally (D-11), so it must stay clearing here too.
+    #[test]
+    fn a_provisional_navigation_start_clears_a_timeout_raise() {
+        assert!(epic_embed_clears_load_timeout(
+            EpicEmbedNavLifecycle::ProvisionalNavigationStarted
+        ));
+    }
+
+    // A genuine finish must drop the banner (D-07) -- a slow-but-eventually-successful load is
+    // not a hang.
+    #[test]
+    fn a_navigation_finish_clears_a_timeout_raise() {
+        assert!(epic_embed_clears_load_timeout(
+            EpicEmbedNavLifecycle::NavigationFinished
+        ));
+    }
+
+    // The one asymmetry this fix adds: a navigation failure must NOT clear the raise, because the
+    // only navigation a failure hook can be reporting on is the one the monitor already timed
+    // out, and the banner is the correct UI for that outcome.
+    #[test]
+    fn a_navigation_failure_does_not_clear_a_timeout_raise() {
+        assert!(!epic_embed_clears_load_timeout(
+            EpicEmbedNavLifecycle::NavigationFailed
+        ));
+    }
+
+    // Content-process termination re-arms the clock like a fresh provisional start (it bumps
+    // `nav_generation` too), so it clears the flag like one.
+    #[test]
+    fn a_content_process_termination_clears_a_timeout_raise() {
+        assert!(epic_embed_clears_load_timeout(
+            EpicEmbedNavLifecycle::ContentProcessTerminated
+        ));
     }
 
     #[test]

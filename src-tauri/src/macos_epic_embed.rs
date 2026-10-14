@@ -60,7 +60,8 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager};
 
 use crate::epic_embed_state::{
-    epic_kvo_event_is_new, epic_nav_state_with_flags, EpicEmbedNavFlags, EpicEmbedVisibility,
+    epic_embed_clears_load_timeout, epic_kvo_event_is_new, epic_nav_state_with_flags,
+    EpicEmbedNavFlags, EpicEmbedNavLifecycle, EpicEmbedVisibility,
 };
 
 /// The `storeKey` value `store_embed_open_args` (main.rs) parses that routes to THIS module
@@ -279,9 +280,12 @@ struct EpicEmbedSurface {
     /// module's own "Timer while hidden" doc comment, above.
     nav_started_at: Option<Instant>,
     /// `true` once `spawn_load_timeout_monitor` has raised the flag for the navigation currently
-    /// in flight. Cleared by the next `didStartProvisionalNavigation` or by `didFinishNavigation`/
-    /// either failure hook (D-11: every load starts fresh, and a genuine failure is not a
-    /// timeout).
+    /// in flight. Cleared by the next `didStartProvisionalNavigation` or by
+    /// `didFinishNavigation`/`webViewWebContentProcessDidTerminate:` (D-11: every load starts
+    /// fresh). NOT cleared by either failure hook (G-50-16, `epic_embed_clears_load_timeout`): a
+    /// genuine failure still clears `nav_started_at` so the clock stops, but the raise itself
+    /// survives, because the only navigation a failure hook can be reporting on is the one that
+    /// just timed out.
     load_timed_out: bool,
     /// Monotonic count of navigations blocked specifically because their scheme was
     /// `EPIC_GAMES_LAUNCHER_SCHEME` (Phase 50 Plan 02, D-14) -- bumped in the
@@ -1375,7 +1379,9 @@ define_class!(
                 // A genuine finish is NOT a timeout (Phase 50 Plan 02): clear both the
                 // in-flight clock and any flag a slow-but-eventually-successful load raised.
                 guard.nav_started_at = None;
-                guard.load_timed_out = false;
+                if epic_embed_clears_load_timeout(EpicEmbedNavLifecycle::NavigationFinished) {
+                    guard.load_timed_out = false;
+                }
                 guard.enqueue_nav_event(event);
             } else {
                 eprintln!(
@@ -1399,7 +1405,11 @@ define_class!(
             if let Ok(mut guard) = surface().lock() {
                 guard.nav_generation = guard.nav_generation.wrapping_add(1);
                 guard.nav_started_at = Some(Instant::now());
-                guard.load_timed_out = false;
+                if epic_embed_clears_load_timeout(
+                    EpicEmbedNavLifecycle::ProvisionalNavigationStarted
+                ) {
+                    guard.load_timed_out = false;
+                }
                 // D-11: every load starts fresh. Clearing the challenge also un-hides the
                 // subview the challenge hid, when nothing else keeps it hidden -- a challenge the
                 // page clears by navigating itself away no longer strands a hidden surface with
@@ -1690,17 +1700,21 @@ define_class!(
 );
 
 /// Shared body for the two navigation-failure hooks (Phase 50 Plan 02): a genuine failure is NOT
-/// a timeout -- it clears `nav_started_at`/`load_timed_out` rather than setting either -- and the
-/// user sees WebKit's own failure through the logged line, not a slow-load notice. Factored out
-/// because `didFailNavigation`/`didFailProvisionalNavigation` differ only in which delegate
-/// method called them, which `caller` names for the log line.
+/// a timeout -- it clears `nav_started_at` so the clock stops, but (G-50-16,
+/// `epic_embed_clears_load_timeout`) NOT `load_timed_out`: the only navigation a failure hook can
+/// be reporting on is the one the monitor already timed out, so the raise and its banner survive.
+/// The user still sees WebKit's own failure through the logged line, not a second notice.
+/// Factored out because `didFailNavigation`/`didFailProvisionalNavigation` differ only in which
+/// delegate method called them, which `caller` names for the log line.
 fn epic_embed_handle_navigation_failure(webview: &WKWebView, error: &NSError, caller: &str) {
     let description = error.localizedDescription().to_string();
     eprintln!("[shell] macos_epic_embed: {caller} -- {description}");
     let event = nav_state_json(webview);
     if let Ok(mut guard) = surface().lock() {
         guard.nav_started_at = None;
-        guard.load_timed_out = false;
+        if epic_embed_clears_load_timeout(EpicEmbedNavLifecycle::NavigationFailed) {
+            guard.load_timed_out = false;
+        }
         guard.enqueue_nav_event(event);
     } else {
         eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
@@ -1790,7 +1804,9 @@ fn epic_embed_handle_content_process_termination(webview: &WKWebView) {
     if let Ok(mut guard) = surface().lock() {
         guard.nav_generation = guard.nav_generation.wrapping_add(1);
         guard.nav_started_at = Some(Instant::now());
-        guard.load_timed_out = false;
+        if epic_embed_clears_load_timeout(EpicEmbedNavLifecycle::ContentProcessTerminated) {
+            guard.load_timed_out = false;
+        }
         let event = nav_state_json(webview);
         guard.enqueue_nav_event(event);
     } else {
