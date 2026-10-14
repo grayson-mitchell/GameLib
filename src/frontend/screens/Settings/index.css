@@ -145,11 +145,22 @@
 a {
   cursor: pointer;
 }
-.settingsWrapper > .button.is-text {
-  margin-inline: 8px;
-  padding-block: 8px;
-  color: var(--text-quartenary);
-}
+
+/* 261015-7tt: `.settingsWrapper > .button.is-text` was deleted here after a
+   two-arm reachability proof (todo 2026-10-11-button-is-text-hover-and-is-link-pairs-miss-4-5-to-1.md,
+   resolution section, commit of this change) found it unreachable: no direct
+   JSX child of either `.settingsWrapper` host (`Settings/index.tsx`,
+   `Accessibility/index.tsx`) can render an element carrying `is-text` as its
+   own root, and the three files that do carry an `is-text` className literal
+   anywhere in src/frontend (`Game/GameSubMenu/index.tsx`,
+   `Game/GamePage/components/MainButton.tsx`, `DownloadManager/index.tsx`) are
+   not reachable via the import graph from either host. If a direct-child
+   `.button.is-text` is ever reconnected under `.settingsWrapper`, it will
+   fall through to the `.settingsWrapper .button` descendant rule below
+   instead (lower specificity, (0,2,0) vs the deleted rule's (0,3,0)) --
+   `display: inline-flex; align-items: center; justify-content: center;`
+   only, no colour/margin/padding override -- so it would need a replacement
+   rule authored, not an assumption that the old declarations still apply. */
 
 .button.is-footer {
   margin-block: 8px;
