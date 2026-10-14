@@ -316,10 +316,25 @@ export function useStoreEmbedHost({
         .storeEmbedTakeNavEvents()
         .then((events) => {
           if (cancelled) return
-          // Apply the LAST event only. The earlier ones are intermediate states this drain
-          // already superseded -- setting each in turn would render a burst of stale hosts.
+          // Superseded fields (url/host/canGoBack/canGoForward) take the LAST event in the
+          // batch -- the earlier ones are intermediate states this drain already superseded, so
+          // setting each in turn would render a burst of stale hosts. `loadTimedOut` is a
+          // ONE-SHOT RAISE, not a superseded state, so it does not get the same treatment: if it
+          // clears later in the SAME batch (G-50-16's live sequence -- raise, then the -999
+          // failure, then the next provisional start, all landing inside one 250 ms poll
+          // interval), applying only the last event would coalesce the raise away before the
+          // renderer ever saw it. Merge it stickily across the whole batch instead, same spirit
+          // as `blockedLauncherSchemeCount` just above being a counter rather than a flag for
+          // exactly this coalescing reason. Strict `=== true` (not truthiness) so a non-Epic
+          // batch, where the field is absent on every event, latches nothing.
           const latest = events[events.length - 1]
-          if (latest) setNavState(latest)
+          if (!latest) return
+          const loadTimedOut = events.some(
+            (event) => event.loadTimedOut === true
+          )
+            ? true
+            : latest.loadTimedOut
+          setNavState({ ...latest, loadTimedOut })
         })
         .catch((error) => {
           logNavCallFailure('storeEmbedTakeNavEvents', error)

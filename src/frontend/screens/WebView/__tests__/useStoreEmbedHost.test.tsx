@@ -1299,6 +1299,90 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(after.challenged).toBe(true)
   })
 
+  // Property 46. Observed-red: today's drain applies `events[events.length - 1]` wholesale, so a
+  // one-shot `loadTimedOut: true` raise followed by later `loadTimedOut: false` events IN THE
+  // SAME BATCH is coalesced away. This is the exact live-run shape of G-50-16: raise, then the
+  // -999 failure, then the next provisional start, all landing inside one 250 ms poll interval.
+  it('46. a loadTimedOut raise survives later false events in the same drain batch', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      {
+        url: 'https://www.epicgames.com/store/en-US/',
+        host: 'www.epicgames.com',
+        canGoBack: true,
+        canGoForward: false,
+        surface: 'epic',
+        loadTimedOut: true
+      },
+      {
+        url: 'https://www.epicgames.com/store/en-US/',
+        host: 'www.epicgames.com',
+        canGoBack: true,
+        canGoForward: false,
+        surface: 'epic',
+        loadTimedOut: false
+      },
+      {
+        url: 'https://www.epicgames.com/store/en-US/',
+        host: 'www.epicgames.com',
+        canGoBack: true,
+        canGoForward: false,
+        surface: 'epic',
+        loadTimedOut: false
+      }
+    ])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    const after = reinvoke(options)
+
+    expect(after.loadTimedOut).toBe(true)
+  })
+
+  // Property 47. Boundary guard, green both before and after the fix: the latch must hold only
+  // WITHIN a batch, not forever. A later drain batch carrying only `loadTimedOut: false` must
+  // still clear the flag, or a genuine finish (D-07) would leave the banner stuck up
+  // permanently. This is not an observed-red property -- it guards against over-fixing rather
+  // than pinning the bug itself.
+  it('47. a later all-false drain batch still clears a previously-surfaced loadTimedOut flag', async () => {
+    const options: MountOptions = {
+      slotRef: makeSlot({ x: 0, y: 0, width: 100, height: 100 }).ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      platform: 'darwin'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    const raised = await drainEpicNavEvent(options, { loadTimedOut: true })
+    expect(raised.loadTimedOut).toBe(true)
+
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      {
+        url: 'https://www.epicgames.com/store/en-US/',
+        host: 'www.epicgames.com',
+        canGoBack: true,
+        canGoForward: false,
+        surface: 'epic',
+        loadTimedOut: false
+      }
+    ])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    const after = reinvoke(options)
+
+    expect(after.loadTimedOut).toBe(false)
+  })
+
   // Property 28. Observed-red mutation: seeding the baseline from `0`/`undefined` instead of the
   // first OBSERVED count turns this red -- a store whose count starts above zero (a restored
   // session) would fire a spurious notice on its very first drain.
