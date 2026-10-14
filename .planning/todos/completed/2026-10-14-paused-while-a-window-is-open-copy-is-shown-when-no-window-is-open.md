@@ -74,3 +74,30 @@ load, not only during gates.
 The diagnostic groundwork is already done — `data-placeholder-reason` is live on the root element
 (`abbc84a71`) and distinguishes the two cases for inspection. That change deliberately did **not**
 touch visible copy, precisely so this decision stayed open.
+
+## Resolution (261014-wro, 2026-10-14)
+
+**Option 3 chosen by the operator, in session, 2026-10-14: render no text on the Epic surface, a
+text-free styled fill.** Options 1 (conditional wording), 2 (reason-neutral wording) and 4 (accept
+it) are closed.
+
+**What changed.** `StoreEmbedPlaceholder`'s message paragraph is now gated on `reason`, withheld
+for the Epic-surface-only value (`reason === 'epic-surface'`) and kept unchanged for both
+suppression values (`'suppressed'` and `'suppressed+epic-surface'`). Commit `6c061a598` carries
+three added test cases: the Epic-surface silent render, both suppression reasons still speaking,
+and a four-shape sweep pinning that exactly one reason value suppresses the copy.
+
+**What did NOT change, explicitly.** No locale file moved, no English wording changed, no key was
+minted, renamed or removed, and no CSS changed. The root div, its className
+(`WebView__embedPlaceholder`) and the `data-placeholder-reason` attribute are all byte-identical.
+The suppression case's behaviour — copy rendered, same string, same position — is untouched.
+
+**What is unobserved.** Nobody has seen the text-free fill on a real Mac cold load. The visual
+question option 3's own text raised — whether a blank area during a long cold load reads as
+broken — is unanswered; the jest cases prove only that no text renders, not how that looks on
+hardware. Whether this is worth a live gate of its own is the operator's call; no live-gate todo
+has been filed unilaterally for it.
+
+**`ready: human` was the correct classification.** This needed a decision among four live options,
+not an implementation choice, and the decision — made in session, 2026-10-14 — is exactly what
+unblocked it.

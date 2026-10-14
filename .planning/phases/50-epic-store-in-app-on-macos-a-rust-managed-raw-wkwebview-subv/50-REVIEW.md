@@ -121,10 +121,16 @@ red first, but no Mac has seen the banner paint. It is tracked by
   > (`abbc84a71`) distinguishing `suppressed` from `epic-surface`. **The copy itself is deliberately
   > unchanged** — this entry's own point, that it needs a copy decision, still stands, and the
   > decision is now filed with its cost record at
-  > `.planning/todos/pending/2026-10-14-paused-while-a-window-is-open-copy-is-shown-when-no-window-is-open.md`.
+  > `.planning/todos/completed/2026-10-14-paused-while-a-window-is-open-copy-is-shown-when-no-window-is-open.md`.
   >
   > Lesson for this file's future readers: an "Open, not fixed here" entry with no stated **cost**
   > reads as cosmetic and gets skipped. This one would have saved two cycles had it carried one.
+  >
+  > **2026-10-14 — discharged by quick task `261014-wro` (commit `6c061a598`), as option 3.** The
+  > placeholder's message paragraph is now gated on `reason`: withheld for the Epic-surface-only
+  > value, kept for both suppression values. UI-SPEC E2's no-new-text constraint — this entry's own
+  > objection to fixing it — was honoured rather than excepted: no text at all renders on the Epic
+  > surface, so there is no new text to conflict with it.
 - A cross-surface re-open while a modal is open shows the embed (the first open on mount behaves
   the same way today).
 - `50-CONTEXT.md`'s "one code path for both raw WKWebViews" wording is now out of date: the Epic

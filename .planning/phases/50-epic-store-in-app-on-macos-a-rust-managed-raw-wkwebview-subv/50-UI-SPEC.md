@@ -145,8 +145,8 @@ D-14 blocked-scheme toast (static-content) · E6 Epic subview (media).
 | E1 bar | error | resolved (explicit) | No error state of its own; on timeout (D-07) and challenge (D-10) the bar stays mounted and the banner/panel render below it. |
 | E1 bar | overflow | resolved (explicit) | Existing `.StoreEmbedControls__host` rule `white-space: nowrap; text-overflow: ellipsis` — host text truncates, the four icon buttons keep fixed width. |
 | E1 bar | long-text | resolved (explicit) | Same ellipsis rule; icon buttons carry aria-labels, not visible text, so no label reflow exists. |
-| E2 placeholder | overflow | resolved (explicit) | Fills the embed slot rect and centres one existing short string (`webview.embedPlaceholder.message`), wrapping within the slot. Now visible *through* the transparent subview (D-06). |
-| E2 placeholder | long-text | resolved (explicit) | Existing, already-translated key; wraps inside the slot. No new text on this surface. |
+| E2 placeholder | overflow | resolved (explicit) | The slot-rect fill and the centring are unchanged. The string itself is centred and wraps within the slot only for the D-19 suppression reason; on the Epic surface (D-06), where it is visible *through* the transparent subview, the fill carries no text at all, so there is nothing to overflow there. |
+| E2 placeholder | long-text | resolved (explicit) | Existing, already-translated key; wraps inside the slot. No text at all renders on the Epic surface, so this criterion applies only to the suppression case — where the existing already-translated key wraps inside the slot exactly as before. E2's original no-new-text constraint is honoured, not excepted. |
 | E3 banner | loading | resolved (explicit) | No loading state of its own: appears only when the 45s timer fires; Reload re-issues the current URL; clears on the next main-frame finish (D-07). No spinner in the banner. |
 | E3 banner | error | resolved (explicit) | If the reload also stalls, the timer restarts and the identical banner re-shows (D-08 no silent retry, D-11 no stickiness). A detected challenge replaces the banner with the E4 panel. |
 | E3 banner | overflow | { statement: "At the app's minimum window width the single 40px banner row shows the message plus both actions (Reload, Open in browser) on one row; the message may ellipsise, the actions may not clip.", verification: backstop } | |
@@ -157,10 +157,15 @@ D-14 blocked-scheme toast (static-content) · E6 Epic subview (media).
 | E4 panel | long-text | resolved (explicit) | Heading (`--text-3xl`) and body (`--text-md`) wrap to multiple lines exactly as the two existing reasons do; nothing is truncated. |
 | E5 toast | overflow | { statement: "The toast follows `HumbleExpiryToast`'s fixed-position, max-width shape; at minimum window width the full message is visible and wrapped, never clipped by the window edge.", verification: backstop } | |
 | E5 toast | long-text | { statement: "Same criterion checked with the longest translation of the D-14 string; the toast grows vertically, never horizontally past its max width.", verification: backstop } | |
-| E6 subview | empty | resolved (explicit) | Before Epic's first paint the subview is transparent (D-06), so the placeholder (E2) is what the user sees; GameLib adds no empty-state copy. |
-| E6 subview | loading | resolved (explicit) | Placeholder through the transparent subview until first paint; at 45s without a main-frame finish the D-07 banner appears. Occlusion is not a load state — an occluded window paints when uncovered (spike 024 established #8). |
+| E6 subview | empty | resolved (explicit) | Before Epic's first paint the subview is transparent (D-06), so what the user sees is the placeholder's (E2) styled fill with no copy in it; GameLib adds no empty-state copy. |
+| E6 subview | loading | resolved (explicit) | The placeholder's text-free fill through the transparent subview until first paint; at 45s without a main-frame finish the D-07 banner appears. Occlusion is not a load state — an occluded window paints when uncovered (spike 024 established #8). |
 | E6 subview | error | resolved (explicit) | Three failure paths, each with a named surface: Cloudflare challenge → E4 panel (D-10); blocked `com.epicgames.launcher://` → E5 toast (D-14); page popup → system browser via the existing throttle (D-12). No other error UI. |
 | E6 subview | populated | resolved (explicit) | Epic's own unmodified page at the slot rect — zero GameLib injection, DOM styling or overlay (L-1). The only GameLib chrome on screen is the E1 bar above it. |
+
+**2026-10-14 — option 3 of the `2026-10-14-paused-while-a-window-is-open-...` todo, operator-locked,
+closed by quick task `261014-wro` (commit `6c061a598`): the Epic surface's fill is now text-free.**
+This is a copy withholding, not a copy change — no locale file moved, no key was renamed or
+reworded, and the suppression case's copy is untouched.
 
 Outside the closed taxonomy (carried from the researcher's pass so they are not dropped):
 
