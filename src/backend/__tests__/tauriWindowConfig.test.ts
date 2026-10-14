@@ -81,6 +81,10 @@ interface TauriWindowConfig {
   title?: string
   titleBarStyle?: string
   hiddenTitle?: boolean
+  width?: number
+  height?: number
+  minWidth?: number
+  minHeight?: number
   [key: string]: unknown
 }
 
@@ -204,5 +208,51 @@ describe('tauri.conf.json main window title rendering (QUICK-260815-k25)', () =>
     ]
     const missingTitleWindow = findWindowByLabel(missingTitleFixture, 'main')
     expect(() => expect(missingTitleWindow?.title).toBe('GameLib')).toThrow()
+  })
+})
+
+/**
+ * Quick task 261015-9qy (TODO-9qy-1): the `main` window declared NO minimum inner size at
+ * all -- an AppleScript resize to {200, 800} on real hardware was accepted with no clamp.
+ * This is the ONLY place a minimum is declared; see the task's action text for the grep
+ * proving no Rust `set_min_size`/`min_inner_size` call and no runtime setter compete with it.
+ *
+ * 900 is MEASURED: the todo's live gate photographed the embed notice row's message plus
+ * both actions fully visible at 900px (`item16-width900.png`), with the 600px arm clipping
+ * `Open in browser`. 600 for height is a JUDGMENT CALL with no hardware measurement behind
+ * it -- see the quick task's SUMMARY for the full justification.
+ */
+describe('tauri.conf.json main window minimum inner size (quick 261015-9qy, TODO-9qy-1)', () => {
+  test('the main window declares minWidth 900 and minHeight 600', () => {
+    const conf = loadTauriConf()
+    const mainWindow = findWindowByLabel(conf.app.windows, 'main')
+    expect(mainWindow).toBeDefined()
+    expect(mainWindow?.minWidth).toBe(900)
+    expect(mainWindow?.minHeight).toBe(600)
+  })
+
+  test('both minima are less than or equal to the declared default width/height, so the opening size is never silently clamped', () => {
+    const conf = loadTauriConf()
+    const mainWindow = findWindowByLabel(conf.app.windows, 'main')
+    expect(mainWindow).toBeDefined()
+    expect(mainWindow?.minWidth as number).toBeLessThanOrEqual(
+      mainWindow?.width as number
+    )
+    expect(mainWindow?.minHeight as number).toBeLessThanOrEqual(
+      mainWindow?.height as number
+    )
+  })
+
+  // SANITY (gate-must-fail-against-known-bad-input, per this project's standing rule):
+  // the exact pre-fix on-disk shape -- a window with label/width/height and neither min
+  // key. In-memory fixture only; never written to disk.
+  test('SANITY: the same lookup-and-assert helper FAILS against an in-memory fixture window carrying no min keys', () => {
+    const noMinFixtureWindows: TauriWindowConfig[] = [
+      { label: 'main', width: 1280, height: 800 }
+    ]
+    const noMinWindow = findWindowByLabel(noMinFixtureWindows, 'main')
+    expect(noMinWindow).toBeDefined()
+    expect(() => expect(noMinWindow?.minWidth).toBe(900)).toThrow()
+    expect(() => expect(noMinWindow?.minHeight).toBe(600)).toThrow()
   })
 })
