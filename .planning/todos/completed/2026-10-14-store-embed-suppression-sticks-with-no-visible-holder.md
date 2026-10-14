@@ -5,6 +5,8 @@ area: webview/store-embed
 severity: major
 platform: macos
 ready: code
+status: CLOSED_MISDIAGNOSIS
+closed_by: "Debug session .planning/debug/resolved/embed-suppression-sticks.md, 2026-10-14 — there is no suppression defect. The symptom was a route-default placeholder misread as a suppression indicator."
 found_by: "Live gate of UAT Item 16, 2026-10-14 (Launch 5). Same defect that confounded UAT Item 3 on 2026-10-14 (Launch 3); this run reproduced it and narrowed it considerably."
 files:
   - src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx
@@ -79,3 +81,51 @@ silently returned empty produced a false "pass" during this very gate. Use `scre
 frontmost asserted at capture time, and remember region captures are occludable — an occluding
 window is not merely a bad screenshot, it is a condition under which the subview genuinely stops
 painting (`an-occluded-wkwebview-does-not-render-and-the-epic-store-does-not-boot.md`).
+
+## 2026-10-14 — CLOSED AS A MISDIAGNOSIS. There is no suppression defect.
+
+**Everything above this line is wrong at its root, and it is kept rather than deleted because the
+reasoning error is the useful part.**
+
+`StoreEmbedSlotContents.tsx:52` renders `StoreEmbedPlaceholder` whenever `suppressed ||
+isEpicSurface`. `isEpicSurface` (`WebView/index.tsx:372`, `storeKey === 'epic' && platform ===
+'darwin'`) is a **static** boolean, true the entire time anyone is on the macOS `/store/epic`
+route. So the placeholder is **always in the DOM on this route, independent of the suppression
+refcount**, and a user sees it exactly whenever the native subview is not painting over it — by
+design before first paint (D-06), and for as long as a navigation is failed or timed out.
+
+In the launch that produced this todo, Epic's navigation had genuinely timed out: that session's
+own `terminal.log` records `load timed out past 45s` then `didFailProvisionalNavigation`. The
+"intermittent, self-releasing, invisible holder" character that made this look so much like a
+refcount leak is just the subview's paint state changing under a deliberate network block.
+
+A debug session mechanistically eliminated **all six** suppression consumers and read the 227-line
+`StoreEmbedSuppressionContext.tsx` in full: the reducer and hooks are pure, clamped, and have
+symmetric effect/cleanup pairs. No leak exists.
+
+**This was already documented before the gate ran.** `50-REVIEW.md`'s `## Open, not fixed here`
+says: *"The 'Paused while a window is open' placeholder copy still shows through the transparent
+Epic subview during cold loads. UI-SPEC E2 forbids new text on this surface, so changing it needs a
+copy decision."* That file was read the same day and the connection was missed.
+
+### How the error happened, which is the part worth keeping
+
+"Placeholder visible" was treated as "suppression active". The copy is what made that inference
+feel safe — the string literally says *"Paused while a window is open"*, so seeing it while no
+window was open read as a contradiction demanding explanation, rather than as a string being shown
+outside the condition it was written for. Two candidate holders were then proposed and argued over
+across two sessions, and the consumer list used for the first guess was itself missing a member.
+**Both guesses were at the wrong level: nobody checked whether the placeholder implied suppression
+at all.**
+
+### What actually came out of this
+
+1. `abbc84a71` — the placeholder now carries a diagnostic `data-placeholder-reason`
+   (`suppressed` / `epic-surface` / both), so the two reasons cannot be silently conflated again.
+   No visible-copy change: UI-SPEC E2 forbids new text there and that is a decision the user has
+   not made.
+2. The **real** residual defects are filed separately and correctly scoped:
+   - `2026-10-14-epic-embed-subview-does-not-repaint-after-reload.md` — the native question this
+     todo's symptom was masking.
+   - `2026-10-14-paused-while-a-window-is-open-copy-is-shown-when-no-window-is-open.md` — the copy
+     defect, which has a real cost record now.

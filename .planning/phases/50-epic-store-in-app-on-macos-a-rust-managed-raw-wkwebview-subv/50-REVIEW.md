@@ -103,6 +103,28 @@ red first, but no Mac has seen the banner paint. It is tracked by
 - The "Paused while a window is open" placeholder copy still shows through the transparent Epic
   subview during cold loads. UI-SPEC E2 forbids new text on this surface, so changing it needs a
   copy decision.
+
+  > **2026-10-14 — this entry was right, and going unconnected cost two debug cycles.** It is the
+  > only place in the phase's records that stated the behaviour before any gate ran, and it was read
+  > the same day the behaviour was then misdiagnosed. The misdiagnosis: a visible placeholder on
+  > `/store/epic` was treated as evidence of an active D-19 suppression refcount, when
+  > `StoreEmbedSlotContents.tsx:52` renders it on `suppressed || isEpicSurface` and `isEpicSurface`
+  > is statically true for that whole route. Two candidate "holders" were proposed across two
+  > sessions, a `severity: major` todo was filed for a defect that does not exist, UAT Items 3 and 16
+  > both acquired false reasoning (since retracted in place), and commit `42dead40a` shipped
+  > self-contradicting text — its message says "suppression was never the explanation" for the
+  > banner while the UAT result in the same commit blamed suppression for the slot.
+  >
+  > Resolved in `.planning/debug/resolved/embed-suppression-sticks.md`: all six suppression
+  > consumers eliminated mechanistically, the 227-line context read in full and found sound. The
+  > conflation is now mechanically prevented by a diagnostic `data-placeholder-reason` attribute
+  > (`abbc84a71`) distinguishing `suppressed` from `epic-surface`. **The copy itself is deliberately
+  > unchanged** — this entry's own point, that it needs a copy decision, still stands, and the
+  > decision is now filed with its cost record at
+  > `.planning/todos/pending/2026-10-14-paused-while-a-window-is-open-copy-is-shown-when-no-window-is-open.md`.
+  >
+  > Lesson for this file's future readers: an "Open, not fixed here" entry with no stated **cost**
+  > reads as cosmetic and gets skipped. This one would have saved two cycles had it carried one.
 - A cross-surface re-open while a modal is open shows the embed (the first open on mount behaves
   the same way today).
 - `50-CONTEXT.md`'s "one code path for both raw WKWebViews" wording is now out of date: the Epic
