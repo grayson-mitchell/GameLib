@@ -78,13 +78,50 @@ coverage:
     rationale: "Precondition unmet: a GameLib.app process (pid 13672, plus sidecar 13683) is running right now, but it was built 2026-10-12 11:13 and launched 11:14 — seven hours before this phase's first code commit (18:15) and owned by a different session. The running process contains zero phase-50 code. Only the human operator can establish the precondition (a fresh build of HEAD, with the stale orphan process gone) before any arm can be scored. Fabricating or assuming a live result was explicitly prohibited; every arm in 50-UAT.md is left `result: pending`."
 
 duration: unmeasured precisely — session spans a context-compaction boundary with no reliable start timestamp; Task-1-commit to Task-2-commit span measured at 12m30s (01:06:53 to 01:19:23 NZDT)
-completed: 2026-10-13
-status: blocked
+completed: 2026-10-14
+status: complete
 ---
 
-# Phase 50 Plan 06: Live-Gate UAT Contract + Validation Sign-Off (Task 3 blocked) Summary
+# Phase 50 Plan 06: Live-Gate UAT Contract + Validation Sign-Off Summary
 
-**Authored the 19-arm Phase 50 live-gate contract and filled the validation map honestly; the live hardware run itself (Task 3) is blocked on an unmet precondition and is returned as a checkpoint, not executed.**
+**Authored the 19-arm Phase 50 live-gate contract and filled the validation map honestly. Task 3's blocking-human precondition was later cleared and the gate RAN — see `## Live gate outcome (2026-10-14)` below, which supersedes the "blocked" framing this summary originally carried.**
+
+## Live gate outcome (2026-10-14)
+
+**This section was added 2026-10-14. Everything below it was written on 2026-10-13, while Task 3
+was still blocked, and describes a state that no longer holds.** The frontmatter `status:` has been
+corrected from `blocked` to `complete` for the same reason. Nothing in the original text has been
+deleted — it is the record of why the checkpoint was returned, and it was correct when written.
+
+**The precondition was cleared and the gate ran**, across four launches on real macOS hardware,
+2026-10-13T08:52Z to 2026-10-14T06:00Z. Commit range `3797fb6b0..b0f847214` (12 commits), plus
+`bd4a2c555` adding the G-50-16 root cause.
+
+| Outcome | Count | Items |
+|---|---|---|
+| pass | 13 | 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17, 19 |
+| issue | 1 | 16 (G-50-16 — timeout banner never visible) |
+| blocked | 4 | 3, 13, 14, 15 |
+| skipped | 1 | 18 (conditional arm; its condition never occurred) |
+
+**The goal arm passed on both jars.** Item 1 rendered the Epic store on a genuinely cold packaged
+jar (0 `epicgames.com` entries, two-day-stale mtime, provenance tied by binary hash); Item 5
+restored a session written by a *previous process* across a full application quit. Item 2
+completed a real Epic sign-in inside the raw `WKWebView`, **unchallenged** — `grep -c 'flagged as
+challenged'` returned 0 across all five launch transcripts, which is the risk this entire phase
+was built against.
+
+**Task 3's second deliverable is now done too.** The folded 2026-09-15 Sign-in todo was disposed
+2026-10-14 and moved to `.planning/todos/completed/` with `status: CLOSED`, closed with no code by
+its own falsifiable rule — Item 2's pass was that rule's first branch verbatim.
+
+**One gap remains open and this plan does not close it.** G-50-16 (the `StoreEmbedTimeoutBanner`
+never becoming visible) was fixed in code by quick task `261014-rso` on 2026-10-14, but no Mac has
+seen the banner paint. UAT Item 16 owes a re-run, filed as
+`.planning/todos/pending/2026-10-14-epic-timeout-banner-fix-needs-a-live-gate-re-run.md`. The gap
+stays `status: failed` in `50-UAT.md` deliberately until that run happens.
+
+The original Task-3 rationale follows below, unaltered.
 
 ## Performance
 

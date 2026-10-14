@@ -3,7 +3,7 @@ phase: "50"
 slug: "epic-store-in-app-on-macos-a-rust-managed-raw-wkwebview-subv"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
+status: validated
 nyquist_compliant: true
 wave_0_complete: true
 created: "2026-10-12"
@@ -104,4 +104,24 @@ launch, ordering constraint, and capture requirement.
 - [ ] Feedback latency < 120s — **measured, not met for the full Jest suite.** `cargo test --manifest-path src-tauri/Cargo.toml --bin gamelib-shell` wall time = **7.168s** (`352 passed; 0 failed; 2 ignored`, `time` output: `1.75s user 2.19s system 54% cpu 7.168 total`), well under the bound. `pnpm test:ci` wall time = **194.43s** (`time` output: `384.40s user 42.85s system 219% cpu 3:14.43 total`), **exceeding** the 120s bound — `543 of 544 suites, 11846 of 11851 tests` passed, the 5 failing tests being the same pre-existing, unrelated `meta/__tests__/lintTranslations.test.ts` `library.tileSize` baseline failures already recorded in `.planning/WINDOWS.md` entry 3 and in `50-04-SUMMARY.md`/`50-05-SUMMARY.md` — not a regression from this plan. Per-task/per-wave scoped runs (the Sampling Rate section above) stay well under the bound; only the full-suite `pnpm test:ci` invocation itself exceeds it. Recorded honestly rather than ticked.
 - [x] `nyquist_compliant: true` set in frontmatter — every row in the Per-Task Verification Map has either a real automated command or a named live-gate arm (no row is left with a placeholder or an uncovered requirement), which is the criterion this box tracks; the separate feedback-latency finding above does not change row coverage and is recorded on its own line.
 
-**Approval:** pending — automated coverage and Wave 0 closure are confirmed above; final sign-off is withheld until Task 3's live gate runs on real hardware (see `50-06-PLAN.md` Task 3 and the blocking-human checkpoint returned for this plan).
+**Approval:** granted 2026-10-14 — automated coverage and Wave 0 closure were confirmed above, and the
+live gate this approval was waiting on has now run.
+
+**The precondition cited by the previous wording no longer exists and that wording was stale.** It
+withheld sign-off "until Task 3's live gate runs on real hardware (see `50-06-PLAN.md` Task 3 and
+the blocking-human checkpoint returned for this plan)". That checkpoint was cleared on 2026-10-13:
+the gate ran across four launches, 2026-10-13T08:52Z to 2026-10-14T06:00Z, and closed at **13 pass,
+1 issue, 4 blocked, 1 skipped** across its 19 arms (`50-UAT.md` `## Summary`, commit range
+`3797fb6b0..b0f847214`).
+
+**What this approval does and does not cover.** It covers what this document measures — per-task
+verification-map coverage, Wave 0 closure, sampling rate, and the honestly-recorded feedback-latency
+miss on the full-suite run. It does **not** assert that every shipped behaviour was observed on
+hardware. One arm failed and four blocked; the authoritative record of what the gate did and did not
+establish is `50-VERIFICATION.md` (`status: gaps_found`, 10 of 16 truths verified), not this file.
+
+**One gap stays open against this phase:** G-50-16, the `StoreEmbedTimeoutBanner` never becoming
+visible on a load timeout. It was fixed in code by quick task `261014-rso` on 2026-10-14 with a
+regression test observed red first, but no Mac has seen the banner paint. UAT Item 16 owes a re-run,
+tracked by `.planning/todos/pending/2026-10-14-epic-timeout-banner-fix-needs-a-live-gate-re-run.md`.
+Approving this document does not discharge that.

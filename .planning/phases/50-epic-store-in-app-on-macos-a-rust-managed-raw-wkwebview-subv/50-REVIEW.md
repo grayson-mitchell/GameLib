@@ -60,6 +60,44 @@ verification for every item marked "live" below.
 | 14 | No autoresizing mask, so the subview drifted on resize until the next bounds update. | `94686484c` — edge-pinning mask (wry's `ViewMinYMargin`), never size-tracking (D-18). | no drift on resize/zoom/fullscreen |
 | 15 | The launcher notice scheduled a timer on every render, cutting later notices short. | `2be248287` — one timer per attempt in an effect, with cleanup. | one toast per blocked attempt |
 
+## Live-check discharge record (added 2026-10-14, after the gate closed)
+
+The Phase 50 live gate ran 2026-10-13/14 and closed at 13 pass / 1 issue / 4 blocked / 1 skipped
+(`50-UAT.md`). **`status: resolved_pending_live_gate` above is still correct and is deliberately
+unchanged** — this table is the discharge record, added so the next reader does not re-derive it.
+
+Three of the fifteen findings (2, 10, 13) carry `—` in the Live-check column and need nothing.
+Of the twelve that do:
+
+| Finding | Live check needed | Discharged? |
+| --- | --- | --- |
+| 1 | gog↔epic shows one surface at a time | **Partial** — Item 10 proves epic↔steam; GOG was exercised in the same launch by Item 9, but the gog↔epic switch itself was never scored |
+| 3 | `window.open('steam://…')` does nothing; launcher popup shows the notice | **Partial** — Items 11/12 discharge the http(s) hand-off and throttle halves; the `steam://` and launcher-popup halves are unobserved |
+| 4 | dialogs appear as origin-titled sheets (UAT 13) | **No** — Item 13 blocked (no live site calls `alert`/`confirm`/`prompt`) |
+| 5 | challenge stays hidden across dialogs and route re-entry | **No** — Item 18 skipped (never challenged) |
+| 6 | panel visible with working Open in browser | **No** — Item 18 skipped |
+| 7 | auto-passed challenge shows the page | **No** — Item 18 skipped |
+| 8 | banner/notice under the controls | **No** — Item 16 failed (no banner) and Item 14 blocked (no notice) |
+| 9 | one reload after sign-in (UAT 15) | **No** — Item 15 not run, by a deliberate cost/benefit decision |
+| 11 | Download opens in the browser; crash reloads | **No** — never induced |
+| 12 | three pages deep updates Back (UAT 9) | **YES** — Item 9 pass |
+| 14 | no drift on resize/zoom/fullscreen | **YES** — Items 4 and 8 pass |
+| 15 | one toast per blocked attempt | **No** — Item 14 blocked |
+
+**2 of 12 fully discharged, 2 partially, 8 not at all.** The eight undischarged rows all depend on
+Items 13, 14, 15, 16 or 18 — every one of which blocked, failed or skipped, mostly on third-party
+preconditions rather than on anything in this codebase.
+
+All 15 fixes remain structurally present in code at HEAD. But *structurally present* is what this
+review already established when it was written; the live column is what is still owed, and most of
+it still is.
+
+**Finding 8's failure has since been fixed in code**, by quick task `261014-rso` (2026-10-14,
+commits `5ba1dd645` and `f32f4757b`): the banner's `loadTimedOut` raise was un-latched and could be
+erased by a later reset in the same 250 ms drain batch. That fix carries a regression test observed
+red first, but no Mac has seen the banner paint. It is tracked by
+`.planning/todos/pending/2026-10-14-epic-timeout-banner-fix-needs-a-live-gate-re-run.md`.
+
 ## Open, not fixed here
 
 - The "Paused while a window is open" placeholder copy still shows through the transparent Epic

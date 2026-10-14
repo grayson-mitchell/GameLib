@@ -4,11 +4,11 @@ milestone: v0.8
 milestone_name: Phase Details
 current_phase: 50
 current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
-status: executing
-stopped_at: Phase 50 Plan 06 blocked on the live-gate precondition
-last_updated: "2026-10-14T07:30:00.000Z"
+status: verified
+stopped_at: Phase 50 live gate closed with one failed gap pending a macOS re-run
+last_updated: "2026-10-14T09:00:00.000Z"
 last_activity: 2026-10-14
-last_activity_desc: Quick 261014-rso latched the Epic embed loadTimedOut raise so the G-50-16 timeout banner can surface — the renderer GAP-D drain now merges the flag stickily across one batch and a navigation failure no longer clears it, with jest property 46 observed red before the fix; scoped jest 56 to 58 and cargo gamelib-shell 390 to 394 both green, planning-gates 12/12. The macOS re-run of UAT Item 16 is owed and filed as a pending live-gate todo, since nothing off-hardware can confirm the banner actually paints. Phase 50 plans 01 through 05 complete across 3 waves (32 commits, cargo clean, 543 jest suites green with only the inherited library.tileSize red proven identical pre-phase). Plan 06 authored 50-UAT.md with 19 arms and filled 50-VALIDATION.md, then halted at a blocking-human gate — the live run needs a fresh build of HEAD because the running GameLib.app predates every phase-50 commit by 7 hours and belongs to another session. Phase 50 execution started
+last_activity_desc: Phase 50 verified retrospectively at 10 of 16 truths — the goal is met and proved on hardware across a cold packaged jar and a warm signed-in jar with an unchallenged real sign-in, while G-50-16's timeout banner stays failed pending the owed macOS re-run of UAT Item 16. Five stale artifacts corrected (STATE, ROADMAP, 50-06-SUMMARY, 50-VALIDATION, and a discharge record added to 50-REVIEW, whose status was RIGHT to stay as it was — only 2 of its 12 live checks actually discharged, not most). The 2026-09-15 Epic Sign-in todo closed with no code on Item 2's pass, by its own falsifiable rule. Quick 261014-rso latched the Epic embed loadTimedOut raise so the G-50-16 timeout banner can surface — the renderer GAP-D drain now merges the flag stickily across one batch and a navigation failure no longer clears it, with jest property 46 observed red before the fix; scoped jest 56 to 58 and cargo gamelib-shell 390 to 394 both green, planning-gates 12/12. The macOS re-run of UAT Item 16 is owed and filed as a pending live-gate todo, since nothing off-hardware can confirm the banner actually paints. Phase 50 plans 01 through 05 complete across 3 waves (32 commits, cargo clean, 543 jest suites green with only the inherited library.tileSize red proven identical pre-phase). Plan 06 authored 50-UAT.md with 19 arms and filled 50-VALIDATION.md, then halted at a blocking-human gate — the live run needs a fresh build of HEAD because the running GameLib.app predates every phase-50 commit by 7 hours and belongs to another session. Phase 50 execution started
 state_head: 51da98d158cbd921aedde8a69ac72a0488c11721
 progress:
   total_phases: 45
@@ -74,10 +74,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 50 (Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic) — EXECUTING
-Plan: 5 of 6
-Status: Blocked — Plan 50-06 awaiting the live-gate precondition (fresh build of HEAD, stale orphan gone)
-Last activity: 2026-10-14 — Completed quick task 261014-rso: latched the Epic embed `loadTimedOut` raise so the G-50-16 timeout banner can surface. The Phase 50 live gate itself is finished (19 arms: 13 pass, 1 issue, 4 blocked, 1 skipped) and G-50-16 was its one major gap; the macOS re-run of UAT Item 16 remains owed as a pending live-gate todo.
+Phase: 50 (Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic) — VERIFIED, GAPS FOUND
+Plan: 6 of 6
+Status: Verified with gaps — `50-VERIFICATION.md` `status: gaps_found`, 10 of 16 truths verified. The phase GOAL is met and was proved on hardware; the full SCOPE has unverified corners. One gap is failed and owed a macOS re-run (G-50-16, UAT Item 16); four UAT arms blocked, three of them on third-party preconditions or a deliberate decision rather than on defects.
+Last activity: 2026-10-14 — Closed out Phase 50's records. Produced `50-VERIFICATION.md` (the phase had none), corrected five artifacts that still asserted a blocked state twelve gate commits refute (STATE, ROADMAP, 50-06-SUMMARY, 50-VALIDATION, plus a discharge record in 50-REVIEW), and closed the 2026-09-15 Epic Sign-in todo with no code on UAT Item 2's pass. Earlier the same day, quick task 261014-rso latched the Epic embed `loadTimedOut` raise so the G-50-16 banner can surface. The macOS re-run of UAT Item 16 remains owed as a pending live-gate todo — nothing off-hardware can confirm the banner paints.
 
 Previous activity: 2026-10-11 - Completed quick task 261011-wik: filed the Windows Stores-tab embed implementation todo (store_embed_* macOS+Linux only; 38-E01 closed on the spike 027 harness, not the shipped app)
 

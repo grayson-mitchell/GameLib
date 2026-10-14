@@ -5872,7 +5872,7 @@ sub-decisions below are LOCKED inputs to that spec, not gray areas to reopen.
 construction; its README's `## What IS established` #6–#9 are the measurements this phase stands
 on and must not re-derive). **Not** Phase 49, which `phase.add` defaulted to by positional guess —
 the offline banner and this subview share no files.
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed
 
 Plans:
 **Wave 1**
@@ -5887,7 +5887,24 @@ Plans:
 - [x] 50-05-PLAN.md — Renderer wiring: surface the Epic signals, render the three notices, one reload on return after an Epic auth change
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 50-06-PLAN.md — Live gate: author `50-UAT.md`, fill `50-VALIDATION.md`, run the gate, dispose the folded Sign-in todo
+- [x] 50-06-PLAN.md — Live gate: author `50-UAT.md`, fill `50-VALIDATION.md`, run the gate, dispose the folded Sign-in todo
+
+**Live gate outcome (ran 2026-10-13/14, four launches on real macOS hardware):** 19 arms —
+**13 pass, 1 issue, 4 blocked, 1 skipped**. The goal arm passed on both a genuinely cold packaged
+jar and a warm one, and a real Epic sign-in completed inside the subview **unchallenged**
+(`grep -c 'flagged as challenged'` = 0 across all five launch transcripts, which is the risk this
+phase was built against). Verification: `50-VERIFICATION.md`, `status: gaps_found`, 10 of 16 truths
+verified. The folded 2026-09-15 Sign-in todo was disposed and closed with no code, by its own
+falsifiable rule, on Item 2's pass.
+
+**One gap stays open:** G-50-16 — `StoreEmbedTimeoutBanner` never became visible on a load timeout.
+Fixed in code 2026-10-14 by quick `261014-rso`, but unconfirmed on hardware; UAT Item 16 owes a
+re-run, tracked by
+`.planning/todos/pending/2026-10-14-epic-timeout-banner-fix-needs-a-live-gate-re-run.md`. Four arms
+blocked: Items 13 and 14 on third-party preconditions that are **not** GameLib defects (no live site
+calls `alert`/`confirm`/`prompt`; the Epic Games Launcher is not installed and registers no
+`com.epicgames.launcher` handler, so Epic renders an inert "In Library" state), Item 15 by a
+deliberate cost/benefit decision, and Item 3 confounded by an unexplained suppression refcount.
 
 **Scope (ships):**
 

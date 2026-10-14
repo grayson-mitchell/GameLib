@@ -5,9 +5,10 @@ area: webview/store-embed
 severity: minor
 platform: macos
 ready: live-gate
-status: OPEN
+status: CLOSED
+resolves_phase: 50
 found_by: 'quick-260915-hza, 2026-09-15 — split out of the /store/epic Turnstile todo when that closed WONTFIX. It was the "second decision, separable" in that todo and was deliberately never actioned there.'
-blocked_by: "Phase 50's live gate (the Sign in arm) — see ROADMAP.md `### Phase 50`"
+closed_by: "Phase 50's live gate, UAT Item 2 pass, 2026-10-13T09:06Z — the arm this todo's own falsifiable rule named. Closed with no code, per that rule."
 files:
   - src/frontend/screens/WebView/index.tsx
   - src/frontend/screens/WebView/storeEmbedOrigins.ts
@@ -122,7 +123,40 @@ is likewise historical. Both are kept as written, as the record.
 **Re-triage note.** `ready: live-gate` because only Phase 50's live gate, not a human design call,
 can now move this todo. `platform: macos` because Phase 50 is macOS only.
 
-**The Trap still holds.** `## Trap for whoever un-gates Epic` still holds, and Phase 50 moves both
+## 2026-10-14 — CLOSED with no code, by the rule this todo wrote for itself
+
+**Phase 50's live gate ran 2026-10-13/14 and UAT Item 2 — the "Sign in" arm — PASSED.** The
+operator completed a normal login sequence against Epic's own in-page Sign in button, inside the
+Rust-managed raw `WKWebView` subview, on the packaged build's jar that had never held an Epic
+session. That is the `## Decision (2026-10-12)` section's first branch verbatim: *"If that arm
+completes sign-in, this todo closes with no code."*
+
+**It was not challenged and it did not 403** — the two conditions that would instead have made the
+hand-off a Phase 50 task:
+
+- `grep -c 'flagged as challenged'` returned **0** across every launch transcript of the gate
+  (launches 1, 2, 2b, 2c and 3), and `WebviewUnavailablePanel reason="epic-challenged"` was never
+  seen. UAT Item 18, the conditional challenge arm, was recorded `skipped` because its condition
+  never occurred.
+- No `403` line appears anywhere in `gamelib.log` for the session.
+
+Corroborated by the jar rather than by the operator's word alone: the packaged jar's
+`epicgames.com` entry count rose 6 to 22 with an mtime matching the sign-in minute, which is
+session cookies landing.
+
+**So the Talon 403 premise is retired by measurement, not by assumption.** This todo was filed
+because Epic's Sign in button led to a surface known blocked for a *Tauri-injected* webview. The
+shipped construction is not Tauri-injected, and the sign-in it was filed against now demonstrably
+completes. Options 1 (intercept and hand off) and 3 (hide via DOM injection) are both moot;
+option 2's feared "dead-end button that 403s" did not materialise.
+
+**Nothing is owed by this closure.** No code shipped for it and none is needed. The `## Trap for
+whoever un-gates Epic` section below still holds for anyone touching the guard or the
+`embeddable` flag, and is kept for that reason.
+
+## The Trap still holds
+
+`## Trap for whoever un-gates Epic` still holds, and Phase 50 moves both
 halves together (the guard becomes darwin-only; the `embeddable: false` flag and the deep-link /
 last-URL restore paths are revisited). Its cited line numbers (`index.tsx:468`,
 `index.tsx:460-467`, `storeEmbedOrigins.ts:44`) are stale — the guard and flag have moved; locate
