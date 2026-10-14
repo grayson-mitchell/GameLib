@@ -806,6 +806,22 @@ const nestedRules = (
   return out
 }
 
+/**
+ * Every nested-rule selector inside a block body, at EVERY depth -- not
+ * just depth 0. `nestedRules` alone only sees the first level, which is
+ * correct for every theme-override idiom in this file (always one level
+ * deep), but WRONG for a "does this stylesheet contain a selector naming
+ * X anywhere" question: `.only` in Dropdown/index.scss
+ * (`.dropdownContainer > .dropdown > .toggleWithOnly > .only`) sits THREE
+ * levels deep, and a depth-0-only scan can never see it regardless of
+ * whether it is correct (261015-7tt).
+ */
+const allNestedSelectors = (blockBody: string): string[] =>
+  nestedRules(blockBody).flatMap((rule) => [
+    rule.selector,
+    ...allNestedSelectors(rule.body)
+  ])
+
 const FILTER_FOCUS_ROW_SCSS =
   'src/frontend/components/UI/NavShell/components/FilterFocusRow/index.scss'
 
@@ -2752,6 +2768,7 @@ describe('Accent-filled Retry, Clear and .button.is-text text contrast in every 
 })
 
 const GAME_PAGE_CSS = 'src/frontend/screens/Game/GamePage/index.css'
+const DROPDOWN_SCSS = 'src/frontend/components/UI/Dropdown/index.scss'
 const GAME_SUB_MENU_TSX = join(
   REPO_ROOT,
   'src/frontend/screens/Game/GameSubMenu/index.tsx'
@@ -2846,50 +2863,21 @@ function pickWinningCandidate(candidates: ColourCandidate[]): ColourCandidate {
  * `buttonDefaultStyle` mixin body, not inside the `button { }` rule itself
  * (which only `@include`s it), so it is read from the mixin block directly.
  */
-function gameMenuColourCandidates(
-  buttonsScss: string,
-  gamePageCss: string
-): ColourCandidate[] {
-  const specs: {
-    fullSelector: string
-    file: string
-    path: string
-    needle: string
-  }[] = [
-    {
-      fullSelector: 'button',
-      file: 'buttons',
-      path: '@mixin buttonDefaultStyle',
-      needle: '@mixin buttonDefaultStyle'
-    },
-    {
-      fullSelector: '.button',
-      file: 'buttons',
-      path: '.button',
-      needle: '.button'
-    },
-    {
-      fullSelector: '.button.is-text',
-      file: 'buttons',
-      path: '.button.is-text',
-      needle: '.button.is-text'
-    },
-    {
-      fullSelector: '.button.is-link',
-      file: 'buttons',
-      path: '.button.is-link',
-      needle: '.button.is-link'
-    },
-    {
-      fullSelector: '.gameConfigContainer .game-actions .gameTools .link',
-      file: 'gamePage',
-      path: '.gameTools .link',
-      needle: '.gameTools .link'
-    }
+/**
+ * The 4 `.button*`-family colour candidates shared by every render site
+ * carrying `button is-text is-link` classes, read from `_buttons.scss` on
+ * every run. `button`'s colour lives inside the `@mixin buttonDefaultStyle`
+ * body, not inside `button { }` itself (which only `@include`s it).
+ */
+function buttonFamilyColourCandidates(buttonsScss: string): ColourCandidate[] {
+  const specs: { fullSelector: string; needle: string }[] = [
+    { fullSelector: 'button', needle: '@mixin buttonDefaultStyle' },
+    { fullSelector: '.button', needle: '.button' },
+    { fullSelector: '.button.is-text', needle: '.button.is-text' },
+    { fullSelector: '.button.is-link', needle: '.button.is-link' }
   ]
-  return specs.map(({ fullSelector, file, needle }) => {
-    const source = file === 'buttons' ? buttonsScss : gamePageCss
-    const block = cssBlock(source, needle)
+  return specs.map(({ fullSelector, needle }) => {
+    const block = cssBlock(buttonsScss, needle)
     const decls = declsAtDepthZero(block, 'color')
     if (decls.length !== 1) {
       throw new Error(
@@ -2899,10 +2887,38 @@ function gameMenuColourCandidates(
     return {
       fullSelector,
       value: decls[0],
-      file,
-      position: source.indexOf(`${needle} {`)
+      file: 'buttons',
+      position: buttonsScss.indexOf(`${needle} {`)
     }
   })
+}
+
+/**
+ * The 5 candidate `color` declarations F2 lists for the game-menu family:
+ * the 4 shared `.button*` candidates plus
+ * `.gameConfigContainer .game-actions .gameTools .link`, read from
+ * `GamePage/index.css` on every run.
+ */
+function gameMenuColourCandidates(
+  buttonsScss: string,
+  gamePageCss: string
+): ColourCandidate[] {
+  const gameMenuBlock = cssBlock(gamePageCss, '.gameTools .link')
+  const gameMenuDecls = declsAtDepthZero(gameMenuBlock, 'color')
+  if (gameMenuDecls.length !== 1) {
+    throw new Error(
+      `expected exactly one depth-0 color in .gameTools .link, found ${gameMenuDecls.length}`
+    )
+  }
+  return [
+    ...buttonFamilyColourCandidates(buttonsScss),
+    {
+      fullSelector: '.gameConfigContainer .game-actions .gameTools .link',
+      value: gameMenuDecls[0],
+      file: 'gamePage',
+      position: gamePageCss.indexOf('.gameTools .link {')
+    }
+  ]
 }
 
 /**
@@ -3186,4 +3202,365 @@ describe('Game-menu .is-link family: render-site census, winning-rule resolution
       expect(fg).toBe(bareFg)
     }
   })
+
+  // --- Task 2 (261015-7tt): MainButton dropdown .is-link pair -----------
+  //
+  // MainButton's "Install with options..." render site
+  // (GamePage/components/MainButton.tsx:401) is
+  // `<button className="link button is-text is-link buttonWithIcon">`
+  // inside a shared `Dropdown` component whose `.dropdown` panel paints
+  // `background: transparent` (Dropdown/index.scss). The painted surface is
+  // therefore an ancestor's, not the dropdown's own.
+
+  const dropdownScss = read(DROPDOWN_SCSS)
+  const mainButtonCandidates = buttonFamilyColourCandidates(buttonsScss)
+  const mainButtonWinner = pickWinningCandidate(mainButtonCandidates)
+
+  /**
+   * Every `body.<theme>`-scoped rule inside `.button.is-text`'s block
+   * that would reach an `.is-link` consumer. Reused from the 261011-pjv
+   * block (`:2500`) -- re-declared here only because this describe block
+   * does not share module scope with that one.
+   */
+  it('MainButton winning-rule resolution: Dropdown/index.scss contributes zero colour candidates for this render site, .button.is-link wins', () => {
+    // Dropdown/index.scss's own selectors that could apply to a `.link
+    // button is-text is-link buttonWithIcon` element: anything whose
+    // selector chain contains `.link`, `.is-link` or `.is-text`. The
+    // component's generic `.only` and `.toggleSwitchWrapper` rules carry
+    // neither class token, so they are structurally inapplicable --
+    // asserted here rather than assumed. `allNestedSelectors` (not
+    // `nestedRules` alone) because `.only` sits THREE levels deep
+    // (`.dropdownContainer > .dropdown > .toggleWithOnly > .only`); a
+    // depth-0-only scan would silently miss it.
+    const dropdownOwnCandidates = allNestedSelectors(
+      cssBlock(dropdownScss, '.dropdownContainer')
+    ).filter(
+      (selector) =>
+        selector.includes('.link') ||
+        selector.includes('.is-link') ||
+        selector.includes('.is-text')
+    )
+    expect(dropdownOwnCandidates).toEqual([])
+
+    expect(mainButtonCandidates).toHaveLength(4)
+    expect(mainButtonWinner.fullSelector).toBe('.button.is-link')
+    expect(mainButtonWinner.value).toBe('var(--text-default)')
+  })
+
+  it('checker can fail: a sabotaged Dropdown/index.scss selector naming .is-link is caught, in memory only', () => {
+    const sabotagedDropdown = dropdownScss.replace('.only {', '.only.is-link {')
+    const dropdownOwnCandidates = allNestedSelectors(
+      cssBlock(sabotagedDropdown, '.dropdownContainer')
+    ).filter(
+      (selector) =>
+        selector.includes('.link') ||
+        selector.includes('.is-link') ||
+        selector.includes('.is-text')
+    )
+    expect(dropdownOwnCandidates).toEqual(['.only.is-link'])
+  })
+
+  it('MainButton surface resolution: .mainInfo is the nearest ancestor with a depth-0 background, settled from the cascade not from a comment', () => {
+    // .dropdown itself: transparent (Dropdown/index.scss).
+    const dropdownBlock = cssBlock(dropdownScss, '.dropdown')
+    expect(declsAtDepthZero(dropdownBlock, 'background')).toEqual([
+      'transparent'
+    ])
+
+    // The DOM ancestor chain, outside-in per MainButton.tsx/GamePage/index.tsx:
+    // .gameConfigContainer > .mainInfoWrapper > .mainInfo > .buttons >
+    // (MainButton) > .dropdownContainer > .dropdown. None of
+    // .mainInfoWrapper, .buttons, .dropdownContainer declares a depth-0
+    // background in either stylesheet; .mainInfo does.
+    const mainInfoWrapperBlock = cssBlock(gamePageCss, '.mainInfoWrapper')
+    const buttonsBlock = cssBlock(gamePageCss, '.buttons')
+    const dropdownContainerBlock = cssBlock(dropdownScss, '.dropdownContainer')
+    expect(declsAtDepthZero(mainInfoWrapperBlock, 'background')).toEqual([])
+    expect(declsAtDepthZero(mainInfoWrapperBlock, 'background-color')).toEqual(
+      []
+    )
+    expect(declsAtDepthZero(buttonsBlock, 'background')).toEqual([])
+    expect(declsAtDepthZero(buttonsBlock, 'background-color')).toEqual([])
+    expect(declsAtDepthZero(dropdownContainerBlock, 'background')).toEqual([])
+
+    const mainInfoBlock = cssBlock(gamePageCss, '.mainInfo')
+    const mainInfoSurfaceDecls = declsAtDepthZero(
+      mainInfoBlock,
+      'background-color'
+    )
+    expect(mainInfoSurfaceDecls).toEqual(['var(--body-background)'])
+  })
+
+  const mainButtonSurfaceDecl = declsAtDepthZero(
+    cssBlock(gamePageCss, '.mainInfo'),
+    'background-color'
+  )[0]
+  const mainButtonHoverBlock = cssBlock(buttonsScss, '.button.is-link:hover')
+  const mainButtonHoverDecls = declsAtDepthZero(mainButtonHoverBlock, 'color')
+
+  /**
+   * MainButton's own narrowly-scoped hover rule in GamePage/index.css --
+   * `.SteamInstallCaret .dropdown .link:hover` (0,4,0), which beats the
+   * global `.button.is-link:hover` (0,3,0) for this ONE render site -- if
+   * one exists, else `undefined`. The 261015-7tt gruvbox_dark fix lives
+   * here, not in `_buttons.scss`: it must not touch the other 21
+   * GameSubMenu `.is-link` render sites that share the global rule.
+   */
+  const mainButtonHoverOverrideBlock = (() => {
+    try {
+      return cssBlock(gamePageCss, '.SteamInstallCaret .dropdown .link:hover')
+    } catch {
+      return null
+    }
+  })()
+  const mainButtonHoverThemeOverrides = mainButtonHoverOverrideBlock
+    ? nestedRules(mainButtonHoverOverrideBlock)
+    : []
+
+  /**
+   * The MainButton dropdown HOVER foreground for `themeClass`: a
+   * theme-scoped override nested inside `.SteamInstallCaret .dropdown
+   * .link:hover` (`body.<themeClass> &:not(:disabled) { color: ... }`) if
+   * one exists for this theme, else the global `.button.is-link:hover`
+   * declaration (`mainButtonHoverDecls`). Mirrors `gameMenuHoverForeground`
+   * (line ~2979) and `isTextHoverForeground` below -- the third copy of the
+   * same override-vs-base idiom in this file, each reading a different
+   * stylesheet location.
+   */
+  function mainButtonHoverForeground(themeClass: string): string {
+    const override = mainButtonHoverThemeOverrides.find((rule) =>
+      rule.selector.startsWith(`body.${themeClass} `)
+    )
+    const decls = override
+      ? declsAtDepthZero(override.body, 'color')
+      : mainButtonHoverDecls
+    if (decls.length !== 1) {
+      throw new Error(
+        `expected exactly one depth-0 MainButton hover color for ${themeClass}, found ${decls.length}`
+      )
+    }
+    return decls[0]
+  }
+
+  it('non-vacuity: MainButton dropdown family resolves its winner, surface and hover declaration', () => {
+    expect(mainButtonSurfaceDecl).toBe('var(--body-background)')
+    expect(mainButtonHoverDecls).toHaveLength(1)
+    expect(mainButtonHoverOverrideBlock).not.toBeNull()
+  })
+
+  it('MainButton gruvbox_dark hover fix: load-bearing, cannot reach disabled, cannot reach an excluded sibling theme', () => {
+    const overrideBlock = mainButtonHoverOverrideBlock as string
+    const override = nestedRules(overrideBlock).find(
+      (rule) => rule.selector === 'body.gruvbox_dark &:not(:disabled)'
+    )
+    if (!override) throw new Error('gruvbox_dark override not found')
+
+    // Load-bearing: removing the override reproduces the exact pre-fix
+    // failing ratio measured during this task (3.9078232730305023:1).
+    const withoutOverride = overrideBlock.replace(
+      /body\.gruvbox_dark &:not\(:disabled\) \{[^}]*\}/,
+      ''
+    )
+    const scope = themeTokens(themesScss, 'body.gruvbox_dark')
+    const preFixFg = resolveValue(mainButtonHoverDecls[0], scope, globals)
+    const preFixBg = resolveValue(mainButtonSurfaceDecl, scope, globals)
+    expect(contrastRatio(preFixFg as string, preFixBg as string)).toBeCloseTo(
+      3.9078232730305023,
+      10
+    )
+    const sabotagedOverrides = nestedRules(withoutOverride)
+    expect(
+      sabotagedOverrides.find(
+        (rule) => rule.selector === 'body.gruvbox_dark &:not(:disabled)'
+      )
+    ).toBeUndefined()
+
+    // Cannot reach disabled: the selector ends in `:not(:disabled)`.
+    expect(override.selector.endsWith(':not(:disabled)')).toBe(true)
+
+    // Cannot reach an excluded sibling theme: no other theme's selector is
+    // present in this block.
+    const otherThemes = themeClasses.filter((t) => t !== 'gruvbox_dark')
+    for (const theme of otherThemes) {
+      expect(
+        nestedRules(overrideBlock).some((rule) =>
+          rule.selector.startsWith(`body.${theme} `)
+        )
+      ).toBe(false)
+    }
+  })
+
+  it('MainButton gruvbox_dark hover fix does not regress any other theme: no other theme carries an override under this selector', () => {
+    const overrideBlock = mainButtonHoverOverrideBlock as string
+    const overrides = nestedRules(overrideBlock)
+    expect(overrides).toHaveLength(1)
+    for (const theme of themeClasses.filter((t) => t !== 'gruvbox_dark')) {
+      expect(mainButtonHoverForeground(theme)).toBe(mainButtonHoverDecls[0])
+    }
+  })
+
+  it.each(themeClasses)(
+    '%s: MainButton dropdown BASE text clears 4.5:1 against --body-background',
+    (theme) => {
+      const scope = themeTokens(themesScss, `body.${theme}`)
+      const fg = resolveValue(mainButtonWinner.value, scope, globals)
+      const bg = resolveValue(mainButtonSurfaceDecl, scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it.each(themeClasses)(
+    '%s: MainButton dropdown HOVER text clears 4.5:1 against --body-background',
+    (theme) => {
+      const scope = themeTokens(themesScss, `body.${theme}`)
+      const fg = resolveValue(mainButtonHoverForeground(theme), scope, globals)
+      const bg = resolveValue(mainButtonSurfaceDecl, scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  // --- Task 2 (261015-7tt): pure .is-text hover family --------------------
+  //
+  // Generalises the single-theme gruvbox_dark hover test in the
+  // 261011-pjv block (`the override does not regress .button.is-text:hover
+  // in gruvbox_dark`) to all 10 themes. `.button.is-text:hover` declares
+  // only `background`; the foreground is inherited from the base block,
+  // which is why `applyTextColourDecl` -- not a second resolver -- is the
+  // right helper (DownloadManager's "Clear List" button,
+  // DownloadManager/index.tsx:138, carries no `.is-link`).
+
+  const isTextBlock = cssBlock(buttonsScss, '.button.is-text')
+  const isTextHoverBlock = cssBlock(buttonsScss, '.button.is-text:hover')
+  const isTextHoverSurfaceDecls = declsAtDepthZero(
+    isTextHoverBlock,
+    'background'
+  )
+  const isTextHoverThemeOverrides = nestedRules(isTextHoverBlock)
+
+  /**
+   * The pure `.is-text` HOVER foreground for `themeClass`: a
+   * `body.<themeClass> <GUARDED_OVERRIDE_TAIL> { color: ... }` override
+   * nested inside `.button.is-text:hover`'s own block if one exists for
+   * this theme, else the BASE foreground (`applyTextColourDecl(isTextBlock,
+   * themeClass)`). `.button.is-text:hover` declares no `color` of its own
+   * (asserted in the non-vacuity test below), so a theme with no hover
+   * override inherits the base colour unchanged -- the same override-vs-
+   * base idiom as `gameMenuHoverForeground` and `mainButtonHoverForeground`
+   * above, applied to a third stylesheet location.
+   */
+  function isTextHoverForeground(themeClass: string): string {
+    const scoped = new RegExp(
+      `body\\.${themeClass}\\s*${GUARDED_OVERRIDE_TAIL}\\s*\\{([^}]*)\\}`
+    ).exec(isTextHoverBlock)
+    if (scoped) {
+      const decls = declsAtDepthZero(scoped[1], 'color')
+      if (decls.length !== 1) {
+        throw new Error(
+          `expected exactly one depth-0 color in the ${themeClass} hover override, found ${decls.length}`
+        )
+      }
+      return decls[0]
+    }
+    return applyTextColourDecl(isTextBlock, themeClass)
+  }
+
+  it('non-vacuity: pure .is-text hover family resolves its fill and inherited foreground helper', () => {
+    expect(isTextHoverSurfaceDecls).toHaveLength(1)
+    expect(isTextHoverSurfaceDecls[0]).toMatch(/var\(\s*--primary-hover/)
+    expect(declsAtDepthZero(isTextHoverBlock, 'color')).toEqual([])
+    expect(isTextHoverThemeOverrides.length).toBeGreaterThan(0)
+  })
+
+  it('pure .is-text HOVER fix (nord-light, nord-dark): load-bearing, cannot reach disabled, cannot reach an excluded sibling (.is-link)', () => {
+    for (const theme of ['nord-light', 'nord-dark']) {
+      const override = isTextHoverThemeOverrides.find(
+        (rule) =>
+          rule.selector === `body.${theme} &:not(.is-link):not(:disabled)`
+      )
+      if (!override) throw new Error(`${theme} hover override not found`)
+
+      // Cannot reach disabled / cannot reach an excluded sibling (.is-link):
+      // the selector carries both exclusions.
+      expect(override.selector).toContain(':not(.is-link)')
+      expect(override.selector.endsWith(':not(:disabled)')).toBe(true)
+    }
+
+    // Load-bearing: removing BOTH overrides reproduces the exact pre-fix
+    // failing ratios measured during this task.
+    const withoutOverrides = isTextHoverBlock
+      .replace(
+        /body\.nord-light &:not\(\.is-link\):not\(:disabled\) \{[^}]*\}/,
+        ''
+      )
+      .replace(
+        /body\.nord-dark &:not\(\.is-link\):not\(:disabled\) \{[^}]*\}/,
+        ''
+      )
+    expect(nestedRules(withoutOverrides)).toHaveLength(0)
+    const preFixRatios: Record<string, number> = {
+      'nord-light': 3.356770572062584,
+      'nord-dark': 4.41083696523498
+    }
+    for (const theme of ['nord-light', 'nord-dark']) {
+      const scope = themeTokens(themesScss, `body.${theme}`)
+      const preFixFg = resolveValue(
+        applyTextColourDecl(isTextBlock, theme),
+        scope,
+        globals
+      )
+      const preFixBg = resolveValue(isTextHoverSurfaceDecls[0], scope, globals)
+      expect(contrastRatio(preFixFg as string, preFixBg as string)).toBeCloseTo(
+        preFixRatios[theme],
+        10
+      )
+    }
+  })
+
+  it('pure .is-text HOVER fix does not regress any other theme: no other theme carries a hover override here', () => {
+    expect(isTextHoverThemeOverrides).toHaveLength(2)
+    for (const theme of themeClasses.filter(
+      (t) => t !== 'nord-light' && t !== 'nord-dark'
+    )) {
+      expect(isTextHoverForeground(theme)).toBe(
+        applyTextColourDecl(isTextBlock, theme)
+      )
+    }
+  })
+
+  it.each(themeClasses)(
+    '%s: pure .is-text HOVER text clears 4.5:1 against --primary-hover',
+    (theme) => {
+      const scope = themeTokens(themesScss, `body.${theme}`)
+      const fg = resolveValue(isTextHoverForeground(theme), scope, globals)
+      const bg = resolveValue(isTextHoverSurfaceDecls[0], scope, globals)
+      expect(fg).not.toBeNull()
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg as string, bg as string)
+      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
 })

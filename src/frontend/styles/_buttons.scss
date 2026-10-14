@@ -184,6 +184,37 @@ button {
 
 .button.is-text:hover {
   background: var(--primary-hover);
+
+  // 261015-7tt: this block declares no `color` of its own, so the
+  // foreground stays whatever the base block above resolved to --
+  // `--background`, this theme's own page-background hue, deliberately
+  // high-contrast against `--accent` (the base fill) because `--background`
+  // flips per theme. `--primary-hover` (#a17399, the SAME hex in all 10
+  // themes) was never designed to pair with an inverted page-background
+  // hue: nord-light's #eceff4 measures 3.36:1 here and nord-dark's #191c22
+  // measures 4.41:1 -- both under the 4.5:1 floor (261015-7tt census).
+  //
+  // No single colour clears 4.5:1 against BOTH nord-light's --accent
+  // (#30444a, dark) and --primary-hover (#a17399) at once -- unlike
+  // gruvbox_dark above, a block-level (always-on) override is
+  // mathematically impossible here, so this is HOVER-scoped only, leaving
+  // the already-passing BASE state untouched (8.88:1 nord-light, 11.41:1
+  // nord-dark). --neutral-01 (#070a0b, a theme-independent global constant,
+  // _colors.scss) measures 5.13:1 against --primary-hover for BOTH themes,
+  // since the hover fill is the same hex regardless of theme.
+  //
+  // `:not(:disabled)` and `:not(.is-link)` carry the same load-bearing
+  // reasoning as the base-block override above: without `:not(:disabled)`
+  // this would outrank `.button:disabled`'s global rule; without
+  // `:not(.is-link)` it would outrank `.button.is-link:hover` for the 22
+  // render sites that carry both classes.
+  body.nord-light &:not(.is-link):not(:disabled) {
+    color: var(--neutral-01, #070a0b);
+  }
+
+  body.nord-dark &:not(.is-link):not(:disabled) {
+    color: var(--neutral-01, #070a0b);
+  }
 }
 
 .button.is-link {

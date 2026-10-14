@@ -377,6 +377,28 @@
           background: var(--focus-ring-fill);
         }
 
+        /* 261015-7tt: gruvbox_dark's --accent (#b57614, inherited via
+           .button.is-link:hover in _buttons.scss) measures 3.91:1 on this
+           dropdown's painted surface -- .mainInfo's --body-background
+           (#282828), the nearest ancestor that declares one -- under the
+           4.5:1 floor. --text-default (#eae8e5) is this SAME button's own
+           BASE-state colour (.button.is-link's `color: var(--text-default)`,
+           already verified >=4.5:1 for all 10 themes), so the override
+           restores the already-passing base colour during hover rather than
+           introducing a new hue; it measures 12.06:1 against #282828.
+           Scoped to `.SteamInstallCaret .dropdown .link:hover` (0,4,0) --
+           MainButton's sole render site for this element, distinct from the
+           21 GameSubMenu .is-link sites under `.gameConfigContainer
+           .game-actions .gameTools .link` (different class chain entirely)
+           -- so this cannot regress Task 1's game-menu fix, and the other 9
+           themes already clear 4.5:1 through the bare `.button.is-link:hover`
+           chain and are left untouched. */
+        .SteamInstallCaret .dropdown .link:hover {
+          body.gruvbox_dark &:not(:disabled) {
+            color: var(--text-default);
+          }
+        }
+
         .SteamInstallCaret__icon {
           transition: transform 0.12s ease;
         }
