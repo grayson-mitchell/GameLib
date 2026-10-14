@@ -1,21 +1,14 @@
 ---
-status: testing
+status: partial
 phase: 50
 source: [50-01-SUMMARY.md, 50-02-SUMMARY.md, 50-03-SUMMARY.md, 50-04-SUMMARY.md, 50-05-SUMMARY.md, 50-CONTEXT.md, 50-UI-SPEC.md, ROADMAP.md]
 started: 2026-10-13T22:00:00Z
-updated: 2026-10-13T22:00:00Z
+updated: 2026-10-14T06:00Z
 ---
 
 ## Current Test
 
-number: 14
-name: Blocked Epic Games Launcher scheme notice (launch 2c)
-expected: |
-  Clicking Play/Launch on an OWNED game inside the embed blocks the
-  com.epicgames.launcher navigation, emits the D-14 literal, and renders
-  EpicLauncherBlockedNotice with its locked copy, auto-dismissing; at minimum window
-  width the message and its accent/icon stay visible and wrapped, never clipped.
-awaiting: user response
+[testing paused — 5 items outstanding: 4 blocked (3, 13, 14, 15) + 1 issue (16); item 18 skipped by its own condition]
 
 ## Protocol
 
@@ -451,14 +444,14 @@ reason: "no challenge was ever encountered, so the fallback path had nothing to 
 
 ### 19. Last-URL restore across app restart (launch 4)
 expected: With Epic's embed navigated to a specific sub-page (not the store's root), fully quitting GameLib and relaunching it shows the Epic embed restore to that same last URL via the validated restore path on its first load — not the store's root, and with no visible reload loop (D-03).
-result: pending
+result: pass — 2026-10-14T06:00Z, Launch 4, dev pid 14798 then 15946 across a full quit. Verified objectively rather than by eye, because the persisted value is readable from disk: before the quit, `last-url-epic` in the main webview's localStorage (`~/Library/WebKit/gamelib-shell/WebsiteData/Default/.../localstorage.sqlite3`, UTF-16 value) read `https://store.epicgames.com/p/risk-of-rain-2`. After a full quit (all of dev binary, `tauri dev`, `vite` and sidecar confirmed gone, port 5173 free) and a cold relaunch, the embed restored to that exact URL: 4 `startUrl=https://store.epicgames.com/p/risk-of-rain-2` lines and **0** `startUrl=https://www.epicgames.com/store/en/` lines, so it never fell back to the store root. The two differ by HOST (`store.` vs `www.`), which makes the pass and fail cases impossible to confuse in the log — chosen deliberately as the discriminator. No visible reload loop, confirmed two ways: the operator observed it settle once, and the launch transcript has 0 `load timed out` and 0 `didFail*` lines.
 
 ## Summary
 
 total: 19
-passed: 12
+passed: 13
 issues: 1
-pending: 1
+pending: 0
 skipped: 1
 blocked: 4
 
