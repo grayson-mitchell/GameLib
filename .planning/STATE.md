@@ -5,16 +5,16 @@ milestone_name: Phase Details
 current_phase: 50
 current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 status: verified
-stopped_at: Phase 50 live gate closed with one failed gap pending a macOS re-run
-last_updated: "2026-10-14T09:00:00.000Z"
+stopped_at: Completed quick-261015-7tt-01-PLAN.md
+last_updated: "2026-10-14T17:50:07.670Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 50 verified retrospectively at 10 of 16 truths — the goal is met and proved on hardware across a cold packaged jar and a warm signed-in jar with an unchallenged real sign-in, while G-50-16's timeout banner stays failed pending the owed macOS re-run of UAT Item 16. Five stale artifacts corrected (STATE, ROADMAP, 50-06-SUMMARY, 50-VALIDATION, and a discharge record added to 50-REVIEW, whose status was RIGHT to stay as it was — only 2 of its 12 live checks actually discharged, not most). The 2026-09-15 Epic Sign-in todo closed with no code on Item 2's pass, by its own falsifiable rule. Quick 261014-rso latched the Epic embed loadTimedOut raise so the G-50-16 timeout banner can surface — the renderer GAP-D drain now merges the flag stickily across one batch and a navigation failure no longer clears it, with jest property 46 observed red before the fix; scoped jest 56 to 58 and cargo gamelib-shell 390 to 394 both green, planning-gates 12/12. The macOS re-run of UAT Item 16 is owed and filed as a pending live-gate todo, since nothing off-hardware can confirm the banner actually paints. Phase 50 plans 01 through 05 complete across 3 waves (32 commits, cargo clean, 543 jest suites green with only the inherited library.tileSize red proven identical pre-phase). Plan 06 authored 50-UAT.md with 19 arms and filled 50-VALIDATION.md, then halted at a blocking-human gate — the live run needs a fresh build of HEAD because the running GameLib.app predates every phase-50 commit by 7 hours and belongs to another session. Phase 50 execution started
-state_head: 51da98d158cbd921aedde8a69ac72a0488c11721
+state_head: 88e18329ad06999af1b4945769191f97ea2c270d
 progress:
   total_phases: 45
   completed_phases: 36
   total_plans: 554
-  completed_plans: 539
+  completed_plans: 545
   percent: 80
 ---
 
@@ -550,6 +550,7 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 45 P07 | 38 min | 3 tasks | 21 files |
 | Phase 45 P08 | 30 min | 3 tasks | 20 files |
 | Phase 45 P11 | 26 min | 3 tasks | 106 files |
+| Phase quick-261015-7tt P01 | 2h40min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1240,6 +1241,8 @@ Recent decisions affecting current work:
 - [Phase 45]: 45-07: injected-TFunction label helpers use gamelib:-prefixed literal keys so i18next-parser files them in the gamelib catalog
 - [Phase 45]: 45-08: progress events are accepted only while this game's run is running exactly the verb named in the event (the payload names a component, never a game)
 - [Phase 45]: 45-08: installed-list read fails open (A-45-04); appendLogLine moved to common/winetricks/logBuffer so renderer and backend fold log lines by one rule
+- [Phase quick-261015-7tt]: Pure .is-text hover fix is HOVER-scoped only (not block-level), proved mathematically impossible to satisfy base+hover luminance constraints with one static colour
+- [Phase quick-261015-7tt]: .settingsWrapper > .button.is-text deleted after a two-arm reachability proof (direct-child DOM walk + import-graph trace) found it unreachable from either settings host
 
 ### Pending Todos
 
@@ -1890,9 +1893,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-10-12T01:09:44.220Z
-Stopped at: Phase 50 UI-SPEC approved
-Resume file: .planning/phases/50-epic-store-in-app-on-macos-a-rust-managed-raw-wkwebview-subv/50-UI-SPEC.md
+Last session: 2026-10-14T17:50:05.452Z
+Stopped at: Completed quick-261015-7tt-01-PLAN.md
+Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
