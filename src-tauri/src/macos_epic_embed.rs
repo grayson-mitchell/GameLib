@@ -60,8 +60,9 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager};
 
 use crate::epic_embed_state::{
-    epic_embed_clears_load_timeout, epic_kvo_event_is_new, epic_nav_state_with_flags,
-    EpicEmbedNavFlags, EpicEmbedNavLifecycle, EpicEmbedVisibility,
+    epic_embed_clears_load_timeout, epic_embed_reload_action, epic_kvo_event_is_new,
+    epic_nav_state_with_flags, EpicEmbedNavFlags, EpicEmbedNavLifecycle, EpicEmbedReloadAction,
+    EpicEmbedVisibility,
 };
 
 /// The `storeKey` value `store_embed_open_args` (main.rs) parses that routes to THIS module
@@ -296,6 +297,18 @@ struct EpicEmbedSurface {
     /// notice. A counter that only ever increases lets the renderer show exactly one toast per
     /// increment it has not yet shown, even across a coalesced drain.
     blocked_launcher_scheme_count: u64,
+    /// `true` once `webView:didCommitNavigation:` has landed for the navigation currently (or
+    /// most recently) in flight (quick task 261014-vot). Set only by that hook; cleared only by
+    /// `close()` and the cold `open()` path (a brand-new `WKWebView` has committed nothing).
+    /// Deliberately NOT cleared by either failure hook: a failure after a successful commit still
+    /// leaves a real current URL that `reload()` can act on -- the Launch 3 behaviour, where each
+    /// Reload click on an already-committed page produced its own `-999` cancellation.
+    has_committed: bool,
+    /// The last URL chrome (not the page) asked this surface to load (quick task 261014-vot).
+    /// Written at exactly the three CHROME-initiated `loadRequest` sites -- `open()`'s warm and
+    /// cold paths and `navigate()` -- never by a delegate hook and never by a page-initiated
+    /// navigation, because `reload()`'s first-commit fallback re-issues this URL verbatim.
+    last_requested_url: Option<String>,
 }
 
 static EPIC_EMBED_SURFACE: OnceLock<Mutex<EpicEmbedSurface>> = OnceLock::new();
@@ -654,6 +667,9 @@ pub(crate) fn open(
                         guard.visibility.set_challenged(false);
                     }
                     let load = challenged || current_url.as_deref() != Some(url_string.as_str());
+                    if load {
+                        guard.last_requested_url = Some(url_string.clone());
+                    }
                     (load, guard.visibility.open())
                 };
                 apply_visibility(webview, hidden);
@@ -732,6 +748,10 @@ pub(crate) fn open(
             guard.delegate = Some(SendPtr(delegate_ptr));
             let hidden = guard.visibility.open();
             guard.top_level_host = None;
+            // A brand-new `WKWebView` has committed nothing -- write both explicitly rather than
+            // leaning on `Default` (quick task 261014-vot).
+            guard.last_requested_url = Some(url_string.clone());
+            guard.has_committed = false;
             guard.enqueue_nav_event(event);
             drop(guard);
             // SAFETY: both are the `+1`s just parked above; nothing can release them before this
@@ -883,12 +903,54 @@ pub(crate) fn forward(app: &AppHandle) -> Result<Value, String> {
     })
 }
 
-/// Re-issues the webview's own current page via `WKWebView::reload()`. Never touches
-/// `canGoBack`/`canGoForward` -- a reload must leave the native back/forward list, and
-/// therefore the resulting nav state's availability flags, unchanged.
+/// Re-issues the webview's current page (quick task 261014-vot). Two branches, decided by
+/// `epic_embed_reload_action`: on a surface that has committed at least one main-frame
+/// navigation, `WKWebView::reload()` -- byte-for-byte the old behaviour, and the one that must
+/// stay unchanged (Launch 3: each Reload click on an already-committed page produced its own
+/// `-999` cancellation). On a surface that has never committed, `WKWebView::reload()` is a no-op
+/// (WebKit's `FrameLoader::reload` returns early on an empty current-request URL), so this
+/// instead re-issues `last_requested_url` via `loadRequest`. Either way, never touches
+/// `canGoBack`/`canGoForward` -- a reload must leave the native back/forward list, and therefore
+/// the resulting nav state's availability flags, unchanged.
 pub(crate) fn reload(app: &AppHandle) -> Result<Value, String> {
-    navigate_webview_on_main_thread(app, "epic_embed_reload", |webview| unsafe {
-        webview.reload();
+    navigate_webview_on_main_thread(app, "epic_embed_reload", |webview| {
+        // Read-then-drop: the guard must not still be held when `loadRequest`/`reload` run below
+        // -- both fire `didStartProvisionalNavigation` synchronously, which takes this same lock
+        // (`navigate()` is the in-module precedent for this exact drop-before-call shape).
+        let (has_committed, last_requested_url) = match surface().lock() {
+            Ok(guard) => (guard.has_committed, guard.last_requested_url.clone()),
+            Err(_) => {
+                eprintln!("[shell] WARN: macos_epic_embed surface registry poisoned -- continuing");
+                (true, None)
+            }
+        };
+        match epic_embed_reload_action(has_committed, last_requested_url.is_some()) {
+            EpicEmbedReloadAction::LoadLastRequested => {
+                let url_string =
+                    last_requested_url.expect("LoadLastRequested implies a last-requested URL");
+                match NSURL::URLWithString(&NSString::from_str(&url_string)) {
+                    Some(nsurl) => {
+                        eprintln!(
+                            "[shell] macos_epic_embed: reload arrived before the first commit -- \
+                             re-issuing the last requested URL"
+                        );
+                        let request = NSURLRequest::requestWithURL(&nsurl);
+                        unsafe {
+                            webview.loadRequest(&request);
+                        }
+                    }
+                    None => {
+                        eprintln!("[shell] macos_epic_embed: reload() given an unparsable URL");
+                        unsafe {
+                            webview.reload();
+                        }
+                    }
+                }
+            }
+            EpicEmbedReloadAction::NativeReload => unsafe {
+                webview.reload();
+            },
+        }
     })
 }
 
@@ -912,6 +974,7 @@ pub(crate) fn navigate(app: &AppHandle, url: &tauri::Url) -> Result<Value, Strin
         // it"), through the same derived visibility every other writer uses (review finding 7).
         match surface().lock() {
             Ok(mut guard) => {
+                guard.last_requested_url = Some(url_string.clone());
                 let hidden = guard.visibility.set_challenged(false);
                 drop(guard);
                 apply_visibility(webview, hidden);
@@ -1006,6 +1069,8 @@ pub(crate) fn close(app: &AppHandle) -> Result<Value, String> {
                 guard.visibility.reset();
                 guard.top_level_host = None;
                 guard.pending_nav_events.clear();
+                guard.has_committed = false;
+                guard.last_requested_url = None;
                 (webview_ptr, delegate_ptr)
             };
 
@@ -1361,6 +1426,21 @@ define_class!(
             (*handler).call((policy,));
         }
 
+        // Quick task 261014-vot: the ONE writer of `has_committed` -- see that field's own doc
+        // comment on why `reload()` needs this as its discriminator. Touches no other field;
+        // `didFinishNavigation`/`didStartProvisionalNavigation` already own the rest of the
+        // lifecycle.
+        #[unsafe(method(webView:didCommitNavigation:))]
+        fn did_commit_navigation(&self, _webview: &WKWebView, _navigation: Option<&WKNavigation>) {
+            if let Ok(mut guard) = surface().lock() {
+                guard.has_committed = true;
+            } else {
+                eprintln!(
+                    "[shell] WARN: macos_epic_embed surface registry poisoned -- continuing"
+                );
+            }
+        }
+
         #[unsafe(method(webView:didFinishNavigation:))]
         fn did_finish_navigation(&self, webview: &WKWebView, _navigation: Option<&WKNavigation>) {
             let url_string = unsafe {
@@ -1373,6 +1453,13 @@ define_class!(
             let host = tauri::Url::parse(&url_string)
                 .ok()
                 .and_then(|parsed| parsed.host_str().map(str::to_string));
+            // Quick task 261014-vot: the todo's own `## Suggested instrument` -- until now this
+            // hook spoke only on failure, so absence of log lines after a Reload click could not
+            // distinguish "nothing happened" from "it worked silently". Host only (T-28-04).
+            eprintln!(
+                "[shell] macos_epic_embed: didFinishNavigation succeeded -- host: {}",
+                host.as_deref().unwrap_or("<unknown>")
+            );
             let event = nav_state_json(webview);
             if let Ok(mut guard) = surface().lock() {
                 guard.top_level_host = host;
@@ -1796,9 +1883,16 @@ fn epic_embed_route_download(app: &AppHandle, navigation_response: &WKNavigation
 /// `webViewWebContentProcessDidTerminate:` (Phase 50 review): reloads, matching wry's -- and so
 /// the Tauri embed's -- default, and queues a nav event so the renderer is never left waiting on a
 /// load that will not report. It also re-arms the load-timeout clock (bumping `nav_generation`
-/// like a fresh `didStartProvisionalNavigation`), so if the reload never starts -- `reload()` is
-/// a no-op on a view that never committed a URL -- the 45 s timeout banner and its Try again
-/// still surface instead of a silently blank rectangle.
+/// like a fresh `didStartProvisionalNavigation`), so if the reload never starts the 45 s timeout
+/// banner and its Try again still surface instead of a silently blank rectangle.
+///
+/// **Deliberately inconsistent with the public `reload()` as of quick task 261014-vot.** The
+/// public `reload()` now has a first-commit fallback (`epic_embed_reload_action`); this hook's
+/// bare `webview.reload()` below does not, and is left unchanged in that task -- a content-process
+/// termination has no `last_requested_url` reasoning behind it yet, no test and no live
+/// observation, so the inconsistency is recorded here rather than silently carried or fixed on
+/// the strength of the public path's reasoning alone. The 45 s timeout re-arm above remains this
+/// hook's backstop either way.
 fn epic_embed_handle_content_process_termination(webview: &WKWebView) {
     eprintln!("[shell] macos_epic_embed: WebContent process terminated -- reloading");
     if let Ok(mut guard) = surface().lock() {

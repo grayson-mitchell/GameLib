@@ -152,6 +152,37 @@ pub(crate) fn epic_kvo_event_is_new(last_queued: Option<&Value>, event: &Value) 
     last_queued != Some(event)
 }
 
+/// Which native call `reload()` (`macos_epic_embed.rs`) should make (quick task 261014-vot).
+/// WebKit's `FrameLoader::reload` returns early when the current document loader's request URL
+/// is empty, so `WKWebView::reload()` is a no-op on a view that has never committed a main-frame
+/// navigation -- the surface's own `has_committed` flag is the discriminator because a
+/// back-forward-list feature is declined in `Cargo.toml`. A committed surface keeps the native
+/// reload unconditionally: a post-commit failure still leaves a real current URL to reload (the
+/// Launch 3 behaviour, where each Reload click produced its own `-999` cancellation).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum EpicEmbedReloadAction {
+    /// `WKWebView::reload()`, byte-for-byte the old behaviour.
+    NativeReload,
+    /// Re-issue `last_requested_url` via `loadRequest` instead -- the one case `reload()` alone
+    /// cannot recover from.
+    LoadLastRequested,
+}
+
+/// Total function over the two booleans `reload()` reads under the surface lock. Returns
+/// `LoadLastRequested` only in the one case a native reload cannot recover: nothing has committed
+/// yet, but there is a last-requested URL to re-issue. Every other combination keeps today's
+/// behaviour.
+pub(crate) fn epic_embed_reload_action(
+    has_committed: bool,
+    has_last_requested_url: bool,
+) -> EpicEmbedReloadAction {
+    if !has_committed && has_last_requested_url {
+        EpicEmbedReloadAction::LoadLastRequested
+    } else {
+        EpicEmbedReloadAction::NativeReload
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,5 +382,42 @@ mod tests {
         let new = serde_json::json!({ "url": "https://store.epicgames.com/p/b" });
         assert!(epic_kvo_event_is_new(Some(&old), &new));
         assert!(epic_kvo_event_is_new(None, &new));
+    }
+
+    // Quick task 261014-vot: a committed surface always keeps the native reload, with or
+    // without a last-requested URL -- the committed path must be provably untouched.
+    #[test]
+    fn a_committed_surface_with_a_last_requested_url_reloads_natively() {
+        assert_eq!(
+            epic_embed_reload_action(true, true),
+            EpicEmbedReloadAction::NativeReload
+        );
+    }
+
+    #[test]
+    fn a_committed_surface_with_no_last_requested_url_reloads_natively() {
+        assert_eq!(
+            epic_embed_reload_action(true, false),
+            EpicEmbedReloadAction::NativeReload
+        );
+    }
+
+    // The one asymmetric row: the defect's own case. A view that has never committed a
+    // main-frame navigation makes `WKWebView::reload()` a no-op, so the last chrome-requested
+    // URL must be re-issued via `loadRequest` instead.
+    #[test]
+    fn an_uncommitted_surface_with_a_last_requested_url_loads_it_instead_of_reloading() {
+        assert_eq!(
+            epic_embed_reload_action(false, true),
+            EpicEmbedReloadAction::LoadLastRequested
+        );
+    }
+
+    #[test]
+    fn an_uncommitted_surface_with_no_last_requested_url_reloads_natively() {
+        assert_eq!(
+            epic_embed_reload_action(false, false),
+            EpicEmbedReloadAction::NativeReload
+        );
     }
 }
