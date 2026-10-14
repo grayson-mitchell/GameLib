@@ -91,9 +91,10 @@ describe('StoreEmbedSlotContents (finding 6)', () => {
     expect(both?.props).toMatchObject({ reason: 'suppressed+epic-surface' })
 
     // The whole point of the attribute: all three reasons read as distinct values.
-    const reasons = [epicOnly, suppressedOnly, both].map(
-      (element) => element?.props.reason
-    )
+    const reasons = [epicOnly, suppressedOnly, both].map((element) => {
+      const props = element?.props as { reason?: string } | undefined
+      return props?.reason
+    })
     expect(new Set(reasons).size).toBe(3)
   })
 
