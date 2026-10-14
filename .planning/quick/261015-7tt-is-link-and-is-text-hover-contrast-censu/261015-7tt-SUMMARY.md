@@ -12,9 +12,9 @@ affects: [themeTokens.test.ts, GamePage-index.css, _buttons.scss, Settings-index
 actuals:
   tokens: 10506
   tasks: 3
-  commits: 3
+  commits: 5
   plan_head_before: b85578578414e5f765e691df7a9250c2ef5e1b7a
-  plan_head_after: 88e18329ad06999af1b4945769191f97ea2c270d
+  plan_head_after: 34bd5de5a01c7f01edafc0bc8cd7db539a6b6688
 
 tech-stack:
   added: []
@@ -111,6 +111,11 @@ Each task was committed atomically:
 1. **Task 1: Census and fix game-menu `.is-link` hover contrast** - `4128be9c6` (test, tdd=true)
 2. **Task 2: Census and fix MainButton `.is-link` and pure `.is-text` hover contrast** - `f90c76cfd` (fix, tdd=true)
 3. **Task 3: Two-arm reachability proof, delete dead CSS, close todo** - `88e18329a` (fix)
+
+Two follow-up commits completed this plan's docs and fixed a self-check finding:
+
+4. **Docs: SUMMARY.md + STATE.md** - `7fdc94216` (docs)
+5. **Fix: restore the dropped resolution section** - `34bd5de5a` (fix) — see Deviations below
 
 ## Files Created/Modified
 
@@ -260,11 +265,24 @@ Every ratio in this summary is token-resolved through `themeTokens.test.ts`'s re
 
 ## Deviations from Plan
 
-None — plan executed exactly as written across all 3 tasks. No Rule 1-4 auto-fixes were needed; the plan's own fix-decision-rule step 4 (escalate, do not half-fix) never fired since every miss had a non-regressing theme-scoped override available.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Task 3's commit (`88e18329a`) landed the todo's pending->completed rename without the dated `## Resolution` section**
+- **Found during:** Self-check, after the Task 3 commit and the first docs commit (`7fdc94216`) had already landed
+- **Issue:** `git show 88e18329a:.../completed/2026-10-11-....md | grep -c "## Resolution"` returned `0` and the file was only 53 lines (its pre-closure body) rather than the 276 lines written to disk (including the resolution section) before the `git mv`/commit. The staged content at commit time did not include the resolution edit.
+- **Fix:** Re-staged the already-correct working-tree file (which still carried the full 276-line content with the resolution section — confirmed via direct disk read before any further edits) and committed it as a standalone fix commit.
+- **Files modified:** `.planning/todos/completed/2026-10-11-button-is-text-hover-and-is-link-pairs-miss-4-5-to-1.md`
+- **Verification:** Post-fix, `git show HEAD:.../completed/....md` is 276 lines with exactly one `## Resolution` heading and zero conflict markers; `pnpm planning-gates` re-run, still 12/12.
+- **Committed in:** `34bd5de5a`
+
+---
+
+**Total deviations:** 1 auto-fixed (Rule 1)
+**Impact on plan:** No change to the plan's substance — the resolution content itself was correct and complete from the first Edit; only the commit that should have carried it was missing it. Fixed before the SUMMARY/self-check closed out, with no gate regression.
 
 ## Issues Encountered
 
-None.
+None beyond the deviation above.
 
 ## Verification output
 
@@ -337,6 +355,8 @@ All 3 tasks complete, todo closed and moved to `completed/`, no regressions in e
 - commit `4128be9c6` — FOUND in `git log --oneline --all`
 - commit `f90c76cfd` — FOUND in `git log --oneline --all`
 - commit `88e18329a` — FOUND in `git log --oneline --all`
+- commit `7fdc94216` — FOUND in `git log --oneline --all`
+- commit `34bd5de5a` — FOUND in `git log --oneline --all`, confirmed `.../completed/....md` at HEAD is 276 lines with exactly one `## Resolution` heading
 
 ---
 *Phase: quick-261015-7tt*

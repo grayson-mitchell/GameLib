@@ -6,10 +6,10 @@ current_phase: 50
 current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 status: verified
 stopped_at: Completed quick-261015-7tt-01-PLAN.md
-last_updated: "2026-10-14T17:50:07.670Z"
+last_updated: "2026-10-14T17:54:07.838Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 50 verified retrospectively at 10 of 16 truths — the goal is met and proved on hardware across a cold packaged jar and a warm signed-in jar with an unchallenged real sign-in, while G-50-16's timeout banner stays failed pending the owed macOS re-run of UAT Item 16. Five stale artifacts corrected (STATE, ROADMAP, 50-06-SUMMARY, 50-VALIDATION, and a discharge record added to 50-REVIEW, whose status was RIGHT to stay as it was — only 2 of its 12 live checks actually discharged, not most). The 2026-09-15 Epic Sign-in todo closed with no code on Item 2's pass, by its own falsifiable rule. Quick 261014-rso latched the Epic embed loadTimedOut raise so the G-50-16 timeout banner can surface — the renderer GAP-D drain now merges the flag stickily across one batch and a navigation failure no longer clears it, with jest property 46 observed red before the fix; scoped jest 56 to 58 and cargo gamelib-shell 390 to 394 both green, planning-gates 12/12. The macOS re-run of UAT Item 16 is owed and filed as a pending live-gate todo, since nothing off-hardware can confirm the banner actually paints. Phase 50 plans 01 through 05 complete across 3 waves (32 commits, cargo clean, 543 jest suites green with only the inherited library.tileSize red proven identical pre-phase). Plan 06 authored 50-UAT.md with 19 arms and filled 50-VALIDATION.md, then halted at a blocking-human gate — the live run needs a fresh build of HEAD because the running GameLib.app predates every phase-50 commit by 7 hours and belongs to another session. Phase 50 execution started
-state_head: 88e18329ad06999af1b4945769191f97ea2c270d
+state_head: 34bd5de5a01c7f01edafc0bc8cd7db539a6b6688
 progress:
   total_phases: 45
   completed_phases: 36
@@ -1243,6 +1243,7 @@ Recent decisions affecting current work:
 - [Phase 45]: 45-08: installed-list read fails open (A-45-04); appendLogLine moved to common/winetricks/logBuffer so renderer and backend fold log lines by one rule
 - [Phase quick-261015-7tt]: Pure .is-text hover fix is HOVER-scoped only (not block-level), proved mathematically impossible to satisfy base+hover luminance constraints with one static colour
 - [Phase quick-261015-7tt]: .settingsWrapper > .button.is-text deleted after a two-arm reachability proof (direct-child DOM walk + import-graph trace) found it unreachable from either settings host
+- [Phase quick-261015-7tt]: Self-check caught the Task 3 commit missing the todo's resolution section (staged-vs-disk mismatch); restored in a follow-up fix commit before closing out
 
 ### Pending Todos
 
