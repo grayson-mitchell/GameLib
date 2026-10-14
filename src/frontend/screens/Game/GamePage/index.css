@@ -706,6 +706,18 @@
 
       &:hover {
         color: var(--navbar-active, var(--accent-overlay, var(--accent)));
+
+        // dracula's --navbar-active resolves to --accent (#bd93f9), which
+        // measures 3.79:1 on this menu's --navbar-background (#44475a) --
+        // under the 4.5:1 floor (261015-7tt census). Every other theme's
+        // hover state already clears 4.5:1 through the bare chain above, so
+        // this is a theme-scoped override, not a token retarget: widening
+        // the fix would touch 9 themes that already pass. --text-default
+        // (white) is dracula's own base-state colour for this same link,
+        // so the override does not introduce an unrelated hue.
+        body.dracula & {
+          color: var(--text-default);
+        }
       }
 
       &:first-child {

@@ -21,8 +21,8 @@
  * copied them from the Login source-gate idiom -- not factored into a
  * shared util, matching that file's own precedent.
  */
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { readFileSync, readdirSync } from 'fs'
+import { join, sep } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
@@ -2748,5 +2748,442 @@ describe('Accent-filled Retry, Clear and .button.is-text text contrast in every 
       baseRatio,
       passes: true
     })
+  })
+})
+
+const GAME_PAGE_CSS = 'src/frontend/screens/Game/GamePage/index.css'
+const GAME_SUB_MENU_TSX = join(
+  REPO_ROOT,
+  'src/frontend/screens/Game/GameSubMenu/index.tsx'
+)
+const MAIN_BUTTON_TSX = join(
+  REPO_ROOT,
+  'src/frontend/screens/Game/GamePage/components/MainButton.tsx'
+)
+const DOWNLOAD_MANAGER_TSX = join(
+  REPO_ROOT,
+  'src/frontend/screens/DownloadManager/index.tsx'
+)
+const FRONTEND_DIR = join(REPO_ROOT, 'src/frontend')
+
+/**
+ * Every `.tsx` file under `src/frontend`, `__tests__` directories excluded.
+ * Copied from `navTourAnchorCensus.test.ts`'s own `walk()` -- that file's
+ * own precedent is not to factor this into a shared util.
+ */
+function walkTsxFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isFile())
+    .filter((entry) => entry.name.endsWith('.tsx'))
+    .map((entry) =>
+      join((entry as unknown as { parentPath: string }).parentPath, entry.name)
+    )
+    .filter((path) => !path.includes(`${sep}__tests__${sep}`))
+}
+
+/**
+ * A CSS specificity count sufficient for this census's plain class / type /
+ * pseudo-class selectors: no id selector appears in any candidate below, so
+ * `a` is always 0 by construction, not by omission. `b` counts classes,
+ * attribute selectors and pseudo-classes (so `:hover`, `:not(...)` and the
+ * compound's own leading class all add to it); `c` counts bare type
+ * selectors. Combinators (plain whitespace, descendant only -- no `>`/`+`/`~`
+ * appears in this census's candidates) are dropped by the split.
+ */
+function classTokenSpecificity(selector: string): [number, number, number] {
+  const compounds = selector.trim().split(/\s+/)
+  let a = 0
+  let b = 0
+  let c = 0
+  for (const compound of compounds) {
+    const tokens =
+      compound.match(
+        /#[\w-]+|\.[\w-]+|:[\w-]+(?:\([^)]*\))?|[A-Za-z][\w-]*/g
+      ) ?? []
+    for (const token of tokens) {
+      if (token.startsWith('#')) a++
+      else if (token.startsWith('.') || token.startsWith(':')) b++
+      else c++
+    }
+  }
+  return [a, b, c]
+}
+
+type ColourCandidate = {
+  fullSelector: string
+  value: string
+  file: string
+  position: number
+}
+
+/**
+ * Highest `classTokenSpecificity(fullSelector)` wins; a tie is broken by
+ * later source position WITHIN THE SAME FILE (how two same-specificity
+ * declarations in one stylesheet resolve in the real cascade). No candidate
+ * in this census ties across two different files, so a cross-file tie
+ * simply keeps whichever candidate was reduced first -- documented here
+ * rather than silently arbitrary.
+ */
+function pickWinningCandidate(candidates: ColourCandidate[]): ColourCandidate {
+  return candidates.reduce((best, candidate) => {
+    const bestSpec = classTokenSpecificity(best.fullSelector)
+    const candSpec = classTokenSpecificity(candidate.fullSelector)
+    for (let i = 0; i < 3; i++) {
+      if (candSpec[i] !== bestSpec[i])
+        return candSpec[i] > bestSpec[i] ? candidate : best
+    }
+    if (candidate.file === best.file) {
+      return candidate.position > best.position ? candidate : best
+    }
+    return best
+  })
+}
+
+/**
+ * The 5 candidate `color` declarations F2 lists for the game-menu family,
+ * each read from its authored stylesheet on every run -- never a hardcoded
+ * copy of the resolved value. `button`'s colour is declared inside the
+ * `buttonDefaultStyle` mixin body, not inside the `button { }` rule itself
+ * (which only `@include`s it), so it is read from the mixin block directly.
+ */
+function gameMenuColourCandidates(
+  buttonsScss: string,
+  gamePageCss: string
+): ColourCandidate[] {
+  const specs: {
+    fullSelector: string
+    file: string
+    path: string
+    needle: string
+  }[] = [
+    {
+      fullSelector: 'button',
+      file: 'buttons',
+      path: '@mixin buttonDefaultStyle',
+      needle: '@mixin buttonDefaultStyle'
+    },
+    {
+      fullSelector: '.button',
+      file: 'buttons',
+      path: '.button',
+      needle: '.button'
+    },
+    {
+      fullSelector: '.button.is-text',
+      file: 'buttons',
+      path: '.button.is-text',
+      needle: '.button.is-text'
+    },
+    {
+      fullSelector: '.button.is-link',
+      file: 'buttons',
+      path: '.button.is-link',
+      needle: '.button.is-link'
+    },
+    {
+      fullSelector: '.gameConfigContainer .game-actions .gameTools .link',
+      file: 'gamePage',
+      path: '.gameTools .link',
+      needle: '.gameTools .link'
+    }
+  ]
+  return specs.map(({ fullSelector, file, needle }) => {
+    const source = file === 'buttons' ? buttonsScss : gamePageCss
+    const block = cssBlock(source, needle)
+    const decls = declsAtDepthZero(block, 'color')
+    if (decls.length !== 1) {
+      throw new Error(
+        `expected exactly one depth-0 color in ${fullSelector}, found ${decls.length}`
+      )
+    }
+    return {
+      fullSelector,
+      value: decls[0],
+      file,
+      position: source.indexOf(`${needle} {`)
+    }
+  })
+}
+
+/**
+ * The resolved game-menu base-state foreground for `themeClass`, modelling
+ * IACVT (F3): `.gameTools .link`'s `color: var(--navbar-inactive)` carries
+ * NO fallback, so in the 8 themes that do not declare `--navbar-inactive`
+ * the declaration is invalid at computed-value time and becomes `unset`.
+ * Because `color` is an inherited property, the element inherits its
+ * parent's computed colour instead -- it does NOT fall back to the
+ * next-losing cascade candidate (`.button.is-link`'s `var(--text-default)`).
+ * This function therefore never reads `.button.is-link`'s declaration at
+ * all; it only ever reads `--navbar-inactive` from `scope` or
+ * `--text-default` from the inherited chain (`_colors.scss:69`).
+ */
+function gameMenuBaseForeground(
+  scope: Map<string, string>,
+  globals: Map<string, string>
+): string {
+  if (scope.has('--navbar-inactive')) {
+    const declared = resolveValue('var(--navbar-inactive)', scope, globals)
+    if (declared === null)
+      throw new Error('--navbar-inactive declared but unresolvable')
+    return declared
+  }
+  const inherited = resolveValue('var(--text-default)', scope, globals)
+  if (inherited === null) throw new Error('--text-default unresolvable')
+  return inherited
+}
+
+/**
+ * Per-theme WCAG 1.4.3 census for the game-menu `.is-link` family's own
+ * text/background pair, base and hover (todo 2026-10-11, item 1/2).
+ *
+ * Lives here for the same reason the other censuses in this file do: the
+ * cross-theme resolver (`themeTokens`, `globalTokens`, `resolveValue`,
+ * `contrastRatio`) is module-private to this file.
+ *
+ * Reads the authored declarations FROM the stylesheets on every run, never
+ * a hardcoded copy of them. Like every census in this file it cannot see a
+ * pixel: no CSS engine runs under the node test environment, so a live
+ * capture still adjudicates appearance -- none has been performed for this
+ * plan (261015-7tt).
+ */
+describe('Game-menu .is-link family: render-site census, winning-rule resolution and contrast in every theme (261015-7tt)', () => {
+  const themesScss = read(THEMES_SCSS)
+  const buttonsScss = read(BUTTONS_SCSS)
+  const gamePageCss = read(GAME_PAGE_CSS)
+  const globals = globalTokens()
+  const themeClasses = themeSelectors.map((s) => s.replace(/^body\./, ''))
+
+  const candidates = gameMenuColourCandidates(buttonsScss, gamePageCss)
+  const winner = pickWinningCandidate(candidates)
+
+  const gameToolsLinkBlock = cssBlock(gamePageCss, '.gameTools .link')
+  const gameToolsBlock = cssBlock(gamePageCss, '.gameTools')
+  const gameToolsSurfaceDecls = declsAtDepthZero(
+    gameToolsBlock,
+    'background-color'
+  )
+  const hoverRule = nestedRules(gameToolsLinkBlock).find(
+    (rule) => rule.selector === '&:hover'
+  )
+  if (!hoverRule) throw new Error('.gameTools .link has no &:hover rule')
+  const hoverColourDecls = declsAtDepthZero(hoverRule.body, 'color')
+  const hoverThemeOverrides = nestedRules(hoverRule.body)
+
+  /**
+   * The hover-state foreground for `themeClass`: a theme-scoped override
+   * nested inside `&:hover` (`body.<themeClass> & { color: ... }`) if one
+   * exists for this theme, else the base `&:hover` declaration read from
+   * `hoverColourDecls`. Mirrors `applyTextColourDecl`'s theme-override-vs-
+   * base idiom (line ~948) rather than duplicating its logic.
+   */
+  function gameMenuHoverForeground(
+    themeClass: string,
+    scope: Map<string, string>
+  ): string {
+    const override = hoverThemeOverrides.find(
+      (rule) => rule.selector === `body.${themeClass} &`
+    )
+    const decls = override
+      ? declsAtDepthZero(override.body, 'color')
+      : hoverColourDecls
+    if (decls.length !== 1) {
+      throw new Error(
+        `expected exactly one depth-0 hover color for ${themeClass}, found ${decls.length}`
+      )
+    }
+    const resolved = resolveValue(decls[0], scope, globals)
+    if (resolved === null) {
+      throw new Error(`hover color for ${themeClass} did not resolve`)
+    }
+    return resolved
+  }
+
+  it('render-site census: re-derived F1 counts match exactly (23 total, 22 is-link, 21 GameSubMenu, 1 MainButton, 1 pure DownloadManager)', () => {
+    const allFiles = walkTsxFiles(FRONTEND_DIR)
+    expect(allFiles.length).toBeGreaterThan(100) // walk sanity, same floor as navTourAnchorCensus
+
+    const isTextSites = allFiles.flatMap((path) => {
+      const text = readFileSync(path, 'utf8')
+      const matches = text.match(/className="[^"]*is-text[^"]*"/g) ?? []
+      return matches.map(() => path)
+    })
+    expect(isTextSites).toHaveLength(23)
+
+    // The is-link subset re-derived directly from file contents, not from
+    // isTextSites, so a non-is-link site is never miscounted as one.
+    const isLinkOccurrences = allFiles.flatMap((path) => {
+      const text = readFileSync(path, 'utf8')
+      const matches =
+        text.match(/className="[^"]*is-text[^"]*is-link[^"]*"/g) ?? []
+      return matches.map(() => path)
+    })
+    expect(isLinkOccurrences).toHaveLength(22)
+    expect(
+      isLinkOccurrences.filter((path) => path === GAME_SUB_MENU_TSX)
+    ).toHaveLength(21)
+    expect(
+      isLinkOccurrences.filter((path) => path === MAIN_BUTTON_TSX)
+    ).toHaveLength(1)
+
+    const pureIsTextOccurrences = isTextSites.filter(
+      (path) => path === DOWNLOAD_MANAGER_TSX
+    )
+    expect(pureIsTextOccurrences).toHaveLength(1)
+  })
+
+  it('non-vacuity: global tokens, all 5 candidates, the game-menu surface and the hover declaration all resolved', () => {
+    expect(globals.size).toBeGreaterThan(0)
+    expect(candidates).toHaveLength(5)
+    expect(gameToolsSurfaceDecls).toHaveLength(1)
+    expect(gameToolsSurfaceDecls[0]).toBe('var(--navbar-background)')
+    expect(hoverColourDecls).toHaveLength(1)
+  })
+
+  it('winning-rule resolution: .gameConfigContainer .game-actions .gameTools .link (0,4,0) wins over .button.is-link and .button.is-text (both 0,2,0)', () => {
+    expect(classTokenSpecificity('button')).toEqual([0, 0, 1])
+    expect(classTokenSpecificity('.button')).toEqual([0, 1, 0])
+    expect(classTokenSpecificity('.button.is-text')).toEqual([0, 2, 0])
+    expect(classTokenSpecificity('.button.is-link')).toEqual([0, 2, 0])
+    expect(
+      classTokenSpecificity(
+        '.gameConfigContainer .game-actions .gameTools .link'
+      )
+    ).toEqual([0, 4, 0])
+
+    expect(winner.fullSelector).toBe(
+      '.gameConfigContainer .game-actions .gameTools .link'
+    )
+    expect(winner.value).toBe('var(--navbar-inactive)')
+  })
+
+  it('checker can fail: dropping the winning selector down to a bare .link flips the picked winner, in memory only', () => {
+    const sabotaged = candidates.map((c) =>
+      c.fullSelector === '.gameConfigContainer .game-actions .gameTools .link'
+        ? { ...c, fullSelector: '.link' }
+        : c
+    )
+    const sabotagedWinner = pickWinningCandidate(sabotaged)
+    expect(sabotagedWinner.fullSelector).toBe('.button.is-link')
+    expect(sabotagedWinner.value).toBe('var(--text-default)')
+  })
+
+  it('IACVT: --navbar-inactive is declared in exactly 2 of 10 theme blocks and nowhere global; the consuming declaration carries no fallback', () => {
+    const declaring = themeClasses.filter((t) =>
+      themeTokens(themesScss, `body.${t}`).has('--navbar-inactive')
+    )
+    expect(declaring).toEqual(['midnightMirage', 'nord-light'])
+    expect(globals.has('--navbar-inactive')).toBe(false)
+    expect(winner.value).toBe('var(--navbar-inactive)') // bare form, no `, fallback`
+  })
+
+  it('IACVT can-fail: the undeclared-theme path reads --text-default from the inherited chain and is live, not hardcoded', () => {
+    const scope = themeTokens(themesScss, 'body.dracula')
+    expect(scope.has('--navbar-inactive')).toBe(false)
+    const before = gameMenuBaseForeground(scope, globals)
+
+    // Moving ONLY the inherited chain's token must move the answer -- this
+    // proves the undeclared branch is live, not a hardcoded literal.
+    const movedInherited = new Map(scope)
+    movedInherited.set('--text-default', '#ff00ff')
+    const afterInheritedMove = gameMenuBaseForeground(movedInherited, globals)
+    expect(afterInheritedMove).toBe('#ff00ff')
+    expect(afterInheritedMove).not.toBe(before)
+  })
+
+  it('IACVT can-fail: the declared-theme path reads --navbar-inactive directly and does not fall through to --text-default', () => {
+    const scope = themeTokens(themesScss, 'body.midnightMirage')
+    expect(scope.has('--navbar-inactive')).toBe(true)
+    const before = gameMenuBaseForeground(scope, globals)
+
+    // Moving the declared token must move the answer.
+    const movedDeclared = new Map(scope)
+    movedDeclared.set('--navbar-inactive', '#ff00ff')
+    const afterDeclaredMove = gameMenuBaseForeground(movedDeclared, globals)
+    expect(afterDeclaredMove).toBe('#ff00ff')
+    expect(afterDeclaredMove).not.toBe(before)
+
+    // Moving ONLY --text-default, leaving --navbar-inactive declared and
+    // untouched, must NOT move the answer -- proving the declared branch
+    // never falls through to the inherited chain.
+    const movedInheritedOnly = new Map(scope)
+    movedInheritedOnly.set('--text-default', '#00ffff')
+    const afterInheritedOnlyMove = gameMenuBaseForeground(
+      movedInheritedOnly,
+      globals
+    )
+    expect(afterInheritedOnlyMove).toBe(before)
+  })
+
+  it.each(themeClasses)(
+    '%s: game-menu BASE text clears 4.5:1 against --navbar-background',
+    (theme) => {
+      const scope = themeTokens(themesScss, `body.${theme}`)
+      const fg = gameMenuBaseForeground(scope, globals)
+      const bg = resolveValue(gameToolsSurfaceDecls[0], scope, globals)
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg, bg as string)
+      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it.each(themeClasses)(
+    '%s: game-menu HOVER text clears 4.5:1 against --navbar-background',
+    (theme) => {
+      const scope = themeTokens(themesScss, `body.${theme}`)
+      const fg = gameMenuHoverForeground(theme, scope)
+      const bg = resolveValue(gameToolsSurfaceDecls[0], scope, globals)
+      expect(bg).not.toBeNull()
+      const ratio = contrastRatio(fg, bg as string)
+      expect({ theme, fg, bg, ratio, passes: ratio >= 4.5 }).toEqual({
+        theme,
+        fg,
+        bg,
+        ratio,
+        passes: true
+      })
+    }
+  )
+
+  it('dracula hover fix: the theme-scoped override is load-bearing -- removing it in memory reproduces the pre-fix 3.79:1 miss', () => {
+    const scope = themeTokens(themesScss, 'body.dracula')
+    const bg = resolveValue(gameToolsSurfaceDecls[0], scope, globals)
+    expect(bg).not.toBeNull()
+
+    const fixed = gameMenuHoverForeground('dracula', scope)
+    const fixedRatio = contrastRatio(fixed, bg as string)
+    expect(fixedRatio).toBeGreaterThanOrEqual(4.5)
+
+    const withoutOverride = resolveValue(
+      hoverColourDecls[0],
+      scope,
+      globals
+    ) as string
+    const preFixRatio = contrastRatio(withoutOverride, bg as string)
+    expect(preFixRatio).toBeCloseTo(3.7935597497017444, 5)
+    expect(preFixRatio).toBeLessThan(4.5)
+  })
+
+  it('dracula hover fix does not regress any other theme: no other theme carries a body.<theme> & override under &:hover', () => {
+    const otherThemeOverrides = hoverThemeOverrides.filter(
+      (rule) => rule.selector !== 'body.dracula &'
+    )
+    expect(otherThemeOverrides).toHaveLength(0)
+    // And every other theme's hover ratio (measured above) still passes
+    // through the unmodified bare &:hover declaration -- re-asserted here
+    // directly against the stylesheet rather than trusted from the
+    // it.each loop above.
+    const nonDraculaThemes = themeClasses.filter((t) => t !== 'dracula')
+    for (const theme of nonDraculaThemes) {
+      const scope = themeTokens(themesScss, `body.${theme}`)
+      const fg = gameMenuHoverForeground(theme, scope)
+      const bareFg = resolveValue(hoverColourDecls[0], scope, globals)
+      expect(fg).toBe(bareFg)
+    }
   })
 })
