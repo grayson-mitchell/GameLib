@@ -77,10 +77,10 @@ describe('StoreEmbedPlaceholder (D-19)', () => {
       StoreEmbedPlaceholder as unknown as (props: {
         reason?: string
       }) => AnyReactElement
-    )({ reason: 'suppressed+epic-surface' })
+    )({ reason: 'suppressed-and-epic-surface' })
 
     expect(element.props['data-placeholder-reason']).toBe(
-      'suppressed+epic-surface'
+      'suppressed-and-epic-surface'
     )
   })
 
@@ -181,7 +181,7 @@ describe('StoreEmbedPlaceholder (D-19)', () => {
       StoreEmbedPlaceholder as unknown as (props: {
         reason?: string
       }) => AnyReactElement
-    )({ reason: 'suppressed+epic-surface' })
+    )({ reason: 'suppressed-and-epic-surface' })
 
     expect(collectText(suppressedOnly).length).toBeGreaterThan(0)
     expect(collectText(suppressedAndEpicSurface).length).toBeGreaterThan(0)
@@ -192,7 +192,7 @@ describe('StoreEmbedPlaceholder (D-19)', () => {
       undefined,
       'suppressed',
       'epic-surface',
-      'suppressed+epic-surface'
+      'suppressed-and-epic-surface'
     ]
 
     const silent = reasons.filter((reason) => {

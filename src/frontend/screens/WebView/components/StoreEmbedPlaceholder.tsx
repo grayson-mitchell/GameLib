@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 interface Props {
   /**
    * WHY the caller is showing this placeholder -- `'suppressed'` (D-19),
-   * `'epic-surface'` (D-06), or `'suppressed+epic-surface'` when both apply.
+   * `'epic-surface'` (D-06), or `'suppressed-and-epic-surface'` when both apply.
    * Computed by the one call site (`StoreEmbedSlotContents.tsx`) and
    * surfaced verbatim as a `data-placeholder-reason` attribute on the root
    * div below, which stays diagnostic-only (Web Inspector / AX tree). Added

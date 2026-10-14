@@ -63,7 +63,7 @@ const StoreEmbedSlotContents = ({
   if (suppressed || isEpicSurface) {
     const reason =
       suppressed && isEpicSurface
-        ? 'suppressed+epic-surface'
+        ? 'suppressed-and-epic-surface'
         : suppressed
           ? 'suppressed'
           : 'epic-surface'
