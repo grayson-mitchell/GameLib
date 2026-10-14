@@ -63,3 +63,34 @@ The native reload/show path in `src-tauri/src/macos_epic_embed.rs`. Open questio
 Before another live launch, add an `eprintln` on the success path (`did_finish_navigation`) so a
 silent success is distinguishable from a no-op. The whole reason this arm is unresolved is that the
 current logging only speaks on failure.
+
+## Resolution
+
+**Cause.** `macos_epic_embed::reload()` called `WKWebView::reload()`, which WebKit
+short-circuits on a view whose current document loader has an empty request URL -- i.e. one that
+has never committed a main-frame navigation. The module had already written this down at
+`macos_epic_embed.rs:1799-1800` without acting on it.
+
+**The discrimination that located it**, since this is the evidence and it is not a re-run: Launch
+3 applied the hosts blackhole MID-session on an already-committed page and each Reload click
+produced a `didFailProvisionalNavigation -- NSURLErrorCancelled (-999)` line, so the native reload
+fired. Launch 5 applied the blackhole BEFORE launch, nothing ever committed, and the confirmed
+Reload click produced ZERO navigation lines. Same code, opposite outcomes, separated by exactly
+whether a commit had happened.
+
+**Fix.** Track `has_committed` (a `didCommitNavigation` hook) and `last_requested_url` (the three
+chrome-side `loadRequest` sites); when nothing has committed, re-issue the last requested URL via
+`loadRequest` instead of `reload()`. The decision is the pure, unit-tested
+`epic_embed_reload_action` in `epic_embed_state.rs`, which compiles and is tested on every OS.
+
+**Instrument.** `did_finish_navigation` now logs success with the host only, closing the gap the
+todo's own `## Suggested instrument` section names: until now the delegate spoke only on failure,
+so an absence of log lines could not distinguish a no-op from a silent success.
+
+**What is still NOT established, stated as plainly as the cause:** the live recovery arm is
+**UNOBSERVED on hardware** -- no Mac has seen this fix repaint the store. And the DNS/connection
+caching confound the todo raises in its own `## Where to look` is **UNMEASURED**: the process may
+have cached the blackholed address for the session's lifetime, which would make a reload keep
+failing legitimately after the hosts revert. Neither is closed by this change. The fix is reasoned
+from WebKit semantics plus the Launch 3 / Launch 5 discrimination. A Mac re-run of the recovery
+half is still owed, with a fresh process after the revert so the two causes separate.
