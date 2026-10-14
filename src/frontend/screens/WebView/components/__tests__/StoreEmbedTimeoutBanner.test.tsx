@@ -223,4 +223,73 @@ describe('WebView/index.css new notice-row rules (D-07/D-14)', () => {
     const noticeRowRules = readNoticeRowRules()
     expect(noticeRowRules).not.toMatch(/position:\s*absolute/)
   })
+
+  /**
+   * Quick task 261015-9qy (TODO-9qy-2): pins the message/actions degrade contract
+   * PER SELECTOR -- the two tests above slice from the first notice-row selector to end
+   * of file, which is too coarse here: under that slice a no-shrink declaration on the
+   * icon rule (`.WebView__embedNoticeRow-icon { flex-shrink: 0; ... }`) would satisfy an
+   * assertion written about the actions rule. `readSelectorBody` narrows to exactly the
+   * body of the named selector.
+   *
+   * This CSS has been in the tree since `348e28057` (`feat(50-03)`), before the
+   * 2026-10-14 live gate that filed the todo -- this test ADDS NO CSS, it only pins the
+   * contract that was already there and corrects the todo's stale premise.
+   */
+  function readSelectorBody(stylesheet: string, selector: string): string {
+    const noticeRowRules = (() => {
+      const marker = stylesheet.indexOf('.WebView__embedNoticeRow')
+      expect(marker).toBeGreaterThan(-1)
+      return stylesheet.slice(marker)
+    })()
+    const selectorIndex = noticeRowRules.indexOf(selector)
+    expect(selectorIndex).toBeGreaterThan(-1)
+    const openBrace = noticeRowRules.indexOf('{', selectorIndex)
+    const closeBrace = noticeRowRules.indexOf('}', openBrace)
+    expect(openBrace).toBeGreaterThan(-1)
+    expect(closeBrace).toBeGreaterThan(openBrace)
+    return noticeRowRules.slice(openBrace + 1, closeBrace)
+  }
+
+  it('pins the message rule and the actions rule degrade contract PER SELECTOR, with a string-copy sabotage arm proving the pin can fail', () => {
+    const css = readFileSync(join(__dirname, '../../index.css'), 'utf8')
+
+    const messageBody = readSelectorBody(
+      css,
+      '.WebView__embedNoticeRow-message'
+    )
+    expect(messageBody).toMatch(/min-width:\s*0/)
+    expect(messageBody).toMatch(/overflow:\s*hidden/)
+    expect(messageBody).toMatch(/white-space:\s*nowrap/)
+    expect(messageBody).toMatch(/text-overflow:\s*ellipsis/)
+
+    const actionsBody = readSelectorBody(
+      css,
+      '.WebView__embedNoticeRow-actions'
+    )
+    expect(actionsBody).toMatch(/flex-shrink:\s*0/)
+
+    // A property declared on a DIFFERENT selector in the same stylesheet region must not
+    // satisfy either assertion -- the icon rule also carries flex-shrink: 0, but it must
+    // not be read as the actions rule's declaration.
+    const iconBody = readSelectorBody(css, '.WebView__embedNoticeRow-icon')
+    expect(iconBody).toMatch(/flex-shrink:\s*0/)
+    expect(iconBody).not.toMatch(/text-overflow:\s*ellipsis/)
+
+    // SANITY (string-copy sabotage, never written to disk): remove the ellipsis
+    // declaration from an in-memory copy only, and assert the same per-selector
+    // extraction then throws. First assert it occurs exactly once so the sabotage
+    // cannot silently no-op.
+    const ellipsisDeclaration = 'text-overflow: ellipsis;'
+    const occurrences = css.split(ellipsisDeclaration).length - 1
+    expect(occurrences).toBe(1)
+    const sabotagedCss = css.replace(ellipsisDeclaration, '')
+    const sabotagedMessageBody = readSelectorBody(
+      sabotagedCss,
+      '.WebView__embedNoticeRow-message'
+    )
+    expect(() =>
+      expect(sabotagedMessageBody).toMatch(/text-overflow:\s*ellipsis/)
+    ).toThrow()
+  })
 })
