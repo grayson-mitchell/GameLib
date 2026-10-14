@@ -66,6 +66,37 @@ describe('StoreEmbedSlotContents (finding 6)', () => {
     expect(renderSlot({ suppressed: true })?.type).toBe(StoreEmbedPlaceholder)
   })
 
+  // Pins the fix for `.planning/debug/resolved/embed-suppression-sticks.md`: that session
+  // misdiagnosed a routine Epic navigation timeout as a stuck D-19 suppression refcount,
+  // because both conditions render this identical component with identical copy. These two
+  // assertions are the regression guard -- D-06 alone (no suppression) must still render the
+  // placeholder, and the `reason` passed through to it must make the two triggers (and their
+  // overlap) distinguishable, so the same conflation cannot happen silently again.
+  it('on the Epic surface with suppression at zero, the placeholder still renders (D-06, unrelated to D-19)', () => {
+    const element = renderSlot({ isEpicSurface: true, suppressed: false })
+    expect(element?.type).toBe(StoreEmbedPlaceholder)
+    expect(element?.props).toMatchObject({ reason: 'epic-surface' })
+  })
+
+  it('the two placeholder triggers are distinguishable via the reason prop (debug: embed-suppression-sticks)', () => {
+    const epicOnly = renderSlot({ isEpicSurface: true, suppressed: false })
+    const suppressedOnly = renderSlot({
+      isEpicSurface: false,
+      suppressed: true
+    })
+    const both = renderSlot({ isEpicSurface: true, suppressed: true })
+
+    expect(epicOnly?.props).toMatchObject({ reason: 'epic-surface' })
+    expect(suppressedOnly?.props).toMatchObject({ reason: 'suppressed' })
+    expect(both?.props).toMatchObject({ reason: 'suppressed+epic-surface' })
+
+    // The whole point of the attribute: all three reasons read as distinct values.
+    const reasons = [epicOnly, suppressedOnly, both].map(
+      (element) => element?.props.reason
+    )
+    expect(new Set(reasons).size).toBe(3)
+  })
+
   it('an unsuppressed Tauri-embed store renders nothing', () => {
     expect(renderSlot({})).toBeNull()
   })

@@ -31,6 +31,7 @@ import StoreEmbedPlaceholder from '../StoreEmbedPlaceholder'
 type AnyReactElement = ReactElement<{
   children?: unknown
   className?: string
+  'data-placeholder-reason'?: string
 }>
 
 function collectText(node: unknown): string {
@@ -62,8 +63,33 @@ describe('StoreEmbedPlaceholder (D-19)', () => {
     expect(element.props.className).toBe('WebView__embedPlaceholder')
   })
 
-  it('takes no props (its signature accepts zero arguments)', () => {
+  it('takes no required props (calling it with zero arguments still works)', () => {
     expect((StoreEmbedPlaceholder as unknown as () => void).length).toBe(0)
+  })
+
+  // Pins the fix for `.planning/debug/resolved/embed-suppression-sticks.md`: the optional
+  // `reason` prop added there must actually reach the rendered DOM as
+  // `data-placeholder-reason`, or the diagnostic is useless in a real live gate even though the
+  // sibling `StoreEmbedSlotContents` test (which only checks the React element's own props, not
+  // this component's rendered output) would still pass.
+  it('forwards an explicit reason onto the root div as data-placeholder-reason', () => {
+    const element = (
+      StoreEmbedPlaceholder as unknown as (props: {
+        reason?: string
+      }) => AnyReactElement
+    )({ reason: 'suppressed+epic-surface' })
+
+    expect(element.props['data-placeholder-reason']).toBe(
+      'suppressed+epic-surface'
+    )
+  })
+
+  it('omits the attribute when called with no reason, same as before this prop existed', () => {
+    const element = (
+      StoreEmbedPlaceholder as unknown as () => AnyReactElement
+    )()
+
+    expect(element.props['data-placeholder-reason']).toBeUndefined()
   })
 
   it('renders one short line of copy, no button and no interactive element', () => {

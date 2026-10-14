@@ -30,6 +30,13 @@ interface Props {
  * Gated on `isEpicSurface`, as 50-05-PLAN intended: `challenged` is only ever set on an Epic
  * event, and the gate keeps a stray flag from putting an Epic panel on another store's slot.
  *
+ * `suppressed` and `isEpicSurface` are mechanistically unrelated (D-19 is a React refcount; D-06
+ * is a static per-route boolean), but render the identical placeholder with identical copy --
+ * this is exactly what made `.planning/debug/resolved/embed-suppression-sticks.md` look like a
+ * suppression leak when it was actually a routine Epic navigation timeout. The `reason` passed
+ * to `StoreEmbedPlaceholder` below is a diagnostic-only, dev/live-gate-inspectable attribute that
+ * exists so this cannot be re-conflated silently again; it changes no pixel.
+ *
  * Hookless (D-22/D-23 chrome discipline): a pure function of its props, invoked directly in its
  * own test, no jsdom required (see `src/frontend/jest.config.js`).
  */
@@ -50,7 +57,13 @@ const StoreEmbedSlotContents = ({
     )
   }
   if (suppressed || isEpicSurface) {
-    return <StoreEmbedPlaceholder />
+    const reason =
+      suppressed && isEpicSurface
+        ? 'suppressed+epic-surface'
+        : suppressed
+          ? 'suppressed'
+          : 'epic-surface'
+    return <StoreEmbedPlaceholder reason={reason} />
   }
   return null
 }
