@@ -284,7 +284,7 @@ source:
 
 | fact | evidence |
 | --- | --- |
-| the embed's literals are `eprintln!`, i.e. **stderr** | 25 `eprintln!` sites and **0** `shell_diag` calls in `macos_epic_embed.rs` |
+| the embed's literals are `eprintln!`, i.e. **stderr** | 25 `eprintln!` sites and **0** `shell_diag` calls in `macos_epic_embed.rs` — **SUPERSEDED 2026-10-15 (quick 261015-lz5): the real count was 30, not 25, and as of that task's commit this row reads 0 `eprintln!` sites and 30 `shell_diag` calls; see the correction appended below** |
 | `gamelib.log` is the **Node sidecar's** log, written by `log_writer.ts` | no Rust line can reach it; `grep -c '\[shell\]' gamelib.log` = **0** |
 | a **packaged** app's stderr is **discarded entirely** | `main.rs:11935` — "`shell_diag`, not `eprintln!`: LaunchServices discards a bundled app's stderr"; `main.rs:11269` says the same |
 | a **dev** run's stderr goes to the **terminal** | the only two files on this machine containing `[shell]` are `gamelib.scrollback.346-04.log` and `.346-12.log` — captured terminal scrollback, not `gamelib.log` |
@@ -300,6 +300,19 @@ Consequences, both load-bearing:
    log literal — they are all visual. Every literal-anchored arm sits in Launches 2–4, which run
    the dev build. Had the launch split been drawn differently, this defect would have made those
    arms unobservable rather than merely mis-addressed.
+
+**CORRECTED 2026-10-15 (quick 261015-lz5):** the paragraph immediately below (the one naming the
+todo) is now superseded — the gap it describes was fixed in that task's commit `9fa43de5e`, and
+the fact-table row at line 287 above was corrected in place rather than here. Three things follow:
+(1) a **packaged** launch now also persists these lines, because every one of the 30 call sites
+routes through `crate::shell_diag`, which appends `{epoch} pid={pid} {message}` to
+`~/Library/Logs/GameLib/gamelib-shell.log` in addition to writing stderr — so consequence 2 above
+no longer applies to a future packaged launch, though it still correctly describes Launch 1 as
+run. (2) the stderr text itself is byte-identical (the swap only dropped the `[shell] ` prefix
+`shell_diag` itself re-adds), so Items 11, 14, 16, 17 and 18 still match verbatim against
+`terminal.log` and none of them is re-scored by this correction. (3) `gamelib.log` (the Node
+sidecar's, via `log_writer.ts`) remains the wrong file for every one of these arms — no Rust line
+reaches it before or after this fix.
 
 `macos_epic_embed.rs` using `eprintln!` rather than `shell_diag` is a real observability gap in
 the shipped code, not just a documentation error — it is filed separately as a todo and is **not**
@@ -447,7 +460,7 @@ result: issue — 2026-10-14T05:46Z, Launch 3, dev pid 12135. **Split result: th
 
 ### 17. Navigation failure delegate literal (launch 3)
 
-expected: During the same host-level-block window as Item 16, the literal `[shell] macos_epic_embed: {caller} -- {description}` appears in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — the embed's literals are `eprintln!` to stderr; see the Test 3 sink correction) with `{caller}` equal to either `didFailNavigation` or `didFailProvisionalNavigation` (whichever the native delegate actually reports for this failure mode) and `{description}` equal to the real `NSError.localizedDescription()` text — recorded verbatim, not paraphrased.
+expected: During the same host-level-block window as Item 16, the literal `[shell] macos_epic_embed: {caller} -- {description}` appears in this gate's `<session-dir>/terminal.log` (NOT `gamelib.log` — see the Test 3 sink correction, and its 2026-10-15 follow-up: the literal now persists to `gamelib-shell.log` too on a packaged launch, but `terminal.log` remains this arm's dev-build evidence) with `{caller}` equal to either `didFailNavigation` or `didFailProvisionalNavigation` (whichever the native delegate actually reports for this failure mode) and `{description}` equal to the real `NSError.localizedDescription()` text — recorded verbatim, not paraphrased.
 result: pass — 2026-10-14T05:46Z, Launch 3, dev pid 12135, under the host-level block. The literal appeared **11 times** with `{caller}` = `didFailProvisionalNavigation` and `{description}` = the real `NSError.localizedDescription()` text, recorded verbatim: `[shell] macos_epic_embed: didFailProvisionalNavigation -- The operation couldn't be completed. (NSURLErrorDomain error -999.)`. `-999` is `NSURLErrorCancelled`, and the arm accepts whichever of the two callers the delegate actually reports, so `didFailProvisionalNavigation` rather than `didFailNavigation` satisfies it as written. **THE PASS STANDS, BUT ITS STATED CAUSE WAS WRONG — corrected 2026-10-14 during G-50-16's diagnosis.** This result originally read "the timeout monitor cancelled the hung provisional navigation". That is unsupported by the code: `stopLoading` and `.cancel(` appear **zero** times in `macos_epic_embed.rs`, and `spawn_load_timeout_monitor` (:499-555) only reads nav state via `nav_state_json` and enqueues an event — it never issues a cancel. The `-999`s are WebKit's own response to a second `reload()`/`loadRequest` landing on top of an outstanding one, i.e. they were produced by the operator's reload clicks, not by the monitor. The arm's own criterion is unaffected (it required the literal with a real caller and a real `localizedDescription`, which it got), so this is an explanation correction, not a re-score. Recorded because the wrong explanation would have mis-set the baseline for anyone later reading -999 as evidence the timeout path cancels loads — it does not. Corroborating the shape independently: the same literal with the same `-999` description had already been captured in the killed Launch-2b transcript before this arm was formally run.
 
 ### 18. Challenge fallback with Try again, not sticky (launch 3, CONDITIONAL)
