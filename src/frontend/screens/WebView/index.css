@@ -72,9 +72,20 @@
  * renders `null` leaves its `auto` track at zero height, and the slot stays in the LAST track
  * whichever rows are showing, so nothing can be auto-placed beneath it.
  * `embedContainerGridRows.test.ts` re-runs the auto-placement over this file and `index.tsx`.
+ *
+ * Quick task 261015-dlu: this rule had no column template, so the grid's single implicit column
+ * was an `auto` track whose own minimum is its items' min-content contribution -- here, the
+ * notice row's nowrap message plus its actions and icon, roughly 420px wide. At a 600px viewport
+ * that implicit track resolved to 419.66px against a 334px content box, pushing the notice row's
+ * actions to a 659.66px right edge, past the window. The column template below gives that track a
+ * zero floor instead, so it shrinks to the container's own 334px box and the message narrows to
+ * 70.08px rather than inflating the track. Below the 900px window-width floor this is a degrade,
+ * not a replacement for it: at a 500px viewport the message is already at zero width and the row
+ * still clips. See `261015-dlu`'s `evidence/` directory for the WebKit and Chromium measurements.
  */
 .WebView__embedContainer {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto 1fr;
   height: 100%;
   width: 100%;

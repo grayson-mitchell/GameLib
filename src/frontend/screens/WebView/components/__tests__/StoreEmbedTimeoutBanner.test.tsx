@@ -72,6 +72,13 @@ function noop() {
   // intentionally empty -- test double
 }
 
+/** Quick task 261015-dlu: same idiom as `embedContainerGridRows.test.ts`'s helper of the
+ * same name -- a non-greedy block-comment strip, so a selector named in comment prose
+ * cannot satisfy a search meant for the rule body. */
+function stripCssComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '')
+}
+
 describe('StoreEmbedTimeoutBanner (D-07/D-08/D-11)', () => {
   it('returns null when timedOut is false', () => {
     const element = StoreEmbedTimeoutBanner({
@@ -235,20 +242,35 @@ describe('WebView/index.css new notice-row rules (D-07/D-14)', () => {
    * This CSS has been in the tree since `348e28057` (`feat(50-03)`), before the
    * 2026-10-14 live gate that filed the todo -- this test ADDS NO CSS, it only pins the
    * contract that was already there and corrects the todo's stale premise.
+   *
+   * Quick task 261015-dlu: generalised with an optional `regionStart`, defaulting to the
+   * original hardcoded literal so all three pre-existing call sites keep their exact prior
+   * behaviour. Also made comment-blind -- both the region marker and the selector match now
+   * run over comment-stripped CSS, the same `stripCssComments` idiom
+   * `embedContainerGridRows.test.ts` already uses -- because `.WebView__embedContainer` is
+   * named in this file's own comment prose (see the `index.css` comment block above that
+   * rule), and an unstripped search would be satisfied by that prose rather than the rule
+   * body. The selector match is anchored on the selector followed by its opening brace, so a
+   * bare row selector cannot be satisfied by a `-message` or `-actions` rule and vice versa.
    */
-  function readSelectorBody(stylesheet: string, selector: string): string {
-    const noticeRowRules = (() => {
-      const marker = stylesheet.indexOf('.WebView__embedNoticeRow')
+  function readSelectorBody(
+    stylesheet: string,
+    selector: string,
+    regionStart: string = '.WebView__embedNoticeRow'
+  ): string {
+    const stripped = stripCssComments(stylesheet)
+    const region = (() => {
+      const marker = stripped.indexOf(regionStart)
       expect(marker).toBeGreaterThan(-1)
-      return stylesheet.slice(marker)
+      return stripped.slice(marker)
     })()
-    const selectorIndex = noticeRowRules.indexOf(selector)
+    const selectorIndex = region.indexOf(`${selector} {`)
     expect(selectorIndex).toBeGreaterThan(-1)
-    const openBrace = noticeRowRules.indexOf('{', selectorIndex)
-    const closeBrace = noticeRowRules.indexOf('}', openBrace)
+    const openBrace = region.indexOf('{', selectorIndex)
+    const closeBrace = region.indexOf('}', openBrace)
     expect(openBrace).toBeGreaterThan(-1)
     expect(closeBrace).toBeGreaterThan(openBrace)
-    return noticeRowRules.slice(openBrace + 1, closeBrace)
+    return region.slice(openBrace + 1, closeBrace)
   }
 
   it('pins the message rule and the actions rule degrade contract PER SELECTOR, with a string-copy sabotage arm proving the pin can fail', () => {
@@ -290,6 +312,56 @@ describe('WebView/index.css new notice-row rules (D-07/D-14)', () => {
     )
     expect(() =>
       expect(sabotagedMessageBody).toMatch(/text-overflow:\s*ellipsis/)
+    ).toThrow()
+  })
+
+  /**
+   * Quick task 261015-dlu (TODO-dlu-1): `.WebView__embedContainer`'s implicit grid column had
+   * no floor -- an `auto` track whose minimum is its items' min-content contribution, set by
+   * this row's own nowrap message to ~420px. Pins the container-level fix PER SELECTOR, with a
+   * cross-selector control and a sabotage arm whose count runs over comment-stripped CSS.
+   */
+  it('pins a zero-floor column template on the embed container, with a cross-selector control and a comment-stripped sabotage arm', () => {
+    const css = readFileSync(join(__dirname, '../../index.css'), 'utf8')
+
+    const containerBody = readSelectorBody(
+      css,
+      '.WebView__embedContainer',
+      '.WebView__embedContainer'
+    )
+    expect(containerBody).toMatch(
+      /grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)/
+    )
+
+    // Cross-selector control: the slot carries its OWN min-width: 0 (D-24), which must not be
+    // read as the container's column declaration.
+    const slotBody = readSelectorBody(
+      css,
+      '.WebView__embedSlot',
+      '.WebView__embedContainer'
+    )
+    expect(slotBody).not.toMatch(
+      /grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)/
+    )
+
+    // SANITY (string-copy sabotage, never written to disk): remove the column declaration from
+    // an in-memory copy only, over COMMENT-STRIPPED CSS, and assert the same per-selector
+    // extraction then throws. First assert it occurs exactly once so the sabotage cannot
+    // silently no-op.
+    const strippedCss = stripCssComments(css)
+    const columnDeclaration = 'grid-template-columns: minmax(0, 1fr);'
+    const occurrences = strippedCss.split(columnDeclaration).length - 1
+    expect(occurrences).toBe(1)
+    const sabotagedStrippedCss = strippedCss.replace(columnDeclaration, '')
+    const sabotagedContainerBody = readSelectorBody(
+      sabotagedStrippedCss,
+      '.WebView__embedContainer',
+      '.WebView__embedContainer'
+    )
+    expect(() =>
+      expect(sabotagedContainerBody).toMatch(
+        /grid-template-columns:\s*minmax\(\s*0\s*,\s*1fr\s*\)/
+      )
     ).toThrow()
   })
 })
