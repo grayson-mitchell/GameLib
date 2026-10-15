@@ -34,6 +34,7 @@ import './themes.scss'
 import GlobalState from './state/GlobalState'
 import { initShortcuts } from './helpers/shortcuts'
 import { configStore } from './helpers/electronStores'
+import { resolveBootLanguage } from './helpers/resolveBootLanguage'
 import { initOnlineMonitor } from './helpers/onlineMonitor'
 import { installKeyboardNavTracking } from './helpers/inputModality'
 import { defaultThemes } from './components/UI/ThemeSelector'
@@ -200,8 +201,14 @@ initShortcuts()
 const storage: Storage = window.localStorage
 storage.removeItem('nonAvailableGames')
 
-const languageCode: string =
-  configStore.get_nodefault('language') ?? storage.getItem('language') ?? 'en'
+// debug/app-starts-in-german: see resolveBootLanguage.ts's header for the full
+// mechanism and evidence. `window.api.logError` is the one channel already proven to
+// reach `gamelib.log` from this file (the CSP-violation handler above).
+const { languageCode } = resolveBootLanguage(
+  configStore.get_nodefault('language'),
+  storage.getItem('language'),
+  window.api.logError
+)
 configStore.set('language', languageCode)
 // The BCP-47 tag, not the shipped code: `lang="pt_BR"` is not a valid language
 // tag and the four underscore-named locales would emit one (quick-260925-bq4).
