@@ -126,9 +126,10 @@ export const tauriIsFrameless = (): Promise<boolean> => {
  * The factor actually applied is also published as the `--webview-zoom` custom property
  * on the document root, but only after `setZoom` resolves, so the property tracks the zoom
  * really in effect (Tauri exposes no zoom getter). The Library divides its tile width by
- * it, so Accessibility zoom does not resize tiles (quick 261011-t4y). The property is
- * absent, and so reads as 1, until the first apply -- which matches today's boot, where no
- * saved zoom is re-applied.
+ * it, so Accessibility zoom does not resize tiles (quick 261011-t4y). `GlobalState`'s
+ * `componentDidMount` applies the saved `zoomPercent` once at boot through this same
+ * function (quick 261015-p3q), so the property is published from boot rather than staying
+ * absent until the user first touches the Accessibility slider.
  */
 export const tauriSetZoomFactor = (zoomFactor: string): void => {
   const parsed = parseFloat(zoomFactor)
