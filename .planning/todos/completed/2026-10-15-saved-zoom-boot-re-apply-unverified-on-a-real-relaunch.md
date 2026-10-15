@@ -61,3 +61,33 @@ Whether a faster-than-boot apply is worth the architectural cost of moving the z
 state and into the shell/preload layer. That was considered and declined in the source todo's resolution;
 re-open only with a new measurement showing the first-paint jump is unacceptable in practice, not from this
 todo.
+
+## Resolution
+
+Closed by quick `261015-pwy`, a live GUI-automation gate on the operator's real Mac: two `pnpm tauri:dev`
+launches (set-and-quit, then a real relaunch with the setting already persisted), driven through CGEvent
+keystrokes/clicks into the real app window with readback via `window.api.logInfo` into `gamelib.log`.
+Evidence: `.planning/quick/261015-pwy-live-gate-the-saved-accessibility-zoom-b/evidence/` (`README.md` has
+the full writeup; `boot-reads.jsonl` has the raw `PWY` records).
+
+**(a) Primary arm -- PASS.** A real relaunch with `zoomPercent: 150` persisted produced an untouched-boot
+`--webview-zoom` of `1.5774409656148782` (predicted `1.5774410`, matched within 1e-5) and a `.gameList`
+track already at the 150%-correct 114.108864px from the first Library paint. A 54-frame screenshot burst
+(mean sampler interval 119.1ms, calibrated) spanning -76ms to +5947ms relative to first window sighting
+found no 100%-rendered frame; the first-paint flash, if any, is bounded at `< 119.1ms`, not a multi-second
+stay. No defect.
+
+**(b) The `--webview-zoom` arm -- PASS.** Confirmed published on boot (not absent), and the Library tile
+width is correct from the first paint of that route -- closes the residual half of `261011-t4y`'s (c).
+
+**(c) The known limitation -- scored as expected, not re-filed.** The flash bound measured (`< 119.1ms`,
+sampler-limited) does not show the `componentDidMount`-layer first-paint cost is unacceptable in practice,
+so the architectural question this todo's "Not in scope" section named stays declined.
+
+**By-product: the `screen.availWidth` k-recomputation hazard (arm (b)'s "for free" apply-latency probe)
+-- REFUTED.** Five `setZoomFactor('1.4')` -> `setZoomFactor('1.5')` probes, run while the page was already
+zoomed to 1.577441, held `screen.availWidth` at 1428 throughout and resolved to the predicted 1.44 factor
+every time (not the ~0.956 hazard value). No new todo filed.
+
+No change was required in `src/frontend/state/savedZoomBoot.ts`, `src/frontend/state/GlobalState.tsx`, or
+`src/preload/api/tauriWindowChrome.ts` -- all three are exactly as `261015-p3q` left them.
