@@ -103,3 +103,10 @@ investigation is from the Item 16 live-gate photographs (`item16-width600.png`,
 `item16-width900.png`), not from here. Nothing in quick task `261015-dlu` was run in the real
 app, so nothing in this evidence bundle observes a rendered ellipsis, a rendered clip, or the fix
 actually painting in a window -- that remains owed to a live gate.
+
+**That live gate ran on 2026-10-15 as quick task `261015-n5k`** (see
+`../../261015-n5k-live-gate-for-261015-dlu-verify-the-embe/evidence/README.md`): in a
+`pnpm tauri:dev` build on this Mac the real banner measured 344px / 80.08px / 584px at a 600px
+layout viewport (this table's `600 F1` row plus the 10px `.App` offset), the 500px row still
+clipped by 3.92px, and a live pre-fix control reproduced this table's `shipped` row to the
+hundredth (419.65625px / 155.73 / 659.66). The harness predicted the running app at every width.
