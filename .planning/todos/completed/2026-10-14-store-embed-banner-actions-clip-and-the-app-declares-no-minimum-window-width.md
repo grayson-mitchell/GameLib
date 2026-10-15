@@ -102,6 +102,15 @@ live gate runs this session.
 UI-SPEC E3's overflow row (`50-UI-SPEC.md:152`) now names the concrete width and the file that
 declares it, closing the "no defined test point" half of this todo.
 
+**Measured and refuted by quick task `261015-dlu`:** the hypothesis below was tested in both
+WebKit and Chromium against the shipped stylesheets. The `content-min-width-0`,
+`navbar-min-width-0` and `navbar-overflow-hidden` arms changed nothing at any width measured —
+byte-identical to the unmodified shipped arm — so the `App.css` shell-column reading is refuted.
+The actual mechanism is `.WebView__embedContainer`'s implicit `auto` grid column, whose
+min-content floor the notice row's nowrap message set to roughly 420px. See
+`../../quick/261015-dlu-embed-container-grid-column-has-no-zero-/evidence/README.md` for the
+WebKit and Chromium numbers.
+
 **Open observation, not acted on here:** `src/frontend/App.css:26` sizes the shell's columns as
 `min-content 1fr`; a `1fr` track's automatic minimum is its content's min-content width;
 `.App .content` carries a zero block minimum but no inline one; and the navbar's grid area spans
