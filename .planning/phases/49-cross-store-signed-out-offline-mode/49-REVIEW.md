@@ -43,7 +43,7 @@ findings:
   warning: 4
   info: 0
   total: 4
-status: issues_found
+status: complete
 ---
 
 # Phase 49: Code Review Report
