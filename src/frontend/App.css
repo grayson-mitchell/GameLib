@@ -166,12 +166,12 @@ to another page but still use the elements of the current page */
 
 .danger {
   font-weight: var(--bold);
-  color: var(--text-danger, var(--danger));
+  color: var(--status-danger);
 }
 
 .warning {
   font-weight: var(--bold);
-  color: var(--text-warning, var(--warning));
+  color: var(--status-warning);
 }
 
 .material-icons.is-primary {

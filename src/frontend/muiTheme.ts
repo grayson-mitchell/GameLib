@@ -79,7 +79,7 @@ export function buildMuiTheme(isRTL: boolean): Theme {
           tooltip: {
             fontSize: 'var(--text-md)',
             backgroundColor: 'var(--background-darker)',
-            color: 'var(--text-primary)',
+            color: 'var(--text-default)',
             padding: 'var(--space-md)',
             borderRadius: 'var(--space-sm)',
             maxWidth: '350px'

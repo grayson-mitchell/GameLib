@@ -108,7 +108,7 @@
   margin-inline-start: 6px;
 }
 
-.warning {
+.settingsWarning {
   color: var(--status-warning);
   font-size: var(--text-md);
   width: 100%;

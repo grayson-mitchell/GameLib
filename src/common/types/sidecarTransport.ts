@@ -393,8 +393,8 @@ export const RUST_HUMBLE_REVEAL_POST = 'humble_reveal_post' as const
  * caches, serviceWorkers }`, where each value is a `number` (items cleared) or the literal string
  * `'unsupported'` -- NEVER a coerced `0` for a category the engine does not expose. This is NOT a
  * new IPC channel in the `humble*` ported-channel sense -- it is a Rust arm behind the existing
- * `LoginWindowSeam`, so it adds no row to `34.4.1-PORTED-CHANNELS.md`'s 7-channel table. Not yet
- * called anywhere -- plan 16 wires it into the two disconnect paths.
+ * `LoginWindowSeam`, so it adds no row to `34.4.1-PORTED-CHANNELS.md`'s 7-channel table. Called
+ * from the Humble disconnect flow in `src/backend/humble/user.ts` via `seam.clearStorage(...)`.
  */
 export const RUST_HUMBLE_LOGIN_CLEAR_STORAGE =
   'humble_login_clear_storage' as const

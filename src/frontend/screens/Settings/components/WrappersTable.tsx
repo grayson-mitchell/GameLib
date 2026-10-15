@@ -61,7 +61,7 @@ const WrappersTable = () => {
         value: t('options.wrapper.placeHolderValue', 'Wrapper Arguments')
       }}
       warning={
-        <span className="warning">
+        <span className="settingsWarning">
           {`${t(
             'options.quote-args-with-spaces',
             'Warning: Make sure to quote args with spaces! E.g.: "path/with spaces/"'
