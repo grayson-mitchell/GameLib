@@ -1,0 +1,44 @@
+=== preflight 2026-10-15 (local ~20:00) HEAD=d0594be48 branch=quick-261002-b63 ===
+gamelib-shell pids: (none)            # pgrep -f 'target/debug/gamelib-shell'
+sidecar pids: (none)                  # pgrep -f 'build/main/sidecar.js'
+vite 5173: 0 listeners                # lsof -nP -iTCP:5173 -sTCP:LISTEN
+GAMELIB_DEV_SECRET_VAULT in shell: '' # env | grep GAMELIB_DEV_SECRET_VAULT
+nile: 1.2.0 Robert Speedwagon         # public/bin/arm64/darwin/nile/nile --version
+vendored source .build-tools/runners-onedir/src/nile: 1.1.2 (build.log line 9) -- predates the .enc scheme
+profile dir: ~/Library/Application Support/gamelib/nile_config/nile  (GameLib/ is the same dir on APFS)
+profile files: SDK/ ce4aec427c5a85b89d2e6576f707aa50.enc (4464 B, mtime Oct 15 18:57) current_user.json installed.json library.json syncpoint.raw
+enc sha256 (profile == backup): e2ae3a13e58b0fc0aa0e4e2edab9b14a8d66c31036fe03a51e0de031e5f0c7d3
+.enc name == md5(user_id)  (checked: printf '%s' "$user_id" | md5)
+installed.json: []   library.json: []   -> nile installed count = 0 (A4 arms; fixture needed)
+
+decrypted store KEY NAMES (operator-run `node nileEnc.cjs keys backup`, values never printed):
+  extensions
+  extensions.device_info
+  extensions.device_info.device_name
+  extensions.device_info.device_serial_number
+  extensions.device_info.device_type
+  extensions.age_classification
+  extensions.customer_info
+  extensions.customer_info.account_pool
+  extensions.customer_info.user_id
+  extensions.customer_info.home_region
+  extensions.customer_info.name
+  extensions.customer_info.given_name
+  tokens
+  tokens.mac_dms
+  tokens.mac_dms.device_private_key
+  tokens.mac_dms.adp_token
+  tokens.bearer
+  tokens.bearer.access_token
+  tokens.bearer.refresh_token
+  tokens.bearer.expires_in
+  customer_id
+  NILE
+  NILE.token_obtain_time
+  NILE.token_obtain_time is number; tokens.bearer.expires_in is number
+Codec: evidence/nileEnc.cjs (copy of the session-scratch helper). Decrypt proved the scheme:
+  key = sha256(user_id); IV = first 16 bytes, AES-256-ECB under the same key; body AES-256-CBC, PKCS7.
+
+Permission note: the auto-mode classifier denied the decrypt (`[Credential Exploration]`) when the
+assistant ran it; the operator ran it with the `!` prefix. The induce steps below were handled the
+same way where denied.

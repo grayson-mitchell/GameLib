@@ -10,10 +10,11 @@
  * classifier is a first-match-wins sequence with `aborted` first.
  *
  * Runner tags the marker strings were derived from (meta/releaseTags.ts):
- * legendary 0.21.0, gogdl v1.3.0, nile v1.2.0. The strings are SOURCE-DERIVED,
- * not yet observed in a real log: they are live-gated by 49-11 / 49-12
- * (RESEARCH A1, A3, A5, A6). If a marker drifts the failure mode is safe --
- * the classifier degrades to `unknown`, it never invents an `expired`.
+ * legendary 0.21.0, gogdl v1.3.0, nile v1.2.0. The strings were SOURCE-DERIVED
+ * and have since been observed in real logs: A1/A2/A5 in 49-LIVE-GATE Run 1
+ * (2026-10-09), A3/A6 in quick 261015-rud (2026-10-15, Amazon answered 400).
+ * If a marker drifts the failure mode is safe -- the classifier degrades to
+ * `unknown`, it never invents an `expired`.
  *
  * Accepted residual (D-17): gogdl 1.3.0 prints a bare `null` for any non-OK
  * refresh and cannot separate an invalid_grant 400 from a 5xx/429 on
@@ -182,15 +183,17 @@ const NILE_REFRESH_RESPONSE_PATTERN = new RegExp(
  * `Failed to refresh the token <Response [NNN]>` on a non-OK refresh and carries
  * on with the stale token, so the HTTP status is recoverable from the line and
  * the exit code says nothing. Only 400/401/403 are an authentication failure
- * (A3: which of those Amazon returns for a dead refresh token is assumed).
+ * (A3: measured 2026-10-15, quick 261015-rud -- Amazon answers 400 to a dead
+ * refresh token, for both a malformed and a one-character-altered token).
  *
  * With nothing installed nile exits 0 before any auth call (A4, F-49-R1-4,
  * observed 7x in 49-LIVE-GATE Run 1 and re-measured 2026-10-10 against the
  * bundled binary). That spawn is zero evidence about the credential either
  * way, so it is `unknown`, never `healthy`. A refresh-failure line still
  * decides first if the two ever co-occur. `library sync` is not a permitted
- * substitute probe (D-16), and a replacement command is gated on the Amazon
- * induction live gate.
+ * substitute probe (D-16). The induction live gate has run, so a replacement
+ * command is no longer gated; it is tracked in the todo
+ * `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md`.
  */
 export function classifyNileOutput(input: ClassifierInput): SignInProbeOutcome {
   if (input.aborted || !input.observed) {

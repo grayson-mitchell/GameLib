@@ -16,6 +16,12 @@ Out-of-scope discoveries logged during execution; not fixed by the plan that fou
    `Failed to refresh the token <Response [NNN]>` with ≥ 1 installed Amazon game, then sign in
    again. Tracked: `.planning/todos/pending/2026-10-10-amazon-expiry-strings-need-a-real-induction.md`
    (`ready: live-gate`). `NILE_AUTH_FAILURE_STATUSES` stays source-derived until then.
+   **CLOSED 2026-10-15 (quick 261015-rud):** the premise was wrong — the `.enc` is AES-256-CBC
+   under `sha256(user_id)` with `user_id` plaintext in `current_user.json`, so it was induced in
+   place (no deregistration, no re-login). Measured `<Response [400]>` for both a malformed and a
+   one-character-altered refresh token; in-app `expired`/`latched`, row and tile rendered; restore
+   proved `healthy`/`cleared`. A3 and A6 CONFIRMED; the status set stands. See 49-LIVE-GATE.md
+   § 2026-10-15 addendum. Follow-on: `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md`.
 4. **Live-gate item 6 (A4)**: with nothing installed the Amazon probe is a no-op. Tracked:
    `2026-10-10-amazon-probe-is-a-no-op-with-nothing-installed.md` (`ready: code`), together with
    the nile stdout/stderr-order classifier flip (`2026-10-10-nile-classifier-flips-…`).

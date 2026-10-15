@@ -1,0 +1,18 @@
+# gamelib.log excerpt, launch 2 (restored .enc, installed.json=[]): probe lines
+22:(20:40:58) [INFO]:    [Nile]:            Saved user data to config file
+27:(20:40:58) [INFO]:    [Nile]:            Refreshing library...
+28:(20:40:58) [INFO]:    [Nile]:            Refreshing Amazon Games...
+29:(20:40:58) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+31:(20:40:58) [INFO]:    [Nile]:            Game list updated, got 0 games
+42:(20:40:59) [INFO]:    [Backend]:         [signInProbe] pass started stores=legendary,gog,nile,humble,steam
+48:(20:40:59) [INFO]:    [Nile]:            Sign-in probe: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+59:(20:41:00) [INFO]:    [Backend]:         [signInProbe] nile outcome=unknown elapsed=844ms
+60:(20:41:00) [INFO]:    [Backend]:         [signInProbe] nile verdict=unchanged
+69:(20:41:02) [INFO]:    [Backend]:         [signInProbe] pass complete outcomes=legendary:healthy,gog:healthy,nile:unknown,humble:unknown,steam:healthy
+75:(20:41:05) [INFO]:    [Nile]:            Looking for updates...
+77:(20:41:05) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+79:(20:41:05) [INFO]:    [Nile]:            Refreshing library...
+80:(20:41:05) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+81:(20:41:05) [INFO]:    [Nile]:            Game list updated, got 0 games
+82:(20:41:05) [INFO]:    [Nile]:            Refreshing Amazon Games...
+83:(20:41:05) [INFO]:    [Nile]:            refreshLibrary complete runner=nile managers=1

@@ -1,0 +1,2 @@
+pre-launch-3 2026-10-15T07:54:55Z: installed.json fixture written: [{"id":"gate-fake-installed","path":"/nonexistent","version":"0"}]
+live .enc sha256 prefix: 461c760af45fa41f (differs from the backup because launch 2's own successful refresh rewrote the access token -- expected)

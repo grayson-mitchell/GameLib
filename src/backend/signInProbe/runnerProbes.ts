@@ -13,10 +13,11 @@
  *     access token ages out (RESEARCH A4). With zero installed games it exits 0
  *     before any auth call (F-49-R1-4, measured), so that run classifies
  *     `unknown`, never `healthy`. `library sync` is not a permitted substitute
- *     (D-16: the pass never triggers a library sync); a replacement command is
- *     gated on the Amazon induction live gate, where its expired-token output
- *     becomes measurable.
- *   Both are live-gated by 49-11 / 49-12; a drifted marker degrades to `unknown`.
+ *     (D-16: the pass never triggers a library sync). The Amazon induction live
+ *     gate has run (quick 261015-rud, 2026-10-15: `<Response [400]>` measured,
+ *     in-app `expired`/`latched`), so a replacement command is no longer gated
+ *     on it; see `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md`.
+ *   Both were live-gated by 49-11 / 49-12; a drifted marker degrades to `unknown`.
  *
  * Every spawn passes `skipErrorHandler: true` (no modal, P2) and feeds
  * `onOutput` into a bounded capture. The capture is NEVER logged: a runner's

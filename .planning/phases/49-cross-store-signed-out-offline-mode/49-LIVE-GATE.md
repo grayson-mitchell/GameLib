@@ -946,7 +946,7 @@ One line per item for the record gate, then the table:
 | 2 | 4 | **PASS** | `gamelib-launch-4.log`, `runner-legendary-launch-4.log`, `hosts-check.txt`, `item2-library.png` | Library showed "Epic Games is not connected" (F-49-R1-1 fallout), not an expired row. |
 | 3 | 2 | **PASS** | `gamelib-launch-2.log`, `runner-gog-launch-2.log`, `flags.log` | gogdl did not rewrite or remove `auth.json` (mtime unchanged). |
 | 4 | 4 | **PASS** | `gamelib-launch-4.log`, `runner-gog-launch-4.log`, `hosts-check.txt` | |
-| 5 | — | **NOT SCORED** | `preflight.txt` | induction impossible by file edit (encrypted token store); operator declined server-side device deregistration. Follow-up todo, `ready: live-gate`. |
+| 5 | — | **NOT SCORED** → **PASS** (2026-10-15 addendum) | `preflight.txt`; 2026-10-15: `quick/261015-rud-…/evidence/` | Run 1: induction impossible by file edit (encrypted token store); operator declined server-side device deregistration. Follow-up todo, `ready: live-gate`. **2026-10-15 (quick 261015-rud): scored PASS** — the store IS editable in place (nile 1.2.0 keys the `.enc` with `sha256(user_id)`, plaintext in `current_user.json`); `<Response [400]>` for both a malformed and a one-character-altered refresh token; in-app `nile outcome=expired`, `verdict=latched`, row + tile rendered; restore proved `healthy` / `cleared`. A3 CONFIRMED (400), A6 CONFIRMED. |
 | 6 | 1-4 (launch 5 skipped) | **FINDING (A4)** | `runner-nile-launch-{1,2,3,4,6,7,9}.log` | with 0 installed, `list-updates --json` prints `[]` + `ERROR [CLI]: No games installed` before any auth; observed 7×. Result (c). |
 | 7 | 6 | **PASS** (Steam) / Humble recorded as absent | `gamelib-launch-6.log`, `item7-library.png` | one dialog (Steam) denied; Humble slot read `ok present=false` (session lives in the dev vault, not the Keychain), review Test 2 CONDITIONAL. 7c PASS: Steam row still present. No dialog screenshot. |
 | 8 | 7 | **PASS** | `gamelib-launch-7.log`, `item8-timeline.txt` | sidecar bound won: `bound reached`, `steam outcome=unknown elapsed=45009ms`; Rust `keyring:timeout` 6 ms later; late Deny produced no `[signInProbe]` line. |
@@ -1066,5 +1066,41 @@ Run 1 above is kept verbatim. After it:
 - **Item 6** stays a recorded FINDING (A4) with a `ready: code` todo.
 
 **Effective verdict after disposition: PASS 9/11 scored, 1 finding (item 6), 1 deferred (item 5).**
+
+### 2026-10-15 addendum — item 5 scored (quick 261015-rud)
+
+The deferral's premise was wrong: the measurement (no token keys in `current_user.json`) was
+right, the remedy (server-side deregistration) was not. nile 1.2.0 (`nile/utils/config.py`,
+upstream tag; the vendored `.build-tools/runners-onedir/src/nile` is 1.1.2 and predates the scheme)
+encrypts `<md5(user_id)>.enc` with AES-256-CBC under `sha256(user_id)`, IV stored as the first 16
+bytes AES-ECB-encrypted under the same key — and `user_id` is plaintext beside it. The induction is
+decrypt → `tokens.bearer.refresh_token` invalid, `NILE.token_obtain_time = 1` → re-encrypt; no
+deregistration, no re-login. With `installed.json = []` nile returns before any auth call (A4), so a
+one-entry fixture was used. Evidence: `.planning/quick/261015-rud-live-gate-the-amazon-expiry-strings-a3-a/evidence/`.
+
+- **Arm A (CLI, scratch copies of the config dir):** `garbage` (literal refresh token) and `flip`
+  (real token, one character altered) both logged exactly
+  `ERROR [AUTH_MANAGER]:<TAB> Failed to refresh the token <Response [400]>`, exit 0, stdout `[]`;
+  an un-induced control with the same fixture refreshed silently. The shipped
+  `classifyNileOutput` read the three captures `expired` / `expired` / `healthy`.
+- **Arm B (in-app, `pnpm tauri:dev`, real profile):** launch 1 `[signInProbe] nile
+  outcome=expired elapsed=1394ms`, `nile verdict=latched`, `pass complete outcomes=…nile:expired…`;
+  Library row "Your Amazon Games sign-in expired" + RECONNECT (`item5-row.png`); Accounts tile
+  "SIGN-IN EXPIRED — RECONNECT" (`item5-tile.png`). Launch 3 (real tokens + fixture): `nile
+  outcome=healthy`, `nile verdict=cleared`, tile "Connected" (`item5-tile-launch3-cleared.png`).
+- **A3 CONFIRMED:** Amazon answers **400** to a dead refresh token (both shapes) — inside
+  `NILE_AUTH_FAILURE_STATUSES`, no widening needed. **A6 CONFIRMED:** the `requests.Response`
+  repr appears verbatim; the status is recoverable.
+- **Two observations, filed as `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md`
+  (`ready: code`):** (1) launch 2 (restored tokens, `installed.json = []`) read `nile
+  outcome=unknown`, `verdict=unchanged`, and the tile **stayed "SIGN-IN EXPIRED — RECONNECT"**
+  (`item5-tile-launch2-latched-unknown.png`) although the real refresh token had just refreshed
+  successfully in the same boot's `library sync` — on a zero-installed profile the latch can only be
+  cleared by a re-login. The 49-SPEC boundary row that gated a replacement probe command on this
+  induction is now open. (2) nile 1.2.0 `library sync` after a failed refresh dies with an unhandled
+  `requests.exceptions.JSONDecodeError` (`library.py:120`), exit 1; GameLib logs
+  `Failed to refresh library: Process exited with code 1` and carries on.
+
+**Effective verdict after the addendum: PASS 10/11 scored, 1 finding (item 6), 0 deferred.**
 The `ready: live-gate` todo for this gate is closed against Phase 49; what remains is tracked
 per finding.

@@ -1,0 +1,3 @@
+restored at 2026-10-15T07:40:38Z from backup/ce4aec427c5a85b89d2e6576f707aa50.enc
+live .enc sha256 == backup: yes  (e2ae3a13e58b0fc0...)
+live installed.json: []

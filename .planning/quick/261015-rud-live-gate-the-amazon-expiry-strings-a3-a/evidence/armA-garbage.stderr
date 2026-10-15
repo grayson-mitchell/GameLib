@@ -1,0 +1,3 @@
+INFO [AUTH_MANAGER]:	 Refreshing token
+ERROR [AUTH_MANAGER]:	 Failed to refresh the token <Response [400]>
+ERROR [LIBRARY]:	 There was an error getting versions

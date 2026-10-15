@@ -1,0 +1,35 @@
+# runners/nile.log excerpt, launch 1 (induced): lines after the pre-launch baseline (16), 160-col cut, blank lines dropped
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+During handling of the above exception, another exception occurred:
+Traceback (most recent call last):
+  File "cli.py", line 364, in <module>
+  File "cli.py", line 343, in main
+  File "cli.py", line 150, in handle_library
+  File "nile/api/library.py", line 120, in sync
+  File "requests/models.py", line 1113, in json
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[PYI-95748:ERROR] Failed to execute script 'cli' due to unhandled exception!
+(20:23:26) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects
+INFO [AUTH_MANAGER]:	 Refreshing token
+ERROR [AUTH_MANAGER]:	 Failed to refresh the token <Response [400]>
+ERROR [LIBRARY]:	 There was an error getting versions
+[]
+(20:23:27) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects
+INFO [AUTH_MANAGER]:	 Refreshing token
+ERROR [AUTH_MANAGER]:	 Failed to refresh the token <Response [400]>
+INFO [LIBRARY]:	 Synchronizing library
+Traceback (most recent call last):
+  File "requests/models.py", line 1105, in json
+  File "requests/models.py", line 1113, in json
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+[PYI-95798:ERROR] Failed to execute script 'cli' due to unhandled exception!
+  File "json/__init__.py", line 346, in loads
+  File "json/decoder.py", line 338, in decode
+  File "json/decoder.py", line 356, in raw_decode
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+During handling of the above exception, another exception occurred:
+Traceback (most recent call last):
+  File "cli.py", line 364, in <module>
+  File "cli.py", line 343, in main
+  File "cli.py", line 150, in handle_library
+  File "nile/api/library.py", line 120, in sync

@@ -1,0 +1,17 @@
+22:(20:56:00) [INFO]:    [Nile]:            Saved user data to config file
+25:(20:56:00) [INFO]:    [Nile]:            Refreshing library...
+27:(20:56:00) [INFO]:    [Nile]:            Game list updated, got 0 games
+30:(20:56:00) [INFO]:    [Nile]:            Refreshing Amazon Games...
+32:(20:56:00) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+40:(20:56:01) [INFO]:    [Nile]:            Looking for updates...
+41:(20:56:01) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+45:(20:56:01) [INFO]:    [Backend]:         [signInProbe] pass started stores=legendary,gog,nile,humble,steam
+52:(20:56:01) [INFO]:    [Nile]:            Sign-in probe: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+65:(20:56:02) [INFO]:    [Backend]:         [signInProbe] nile outcome=healthy elapsed=1113ms
+66:(20:56:02) [INFO]:    [Backend]:         [signInProbe] nile verdict=cleared
+69:(20:56:03) [INFO]:    [Nile]:            Refreshing library...
+70:(20:56:03) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+71:(20:56:03) [INFO]:    [Nile]:            Refreshing Amazon Games...
+72:(20:56:03) [INFO]:    [Nile]:            Game list updated, got 0 games
+73:(20:56:03) [INFO]:    [Nile]:            refreshLibrary complete runner=nile managers=1
+77:(20:56:05) [INFO]:    [Backend]:         [signInProbe] pass complete outcomes=legendary:healthy,gog:healthy,nile:healthy,humble:unknown,steam:healthy

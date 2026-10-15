@@ -1,0 +1,3 @@
+rewrote ce4aec427c5a85b89d2e6576f707aa50.enc; changed: tokens.bearer.refresh_token (set to the literal gate-invalid); NILE.token_obtain_time (set to 1); round-trip ok
+installed.json fixture written: [{"id":"gate-fake-installed","path":"/nonexistent","version":"0"}]
+induced at 2026-10-15T07:22:04Z; live .enc now sha256 89bdeea70d2f0a04...

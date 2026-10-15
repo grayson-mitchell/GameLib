@@ -1,0 +1,14 @@
+# runners/nile.log excerpt, launch 2 (restored .enc, installed.json=[]): the runner log ROTATED at launch (nile.log.old=59 lines = launch 1); new nile.log in full, 160-col cut, blanks dropped
+(20:40:58) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects
+(20:40:59) [INFO]:    Sign-in probe: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/G
+ERROR [CLI]:	 No games installed
+[]
+INFO [AUTH_MANAGER]:	 Refreshing token
+INFO [LIBRARY]:	 Synchronizing library
+INFO [LIBRARY]:	 Successfully synced the library
+(20:41:05) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects
+ERROR [CLI]:	 No games installed
+[]
+(20:41:05) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects
+INFO [LIBRARY]:	 Synchronizing library
+INFO [LIBRARY]:	 Successfully synced the library

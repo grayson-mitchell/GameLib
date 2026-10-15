@@ -1,0 +1,22 @@
+# gamelib.log excerpt, launch 1 (induced), file rotated at launch: 113 lines total at capture; grep -n of the probe lines
+17:(20:23:16) [INFO]:    [Backend]:         [signInProbe] pass started stores=legendary,gog,nile,humble,steam
+21:(20:23:16) [INFO]:    [Nile]:            Sign-in probe: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+43:(20:23:17) [INFO]:    [Nile]:            Saved user data to config file
+48:(20:23:17) [INFO]:    [Nile]:            Refreshing library...
+49:(20:23:17) [INFO]:    [Nile]:            Refreshing Amazon Games...
+50:(20:23:17) [INFO]:    [Nile]:            Game list updated, got 0 games
+51:(20:23:17) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+59:(20:23:18) [INFO]:    [Backend]:         [signInProbe] nile outcome=expired elapsed=1394ms
+60:(20:23:18) [INFO]:    [Backend]:         [signInProbe] nile verdict=latched
+64:(20:23:18) [INFO]:    [Backend]:         [signInProbe] pass complete outcomes=legendary:healthy,gog:healthy,nile:expired,humble:unknown,steam:healthy
+79:(20:23:19) [ERROR]:   [Nile]:            Error running command "NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync": Error: Process exited with code 1
+84:(20:23:19) [ERROR]:   [Nile]:            Failed to refresh library: Process exited with code 1
+99:(20:23:26) [INFO]:    [Nile]:            Looking for updates...
+100:(20:23:26) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile list-updates --json
+102:(20:23:27) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync
+103:(20:23:27) [INFO]:    [Nile]:            Refreshing Amazon Games...
+104:(20:23:27) [INFO]:    [Nile]:            Game list updated, got 0 games
+105:(20:23:27) [INFO]:    [Nile]:            refreshLibrary complete runner=nile managers=1
+106:(20:23:27) [INFO]:    [Nile]:            Refreshing library...
+107:(20:23:28) [ERROR]:   [Nile]:            Error running command "NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile library sync": Error: Process exited with code 1
+112:(20:23:28) [ERROR]:   [Nile]:            Failed to refresh library: Process exited with code 1

@@ -1,0 +1,16 @@
+# runners/nile.log excerpt, launch 3 (real tokens, one-entry installed.json fixture). The runner log
+# rotates at each launch; this is the new file's non-blank lines, 120-col cut, transcribed from the
+# grep the orchestrator ran at 20:56 local (the direct file copy was denied by the permission classifier).
+(20:56:01) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile
+(20:56:00) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile
+(20:56:01) [INFO]:    Sign-in probe: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_c
+INFO [LIBRARY]:	 Synchronizing library
+[]
+INFO [LIBRARY]:	 Successfully synced the library
+[]
+(20:56:03) [INFO]:    Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile
+INFO [LIBRARY]:	 Synchronizing library
+INFO [LIBRARY]:	 Successfully synced the library
+# Reading: no "Refreshing token" line -- launch 2's refresh had already renewed the access token, so
+# list-updates found it unexpired and printed [] (fixture id not in the library); the classifier's
+# healthy branch is the fall-through, consistent with gamelib-launch-3.excerpt.log line 65.
