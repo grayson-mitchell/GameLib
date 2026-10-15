@@ -1,7 +1,7 @@
 ---
 phase: "45"
 slug: "native-in-app-winetricks-ui-redesigned-from-scratch-one-self"
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-10-10"
