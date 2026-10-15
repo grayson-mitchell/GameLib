@@ -25,6 +25,10 @@ Out-of-scope discoveries logged during execution; not fixed by the plan that fou
 4. **Live-gate item 6 (A4)**: with nothing installed the Amazon probe is a no-op. Tracked:
    `2026-10-10-amazon-probe-is-a-no-op-with-nothing-installed.md` (`ready: code`), together with
    the nile stdout/stderr-order classifier flip (`2026-10-10-nile-classifier-flips-…`).
+   **DEFERRED 2026-10-15 by operator decision:** the no-op todo closed in quick 261010-h9n
+   (zero-installed classifies `unknown`); the residual latch-never-clears defect is deferred to
+   `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md` (`ready: code`). UAT item 6
+   carries the matching `reason: Deferred follow-up`.
 5. Renderer: a mid-session `verdict=cleared` reaches the Library only on remount
    (`2026-10-10-library-sign-in-rows-do-not-rederive-a-mid-session-clear.md`); nord_light row
    legibility; operator request to move the rows to the top and halve the banner height.

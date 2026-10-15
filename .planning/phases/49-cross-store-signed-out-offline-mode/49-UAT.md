@@ -3,7 +3,7 @@ status: complete
 phase: 49
 source: [49-08-SUMMARY.md, 49-09-SUMMARY.md, 49-10-SUMMARY.md, 49-LIVE-GATE.md]
 started: 2026-10-10T00:00:00Z
-updated: 2026-10-09T21:30:00Z
+updated: 2026-10-15T09:00:00Z
 ---
 
 ## Protocol
@@ -47,13 +47,14 @@ Evidence: gamelib-launch-4.log, runner-gog-launch-4.log, hosts-check.txt. Assump
 
 ### 5. Amazon expired records the exact refresh status and latches only on 400, 401 or 403 (launch 2)
 expected: With an expired access token and an invalid refresh token, the nile runner log shows `Failed to refresh the token <Response [NNN]>` and the observed NNN is recorded; for NNN in 400, 401, 403 gamelib.log shows `[signInProbe] nile outcome=expired`, the Library shows one Amazon expired row, and the Amazon tile reads "Sign-in expired — Reconnect"; any other NNN is recorded as a finding against A3.
-result: skipped — not scorable: nile v1.2.0 keeps its tokens in an encrypted `*.enc` blob; current_user.json has only `name`/`user_id`, so the induction has nothing to edit (review R34 fired). Operator declined server-side device deregistration. A3/A6 untested; todo filed `ready: live-gate`. DEFERRED by operator decision 2026-10-09 to deferred-items.md; the phase does not block on it.
+result: pass — 2026-10-15, quick 261015-rud, in-place nile induction (the `.enc` is AES-256-CBC under `sha256(user_id)`, so the premise below was wrong). NNN = 400 for both a malformed and a one-character-altered refresh token, inside 400/401/403; `<Response [400]>` verbatim (A6); `nile outcome=expired`, `verdict=latched`, one Amazon expired row and the Reconnect tile rendered; restore proved `healthy`/`cleared`. A3 and A6 CONFIRMED. See 49-LIVE-GATE.md § 2026-10-15 addendum. Superseded original result: skipped — not scorable: nile v1.2.0 keeps its tokens in an encrypted `*.enc` blob; current_user.json has only `name`/`user_id`, so the induction has nothing to edit (review R34 fired). Operator declined server-side device deregistration. A3/A6 untested; todo filed `ready: live-gate`. DEFERRED by operator decision 2026-10-09 to deferred-items.md; the phase does not block on it.
 
 Evidence: gamelib-launch-2.log, runner-nile-launch-2.log, flags.log, item5-row.png, item5-tile.png. Assumptions A3, A6. Arm B in launch 5 if no Amazon game is installed.
 
 ### 6. Amazon with nothing installed: record whether the probe still attempts a refresh (launch 5)
 expected: With installed.json emptied and the Amazon credential induced as in item 5, the observation is unambiguous: either a Failed to refresh the token line with its status and the resulting outcome, or provably no refresh attempt and outcome=healthy, recorded as a finding against A4.
-result: issue — FINDING A4 from launches 1-4 (launch 5 skipped as redundant, installed count already 0): runner-nile logs show `[]` + `ERROR [CLI]: No games installed` before any auth call, outcome=healthy; a user with nothing installed is never told their Amazon sign-in expired. Also F-49-R1-5: the same output classified `unknown` in launches 6-7.
+result: skipped — deferred 2026-10-15 (see reason). Original result: issue — FINDING A4 from launches 1-4 (launch 5 skipped as redundant, installed count already 0): runner-nile logs show `[]` + `ERROR [CLI]: No games installed` before any auth call, outcome=healthy; a user with nothing installed is never told their Amazon sign-in expired. Also F-49-R1-5: the same output classified `unknown` in launches 6-7.
+reason: Deferred follow-up: by operator decision 2026-10-15. The no-op half was fixed by quick 261010-h9n (zero-installed now classifies `unknown`); the remaining consequence — the latch never clears on a zero-installed profile — is tracked in `.planning/todos/pending/2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md` (`ready: code`). The phase does not block on it.
 
 Evidence: gamelib-launch-5.log, runner-nile-launch-5.log. Assumption A4.
 
