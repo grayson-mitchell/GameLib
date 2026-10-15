@@ -14,9 +14,9 @@
  * `configStore`/`localStorage`/`window.api`. No change to resolution precedence itself:
  * no logic defect was found in the fallback order, only this observability gap.
  */
-export type ResolvedLanguageSource = 'configStore' | 'localStorage' | 'default'
+type ResolvedLanguageSource = 'configStore' | 'localStorage' | 'default'
 
-export interface ResolveBootLanguageResult {
+interface ResolveBootLanguageResult {
   languageCode: string
   resolvedFrom: ResolvedLanguageSource
 }

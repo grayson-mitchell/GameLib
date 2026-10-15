@@ -54,7 +54,7 @@ export function resolveSavedZoomPercent(raw: unknown): number {
   return raw
 }
 
-export interface ApplySavedZoomAtBootDeps {
+interface ApplySavedZoomAtBootDeps {
   /** The raw, untrusted persisted `zoomPercent` -- `this.state.zoomPercent`. */
   savedZoomPercent: unknown
   /** Forwards to `window.api.setZoomFactor`. */
