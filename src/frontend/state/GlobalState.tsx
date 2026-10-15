@@ -50,6 +50,7 @@ import {
   hydrateFocusRowSelection,
   seedFocusRowFromMirror
 } from 'common/focusRowMigration'
+import { applySavedZoomAtBoot } from './savedZoomBoot'
 import {
   resolveSignInStates,
   sanitizeSignInProbeOutcomeMap,
@@ -1574,6 +1575,22 @@ class GlobalState extends PureComponent<Props> {
       gameUpdates = [],
       libraryStatus
     } = this.state
+
+    // 261015-p3q: re-apply the saved Accessibility zoom once at boot, through
+    // the same window.api.setZoomFactor chain setZoomPercent uses, so a saved
+    // zoomPercent is actually in effect after a relaunch rather than only
+    // being displayed back on the slider. Earliest statement in this method:
+    // every statement before it widens the window in which the user sees
+    // factor 1. Reads this.state.zoomPercent directly (NOT destructured
+    // above) because state.zoom (the Zoom Platform storefront) and
+    // state.zoomPercent (this accessibility setting) are unrelated and must
+    // not be confused.
+    applySavedZoomAtBoot({
+      savedZoomPercent: this.state.zoomPercent,
+      setZoomFactor: (zoomFactor) => window.api.setZoomFactor(zoomFactor),
+      onError: (error) =>
+        window.api.logError(`applySavedZoomAtBoot failed: ${String(error)}`)
+    })
 
     // CR-01: first launch of a profile whose mirror has no `focusRow` key yet.
     // `void` is safe ONLY because hydrateFocusRowSelection never rejects.
