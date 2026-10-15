@@ -1,0 +1,16 @@
+# every gamelib-shell.log line for the packaged shell pid 60602 (launch 1792038726 .. quit 1792039023), extracted after the app had exited
+3925:1792038726 pid=60602 spawning sidecar (dev): "/usr/local/bin/node" "/Users/graysonmitchell/Projects/GameLib/src-tauri/../build/main/sidecar.js"
+3926:1792038726 pid=60602   cwd=/
+3927:1792038726 pid=60602   entry_exists=true
+3928:1792038726 pid=60602   GAMELIB_SHELL_EXE=/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/2d36cfcb-a5f7-4560-a0ea-d9acb2791def/scratchpad/GameLib.app/Contents/MacOS/gamelib-shell
+3929:1792038726 pid=60602   GAMELIB_APP_ROOT=/Users/graysonmitchell/Projects/GameLib
+3930:1792038726 pid=60602   forward_args=[]
+3931:1792038726 pid=60602 sidecar process spawned OK
+3932:1792038726 pid=60602 close handler attached (tray=true): hide-to-tray re-read on every close; otherwise the quit is routed to the sidecar
+3933:1792038726 pid=60602 app menu: Quit (Cmd+Q) routed through the sidecar (id=app_menu_quit)
+3934:1792038726 pid=60602 terminate veto: applicationShouldTerminate: added to TaoAppDelegateParent (Dock Quit routed through the sidecar)
+3935:1792038740 pid=60602 keyring keyring_get account=steam-refresh-token outcome=found
+3936:1792038746 pid=60602 keyring keyring_get account=humble-session outcome=found
+3937:1792038877 pid=60602 macos_epic_embed: didFinishNavigation succeeded -- host: store.epicgames.com
+3938:1792039023 pid=60602 quit (Cmd+Q): handed to the sidecar handleExit
+3939:1792039023 pid=60602 exit requested (code=Some(0))

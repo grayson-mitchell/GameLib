@@ -275,3 +275,11 @@ None - no external service configuration required.
 ---
 *Phase: quick-261015-lz5*
 *Completed: 2026-10-15*
+
+## Addendum (2026-10-15, quick task `261015-oc8`)
+
+The packaged-launch follow-up listed above is now closed: `261015-oc8` launched a `tauri build --debug`
+bundle of `beca31cbf` via `open -n`, measured the shell's stderr on `/dev/null`, and read the
+`didFinishNavigation` line back from `gamelib-shell.log` under the packaged pid, surviving a Cmd+Q
+exit. PASS, no code change. The todo now lives in `.planning/todos/completed/`; see
+`../261015-oc8-live-gate-261015-lz5-shell-diag-persiste/evidence/README.md`.
