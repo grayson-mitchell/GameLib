@@ -3666,6 +3666,17 @@ fn login_origin_banner_update_script(origin: &str) -> String {
 /// document scroller and confirmed the inner one keeps a normal, unstyled scrollbar while the
 /// document scroller gets the inset.
 ///
+/// KNOWN LIMIT THIS SCRIPT CANNOT CLOSE (measured 2026-10-16 in a real-sheet probe, macOS
+/// 26.6.2): in a sheet the main-frame scrollbar does NOT start at y=0. WebKit reads the
+/// `WKWebView`'s `_effectiveCornerRadii` (26pt, inherited from the sheet window's rounded
+/// corners) and starts the scrollbar frame at y=19 to keep it out of the arc, so the
+/// `::-webkit-scrollbar` background above fills only 19..bottom and the gutter between the arc
+/// and y=19 shows the DOCUMENT BACKGROUND COLOUR (the `html`/`body` blend -- Humble's `#e3e3e3`).
+/// No page CSS can paint it: a fixed root `background-image` is clipped to the viewport, and the
+/// only page-side lever is the page's own canvas colour. The pending todo
+/// `2026-10-03-login-sheet-title-bar-has-a-light-wedge-at-the-rounded-corner.md` records every
+/// lever tried, the one private-API override that works, and why it is parked on route C/D.
+///
 /// The `32px` track inset MUST equal the bar height the other two scripts set. A `#[cfg(test)]`
 /// test below extracts all three literals and asserts they agree, so the three cannot drift.
 ///
