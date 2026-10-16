@@ -60,7 +60,8 @@ import {
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
-  bridgeBottleNameFor
+  bridgeBottleNameFor,
+  removePerGameBridgeBottle
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { noteSteamAuthTrigger } from './authTrigger'
@@ -2477,12 +2478,38 @@ export default class SteamGame implements Game {
    * (getBridgeBottleSettings(appId), quick/261016-u1w D-B) — never touches
    * the Phase 17 GameLibSteam bottle.
    *
-   * Resolves the install root the SAME way installBridgeGame() does
-   * (resolveBridgeGameInstallRoot, via resolveBridgeLaunchExe) rather than
-   * a second, divergent path-derivation — reuse, not a parallel
-   * implementation.
+   * quick/261016-u1w (D-D): when this game's bottle IS its own per-game
+   * bottle (`bridgeBottleNameFor(appId)`), the whole bottle belongs to the
+   * game, so the whole bottle is removed via removePerGameBridgeBottle —
+   * no resolveBridgeLaunchExe/install-root resolution needed. Otherwise
+   * (the game still lives in the legacy shared bottle), the existing
+   * direct-deletion body below runs unchanged, resolving the install root
+   * the SAME way installBridgeGame() does (resolveBridgeGameInstallRoot,
+   * via resolveBridgeLaunchExe) rather than a second, divergent
+   * path-derivation — reuse, not a parallel implementation.
    */
   private async uninstallBridgeGame(): Promise<ExecResult> {
+    const bottleName = getBridgeBottleSettings(this.appId).wineCrossoverBottle
+    if (bottleName === bridgeBottleNameFor(this.appId)) {
+      const result = await removePerGameBridgeBottle(this.appId)
+      if (result.status === 'error') {
+        logWarning(
+          `SteamGame: uninstallBridgeGame failed to remove per-game bottle "${bottleName}" for appId ${this.appId}: ${result.error}`,
+          LogPrefix.Steam
+        )
+        return {
+          stdout: '',
+          stderr: `Failed to remove bridge bottle: ${result.error}`
+        }
+      }
+      logInfo(
+        `SteamGame: removed per-game bridge bottle "${bottleName}" for appId ${this.appId} (${result.status})`,
+        LogPrefix.Steam
+      )
+      this.markBridgeGameUninstalled()
+      return { stdout: '', stderr: '' }
+    }
+
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
       logWarning(
@@ -2493,7 +2520,7 @@ export default class SteamGame implements Game {
       return { stdout: '', stderr: '' }
     }
 
-    const installRoot = this.resolveBridgeGameInstallRoot(exePath)
+    const installRoot = this.resolveBridgeGameInstallRoot(exePath, bottleName)
     if (!installRoot) {
       logWarning(
         `SteamGame: uninstallBridgeGame rejected an exe path outside the bridge bottle's common/ dir for appId ${this.appId}`,

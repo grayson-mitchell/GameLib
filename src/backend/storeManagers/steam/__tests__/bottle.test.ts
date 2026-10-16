@@ -51,7 +51,8 @@ import {
   provisionBridgeBottle,
   bridgeBottleNameFor,
   resolveBridgeBottleName,
-  listReadyBridgeBottleNames
+  listReadyBridgeBottleNames,
+  removePerGameBridgeBottle
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -2012,6 +2013,185 @@ describe('bottle.ts', () => {
         const result = listReadyBridgeBottleNames()
 
         expect(result).toEqual(['GameLibSteamBridge-206040'])
+      })
+    })
+
+    // quick/261016-u1w (D-D): deletes exactly GameLibSteamBridge-<appId>,
+    // behind a guard chain that can never name any other bottle.
+    describe('removePerGameBridgeBottle', () => {
+      const perGameName = 'GameLibSteamBridge-206040'
+      const perGameDir = getBottleDir(perGameName)
+
+      beforeEach(() => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+        })
+      })
+
+      test('present dir: stops the wineserver (WINEPREFIX exactly the per-game bottle dir), runs cxbottle --bottle <name> --delete --force, and returns removed with no rmSync', async () => {
+        let present = true
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === perGameDir && present
+        )
+        mockedSpawnAsync.mockImplementation((bin: string) => {
+          if (String(bin).includes('cxbottle')) {
+            present = false
+          }
+          return Promise.resolve({ code: 0, stdout: '', stderr: '' })
+        })
+
+        const result = await removePerGameBridgeBottle('206040')
+
+        expect(result).toEqual({ status: 'removed' })
+        const wineserverCall = mockedSpawnAsync.mock.calls.find(([bin]) =>
+          String(bin).includes('wineserver')
+        )
+        expect(wineserverCall).toBeDefined()
+        expect(wineserverCall?.[1]).toEqual(['-k'])
+        expect(wineserverCall?.[2]?.env?.WINEPREFIX).toBe(perGameDir)
+        const deleteCall = mockedSpawnAsync.mock.calls.find(([bin]) =>
+          String(bin).includes('cxbottle')
+        )
+        expect(deleteCall).toBeDefined()
+        expect(deleteCall?.[1]).toEqual([
+          '--bottle',
+          perGameName,
+          '--delete',
+          '--force'
+        ])
+        expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+
+      test('when the dir survives cxbottle, rmSync runs and removal still succeeds', async () => {
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === perGameDir
+        )
+        mockedSpawnAsync.mockImplementation((bin: string) => {
+          if (String(bin).includes('cxbottle')) {
+            mockedRmSync.mockImplementation((path: string) => {
+              if (path === perGameDir) {
+                mockedExistsSync.mockImplementation(() => false)
+              }
+            })
+          }
+          return Promise.resolve({ code: 0, stdout: '', stderr: '' })
+        })
+
+        const result = await removePerGameBridgeBottle('206040')
+
+        expect(result).toEqual({ status: 'removed' })
+        expect(mockedRmSync).toHaveBeenCalledWith(perGameDir, {
+          recursive: true,
+          force: true
+        })
+      })
+
+      test('when rmSync throws and the dir still exists, returns error without throwing', async () => {
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === perGameDir
+        )
+        mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+        mockedRmSync.mockImplementation(() => {
+          throw new Error('EPERM')
+        })
+
+        const result = await removePerGameBridgeBottle('206040')
+
+        expect(result.status).toBe('error')
+      })
+
+      test('absent dir: returns absent with no spawnAsync and no rmSync', async () => {
+        mockedExistsSync.mockReturnValue(false)
+
+        const result = await removePerGameBridgeBottle('206040')
+
+        expect(result).toEqual({ status: 'absent' })
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+
+      test.each(['', 'abc', '../1', '206040/..', ' '])(
+        'rejects an invalid appId %j with no spawnAsync and no rmSync',
+        async (appId) => {
+          const result = await removePerGameBridgeBottle(appId)
+
+          expect(result.status).toBe('error')
+          expect(mockedSpawnAsync).not.toHaveBeenCalled()
+          expect(mockedRmSync).not.toHaveBeenCalled()
+        }
+      )
+
+      test('refuses when the stored Phase 17 bottle name equals the per-game name (trimmed)', async () => {
+        mockedGetNodefault.mockImplementation((key: string) =>
+          key === 'bottleName' ? `  ${perGameName}  ` : undefined
+        )
+        mockedExistsSync.mockReturnValue(true)
+
+        const result = await removePerGameBridgeBottle('206040')
+
+        expect(result.status).toBe('error')
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+
+      test('refuses when the shared GOG/Epic bottle equals the per-game name (trimmed)', async () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: `  ${perGameName}  `
+            }) as GameSettings
+        })
+        mockedExistsSync.mockReturnValue(true)
+
+        const result = await removePerGameBridgeBottle('206040')
+
+        expect(result.status).toBe('error')
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+
+      test('never spawns against or rmSyncs the legacy bridge bottle or the Phase 17 GameLibSteam bottle dir, across every case above', async () => {
+        const legacyDir = getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME)
+        const steamDir = getBottleDir(DEFAULT_STEAM_BOTTLE_NAME)
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === perGameDir
+        )
+        mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+        await removePerGameBridgeBottle('206040')
+
+        for (const call of mockedSpawnAsync.mock.calls) {
+          const [bin, args, opts] = call
+          expect(bin).not.toBe(legacyDir)
+          expect(bin).not.toBe(steamDir)
+          if (Array.isArray(args)) {
+            expect(args).not.toContain(legacyDir)
+            expect(args).not.toContain(steamDir)
+          }
+          expect(opts?.env?.WINEPREFIX).not.toBe(legacyDir)
+          expect(opts?.env?.WINEPREFIX).not.toBe(steamDir)
+        }
+        for (const call of mockedRmSync.mock.calls) {
+          expect(call[0]).not.toBe(legacyDir)
+          expect(call[0]).not.toBe(steamDir)
+        }
+      })
+
+      test('source contains no reference to the Windows Steam installer (R6-style grep guard)', () => {
+        const source = readRealFile(joinPath(__dirname, '../bottle.ts'), 'utf8')
+        const fnStart = source.indexOf(
+          'export async function removePerGameBridgeBottle'
+        )
+        const fnEnd = source.indexOf(
+          'export async function provisionBridgeBottle'
+        )
+        expect(fnStart).toBeGreaterThan(-1)
+        expect(fnEnd).toBeGreaterThan(fnStart)
+        const fnSource = source.slice(fnStart, fnEnd)
+        expect(fnSource).not.toContain('SteamSetup.exe')
+        expect(fnSource).not.toContain('STEAM_SETUP_EXE_URL')
       })
     })
   })

@@ -13,7 +13,7 @@
  * loginusers.vdf/sentry files; login state is only ever set by the
  * guided-setup flow (17-06) confirming the user completed login.
  */
-import { dirname, join } from 'path'
+import { dirname, join, relative, resolve } from 'path'
 import {
   existsSync,
   mkdirSync,
@@ -1322,6 +1322,151 @@ export function listReadyBridgeBottleNames(): string[] {
     : []
 
   return [...legacy, ...perGame]
+}
+
+/**
+ * quick/261016-u1w (D-D): deletes a game's own per-game bridge bottle
+ * (`GameLibSteamBridge-<appId>`) on uninstall. This function can NEVER name
+ * any other bottle — the guard chain below rejects anything that is not
+ * exactly `bridgeBottleNameFor(appId)`, so the legacy shared bridge bottle
+ * (DEFAULT_BRIDGE_BOTTLE_NAME), the Phase 17 Steam bottle
+ * (DEFAULT_STEAM_BOTTLE_NAME), the user's own stored bottle name, and the
+ * shared GOG/Epic bottle (CR-01 mirror) are all unreachable targets (LD-1).
+ *
+ * Guard order, ALL before any spawn/delete side effect:
+ * 1. `bridgeBottleNameFor(appId)` must be non-null (numeric appId only).
+ * 2. `sanitizeBottleName(name) === name` (T-17-01 chokepoint).
+ * 3. `name` must not equal DEFAULT_BRIDGE_BOTTLE_NAME,
+ *    DEFAULT_STEAM_BOTTLE_NAME, the trimmed stored Phase 17 bottle name
+ *    (steamBottleConfigStore), or the trimmed shared GOG/Epic bottle
+ *    (GlobalConfig.wineCrossoverBottle) — mirrors provisionBottle's CR-01.
+ * 4. Containment: `relative(resolve(bottlesRoot), resolve(getBottleDir(name)))`
+ *    must equal `name` exactly, where `bottlesRoot` is the CrossOver
+ *    Bottles directory every bottle lives in.
+ *
+ * Then: absent dir -> 'absent'. Otherwise stop the bottle's own wineserver
+ * (killBottleWineServer, WINEPREFIX-scoped — T-17-DoS), run
+ * `cxbottle --bottle <name> --delete --force` (also cleans CrossOver's own
+ * menu/association entries, which a bare rmSync would not), then rmSync the
+ * dir if it still survives. Returns 'removed' once the dir is confirmed
+ * gone, or 'error' with a message, and never throws.
+ *
+ * Contains no reference to the Windows Steam installer (SteamSetup.exe /
+ * STEAM_SETUP_EXE_URL) — a per-game bridge bottle never has one to clean up.
+ */
+export async function removePerGameBridgeBottle(
+  appId: string
+): Promise<
+  | { status: 'removed' }
+  | { status: 'absent' }
+  | { status: 'error'; error: string }
+> {
+  // (1) Only a numeric appId yields a per-game name at all.
+  const rawName = bridgeBottleNameFor(appId)
+  if (!rawName) {
+    logError(
+      `removePerGameBridgeBottle: rejected non-numeric appId "${appId}" (T-17-04 mirror)`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: `Invalid appId: "${appId}"` }
+  }
+
+  // (2) T-17-01 chokepoint — reject unsafe characters/traversal.
+  const name = sanitizeBottleName(rawName)
+  if (name !== rawName) {
+    logError(
+      `removePerGameBridgeBottle: rejected unsafe bottle name "${rawName}" for appId "${appId}" (T-17-01)`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: `Invalid bottle name: "${rawName}"` }
+  }
+
+  // (3) Refuse every non-per-game bottle this function could ever be asked
+  // to touch, mirroring provisionBottle's CR-01 guard (D-01).
+  const storedPhase17Name = steamBottleConfigStore.get_nodefault('bottleName')
+  const sharedBottle = GlobalConfig.get().getSettings().wineCrossoverBottle
+  const forbidden = new Set<string>([
+    DEFAULT_BRIDGE_BOTTLE_NAME,
+    DEFAULT_STEAM_BOTTLE_NAME
+  ])
+  if (typeof storedPhase17Name === 'string' && storedPhase17Name.trim()) {
+    forbidden.add(storedPhase17Name.trim())
+  }
+  if (typeof sharedBottle === 'string' && sharedBottle.trim()) {
+    forbidden.add(sharedBottle.trim())
+  }
+  if (forbidden.has(name)) {
+    logError(
+      `removePerGameBridgeBottle: refusing to remove protected bottle "${name}" for appId "${appId}" (CR-01 mirror)`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: `Refusing to remove protected bottle "${name}".`
+    }
+  }
+
+  // (4) Containment: the resolved bottle dir must sit exactly one segment
+  // (== name) below the Bottles root — never above it, never elsewhere.
+  const bottlesRoot = dirname(getBottleDir(DEFAULT_BRIDGE_BOTTLE_NAME))
+  const relFromRoot = relative(
+    resolve(bottlesRoot),
+    resolve(getBottleDir(name))
+  )
+  if (relFromRoot !== name) {
+    logError(
+      `removePerGameBridgeBottle: containment check failed for bottle "${name}" (resolved outside the Bottles root)`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      error: `Refusing to remove "${name}": outside the Bottles directory.`
+    }
+  }
+
+  // (5) Nothing on disk — nothing to do.
+  const bottleDir = getBottleDir(name)
+  if (!existsSync(bottleDir)) {
+    return { status: 'absent' }
+  }
+
+  // (6) Stop the bottle's own wineserver first (best-effort), then delete
+  // via the same locked cxbottle mechanism provisionBottle uses, with an
+  // rmSync fallback if the dir survives.
+  await killBottleWineServer(name)
+
+  try {
+    await spawnAsync(CXBOTTLE_BIN, ['--bottle', name, '--delete', '--force'])
+  } catch (error) {
+    logWarning(
+      ['removePerGameBridgeBottle: cxbottle --delete threw', error],
+      LogPrefix.Steam
+    )
+  }
+
+  if (existsSync(bottleDir)) {
+    try {
+      rmSync(bottleDir, { recursive: true, force: true })
+    } catch (error) {
+      logWarning(
+        ['removePerGameBridgeBottle: fallback rmSync threw', error],
+        LogPrefix.Steam
+      )
+    }
+  }
+
+  // (7) Final confirmation.
+  if (existsSync(bottleDir)) {
+    const error = `Bottle directory "${bottleDir}" still exists after removal attempt`
+    logError(`removePerGameBridgeBottle: ${error}`, LogPrefix.Steam)
+    return { status: 'error', error }
+  }
+
+  logInfo(
+    `removePerGameBridgeBottle: removed per-game bridge bottle "${name}" for appId "${appId}"`,
+    LogPrefix.Steam
+  )
+  return { status: 'removed' }
 }
 
 /**

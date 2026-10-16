@@ -43,7 +43,8 @@ import {
   getBottleSteamappsDir,
   isBridgeBottleReady,
   getBridgeBottleSettings,
-  provisionBridgeBottle
+  provisionBridgeBottle,
+  removePerGameBridgeBottle
 } from '../bottle'
 import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
@@ -246,6 +247,8 @@ jest.mock('../bottle', () => ({
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   provisionBridgeBottle: jest.fn(),
+  // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
+  removePerGameBridgeBottle: jest.fn(),
   // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
   // wipes a jest.fn()'s implementation before every test, but games.ts calls
   // this directly as a pure, deterministic builder, so the factory gives it
@@ -5698,6 +5701,7 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     ;(bridgeAllowlist.has as jest.Mock).mockReset()
     ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
     ;(resolveBridgeLaunchExe as jest.Mock).mockReset()
+    ;(removePerGameBridgeBottle as jest.Mock).mockReset()
     ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteamBridge'
     })
@@ -5729,8 +5733,65 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     // quick/261016-u1w (D-B threading): resolves THIS game's own bridge
     // bottle rather than the shared zero-arg default.
     expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
+    // quick/261016-u1w (D-D): this game lives in the LEGACY shared bottle
+    // ('GameLibSteamBridge'), not its own per-game bottle, so the whole-bottle
+    // removal path must never be reached here.
+    expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
     expect(result).toEqual({ stdout: '', stderr: '' })
     expect(library.get(APP_ID)?.is_installed).toBe(false)
+  })
+
+  // quick/261016-u1w (D-D): when this game's own bottle IS its per-game
+  // bottle, the whole bottle is removed directly — no resolveBridgeLaunchExe,
+  // no install-root resolution, no PICS round-trip.
+  describe('per-game bottle removal (D-D)', () => {
+    beforeEach(() => {
+      ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: 'GameLibSteamBridge-570'
+      })
+    })
+
+    it('calls removePerGameBridgeBottle(appId) and never consults resolveBridgeLaunchExe', async () => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'removed'
+      })
+
+      const game = new SteamGame(APP_ID)
+      await game.uninstall({} as any)
+
+      expect(removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
+      expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
+    })
+
+    it.each(['removed', 'absent'] as const)(
+      'on status "%s", returns an empty ExecResult and marks the library entry is_installed:false',
+      async (status) => {
+        ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+        ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({ status })
+
+        const game = new SteamGame(APP_ID)
+        const result = await game.uninstall({} as any)
+
+        expect(result).toEqual({ stdout: '', stderr: '' })
+        expect(library.get(APP_ID)?.is_installed).toBe(false)
+      }
+    )
+
+    it('on status "error", stderr carries the error and the library entry stays installed', async () => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'error',
+        error: 'cxbottle delete failed'
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.uninstall({} as any)
+
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toContain('cxbottle delete failed')
+      expect(library.get(APP_ID)?.is_installed).toBe(true)
+    })
   })
 
   it('regression: a non-allowlisted title uninstall() never consults resolveBridgeLaunchExe, and (debug/steam-bottle-uninstall-reverts FINAL) routes to direct deletion instead of tellBottledSteamToUninstall', async () => {
