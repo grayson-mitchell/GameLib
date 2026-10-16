@@ -11,12 +11,18 @@
  */
 import { sendFrontendMessage } from 'backend/ipc'
 import { configStore as nileConfigStore } from 'backend/storeManagers/nile/electronStores'
-import { __resetSignInEpochsForTests } from 'backend/signInProbe/sessionEpoch'
+import {
+  __resetSignInEpochsForTests,
+  bumpSignInEpoch
+} from 'backend/signInProbe/sessionEpoch'
 import {
   __resetSignInProbeOutcomesForTests,
   getSignInProbeOutcomes
 } from 'backend/signInProbe/outcomes'
-import { NILE_LIBRARY_SYNC_SUCCESS_MARKER } from 'backend/signInProbe/classify'
+import {
+  NILE_LIBRARY_SYNC_SUCCESS_MARKER,
+  NILE_REFRESH_FAILURE_MARKER
+} from 'backend/signInProbe/classify'
 import type { FakeFlagStore } from 'backend/signInProbe/__tests__/fakeFlagStore'
 import type { CallRunnerOptions, ExecResult } from 'common/types'
 import NileLibraryManager from '../library'
@@ -140,5 +146,62 @@ describe('Amazon: a successful library sync clears a latched flag (quick 261016-
     expect(sendMock).toHaveBeenCalledWith('signInProbeOutcomes', {
       outcomes: expect.objectContaining({ nile: 'healthy' })
     })
+  })
+
+  it('a failed refresh (400, non-zero exit) leaves a latched flag set and never clears it', async () => {
+    flag.data.set('expired', true)
+    const mgr = new NileLibraryManager()
+    armRunner(mgr, [`${NILE_REFRESH_FAILURE_MARKER} <Response [400]>`], {
+      error: 'Process exited with code 1'
+    })
+
+    await callRefreshNile(mgr)
+
+    // classifyNileLibrarySync returns 'unknown' here, so applySignInVerdict's
+    // 'unknown' branch never touches the flag (verdict.ts: "unknown NEVER
+    // writes"). The outcome is still recorded/published as 'unknown', mirroring
+    // pass.ts: only a 'stale' result skips the record+publish.
+    expect(flag.data.get('expired')).toBe(true)
+    expect(flag.deletes).not.toContain('expired')
+    expect(getSignInProbeOutcomes().nile).toBe('unknown')
+  })
+
+  it('an epoch bump mid-flight (a fresh sign-in landing during the spawn) makes the verdict stale: the flag is left untouched and nothing is published (T-49-10)', async () => {
+    flag.data.set('expired', true)
+    const mgr = new NileLibraryManager()
+    jest
+      .spyOn(mgr, 'runRunnerCommand')
+      .mockImplementation((_argv: string[], options?: CallRunnerOptions) => {
+        options?.onOutput?.(SUCCESS_CHUNK, {} as never)
+        // Simulates a sign-in completing while this spawn is still in flight --
+        // the epoch was already captured before runRunnerCommand was called.
+        bumpSignInEpoch('nile')
+        return Promise.resolve({
+          stdout: '',
+          stderr: '',
+          error: undefined,
+          abort: false
+        })
+      })
+
+    await callRefreshNile(mgr)
+
+    expect(flag.data.get('expired')).toBe(true)
+    expect(flag.deletes).not.toContain('expired')
+    expect(getSignInProbeOutcomes().nile).toBeUndefined()
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('a synchronous throw inside the observer resolves cleanly, with no unhandled rejection and nothing published (F6)', async () => {
+    const mgr = new NileLibraryManager()
+    jest.spyOn(mgr, 'runRunnerCommand').mockImplementation(() => {
+      throw new Error('forced for quick 261016-n7s F6 throw-safety')
+    })
+
+    await expect(callRefreshNile(mgr)).resolves.toEqual({
+      stderr: '',
+      stdout: ''
+    })
+    expect(sendMock).not.toHaveBeenCalled()
   })
 })

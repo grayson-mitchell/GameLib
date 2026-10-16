@@ -13,10 +13,12 @@
  *     access token ages out (RESEARCH A4). With zero installed games it exits 0
  *     before any auth call (F-49-R1-4, measured), so that run classifies
  *     `unknown`, never `healthy`. `library sync` is not a permitted substitute
- *     (D-16: the pass never triggers a library sync). The Amazon induction live
- *     gate has run (quick 261015-rud, 2026-10-15: `<Response [400]>` measured,
- *     in-app `expired`/`latched`), so a replacement command is no longer gated
- *     on it; see `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md`.
+ *     for THIS probe (D-16: the pass never triggers a library sync). The
+ *     zero-installed latch-never-clears defect this created is resolved (quick
+ *     261016-n7s): this probe command and its `unknown` verdict are unchanged,
+ *     and the latch now clears from a separate observer on the `library sync`
+ *     spawn that `refreshNile()` already makes on every library refresh --
+ *     D-16 still holds, because that observer does not trigger a new spawn.
  *   Both were live-gated by 49-11 / 49-12; a drifted marker degrades to `unknown`.
  *
  * Every spawn passes `skipErrorHandler: true` (no modal, P2) and feeds

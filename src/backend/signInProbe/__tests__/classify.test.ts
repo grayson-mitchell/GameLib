@@ -10,12 +10,14 @@ import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import {
   classifyGogdlAuth,
   classifyLegendaryStatus,
+  classifyNileLibrarySync,
   classifyNileOutput,
   createBoundedOutputCapture,
   EPIC_AUTH_FAILURE_MARKER,
   EPIC_NETWORK_FAILURE_MARKER,
   GOG_REFRESH_CONNECTION_FAILURE_MARKER,
   NILE_AUTH_FAILURE_STATUSES,
+  NILE_LIBRARY_SYNC_SUCCESS_MARKER,
   NILE_NO_GAMES_INSTALLED_MARKER,
   NILE_REFRESH_FAILURE_MARKER,
   SIGN_IN_PROBE_OUTPUT_CAP
@@ -187,10 +189,10 @@ const nileBase = {
   aborted: false
 }
 
-describe('classifyNileOutput (Amazon, RESEARCH 1c)', () => {
-  const refreshFailure = (status: string) =>
-    `${NILE_REFRESH_FAILURE_MARKER} <Response [${status}]>`
+const refreshFailure = (status: string) =>
+  `${NILE_REFRESH_FAILURE_MARKER} <Response [${status}]>`
 
+describe('classifyNileOutput (Amazon, RESEARCH 1c)', () => {
   const expiredRows: Array<[string, SignInProbeOutcome]> =
     NILE_AUTH_FAILURE_STATUSES.map((s) => [s, 'expired'])
 
@@ -312,6 +314,62 @@ describe('classifyNileOutput (Amazon, RESEARCH 1c)', () => {
   })
 })
 
+describe('classifyNileLibrarySync (Amazon, quick 261016-n7s -- clear-only)', () => {
+  it('the success phrase alone is healthy', () => {
+    expect(
+      classifyNileLibrarySync({
+        ...nileBase,
+        output: NILE_LIBRARY_SYNC_SUCCESS_MARKER
+      })
+    ).toBe('healthy')
+  })
+
+  it('the success phrase alongside a refresh-failure line is unknown (first-match-wins)', () => {
+    expect(
+      classifyNileLibrarySync({
+        ...nileBase,
+        output: `${refreshFailure('401')}\n${NILE_LIBRARY_SYNC_SUCCESS_MARKER}`
+      })
+    ).toBe('unknown')
+  })
+
+  it('a refresh failure with a 400 is unknown -- this path can never latch', () => {
+    expect(
+      classifyNileLibrarySync({ ...nileBase, output: refreshFailure('400') })
+    ).toBe('unknown')
+  })
+
+  it('errored with the success phrase present is unknown', () => {
+    expect(
+      classifyNileLibrarySync({
+        ...nileBase,
+        output: NILE_LIBRARY_SYNC_SUCCESS_MARKER,
+        errored: true
+      })
+    ).toBe('unknown')
+  })
+
+  it('aborted with the success phrase present is unknown', () => {
+    expect(
+      classifyNileLibrarySync({
+        ...nileBase,
+        output: NILE_LIBRARY_SYNC_SUCCESS_MARKER,
+        aborted: true
+      })
+    ).toBe('unknown')
+  })
+
+  it('a zero-chunk capture (joined spawn) is unknown', () => {
+    expect(classifyNileLibrarySync({ ...nileBase, observed: false })).toBe(
+      'unknown'
+    )
+  })
+
+  it('empty output, observed, clean is unknown -- contrast with classifyNileOutput, where a clean empty capture is healthy', () => {
+    expect(classifyNileLibrarySync({ ...nileBase, output: '' })).toBe('unknown')
+  })
+})
+
 describe('createBoundedOutputCapture', () => {
   it('concatenates chunks in order', () => {
     const capture = createBoundedOutputCapture()
@@ -375,5 +433,11 @@ describe('classify.ts source gate (T-49-09)', () => {
     const imports = source.split('\n').filter((l) => /^import /.test(l))
     expect(imports).toHaveLength(1)
     expect(imports[0]).toMatch(/^import type .* from 'common\/signInState'/)
+  })
+
+  it("classifyNileLibrarySync's declared return type excludes 'expired' -- this path can never latch (quick 261016-n7s)", () => {
+    expect(source).toMatch(
+      /export function classifyNileLibrarySync\([^)]*\): 'healthy' \| 'unknown'/
+    )
   })
 })

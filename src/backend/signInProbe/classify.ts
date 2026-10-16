@@ -191,9 +191,12 @@ const NILE_REFRESH_RESPONSE_PATTERN = new RegExp(
  * bundled binary). That spawn is zero evidence about the credential either
  * way, so it is `unknown`, never `healthy`. A refresh-failure line still
  * decides first if the two ever co-occur. `library sync` is not a permitted
- * substitute probe (D-16). The induction live gate has run, so a replacement
- * command is no longer gated; it is tracked in the todo
- * `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md`.
+ * substitute for THIS probe (D-16). The zero-installed shape therefore means
+ * the latch, once set, could only clear via a Reconnect login -- resolved by
+ * quick 261016-n7s, which adds `classifyNileLibrarySync` below as a
+ * clear-only observer on the `library sync` spawn `refreshNile()` already
+ * makes on every library refresh. This probe and its classifier are
+ * unchanged.
  */
 /**
  * nile `library api/library.py:133`, confirmed in the shipped v1.2.0 binary
