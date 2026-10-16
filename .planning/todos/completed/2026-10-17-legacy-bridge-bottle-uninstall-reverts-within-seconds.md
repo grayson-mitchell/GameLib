@@ -38,3 +38,22 @@ the legacy bottle's steamapps dir alongside the install root (the per-game branc
 this by construction), and add a games.test.ts case asserting the manifest unlink. Consider also
 dropping the appId from the bridge poller/`nonAvailableGames` reconcile path, but the manifest
 unlink alone stops the revert.
+
+## Closed
+
+Closed 2026-10-17 by quick task 261017-bqw
+(`.planning/quick/261017-bqw-unlink-the-legacy-bottle-appmanifest-on-/`).
+
+The legacy branch of `uninstallBridgeGame()` now deletes this appId's own
+`appmanifest_<appId>.acf` from the legacy bottle's steamapps dir, in the same try block as the
+install root removal (commit `dbb87081b`). Two new real-filesystem jest cases in games.test.ts
+prove the manifest unlink is scoped to this appId only, in this bottle only — a sibling legacy
+game's manifest and install dir, and the Phase 17 `GameLibSteam` bottle's own manifest for the
+same appId, all survive untouched; a missing manifest still completes with an empty stderr.
+`games.test.ts` went from 274 to 276 passing tests. The frontend `nonAvailableGames` path was
+deliberately left unchanged — the todo's own heal-on-refresh evidence (07:49:52 / 07:50:08) shows
+the grid heals with no frontend change once the manifest is gone and the library refreshes.
+
+The fix is desk-verified against a real-filesystem jest fixture, not on CrossOver. A live
+confirmation would mean uninstalling one of the operator's remaining legacy-bottle games (Avernum 6
+or HOARD), which is an operator decision.
