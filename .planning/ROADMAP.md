@@ -27,7 +27,6 @@ v0.2–v0.7 were never archived through `/gsd-complete-milestone`; their phase d
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-
 **v0.1 — Steam Platform (Shipped 2026-06-29)**
 
 - [x] **Phase 1: Steam Authentication** - Users can add, manage, and remove Steam accounts in GameLib (completed 2026-06-27)
@@ -170,3 +169,61 @@ them `.github/workflows/release-tauri.yml` ships unsigned, giving each release a
 identity so the macOS Keychain ACL never matches and users get re-prompted on every update. That
 is the actual lever on prompt *quantity*, it is independent of this phase, and it should not wait
 on it.
+
+### Phase 51: Widen the native Steam bridge — more interface proxies, scan-derived eligibility
+
+**Goal:** Most Windows-only Steam games on macOS run through the Phase 24 bridge in their own
+per-game bottle, and the shared Phase 17 `GameLibSteam` bottled-Steam bottle becomes the fallback
+for a measured residue instead of the default. Today `isBridgeEligible()` (`steam/games.ts:2001`)
+requires membership in `bridge/bridge-allowlist.json`, which holds two games (Avernum 5 and 6), so
+every other bottle-eligible title shares one Windows Steam client and one set of CrossOver tweaks.
+Filed 2026-10-17 from the operator design question of 2026-10-16, closing
+`.planning/todos/completed/2026-10-16-widen-the-native-steam-bridge-beyond-two-games.md`.
+Per-game bridge bottles already ship (quick `261016-u1w`, live-gated 5/5 by `261016-wsq`), so the
+bottle half of the question is answered; this phase is the interface half and the eligibility half.
+
+**Three sub-decisions are LOCKED inputs to the spec, made from the Phase 24 record:**
+
+1. **Interface order is the Hoard set, in this order:** ISteamUtils, ISteamApps, ISteamUserStats
+   first (near-universal, mostly read-only or safely stubbable), ISteamRemoteStorage second (answer
+   as cloud-disabled), ISteamMatchmaking and ISteamNetworking last (answer unavailable; P2P join
+   stays out of scope as 24-SPEC ruled). The evidence is D-UAT-24-09: Hoard loaded the shim, ran,
+   and died on the first unimplemented accessor (`SteamUtils`) because `steam_api.def` exports only
+   the lifecycle set plus `SteamAPI_SteamUser_v023` and `SteamAPI_SteamFriends_v018`. The export
+   table must also grow the bare legacy accessors (`SteamUser()`, `SteamUtils()`, …) Hoard imports
+   and whatever the `SteamInternal_*` / `SteamAPI_GetHSteamUser` / `SteamClient()` family modern
+   SDKs route through — research must census that family against real owned titles, it is not in
+   any spike. Acceptance is 24-UAT Gate 4 re-run: Hoard (63000) playable through the bridge.
+2. **Eligibility becomes scan-derived, not hand-curated.** The install-time coverage check already
+   exists (`bridge/shimGenerate.ts:239`, `scanSteamApiImports` → rejected placement on any uncovered
+   symbol); today its verdict is thrown away after one launch failure. This phase persists it per
+   game in `steamMetadataStore` on the D-17 `forcedWindowsViaBottle` precedent, and a bottle-eligible
+   game that is NOT allowlisted installs into a per-game bridge bottle, is scanned, and either runs
+   through the bridge or gets the D-05 dialog naming the missing symbols and offering the
+   bottled-Steam fallback. The scan can only run after the exe exists, so the phase accepts
+   install-first-decide-second; the spec must settle whether the depot manifest's file list
+   (`steam_api.dll` vs `steam_api64.dll`) gives a cheap pre-install screen.
+3. **The allowlist stays bundled JSON; no remote CI index.** D-01 named the Phase 19 index as the
+   upgrade path, but there is nothing to index without owning the games. The JSON becomes a seed of
+   known-good titles plus a known-bad list (DRM-wrapped, 24-SPEC out-of-scope); growth is the
+   persisted scan verdict above.
+
+**Two hazards the spec must carry, both measured at filing:** (a) the shim is PE32 i386 and
+`importScan.ts` matches only the `steam_api.dll` heading, so a 64-bit game scans as importing
+nothing and placement passes vacuously — the game then loads a `steam_api64.dll` that does not
+exist. Any scan-derived eligibility must fail closed on a `steam_api64.dll` import, and whether a
+64-bit shim target (`zig cc -target x86_64-windows-gnu`, single Win64 calling convention) is in
+scope decides whether "most" is reachable at all; research it before the spec, do not assume
+either way. (b) Until this lands, the documented stopgap for the shared bottle is per-executable
+Wine overrides (`HKCU\Software\Wine\AppDefaults\<game>.exe`), which need no second bottle.
+
+**Requirements**: TBD (run `/gsd-spec-phase 51` or `/gsd-discuss-phase 51` to mint; the three
+sub-decisions above are locked, the two hazards are open questions for research).
+**Depends on:** Phase 24 (the generator `meta/gen_vtables.ts`, the helper
+`native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
+in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
+`phase.add` wrote by positional guess — the Epic subview shares no files with this.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 51 to break down)
