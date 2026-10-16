@@ -4,10 +4,10 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: Awaiting next milestone
 stopped_at: Completed quick task 261015-rud -- live-gated Amazon expiry strings A3/A6 by nile induction
-last_updated: "2026-10-16T05:09:35.256Z"
+last_updated: "2026-10-16T06:23:54.903Z"
 last_activity: 2026-10-16
 last_activity_desc: Milestone v0.8 completed and archived
-state_head: f23c8dd71aea649229a5a3d040e0542ebd715fc2
+state_head: 953cd5cba9239ad7f2ee22a21e326c9986aec5ef
 progress:
   total_phases: 45
   completed_phases: 36
@@ -654,6 +654,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261015-vtu | **Closed 34.4.1 cycle-2 E-WR-01..04 dead theme tokens + IN-01; review dispositions declared.** CSS/token only, NOT rendered live; 17 info findings and IN-02 NOT addressed. | 2026-10-15 | 24792ec3e | COMPLETE (desk). 26 suites/588 jest, scoped prettier, planning-gates 12/12; phase folder reads green by declaration (REVIEW-FIX warnings_resolved + cycle-2 disposition closed). | [261015-vtu](./quick/261015-vtu-close-e-wr-01-04-theme-token-warnings-fr/) |
 | 261016-n7s | **Amazon sign-in latch now clears on a zero-installed profile.** The expiry probe's `list-updates` run is `unknown` with nothing installed (A4) and `unknown` never writes, so a latched `expired` could only clear via Reconnect. Fix: a clear-only classifier (`classifyNileLibrarySync`, return type excludes `expired`) observes the `nile library sync` spawn `refreshNile()` already makes on every library refresh and hands `healthy`/`unknown` to `applySignInVerdict` with the pre-spawn epoch; non-stale verdicts record+publish like the pass. Probe and D-16 untouched. Marker `Successfully synced the library` proven in the shipped v1.2.0 binary (vendored tree is 1.1.2). Lazy alias imports (storeManagers cycle measured). jest 12/12 suites 245/245, codecheck 0, lint ceilings PASS unbumped (tests 638/638 zero headroom, no re-pin needed), prettier clean, planning-gates 12/12. Source todo closed into completed/. Live confirmation on the real zero-installed profile not done. | 2026-10-16 | 60023a86e | — | [261016-n7s-amazon-sign-in-latch-never-clears-on-a-z](./quick/261016-n7s-amazon-sign-in-latch-never-clears-on-a-z/) |
 | 28 | Fix 7 unparseable YAML frontmatters (6 quick-task SUMMARYs + 34.13-UAT.md) refused by audit-open acknowledge during the v0.8 close pre-flight | 2026-10-16 | 102129700 | — | — |
+| 29 | fast: close the login-sheet scrollbar-gutter wedge live-gate at the desk -- attributed to WebKit macOS 26 corner-avoidance inset (scrollbar frame starts at y=19) over the document background colour; todo flipped to ready: blocked, parked on route C/D | 2026-10-16 | aadc89ad0 | — | — |
 
 ## Deferred Items
 
