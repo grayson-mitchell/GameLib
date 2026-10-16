@@ -23,6 +23,8 @@ import { logWarning } from 'backend/logger'
 import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../electronStores'
+import { library } from '../state'
+import { startBottleProcessMonitor } from '../bottleProcessMonitor'
 import {
   getBottleDir,
   getBottleSteamappsDir,
@@ -87,6 +89,16 @@ jest.mock('backend/launcher', () => ({
   runWineCommand: jest.fn()
 }))
 
+// quick/261016-t3e: the 'launch' verb now lazily imports this module to
+// start a process monitor fire-and-forget — mocked so the launch-verb
+// wiring assertion below can observe the call without exercising the real
+// polling loop (that loop has its own dedicated bottleProcessMonitor.test.ts).
+jest.mock('../bottleProcessMonitor', () => ({
+  startBottleProcessMonitor: jest.fn(),
+  stopBottleProcessMonitor: jest.fn(),
+  __stopAllBottleProcessMonitors: jest.fn()
+}))
+
 // GAP C (17-16): force isMac true so the macOS raise poll loop is exercised
 // deterministically on every host (the loop is dynamically imported by
 // bottle.ts). isSnap is provided because backend/constants/paths reads it.
@@ -118,6 +130,7 @@ const mockedCheckWineBeforeLaunch = checkWineBeforeLaunch as jest.Mock
 const mockedRunWineCommand = runWineCommand as jest.Mock
 const mockedAppHide = app.hide as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
+const mockedStartBottleProcessMonitor = jest.mocked(startBottleProcessMonitor)
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -1211,6 +1224,77 @@ describe('bottle.ts', () => {
       )
       expect(commandParts).toContain('-applaunch')
       expect(commandParts).toContain(GOOD_APP_ID)
+    })
+
+    // quick/261016-t3e: regression guard for LD-1 + the new launch-verb wiring.
+    describe('bottle process monitor wiring (quick/261016-t3e)', () => {
+      const seededInstallPath = joinPath(
+        getBottleDir(DEFAULT_STEAM_BOTTLE_NAME),
+        'drive_c',
+        'Program Files (x86)',
+        'Steam',
+        'steamapps',
+        'common',
+        'Fallout 2'
+      )
+
+      afterEach(() => {
+        // The library Map is module-global and survives between tests — a
+        // leaked entry would silently change what a later test observes.
+        library.delete(GOOD_APP_ID)
+      })
+
+      test('launch starts the bottle process monitor with the appId and install_path from the library Map', async () => {
+        mockedExistsSync.mockReturnValue(true)
+        mockedGetNodefault.mockReturnValue(undefined)
+        library.set(GOOD_APP_ID, {
+          install: { install_path: seededInstallPath }
+        } as never)
+
+        await tellBottledSteamToLaunch(GOOD_APP_ID)
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(mockedStartBottleProcessMonitor).toHaveBeenCalledTimes(1)
+        expect(mockedStartBottleProcessMonitor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            appId: GOOD_APP_ID,
+            installPath: seededInstallPath
+          })
+        )
+      })
+
+      test('install and uninstall do NOT start a bottle process monitor (LD-1)', async () => {
+        mockedExistsSync.mockReturnValue(true)
+        mockedGetNodefault.mockReturnValue(undefined)
+        library.set(GOOD_APP_ID, {
+          install: { install_path: seededInstallPath }
+        } as never)
+
+        await tellBottledSteamToInstall(GOOD_APP_ID)
+        await tellBottledSteamToUninstall(GOOD_APP_ID)
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(mockedStartBottleProcessMonitor).not.toHaveBeenCalled()
+      })
+
+      test('launch with no known install_path logs a warning and does not start a monitor', async () => {
+        mockedExistsSync.mockReturnValue(true)
+        mockedGetNodefault.mockReturnValue(undefined)
+        // No library entry seeded for GOOD_APP_ID in this test.
+
+        const result = await tellBottledSteamToLaunch(GOOD_APP_ID)
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(result.status).toBe('done')
+        expect(mockedStartBottleProcessMonitor).not.toHaveBeenCalled()
+        expect(mockedLogWarning).toHaveBeenCalledWith(
+          expect.stringContaining(GOOD_APP_ID),
+          'Steam'
+        )
+      })
     })
 
     test('install dispatches steam://install/<appId> targeting the bottle Steam.exe', async () => {
