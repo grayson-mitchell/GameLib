@@ -40,6 +40,7 @@ import {
   steamSupportPath
 } from './constants'
 import { steamBottleConfigStore } from './electronStores'
+import { library } from './state'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
 // D-08/R6/Pitfall 1: the bridge bottle is a SEPARATE, shared CrossOver
@@ -1004,6 +1005,39 @@ async function dispatchToBottledSteam(
       void raiseInstallerWindow(verb)
     } else if (verb === 'launch') {
       void raiseBottledGameWindow('launch')
+      // quick/261016-t3e: give a bottled launch real started/stopped
+      // feedback by polling for any process under the game's own bottle
+      // install directory (Playnite's SteamPlayController pattern). Lazy
+      // import — see the module-load note at the top of this file: a static
+      // edge here would drag `backend/ipc` into every unit test that imports
+      // bottle.ts for its pure helpers.
+      const installPath = library.get(appId)?.install?.install_path
+      if (!installPath) {
+        logWarning(
+          `tellBottledSteamToLaunch: no install_path known for appId "${appId}" — no process monitor started`,
+          LogPrefix.Steam
+        )
+      } else {
+        void (async () => {
+          try {
+            const { startBottleProcessMonitor } =
+              await import('./bottleProcessMonitor')
+            startBottleProcessMonitor({
+              appId,
+              installPath,
+              bottleDir: getBottleDir(bottleName)
+            })
+          } catch (error) {
+            logWarning(
+              [
+                `tellBottledSteamToLaunch: failed to start bottle process monitor for appId "${appId}"`,
+                error
+              ],
+              LogPrefix.Steam
+            )
+          }
+        })()
+      }
     }
     await runWineCommand({
       commandParts,
