@@ -9,6 +9,7 @@ provides:
   - "DD-1 rollback: a rejected_by_server reveal deletes the write-ahead humbleRevealedStore entry"
   - "DD-3 derivation: ClaimAnnotation.revealRefusedAt computed from humbleAuditStore, never stored"
   - "DD-4 wizard warning: HumbleClaimWizard's warning step shows the shipped revealRejectedBody copy when priorRefusalAt is set"
+
 affects: [humble-keys-screen, humble-claim-flow]
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed: [TODO-2026-09-10-STRANDED-KEY]
 
 duration: ~25min
 completed: 2026-09-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260911-ftc: Fix the stranded-key bug summary

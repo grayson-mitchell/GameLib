@@ -4,6 +4,10 @@ phase: 30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check
 source: [30-01-SUMMARY.md, 30-02-SUMMARY.md, 30-03-SUMMARY.md, 30-04-SUMMARY.md, 30-REVIEW-FIX.md]
 started: 2026-07-22T21:57:57Z
 updated: 2026-08-13T00:00:00Z
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  gap_snapshot: "diagnosed::scenarios=0"
 ---
 
 ## Current Test
@@ -13,24 +17,29 @@ updated: 2026-08-13T00:00:00Z
 ## Tests
 
 ### 1. Cold Start Smoke Test
+
 expected: Kill any running GameLib/Tauri/sidecar process. Start `npm run tauri:dev` from scratch. Rust shell launches, sidecar signals READY, window paints a real UI (not blank), no `is not a constructor` error, no boot crash.
 result: pass
 
 ### 2. Steam Library Populates Under Tauri
+
 expected: With the session already signed in to Steam (tile shows Logout), the library screen lists the account's owned Steam titles. No `UNPORTED_CHANNEL_MARKER` warnings for `checkSteamInstalled` / `steamStartQR` / `listSteamLibraryTargets`.
 result: pass
 
 ### 3. Steam Logout Honest Dialog (G-30-01 regression)
+
 expected: Under Tauri, clicking Logout on the Steam tile shows a "sign-out isn't available in this build" dialog — no page reload, no latched "Logging out..." button, tile still reads Logout. Under Electron (`npm start`), Logout still genuinely signs out and reloads.
 result: pass
 
 ### 4. Install Button Opens Native Folder Picker
+
 expected: With `enableSteamNativeInstall: true`, clicking Install on a Steam title opens the real macOS native folder picker (tauri-plugin-dialog `dialog_open`). Picking a folder returns that path; cancelling closes it cleanly with no error toast and no hang.
 result: issue
 reported: "nothing happens when click on install other than the spinner appearing"
 severity: major
 
 ### 5. Install Starts and Button State Transitions
+
 expected: After choosing an install folder, the depot download starts and the library button transitions queued → installing → done via the `gameStatusUpdate` push. The install does NOT abort at ~60 seconds (CR-03 timeout fix) — a long download keeps running past a minute.
 result: pass
 verified_by: "Phase 33 plan 33-05 — gate D-13, outcome PASS, verified_by human (live hardware, `npm run tauri:dev`, sidecar rebuilt from current tree), verified_on 2026-07-24"
@@ -56,6 +65,7 @@ note: |
   was witnessed; the transport carrying it was inferred.
 
 ### 6. Uninstall Reverts Button State
+
 expected: Clicking Uninstall on an installed Steam title removes it and the library button transitions back to Install.
 result: tracked
 tracked_by: "30-VERIFICATION.md human_verification — 'Uninstall reverts button state (30-UAT test 6)'. Tracked THERE, not here, so this open question is counted once rather than three times."
@@ -72,6 +82,7 @@ reason: |
   30-VERIFICATION.md each restate.
 
 ### 7. Update Check Reports Real Results
+
 expected: The update check runs across runners without one failing runner killing the whole check (WR-05), and triggering an update on a game reports the actual outcome — a failed update surfaces as a failure, not a false "success" (WR-04).
 result: tracked
 tracked_by: "30-VERIFICATION.md human_verification — 'Update check reports real results — WR-04 / WR-05 (30-UAT test 7)'. Tracked THERE, not here, so this open question is counted once."
@@ -87,12 +98,14 @@ reason: |
   CSP / `withGlobalTauri`). They are not evidence for this test.
 
 ### 8. openDialog File-Picker Call Sites (WR-02 / WR-01)
+
 expected: Any UI that browses for a FILE rather than a folder (e.g. adding a game / choosing an executable or path in Settings) opens a native picker honoring the requested mode — a file picker where a file is asked for, not always a folder picker. Previously this path rejected outright under Tauri.
 result: issue
 reported: "settings cant be reached"
 severity: major
 
 ### 9. Electron Build Unregressed
+
 expected: `npm start` (Electron) still boots, lists the Steam library, installs/uninstalls, and checks updates exactly as before Phase 30 — the additive/reversible invariant holds.
 result: issue
 reported: "still boots, but trying to sync steam, and failing. gog games are still listed."
@@ -118,7 +131,6 @@ in Gaps below), tracked 2 (tests 6 and 7 — the phase's two surviving open ques
 canonically in 30-VERIFICATION.md's human_verification block so each is counted ONCE across this
 phase's three files rather than restated in all of them). 4+3+2 = 9.
 -->
-
 
 ## Gaps
 

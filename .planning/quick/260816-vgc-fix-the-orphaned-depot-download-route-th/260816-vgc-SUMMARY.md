@@ -11,10 +11,12 @@ dependency-graph:
   affects:
     - src/backend/downloadmanager/utils.ts
     - src/backend/downloadmanager/__tests__/utils.test.ts
+
 tech-stack:
   added: []
   patterns:
     - "Failure-path abort routed through the same primitives (callAbortController, SteamGame.stop) the existing Cancel path (downloadqueue.ts stopCurrentDownload) already uses"
+
 key-files:
   created:
     - .planning/todos/pending/2026-08-16-aborted-depot-residue-has-no-acf.md
@@ -22,11 +24,17 @@ key-files:
     - src/backend/downloadmanager/utils.ts
     - src/backend/downloadmanager/__tests__/utils.test.ts
     - .planning/todos/pending/2026-08-16-orphaned-depot-download-outlives-failure.md
+
 decisions:
   - "Partial-byte/.acf reconcilability (the source todo's fourth 'what good looks like' bullet) deferred to a new todo rather than bolted onto this fix — it touches depot.ts's manifest-write ordering that Phase 23 hardened over ten plans"
+
 metrics:
   duration: "~30 minutes"
   completed: 2026-08-16
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Fix the orphaned-depot-download route Summary
@@ -53,6 +61,7 @@ Confirmed RED against the unmodified source before touching `utils.ts`:
   Expected: "1091500"
   Number of calls: 0
 ```
+
 Specs 1, 2, 3, 6 failed (asserting a call the unmodified source never makes); specs 4 and 5
 passed (asserting absence); all 17 pre-existing specs in the file stayed green.
 
@@ -134,6 +143,7 @@ consistency, though strictly it should have been a `docs(...)` message since it 
 
 **Net effect:** the same 4 files are touched across 3 commits instead of being combined into
 1. `git show --stat HEAD` alone will NOT show all 4 files (Task 3's commit `c41684299` shows
+
 only the 2 todo files) — the plan's literal verification step 4 as written will read as
 failing if run against HEAD only. Every other verification and every substantive
 success-criterion (correct files changed in aggregate, concurrent `library.ts`/test files

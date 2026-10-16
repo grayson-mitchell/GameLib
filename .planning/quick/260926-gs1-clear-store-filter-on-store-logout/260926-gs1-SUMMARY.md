@@ -9,6 +9,7 @@ provides:
   - pruneDisconnectedStores pure helper in filterEngine.ts
   - transition-only useRef baseline + useEffect wiring in Library/index.tsx
   - closed todo 2026-09-26-store-filter-survives-logout-and-empties-the-library
+
 affects: [library-filters, store-facet]
 
 tech-stack:
@@ -42,6 +43,10 @@ requirements-completed:
 
 duration: 5min
 completed: 2026-09-26
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260926-gs1: Clear store filter on store logout Summary

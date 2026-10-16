@@ -16,15 +16,21 @@ key_files:
     - src/backend/storeManagers/steam/user.ts
     - src/frontend/screens/Login/components/SteamLogin/index.tsx
     - src/backend/storeManagers/steam/__tests__/user.test.ts
+
 decisions:
   - connectingPromise assigned in QR authenticated handler so concurrent ensureConnected dedupes
   - Frontend gates finalization on truthy poll.username to defer until persona arrives
   - logout() now clears connectingPromise to prevent stale-promise await on re-login
+
 metrics:
   duration: 6m
   completed: 2026-06-29
   tasks: 3
   files_modified: 3
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260629-9ly: Fix QR-Login Library Race Summary

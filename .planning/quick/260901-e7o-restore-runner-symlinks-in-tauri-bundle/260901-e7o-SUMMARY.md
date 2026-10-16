@@ -5,6 +5,7 @@ subsystem: build
 tags: [tauri, macos, bundle-packaging, symlinks, pyinstaller, packagingConfig]
 
 # Dependency graph
+
 requires:
   - phase: quick-260901-8rm
     provides: "Per-platform tauri.{macos,windows,linux}.conf.json overlays narrowing bundle.resources to only the runner trees each platform needs"
@@ -14,6 +15,7 @@ provides:
   - "packagingConfig.test.ts positive-coverage gate closing the hole where nothing asserted macOS actually ships the darwin trees"
   - "Measured OLD-shipped vs NEW-shipped darwin-tree census on a real release DMG (260901-e7o-MEASUREMENTS.md)"
   - "Cause 3 of the 2026-08-28 bundle-size todo marked CLOSED, with two prior errors in that file corrected"
+
 affects: [build, packaging, macos-bundle-size, tauri-config, steam-runner-bootstrap]
 
 tech-stack:
@@ -40,8 +42,13 @@ key-decisions:
 requirements-completed: []
 
 # Metrics
+
 duration: spans a compacted session with a human checkpoint round-trip; see Performance for commit timestamps
 completed: 2026-09-01
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260901-e7o: Restore runner symlinks in Tauri bundle Summary

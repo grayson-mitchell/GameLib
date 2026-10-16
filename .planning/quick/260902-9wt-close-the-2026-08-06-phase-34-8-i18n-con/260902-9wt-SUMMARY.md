@@ -9,6 +9,7 @@ provides:
   - "2026-08-06 Phase-34.8 i18n approach todo CLOSED with a non-total closure record"
   - "2026-08-28 machine-fill coverage todo widened from 2-locale/5-key scope to its actual 46-locale/80-key scope, left PENDING"
   - "STATE.md Quick Tasks row for 260902-9wt, committed via a prepared-index technique that did not disturb a concurrent session's uncommitted work"
+
 affects: [i18n, todos]
 
 tech-stack:
@@ -32,6 +33,10 @@ requirements-completed: ["QUICK-260902-9wt"]
 
 duration: ~20min
 completed: 2026-09-02
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260902-9wt: Close the 2026-08-06 Phase-34.8 i18n approach todo Summary
@@ -84,16 +89,19 @@ No separate STATE.md-only commit was needed beyond `eadaae560`: the prepared-ind
 ## Verification (gate output, verbatim)
 
 **Task 1 gate:**
+
 ```
 OK
 ```
 
 **Task 2 gate:**
+
 ```
 OK
 ```
 
 **Task 3 gate (run as discrete assertions, all passed):**
+
 ```
 PENDING-SIDE PRESENT
 COMPLETED-SIDE PRESENT
@@ -116,6 +124,7 @@ index clean (empty output)
 ```
 
 **Plan-level `<verification>` block:**
+
 ```
 === residue owned check ===
 .planning/todos/pending/2026-08-28-gamelib-json-de-fr-missing-five-keys-machine-fill-401s.md

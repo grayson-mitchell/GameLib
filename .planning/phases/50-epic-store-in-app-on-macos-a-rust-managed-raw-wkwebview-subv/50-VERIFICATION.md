@@ -20,6 +20,7 @@ covered_files:
   - "src/frontend/screens/WebView/index.css"
   - "src/frontend/screens/WebView/storeEmbedOrigins.ts"
   - "src/frontend/screens/WebView/useStoreEmbedHost.ts"
+
 covered_digest: "v2:sha256:9433954d090e247da1f7554e59b2fd28295c641ec08ad73be937831756d0fc39"
 behavior_unverified: 5
 overrides_applied: 0
@@ -63,6 +64,7 @@ gaps:
         issue: "status: resolved_pending_live_gate is still CORRECT, but no record of which Live-check rows the closed gate discharged (measured below: 2 of 12 fully, 2 partially, 8 not at all)"
     missing:
       - "Apply the four corrections recommended in this report's Stale-Artifact Re-Derivation section (the operator is handling these; this verification does not edit them)"
+
 behavior_unverified_items:
   - truth: "A main-frame Cloudflare challenge falls back to WebviewUnavailablePanel reason='epic-challenged' with Try again and Open in browser, and is not sticky (ROADMAP ships #5, D-09/D-10/D-11)"
     test: "Induce a real main-frame Cloudflare/Turnstile challenge on Epic's store inside the embed, then clear it and reload"
@@ -84,6 +86,10 @@ behavior_unverified_items:
     test: "Sign out of Epic through GameLib's Manage Accounts, return to the Stores tab, then visit a second time with no further change"
     expected: "Exactly one reload on the first return, none on the second"
     why_human: "Not run, by a deliberate cost/benefit decision taken with the operator. The arm's named mechanism was proven incapable during the gate — signInState comes from epic.username in renderer context and nothing watches user.json, so a credential-fixture move is invisible to the running app. The only working induction is a real Epic sign-out and re-login, and neither half of the criterion has an instrument: the success path logs nothing in the renderer (logNavCallFailure only) and nothing in Rust (macos_epic_embed.rs:885). The gate's own recommendation — a unit test on recordSignInBaseline, which is a pure function over (storeKey, signInState) — is strictly better evidence and is unactioned."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: gaps_found
 ---
 
 # Phase 50: Epic store in-app on macOS — Verification Report

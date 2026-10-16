@@ -14,6 +14,7 @@ provides:
   - Split hover/focus looks on .gameCard and .gameListItem, with the pga stale-focus suppression rescoped to body:not(.controllerLayout)
   - A cross-surface source-text gate (focusIndicator.test.ts) plus a rewritten gameCardFocusRing.test.ts
   - The actioned todo moved to ready: live-gate with a live-sweep checklist
+
 affects: [gamepad-focus, console-mode, navshell, library-grid, theming]
 
 tech-stack:
@@ -47,6 +48,10 @@ requirements-completed: [QUICK-260926-acw]
 
 duration: 45min
 completed: 2026-09-26
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260926-acw: Give controller/keyboard focus a perceptible indicator — Summary

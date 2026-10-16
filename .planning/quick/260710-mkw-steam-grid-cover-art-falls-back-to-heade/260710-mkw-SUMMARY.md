@@ -5,15 +5,18 @@ subsystem: ui
 tags: [react, steam, library, cover-art, cachedimage, fallback]
 
 # Dependency graph
+
 requires:
   - phase: 02-steam-library
     provides: Steam art fields (art_cover = header.jpg, art_square = library_600x900.jpg) on GameInfo
 provides:
   - Ordered multi-level fallback chain on CachedImage (fallback accepts string | string[])
   - Steam grid tiles fall back portrait capsule -> game header art -> generic placeholder
+
 affects: [Library GameCard, any future CachedImage caller wanting chained fallbacks]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -38,8 +41,13 @@ patterns-established:
 requirements-completed: [QUICK-260710-mkw]
 
 # Metrics
+
 duration: ~15min
 completed: 2026-07-10
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260710-mkw: Steam Grid Cover Art Falls Back to Header Art Summary
@@ -55,6 +63,7 @@ completed: 2026-07-10
 - **Files modified:** 3 (1 created, 2 modified)
 
 ## Accomplishments
+
 - Extended `CachedImage` from a single fallback slot to an ordered, bounded fallback chain while keeping single-string callers behaviorally identical
 - Wired the Library grid (non-justPlayed) tile to prefer the game's header art before the generic missing-art placeholder
 - Added TDD unit coverage proving `src -> fallback[0] -> fallback[1]` ordering, single-string backward compatibility, per-source imagecache retry, chain boundedness, and reset-on-src-change
@@ -68,11 +77,13 @@ completed: 2026-07-10
 _Task 1 was `tdd="true"` (test -> feat). No refactor commit needed — implementation was already minimal and clean._
 
 ## Files Created/Modified
+
 - `src/frontend/components/UI/CachedImage/index.tsx` - Widened `fallback` to `string | string[]`, normalized to an ordered array, replaced the boolean `useFallback` with a numeric index; `onError` advances through the bounded chain after the existing imagecache-then-raw retry; chain resets to primary on `props.src` change
 - `src/frontend/components/UI/CachedImage/__tests__/index.test.tsx` - Unit suite (no jsdom; slot-based useState + dependency-aware useEffect react mock) asserting chain order, backward compatibility, http imagecache retry, boundedness, and reset
 - `src/frontend/screens/Library/components/GameCard/index.tsx` - Grid (else) branch now passes `[getImageFormatting(art_cover, runner), fallBackImageMissing]` when `art_cover` is truthy and differs from the portrait capsule; otherwise the bare `fallBackImageMissing`. justPlayed branch and logo image untouched
 
 ## Decisions Made
+
 - Kept the single-string fallback path outcome-identical so all existing `CachedImage` callers are unaffected (verified project-wide by `tsc --noEmit`)
 - Grid tile guards on `art_cover && art_cover !== cover` so non-Steam runners (whose art_square/art_cover often match) and games without a distinct header keep the original single-placeholder behavior
 
@@ -94,18 +105,23 @@ _Task 1 was `tdd="true"` (test -> feat). No refactor commit needed — implement
 **Impact on plan:** Functional changes match the plan exactly. Only the command invocations were adapted to the actual pnpm-based toolchain. No scope creep.
 
 ## Issues Encountered
+
 - The frontend jest project has no jsdom/react-test-renderer (documented in `src/frontend/jest.config.js`). Followed the established project pattern (HumbleKeysWaiting): a module-level `react` mock with slot-based `useState`. Added a dependency-aware `useEffect` to the mock (only re-runs when deps change) so the chain progression is observable across re-renders — a naive run-every-render effect would have wiped the fallback index via CachedImage's src-keyed reset effect.
 
 ## Known Stubs
+
 None.
 
 ## Threat Flags
+
 None — no new network endpoints, auth paths, or trust-boundary surface. Only URLs already present on GameInfo (art_cover/art_square) are used; the chain is bounded and cannot loop (satisfies threat register T-quick-02).
 
 ## User Setup Required
+
 None - frontend-only change, no external service configuration required.
 
 ## Next Phase Readiness
+
 - Code complete and verified (tests + typecheck + lint pass).
 - **Task 3 remains: a blocking `checkpoint:human-verify`.** The user must launch the app and confirm in the Library grid that Bard's Tale IV (appid 566090) shows its landscape header art instead of the generic placeholder, that games with valid portrait capsules are unregressed, that a game with no usable art still shows the placeholder, and that the Recently Played row + Epic/GOG/Amazon tiles are unchanged.
 

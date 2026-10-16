@@ -8,15 +8,18 @@ provides:
   - 'smoke:sidecar READY-sentinel assertion (a signal the uncaughtException guard cannot forge)'
   - 'smoke:sidecar early-boot swallowed-fault assertion'
   - 'drift gate binding the .cjs literal to the TypeScript READY_SENTINEL export'
+
 affects:
   - meta/sidecarStartupSmoke.cjs
   - src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts
   - src/sidecar/installRejectionGuard.ts
+
 tech-stack:
   added: []
   patterns:
     - 'Assert a positive liveness signal, not the absence of a failure code'
     - 'Bind a hardcoded cross-language literal with a stripComments source gate + positive controls'
+
 key-files:
   created: []
   modified:
@@ -24,14 +27,20 @@ key-files:
     - src/backend/sidecar/__tests__/sidecarRejectionGuard.test.ts
     - src/sidecar/installRejectionGuard.ts
     - .planning/todos/completed/2026-09-13-smoke-sidecar-cannot-detect-a-module-evaluation-crash-the-uncaughtexception-guard-makes-the-exit-code-always-zero.md
+
 decisions:
   - 'Stderr arm IMPLEMENTED after measurement (4/4 clean boots emitted zero stderr bytes), but scoped honestly to the early-boot window'
   - 'installUncaughtExceptionGuard() and STARTUP_TIMEOUT_MS left untouched — the defect was the gate signal, not the guard'
   - 'Todo CLOSED: gate proven RED under the negative control and GREEN when restored'
+
 metrics:
   tasks: 3
   commits: 3
   completed: 2026-09-13
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260913-lkk: Fix the `smoke:sidecar` fail-open signal — Summary

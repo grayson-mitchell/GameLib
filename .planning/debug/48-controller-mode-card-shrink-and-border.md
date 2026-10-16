@@ -4,6 +4,10 @@ trigger: "Phase 48 UAT test 8 gaps G-48-8a (strip cards shrink/crop when switchi
 created: 2026-10-07T00:00:00Z
 updated: 2026-10-07T00:00:00Z
 goal: find_root_cause_only
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: diagnosed
 ---
 
 ## Current Focus

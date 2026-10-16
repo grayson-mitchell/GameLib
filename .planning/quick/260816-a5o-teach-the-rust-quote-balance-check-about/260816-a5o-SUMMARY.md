@@ -6,16 +6,20 @@ subsystem: backend-test-gates
 tags: [wr-08, source-gate, rust, quote-balance, test-utils, ledger]
 requires:
   - src/backend/testUtils/stripSourceComments.ts
+
 provides:
   - src/backend/testUtils/rustQuoteBalance.ts
+
 affects:
   - src/backend/__tests__/longRunningChannels.test.ts
   - src/backend/__tests__/tauriShellSource.test.ts
+
 tech-stack:
   added: []
   patterns:
     - "Shared source-gate normalizer module in src/backend/testUtils/ (follows stripSourceComments.ts)"
     - "Logical-line folding before per-line source assertions"
+
 key-files:
   created:
     - src/backend/testUtils/rustQuoteBalance.ts
@@ -23,14 +27,20 @@ key-files:
     - src/backend/__tests__/longRunningChannels.test.ts
     - src/backend/__tests__/tauriShellSource.test.ts
     - .planning/quick/260816-9o0-guard-gen-i18n-gate-scope-from-clobberin/deferred-items.md
+
 decisions:
   - "WR-08's per-physical-line quote premise removed structurally via a logical-line joiner, not patched with a third special case"
   - "stripRustEscapes must run BEFORE the join; pinned by its own discriminator, falsified by inverting the order"
   - "app_hide declared in the REQ-34.1-07 census with an explicit note that its proof status is weaker than every entry above it"
+
 metrics:
   tasks: 3
   commits: 3
   completed: 2026-08-16
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260816-a5o: Teach the Rust quote-balance check about `\`-continued literals — Summary

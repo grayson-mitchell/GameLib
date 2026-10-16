@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 260923-qe5: Fix `checkNintendo` trusting Chromium's `standard` mapping — Summary
 
 **One-liner:** `checkNintendo` and Console Mode's `getActionButtonIndex`/`getBackButtonIndex` both

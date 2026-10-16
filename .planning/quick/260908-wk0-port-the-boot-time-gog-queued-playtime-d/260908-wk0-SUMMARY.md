@@ -11,6 +11,7 @@ provides:
   - "Block G — exported syncQueuedPlaytimeWhenOnline() in bootstrap.ts, wired into init() after Block D, draining the GOG queued-playtime queue once online at boot"
   - "Dedicated jest suite (playtimeQueueBootDrain.test.ts) proving wiring, ordering, both setting arms, and both never-fail-boot arms, load-bearing per 4 mutations"
   - "Closed todo: 2026-09-06-queued-gog-playtime-never-drains-at-boot.md, RESOLVED"
+
 affects: [gog-library-manager, sidecar-bootstrap-sequence]
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed:
 
 duration: ~13min (span between Task 1 and final Task 3 fix commit; excludes earlier planning/investigation time from the prior session segment)
 completed: 2026-09-08
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260908-wk0: Port boot-time GOG queued-playtime drain Summary
@@ -85,6 +90,7 @@ _Note: Task 2 is a single `test` commit (suite + registration together) since th
 Bootstrap.ts confirmed byte-identical to the Task 1 commit both before mutation testing began and after all 4 mutations were reverted: `git diff 1342fd9b4 -- src/backend/sidecar/bootstrap.ts` produces 0 lines of output, and `grep -n "MUTATION" src/backend/sidecar/bootstrap.ts` exits 1 (no matches) in the final state.
 
 **Mutation 1** — commented out the `syncQueuedPlaytimeWhenOnline()` call inside Block G's guard. Result: RED, case 1 assertion (a):
+
 ```
 expect(jest.fn()).toHaveBeenCalledTimes(expected)
 Expected number of calls: 1
@@ -92,6 +98,7 @@ Received number of calls: 0
 ```
 
 **Mutation 2** (the load-bearing one) — moved Block G's entire `if (!playtimeQueueDrainInitialized)` block to sit immediately BEFORE Block D's `if (!playtimeLockClearInitialized)` block. Result: RED, case 1 assertion (b), the recorded array flips from the expected `[false]` to the received `[true]`:
+
 ```
 expect(received).toEqual(expected) // deep equality
 - Expected  - 1
@@ -101,9 +108,11 @@ expect(received).toEqual(expected) // deep equality
 +   true,
   ]
 ```
+
 This proves the ordering assertion measures the real precondition state at call time, not merely that the mock was invoked.
 
 **Mutation 3** — deleted the `.catch(...)` from the `syncQueuedPlaytime()` call inside the deferred callback. Result: RED, case 4 (the rejection escapes uncaught and the expected `logWarning` never fires):
+
 ```
 gameplay.gog.com unreachable
   > 188 | .mockRejectedValue(new Error('gameplay.gog.com unreachable'))
@@ -114,6 +123,7 @@ Received: false
 ```
 
 **Mutation 4** — deleted the inner `try/catch` inside the deferred callback (leaving only the outer try and the `.catch()`). Result: RED, case 6 (the synchronous throw escapes uncaught):
+
 ```
 expect(received).not.toThrow()
 Error name:    "Error"
@@ -160,9 +170,11 @@ Disabled-arm skip-log receipt: `grep -c 'Skipping playtime sync queue upload' bu
 `electronUntouched.test.ts`'s "by-construction gate: keyringTokenStore.ts and bootstrap.ts never reference configStore/TOKEN_STORE_KEY/TOKEN_PREFIX (comments stripped)" fails at current HEAD. This is **NOT caused by this task's changes** — Block G only imports/uses `GlobalConfig`, `logDebug`, `logWarning`, `runOnceWhenOnline`, and `libraryManagerMap`; it never references `configStore`.
 
 Proven pre-existing at baseline sha `80de085d9` (the HEAD commit before any of this task's Task 1/2/3 commits):
+
 ```
 git show 80de085d9:src/backend/sidecar/bootstrap.ts | grep -n "configStore"
 ```
+
 returns 5 matches, including line 91 (`import { configStore } from '../constants/key_value_stores'`) and line 413 (`configStore.delete('userInfo')`), both inside the pre-existing `reconcileStoreUsersWhenOnline()` function (Block E, ported by an earlier quick task, `quick-260908-fre`). This gate was already RED before this task began; per the plan's explicit instruction, it was not adjusted or fixed.
 
 ## Decisions Made

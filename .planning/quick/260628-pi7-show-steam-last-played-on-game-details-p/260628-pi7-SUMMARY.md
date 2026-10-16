@@ -17,13 +17,19 @@ key_files:
     - src/backend/storeManagers/steam/library.ts
     - src/backend/storeManagers/steam/__tests__/library.test.ts
     - src/frontend/screens/Game/TimeContainer/index.tsx
+
 decisions:
   - "Cached metadata spread placed first in extra object; fresh playtime/last-played fields placed after to override stale cache on every sync"
   - "Steam TimeContainer branch renders two lines (Last Played date + Total Time Played) and exits early so non-Steam tsInfo/never paths are unchanged"
   - "rtime_last_played defaults to 0 when absent; 0 is falsy in the UI renderer, displaying Never for games never launched through Steam"
+
 metrics:
   duration: ~6 min
   completed: 2026-06-28
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260628-pi7 Plan 01: Steam Last Played Summary

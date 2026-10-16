@@ -9,6 +9,7 @@ provides:
   - "SidebarLinks community group renders only Ko-fi (Discord and GitHub Sponsors entries removed)"
   - "Regression test locking the removal in (SidebarLinks community links describe block)"
   - "Sidebar tour community step copy no longer claims a Discord link"
+
 affects: [sidebar, i18n]
 
 tech-stack:
@@ -33,6 +34,10 @@ requirements-completed: [QUICK-260805-v1f]
 
 duration: 12min
 completed: 2026-08-05
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260805-v1f: Remove Discord and GitHub Sponsors from Sidebar Summary
@@ -47,6 +52,7 @@ completed: 2026-08-05
 - **Files modified:** 4
 
 ## Accomplishments
+
 - `SidebarLinks` community group (`data-tour="sidebar-community"`) now renders only the Ko-fi button; Discord and GitHub Sponsors `SidebarItem`s are gone
 - Dead `faDiscord`/`faGithub` (`@fortawesome/free-brands-svg-icons`) and `openDiscordLink` (`frontend/helpers`) imports removed from the component
 - New regression test (`SidebarLinks community links` describe block) asserts `'Discord'` and `'GitHub Sponsors'` labels are absent and `'Ko-fi'` is present, following TDD RED → GREEN
@@ -64,12 +70,14 @@ Each task was committed atomically:
 _TDD task (Task 1) produced two commits: test (RED) then feat (GREEN). No refactor step was needed — the removal was already minimal._
 
 ## Files Created/Modified
+
 - `src/frontend/components/UI/Sidebar/components/SidebarLinks/index.tsx` - Deleted the Discord and GitHub Sponsors `SidebarItem`s from the community div; removed the now-dead `@fortawesome/free-brands-svg-icons` and `frontend/helpers` imports; Ko-fi item and wrapping div untouched
 - `src/frontend/components/UI/Sidebar/components/SidebarLinks/__tests__/index.test.tsx` - Added `SidebarLinks community links` describe block with a `labelsOf` helper asserting the two removed labels are absent and Ko-fi is present; removed the obsolete `frontend/helpers` jest mock and its docstring justification
 - `src/frontend/components/UI/Sidebar/components/SidebarTour.tsx` - Changed the `tour.sidebar.community` `t()` call's default string from "Join our community on Discord and support GameLib's development." to "Support GameLib's development."; key name and `element` selector untouched
 - `public/locales/en/translation.json` - Updated the `tour.sidebar.community` value to match the new inline default text
 
 ## Decisions Made
+
 - Left `openDiscordLink` in `frontend/helpers` alone since `LogSettings/index.tsx` still imports and uses it for the Settings > Log "Join our Discord" button — matches the plan's explicit scope boundary
 - Left the `openDiscordLink`/`openGithubSponsorsPage` IPC listeners (main.ts, sidecar registration, preload API, ipc.ts) untouched — accepted as inert dead surface per the plan's threat register (T-v1f-02), removing them would break `shellFilesFlows.test.ts` and widen scope beyond a sidebar-only change
 - Left the `userselector.discord` translation key in place (upstream-owned, still referenced elsewhere)
@@ -80,12 +88,15 @@ _TDD task (Task 1) produced two commits: test (RED) then feat (GREEN). No refact
 None - plan executed exactly as written. The test file's existing `labelsOf` helper duplication note in the plan ("lift to module scope or duplicate — pick whichever keeps the diff smallest") was resolved by duplicating the three-line helper in the new describe block, matching the existing pattern already used in the `SidebarLinks account item` block.
 
 ## Issues Encountered
+
 None.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Verification Performed
+
 - `pnpm exec jest src/frontend/components/UI/Sidebar/components/SidebarLinks` — 8/8 passing, including the new community-links test
 - `pnpm exec jest src/frontend/components/UI/Sidebar` — full Sidebar suite green
 - `pnpm codecheck` (`tsc --noEmit`) — clean, no errors from removed imports
@@ -97,6 +108,7 @@ None - no external service configuration required.
 - `node -e "JSON.parse(...)"` on `public/locales/en/translation.json` — parses cleanly
 
 ## Next Phase Readiness
+
 This was a self-contained UI cleanup with no downstream dependencies. No blockers for other in-flight work (Phase 34.4.2, 34.7, 34.8).
 
 ---

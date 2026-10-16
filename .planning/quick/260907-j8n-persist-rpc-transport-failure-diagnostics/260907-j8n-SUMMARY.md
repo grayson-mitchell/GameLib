@@ -6,28 +6,37 @@ subsystem: infra
 tags: [rust, tauri, sidecar, ipc, logging, diagnostics, f-9]
 requires:
   - phase: none (standalone quick task)
+
 provides:
   - "invoke_abandoned_message() helper in src-tauri/src/main.rs, with cargo coverage"
   - "shell_diag routing for the four RPC transport-failure diagnostic sites"
   - "src/backend/__tests__/shellDiagPersistence.test.ts (CI gate, 15 tests)"
+
 affects: [shell-diagnostics, gamelib-shell-log, f-9-todo]
 tech-stack:
   added: []
   patterns:
     - "shell_diag() for any diagnostic that must survive a packaged build (LaunchServices discards bare eprintln! stderr)"
+
 key-files:
   created:
     - src/backend/__tests__/shellDiagPersistence.test.ts
   modified:
     - src-tauri/src/main.rs
     - .planning/todos/pending/2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md
+
 key-decisions:
   - "No log rotation or throttle for gamelib-shell.log added in this task — bounded per site, no supporting evidence of need (see Log Volume Decision below)"
   - "The new shell_diag call in each invoke() arm goes BEFORE self.record_abandoned, not after, because abandonedInvokeAttribution.test.ts's ordering pin only tolerates whitespace between record_abandoned and its Err"
+
 requirements-completed: [F-9]
 metrics:
   duration: "~30min"
   completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260907-j8n: Persist RPC transport-failure diagnostics Summary
@@ -108,6 +117,7 @@ with the original
 Result: `npx jest shellDiagPersistence` → 13/15, with these two tests failing:
 - `Site A and Site B route through shell_diag, not a bare eprintln! > Site A (unknown/timed-out id) calls shell_diag`
 - `Site A and Site B route through shell_diag, not a bare eprintln! > Site A regression guard: the bare eprintln! form is gone`
+
 Restored `main.rs` from the pre-mutation copy; `npx jest shellDiagPersistence` back to 15/15.
 
 **(b) Delete the `shell_diag` call from the timeout arm only, leaving the disconnect arm's copy.**
@@ -117,6 +127,7 @@ from the timeout arm's `Err(_)` block, leaving the disconnect arm's call untouch
 Result: `npx jest shellDiagPersistence` → 13/15, with these two tests failing:
 - `Sites C and D: both silent invoke() arms are now instrumented > shell_diag(&invoke_abandoned_message( occurs exactly twice — COUNTED` (2 → 1)
 - `Sites C and D: both silent invoke() arms are now instrumented > the timeout arm carries the "timeout" reason, paired with its own Err`
+
 This is the mutation that proves the count assertion is not satisfiable by the disconnect arm's
 copy alone — the same blind spot `abandonedInvokeAttribution.test.ts`'s own history documents
 having been hand-verified against for `record_abandoned`.
@@ -130,27 +141,33 @@ to
 Result: `npx jest shellDiagPersistence` → 13/15, with these two tests failing:
 - `double-prefix guard: no shell_diag call anywhere in main.rs passes a literal beginning with [shell]  > the guard passes against real main.rs`
 - `Site A and Site B route through shell_diag, not a bare eprintln! > Site B (missing/non-string id) calls shell_diag` (side effect: the positive regex no longer matches the now-doubled literal)
+
 The double-prefix guard (group 5) fires as required.
 Restored `main.rs`; `npx jest shellDiagPersistence` back to 15/15.
 
 **(d) Move the timeout arm's `shell_diag` call to sit BETWEEN `record_abandoned` and `Err(...)`.**
 Mutation: reordered the timeout arm's `Err(_)` block from
+
 ```
 self.pending.lock().ok().and_then(|mut p| p.remove(&id));
 shell_diag(&invoke_abandoned_message("timeout", &id, &channel));
 self.record_abandoned(&id, &channel);
 Err(invoke_timeout_message(&channel))
 ```
+
 to
+
 ```
 self.pending.lock().ok().and_then(|mut p| p.remove(&id));
 self.record_abandoned(&id, &channel);
 shell_diag(&invoke_abandoned_message("timeout", &id, &channel));
 Err(invoke_timeout_message(&channel))
 ```
+
 Result: `npx jest abandonedInvokeAttribution` (the UNTOUCHED sibling gate, forbidden to edit) → 8/9,
 failing:
 - `F-9: an abandoned invoke is attributable to its channel > the recording sits in the timeout arm and the disconnect arm specifically`
+
 This proves the ordering constraint stated above is real and enforced by a gate outside this
 task's own file, not planner folklore. Restored `main.rs`; `npx jest abandonedInvokeAttribution`
 back to 9/9.

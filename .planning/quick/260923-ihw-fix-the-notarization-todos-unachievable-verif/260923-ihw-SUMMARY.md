@@ -8,6 +8,7 @@ requires: []
 provides:
   - "Corrected step 4/5 verification recipe in the macOS notarization todo, positive- and negative-controlled"
   - "A dated 2026-09-23 measurement sub-section recording the 530=506+24 defect and both corrected-form controls"
+
 affects: [macos-notarization-live-gate]
 
 tech-stack:
@@ -28,6 +29,10 @@ requirements-completed: [QUICK-260923-ihw]
 
 duration: 20min
 completed: 2026-09-23
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260923-ihw: Fix the notarization todo's unachievable verification Summary

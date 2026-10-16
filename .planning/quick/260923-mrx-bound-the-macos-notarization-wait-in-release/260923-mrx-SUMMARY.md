@@ -9,6 +9,7 @@ provides:
   - "timeout-minutes: 60 on the tauri-action step in release-tauri.yml (all three matrix legs)"
   - "A macOS-only if: failure() notarytool history diagnostic step, continue-on-error, no APPLE_* env map, no credential echo"
   - "Parsed-YAML regression block (8 tests) asserting both, falsification-checked against a reverted workflow"
+
 affects: [macos-notarization-live-gate, release-tauri-ci]
 
 tech-stack:
@@ -36,6 +37,10 @@ requirements-completed: [QUICK-260923-mrx]
 
 duration: 35min
 completed: 2026-09-23
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260923-mrx: Bound the macOS notarization wait in release Summary

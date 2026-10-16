@@ -18,6 +18,7 @@ changes. Logged per the executor's scope-boundary rule rather than fixed inline.
    the executor's scope-boundary rule. Needs a one-line addition to
    `STRUCTURALLY_CONTAINED_SUITES` (or `IN_SCOPE_SUITES`, if pathShim's own env-var/homedir
    mocking pattern matches the in-scope kit) in a future plan/pass.
+  status: acknowledged
 
 2. **`src/backend/wine/manager/downloader/__tests__/utilities/rest.test.ts` — `unlinkFile` test
    failure.** Fails with `Couldn't remove <filePath>!` inside `utilities.ts:140`'s `unlinkFile`
@@ -26,6 +27,7 @@ changes. Logged per the executor's scope-boundary rule rather than fixed inline.
    set (`runnerAuthFlowRegistration.ts`/`wineToolsFlowRegistration.ts`/
    `shortcutsFlowRegistration.ts`/`runnerMiscFlowRegistration.ts`/`handlers.ts`/
    `runnerSliceRegistration.test.ts`).
+  status: acknowledged
 
 3. **`src/backend/__tests__/longRunningChannels.test.ts` — stripper-integrity self-check fails
    against the real `main.rs`.** The "every line of the stripped output has a balanced quote
@@ -36,6 +38,7 @@ changes. Logged per the executor's scope-boundary rule rather than fixed inline.
    `#[cfg(test)]` module — not touched by this plan (34.5-04 touches no `.rs` file). Out of scope
    for this plan; flagged here for a future pass to either fix the stripper's char-literal
    handling or adjust the offending Rust literals.
+  status: acknowledged
 
 ### Resolution — Wave 1 post-merge gate (orchestrator, 2026-07-29)
 
@@ -63,6 +66,7 @@ None of the three items above block this plan's own acceptance criteria (Task 1/
 clauses concern only `npx tsc --noEmit`, the new
 `runnerSliceRegistration.test.ts` suite itself, and the recorded exit code/counts of the full
 suite — see `34.5-04-SUMMARY.md`'s verbatim recording).
+  status: acknowledged
 
 ## Found during 34.5-12
 
@@ -230,6 +234,7 @@ D-CYCLE5-B; session B (21:42:53) `dev-vault`. Both preserved as
   (`keyring failure memoized slot=humble-session class=timeout ms=120000` and the same for
   `slot=steam-refresh-token`, both 21:24:40). Session B ran `dev-vault` and issues no real
   `keyring_get` at all.
+  status: acknowledged
 
 ### New findings, carried observation-only and undiagnosed
 
@@ -377,6 +382,7 @@ Neither row retired **by this descope** — both retired on their own dates, for
 before this descope was ever recorded. This descope is a scope decision at gate-authoring time,
 not a test result, and it must never be read as "Epic passed" or as adding to either row's own
 retirement credit.
+  status: acknowledged
 
 ## Found during the fourth blocking live gate (2026-08-12, plan 34.5-51) — gap cycle 7 to scope
 
@@ -725,3 +731,4 @@ Recorded, not diagnosed. IDs continue from `-30`; **the next free id is `F-34.5-
     give a future author; both are of the family Tests 4 and 7 are meant to catch. Note clause (i) is
     the SECOND consecutive retarget of the same observation to land on an impossibility —
     D-CYCLE7-A moved it off the `NSWindow` title (`F-34.5-G6-16`) for exactly the same reason.
+  status: acknowledged

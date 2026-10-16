@@ -6,31 +6,41 @@ tags: [library, filters, layout, source-gate, scss]
 requires:
   - src/frontend/screens/Library/components/FilterChipRow
   - src/backend/testUtils/stripSourceComments
+
 provides:
   - FilterChipRow rendered as the first visible child of `.listing`
   - filterChipRowPlacement.test.ts render-order gate
+
 affects:
   - src/frontend/screens/Library/index.tsx
+
 tech-stack:
   added: []
   patterns:
     - comment-stripped source gate (no jsdom in this project)
     - one shared predicate driving both real source and known-bad specimen
+
 key-files:
   created:
     - src/frontend/screens/Library/__tests__/filterChipRowPlacement.test.ts
   modified:
     - src/frontend/screens/Library/index.tsx
     - src/frontend/screens/Library/components/FilterChipRow/index.scss
+
 decisions:
   - "Chip row hoisted above RecentlyPlayed despite only partly governing that lane -- above-the-fold visibility wins; making RecentlyPlayed honour the remaining facets is explicitly out of scope"
   - "Task 2 INLINE: added padding-inline: var(--space-md-fixed) -- every other child of .listing already insets by that exact token; the chip row was the only one flush against the container edge"
   - "Task 2 BLOCK: NO CHANGE to padding-block: var(--space-2xs) -- .libraryHeader already pads all four sides, and padding-block is symmetric so raising it would eat the headroom the hoist reclaims"
+
 metrics:
   duration: ~25 min
   completed: 2026-08-15
   tasks: 2
   commits: 2
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260815-qf0: Hoist FilterChipRow Above RecentlyPlayed — Summary

@@ -10,6 +10,7 @@ provides:
   - "`.planning/planning-frontmatter-gate.py`, a tenth planning gate parsing STATE.md (required) + ROADMAP.md (optional) frontmatter"
   - "`js-yaml ^4.1.1` declared in devDependencies, pinning which locked version hoists"
   - "`MINIMUM_EXPECTED_GATES = 10` in meta/runPlanningGates.py"
+
 affects: [planning-gates, gsd-sdk-state-corruption-investigation]
 
 tech-stack:
@@ -37,6 +38,10 @@ requirements-completed: [2026-09-09-state-md-last-activity-frontmatter-is-invali
 
 duration: 47min
 completed: 2026-09-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260911-ayu: Fix STATE.md frontmatter and add the gate that would have caught it Summary

@@ -39,3 +39,4 @@ rather than fixed inline.
   on the three `44-07`-owned artifacts. Not fixed. Plan 44-07 (or `pnpm gen-i18n-gate-scope`, per
   the test's own skipped-test hint) is expected to regenerate `meta/i18nForkTouchedFiles.json`
   and reconcile this drift.
+  status: acknowledged

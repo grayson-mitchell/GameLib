@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 261001-apg: AppImage desk run of the live-gate checklist
 
 Addendum text lives on the todo (`2026-09-28-linux-add-child-embed-cannot-be-positioned-gtkbox-packing.md`). Evidence:

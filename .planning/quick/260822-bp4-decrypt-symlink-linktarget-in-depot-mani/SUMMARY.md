@@ -12,6 +12,7 @@ provides:
   - "linktarget decrypted at parse time using the same decryptFilename primitive as filename"
   - "the symlink-write containment guard now validates the real (decrypted) target, not ciphertext"
   - "a real-crypto fixture builder (steamEncryptString) for future depot manifest-field tests"
+
 affects: [37-live-gate, native-macos-install, framework-bundled-titles]
 
 tech-stack:
@@ -35,6 +36,10 @@ requirements-completed: []
 
 duration: ~25min
 completed: 2026-08-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260822-bp4: Decrypt symlink `linktarget` in depot manifests Summary

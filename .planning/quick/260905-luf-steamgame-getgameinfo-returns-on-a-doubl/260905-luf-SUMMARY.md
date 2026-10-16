@@ -9,6 +9,7 @@ provides:
   - "resolveGameTitle() — the single shared title-fallback chain (live → enqueue-time gameInfo → appName) for every DownloadManager title consumer"
   - "Once-per-appId logWarning on SteamGame.getGameInfo() double cache miss"
   - "Regression tests pinning both the {} sentinel contract and the fallback chain"
+
 affects: [downloadmanager, sidecar-install-flows, steam-store-manager]
 
 tech-stack:
@@ -36,6 +37,10 @@ requirements-completed: [QUICK-LUF-01]
 
 duration: 5m (commit-to-commit span; tracing/RED-proof work preceding the first commit is not separately timestamped)
 completed: 2026-09-05
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260905-luf: SteamGame.getGameInfo() double cache miss — Summary

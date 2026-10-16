@@ -5,6 +5,10 @@ source: [28-VERIFICATION.md, 28-PROOF.md]
 started: 2026-07-22
 updated: 2026-07-22
 blocked_by: no login channel in the Tauri build (D-02/D-03) — port lands in a later phase
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  gap_snapshot: "partial::scenarios=0"
 ---
 
 ## Current Test
@@ -14,6 +18,7 @@ blocked_by: no login channel in the Tauri build (D-02/D-03) — port lands in a 
 ## Tests
 
 ### 1. `openExternal` frame reaches Steam from the Tauri build (REQ-28-05)
+
 expected: With a signed-in library in the Tauri build, launching a Steam game opens Steam via
 `steam://rungameid/{appId}`. Before Phase 28 the frame was silently dropped in the Rust reader
 thread (`src-tauri/src/main.rs`); plan 28-02 fixed the drop, but the fix has never been exercised

@@ -8,6 +8,7 @@ provides:
   - "enumerateSteamInstallCopies / removeSteamInstallCopy multi-root primitives (steam/library.ts)"
   - "SteamGame.install() route-time auto-cleanup of a demoted native i386 orphan (steam/games.ts)"
   - "removeAllSteamInstallCopies IPC seam + Remove all copies… GameSubMenu action"
+
 affects: [steam-uninstall, steam-install-routing, macos-native-steam]
 
 tech-stack:
@@ -40,6 +41,10 @@ requirements-completed: []
 
 duration: resumed session, ~1h (Task 3 portion this segment)
 completed: 2026-08-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260821-le0: Fix 32-bit Mac Steam titles permanently — Summary

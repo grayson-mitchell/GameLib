@@ -25,3 +25,4 @@ keys") — both failures were baseline drift from the 48-locale `library.tileSiz
 (`933c7ac3d`), not a defect in either gate. Corroborated by `pnpm i18n` reporting `Added keys: 0`
 / `Restored keys: 0` across all four namespaces and `pnpm i18n-churn-guard` reporting clean on the
 same tree.
+  status: acknowledged

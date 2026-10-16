@@ -9,6 +9,7 @@ provides:
   - "TokenReadOutcome discriminated union (present/absent/unreadable) on the shared TokenStore seam"
   - "SidecarKeyringSlotStore.readToken() as the keyring read primitive, with getToken() reduced to a lossy adapter over it"
   - "ensureConnected()/getCredentials() branching on the three-state outcome instead of the lossy '' collapse"
+
 affects: [steam-auth, tauri-sidecar-keyring]
 
 tech-stack:
@@ -39,6 +40,10 @@ requirements-completed:
 
 duration: ~55min
 completed: 2026-08-14
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260814-r2d: Fix keyring read timeout reported as "no token" Summary

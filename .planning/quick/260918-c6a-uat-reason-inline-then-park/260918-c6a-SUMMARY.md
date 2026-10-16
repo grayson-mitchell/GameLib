@@ -8,6 +8,7 @@ requires: []
 provides:
   - "27-UAT.md's two `reason: |` block scalars relocated to `reason: <summary>` + verbatim body prose, closing item A of the audit-uat body-block-scalar todo"
   - "the parked todo, `ready: blocked`, `severity: minor`, with an argued severity call and a named testable unpark trigger"
+
 affects: [audit-uat, uat-visibility-gate, todo-triage]
 
 tech-stack:
@@ -30,6 +31,10 @@ requirements-completed: [ITEM-A, ITEM-D-PARK]
 
 duration: 32min
 completed: 2026-09-18
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260918-c6a: Relocate 27-UAT reason narratives, then park the audit-uat todo Summary

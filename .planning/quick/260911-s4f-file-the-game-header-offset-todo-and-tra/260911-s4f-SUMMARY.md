@@ -12,6 +12,7 @@ provides:
   - Run-1/run-2 FAILs (item 2 KEY-column, item 3 both GAME-column rows) superseded to PASS by e344f589d's alignment fix
   - New ready:code todo for the GAME column header-vs-titles 5.5 CSS px offset, the sole remaining Phase 43 blocker
   - 43-12-evidence/ preserving all 8 run-3 artifacts out of /tmp
+
 affects: [phase-43-humble-keys-screen]
 
 tech-stack:
@@ -37,6 +38,10 @@ requirements-completed: [REQ-43-19]
 
 duration: unknown (session continued from mid-task compaction; no reliable start timestamp)
 completed: 2026-09-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260911-s4f: Transcribe REQ-43-19 Run 3 and File the GAME Header Offset Todo Summary

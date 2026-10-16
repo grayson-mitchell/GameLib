@@ -14,3 +14,4 @@ rule (only auto-fix issues directly caused by the current task's changes).
   which shows this plan's own diff touches only the docstring, one import line, and
   one call-site addition. Not fixed here (out of scope, unrelated to the
   install-slice registration this plan adds).
+  status: acknowledged

@@ -24,11 +24,17 @@ key-files:
     - src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx
   deleted:
     - src/frontend/screens/Settings/components/SettingsModal/index.scss
+
 decisions:
   - "Deletion over re-anchoring for the compound .Dialog__content.settingsDialogContent selector, per the Dialog.tsx:106-120 precedent (260820-kq0/260921-mzl) -- re-anchoring would have activated an unreviewed 65vw/60vh/800px/64vh layout on the Settings dialog for the first time"
+
 metrics:
   duration: "~40 minutes"
   completed: 2026-09-20
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260921-nub Plan 01: Delete dead `.Dialog__content`/`.Dialog__headerTitle` CSS and close the parent todo Summary

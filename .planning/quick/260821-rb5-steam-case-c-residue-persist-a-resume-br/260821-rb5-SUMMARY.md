@@ -12,6 +12,7 @@ provides:
   - SteamLibraryManager.init() surfaces breadcrumb-only appIds (no ACF at all) alongside ACF-scanned appIds
   - Self-heal: a breadcrumb whose on-disk manifest is already StateFlags & 4 complete is cleared, not surfaced
   - Regression fix: SteamGame.install()'s pre-existing steamResumePending resume-trigger now excludes appIds with a live in-flight install
+
 affects: [steam-depot, steam-library-init, steam-install-resume]
 
 tech-stack:
@@ -40,6 +41,10 @@ requirements-completed: [QUICK-RB5-01, QUICK-RB5-02, QUICK-RB5-03, QUICK-RB5-04]
 
 duration: 32min
 completed: 2026-08-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260821-rb5: Steam Case-C Residue — Persist a Resume Breadcrumb Summary

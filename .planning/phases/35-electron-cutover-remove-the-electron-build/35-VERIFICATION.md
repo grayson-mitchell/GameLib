@@ -23,6 +23,7 @@ re_verification:
     - "None found. Re-ran the five absence/pin gates (5 suites / 42 tests, exit 0), the un-anchored `grep -rn isTauri src/` (0 matches), and `pnpm codecheck` (tsc --noEmit, exit 0)."
   residual_red_gate:
     - "`pnpm test` exits 1 — 3 failed / 7296 passed, 365 of 366 suites. All 3 are decompressPool.test.ts lzmaLoader native-decode cases. Verified NOT caused by Phase 35: the phase's ONLY diffs to lzma files across the whole phase (git diff e42f9862..HEAD) are two comment-text edits in lzmaNativeBinding.ts and meta/buildDecompressWorkerDev.ts. Ledgered as .planning/todos/pending/2026-08-31-decompresspool-native-lzma-tests-fail-3-of-41.md."
+
 post_reverification_closure:
   performed: 2026-08-31 — quick task 260831-q93, executor-recorded (NOT an independent verification pass)
   previous_status: gaps_found
@@ -35,6 +36,7 @@ post_reverification_closure:
     - "Measured on a `pnpm tauri:dev` build, jar `gamelib-shell.binarycookies` (process-name keyed), NOT the packaged `com.gamelib.shell.binarycookies` jar the 21-criterion live gate used. Build identity was verified by `nm` (35 symbol hits for default_data_store_cookies_for_domain), not assumed — `strings` returns 0 for the same symbol and would have falsely indicated a stale build."
     - "D-35-29-02 remains OPEN and was UPGRADED by this run from a single-jar observation to a REPRODUCED one (the same four Epic auth cookie names survive logout on the second, differently-keyed jar). This run also created a NEW contradiction that did not exist at the 16/17 adjudication: the product's in-process post-clear census now reads matched=0 on all five hosts while an external `strings` read of the same jar still shows those four names. It is ledgered as an open deferred item, NOT scored as a must-have failure — that was already its standing at 16/17 and this executor did not re-adjudicate it. A fresh verifier pass is the proper vehicle for deciding whether it should become one."
     - "The two gates routed OUT of Phase 35 (`pnpm lint` -> Phase 39, Windows/Linux smoke -> Phase 38) and the red `pnpm test` (3 decompressPool native-LZMA failures, ledgered as an unowned pre-existing todo) are unchanged by this task and were already excluded from the 17 must-haves. They do not hold Phase 35 open and are not claimed as closed."
+
 independent_adjudication:
   performed: 2026-08-31 — third pass, independent verifier, spawned BECAUSE the 16/17 -> 17/17 move was made by the quick-task executor closing its own work
   reviewed: "post_reverification_closure (quick task 260831-q93)"
@@ -59,6 +61,7 @@ independent_adjudication:
     - "`pnpm lint` — RE-MEASURED BY ME, exit code captured from the command and not from a pipe: exit 1, 4155 problems (9 errors, 4146 warnings). Correctly routed to Phase 39, which exists in ROADMAP.md with a repo-wide lint goal. Not among the 17 must-have truths. DRIFT NOTED, not scored: this file's deferred block says `the 6 current errors`; there are now NINE, across meta/__tests__/cleanDist.test.ts, src/backend/__tests__/packagingConfig.test.ts, src/backend/sidecar/__tests__/appShellFlows.test.ts, src/backend/sidecar/__tests__/steamAuthFlows.test.ts, src/backend/sidecar/installedJsonWatcher.ts, src/backend/utils.ts, src/frontend/screens/WebView/index.tsx, src/frontend/state/__tests__/GlobalStateSleepAssertionClassification.test.ts. Phase 39 should inherit the corrected count."
     - "Windows/Linux parity — correctly routed. REQ-35-20's OWN text routes the smoke-launch half to Phase 38 as `38-W04`/`38-W05` and records the option-c scope reduction as user-acknowledged. Phase 38 exists in ROADMAP.md. Not among the 17 must-have truths."
     - "`pnpm test` decompressPool — RE-MEASURED BY ME. Note the correct path is `src/backend/storeManagers/steam/__tests__/decompressPool.test.ts`; `npx jest` against the `src/backend/__tests__/` path implied elsewhere exits 1 with `0 matches`, a fail-open shape a future pass should not mistake for a failure. On the real path: exit 1, `Tests: 3 failed, 38 passed, 41 total`, all three lzmaLoader native-decode cases. Phase 35 attribution independently disproved: `git diff e42f9862..HEAD` touches exactly one lzma file, `src/backend/storeManagers/steam/depot/lzmaNativeBinding.ts`, and the change is a single line INSIDE A DOC COMMENT (an `--alias:` path in prose). Todo `.planning/todos/pending/2026-08-31-decompresspool-native-lzma-tests-fail-3-of-41.md` exists. Correctly excluded."
+
 fourth_adjudication:
   performed: 2026-08-31 — FOURTH pass, independent verifier, spawned BECAUSE the claim that the third pass's sole blocker was fixed came from the gsd-debug session that made the fix
   reviewed: "commit b5b3464bd (fix) + b996d1772 (docs), debug session `.planning/debug/resolved/epic-cookie-clear-read-divergence.md`, and the third pass's `independent_adjudication` block above"
@@ -97,6 +100,7 @@ fourth_adjudication:
     - "`pnpm lint` -> Phase 39. RE-MEASURED BY ME with the exit code captured from the command, not a pipe: exit 1, 4171 problems, NINE errors. The third pass's corrected count of 9 is confirmed and the `deferred:` block's stale '6' is superseded — see the dated correction on that entry. The nine errors are in the SAME eight files the third pass named; `b5b3464bd` introduced no new error (problem count moved 4155 -> 4171 entirely in warnings, from the new source and test comments)."
     - "Windows/Linux smoke-launch parity -> Phase 38 (`38-W04`/`38-W05`). Unchanged. NOTE FOR PHASE 38, new: the off-macOS cookie-clear branch now opens its handle window at `https://gamelib.invalid/`, and off macOS there is no default-data-store fallback, so both the clear and the census depend on that window carrying a usable cookie store. That is untested and is where the fail-open above is most likely to be live."
     - "3 `decompressPool` native-LZMA failures — re-measured by me on the real path `src/backend/storeManagers/steam/__tests__/decompressPool.test.ts`: exit 1, 3 failed / 38 passed / 41 total. Unchanged, still ledgered as an unowned todo, Phase 35 attribution already independently disproved. Correctly excluded."
+
 fifth_adjudication:
   performed: 2026-08-31 22:36 NZST — FIFTH pass, independent verifier, spawned BECAUSE every previous upward score move was made by the agent that did the work, and each of the last two passes found a defect one level inside the one before
   reviewed: "commits bea07cd17 (fail-closed fix) + a9ef3026a (records); the packaged live gate run by the operator at 22:23:33; and the `fourth_adjudication` block above"
@@ -139,6 +143,7 @@ fifth_adjudication:
     - "The RED-proof of `b5b3464bd`'s own wipe-step reorder gate. I did not re-run the fourth pass's mutation of the `wipeSteps` array; I verified the ordering live in gamelib.log instead, which is the stronger evidence for that particular claim."
   what_would_close_the_phase:
     - "ONE gesture. Everything else in this file is discharged, resolved, or routed."
+
 sixth_adjudication:
   performed: 2026-08-31 23:12 NZST — SIXTH pass, CLOSURE adjudication. Spawned because the fifth pass set two conditions for closure and the party claiming both were met was the orchestrator that performed them.
   reviewed: "commits `b737b2f42` (the `(e5)` gate) and `68621ed60` (its records); the RELEASE build installed at `/Applications/GameLib.app` and the live Epic logout it performed at 22:54; and the `fifth_adjudication` block above."
@@ -295,6 +300,7 @@ gaps:
       - "FOURTH PASS 2026-08-31, SECOND ITEM: exercise the fix ONCE on a PACKAGED build. Every live proof to date is on `pnpm tauri:dev` and the packaged jar `com.gamelib.shell.binarycookies` has not moved since 18:17:28, which PREDATES the fix. `35-CONTEXT.md` states `packaged, not dev` three times."
       - "CLOSED 2026-08-31 by b5b3464bd, verified by the fourth pass — Give the census read the same label-independent data-store fallback the clear already has, and verify by a live logout showing a per-host verdict other than UNSUPPORTED_OR_ERROR. A passing unit test must NOT be accepted as evidence — the existing tests assert the no-window branch does not throw, which passes while the census never works."
       - "OR: an embedded browser view returns, restoring a vehicle that can seed a non-primary Epic apex, and one live logout then reads a non-zero delta on at least one of fortnite.com / unrealengine.com / twinmotion.com / metahuman.com. No later milestone phase currently owns this, so it is NOT deferrable."
+
 deferred:
   - truth: "`pnpm lint` exits 0"
     addressed_in: "Phase 39"
@@ -324,6 +330,10 @@ human_verification:
   - test: "PARTIALLY RESOLVED — Review criticals CR-01..CR-04 from 35-REVIEW.md"
     expected: "A decision per item: fix, or accept with a recorded reason"
     why_human: "All four fixes have LANDED in code and the verifier confirmed each: CR-01 `OPEN_EXTERNAL_ALLOWED_SCHEMES` at main.rs:1207 enforced at :1220; CR-02 `frontendReadyBootWorkDone` one-shot guard at appShellFlowRegistration.ts:202; CR-03 `window.platform` win32 arm at tauriAttach.ts:77; CR-04 renderer surfacing plus the backend jar-liveness classification. WHAT REMAINS IS A RECORDS PASS, NOT A DECISION: 35-REVIEW.md is still `status: issues_found` and none of the four CR sections carries a resolution annotation."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 35: Electron cutover — remove the Electron build — Verification Report

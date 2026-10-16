@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "Under the ELECTRON build (npm start, NOT Tauri), Steam library sync should still succeed exactly as before Phase 30. Actual: 'still boots, but trying to sync steam, and failing. gog games are still listed.' (Phase 30 UAT Test 9)"
 created: 2026-07-23T00:00:00Z
 updated: 2026-07-23T00:00:00Z
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: diagnosed
 ---
 
 ## Current Focus

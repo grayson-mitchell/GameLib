@@ -8,7 +8,12 @@ commits:
   - 9b1e52c48 feat(quick-260916-cdb) rename import door label, demote to GameSubMenu
   - 4301221c9 i18n(quick-260916-cdb) fill installFlows.import* across 48 non-English locales
   - 06addb1d9 test(quick-260916-cdb) pin MainButton import-door demotion, close todo, file Trans follow-up
+
 completed: 2026-09-16
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260916-cdb: rename "Import Game" label, demote it from the Game-page primary row into GameSubMenu

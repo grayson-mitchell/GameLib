@@ -11,6 +11,7 @@ tech-stack:
   patterns:
     - "Two-guard try/catch: outer wraps runOnceWhenOnline() registration, inner wraps the deferred callback body (a later event-loop turn the outer catch cannot see)."
     - "Floated-promise .catch() on GOGUser.getUserDetails() since runOnceWhenOnline discards its callback's return value."
+
 key-files:
   created:
     - src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts
@@ -18,12 +19,18 @@ key-files:
     - src/backend/sidecar/bootstrap.ts
     - src/backend/sidecar/__tests__/testContainment.test.ts
     - .planning/todos/pending/2026-09-06-boot-time-epic-and-gog-user-reconciliation-lost.md (moved to completed/)
+
 decisions:
   - "Verbatim log-string preservation: the ported logInfo('User Not Found, removing it from Store', ...) line does NOT get this file's local [bootstrap] prefix convention, because the exact literal is the todo's bundle-level grep target."
   - "New imports (LegendaryUser, GOGUser, configStore) add no new module to the sidecar bundle — handlers.ts -> runnerAuthFlowRegistration.ts already imports both classes transitively."
+
 metrics:
   duration: "~1 session (continued after context compaction)"
   completed: 2026-09-08
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260908-fre: Port the lost boot-time Epic/GOG user reconciliation Summary
@@ -96,6 +103,7 @@ disposable probe test files, since deleted).
 All three prescribed mutations were applied to `bootstrap.ts`, confirmed RED, then reverted.
 
 **Mutation 1 — comment out the `reconcileStoreUsersWhenOnline()` call site in `init()`:**
+
 ```
 FAIL src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts
   ● todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation
@@ -112,10 +120,12 @@ FAIL src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts
                                                     ^
 Tests: 1 failed, 6 passed, 7 total
 ```
+
 The other 6 direct-call cases were unaffected (as expected — they call
 `reconcileStoreUsersWhenOnline()` directly, bypassing `init()`'s call site entirely). Restored.
 
 **Mutation 2 — delete `forceLog: true` from the ported `logInfo(...)` options object:**
+
 ```
 FAIL src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts
   ● todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation
@@ -134,10 +144,12 @@ FAIL src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts
 
 Tests: 2 failed, 5 passed, 7 total
 ```
+
 Both the wiring proof and case 2 failed, since both assert the exact options object (not merely
 the message string) — the receipt `forceLog: true` exists to protect. Restored.
 
 **Mutation 3 — remove the `.catch()` from the floated `GOGUser.getUserDetails()` call:**
+
 ```
 FAIL src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts
   ● todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation › reconcileStoreUsersWhenOnline() -- called directly
@@ -149,6 +161,7 @@ FAIL src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts
 
 Tests: 1 failed, 6 passed, 7 total (plus the unhandled-rejection surfaced alongside)
 ```
+
 Case 6 failed with the expected unhandled-rejection signature. Restored.
 
 Final state after all three mutations reverted, confirmed green:

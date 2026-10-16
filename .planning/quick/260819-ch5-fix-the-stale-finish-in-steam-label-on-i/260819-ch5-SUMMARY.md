@@ -6,9 +6,11 @@ tags: [i18n, steam, gamepage, react-i18next, jest]
 
 requires:
   - phase: 23
+
 provides:
   - "gamelib:steam.status.resumeInstall / resumeInstallHint fork-owned i18n keys"
   - "steamResumeCopyCensus.test.ts repo-wide residual stale-copy census gate"
+
 affects: [gamepage-ui, steam-install-labels]
 
 tech-stack:
@@ -41,6 +43,10 @@ requirements-completed: [QUICK-260819-CH5]
 metrics:
   duration: ~20min
   completed: 2026-08-19
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260819-ch5: Fix the stale "Finish in Steam" label Summary
@@ -48,6 +54,7 @@ metrics:
 **Retired the stale "Finish in Steam" copy at all three GamePage render sites (button, status line, card/list label), repointing them at two new fork-owned `gamelib:steam.status.*` keys, converting both existing test suites to measure the rendered catalog value, and adding a repo-wide census gate that fails if any residual call site resurfaces.**
 
 ## Performance
+
 - **Duration:** ~20 min
 - **Started:** 2026-08-18 (session start)
 - **Completed:** 2026-08-19T09:12:29+12:00
@@ -55,6 +62,7 @@ metrics:
 - **Files modified:** 8 (1 created, 7 modified)
 
 ## Accomplishments
+
 - All three independent render call sites (`MainButton.tsx`'s primary button, `GameStatus.tsx`'s explanatory status line, `constants.ts`'s `getStatusLabel` feeding the game card/list/submenu) now render "Resume Install" / "Install incomplete — resume the download in GameLib" instead of "Finish in Steam".
 - Two new keys added to the fork-owned `public/locales/en/gamelib.json` catalog (`steam.status.resumeInstall`, `steam.status.resumeInstallHint`); `gamepage.json` untouched, keeping `i18nCatalogChurnGuard` clean.
 - Both suites that previously asserted the old copy now measure the RENDERED catalog value rather than an inline `t()` default — closing a real gap in `hasStatus.reconcile.test.ts`, whose `fakeT` sat outside `labelSuiteI18nCensus`'s scan scope.
@@ -62,6 +70,7 @@ metrics:
 - `steam-waiting-for-restart` and `steam-paused` copy/semantics verified unchanged throughout.
 
 ## Task Commits
+
 Each task committed atomically:
 1. **Task 1: Add the fork-owned keys and repoint all three render sites** - `fa4d718be` (feat)
 2. **Task 2: Convert both existing suites to measure the RENDERED string** - `5e48a76bd` (test)
@@ -70,6 +79,7 @@ Each task committed atomically:
 **Plan metadata:** commit pending (docs: complete plan — orchestrator-owned)
 
 ## Files Created/Modified
+
 - `public/locales/en/gamelib.json` - added `steam.status.resumeInstall` / `resumeInstallHint`
 - `src/frontend/screens/Game/GamePage/components/MainButton.tsx` - primary button now renders `gamelib:steam.status.resumeInstall`; comment updated
 - `src/frontend/screens/Game/GamePage/components/GameStatus.tsx` - status line now renders `gamelib:steam.status.resumeInstallHint`; comment updated
@@ -95,13 +105,16 @@ Each task committed atomically:
 None otherwise — plan executed as written.
 
 ## Known Consequences (accepted, not defects)
+
 - **Non-English locale bundles retain the stale translated copy** until the next translation sync. `gamelib.json` (the fork-owned English catalog) carries the new keys; other language files under `public/locales/` were not touched, per hard constraint 2 (`i18nCatalogChurnGuard` forbids editing any locale path outside `gamelib.json`/`gamelib.mt.json`). `pnpm lint-translations:gamelib` exits 0 with pre-existing (unrelated) ENOENT warnings for languages that have no `gamelib.json` at all — not caused by this change.
 - **`public/locales/en/gamepage.json`'s `status.steamFinishInSteam` key remains, byte-identical to HEAD, as a deliberately dead key.** `i18nCatalogChurnGuard` forbids editing or deleting upstream-owned catalogs; `steamResumeCopyCensus.test.ts`'s catalog-pin block asserts this key's continued presence so a future agent cannot "clean it up" and trip the guard.
 
 ## Issues Encountered
+
 None beyond the auto-fixed census/pin interaction above.
 
 ## Verification Performed
+
 - `pnpm codecheck` — clean (0 errors).
 - `pnpm lint --cache` — 0 errors, 3864 pre-existing warnings (none new, none in files touched by this plan beyond pre-existing patterns).
 - `pnpm test -- src/frontend/screens/Game/GamePage/components/__tests__ src/frontend/hooks/__tests__` — 14 + 2 suites, all green.
@@ -112,12 +125,15 @@ None beyond the auto-fixed census/pin interaction above.
 - `git diff` inspected by hand for all 8 files — confirmed comment-only hunks in the two backend files, and no change to any `onClick`, `handleInstall`, `openSteamInstallOptions`, install-routing, or other backend executable line.
 
 ## Human Verification Still Needed
+
 A dev app instance was reported running against this tree during planning. Per the plan's `<human-check>`: on a Steam game with an incomplete on-disk native install, confirm the primary button now reads **Resume Install**, the status line beneath the title reads **Install incomplete — resume the download in GameLib**, and the game's card in the library list carries **Resume Install** — and that clicking still starts GameLib's own native depot download (unchanged behaviour). This executor did not perform that live check (no instructions were given to interact with a running app instance); it is called out here for the user/orchestrator to confirm via hot reload.
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 No blockers. This is a self-contained copy fix; no downstream phase depends on these exact key names beyond the census gate itself, which will catch any future regression automatically.
 
 ---

@@ -8,8 +8,10 @@ provides:
   - 'A complete six-class disposition of every backend `getGameInfo()` hit'
   - 'A reachability verdict for the raw-Map bypass at uninstall()/uninstallBottleGameDirectly()'
   - 'The closed 2026-08-22 getGameInfo double-cache-miss todo'
+
 affects:
   - src/backend/storeManagers/steam/games.ts
+
 tech-stack:
   added: []
   patterns: []
@@ -20,6 +22,10 @@ decisions: []
 metrics:
   duration: TBD
   completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260907-e7a: Audit and Close the Non-Title Axis of the Steam `getGameInfo()` Todo Summary
@@ -471,16 +477,20 @@ plan". That intent **holds**; the raw grep does not, because this task's entire 
 Proof the +5 is comments and nothing else, in three independent measurements:
 
 ```
+
 # 1. all 5 new hits are on ADDED lines
+
 git diff 4c0a7f58d -- src/backend/storeManagers/steam/games.ts | grep -E '^\+' | grep -c 'getGameInfo()'
 → 5
 
 # 2. every added line in that file is a // comment (0 non-comment additions)
+
 git diff -U0 src/backend/storeManagers/steam/games.ts \
   | grep -E '^\+[^+]' | grep -vE '^\+[[:space:]]*//' | grep -vE '^\+[[:space:]]*$'
 → (no output)   # and git diff --numstat → 32 additions, 0 deletions
 
 # 3. comment-stripped census, whole backend, compared ACROSS the two revisions
+
 rev 4c0a7f58d comment-stripped backend census: 82
 rev HEAD      comment-stripped backend census: 82   ← identical
    (games.ts alone: 5 at both revisions)

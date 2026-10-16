@@ -13,6 +13,7 @@ of fixing it inline).
   `launcher.ts`, `knownFixes.ts`, `crossover_index`, and `main.ts` as a group; the pre-existing
   error sits inside that directory group but predates this plan and is unrelated to the D-06
   extraction. Not fixed here.
+  status: acknowledged
 
 ## From plan 34.2-07
 
@@ -41,6 +42,7 @@ of fixing it inline).
   `cd src-tauri && cargo check --quiet` is clean. `pnpm test:ci`'s full-suite green requirement
   in this plan's own `<verification>` section could not be satisfied end-to-end due to this
   pre-existing, unrelated defect — recorded here rather than silently claimed passing.
+  status: acknowledged
 
 ## From the phase-level post-merge test gate (orchestrator, /gsd-execute-phase 34.2)
 
@@ -57,6 +59,7 @@ of fixing it inline).
   test red.** Full backend suite otherwise green at end of 34.2: 105/106 suites, 2211/2212
   tests passing. Out of scope for 34.2 to fix — belongs to a 34.1 gap-closure cycle or a
   standalone fix. Flagged to the user in the phase-completion report.
+  status: acknowledged
 
 ## From plan 34.2-18 (gap cycle 2, CR-03/WR-01 closure) — CLOSED by gap cycle 3
 
@@ -102,6 +105,7 @@ rotation) this entry originally recorded. Plan 34.2-23 subsequently deleted
 remaining, including in prose) and replaced it with a `readdirSync`-derived set-equality tripwire
 proving every `*.test.ts` file in the directory is classified — so a 12th suite added without
 conscious classification cannot be silently invisible the way this hole was.
+  status: acknowledged
 
 ## From plan 34.2-20 (gap cycle 3, WR-02 closure)
 
@@ -137,6 +141,7 @@ one gap cycle 3 used when it closed the 34.2-18 entry).
   standalone plan making all four `backend/logger` wrapper exports `return` their writer call,
   with call-site audits of every fire-and-forget `logInfo`/`logDebug`/`logWarning` call this
   project has (a wide blast radius, hence a separate plan).
+  status: acknowledged
 
 ## From plan 34.2-19 (gap cycle 3, structural containment)
 
@@ -160,6 +165,7 @@ one gap cycle 3 used when it closed the 34.2-18 entry).
   the 5th run's extra failure is this pre-existing, already-tracked defect surfacing on a
   different file, not a new regression). Not fixed here — same natural home as the 34.2-07
   entry (a standalone fix for `library.ts`'s poll-timer teardown).
+  status: acknowledged
 
 ## From gap cycle 3 (plans 34.2-19..34.2-23)
 
@@ -248,6 +254,7 @@ the two builds, which REQ-34.2-14 explicitly forbids. Cross-referenced in plan 3
 model as T-34.2-69. **Natural home, if tightened later:** a single change in
 `LogWriter#writeString` (escape `\n` → `\\n` for non-forced messages), applied once for both
 builds rather than per-channel.
+  status: acknowledged
 
 ## From gap cycle 4 (plans 34.2-25..34.2-29)
 
@@ -309,6 +316,7 @@ edit cannot quietly drop the record that these were considered and not silently 
     WHICH suite the leaked timer lands on is non-deterministic and unrelated to whatever this
     project's plans touch. **Natural home:** unchanged — a standalone fix for `library.ts`'s
     poll-timer teardown.
+  status: acknowledged
 
 ## Gap-cycle-4 findings CLOSED 2026-08-23 (quick task `260823-9ds`)
 
@@ -575,6 +583,7 @@ with this section.
   `testContainment.test.ts`'s Block A may be exercising a factory that is never
   installed. Todo:
   `.planning/todos/pending/2026-08-23-per-suite-jest-mock-os-is-inert-in-backend-suites.md`.
+  status: acknowledged
 
 ## Gap cycle 4: closed
 
@@ -602,3 +611,4 @@ happens the phase's own artifacts still read as though the cycle is open. Note a
 fact **closed** — `src/backend/testUtils/stripSourceComments.ts` exists, strips
 block comments before the line filter, and both originally-defective files
 import it.
+  status: acknowledged

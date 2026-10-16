@@ -31,7 +31,7 @@ guard is working correctly and is reporting a real staleness, not misfiring.
 artifact. Note MEMORY's `regenerating-an-artifact-breaks-the-pins-that-guard-it` before doing
 so — regenerating this file has broken its own pins before.
 
-**Status:** open, unowned. Consistent with MEMORY's standing note that the repo's i18n gate is
+**Status:** acknowledged
 red repo-wide (`prettier-gate-is-red-repo-wide.md`).
 
 **RESOLVED 2026-08-30, plan 35-24.** The drift had grown from 3 to 6 files by execution time
@@ -171,7 +171,7 @@ Rust symbol). A silent failure does not just cost the user — it costs whoever 
 logged-out case additionally deserves its own message, since the underlying prompt is
 unreachable by design on this platform.
 
-**Status:** open, unowned. Neither blocks D-16.
+**Status:** acknowledged
 
 ## D-35-04-01 — `main.rs`'s `resolve_packaged_app_root` doc comment now asserts a FALSEHOOD
 
@@ -233,7 +233,7 @@ gzip when no published index exists, so the literal always resolves), or add a p
 injects the entry into the config only when the file is present. Do NOT "fix" it by adding the
 literal — that breaks the contributor build.
 
-**Status:** open, low priority.
+**Status:** acknowledged
 
 ## D-35-04-03 — six directory-symlinks in the PyInstaller `Python.framework` do not survive bundling
 
@@ -529,7 +529,7 @@ gated renderer-side. That is the single question blocking this item.
 
 **Why this entry exists at all, and what it stops from going wrong.** `REQ-35-17` is satisfied on the path-rejection dialog and **NOT** on EOS. Without this item written down here, the requirement reads as discharged.
 
-**Status:** open, unowned. Does not block D-16.
+**Status:** acknowledged
 
 ---
 
@@ -628,6 +628,7 @@ Plan 35-08 names two mutually exclusive transports for the same commands.
 - `grep -c 'wake_lock_start\|wake_lock_stop' src-tauri/src/main.rs` is at least `4`
   (two definitions + two `generate_handler!` entries).
 - `grep -A8 'generate_handler!' src-tauri/src/main.rs | grep -c 'wake_lock'` is at least `2`.
+
 ```
 
 **The same plan's `must_haves.key_links`, and all of Task 2**, require the opposite:
@@ -733,6 +734,7 @@ The domain-scoped clear is **INCOMPLETE**, not absent. Live survivors after an E
 Separately and genuinely correct in plan 35-09: a `deleted === 0` outcome should FAIL the logout.
 Today `legendary/user.ts` swallows every wipe step into
 `logWarning('... failed (continuing)')`.
+  status: acknowledged
 
 ### 5. Where the defect entered, so it is not re-derived
 
@@ -753,6 +755,7 @@ itself will reproduce this.
 
 **Open decision for the operator:** which Epic-owned domains belong in the clear's filter. That is a
 scope decision, not an implementation detail, which is why the executor did not improvise one.
+  status: acknowledged
 
 ### OPERATOR DECISION 2026-08-29 — option (a), apex domain list
 
@@ -810,6 +813,7 @@ is opened by `open_pristine_epic_login_window`, which **never registers a Tauri-
 
 **Sequencing:** this touches `src-tauri/src/main.rs`, so it cannot run concurrently with plan 35-10,
 which holds the same file.
+  status: acknowledged
 
 ## D-35-10-01 — TIME-CRITICAL, DEADLINE WAVE 8: `uncaughtException` has no sidecar equivalent and dies at 35-14
 
@@ -896,11 +900,16 @@ warning-and-continuing, so the failure is unobservable" is closed. It is now obs
 **The full failure path, traced:**
 
 1. `legendary/user.ts` throws with a per-domain breakdown → `gamelib.log`. Good.
+  status: acknowledged
 2. `ipcMain.handle('logoutLegendary')` rejects → `window.api.logoutLegendary()` rejects.
+  status: acknowledged
 3. `GlobalState.epicLogout`'s `try/finally` does not swallow — correct — and rethrows.
+  status: acknowledged
 4. `Runner/index.tsx:44`'s `handleLogout` catches it and calls **`console.error`**.
+  status: acknowledged
 5. **Under Tauri, renderer `console.*` is visible only in the WKWebView inspector.** It reaches
    neither `gamelib.log` nor the terminal `[shell]` sink (see `35-AB-RETEST.md`'s sink table).
+  status: acknowledged
 6. Meanwhile `epicLogout`'s inner `.finally` has already cleared the Epic library state, and
    `handleLogout`'s `finally` recovers the button.
 
@@ -920,12 +929,15 @@ is worse than the bug it fixes". Adding a user-facing surface on a path that is 
 failure needs its own care, not an opportunistic line.
 
 **Options for the operator:**
+  status: acknowledged
 
 - **(a) Toast/notification on logout failure.** Cheapest visible signal. Must not itself be able to
   reject into the failing path.
+  status: acknowledged
 - **(b) Leave the user signed-IN on a failed clear** — i.e. do not clear `epic` library state when
   the logout rejects, so the UI honestly reflects that logout did not complete. Arguably the most
   correct, and the largest behaviour change.
+  status: acknowledged
 - **(c) Accept it and say so in the release notes** — the failure is recorded in `gamelib.log`,
   which is what the diagnostics bundle collects.
 
@@ -938,7 +950,7 @@ screen.
 jar now legitimately measures zero and therefore fails. That is the operator decision working as
 decided, but it is a real edge — a user who logs out twice in a row sees the second one fail.
 
-**Status:** open, unowned. Does not block Task 3.
+**Status:** acknowledged
 
 ### D-35-10-01 CLOSED 2026-08-29 — plus a regression the closing work uncovered
 
@@ -969,6 +981,7 @@ margin the original 12-against-20 measurement chose. The RED-proof also establis
 calls), proven both ways: ceiling 3 with a filter passes; ceiling 3 on the full file fails at 12.
 
 ---
+  status: acknowledged
 
 ## D-35-10-02 — RESOLVED SAME DAY: the `installed.json` watcher hung the sidecar, and its only gate ran nowhere
 
@@ -1065,7 +1078,7 @@ holds for every site except this one. Plan 35-15 should not assume a uniform sed
 ## D-35-08-02 — a running game ALSO holds a system-sleep assertion, mislabelled as a download
 
 **Found during:** plan 35-08 Task 3, the live wake-lock gate (`35-08-LIVE-GATE.md`, F-35-08-A).
-**Status:** open, unowned. Real user-visible behaviour, reproduced 3 of 3 game launches.
+**Status:** acknowledged
 **Not a defect in 35-08's own code** — the Rust arms and the `powerSaveBlocker` stub each took
 exactly the kind they were asked for. The wrong kind was *requested* by an inherited caller.
 
@@ -1212,6 +1225,7 @@ file rather than left in this ledger alone.
   `tauri.conf.json`'s current guard.
 - `verify:runner-bundle` has **no caller anywhere** — see the note in `verifyRunnerBundle.test.ts`
   and REQ-34.16-02, which remains PARTIAL and is now unsatisfiable by the Electron route.
+  status: acknowledged
 
 ## D-35-15-01 — browser games are broken under Tauri, and have been since the sidecar existed
 
@@ -1305,6 +1319,7 @@ comment-stripping stage before matching) and none affect build behaviour (commen
 They are pure documentation staleness. Whoever next touches `buildSidecarSea.ts` or
 `src/sidecar/index.ts`'s header should correct all three in the same pass rather than letting a
 fourth accumulate.
+  status: acknowledged
 
 ## D-35-19-01 — RESOLVED NOT-A-DEFECT: first-run Keychain prompts are the "Allow" vs "Always Allow" distinction, and no criterion covers them
 
@@ -1445,7 +1460,7 @@ needs checking rather than assuming:
 A fix must be verified by WATCHING THE SCREEN on a machine with multiple Spaces, not by the log
 line or by an end-state check -- both of those already pass today.
 
-**Status:** OPEN, unowned. Not blocking phase 35 -- criterion 8 passes on its stated terms. Worth
+**Status:** acknowledged
 noting that this is a Tauri-shell behaviour with no established Electron comparison; whether the
 Electron build had the same flash is UNKNOWN and was not tested (the Electron build no longer
 exists to test it against, per plan 35-14).
@@ -1477,6 +1492,7 @@ account or VM with a single installed GameLib.app.
 
 Does NOT affect criterion 11's PASS: that criterion scores the single-instance guard, and the guard
 was proven to hold against a URL that demonstrably arrived.
+  status: acknowledged
 
 ## D-35-19-05 — `RUNNERS` enum omits `steam`; deep-link launch can never resolve a Steam title
 
@@ -1484,9 +1500,11 @@ Found: criterion 11 (root-causing criterion 10), 2026-08-30. Status: **ROOT CAUS
 UNFIXED. Pre-existing, inherited from upstream — NOT a Phase 35 regression.**
 
 `src/backend/protocol.ts:15`:
+
 ```ts
 const RUNNERS = z.enum(['legendary', 'gog', 'nile', 'sideload'])
 ```
+
 `findGame()` iterates `RUNNERS.options` to resolve an `appName` with no explicit runner. That set
 has four entries; `src/backend/storeManagers/index.ts` registers six managers (`sideload, gog,
 legendary, nile, zoom, steam`). **`steam` is never iterated, so a Steam title can never be resolved
@@ -1518,6 +1536,7 @@ on runner-resolution paths that work for GOG:
 These are DISTINCT defects in different files with different causes — do not treat them as one
 bug. But they should be scoped and fixed together, and a fix for either should be regression-tested
 against the other.
+  status: acknowledged
 
 ## D-35-19-07 — move-install is BROKEN on macOS 15+ : openrsync rejects two of the flags
 
@@ -1582,6 +1601,7 @@ verification record under D-35-19-16.
 > codes — which is what the item itself asked for.
 
 `src/backend/utils.ts:1287`:
+
 ```ts
 if (code !== 1) {
   logInfo(`Finished Moving ${title}`, LogPrefix.Backend)
@@ -1620,9 +1640,11 @@ not update. Confirmed by direct observation: removing the sole installed title m
 and restoring it required a **manual refresh** before the change appeared.
 
 Mechanism. `sidecar/installedJsonWatcher.ts:86` passes:
+
 ```ts
 () => libraryManagerMap['legendary'].refreshInstalled()
 ```
+
 `refreshInstalled()` (`storeManagers/legendary/library.ts:131`) rebuilds `installedGames` from disk
 and returns. It sends nothing to the frontend. Every other library-mutating path does:
 
@@ -1658,10 +1680,12 @@ Found: criterion 15, 2026-08-30. Status: **CONFIRMED, UNFIXED. Not user-breaking
 released cleanly in the observed run.**
 
 `pmset -g assertions` during one game launch showed two distinct IOKit handles with the same label:
+
 ```
 pid 56568(gamelib-shell): [0x0003d4d3000593ff] PreventUserIdleDisplaySleep named: "GameLib: a game is running"
 pid 56568(gamelib-shell): [0x0003d4d2000593fd] PreventUserIdleDisplaySleep named: "GameLib: a game is running"
 ```
+
 Only ONE acquire was logged (`Preventing display from sleep`).
 
 Two independent sites each take their own assertion for the same event:
@@ -1679,15 +1703,19 @@ guarantee.
 Found: criterion 15, 2026-08-30. Status: **CONFIRMED, UNFIXED.**
 
 During a game launch with **no download active**, `pmset` showed:
+
 ```
 pid 56568(gamelib-shell): [0x0003d4d2000193fe] PreventUserIdleSystemSleep named: "GameLib: a download is in progress"
 ```
+
 This is `prevent-app-suspension`, taken by the `lock` IPC handler's `!playing` branch at
 `src/backend/sidecar/appShellFlowRegistration.ts:301`:
+
 ```ts
 if (!playing && !isSleepBlocked)   { powerId = powerSaveBlocker.start('prevent-app-suspension') }
 if (playing && !isDisplaySleepBlocked) { displaySleepId = powerSaveBlocker.start('prevent-display-sleep') }
 ```
+
 Both branches evidently ran across the launch sequence. Preventing system sleep during gameplay may
 well be *desirable*, but the assertion asserts something false, and the label is user-visible to
 anyone running `pmset -g assertions` to find out what is keeping their Mac awake.
@@ -1733,14 +1761,17 @@ Status: **OBSERVED DEFECT, UNFIXED.**
 - `"Preventing display from sleep"` lines in that instance's log: **1 total**, from criterion 15's
   launch at 11:29:19. The second launch at 12:08:04 did NOT log it.
 - display assertions while playing: **1**, versus criterion 15's **2**.
+
 Both the behaviour AND the predicted severity held: degraded, not absent — the `lock`/`unlock` path
 still supplied one assertion, so display sleep was still prevented.
 
 `src/backend/launcher.ts` assigns `powerDisplayId` in exactly one place (`:190`) and never resets it
 after `powerSaveBlocker.stop(powerDisplayId)` (`:294`). The acquire is guarded:
+
 ```ts
 if (!powerDisplayId) { powerDisplayId = powerSaveBlocker.start('prevent-display-sleep') }
 ```
+
 so once it holds a number, that branch never runs again for the life of the sidecar.
 
 Predicted effect: launcher.ts's display assertion is taken only on the FIRST game launch per app
@@ -1798,6 +1829,7 @@ Note the same `isOnline()` guard is used by `downloadmanager/utils.ts:138` and `
 Blocks a strong result for criteria 20/21: with Epic never contacted, session validity can only be
 shown as token persistence, never as server acceptance — unlike Humble, where
 `fetched=7/7 ok=7 denied=0 expired=0` proves the server accepted the restored credentials.
+  status: acknowledged
 
 ## D-35-19-14 — `gamelib.log` is truncated on every app start
 
@@ -1855,11 +1887,13 @@ trusted delete return, which is the correct construction given
 
 **THE FIX FOR THIS ALREADY EXISTS IN THE HUMBLE PATH — port it.** Criterion 19, run after this item
 was written, showed Humble's disconnect logging a cookie CENSUS alongside its clear count:
+
 ```
 Humble disconnect: cookie census before(total=9, matched=0, verdict=SUPPORTED_NONEMPTY)
                                   after(total=9, matched=0, verdict=SUPPORTED_NONEMPTY)
 Humble disconnect: cleared 0 humblebundle.com cookie(s)
 ```
+
 That `verdict=SUPPORTED_NONEMPTY` with `total=9` makes the zero self-interpreting: the cookie API
 worked and the jar was non-empty, so `matched=0` provably means "none present" rather than "probe
 broken". Epic's per-domain lines emit only the count, which is why this item had to argue the
@@ -2033,6 +2067,7 @@ The suggested check of the sibling runners was done: `legendary/library.ts:415` 
 `sideload` are no-op stubs. **This defect is GOG-only.**
 
 ---
+  status: acknowledged
 
 ## D-35-ROUTE-01 — ROUTED TO PHASE 39, 2026-08-30: the two red planning gates and `WR-01`
 
@@ -2142,6 +2177,7 @@ did nothing wrong; the ORDERING did. This is not a one-off: expect it to recur e
 re-baseline plan is scheduled before other fork-touching plans in the same wave, and plan
 accordingly (e.g. sequence the re-baseline last in its wave, or accept it may need one more
 follow-up pass). Not a redesign of the gate itself — that remains out of scope here.
+  status: acknowledged
 
 ## D-35-29-01 — plan 35-23's Epic cookie census is INERT at logout: it needs a login window, and logout has none
 
@@ -2186,6 +2222,7 @@ Two anomalies recorded from the same run, neither a failure and neither chased:
 
 1. `fortnite.com` reads `before total=54` / `after total=54` despite clearing 1. The per-host
    `matched` moved 1 -> 0 correctly; only the jar-wide `total` failed to decrement.
+  status: acknowledged
 2. An external `strings` proxy counted `epicgames.com` occurrences 4 -> 6 **after** the clear.
    That proxy counts raw string occurrences in a rewritten binary file, not cookies. It is
    unusable for arithmetic and must not be read as the clear adding cookies; it remains valid
@@ -2212,6 +2249,7 @@ than `jarTotal` precisely so an Epic-empty host in a live shared jar would read
 `SUPPORTED_BUT_EMPTY` rather than `SUPPORTED_NONEMPTY`. The construction is correct.
 
 **It cannot execute.** Measured at logout, on all five hosts:
+
 ```
 Legendary logout: <host> cookie census read failed (non-fatal, evidence unavailable for this side):
   Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
@@ -2313,19 +2351,23 @@ checked.
 
 **Live gate, 2026-08-31 21:03** (dev build pid 85098; jar identified by which mtime moved — `gamelib-shell.binarycookies` 20:48->21:03, packaged jar untouched at 18:17):
 - product: `post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s)`
+  status: acknowledged
 - independent index-walking parse of the same jar: **0** Epic-owned live records, 0 by domain substring, 0 by cookie-name substring, and **0 raw byte occurrences** of `EPIC_SESSION_AP`, `_epicSID`, `_tald`, `EPIC_DEVICE`, `EPIC_LOGIN_ID`
+  status: acknowledged
 - **0 `__cf_bm` anywhere** — no Cloudflare receipt, so no page load happens in teardown at all
+  status: acknowledged
 - all four arithmetic reconciliations that the pre-fix run FAILED now hold: jar total 59->51 = 8 = reported cleared 8; per-host deltas sum to 8; every per-host delta matches its own census; 51 live records - 0 expired = census `after(total=51)`
+  status: acknowledged
 - not vacuous: BEFORE census measured `matched=8` (pre-fix baseline was 3); all 8 removed
+  status: acknowledged
 - no collateral damage: 0 non-Epic records lost; Humble/GOG/Amazon sessions intact
 
 **Residual, and it is NOT closed by this:** [[D-35-19-15]]'s sibling-domain sub-criterion is still unexercised — all four of fortnite/unrealengine/twinmotion/metahuman reported `before(matched=0)`. Note the reason, which is a consequence of the fix: pre-fix each showed `before(matched=1)`, and those cookies were set by the logout's OWN hidden window. Removing the window removed the only thing that had ever populated them during a logout. Proving they clear now needs a deliberately seeded fixture.
 
 **Also worth knowing before the next `grep`:** an `api.hcaptcha.com`/`hmt_id` cookie PARTITIONED to `https://epicgames.com` survives logout, so the string `epicgames` still appears once in the jar's bytes after a clean logout. It is correctly out of scope (hcaptcha.com is not Epic-owned; clearing it is the REQ-34.4.1-06 harm) and carries no Epic session.
+  status: acknowledged
 
 ---
-
-
 
 Found: criterion 21 re-run, 2026-08-31. Status: **OPEN, and now REPRODUCED on a second,
 differently-keyed jar (2026-08-31 19:27, quick task `260831-q93` Task 3). Cause still NOT
@@ -2345,6 +2387,7 @@ first time there are now TWO measurements of the same gesture that disagree:
 - the product's own in-process post-clear census reads `matched=0` on **all five** Epic hosts
   (see [[D-35-29-01]]'s verbatim log block) — i.e. the code under test says the Epic cookies are
   gone; while
+  status: acknowledged
 - the external `strings` read of the same jar says those four names are still there.
 
 The item's original "caveat on the evidence" anticipated exactly this shape — `strings` over a
@@ -2370,10 +2413,12 @@ logout is genuinely effective — `user.json` was REMOVED and re-opening the Epi
 
 However, an independent read of `~/Library/HTTPStorages/com.gamelib.shell.binarycookies` (external
 to the product, so it does not rely on the code under test) taken after the clear still shows:
+
 ```
 _epicSID   _tald   EPIC_DEVICE   EPIC_LOGIN_ID
 on: A.epicgames.com (x4), A.www.epicgames.com, A.ecosec.on.epicgames.com
 ```
+
 These are the exact four names `35-AB-RETEST.md` Item 7 identified as the residual set the
 `EPIC_COOKIE_HOSTS` work exists to remove.
 
@@ -2383,6 +2428,7 @@ The jar was rewritten at `18:15:19`, after the `18:15:15` clear, and its total s
 **Two explanations, NOT distinguished by this run:**
 1. the clear did not actually remove them (cf. [[wry-cookie-delete-lies-about-deleting]] — a delete
    that reports success without deleting is a known behaviour in this stack); or
+  status: acknowledged
 2. they were re-created in the ~3s between the clear and the file write.
 
 **Caveat on the evidence:** `strings` over a binary format is a proxy and could in principle
@@ -2391,6 +2437,7 @@ binarycookies parse, or a `cookies_for_url` read taken with a window present (bl
 [[D-35-29-01]]).
 
 Severity is bounded by the behavioural result: authentication is NOT restored by these cookies.
+  status: acknowledged
 
 ### UPGRADED 2026-08-31 by the independent verification — severity bound DROPPED, residue set WRONG
 

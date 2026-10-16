@@ -14,11 +14,13 @@ dependency-graph:
     - src/frontend/screens/WebView/useTauriOAuthLogin.ts
     - src/frontend/screens/WebView/components/TauriLoginPanel.tsx
     - src/backend/storeManagers/nile/user.ts
+
 tech-stack:
   added: []
   patterns:
     - "In-flight-promise memoization without a value cache -- deliberately DIFFERENT from GOGUser.getCredentials()'s TTL cache, because NileLoginData carries single-use PKCE material that must never be replayed across a retry"
     - "A transient phase set before an await and cleared to the next phase after it resolves, mirroring the 260803-eee finalizing precedent -- preparing is non-terminal and never touches reachedTerminal"
+
 key-files:
   created:
     - src/frontend/screens/WebView/__tests__/WebViewAmazonLoginDataSpawn.test.ts
@@ -30,13 +32,19 @@ key-files:
     - src/frontend/screens/WebView/__tests__/useTauriOAuthLogin.test.tsx
     - src/frontend/screens/WebView/components/TauriLoginPanel.tsx
     - src/frontend/screens/WebView/components/__tests__/TauriLoginPanel.test.tsx
+
 decisions:
   - "No value cache/TTL on NileUser.getLoginData()'s memoization -- only an in-flight promise, cleared in a finally with an identity check (systeminfo's own precedent). A sequential call issued after the previous one resolved always spawns fresh, pinned by a negative test, because code_verifier/serial are single-use PKCE material."
   - "safeSetState({ phase: 'awaiting' }) moved from the top of run() to immediately after the login URL is resolved (for ALL four runners), immediately before oauthCaptureLogin -- not just for nile. The three constant-URL runners resolve synchronously so they still reach awaiting in the same tick as before; only nile's async fetch now has a preceding preparing state to cover."
   - "preparing carries `runner` on the state itself (mirroring finalizing/blocked), so TauriLoginPanel reads it from state rather than depending on the separately-passed runner prop staying in sync."
+
 metrics:
   duration_minutes: "~50 (3 implementation tasks + live checkpoint)"
   completed: "2026-08-06"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260806-teb: Cut Amazon login dead time under Tauri Summary

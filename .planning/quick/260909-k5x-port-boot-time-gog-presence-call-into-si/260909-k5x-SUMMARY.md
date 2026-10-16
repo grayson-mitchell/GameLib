@@ -6,12 +6,15 @@ tags: [gog, presence, bootstrap, sidecar, tauri]
 requires: []
 provides:
   - "setGogPresenceWhenOnline() (Block H) -- boot-time GOG presence call, wired into init()"
+
 affects:
   - src/backend/sidecar/bootstrap.ts
+
 tech-stack:
   added: []
   patterns:
     - "Boot-time side-effect block (Block H), following Blocks E/G's guard-flag + outer/inner try/catch + explicit .catch() shape"
+
 key-files:
   created:
     - src/backend/sidecar/__tests__/gogPresenceBootWire.test.ts
@@ -20,12 +23,18 @@ key-files:
     - src/backend/sidecar/bootstrap.ts
     - src/backend/sidecar/__tests__/testContainment.test.ts
     - .planning/todos/completed/2026-09-06-gog-presence-never-set-at-startup-and-its-keepalive-never-arms.md (moved from pending/)
+
 decisions:
   - "D-K5X-01: Block H has NO load-bearing ordering constraint -- only the generic three (after initLogger, after initOnlineMonitor, before READY_SENTINEL). Blocks D/E/F/G each individually checked and refuted as a dependency."
   - "D-K5X-02: no settings read hoisted to helper entry, unlike Block G's D5 -- port fidelity to the deleted bare main.ts:477 call. The disableGOGPresence/disablePlaytimeSync gate stays inside setPresence() itself, evaluated at online time, not at boot time."
+
 metrics:
   duration: "~90 minutes"
   completed: 2026-09-09
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260909-k5x: Port boot-time GOG presence call into bootstrap.ts as Block H Summary

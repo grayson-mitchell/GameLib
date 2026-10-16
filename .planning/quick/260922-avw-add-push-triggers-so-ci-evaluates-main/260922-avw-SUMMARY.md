@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick Task 260922-avw: Add push triggers so CI evaluates main — Summary
 
 One-liner: added a `push:`-on-`[main, stable]` trigger (filtered by `paths-ignore`) plus a
@@ -93,6 +100,7 @@ Both predictions in the plan held exactly; grep was run regardless, per instruct
 **3b — updated exactly two citations:**
 - `CLAUDE.md`: `` `.github/workflows/test.yml:32` `` → `` `.github/workflows/test.yml:41` ``
 - `.planning/ROADMAP.md`: `` `.github/workflows/lint.yml:19` `` → `` `.github/workflows/lint.yml:28` ``
+
 `git diff --stat` on these two files showed exactly 2 insertions/2 deletions total — nothing else
 in either file touched. The other historical citations of these workflow paths elsewhere in the
 repo (completed todos, past SUMMARY/REVIEW/PLAN files) were left untouched, per the citation scope

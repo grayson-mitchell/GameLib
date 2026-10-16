@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 260925-9de: Fix `checkNintendo`'s axis reads — right stick dead on non-standard Nintendo pads — Summary
 
 **One-liner:** `checkNintendo` read the right stick's vertical axis unbranched at `axes[3]`, above

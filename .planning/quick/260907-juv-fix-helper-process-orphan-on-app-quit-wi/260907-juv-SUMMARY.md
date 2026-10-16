@@ -14,6 +14,7 @@ provides:
   - "SidecarState::shutdown_child() (src-tauri/src/main.rs) reaps the sidecar's whole unix process group (SIGTERM -> bounded grace via try_wait() -> SIGKILL -> wait()) instead of only the sidecar pid -- covers every quit path, including red-X/Cmd+Q/osascript which bypass handleExit() entirely"
   - "configure_sidecar_process_group() called from both spawn_sidecar_dev and spawn_sidecar_packaged, gated #[cfg(unix)] with a #[cfg(not(unix))] no-op preserving Windows' existing child.kill() behavior"
   - "src/backend/__tests__/quitTeardownWiring.test.ts: comment-stripped source-text gates pinning the Rust call sites directly -- the only thing gating Layer B in CI, since CI runs no cargo step"
+
 affects: [tauri-shell, gog-store-manager, steam-bridge]
 
 tech-stack:
@@ -48,6 +49,10 @@ requirements-completed: [TODO-2026-09-01-helper-orphan]
 
 duration: unknown (resumed from a compacted session; commits span at least 2026-09-07T14:53:05+12:00 to 2026-09-07T15:04:32+12:00 for Tasks 2-3 alone)
 completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260907-juv: Fix helper process orphan on app quit under Tauri Summary
@@ -133,6 +138,7 @@ All four proofs below were captured directly from terminal output. Tree swaps us
 All three gate files applied against baseline source (no `longLivedChildren.ts`, `utils.ts`/`helperProcess.ts`/`games.ts`/`platform/index.ts`/`main.rs`/`Cargo.toml` all reverted to `32324f6ec`).
 
 **Gate A** — `npx jest src/backend/sidecar/__tests__/appShellFlows.test.ts --verbose`:
+
 ```
 FAIL Backend src/backend/sidecar/__tests__/appShellFlows.test.ts
   ● Test suite failed to run
@@ -152,6 +158,7 @@ Tests:       0 total
 ```
 
 **Gate B** — `npx jest src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts --verbose`:
+
 ```
 FAIL Backend src/backend/storeManagers/steam/bridge/__tests__/helperProcess.test.ts
   ● Test suite failed to run
@@ -171,6 +178,7 @@ Tests:       0 total
 ```
 
 **Gate C** — `npx jest src/backend/__tests__/quitTeardownWiring.test.ts --verbose`:
+
 ```
 ✕ C1: configure_sidecar_process_group is defined in main.rs
 ✕ C2: BOTH sidecar spawn sites call configure_sidecar_process_group (parity)
@@ -184,7 +192,9 @@ Tests:       0 total
 Test Suites: 1 failed, 1 total
 Tests:       7 failed, 1 passed, 8 total
 ```
+
 C8's failure detail (the stale before-quit claim still present at baseline):
+
 ```
 - Expected  - 1
 + Received  + 3
@@ -193,6 +203,7 @@ C8's failure detail (the stale before-quit claim still present at baseline):
 + Array [
 +   "/Users/graysonmitchell/Projects/GameLib/src/backend/storeManagers/steam/bridge/helperProcess.ts:301: * `main.ts` before-quit) so the long-lived shared helper never orphans on",
 + ]
+
 ```
 
 ### Proof (b-1): Layer A alone (Layer A files at final state, Layer B files reverted to baseline)
@@ -200,6 +211,7 @@ C8's failure detail (the stale before-quit claim still present at baseline):
 **Gate A:** `Tests: 42 passed, 42 total` — all green.
 **Gate B:** `Tests: 11 passed, 11 total` — all green.
 **Gate C:**
+
 ```
 ✕ C1: configure_sidecar_process_group is defined in main.rs
 ✕ C2: BOTH sidecar spawn sites call configure_sidecar_process_group (parity)
@@ -212,6 +224,7 @@ C8's failure detail (the stale before-quit claim still present at baseline):
 
 Tests: 5 failed, 3 passed, 8 total
 ```
+
 This is the required evidence that **Layer A alone is a false fix**: the Node-side wiring (Gate A/B) is fully green, but every Layer-B-specific assertion in Gate C (C1, C2, C4, C5, C6 — all about the Rust process-group reap) stays red, because red-X/Cmd+Q/`osascript` quit still bypasses `handleExit()` entirely and nothing reaps the sidecar's child processes on those paths.
 
 ### Proof (b-2): Layer B alone (Layer B files at final state, Layer A files reverted to baseline, `longLivedChildren.ts` absent)
@@ -219,6 +232,7 @@ This is the required evidence that **Layer A alone is a false fix**: the Node-si
 **Gate A:** `Cannot find module '../../longLivedChildren'` — identical failure to proof (a); Test Suites: 1 failed, Tests: 0 total.
 **Gate B:** `Cannot find module 'backend/longLivedChildren'` — identical failure to proof (a); Test Suites: 1 failed, Tests: 0 total.
 **Gate C:**
+
 ```
 ✓ C1: configure_sidecar_process_group is defined in main.rs
 ✓ C2: BOTH sidecar spawn sites call configure_sidecar_process_group (parity)
@@ -231,6 +245,7 @@ This is the required evidence that **Layer A alone is a false fix**: the Node-si
 
 Tests: 2 failed, 6 passed, 8 total
 ```
+
 This is the symmetric evidence that **Layer B alone is also insufficient**: the Rust-side reap is fully wired (C1–C6 green), but the graceful, in-app quit path is entirely missing (Gate A/B fail to even resolve their module), and comet's registration site plus the stale doc-comment correction (C7, C8 — both Layer A artifacts) remain red.
 
 _(Both (b-1) and (b-2) were followed immediately by a full restoration to the committed HEAD state, verified via `diff <(git show HEAD:<path>) <path>` → `MATCH` for every swapped file, before proceeding.)_
@@ -238,6 +253,7 @@ _(Both (b-1) and (b-2) were followed immediately by a full restoration to the co
 ### Proof (c): call-site deletion, Layer A (`shutdownLongLivedChildren()` removed from `handleExit()`)
 
 `npx jest src/backend/sidecar/__tests__/appShellFlows.test.ts -t "A1" --verbose`:
+
 ```
 ● sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-09) › REQ-260907-juv A1: quit (send) calls shutdownLongLivedChildren exactly once
 
@@ -253,11 +269,13 @@ _(Both (b-1) and (b-2) were followed immediately by a full restoration to the co
 
 Tests: 1 failed, 41 skipped, 42 total
 ```
+
 This is a **test-level assertion failure** ("Received number of calls: 0"), not a module-resolution error — proving the gate catches a silently dropped call site at the exact call, not merely the module's continued existence. `utils.ts` was restored immediately after and re-verified GREEN (42/42) and byte-identical to the committed blob.
 
 ### Proof (d): spawn-site deletion, Layer B (`configure_sidecar_process_group(&mut cmd);` removed from `spawn_sidecar_dev` only; `spawn_sidecar_packaged`'s call left intact)
 
 `npx jest src/backend/__tests__/quitTeardownWiring.test.ts --verbose`:
+
 ```
 ● Layer B -- Rust process-group spawn + group reap (quick 260907-juv) › C2: BOTH sidecar spawn sites call configure_sidecar_process_group (parity)
 
@@ -286,6 +304,7 @@ This is a **test-level assertion failure** ("Received number of calls: 0"), not 
 Test Suites: 1 failed, 1 total
 Tests:       1 failed, 7 passed, 8 total
 ```
+
 Only C2 failed (the parity assertion checking BOTH spawn sites), all other 7 tests stayed green — proving the gate catches a dropped call at exactly one of the two spawn sites, by asserting on the extracted function body's raw text rather than merely the helper function's existence (which C1 checks separately and which remained unaffected). `main.rs` was restored immediately after; Gate C re-verified GREEN (8/8), `cargo build` re-run successfully, and `Cargo.lock`'s diff confirmed unchanged (still the single expected `libc` line vs. `32324f6ec`).
 
 ## Live Gate — Explicitly NOT Run

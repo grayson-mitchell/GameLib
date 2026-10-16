@@ -11,6 +11,7 @@ provides:
   - Non-empty, decreasing ETA string (HH:MM:SS) once speed is known
   - A distinct 'steam-paused' gameStatusUpdate context + frontend "Paused" label for a frozen in-flight download
   - Corrected games.ts install() docstring (pollInstallOnce DOES stream progress)
+
 affects: [steam-install-ux, download-manager]
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed: [QUICK-260719-AOG]
 
 duration: ~40min
 completed: 2026-07-19
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260719-aog: Steam Native Install Progress Polish Summary

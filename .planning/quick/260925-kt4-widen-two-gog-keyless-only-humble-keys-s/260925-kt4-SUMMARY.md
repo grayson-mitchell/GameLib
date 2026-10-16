@@ -7,10 +7,12 @@ provides:
   - isGiftable widened to the full keyless set (gog_keyless, epic_keyless, origin_keyless)
   - Keys/index.tsx claim-destination fork widened to the full keyless set
   - HumbleKeyRow login-and-claim exclusion and claim-button label widened to match
+
 affects:
   - src/common/humble/viewFilters.ts
   - src/frontend/screens/Humble/Keys/index.tsx
   - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
+
 key-files:
   created: []
   modified:
@@ -21,14 +23,20 @@ key-files:
     - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
     - src/frontend/screens/Humble/Keys/__tests__/index.test.tsx
     - .planning/todos/completed/2026-09-25-humble-keys-two-sites-still-special-case-only-gog-keyless.md
+
 decisions:
   - "D1: site 1's generalization to epic_keyless/origin_keyless rests on classify.ts:174-181's structural no-key-code shape, not a second live probe (stated in code comment)"
   - "D2: isGiftableSpare left byte-identical — platform-blind by design, divergence from isGiftable pinned by test"
   - "D3: isKeylessKeyType stays a closed literal set, never endsWith — an unrecognised foo_keyless must fall through to the safe/keyed path"
   - "D4: no new locale string added — humbleKeys.claimOnHumble already existed in all 49 locales"
+
 metrics:
   duration: "~1 session (across a context compaction)"
   completed: 2026-09-25
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260925-kt4: Widen the two gog_keyless-only Humble Keys special cases Summary

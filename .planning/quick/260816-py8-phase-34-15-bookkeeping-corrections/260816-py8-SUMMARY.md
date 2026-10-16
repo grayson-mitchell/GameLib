@@ -15,11 +15,17 @@ key-files:
   modified:
     - .planning/phases/34.15-steam-platform-signal-and-sync-integrity/34.15-REVIEW.md
     - .planning/STATE.md
+
 decisions:
   - "findings: counts in 34.15-REVIEW.md frontmatter now mean OPEN findings, not findings-ever-found (per plan's count_interpretation_decision, implemented as specified)"
+
 metrics:
   duration: "~20 minutes"
   completed: 2026-08-16
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260816-py8: Phase 34.15 Bookkeeping Corrections Summary
@@ -158,6 +164,7 @@ verbatim SPEC content, not an execution defect:**
    reproduction of the plan's own SPEC-B2 text, not a deviation.
 
 Verified independently that both occurrences exist:
+
 ```
 $ grep -c "No dedicated todo" .planning/phases/34.15-steam-platform-signal-and-sync-integrity/34.15-REVIEW.md
 2

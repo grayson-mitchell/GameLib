@@ -5,14 +5,17 @@ subsystem: ui
 tags: [css, focus-ring, accessibility, theming, game-card]
 
 # Dependency graph
+
 requires: []
 provides:
   - Token-driven accent highlight ring for `.gameCard` and `.gameListItem`, shared by `:hover` AND `:focus-within`, in normal (non-console) mode
   - Stale-focus suppression so exactly one tile highlights at a time when the pointer is over the grid/list ("hover wins while mousing")
   - Source-text gate holding the ring to `var(--accent)`, proving hover+focus share one rule, proving the suppression rules exist, and keeping it in step with `.consoleCard.focused`
+
 affects: [console-mode, game-card, theming]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -37,8 +40,13 @@ patterns-established:
 requirements-completed: [QUICK-260925-pga]
 
 # Metrics
+
 duration: 25min
 completed: 2026-09-25
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260925-pga: Accent highlight ring for non-console game cards Summary
@@ -54,6 +62,7 @@ completed: 2026-09-25
 - **Files modified:** 1 modified, 1 created (both further revised in each follow-up round)
 
 ## Accomplishments
+
 - `.gameCard:hover, .gameCard:focus-within` (grouped selector, matching the file's existing `scale(1.05)` idiom) now paints a 3px `var(--accent, #0080ff)` outline (`outline-offset: -1px`), a two-layer `box-shadow` (drop shadow + `color-mix()` accent glow), and `z-index: 2` — replacing the old 1px system hairline, and firing for mouse hover as well as keyboard/gamepad focus.
 - `.gameListItem:hover, .gameListItem:focus-within` (new rule) paints a 2px `var(--accent, #0080ff)` outline at `-2px` offset for list view, which previously had only a text-colour change.
 - `.gameList:hover .gameCard:focus-within:not(:hover)` and `.gameListLayout:hover .gameListItem:focus-within:not(:hover)` suppress a stale ring (and, for the grid card, the shared `scale(1.05)` pop) on a card/row that still carries DOM focus from a prior gamepad landing or click, while the pointer hovers a *different* card — so exactly one tile highlights at a time while mousing.
@@ -75,10 +84,12 @@ Each task was committed atomically:
 **Plan metadata:** to be committed by orchestrator (SUMMARY.md, STATE.md not committed by this agent per constraints)
 
 ## Files Created/Modified
+
 - `src/frontend/screens/Library/components/GameCard/index.css` - Ring rules for `.gameCard` and `.gameListItem` key on the grouped `:hover, :focus-within` selector shape (previously `:focus-within` only). `.gameCard`'s ring: 3px `var(--accent)` outline, two-layer box-shadow (drop shadow + glow), `z-index: 2`. `.gameListItem`'s ring: 2px `var(--accent)` outline, no glow/z-index. Added `.gameList:hover .gameCard:focus-within:not(:hover)` (restores resting outline/box-shadow/z-index) and a second rule of the same selector restoring `transform: none` against the shared `scale(1.05)` rule; added `.gameListLayout:hover .gameListItem:focus-within:not(:hover)` (restores resting outline). Explanatory comments above each new/changed rule.
 - `src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts` - Source-text gate, now 12 tests across two describe blocks: original 8 (ring presence/token-driven-ness, hairline absence, no-bare-hex, hover+focus grouping, console-mode cross-file guard) plus 4 new (both stale-focus-suppression rule bodies exist for `.gameCard`, the box-shadow restoration uses the literal drop shadow rather than `none`, the scale suppression restores `transform: none`, and the list-item suppression clears its outline). Docstring rewritten across both rounds to state current scope.
 
 ## Decisions Made
+
 - Followed the plan's investigation findings verbatim for the base ring values: reused `.consoleCard.focused`'s exact pixel/colour/z-index values so the two modes match exactly, kept `:focus-within` (not `:focus-visible`) since gamepad nav relies on it, and kept the `outline`/`box-shadow` split for `color-mix()` degradation safety.
 - REVERSED the plan's design call to exclude `:hover` from the ring, after a live operator check reported "gamepad is working but mouse is not." This app already treats hover and focus as one "highlighted" state (the pre-existing `.gameCard:hover, .gameCard:focus-within { transform: scale(1.05) }` rule proves it), and the operator confirmed their original request ("make highlighted games ... have a border") meant both input paths.
 - Round 3: after hover was added, gamepad/click-driven real DOM focus could linger as a second, stale ring once the pointer moved elsewhere. The coordinator asked the operator to choose between "hover wins while mousing" and alternatives; operator chose hover-wins. Implemented as pointer-container-scoped `:not(:hover)` suppression, extended to the shared scale transform as a deliberate scope decision (leaving the scale would have only relocated the "stuck on" symptom from the ring to the pop-out size). Accepted, not fixed: pointer resting in a gap between cards while another card is stale-focused shows zero rings momentarily.
@@ -117,15 +128,19 @@ Each task was committed atomically:
 One self-correcting fix during Task 2 authoring: the test's relative path to `ConsoleMode/index.scss` initially used three `..` segments (`ENOENT`), corrected to four to match the actual directory depth from `GameCard/__tests__/` — caught immediately by the task's own `<verify>` jest run before commit, so no separate deviation entry is warranted (Rule 1, fixed inline within the same task, before any commit).
 
 ## Issues Encountered
+
 None beyond the items already documented above (the path-depth fix, the hover-scope reversal, and the stale-focus-suppression extension, both driven by live operator feedback).
 
 ## Known Stubs
+
 None. No hardcoded empty values, placeholder text, or unwired data introduced by this plan.
 
 ## Threat Flags
+
 None. This plan edits one stylesheet and adds one source-text test; no new network endpoint, auth path, file access pattern, or schema surface was introduced. Consistent with the plan's own threat model (T-pga-01, accepted; T-pga-SC, n/a).
 
 ## User Setup Required
+
 None - no external service configuration required.
 
 ## Next Phase Readiness

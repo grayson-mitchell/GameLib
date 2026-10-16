@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  gap_snapshot: "unknown::scenarios=0"
+---
+
 # Phase 30 — Human UAT Results
 
 **Claim level:** this phase's honest claim is **wired and unit-proven**, not "hardware-proven" (a
@@ -145,6 +152,7 @@ headline user-facing claims below have been witnessed on a live Tauri build *sin
 so they are held `pending`. Run against `npm run tauri:dev` with `enableSteamNativeInstall: true`.
 
 ### 1. Live Tauri install retest (Gap 1 / 30-05 fix)
+
 expected: Clicking Install on a Steam title that can't proceed headless (or genuinely fails) clears the "installing" badge back to Install; a visible ERROR dialog appears for a genuine failure, and no dialog (badge still clears) for the client-not-ready case.
 result: issue
 reported: "no, spinner remains spinning once clicked"
@@ -152,15 +160,18 @@ severity: major
 note: 30-05 fix did NOT resolve the spinner hang on a live Tauri build — badge never leaves 'installing'. Same user-visible symptom as original UAT Test 4.
 
 ### 2. Live Tauri Settings retest (Gap 2 / 30-06 fix)
+
 expected: The Settings screen renders real config under `npm run tauri:dev` instead of a permanent UpdateComponent spinner, for both a fresh load and a load that fails/rejects.
 result: pass
 
 ### 3. Native folder-picker dialog (dialog_open / tauri-plugin-dialog)
+
 expected: A real openDialog call site (CustomWineProton binary picker, SideloadDialog, PathSelectionBox) opens an actual native macOS picker, honors openFile vs openDirectory (WR-01), and returns the picked path in Electron's exact `{canceled, filePaths}` shape.
 result: pass
 note: Folder-picker mode exercised live and behaved as expected. File-mode (openFile) path not separately exercised this session, but folder path confirms dialog_open wiring + path return shape.
 
 ### 4. Full Install → Uninstall E2E on real Steam depot content
+
 expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
 result: partial
 reason: |
@@ -174,16 +185,19 @@ reason: |
 canonical_record: "30-UAT.md test 6 (Uninstall Reverts Button State) — this entry is a duplicate restatement, not an independent item"
 
 ### 5. Both-builds smoke re-confirmation after 30-05/30-06
+
 expected: `npm start` and `npm run tauri:dev` both still launch clean with no new console errors after the two gap-closure fixes (re-runs the 30-04 Task 3 checkpoint against current HEAD).
 result: pass
 note: Both Electron (`npm start`) and Tauri (`npm run tauri:dev`) boot clean on current HEAD — additive/reversible invariant holds after 30-05/30-06.
 
 ### 6. CR-03/CR-04 long-running-channel timeout removal
+
 expected: A Steam depot install running >60s under Tauri does not hit `sidecar invoke timed out`; a folder picker left open >60s still honors the eventual selection.
 result: pass
 note: No 60s `sidecar invoke timed out` observed; folder picker left open >60s still accepted the late selection. CR-03/CR-04 timeout removal confirmed live.
 
 ### 7. Electron Steam sync recovery (Test 9 disambiguation)
+
 expected: Under `npm start`, after re-signing in to Steam (refreshing the OSCrypt token), Steam library sync succeeds again — confirming the Test 9 failure was the diagnosed token-divergence issue, not a Phase 30 regression.
 result: pass
 note: After re-sign-in under Electron, Steam library sync recovered and listed owned titles. Confirms original UAT Test 9 was environmental token-divergence, NOT a Phase 30 regression — closed as not-a-defect.
@@ -257,6 +271,7 @@ mechanism-proven but NOT yet live-proven.** Run against `npm run tauri:dev` with
 `enableSteamNativeInstall: true`.
 
 ### 1. Live Tauri install retest (G-30-02 / 30-07 fix)
+
 expected: Clicking Install on a Steam title whose CM socket is present-but-unresponsive reaches a terminal state within the bound — the "installing" badge clears and an ERROR dialog surfaces — instead of spinning on "installing" forever. A healthy, fast-resolving install is unaffected.
 result: issue
 reported: "4. fails" — live Tauri retest 2026-07-23, install spinner STILL hangs forever after the 30-07 timeout fix + WR-01/02/03 bound tuning.
@@ -284,6 +299,7 @@ resolution: |
 note: 30-07 implemented the diagnosed remedy (bound every pre-download CM await + resolveSteamInstallTarget) and is unit-proven (1004 tests), but the live badge still never cleared. The real live trigger was on a path the pre-download withTimeout wrapping does not reach — see `.planning/debug/steam-install-spinner-hangs-tauri-live-g3002.md`, now marked resolved.
 
 ### 2. Full Install → Uninstall E2E on real Steam depot content (Test 4)
+
 expected: With a signed-in populated library, Install starts a real depot download, the button transitions queued → installing → done via gameStatusUpdate, and Uninstall reverts the button to Install.
 result: partial
 disposition: PARKED to Phase 33 — PARK HONORED; install half proven, uninstall half still open

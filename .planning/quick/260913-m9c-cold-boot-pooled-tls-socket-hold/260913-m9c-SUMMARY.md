@@ -6,30 +6,40 @@ tags: [cold-boot, http-agent, diagnostics, ci-budget, measurement-refutation]
 requires:
   - src/backend/testUtils/fakeHomeProfile.ts
   - meta/runTs.cjs
+
 provides:
   - meta/coldBootTiming.ts
+
 affects:
   - .planning/todos/pending/2026-09-13-cold-sidecar-boot-holds-pooled-keepalive-tls-sockets-for-26s-against-a-30s-ci-budget.md
+
 tech-stack:
   added: []
   patterns:
     - "Diagnostic report (--report-on-signal + SIGUSR2) as the handle instrument, never process._getActiveHandles()"
     - "Agent census via constructor wrap PLUS http.Agent.prototype.addRequest hook, so no agent can be missed"
     - "Fresh createFakeHomeProfile() per timed run; captures registered and shredded in a finally"
+
 key-files:
   created:
     - meta/coldBootTiming.ts
   modified:
     - .planning/todos/pending/2026-09-13-cold-sidecar-boot-holds-pooled-keepalive-tls-sockets-for-26s-against-a-30s-ci-budget.md
     - .planning/STATE.md
+
 decisions:
   - "Task 2 STOPPED, not redirected: the measurement falsified the plan's prediction, and the planned fix is inert against the real mechanism"
   - "No src/ file was touched, so no config-pin test was added either -- it would have asserted a setting that does not fix the defect"
   - "Todo parked in pending/ as ready: human rather than closed; the remedy requires a product decision"
   - "Todo filename deliberately NOT renamed despite its now-refuted slug, to preserve the resolver breadcrumb"
+
 metrics:
   duration: ~40 min
   completed: 2026-09-13
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260913-m9c: Cold-Boot Pooled TLS Socket Hold Summary

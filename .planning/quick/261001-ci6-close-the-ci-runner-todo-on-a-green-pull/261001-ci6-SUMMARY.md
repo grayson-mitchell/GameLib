@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 261001-ci6: close the CI-runner todo
 
 `ci` (the Test workflow) concluded success on the PR run for `9109d01da`; lint and codecheck passed too. Skip counts were not read

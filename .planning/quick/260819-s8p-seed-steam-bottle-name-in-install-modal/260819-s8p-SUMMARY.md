@@ -5,6 +5,10 @@ date: 2026-08-19
 status: complete (code) / conflict on Task 3 commit — see below
 closes_gap: G-D05-BOTTLENAME (and its already-FAILED sibling G-ROW-1), CODE ONLY
 phase_ref: 34.13-steam-install-time-wine-bottle-form-gog-parity
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: complete (code) / conflict on task 3 commit — see below
 ---
 
 # Quick Task 260819-s8p — Summary
@@ -37,6 +41,7 @@ Seeded the Steam install-modal's read-only CrossOver bottle-name field with `DEF
 Per the plan's verification requirement, the seed block was reverted **by hand-editing the file directly** (Edit tool, not `git checkout`/`git stash`), the gate suite was run, the failure was observed, and the file was hand-edited back to the fix — verified byte-identical to the committed state via `git diff` (empty output) afterward.
 
 Reverted block (removed):
+
 ```
 if (isSteamManagedApp) {
   setCrossoverBottle((current) => current || DEFAULT_STEAM_BOTTLE_NAME)
@@ -101,12 +106,14 @@ FOUND commit 0e91e6471 in git log
 ```
 
 `git status --short` at completion:
+
 ```
  M .planning/STATE.md
  M .planning/phases/34.13-steam-install-time-wine-bottle-form-gog-parity/34.13-UAT.md
 ?? .planning/quick/260819-p2d-uat-3413-bottle-prefill-note/
 ?? .planning/quick/260819-s8p-seed-steam-bottle-name-in-install-modal/
 ```
+
 `.planning/STATE.md` and `.planning/quick/260819-p2d-uat-3413-bottle-prefill-note/` are exactly as found at task start — untouched. `34.13-UAT.md` carries both the concurrent session's pre-existing edits and my four new notes, none committed.
 
 ## Self-Check: PASSED

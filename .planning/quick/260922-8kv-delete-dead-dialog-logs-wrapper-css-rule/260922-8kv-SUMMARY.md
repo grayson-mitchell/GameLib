@@ -8,6 +8,10 @@ commits:
     subject: "fix(quick-260922-8kv): delete the dead dialog .logs-wrapper block in LogSettings"
   - sha: 76f16d6f5
     subject: "docs(quick-260922-8kv): close the dead dialog .logs-wrapper todo on the delete decision"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260922-8kv Summary

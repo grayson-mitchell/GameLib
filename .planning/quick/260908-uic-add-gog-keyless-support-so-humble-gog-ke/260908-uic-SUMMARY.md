@@ -11,10 +11,12 @@ dependency-graph:
   affects:
     - src/backend/humble/classify.ts
     - src/common/humble/keyTypePresentation.ts
+
 tech-stack:
   added: []
   patterns:
     - "epic_keyless precedent (branded + logo, absent from REDEEM_URL_BUILDERS) copied for gog_keyless"
+
 key-files:
   created: []
   modified:
@@ -23,12 +25,18 @@ key-files:
     - src/backend/humble/__tests__/classify.test.ts
     - src/backend/humble/__tests__/keyTypePresentation.test.ts
     - src/backend/humble/__tests__/fixtures/tpks.ts
+
 decisions:
   - "gog is retained unchanged as the evidenced keyed-GOG value; gog_keyless is added as a second, separately-evidenced value (live GameLib sync, not Playnite/Galaxy union)."
   - "gog_keyless gets a KEY_TYPE_PRESENTATIONS entry (branded GOG) but NO REDEEM_URL_BUILDERS entry — it falls through to the help URL, matching the epic_keyless precedent exactly."
+
 metrics:
   duration: "~35 minutes"
   completed: "2026-09-08"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase 260908-uic Plan 01: Add gog_keyless support so Humble GOG keyless entitlements classify Summary

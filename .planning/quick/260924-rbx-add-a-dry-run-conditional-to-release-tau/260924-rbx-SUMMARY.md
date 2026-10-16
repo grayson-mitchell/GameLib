@@ -10,6 +10,7 @@ provides:
   - "single job-level GAMELIB_DRY_RUN boolean, gated on github.event_name"
   - "conditional tauri-action tagName/releaseName (empty on dry run) and unconditional empty releaseId"
   - "GitHub-expression evaluator (evaluateGithubExpression) + resolved-value jest gates in releaseWorkflow.test.ts"
+
 affects: [release-tauri.yml, releaseWorkflow.test.ts]
 
 tech-stack:
@@ -34,6 +35,10 @@ requirements-completed: [QT-260924-rbx]
 
 duration: ~35min
 completed: 2026-09-24
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260924-rbx: Dry-run conditional for Release Tauri Summary
@@ -104,6 +109,7 @@ None — no external service configuration required.
 All commands below were run for real; output is condensed but not fabricated.
 
 **Task 1 (RED):**
+
 ```
 npx prettier --check src/backend/__tests__/releaseWorkflow.test.ts   -> All matched files use Prettier code style!
 pnpm codecheck                                                        -> clean (no output = success)
@@ -119,6 +125,7 @@ npx jest src/backend/__tests__/releaseWorkflow.test.ts
 ```
 
 **Task 2 (GREEN, after the comment fix above):**
+
 ```
 node -e "require('js-yaml').load(...)"                                -> YAML OK
 npx prettier --check .github/workflows/release-tauri.yml src/backend/__tests__/releaseWorkflow.test.ts
@@ -130,6 +137,7 @@ pnpm planning-gates -> 12/12 planning gates passed.
 ```
 
 **Orchestrator-mandated diff guards (run against pre-plan base `4779bb1bd`, since Task 1 and Task 2 were committed separately):**
+
 ```
 git diff --stat 4779bb1bd -- .github/workflows/release-tauri.yml src/backend/__tests__/releaseWorkflow.test.ts
   -> 2 files changed, 386 insertions(+), 2 deletions(-)   [EXACTLY 2 files]

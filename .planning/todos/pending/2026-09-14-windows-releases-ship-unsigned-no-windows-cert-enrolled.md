@@ -11,6 +11,10 @@ found_by: 'Split from the macOS signing todo on 2026-09-14, after the Apple Deve
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md (Direction step 5)'
 files:
   - .github/workflows/release-tauri.yml
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
 ---
 
 ## PARKED 2026-10-08 — no certificate will be acquired yet

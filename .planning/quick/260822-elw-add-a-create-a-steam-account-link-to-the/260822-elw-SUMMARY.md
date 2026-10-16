@@ -9,6 +9,7 @@ provides:
   - "SteamLogin/index.tsx: exported Step type, showsCreateAccountLink(step), renderCreateAccountLink(step)"
   - "Gated create-account link, rendered once after the credentials TabPanel in renderWindowBody()"
   - "Both-direction jest gate over the predicate/render/call-site shape (steamCreateAccountLink.test.tsx)"
+
 affects: [steam-login, i18n-gate-scope]
 
 tech-stack:
@@ -33,6 +34,10 @@ requirements-completed: [QUICK-260822-elw-01]
 
 duration: ~30min
 completed: 2026-08-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260822-elw: Add a "create a Steam account" link to the Steam login dialog Summary
@@ -78,6 +83,7 @@ _Note: a concurrent session was landing phase 37-11 commits in `src/backend/stor
 ## Verification (actual output)
 
 ### Frontend Login suite
+
 ```
 npx jest --selectProjects Frontend --testPathPattern "screens/Login" --no-coverage
 
@@ -91,34 +97,44 @@ PASS Frontend src/frontend/screens/Login/__tests__/loginCrossfade.test.ts
 Test Suites: 6 passed, 6 total
 Tests:       83 passed, 83 total
 ```
+
 (Baseline before this task: 5 suites / 76 tests, all green. +1 suite / +7 tests, no regressions.)
 
 ### Meta hardcodedStringGate
+
 ```
 npx jest --selectProjects Meta --testPathPattern "hardcodedStringGate" --no-coverage
 
 Test Suites: 1 passed, 1 total
 Tests:       128 passed, 128 total
 ```
+
 Zero violations, zero stale exemptions, allowlist still exactly two entries in the same fixed order.
 
 ### Meta genI18nGateScope
+
 ```
 npx jest --selectProjects Meta --testPathPattern "genI18nGateScope" --no-coverage
 
 Test Suites: 1 failed, 1 total
 Tests:       1 failed, 1 skipped, 25 passed, 27 total
 ```
+
 The one failure is the pre-existing A-17 `forkTouchedSnapshot.files` array-equality assertion (`meta/__tests__/genI18nGateScope.test.ts:402`) — same single missing entry (`humbleLoginChromeCss.ts`) as the documented pre-existing baseline from quick task 260822-di1. Confirmed this task did NOT add a new source file under the scanned scope (only edited existing `index.tsx`/`index.scss`; the new `__tests__/*.test.tsx` file is excluded from `freshSnapshotFiles()` per `genI18nGateScope.ts` line 163), so the snapshot is exactly as stale as before this task — still 1 failure, not 5.
 
 ### tsc / eslint
+
 ```
 npx tsc --noEmit          # clean, no output
 npx eslint src/frontend/screens/Login/components/SteamLogin/index.tsx \
             src/frontend/screens/Login/components/SteamLogin/__tests__/steamCreateAccountLink.test.tsx
+
 # 0 errors. 3 pre-existing warnings on index.tsx (import-x/no-named-as-default on the
+
 # QRCode default import, two @typescript-eslint/no-floating-promises on unrelated
+
 # pre-existing useEffect callbacks at lines 215/241) -- none introduced by this task.
+
 ```
 
 ### Falsifiability (per-assertion, checksum-verified reverts)

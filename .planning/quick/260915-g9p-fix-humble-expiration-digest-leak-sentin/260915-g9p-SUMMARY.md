@@ -9,24 +9,32 @@ dependency-graph:
     - Hardened Pitfall 5 negative-control test for the Humble expiration digest
   affects:
     - src/backend/humble/__tests__/expirationAlerts.test.ts
+
 tech-stack:
   added: []
   patterns:
     - "Shared sentinel constants between fixture and assertion (drift-proof negative control)"
     - "Expected value rendered by the same call as the value under test (zone/locale-agnostic assertion)"
+
 key-files:
   created: []
   modified:
     - src/backend/humble/__tests__/expirationAlerts.test.ts
     - .planning/todos/completed/2026-09-15-humble-expiration-digest-leak-sentinel-collides-with-the-date.md
+
 decisions:
   - "D-1 honored: closed the timezone axis by rendering the expected date with the same call under test, not by pinning TZ."
   - "D-2 honored: added an exact-equality structural body assertion in addition to the named sentinel checks."
   - "D-3 honored: named negative assertions (not.toContain) ordered before the structural toBe, so a real leak reports as the specific sentinel failure."
   - "D-4 honored: the removed bare-`'7'` expression is described in prose ('the bare single-digit sentinel'), never retyped verbatim, in both the test file and this summary/todo."
+
 metrics:
   duration: "~25 minutes"
   completed: 2026-09-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260915-g9p: Fix Humble Expiration Digest Leak Sentinel Summary

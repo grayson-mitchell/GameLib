@@ -7,6 +7,10 @@ updated: 2026-07-17
 phase: 21-steam-native-install
 related_uat: .planning/phases/21-steam-native-install/21-UAT.md
 severity: blocker
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_verify
 ---
 
 # Debug: depot decryption key requested with base appId for DLC/sub-app depots (D-UAT-08)
@@ -32,6 +36,7 @@ severity: blocker
 `select.ts::selectDepots` runs for the base app AND each DLC/sub-app (via `selectAllDepots`'s loop over `dlcInfos`), but the `DepotDescriptor` it emits records only `{id, manifest, size, dlcappid}` — it NEVER records which app (`appinfo.appid`) the depot was enumerated from. `buildDepotPlan` (depot.ts) then calls `fetchDepotPlanEntry(client, numericAppId = Number(baseAppId), descriptor)` and requests `getDepotDecryptionKey(BASE_appId, depotId)` for EVERY depot. Cyberpunk's macOS depots (1460472, 2224089) belong to sub-apps (log: "union across base + DLC apps"), so Steam rejects the base-app key request with EResult `FileNotFound`.
 
 Selection log evidence:
+
 ```
 os=macos arch=64 language=english branch=public -> depots [1460472(65GB), 2060314(193MB)]
 os=macos ... -> depots [2224089(24GB)]

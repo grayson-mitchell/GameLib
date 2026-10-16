@@ -16,6 +16,10 @@ commits:
 base_commit: 51716f88f
 concurrent_session_commits_excluded: [f36e21cff, af09a6bb3]
 requirements: [WR-10, WR-11, WR-18]
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # 260827-vpl: Close out Phase 34.11's final three residual findings — SUMMARY (reconstructed)

@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 261001-lgc: record the Linux embed live gate and close the reload-loop debug session
 
 Operator live gate on the rebuilt AppImage (`8dc406b3`, real profile): checks 1-9 PASS after the GOG reload loop was found and

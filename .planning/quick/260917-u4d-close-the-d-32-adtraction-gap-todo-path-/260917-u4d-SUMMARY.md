@@ -6,6 +6,7 @@ tags: [todo-triage, planning-bookkeeping, store-embed, tauri]
 provides:
   - "D-32 adtraction/ad-block-detection todo closed under completed/ as resolution path 1 (do nothing further), operator decision 2026-09-17, all five original sections preserved plus a new ## Resolution section"
   - "Four live citations repointed from todos/pending/ to todos/completed/ for the moved file"
+
 affects: []
 
 tech-stack:
@@ -31,6 +32,10 @@ requirements-completed: []
 
 duration: 25min
 completed: 2026-09-17
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260917-u4d: Close the D-32 adtraction gap todo path Summary
@@ -118,6 +123,7 @@ None. The `git mv` move-first / edit-at-new-path / add-last ordering worked as p
 ## Verification Results
 
 **Jest** (`npx jest src/frontend/screens/WebView/__tests__/WebViewAdtractionGapDeclared.test.ts`):
+
 ```
 Test Suites: 1 passed, 1 total
 Tests:       10 passed, 10 total
@@ -126,12 +132,14 @@ Time:        0.198 s
 ```
 
 **Prettier** (`npx prettier --check .../WebViewAdtractionGapDeclared.test.ts`):
+
 ```
 Checking formatting...
 All matched files use Prettier code style!
 ```
 
 **Planning gates** (`pnpm planning-gates`):
+
 ```
 11/11 planning gates passed.
 ```

@@ -7,6 +7,10 @@ updated: 2026-08-16T21:50:00Z
 goal: find_and_fix
 live_access: yes — operator is at the keyboard on an Electron build and can re-run the uninstall, paste logs, and inspect disk
 runtime: Electron (NOT Tauri)
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_verify
 ---
 
 # Debug Session: WazHack uninstall reverts to installed
@@ -134,6 +138,7 @@ next_action: "AWAITING OPERATOR REVIEW. All changes are self-verified but
 ---
 
 ## Round 1 (2026-08-16, initial investigation) — HISTORICAL, superseded by
+
 ## Round 3 below; preserved verbatim for the record.
 
 reasoning_checkpoint:
@@ -261,6 +266,7 @@ next_action: "Awaiting human verification: ask the operator to re-run Uninstall
 ---
 
 ## Round 2: Reopened question — does steam://uninstall/ work at all on native
+
 ## macOS Steam? (operator-directed, 2026-08-16, post-checkpoint)
 
 > **⚠ RETRACTED 2026-08-16T21:15:00Z (Round 3, operator-supplied control-test
@@ -701,7 +707,9 @@ reasoning_checkpoint_round2:
     without this constraint.
 
 ## Round 3: Correction — orphaned ACF, GameLib-written StateFlags=4 manifest
+
 ## Steam never adopted into its own library registry (operator-directed,
+
 ## 2026-08-16, post-checkpoint, overturns Round 2)
 
 reasoning_checkpoint_round3:
@@ -848,7 +856,9 @@ reasoning_checkpoint_round3:
     unknown side effects on the operator's real Steam session."
 
 ## Round 4: Pre-registered prediction for the decisive live retry
+
 ## (operator-directed, 2026-08-16, post-checkpoint) — written BEFORE the
+
 ## operator runs the test, per explicit instruction.
 
 reasoning_checkpoint_round4:
@@ -940,6 +950,7 @@ reasoning_checkpoint_round4:
     is ambiguous."
 
 ## Round 5: Root cause confirmed by live test; fix (a) implemented
+
 ## (operator-directed, 2026-08-16, post-checkpoint)
 
 The Round 4 prediction is CONFIRMED (see the 2026-08-16T21:35:00Z evidence

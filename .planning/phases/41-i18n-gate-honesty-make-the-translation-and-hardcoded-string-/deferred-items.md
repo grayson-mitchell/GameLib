@@ -18,6 +18,7 @@ rule rather than fixed inline.
 - **Disposition:** out of scope for 41-01 per the executor's scope-boundary rule (only auto-fix
   issues directly caused by the current task's changes). Not fixed. Recorded here so a future
   phase (or the operator) can decide whether to raise the ceiling or burn down the warning count.
+  status: acknowledged
 
 ## 41-07: pre-existing eslint warning at `meta/lintTranslations.ts:155`
 
@@ -34,3 +35,4 @@ rule rather than fixed inline.
   issues directly caused by the current task's changes). Not fixed. Recorded here so a future
   phase (or the operator) can decide whether to add a type guard or narrow `JSON.parse`'s return
   type at that call site.
+  status: acknowledged

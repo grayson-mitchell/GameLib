@@ -9,6 +9,7 @@ provides:
   - Platform icon rendering in InstalledInfo.tsx's Installed Platform row (getInstallPlatformIcon helper)
   - Visible faFolderOpen affordance on the Install Path row
   - info.openLocation i18n key in gamepage.json
+
 affects: [game-details, install-info-panel]
 
 tech-stack:
@@ -34,6 +35,10 @@ requirements-completed: [QUICK-KNR]
 
 duration: ~15min
 completed: 2026-07-10
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260710-knr: Install Info Platform Icon + Folder-Open Affordance Summary
@@ -47,6 +52,7 @@ completed: 2026-07-10
 - **Files modified:** 2
 
 ## Accomplishments
+
 - Added `getInstallPlatformIcon()` helper in InstalledInfo.tsx mapping win/osx/mac/darwin/linux substrings (case-insensitive) to `{ icon, title }`, with `null` fallback to raw text for unrecognized platform values
 - Installed Platform row now renders `<FontAwesomeIcon>` when a mapping exists; Browser early-return path is untouched
 - Install Path row shows a `faFolderOpen` icon (with `t('info.openLocation', 'Open location')` tooltip) after the truncated path, inside the existing `clickable` div — no new click handler added
@@ -62,10 +68,12 @@ Each task was committed atomically:
 _Task 3 (checkpoint:human-verify) is a manual visual-verification step — see "User Setup Required" / pending UAT below._
 
 ## Files Created/Modified
+
 - `src/frontend/screens/Game/GamePage/components/InstalledInfo.tsx` - Added platform-icon helper + FontAwesome imports; Installed Platform row renders an icon when the platform maps to Windows/macOS/Linux (raw text fallback otherwise); Install Path row gains a trailing `faFolderOpen` icon
 - `public/locales/en/gamepage.json` - Added `info.openLocation` key
 
 ## Decisions Made
+
 - Reused the exact import identifiers from `PlatformSupport.tsx` (`faApple`, `faLinux`, `faWindows`, `FontAwesomeIcon`) rather than introducing new icon conventions
 - Kept the icon-mapping helper pure and null-returning for unmapped platforms (no assumptions about future platform strings)
 - Left `index.css` unchanged — the existing `& > div > *` flex row + `gap: var(--space-md-fixed)` already places the icon at the row end without needing new spacing rules (per the plan's interface notes); no visual regression risk since this can't be confirmed without running the GUI (see pending UAT)
@@ -75,6 +83,7 @@ _Task 3 (checkpoint:human-verify) is a manual visual-verification step — see "
 None - plan executed exactly as written. CSS spacing tweak in Task 2 was optional and conditioned on a visual check; since the runtime UAT is pending (see below), `index.css` was left unmodified as the plan explicitly permits ("If no spacing tweak is needed after visual check, leave index.css unchanged and drop it from the commit").
 
 ## Issues Encountered
+
 None.
 
 ## User Setup Required
@@ -91,6 +100,7 @@ None - no external service configuration required.
 7. If spacing/mapping issues are found, a follow-up quick task can adjust `index.css` or `getInstallPlatformIcon` without touching the rest of this change.
 
 ## Next Phase Readiness
+
 - Code changes complete, committed, and verified via `pnpm codecheck` (tsc --noEmit, clean) and `pnpm eslint` (no new errors) and `pnpm exec prettier --check` (clean after auto-format)
 - Awaiting human visual UAT per above before this quick task can be considered fully closed
 

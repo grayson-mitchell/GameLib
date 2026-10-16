@@ -12,6 +12,7 @@ provides:
   - "meta/__tests__/runTsSignals.test.ts: 5 executable, execution-proven regression pins (T1-T5) for C4-01/C4-02/C4-04 and invariant 1"
   - "meta/__tests__/fixtures/runTsSignalFixture.ts: long-lived fixture entry for signal-proof tests"
   - "34.9-WRAPPER-PROOF.md row 11 dated addendum recording the fix"
+
 affects: [34.9-32, 34.9-33]
 
 tech-stack:
@@ -45,6 +46,10 @@ requirements-completed: [REQ-34.9-08, C4-01, C4-02, C4-04]
 
 duration: ~50min
 completed: 2026-08-14
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260814-u2u: Forward signals in meta/runTs.cjs Summary

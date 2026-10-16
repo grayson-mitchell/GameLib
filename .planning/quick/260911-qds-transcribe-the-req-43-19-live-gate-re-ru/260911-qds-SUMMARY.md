@@ -5,6 +5,10 @@ status: AWAITING_HUMAN_CHECK
 requirements: [REQ-43-19]
 branch: fix/steam-native-install-stability
 baseline: 0d2ae9862
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_check
 ---
 
 # 260911-qds: Transcribe the REQ-43-19 live-gate RE-RUN — Summary
@@ -57,6 +61,7 @@ shape) over all text evidence in `43-11-evidence/`:
 
 Pattern 1 (dash-separated alphanumeric groups) — **33 matches, all enumerated and dispositioned as
 benign**:
+
 ```
 gamelib-launch-1.log:1-9    — session-directory timestamp paths (/private/tmp/gamelib-gate-20260911T062945Z/...)
 gamelib-launch-1.old.log:1-19 — session-directory timestamp paths (.../gamelib-gate-20260911T043842Z/...)
@@ -70,6 +75,7 @@ terminal.log:141            — temp-directory build script path (gamelib-runts-
 terminal.log:158            — sha256 hash + binary path
 terminal.log:161            — PID + session-directory binary path
 ```
+
 None is a Humble redemption-code shape (5-char alphanumeric groups). All are: session-directory
 timestamp paths, build-tool content-hash filenames, or platform triples.
 
@@ -95,6 +101,7 @@ gift` as `resolveKeyScenario`'s fall-through default at `HumbleKeyRow/index.tsx:
 awk '/^## Verdict/,/^### Note on item/' 43-LIVE-GATE.md | grep '^| ' \
   | awk -F'|' '{print $(NF-1)}' | sed 's/^ *//;s/ *$//' | sort | uniq -c | sort -rn
 ```
+
 ```
      19 PASS
       3 NOT ATTEMPTABLE
@@ -126,6 +133,7 @@ run 1) and item 2 fails once (KEY column, run 2) — the same rule, two columns,
 `ready: human` design-decision todo, not a code defect.
 
 **Verify command output (verbatim, all non-zero as required):**
+
 ```
 33,36,43                 1
 delta \*\*2\*\*          1
@@ -142,6 +150,7 @@ index.tsx:277            1
 43-11-evidence           1
 1cd1e843                 2
 ```
+
 (`index.tsx:277` initially returned 0 because the contract-defect text cited the wrong full path
 and only the line range `:210-277`, not the bare string `:277` — fixed before commit by correcting
 the path to `HumbleKeyRow/index.tsx:210-278`, matching the doc's own existing citation convention,
@@ -172,6 +181,7 @@ and pointing separately at `index.tsx:277` for the fall-through `return` stateme
   - `pnpm planning-gates` → **10/10** (verbatim tail below).
 
 **`pnpm planning-gates` output:**
+
 ```
 [PASS] .planning/phases/34.2-tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid/currency-gate.py
 [PASS] .planning/phases/34.3-tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics/ported-channels-gate.py
@@ -190,6 +200,7 @@ and pointing separately at `index.tsx:277` for the fall-through `return` stateme
 **STATE.md is staged but deliberately NOT committed** — it is held for the human-check below.
 
 ## Commits so far (8, all plain `git` with explicit pathspecs, `Co-Authored-By` trailer applied
+
 from the second commit onward — the first commit predates my noticing the attribution requirement
 and was not amended, per the no-amend rule taking precedence over a one-commit trailer omission)
 

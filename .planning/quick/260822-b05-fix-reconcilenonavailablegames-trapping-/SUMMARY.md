@@ -8,7 +8,12 @@ files_modified:
   - src/frontend/hooks/constants.ts
   - src/frontend/hooks/__tests__/reconcileNonAvailableGames.test.ts
   - .planning/todos/pending/2026-08-22-nonavailablegames-permanently-traps-uninstalled-games.md
+
 completed: 2026-08-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260822-b05: Fix reconcileNonAvailableGames trapping uninstalled games Summary
@@ -145,11 +150,13 @@ files deleted by the code commit.
 ## Handoff (unchanged from plan, restated for 37-08)
 
 Two-command live repro:
+
 ```bash
 cd ~/Library/Application\ Support/Steam/steamapps
 mv appmanifest_259130.acf /tmp/
 mv common/Wasteland /tmp/
 ```
+
 Relaunch GameLib; the game must now appear (as not-installed) instead of vanishing, and the
 `Library: N owned Steam game(s) silently excluded ...` guard line must stop firing. Also owed:
 gog/nile/legendary confirmation, and a decision on closing

@@ -15,6 +15,10 @@ key-decisions:
   - "Did not add the new key to any locale catalog (public/locales/**) — the namespace/translation decision stays open for a human, per the todo's Solution section"
 
 completed: 2026-09-26
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260926-jes: Rename notify.uninstalled.error to notify.uninstallError Summary

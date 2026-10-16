@@ -4,6 +4,10 @@ trigger: "Operator, 2026-08-19, live `pnpm tauri:dev`: clicking 'Install options
 created: 2026-08-19
 goal: find_root_cause_only
 area: steam
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: reported
 ---
 
 ## Symptoms

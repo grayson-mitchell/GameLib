@@ -13,12 +13,14 @@ provides:
   - "frontendDist repointed at build/renderer, dropping ~410MB of helper binaries/dead Electron bundle/SEA blob from the shell binary embed"
   - "release-tauri.yml additive guard for build/renderer/index.html"
   - "measured, corrected shipped-Resources/build/bin baseline (195,358,418 B) superseding the stale ~233.8 MiB figure"
+
 affects: [release-packaging, macos-bundle-size, i18n-locale-loading, about-window]
 tech-stack:
   added: []
   patterns:
     - "pure-function + thin-plugin-wrapper shape for vite plugins (matches meta/preserveRunnerSymlinks.ts, meta/pruneStaleHelperBinaries.ts) — enables direct unit testing without a real build"
     - "generateBundle-captured bundle keys, closeBundle-driven assembly — copy is exact and driven by rollup's own emitted-file list, not a directory glob"
+
 key-files:
   created:
     - meta/assembleRendererDist.ts
@@ -34,15 +36,21 @@ key-files:
     - src-tauri/build.rs
     - src-tauri/src/main.rs
     - .planning/todos/pending/2026-08-28-tauri-macos-bundle-is-786mb-frontenddist-embeds-build-bin-in.md
+
 key-decisions:
   - "Implemented design D1 from the todo's two candidates: outDir/publicDir/emptyOutDir left exactly as-is, bundle.resources untouched, and a new explicit copy step (meta/assembleRendererDist.ts) produces the webview-reachable subset in build/renderer/ for frontendDist to point at."
   - "Copy is driven by rollup's generateBundle emitted-file list, not a directory glob — de-risked first via a throwaway Task 1 probe before any implementation was built on the assumption, and this is also what drops 19,540,372 B of stale build/assets for free."
   - "Six independently-tested fail-loud post-conditions in assembleRendererDist so a silently empty/partial build/renderer cannot ship a white screen — the plan's stated anti-pattern to avoid."
   - "Reported the Task 3 non-regression gate's literal FAIL (195,358,418 B vs. the plan's 230-260 MB band) rather than weakening the gate; root-caused it as a2w's already-landed effect being measured in a packaged build for the first time, not a regression from this task's code."
+
 requirements-completed: [TODO-2026-08-28-FIX-2]
 metrics:
   duration: "~45min visible executor work across a continued session (Tasks 2-3 spanned 09:15-09:28 +12 per commit timestamps; Task 1's probe and the human-checkpoint wait are not separately timed)"
   completed: "2026-09-01"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260901-b8z: Repoint frontendDist at a renderer-only dir Summary

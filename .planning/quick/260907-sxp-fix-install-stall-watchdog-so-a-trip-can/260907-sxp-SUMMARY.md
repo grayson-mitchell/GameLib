@@ -9,6 +9,7 @@ provides:
   - "withStallTimeout's trip() signals the appName's registered AbortController synchronously, before rejecting"
   - "RED/GREEN test coverage asserting the abort SIGNAL, not just the rejection (T-A/T-B), plus two green regression pins (T-C/T-D)"
   - "corrected mechanism record on the 2026-08-27 stall-watchdog todo, with two unconfirmed narrowed hypotheses for the real orphan"
+
 affects: [steam-depot, downloadmanager]
 
 tech-stack:
@@ -32,6 +33,10 @@ requirements-completed: [TODO-260827-STALL]
 
 duration: ~20min
 completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260907-sxp: Fix install-stall watchdog so a trip can Summary

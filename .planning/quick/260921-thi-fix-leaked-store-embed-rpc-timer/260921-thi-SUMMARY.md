@@ -5,15 +5,18 @@ subsystem: testing
 tags: [jest, fake-timers, sidecar-rpc, unhandled-rejection, mutation-testing]
 requires:
   - phase: none (test-only fix, isolated to storeEmbedWireContract.test.ts)
+
 provides:
   - "fireWithNoRustPeer() helper: gives every no-peer store_embed seam call a real rejection handler"
   - "mutation-proven two-leg regression gate (behavioural + source-shape census) against the leak recurring"
+
 affects: [sidecar-rpc-tests, todo-tracking]
 tech-stack:
   added: []
   patterns:
     - "Positive-assertion regression gate for a defect where process.on('unhandledRejection') sees zero (jest intercepts first)"
     - "Two-pass comment stripping (stripSourceComments + per-line stripTrailingLineCommentTs) before a source-shape census regex"
+
 key-files:
   created: []
   modified:
@@ -21,13 +24,19 @@ key-files:
     - src/backend/sidecar/__tests__/testContainment.test.ts
     - .planning/todos/completed/2026-09-21-leaked-store-embed-rpc-timer-now-blames-an-unrelated-test.md
     - .planning/todos/pending/2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md
+
 key-decisions:
   - "Both regression-gate legs live inside storeEmbedWireContract.test.ts itself, not a new *.test.ts file, to avoid a testContainment.test.ts Block C ledger entry for no gain"
   - "No repo-wide ban on void-ed requestRustInvoke calls: the three sites here were the only ones in the repo; a repo-wide gate would police an empty set"
   - "Leg A asserts a POSITIVE claim (handler received the exact Error) rather than an absence claim, because process.on('unhandledRejection') is structurally blind here"
+
 metrics:
   duration: ~130min
   completed: 2026-09-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260921-thi: Fix leaked store_embed rustInvoke timer Summary

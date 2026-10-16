@@ -9,6 +9,7 @@ provides:
   - "Pure, dependency-free `parseWinetricksListAll(chunks: string[]): WinetricksComponent[]` parser module"
   - "Shared `WinetricksComponent { verb, title, category, cached }` type across backend, IPC and frontend"
   - "`Winetricks.listAvailable` rewired from `dlls list` + `fonts list` to a single `list-all` invocation with `LANG=C` pinned"
+
 affects: [winetricks, backend/tools, frontend/Winetricks]
 
 tech-stack:
@@ -42,6 +43,10 @@ requirements-completed: [QUICK-260915-ajd]
 
 duration: ~35min
 completed: 2026-09-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260915-ajd: Change listAvailable to return verb+title+category+cached Summary

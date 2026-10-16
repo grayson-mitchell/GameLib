@@ -9,6 +9,7 @@ provides:
   - "Rewritten todo recording three live dialog-shim collapse defects (VCRuntime button 2 unreachable, Snap checkbox never read back, sideloaded-game unsaved-progress fail-open) with file/line/mechanism/consequence/platform gate"
   - "Corrected 10-site census (was ~14, two sites no longer exist)"
   - "EOS headline claim and Traps 1-2 marked CLOSED/MITIGATED with closing evidence; Trap 3 marked still-live"
+
 affects: [ui-dialogs, tauri-sidecar]
 
 tech-stack:
@@ -29,6 +30,10 @@ requirements-completed: [QUICK-260907-rjc]
 
 duration: 25min
 completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260907-rjc: Rewrite stale EOS native-dialog todo Summary

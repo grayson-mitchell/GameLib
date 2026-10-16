@@ -8,6 +8,7 @@ provides:
   - "2026-08-26 winetricks search/hover todo narrowed to its two unresolved halves, ready: live-gate, still OPEN in pending/"
   - "searchProbe.ts: default-OFF, opt-in, six-capture live-instrumentation harness for the shared SearchBar suggestions list"
   - "260915-lhm-PROBE-RETRIEVAL.md: one-pass operator drive + sqlite retrieval + reading table for the harness"
+
 affects: [2026-08-26-winetricks-package-selection-is-temperamental-hover-and-search, 2026-08-30-library-search-bar-suggestions-are-mouse-dead-until-a-tab-press]
 
 tech-stack:
@@ -35,6 +36,10 @@ requirements-completed: []
 
 duration: "not reliably measurable -- this execution spanned a context-compaction boundary; own commits span 16:06:01-16:06:21 PDT 2026-09-15, immediately following unrelated commit a88104f8c at 13:37:00 PDT from either an earlier stretch of this same session or the concurrent session on this branch"
 completed: 2026-09-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260915-lhm: Close/narrow two winetricks todos, add a default-OFF SearchBar probe

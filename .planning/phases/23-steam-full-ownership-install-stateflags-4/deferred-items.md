@@ -159,3 +159,4 @@ in `depot/select.ts`, plus a skip-and-warn path (continue the install, warn the 
 depot was skipped) instead of a whole-install abort on a Blocked key for a non-essential
 depot — and reconcile GameLib's selected depot set against the official client's for this
 title in both directions.
+  status: acknowledged

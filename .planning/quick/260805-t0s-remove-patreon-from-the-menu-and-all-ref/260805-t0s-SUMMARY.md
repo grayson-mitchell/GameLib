@@ -5,6 +5,7 @@ subsystem: ui, ipc
 tags: [electron, tauri-sidecar, ipc, react, fortawesome, funding-metadata]
 
 # Dependency graph
+
 requires: []
 provides:
   - Patreon sidebar entry removed from the community menu block
@@ -12,9 +13,11 @@ provides:
   - patreonPage URL constant deleted
   - Sidecar channel-contract test reconciled to 20 total / 9 constant openers
   - Funding metadata (.github/FUNDING.yml, Support.md, snap/snapcraft.yaml) stripped of Patreon references
+
 affects: []
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns: []
@@ -48,6 +51,10 @@ requirements-completed:
 
 duration: 25min
 completed: 2026-08-05
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260805-t0s: Remove Patreon from menu and all references Summary
@@ -63,6 +70,7 @@ completed: 2026-08-05
 - **Files modified:** 10
 
 ## Accomplishments
+
 - Sidebar community block now renders Discord, Ko-fi, GitHub Sponsors only — no Patreon entry, `faPatreon` import dropped
 - `openPatreonPage` channel deleted from every layer it crossed: preload export, `IpcListeners`/`SyncIPCFunctions` type, Electron `main.ts` listener, Tauri sidecar registration
 - `patreonPage` URL constant removed from `src/backend/constants/urls.ts`
@@ -82,6 +90,7 @@ Each task was committed atomically:
 _No TDD flow used — plan type is a straightforward deletion/reconciliation task._
 
 ## Files Created/Modified
+
 - `src/frontend/components/UI/Sidebar/components/SidebarLinks/index.tsx` - Removed the Patreon `<SidebarItem>` and `faPatreon` import
 - `src/preload/api/misc.ts` - Removed `openPatreonPage` export
 - `src/common/types/ipc.ts` - Removed `openPatreonPage` from `SyncIPCFunctions`
@@ -94,6 +103,7 @@ _No TDD flow used — plan type is a straightforward deletion/reconciliation tas
 - `snap/snapcraft.yaml` - Removed the Patreon donation URL
 
 ## Decisions Made
+
 See `key-decisions` in frontmatter (D-1, D-2, D-4 from the plan, carried through unchanged).
 
 ## Deviations from Plan
@@ -101,6 +111,7 @@ See `key-decisions` in frontmatter (D-1, D-2, D-4 from the plan, carried through
 None - plan executed exactly as written. All three tasks matched the discovery findings precisely; no additional Patreon references were found beyond the 10 files the planner had already identified.
 
 ## Issues Encountered
+
 None.
 
 ## User Setup Required
@@ -108,6 +119,7 @@ None.
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 This was a standalone quick task with no downstream phase dependency. Repo-wide `patreon` grep (excluding `.planning/`, `node_modules/`, `.git/`, `dist/`, `build/`, `target/`, `graphify-out/`) returns zero matches; `pnpm codecheck` and `pnpm test:ci` are both green.
 
 ---

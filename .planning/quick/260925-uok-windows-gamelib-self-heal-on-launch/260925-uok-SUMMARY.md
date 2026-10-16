@@ -6,13 +6,16 @@ tags: [windows, registry, deep-link, protocol-handler, self-heal, ffi]
 requires:
   - 'src-tauri/src/main.rs .setup() closure'
   - 'windows-sys 0.60 (already declared)'
+
 provides:
   - 'repair_windows_gamelib_protocol_registration (#[cfg(windows)] HKCU self-heal)'
   - 'gamelib_protocol_* pure decision helpers'
   - 'quick-260925-uok source-gate describe in tauriShellSource.test.ts'
+
 affects:
   - '.planning/REQUIREMENTS.md decision point (a) / REQ-46-06 rationale'
   - '.planning/todos/completed/2026-09-25-windows-gamelib-registration-is-install-time-only.md'
+
 tech-stack:
   added:
     - 'windows-sys feature Win32_System_Registry (no new crate)'
@@ -20,6 +23,7 @@ tech-stack:
     - 'REQ-46-07 pure-decision / FFI-I-O split'
     - 'fail-open T-34.5-G6-24'
     - 'region-scoped source gate with RED self-test'
+
 key-files:
   created: []
   modified:
@@ -28,16 +32,22 @@ key-files:
     - src/backend/__tests__/tauriShellSource.test.ts
     - .planning/REQUIREMENTS.md
     - .planning/todos/completed/2026-09-25-windows-gamelib-registration-is-install-time-only.md
+
 decisions:
   - 'Option 1 (self-heal on launch) implemented; options 2 (warn-only) and 3 (accept) rejected by the operator before planning'
   - 'New narrowly-scoped Windows repair fn rather than widening register_all() -- REQ-46-06 pin untouched'
   - 'windows-sys kept over winreg/windows-registry for consistency with the adjacent single-instance FFI'
+
 metrics:
   tasks: 3
   commits: 3
   rust_tests_before: '234 passed / 0 failed / 2 ignored'
   rust_tests_after: '241 passed / 0 failed / 2 ignored'
   completed: 2026-09-25
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260925-uok: Windows `gamelib://` self-heal on launch — Summary

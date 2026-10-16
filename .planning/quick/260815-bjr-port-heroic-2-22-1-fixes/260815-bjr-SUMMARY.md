@@ -5,14 +5,17 @@ subsystem: bugfix
 tags: [rosetta, macos, console-mode, hidden-games, epic, legendary, i18n, jest]
 
 # Dependency graph
+
 requires: []
 provides:
   - "checkRosettaInstall() that resolves instead of rejecting when the arch spawn fails, showing the Rosetta warning dialog on Apple Silicon without Rosetta"
   - "selectConsoleGames() — extracted, side-effect-free Console mode grid filter that also respects hiddenGames.list"
   - "es -> es-ES language remap for Epic store-content metadata requests"
+
 affects: [console-mode, macos-onboarding, epic-store-metadata]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -35,8 +38,13 @@ key-decisions:
 requirements-completed: [PORT-2.22.1-01, PORT-2.22.1-02, PORT-2.22.1-03]
 
 # Metrics
+
 duration: ~20min
 completed: 2026-08-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260815-bjr: Port Heroic v2.22.1 Fixes Summary
@@ -51,6 +59,7 @@ completed: 2026-08-15
 - **Files modified:** 6 (3 created, 3 modified)
 
 ## Accomplishments
+
 - `checkRosettaInstall()` no longer reads/parses `stdout`; it derives Rosetta availability solely from whether the `arch -x86_64 ...` spawn resolves or rejects, so a rejecting spawn (Rosetta not installed) now resolves the function and shows the "install Rosetta" dialog instead of escaping as an unhandled promise rejection from the un-awaited call in `main.ts`.
 - Console mode's grid-eligibility filter was extracted into a new, side-effect-free `selectConsoleGames()` in `selectors.ts` and wired to also exclude games present in `hiddenGames.list`, closing a privacy/UX leak where hidden games still appeared in Console mode. GameLib's pre-existing `is_delisted` (GAP-B) and `thirdPartyManagedApp`/`is_dlc` exclusions were preserved.
 - Epic store-content metadata requests for the Spanish locale now request `es-ES` instead of the raw `es` config value, matching the existing `pt`->`pt-BR` and `zh_Hans`->`zh-CN` remaps.
@@ -67,6 +76,7 @@ Each task was committed atomically:
 _No TDD-multi-commit tasks; each task's test(s) and implementation landed in a single commit per the plan's atomic-commit-per-fix instruction._
 
 ## Files Created/Modified
+
 - `src/backend/utils.ts` - `checkRosettaInstall()` now derives `result` from `execAsync(...).then(() => true).catch(() => false)` instead of parsing `stdout`
 - `src/backend/__tests__/checkRosettaInstall.test.ts` - regression coverage for the rejecting-spawn, succeeding-spawn, and empty-stdout cases, driving the real exported function through a mocked `child_process.exec`
 - `src/frontend/screens/ConsoleMode/selectors.ts` - new module exporting `selectConsoleGames(all, hiddenGames)`, the single console-grid eligibility filter (DLC, third-party-managed, delisted, hidden)
@@ -75,6 +85,7 @@ _No TDD-multi-commit tasks; each task's test(s) and implementation landed in a s
 - `src/backend/storeManagers/legendary/games.ts` - `getExtraFromAPI` gains a third `if (lang === 'es') { lang = 'es-ES' }` remap alongside the existing `pt` and `zh_Hans` remaps
 
 ## Decisions Made
+
 - Fix 2 hand-merged (not cherry-picked) because `ConsoleMode/index.tsx` has diverged from the Heroic fork base (`steam.library` spread + `is_delisted`/GAP-B clause); both divergences were preserved in the new `selectors.ts`.
 - No new automated test for Fix 3 — the plan explicitly scoped it out (private, single-caller, 3-line mechanical remap matching two already-uncovered sibling remaps).
 
@@ -99,6 +110,7 @@ None. One minor observational note: `npx jest --selectProjects Frontend <path>` 
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - All three fixes are self-contained bugfixes/locale corrections with no follow-on work implied.
 - `src/backend/main.ts`'s un-awaited `checkRosettaInstall()` call was deliberately left untouched per the plan's scope fence — it is now safe because the function can no longer reject on the spawn path. Adding an explicit `.catch()` there remains a separate, out-of-scope concern if ever desired.
 - Console mode still has no in-console "hide game" action; this plan only makes the existing library hidden-flag apply there too, matching upstream's scope.

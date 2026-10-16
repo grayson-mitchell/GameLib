@@ -13,6 +13,7 @@ provides:
   - sign:macos-resources package script routed through meta/runTs.cjs
   - macOS-only signing step in release-tauri.yml, placed before tauri-action
   - executed tests for the detector, the argv and the workflow step's position
+
 affects: [macos release, notarization, release-tauri.yml, helper binaries]
 
 tech-stack:
@@ -47,6 +48,10 @@ requirements-completed: []
 
 duration: ~70min
 completed: 2026-09-17
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick task 260917-uik: Sign every Mach-O under the macOS helper tree Summary

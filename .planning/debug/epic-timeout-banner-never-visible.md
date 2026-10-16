@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "UAT gap G-50-16 (Phase 50, UAT test 16, severity major): StoreEmbedTimeoutBanner never visible on an Epic store load timeout, despite the backend timeout literal firing 3 times."
 created: 2026-10-13T00:00:00Z
 updated: 2026-10-13T00:00:00Z
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: diagnosed
 ---
 
 ## Current Focus

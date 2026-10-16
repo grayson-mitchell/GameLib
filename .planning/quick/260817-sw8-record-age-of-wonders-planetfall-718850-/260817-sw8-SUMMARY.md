@@ -8,11 +8,17 @@ key-files:
   modified:
     - .planning/todos/pending/2026-08-16-eight-minute-install-watchdog-makes-long-native-steam-instal.md
     - .planning/debug/humankind-depot-full-stall.md
+
 decisions:
   - "Recorded the 2026-08-17 Age of Wonders: Planetfall (718850) live install as supporting evidence in both documents, explicitly stating it does NOT close either item because neither is pinned to that title — both remain pinned to a HUMANKIND (1124300) run."
+
 metrics:
   duration: "~10 minutes"
   completed: 2026-08-17
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260817-sw8: Record Age of Wonders: Planetfall (718850) live evidence Summary

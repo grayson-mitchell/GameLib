@@ -18,12 +18,18 @@ key-files:
     - src/frontend/screens/Library/__tests__/steamLibraryVisibility.test.ts
     - src/frontend/screens/Library/__tests__/connectedStoresParity.test.ts
     - .planning/todos/completed/2026-09-24-steam-facet-row-can-outlive-its-grid-games-reopening-t-34-11-12.md
+
 decisions:
   - "Option 2 (share one predicate) taken per the todo, verbatim per the locked plan design."
   - "steamVisibility memo reshaped to a block-bodied arrow function (not the plan's illustrative one-line-return form) so functionRegion's brace-counting can extract the whole call for the wiring test -- functionally identical, same dep array."
+
 metrics:
   duration: "~45 min"
   completed: 2026-09-24
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260924-g7r Plan 01: Share one Steam visibility predicate Summary

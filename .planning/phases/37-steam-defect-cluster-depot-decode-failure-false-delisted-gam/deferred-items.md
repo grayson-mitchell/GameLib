@@ -24,3 +24,4 @@ commands. Not fixed here — logged per the executor's scope-boundary rule
    gamepad.ts` and sibling test files were dirty in the working tree at
    the start of this plan's execution, per this plan's `<git_safety>`
    block). Not a file 37-03b modified or read; not fixed here.
+  status: acknowledged

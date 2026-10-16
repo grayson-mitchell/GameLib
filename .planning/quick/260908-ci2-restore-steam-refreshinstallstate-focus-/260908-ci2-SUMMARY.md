@@ -5,6 +5,7 @@ subsystem: infra
 tags: [tauri, sidecar, ipc, steam, rust, jest]
 
 # Dependency graph
+
 requires:
   - phase: quick-260906-gej
     provides: "Sweep finding A5: refreshInstallState() has zero production call sites"
@@ -13,9 +14,11 @@ provides:
   - "Rust shell producer: WindowEvent::Focused(true) -> send frame, on a spawned thread, fail-soft"
   - "Sidecar consumer: ipcMain.on(SHELL_WINDOW_FOCUSED, ...) -> refreshInstallState().catch(...)"
   - "steamFocusRefreshWire.test.ts: 4-gate cross-side wire-contract pin (T-A/T-B/T-C/T-D)"
+
 affects: [steam-store-manager, sidecar-transport, tauri-shell]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -46,8 +49,13 @@ patterns-established:
 requirements-completed: [TODO-260906-STEAM-REFRESHINSTALLSTATE]
 
 # Metrics
+
 duration: 25min
 completed: 2026-09-08
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260908-ci2: Restore Steam refreshInstallState Focus Trigger Summary

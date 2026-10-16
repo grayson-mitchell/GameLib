@@ -11,6 +11,7 @@ provides:
   - "isRemasterFalsePositiveRisk guard in the shared title matcher, treating remaster/remake as distinct products"
   - "normalizeTitle no longer strips 'remastered', preserving the keyword for the guard"
   - "Regression-protected test coverage proving all other EDITION_SUFFIXES and the DLC guard are unaffected"
+
 affects: [store-search, humble-dedup, title-matching]
 
 tech-stack:
@@ -35,6 +36,10 @@ requirements-completed: [QUICK-260715-a7g]
 
 duration: 12min
 completed: 2026-07-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260715-a7g: Treat remaster/remake as product differentiators Summary

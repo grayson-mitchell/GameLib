@@ -4,11 +4,13 @@ subsystem: docs
 tags: [signpath, code-signing, windows, todo-triage]
 
 # Dependency graph
+
 requires: []
 provides:
   - Windows code-signing todo retargeted to the SignPath Foundation decision
   - Four 2026-09-24 findings recorded (EV-parity, HSM-mandatory .p12 impossibility, workflow audit, SignPath/updater-signature collision)
   - Direction rewritten to a three-step SignPath route with build/sign/re-sign/upload ordering called out before credentials
+
 affects: [windows-release-signing]
 
 key-files:
@@ -23,6 +25,10 @@ requirements-completed: [DOC-260924-pm3]
 
 duration: 12min
 completed: 2026-09-24
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260924-pm3: Correct the Windows code-signing todo Summary

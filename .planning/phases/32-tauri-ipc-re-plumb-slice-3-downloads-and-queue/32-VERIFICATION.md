@@ -11,6 +11,10 @@ human_verification:
   - test: "Live queue E2E: with a signed-in Steam library under `pnpm tauri:dev`, enqueue an install, observe the Download Manager screen and the NavShell DownloadsRing update via progressUpdate/changedDMQueueInformation, then pause/resume/cancel from the UI."
     expected: "Queue populates, progress bar updates, pause aborts + resume restarts via reconcilePartialState, cancel removes the item — matching 32-PORTED-CHANNELS.md's documented behavior."
     why_human: "Requires a real running download under a live shell; no automated harness can observe it. UNBLOCKED 2026-08-22 — the original 'doubly-gated' why_human is superseded: G-30-01 was CLOSED 2026-07-23 as a misdiagnosis (30-HUMAN-UAT.md:10,68,103 — the tester clicked Logout on an already-authenticated session; the QR tab is unreachable by design while signed in), a day BEFORE 32-HUMAN-UAT.md's own updated: stamp cited it as live; and G-30-02 was closed and hardware-proven by Phase 33's 33-05 D-13 live gate (REQ-33-01/02/10). Neither gates this item any longer. See the CORRECTION section in 32-HUMAN-UAT.md."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 32: Tauri IPC re-plumb slice 3 — downloads and queue Verification Report

@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # 260815-opt — Library filter visibility: facet-group selection badge + header denominator
 
 **Status:** all three tasks executed and committed. Full regression gate green.
@@ -39,6 +46,7 @@ not fire `.husky/post-checkout` and cannot touch untracked files).
 ### RED proofs (all runtime/behavioural per C7 — no type-error proofs)
 
 **RED 1 — `facetSelectionCount.test.ts` before `selectionCount.ts` existed.**
+
 ```
 ● Test suite failed to run
   Cannot find module '../components/FilterFacetGroup/selectionCount' from
@@ -46,12 +54,14 @@ not fire `.husky/post-checkout` and cannot touch untracked files).
   at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
 Test Suites: 1 failed, 1 total   Tests: 0 total
 ```
+
 After implementation: `Tests: 7 passed, 7 total`.
 
 **RED 2 — badge specs before editing `FilterFacetGroup/index.tsx`.**
 `Tests: 3 failed, 8 passed, 11 total`. The split is itself the discriminator and is recorded
 as such: the `selectedCount` omitted and `selectedCount={0}` specs **passed in RED** (correct —
 the component already rendered no badge), while the three badge-present specs failed:
+
 ```
 ● selectedCount={3} renders a badge whose text child is the NUMBER 3, between the title and the caret
   expect(received).toHaveLength(expected)
@@ -69,6 +79,7 @@ the component already rendered no badge), while the three badge-present specs fa
 **RED 3 — `facetGroupBadgeStyles.test.ts` before editing `index.scss`.**
 `Tests: 4 failed, 4 passed, 8 total`. Failures: badge selector not emitted; badge class-count;
 title class-count; badge token chain. Every SANITY counter-check passed in RED.
+
 ```
 ● the badge selector carries at least three class components…
   Expected: ArrayContaining ["NavShell__tier2Portal","FilterFacetGroup","FilterFacetGroup__badge"]
@@ -83,12 +94,14 @@ Scratchpad copy taken first. Badge rule rewritten **without** its `.FilterFacetG
 (bare `.FilterFacetGroup__badge`, i.e. `(0,2,0)`).
 
 Observed — **exactly one spec failed, and it was the target spec**:
+
 ```
 ✕ the badge selector carries at least three class components, beating Dropdown on class count alone
   Expected: ArrayContaining ["NavShell__tier2Portal","FilterFacetGroup","FilterFacetGroup__badge"]
   Received: ["NavShell__tier2Portal","FilterFacetGroup__badge"]
 Tests: 1 failed, 7 passed, 8 total
 ```
+
 The other 7 (including both SANITY checks and the token-chain check) stayed green, so the
 failure is attributable to specificity alone and not to a broken compile.
 
@@ -98,10 +111,12 @@ re-run: `8 passed, 8 total`.
 ### Manual cascade verification (run in addition to the committed gate)
 
 Emitted, both at `(0,3,0)`:
+
 ```
 .NavShell__tier2Portal .FilterFacetGroup .FilterFacetGroup__title
 .NavShell__tier2Portal .FilterFacetGroup .FilterFacetGroup__badge
 ```
+
 Dropdown's emitted rules were read by eye. Confirmed no Dropdown selector can match the badge,
 and for a stronger reason than class count: `Dropdown/index.tsx` renders `.dropdownButton`
 (which holds the title fragment, hence the badge) as a **SIBLING** of `.dropdown`, both children
@@ -126,17 +141,20 @@ Aggregate `Tests: 9 failed, 29 passed, 38 total`, i.e. **exactly 3 failures per 
 | `FilterMoreGroup.test.tsx` | 3 failed, 14 passed, 17 total |
 
 All pre-existing specs stayed green in RED. Sample:
+
 ```
 ● FilterStoreFacet › with no active filters, passes selectedCount 0 …   Expected: 0   Received: undefined
 ● FilterStoreFacet › counts only the store descriptors …                Expected: 2   Received: undefined
 ● FilterStoreFacet › supplies an already-translated badge label …       Expected: "2 selected"   Received: undefined
 ```
+
 After wiring: `Tests: 38 passed, 38 total`.
 
 ### Non-vacuity mutation — PERFORMED
 
 `FilterMoreGroup`'s `countDescriptorsOfKind(activeFilterDescriptors, MORE_FILTER_KINDS)`
 replaced with the literal `0`. Observed:
+
 ```
 PASS FilterStoreFacet.test.tsx
 PASS FilterRunnabilityFacet.test.tsx
@@ -145,6 +163,7 @@ FAIL FilterMoreGroup.test.tsx
   ● supplies an already-translated badge label interpolated on {{selected}}, not the reserved name
 Tests: 2 failed, 36 passed, 38 total
 ```
+
 Isolation is exactly as intended: **only** `FilterMoreGroup`'s two count-bearing specs failed;
 Store and Runnability stayed fully green. Its `selectedCount 0` spec correctly stayed green —
 the mutation hardcodes `0`, which is what that spec asserts, so that spec is not the
@@ -163,8 +182,10 @@ all of it the concurrent Phase 34.13 session's keys (`steamInstall*`,
 `git show HEAD:<path> > <path>` and the single key was re-added by hand `Edit`.
 
 Final committed catalog delta for Task 2 — exactly one line:
+
 ```
 +            "groupSelectedCount": "{{selected}} selected",
+
 ```
 
 Test-mock upgrade worth noting: the three `react-i18next` mocks now **interpolate** their
@@ -179,6 +200,7 @@ the label specs could not have detected C6 violations. They now assert `'2 selec
 ### RED proofs
 
 **RED 1a — before `gameCount.ts` existed** (runtime module resolution):
+
 ```
 ● Test suite failed to run
   Cannot find module '../components/LibraryHeader/gameCount' from
@@ -188,6 +210,7 @@ Tests: 0 total
 
 **RED 1b — after creating `gameCount.ts`, before `DEFAULT_FILTER_ENGINE_STATE` and before
 editing either component.** `Tests: 9 failed, 13 passed, 22 total`:
+
 ```
 ● DEFAULT_FILTER_ENGINE_STATE › is every filter at its default …
   Expected: {"collection": null, …, "view": "all"}   Received: undefined
@@ -205,6 +228,7 @@ editing either component.** `Tests: 9 failed, 13 passed, 22 total`:
   Expected pattern: /<LibraryHeader[\s\S]{0,200}?totalGames=/
 ● Library/index.tsx source gate › derives that total through …
 ```
+
 The five `countGamesExcludingDlc` specs went green at this point (module just written), and
 **every SANITY counter-check passed in RED**, confirming the prohibition gates
 (`{{count}}`, inline `install.is_dlc`) were not passing vacuously.
@@ -219,11 +243,13 @@ everything. Both green.
 
 The `activeFilterCount > 0` gate was deleted so the filtered form rendered unconditionally.
 Observed — **exactly one spec failed, the gate spec**:
+
 ```
 ✕ gates the new form on activeFilterCount > 0, so an unfiltered library renders exactly what it renders today
   Expected substring: "activeFilterCount > 0"
 Tests: 1 failed, 25 passed, 26 total
 ```
+
 Reverted by direct `Edit`. **`diff` against the pre-mutation scratchpad copy: EMPTY.** Re-run:
 `26 passed, 26 total`.
 
@@ -233,10 +259,12 @@ Second `pnpm i18n` run extracted `library.header.filteredOfTotal = "{{shown}} of
 correctly, and again dragged in the same concurrent-session drift. Same treatment: all four
 catalogs restored to HEAD (which by then contained Task 2's key), key re-added by hand.
 Final committed delta:
+
 ```
 +        "header": {
 +            "filteredOfTotal": "{{shown}} of {{total}}"
 +        },
+
 ```
 
 ---
@@ -248,16 +276,20 @@ Final committed delta:
 **Found during:** Task 3, at first GREEN run.
 
 The plan's step 3 specified the memo inline in `Library/index.tsx`:
+
 ```js
 filterEngine.filterLibrary(libraryUnion, filterEngine.DEFAULT_FILTER_ENGINE_STATE, engineDeps)
 ```
+
 Implemented as written, this **failed a pre-existing gate**:
+
 ```
 FAIL src/frontend/screens/Library/__tests__/libraryPipeline.test.ts
 ● Library pipeline has exactly one implementation › never calls filterLibrary( or countFor(
   itself -- both call shapes live in engineWiring.ts, where a behavioural test can reach the
   real arguments
 ```
+
 That gate is not incidental. It was written after CR-01, where an engine call sitting in the
 component was handed the wrong first argument and **no test could reach it**; its rule is that
 engine call shapes must live somewhere a behavioural test can exercise them over real
@@ -292,6 +324,7 @@ executable known-bad specimen.
 128:10  error  This assertion is unnecessary since it does not change the type of the expression
         @typescript-eslint/no-unnecessary-type-assertion
 ```
+
 Both are on lines I did not write. **Confirmed pre-existing** by linting an unmodified copy of
 the file at HEAD (written to a throwaway path, linted, deleted) — identical two errors. `pnpm
 lint` uses `--cache`, which is why they had not been surfacing.
@@ -371,9 +404,11 @@ mechanism is identical — but only `STORE` was actually attested.
 ## Working-tree hygiene
 
 Final `git status --porcelain` shows only this task's untracked planning directory:
+
 ```
 ?? .planning/quick/260815-opt-library-filter-visibility-facet-group-se/
 ```
+
 The concurrent session's files were never touched, staged, or committed. Its two named
 untracked files (`InstallModal/steamEligibilityProbe.ts` and its test) did not appear in
 `git status` at any point during execution — that session appears to have committed them

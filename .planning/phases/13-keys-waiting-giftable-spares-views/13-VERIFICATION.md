@@ -18,10 +18,15 @@ gaps:
     missing:
       - "getUrgencyCountdownParts must special-case daysLeft < 2 (the 24h-48h window) to return value: 1, per the locked UI-SPEC copy row"
       - "Fix the misleadingly-named 30h test to assert value: 1, and add a boundary test at 48h expecting value: 2 (per 13-REVIEW.md's suggested fix)"
+
 deferred:
   - truth: "Urgency badge colors (danger/warning) confirmed visually on real expiring keys"
     addressed_in: "Pending human UAT (not deferred to a later phase — tracked as an open UAT item)"
     evidence: "13-HUMAN-UAT.md status: partial — the connected test account currently has no keys within 30 days of expiry; re-test when one enters the window. This is a visual-confirmation gap, not a code gap: the tier-selection logic (getUrgencyTier) itself is unit-tested and verified correct by this report."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: gaps_found
 ---
 
 # Phase 13: Keys-Waiting + Giftable-Spares Views Verification Report

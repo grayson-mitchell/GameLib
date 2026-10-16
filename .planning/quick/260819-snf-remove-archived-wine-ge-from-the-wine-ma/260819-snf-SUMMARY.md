@@ -5,14 +5,17 @@ subsystem: wine/linux
 tags: [wine-manager, ge-proton, github-releases, upstream-port]
 requires:
   - phase: none (standalone quick task)
+
 provides:
   - "Repositorys enum without WINEGE"
   - "fetchReleases arch-matched GE-Proton asset selection"
+
 affects: [wine-manager, wine-downloader]
 tech-stack:
   added: []
   patterns:
     - "GE-Proton asset selection keyed on process.arch, matching upstream feb170afb"
+
 key-files:
   created:
     - src/backend/wine/manager/downloader/__tests__/utilities/geProtonArch.test.ts
@@ -24,13 +27,19 @@ key-files:
     - src/common/types.ts
     - src/frontend/screens/WineManager/index.tsx
     - src/backend/wine/manager/downloader/__tests__/main/getter.test.ts
+
 key-decisions:
   - "Locale catalogs left untouched per 260810-tr4 precedent; orphaned wineExplanation.wine-ge keys stay inert"
   - "Type union member 'Wine-GE' and ReleasesInfo key 'wine-ge' kept (matching upstream) so already-installed Wine-GE versions on disk remain valid"
+
 requirements-completed: []
 metrics:
   duration: 45min
   completed: 2026-08-19
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260819-snf: Remove archived Wine-GE + deterministic GE-Proton downloads Summary

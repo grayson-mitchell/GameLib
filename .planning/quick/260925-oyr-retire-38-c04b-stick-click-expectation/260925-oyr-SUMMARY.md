@@ -15,12 +15,18 @@ key-files:
     - .planning/phases/34.1-tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome/34.1-VERIFICATION.md
     - src/frontend/helpers/gamepad_layouts/nintendo.ts (comment only)
     - src/frontend/helpers/__tests__/nintendoLayout.test.ts (comment only)
+
 decisions:
   - "38-C04b (gamepad L3/R3 stick clicks) RETIRED as a misdescription; this supersedes 260925-nxt's decision to keep it open in human_verification"
+
 metrics:
   completed: 2026-09-25
   tasks: 3
   files: 6
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260925-oyr: Retire 38-C04b stick-click expectation Summary

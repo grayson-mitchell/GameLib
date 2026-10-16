@@ -14,6 +14,7 @@ gaps:
     missing:
       - "Redact Sample 2 to aggregate-only (e.g. 'n=15, X base games, Y hits, Z misses, W DLC/addon rows excluded') with no per-title names, matching the must_have and the report's own privacy-note claim"
       - "Correct or remove 19-02-SUMMARY.md's 'no owned-title list' claim once the report is fixed"
+
 human_verification:
   - test: "Enable the 'Build CrossOver compatibility index' GitHub Action on the fork (Actions tab → 'Enable workflow') and run it once manually via workflow_dispatch, per 19-04-PLAN.md's checkpoint:human-action"
     expected: "The Action runs, creates/updates the non-`v*` `crossover-index` rolling release with `crossover-index.json.gz` + `collisions.json` attached, and does not appear as the repo's 'latest' release"
@@ -21,6 +22,10 @@ human_verification:
   - test: "Add a game to the macOS library mid-session (e.g. a new Steam purchase appearing via background metadata sync, or click 'Refresh Library') and confirm its CrossOver badge/filter membership appears without an app restart"
     expected: "The new game's grid tile shows a medal/unknown badge (or correctly no badge if ineligible) and it is included in the CrossOver rating filter's correct bucket, per the WR-05 fix (`main.ts` now re-invokes `refreshCrossoverRatingMap()` from the `refreshLibrary` handler)"
     why_human: "19-REVIEW.md's own WR-05 resolution note flags this as needing manual/live verification — there is no existing `main.ts` test harness to exercise the `refreshLibrary` IPC handler's fire-and-forget call, so this can only be confirmed by running the packaged app."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 19: CrossOver Compatibility Index (macOS) Verification Report

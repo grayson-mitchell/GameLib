@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "1-3 yes, dark tray icon does nothing"
 created: 2026-07-25T00:00:00Z
 updated: 2026-07-25T00:00:00Z
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: diagnosed
 ---
 
 ## Current Focus
@@ -52,6 +56,7 @@ reproduction: |
   2. Tray icon appears (PASSES), clicking it shows/focuses window (PASSES), both menu items work (PASSES)
   3. Toggle the dark-tray-icon setting in Settings
   4. Tray image does not change
+
 started: Never worked on this branch. NOT a Phase 34.1 regression — the underlying asset
   defect dates to commit `34fc2f5f` (2026-06-27, "rebrand app identity from Heroic to GameLib"),
   which predates the Tauri tray port entirely and affects the Electron build identically.

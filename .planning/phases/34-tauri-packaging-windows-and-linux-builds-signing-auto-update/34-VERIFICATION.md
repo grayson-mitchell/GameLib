@@ -20,6 +20,10 @@ human_verification:
   - test: "After the draft release from the re-run tag-push test is manually published, confirm promote-updater-feed.yml fires and the `updater` release's latest.json is updated"
     expected: "GitHub `release: published` event triggers promote-updater-feed.yml; it finds latest.json on the newly-published release, uploads it to the fixed-tag `updater` release, and its own round-trip verification step (re-download + re-hash) passes"
     why_human: "Requires a real GitHub release-publish webhook event, which the first live run never reached (no Release was created — all 4 legs failed before that step). Bundled into the same REQ-34-09 procedure."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 34: Tauri packaging — Windows and Linux builds, signing, auto-update Verification Report

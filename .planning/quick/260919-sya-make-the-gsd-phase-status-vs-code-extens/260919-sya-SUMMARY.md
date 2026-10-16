@@ -9,6 +9,7 @@ provides:
   - Host-aware todoTriage platform rung in the gsd-phase-status VS Code extension (driven by process.platform, not a hardcoded macOS assumption)
   - Actionable-only tallyTodos, derived from todoTriage's colour verdict rather than a second copy of the readiness vocabulary
   - A frozen, disk-based fixture (fixtures/todos-pending-260919/) so the 24-row live-census assertions do not read the live, concurrently-mutated .planning/todos/pending directory
+
 affects: [gsd-phase-status extension itself; any future change to the todo triage vocabulary]
 
 tech-stack:
@@ -37,6 +38,10 @@ requirements-completed: [SYA-01, SYA-02, SYA-03, SYA-04]
 
 duration: ~12min
 completed: 2026-09-20
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260919-sya: Host-aware todo triage + actionable tally Summary
@@ -116,20 +121,24 @@ README's "Individual todo files" table (`| In pending/ | ○ | grey |`) predates
 ## Verification Results (verbatim)
 
 **Final `node test-parse.js`** (in `~/.vscode/extensions/gsd-phase-status`):
+
 ```
 EXIT=0
 ok count: 295
 FAIL count: 0
 ...tail: "All parser tests passed."
 ```
+
 (291 `ok` immediately after landing the plan's originally-scoped assertions; 295 after also adding the frozen on-disk fixture block per the mid-flight correction. Both exit 0 with zero FAIL. Baseline before this task: 260 `ok`.)
 
 **Three-host live replay** (Task 3's automated verify, run against the live tree at verify time):
+
 ```
 live actionable: 13,12,11 total 24
 ```
 
 **Point-in-time observation, live tree, 2026-09-20T04:10:06Z** (informational only, not a persisted assertion):
+
 ```
 file count now: 24
 {"macos":{"total":24,"parked":2,"unparked":22,"open":13},

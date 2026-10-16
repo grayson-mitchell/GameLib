@@ -5,13 +5,16 @@ subsystem: testing
 tags: [eslint, typescript-eslint, lint-debt, jest, ci]
 
 # Dependency graph
+
 requires: []
 provides:
   - "Zero eslint errors (severity 2) across the whole repo -- CI's lint job (.github/workflows/lint.yml) now passes"
   - "All stale `no-var-requires` suppressions retargeted to the live `no-require-imports` rule name, with justification prose preserved"
+
 affects: [lint-debt, ci-gates]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -66,8 +69,13 @@ patterns-established:
 requirements-completed: [LINT-DEBT-01]
 
 # Metrics
+
 duration: 42min
 completed: 2026-08-18
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260818-s5l: Fix the 55 ESLint Errors Summary

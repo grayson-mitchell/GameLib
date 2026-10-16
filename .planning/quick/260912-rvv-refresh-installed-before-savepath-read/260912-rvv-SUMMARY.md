@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 260912-rvv: refresh `installedGames` before the save_path readback -- Summary
 
 One-liner: `getDefaultLegendarySavePath()` now calls `libraryManagerMap['legendary'].refreshInstalled()`

@@ -8,15 +8,18 @@ provides:
   - closed triage vocabulary (severity/platform/ready) on every pending todo
   - CI enforcement of that vocabulary via pnpm planning-gates
   - severity+readiness badges in the VS Code Explorer (extension v0.10.0)
+
 affects:
   - .planning/todos/pending/
   - meta/runPlanningGates.py
   - CLAUDE.md
+
 tech-stack:
   added: []
   patterns:
     - "planning gate discovered by `-gate.py` suffix, self-test first then live walk"
     - "anti-vacuity floor raised in lockstep with each new gate"
+
 key-files:
   created:
     - .planning/todos/todo-frontmatter-gate.py
@@ -28,13 +31,19 @@ key-files:
     - ~/.vscode/extensions/gsd-phase-status/extension.js (OUT OF REPO, uncommitted)
     - ~/.vscode/extensions/gsd-phase-status/test-parse.js (OUT OF REPO, uncommitted)
     - ~/.vscode/extensions/gsd-phase-status/package.json (OUT OF REPO, uncommitted)
+
 decisions:
   - "`platform:` means the OS required to DO or VERIFY the work, not the OS the defect manifests on"
   - "platform-gated todos take `ready: blocked`, so `grep -l 'ready: code'` returns only work finishable today"
   - "free-text severity collapsed to its EVIDENCED value (medium), not its unmeasured upper bound"
+
 metrics:
   duration: ~50 min
   completed: 2026-09-08
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260908-gye: Todo Triage Decorations Summary

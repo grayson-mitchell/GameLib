@@ -681,6 +681,7 @@ without waiting for the second.
    Do not "fix" it by dropping the x64 step; that reopens this item.
 
 **CROSS-REFERENCE, dated 2026-08-27 (Phase 34.18, plan 34.18-06) — this item's 2026-08-25 CLOSED rationale above is now STALE BY BEHAVIOUR; recorded here, not re-closed.** The 2026-08-25 closure cites `dist:mac` (`package.json:51`) and `release:mac` (`:46`) each running `pnpm verify:runner-bundle build --arch=x64` as a hardcoded `&&` step, added after `--arch=arm64` and before `electron-builder` — that citation was accurate on 2026-08-25, but plan 34.18-04 (2026-08-27) removed that exact `--arch=x64` step entirely as part of retiring macOS x64 packaging (see items 1, 12 and 13 above; `34.18-04-SUMMARY.md`). This is NOT a reopening of this item and does NOT add a second `CLOSED` label: C2-05 was about an unverified x64 build reaching the auto-publish channel, and with x64 packaging removed from `dist:mac`/`release:mac` altogether, there is no x64 build left that could reach that channel — the finding is now MOOT-BY-CONSTRUCTION, not reverted. Qualification 3 immediately above (do not "fix" it by dropping the x64 step) is itself now historical, superseded by the 2026-08-27 retirement decision: the x64 step was dropped, deliberately, because the thing it guarded no longer exists, not as an accidental regression of this item's closure. Items 12 and 13 carry the live 2026-08-27 disposition (12 CLOSED, 13 CARRIED FORWARD).
+  status: acknowledged
 
 ### 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not just behaviour
 
@@ -898,6 +899,7 @@ List B = `{C2-01 → 34.9-25/26, C2-02 → 34.9-25/26, C2-03 → 34.9-25/26, C2-
 34.9-24, C2-08 → 34.9-24}` — 6 IDs mapped to a confirmed landed fix, every confirmation drawn from
 `meta/`, `package.json` or a live `pnpm test:ci` run, never from `.planning/` or a SUMMARY's own
 words.
+  status: acknowledged
 
 ### A minus B
 
@@ -1023,6 +1025,7 @@ List A = `{C3-01, C3-02, C3-03}` — 3 IDs, confirmed by `grep -c '^### C3-' 34.
 
 List B = `{C3-01 → 34.9-29/32, C3-02 → 34.9-30, C3-03 → 34.9-30}` — 3 IDs mapped to a confirmed
 landed fix.
+  status: acknowledged
 
 ### A minus B
 
@@ -1096,6 +1099,7 @@ List A = `{C4-01, C4-02, C4-03, C4-04, C4-05}` — 5 IDs, confirmed by `grep -c 
 
 List B = `{C4-01 → 260814-u2u, C4-02 → 260814-u2u, C4-03 → 260814-u2u (D7 consequence), C4-04 →
 260814-u2u}` — 4 IDs mapped to a confirmed landed fix.
+  status: acknowledged
 
 ### A minus B
 
@@ -1388,6 +1392,7 @@ could clobber it. A future cycle that forgets this step will lose the prior cycl
 permanently, with no diagnostic — `git show HEAD:<path> > <path>` is the recovery if it is caught
 via `git status` before the next commit; there is no recovery once committed over without git
 history to fall back on.
+  status: acknowledged
 
 ## Code-review finding disposition — gap cycle 5 review (2026-08-14)
 

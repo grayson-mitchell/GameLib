@@ -25,6 +25,10 @@ key-decisions:
   - "PRESET_UNCATEGORIZED and 'sideload' used as the collection/store specimen values in the WR-16 catalog-fidelity test (per plan-check amendment #1) — the only values of those two kinds that route through a real i18next lookup rather than a bare literal."
 
 completed: 2026-08-27
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260827-ua7: Close Phase 34.11 Residual Warnings WR-08/WR-16 Summary

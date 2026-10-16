@@ -13,6 +13,7 @@ dependency-graph:
     - src/frontend/components/UI/Dialog/components/Dialog.tsx
     - src/frontend/components/UI/Dialog/__tests__/dialogWindowChrome.test.ts
     - src/frontend/components/UI/Winetricks/WinetricksBrowse/index.scss
+
 tech-stack:
   added: []
   patterns: []
@@ -25,11 +26,17 @@ key-files:
     - src/frontend/components/UI/Dialog/__tests__/dialogWindowChrome.test.ts
     - src/frontend/components/UI/Winetricks/WinetricksBrowse/index.scss
     - .planning/todos/completed/2026-09-19-native-dialog-residue-after-the-vcruntime-and-snap-migrations.md
+
 decisions:
   - "Deleted only item 3's six named dead .Dialog__* blocks; did not widen scope to .Dialog__headerTitle/.Dialog__content even though they measured equally dead, because their deadness fans into four other stylesheets that need their own visual-verification pass."
+
 metrics:
   duration: "~35 minutes"
   completed: 2026-09-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260921-mzl: Delete the dead Dialog CSS (todo item 3) Summary

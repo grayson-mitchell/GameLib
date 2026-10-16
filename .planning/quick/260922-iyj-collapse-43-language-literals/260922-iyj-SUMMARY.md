@@ -11,10 +11,12 @@ dependency-graph:
     - src/frontend/index.tsx
     - src/backend/sidecar/bootstrap.ts
     - src/frontend/components/UI/LanguageSelector/index.tsx
+
 tech-stack:
   added: []
   patterns:
     - "const-asserted array -> derived union type -> Record<Union, V> as a compile-time set-equality gate"
+
 key-files:
   created: []
   modified:
@@ -24,13 +26,19 @@ key-files:
     - src/frontend/components/UI/LanguageSelector/index.tsx
     - .planning/todos/pending/2026-09-21-the-43-language-list-is-hand-maintained-in-four-places.md (moved)
     - .planning/todos/completed/2026-09-21-the-43-language-list-is-hand-maintained-in-four-places.md (moved to, resolution appended)
+
 decisions:
   - "Pass supportedLanguages directly, no spread -- i18next@22.5.1 types supportedLngs as `false | readonly string[]`"
   - "Enforce label/flag map key-set agreement via Record<SupportedLanguage, string>, not a new test -- tests lint ceiling was at 638/638 with zero headroom"
   - "Keep Object.keys(languageLabels) as the dropdown render source, not supportedLanguages -- their orderings differ (hu/hr) and switching would silently reorder the visible dropdown"
+
 metrics:
   duration: "~45 minutes"
   completed: 2026-09-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260922-iyj Plan 01: Collapse 43-Language Literals Summary

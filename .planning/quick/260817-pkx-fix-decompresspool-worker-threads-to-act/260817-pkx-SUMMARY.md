@@ -5,6 +5,7 @@ subsystem: infra
 tags: [node-sea, worker_threads, esbuild, steam-depot, decompresspool, sidecar]
 
 # Dependency graph
+
 requires:
   - phase: quick-260817-ihr
     provides: "DECOMPRESS_POOL_MAX_WORKERS 8->16 fan-out cap raise (was inert until this fix)"
@@ -12,9 +13,11 @@ provides:
   - "A packaged macOS SEA sidecar that spawns real worker_threads for depot chunk decode instead of silently falling back to inline single-thread decode"
   - "A build-time SEA asset embedding mechanism (meta/buildSidecarSea.ts's bundleWorkerForSea/buildSeaConfig) reusable for any future worker-script-in-SEA-binary need"
   - "A runtime self-test entry (GAMELIB_SIDECAR_SELFTEST=decompress-pool) that proves worker_threads engagement in a packaged binary without a real game install"
+
 affects: [phase-23-plan-23-10, steam-native-install-throughput, sea-sidecar-packaging]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -42,8 +45,13 @@ patterns-established:
 requirements-completed: [PKX-01, PKX-02, PKX-03]
 
 # Metrics
+
 duration: ~21min
 completed: 2026-08-17
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260817-pkx: SEA Sidecar Decompress-Worker Fix Summary
@@ -163,9 +171,11 @@ Tests:       1229 passed, 1229 total
 ```
 
 The single failure, `depot.finalize.test.ts`, crashed with:
+
 ```
 FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
 ```
+
 This is the documented, pre-existing JavaScript heap OOM — crash signature confirmed to match exactly (same "Ineffective mark-compacts near heap limit" fatal error). Not caused by, or related to, this task's changes.
 
 ## KNOWN GAPS

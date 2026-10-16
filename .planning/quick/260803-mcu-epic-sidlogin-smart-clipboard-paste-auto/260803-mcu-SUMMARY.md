@@ -16,12 +16,18 @@ key-files:
     - src/frontend/helpers/__tests__/epicAuthCode.test.ts
   modified:
     - src/frontend/screens/Login/components/SIDLogin/index.tsx
+
 decisions:
   - "Reused the it.each table-test convention from steamKeyValidation.test.ts for consistency"
   - "Paste button reuses the same clobber-avoidance guard as auto pre-fill (only fills when field is empty or holds the prior auto-filled value) rather than force-overwriting on manual click"
+
 metrics:
   duration: "~20 min"
   completed: "2026-08-03"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260803-mcu Plan 01: Epic SIDLogin smart clipboard paste + auto pre-fill Summary
@@ -92,6 +98,7 @@ $ git status --short src/frontend/screens/Login/index.tsx src/frontend/screens/L
  M src/frontend/screens/Login/components/Runner/index.tsx
  M src/frontend/screens/Login/index.tsx
 ```
+
 Both `Login/index.tsx` and `Runner/index.tsx` show only their pre-existing modifications from the just-completed debug session (Epic→SIDLogin routing pivot) — untouched by this plan, as required by scope boundaries.
 
 ## Commits

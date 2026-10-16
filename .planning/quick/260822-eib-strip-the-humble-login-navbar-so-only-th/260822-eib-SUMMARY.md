@@ -11,6 +11,7 @@ provides:
   - "HUMBLE_LOGIN_CHROME_CSS extended to two rules (footer.site-footer + .simple-navbar), still single-line/space-separated on both login surfaces"
   - "All simple-navbar gates inverted from 'must not touch' to 'must hide', with the four legally/functionally protected selectors and the two signup-affordance selectors still pinned absent"
   - "A new drift-pin RED proof covering the half-applied-update failure mode (TS constant updated, Rust concat! literal forgotten)"
+
 affects: [humble-login, webview-login-chrome]
 
 tech-stack:
@@ -39,6 +40,10 @@ requirements-completed: []
 
 duration: ~35min
 completed: 2026-08-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260822-eib: Strip the Humble login navbar so only the login form remains Summary
@@ -58,6 +63,7 @@ Still one line, two independent rules, one space between them (D-1/D-2 -- both l
 Task 1 changed **production CSS only** in `loginChromeCss.ts`, `main.rs`'s `login_chrome_css_script()`, and the Electron doc comment -- and deliberately left every test/gate file untouched. Running the existing (still-unflipped) gates against that change produced exactly the three required failures, captured verbatim:
 
 **(a) cargo, `login_chrome_css_script_hides_the_marketing_footer_and_nothing_else`:**
+
 ```
 thread 'tests::login_chrome_css_script_hides_the_marketing_footer_and_nothing_else' panicked at src/main.rs:7355:13:
 assertion failed: !script.contains(forbidden)
@@ -65,6 +71,7 @@ test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 148 filtered out
 ```
 
 **(b) jest, `HUMBLE_LOGIN_CHROME_CSS > is exactly the one footer-hiding rule`:**
+
 ```
 expect(received).toBe(expected) // Object.is equality
 Expected: "footer.site-footer { display: none !important; }"
@@ -72,11 +79,13 @@ Received: "footer.site-footer { display: none !important; } .simple-navbar { dis
 ```
 
 **(c) jest, `HUMBLE_LOGIN_CHROME_CSS > does not name the protected selector simple-navbar`:**
+
 ```
 expect(received).not.toContain(expected) // indexOf
 Expected substring: not "simple-navbar"
 Received string:        "footer.site-footer { display: none !important; } .simple-navbar { display: none !important; }"
 ```
+
 Full run: `Test Suites: 1 failed, 1 passed, 2 total`, `Tests: 2 failed, 36 passed, 38 total`.
 
 The drift pin (`loginChromeCssInjection.test.ts`'s `DRIFT PIN (T-di1-06)` describe, "the real login_chrome_css_script fn body embeds exactly HUMBLE_LOGIN_CHROME_CSS") was **GREEN** at this point, as required -- both literals changed together in the same commit, so byte equality held even while the forbidden-selector gates broke.
@@ -139,6 +148,7 @@ src/backend/humble/__tests__/loginChromeCss.test.ts:18,22,24: (positive toBe/toC
 src/common/humble/loginChromeCss.ts:18,19,58: (doc comment + the constant itself)
 src-tauri/src/main.rs:1692,1755,7356: (doc comment + the literal + positive contains)
 ```
+
 Every remaining occurrence is either the CSS text itself, a positive assertion, or prose. Zero negative (`forbidden`/`not.toContain`/`!script.contains`) references anywhere in `src/` or `src-tauri/`.
 
 ## What did NOT change

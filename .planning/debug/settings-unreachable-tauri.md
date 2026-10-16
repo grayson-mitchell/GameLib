@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "Phase 30 UAT Test 8 (Tauri): settings cant be reached"
 created: 2026-07-23
 updated: 2026-07-23
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: diagnosed
 ---
 
 ## Current Focus

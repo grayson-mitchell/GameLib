@@ -9,6 +9,7 @@ provides:
   - "HumbleKeyRow store logo hoisted to the row's first flex child, named for AT via role=img + aria-label"
   - "HumbleKeyRowCaption reduced to the bare platform display name, origin bundle-label text dropped from the row entirely"
   - "Icon sizing/colour re-derived from the title's declared line-box ratio instead of the caption's 1em"
+
 affects: [humble-keys-ui]
 
 tech-stack:
@@ -35,6 +36,10 @@ requirements-completed: [QT-260908-VO4-01]
 
 duration: 12min
 completed: 2026-09-08
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase 260908-vo4 Plan 01: Humble Key Row — Store Icon Moved Left Summary

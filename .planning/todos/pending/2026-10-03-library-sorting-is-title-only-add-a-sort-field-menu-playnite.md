@@ -12,6 +12,10 @@ files:
   - src/common/types.ts:184-195
   - src/common/types/gog.ts:281-289
   - src/backend/storeManagers/steam/depot.ts:496-526
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
 ---
 
 ## Problem

@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick Task 260906-gej: Sweep the sidecar bootstrap for unported non-handler side effects — Summary
 
 Recorded the already-complete sidecar-bootstrap sweep (`260906-gej-FINDINGS.md`) as durable

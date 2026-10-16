@@ -2,6 +2,10 @@
 quick_id: 260910-et3
 title: Make dev-vault default `tauri:dev`, add `tauri:dev:keyring` for explicit keyring arm
 status: partial
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: partial
 ---
 
 # Quick Task 260910-et3 Summary

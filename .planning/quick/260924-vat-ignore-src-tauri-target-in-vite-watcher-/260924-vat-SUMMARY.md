@@ -8,6 +8,7 @@ requires: []
 provides:
   - "vite.config.ts server.watch.ignored covering src-tauri/target"
   - "Regression pin + source-text guard in viteRendererConfig.test.ts"
+
 affects: [vite.config.ts, tauri-dev-workflow]
 
 tech-stack:
@@ -32,6 +33,10 @@ requirements-completed: [TODO-2026-09-24-vite-ebusy-src-tauri-target]
 
 duration: ~10min
 completed: 2026-09-24
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260924-vat: Ignore src-tauri/target in Vite watcher Summary

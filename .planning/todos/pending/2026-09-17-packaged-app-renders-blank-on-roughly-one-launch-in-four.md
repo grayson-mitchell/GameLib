@@ -11,6 +11,10 @@ files:
   - src/frontend/__tests__/routerInitialLoadFallback.test.ts
   - src/frontend/blankRenderProbe.ts
   - src/frontend/index.tsx:23
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
 ---
 
 # Packaged .app renders blank, and #root is EMPTY when it does

@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick Task 260907-ppy Summary
 
 GOG `importGame`: reject a chosen folder whose product id does not match the selected game,
@@ -379,6 +386,7 @@ process), so nothing would overwrite the edit from memory. Both targets backed u
  			"installedWithDLCs": false
 +			"versionEtag": "\"688661e1d54090f16fd8742109bc6759\"",
 +			"pinnedVersion": false
+
 ```
 
 **The quoted form is not a typo and was not guessed.** `versionEtag` is sent verbatim as the

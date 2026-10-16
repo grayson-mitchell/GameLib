@@ -8,6 +8,7 @@ requires: []
 provides:
   - "cardVisibility.ts: module-singleton IntersectionObserver + per-node callback registry, fail-open when IntersectionObserver is unavailable"
   - "GameCard self-observes its own placeholder node instead of listening for a one-shot broadcast"
+
 affects: []
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed: [TODO-260923-library-card-art]
 
 duration: 12min
 completed: 2026-09-24
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260924-swb: Fix library card art never recovering from a missed visibility event Summary

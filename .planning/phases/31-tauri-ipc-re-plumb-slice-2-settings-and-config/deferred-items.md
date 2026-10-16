@@ -15,6 +15,7 @@ current task's changes).
   to this plan's `process.getSystemVersion` polyfill addition (which lands
   earlier in the same file but does not touch the `IpcHandler` type). Not
   fixed — out of scope for this plan.
+  status: acknowledged
 
 ## Plan 31-02
 
@@ -29,3 +30,4 @@ current task's changes).
   state shared across test files (same family as the memory note "Tests
   clobbering real Steam store"), not by this plan's dialog/electronStub
   changes. Not fixed -- out of scope for this plan.
+  status: acknowledged

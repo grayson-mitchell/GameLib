@@ -5,6 +5,11 @@ status: DONE
 completed: 2026-09-12
 files_modified:
   - .planning/ROADMAP.md
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: done
 ---
 
 # Quick Task 260912-bul: Correct three stale Phase 34.6 facts in ROADMAP Summary
@@ -50,18 +55,21 @@ the file was saved. No assertion failed; the edit applied cleanly on the first a
 All commands and full output below are copied verbatim from the actual run.
 
 ### Gate 1 — FAIL 7/9 verdict preserved
+
 ```
 PASS G1 FAIL 7/9 count == 3
 PASS G1 verdict verbatim on 3208
 ```
 
 ### Gate 2 — zero unchecked boxes, exact `- [ ]` form
+
 ```
 PASS G2 zero "- [ ]" in block
 PASS G2 line 3237 keeps its backticked [ ]
 ```
 
 ### Corrections landed
+
 ```
 PASS C1 heading declares completion
 PASS C1 no variation selector
@@ -87,23 +95,28 @@ The plan is factually wrong on this one point: `git diff --numstat` alone cannot
 single-file string when other files are already dirty in the tree. The **intended** check — that
 ROADMAP.md itself shows exactly 3 insertions / 3 deletions, and that this task modified no other
 file — does hold, verified with a path-scoped diff:
+
 ```
 $ git diff --numstat -- .planning/ROADMAP.md
 3	3	.planning/ROADMAP.md
 ```
+
 and confirmed the humble-keys file's diff is unchanged by this task (still exactly the same
 pre-existing `31\t0` it carried at baseline, not incremented by anything this task did).
 
 ### Gate 4 — parser replay: roadmap and folder rollup agree
+
 ```
 plans classified: 21 strongStatus: complete rollup: complete
 PASS G4 roadmap and folder AGREE (both complete)
 ```
+
 `classifyPlans` was called with an array of file names (`fs.readdirSync(dir)`), and
 `folderArtifactStatuses` was called with a name→frontmatter map — per the required parser
 signatures, not a directory path.
 
 ### Gate 5 — `pnpm planning-gates`
+
 ```
 [PASS] .planning/phases/34.2-.../currency-gate.py
 [PASS] .planning/phases/34.3-.../ported-channels-gate.py
@@ -118,6 +131,7 @@ signatures, not a directory path.
 
 10/10 planning gates passed.
 ```
+
 Matches baseline `687b6dc8a` (10/10).
 
 ## Deviations from Plan

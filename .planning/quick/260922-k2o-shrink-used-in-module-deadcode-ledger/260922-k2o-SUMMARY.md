@@ -5,6 +5,10 @@ date: 2026-09-22
 mode: quick
 resolves_todo: .planning/todos/pending/2026-09-21-the-204-entry-used-in-module-ledger-freezes-an-export-keyword-cleanup.md
 status: partial (33 of 203 shipped; todo rewritten, not closed)
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: partial (33 of 203 shipped; todo rewritten, not closed)
 ---
 
 # Summary — shrink the `used-in-module` dead-code ledger
@@ -87,6 +91,7 @@ left exported exactly as the plan required; none of the three named traps was to
 
 unreachable: 47 OK | used-in-module: 170 OK
 ```
+
 Exit 0.
 
 ### 2. `pnpm typecheck` → corrected to `pnpm codecheck` (see Deviation 1)
@@ -95,6 +100,7 @@ Exit 0.
 > gamelib@0.7.0 codecheck /Users/graysonmitchell/Projects/GameLib
 > tsc --noEmit
 ```
+
 Exit 0, no output (clean).
 
 ### 3. `pnpm lint`
@@ -105,26 +111,32 @@ Exit 0, no output (clean).
 
 production: PASS | tests: PASS
 ```
+
 Exit 0. **638/638 — exactly the documented zero-headroom TESTS ceiling. No drift.**
 
 ### 4. `npx prettier --check meta/ src/`
 
 First run (before Deviation 2's fix):
+
 ```
 Checking formatting...
 [warn] meta/trayIconVariants.ts
 [warn] Code style issues found in the above file. Run Prettier with --write to fix.
 ```
+
 Exit 1. Fixed per Deviation 2. Re-run:
+
 ```
 Checking formatting...
 All matched files use Prettier code style!
 ```
+
 Exit 0.
 
 ### 5. Touched jest suites
 
 Primary touched suites:
+
 ```
 PASS Backend src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts
 PASS Frontend src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts
@@ -135,14 +147,17 @@ PASS Backend src/backend/sidecar/__tests__/flowRegistrationCensus.test.ts
 Test Suites: 5 passed, 5 total
 Tests:       128 passed, 128 total
 ```
+
 Exit 0.
 
 Fixture/helper importer directories (`src/backend/humble/__tests__/`,
 `src/backend/storeManagers/steam/__tests__/`, `src/backend/sidecar/__tests__/`, `meta/__tests__/`):
+
 ```
 Test Suites: 161 passed, 161 total
 Tests:       2 skipped, 4669 passed, 4671 total
 ```
+
 Exit 0. (One unrelated pre-existing "Cannot log after tests are done" console warning surfaced from
 `src/backend/sidecar/downloadQueueFlowRegistration.ts` during `storeLayer.test.ts` — a known async
 logging quirk in a module this task never touched; not a failure, out of scope, not fixed here.)
@@ -165,6 +180,7 @@ logging quirk in a module this task never touched; not a failure, out of scope, 
 
 12/12 planning gates passed.
 ```
+
 Exit 0. Also re-ran `python3 .planning/todos/todo-frontmatter-gate.py` standalone after rewriting
 the todo, to isolate that its frontmatter (`severity: minor` / `platform: any` / `ready: code`,
 bare/lowercase/exact, in order) still conforms: `OK: 21 pending todo(s) all carry in-vocabulary

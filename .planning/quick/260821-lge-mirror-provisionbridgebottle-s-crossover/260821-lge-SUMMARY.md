@@ -12,6 +12,7 @@ provides:
   - "Two jest tests (rejection + non-over-fire discriminator) proving the guard, RED-demonstrated against the guard-disabled build"
   - "Corrected steamBottleDefaults.ts doc comment recording the gap as closed"
   - "steam-bottle-gptk-engine-produces-broken-bottle.md moved to .planning/todos/completed/"
+
 affects: [steam-bottle-provisioning, steam-install-form]
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed: [QUICK-260821-LGE-01]
 
 duration: ~15min
 completed: 2026-08-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260821-lge: Mirror provisionBridgeBottle's CrossOver-only guard into provisionBottle Summary
@@ -53,6 +58,7 @@ completed: 2026-08-21
 - **Files modified:** 4 (3 source/test + 1 todo move)
 
 ## Accomplishments
+
 - `provisionBottle()` now rejects any `opts.wineVersion.type !== 'crossover'` with `{status:'error'}` before the step (2) `steamBottleConfigStore.set(...)` write, `cxbottle` spawn, `rmSync`, or `downloadFile` call — closing the asymmetry with `provisionBridgeBottle`'s D-08 guard that was the origin of the original defect.
 - Two new jest tests mirror the bridge bottle's D-08 pair exactly: a rejection test and a non-over-fire discriminator, using `bottleName: 'GameLibSteam'` (not the shared `'GameLib'`) so the CR-01 guard cannot be mistaken for the one firing.
 - Corrected the now-false "KNOWN REMAINING GAP" doc comment in `steamBottleDefaults.ts` (comment-only change).
@@ -69,12 +75,14 @@ Each task was committed atomically:
 _Note: this plan was `tdd="true"` on Tasks 1-2 but executed as fix-then-test (guard written first, tests added and RED-proven second by temporarily commenting out the new guard's `return` in place) rather than strict test-first, since the guard shape was already fully specified by the plan's `<interfaces>` block (byte-for-byte mirror of `provisionBridgeBottle`'s existing, already-tested guard). The RED-proof requirement was still honored: see Issues Encountered._
 
 ## Files Created/Modified
+
 - `src/backend/storeManagers/steam/bottle.ts` - New step (1c) guard clause in `provisionBottle()`, between the (1b) CR-01 guard and the (2) store write
 - `src/backend/storeManagers/steam/__tests__/bottle.test.ts` - New `describe('D-08: CrossOver-only guard (mirrors provisionBridgeBottle)')` block with rejection + discriminator tests
 - `src/frontend/screens/Game/GamePage/components/steamBottleDefaults.ts` - Doc comment above `resolveSubmittedBottleEngine` corrected from "KNOWN REMAINING GAP" to "CLOSED 2026-08-21"
 - `.planning/todos/completed/steam-bottle-gptk-engine-produces-broken-bottle.md` - Moved from `pending/`, dated closing note appended
 
 ## Decisions Made
+
 - Cited the todo filename (`steam-bottle-gptk-engine-produces-broken-bottle.md`) in the new guard's `logError` message and code comment, rather than inventing a new decision/threat ID — none was assigned for this closure and the plan explicitly directed this.
 - Did not touch `persistBottleWineVersion` or step (6)'s `steamBottleConfigStore.set('wineVersion', ...)` re-read — both are recorded, deliberate self-healing paths (review B-WR-08) serving `checkWineBeforeLaunch`'s recovery flow, out of scope for this guard.
 
@@ -91,6 +99,7 @@ None - plan executed exactly as written. All three tasks completed with the exac
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - The `steam-bottle-gptk-engine-produces-broken-bottle` todo is fully closed; no further work is queued from it.
 - Option (b) (a prefix-based GPTK/`toolkit` Steam provisioning path) remains an open idea, not a defect — should it ever be pursued, it is a new, separate scope of work (effectively a second bottle backend), not a continuation of this fix.
 

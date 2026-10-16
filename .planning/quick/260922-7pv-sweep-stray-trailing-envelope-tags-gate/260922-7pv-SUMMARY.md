@@ -53,6 +53,10 @@ metrics:
     05:58:08, commit timestamps); total session time including gate authoring
     and self-test iteration was longer and was not separately instrumented"
   completed: "2026-09-21"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260922-7pv: Sweep Stray Trailing Envelope-Tags, Add a Gate Summary

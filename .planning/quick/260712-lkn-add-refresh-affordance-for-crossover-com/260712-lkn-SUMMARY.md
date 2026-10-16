@@ -7,18 +7,22 @@ requires:
   - getWikiGameInfo backend + IPC
   - GameContext wikiInfo plumbing
   - AppleWikiInfo CrossOver pill
+
 provides:
   - getWikiGameInfo forceRefresh cache-bypass
   - refreshWikiInfo GameContext callback
   - Refresh IconButton on CrossOver rating pill
+
 affects:
   - src/backend/wiki_game_info
   - src/frontend/screens/Game
+
 tech-stack:
   added: []
   patterns:
     - MUI IconButton + Refresh icon inside iconWithText pill
     - stopPropagation/preventDefault to suppress parent <a> navigation
+
 key-files:
   created: []
   modified:
@@ -28,14 +32,20 @@ key-files:
     - src/frontend/types.ts
     - src/frontend/screens/Game/GamePage/index.tsx
     - src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx
+
 decisions:
   - "Refresh path accepts any non-null wiki result (unlike the initial useEffect gate) so a codeweavers-only update lands"
   - "IPC forceRefresh is optional; preload makeHandlerInvoker forwards extra args automatically (no preload edit needed)"
+
 metrics:
   duration: ~10m
   completed: 2026-07-12
   tasks: 2
   files-modified: 6
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260712-lkn: Add refresh affordance for CrossOver compatibility rating Summary
@@ -45,11 +55,13 @@ Adds a user-facing MUI Refresh IconButton on the CrossOver rating pill (macOS/Li
 ## What Was Built
 
 ### Task 1 — forceRefresh plumbing (commit 7a477f16)
+
 - `getWikiGameInfo(game, forceRefresh = false)` — the cached-response early return now guards on `!forceRefresh`, so a `true` value falls through to the fresh fetch and the existing `wikiGameInfoStore.set(...)` re-populates the cache.
 - `ipc_handler.ts` threads `forceRefresh` from the IPC call into the backend.
 - `ipc.ts` type signature carries the optional `forceRefresh?: boolean` arg. The preload `makeHandlerInvoker` forwards the extra arg automatically — no preload change required.
 
 ### Task 2 — Refresh button on the CrossOver pill (commit c474c4ee)
+
 - `GameContextType` gains optional `refreshWikiInfo?: () => Promise<void>` (type-only; `initialContext` left as-is since the field is optional).
 - `GamePage/index.tsx` defines a `useCallback` that calls `window.api.getWikiGameInfo(title, appName, runner, true)` and sets any non-null result — intentionally looser than the initial `useEffect` gate so a codeweavers-only update still lands. Wired into `contextValues`.
 - `AppleWikiInfo.tsx` renders a small `IconButton` (size="small") with `<Refresh fontSize="small" />` inside the CrossOver pill. Its onClick calls `stopPropagation()` + `preventDefault()` (so the parent `<a onClick={onClickCrossover}>` does not open CodeWeavers), toggles a local `refreshing` state, awaits `refreshWikiInfo?.()`, and resets in a `finally`. The button is `disabled={refreshing}` while in flight. Uses the `t('info.refresh-rating', 'Refresh rating')` translation for both `title` and `aria-label`.
@@ -57,6 +69,7 @@ Adds a user-facing MUI Refresh IconButton on the CrossOver rating pill (macOS/Li
 ## Deviations from Plan
 
 ### Minor implementation adjustments (not behavioral deviations)
+
 - **Event type import:** Used `import { MouseEvent } from 'react'` for the handler param instead of `React.MouseEvent`, since the component imports React named exports (no default `React` namespace in scope). Keeps tsc clean.
 - **GameContext.tsx:** Listed in the plan's `files_modified`, but per the plan's own Task 2 step 2 the file needs no change (the new context field is optional). Left untouched — not committed.
 
@@ -71,5 +84,6 @@ Adds a user-facing MUI Refresh IconButton on the CrossOver rating pill (macOS/Li
 None.
 
 ## Self-Check: PASSED
+
 - Modified files present: all 6 confirmed on disk.
 - Commits present: 7a477f16 (Task 1), c474c4ee (Task 2) confirmed in git log.

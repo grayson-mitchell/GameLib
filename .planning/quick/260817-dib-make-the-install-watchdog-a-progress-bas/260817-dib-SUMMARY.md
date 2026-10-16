@@ -12,6 +12,7 @@ provides:
   - "Steam native depot progress routed onto backendEvents via sendProgressUpdate, so the watchdog can re-arm for Steam installs"
   - "box.error.install.stalled dialog copy naming the observed no-progress window, distinct from the inner-CM-timeout 'connection may be stale' copy"
   - "LIVE-GATE.md operator recipe (Gate A/Gate B) proving the wall-clock property against a real multi-GB download"
+
 affects: [23-10, steam-depot-download, download-watchdog]
 
 tech-stack:
@@ -45,6 +46,10 @@ requirements-completed: [QUICK-260817-dib]
 
 duration: ~14min
 completed: 2026-08-17
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260817-dib: Install watchdog -> no-progress bound Summary
@@ -97,6 +102,7 @@ See `key-decisions` in the frontmatter above. The two most load-bearing:
 ## RED/GREEN evidence
 
 **Task 1 (installStallWatchdog.test.ts):** ran the full 10-spec file with the not-yet-written module temporarily moved aside:
+
 ```
 FAIL Backend src/backend/downloadmanager/__tests__/installStallWatchdog.test.ts
   ● Test suite failed to run
@@ -104,9 +110,11 @@ FAIL Backend src/backend/downloadmanager/__tests__/installStallWatchdog.test.ts
 Test Suites: 1 failed, 1 total
 Tests:       0 total
 ```
+
 Restored the module -> `Tests: 10 passed, 10 total`.
 
 **Task 2 (utils.test.ts), against the REAL pre-fix `utils.ts`** (before `withTimeout` was swapped for `withStallTimeout` and before the `isStallError` catch branch existed):
+
 ```
 ✕ RED (the defect): advancing progress every 100s keeps a native Steam install running past 20 minutes of fake time -- no error, no dialog
     Expected: false
@@ -118,6 +126,7 @@ Restored the module -> `Tests: 10 passed, 10 total`.
            2: "box.error.install.failed", "The installation of {{title}} failed: {{error}}", {"error": "install did not settle — connection may be stale", "title": "Test Game"}
 Tests:       2 failed, 19 skipped, 4 passed, 25 total
 ```
+
 This is the decisive proof: the OLD code killed an advancing, healthy install at the fixed 8-minute ceiling, and used the connection-fault copy even for a genuine stall. After implementing: `Tests: 25 passed, 25 total` (all pre-existing specs unmodified and green).
 
 ## Deviations from Plan

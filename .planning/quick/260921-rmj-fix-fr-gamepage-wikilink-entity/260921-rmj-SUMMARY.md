@@ -10,6 +10,7 @@ provides:
   - "wikiLinkTrans.realI18next.test.ts A4 widened to the malformed-entity family, parameterised over de+fr, mutation-proven"
   - "the fr malformed-entity todo closed with a corrected sibling paragraph"
   - "a new, re-measured pending todo for the 15-locale empty-wikiLink condition"
+
 affects: [i18n, gamepage]
 
 tech-stack:
@@ -36,6 +37,10 @@ requirements-completed: []
 
 duration: ~7min commit-to-commit (d466a141d to cf3493cf3); wall time including full gate runs (pnpm test:ci ~4min) was longer
 completed: 2026-09-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260921-rmj: Fix fr gamepage wikiLink entity Summary
@@ -113,6 +118,7 @@ All three PASS conditions held simultaneously:
 3. Still carries `<U+00A0>` immediately before the colon -- YES.
 
 Blast radius, confirmed after staging:
+
 ```
 $ git diff --cached --numstat -- public/locales/fr/gamepage.json
 1	1	public/locales/fr/gamepage.json

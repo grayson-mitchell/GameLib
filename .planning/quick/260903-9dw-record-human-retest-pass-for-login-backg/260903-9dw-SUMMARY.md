@@ -15,12 +15,18 @@ key-files:
   modified:
     - .planning/quick/260902-wbd-port-login-background-setting-from-stash/260902-wbd-SUMMARY.md
     - .planning/STATE.md
+
 decisions:
   - "Appended a dated `## Human re-test COMPLETE -- 2026-09-03` section rather than editing the existing `## Human re-test required` section, per repo convention of keeping historical text and adding a forward-pointing correction."
   - "Recorded the large-image inline-style size-limit speculation as still UNTESTED, not cleared, since the re-test did not test a large image."
+
 metrics:
   duration: "~10 minutes"
   completed: 2026-09-03
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260903-9dw: Record human re-test PASS for login background Summary

@@ -3,6 +3,10 @@ status: awaiting_human_verify
 trigger: "Download queue crashes with 'Cannot find module backend/storeManagers' — wedges the DownloadManager on any download completion AND on the in-app Cancel button."
 created: 2026-07-21
 updated: 2026-07-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_verify
 ---
 
 ## Current Focus

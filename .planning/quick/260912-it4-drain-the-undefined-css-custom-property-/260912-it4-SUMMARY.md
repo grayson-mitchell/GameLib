@@ -5,16 +5,20 @@ subsystem: frontend-styling
 tags: [css-custom-properties, design-tokens, source-gate, themes]
 requires:
   - src/backend/testUtils/stripSourceComments.ts
+
 provides:
   - src/frontend/components/UI/NavShell/__tests__/cssTokenSweep.test.ts
+
 affects:
   - src/frontend/themes.scss
   - src/frontend/styles/_buttons.scss
+
 tech-stack:
   added: []
   patterns:
     - "Source-text sweep gate with an explicit, rot-detected allowlist"
     - "color-mix(in srgb, …) as the rgba(var(--x-rgb), …) replacement"
+
 key-files:
   created:
     - src/frontend/components/UI/NavShell/__tests__/cssTokenSweep.test.ts
@@ -35,14 +39,20 @@ key-files:
     - src/frontend/components/UI/SteamGridDBPicker/index.scss
     - src/frontend/components/UI/Dropdown/index.scss
     - .planning/quick/260912-it4-drain-the-undefined-css-custom-property-/sweep-census.py
+
 decisions:
   - "--status-sucess collapsed to var(--success), NOT spelling-corrected: --status-success is a raw Figma constant body.nord-light does not override"
   - "--border-color declared once in the base body {} block rather than rewriting 7 call sites, so themes can override"
   - "--installing-effect allowlisted, not guessed: it is a number with no recoverable value and needs a design decision"
   - "Login/index.scss:118 got a family-only fix, deviating from the plan, because line 119 already declares font-weight: 700 explicitly"
+
 metrics:
   duration: ~50 min
   completed: 2026-09-12
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260912-it4: Drain the Undefined CSS Custom Property References — Summary
@@ -118,6 +128,7 @@ A gate never seen failing proves nothing. Both controls were run and both revert
 ```
 ● css token sweep › references no CSS custom property that nothing declares
     +   "--definitely-not-a-token (src/frontend/components/UI/Dropdown/index.scss:65)",
+
 Tests:       1 failed, 2509 skipped, 1 passed, 2511 total
 ```
 
@@ -129,6 +140,7 @@ failure message. Reverted; the file is byte-identical to its committed state.
 ```
 ● css token sweep › allowlists no name that has stopped being an undefined reference
     +   "--a-name-that-is-no-longer-undefined",
+
 Tests:       1 failed, 2509 skipped, 1 passed, 2511 total
 ```
 

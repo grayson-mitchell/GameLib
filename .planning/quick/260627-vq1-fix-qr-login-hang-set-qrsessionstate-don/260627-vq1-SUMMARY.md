@@ -14,14 +14,20 @@ key_files:
   modified:
     - src/backend/storeManagers/steam/user.ts
     - src/backend/storeManagers/steam/__tests__/user.test.ts
+
 decisions:
   - Store credentials and set qrSessionState=done synchronously in QR authenticated handler; defer CM persona-name fetch to background .then()
   - Call clearTimeout at the top of both loggedOn and error handlers (before any async work) to prevent the timer from firing after the promise already resolved via loggedOn
+
 metrics:
   duration: ~5 minutes
   completed: 2026-06-27
   tasks_completed: 2
   tasks_total: 2
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick Plan 260627-vq1: Fix QR Login Hang (Set qrSessionState=done Synchronously) Summary

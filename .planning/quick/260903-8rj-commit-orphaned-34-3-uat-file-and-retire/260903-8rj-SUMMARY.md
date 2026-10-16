@@ -8,6 +8,7 @@ requires: []
 provides:
   - "34.3-UAT.md tracked in main repo, status: superseded, with a factual retirement section"
   - "34.3-VERIFICATION.md's stale 'items 1 and 2 are real, open, and invisible' claim retired via an appended dated marker, historical text unchanged"
+
 affects: [34.3, audit-uat, planning-gates]
 
 tech-stack:
@@ -31,6 +32,10 @@ requirements-completed: [QUICK-260903-8rj]
 
 duration: 12min
 completed: 2026-09-03
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260903-8rj: Commit orphaned 34.3 UAT file and retire a stale status claim — Summary
@@ -78,12 +83,15 @@ None — plan executed exactly as written. All exact-line anchors given in the p
 All automated verification blocks from the plan were run and passed:
 
 **Task 1 verify (`34.3-UAT.md`):**
+
 ```
 OK
 ```
+
 (5 `result: [pending]` lines confirmed; Summary/Gaps block and post-frontmatter body diffed clean against the worktree source except the intended edits; `status: superseded`, `updated: 2026-09-03`, `started: 2026-08-23` confirmed; `## Superseded 2026-09-03` section confirmed present and correctly ordered before `## Why this session exists`; no live `awaiting: user response` remains; worktree source confirmed untouched — still shows only as untracked (`??`), no modification.)
 
 **Task 2 verify (`34.3-VERIFICATION.md` + commit):**
+
 ```
 caveat unchanged
 frontmatter unchanged
@@ -97,6 +105,7 @@ tree clean
 ```
 
 **`pnpm planning-gates` (run AFTER the commit, per the task instruction that a pre-commit red on the uncommitted-inventory gate is not a real finding):**
+
 ```
 [PASS] .planning/phases/34.2-.../currency-gate.py
 [PASS] .planning/phases/34.3-.../ported-channels-gate.py

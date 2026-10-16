@@ -5,14 +5,17 @@ subsystem: dev-tooling
 tags: [tauri, powershell, proc, jest, cjs, dev-workflow]
 
 # Dependency graph
+
 requires: []
 provides:
   - "meta/tauriDevPreflight.cjs: cross-platform pre-flight that blocks tauri:dev* when a foreign gamelib-shell is running"
   - "Closed todo 2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md with both LOCKED decisions recorded"
   - "38-HUMAN-UAT.md Sitting 4 final disposition (inference accepted, evidence rotated away)"
+
 affects: [tauri-dev-workflow, phase-38-human-uat]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -41,6 +44,10 @@ requirements-completed: [QUICK-260926-dxa]
 
 duration: ~55min
 completed: 2026-09-26
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260926-dxa: Tauri Dev Pre-flight Rejects a Foreign Running Shell Summary

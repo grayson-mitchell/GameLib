@@ -5,6 +5,7 @@ subsystem: ui
 tags: [i18n, react, filesize, install-dialog, gamelib-catalog]
 
 # Dependency graph
+
 requires:
   - phase: quick-260923-o2s
     provides: "isWritable_windows fix that made the free-space line render on Windows for the first time, revealing this presentation defect"
@@ -12,9 +13,11 @@ provides:
   - "Shared diskSpaceLabels() formatter (freeLabel/totalLabel) for both install dialogs"
   - "New interpolated gamelib key installFlows.diskSpaceFreeOfTotal, filled in all 49 locales"
   - "SteamDialog and DownloadDialog both render the labelled free-space line"
+
 affects: [install-modal, i18n-catalog-gamelib]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -43,8 +46,13 @@ key-decisions:
 requirements-completed: []
 
 # Metrics
+
 duration: 40min
 completed: 2026-09-23
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260923-vdq: Label Both Figures in the Install Dialog Summary

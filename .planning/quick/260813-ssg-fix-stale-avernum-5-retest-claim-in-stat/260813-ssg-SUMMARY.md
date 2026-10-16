@@ -5,7 +5,12 @@ subsystem: docs
 one-liner: Corrected a stale "human retest of Avernum 5" claim in STATE.md's Phase 24 status prose; Gate 3 actually closed against Avernum 6 in RETEST RUN 3
 files-modified:
   - .planning/STATE.md
+
 commit: eb33b165e
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260813-ssg: Fix stale Avernum 5 retest claim in STATE.md — Summary

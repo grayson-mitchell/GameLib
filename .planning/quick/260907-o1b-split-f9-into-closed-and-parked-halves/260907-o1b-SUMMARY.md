@@ -6,25 +6,34 @@ subsystem: docs
 tags: [f-9, todo-bookkeeping, docs-only]
 requires:
   - phase: none (standalone quick task)
+
 provides:
   - "F-9 todo split into a CLOSED AS UNANSWERABLE section (Q1, id=1575) and a PARKED section (Q2, the class question) with a runnable, per-OS unpark grep"
+
 affects: [f-9-todo]
 tech-stack:
   added: []
   patterns:
     - "PARKED prose-status convention matched to the sibling todo (2026-08-17-humble-slots-still-prompt-unattended-at-startup.md): quoted status: line naming the section, an explicit ## PARKED <date> heading, an explicit **Unpark line"
+
 key-files:
   created: []
   modified:
     - .planning/todos/pending/2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md
+
 key-decisions:
   - "Q1 (id=1575's specific co-occurrence) closes as permanently unanswerable, recorded as UNDETERMINED forever — not rounded to 'no', and every sentence in the CLOSED section using closed/closes/closing/closure also carries UNDETERMINED (enforced by the plan's mutation-proved gate script)"
   - "Q2 (the timeout shape as a class) parks rather than closes, because 260905-omc and 260907-j8n made a recurrence passively self-recording to gamelib-shell.log — the file no longer requires a live operator to become answerable"
   - "The August parked: 2026-08-23 / parked_by: operator frontmatter values were left untouched; this task reconciled the status: line to match, it did not re-date the original park"
+
 requirements-completed: [F-9]
 metrics:
   duration: "~20min"
   completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260907-o1b: Split the F-9 todo into closed and parked halves Summary

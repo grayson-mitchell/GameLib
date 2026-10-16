@@ -11,6 +11,7 @@ dependency-graph:
     - ".planning/todos/pending/2026-08-28-gamelib-json-de-fr-missing-five-keys-machine-fill-401s.md"
     - ".planning/todos/pending/2026-09-01-non-english-catalogs-are-unrebranded-2117-heroic-strings.md"
     - ".planning/todos/completed/2026-08-06-phase-34-8-i18n-context-fork-namespace-llm-machine-fill-defe.md"
+
 tech-stack:
   added: []
   patterns: ["prepared-index STATE.md commit to avoid sweeping in a concurrent session's uncommitted line", "append-only amendment to a CLOSED record, proven by diff not assertion"]
@@ -22,11 +23,17 @@ key-files:
     - .planning/todos/pending/2026-09-01-non-english-catalogs-are-unrebranded-2117-heroic-strings.md
     - .planning/todos/completed/2026-08-06-phase-34-8-i18n-context-fork-namespace-llm-machine-fill-defe.md
     - .planning/STATE.md
+
 decisions:
   - "Split the 46-locale fork-string coverage gap out of the 2026-08-28 todo into its own record, at the operator's request, reversing part of 260902-9wt without calling it a mistake"
+
 metrics:
   duration: "~35 minutes"
   completed: 2026-09-02
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260902-ad5: Split the 46-locale fork-string coverage gap into its own todo — Summary

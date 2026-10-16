@@ -11,6 +11,7 @@ provides:
   - "meta/__tests__/genI18nGateScope.test.ts: all eight count pins re-derived (174/215), dated journal entry added, no assertion logic changed"
   - "three executed mutation probes proving the green is load-bearing (M1/M2/M3, each named a real spec red)"
   - "pnpm test:ci restored to GREEN (439/439 suites) from the A-17 ANTI-ROT staleness this task existed to fix"
+
 affects: [meta/i18nGateScope.json, meta/i18nForkTouchedFiles.json, meta/__tests__/genI18nGateScope.test.ts, DECLARED_UNSCANNED_DEBT]
 
 tech-stack:
@@ -36,6 +37,10 @@ requirements-completed: []
 
 duration: ~35min total across both segments (audit-only stop, then Tasks 2-3 after the operator's fix landed)
 completed: 2026-09-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260921-saw: Refresh i18n fork-touched snapshot Summary
@@ -92,6 +97,7 @@ Categories title in SettingsModal`) changed one line:
 ```diff
 -      category: 'Categories'
 +      category: t('header.categories', 'Categories')
+
 ```
 
 Re-measured after the fix (by the coordinator, cited here, not re-run by this executor per the
@@ -112,6 +118,7 @@ per instruction:
 $ node -e "...console.log('scope',s.files.length,'fork',f.files.length);"
 scope 173 fork 214
 ```
+
 (unchanged from the pre-fix state -- the fix touched only the source file, not either artifact.)
 
 **(a) `meta/i18nForkTouchedFiles.json`.** Ran `pnpm gen-i18n-gate-scope` (not `:rewrite`) to see
@@ -151,6 +158,7 @@ $ git diff meta/i18nForkTouchedFiles.json
 +    "src/frontend/screens/Settings/components/SettingsModal/index.tsx",
      "src/frontend/screens/Settings/components/ShowValveProton.tsx",
 ```
+
 Exactly one added line; `generatedAt` and `purpose` untouched.
 
 **(b) `meta/i18nGateScope.json`.** Hand-inserted the same path into its correct sorted slot.
@@ -190,6 +198,7 @@ separately above since they sit in the same `it(...)` line as sites 7/8.)
 865:   * this entry was written -- 173 files scanned, 0 violations. Enters BOTH
 870:   * fork-touched 214 -> 215, scope 173 -> 174, unscanned debt UNCHANGED at
 ```
+
 All five survivors sit inside dated journal entries (three pre-existing, two -- 853/865 -- from the
 `2026-09-21 continued` entry already in the file, and 870 is this task's new entry). Line 764's
 pre-existing `216` narrative (`the snapshot a real regeneration would produce TODAY: the 216 files
@@ -239,10 +248,12 @@ re-derive its count pins`.
   - Expected  - 1
   + Received  + 0
   -   "src/frontend/screens/Brand/ProbeOnlyM1.tsx",
+
 ✕ A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses...
   (same array mismatch, refusal.added vs DECLARED_UNSCANNED_DEBT)
 Tests: 2 failed, 1 skipped, 24 passed, 27 total
 ```
+
 Restored via `cp` from `$SCRATCH/genI18nGateScope.test.fixed.ts`; `git diff --quiet` confirmed no
 residual diff.
 
@@ -254,12 +265,14 @@ residual diff.
   - Expected  - 1
   + Received  + 0
   -   "src/frontend/screens/Settings/components/SettingsModal/index.tsx",
+
 ✕ A0 fixture sanity: ... Expected: 215, Received: 214
 ✕ A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: ... refusal.removed Expected [] Received [SettingsModal/index.tsx]
 ✕ A3 NON-VACUITY / POSITIVE CONTROL: ... Expected: 215, Received: 214
 ✕ A4 BOOTSTRAP: ... Expected: 215, Received: 214
 Tests: 5 failed, 1 skipped, 21 passed, 27 total
 ```
+
 This reproduces the exact original HEAD failure (`A-17 ANTI-ROT`) on demand, plus the four count
 specs the plan named. Restored via `cp` from `$SCRATCH/forkTouched.fixed.json`; confirmed clean.
 
@@ -271,10 +284,12 @@ from `meta/i18nGateScope.json`. Actual red output:
   - Expected  - 0
   + Received  + 1
   +   "src/frontend/screens/Settings/components/SettingsModal/index.tsx",
+
 ✕ A0 fixture sanity: ... (scope count mismatch)
 ✕ A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: ... (cascaded from the same count mismatch)
 Tests: 3 failed, 1 skipped, 23 passed, 27 total
 ```
+
 `A-03 RATCHET` names the file as undeclared drift (Received +1, not in `DECLARED_UNSCANNED_DEBT`),
 and `A0 fixture sanity` failed as expected; `A2` also cascaded red (consistent, not contradicting
 the plan's prediction). Restored via `cp` from `$SCRATCH/gateScope.fixed.json`; confirmed clean.
@@ -282,12 +297,14 @@ the plan's prediction). Restored via `cp` from `$SCRATCH/gateScope.fixed.json`; 
 **No probe came back green.** Every mutation was caught by a named spec.
 
 **Tree parity confirmed after all three probes:**
+
 ```
 $ diff -q meta/i18nForkTouchedFiles.json          "$SCRATCH/forkTouched.fixed.json"
 $ diff -q meta/i18nGateScope.json                 "$SCRATCH/gateScope.fixed.json"
 $ diff -q meta/__tests__/genI18nGateScope.test.ts "$SCRATCH/genI18nGateScope.test.fixed.ts"
 ALL THREE ARTIFACTS BYTE-IDENTICAL TO POST-TASK-2 STATE
 ```
+
 (all three `diff -q` commands produced no output, i.e. no difference; `git status --porcelain`
 confirmed only the pre-existing untracked plan directory remained.)
 

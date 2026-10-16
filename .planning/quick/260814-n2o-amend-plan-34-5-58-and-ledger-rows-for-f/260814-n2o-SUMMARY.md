@@ -10,6 +10,7 @@ dependency-graph:
     - "34.5-58-PLAN.md's condition-(4) grep, preconditions, and operator script corrected for the post-e76820d8d log contract"
   affects:
     - "34.5-58's operator-present session (not yet run)"
+
 tech-stack:
   added: []
   patterns: []
@@ -18,10 +19,15 @@ key-files:
   modified:
     - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-UNTESTED-ITEMS.md
     - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-58-PLAN.md
+
 decisions: []
 metrics:
   duration: "~35 min"
   completed: 2026-08-14
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260814-n2o: Amend plan 34.5-58 and ledger rows for F-34.5-G6-26 Summary
@@ -94,15 +100,18 @@ executed (no `34.5-58-SUMMARY.md` exists), so it was amended in place rather tha
 ## Verification Gates Run (raw output)
 
 **Task 1 automated gate:**
+
 ```
 LEDGER_OK
 ```
+
 (individual clauses all passed: row count 33, both target rows carry `**OPEN**` exactly once
 across the two lines, zero `RETIRED 2026-08-14` occurrences, `F-34.5-G6-26` present once in each
 row, `keyring-session-capture` present once in each row, the gate-3 `keyring_get failed:
 keyring:timeout` sentence still present once in `U-34.5-01`.)
 
 **Task 2 automated gate:**
+
 ```
 issuing keyring_get (may prompt) => 1
 keyring_get ok present= => 1
@@ -117,9 +126,11 @@ INTERFACES_OK
 
 **Task 3 automated gate (verbatim from the plan, run twice — first attempt caught two
 self-inflicted regressions, both fixed before the final pass below):**
+
 ```
 PLAN_AMEND_OK
 ```
+
 Supporting clause checks, all `OK`:
 - stale-grep clause == 0 (RED-proven: it was 1 before the fix, confirming the gate is non-vacuous)
 - `issuing keyring_get (may prompt)` >= 3, `keyring_get ok present=` >= 3, `served from cache` >= 3,

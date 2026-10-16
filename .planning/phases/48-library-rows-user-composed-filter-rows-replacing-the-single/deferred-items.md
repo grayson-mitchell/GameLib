@@ -12,11 +12,12 @@ Out-of-scope discoveries logged by executors. Not fixed by the plan that found t
   (`git diff 752b510f8 HEAD --name-only` confirms). It reproduces alone, so it is not one of the known
   parallel-load flakes (`fakeHomeIsolation`, `appShellFlows`). Needs its own todo or quick task: decide whether
   the 261003-u48 wiring or the gate is stale.
+  status: acknowledged
 
 ## Found by 48-13 (2026-10-09)
 
 - **`pageScrollDelta` / `canScrollForward` take one click too many in a floor-clientWidth model at single-column widths.**
-  status: open
+  status: acknowledged
   With `scrollWidth` rounded and `clientWidth` floored, the residual travel at the end can be 1.28px, above
   `SUBPIXEL_EPSILON` (1), so the control stays enabled for one extra click that scrolls about 1px. First failing
   triples: n=14 content 161.92 (14 clicks, want 13); n=20 content 164.88 (20, want 19). The rounded model passes

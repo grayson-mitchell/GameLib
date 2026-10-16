@@ -12,6 +12,9 @@ parked: 2026-08-23
 parked_by: operator
 revisit_trigger: "the timeout recurs with a cookie operation in the same window"
 related_requirement: REQ-34.4.1-GAP-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
 ---
 
 # F-9 — a generic RPC timeout fired live; co-occurrence with a cookie op is UNDETERMINED
@@ -347,9 +350,13 @@ timeout shape recurred since persistence began (`6fb96c76a`) and names its chann
 exactly what that does and does not establish.
 
 ```
+
 # macOS
+
 grep -c 'invoke abandoned\|unknown/timed-out' ~/Library/Logs/GameLib/gamelib-shell.log
+
 # Linux (and any non-macOS build that sets HOME)
+
 grep -c 'invoke abandoned\|unknown/timed-out' ~/.config/gamelib/gamelib-shell.log
 ```
 

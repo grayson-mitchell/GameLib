@@ -5,15 +5,18 @@ subsystem: ui
 tags: [steam, ipc, react, i18n, install-size]
 
 # Dependency graph
+
 requires:
   - phase: 260710-kba
     provides: getFileSize-formatted install_size string convention for Steam
 provides:
   - "getSteamInstallSize IPC handler (backend + type + preload invoker)"
   - "Pre-install Steam game page estimated Install Size row"
+
 affects: [game-details-ui, steam-store-manager]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -35,8 +38,13 @@ key-decisions:
 requirements-completed: [QUICK-260710-m3f]
 
 # Metrics
+
 duration: ~15min
 completed: 2026-07-10
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260710-m3f: Show Estimated Install Size on Pre-Install Steam Game Page Summary
@@ -50,6 +58,7 @@ completed: 2026-07-10
 - **Files modified:** 5
 
 ## Accomplishments
+
 - New `getSteamInstallSize` IPC handler (type declaration, backend registration, preload invoker) mirroring the existing Steam handler pattern exactly
 - `DownloadSizeInfo.tsx` now renders an estimated Install Size row for not-installed online Steam games (loading label, "Unknown" fallback, "~ {size} (estimate)" success state) instead of returning null
 - No Download Size row rendered for Steam, per the locked design decision
@@ -65,6 +74,7 @@ Each task was committed atomically:
 **Plan metadata:** committed separately by the orchestrator
 
 ## Files Created/Modified
+
 - `src/common/types/ipc.ts` - Added `getSteamInstallSize: (appId: string) => Promise<string>` to `AsyncIPCFunctions`
 - `src/backend/main.ts` - Imported `getSteamInstallSize` from `storeManagers/steam/games`; registered a thin pass-through `addHandler('getSteamInstallSize', ...)`
 - `src/preload/api/steam.ts` - Added `export const getSteamInstallSize = makeHandlerInvoker('getSteamInstallSize')`
@@ -72,6 +82,7 @@ Each task was committed atomically:
 - `public/locales/en/gamepage.json` - Added `game.installSizeUnknown` and `game.estimate` i18n keys
 
 ## Decisions Made
+
 - Extracted the Steam-only UI into a separate `SteamInstallSize` component so its `useState`/`useEffect` hooks are called unconditionally, rather than adding hooks after `DownloadSizeInfo`'s existing early returns (React Rules of Hooks).
 - Kept the IPC handler a pure pass-through of `appId` only (no `gameInfo`) since the frontend only calls it for not-installed games — the installed-game fast path inside `getSteamInstallSize` (which needs `gameInfo`) doesn't apply here, matching the plan's guidance.
 

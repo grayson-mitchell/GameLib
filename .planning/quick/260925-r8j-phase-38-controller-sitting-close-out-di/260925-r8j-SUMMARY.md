@@ -9,12 +9,15 @@ provides:
   - "38-HUMAN-UAT.md: Sitting 3 session block with full artifacts"
   - "Origin-phase receipts (34.1, 34.10, 34.11, 34.13) reconciled with discharge outcomes"
   - "Two pending todos: controller-focus affordance (major), mouse-highlight-vs-DOM-focus (medium)"
+
 affects:
   - src/frontend/helpers/gamepad.ts
+
 tech-stack:
   added: []
   patterns:
     - "Line-scanning read/write for non-strict-YAML planning files (38-VERIFICATION.md, 34.13-UAT.md), never js-yaml"
+
 key-files:
   created:
     - .planning/todos/pending/2026-09-25-controller-focus-has-no-perceptible-affordance.md
@@ -27,13 +30,19 @@ key-files:
     - .planning/phases/34.11-library-filtering-search-views-collections-and-cross-store-f/34.11-VERIFICATION.md
     - .planning/phases/34.13-steam-install-time-wine-bottle-form-gog-parity/34.13-UAT.md
     - src/frontend/helpers/gamepad.ts
+
 decisions:
   - "34.10 gets an `outcome:` field on its existing `deferred[0]` receipt rather than a new `human_verification_relocated` key — decided in-plan (`the_34_10_decision`), because the two-way relocation obligation was already satisfied by that entry and a second parallel receipt would only create drift risk."
   - "38-C03's `test:`/`expected:` text corrected at discharge to describe tab/shiftTab as rewrites inside `checkAction()`'s switch, never a physical binding — disclosed explicitly as a specification correction, not a re-score."
   - "38-C01a's cold-start clause discharged as covered by 38-C01b's shared `!el` recovery branch, explicitly NOT claimed as an independently observed d-pad event."
+
 metrics:
   duration: "~35 minutes (five task commits, ~20:11-20:24 local time for the commit span; earlier tasks took longer per-task due to file size)"
   completed: 2026-09-25
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260925-r8j: Phase 38 Controller Sitting Close-Out Summary

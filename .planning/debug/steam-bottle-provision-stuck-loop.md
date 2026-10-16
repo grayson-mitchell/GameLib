@@ -4,6 +4,10 @@ trigger: "UAT Issue 1 BLOCKER (MACSTEAM-02): macOS+CrossOver install of Windows-
 created: 2026-07-11
 updated: 2026-07-11
 resolved_by: [17-08, 17-10]
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: resolved-pending-verify
 ---
 
 ## Current Focus

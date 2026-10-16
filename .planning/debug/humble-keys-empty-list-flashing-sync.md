@@ -3,6 +3,10 @@ status: awaiting_human_verify
 trigger: "Phase 11 Humble key sync live-UAT round 2: keys list empty despite 'Last synced 7 minutes ago'; freshness line flashes on/off repeatedly on startup and after manual refresh; manual refresh does not advance syncedAt"
 created: 2026-07-06T12:00:00Z
 updated: 2026-07-06T15:00:00Z
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_verify
 ---
 
 ## Current Focus

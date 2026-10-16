@@ -12,3 +12,4 @@ caused by the current task's changes).
   but never used (`@typescript-eslint/no-unused-vars`).
 - `src/backend/__tests__/tauriShellSource.test.ts:1424` -- an unnecessary type assertion
   (`@typescript-eslint/no-unnecessary-type-assertion`).
+  status: acknowledged

@@ -5,6 +5,7 @@ subsystem: testing
 tags: [jest, typescript, regex, rust, test-infrastructure]
 
 # Dependency graph
+
 requires:
   - phase: 34.2 gap cycle 3
     provides: WR-08 quote-balance guards and their falsifiability-lever discipline
@@ -12,9 +13,11 @@ provides:
   - stripRustRawStrings() normalizer in longRunningChannels.test.ts
   - both WR-08 guards made raw-string aware (no longer false-positive on commit 88c2043cc's multi-line r#"..."# literal)
   - 5 new self-tests, including the falsifiability lever proving guard (b) can still fail
+
 affects: [future WR-08 regressions, any test file that copies this stripper pattern (tauriConf.test.ts, tauriShellSource.test.ts)]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -37,8 +40,13 @@ patterns-established:
 requirements-completed: [WR-08]
 
 # Metrics
+
 duration: ~15min
 completed: 2026-08-02
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260802-o3j: Fix WR-08 stripper integrity regression Summary
@@ -53,6 +61,7 @@ completed: 2026-08-02
 - **Files modified:** 1
 
 ## Accomplishments
+
 - `stripRustRawStrings()` removes Rust raw string literals (`r"..."`, `r#"..."#`, `r##"..."##`, ...) with matched-hash-count closing, multi-line support, a mandatory non-identifier boundary guard, and newline-preserving replacement — added as a direct sibling of `stripRustCharLiterals`
 - Both WR-08 guards (whole-file and per-line) now call `stripRustRawStrings(loadMainRsCode())` on full source before any `.split('\n')`, with an inline comment protecting the ordering invariant from future refactors
 - 5 new self-tests added, including the falsifiability lever the WR-08 history comment demands: a genuinely truncated ordinary `"steam://` literal still reads as ODD after the new normalizer runs
@@ -69,9 +78,11 @@ completed: 2026-08-02
 _Note: Tasks 1 and 2 were implemented and verified together before a single atomic commit, since they modify the same function/describe-block region and splitting them into two commits would have left an intermediate commit with an unused helper function — no independent value to preserving that midpoint._
 
 ## Files Created/Modified
+
 - `src/backend/__tests__/longRunningChannels.test.ts` — added `stripRustRawStrings()` (normalizer + doc comment), wired it into both WR-08 guards, added 5 self-tests
 
 ## Decisions Made
+
 - Fixed the normalizer rather than weakening/skipping the failing assertion, following the WR-08 block's own recorded discipline and the Phase 34.4.1 precedent it names
 - Task 1 and Task 2 were committed together as one atomic commit rather than two, since Task 2's self-tests are the only thing that proves Task 1's normalizer is both correct and non-vacuous — splitting them would leave an intermediate commit whose "done" state (Task 1 alone) is unverifiable against the falsifiability requirement
 
@@ -86,6 +97,7 @@ None — plan executed exactly as written. One planning-time synthetic-test deta
 **Falsifiability hand-verification (Task 2's own "done" criterion).** Before finalizing, both required inversions were performed and reverted:
 1. Removing the non-identifier boundary guard entirely → self-test 5 ("leaves an ordinary string literal ending in r untouched") failed, correctly reporting real code (`"repair"`, `"com.gamelib.launcher"`) getting eaten.
 2. Replacing the `\3` hash backreference with a fixed single-hash closer → self-test 3 (the `r##"..."##` body-containing-`"#`` case) failed, correctly reporting the closer terminating early.
+
 File was restored to the verified-working version after each check and confirmed byte-identical via `diff` before proceeding.
 
 ## User Setup Required
@@ -105,6 +117,7 @@ None - no external service configuration required.
 `src-tauri/src/main.rs` ~line 1171 carries a doc comment on `reveal_post_script` explaining its JS template is assembled from `concat!` single-line pieces specifically because this WR-08 guard previously rejected multi-line raw strings. This fix lifts that constraint — a future cleanup could consolidate `reveal_post_script` into a single `r#"..."#` literal now that the guard is raw-string aware. `main.rs` was not touched by this task (it carries a separate, uncommitted Epic fix) and no action was taken here.
 
 ## Next Phase Readiness
+
 - WR-08 regression closed; guard remains falsifiable per the plan's own bar
 - No blockers for the separate Epic post-auth fix commit that follows this one
 

@@ -11,6 +11,7 @@ dependency-graph:
     - src/frontend/screens/Login/components/SteamLogin/index.scss
     - src/frontend/components/UI/Dialog/components/Dialog.tsx
     - (all 25 consumers of frontend/components/UI/Dialog -- see census below)
+
 tech-stack:
   added: []
   patterns: [shared-UI-Dialog-primitive-for-in-app-modal-windows, styled-Paper-component-level-override-over-competing-stylesheet]
@@ -22,13 +23,19 @@ key-files:
     - src/frontend/screens/Login/components/SteamLogin/index.tsx
     - src/frontend/screens/Login/components/SteamLogin/index.scss
     - src/frontend/components/UI/Dialog/components/Dialog.tsx
+
 decisions:
   - "User explicitly chose the in-app modal Dialog reading of 'same windowing as Humble' over a native child window, ratifying the plan as written."
   - "Round 2: operator's Task 3 verdict was FAIL (sharp corners, instant open). Root cause confirmed: .Dialog__element (Dialog/index.css) is dead CSS -- never applied to any real element."
   - "Round 3: operator overrode the round-2 Steam-only scope decision (\"fix the primitive properly for all of them\") -- the fix now lives in the shared Dialog primitive, reaching all 25 consumers."
+
 metrics:
   duration: "~40m (Tasks 1-2, round 1) + ~55m (Task 4, round 3); human gate outstanding"
   completed: "2026-08-20 (Tasks 1, 2, 4 done; Task 5 gate NOT yet run -- supersedes Task 3, which ran once and FAILED)"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260820-kq0 Plan 01: Steam login window chrome Summary
@@ -160,6 +167,7 @@ src/frontend/screens/Settings/sections/LogSettings/components/UploadedLogFilesLi
 src/frontend/screens/WebView/index.tsx
 src/frontend/screens/WineManager/components/WineManagerSettingsModal.tsx
 ```
+
 (`grep -rl "from 'frontend/components/UI/Dialog'" src/frontend --include="*.tsx" --include="*.ts"`)
 
 Every one of these now inherits the radius and transition fix below, since it goes through the
@@ -180,6 +188,7 @@ passed via `TransitionProps` on `MuiDialog` directly — verified by a `tsc` err
 (`TS2353: 'direction' does not exist in type 'TransitionProps'`) when first attempted that way.
 Instead, added a `forwardRef` wrapper matching MUI's own documented pattern for a directional
 Dialog transition:
+
 ```tsx
 const SlideUpTransition = forwardRef(function SlideUpTransition(
   props: React.ComponentProps<typeof Slide>,
@@ -188,6 +197,7 @@ const SlideUpTransition = forwardRef(function SlideUpTransition(
   return <Slide direction="up" ref={ref} {...props} />
 })
 ```
+
 wired via `TransitionComponent={SlideUpTransition}` and `transitionDuration={500}` on
 `MuiDialog`, replacing the implicit default `Fade`. `Slide` is confirmed built with
 `React.forwardRef` internally (`node_modules/@mui/material/Slide/Slide.js:81`), so passing it

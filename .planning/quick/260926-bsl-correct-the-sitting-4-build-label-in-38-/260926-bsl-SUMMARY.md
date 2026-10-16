@@ -9,6 +9,7 @@ dependency-graph:
   affects:
     - ".planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-HUMAN-UAT.md"
     - ".planning/todos/pending/2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md"
+
 tech-stack:
   added: []
   patterns: ["desk-diff transfer note", "inferred-vs-measured attribution labelling"]
@@ -17,11 +18,17 @@ key-files:
   modified:
     - ".planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-HUMAN-UAT.md"
     - ".planning/todos/pending/2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md"
+
 decisions:
   - "Sitting 4's build attribution is relabelled by INFERENCE from commit dates, not by measurement, and every place that carries the label (frontmatter row, Current Test prose, heading, Conditions paragraph) says so explicitly rather than reading as equally established with sitting 5's measured label."
+
 metrics:
   duration: "~35 min"
   completed: "2026-09-26"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260926-bsl: Correct the sitting-4 build label in 38-HUMAN-UAT.md Summary

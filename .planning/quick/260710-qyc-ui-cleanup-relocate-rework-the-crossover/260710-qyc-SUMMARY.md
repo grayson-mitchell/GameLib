@@ -5,6 +5,7 @@ subsystem: ui
 tags: [react, gamepage, i18n, crossover, codeweavers, wine]
 
 # Dependency graph
+
 requires:
   - phase: quick-260710-l27
     provides: "AppleWikiInfo component with separate Crossover/Wine rating rows (this plan relocates + reworks those rows)"
@@ -14,9 +15,11 @@ provides:
   - "Crossover row now shows the CodeWeavers logo instead of the generic WineBar icon"
   - "Wine row now links to AppleGamingWiki (macOS) or WineHQ AppDB (Linux) search instead of codeweavers.com"
   - "Extra-info tab no longer appears for games whose only extra data is applegamingwiki/codeweavers"
+
 affects: [gamepage, extra-info-tab, install-info-tab]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -40,8 +43,13 @@ patterns-established:
 requirements-completed: [QYC-UI-01]
 
 # Metrics
+
 duration: ~12min
 completed: 2026-07-10
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260710-qyc: UI Cleanup - Relocate/Rework CrossOver Summary
@@ -57,6 +65,7 @@ completed: 2026-07-10
 - **Files modified:** 3
 
 ## Accomplishments
+
 - `AppleWikiInfo` relocated out of the Extra-info tab into the Install-info tab (right after `PlatformSupport`, before `DownloadSizeInfo`)
 - `hasWikiInfo` gate corrected so the Extra-info tab no longer appears for games whose only extra data is applegamingwiki or codeweavers
 - Emulation rows now hidden entirely for native games via a new `is.native` early-return in `AppleWikiInfo`
@@ -75,11 +84,13 @@ Each task was committed atomically:
 **Plan metadata:** (to be added by orchestrator's docs commit)
 
 ## Files Created/Modified
+
 - `src/frontend/screens/Game/GamePage/index.tsx` - Relocated `<AppleWikiInfo>` from the extra TabPanel to the info TabPanel; narrowed the `hasWikiInfo` boolean to drop the `applegamingwiki`/`codeweavers.rating` terms
 - `src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx` - Added `is.native` early-return gate, swapped Crossover row icon to `CodeweaversLogo`, reworded both row labels, reworked `onClickWine` to branch on `is.mac` (AppleGamingWiki vs WineHQ AppDB)
 - `public/locales/en/gamepage.json` - `info.crossover-rating` → "Crossover emulation", `info.wine-rating` → "Wine emulation" (keys unchanged)
 
 ## Decisions Made
+
 None beyond the plan's locked decisions — all implemented exactly as specified (relocation target, gate expression, icon swap, wording, Wine-link branching, Crossover-link left untouched).
 
 ## Deviations from Plan
@@ -95,6 +106,7 @@ None - plan executed exactly as written.
 None - no external service configuration required.
 
 ## Next Phase Readiness
+
 - No blockers. The relocated/reworked emulation rows are ready for runtime visual UAT (needs GUI, consistent with other recent quick tasks in this session).
 - The pre-existing `pnpm lint` crash on `spike/crossover-compat-lookup.mjs` should be cleaned up in a separate follow-up task (delete the spike directory or fix the eslint config) — tracked in `deferred-items.md`, not blocking this task.
 

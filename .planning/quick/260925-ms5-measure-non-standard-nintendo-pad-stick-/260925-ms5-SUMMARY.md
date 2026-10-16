@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 260925-ms5: Measure the non-standard Nintendo pad's stick-click and Home/Capture indices — Summary
 
 **One-liner:** L3/R3 (stick clicks) measured at `buttons[10]`/`buttons[11]` on the operator's PowerA

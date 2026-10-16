@@ -18,3 +18,4 @@ executor Scope Boundary rule).
   the current task's changes; this predates and is unrelated to this
   plan's diff). Not fixed. Left for a dedicated todo/investigation outside
   this plan's scope.
+  status: acknowledged

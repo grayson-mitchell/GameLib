@@ -5,6 +5,7 @@ subsystem: tooling
 tags: [prettier, eslint, i18next, husky, pre-push, todo-lifecycle]
 
 # Dependency graph
+
 requires:
   - phase: quick-260909-s8x
     provides: "meta/lintScoped.cjs with SRC_CEILING/TESTS_CEILING replacing eslint --max-warnings"
@@ -13,9 +14,11 @@ provides:
   - "public/locales/en/gamelib.json commits the i18next key-ordering fixpoint"
   - "pending lint-ratchet todo closed and moved to completed/ with accurate attribution"
   - "git push --dry-run succeeds without --no-verify on fix/steam-native-install-stability"
+
 affects: [tooling, ci, pre-push-hook]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -48,8 +51,13 @@ key-decisions:
 requirements-completed: [QUICK-260911-ijv-01]
 
 # Metrics
+
 duration: ~15min
 completed: 2026-09-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260911-ijv: Fix the red pre-push prettier gate and close the stale lint-ratchet todo Summary
@@ -126,6 +134,7 @@ All items below were measured live, not assumed:
 ```
 $ git status --porcelain .planning/STATE.md .planning/ROADMAP.md
 ```
+
 Output: **(empty)** — confirmed no gsd-sdk `state.*`/`roadmap.*` verb was invoked and neither file was hand-edited.
 
 ## Untracked-file preservation check
@@ -135,6 +144,7 @@ $ git status --porcelain
 ?? .claude/skills/archify/
 ?? skills-lock.json
 ```
+
 Both remain untracked after all four commits, as required — neither ever appeared in `git diff --cached --name-only` before any commit in this task.
 
 ## Next Phase Readiness

@@ -85,6 +85,7 @@ Whoever picks up the general `i18nForkTouchedFiles.json` staleness backlog shoul
 run `pnpm gen-i18n-gate-scope` (noting WR-17's caveat about `pnpm i18n` catalog
 drift dropping 8 panel files if run naively) or hand-triage each of the 13 files
 into either `meta/i18nGateScope.json` or the test's `DECLARED_UNSCANNED_DEBT` list.
+  status: acknowledged
 
 ## 34.12-06 — `helperProcess.test.ts` timeout under full 5-project `pnpm test`, resource-contention flake, unrelated to this plan (out of scope)
 

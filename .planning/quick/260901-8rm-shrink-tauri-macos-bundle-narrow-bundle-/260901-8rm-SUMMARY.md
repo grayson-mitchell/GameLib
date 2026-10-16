@@ -10,6 +10,7 @@ provides:
   - "Merged-map config test coverage (packagingConfig.test.ts) proving base+overlay shape per platform"
   - "Measured packaged-macOS-artifact census (260901-8rm-MEASUREMENTS.md) confirming Tauri's platform-config merge is DEEP"
   - "Executable brief for fix (2) (frontendDist repointing) with two costed candidate designs"
+
 affects: [build, packaging, macos-bundle-size, tauri-config]
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed: [TODO-2026-08-28-BUNDLE-SIZE-FIX-1]
 
 duration: ~25min
 completed: 2026-09-01
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260901-8rm: Narrow Tauri macOS bundle.resources into per-platform overlays Summary

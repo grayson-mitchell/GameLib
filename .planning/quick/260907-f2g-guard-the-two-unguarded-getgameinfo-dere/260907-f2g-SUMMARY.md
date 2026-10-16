@@ -6,17 +6,21 @@ tags: [protocol-handler, wine-tools, getGameInfo, D-01, guard-clause, red-proof]
 requires:
   - D-01 (260905-luf): SteamGame.getGameInfo() returns `{} as GameInfo` on a double cache miss as a deliberate cross-runner sentinel
   - 260907-e7a: the getGameInfo() census that identified these two sites as class 6
+
 provides:
   - findGame()'s explicit-runner branch returns `undefined` for the D-01 sentinel
   - runWineCommandOnGame() returns the handled no-op shape when GameInfo carries no install path
+
 affects:
   - src/backend/protocol.ts
   - src/backend/tools/index.ts
+
 tech-stack:
   added: []
   patterns:
     - "Call-site guard for the D-01 sentinel, never a change to the `{}` return itself"
     - "Guard + early-return + logError, matching the shape of the adjacent guard, rather than a bare optional chain"
+
 key-files:
   created:
     - src/backend/tools/__tests__/runWineCommandOnGameGuard.test.ts
@@ -25,16 +29,22 @@ key-files:
     - src/backend/__tests__/protocol.test.ts
     - src/backend/tools/index.ts
     - .planning/todos/completed/2026-09-07-two-unguarded-getgameinfo-derefs-protocol-findgame-and-runwinecommandongame.md
+
 decisions:
   - "Site 2's fix is guard + early-return + logError, NOT the optional chain the filed todo proposed: `WineCommandArgs.gameInstallPath` is optional, so an optional chain type-checks and turns a loud TypeError into a silent bad-arg Wine run."
   - "Site 2's tests use `runner: 'gog'`, not `'steam'` — the 'steam' early return at tools/index.ts:879 precedes the deref, so a Steam runner would make every test in the file vacuous."
   - "dxvkEvidenceLines.test.ts:24-27's importability docstring is inaccurate but was NOT edited (out of scope); the correction is recorded in the closed todo and the new test file's header."
+
 metrics:
   duration: ~35 min
   completed: 2026-09-07
   tasks: 2
   commits: 3
   tests_added: 5
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260907-f2g: Guard the Two Unguarded getGameInfo() Derefs Summary

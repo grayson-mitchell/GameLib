@@ -10,6 +10,7 @@ requires:
 provides:
   - PROGRESS_HEARTBEAT_MS (1000ms) wall-clock heartbeat inside downloadDepotFiles
   - Guaranteed progressUpdate cadence independent of chunk-completion timing
+
 affects: [21-steam-native-install, 23-steam-full-ownership-install-stateflags-4]
 
 tech-stack:
@@ -33,6 +34,10 @@ requirements-completed: [QUICK-STEAM-PROGRESS-CADENCE]
 
 duration: 25min
 completed: 2026-07-18
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260718-jmt Summary
@@ -48,6 +53,7 @@ completed: 2026-07-18
 - **Files modified:** 2
 
 ## Accomplishments
+
 - Added `PROGRESS_HEARTBEAT_MS = 1000` named constant next to `PROGRESS_THROTTLE_MS` in `depot.ts`
 - `downloadDepotFiles` now starts a `setInterval(() => emitProgress(true), PROGRESS_HEARTBEAT_MS)` immediately before the worker `Promise.all`, wrapped in a `try { ... } finally { clearInterval(heartbeat) }` scoped to only that `Promise.all` — the interval is cleared on both normal completion and throw/abort
 - The pre-existing forced `emitProgress(true)` flush right after the `Promise.all`, and the outer `finally { await pool.shutdown() }`, are both untouched
@@ -62,6 +68,7 @@ Single TDD task, one atomic commit (test + implementation together per the plan'
 _No separate plan-metadata commit was made — per the executor's constraints, docs artifacts (SUMMARY.md, STATE.md) are committed separately by the orchestrator._
 
 ## Files Created/Modified
+
 - `src/backend/storeManagers/steam/depot.ts` - added `PROGRESS_HEARTBEAT_MS` constant + `setInterval`/`clearInterval` heartbeat wrapping the worker `Promise.all` inside `downloadDepotFiles`
 - `src/backend/storeManagers/steam/__tests__/depot.test.ts` - added a `describe('progress heartbeat: ...')` block with one test proving the heartbeat cadence and cleanup contract
 

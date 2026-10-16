@@ -2,6 +2,10 @@
 quick_id: 260906-vdn
 slug: write-41-review-fix-md-recording-the-clo
 completed: 2026-09-06
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260906-vdn: Record the phase 41 review fix pass

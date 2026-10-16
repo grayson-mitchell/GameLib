@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick task 260923-uvt — close the notarization todo, carry its residuals out first
 
 **Status: COMPLETE.** Documentation only. Baseline HEAD `6dabb9e37`, `pnpm planning-gates` 12/12

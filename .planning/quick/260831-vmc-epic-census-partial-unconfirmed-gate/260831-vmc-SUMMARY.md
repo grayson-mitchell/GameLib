@@ -5,27 +5,37 @@ subsystem: legendary/epic-logout
 tags: [testing, mutation-testing, epic, cookies, REQ-35-07, D-35-19-15, F-5-02]
 requires:
   - "src/backend/storeManagers/legendary/user.ts:564 (`if (unconfirmedHosts.length > 0)`) — READ-ONLY"
+
 provides:
   - "(e5) partial-unconfirmed boundary pin in epicCookieCensus.test.ts"
+
 affects:
   - "35-VERIFICATION.md finding F-5-02"
+
 tech-stack:
   added: []
   patterns:
     - "call-indexed jest mock counter to target one read inside a fixed-order sweep"
     - "record the rejecting call from the mock's OWN arguments, so the targeting assertion is not tautological"
+
 key-files:
   created: []
   modified:
     - src/backend/storeManagers/legendary/__tests__/epicCookieCensus.test.ts
+
 decisions:
   - "Target a MIDDLE host (unrealengine.com, index 2) rather than the first or last, so the pin cannot pass via a loop that short-circuits at an edge"
   - "Do NOT copy (e3)'s `not.toContain(`${host}=0,`)` — in (e5) four hosts legitimately record a zero"
+
 metrics:
   duration: ~25 min
   completed: 2026-08-31
   tests_before: 53
   tests_after: 54
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260831-vmc: Epic census partial-unconfirmed gate Summary

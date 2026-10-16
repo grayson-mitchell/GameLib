@@ -7,25 +7,34 @@ requires: []
 provides:
   - "CLAUDE.md UAT item shape convention"
   - "Restated audit-uat body-block-scalar todo (2026-09-18 decision)"
+
 affects:
   - CLAUDE.md
   - .planning/todos/pending/2026-09-11-audit-uat-reads-block-scalars-in-document-bodies.md
+
 tech-stack:
   added: []
   patterns:
     - "Append-only todo convention: new DECISION sections govern earlier sections, nothing deleted"
+
 key-files:
   created: []
   modified:
     - CLAUDE.md
     - .planning/todos/pending/2026-09-11-audit-uat-reads-block-scalars-in-document-bodies.md
+
 decisions:
   - "Adopt remedy option 2: accept the 26 existing expected:| blocks in 34.3/34.5/34.6-UAT.md as permanently ledgered by uat-visibility-gate.py; prevent NEW suppressed files via a CLAUDE.md authoring convention rather than flattening old ones."
   - "Severity of the todo reassessed major -> medium: the contamination is now bounded and CI-ledgered (not silently unwatched), though audit-uat's own JSON output still carries no internal indicator."
   - "Readiness stays human (not rubber-stamped to code): item A (27-UAT.md's two multi-paragraph reason: | fields) still needs a remedy SHAPE decided, since flattening is hard-excluded for multi-paragraph blocks by this todo's own census."
+
 metrics:
   duration: "~45 min"
   completed: 2026-09-18
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260918-amq Plan 01: UAT expected: inline convention Summary

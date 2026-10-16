@@ -5,14 +5,17 @@ subsystem: testing
 tags: [spike, crossover, codeweavers, feasibility, throwaway]
 
 # Dependency graph
+
 requires: []
 provides:
   - Measured slug-match rate (66.7% naive, ~83.3% with two documented slugify fixes) for CrossOver compatibility lookup by kebab-case slug against codeweavers.com/compatibility/crossover/{slug}
   - Corrected protocol understanding: misses are HTTP 200 soft-404s (title "404 Not Found | CodeWeavers"), never a real HTTP 404 status
   - GO recommendation (conditional) for a future backend service + compatibility pill feature
+
 affects: [future CrossOver/Wine compatibility backend + UI pill work]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns: []
@@ -30,8 +33,13 @@ patterns-established: []
 requirements-completed: [SPIKE-CROSSOVER-COMPAT]
 
 # Metrics
+
 duration: 6min
 completed: 2026-07-10
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260710-nwb: CrossOver Compatibility Lookup Spike Summary

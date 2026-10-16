@@ -5,7 +5,12 @@ requirements: [QUICK-260820-IC0, T-34.5-17, T-34.5-32]
 files_modified:
   - src/backend/sidecar/__tests__/wineToolsFlows.test.ts
   - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-SECURITY.md
+
 completed: 2026-08-20
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260820-ic0: Add the missing platform-branch absence gate Summary

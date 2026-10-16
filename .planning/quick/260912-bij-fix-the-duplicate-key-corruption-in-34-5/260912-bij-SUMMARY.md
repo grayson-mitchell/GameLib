@@ -4,6 +4,11 @@ type: execute
 baseline_head: 8c3eb8ffc
 files_modified:
   - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-UAT.md
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260912-bij: Fix the duplicate-key corruption in 34.5-UAT item 18 Summary

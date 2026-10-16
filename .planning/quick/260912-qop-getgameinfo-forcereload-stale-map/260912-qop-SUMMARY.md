@@ -11,6 +11,7 @@ provides:
     `installedGames` map, not re-read from `installed.json`.
   - Two recorded negative controls proving the probe can genuinely fail (not decorative).
   - A dated measurement note appended to the pending todo this probe serves (todo remains open).
+
 affects: [legendary-save-sync, installed-json-watcher]
 
 tech-stack:
@@ -42,6 +43,10 @@ requirements-completed: ['QT-260912-qop']
 
 duration: ~90min
 completed: 2026-09-12
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260912-qop: getGameInfo forceReload stale-map probe Summary

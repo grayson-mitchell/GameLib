@@ -11,10 +11,12 @@ dependency-graph:
     - "Preserved-in-repo evidence for keyring_get's bounded, classified 45s timeout"
   affects:
     - ".planning/todos/pending/ (one fewer open item)"
+
 tech-stack:
   added: []
   patterns:
     - "Archival discharge: grep the existing log archive before staging a fresh forced reproduction"
+
 key-files:
   created:
     - .planning/quick/260907-ov3-live-gate-the-keyring-get-bounded-classi/260907-ov3-LIVE-GATE.md
@@ -23,11 +25,17 @@ key-files:
     - .planning/quick/260907-ov3-live-gate-the-keyring-get-bounded-classi/260907-ov3-evidence-pre-346-12.log
   modified:
     - .planning/todos/completed/2026-08-23-keyring-get-bounded-timeout-unverified-live.md (git mv from pending/, appended 2026-09-07 disposition)
+
 decisions:
   - "Discharged the todo from three pre-existing log archives rather than staging a fresh forced Keychain-block reproduction, because the archive already contains a stronger specimen (naturally occurring, two independent slots in one session, negative control in the same session) than anything that could be staged, at zero teardown risk to a live credential slot."
+
 metrics:
   duration: "~35 minutes"
   completed: "2026-09-07"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260907-ov3 Plan 01: Live-gate the keyring_get bounded, classified timeout Summary

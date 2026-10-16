@@ -15,6 +15,10 @@ human_verification:
     expected: "Finder/Explorer reveals the file; openPath opens the file in its default app; quit/relaunch actually terminates/restarts the real Tauri process (no zombie sidecar)"
     why_human: "Real OS file-manager interaction and full process lifecycle (exit code, relaunch) cannot be verified by jest mocks of requestRustInvoke"
 required_reading_note: "REQUIREMENTS.md line 458 (REQ-33-10) checkbox is still unchecked ([ ]) despite 33-05-SUMMARY.md documenting a human-approved D-13 PASS on 2026-07-24. This is a bookkeeping gap, not a code gap -- flagged for the orchestrator, not blocking this verification's PASS-track findings."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 33: Tauri lifecycle cluster — app, dialog, window, notifications, tray Verification Report

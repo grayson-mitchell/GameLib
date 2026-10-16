@@ -12,6 +12,7 @@ provides:
     no-explicit-any: off, resolving the policy contradiction where any was sanctioned but its
     consumption rules still warned"
   - "package.json lint:src / lint:tests scripts exposing each ceiling independently"
+
 affects: [ci, lint, husky-pre-push, github-actions-lint-workflow]
 
 tech-stack:
@@ -49,6 +50,10 @@ requirements-completed: [QUICK-260909-s8x]
 duration: ~16min (commit-to-commit span; full session including measurement and the mutation
   matrix ran longer)
 completed: 2026-09-09
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260909-s8x: Split the Lint Ratchet Into Separate Production/Test Ceilings — Summary

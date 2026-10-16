@@ -20,6 +20,10 @@ human_verification:
   - test: "Log inspection after a real redeem attempt (any outcome)"
     expected: "No raw key value appears anywhere in gamelib.log"
     why_human: "Automated test asserts no mock logger call contains the key string; a full log-file inspection after a real run is the SPEC-mandated final check"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 26: Steam Key Redemption Verification Report

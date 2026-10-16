@@ -9,6 +9,7 @@ provides:
   - "meta/pruneStaleHelperBinaries.ts: mirror-prune vite plugin + fail-loud public/bin population guard"
   - "meta/checkBuildBinMirror.ts: standalone pnpm check:build-bin-mirror gate (files + symlinks + apparent bytes)"
   - "vite.config.ts wired with pruneStaleHelperBinariesPlugin() at buildStart, before preserveRunnerSymlinksPlugin()'s closeBundle"
+
 affects: [build-pipeline, macos-packaging, tauri-bundle-size]
 
 tech-stack:
@@ -40,6 +41,10 @@ requirements-completed: [QT-260901-a2w-01, QT-260901-a2w-02, QT-260901-a2w-03]
 
 duration: ~6min (commit-to-commit; wall-clock longer including research/verification)
 completed: 2026-09-01
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260901-a2w: Stop Shipping Stale build/bin Helper Files Summary

@@ -3,6 +3,10 @@ status: awaiting_human_verify
 trigger: "DATA_START Winetricks settings window not resizable by dragging on macOS, yet captures show three distinct widths DATA_END"
 created: 2026-10-12
 updated: 2026-10-12
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_verify
 ---
 
 ## Current Focus

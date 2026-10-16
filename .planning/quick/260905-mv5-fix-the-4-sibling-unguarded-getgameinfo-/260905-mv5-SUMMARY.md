@@ -11,6 +11,7 @@ provides:
   - src/backend/utils/gameTitle.ts (single title-fallback chain, zero runtime imports)
   - resolveTitleForGame(game, appName) for Game-instance display-string callers
   - D-03 guard (return false + logWarning) on both shortcutsExists handlers
+
 affects: [backend/utils, backend/downloadmanager, backend/shortcuts, backend/sidecar]
 tech-stack:
   added: []
@@ -18,6 +19,7 @@ tech-stack:
     - "zero-runtime-import module (import type only) to break a two-way circular dependency"
     - "handlerRegistry/listenerRegistry plain Maps (not jest.fn capture) to read IPC handler registrations under resetMocks:true"
     - "precedence-swap revert to RED-prove a 'live value still wins' no-regression assertion"
+
 key-files:
   created:
     - src/backend/utils/gameTitle.ts
@@ -32,13 +34,19 @@ key-files:
     - src/backend/__tests__/askForceUninstall.test.ts
     - src/backend/sidecar/__tests__/installFlows.test.ts
     - src/backend/sidecar/__tests__/shortcutsFlows.test.ts
+
 key-decisions:
   - "D-02: relocated resolveGameTitle into a new zero-runtime-import module (gameTitle.ts) instead of importing downloadmanager/utils.ts from utils.ts, to avoid closing a two-way cycle"
   - "D-03: shortcutsExists (both Electron and sidecar) returns false + logWarning instead of resolving a fallback title, because its title feeds a filesystem path (shortcutFiles), not a display string -- a synthesized fallback would probe a path addShortcuts never wrote (sanitize('') collapses to a SHARED ~/Applications/.app path on darwin)"
+
 requirements-completed: [QUICK-MV5-01]
 metrics:
   duration: ~51min
   completed: 2026-09-05
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260905-mv5: Fix the 4 sibling unguarded getGameInfo() title consumers Summary

@@ -18,6 +18,10 @@ human_verification:
   - test: "All hardware UAT items carried forward unresolved from the prior verification pass (native .acf adoption + hard-DRM launch, 10GB+ RSS/byte-correctness, real multi-depot game, bottled Windows Steam adoption, D-10 guided client install, D-11 prompt-to-launch)"
     expected: "See prior 21-VERIFICATION.md run (2026-07-16) human_verification list — unchanged, not in scope for this gap-closure pass."
     why_human: "Out of scope for 21-17; carried forward because they still gate full phase closure. Not re-verified in this pass per the phase's explicit scope fence (baseline plans 21-01..21-16 are authoritative, not re-verified from scratch)."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 21: Steam Native Install — Gap-Closure Verification (21-17)

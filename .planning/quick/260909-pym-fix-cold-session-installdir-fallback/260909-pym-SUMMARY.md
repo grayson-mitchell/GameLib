@@ -7,14 +7,17 @@ requires: []
 provides:
   - readAcfInstalldir (src/backend/storeManagers/steam/acfInstalldir.ts)
   - STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS (src/backend/storeManagers/steam/withTimeout.ts)
+
 affects:
   - src/backend/storeManagers/steam/installLocation.ts
   - src/backend/storeManagers/steam/library.ts
+
 tech-stack:
   added: []
   patterns:
     - "Shared leaf module for a filesystem read used by two callers that must never diverge (mirrors the existing single-sanitizer pattern)"
     - "ensureConnected() awaited with an explicit withTimeout bound before a decision that depends on connection state, rather than an unbounded await"
+
 key-files:
   created:
     - src/backend/storeManagers/steam/acfInstalldir.ts
@@ -25,13 +28,19 @@ key-files:
     - src/backend/storeManagers/steam/library.ts
     - src/backend/storeManagers/steam/withTimeout.ts
     - .planning/todos/pending/2026-09-09-cold-session-installdir-falls-back-to-app-appid.md
+
 decisions:
   - "ACF takes precedence over PICS in resolveSteamInstallTarget, and short-circuits the connect/PICS round-trip entirely when found — protects the three live app_257350/app_25900/app_402060 installs from ever growing a second directory on reinstall"
   - "STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS = 20000ms keeps the inner worst case (45000ms) strictly under games.ts's 50000ms outer WR-01 bound, with 5000ms headroom"
   - "The ACF candidate funnels through the exact same sanitizeInstalldir call as the PICS candidate — no ACF-only bypass, UnsafeInstalldirError not caught for either source"
+
 metrics:
   duration: "~55 minutes"
   completed: 2026-09-09
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260909-pym Plan 01: Fix cold-session installdir fallback Summary

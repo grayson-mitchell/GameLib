@@ -14,10 +14,12 @@ dependency-graph:
     - .planning/debug/humankind-depot-full-stall.md
     - .planning/debug/nile-spawn-app-side-latency.md
     - .planning/todos/pending/2026-09-11-audit-uat-reads-block-scalars-in-document-bodies.md
+
 tech-stack:
   added: []
   patterns:
     - "Insert-only prose line under `## Current Focus`, above the untouched YAML key, to make audit-open's first-non-empty-line slice legible without restructuring YAML"
+
 key-files:
   created: []
   modified:
@@ -26,12 +28,18 @@ key-files:
     - .planning/debug/humankind-depot-full-stall.md
     - .planning/debug/nile-spawn-app-side-latency.md
     - .planning/todos/pending/2026-09-11-audit-uat-reads-block-scalars-in-document-bodies.md
+
 decisions:
   - "Replaced 2 of the 4 planner-supplied prose strings after confirming they no longer matched the session's own recorded current state (see below); kept the other 2 verbatim after confirming them true."
   - "Built the two negative-control fixtures (NEG-hypothesis.json, NEG-counts.json) from the AFTER capture rather than the raw BASELINE, so each fixture differs from a valid state in exactly one dimension and the comparator's failure is attributable to the intended check, not a confound from stale pre-Task-1 hypothesis text."
+
 metrics:
   duration: "~50m"
   completed: "2026-09-12"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260912-n9i: Fix `audit-open` Current Focus emitting a YAML key Summary

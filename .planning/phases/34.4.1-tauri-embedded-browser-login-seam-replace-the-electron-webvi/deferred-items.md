@@ -23,6 +23,7 @@ issues directly caused by the current task's changes).
   scope-boundary rule.
 - **Disposition:** logged, not fixed. A future session touching `depot.test.ts` or its
   suite-ordering/timing assumptions should re-run this repro before assuming it is unrelated.
+  status: acknowledged
 
 ## Plan 18 — `seam-parity-sweep.py` category/term tables are stale relative to plans 12/13/15/16 (2026-07-30)
 
@@ -60,6 +61,7 @@ issues directly caused by the current task's changes).
 - **Disposition:** logged, not fixed. The regenerated `34.4.1-SEAM-PARITY-SWEEP.md` is committed
   as-is (mechanically honest per the script's own current rules) — plan 19 owns reconciling S-07/
   S-10/S-11's disposition text against the fact that F-6 and F-1 are both already closed.
+  status: acknowledged
 
 ## Plan 19 — `seam-parity-sweep.py`'s S-07/S-10/S-11 staleness re-forwarded, not fixed (2026-07-30)
 
@@ -89,6 +91,7 @@ issues directly caused by the current task's changes).
   `clearHumbleStorage`/`clearEpicStorage`, decide whether to add a formal decision id to
   `secretStore.ts`'s header or accept S-11's SILENTLY-DROPPED read as a known false-negative of
   the script's strict-by-design matching, and regenerate the sweep document.
+  status: acknowledged
 
 ## Plan 18 — `helperProcess.test.ts` full-suite-only flake (2026-07-30)
 
@@ -104,16 +107,19 @@ issues directly caused by the current task's changes).
   files (`src-tauri/src/main.rs`, `src/backend/humble/user.ts`, `src/backend/humble/adapter.ts`,
   and their tests). Not fixed here per the scope-boundary rule.
 - **Disposition:** logged, not fixed.
+  status: acknowledged
 
 ## Live observation — Keychain prompt storm at boot, and F-9's probable root cause (2026-07-31)
 
 - **Found during:** Plan 21 Task 3's human checkpoint. The operator booted the app to drive the
   spike-016 probe and was prompted for the Keychain password **20+ times on a single boot**. The
   probe itself was NOT run — this observation is not spike 016's answer, and Task 3 remains open.
+  status: acknowledged
 - **Second observation, same boot:** the Humble session survived the relaunch — **no re-login was
   required**. This is plan 13's F-1 fix (session cookie held in the `humble-session` keyring slot)
   behaving correctly across a real process restart. Not gate evidence on its own, but it is the
   first live signal that F-1's closure holds outside the test suite.
+  status: acknowledged
 
 ### Why this matters beyond the annoyance: it is very likely **F-9's root cause**
 
@@ -155,6 +161,7 @@ but not a catastrophic one. **This must be tested before plan 26 is re-scoped** 
 - **Open question for whoever picks this up:** does the prompt storm reproduce on a properly
   signed build? That single test decides whether this is a release-blocking defect or a
   dev-ergonomics problem with a latent timeout tail.
+  status: acknowledged
 
 ### Follow-up (2026-07-31, same day): signing hypothesis MECHANISM CONFIRMED, empirical test NOT RUNNABLE locally
 
@@ -208,6 +215,7 @@ attributable to the missing cache.
 **NOT runnable locally** (0 codesigning identities). It requires either a Developer ID cert
 installed on the test machine, or a CI run with the three Apple secrets populated. Do not record it
 as answered until one of those happens.
+  status: acknowledged
 
 ### Resolution of the "Always Allow" ambiguity (2026-07-31)
 
@@ -649,6 +657,7 @@ as an explicit addition — the existing inheritance demonstrably did not cover 
 finding was first recorded "F-9 watch CLEAN" on a `gamelib.log` grep that **could not have seen it**,
 because shell `eprintln!` never reaches the log file. *A clean grep of the wrong source is not
 evidence of absence.*
+  status: acknowledged
 
 ## Gap cycle 3 — ownership map for every D-29 item
 

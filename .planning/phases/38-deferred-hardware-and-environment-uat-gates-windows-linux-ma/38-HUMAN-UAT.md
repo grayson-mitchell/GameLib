@@ -18,6 +18,11 @@ sessions:
   - "Sitting 11 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified -- 38-W05 CONFOUNDED (window at 270 ms then SIGABRT at 364 ms, EGL_NOT_INITIALIZED on a host with a broken NVIDIA driver/library pair; glibc failure of sitting 10 cleared), item stays OPEN"
   - "Sitting 12 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified, NVIDIA driver/library matched at launch -- 38-W05 PASS (direct launch with no workaround, window at 265 ms, 11/11 samples, bundled sidecar alive, interactive Library UI, 0 glibc/EGL lines), discharged"
   - "Sitting 13 -- 2026-09-30, Windows 11 (operator's machine), CI-produced NSIS installer from release-tauri.yml run 36556473399 (`b48e8948f`, timing-bound, Authenticode NotSigned, updater .sig not verified), `pnpm tauri:dev` at `64bf2bfb4` (real-profile arm), and the spike 027 harness (native MSVC build) -- 38-W04 PASS, 38-S14 PASS (sub-case b incl. a real ADOM install), 38-S16 PASS (Windows/row-5 half), 38-E01 PASS, all four discharged; 38-E03 and 38-E04 branch (b) PASS on a modified harness, both items stay OPEN"
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  gap_snapshot: "false::scenarios=0"
 ---
 
 ## Current Test
@@ -239,7 +244,6 @@ Add a dated session block here when each sitting happens, then move the
 corresponding entries in `38-VERIFICATION.md` from `human_verification` to
 `human_verification_discharged` — annotating in place does not work, because the audit counts
 array membership and ignores any `result:` field.
-
 
 ## Sitting 2 — 2026-09-23, Windows 11, tauri dev build `2cf170c14`
 

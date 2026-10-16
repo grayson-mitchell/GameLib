@@ -9,6 +9,7 @@ provides:
   - "Live re-measure of the gog-logo.svg centring fix on Humble Keys and GamePage, in nord-light and nord-dark"
   - "Evidence set (6 captures + 2 prediction renders + measurements.md) under .planning/quick/260912-k09-*/evidence/"
   - "Closed todo: the owed live gate for quick task 260912-873"
+
 affects: [humble-keys-ui, gamepage-ui]
 
 tech-stack:
@@ -36,6 +37,10 @@ requirements-completed: []
 
 duration: 2h
 completed: 2026-09-12
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260912-k09: gog-logo centring live re-measure — Summary

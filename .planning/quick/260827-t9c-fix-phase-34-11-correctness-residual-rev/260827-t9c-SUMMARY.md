@@ -14,6 +14,7 @@ provides:
   - collectionIsStale() staleness predicate + wiring effect (WR-09 closed)
   - renderableActiveFilters() applied before activeFilterCount is derived (WR-12 closed)
   - 34.11-REVIEW-FIX.md and the pending todo reconciled to the same 5-open count
+
 affects: [34.11-library-filtering-search-views-collections-and-cross-store-f, phase-34-11-residual-review-warnings-todo]
 
 tech-stack:
@@ -49,6 +50,10 @@ requirements-completed: [WR-01, WR-05, WR-06, WR-09, WR-12]
 
 duration: ~25min (commit span 21:23–21:34 NZST across the 3 task commits; total session time longer due to a mid-execution context compaction)
 completed: 2026-08-27
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260827-t9c: Close Phase 34.11's 5 Correctness Residual Review Warnings Summary
@@ -126,6 +131,7 @@ None beyond the deviation above. All three tasks' own `<verify>` blocks passed o
 ## Verification Output (real, pasted)
 
 ### Task 1 verify (from prior session, re-confirmed clean by the full-suite runs below)
+
 Task 1's jest/eslint/tsc/anti-suppression checks all passed at commit time (`a0e7dfed7`); re-confirmed transitively by the Task 2 and final full-suite runs below, which include every file Task 1 touched.
 
 ### Task 2 verify
@@ -208,7 +214,9 @@ Tests:       1 failed, 1 skipped, 627 passed, 629 total
  meta/__tests__/genI18nGateScope.test.ts:415 — not touched, not caused by this task)
 
 $ git status --short --branch
+
 ## fix/steam-native-install-stability...gamelib/fix/steam-native-install-stability [ahead 15]
+
 (nothing pushed)
 ```
 

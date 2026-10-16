@@ -18,11 +18,17 @@ key-files:
     - src/backend/sidecar/__tests__/keyringTokenStore.test.ts
     - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-SECURITY.md
     - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-SECURITY-EVIDENCE-G6.md
+
 decisions:
   - "Option (a) from the G6 recommendation (monotonic cacheEpoch counter) implemented as specified; option (b) (accept as residual risk) explicitly rejected."
+
 metrics:
   duration: "~35 min"
   completed: 2026-08-20
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260820-fyl: Keyring cache-epoch guard closes T-34.5-G6-14 Summary
@@ -224,6 +230,7 @@ No `AR-34.5-0x` row added to the Accepted Risks Log -- nothing was accepted; the
 ## Commit sequence and working-tree isolation
 
 **BEFORE (Task 3, prior to the docs commit):**
+
 ```
  M .planning/STATE.md
  M .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-SECURITY-EVIDENCE-G6.md

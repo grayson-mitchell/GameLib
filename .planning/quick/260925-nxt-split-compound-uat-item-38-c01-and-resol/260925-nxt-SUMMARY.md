@@ -12,22 +12,30 @@ dependency-graph:
     - ".planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-VERIFICATION.md"
     - ".planning/phases/34.1-tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome/34.1-VERIFICATION.md"
     - ".planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-HUMAN-UAT.md"
+
 tech-stack:
   added: []
   patterns:
     - "UAT item split at branch boundary (relocation rule 4), replacing the compound parent in place rather than appending"
+
 key-files:
   created: []
   modified:
     - ".planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-VERIFICATION.md"
     - ".planning/phases/34.1-tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome/34.1-VERIFICATION.md"
     - ".planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-HUMAN-UAT.md"
+
 decisions:
   - "38-C04b (stick clicks) stays OPEN in human_verification rather than retired, per the user's locked decision, so the unmet expectation (no code dispatches L3/R3 to any action) stays visible to audit-uat instead of silently disappearing."
   - "Sitting 1's frozen historical records (the two sitting_1_2026_09_23 fields on 38-C03/38-C08, and the entire human_verification_retired array) were left verbatim; the new halves point back to their parent via origin_item instead."
+
 metrics:
   duration: "~45 minutes"
   completed: 2026-09-25
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260925-nxt: Split compound UAT item 38-C01 and 38-C04 Summary

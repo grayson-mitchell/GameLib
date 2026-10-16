@@ -13,6 +13,10 @@ unpark_reason: "Parking condition MET (app is now Tauri) and the symptom RECURRE
 also_tracked_as: "G-23.2-01 (.planning/phases/23.2-.../23.2-HUMAN-UAT.md) -- ROUTED OUT of that ledger 2026-08-19 (quick task 260819-r4k); the entry there is retained at status `routed` and that phase's open_gaps is now []"
 sole_owner: true  # since 2026-08-19 this file is the ONLY live record of the vanish defect. No phase ledger carries it as open, so /gsd-audit-uat will not resurface it. Do not archive or close this session until the bug recurs and is fixed.
 branch: fix/steam-native-install-stability
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: parked
 ---
 
 ## 2026-08-22 — nonAvailableGames trap RULED OUT as this defect's cause (still parked)

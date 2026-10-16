@@ -36,6 +36,7 @@ scope-boundary rule (pre-existing failures in unrelated files); not fixed here.
    `/gsd-secure-phase 34.3`.
 
 ---
+  status: acknowledged
 
 ## From plan 34.3-09 (Task 1, the blocking live-gate's automated sweep)
 
@@ -65,6 +66,7 @@ this phase's plans 34.3-01..08 modified (confirmed via `git diff --stat`). Not f
    run the full sweep from repo root, not `src/backend`.
 
 ---
+  status: acknowledged
 
 ## From plan 34.3-09 (Task 1) — SEA sidecar build was broken since Phase 34.2, fixed here
 
@@ -161,3 +163,4 @@ Not caused by this phase and not fixable from inside it. The stable steady-state
 
 Natural home: a dedicated test-isolation debug session — the fix is almost certainly an
 unclosed timer/handle in a shared module, not anything in the suites it lands on.
+  status: acknowledged

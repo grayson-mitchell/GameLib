@@ -36,6 +36,7 @@ Epic in the meantime (its login window is byte-unchanged, machine-enforced by
   `34.4.2-PLATFORM-SCOPE.md`, this file). Not fixed here per the scope-boundary rule.
 - **Disposition:** logged, not fixed. A future session touching `helperProcess.test.ts` or its
   suite-ordering/timing assumptions should re-run this repro before assuming it is unrelated.
+  status: acknowledged
 
 ## Plan 05 — `seam-parity-sweep.py` real-tree run fails on a site outside this phase's diff (2026-08-04)
 
@@ -61,6 +62,7 @@ Epic in the meantime (its login window is byte-unchanged, machine-enforced by
   `seam-parity-sweep.py` in its `files_modified` should add a `SITE_PROFILES` entry for
   `humbleLoginFlowRegistration.ts:449` (or classify it as a legitimate mechanical-tier miss) before
   trusting the sweep's completeness again.
+  status: acknowledged
 
 ## Plan 05 — pre-existing REQUIREMENTS.md checkbox/prose mismatches found, not fixed (2026-08-04)
 
@@ -107,6 +109,7 @@ closure.
   premature `[x]` back to `[ ]` if plan 06's live gate has not yet recorded a PASS for item 4 by the
   time that plan starts, and should investigate how REQ-34.4.2-07 came to be checked before this
   plan (05) had produced any artifact at all.
+  status: acknowledged
 
 ## Plan 07 — `.planning/STATE.md`'s "Next action" line points at an unrelated Phase 34.5 gap cycle (2026-08-04)
 
@@ -127,6 +130,7 @@ closure.
 - **Disposition:** logged, not fixed. A future session (ideally the one that opens Phase 34.4.2's
   own live-gate work, plans 09/10) should replace that line with 34.4.2's actual next action, or
   relocate the 34.5 gap-cycle-6 pointer to wherever Phase 34.5's own current-position block lives.
+  status: acknowledged
 
 ## Plan 09 — the autofill glyph's un-gated cross-platform injection remains unfixed, now with a macOS-gated sibling for contrast (2026-08-04) — **CLOSED 2026-08-05 by plan 13's deletion**
 
@@ -165,6 +169,7 @@ ever gating or shipping a cross-platform poster for it.
   or ship a real cross-platform poster so the icon is no longer inert off macOS. Until then, an
   unlabelled key icon that does nothing when clicked remains a worse experience than no icon at
   all on Windows/Linux -- this phase's own finding, still true.
+  status: acknowledged
 
 ## Plan 11 — seven `34.4.2-REVIEW.md` findings deliberately OUT of scope this cycle (2026-08-05)
 
@@ -240,6 +245,7 @@ the seven below sit adjacent but are not on those routes.**
   AppKit-executing test infrastructure, out of scope for this phase entirely. **Disposition:**
   logged, not fixed, no owning plan -- accepted as a standing limitation, mitigated by the live
   gate's own `attached=` requirement (`34.4.2-LIVE-GATE-RERUN-2.md` item 1).
+  status: acknowledged
 
 ## Plan 11 — the debug arc's three commits landed with no phase plan documenting them (2026-08-05)
 
@@ -259,6 +265,7 @@ the seven below sit adjacent but are not on those routes.**
   arcs: a debug session that lands commits mid-phase should route its documentation through the
   next phase plan (as this one did) rather than leaving the phase's own records silently stale
   about work that already shipped.
+  status: acknowledged
 
 ## Plan 13 — what the deletion deliberately did NOT do (2026-08-05)
 
@@ -286,6 +293,7 @@ on these four points as an oversight.**
   disable, and forbids re-proposing the affordance under a different synthesis approach, a
   different trigger event, or behind a kill switch. No such attempt was made in this plan, and none
   should be proposed by a future session without a new operator decision superseding D-A.
+  status: acknowledged
 
 ## Plan 14 — the nile spawn tax that motivates the guard, and one silently-swallowed refusal path (2026-08-05)
 
@@ -360,6 +368,7 @@ something to pre-empt with an out-of-scope fix.**
   or the refuse-or-arm check reference `request_login_sheet_cancel`, the harness-containment test,
   `PRESENTED_LOGIN_SHEETS`' eviction path, or `is_login_cancel_request`'s scheme handling). Stated
   here explicitly so the non-action is visible as a deliberate scope decision, not an oversight.
+  status: acknowledged
 
 ## Plan 15 — gate run 2's orphaned findings folded into the ledger (2026-08-05)
 
@@ -456,6 +465,7 @@ no previously-deferred finding (WR-02, WR-05, WR-08, IN-01, IN-03, IN-04) re-ope
   promise to "be more careful" next time. **This is measurable**: the count of structural
   impossibilities discovered during the next live run (plan 16) should be zero. If it is not, the
   review's own method — not just this one contract — should be revisited.
+  status: acknowledged
 
 ## Plan 16 — a fifth contract-authoring defect (an interaction, not a single unreachable requirement), plus two live findings (2026-08-05)
 
@@ -518,6 +528,7 @@ BLOCKS the phase, routed to gap cycle 4 for diagnosis.**
   candidate layers before attempting any fix, per this phase's own standing lesson that when two
   readings of a measurement both fit, the next step is to build a discriminator, not ship the
   nicer-sounding cause.
+  status: acknowledged
 
 ## Plans 17-18 — the wedge closed, its residual closed, and the review method upgraded (2026-08-06)
 
@@ -696,6 +707,7 @@ here. This section records the four findings and their dispositions.
   UI permits the user to do?). **Disposition:** logged against T-34.4.2-42
   (`34.4.2-PLATFORM-SCOPE.md` §5's eleventh update), not fixed here — a future review-authoring
   plan should add these two test classes before the next contract is trusted to be complete.
+  status: acknowledged
 
 ## Plan 23 — gap cycle 5 authoring: owners assigned to RERUN-4's four findings, F-34.4.2-10 deferred with reasons (2026-08-06)
 
@@ -760,6 +772,7 @@ finding.** Of the five items above, only F-34.4.2-17/F-C is recorded as closed �
 F-34.4.2-16/F-B, F-34.4.2-18/F-D and the T-34.4.2-42 scorecard entry are all owned and fixed IN THE
 CONTRACT, but none is closed until plan 34.4.2-24's run measures the behaviour each fix is supposed
 to enable. F-34.4.2-10 remains explicitly deferred, not owned by any fix this cycle.
+  status: acknowledged
 
 ## Plan 24 — the blocking live gate RAN against `34.4.2-LIVE-GATE-RERUN-5.md`, verdict FAIL, items_passed 0/5 — no launch was scorable (2026-08-06)
 
@@ -832,6 +845,7 @@ run mints and F-34.4.2-10's own updated status, per this ledger's own convention
   measured PASS with the path confirmed reached" (`34.4.2-PLATFORM-SCOPE.md` §5's twelfth
   update) — is NOT met.** F-34.4.2-10 stays OPEN and deferred, on the same three reasons stated
   there. Never omitted.
+  status: acknowledged
 
 ## F-34.4.2-19 Track 2 continuation — WR-03 deadline lead structurally ruled out; a gate-contract defect surfaces, plus one NEW unrelated logger defect (2026-08-08)
 
@@ -895,6 +909,7 @@ sub-check or required literal was changed; item 5 was not re-instated. All prior
 (`-LIVE-GATE.md`, `-RERUN.md`, `-RERUN-2.md`, `-RERUN-3.md`, `-RERUN-4.md`) remain byte-unchanged.
 No requirement box was ticked (`REQ-34.4.2-04`, `-05`, `-09` all stay `[ ]`, D-08's no-partial-pass
 rule). **Next: `/gsd-debug`** — the blocker (F-34.4.2-19) is an undiagnosed defect, not a known gap.
+  status: acknowledged
 
 ## F-34.4.2-19 CLOSED — debug session resolved the root cause; three residuals recorded (2026-08-08)
 
@@ -974,6 +989,7 @@ CLOSED as a diagnosed-and-fixed defect, but Phase 34.4.2's own six gate items (i
 `34.4.2-LIVE-GATE-RERUN-5.md` and any successor contract) have not been re-scored since this fix
 landed. A fresh live-gate run is the phase's own next step, and is separate work from this debug
 session — this session performed diagnosis and fix only, not phase-gate closure.
+  status: acknowledged
 
 ## RERUN-6 authored — D-G4/D-G5 locked, two findings retired, one NEW finding (2026-08-19)
 
@@ -1034,6 +1050,7 @@ empty, ran no harness, and launched no app. All six prior gate documents are byt
 REQ-34.4.2-09 both stay `[ ]`; D-08's no-partial-pass rule is untouched. `git diff --stat -- src
 src-tauri/src` is empty for this task. **Next: a human operator session runs
 `34.4.2-LIVE-GATE-RERUN-6.md`.** No GSD command advances this phase.
+  status: acknowledged
 
 ## RERUN-6 RAN — verdict PASS 5/5, the phase's first full PASS; two NEW contract defects (2026-08-19)
 
@@ -1092,3 +1109,4 @@ preceding item 4's own scored login at 16:56:42.
 retired by D-G4. **Still owed before formal closure: `34.4.2-VERIFICATION.md` reads `gaps_found`
 against RERUN-5 and must be amended IN PLACE — it was hand-corrected in `7e1781fbb`, so
 regenerating it destroys that correction.**
+  status: acknowledged

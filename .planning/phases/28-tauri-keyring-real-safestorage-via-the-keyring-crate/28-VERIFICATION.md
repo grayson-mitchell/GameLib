@@ -19,6 +19,11 @@ gaps:
         issue: "openExternal reader branch (lines 452-466) compiles and passes code review but has zero runtime/hardware evidence of actually opening a URL"
     missing:
       - "Hardware-verify a real steam:// launch through this path once a future phase ports the login channel and a game becomes launchable in the Tauri window (28-PROOF.md already recommends this as the next phase's own checkpoint item)."
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 28: Tauri keyring — real `safeStorage` via the `keyring` crate — Verification Report

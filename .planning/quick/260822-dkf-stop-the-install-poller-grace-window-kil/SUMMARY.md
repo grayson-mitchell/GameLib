@@ -10,6 +10,7 @@ requires:
 provides:
   - "startInstallPolling's grace window no longer fires while a GameLib-owned native depot download is live (gated on isNativeInstallInFlight(appId), read per-tick)"
   - "startInstallPolling's idempotent early return upgrades an existing poll's isNativeHandoff/skippedDepots instead of no-opping when the finalize-time handoff call arrives against a still-live download poll"
+
 affects: [backend/steam, downloadmanager, frontend-library-status]
 
 tech-stack:
@@ -33,6 +34,10 @@ requirements-completed: []
 
 duration: ~35min
 completed: 2026-08-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase 37 Plan 11: Stop the install poller's grace window killing the UI on slow native installs Summary

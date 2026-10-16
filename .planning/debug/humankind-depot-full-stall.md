@@ -32,6 +32,10 @@ symptoms:
     The REAL, confirmed post-fix symptom is: severely under-scaled
     throughput causing the user to give up and cancel manually, not a
     silent freeze.
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: investigating
 ---
 
 ## Current Focus

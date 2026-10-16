@@ -4,6 +4,10 @@ trigger: "Issue 2 (MAJOR, Test 3, MACSTEAM-04): macOS Install/Play on Windows-on
 created: 2026-07-11
 updated: 2026-07-11
 resolved_by: [17-09]
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: resolved-pending-verify
 ---
 
 ## Current Focus

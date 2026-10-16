@@ -9,8 +9,10 @@ key-files:
   created: []
   modified:
     - .planning/todos/pending/2026-10-05-windows-desktop-and-start-menu-shortcuts-are-never-written.md
+
 decisions:
   - "Todo kept pending: check 4 (and the icon half of check 3) FAIL for characters outside the Windows ANSI code page (1252 on this box); reproduced on two consecutive isolated runs and once in the real-profile arm."
+
 metrics:
   actuals:
     tokens: 24000
@@ -20,6 +22,10 @@ plan_head_before: 1ab283c76192c07dc630d5d8059d2a8877206766
 plan_head_after: f76382f6cc8248bb6576268a5a05fde9309f1c40
 commits: 1
 completed: 2026-10-12
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: incomplete
 ---
 
 # Phase quick-261012-9aa Plan 01: Live Windows gate for the pending shortcuts todo Summary

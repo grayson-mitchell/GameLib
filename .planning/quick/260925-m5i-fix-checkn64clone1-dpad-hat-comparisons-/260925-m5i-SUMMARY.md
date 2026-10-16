@@ -8,6 +8,7 @@ requires: []
 provides:
   - "checkN64Clone1's padDown/padRight hat comparisons corrected to match its own documented convention"
   - "Synthetic hat-axis test coverage for checkN64Clone1 (Vendor 0079 Product 0006 clone pad)"
+
 affects: [gamepad-layouts, nintendo-controller-support]
 
 tech-stack:
@@ -31,6 +32,10 @@ requirements-completed: [QUICK-260925-m5i]
 
 duration: ~15min
 completed: 2026-09-25
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260925-m5i: Fix checkN64Clone1 d-pad hat comparisons Summary

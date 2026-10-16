@@ -5,6 +5,7 @@ subsystem: steam
 tags: [steam, precedence, platform-signal, pics, appdetails, concurrency, cache]
 
 # Dependency graph
+
 requires:
   - phase: 34.15-steam-platform-signal-and-sync-integrity
     provides: the bulk PICS oslist platform-capture writer (platformCapture.ts) that this task
@@ -18,6 +19,7 @@ provides:
 affects: [steam-platform-row, steam-install-form, steam-library-sync]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -58,8 +60,13 @@ key-decisions:
 requirements-completed: [WR-02]
 
 # Metrics
+
 duration: 8min
 completed: 2026-08-16
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260816-qcn: Steam platform-signal precedence rule and serialised merge Summary

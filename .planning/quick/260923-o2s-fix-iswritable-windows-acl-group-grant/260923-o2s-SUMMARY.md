@@ -6,15 +6,18 @@ subsystem: filesystem
 tags: [windows, acl, filesystem, jest, write-probe]
 
 # Dependency graph
+
 requires: []
 provides:
   - "isWritable_windows as a real write probe (stat -> open('r+') or write-then-unlink), with the ACL-identity match and its single-entry-ACL trap deleted structurally"
   - "The first jest tests isWritable_windows has ever had, incl. a mocked regression case for the exact D:\\SteamLibrary ACL shape and a live opt-in arm"
   - "A recorded, load-bearing comment on isWritable_unix explaining why it stays an F_OK existence check"
   - "The ACL-group-grant todo retired to completed/ with an honest split of what is evidenced here vs left to the phase-38 orchestrator"
+
 affects: [filesystem, steam-install-dialog, download-dialog, phase-38]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -43,8 +46,13 @@ patterns-established:
 requirements-completed: [QUICK-260923-o2s]
 
 # Metrics
+
 duration: 9min
 completed: 2026-09-23
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: completed
 ---
 
 # Quick Task 260923-o2s: Fix isWritable_windows ACL group-grant blindness Summary
@@ -187,6 +195,7 @@ and `isWritable_unix`'s diff remains comment-only.
 Scoped run: `npx jest --selectProjects Backend --testPathPattern utils/filesystem`
 
 **Case 1 -- "group-granted directory is writable" (mocked, D:\SteamLibrary ACL shape):**
+
 ```
 expect(received).toBe(expected) // Object.is equality
 Expected: true
@@ -195,6 +204,7 @@ Received: false
 ```
 
 **Case 2 -- "single-entry ACL does not produce a false negative" (mocked):**
+
 ```
 expect(received).toBe(expected) // Object.is equality
 Expected: true
@@ -213,6 +223,7 @@ path also lacks a per-user ACE for `grays` (consistent with the todo's own measu
 test's expectation. Recorded honestly rather than retro-fit into the RED story.
 
 **Case 5 -- "the probe file is always removed":**
+
 ```
 expect(jest.fn()).toHaveBeenCalledTimes(expected)
 Expected number of calls: 1
@@ -221,6 +232,7 @@ Received number of calls: 0
 ```
 
 **Case 6 -- "an unlink failure cannot change the verdict":**
+
 ```
 expect(received).resolves.toBe(expected) // Object.is equality
 Expected: true
@@ -229,6 +241,7 @@ Received: false
 ```
 
 **Case 7 -- "an existing non-directory is probed without mutation":**
+
 ```
 expect(received).toBe(expected) // Object.is equality
 Expected: true
@@ -237,6 +250,7 @@ Received: false
 ```
 
 **Live arm (`GAMELIB_LIVE_WRITE_PROBE=1`, scoped to `windows.test.ts`), pre-fix:**
+
 ```
 isWritable_windows › live (opt-in, real Windows ACLs) › D:\SteamLibrary is writable
 expect(received).toBe(expected) // Object.is equality
@@ -244,6 +258,7 @@ Expected: true
 Received: false
   at windows.test.ts:274:19
 ```
+
 The sibling case, "a nonexistent path under D:\SteamLibrary is not writable", passed pre-fix
 (expected `false`, matching the unchanged existence contract).
 
@@ -252,10 +267,12 @@ The sibling case, "a nonexistent path under D:\SteamLibrary is not writable", pa
 Mocked arm: 9 passed, 2 skipped (live, not opted in) -- all seven `isWritable_windows` cases green.
 
 Live arm (`GAMELIB_LIVE_WRITE_PROBE=1`), post-fix:
+
 ```
 isWritable_windows › live (opt-in, real Windows ACLs) › D:\SteamLibrary is writable  PASS
 isWritable_windows › live (opt-in, real Windows ACLs) › a nonexistent path under D:\SteamLibrary is not writable  PASS
 ```
+
 11/11 passed. Confirmed via PowerShell (`Get-ChildItem -Filter '.gamelib-write-probe-*'`) that no
 probe file was left behind in `D:\SteamLibrary` after the run.
 

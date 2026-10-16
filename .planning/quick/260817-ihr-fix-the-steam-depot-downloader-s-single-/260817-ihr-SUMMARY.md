@@ -5,6 +5,7 @@ subsystem: steam-native-install
 tags: [steam, depot-download, concurrency, circuit-breaker, throughput]
 
 # Dependency graph
+
 requires:
   - phase: 25-steam-depot-download-multi-host-fan-out-throughput
     provides: TOP_N_FANOUT / workerSlot attempt-0 host fan-out (pickHost), which this
@@ -21,6 +22,7 @@ provides:
 affects: [23-10, steam-native-install, steam-depot-download]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -60,8 +62,13 @@ key-decisions:
 requirements-completed: [IHR-01, IHR-02, IHR-03]
 
 # Metrics
+
 duration: ~25min
 completed: 2026-08-17
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260817-ihr: Fix the Steam depot downloader's throughput regressions Summary

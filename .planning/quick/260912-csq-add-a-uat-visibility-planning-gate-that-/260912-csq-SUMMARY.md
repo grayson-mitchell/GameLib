@@ -12,24 +12,32 @@ dependency-graph:
   affects:
     - .planning/uat-visibility-gate.py
     - meta/runPlanningGates.py
+
 tech-stack:
   added: []
   patterns:
     - "Ledger literal GENERATED from a machine-written census JSON and injected through loud-failing anchors, never retyped from prose"
     - "Ratchet fails in four directions (regression, new offender, stale-high entry, vanished file) so an improving corpus cannot leave the pin silently stale"
     - "scan() takes its ledger as a parameter so all four ratchet directions are exercisable by the self-test through the real function"
+
 key-files:
   created:
     - .planning/uat-visibility-gate.py
   modified:
     - meta/runPlanningGates.py
+
 decisions:
   - "Recorded the VERIFICATION exclusion as a MEASURED decision with its evidence in the gate docstring, not as a scoping convenience: four VERIFICATION files are emitted by audit-uat WITH ITEMS today, so the pre-narrowing corpus would have booked 17 items as hidden in files the tool visibly surfaces."
   - "Defined verificationEmittedWithItems as the CONTRADICTION SET (emitted AND would-be-ledgered) after measuring that 7 VERIFICATION files are emitted with items, not 4. The plan's expected 4 is the intersection with the old ledger, and it reproduced exactly; the plan's wording was loose, the number was not wrong."
   - "Left the `result:` vocabulary filter (uat.js:154) entirely out of the gate's predicate and confined it to Task 1's comparison layer, so an item the regex matches counts as VISIBLE even when the tool later drops it."
+
 metrics:
   duration: "~55m"
   completed: "2026-09-12"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260912-csq: an eleventh planning gate makes `audit-uat` suppression LOUD

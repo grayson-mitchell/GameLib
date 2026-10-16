@@ -5,6 +5,7 @@ subsystem: testing
 tags: [jest, backend, comment-stripping, source-gate, vacuous-gate-defect]
 
 # Dependency graph
+
 requires:
   - phase: 34.2 (tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid)
     provides: the round-4 review that found the vacuous-gate defect and the human override that
@@ -19,6 +20,7 @@ provides:
 affects: [34.3, 34.4, 34.5, any future backend test file that needs a source-text gate]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -70,6 +72,10 @@ requirements-completed:
 
 duration: ~30min
 completed: 2026-07-26
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260726-q8f: Extract shared stripSourceComments util Summary
@@ -91,6 +97,7 @@ flipped in either direction.**
   already-correct copy)
 
 ## Accomplishments
+
 - Created `src/backend/testUtils/stripSourceComments.ts`, the single shared implementation, with
   an 8-case self-test whose Tests 1–3 were hand-RED-proofed against the old line-prefix-only
   implementation (all three failed, confirming the self-test can actually detect the defect it
@@ -119,6 +126,7 @@ flipped in either direction.**
 _No separate plan-metadata commit — this quick task's SUMMARY commit below serves that role._
 
 ## Files Created/Modified
+
 - `src/backend/testUtils/stripSourceComments.ts` — the shared util (block comments stripped via
   `/\/\*[\s\S]*?\*\//g` FIRST, then the pre-existing line-prefix filter UNCHANGED)
 - `src/backend/__tests__/stripSourceComments.test.ts` — 8-case self-test, placed at
@@ -201,6 +209,7 @@ source text, and swapping a local definition for an import changes that text. Th
 gate's outcome depended on the deleted comment-stripping code's specific bugs.
 
 ## Decisions Made
+
 - Block-comment removal precedes the line-prefix filter, and the filter is retained rather than
   replaced by a naive `/\/\/.*$/gm` pass — pinned by self-test Tests 5 and 6 (the `steam://`
   literal survives both a bare and a trailing-comment-adjacent form), preserving the WR-08
@@ -261,12 +270,15 @@ gate, editing an allowlist, or reverting the stripper fix — both resolved by d
 each gate's own documentation instructs.
 
 ## Issues Encountered
+
 None beyond the two items documented above under Deviations.
 
 ## User Setup Required
+
 None — no external service configuration required.
 
 ## Next Phase Readiness
+
 - The repo-wide vacuous-gate defect (a non-`*`-prefixed block comment satisfying a source-text
   gate) is closed: `grep -rn 'filter((line) => !/' src/backend` returns exactly 1 hit, the shared
   util's own retained line filter.

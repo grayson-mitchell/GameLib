@@ -47,6 +47,10 @@ requirements-completed: [Q-VVZ-01, Q-VVZ-02, Q-VVZ-03]
 
 duration: ~12min
 completed: 2026-08-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260815-vvz: Fix the dead app.hide sidecar fallback Summary

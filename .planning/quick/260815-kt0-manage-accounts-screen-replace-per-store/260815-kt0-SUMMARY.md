@@ -8,6 +8,7 @@ requires: []
 provides:
   - Uniform, localised, italic "Connected" indicator on all six Manage Accounts store tiles
   - Removal of the RunnerProps.user identity prop and its two identity-fallback strings
+
 affects: [login-screen, manage-accounts, i18n-gamelib-catalog]
 
 tech-stack:
@@ -34,6 +35,10 @@ requirements-completed: [QUICK-260815-kt0-01, QUICK-260815-kt0-02, QUICK-260815-
 
 duration: ~25min
 completed: 2026-08-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260815-kt0: Manage Accounts — Replace Per-Store Identity with Uniform Connected Label

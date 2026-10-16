@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 261001-pez: mid-drag frame capture for the Linux store embed
 
 **Result:** the "per-frame staleness during a continuous drag" gap that 260930-feh recorded as NOT MEASURED is now

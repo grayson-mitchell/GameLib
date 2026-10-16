@@ -7,24 +7,33 @@ requires: []
 provides:
   - "Closed report-upstream todo (completed/2026-09-24-report-gsd-sdk-unanchored-state-field-replace-upstream.md) with a Resolution section explaining why nothing was filed upstream"
   - "New pending decision todo (pending/2026-09-25-decide-whether-to-migrate-off-deprecated-get-shit-done-cc.md) framing migrate/fork-and-pin/stay-frozen as an open human call"
+
 affects:
   - ".planning/todos/pending/"
   - ".planning/todos/completed/"
+
 tech-stack:
   added: []
   patterns:
     - "git mv + append-only Resolution section for closing a todo as obsolete without disturbing its original body or frontmatter"
+
 key-files:
   created:
     - .planning/todos/pending/2026-09-25-decide-whether-to-migrate-off-deprecated-get-shit-done-cc.md
   modified:
     - .planning/todos/completed/2026-09-24-report-gsd-sdk-unanchored-state-field-replace-upstream.md (moved from pending/, Resolution section appended)
+
 decisions:
   - "Closed the report-upstream todo as obsolete rather than filing anything: the named repo (gsd-build/get-shit-done) was archived read-only 2026-06-26 with 0 open issues, and get-shit-done-cc on npm is deprecated and frozen at 1.42.3 -- no fix can ever land in the version GameLib runs regardless of who reports what."
   - "Opened a separate decision todo rather than folding the live exposure into the closure, so the migrate/fork-and-pin/stay-frozen question stays visible and undissolved."
+
 metrics:
   duration: "~15 minutes"
   completed: 2026-09-25
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260925-o9b Plan 01: Close obsolete report-upstream todo, open successor decision todo Summary

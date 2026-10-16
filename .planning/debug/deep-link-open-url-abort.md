@@ -5,6 +5,10 @@ trigger: "Tauri shell aborts (SIGABRT) intermittently inside the macOS deep-link
 created: 2026-08-29
 updated: 2026-08-29
 origin: Phase 35 plan 35-07 human-verify gate, Task 4 — blocks the gate and sits BEFORE plan 35-14, the phase's point of no return
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: investigating
 ---
 
 # Debug: `on_open_url` aborts the shell (panic across a nounwind ObjC boundary)

@@ -39,6 +39,10 @@ human_verification:
   - test: "Update check reports real results — WR-04 / WR-05 (30-UAT test 7)"
     expected: "The update check runs across runners without one failing runner killing the whole check (WR-05), and triggering an update on a game reports the actual outcome — a failed update surfaces as a failure, not a false 'success' (WR-04)."
     why_human: "Originally skipped for 'no installed game available' — a premise voided by the D-13 gate, since installs now work. Never exercised live. NOTE: the WR-04/WR-05 identifiers appearing in Phase 34 artifacts are DIFFERENT findings (packaging CSP / withGlobalTauri) and are not evidence for this item."
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 30: Tauri IPC re-plumb slice 1 (install/uninstall/update-check) Verification Report

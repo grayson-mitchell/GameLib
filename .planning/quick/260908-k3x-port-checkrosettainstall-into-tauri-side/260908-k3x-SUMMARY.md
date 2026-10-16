@@ -12,12 +12,18 @@ key-files:
     - src/backend/sidecar/__tests__/testContainment.test.ts
     - .planning/todos/completed/2026-09-06-checkrosettainstall-never-runs-under-tauri.md
     - .planning/STATE.md
+
 key-decisions:
   - "Chained checkRosettaWhenMac() off the CAUGHT i18next init promise (i18nReady), not statement order, so the dialog waits for the real catalog load"
   - "Mac gate lives in checkRosettaWhenMac(), not in checkRosettaInstall(), so the latter's own test suite stays valid and unmodified"
   - "Filed a live-gate todo rather than closing silently -- no test on this machine can observe the dialog painting on a Rosetta-less Apple Silicon Mac"
+
 duration: 23min (commit-visible span; pre-commit investigation of a test-timing defect added further unlogged time)
 completed: 2026-09-08
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260908-k3x: Port checkRosettaInstall into Tauri side Summary

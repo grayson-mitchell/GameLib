@@ -5,6 +5,7 @@ subsystem: infra
 tags: [rust, tauri, windows-registry, self-heal, dev-tooling]
 
 # Dependency graph
+
 requires:
   - phase: quick-260925-uok
     provides: repair_windows_gamelib_protocol_registration and its pure DECISION-block helpers
@@ -13,9 +14,11 @@ provides:
   - "The dev-build skip wired into repair_windows_gamelib_protocol_registration, before any registry call"
   - "Gate 5 source gate (+ two RED-proof self-tests) pinning the skip's ordering and log discipline"
   - "Live Windows proof that pnpm tauri:dev no longer rewrites HKCU\\Software\\Classes\\gamelib\\shell\\open\\command"
+
 affects: [windows-single-instance-guard, gamelib-deep-link-registration, tauri-dev-workflow]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -40,8 +43,13 @@ patterns-established:
 requirements-completed: [TODO-2026-09-26-gamelib-self-heal-dev-builds]
 
 # Metrics
+
 duration: 28min
 completed: 2026-09-26
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260926-f3l: Dev builds skip the gamelib:// HKCU self-heal Summary

@@ -8,6 +8,7 @@ requires: []
 provides:
   - Correct Nintendo-layout face-button labels in Console Mode
   - Index-based (not position-based) gamepad disconnect comparison
+
 affects: [console-mode-gamepad-hints, gamepad-connection-lifecycle]
 
 tech-stack:
@@ -35,6 +36,10 @@ requirements-completed: [QUICK-260821-ooq]
 
 duration: 45min
 completed: 2026-08-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260821-ooq: Port Heroic gamepad fixes (Nintendo face buttons + disconnect index bug) Summary
@@ -84,6 +89,7 @@ Each gate was proven RED against the pre-fix source via an in-place edit + in-pl
 
 **Gate 1 -- `getActionButtonLabel('nintendo')` should be `'B'`**
 Reverted `controller.ts`'s action function to the pre-fix `layout.startsWith('ps') ? '✕' : 'A'` (no nintendo branch). Result:
+
 ```
 ✕ nintendo layout: action={"action": "B", "back": "A"} back=%p (2 ms)
   Expected: "B"
@@ -93,32 +99,38 @@ Tests: 1 failed, 5 passed, 6 total
 
 **Gate 2 -- `getBackButtonLabel('nintendo')` should be `'A'`**
 Restored the action fix, reverted the back function to the pre-fix `layout.startsWith('ps') ? '◯' : 'B'`. Result:
+
 ```
 ✕ nintendo layout: action={"action": "B", "back": "A"} back=%p (1 ms)
   Expected: "A"
   Received: "B"
 Tests: 1 failed, 5 passed, 6 total
 ```
+
 Both label defect gates fail as predicted on the pre-fix source. Fix restored; `git diff --stat -- controller.ts` confirmed empty after restoration.
 
 **Gate 3 -- disconnecting the ACTIVE pad emits a reset even when its `gamepad.index` differs from its array position**
 Reverted `removegamepad` to the pre-fix `const removedIndex = controllers.findIndex(...)` / `if (removedIndex === currentController)`. Result:
+
 ```
 ✕ CASE 1 -- disconnecting the ACTIVE pad emits a reset ...
   Expected length: 2
   Received length: 1
   Received array:  [{"detail": {"controllerId": "Test Pad 3 (Vendor: 1234 Product: 5678)"}, "type": "controller-changed"}]
 ```
+
 Matches the plan's prediction exactly: `removedIndex` is `1` (array position of index-3 pad within `[0, 3]`), `currentController` is `3`, `1 !== 3`, so the reset never fires.
 
 **Gate 4 -- disconnecting a NON-active pad whose array position equals `currentController` emits nothing further**
 Same reverted source as Gate 3. Result:
+
 ```
 ✕ CASE 2 -- disconnecting a NON-active pad whose array position equals currentController emits nothing further
   Expected length: 1
   Received length: 2
   Received array:  [{"detail": {"controllerId": "Test Pad 0 (Vendor: 1234 Product: 5678)"}, "type": "controller-changed"}, {"detail": {"controllerId": ""}, "type": "controller-changed"}]
 ```
+
 Matches the plan's prediction: `removedIndex` is `0` (array position of index-5 pad within `[5, 0]`), `currentController` is `0`, `0 === 0`, so an unwanted reset fires even though the still-connected pad-0 should keep its hints.
 
 Both disconnect defect gates fail as predicted on the pre-fix source. Fix restored; `git diff --stat -- gamepad.ts` confirmed empty after restoration.

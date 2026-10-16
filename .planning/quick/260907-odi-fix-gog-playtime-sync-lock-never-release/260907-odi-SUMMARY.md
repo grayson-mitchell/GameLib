@@ -14,8 +14,13 @@ key-files:
     - src/backend/storeManagers/gog/__tests__/library.test.ts
     - src/backend/sidecar/__tests__/testContainment.test.ts
     - .planning/todos/completed/2026-09-06-gog-playtime-sync-lock-never-cleared-at-boot.md (git mv from pending/)
+
 metrics:
   completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260907-odi: Fix the GOG playtime sync lock — release it on throw, clear a stranded one at boot — Summary

@@ -9,6 +9,7 @@ requires:
     provides: WineSelector shared component (general InstallModal + SteamBottleSetup consumers)
 provides:
   - Reordered Wine-settings JSX in WineSelector so the "Use shared Wine prefix" toggle + warning render last
+
 affects: [phase-17-uat, wineselector, installmodal, steambottlesetup]
 
 tech-stack:
@@ -29,6 +30,10 @@ requirements-completed: [GAP-4-phase17-uat]
 
 duration: 5min
 completed: 2026-07-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260711-htb: Move "Use shared Wine prefix" toggle to bottom of WineSelector Summary
@@ -42,6 +47,7 @@ completed: 2026-07-11
 - **Files modified:** 1
 
 ## Accomplishments
+
 - Moved the `ToggleSwitch` (htmlId `use-shared-wine-config`) and its `useSharedPrefix &&` warning infoBox, as a pair, from the top of the Wine-settings `<details>` block to the bottom, below the `SelectField` (Wine version).
 - New render order: WinePrefix/CrossOver Bottle → Wine version SelectField → "Use shared Wine prefix" toggle → warning infoBox.
 - Change is global by construction (single shared `WineSelector` component) — applies to both the general InstallModal (Epic/GOG/Amazon/sideload) and SteamBottleSetup consumers.
@@ -54,9 +60,11 @@ completed: 2026-07-11
 _No separate plan-metadata commit — docs artifacts (this SUMMARY, STATE.md) are committed by the orchestrator._
 
 ## Files Created/Modified
+
 - `src/frontend/screens/Library/components/InstallModal/WineSelector/index.tsx` - Reordered the 5 sibling elements inside the Wine-settings `<details>` block; moved the shared-prefix toggle + warning to the bottom.
 
 ## Decisions Made
+
 - Pure JSX reorder only, no prop/state/style changes, matching the plan's explicit constraint and the locked decision that this reorder applies globally (not gated to Steam only).
 
 ## Deviations from Plan

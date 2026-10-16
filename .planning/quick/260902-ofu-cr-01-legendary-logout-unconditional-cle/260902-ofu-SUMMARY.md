@@ -11,6 +11,7 @@ provides:
   - "LegendaryUser.logout() runs its credential-side cleanup (configStore.delete('userInfo') + clearCache('legendary')) even when no login-window seam is installed"
   - "A 12th regression test in legendary/__tests__/user.test.ts pinning the no-seam invariant, proven RED-then-GREEN"
   - "39-VERIFICATION.md's sole human_verification item for Phase 39 marked resolved"
+
 affects: [legendary-auth, humble-seam-pattern, phase-39-verification]
 
 tech-stack:
@@ -35,6 +36,10 @@ requirements-completed: []
 
 duration: 25min
 completed: 2026-09-02
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260902-ofu: Close Phase 39 CR-01 Summary

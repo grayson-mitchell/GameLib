@@ -6,6 +6,11 @@ status: done
 resolves_todo: null
 commits:
   - e368075c3
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: done
 ---
 
 # Shrink shared control heights app-wide — Summary

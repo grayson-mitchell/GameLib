@@ -5,23 +5,31 @@ tags: [claude-code, hooks, graphify, cross-platform, settings.json]
 requires: []
 provides:
   - PATH-resolved graphify PreToolUse hook commands in tracked .claude/settings.json
+
 affects: [phase-38-windows-uat]
 tech-stack:
   added: []
   patterns:
     - "Shell-form PreToolUse hook commands use bare tool names resolved from PATH, never per-machine absolute paths, so a tracked settings.json works across macOS/Linux/Windows"
+
 key-files:
   created: []
   modified:
     - .claude/settings.json
     - .planning/STATE.md
+
 key-decisions:
   - "Kept shell form (bare command string), not exec form with args — exec form on Windows requires a real executable path and adds an out-of-scope args key"
   - "Left the missing-binary case unguarded (no `command -v` check) so an absent graphify fails loudly (exit 127, non-blocking for PreToolUse) rather than silently disabling the gate"
+
 requirements-completed: [QUICK-260906-H2K]
 metrics:
   duration: 15min
   completed: 2026-09-06
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260906-h2k: PATH-resolve the graphify PreToolUse hooks Summary

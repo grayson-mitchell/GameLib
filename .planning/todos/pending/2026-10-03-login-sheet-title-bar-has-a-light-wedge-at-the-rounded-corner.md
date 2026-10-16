@@ -11,6 +11,10 @@ files:
   - src-tauri/src/main.rs:3040-3140
   - src-tauri/src/main.rs:2919-3000
   - .planning/quick/261003-nsk-humble-login-title-bar/261003-nsk-CONTEXT.md
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
 ---
 
 ## Problem

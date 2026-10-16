@@ -5,13 +5,16 @@ subsystem: ui
 tags: [react, jest, frontend, game-page, install-flow]
 
 # Dependency graph
+
 requires: []
 provides:
   - "MainButton install onClick now tests !is.installing before opening the fresh-install modal"
   - "Type-enforced census (MainButton.installClickRouting.test.tsx) over every GameContextType['is'] key, guarding against a future flag silently re-introducing this defect shape"
+
 affects: [frontend-game-page, install-flow, steam-integration]
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -33,8 +36,13 @@ key-decisions:
 requirements-completed: []
 
 # Metrics
+
 duration: ~20min
 completed: 2026-09-07
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260907-dbh: Fix Pause/Cancel Button Opening Install Modal Summary

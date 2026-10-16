@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 260921-pvt: Delete the stray trailing closing tag Summary
 
 One-liner: Deleted a stray, orphaned XML-style closing tag (split spelling `` `</content` `` + `` `>` ``) that sat as the final line of six pending todos, and filed one new todo recording it as a recurring authoring artifact across two independent sessions, with the frontmatter gate's by-design blindness and the self-referential trap any future gate would face.

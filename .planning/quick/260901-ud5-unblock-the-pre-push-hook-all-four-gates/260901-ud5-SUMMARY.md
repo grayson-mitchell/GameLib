@@ -14,6 +14,10 @@ key-decisions:
 metrics:
   duration: ~32min across 3 commits (task1 22:01:54 NZST -> task3 22:33:49 NZST; work spanned a context-compaction boundary between tasks 2 and 3)
   completed: 2026-09-01
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260901-ud5: Unblock the pre-push hook Summary
@@ -35,6 +39,7 @@ _No plan-metadata commit was created by this executor — SUMMARY.md/STATE.md/RO
 ## Real Gate Output (all four `.husky/pre-push` legs, run after Task 3's commit)
 
 ### Leg 1 — `pnpm codecheck` (tsc --noEmit)
+
 ```
 > gamelib@0.7.0 codecheck /Users/graysonmitchell/Projects/GameLib
 > tsc --noEmit
@@ -43,15 +48,18 @@ LEG1_EXIT=0
 ```
 
 ### Leg 2 — `pnpm lint`
+
 ```
 ✖ 4195 problems (0 errors, 4195 warnings)
   0 errors and 71 warnings potentially fixable with the --fix option.
 
 LEG2_EXIT=0
 ```
+
 (Errors measured as JSON per the mandatory rule: `npx eslint --cache . -f json` filtered for `severity === 2` → 0 both before and after the Task 3 RedeemSteamKeyDialog fix below. Warnings pre-date this task and are not a gate.)
 
 ### Leg 3 — `pnpm prettier` (prettier --check .)
+
 ```
 > gamelib@0.7.0 prettier /Users/graysonmitchell/Projects/GameLib
 > prettier --check .
@@ -62,6 +70,7 @@ LEG3_EXIT=0
 ```
 
 ### Leg 4 — `pnpm i18n --fail-on-update`
+
 ```
 [en] translation
 Unique keys: 890 (8 are plurals)
@@ -89,6 +98,7 @@ Unreferenced keys: 0
 
 LEG4_EXIT=0
 ```
+
 Verified stable across five separate bare/`--fail-on-update` runs in this session — `Added keys: 0` / `Restored keys: 0` every time, and `git diff --name-status HEAD -- public/locales` shows only `gamelib.json` and `translation.json` differing from HEAD (the two files D-05 permits `pnpm i18n` to touch).
 
 **All four legs: exit 0.**

@@ -10,11 +10,13 @@ requires:
 provides:
   - "48 non-English gamelib.json catalogs carrying all 17 previously-missing keys"
   - "meta/i18nCatalogPresenceBaseline.json re-recorded to totalPairs: 0, missing: {}"
+
 affects: [i18n, meta/lintTranslations.ts consumers, future gamelib key additions]
 tech-stack:
   added: []
   patterns:
     - "prove-then-bulk: scope a machine-fill run to 2 locales, measure the delta, only then run the full 46-locale bulk fill"
+
 key-files:
   created: []
   modified:
@@ -22,12 +24,18 @@ key-files:
     - public/locales/*/gamelib.mt.json (48 locales)
     - meta/i18nCatalogPresenceBaseline.json
     - meta/__tests__/lintTranslations.test.ts
+
 key-decisions:
   - "Fixed meta/__tests__/lintTranslations.test.ts's R14 shrink-direction test to use an isolated fixture locales tree instead of depending on the real committed baseline having a non-empty `missing` map -- that assumption breaks once the map is genuinely empty, which is this task's intended outcome"
+
 requirements-completed: []
 metrics:
   duration: ~35min
   completed: 2026-09-06
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260906-u8i: Fill the 794 missing gamelib locale pairs Summary

@@ -9,6 +9,7 @@ provides:
   - "machineFillGamelib.ts's glossary source-presence check is now symmetric (case-sensitive) with its verbatim check"
   - "48 non-en gamelib.json locale catalogs + MT sidecars committed (landed by the coordinator as 3b3d813f2, not by this plan)"
   - "corrected coverage numbers on the owning todo (242 outstanding, 185 with a known fix, 57 undiagnosed)"
+
 affects: [i18n, machine-fill-gamelib, hardcoded-string-gate]
 
 tech-stack:
@@ -34,6 +35,10 @@ requirements-completed: []
 metrics:
   duration: "~40min (execution paused mid-Task-1 for an operator decision after the gate-blast-radius measurement; resumed after the coordinator's option-C directive and state hand-off)"
   completed: 2026-09-03
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260903-itr: Fix machineFillGamelib's glossary case asymmetry (revised from glossary-removal to root-cause fix) Summary
@@ -73,6 +78,7 @@ metrics:
 ## Gate results, verbatim
 
 **Baseline, before any edit (Browser still in glossary, 348 tests):**
+
 ```
 PASS Meta meta/__tests__/i18nGlossary.test.ts
 PASS Meta meta/__tests__/gamelibCatalogParity.test.ts
@@ -82,6 +88,7 @@ Tests:       348 passed, 348 total
 ```
 
 **After removing `Browser` from the glossary (the abandoned Task 1 attempt):**
+
 ```
 PASS Meta meta/__tests__/i18nGlossary.test.ts
 PASS Meta meta/__tests__/gamelibCatalogParity.test.ts
@@ -100,15 +107,18 @@ Tests:       2 failed, 346 passed, 348 total
 ```
 
 **New common-noun test, RED before the matcher fix (proof of non-vacuity):**
+
 ```
 ● glossary preservation › validateTranslation accepts a genuine translation of the common noun "browser" (not the glossed brand)
   expect(received).toEqual(expected)
   - Array []
   + Array [ "translation drops or alters glossary term \"Browser\" present in the source -- glossary terms must survive verbatim" ]
+
 Tests:       1 failed, 34 skipped, 5 passed, 40 total
 ```
 
 **Final gate run, all four suites, after the containsTermSourcePresence fix (revised Task 1 committed):**
+
 ```
 PASS Meta meta/__tests__/i18nGlossary.test.ts
 PASS Meta meta/__tests__/machineFillGamelib.test.ts

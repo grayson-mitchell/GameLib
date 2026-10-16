@@ -4,6 +4,10 @@ phase: 32-tauri-ipc-re-plumb-slice-3-downloads-and-queue
 source: [32-RESEARCH.md, 32-VALIDATION.md]
 started: 2026-07-23
 updated: 2026-08-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  gap_snapshot: "partial::scenarios=0"
 ---
 
 ## Current Test

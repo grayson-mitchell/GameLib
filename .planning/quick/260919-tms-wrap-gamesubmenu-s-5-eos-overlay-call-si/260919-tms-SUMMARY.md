@@ -12,6 +12,7 @@ provides:
   - "Shared EOS_FEATURE export in declaredUnavailable.ts, out of i18n gate scope"
   - "GameSubMenuEosDeclineCallSiteGuard.test.ts, a GameSubMenu-scoped sibling to AdvancedSettings' guard"
   - "Corrected, closed todo at .planning/todos/completed/2026-08-25-eos-overlay-gamesubmenu-bypasses-callordeclare-on-linux.md"
+
 affects: [gamesubmenu, declared-unavailable, eos-overlay, i18n-gate]
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed:
 
 duration: ~15min
 completed: 2026-09-19
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260919-tms: Wrap GameSubMenu's 5 EOS Overlay Call Sites Summary
@@ -184,10 +189,12 @@ Ran all test suites matching /src\/frontend\/screens\/Game\/GameSubMenu\/__tests
 ### Step 3: Meta hardcoded-string/i18n gates
 
 `npx jest --selectProjects Meta --runInBand meta/__tests__/hardcodedStringGate.test.ts meta/__tests__/genI18nGateScope.test.ts` →
+
 ```
 Test Suites: 2 passed, 2 total
 Tests:       1 skipped, 177 passed, 178 total
 ```
+
 Zero hardcoded-string/i18n violations across the whole committed scope, including `GameSubMenu/index.tsx`.
 
 ### Step 4: `pnpm codecheck`
@@ -201,6 +208,7 @@ Zero hardcoded-string/i18n violations across the whole committed scope, includin
 ✖ 638 problems (0 errors, 638 warnings)     <- tests scope, TESTS_CEILING = 638
 production: PASS | tests: PASS
 ```
+
 Exit code 0. Neither ceiling was raised; the tests-scope count landed exactly at the existing, unchanged ceiling (638), and production landed 5 under its ceiling (1119 of 1124).
 
 ### Step 6: `pnpm planning-gates`
@@ -208,6 +216,7 @@ Exit code 0. Neither ceiling was raised; the tests-scope count landed exactly at
 ```
 11/11 planning gates passed.
 ```
+
 Exit code 0, including `.planning/todos/todo-frontmatter-gate.py` and `.planning/planning-frontmatter-gate.py` against the corrected, moved todo.
 
 ## What Was NOT Verified

@@ -11,11 +11,13 @@ dependency_graph:
     - src/backend/downloadmanager/downloadqueue.ts
     - src/backend/utils/uninstaller.ts
     - src/backend/storeManagers/steam/library.ts
+
 tech_stack:
   added: []
   patterns:
     - runner === 'steam' guard inline in shared DM/uninstaller pipeline
     - ACF poller as sole owner of Steam status transitions and completion toasts
+
 key_files:
   modified:
     - src/backend/downloadmanager/utils.ts
@@ -23,14 +25,20 @@ key_files:
     - src/backend/utils/uninstaller.ts
     - src/backend/storeManagers/steam/library.ts
     - src/backend/storeManagers/steam/__tests__/library.test.ts
+
 decisions:
   - Notify calls in pollInstallOnce/pollUninstallOnce placed AFTER sendGameStatusUpdate{done} and BEFORE stopInstallPolling/stopUninstallPolling — ensures the badge flip and the toast happen atomically before the poll stops
   - Used existing?.title ?? '' fallback for notify title (TypeScript requires string not string|undefined); the fallback case never occurs in practice since polls are started for known library entries
   - Standalone unit tests for uninstallGameCallback deferred — see "Known Infeasibilities" section
+
 metrics:
   completed: "2026-06-29T08:11:15Z"
   tasks_completed: 2
   files_modified: 5
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260629-rbn Plan 01: Fix Premature Steam Install/Uninstall Notifications + Badge Flash

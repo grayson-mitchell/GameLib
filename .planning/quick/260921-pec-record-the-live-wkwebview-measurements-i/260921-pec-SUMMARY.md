@@ -9,13 +9,19 @@ key-files:
     - .planning/todos/pending/2026-09-20-the-bare-dialog-class-is-never-applied-to-any-element.md
     - .planning/todos/pending/2026-09-20-dialog-styledpaper-logs-wrapper-rule-has-a-stray-paren.md
     - .planning/todos/pending/2026-09-20-steam-key-dialog-input-has-no-css-rule-at-all.md
+
 decisions:
   - "bare-.Dialog margin todo re-triaged live-gate -> code: cascade question now measured, remainder is desk decision"
   - "stray-paren todo kept at live-gate, deliberately, narrowed to the single remaining user-visible question"
   - "Steam-key input todo re-triaged live-gate -> human: nothing left to measure, remainder is a design decision"
+
 metrics:
   duration: "~25 min"
   completed: 2026-09-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260921-pec: Record the live WKWebView measurements Summary
@@ -81,15 +87,18 @@ match, both `## Measured live under WKWebView` sections + evidence path present,
 stray-paren file, `Dialog__footer` in the Steam-key file).
 
 **Task 3 verify — scope fence and per-file frontmatter/section check:**
+
 ```
 rc-so-far=0
 ```
+
 (no FAIL lines emitted; `git diff --quiet -- src/ src-tauri/` exited 0, no file appeared under
 `.planning/todos/completed/`, and all three frontmatter blocks matched their expected
 `severity|platform|ready` strings exactly, each with the `## Measured live under WKWebView`
 section and full evidence path present.)
 
 **`git status --porcelain` before commits:**
+
 ```
  M .planning/todos/pending/2026-09-20-dialog-styledpaper-logs-wrapper-rule-has-a-stray-paren.md
  M .planning/todos/pending/2026-09-20-steam-key-dialog-input-has-no-css-rule-at-all.md
@@ -98,6 +107,7 @@ section and full evidence path present.)
 ```
 
 **`pnpm planning-gates` (verbatim tail):**
+
 ```
 [PASS] .planning/phases/34.2-tauri-ipc-re-plumb-slice-5-game-details-settings-and-overrid/currency-gate.py
 [PASS] .planning/phases/34.3-tauri-ipc-re-plumb-slice-6-shell-files-logs-and-diagnostics/ported-channels-gate.py
@@ -113,6 +123,7 @@ section and full evidence path present.)
 
 11/11 planning gates passed.
 ```
+
 Matches the baseline of 11/11 measured at HEAD `0188b54a9` before any edit.
 
 ## Self-Check

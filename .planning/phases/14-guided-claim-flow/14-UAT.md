@@ -4,6 +4,10 @@ phase: 14-guided-claim-flow
 source: [14-01-SUMMARY.md, 14-02-SUMMARY.md, 14-03-SUMMARY.md, 14-04-SUMMARY.md, 14-05-SUMMARY.md, 14-06-SUMMARY.md, 14-REVIEW-FIX.md]
 started: 2026-07-09T00:00:00Z
 updated: 2026-07-09T02:00:00Z
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  gap_snapshot: "partial::scenarios=0"
 ---
 
 ## Current Test
@@ -13,43 +17,51 @@ updated: 2026-07-09T02:00:00Z
 ## Tests
 
 ### 1. Cold Start Smoke Test
+
 expected: Quit GameLib completely. Relaunch the dev build from scratch. App boots without errors, Humble Keys screen renders both tabs, and a Humble sync completes — no blank lists, no crash from the new claim/audit stores or classifier-version bump.
 result: pass
 
 ### 2. Redeemed + Undo survives a sync (CR-01 fix)
+
 expected: With a key showing "Redeemed {date}" + "Undo" (from Mark as redeemed), trigger a Humble sync. After the sync finishes, the row STILL shows "Redeemed {date}" + "Undo" — it does not vanish from Keys waiting, and Undo still works.
 result: pass
 retest: "2026-07-09 after 14-07 gap closure + fix commits: Resident Evil Village keeps 'Redeemed {date}' + Undo through sync. Original failure: 'fail, after sync changes to redeemed'."
 
 ### 3. Revealed key keeps "Finish activation" after sync (WR-02 fix)
+
 expected: A key that has been revealed but NOT marked redeemed (row shows "Revealed {date}" + "Finish activation") stays visible in Keys waiting with the same button after a Humble sync — the server seeing the revealed key must not silently drop the row.
 result: pass
 retest: "2026-07-09 after 14-07 gap closure + fix commits: Californium keeps 'Revealed {date}' + Finish activation through sync. Original failure diagnosed as classifier misalignment (redeemed_key_val treated as Steam-REDEEMED); fixed by 14-07."
 
 ### 4. Undo a mistaken ownership override (WR-04 fix)
+
 expected: On a fuzzy "Likely owned" row in Giftable spares, click "Not the same game". The key moves to Keys waiting, and THERE it now shows an "Undo — I do own this game" control. Clicking it returns the key to Giftable spares. (Non-overridden fuzzy Spares rows no longer show a confusing pre-emptive Undo button.)
 result: skipped
 reason: "No fuzzy-matched key available to test — the only key in Spares is an exact match."
 
 ### 5. Finish activation loads without hanging (WR-05 fix)
+
 expected: Clicking "Finish activation" on a revealed key opens the wizard and shows the key promptly — never an infinite "Loading…" state. (If anything fails, you get an explicit outcome message, not a hang.)
 result: blocked
 blocked_by: other
 reason: "User: I think this was tested in an earlier test stage? don't have any more keys to test with at the moment, so lets defer. (Happy path was exercised live during the 14-06 checkpoint undo cycle, pre-fix; the WR-05 change only touched error paths.)"
 
 ### 6. C2 owned-key block (re-confirm from live checkpoint)
+
 expected: Clicking "Claim" on an owned or "Likely owned" key shows the "You already own this on Steam" panel routing to Giftable spares — no reveal happens. (You verified this live yesterday; quick re-confirm or reply "pass".)
 result: blocked
 blocked_by: other
 reason: "Deferred — no claimable keys remaining. Was verified live during the approved 14-06 checkpoint (2026-07-08)."
 
 ### 7. Danger-gated reveal, no auto-reveal (re-confirm from live checkpoint)
+
 expected: Opening the claim wizard never reveals a key by itself — the reveal fires only after you explicitly confirm the irreversibility warning. There is no "reveal all" anywhere. (Verified live yesterday; quick re-confirm or reply "pass".)
 result: blocked
 blocked_by: other
 reason: "Deferred — no unrevealed keys remaining. Was verified live during the approved 14-06 checkpoint (2026-07-08)."
 
 ### 8. Sync does not churn Keys waiting through intermediate states
+
 expected: A Humble sync/refresh updates key rows to their final categorization without visibly loading ALL keys into Keys waiting first and then progressively removing/recategorizing them.
 result: pass
 retest: "2026-07-09 after 14-08 gap closure (3e3a4606/01e9260d) + fix commits (d57b6f23/4bce6a3a/602d7ec9): user ran v6 migration sync + second normal sync — 'stable', no fill-then-empty churn. Original reports preserved in git history (4ca11a2a)."

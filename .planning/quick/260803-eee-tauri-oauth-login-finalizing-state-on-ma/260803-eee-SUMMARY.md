@@ -19,6 +19,7 @@ dependency-graph:
     - src/backend/sidecar/humbleLoginFlowRegistration.ts
     - src/backend/humble/loginWindowSeam.ts
     - src-tauri/src/main.rs
+
 tech-stack:
   added: []
   patterns:
@@ -27,6 +28,7 @@ tech-stack:
     - "Terminal-outcome callback called directly (bypassing safeSetState's !cancelled gate), guarded for navigation purposes by the consumer's own true-unmount mountedRef -- mirrors ac3557ddb's onLoginSuccess/handleTauriOAuthSuccess pattern"
     - "Window-close observed via WindowEvent::Destroyed (not CloseRequested) on the built WebviewWindow handle, relayed through the SAME LOGIN_WINDOW_EVENTS queue nav events already use -- one relay mechanism, not two"
     - "Resolve-first-wins achieved for free from an existing settled flag + chronological event-array order, no new synchronization primitive needed"
+
 key-files:
   created: []
   modified:
@@ -43,6 +45,7 @@ key-files:
     - src/backend/sidecar/humbleLoginFlowRegistration.ts
     - src/backend/sidecar/__tests__/oauthLoginCapture.test.ts
     - src/backend/sidecar/__tests__/humbleLoginFlows.test.ts
+
 decisions:
   - "Carry `runner` on the finalizing state member itself (mirroring `blocked`), so the panel names the runner from state alone rather than depending on the separately-passed `runner` prop staying in sync"
   - "Two pre-existing test assertions in useTauriOAuthLogin.test.tsx that captured the hook's captured-but-pending state as `{ phase: 'awaiting' }` were updated to `{ phase: 'finalizing', runner: 'gog' }` -- this is the exact, unavoidable, intended behavior change Task 1 introduces (see Deviations)"
@@ -51,9 +54,14 @@ decisions:
   - "Task 5: WindowEvent::Destroyed, not CloseRequested -- Destroyed is the point the window is actually gone; CloseRequested exists so a handler can veto the close, which this arm never wants to do"
   - "Task 5: the close signal reuses the EXISTING LOGIN_WINDOW_EVENTS queue and takeEvents() channel rather than adding a new rustInvoke command -- additive to an established seam, per the developer's explicit instruction to keep it in 34.4.1's existing shape"
   - "Task 5: coerceNavEvent's allow-list was the actual trap -- widening the TS type alone would NOT have fixed anything, since that function silently defaulted any unrecognized event to 'finished' before this task"
+
 metrics:
   duration_minutes: "~70"
   completed: 2026-08-03
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260803-eee Plan 01: Tauri OAuth login finalizing state Summary

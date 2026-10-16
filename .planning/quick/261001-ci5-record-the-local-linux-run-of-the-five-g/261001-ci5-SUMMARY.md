@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick 261001-ci5: local Linux run of the five guarded suites
 
 5 of 5 suites green on this Linux x86_64 host: 94 passed, 13 skipped (the predicted 9 + 4), 107 total (equals the macOS baseline).

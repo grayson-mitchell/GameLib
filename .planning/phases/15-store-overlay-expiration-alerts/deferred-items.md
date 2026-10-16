@@ -13,3 +13,4 @@
   `src/frontend/screens/Discounts/components/DiscountCard/index.tsx`) — zero
   errors/warnings. Not fixed per scope-boundary rule (Rule 1-3 scope is
   changes directly caused by the current task).
+  status: acknowledged

@@ -33,6 +33,10 @@ human_verification:
   - test: "Original UAT confirmed behaviors remain intact (regression check)"
     expected: "Steam Store tab still loads store.steampowered.com in the WebView with no LoginWarning and last-URL persistence. Steam games appear in Console with the Steam chip. Launch and install handoffs still work."
     why_human: "Runtime behaviors confirmed by the original UAT session — checking for regression from gap-closure edits requires re-running the same runtime checks"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 8: New Steam Surfaces Verification Report (Gap-Closure Re-Verification)

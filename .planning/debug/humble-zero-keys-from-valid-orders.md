@@ -3,6 +3,10 @@ status: awaiting_human_verify
 trigger: "Phase 11 Humble key sync live-UAT round 3: 'Humble sync finished: gamekeys=25 fetched=25/25 frozen=0 ok=25 schema_error=0 denied=0 expired=0 transient=0 keysCached=0' — all orders fetched and parsed ok, zero keys extracted; account verifiably has 1 direct-purchase Steam key + several gift keys"
 created: 2026-07-06T00:00:00Z
 updated: 2026-07-06T00:00:00Z
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_verify
 ---
 
 ## Current Focus

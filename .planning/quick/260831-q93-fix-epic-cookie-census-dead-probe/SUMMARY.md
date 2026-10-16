@@ -10,6 +10,7 @@ also_affects: [D-35-29-02, REQ-35-07]
 commits:
   - 9106ccbea  # fix: label-independent census read in the Rust arm
   - 0cbcde4bc  # test: gates that assert evidence, not absence-of-throw
+
 files_modified:
   - src-tauri/src/main.rs
   - src/backend/__tests__/tauriShellSource.test.ts
@@ -17,6 +18,11 @@ files_modified:
   - .planning/phases/35-electron-cutover-remove-the-electron-build/deferred-items.md
   - .planning/phases/35-electron-cutover-remove-the-electron-build/35-VERIFICATION.md
   - .planning/STATE.md
+
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260831-q93 — the Epic cookie census now produces a reading

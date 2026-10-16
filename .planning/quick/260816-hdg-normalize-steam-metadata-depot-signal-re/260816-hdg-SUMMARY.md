@@ -6,20 +6,24 @@ tags: [steam, metadata-cache, install-form, depot-signal, source-gate]
 requires:
   - "Phase 34.14 D-04 fail-open (install-form platform row)"
   - "games.ts getGameInfo self-heal refetch (DETAIL-01)"
+
 provides:
   - "depotSignalCaptured — the single predicate that decides whether a steamMetadataStore entry actually captured the D-17 depot signal"
   - "Read-boundary normalization at the three depot-signal sites"
   - "Source gate pinning all five read sites plus the steamPlatformRow.ts prohibition"
+
 affects:
   - src/backend/storeManagers/steam/library.ts
   - src/backend/storeManagers/steam/installFormIpc.ts
   - src/backend/storeManagers/steam/games.ts
   - src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx
+
 tech-stack:
   added: []
   patterns:
     - "Structural-parameter, dependency-free predicate module (the steamPlatformRow.ts extraction pattern, backend side)"
     - "Comment-stripped source gate over production files (stripSourceComments), RED-proven against known-bad input"
+
 key-files:
   created:
     - src/backend/storeManagers/steam/metadataCapture.ts
@@ -31,15 +35,21 @@ key-files:
     - src/backend/storeManagers/steam/__tests__/games.test.ts
     - src/backend/storeManagers/steam/__tests__/library.test.ts
     - src/backend/storeManagers/steam/__tests__/installFormIpc.test.ts
+
 decisions:
   - "Read-boundary normalization, not a startup migration — applyMigrations() is wired only into Electron's app.whenReady(); the Tauri sidecar never runs it, so a Migration class would be dead code in the shipping runtime"
   - "The two mac-nativeness gates and ensurePlatformsCaptured's alreadyCaptured() deliberately keep the raw read — a residue entry genuinely captured its mac answer, and narrowing them would de-route bottle/bridge-eligible games for a fact already cached"
   - "Fixture repairs ADD is_windows_native; the predicate is never weakened and no call site is ever reverted to make a test go green"
+
 metrics:
   duration: ~55 min
   completed: 2026-08-16
   tasks: 3
   commits: 4
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260816-hdg: Normalize the Steam metadata depot-signal read — Summary

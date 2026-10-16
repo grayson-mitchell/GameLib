@@ -13,10 +13,12 @@ dependency-graph:
   affects:
     - "src/frontend/state/GlobalState.tsx steam.library initial state"
     - "src/backend/sidecar boot snapshot payload (now includes steam_library)"
+
 tech-stack:
   added: []
   patterns:
     - "Fifth CacheStore mirrored into the D-13 boot-set (GOG/Epic/Amazon/Zoom pattern extended to Steam)"
+
 key-files:
   created:
     - src/frontend/state/__tests__/GlobalStateSteamCacheHydration.test.ts
@@ -27,12 +29,18 @@ key-files:
     - src/frontend/helpers/electronStores.ts
     - src/frontend/state/GlobalState.tsx
     - src/common/types/__tests__/storePolicy.test.ts
+
 decisions:
   - "Constructor-only seed: refresh() deliberately left untouched so live pushGameToLibrary state is never clobbered by a stale disk re-read"
   - "loadSteamLibrary() is a plain read (steamLibraryStore.get('games', []) + applyGameOverrides) — no platform-verdict normalisation, no merge of a separate installed-games store"
+
 metrics:
   duration: "~45 min"
   completed: "2026-08-19"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260819-r4r: Cache Steam library on startup Summary

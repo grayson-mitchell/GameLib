@@ -50,6 +50,7 @@ started.
 
 Both are out of scope for 39-02 (Scope Boundary rule) and were not fixed. Recorded here so a
 later phase-39 plan (or a dedicated fix) picks them up rather than re-discovering them.
+  status: acknowledged
 
 ## From Plan 39-03
 

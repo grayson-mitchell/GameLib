@@ -8,12 +8,14 @@ provides: [checkPresenceBaselineSelfConsistency]
 affects:
   - meta/lintTranslations.ts
   - meta/i18nCatalogPresenceBaseline.json
+
 tech-stack:
   added: []
 patterns:
   - "Self-consistency gate: assert two halves of ONE committed artifact agree, never the artifact against a separately-evolving tree. Keeps the drift-prone artifact/pin coupling out while still closing the 'inert field looks enforced' hazard."
   - "Test pins derived at run time from the artifact under test, not hard-coded, so regenerating that artifact cannot break them."
   - "Two negative controls per wired gate: neutralise the helper (proves the assertions), then remove only the call site (proves the wiring)."
+
 key-files:
   created: []
   modified:
@@ -22,14 +24,20 @@ key-files:
     - meta/i18nCatalogPresenceBaseline.json
     - .planning/todos/pending/2026-09-07-presence-baseline-totalpairs-is-unenforced-prose.md (moved to completed/)
     - .planning/todos/pending/2026-09-07-linttranslations-header-comment-cites-794-pairs-now-zero.md (moved to completed/)
+
 decisions:
   - "Routed the self-consistency failure to `hardFailures`, not `findings` — a deliberate deviation from the todo's wording, recorded in the todo itself. `findings` do not reach the exit code; a check that cannot fail the run is a gesture. Safe here because the predicate is a pure function of one committed file the writer always emits consistently."
   - "Renamed the new arms R15a-d -> R21a-d after discovering R15 was already taken by the baseline write-guard test. An ambiguous test ID is a records defect waiting to happen."
   - "Regenerated the artifact via LINT_TRANSLATIONS_WRITE_BASELINE=1 rather than hand-editing the `reason` string, so the writer and the shipped file cannot diverge."
   - "Fixed a third stale-794 site (the CANONICAL_LOCALES_PATH comment) that neither todo enumerated — same defect, two lines away."
+
 metrics:
   duration: "~1 session"
   completed: 2026-09-08
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260908-gx3: enforce presence-baseline `totalPairs`, de-stale the 794-pair prose

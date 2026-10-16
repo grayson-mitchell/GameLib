@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick Task 260923-ohg: Close the Linux release-leg todo Summary
 
 Closed the Linux E0599 release-leg todo on its own live-gate evidence (run 35808881023), resolved

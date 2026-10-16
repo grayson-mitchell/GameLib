@@ -5,13 +5,16 @@ subsystem: ui
 tags: [react, i18next, login-screen, source-gate-testing]
 
 # Dependency graph
+
 requires: []
 provides:
   - Manage Accounts (Login) page renders without the "Login with your platform..." paragraph
   - Source-text gate in Login/__tests__/index.test.tsx preventing the string's silent return
+
 affects: []
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns: []
@@ -30,8 +33,13 @@ key-decisions:
 requirements-completed: [QUICK-260805-RWY]
 
 # Metrics
+
 duration: 10min
 completed: 2026-08-05
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260805-rwy: Remove Manage Accounts Login Text Summary
@@ -45,6 +53,7 @@ completed: 2026-08-05
 - **Files modified:** 2
 
 ## Accomplishments
+
 - Removed the `const loginMessage = t('login.message', ...)` declaration (was lines 87-90) from `Login/index.tsx`
 - Removed the `<p className="runnerMessage">{loginMessage}</p>` render line (was line 154), leaving the neighbouring `disabledMessage` (old-macOS warning) paragraph untouched
 - Added a new `describe` block to `Login/__tests__/index.test.tsx` with a negative source-text gate (proves `loginMessage`, `login.message`, `runnerMessage`, and the sentence fragment are all gone) and a positive control (proves `disabledMessage`, `runnerGroup`, and all six runner tiles — epic, gog, nile, zoom, steam, humble — survived)
@@ -60,10 +69,12 @@ Task 2 (`checkpoint:human-verify`) was not attempted by this agent per plan inst
 **Plan metadata:** not yet committed (docs commit is the orchestrator's responsibility per task instructions)
 
 ## Files Created/Modified
+
 - `src/frontend/screens/Login/index.tsx` - Deleted the `loginMessage` const and its `<p className="runnerMessage">` render site; `t`, `useTranslation()`, and the `useEffect` dependency array were left intact since `t` has many other callers in this file
 - `src/frontend/screens/Login/__tests__/index.test.tsx` - Added a source-text gate `describe` block (negative assertions + positive control) following the file's existing `read()`/`LOGIN_TSX` conventions
 
 ## Decisions Made
+
 - D-01: `public/locales/**` untouched — deleting `login.message` across ~38 catalogs is unnecessary upstream-merge conflict surface for zero user-visible benefit; the repo's `meta/lintTranslations.ts` already tolerates orphaned catalog keys (`printExtraTransations = false`)
 - D-02: `index.scss` untouched — `.runnerMessage` (index.scss:157) is now dead CSS, left in place deliberately to keep this diff to two files and avoid an upstream merge conflict for a 6-line rule that costs nothing at runtime. **Recorded here explicitly so a future reader does not file it as an oversight.**
 - D-03: Deleted the `loginMessage` const along with the JSX, not just the JSX — an unused const would trip `@typescript-eslint/no-unused-vars` and would also defeat the new source-text gate (the removed string would still be present in the file, just unused)

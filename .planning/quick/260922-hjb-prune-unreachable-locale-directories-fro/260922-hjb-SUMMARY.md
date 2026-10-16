@@ -8,6 +8,7 @@ requires: []
 provides:
   - meta/pruneUnofferedLocales.ts (computeUnofferedLocaleDirs, assessOfferedLocales, pruneUnofferedLocales, pruneUnofferedLocalesPlugin)
   - a wired vite.config.ts plugin that prunes both build/locales and build/renderer/locales down to the 43 offered codes on every build
+
 affects: [i18n, build-packaging, vite.config.ts]
 
 tech-stack:
@@ -36,6 +37,10 @@ requirements-completed: [todo-2026-09-21-six-locale-directories-ship-unreachable
 
 duration: 11min
 completed: 2026-09-22
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260922-hjb: Prune Unreachable Locale Directories Summary

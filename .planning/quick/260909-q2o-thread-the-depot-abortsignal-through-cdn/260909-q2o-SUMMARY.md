@@ -6,14 +6,17 @@ tags: [steam, cdnAuth, AbortSignal, decompress, tdd]
 requires: []
 provides:
   - "CdnAuthTokenCache.getToken(depotId, host, signal?) — optional AbortSignal, never throws"
+
 affects:
   - src/backend/storeManagers/steam/depot/decompress.ts
   - .planning/todos/pending/2026-08-27-stall-watchdog-leaves-the-download-running.md
+
 tech-stack:
   added: []
   patterns:
     - "awaitOrAbort(fetchPromise, signal) — Promise.race against a listener-backed abort promise that never disturbs or cancels the raced-against promise; listener always removed in a finally"
     - "pending.delete detached from the awaiting caller via `void fetchPromise.finally(...)` so an aborting caller cannot strand the single-flight key for a concurrent no-signal caller"
+
 key-files:
   created: []
   modified:
@@ -22,6 +25,7 @@ key-files:
     - src/backend/storeManagers/steam/__tests__/cdnAuth.test.ts
     - src/backend/storeManagers/steam/__tests__/depotPrimitives.test.ts
     - .planning/todos/pending/2026-08-27-stall-watchdog-leaves-the-download-running.md
+
 decisions:
   - "getToken degrades to '' on abort and never throws — an aborted token fetch must never look like a token-endpoint failure to any caller"
   - "An abort never writes a CDN_AUTH_TOKEN_FAILURE_COOLDOWN_MS entry into negativeCache — cancelling is not evidence a host is bad"
@@ -29,9 +33,14 @@ decisions:
   - "pending.delete is tied to the fetch promise's own settlement (void fetchPromise.finally(...)), not to the awaiting caller's completion, so an aborting caller cannot strand the single-flight key"
   - "callGetCDNAuthToken (the manual _send bypass around steam-user 5.3.0's missing protobuf map entry) is deliberately left un-threaded — it is Steam-CM protocol plumbing, not the cancellation surface"
   - "The abort listener registered in awaitOrAbort is always removed in a finally, whether the race is won by the fetch or by the abort — prevents a per-call listener leak on a long-lived signal"
+
 metrics:
   duration: "~70 minutes (includes an incomplete-then-resolved investigation of a pre-existing lint ceiling breach)"
   completed: 2026-09-09
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Phase quick-260909-q2o Plan 01: Thread the depot AbortSignal through CDN auth Summary

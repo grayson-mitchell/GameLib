@@ -9,6 +9,7 @@ provides:
   - "Humble login-chrome CSS: single source of truth (src/common/humble/loginChromeCss.ts)"
   - "Tauri login_chrome_css_script() injection, ungated, in humble_login_open's if-visible block"
   - "Electron attachHumbleLoginChromeCss dom-ready -> insertCSS wiring in HumbleLoginSurface.tsx"
+
 affects: [humble-login, webview-login-chrome]
 
 tech-stack:
@@ -37,6 +38,10 @@ requirements-completed: [QT-260822-di1-01, QT-260822-di1-02, QT-260822-di1-03]
 
 duration: ~70min
 completed: 2026-08-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260822-di1: Inject chrome-stripping CSS into the Humble login surfaces Summary
@@ -89,6 +94,7 @@ _Note: a concurrent session's commits (`7d1d4f738`, `175458920`) landed interlea
 ## Verification (actual output)
 
 ### The three new/changed test files
+
 ```
 pnpm exec jest src/backend/humble/__tests__/loginChromeCss.test.ts src/backend/__tests__/loginChromeCssInjection.test.ts src/frontend/screens/WebView/__tests__/humbleLoginChromeCss.test.ts --no-coverage
 
@@ -101,6 +107,7 @@ Tests:       53 passed, 53 total
 ```
 
 ### WR-08 guard
+
 ```
 npx jest src/backend/__tests__/longRunningChannels.test.ts --no-coverage
 
@@ -109,6 +116,7 @@ Tests:       40 passed, 40 total
 ```
 
 ### Existing main.rs structural gates
+
 ```
 npx jest src/backend/__tests__/tauriShellSource.test.ts --no-coverage
 
@@ -117,6 +125,7 @@ Tests:       105 passed, 105 total
 ```
 
 ### cargo test (Rust toolchain WAS available)
+
 ```
 cd src-tauri && cargo test login_chrome_css 2>&1 | tail -20
 
@@ -145,6 +154,7 @@ Both required RED proofs are real tests in `loginChromeCssInjection.test.ts`, ru
 Also: `isHumbleLoginChromeHost`'s own RED proof (Task 1) — a naive `indexOf`-based predicate is shown to incorrectly return `true` for `humblebundle.com.evil.example`, proving the real predicate's `false` on that input is not vacuous.
 
 ### Codecheck / lint
+
 ```
 pnpm codecheck   # tsc --noEmit — clean
 pnpm exec eslint -f json <7 changed files> | filtered on severity === 2   # 0 errors
@@ -152,6 +162,7 @@ pnpm exec prettier --write <touched files only>   # no sweep; HumbleLoginSurface
 ```
 
 ### Full jest suite (for regression visibility only — not part of this task's required gate list)
+
 ```
 pnpm exec jest --no-coverage
 

@@ -24,6 +24,10 @@ key-decisions:
   - "Three visual-only defects (title wrap, sort label placement, badge contrast) filed as one ready:live-gate todo rather than claimed done, since the frontend jest project has no rendered/computed-style adjudicator (testEnvironment: 'node', no jsdom)"
 
 completed: 2026-09-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260911-t0p: Fix four UI defects on the Humble Keys screen Summary

@@ -11,6 +11,7 @@ provides:
   - "deletePresence() resets `interval` to undefined so setPresence()'s `if (!interval)` guard can re-arm the 5-minute keep-alive after any deletePresence() call in the same process"
   - "D-DRS-01: guard/teardown placement decision recorded as a comment on deletePresence() in presence.ts"
   - "Dedicated regression suite src/backend/storeManagers/gog/__tests__/gogPresenceKeepAlive.test.ts (arm -> no-stack -> teardown -> re-arm, plus the D-DRS-01 receipt case)"
+
 affects: [gog-presence, launcher-quit-path, settings-changed-listener]
 
 tech-stack:
@@ -35,6 +36,10 @@ requirements-completed:
 
 duration: ~24min (measured from the D-DRS-01 audit commit's timestamp to the closing commit's timestamp; the interactive session itself spanned longer across a context-window compaction)
 completed: 2026-09-10
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260910-drs: Reset the GOG presence keep-alive interval Summary

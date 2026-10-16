@@ -7,6 +7,7 @@ tags: [i18n, react, mui, nav-shell, css]
 requires: []
 provides:
   - Tier-1 nav tab strip re-keyed to Accounts/Library (content) and all-caps (CSS presentation)
+
 affects: [navigation-shell, i18n-catalog]
 
 tech-stack:
@@ -38,6 +39,10 @@ requirements-completed: [QUICK-260815-lta-01, QUICK-260815-lta-02, QUICK-260815-
 
 duration: 25min
 completed: 2026-08-15
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260815-lta: Tier-1 Nav Tab Headings Summary

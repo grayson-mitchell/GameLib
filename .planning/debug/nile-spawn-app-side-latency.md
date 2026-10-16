@@ -4,6 +4,10 @@ trigger: "D-TEB-01 (deferred from quick task 260806-teb): the Amazon (nile) logi
 created: 2026-08-06
 updated: 2026-08-06T10:48Z
 slug: nile-spawn-app-side-latency
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: root-caused-no-fix-applied
 ---
 
 ## FALSIFICATION NOTICE (2026-08-06, post-fix live verification)

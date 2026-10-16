@@ -6,6 +6,10 @@ mode: quick
 follows: 260922-k2o
 resolves_todo: .planning/todos/pending/2026-09-21-the-204-entry-used-in-module-ledger-freezes-an-export-keyword-cleanup.md
 status: partial (Tasks 0-4 of 6 shipped; Tasks 5-6 belong to a later agent)
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: partial (tasks 0-4 of 6 shipped; tasks 5-6 belong to a later agent)
 ---
 
 # Summary — Task 0 (census fix) and Task 1 (steam bucket C) only
@@ -142,6 +146,7 @@ were hit, and no package installs were required.
 
 unreachable: 47 OK | used-in-module: 121 OK
 ```
+
 Exit 0. Also re-verified with a direct `node meta/findDeadcode.cjs` call (bypassing the pnpm
 wrapper) to rule out output caching: identical `unreachable: 47 OK | used-in-module: 121 OK`,
 exit 0.
@@ -152,6 +157,7 @@ exit 0.
 > gamelib@0.7.0 codecheck /Users/graysonmitchell/Projects/GameLib
 > tsc --noEmit
 ```
+
 Exit 0, no output, every time.
 
 ### `npx prettier --check meta/ src/` (full repo, run after Task 1 completed)
@@ -160,6 +166,7 @@ Exit 0, no output, every time.
 Checking formatting...
 All matched files use Prettier code style!
 ```
+
 Exit 0. No reflow was needed on any touched file this task (unlike `260922-k2o`'s `encodeRgba`
 case) — none of the 49 un-exports shortened a signature below the wrap threshold.
 
@@ -171,6 +178,7 @@ case) — none of the 49 un-exports shortened a signature below the wrap thresho
 
 production: PASS | tests: PASS
 ```
+
 Exit 0. **638/638 — exactly the documented zero-headroom TESTS ceiling. No drift.**
 
 ### `npx jest src/backend/storeManagers/steam/`
@@ -181,6 +189,7 @@ Tests:       1 skipped, 1500 passed, 1501 total
 Snapshots:   0 total
 Time:        14.347 s, estimated 24 s
 ```
+
 Exit 0. Every touched file's test file passed: `clientSetup.test.ts`, `installLocation.test.ts`,
 `reconcile.test.ts`, `hostHealth.test.ts`, `platformCapture.test.ts`, `fileAttributes.test.ts`,
 `withTimeout.test.ts`, `pathCollisions.test.ts`, `flagsCensus.test.ts`, `depot.test.ts`,
@@ -209,6 +218,7 @@ not a failure, out of scope for this task, not touched.
 
 12/12 planning gates passed.
 ```
+
 Exit 0.
 
 ## Known Stubs
@@ -454,6 +464,7 @@ package installs were required in either Task 2 or Task 3.
 
 unreachable: 47 OK | used-in-module: 67 OK
 ```
+
 Exit 0.
 
 ### `pnpm lint` (full repo, after the eslint-disable fix)
@@ -463,6 +474,7 @@ Exit 0.
   0 errors and 71 warnings potentially fixable with `--fix` option.
 production: PASS | tests: PASS
 ```
+
 Exit 0. **638/638 — the documented zero-headroom TESTS ceiling, unchanged.** The one new
 production-scope error introduced by the `WINETRICKS_CHANNELS` un-export was fixed before this
 run (see Deviation 1 above); this pasted output is from AFTER that fix, confirming
@@ -473,6 +485,7 @@ run (see Deviation 1 above); this pasted output is from AFTER that fix, confirmi
 ```
 Checking formatting... All matched files use Prettier code style!
 ```
+
 Exit 0.
 
 ### `pnpm codecheck`
@@ -481,6 +494,7 @@ Exit 0.
 > gamelib@0.7.0 codecheck /Users/graysonmitchell/Projects/GameLib
 > tsc --noEmit
 ```
+
 Exit 0, no output.
 
 ### Targeted jest (files touched in Task 3)
@@ -489,6 +503,7 @@ Exit 0, no output.
 Test Suites: 8 passed, 8 total
 Tests:       213 passed, 213 total
 ```
+
 Covering `SteamClientSetup.test.ts`, `SteamSignOut.test.ts`, `declaredUnavailable.test.ts`,
 `filterEngine.test.ts`, `useDebouncedStoreSearch.test.ts`, `useTauriOAuthLogin.test.tsx`,
 `navTabs.test.ts`, `NavTabsComponent.test.tsx`, plus a second targeted run:
@@ -497,6 +512,7 @@ Covering `SteamClientSetup.test.ts`, `SteamSignOut.test.ts`, `declaredUnavailabl
 Test Suites: 2 passed, 2 total
 Tests:       61 passed, 61 total
 ```
+
 Covering `storePolicy.test.ts`, `StoreEmbedSuppressionContext.test.tsx`.
 
 ### Full Frontend + Common jest projects (diligence pass, not the formal Task 5 sweep)
@@ -508,6 +524,7 @@ Snapshots:   0 total
 Time:        5.628 s, estimated 6 s
 Ran all test suites in 2 projects.
 ```
+
 Exit 0. Run as part of verifying this executor's own scope (Tasks 2-3 touch files across both
 projects); this is NOT the plan's formal Task 5 gate sweep (which also covers Backend jest,
 `pnpm planning-gates`, etc.) and was not treated as satisfying it.

@@ -14,6 +14,10 @@ human_verification:
   - test: "On macOS, hover over the menu-bar tray icon and read the tooltip"
     expected: "Tooltip reads 'GameLib', not 'Heroic'"
     why_human: "tray_icon.ts and its test are both verified in code; tooltip display requires a running macOS process with a live tray icon"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 5: Branding & About Polish — Verification Report

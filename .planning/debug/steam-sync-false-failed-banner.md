@@ -4,6 +4,10 @@ trigger: "Steam sync-notice banner falsely shows \"failed\" during the post-sign
 created: 2026-10-11T01:30:00Z
 updated: 2026-10-11T03:10:00Z
 source_todo: .planning/todos/pending/2026-10-10-steam-sync-notice-false-failure-after-signin-reconnect.md
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: awaiting_human_verify
 ---
 
 ## Current Focus
@@ -132,6 +136,7 @@ files_changed:
   - src/common/types/ipc.ts
   - src/backend/storeManagers/steam/__tests__/user.test.ts
   - src/backend/storeManagers/steam/__tests__/library.test.ts
+
 commits:
   - 331988302 fix(steam): stop ensureConnected() waiting out the grace window after a terminal CM logon rejection
   - b08c6c2ec fix(steam): name a CM-rejected logon 'logon-rejected' on sync exit path 1, not a readiness race

@@ -14,13 +14,19 @@ key-files:
   created: []
   modified:
     - .planning/todos/completed/2026-09-24-python3-in-git-bash-is-a-store-stub-exiting-49-not-a-missing-python.md
+
 decisions:
   - "Closed the python3/Git-Bash Store-stub todo as VERIFIED-NOT-A-DEFECT with no code change."
   - "Direction item 4 (a CLAUDE.md conventions note) decided AGAINST by the operator; not added."
   - "Direction item 3 (disabling the Store app-execution alias) left unverified and untested by design."
+
 metrics:
   duration: "~15 minutes"
   completed: 2026-09-24
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick 260924-tjg: Close the python3 Git-Bash store-stub todo Summary

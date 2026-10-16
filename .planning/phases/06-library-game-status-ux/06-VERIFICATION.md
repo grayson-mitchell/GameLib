@@ -18,6 +18,10 @@ human_verification:
   - test: "While a Steam game shows 'Playing', inspect the card and right-click context menu"
     expected: "No Stop button appears on the card icon; no Stop item appears in the context menu"
     why_human: "UI element presence/absence requires visual inspection; the !isSteam guards are code-verified but rendering behavior depends on live runtime state"
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: human_needed
 ---
 
 # Phase 6: Library & Game Status UX — Verification Report

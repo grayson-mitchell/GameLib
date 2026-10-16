@@ -9,12 +9,18 @@ key-files:
   modified:
     - src/frontend/screens/Game/GamePage/index.tsx
     - .planning/todos/completed/2026-09-19-gamepage-wikilink-trans-uses-key-not-i18nkey.md (moved from pending/, corrected)
+
 key-decisions:
   - "Accepted the U+00A0 -> U+0020 trade: shouldUnescape decodes &nbsp; to an ordinary space, not a true non-breaking space, in English too. Stated as a trade in code comment, todo, and here -- not an oversight."
   - "Confirmed the plan's REPO_ROOT depth warning: six '..' segments from GamePage/__tests__/, not the sibling's eight."
   - "Did not assert shouldUnescape's presence as a source token in A1 -- only its rendered consequence via A4, per orchestrator decision 3."
+
 duration: ~40min
 completed: 2026-09-21
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260921-k2d: flip GamePage's wikiLink `key=` to `i18nKey=` + `ns` + `shouldUnescape` Summary

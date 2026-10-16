@@ -4,6 +4,10 @@ trigger: "Phase 30 UAT Test 4 — under Tauri (npm run tauri:dev), clicking Inst
 created: 2026-07-23T00:00:00Z
 updated: 2026-07-23T00:00:00Z
 goal: find_root_cause_only
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: diagnosed
 ---
 
 ## Current Focus

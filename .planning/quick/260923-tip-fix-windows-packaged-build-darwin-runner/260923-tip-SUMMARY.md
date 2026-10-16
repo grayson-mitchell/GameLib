@@ -1,3 +1,10 @@
+---
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
+---
+
 # Quick Task 260923-tip: Fix Windows packaged build breaking on darwin runner symlinks — Summary
 
 One-liner: scoped darwin onedir runner downloads and their population guard out of non-darwin builds (Layer 1), typed recreated symlinks correctly for Windows (Layer 2), and stopped `closeBundle` guards from masking the real first `vite build` error (Layer 3).

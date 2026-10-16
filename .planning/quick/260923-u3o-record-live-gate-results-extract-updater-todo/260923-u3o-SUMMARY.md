@@ -7,10 +7,12 @@ requires: []
 provides:
   - the recorded verdict of the 2026-09-23 macOS release live gate
   - a standalone todo for the macOS updater-manifest defect
+
 affects:
   - .planning/todos/pending/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md
   - .planning/todos/pending/2026-09-23-macos-updater-manifest-can-never-gain-a-macos-entry-bundle-targets-omits-app.md
   - .planning/STATE.md
+
 tech-stack:
   added: []
   patterns: [append-only status sections, triage vocabulary from CLAUDE.md]
@@ -20,13 +22,19 @@ key-files:
   modified:
     - .planning/todos/pending/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md
     - .planning/STATE.md
+
 decisions:
   - the notarization todo is left OPEN in pending/ with a recommendation to close, not closed
   - the updater-manifest defect is extracted as a CORRECTION to p95 item 8, which is not edited
   - the prettier check required by CLAUDE.md is vacuous over .planning/ and was NOT run
+
 metrics:
   duration: ~25 min
   completed: 2026-09-23
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: unknown
 ---
 
 # Quick Task 260923-u3o: Record the macOS Live-Gate Results and Extract the Updater Todo Summary
