@@ -4,12 +4,12 @@ plan: 12
 artifact: uat
 status: parked
 parked_todos: [2026-10-16-phase-21-native-install-uat-deferred-to-windows.md, 2026-10-16-phase-21-d-uat-10-bottled-steam-launch-uninstall.md]
-disposition: "native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall remains an OPEN macOS bug (root cause unknown, not Windows-deferrable). macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
+disposition: "native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall RESOLVED, real-HW verified 2026-10-16. macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
 total_items: 11
 pending_items: 0
 passed_items: 3
 deferred_items: 7
-open_macos_bug_items: 1
+open_macos_bug_items: 0
 failed_items: 0
 blocked_items: 0
 requirements: [SNI-01, SNI-04, SNI-08, SNI-06]
@@ -658,6 +658,18 @@ launched Steam.
 > deleted the Portal 2 bottle files (12 GB + `appmanifest_620.acf`) to reclaim disk, so no test subject
 > remains. **Fix #2's launch/uninstall verification DEFERRED to a future bottle install.** Note: the
 > ~30s-then-revert uninstall the user saw was on the PRE-restart stale backend; not retested on the fix.
+>
+> **✅ FIX #2 HW-VERIFIED 2026-10-16 (real macOS, `pnpm tauri:dev`, CrossOver 26.2, GameLibSteam bottle):**
+> - **Play:** Fallout 2 (38410) launched via `steam.exe -applaunch 38410` in the bottle. First attempt
+>   stalled while the bottled Steam self-updated (226 MB, relaunch drops `-applaunch`), then a hidden
+>   Steam login; a further ~6 min block was Steam's one-playing-session-per-account rule (a game was
+>   open on another computer) — NOT a GameLib defect. Once that session ended the game launched.
+> - **Uninstall:** Child of Light (256290) — `gamelib.log` 20:15:16 "removed bottle install", "badge
+>   flipped to not-installed"; `appmanifest_256290.acf` and `common/Child of Light` gone; stayed
+>   uninstalled, no revert to Play.
+> - **Observations (not D-UAT-10 defects):** Play shows no feedback while Steam is blocked (only the
+>   `raiseFrontmostBottledProcess ... no matching process` warning in the log); the uninstall
+>   notification shows a terminal icon instead of the GameLib icon (filed as a todo).
 
 ## Summary Table (fill in after all items are run)
 
@@ -670,7 +682,7 @@ launched Steam.
 | 2a | 10GB+ streaming memory bound | SNI-01 (A1) | PASS | Cyberpunk 2077 (~90GB); main-proc RSS bounded, healthy speed (re-verifies D-UAT-03 worker-pool). |
 | 2b | Byte-correctness spot-check | SNI-01 | DEFERRED → Windows post-prod | Needs a completed download to SHA1-check. Deferred to Windows post-prod validation (2026-07-20). |
 | 2c | Real multi-depot game | SNI-01 (A2) | PARTIAL → remainder DEFERRED → Windows post-prod | Cyberpunk 2077, 3 macOS depots ~90GB. Past plan-build + streaming ✅ (D-UAT-08 fix 64d5afcc real-HW verified). Multi-depot Steam adoption / no-collision deferred to Windows post-prod (2026-07-20). Note: real multi-depot StateFlags=4 adoption was independently HW-confirmed under Phase 23 Gate 1 (2026-07-19). |
-| 3 | Bottled Steam adoption | SNI-08 (A3) | PARTIAL | Portal 2 (620) into GameLibSteam bottle. Install + adoption ✅ (Windows depot streamed to bottle, portal2.exe, StateFlags→4, 12GB, install record correct). Launch/uninstall/detail ❌ D-UAT-10 (bottle-installed game not launchable/uninstallable from GameLib; shows GPTK; root cause UNKNOWN → /gsd-debug). Step 4 launch-through-bottle unverified. |
+| 3 | Bottled Steam adoption | SNI-08 (A3) | PARTIAL | Portal 2 (620) into GameLibSteam bottle. Install + adoption ✅ (Windows depot streamed to bottle, portal2.exe, StateFlags→4, 12GB, install record correct). Launch/uninstall/detail ✅ D-UAT-10 fixed and real-HW verified 2026-10-16 (Fallout 2 Play via bottle, Child of Light uninstall stays uninstalled; detail shows CrossOver). Step 4 launch-through-bottle verified. |
 | 4a | D-10 guided client install | SNI-06 (partial) | DEFERRED → Windows post-prod | Steam-client-detection / guided-install flow; deferred to Windows post-prod (2026-07-20). Guided-install UX differs per OS. |
 | 4b | D-11 prompt-to-launch | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
 | 4c | Continue-to-download | SNI-06 (partial) | DEFERRED → Windows post-prod | Deferred to Windows post-prod (2026-07-20). |
