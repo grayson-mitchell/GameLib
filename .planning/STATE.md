@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 milestone: v0.8
 current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 status: Awaiting next milestone
-stopped_at: Completed quick task 261016-t3e -- bottled-Steam install-dir process monitor landed (fixture-verified, live CrossOver gate still owed)
-last_updated: "2026-10-16T08:34:16.609Z"
+stopped_at: Completed quick task 261016-u1w -- per-game CrossOver bottles for bridge-routed Steam games (desk-verified, live gate owed)
+last_updated: "2026-10-16T10:26:56.614Z"
 last_activity: 2026-10-16
-last_activity_desc: Quick task 261016-t3e bottled-Steam process monitor landed; Milestone v0.8 completed and archived
-state_head: f272eb6389578b1e900d8ce592cfbe78a32d8e81
+last_activity_desc: Quick task 261016-u1w per-game bridge bottles landed; Quick task 261016-t3e bottled-Steam process monitor landed; Milestone v0.8 completed and archived
+state_head: 9763928d82e3dba53bdb29e10c305d2a57f7aa8a
 progress:
   total_phases: 45
   completed_phases: 36
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: Milestone v0.8 complete — no active phase (next: `/gsd-new-milestone`)
 Plan: 0 of 0
 Status: Awaiting next milestone — v0.8 Tauri Shell shipped 2026-10-16 as an override closeout (see `## Deferred Items`); tag `v0.8` is local and unpushed
-Last activity: 2026-10-16 — Completed quick task 261016-t3e: bottled-Steam install-directory process monitor (Playnite pattern) gives Play real `playing`/`done` feedback; fixture-verified only, live CrossOver gate owed (commits 87c3d4fda, cf8d2e67c, 7d0bdc873). Previously: Milestone v0.8 completed and archived (safety commit 39e1d5273, REQUIREMENTS.md removed in 35ad4aa85)
+Last activity: 2026-10-16 — Completed quick task 261016-u1w: each bridge-routed Steam game now gets its own `GameLibSteamBridge-<appId>` CrossOver bottle; installs already in the shared `GameLibSteamBridge` bottle still resolve there; uninstall deletes only the game's own bottle (commits 46673344a, 46a9c3732, 2eee66954, 2f2792de3); desk-verified (8 suites / 697 tests, codecheck, lint 1089/1124 + 638/638, deadcode 46/0), live gate owed. Previously: Completed quick task 261016-t3e: bottled-Steam install-directory process monitor (Playnite pattern) gives Play real `playing`/`done` feedback; fixture-verified only, live CrossOver gate owed (commits 87c3d4fda, cf8d2e67c, 7d0bdc873). Previously: Milestone v0.8 completed and archived (safety commit 39e1d5273, REQUIREMENTS.md removed in 35ad4aa85)
 
 Progress: [████████░░] 80%
 
@@ -658,6 +658,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261016-ra0 | **Archived phases 05-26 into milestones/v0.2..v0.7-phases/; v0.7 closed with live UAT PARKED.** audit-uat 314 before/after; not rendered in the explorer; historical path refs inside archived docs left as-is. | 2026-10-16 | d64387d4b | COMPLETE (desk). 519 renames, 7 .planning-reading suites 215 tests, planning-gates 12/12, scoped prettier; fixed packagingConfig.test.ts already red from the v0.8 archive. | [261016-ra0](./quick/261016-ra0-archive-phases-05-26-into-per-milestone-/) |
 | 31 | 261016 D-UAT-10 live gate: bottled Steam Play + uninstall real-HW verified; todo closed | 2026-10-16 | 2f19be397 | — | — |
 | 261016-t3e | Steam bottled launch: install-directory process monitor (Playnite pattern) for real started/stopped Play feedback | 2026-10-16 | 7d0bdc873 | — | [261016-t3e-steam-bottled-launch-install-directory-p](./quick/261016-t3e-steam-bottled-launch-install-directory-p/) |
+| 261016-u1w | Per-game CrossOver bottles for bridge-routed Steam games (GameLibSteamBridge-<appId>); legacy shared-bottle installs still resolve; live gate pending | 2026-10-16 | 9763928d8 | code-verified | [261016-u1w-per-game-bridge-bottles](./quick/261016-u1w-per-game-bridge-bottles/) |
 
 ## Deferred Items
 
