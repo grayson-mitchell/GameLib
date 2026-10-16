@@ -2,7 +2,8 @@
 phase: 21-steam-native-install
 plan: 12
 artifact: uat
-status: partial
+status: parked
+parked_todos: [2026-10-16-phase-21-native-install-uat-deferred-to-windows.md, 2026-10-16-phase-21-d-uat-10-bottled-steam-launch-uninstall.md]
 disposition: "native-install UAT (1c/1d/2b/2c/4a/4b/4c) DEFERRED to Windows post-production (2026-07-20 user decision); D-UAT-10 bottled-Steam launch/uninstall remains an OPEN macOS bug (root cause unknown, not Windows-deferrable). macOS hardware pass: 1a/1b/2a PASS, D-UAT-05/06/08 resolved."
 total_items: 11
 pending_items: 0

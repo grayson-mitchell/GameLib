@@ -1,5 +1,6 @@
 ---
 status: partial
+parked_todo: 2026-10-16-phase-26-steam-key-redemption-live-uat-never-run.md
 phase: 26-steam-key-redemption
 source: [26-VERIFICATION.md]
 started: 2026-07-20
