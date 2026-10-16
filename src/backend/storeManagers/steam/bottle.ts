@@ -161,7 +161,7 @@ export function getBottleSteamExePath(bottleName: string): string {
  * separator, a parent-directory traversal sequence, a NUL byte, or an
  * empty/whitespace-only name. Returns the trimmed name when clean.
  */
-export function sanitizeBottleName(name: string): string | null {
+export function sanitizeBottleName(name: string | null): string | null {
   if (typeof name !== 'string') return null
   const trimmed = name.trim()
   if (!trimmed) return null
@@ -1115,6 +1115,73 @@ export function isBridgeBottleReady(bottleName?: string): boolean {
   return isBottleProvisioned(name)
 }
 
+// ── quick/261016-u1w (D-A/D-B): per-game bridge bottles ─────────────────────
+// Every bridge-routed Steam game now gets its OWN dedicated CrossOver bottle
+// (GameLibSteamBridge-<appId>, Proton-style) instead of sharing the single
+// DEFAULT_BRIDGE_BOTTLE_NAME bottle above. The shared bottle is kept as a
+// LEGACY fallback only — resolveBridgeBottleName() below is the single
+// resolver that decides, per appId, which bottle a caller should use.
+
+/**
+ * D-A: pure, NUMERIC_APP_ID-guarded builder for a per-game bridge bottle
+ * name. Mirrors buildSteamProtocolUrl's numeric-guard precedent (T-03-01) —
+ * never constructs a name from an untrusted/non-numeric appId. Returns null
+ * (never throws) for a non-numeric appId so callers can treat "no valid
+ * per-game name" as a plain data case, not an exception path.
+ */
+export function bridgeBottleNameFor(appId: string): string | null {
+  if (!NUMERIC_APP_ID.test(appId)) {
+    return null
+  }
+  return `${DEFAULT_BRIDGE_BOTTLE_NAME}-${appId}`
+}
+
+/**
+ * D-B: the SINGLE resolver for "which bridge bottle does this appId use".
+ * Every bridge-routed call site that needs to find an EXISTING install
+ * (launch, uninstall, library-state reconciliation) must route through
+ * this function — never re-derive the per-game/legacy choice locally.
+ *
+ * Resolution order:
+ *  1. The per-game bottle (GameLibSteamBridge-<appId>) wins if it is
+ *     already ready (provisioned) — the new, steady-state layout.
+ *  2. Otherwise, the legacy shared bottle (DEFAULT_BRIDGE_BOTTLE_NAME) wins
+ *     ONLY if it is ready AND it genuinely holds THIS appId's manifest
+ *     (appmanifest_<appId>.acf) — i.e. this game was installed before the
+ *     per-game-bottle migration and still lives in the shared bottle.
+ *  3. Otherwise the per-game bottle name is returned anyway (even though
+ *     not yet provisioned) — a not-yet-installed game resolves to the
+ *     bottle its OWN install will create, never to the shared legacy one.
+ *
+ * New installs never call this resolver — they always target
+ * bridgeBottleNameFor(appId) directly (installBridgeGame below), so a
+ * fresh install can never accidentally land in the legacy shared bottle.
+ */
+export function resolveBridgeBottleName(appId: string): string | null {
+  const perGameName = bridgeBottleNameFor(appId)
+  if (!perGameName) {
+    return null
+  }
+
+  if (isBridgeBottleReady(perGameName)) {
+    return perGameName
+  }
+
+  if (
+    isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+    existsSync(
+      join(
+        getBottleSteamappsDir(DEFAULT_BRIDGE_BOTTLE_NAME),
+        `appmanifest_${appId}.acf`
+      )
+    )
+  ) {
+    return DEFAULT_BRIDGE_BOTTLE_NAME
+  }
+
+  return perGameName
+}
+
 /**
  * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
  * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
@@ -1147,13 +1214,15 @@ function resolveCrossoverWine(label: string): WineInstallation | undefined {
 }
 
 /**
- * Composes a GameSettings-shaped object for the dedicated bridge bottle,
- * mirroring getSteamBottleSettings() but always resolving
- * DEFAULT_BRIDGE_BOTTLE_NAME — never the Phase 17 bottle (Pitfall 1 / R4
- * routing precondition). One shared bridge bottle (D-03 "share as much as
- * possible"), so — unlike getSteamBottleSettings() — no per-install override
- * is read back from steamBottleConfigStore; the bridge bottle's name/engine
- * are not user-configurable this phase.
+ * Composes a GameSettings-shaped object for a bridge bottle, mirroring
+ * getSteamBottleSettings() in shape. quick/261016-u1w (D-B): an optional
+ * `appId` resolves the PER-GAME bridge bottle (via resolveBridgeBottleName)
+ * instead of always the shared DEFAULT_BRIDGE_BOTTLE_NAME — callers that
+ * omit appId keep the old shared-bottle behavior (back-compat; no caller
+ * currently depends on this, but the optional param avoids a disruptive
+ * signature change across every call site in one commit). No per-install
+ * override is read back from steamBottleConfigStore; bridge bottle
+ * names/engine are not user-configurable.
  *
  * D-UAT-24-06: `wineVersion` must resolve the CrossOver runtime that CREATED
  * this bottle via cxbottle (D-08 CrossOver-only lifecycle) — never
@@ -1164,11 +1233,14 @@ function resolveCrossoverWine(label: string): WineInstallation | undefined {
  * to globalSettings.wineVersion only when CrossOver is not present on disk —
  * identical to today's behavior for dev/CI/non-macOS.
  */
-export function getBridgeBottleSettings(): GameSettings {
+export function getBridgeBottleSettings(appId?: string): GameSettings {
   const globalSettings = GlobalConfig.get().getSettings()
+  const wineCrossoverBottle = appId
+    ? (resolveBridgeBottleName(appId) ?? DEFAULT_BRIDGE_BOTTLE_NAME)
+    : DEFAULT_BRIDGE_BOTTLE_NAME
   return {
     ...globalSettings,
-    wineCrossoverBottle: DEFAULT_BRIDGE_BOTTLE_NAME,
+    wineCrossoverBottle,
     wineVersion:
       resolveCrossoverWine('CrossOver (bridge bottle runtime)') ??
       globalSettings.wineVersion

@@ -59,7 +59,8 @@ import {
   getBottleSteamappsDir,
   isBridgeBottleReady,
   getBridgeBottleSettings,
-  provisionBridgeBottle
+  provisionBridgeBottle,
+  bridgeBottleNameFor
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { noteSteamAuthTrigger } from './authTrigger'
@@ -1321,9 +1322,10 @@ export default class SteamGame implements Game {
 
   /**
    * Phase 24 Plan 08 (R3/R4/R7, D-01): allowlisted-title bridge install
-   * path — a sibling of installBottleNative() above, but targeting the
-   * DEDICATED bridge bottle (24-04, `GameLibSteamBridge`) instead of the
-   * Phase 17 `GameLibSteam` bottle. Reuses the SAME installDepotDownload()
+   * path — a sibling of installBottleNative() above, but targeting this
+   * game's OWN per-game bridge bottle (quick/261016-u1w D-A,
+   * `GameLibSteamBridge-<appId>`) instead of the Phase 17 `GameLibSteam`
+   * bottle. Reuses the SAME installDepotDownload()
    * engine both installNative()/installBottleNative() already share, with
    * the write target swapped to the bridge bottle's OWN steamapps/ dir and
    * os hard-coded 'windows', then places the generated shim as a
@@ -1354,12 +1356,31 @@ export default class SteamGame implements Game {
    * instead of looping back into the same failing bridge (T-24-17).
    */
   private async installBridgeGame(args: InstallArgs): Promise<InstallResult> {
-    if (!isBridgeBottleReady()) {
-      logInfo(
-        `SteamGame: bridge bottle not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
+    // quick/261016-u1w (D-A): new installs ALWAYS target this game's OWN
+    // per-game bridge bottle directly — never via resolveBridgeBottleName
+    // (D-B), which would let an existing legacy-bottle manifest for this
+    // appId redirect a fresh install back into the shared bottle.
+    const bridgeBottleName = bridgeBottleNameFor(this.appId)
+    if (!bridgeBottleName) {
+      logWarning(
+        `SteamGame: installBridgeGame rejected non-numeric appId ${this.appId} — no per-game bottle name`,
         LogPrefix.Steam
       )
-      const provisionResult = await provisionBridgeBottle()
+      markBridgeFailedThisSession(this.appId)
+      return {
+        status: 'error',
+        error: `Invalid appId: "${this.appId}"`
+      }
+    }
+
+    if (!isBridgeBottleReady(bridgeBottleName)) {
+      logInfo(
+        `SteamGame: bridge bottle "${bridgeBottleName}" not yet provisioned for appId ${this.appId} — provisioning inline (BLOCKER 1, no consent dialog needed)`,
+        LogPrefix.Steam
+      )
+      const provisionResult = await provisionBridgeBottle({
+        bottleName: bridgeBottleName
+      })
       if (provisionResult.status !== 'done') {
         logWarning(
           `SteamGame: bridge bottle provisioning failed for appId ${this.appId}: ${provisionResult.error}`,
@@ -1375,9 +1396,7 @@ export default class SteamGame implements Game {
       }
     }
 
-    const targetSteamappsDir = getBottleSteamappsDir(
-      getBridgeBottleSettings().wineCrossoverBottle
-    )
+    const targetSteamappsDir = getBottleSteamappsDir(bridgeBottleName)
     const downloadResult = await this.installDepotDownload(args, {
       targetSteamappsDirOverride: targetSteamappsDir,
       os: 'windows',
@@ -1410,7 +1429,9 @@ export default class SteamGame implements Game {
       }
     }
 
-    const shimResult = await placeShimForGame(this.appId, exePath)
+    const shimResult = await placeShimForGame(this.appId, exePath, {
+      bottleName: bridgeBottleName
+    })
     if (
       shimResult.status === 'error' ||
       shimResult.status === 'shim-not-built'
@@ -1441,7 +1462,10 @@ export default class SteamGame implements Game {
     // already both succeeded by this point, so is_installed is set directly
     // (mirrors library.ts's pollInstallOnce() 'installed' branch shape)
     // rather than relying solely on the poller.
-    const installRoot = this.resolveBridgeGameInstallRoot(exePath)
+    const installRoot = this.resolveBridgeGameInstallRoot(
+      exePath,
+      bridgeBottleName
+    )
     if (installRoot) {
       this.markBridgeGameInstalled(installRoot)
     }
@@ -1467,8 +1491,21 @@ export default class SteamGame implements Game {
    * paths it built from that SAME root, but this is a defensive check, not
    * an assumption of trust.
    */
-  private resolveBridgeGameInstallRoot(exePath: string): string | undefined {
-    const bottleName = getBridgeBottleSettings().wineCrossoverBottle
+  private resolveBridgeGameInstallRoot(
+    exePath: string,
+    bottleNameOverride?: string
+  ): string | undefined {
+    // quick/261016-u1w (D-B threading): a fresh install already knows
+    // EXACTLY which bottle it just placed files into (installBridgeGame's
+    // own bridgeBottleName, via bridgeBottleNameFor -- D-A) and passes it
+    // straight through here, bypassing the resolver entirely so this stays
+    // consistent with the install it just performed. Without an override
+    // (the uninstall path), fall back to resolving THIS game's bottle via
+    // getBridgeBottleSettings (per-game if ready, else the legacy shared
+    // bottle if that's actually where its manifest lives).
+    const bottleName =
+      bottleNameOverride ??
+      getBridgeBottleSettings(this.appId).wineCrossoverBottle
     const commonRoot = resolve(getBottleSteamappsDir(bottleName), 'common')
     const resolvedExePath = resolve(exePath)
     const relFromCommon = relative(commonRoot, resolvedExePath)
@@ -2146,8 +2183,8 @@ export default class SteamGame implements Game {
   /**
    * Phase 24 Plan 08 (R4/R6/R7): allowlisted-title bridge launch path. Runs
    * the game's OWN resolved Windows `.exe` (resolveBridgeLaunchExe, Task 1)
-   * directly via `runWineCommand` against the dedicated bridge bottle
-   * (getBridgeBottleSettings, 24-04) — NEVER `tellBottledSteamToLaunch` /
+   * directly via `runWineCommand` against THIS game's own bridge bottle
+   * (getBridgeBottleSettings(appId), quick/261016-u1w D-B) — NEVER `tellBottledSteamToLaunch` /
    * `dispatchToBottledSteam`, since the bridge bottle has no bottled Steam
    * client to `-applaunch` through (RESEARCH Pattern 4's single largest
    * routing-shape delta).
@@ -2203,7 +2240,16 @@ export default class SteamGame implements Game {
     // bridge failure — do NOT markBridgeFailedThisSession here, since that
     // would poison the session against the very bridge install the
     // resulting dialog steers the user toward.
-    if (!isBridgeBottleReady() || !existsSync(exePath)) {
+    // quick/261016-u1w (D-B threading): resolve THIS game's bottle once —
+    // per-game bottle if ready, else the legacy shared bottle if that's
+    // actually where this appId's manifest lives — and reuse it for both
+    // the readiness gate below and the runWineCommand() gameSettings, so
+    // the game launches from the SAME bottle its exe was resolved against.
+    const bridgeBottleSettings = getBridgeBottleSettings(this.appId)
+    if (
+      !isBridgeBottleReady(bridgeBottleSettings.wineCrossoverBottle) ||
+      !existsSync(exePath)
+    ) {
       logWarning(
         `SteamGame: appId ${this.appId} is bridge-eligible and marked installed, but the bridge bottle/exe is absent on disk (installed via a non-bridge path) — not firing wine at a non-existent exe (D-UAT-24-02)`,
         LogPrefix.Steam
@@ -2224,7 +2270,7 @@ export default class SteamGame implements Game {
       const { runWineCommand } = await import('backend/launcher')
       await runWineCommand({
         commandParts: [exePath],
-        gameSettings: getBridgeBottleSettings(),
+        gameSettings: bridgeBottleSettings,
         wait: false,
         protonVerb: 'run',
         startFolder: dirname(exePath),
@@ -2427,9 +2473,9 @@ export default class SteamGame implements Game {
    * all (R6 — no Windows Steam client in the bridge bottle) — GameLib owns
    * removal directly, consistent with the files-on-disk ownership model
    * the bridge install path already commits to (finding #10). Removes
-   * ONLY the game's own install root inside the DEDICATED bridge bottle
-   * (getBridgeBottleSettings, 24-04) — never touches the Phase 17
-   * GameLibSteam bottle.
+   * ONLY the game's own install root inside THIS game's own bridge bottle
+   * (getBridgeBottleSettings(appId), quick/261016-u1w D-B) — never touches
+   * the Phase 17 GameLibSteam bottle.
    *
    * Resolves the install root the SAME way installBridgeGame() does
    * (resolveBridgeGameInstallRoot, via resolveBridgeLaunchExe) rather than

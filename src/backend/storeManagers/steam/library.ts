@@ -109,9 +109,18 @@ function getBottleSteamappsRoot(): string {
  * the wrong location and timed out despite a correctly-written manifest).
  * Mirrors getBottleSteamappsRoot() but is a distinct, never-conflated root
  * (RESEARCH.md Pitfall 2).
+ *
+ * quick/261016-u1w (D-B threading): accepts an optional per-game appId so
+ * callers that know WHICH game they're scanning for (readAcfState's
+ * 'bridge' arm) can resolve that game's own dedicated bottle instead of
+ * always the shared legacy one. Callers with no single game in mind
+ * (buildBridgeInstalledMap, Task 2 scope) call this with no argument and
+ * keep today's shared-bottle behavior.
  */
-export function getBridgeBottleSteamappsRoot(): string {
-  return getBottleSteamappsDir(getBridgeBottleSettings().wineCrossoverBottle)
+export function getBridgeBottleSteamappsRoot(appId?: string): string {
+  return getBottleSteamappsDir(
+    getBridgeBottleSettings(appId).wineCrossoverBottle
+  )
 }
 
 // DETAIL-01 gap-fix: Steam installs the depot for the host OS, so the installed
@@ -1940,7 +1949,7 @@ export async function readAcfState(
     source === 'bottle'
       ? [getBottleSteamappsRoot()]
       : source === 'bridge'
-        ? [getBridgeBottleSteamappsRoot()]
+        ? [getBridgeBottleSteamappsRoot(appId)]
         : (await getSteamLibraries()).map((libPath) =>
             join(libPath, 'steamapps')
           )

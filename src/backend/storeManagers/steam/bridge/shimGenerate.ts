@@ -32,8 +32,8 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { builtBridgeShimPath } from 'backend/constants/paths'
 import {
-  DEFAULT_BRIDGE_BOTTLE_NAME,
   getBottleDir,
+  resolveBridgeBottleName,
   sanitizeBottleName
 } from '../bottle'
 import { scanSteamApiImports } from './importScan'
@@ -137,7 +137,8 @@ function isByteIdentical(pathA: string, pathB: string): boolean {
  * whatever is already at that path unless it is already byte-identical to
  * the built shim. Every input is guarded before any path/copy operation:
  *  1. appId must be numeric (T-24-06).
- *  2. bottleName (default: the shared bridge bottle) must sanitize clean
+ *  2. bottleName (default: this game's own per-game bridge bottle, via
+ *     resolveBridgeBottleName -- quick/261016-u1w D-B) must sanitize clean
  *     (T-24-06, same `sanitizeBottleName` chokepoint `provisionBridgeBottle`
  *     uses).
  *  3. `gameExePath` must resolve INSIDE that bottle's directory --
@@ -174,7 +175,14 @@ export async function placeShimForGame(
     return { status: 'error', error: `Invalid appId: "${appId}"` }
   }
 
-  const rawBottleName = opts?.bottleName ?? DEFAULT_BRIDGE_BOTTLE_NAME
+  // quick/261016-u1w (D-B): default to THIS game's own per-game bridge
+  // bottle (resolveBridgeBottleName), never the shared legacy name. A null
+  // result (unreachable in practice -- appId already passed NUMERIC_APP_ID
+  // above, and resolveBridgeBottleName applies the identical guard) falls
+  // through to sanitizeBottleName's own typeof-string guard below, taking
+  // the existing rejected-bottle-name error branch rather than silently
+  // substituting a different bottle.
+  const rawBottleName = opts?.bottleName ?? resolveBridgeBottleName(appId)
   const bottleName = sanitizeBottleName(rawBottleName)
   if (!bottleName) {
     logError(

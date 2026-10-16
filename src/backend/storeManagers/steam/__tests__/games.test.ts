@@ -245,7 +245,13 @@ jest.mock('../bottle', () => ({
   // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
-  provisionBridgeBottle: jest.fn()
+  provisionBridgeBottle: jest.fn(),
+  // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
+  // wipes a jest.fn()'s implementation before every test, but games.ts calls
+  // this directly as a pure, deterministic builder, so the factory gives it
+  // a real (mirrored) implementation that survives resetMocks.
+  bridgeBottleNameFor: (appId: string): string | null =>
+    /^\d+$/.test(appId) ? `GameLibSteamBridge-${appId}` : null
 }))
 
 // ── bridge/allowlist.ts mock (24-03) — controls isBridgeEligible()'s
@@ -1578,6 +1584,10 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     expect(ensureBridgeHelperReady).toHaveBeenCalledWith(APP_ID)
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    // quick/261016-u1w (D-B threading): getBridgeBottleSettings is now
+    // per-appId, so the resolved bottle used for both the readiness gate
+    // and runWineCommand's gameSettings is this game's OWN bridge bottle.
+    expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
     expect(runWineCommand).toHaveBeenCalledWith(
       expect.objectContaining({
         commandParts: [RESOLVED_EXE_PATH],
@@ -3041,9 +3051,12 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteamBridge'
     })
+    // quick/261016-u1w (D-A): new installs target the PER-GAME bridge
+    // bottle directly (bridgeBottleNameFor(appId)), never the shared
+    // legacy name — re-keyed from 'GameLibSteamBridge' to the per-game name.
     ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
       (bottleName: string) =>
-        bottleName === 'GameLibSteamBridge'
+        bottleName === `GameLibSteamBridge-${APP_ID}`
           ? BRIDGE_STEAMAPPS_DIR
           : '/mock/bottle/steamapps'
     )
@@ -3078,6 +3091,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     expect(provisionBridgeBottle).not.toHaveBeenCalled()
+    // quick/261016-u1w (D-A): isBridgeBottleReady is consulted against the
+    // PER-GAME bottle name, not the shared legacy name.
+    expect(isBridgeBottleReady).toHaveBeenCalledWith(
+      `GameLibSteamBridge-${APP_ID}`
+    )
     expect(downloadSteamDepots).toHaveBeenCalledWith(APP_ID, {
       targetSteamappsDir: BRIDGE_STEAMAPPS_DIR,
       installdir: RESOLVED_TARGET.installdir,
@@ -3085,7 +3103,40 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       signal: 'mock-signal'
     })
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
-    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH)
+    // quick/261016-u1w: placeShimForGame now receives the per-game bottle
+    // name explicitly, rather than relying on shimGenerate's own default.
+    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH, {
+      bottleName: `GameLibSteamBridge-${APP_ID}`
+    })
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('D-A/D-B: new installs ALWAYS target the per-game bottle directly, even when the legacy bridge bottle already holds this appId manifest (the resolver is never consulted for new installs)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    // Legacy bottle is ready; per-game bottle is NOT ready — if install()
+    // ever consulted resolveBridgeBottleName, a legacy-manifest answer
+    // would resolve to the legacy name. Installs must bypass that
+    // resolver entirely and provision/target the per-game name regardless.
+    ;(isBridgeBottleReady as jest.Mock).mockImplementation(
+      (bottleName?: string) => bottleName === 'GameLibSteamBridge'
+    )
+    ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(isBridgeBottleReady).toHaveBeenCalledWith(
+      `GameLibSteamBridge-${APP_ID}`
+    )
+    expect(isBridgeBottleReady).not.toHaveBeenCalledWith('GameLibSteamBridge')
+    expect(provisionBridgeBottle).toHaveBeenCalledWith({
+      bottleName: `GameLibSteamBridge-${APP_ID}`
+    })
+    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH, {
+      bottleName: `GameLibSteamBridge-${APP_ID}`
+    })
     expect(result).toEqual({ status: 'done' })
   })
 
@@ -3197,7 +3248,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
 
-    expect(provisionBridgeBottle).toHaveBeenCalled()
+    expect(provisionBridgeBottle).toHaveBeenCalledWith({
+      bottleName: `GameLibSteamBridge-${APP_ID}`
+    })
     expect(downloadSteamDepots).toHaveBeenCalled()
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
@@ -3217,7 +3270,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
 
-    expect(provisionBridgeBottle).toHaveBeenCalled()
+    expect(provisionBridgeBottle).toHaveBeenCalledWith({
+      bottleName: `GameLibSteamBridge-${APP_ID}`
+    })
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
@@ -5671,6 +5726,9 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
 
     expect(tellBottledSteamToUninstall).not.toHaveBeenCalled()
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    // quick/261016-u1w (D-B threading): resolves THIS game's own bridge
+    // bottle rather than the shared zero-arg default.
+    expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
     expect(result).toEqual({ stdout: '', stderr: '' })
     expect(library.get(APP_ID)?.is_installed).toBe(false)
   })

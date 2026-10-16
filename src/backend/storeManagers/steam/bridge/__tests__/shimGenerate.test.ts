@@ -37,7 +37,7 @@ import { join } from 'node:path'
 
 import { placeShimForGame, SHIM_EXPORTED_SYMBOLS } from '../shimGenerate'
 import { scanSteamApiImports } from '../importScan'
-import { getBottleDir } from '../../bottle'
+import { getBottleDir, resolveBridgeBottleName } from '../../bottle'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -77,7 +77,13 @@ jest.mock('../../bottle', () => ({
     }
     return trimmed
   },
-  getBottleDir: jest.fn()
+  getBottleDir: jest.fn(),
+  // quick/261016-u1w (D-B): plain arrow function, NOT jest.fn() -- resetMocks
+  // wipes a jest.fn()'s implementation before every test, but shimGenerate.ts
+  // calls this directly as a pure resolver, so the factory gives it a real
+  // (mirrored) implementation that survives resetMocks.
+  resolveBridgeBottleName: (appId: string): string | null =>
+    /^\d+$/.test(appId) ? `GameLibSteamBridge-${appId}` : null
 }))
 
 const mockedScanSteamApiImports = scanSteamApiImports as jest.Mock
@@ -160,6 +166,22 @@ describe('shimGenerate', () => {
     expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
       'fake-compiled-pe32-dll-bytes'
     )
+  })
+
+  it('quick/261016-u1w (D-B): resolves the per-game bridge bottle name by default, not the shared legacy name, when no opts.bottleName is given', async () => {
+    mockedScanSteamApiImports.mockResolvedValue({
+      status: 'ok',
+      symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
+    })
+
+    await placeShimForGame('1234', gameExePath, {
+      shimSourcePath: realShimSourcePath
+    })
+
+    expect(mockedGetBottleDir).toHaveBeenCalledWith(
+      resolveBridgeBottleName('1234')
+    )
+    expect(mockedGetBottleDir).not.toHaveBeenCalledWith('GameLibSteamBridge')
   })
 
   it("OVERWRITES a byte-different file already at shimPath (D-UAT-24-04: the game's own depot-shipped steam_api.dll must not survive)", async () => {
