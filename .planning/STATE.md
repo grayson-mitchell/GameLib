@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 milestone: v0.8
 current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 status: Awaiting next milestone
-stopped_at: Completed quick task 261016-u1w -- per-game CrossOver bottles for bridge-routed Steam games (desk-verified, live gate owed)
-last_updated: "2026-10-16T10:26:56.614Z"
-last_activity: 2026-10-16
-last_activity_desc: Quick task 261016-u1w per-game bridge bottles landed; Quick task 261016-t3e bottled-Steam process monitor landed; Milestone v0.8 completed and archived
-state_head: 9763928d82e3dba53bdb29e10c305d2a57f7aa8a
+stopped_at: Completed quick task 261016-wsq -- live gate for per-game bridge bottles, 5 of 5 PASS, new major todo for the legacy-bottle uninstall revert
+last_updated: "2026-10-16T19:08:09.736Z"
+last_activity: 2026-10-17
+last_activity_desc: Quick task 261016-wsq live-gated per-game bridge bottles on real CrossOver, 5 of 5 PASS, legacy-bottle uninstall revert measured as major; Quick task 261016-u1w per-game bridge bottles landed; Quick task 261016-t3e bottled-Steam process monitor landed; Milestone v0.8 completed and archived
+state_head: 87f64dff54c0ee926c8da1f6ec6d92355c24891e
 progress:
   total_phases: 45
   completed_phases: 36
@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: Milestone v0.8 complete — no active phase (next: `/gsd-new-milestone`)
 Plan: 0 of 0
 Status: Awaiting next milestone — v0.8 Tauri Shell shipped 2026-10-16 as an override closeout (see `## Deferred Items`); tag `v0.8` is local and unpushed
-Last activity: 2026-10-16 — Completed quick task 261016-u1w: each bridge-routed Steam game now gets its own `GameLibSteamBridge-<appId>` CrossOver bottle; installs already in the shared `GameLibSteamBridge` bottle still resolve there; uninstall deletes only the game's own bottle (commits 46673344a, 46a9c3732, 2eee66954, 2f2792de3); desk-verified (8 suites / 697 tests, codecheck, lint 1089/1124 + 638/638, deadcode 46/0), live gate owed. Previously: Completed quick task 261016-t3e: bottled-Steam install-directory process monitor (Playnite pattern) gives Play real `playing`/`done` feedback; fixture-verified only, live CrossOver gate owed (commits 87c3d4fda, cf8d2e67c, 7d0bdc873). Previously: Milestone v0.8 completed and archived (safety commit 39e1d5273, REQUIREMENTS.md removed in 35ad4aa85)
+Last activity: 2026-10-17 — Completed quick task 261016-wsq: live-gated 261016-u1w per-game bridge bottles on real CrossOver, 5 of 5 items PASS; measured that a legacy-bottle uninstall reverts to installed within 3 s (new `major` todo, `ready: code`); no code change.
 
 Progress: [████████░░] 80%
 
@@ -659,6 +659,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 31 | 261016 D-UAT-10 live gate: bottled Steam Play + uninstall real-HW verified; todo closed | 2026-10-16 | 2f19be397 | — | — |
 | 261016-t3e | Steam bottled launch: install-directory process monitor (Playnite pattern) for real started/stopped Play feedback | 2026-10-16 | 7d0bdc873 | — | [261016-t3e-steam-bottled-launch-install-directory-p](./quick/261016-t3e-steam-bottled-launch-install-directory-p/) |
 | 261016-u1w | Per-game CrossOver bottles for bridge-routed Steam games (GameLibSteamBridge-<appId>); legacy shared-bottle installs still resolve; live gate pending | 2026-10-16 | 9763928d8 | code-verified | [261016-u1w-per-game-bridge-bottles](./quick/261016-u1w-per-game-bridge-bottles/) |
+| 261016-wsq | Live-gated 261016-u1w per-game bridge bottles on real CrossOver 26.2 — 5 of 5 items PASS (per-game bottle provisioned in 14 s, depot landed in it, launch from it, deleted in 1 s and gone from cxbottle; legacy Avernum 6 still launches; refresh keeps both). T-u1w-06 MEASURED as major: a legacy-bottle uninstall reverts to installed in 3 s and hides the game from the grid — new ready-code todo filed. No code change. | 2026-10-17 | — | Docs only (this commit). Gate run inline by the orchestrator against a fresh detached pnpm tauri:dev (the operator's instance ran a pre-u1w sidecar and was quit by them). Per-arm table in evidence/README.md, log lines in gate-log-extract.txt, 3 frames. Machine restored as found from a P2 backup; teardown asserted empty. planning-gates 12/12. Every written path is prettier-ignored, so no formatter check was run. Not exercised: two per-game bottles at once, Remove all copies (LD-5), Avernum 5 past its own 16-bit-colour dialog. | [261016-wsq-run-the-per-game-bridge-bottles-live-gat](./quick/261016-wsq-run-the-per-game-bridge-bottles-live-gat/) |
 
 ## Deferred Items
 

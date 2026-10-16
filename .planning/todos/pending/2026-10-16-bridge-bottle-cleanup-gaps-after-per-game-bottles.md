@@ -13,11 +13,16 @@ ready: human
 
 Both were deliberately left out of 261016-u1w.
 
-1. **Legacy-bottle uninstall may leave a stale `appmanifest_<appId>.acf` (T-u1w-06, unverified).**
-   Uninstalling a bridge game that lives in the legacy shared `GameLibSteamBridge` bottle never deletes
-   its manifest. If that manifest still reads fully installed, the next library refresh may show the
-   game as installed again. Read from source, not reproduced. Per-game bottles are immune (the whole
-   bottle is deleted). Measure first: uninstall from the legacy bottle, refresh, check the library.
+1. **Legacy-bottle uninstall leaves a stale `appmanifest_<appId>.acf` (T-u1w-06) — MEASURED 2026-10-17, it
+   is worse than "may".** Quick task 261016-wsq Arm 2 uninstalled Avernum 5 from the legacy bottle through
+   the app: the install root was removed at 07:48:43, the manifest survived, `markBridgeGameUninstalled`'s
+   `gameStatusUpdate done` triggered the frontend's `refreshLibrary runner=steam origin=game-status` in the
+   same second, and by 07:48:46 the library had re-marked 206040 installed with a path to the deleted
+   directory. No user refresh was needed. Because `isGameAvailable()` then saw a missing install_path, the
+   frontend pushed 206040 into `nonAvailableGames` and the game vanished from the library grid (19 "silently
+   excluded" errors in 75 s) until the manifest was deleted by hand. Promoted to its own `ready: code` todo:
+   `2026-10-17-legacy-bridge-bottle-uninstall-reverts-within-seconds.md`. Per-game bottles are immune (the
+   whole bottle is deleted — measured in the same run).
 
 2. **"Remove all copies" leaves an empty per-game bottle (LD-5, needs a decision).**
    `removeSteamInstallCopy('bridge')` removes the install dir and manifest but keeps

@@ -1,0 +1,68 @@
+# gamelib.log extract — quick 261016-wsq live gate, launch 2026-10-17 07:45 NZDT (dev pid 51243, sidecar 51297)
+# Filter: [GATE-wsq] probe lines + [Steam]/[Backend]/[DownloadManager]/[Frontend] lines matching bridge|206040|206060|provision|removePerGame|uninstall|refreshLibrary|Finished|Running Wine|launching
+
+(07:45:40) [INFO]:    [Steam]:           Steam TokenStore implementation set to DevVaultTokenStore
+(07:45:40) [INFO]:    [Backend]:         [signInProbe] steam outcome=healthy elapsed=2ms
+(07:45:40) [INFO]:    [Backend]:         [signInProbe] steam verdict=unchanged
+(07:45:45) [INFO]:    [Backend]:         [signInProbe] steam verdict=unchanged
+(07:46:49) [INFO]:    [Frontend]:        [GATE-wsq] probe-installed {"t":1792176409209}
+(07:46:54) [INFO]:    [Frontend]:        [GATE-wsq] snap:arm0-as-found <json — see README table>
+(07:47:14) [INFO]:    [Frontend]:        [GATE-wsq] launch:start {"id":"206060"}
+(07:47:14) [INFO]:    [Steam]:           spawnHelperIfNeeded: spawning the shared bridge helper from /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/steam-bridge-helper (D-03)
+(07:47:14) [WARNING]: [Steam]:           bridge helper: [S_API] SteamAPI_Init(): Loaded '/Users/graysonmitchell/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib' OK.
+(07:47:14) [WARNING]: [Steam]:           bridge helper: Setting breakpad minidump AppID = 480
+(07:47:14) [WARNING]: [Steam]:           bridge helper: SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197995867096 [API loaded no]
+(07:47:14) [WARNING]: [Steam]:           bridge helper: [2026-10-16T18:47:14Z] INIT   SteamAPI ready (single InitFlat call, identity AppID 480)
+(07:47:14) [WARNING]: [Steam]:           bridge helper: [2026-10-16T18:47:14Z] LISTEN 127.0.0.1:54550 (loopback-only, persistent-channel)
+(07:47:15) [INFO]:    [Backend]:         Checking if wine version exists: CrossOver (bridge bottle runtime)
+(07:47:15) [INFO]:    [Steam]:           SteamGame: launching appId 206060 via the Steam bridge (/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 6/Avernum 6.exe)
+(07:47:15) [DEBUG]:   [Backend]:         Running Wine command: /Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 6/Avernum 6.exe
+(07:48:14) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] unhandled-rejection sidecar invoke timed out: launch t=153277ms vis=visible rootKids=1
+(07:48:43) [INFO]:    [Frontend]:        [GATE-wsq] uninstall:start {"id":"206040"}
+(07:48:43) [INFO]:    [Steam]:           SteamGame: removed bridge install for appId 206040 at "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 5"
+(07:48:43) [INFO]:    [Backend]:         Finished uninstalling
+(07:48:43) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=game-status
+(07:48:43) [INFO]:    [Frontend]:        [GATE-wsq] uninstall:done {"id":"206040","r":null}
+(07:48:46) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 206040
+(07:48:53) [INFO]:    [Frontend]:        [GATE-wsq] snap:arm2-after-uninstall <json — see README table>
+(07:48:58) [INFO]:    [Frontend]:        [GATE-wsq] refresh:start {}
+(07:48:58) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 206040
+(07:49:00) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 206040
+(07:49:01) [INFO]:    [Frontend]:        [GATE-wsq] refresh:done {"r":null}
+(07:49:01) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 206040
+(07:49:12) [INFO]:    [Frontend]:        [GATE-wsq] snap:arm2-after-refresh <json — see README table>
+(07:49:54) [INFO]:    [Frontend]:        [GATE-wsq] refresh:start {}
+(07:49:54) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 206040
+(07:49:57) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 206040
+(07:49:57) [INFO]:    [Frontend]:        [GATE-wsq] refresh:done {"r":null}
+(07:50:08) [INFO]:    [Frontend]:        [GATE-wsq] snap:arm2-rearmed <json — see README table>
+(07:50:42) [INFO]:    [Frontend]:        [GATE-wsq] install:start {"id":"206040","pre":{"app":"206040","title":"Avernum 5","installed":false}}
+(07:50:42) [INFO]:    [Steam]:           SteamGame: bridge bottle "GameLibSteamBridge-206040" not yet provisioned for appId 206040 — provisioning inline (BLOCKER 1, no consent dialog needed)
+(07:50:42) [INFO]:    [Frontend]:        [GATE-wsq] install:queued {"id":"206040","r":null}
+(07:50:56) [INFO]:    [Steam]:           provisionBridgeBottle: bridge bottle "GameLibSteamBridge-206040" created (no Windows Steam client installed — R6)
+(07:51:10) [INFO]:    [Steam]:           Writing StateFlags=4 full-ownership manifest for appId 206040 (sizeOnDisk=92315962, buildid=29992)
+(07:51:10) [INFO]:    [Steam]:           Steam: starting install polling for appId 206040 (interval 3000ms, source bridge, isNativeHandoff true, skippedDepots 0)
+(07:51:12) [INFO]:    [Steam]:           placeShimForGame: overwrote steam_api.dll for appId 206040 at "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-206040/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 5/steam_api.dll" (2 imported symbol(s) covered)
+(07:51:12) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=game-status
+(07:51:13) [INFO]:    [Steam]:           Steam: install polling complete for appId 206040 — badge flipped to installed
+(07:51:13) [INFO]:    [Steam]:           Steam: stopped install polling for appId 206040
+(07:58:32) [INFO]:    [Frontend]:        [GATE-wsq] snap:arm3-after-install <json — see README table>
+(07:58:38) [INFO]:    [Frontend]:        [GATE-wsq] launch:start {"id":"206040"}
+(07:58:39) [INFO]:    [Steam]:           SteamGame: launching appId 206040 via the Steam bridge (/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-206040/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 5/Avernum 5.exe)
+(07:58:39) [INFO]:    [Backend]:         Checking if wine version exists: CrossOver (bridge bottle runtime)
+(07:58:39) [DEBUG]:   [Backend]:         Running Wine command: /Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-206040/drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 5/Avernum 5.exe
+(07:59:38) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] unhandled-rejection sidecar invoke timed out: launch t=837652ms vis=visible rootKids=1
+(08:01:03) [INFO]:    [Frontend]:        [GATE-wsq] refresh:start {}
+(08:01:05) [INFO]:    [Frontend]:        [GATE-wsq] refresh:done {"r":null}
+(08:01:17) [INFO]:    [Frontend]:        [GATE-wsq] snap:arm4-after-refresh <json — see README table>
+(08:01:44) [INFO]:    [Frontend]:        [GATE-wsq] uninstall:start {"id":"206040"}
+(08:01:45) [INFO]:    [Steam]:           removePerGameBridgeBottle: removed per-game bridge bottle "GameLibSteamBridge-206040" for appId "206040"
+(08:01:45) [INFO]:    [Steam]:           SteamGame: removed per-game bridge bottle "GameLibSteamBridge-206040" for appId 206040 (removed)
+(08:01:45) [INFO]:    [Backend]:         Finished uninstalling
+(08:01:45) [INFO]:    [Frontend]:        [GATE-wsq] uninstall:done {"id":"206040","r":null}
+(08:01:56) [INFO]:    [Frontend]:        [GATE-wsq] refresh:start {}
+(08:01:58) [INFO]:    [Frontend]:        [GATE-wsq] refresh:done {"r":null}
+(08:02:10) [INFO]:    [Frontend]:        [GATE-wsq] snap:arm5-after-uninstall-refresh <json — see README table>
+(08:02:48) [INFO]:    [Frontend]:        [GATE-wsq] refresh:start {}
+(08:02:51) [INFO]:    [Frontend]:        [GATE-wsq] refresh:done {"r":null}
+(08:03:02) [INFO]:    [Frontend]:        [GATE-wsq] snap:restore-legacy-avernum5 <json — see README table>
