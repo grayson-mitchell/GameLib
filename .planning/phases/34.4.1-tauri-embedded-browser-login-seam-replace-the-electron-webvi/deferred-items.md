@@ -262,6 +262,7 @@ both, or it will close the symptom and leave the failure mode.
 operator's login keychain from a 2026-07-22 build. Harmless and no longer written, but a probe
 artifact was left in a real user keychain — worth a look at whether any current self-check path can
 still strand entries. NOT deleted here (it is the operator's keychain, not this plan's to modify).
+  status: acknowledged
 
 ### Upgrade (2026-07-31): the ACL theory now has DIRECT hardware evidence, not just elimination
 
@@ -726,6 +727,7 @@ Guessing here would repeat the failure that cost F-10 nine live runs — correla
 **Non-blocking regardless:** `finishLogin` gates acceptance on `getGamekeys`, never on
 `getAccountIdentity`, whose throw is caught. The fetch stays best-effort; making the UI depend on it
 is explicitly out of scope.
+  status: acknowledged
 
 ### D-29-04 and D-29-05 — **CLOSED (static half) 2026-08-23** (plan 33). Live half → plan 35.
 

@@ -142,6 +142,7 @@ rollup claim." It caught this. The gap was that plan 34.3-03 ran a *targeted* je
 that excluded `cargoFeatures.test.ts` — the phase-level post-merge gate is what surfaced it.
 
 ---
+  status: acknowledged
 
 ## From the phase-close gate — non-deterministic cross-suite flake
 

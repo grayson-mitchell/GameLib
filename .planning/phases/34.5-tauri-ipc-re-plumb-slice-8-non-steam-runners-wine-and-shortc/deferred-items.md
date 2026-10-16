@@ -324,6 +324,7 @@ one while the other is public changes nothing about what is findable. The publis
 the SteamID64 in those 37 published files — that is expected and must NOT be re-raised as a new
 finding or spent another cycle on. Anything genuinely new (a token, cookie, session id, OAuth code,
 or a NEW unredacted account id in an unpublished file) is still in scope and still blocks.
+  status: acknowledged
 
 ## Found during gap cycle 6 (plan 34.5-50) — the fourth blocking-gate contract's authoring
 

@@ -416,13 +416,16 @@ Summary's self-check section:
 
 - `34.9-18-SUMMARY.md:45`: *"closing CR-01 and WR-01"* — both self-check PASSED, no disagreement in
   the body.
+  status: acknowledged
 - `34.9-19-SUMMARY.md:60`: *"Closed the one known blind spot (WR-02)"*; `:62-63`: IN-01/IN-02 doc
   comments corrected and pinned; `:148` explicitly states *"IN-03 ... remains deferred, owned by
   plan 34.9-22's ledger entry"* — i.e. 34.9-19 itself records that IN-03 is NOT closed by it. No
   disagreement between frontmatter/tags and body for WR-02/IN-01/IN-02.
+  status: acknowledged
 - `34.9-20-SUMMARY.md:61`: *"Closed the second half of CR-01 ... It is now an unconditional `&&`
   step in both macOS packaging scripts"* — wiring only, not yet observed firing; consistent with
   34.9-21 being the plan that completes CR-01's closure.
+  status: acknowledged
 - `34.9-21-SUMMARY.md:62`: *"CR-01 (the sole Critical finding from `34.9-REVIEW.md`) is closed and
   `34.9-VERIFICATION.md` truth 8 is satisfied"* (verdict `PASS`, both directions scored from disk
   evidence) — no disagreement; this is CR-01's landing plan.
@@ -446,6 +449,7 @@ this plan's ledger. It receives item 11 below.
 count: **0**. *(As originally recorded 2026-08-12. Superseded 2026-08-22 by quick task 260822-hrf:
 IN-03 now reads FIXED above; see item 11's own closure note below for the landed commits. Left in
 place rather than rewritten, per this ledger's amend-not-retick discipline.)*
+  status: acknowledged
 
 ### 11. IN-03 — the F-34.9-02 stale-artifact fix is macOS-only
 
@@ -804,6 +808,7 @@ about not running `download-helper-binaries` describes, reached by an unexpected
 
 **This discharges the precondition that fired unanswered on 2026-08-22** (see the AMENDED note
 above). Item 19 is closed.
+  status: acknowledged
 
 ## Code-review finding disposition — gap cycle 2 review (2026-08-13)
 

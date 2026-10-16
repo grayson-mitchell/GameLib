@@ -335,7 +335,9 @@ WR-11 resolve+relative containment check carried forward as defence-in-depth.
 left `({}).polluted === undefined` (dot-prop@6 `disallowedKeys`), so Phase 29 CR-01's concern is
 satisfied by the library itself.
 
-**Status:** open. This is an input correction for whoever re-runs 35-05, not a nicety.
+**Status:** acknowledged
+
+_Was:_ open. This is an input correction for whoever re-runs 35-05, not a nicety.
 
 ## D-35-05-02 — RESOLVED 2026-08-29 (scope corrected to ~48 sites, operator-approved) — was BLOCKING: plan 35-05's site count is ~9, the real count is ~48
 
@@ -388,7 +390,9 @@ containment root, **not** the developer's real profile. The `tests-clobbering-re
 failure mode is structurally closed here. This lowers the severity of getting the fork wrong;
 it does not remove the need to choose.
 
-**Status:** RESOLVED 2026-08-29. Both D-35-05-01 and D-35-05-02 were raised as blockers, put to the
+**Status:** resolved
+
+_Was:_ RESOLVED 2026-08-29. Both D-35-05-01 and D-35-05-02 were raised as blockers, put to the
 operator, and discharged: the prescribed method was corrected rather than followed, and the ~48-site
 scope was approved to stay in 35-05. Plan 35-05 is COMPLETE. **Left in the ledger deliberately** —
 the measurement (24 cache files collapsing onto one `config.json` inside the repo) is the reason
@@ -1416,7 +1420,9 @@ path, which the Header documents as a `shell_diag()` call site, and are the natu
 - sink 2 stays empty => sink 2 is DEAD for packaged builds entirely, and every sink-2-based
   criterion in this document must be re-scored.
 
-**Status:** OPEN, unowned. Not blocking phase 35 — no criterion FAILs on it, because the criteria
+**Status:** acknowledged
+
+_Was:_ OPEN, unowned. Not blocking phase 35 — no criterion FAILs on it, because the criteria
 that would have depended on it are being scored on their observable halves. It wants a decision in
 a later phase: either route the packaged-path diagnostics through `shell_diag()`, or amend the
 sink-2 contract to state honestly which paths it covers.
@@ -1697,6 +1703,7 @@ handles must both be released or the display stays locked with no UI left to unl
 threat T-35-31). In this run both did release. Whoever fixes this should decide which site OWNS the
 display assertion rather than making both idempotent, since "both happen to release" is not a
 guarantee.
+  status: acknowledged
 
 ## D-35-19-11 — a "download is in progress" system assertion is held while merely PLAYING a game
 
@@ -1751,6 +1758,7 @@ active, the counts are 1 and 1, which looks like the clean expected state. The `
 spurious acquire is suppressed. Any regression test must use (a) a game running with no download, or
 (b) a download finishing while a game keeps running. A simultaneous snapshot will report a false
 PASS.
+  status: acknowledged
 
 ## D-35-19-12 — CONFIRMED: `powerDisplayId` is never reset, so launcher.ts acquires once per session
 
@@ -1785,6 +1793,7 @@ odd one out. That asymmetry is the likely fix (`powerDisplayId = null` after sto
 **Criterion 15 performed only ONE launch, so this was never exercised.** To test: launch a game,
 quit it, launch a second game, and count `GameLib: a game is running` assertions — expect 1 rather
 than 2 if the prediction holds.
+  status: acknowledged
 
 ## D-35-19-13 — startup race: the Epic library refresh always sees "offline" and serves cache
 
@@ -1913,6 +1922,7 @@ found unavailable, and the reason is now structural rather than circumstantial.*
   than this item's own guess of "a longer-lived session". The `EPIC_COOKIE_HOSTS` widening is
   currently **unreachable-by-construction**: correct, defensive, and waiting for the browser to
   return.
+  status: acknowledged
 - **Census route — implemented, and inert.** This item's own text offered the census as a way to
   "close this gap without needing the seeding step". Plan `35-23` implemented it correctly and it
   returns `UNSUPPORTED_OR_ERROR` on all five hosts at logout, because the census read requires a
@@ -1925,6 +1935,7 @@ exercised the widening no matter how it was driven.
 **This item cannot be closed until either an embedded browser returns (restoring the seeding
 vehicle) or [[D-35-29-01]] is fixed (restoring the census).** Do not mark it closed on the strength
 of criterion 21 passing — the criterion tests credential re-entry, which is a different question.
+  status: acknowledged
 
 ### CLOSED 2026-08-31 — the second of those two routes opened, and the evidence arrived on it
 
@@ -2024,8 +2035,10 @@ destination byte-identical by sha256). Only the RECORDED path is wrong.
 Mechanism — two independent appends of the same basename:
 1. `utils.ts` `moveOnUnix`: `const destination = join(newInstallPath, basename(install_path))`, and
    it returns that as `installPath`.
+  status: acknowledged
 2. `gog/games.ts:794` `moveInstall` passes that already-complete path straight to
    `changeGameInstallPath`.
+  status: acknowledged
 3. `gog/library.ts:891-893`:
    ```ts
    if (cachedGameData.install.platform === 'osx') {
@@ -2045,6 +2058,7 @@ Scope note: only the `osx` platform branch doubles, so this is macOS-specific fo
 
 The tester's Endless Sky entry was repaired by hand during this session (backup at
 `/tmp/gog-installed.json.bak`).
+  status: acknowledged
 
 ### How it was fixed (`260830-k4m`)
 
@@ -2277,6 +2291,7 @@ blind to its own defect ([[gate-gesture-can-be-blind-to-its-own-defect]]).
 pristine-window fallback the clear already has, so both sides resolve against the same store. Any
 fix must be verified by a live logout showing a `verdict` other than `UNSUPPORTED_OR_ERROR`; a
 passing unit test must not be accepted as evidence.
+  status: acknowledged
 
 ### CORRECTION 2026-08-31 — the cause above is UNDERSTATED, and the consequence is worse
 
@@ -2426,6 +2441,7 @@ The jar was rewritten at `18:15:19`, after the `18:15:15` clear, and its total s
 297 -> 145, so this is not a stale read.
 
 **Two explanations, NOT distinguished by this run:**
+  status: acknowledged
 1. the clear did not actually remove them (cf. [[wry-cookie-delete-lies-about-deleting]] — a delete
    that reports success without deleting is a known behaviour in this stack); or
   status: acknowledged
