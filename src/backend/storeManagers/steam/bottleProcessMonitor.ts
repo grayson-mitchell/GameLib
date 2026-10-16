@@ -174,6 +174,10 @@ async function runPollLoop(
   pollIntervalMs: number
 ): Promise<void> {
   const startedAt = Date.now()
+  // Session duration is measured from the FIRST MATCH, not from monitor
+  // start: the no-deadline wait for a blocked Steam (measured at ~6 minutes
+  // on 2026-10-16) is not play time and must not inflate the logged figure.
+  let matchedAt = 0
   let everMatched = false
   let consecutiveFailures = 0
 
@@ -221,6 +225,7 @@ async function runPollLoop(
 
     if (matches.length > 0 && !everMatched) {
       everMatched = true
+      matchedAt = Date.now()
       logInfo(
         [
           `bottleProcessMonitor [${appId}]: matched process(es) — game started`,
@@ -234,9 +239,9 @@ async function runPollLoop(
         status: 'playing'
       })
     } else if (matches.length === 0 && everMatched) {
-      const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000)
+      const elapsedSeconds = Math.round((Date.now() - matchedAt) / 1000)
       logInfo(
-        `bottleProcessMonitor [${appId}]: matched process(es) gone after ${elapsedSeconds}s — game stopped`,
+        `bottleProcessMonitor [${appId}]: matched process(es) gone after ${elapsedSeconds}s of play — game stopped`,
         LogPrefix.Steam
       )
       sendFrontendMessage('gameStatusUpdate', {
