@@ -43,7 +43,8 @@ import {
   getSteamBottleSettings,
   getBridgeBottleSettings,
   isBottleProvisioned,
-  isBridgeBottleReady
+  listReadyBridgeBottleNames,
+  resolveBridgeBottleName
 } from './bottle'
 import {
   buildDepotPlan,
@@ -101,23 +102,23 @@ function getBottleSteamappsRoot(): string {
 }
 
 /**
- * Resolves the DEDICATED bridge bottle's (GameLibSteamBridge) own steamapps
- * dir from getBridgeBottleSettings() — the bridge install writes its
- * StateFlags=4 appmanifest there, so the post-install poll must read from
- * this exact root, not the native libraries and not the Phase 17
- * getBottleSteamappsRoot() bottle (D-UAT-24-05: the poll previously looked in
- * the wrong location and timed out despite a correctly-written manifest).
- * Mirrors getBottleSteamappsRoot() but is a distinct, never-conflated root
- * (RESEARCH.md Pitfall 2).
+ * Resolves a bridge bottle's own steamapps dir from getBridgeBottleSettings()
+ * — the bridge install writes its StateFlags=4 appmanifest there, so the
+ * post-install poll must read from this exact root, not the native
+ * libraries and not the Phase 17 getBottleSteamappsRoot() bottle
+ * (D-UAT-24-05: the poll previously looked in the wrong location and timed
+ * out despite a correctly-written manifest). Mirrors getBottleSteamappsRoot()
+ * but is a distinct, never-conflated root (RESEARCH.md Pitfall 2).
  *
- * quick/261016-u1w (D-B threading): accepts an optional per-game appId so
- * callers that know WHICH game they're scanning for (readAcfState's
- * 'bridge' arm) can resolve that game's own dedicated bottle instead of
- * always the shared legacy one. Callers with no single game in mind
- * (buildBridgeInstalledMap, Task 2 scope) call this with no argument and
- * keep today's shared-bottle behavior.
+ * quick/261016-u1w (D-E): `appId` is now REQUIRED — this resolves that one
+ * game's own bridge bottle (per-game if ready, else legacy if it holds this
+ * game's manifest, via resolveBridgeBottleName/D-B) rather than defaulting
+ * to the shared legacy bottle. Callers that need to scan EVERY ready bridge
+ * bottle (buildBridgeInstalledMap) do not call this — they loop over
+ * listReadyBridgeBottleNames() and resolve each name's steamapps dir
+ * directly via getBottleSteamappsDir().
  */
-export function getBridgeBottleSteamappsRoot(appId?: string): string {
+export function getBridgeBottleSteamappsRoot(appId: string): string {
   return getBottleSteamappsDir(
     getBridgeBottleSettings(appId).wineCrossoverBottle
   )
@@ -1062,14 +1063,17 @@ export default class SteamLibraryManager implements LibraryManager {
       const installedMap = await buildInstalledMap()
       const bottleInstalledMap =
         isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
-      // D-UAT-24-07: consult the bridge bottle too, so a bridge-installed game
-      // (24-12's install poll flips is_installed:true on install) stays
-      // installed across this periodic sync instead of being clobbered back to
-      // false — gated the same way as the Phase 17 bottle map (isMac +
-      // provisioned check), so non-mac/unprovisioned environments skip this
-      // scan entirely (no new failing scan, native/bottle behavior unchanged).
+      // D-UAT-24-07: consult every ready bridge bottle too (quick/261016-u1w
+      // D-C), so a bridge-installed game (24-12's install poll flips
+      // is_installed:true on install) stays installed across this periodic
+      // sync instead of being clobbered back to false — gated on ANY bridge
+      // bottle being ready (legacy or per-game), so a host with no bridge
+      // bottle provisioned at all skips this scan entirely (no new failing
+      // scan, native/bottle behavior unchanged).
       const bridgeInstalledMap =
-        isMac && isBridgeBottleReady() ? await buildBridgeInstalledMap() : null
+        isMac && listReadyBridgeBottleNames().length > 0
+          ? await buildBridgeInstalledMap()
+          : null
       // WR-01 (21-17): the incomplete-on-disk set (native ACF present, bit 4
       // unset — e.g. a 1026 cancel handoff). Because this rebuild does
       // library.clear() below and derives each GameInfo purely from the ACF
@@ -1350,13 +1354,14 @@ export default class SteamLibraryManager implements LibraryManager {
    * 17-03 (MACSTEAM-05): when isMac && isBottleProvisioned(), ALSO diffs each
    * library entry against buildBottleInstalledMap() (the dedicated CrossOver
    * bottle's own ACF root) and reconciles bottle-installed games with
-   * install.platform: 'Windows' (Pitfall 3) — never the host OS. D-UAT-24-07:
-   * when isMac && isBridgeBottleReady(), ALSO diffs against
-   * buildBridgeInstalledMap() (the dedicated bridge bottle's own ACF root),
-   * so a bridge-installed game's badge is not clobbered back to false by this
-   * focus-triggered reconciliation either — same 'Windows' platform label
-   * (installPlatformForSource). Bottle reconciliation is gated strictly behind
-   * isBottleProvisioned() (T-17-03: a
+   * install.platform: 'Windows' (Pitfall 3) — never the host OS. D-UAT-24-07
+   * (quick/261016-u1w D-C): when isMac && listReadyBridgeBottleNames() is
+   * non-empty, ALSO diffs against buildBridgeInstalledMap() (every ready
+   * bridge bottle's own ACF root — legacy shared bottle plus every per-game
+   * bottle), so a bridge-installed game's badge is not clobbered back to
+   * false by this focus-triggered reconciliation either — same 'Windows'
+   * platform label (installPlatformForSource). Bottle reconciliation is
+   * gated strictly behind isBottleProvisioned() (T-17-03: a
    * missing/unprovisioned bottle is a no-op, not a repeated failing scan) and
    * is skipped entirely on Linux/Windows or an un-provisioned macOS, leaving
    * the native-only reconciliation byte-for-byte unchanged in those cases.
@@ -1374,11 +1379,14 @@ export default class SteamLibraryManager implements LibraryManager {
     const installedMap = await buildInstalledMap()
     const bottleInstalledMap =
       isMac && isBottleProvisioned() ? await buildBottleInstalledMap() : null
-    // D-UAT-24-07: same bridge-map consult as refresh(), so a focus/post-launch
-    // reconciliation does not clobber a bridge-installed game's badge back to
-    // false either. Gated identically (isMac + provisioned check).
+    // D-UAT-24-07 (quick/261016-u1w D-C): same bridge-map consult as
+    // refresh(), so a focus/post-launch reconciliation does not clobber a
+    // bridge-installed game's badge back to false either. Gated on ANY
+    // bridge bottle being ready, not just the legacy shared one.
     const bridgeInstalledMap =
-      isMac && isBridgeBottleReady() ? await buildBridgeInstalledMap() : null
+      isMac && listReadyBridgeBottleNames().length > 0
+        ? await buildBridgeInstalledMap()
+        : null
 
     for (const [appIdStr, gameInfo] of library.entries()) {
       const appId = parseInt(appIdStr, 10)
@@ -2291,18 +2299,26 @@ export async function buildBottleInstalledMap(): Promise<
 
 /**
  * Bridge-bottle-scoped sibling of buildBottleInstalledMap() — same StateFlags
- * bitmask + corrupt-file discipline (T-2-01/T-17-05), but rooted at the
- * DEDICATED bridge bottle's (GameLibSteamBridge) own steamapps dir via
- * getBridgeBottleSteamappsRoot(), never conflated with the native or Phase 17
- * bottle roots (RESEARCH.md Pitfall 2). D-UAT-24-07: the periodic library
- * sync (refresh()) and the focus-triggered reconciliation
+ * bitmask + corrupt-file discipline (T-2-01/T-17-05), but rooted at EVERY
+ * currently-ready bridge bottle (quick/261016-u1w D-C) — the legacy shared
+ * bottle plus every per-game bottle (GameLibSteamBridge-<appId>) —
+ * via listReadyBridgeBottleNames(), never conflated with the native or
+ * Phase 17 bottle roots (RESEARCH.md Pitfall 2). D-UAT-24-07: the periodic
+ * library sync (refresh()) and the focus-triggered reconciliation
  * (refreshInstallState()) previously derived install-state from ONLY the
  * native + Phase 17 bottle maps, so a bridge-installed game (24-12's install
  * poll had already flipped its badge to Installed) got clobbered back to
  * not-installed on the very next sync — this builder lets both paths consult
- * the bridge bottle too, so the badge stays durable across syncs. Returns an
- * empty Map when the bridge bottle steamapps dir doesn't exist yet (e.g. the
- * bridge bottle has never been provisioned).
+ * every ready bridge bottle too, so the badge stays durable across syncs.
+ *
+ * Attribution (D-C/D-B): a manifest found in bottle `name` counts for its
+ * appId ONLY when `resolveBridgeBottleName(String(appid)) === name` — i.e.
+ * only the resolver's own answer for that appId may claim it. This is what
+ * keeps a stray/foreign manifest in a per-game bottle, or a stale legacy
+ * manifest for a game that has since migrated to its own per-game bottle,
+ * from being double-counted or attributed to the wrong bottle; each appId
+ * has exactly one owner, decided the same way every other bridge reader
+ * decides it. Returns an empty Map when no bridge bottle is ready at all.
  *
  * Exported for unit testing.
  */
@@ -2313,37 +2329,44 @@ export async function buildBridgeInstalledMap(): Promise<
     number,
     { installPath: string; sizeOnDisk: string }
   >()
-  const steamappsDir = getBridgeBottleSteamappsRoot()
-  if (!existsSync(steamappsDir)) return installed
 
-  let files: string[]
-  try {
-    files = readdirSync(steamappsDir)
-  } catch {
-    return installed
-  }
+  for (const name of listReadyBridgeBottleNames()) {
+    const steamappsDir = getBottleSteamappsDir(name)
+    if (!existsSync(steamappsDir)) continue
 
-  for (const file of files) {
-    if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
-
+    let files: string[]
     try {
-      const content = readFileSync(join(steamappsDir, file), 'utf-8')
-      const parsed = parse(content)
-      const state = parsed?.AppState
-      if (!state) continue
-
-      const appid = parseInt(state.appid, 10)
-      const stateFlags = parseInt(state.StateFlags, 10)
-      const isInstalled = isFullyInstalledStateFlags(stateFlags)
-
-      if (isInstalled && !isNaN(appid)) {
-        installed.set(appid, {
-          installPath: join(steamappsDir, 'common', state.installdir ?? ''),
-          sizeOnDisk: state.SizeOnDisk ?? '0'
-        })
-      }
+      files = readdirSync(steamappsDir)
     } catch {
-      /* skip corrupt ACF — T-2-01 mitigation */
+      continue
+    }
+
+    for (const file of files) {
+      if (!file.startsWith('appmanifest_') || !file.endsWith('.acf')) continue
+
+      try {
+        const content = readFileSync(join(steamappsDir, file), 'utf-8')
+        const parsed = parse(content)
+        const state = parsed?.AppState
+        if (!state) continue
+
+        const appid = parseInt(state.appid, 10)
+        const stateFlags = parseInt(state.StateFlags, 10)
+        const isInstalled = isFullyInstalledStateFlags(stateFlags)
+
+        if (
+          isInstalled &&
+          !isNaN(appid) &&
+          resolveBridgeBottleName(String(appid)) === name
+        ) {
+          installed.set(appid, {
+            installPath: join(steamappsDir, 'common', state.installdir ?? ''),
+            sizeOnDisk: state.SizeOnDisk ?? '0'
+          })
+        }
+      } catch {
+        /* skip corrupt ACF — T-2-01 mitigation */
+      }
     }
   }
 

@@ -9,7 +9,13 @@
  *  - graceful-fs mocked (existsSync) — no real filesystem access
  *  - electron mocked (app.getPath) — backend/constants/paths imports it
  */
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'graceful-fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync
+} from 'graceful-fs'
 // Real (unmocked) fs — used ONLY to grep bottle.ts's own source text for the
 // R6 "no Windows Steam installer reference in provisionBridgeBottle" guard
 // below. Distinct local name so it never collides with the mocked
@@ -44,7 +50,8 @@ import {
   getBridgeBottleSettings,
   provisionBridgeBottle,
   bridgeBottleNameFor,
-  resolveBridgeBottleName
+  resolveBridgeBottleName,
+  listReadyBridgeBottleNames
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -63,6 +70,7 @@ jest.mock('backend/platform', () => ({
 jest.mock('graceful-fs', () => ({
   existsSync: jest.fn(),
   mkdirSync: jest.fn(),
+  readdirSync: jest.fn(),
   readFileSync: jest.fn(),
   rmSync: jest.fn()
 }))
@@ -121,6 +129,7 @@ jest.mock('backend/logger', () => ({
 
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
+const mockedReaddirSync = readdirSync as jest.Mock
 const mockedReadFileSync = readFileSync as jest.Mock
 const mockedRmSync = rmSync as jest.Mock
 const mockedGetNodefault = steamBottleConfigStore.get_nodefault as jest.Mock
@@ -144,6 +153,7 @@ describe('bottle.ts', () => {
   beforeEach(() => {
     mockedExistsSync.mockReset()
     mockedMkdirSync.mockReset()
+    mockedReaddirSync.mockReset()
     mockedReadFileSync.mockReset()
     mockedRmSync.mockReset()
     mockedGetNodefault.mockReset()
@@ -1556,17 +1566,19 @@ describe('bottle.ts', () => {
           return false
         })
 
-        expect(isBridgeBottleReady()).toBe(true)
         expect(isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME)).toBe(true)
       })
 
       test('is false when the bridge bottle has not been created', () => {
         mockedExistsSync.mockReturnValue(false)
 
-        expect(isBridgeBottleReady()).toBe(false)
+        expect(isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME)).toBe(false)
       })
 
-      test('resolves DEFAULT_BRIDGE_BOTTLE_NAME by default, not the stored Phase 17 bottle name', () => {
+      // quick/261016-u1w (D-E): isBridgeBottleReady now REQUIRES a name and
+      // probes EXACTLY that name — a per-game name must never touch the
+      // legacy or Phase 17 dir (no silent default).
+      test('probes exactly the name passed, never any other bottle', () => {
         const seenPaths: string[] = []
         mockedExistsSync.mockImplementation((path: string) => {
           seenPaths.push(path)
@@ -1574,30 +1586,40 @@ describe('bottle.ts', () => {
         })
         mockedGetNodefault.mockReturnValue(DEFAULT_STEAM_BOTTLE_NAME)
 
-        isBridgeBottleReady()
+        isBridgeBottleReady('GameLibSteamBridge-206040')
 
         expect(
-          seenPaths.some((p) => p.includes(DEFAULT_BRIDGE_BOTTLE_NAME))
+          seenPaths.every((p) => p.includes('GameLibSteamBridge-206040'))
         ).toBe(true)
         expect(
           seenPaths.some(
             (p) =>
               p.includes(DEFAULT_STEAM_BOTTLE_NAME) &&
-              !p.includes(DEFAULT_BRIDGE_BOTTLE_NAME)
+              !p.includes('GameLibSteamBridge-206040')
+          )
+        ).toBe(false)
+        expect(
+          seenPaths.some(
+            (p) =>
+              p.includes(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+              !p.includes('GameLibSteamBridge-206040')
           )
         ).toBe(false)
       })
     })
 
     describe('getBridgeBottleSettings', () => {
-      test('resolves the bridge bottle name, not GameLibSteam', () => {
+      // quick/261016-u1w (D-E): appId is now REQUIRED. With no bridge bottle
+      // ready (mockedExistsSync default-false), resolveBridgeBottleName
+      // falls through to the per-game name — never the Phase 17 bottle.
+      test('resolves the per-game bridge bottle name, not GameLibSteam', () => {
         mockedGlobalConfigGet.mockReturnValue({
           getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
         })
 
-        const settings = getBridgeBottleSettings()
+        const settings = getBridgeBottleSettings('206040')
 
-        expect(settings.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
+        expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
         expect(settings.wineCrossoverBottle).not.toBe(DEFAULT_STEAM_BOTTLE_NAME)
       })
 
@@ -1607,9 +1629,9 @@ describe('bottle.ts', () => {
         })
         mockedGetNodefault.mockReturnValue('some-other-bottle')
 
-        const settings = getBridgeBottleSettings()
+        const settings = getBridgeBottleSettings('206040')
 
-        expect(settings.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
+        expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
       })
 
       // ── D-UAT-24-06 (24-15 gap closure) ─────────────────────────────────
@@ -1631,7 +1653,7 @@ describe('bottle.ts', () => {
           path.endsWith('/CrossOver/bin/wine')
         )
 
-        const settings = getBridgeBottleSettings()
+        const settings = getBridgeBottleSettings('206040')
 
         expect(settings.wineVersion.type).toBe('crossover')
         expect(settings.wineVersion.bin).toMatch(/\/CrossOver\/bin\/wine$/)
@@ -1648,12 +1670,12 @@ describe('bottle.ts', () => {
         })
         mockedExistsSync.mockReturnValue(false)
 
-        const settings = getBridgeBottleSettings()
+        const settings = getBridgeBottleSettings('206040')
 
         expect(settings.wineVersion).toEqual(gptkGlobalWine)
       })
 
-      test('D-UAT-24-06: stays synchronous and still sets wineCrossoverBottle to the bridge default', () => {
+      test('D-UAT-24-06: stays synchronous and still resolves a bridge bottle name', () => {
         mockedGlobalConfigGet.mockReturnValue({
           getSettings: () => ({ wineVersion: gptkGlobalWine }) as GameSettings
         })
@@ -1661,10 +1683,10 @@ describe('bottle.ts', () => {
           path.endsWith('/CrossOver/bin/wine')
         )
 
-        const result = getBridgeBottleSettings()
+        const result = getBridgeBottleSettings('206040')
 
         expect(result).not.toBeInstanceOf(Promise)
-        expect(result.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
+        expect(result.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
       })
 
       // ── Per-game bottle threading (D-B) ────────────────────────────────
@@ -1683,15 +1705,15 @@ describe('bottle.ts', () => {
         expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
       })
 
-      test('still defaults to DEFAULT_BRIDGE_BOTTLE_NAME when called with no appId (back-compat)', () => {
+      test('resolves to the per-game bottle name (not the legacy shared one) when no bridge bottle is ready at all', () => {
         mockedGlobalConfigGet.mockReturnValue({
           getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
         })
         mockedExistsSync.mockReturnValue(false)
 
-        const settings = getBridgeBottleSettings()
+        const settings = getBridgeBottleSettings('206040')
 
-        expect(settings.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
+        expect(settings.wineCrossoverBottle).toBe('GameLibSteamBridge-206040')
       })
 
       test('throws when given a non-numeric appId -- a caller that passed an appId has a specific game in mind, so resolving the WRONG (shared) bottle silently would be worse than failing loudly', () => {
@@ -1720,7 +1742,10 @@ describe('bottle.ts', () => {
           type: 'toolkit'
         }
 
-        const result = await provisionBridgeBottle({ wineVersion: gptk })
+        const result = await provisionBridgeBottle({
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME,
+          wineVersion: gptk
+        })
 
         expect(result.status).toBe('error')
         expect(result.error).toMatch(/crossover/i)
@@ -1743,7 +1768,10 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        const result = await provisionBridgeBottle({ wineVersion: crossover })
+        const result = await provisionBridgeBottle({
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME,
+          wineVersion: crossover
+        })
 
         expect(result.status).toBe('done')
       })
@@ -1753,7 +1781,9 @@ describe('bottle.ts', () => {
           path.includes('cxbottle.conf')
         )
 
-        const result = await provisionBridgeBottle()
+        const result = await provisionBridgeBottle({
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
+        })
 
         expect(result).toEqual({ status: 'done' })
         expect(mockedSpawnAsync).not.toHaveBeenCalled()
@@ -1770,7 +1800,9 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        const result = await provisionBridgeBottle()
+        const result = await provisionBridgeBottle({
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
+        })
 
         expect(result.status).toBe('done')
         expect(mockedSpawnAsync).toHaveBeenCalledWith(
@@ -1807,6 +1839,30 @@ describe('bottle.ts', () => {
         )
       })
 
+      // quick/261016-u1w (D-C/D-E): a per-game bottle name provisions exactly
+      // like any other named bottle — no special-casing in provisionBridgeBottle.
+      test('provisions a per-game bottle name via cxbottle --bottle <name>', async () => {
+        mockedExistsSync.mockReturnValue(false)
+        mockedSpawnAsync.mockImplementation((bin: string) => {
+          if (bin.includes('cxbottle')) {
+            mockedExistsSync.mockImplementation((path: string) =>
+              path.includes('cxbottle.conf')
+            )
+          }
+          return { code: 0, stdout: '', stderr: '' }
+        })
+
+        const result = await provisionBridgeBottle({
+          bottleName: 'GameLibSteamBridge-206040'
+        })
+
+        expect(result.status).toBe('done')
+        expect(mockedSpawnAsync).toHaveBeenCalledWith(
+          expect.stringContaining('cxbottle'),
+          expect.arrayContaining(['--bottle', 'GameLibSteamBridge-206040'])
+        )
+      })
+
       test('never calls downloadFile — no Windows Steam installer is fetched (R6)', async () => {
         mockedExistsSync.mockReturnValue(false)
         mockedSpawnAsync.mockImplementation(async (bin: string) => {
@@ -1818,7 +1874,7 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        await provisionBridgeBottle()
+        await provisionBridgeBottle({ bottleName: DEFAULT_BRIDGE_BOTTLE_NAME })
 
         expect(mockedDownloadFile).not.toHaveBeenCalled()
         expect(mockedRunWineCommand).not.toHaveBeenCalled()
@@ -1832,7 +1888,9 @@ describe('bottle.ts', () => {
           stderr: 'boom'
         })
 
-        const result = await provisionBridgeBottle()
+        const result = await provisionBridgeBottle({
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
+        })
 
         expect(result.status).toBe('error')
       })
@@ -1841,7 +1899,9 @@ describe('bottle.ts', () => {
         mockedExistsSync.mockReturnValue(false)
         mockedSpawnAsync.mockRejectedValue(new Error('spawn failed'))
 
-        const result = await provisionBridgeBottle()
+        const result = await provisionBridgeBottle({
+          bottleName: DEFAULT_BRIDGE_BOTTLE_NAME
+        })
 
         expect(result.status).toBe('error')
         expect(result.error).toContain('spawn failed')
@@ -1858,7 +1918,7 @@ describe('bottle.ts', () => {
           return { code: 0, stdout: '', stderr: '' }
         })
 
-        await provisionBridgeBottle()
+        await provisionBridgeBottle({ bottleName: DEFAULT_BRIDGE_BOTTLE_NAME })
 
         const wineserverCall = mockedSpawnAsync.mock.calls.find(([bin]) =>
           String(bin).includes('wineserver')
@@ -1868,6 +1928,90 @@ describe('bottle.ts', () => {
         expect(wineserverCall?.[2]?.env?.WINEPREFIX).toContain(
           DEFAULT_BRIDGE_BOTTLE_NAME
         )
+      })
+    })
+
+    // quick/261016-u1w (D-C): every ready bridge bottle — legacy first (if
+    // ready), then per-game bottles sorted by ascending numeric appId.
+    describe('listReadyBridgeBottleNames', () => {
+      const bottlesRoot = joinPath(
+        userHome,
+        'Library/Application Support/CrossOver/Bottles'
+      )
+
+      test('returns [] when the Bottles dir does not exist, and never calls readdirSync', () => {
+        mockedExistsSync.mockReturnValue(false)
+
+        const result = listReadyBridgeBottleNames()
+
+        expect(result).toEqual([])
+        expect(mockedReaddirSync).not.toHaveBeenCalled()
+      })
+
+      test('lists the legacy bottle first, then per-game bottles sorted by ascending numeric appId', () => {
+        mockedExistsSync.mockImplementation((path: string) => {
+          if (path === bottlesRoot) return true
+          // every candidate bottle's cxbottle.conf is "ready"
+          if (path.includes('cxbottle.conf')) {
+            return (
+              path.includes(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+              !path.includes('NotReady')
+            )
+          }
+          return false
+        })
+        mockedReaddirSync.mockImplementation((path: string) => {
+          if (path === bottlesRoot) {
+            return [
+              'GameLibSteamBridge-206060',
+              'GameLibSteam',
+              'GameLibSteamBridge',
+              'SomeUsersOwnBottle',
+              'GameLibSteamBridge-206040',
+              'GameLibSteamBridge-NotNumeric',
+              'GameLibSteamBridge-NotReady'
+            ]
+          }
+          return []
+        })
+
+        const result = listReadyBridgeBottleNames()
+
+        expect(result).toEqual([
+          'GameLibSteamBridge',
+          'GameLibSteamBridge-206040',
+          'GameLibSteamBridge-206060'
+        ])
+      })
+
+      test('readdirSync throwing returns [] without throwing', () => {
+        mockedExistsSync.mockReturnValue(true)
+        mockedReaddirSync.mockImplementation(() => {
+          throw new Error('EPERM')
+        })
+
+        expect(() => listReadyBridgeBottleNames()).not.toThrow()
+        expect(listReadyBridgeBottleNames()).toEqual([])
+      })
+
+      test('when the legacy bottle is not ready, only the ready per-game names are returned', () => {
+        mockedExistsSync.mockImplementation((path: string) => {
+          if (path === bottlesRoot) return true
+          if (path.includes('cxbottle.conf')) {
+            return path.includes('GameLibSteamBridge-206040')
+          }
+          return false
+        })
+        mockedReaddirSync.mockImplementation((path: string) => {
+          if (path === bottlesRoot) {
+            return ['GameLibSteamBridge', 'GameLibSteamBridge-206040']
+          }
+          return []
+        })
+
+        const result = listReadyBridgeBottleNames()
+
+        expect(result).toEqual(['GameLibSteamBridge-206040'])
       })
     })
   })
