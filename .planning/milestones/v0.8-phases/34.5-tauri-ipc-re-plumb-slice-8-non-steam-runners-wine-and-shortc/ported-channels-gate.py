@@ -31,7 +31,11 @@ from pathlib import Path
 
 PHASE_DIR = Path(__file__).parent
 PORTED_CHANNELS_PATH = PHASE_DIR / "34.5-PORTED-CHANNELS.md"
-INVENTORY_PATH = PHASE_DIR.parent.parent / "IPC-PORT-INVENTORY.md"
+# Archived with the v0.8 milestone (2026-10-16): the phase dir now sits two levels deeper, so the
+# repo root is found by walking up to the first ancestor that contains `.planning/` instead of
+# a fixed `parent.parent.parent` — the gate keeps guarding the live tree from the archive.
+REPO_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".planning").is_dir())
+INVENTORY_PATH = REPO_ROOT / ".planning" / "IPC-PORT-INVENTORY.md"
 
 # ---------------------------------------------------------------------------
 # The declared 39, by registration module (11 + 9 + 7 + 11 + 1 = 39), the first 38 measured by

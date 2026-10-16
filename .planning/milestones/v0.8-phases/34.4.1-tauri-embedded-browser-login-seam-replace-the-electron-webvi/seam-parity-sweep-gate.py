@@ -67,7 +67,10 @@ import sys
 from pathlib import Path
 
 PHASE_DIR = Path(__file__).parent
-REPO_ROOT = PHASE_DIR.parent.parent.parent
+# Archived with the v0.8 milestone (2026-10-16): the phase dir now sits two levels deeper, so the
+# repo root is found by walking up to the first ancestor that contains `.planning/` instead of
+# a fixed `parent.parent.parent` — the gate keeps guarding the live tree from the archive.
+REPO_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".planning").is_dir())
 SRC_DIR = REPO_ROOT / "src"
 OUTPUT_PATH = PHASE_DIR / "34.4.1-SEAM-PARITY-SWEEP.md"
 # RE-POINTED Phase 39 Plan 08 (D-35-14-02 vocabulary): this file was `git mv`'d by Phase 35 plans

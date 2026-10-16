@@ -234,11 +234,7 @@ MINIMUM_PHASE_LEDGERS = 89
 # automatically safe, hence pinned by name rather than exempted by shape.
 KNOWN_NO_FRONTMATTER: tuple[tuple[str, str], ...] = (
     (
-        "phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-HUMAN-UAT.md",
-        "prose results doc; audit-uat reads its 15 items from the body regardless (uat.cjs:155)",
-    ),
-    (
-        "phases/40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we/40-EMBED-API-VERIFICATION.md",
+        "milestones/v0.8-phases/40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we/40-EMBED-API-VERIFICATION.md",
         "a D-25 crate-source verdict doc, not a verify-phase ledger",
     ),
 )
@@ -250,15 +246,11 @@ KNOWN_NO_FRONTMATTER: tuple[tuple[str, str], ...] = (
 # moves still FAILS (DD-2). This is the ledger analogue of REQUIRED_STATE_KEYS above.
 KNOWN_UNPARSEABLE_TERMINAL: tuple[tuple[str, str], ...] = (
     (
-        "phases/34.13-steam-install-time-wine-bottle-form-gog-parity/34.13-UAT.md",
-        "complete",
-    ),
-    (
-        "phases/34.4.1-tauri-embedded-browser-login-seam-replace-the-electron-webvi/34.4.1-VERIFICATION.md",
+        "milestones/v0.8-phases/34.4.1-tauri-embedded-browser-login-seam-replace-the-electron-webvi/34.4.1-VERIFICATION.md",
         "passed",
     ),
     (
-        "phases/39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec/39-VERIFICATION.md",
+        "milestones/v0.8-phases/39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec/39-VERIFICATION.md",
         "passed",
     ),
 )

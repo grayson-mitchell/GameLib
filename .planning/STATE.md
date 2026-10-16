@@ -75,10 +75,14 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: Milestone v0.8 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-16 — Milestone v0.8 completed and archived
+Phase: Milestone v0.8 complete — no active phase (next: `/gsd-new-milestone`)
+Plan: 0 of 0
+Status: Awaiting next milestone — v0.8 Tauri Shell shipped 2026-10-16 as an override closeout (see `## Deferred Items`); tag `v0.8` is local and unpushed
+Last activity: 2026-10-16 — Milestone v0.8 completed and archived (safety commit 39e1d5273, REQUIREMENTS.md removed in 35ad4aa85)
+
+Progress: [████████░░] 80%
+
+History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
 ## Native-Install Arc Phase Map (21–25)
 

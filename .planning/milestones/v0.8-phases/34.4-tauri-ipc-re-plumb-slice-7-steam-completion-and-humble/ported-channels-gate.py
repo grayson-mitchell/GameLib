@@ -45,7 +45,11 @@ from pathlib import Path
 
 PHASE_DIR = Path(__file__).parent
 PORTED_CHANNELS_PATH = PHASE_DIR / "34.4-PORTED-CHANNELS.md"
-INVENTORY_PATH = PHASE_DIR.parent.parent / "IPC-PORT-INVENTORY.md"
+# Archived with the v0.8 milestone (2026-10-16): the phase dir now sits two levels deeper, so the
+# repo root is found by walking up to the first ancestor that contains `.planning/` instead of
+# a fixed `parent.parent.parent` — the gate keeps guarding the live tree from the archive.
+REPO_ROOT = next(p for p in Path(__file__).resolve().parents if (p / ".planning").is_dir())
+INVENTORY_PATH = REPO_ROOT / ".planning" / "IPC-PORT-INVENTORY.md"
 
 # The 31 channel names from `.planning/IPC-PORT-INVENTORY.md`'s
 # "## Phase 34.4 — Slice 7 — Steam completion and Humble (31 channels)" heading.
