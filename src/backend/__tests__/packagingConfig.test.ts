@@ -48,7 +48,8 @@ const PACKAGING_LIMITATIONS_PATH = join(
   '..',
   '..',
   '.planning',
-  'phases',
+  'milestones',
+  'v0.8-phases',
   '34.9-macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co',
   '34.9-PACKAGING-LIMITATIONS.md'
 )

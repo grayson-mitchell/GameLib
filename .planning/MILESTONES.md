@@ -133,20 +133,20 @@
 
 ---
 
-## v0.7 Steam Native Install (In progress — no ship date)
+## v0.7 Steam Native Install (Closed 2026-10-16 — parked live UAT, no ship date)
 
 **Scope:** Phases 21, 22 (parked), 23, 24, 25, 26 — an in-process Steam depot-download engine GameLib owns (real progress, real errors, recovery) instead of the opaque `steam://rungameid` handoff, extended to full-ownership `StateFlags=4` installs, a macOS native Steam bridge, multi-host download throughput, and in-app Steam key redemption.
 
-**Status: NOT shipped.** Per STATE.md (`milestone: v0.7`, `status: verifying`) and disk reconciliation:
+**Status: CLOSED 2026-10-16 by operator decision, with live-only UAT PARKED — not verified, and never given a ship date.** Phase dirs archived to `milestones/v0.7-phases/`. Parked as todos with revisit triggers: Phase 21's 7 Windows-deferred native-install items and D-UAT-10 (bottled-Steam launch/uninstall, macOS, major), and Phase 26's 5 live redeem items (`.planning/todos/pending/2026-10-16-phase-2*`). The per-phase notes below were written 2026-07-22 and are kept as written, except where marked CLOSED:
 
 - **Phase 21 (Steam Native Install, depot download)** — 17/17 plans, code-review clean, secure-phase 41/41 threats_open:0. Complete 2026-07-20, but hardware UAT (7 native-install items) deferred to Windows post-production, plus one tracked macOS-debug item (D-UAT-10 bottled-launch).
 - **Phase 22 (Steam Game Families / multiple bottles)** — ⛔ PARKED 2026-07-21, superseded by Phase 24. 8 plans written, 0 executed. See ROADMAP.md `## Parked / Superseded Phases` and commit `b40aa6d8`.
-- **Phase 23 (Steam full-ownership install, StateFlags=4)** — **5/10 plans executed.** Gaps open: G-23-01 (KCD2 `Blocked`-depot-key aborts the whole install) and G-23-02 (native install applies no execute bits; Gate 2 only a CONDITIONAL PASS after a manual `chmod +x`). Gate 3 not yet run. REQ-23-07 stays open.
+- **Phase 23 (Steam full-ownership install, StateFlags=4)** — **[as of 2026-07-22; now 10/10 and COMPLETE 2026-08-19]** 5/10 plans executed then. Gaps were open: G-23-01 (KCD2 `Blocked`-depot-key aborts the whole install) and G-23-02 (native install applies no execute bits; Gate 2 only a CONDITIONAL PASS after a manual `chmod +x`). Gate 3 not yet run. REQ-23-07 stays open.
 - **Phase 24 (macOS native Steam bridge)** — 16/17 plans executed (only 24-10, the human-hardware packaged-build checkpoint, has no SUMMARY.md — its acceptance is recorded directly in 24-UAT.md instead). Gates 0/1/2/3 PASS on real hardware; Gate 4 (Hoard) explicitly out of scope (bridge proxies only ISteamUser + ISteamFriends). Completed 2026-07-21; superseded/parked Phase 22.
 - **Phase 25 (multi-host download fan-out)** — 3/3 plans, hardware-verified 2026-07-19 (hosts=3, ~10 MiB/s vs 1.5–2.9 MiB/s baseline).
 - **Phase 26 (Steam Key Redemption)** — 5/5 plans, completed 2026-07-20.
 
-**Blocking this milestone's close:** Phase 23's two open gaps (G-23-01, G-23-02) and REQ-23-07. No ship date is recorded because the milestone has not shipped.
+**~~Blocking this milestone's close~~ — CLOSED 2026-08-19:** Phase 23's G-23-01 (fixed by Phase 23.2, proven on real hardware) and G-23-02 (execute bits, Gate 2 attempt 3) and REQ-23-07 (all three hardware gates PASS). What actually remained open at close was the parked UAT above. No ship date is recorded.
 
 ---
 

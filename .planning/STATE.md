@@ -1,21 +1,21 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.8
-milestone_name: Tauri Shell
+current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 status: Awaiting next milestone
 stopped_at: Completed quick task 261015-rud -- live-gated Amazon expiry strings A3/A6 by nile induction
-last_updated: "2026-10-16T06:23:54.903Z"
+last_updated: "2026-10-16T06:43:05.661Z"
 last_activity: 2026-10-16
 last_activity_desc: Milestone v0.8 completed and archived
-state_head: 953cd5cba9239ad7f2ee22a21e326c9986aec5ef
+state_head: d64387d4b4c8ea76b2653a4b42965e432b7af9e7
 progress:
   total_phases: 45
   completed_phases: 36
   total_plans: 554
   completed_plans: 545
   percent: 80
+milestone_name: Tauri Shell
 current_phase: 50
-current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 ---
 
 # Project State
@@ -90,7 +90,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 |-------|------|-------|-----------|--------|
 | 21 | Steam Native Install (depot download) | 17 | 17 | ✅ Complete (2026-07-20) — code-review clean, secure-phase 41/41 threats_open:0; hardware UAT (7 native-install items) DEFERRED to Windows post-production + D-UAT-10 bottled-launch deferred as tracked macOS debt |
 | 22 | Steam Game Families (multiple bottle configs) | 8 | 0 | ⛔ **PARKED 2026-07-21 — superseded by Phase 24.** Bridge's one shared bottle (D-03) eliminates the per-family bottle matrix; plans retained unexecuted (`22-multiple-steam-bottles/PARKED.md`) |
-| 23 | Steam full-ownership install (StateFlags=4) | 10 | 6 | 🔄 In progress, NOT phase-complete — Gate 1 PASS (2026-07-19); Gate 2 CONDITIONAL PASS (2026-07-21, HUMANKIND Denuvo launch proven but only after a manual `chmod +x` workaround — blocker gap **G-23-02**, native install applies no execute bits); Gate 3 pending. Gap **G-23-01** (KCD2 `Blocked`-depot-key aborts whole install) also open. **23-06 executed** (trace-before-fix): added permanent `steam-flags-census` instrumentation (plan-build/download-entry/download-complete) + `23-TRACE.md` H1-H5 hypothesis matrix — no fix yet, per user-locked ordering. Next: 23-07 (live-run recording) → 23-08 (the gated fix). REQ-23-07 stays open until Gate 2 re-runs clean and Gate 3 passes (`/gsd-verify-work 23`) |
+| 23 | Steam full-ownership install (StateFlags=4) | 10 | 10 | ✅ Complete 2026-08-19 — 10/10 plans; all three D-07 hardware gates PASS on real macOS; G-23-01 closed by Phase 23.2, G-23-02 closed in Gate 2 attempt 3; REQ-23-07 satisfied. (Row rewritten 2026-10-16: it still read "In progress, Gate 3 pending" from 2026-07-21.) |
 | 24 | macOS native Steam bridge (steam_api proxy) | 17 | 17 | ✅ Complete 2026-07-21 — Gates 0/1/2/3 PASS on real hardware; gap cycles 24-11..24-17 closed shim-overwrite/install-poll + CrossOver-launch/library-sync clusters; secure-phase done (threats_open:0). Gate 4 (Hoard) out of scope — bridge proxies only ISteamUser + ISteamFriends. Gate 3 = **Avernum 6** (RETEST RUN 3, 19:02 rebuild w/ 24-17); `24-UAT.md` `status: complete`, `pending_gates: 0`. Deferred (not open): **D-UAT-24-09** full Hoard support needs 6 more interface proxies (follow-on phase; Hoard delisted `30cdda6a`); **WR-01** helper concurrency skipped at review-fix (`24-REVIEW-FIX.md` partial — single-threaded helper serializes a 2nd concurrent bridge game); **D-UAT-24-08** helper-reuse-on-bind never built (teardown wired at `main.ts:716-722`; no 127.0.0.1:54550 reuse path in `helperProcess.ts`), never dispositioned in `24-UAT.md` |
 | 25 | Steam depot multi-host fan-out (throughput) | 3 | 3 | ✅ Complete + HW-verified 2026-07-19 (hosts=3, ~10 MiB/s vs 1.5–2.9 baseline) |
 
@@ -655,6 +655,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261016-n7s | **Amazon sign-in latch now clears on a zero-installed profile.** The expiry probe's `list-updates` run is `unknown` with nothing installed (A4) and `unknown` never writes, so a latched `expired` could only clear via Reconnect. Fix: a clear-only classifier (`classifyNileLibrarySync`, return type excludes `expired`) observes the `nile library sync` spawn `refreshNile()` already makes on every library refresh and hands `healthy`/`unknown` to `applySignInVerdict` with the pre-spawn epoch; non-stale verdicts record+publish like the pass. Probe and D-16 untouched. Marker `Successfully synced the library` proven in the shipped v1.2.0 binary (vendored tree is 1.1.2). Lazy alias imports (storeManagers cycle measured). jest 12/12 suites 245/245, codecheck 0, lint ceilings PASS unbumped (tests 638/638 zero headroom, no re-pin needed), prettier clean, planning-gates 12/12. Source todo closed into completed/. Live confirmation on the real zero-installed profile not done. | 2026-10-16 | 60023a86e | — | [261016-n7s-amazon-sign-in-latch-never-clears-on-a-z](./quick/261016-n7s-amazon-sign-in-latch-never-clears-on-a-z/) |
 | 28 | Fix 7 unparseable YAML frontmatters (6 quick-task SUMMARYs + 34.13-UAT.md) refused by audit-open acknowledge during the v0.8 close pre-flight | 2026-10-16 | 102129700 | — | — |
 | 29 | fast: close the login-sheet scrollbar-gutter wedge live-gate at the desk -- attributed to WebKit macOS 26 corner-avoidance inset (scrollbar frame starts at y=19) over the document background colour; todo flipped to ready: blocked, parked on route C/D | 2026-10-16 | aadc89ad0 | — | — |
+| 261016-ra0 | **Archived phases 05-26 into milestones/v0.2..v0.7-phases/; v0.7 closed with live UAT PARKED.** audit-uat 314 before/after; not rendered in the explorer; historical path refs inside archived docs left as-is. | 2026-10-16 | d64387d4b | COMPLETE (desk). 519 renames, 7 .planning-reading suites 215 tests, planning-gates 12/12, scoped prettier; fixed packagingConfig.test.ts already red from the v0.8 archive. | [261016-ra0](./quick/261016-ra0-archive-phases-05-26-into-per-milestone-/) |
 
 ## Deferred Items
 

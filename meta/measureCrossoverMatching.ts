@@ -716,7 +716,8 @@ async function main() {
 
   const reportPath = join(
     '.planning',
-    'phases',
+    'milestones',
+    'v0.5-phases',
     '19-crossover-compatibility-index-macos',
     `measure-crossover-match-${reportDate}.md`
   )

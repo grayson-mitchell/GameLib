@@ -8,12 +8,12 @@ GameLib forks Heroic Games Launcher and adds Steam as a first-class platform alo
 ## Milestones
 
 - ✅ **v0.1 Steam Platform** — Phases 1–4 (shipped 2026-06-29) — archive: `milestones/v0.1-ROADMAP.md`
-- ✅ **v0.2 Polish & Enhancements** — Phases 5–8.1 (Phase 9 Quality Gate never started; phase dirs still live under `.planning/phases/`)
-- ✅ **v0.3 Humble Bundle Integration** — Phases 10–15 (shipped 2026-07-10)
-- ✅ **v0.4 Compatibility Data** — Phase 16 (shipped 2026-07-10)
-- ✅ **v0.5 Steam macOS Compatibility Runtime** — Phases 17–19 (shipped 2026-07-14)
-- ✅ **v0.6 Aggregated Store Search** — Phase 20 (shipped 2026-07-15)
-- 🚧 **v0.7 Steam Native Install** — Phases 21, 23–26 (never formally closed; MILESTONES.md records it in progress — Phase 23 gaps G-23-01/G-23-02)
+- ✅ **v0.2 Polish & Enhancements** — Phases 5–8.1 (Phase 9 Quality Gate never started) — phase dirs archived 2026-10-16 to `milestones/v0.2-phases/`
+- ✅ **v0.3 Humble Bundle Integration** — Phases 10–15 (shipped 2026-07-10) — `milestones/v0.3-phases/`
+- ✅ **v0.4 Compatibility Data** — Phase 16 (shipped 2026-07-10) — `milestones/v0.4-phases/`
+- ✅ **v0.5 Steam macOS Compatibility Runtime** — Phases 17–19 (shipped 2026-07-14) — `milestones/v0.5-phases/`
+- ✅ **v0.6 Aggregated Store Search** — Phase 20 (shipped 2026-07-15) — `milestones/v0.6-phases/`
+- ✅ **v0.7 Steam Native Install** — Phases 21, 23–26 (closed 2026-10-16 with live-only UAT PARKED, not verified — see MILESTONES.md; Phase 23's gaps G-23-01/G-23-02 were closed 2026-08-19) — `milestones/v0.7-phases/`
 - ✅ **v0.8 Tauri Shell** — Phases 27–50 plus parked Phase 22 (shipped 2026-10-16, **override closeout** — see MILESTONES.md) — archive: `milestones/v0.8-ROADMAP.md` (full phase details, 6008 lines), `milestones/v0.8-phases/`
 
 v0.2–v0.7 were never archived through `/gsd-complete-milestone`; their phase directories (5–26) remain under `.planning/phases/` and their full roadmap entries are preserved verbatim in `milestones/v0.8-ROADMAP.md` lines 238–1051.

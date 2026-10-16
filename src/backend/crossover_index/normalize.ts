@@ -107,7 +107,7 @@ export function normalizePunctuationAndEditionStripped(title: string): string {
  * knob is actually contested.
  *
  * Selected candidate: C (punctuation + edition-suffix stripped) — see
- * `.planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md`
+ * `.planning/milestones/v0.5-phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md`
  * (the highest hit rate among the candidates that pass the D-02 gate).
  */
 export const normalize = normalizePunctuationAndEditionStripped
@@ -120,7 +120,7 @@ export const normalize = normalizePunctuationAndEditionStripped
  * lookup imports this symbol to conditionally skip the byName matching path
  * — the name is a stable cross-plan contract, do not rename it.
  *
- * Set from: .planning/phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md
+ * Set from: .planning/milestones/v0.5-phases/19-crossover-compatibility-index-macos/measure-crossover-match-2026-07-13.md
  * Verdict: PASS — candidate C (punctuation + edition-suffix stripped),
  * wrongHitRate 0.81% (1/123), hitRate 85.37% (105/123), against the
  * pre-committed bounds WRONG_HIT_MAX=0.02, HIT_RATE_MIN=0.30, evaluated on
