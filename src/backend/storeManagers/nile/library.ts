@@ -197,18 +197,69 @@ export default class NileLibraryManager implements LibraryManager {
   }
 
   /**
-   * Refresh games in the user's library
+   * Refresh games in the user's library.
+   *
+   * Quick 261016-n7s: this spawn already proves the Amazon credential on
+   * every successful run, so it also carries the Amazon sign-in latch's only
+   * clear path -- the expiry probe's zero-installed `list-updates` run is
+   * `unknown` by design (A4, F-49-R1-4) and never writes, so without this the
+   * flag could only ever clear via a Reconnect login. Observing a spawn that
+   * already happens on every refresh is not the pass triggering a sync, so
+   * D-16 still holds. The signInProbe modules are imported lazily, never
+   * statically, to stay out of the storeManagers import cycle (F2; the same
+   * reason runnerProbes.ts gives).
+   *
+   * Sidecar exit contract: this observer creates no timer, watcher, socket or
+   * child of its own -- the one child is the pre-existing `callRunner` spawn
+   * below, already bounded by the `'nile-refresh'` abort id.
    */
   private async refreshNile(): Promise<ExecResult> {
     logInfo('Refreshing Amazon Games...', LogPrefix.Nile)
 
-    const res = await this.runRunnerCommand(['library', 'sync'], {
-      abortId: 'nile-refresh'
-    })
+    try {
+      const { createBoundedOutputCapture, classifyNileLibrarySync } =
+        await import('backend/signInProbe/classify')
+      const { captureSignInEpoch } =
+        await import('backend/signInProbe/sessionEpoch')
+      const { applySignInVerdict } = await import('backend/signInProbe/verdict')
+      const { recordSignInProbeOutcome, publishSignInProbeOutcomes } =
+        await import('backend/signInProbe/outcomes')
 
-    if (res.error) {
-      logError(['Failed to refresh library:', res.error], LogPrefix.Nile)
+      // Captured before the spawn starts: a sign-in that completes while it
+      // is in flight moves the epoch and the verdict is refused (T-49-10).
+      const epoch = captureSignInEpoch('nile')
+      const capture = createBoundedOutputCapture()
+
+      const res = await this.runRunnerCommand(['library', 'sync'], {
+        abortId: 'nile-refresh',
+        onOutput: (chunk) => capture.onOutput(chunk)
+      })
+
+      if (res.error) {
+        logError(['Failed to refresh library:', res.error], LogPrefix.Nile)
+      }
+
+      const outcome = classifyNileLibrarySync({
+        output: capture.text(),
+        observed: capture.observed(),
+        errored: Boolean(res.error),
+        aborted: Boolean(res.abort)
+      })
+      const result = applySignInVerdict('nile', outcome, epoch)
+      // Mirrors pass.ts: only a non-stale verdict is recorded and published
+      // (T-49-10).
+      if (result !== 'stale') {
+        recordSignInProbeOutcome('nile', outcome)
+        publishSignInProbeOutcomes()
+      }
+    } catch {
+      // The caller does not await refreshNile() (F6); an escaping rejection
+      // here would become an unhandled rejection, so this catch is
+      // load-bearing, not defensive decoration. The captured text must never
+      // be logged, not even on this path (T-49-15) -- only what
+      // applySignInVerdict already logs (the store and the verdict label).
     }
+
     return {
       stderr: '',
       stdout: ''

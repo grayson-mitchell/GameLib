@@ -195,6 +195,45 @@ const NILE_REFRESH_RESPONSE_PATTERN = new RegExp(
  * command is no longer gated; it is tracked in the todo
  * `2026-10-15-amazon-latch-never-clears-on-a-zero-installed-profile.md`.
  */
+/**
+ * nile `library api/library.py:133`, confirmed in the shipped v1.2.0 binary
+ * (inflated from its PyInstaller zlib archive) and observed twice in the
+ * 261015-rud evidence log (`INFO [LIBRARY]:<TAB> Successfully synced the
+ * library`). Substring only: the prefix and its whitespace are not pinned.
+ */
+export const NILE_LIBRARY_SYNC_SUCCESS_MARKER =
+  'Successfully synced the library'
+
+/**
+ * Amazon, `nile library sync` (quick 261016-n7s). This is the clear-only
+ * counterpart to `classifyNileOutput`'s probe classifier: the zero-installed
+ * `list-updates` run is `unknown` by design (A4, F-49-R1-4) and nothing can
+ * ever clear a latched `expired` flag except a Reconnect login, because
+ * `refreshNile()` already spawns `nile library sync` on every library refresh
+ * and that spawn already proves the credential when it succeeds. The return
+ * type excludes `expired` on purpose -- this path can never latch, only
+ * clear or leave the flag alone (D-16 still holds: this observes a spawn that
+ * already happens, it does not trigger one).
+ */
+export function classifyNileLibrarySync(
+  input: ClassifierInput
+): 'healthy' | 'unknown' {
+  if (input.aborted || !input.observed) {
+    return 'unknown'
+  }
+  // A failed-then-crashed sync must never clear a flag either.
+  if (input.output.includes(NILE_REFRESH_FAILURE_MARKER)) {
+    return 'unknown'
+  }
+  if (input.errored) {
+    return 'unknown'
+  }
+  if (input.output.includes(NILE_LIBRARY_SYNC_SUCCESS_MARKER)) {
+    return 'healthy'
+  }
+  return 'unknown'
+}
+
 export function classifyNileOutput(input: ClassifierInput): SignInProbeOutcome {
   if (input.aborted || !input.observed) {
     return 'unknown'
