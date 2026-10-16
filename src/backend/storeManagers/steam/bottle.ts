@@ -1224,6 +1224,12 @@ function resolveCrossoverWine(label: string): WineInstallation | undefined {
  * override is read back from steamBottleConfigStore; bridge bottle
  * names/engine are not user-configurable.
  *
+ * Throws when `appId` is given but fails NUMERIC_APP_ID (e.g. 'abc') —
+ * unlike resolveBridgeBottleName, which returns null for the same input,
+ * a caller that bothered to pass an appId at all has a specific game in
+ * mind; silently falling back to the shared bottle would resolve settings
+ * for the WRONG game rather than surfacing the bad id.
+ *
  * D-UAT-24-06: `wineVersion` must resolve the CrossOver runtime that CREATED
  * this bottle via cxbottle (D-08 CrossOver-only lifecycle) — never
  * globalSettings.wineVersion, which on a machine with Game Porting Toolkit
@@ -1235,9 +1241,16 @@ function resolveCrossoverWine(label: string): WineInstallation | undefined {
  */
 export function getBridgeBottleSettings(appId?: string): GameSettings {
   const globalSettings = GlobalConfig.get().getSettings()
-  const wineCrossoverBottle = appId
-    ? (resolveBridgeBottleName(appId) ?? DEFAULT_BRIDGE_BOTTLE_NAME)
-    : DEFAULT_BRIDGE_BOTTLE_NAME
+  let wineCrossoverBottle = DEFAULT_BRIDGE_BOTTLE_NAME
+  if (appId) {
+    const resolved = resolveBridgeBottleName(appId)
+    if (!resolved) {
+      throw new Error(
+        `getBridgeBottleSettings: invalid appId "${appId}" (must be numeric)`
+      )
+    }
+    wineCrossoverBottle = resolved
+  }
   return {
     ...globalSettings,
     wineCrossoverBottle,

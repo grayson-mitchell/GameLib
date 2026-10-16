@@ -1693,6 +1693,14 @@ describe('bottle.ts', () => {
 
         expect(settings.wineCrossoverBottle).toBe(DEFAULT_BRIDGE_BOTTLE_NAME)
       })
+
+      test('throws when given a non-numeric appId -- a caller that passed an appId has a specific game in mind, so resolving the WRONG (shared) bottle silently would be worse than failing loudly', () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+        })
+
+        expect(() => getBridgeBottleSettings('abc')).toThrow(/abc/)
+      })
     })
 
     describe('provisionBridgeBottle', () => {
