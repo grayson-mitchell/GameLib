@@ -9,17 +9,19 @@ dependency-graph:
   affects: [lintTranslations gate, gamelibCatalogParity gate, Library tile-size slider UI]
 tech-stack:
   added: []
-  patterns: [byte-exact JSON round-trip write, append-only gamelib.mt.json keys[] provenance]
+  patterns: [byte-exact JSON round-trip write, "append-only gamelib.mt.json keys[] provenance"]
 key-files:
   created: []
   modified:
     - public/locales/<48 non-en locales>/gamelib.json
     - public/locales/<48 non-en locales>/gamelib.mt.json
+
 decisions:
   - "LD-2 upheld: pnpm machine-fill-gamelib unavailable under the gateway-scoped key (401); all 96 strings authored in-session by the executor model."
   - "LD-4 upheld: tileSize appended as the LAST key of library in every locale; no other key re-sorted."
   - "LD-5 upheld: both new keys stamped into each gamelib.mt.json keys[] (sorted, append-only); model/filledAt left untouched."
   - "LD-6 upheld: one commit (933c7ac3d) for all 96 files; .planning/milestone.lock and the quick task directory were never staged."
+
 metrics:
   duration: "~1 session (compacted once)"
   completed: 2026-10-12
@@ -28,6 +30,10 @@ actuals:
   tokens: null
   tasks: 2
   commits: 1
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: complete
 ---
 
 # Quick Task 261012-euq: Fill gamelib library.tileSize label and valueText Summary

@@ -8,8 +8,9 @@ requires:
   - phase: 13-keys-waiting-giftable-spares-views
     provides: getUrgencyCountdownParts (D-62), the urgency badge itself, and 13-REVIEW.md's CR-01/IN-06 findings
 provides:
-  - "1 day left" copy reachable across the full 24h-48h band, not just the measure-zero 24.000h instant
+  - '"1 day left" copy reachable across the full 24h-48h band, not just the measure-zero 24.000h instant'
   - Closure markers on 13-REVIEW.md's CR-01 (the repo's one open Critical) and IN-06(a)
+
 affects: [13-keys-waiting-giftable-spares-views]
 
 actuals:
@@ -75,6 +76,10 @@ coverage:
 duration: ~15min
 completed: 2026-09-29
 status: complete
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: complete
 ---
 
 # Quick Task 260930-9oq: Fix 13-CR-01 -- Urgency badge can never say "1 day left" Summary
@@ -101,6 +106,7 @@ status: complete
 This is the load-bearing evidence for this task -- recorded verbatim, not paraphrased.
 
 **Task 1 -- baseline (HEAD `cc60961cf`, nothing edited):**
+
 ```
 npx jest --selectProjects Backend --testPathPattern 'humble/__tests__/urgencyBadge'
   Test Suites: 1 passed, 1 total
@@ -116,9 +122,11 @@ npx jest --selectProjects Frontend --testPathPattern 'HumbleKeyRow'
   Test Suites: 1 passed, 1 total
   Tests:       101 passed, 101 total
 ```
+
 The filtered run passing here is the *enshrinement*: the test's title ("exactly-1-day range yields value 1") was already correct, but its assertion (`value: 2`) matched the buggy implementation, not the spec.
 
 **Task 2 -- source edit alone, test file untouched:**
+
 ```
 npx jest ... -t 'exactly-1-day range yields value 1'
   - Expected  - 1
@@ -135,9 +143,11 @@ npx jest --selectProjects Backend --testPathPattern 'humble/__tests__/urgencyBad
   Test Suites: 1 failed, 1 total
   Tests:       1 failed, 20 passed, 21 total
 ```
+
 `git diff --name-only` at this point listed exactly one path (`src/common/humble/urgencyBadge.ts`). `npx prettier --check` on that one path passed, but per the plan this was explicitly NOT read as task completion -- the red jest run is what makes Task 2 done. This intermediate red state was never committed.
 
 **Task 3 -- assertion corrected (2 -> 1) plus two new boundary tests:**
+
 ```
 npx jest --selectProjects Backend --testPathPattern 'humble/__tests__/urgencyBadge'
   Test Suites: 1 passed, 1 total

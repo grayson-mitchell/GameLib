@@ -3,20 +3,26 @@ quick_id: 260906-hq8
 title: 'Fix meta/runTs.cjs esbuild spawn on Windows — bin/esbuild stays a JS shim on win32'
 date: 2026-09-06
 status: complete
-one_liner: 'Added the injectable-platform buildEsbuildSpawnArgv() win32 branch to meta/runTs.cjs, mirroring buildSidecarSea.ts, plus its first platform test coverage — mechanism confirmed from esbuild's own installer/tarball on macOS, never reproduced on Windows.'
+one_liner: 'Added the injectable-platform buildEsbuildSpawnArgv() win32 branch to meta/runTs.cjs, mirroring buildSidecarSea.ts, plus its first platform test coverage — mechanism confirmed from esbuild''s own installer/tarball on macOS, never reproduced on Windows.'
 key-files:
   created:
     - .planning/todos/pending/2026-09-06-runts-win32-esbuild-fix-unconfirmed-on-windows.md
   modified:
     - meta/runTs.cjs
     - meta/__tests__/runTs.test.ts
+
 decisions:
   - 'buildEsbuildSpawnArgv(esbuildCli, esbuildArgs, platform = process.platform) mirrors buildSidecarSea.ts buildEsbuildArgv() exactly, including the injected platform parameter — required so both branches are assertable from a macOS test run, not just the host platform'
   - 'require.main === module guard added around main(), with module.exports = { buildEsbuildSpawnArgv } — lets the wrapper be require()d for testing with zero side effects while every real invocation (23 package.json scripts, plus runTsSignals.test.ts probe copies) is unaffected'
   - 'Did not touch meta/buildSidecarSea.ts (already correct) or the already-Windows-correct symlink junction / second process.execPath spawn in runTs.cjs'
+
 metrics:
   duration: 'single session'
   completed: '2026-09-06'
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: complete
 ---
 
 # Quick Task 260906-hq8: Fix runTs.cjs esbuild spawn on Windows Summary

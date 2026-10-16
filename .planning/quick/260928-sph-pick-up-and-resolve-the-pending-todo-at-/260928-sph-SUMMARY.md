@@ -6,7 +6,8 @@ tags: [python, yaml, js-yaml, ci-gate, audit-uat, gsd-core]
 
 requires: []
 provides:
-  - A phase-ledger walk (89 files: phases/*/ + archived milestones/*-phases/*/) in
+  - >-
+    A phase-ledger walk (89 files: phases/*/ + archived milestones/*-phases/*/) in
     .planning/planning-frontmatter-gate.py, strictly parsing every VERIFICATION/UAT
     frontmatter block audit-uat reads, with shrink-only pin tables for the two no-fence
     files and the three unparseable terminal-status files.
@@ -53,6 +54,10 @@ requirements-completed: [QUICK-260928-SPH]
 duration: ~70min
 completed: 2026-09-28
 status: complete
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: complete
 ---
 
 # Quick Task 260928-sph: Phase-Ledger Frontmatter Walk Summary

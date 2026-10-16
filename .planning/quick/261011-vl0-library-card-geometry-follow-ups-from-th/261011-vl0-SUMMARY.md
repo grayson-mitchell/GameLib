@@ -8,14 +8,17 @@ provides:
   - content-driven library card height (3:4 art + pinned 51px icons bar)
   - pre-reveal placeholder equal to the revealed card height
   - strip hero equal to neighbour height by construction, letterboxed wide art
+
 affects:
   - src/frontend/screens/Library/components/GameCard/index.css
   - src/frontend/screens/Library/components/FocusRowStrip/index.css
+
 tech-stack:
   added: []
   patterns:
     - custom properties --game-card-art-height / --game-card-bar-height on .gameCard
-    - ".gameCard:empty" placeholder styling
+    - '".gameCard:empty" placeholder styling'
+
 key-files:
   modified:
     - src/frontend/screens/Library/components/GameCard/index.css
@@ -23,11 +26,13 @@ key-files:
     - src/frontend/screens/Library/components/FocusRowStrip/__tests__/focusRowStripSource.test.ts
     - src/frontend/screens/Library/components/FocusRowStrip/index.css
     - src/frontend/screens/Library/libraryTileSize.ts
+
 decisions:
   - "Bar pinned with block-size: var(--game-card-bar-height) (51px), not min-height"
   - "Placeholder styled with .gameCard:empty, no TSX change"
   - "Letterbox bands painted on the hero img as background-image"
   - "libraryTileSize.ts and FocusRowStrip/index.css changed in comments only"
+
 metrics:
   tasks: 2
   files: 5
@@ -41,6 +46,10 @@ actuals:
   commits: 2
 status: complete
 completed: 2026-10-11
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: complete
 ---
 
 # Phase quick-261011-vl0 Plan 01: Library card geometry follow-ups Summary

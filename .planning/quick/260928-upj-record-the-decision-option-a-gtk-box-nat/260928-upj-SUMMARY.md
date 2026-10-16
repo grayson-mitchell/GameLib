@@ -5,6 +5,7 @@ subsystem: docs
 tags: [planning-ledger, tauri, linux, gtk, uat, yaml]
 
 # Dependency graph
+
 requires:
   - phase: quick-260928-raq
     provides: 38-VERIFICATION.md's `regated_2026_09_28` re-gate fields and `ledger-check.cjs`, the harness this task's checker follows the output convention of
@@ -12,10 +13,12 @@ provides:
   - A LOCKED operator decision (option a, GTK-box-native layout) recorded on the Linux `add_child` positioning todo
   - Re-scoped Linux branches of Phase 38 ledger items `38-E03`/`38-E04`, naming the decided strategy and the unbuilt layout instead of an open design choice
   - A `deferral_note` amendment recording the same
-  - `upj-check.py`, a quick-task harness proving parsed equality of everything outside the six edited values against the pre-edit commit
+  - '`upj-check.py`, a quick-task harness proving parsed equality of everything outside the six edited values against the pre-edit commit'
+
 affects: [whichever future phase builds the Linux store tab / GTK-box-native layout, quick 260928-tvk (shares the same ledger file, non-overlapping line ranges)]
 
 # Actuals (#2632)
+
 actuals:
   tokens: 15900
   tasks: 2
@@ -23,6 +26,7 @@ actuals:
 plan_head_before: 8c7b1821b7201e6b711459b993c7ed6242f236d8
 
 # Tech tracking
+
 tech-stack:
   added: []
   patterns:
@@ -76,6 +80,10 @@ coverage:
 duration: ~30min (not separately timed with a start marker; estimated from turn count)
 completed: 2026-09-28
 status: complete
+audit_acknowledged:
+  milestone: v0.8
+  at: 2026-10-16
+  status: complete
 ---
 
 # Quick 260928-upj: Record the operator's option-(a) decision, re-scope 38-E03/38-E04 Summary
@@ -150,6 +158,7 @@ FAIL ledger-field-mentions-option-a:38-E03:platform_gate: Linux segment does not
 FAIL ledger-blocked-by-both-paths:38-E03: missing path(s): ['.../2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md']
 FAIL ledger-line-count-delta: expected 461 (base 460 + 1 new lines), found 460
 ```
+
 Exit code: 1. A checker that is green on the unedited tree proves nothing; this one was not.
 
 ## Final Verification Outputs
@@ -159,6 +168,7 @@ against `HEAD~1`): all 46 checks PASS, exit 0.
 
 **`ledger-check.cjs --open 10 --discharged 16 --retired 10 --no-stale-premise` plus `--includes`
 assertions:**
+
 ```
 PASS js-yaml-version: 4.1.1
 PASS frontmatter-parse
@@ -178,6 +188,7 @@ PASS includes:open:38-E04:blocked_by
 PASS includes:top:deferral_note
 PASS no-stale-premise
 ```
+
 Counts (10 open / 16 discharged / 10 retired) are unchanged from the pre-edit commit, read via
 `upj-check.py --print-counts` rather than hard-coded, per the plan's own instruction — this
 matches the plan's `planning_observations` expectation exactly.
