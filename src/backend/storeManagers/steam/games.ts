@@ -2482,11 +2482,22 @@ export default class SteamGame implements Game {
    * bottle (`bridgeBottleNameFor(appId)`), the whole bottle belongs to the
    * game, so the whole bottle is removed via removePerGameBridgeBottle —
    * no resolveBridgeLaunchExe/install-root resolution needed. Otherwise
-   * (the game still lives in the legacy shared bottle), the existing
-   * direct-deletion body below runs unchanged, resolving the install root
-   * the SAME way installBridgeGame() does (resolveBridgeGameInstallRoot,
-   * via resolveBridgeLaunchExe) rather than a second, divergent
-   * path-derivation — reuse, not a parallel implementation.
+   * (the game still lives in the legacy shared bottle), the direct-deletion
+   * body below resolves the install root the SAME way installBridgeGame()
+   * does (resolveBridgeGameInstallRoot, via resolveBridgeLaunchExe) rather
+   * than a second, divergent path-derivation — reuse, not a parallel
+   * implementation.
+   *
+   * quick/261017-bqw: the legacy branch ALSO removes this appId's own
+   * `appmanifest_<appId>.acf` from the legacy bottle's steamapps dir,
+   * together with the install root. A surviving manifest is read back by
+   * buildBridgeInstalledMap() and resolveBridgeBottleName() on the refresh
+   * that markBridgeGameUninstalled()'s `gameStatusUpdate done` triggers —
+   * that refresh re-marked the game installed with a deleted install_path
+   * and hid it from the Library grid, as measured live by quick task
+   * 261016-wsq, Arm 2 (uninstalling Avernum 5 / 206040 from the legacy
+   * bottle). The per-game branch above gets the same result by
+   * construction, because it removes the whole bottle.
    */
   private async uninstallBridgeGame(): Promise<ExecResult> {
     const bottleName = getBridgeBottleSettings(this.appId).wineCrossoverBottle
@@ -2512,6 +2523,13 @@ export default class SteamGame implements Game {
 
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
+      // 261017-bqw: this branch deliberately does NOT touch the manifest.
+      // resolveBridgeLaunchExe returns undefined on no CM client, a PICS
+      // failure or no Windows launch entry — in all three, the game's
+      // files are usually still on disk. Deleting only the manifest here
+      // would orphan an install GameLib could no longer see. A surviving
+      // manifest re-marks a game whose files still exist, so it stays
+      // visible, which is the correct outcome for this branch.
       logWarning(
         `SteamGame: uninstallBridgeGame could not resolve the bridge install location for appId ${this.appId} — nothing to remove`,
         LogPrefix.Steam
@@ -2532,12 +2550,25 @@ export default class SteamGame implements Game {
       }
     }
 
+    // 261017-bqw (A-12 answered): no NUMERIC_APP_ID guard is added here.
+    // It would be unreachable — getBridgeBottleSettings(this.appId) on this
+    // method's first line already throws for a non-numeric appId (via
+    // bridgeBottleNameFor's NUMERIC_APP_ID test), and isBridgeEligible()
+    // only admits allowlisted ids, which bridge/allowlist.ts validates with
+    // a `^\d+$` zod regex. manifestPath is built only from this.appId and
+    // the resolved bottle's own steamapps dir, never from any other string.
+    const manifestPath = join(
+      getBottleSteamappsDir(bottleName),
+      `appmanifest_${this.appId}.acf`
+    )
+
     try {
       rmSync(installRoot, { recursive: true, force: true })
+      rmSync(manifestPath, { force: true })
     } catch (error) {
       logWarning(
         [
-          `SteamGame: uninstallBridgeGame failed to remove "${installRoot}" for appId ${this.appId}`,
+          `SteamGame: uninstallBridgeGame failed to remove "${installRoot}" or "${manifestPath}" for appId ${this.appId}`,
           error
         ],
         LogPrefix.Steam
@@ -2549,7 +2580,7 @@ export default class SteamGame implements Game {
     }
 
     logInfo(
-      `SteamGame: removed bridge install for appId ${this.appId} at "${installRoot}"`,
+      `SteamGame: removed bridge install for appId ${this.appId} at "${installRoot}" and its manifest "${manifestPath}"`,
       LogPrefix.Steam
     )
     this.markBridgeGameUninstalled()

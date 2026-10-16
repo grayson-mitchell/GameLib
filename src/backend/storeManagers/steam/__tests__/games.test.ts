@@ -5794,6 +5794,106 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     })
   })
 
+  // 261017-bqw: a real-filesystem regression proving the legacy shared
+  // bottle's uninstall deletes THIS appId's own appmanifest_<appId>.acf
+  // alongside the install root. Measured live on 2026-10-17 by quick task
+  // 261016-wsq, Arm 2 — uninstalling Avernum 5 (206040) from the legacy
+  // bottle left the manifest behind, and the gameStatusUpdate-triggered
+  // refresh read it back and re-marked the game installed with a deleted
+  // install_path, hiding it from the Library grid.
+  describe('261017-bqw: legacy shared bottle — real filesystem manifest unlink', () => {
+    let tmp: string
+    let bridgeSteamappsDir: string
+    let phase17SteamappsDir: string
+    let installDir: string
+    let manifestPath: string
+    let siblingDir: string
+    let siblingManifestPath: string
+
+    beforeEach(() => {
+      tmp = mkdtempSync(
+        realJoin(tmpdir(), 'gamelib-bridge-legacy-uninstall-test-')
+      )
+      bridgeSteamappsDir = realJoin(tmp, 'bridge', 'steamapps')
+      phase17SteamappsDir = realJoin(tmp, 'phase17', 'steamapps')
+      installDir = realJoin(bridgeSteamappsDir, 'common', 'Avernum 4')
+      manifestPath = realJoin(bridgeSteamappsDir, `appmanifest_${APP_ID}.acf`)
+      siblingDir = realJoin(bridgeSteamappsDir, 'common', 'Avernum 6')
+      siblingManifestPath = realJoin(
+        bridgeSteamappsDir,
+        'appmanifest_206060.acf'
+      )
+
+      mkdirSync(installDir, { recursive: true })
+      mkdirSync(siblingDir, { recursive: true })
+      mkdirSync(phase17SteamappsDir, { recursive: true })
+      writeFileSync(realJoin(installDir, 'Avernum4.exe'), 'binary-stub')
+      writeFileSync(realJoin(siblingDir, 'Avernum 6.exe'), 'binary-stub')
+      writeFileSync(manifestPath, 'avernum 4 legacy-bottle manifest')
+      writeFileSync(siblingManifestPath, 'avernum 6 legacy-bottle manifest')
+      writeFileSync(
+        realJoin(phase17SteamappsDir, `appmanifest_${APP_ID}.acf`),
+        'avernum 4 phase17-bottle manifest'
+      )
+
+      // resetMocks wipes these between tests, and the outer beforeEach keys
+      // getBottleSteamappsDir to the fake '/mock/...' paths, so re-arm here
+      // against the real tmp tree.
+      ;(getBottleSteamappsDir as jest.Mock).mockImplementation(
+        (bottleName: string) =>
+          bottleName === 'GameLibSteamBridge'
+            ? bridgeSteamappsDir
+            : phase17SteamappsDir
+      )
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        realJoin(installDir, 'Avernum4.exe')
+      )
+      library.set(
+        APP_ID,
+        makeEntry({
+          title: 'Avernum 4',
+          is_installed: true,
+          install: { install_path: installDir }
+        })
+      )
+    })
+
+    afterEach(() => {
+      realRmSync(tmp, { recursive: true, force: true })
+    })
+
+    it("removes the install root AND this appId's own appmanifest from the legacy bottle — the sibling legacy game and the Phase 17 bottle's own manifest for the same appId survive untouched", async () => {
+      const game = new SteamGame(APP_ID)
+      const result = await game.uninstall({} as any)
+
+      expect(result).toEqual({ stdout: '', stderr: '' })
+      expect(realExistsSync(installDir)).toBe(false)
+      expect(realExistsSync(manifestPath)).toBe(false)
+      expect(realExistsSync(siblingDir)).toBe(true)
+      expect(realExistsSync(realJoin(siblingDir, 'Avernum 6.exe'))).toBe(true)
+      expect(realExistsSync(siblingManifestPath)).toBe(true)
+      expect(
+        realExistsSync(
+          realJoin(phase17SteamappsDir, `appmanifest_${APP_ID}.acf`)
+        )
+      ).toBe(true)
+      expect(library.get(APP_ID)?.is_installed).toBe(false)
+      expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
+    })
+
+    it('a manifest already missing before uninstall still completes with empty stderr (force:true, not an error)', async () => {
+      realRmSync(manifestPath, { force: true })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.uninstall({} as any)
+
+      expect(result).toEqual({ stdout: '', stderr: '' })
+      expect(realExistsSync(installDir)).toBe(false)
+      expect(library.get(APP_ID)?.is_installed).toBe(false)
+    })
+  })
+
   it('regression: a non-allowlisted title uninstall() never consults resolveBridgeLaunchExe, and (debug/steam-bottle-uninstall-reverts FINAL) routes to direct deletion instead of tellBottledSteamToUninstall', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
