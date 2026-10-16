@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 milestone: v0.8
 current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 status: Awaiting next milestone
-stopped_at: Completed quick task 261017-cwf -- terminal-icon todo measured on packaged macOS builds, dev icon is by plugin design, packaged build delivers no notifications at all (new major todo), no code change
-last_updated: "2026-10-16T20:48:56.453Z"
+stopped_at: Phase 51 context gathered
+last_updated: "2026-10-16T21:36:03.081Z"
 last_activity: 2026-10-17
 last_activity_desc: Quick task 261017-cwf measured the Game Uninstalled terminal-icon todo on packaged macOS builds -- dev icon is tauri-plugin-notification's is_dev() Terminal attribution, not a GameLib defect; both the ad-hoc --debug bundle and the Developer-ID 0.8.0 release bundle deliver NO notification on macOS 26 and GameLib never appears in System Settings Notifications; new major todo 2026-10-17-packaged-macos-build-delivers-no-notifications, source todo closed, no code change; Phase 51 added 2026-10-17 (widen the native Steam bridge; scoped from the Phase 24 record; todo closed into todos/completed; Depends-on hand-corrected to Phase 24 and quick 261016-u1w); Quick task 261017-bqw unlinked the legacy GameLibSteamBridge appmanifest on bridge uninstall (fix dbb87081b, todo close d17199a80) -- the legacy branch of uninstallBridgeGame now rmSyncs appmanifest_<appId>.acf beside the install root so the post-uninstall refresh cannot re-mark the game installed and hide it from the grid; games.test.ts 274 to 276 on a real-filesystem fixture, lint 1089/1124 and 638/638, gates 12/12; desk-verified only, not run on CrossOver; source todo moved to todos/completed; Quick task 261016-wsq live-gated per-game bridge bottles on real CrossOver, 5 of 5 PASS, legacy-bottle uninstall revert measured as major; Quick task 261016-u1w per-game bridge bottles landed; Quick task 261016-t3e bottled-Steam process monitor landed; Milestone v0.8 completed and archived
-state_head: 4335a0c7fe206d27b85efb38040aefd53971f91c
+state_head: 324e60687c22c79c551d86b034a3ad366c351a1c
 progress:
   total_phases: 45
   completed_phases: 36
@@ -1247,9 +1247,9 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 
 ## Session Continuity
 
-Last session: 2026-10-15T08:32:25.000Z
-Stopped at: Completed quick task 261015-rud -- live-gated Amazon expiry strings A3/A6 by nile induction
-Resume file: None
+Last session: 2026-10-16T21:36:03.063Z
+Stopped at: Phase 51 context gathered
+Resume file: .planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca/51-CONTEXT.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
