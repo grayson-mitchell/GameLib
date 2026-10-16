@@ -1,39 +1,40 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.8
-milestone_name: Phase Details
-current_phase: 50
-current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
-status: verified
+milestone_name: Tauri Shell
+status: Awaiting next milestone
 stopped_at: Completed quick task 261015-rud -- live-gated Amazon expiry strings A3/A6 by nile induction
-last_updated: "2026-10-16T04:47:12.242Z"
+last_updated: "2026-10-16T05:09:35.256Z"
 last_activity: 2026-10-16
-last_activity_desc: "Quick 261016-n7s made the Amazon sign-in latch clear on a zero-installed profile -- the expiry probe's list-updates run is unknown with nothing installed (A4) and unknown never writes, so a latched expired flag could only clear via Reconnect. A new clear-only classifier classifyNileLibrarySync (return type excludes expired) observes the nile library sync spawn that refreshNile() already makes on every library refresh and hands healthy or unknown to applySignInVerdict with the pre-spawn epoch, recording and publishing non-stale verdicts exactly like the pass; the probe, its unknown verdict and D-16 are untouched. Marker 'Successfully synced the library' proven in the shipped v1.2.0 binary (the vendored tree is 1.1.2), signInProbe modules imported lazily because the storeManagers cycle was measured. Re-measured by the orchestrator -- jest 12 of 12 suites 245 of 245, codecheck 0, both lint ceilings PASS unbumped at zero test headroom, prettier clean, planning-gates 12 of 12. Source todo closed into completed/. Not done -- a live run on the real zero-installed profile. Before that, Quick 261015-p3q re-applied the saved Accessibility zoom at boot -- GlobalState.componentDidMount now calls a new applySavedZoomAtBoot helper (savedZoomBoot.ts) once, undebounced, through the existing window.api.setZoomFactor bridge, before any window.api.handle registration, closing the gap the source todo found (a saved 150% rendered at 100% until the slider was touched). Admitted range mirrors the slider's own 60-200 with an anti-drift arm reading that JSX; out-of-range or non-number resolves to 100. Call is unconditional including at 100% so --webview-zoom publishes on boot too. New source-text wiring gate (GlobalStateSavedZoomWiring.test.ts) pins the call site with a self-test arm proving its own matchers can fail; corrected tauriWindowChrome.ts's now-false doc comment. Source todo closed into completed/ with a Resolution naming the declined options; new live-gate todo filed for the real quit-and-relaunch check. 18 18 new jest both suites, 27 27 windowChrome.test.ts unaffected, codecheck 0, lint ceilings both unbumped, prettier clean, planning-gates 12 12. Before that, Quick 261015-oc8 live-gated 261015-lz5's shell_diag persistence on a PACKAGED launch and it passed with no code change -- a tauri build --debug bundle of HEAD recovered from the DMG and tied to target/debug/gamelib-shell by sha256, launched with open -n so the shell's stdout and stderr were /dev/null by lsof (stderr offset advancing 2538 to 2918, the LaunchServices discard measured not assumed), the real STORES tab clicked, store.epicgames.com rendered in the native Epic subview, and gamelib-shell.log line 3937 carries 1792038877 pid=60602 macos_epic_embed didFinishNavigation succeeded for host store.epicgames.com with the epoch-pid prefix and zero leaked [shell] prefixes for that pid. After a Cmd+Q quit (pid gone in 2 s) the line was still there with the pid's own quit lines after it, and the teardown census (shell, sidecar, vite, 5173) was empty. Not exercised -- the D-14 launcher-scheme literal (a chrome-side storeEmbedNavigate to that scheme produced no embed line) and the location.hash console lever did not change the route in the packaged build; gamelib-shell.log is still unrotated at 334 960 bytes. Source todo closed into completed/. Before that, Quick 261015-n5k live-gated 261015-dlu's embed-container zero-floor column in the running app on this Mac with no code change -- a pnpm tauri:dev build of HEAD on the real Stores to Epic route, the real StoreEmbedTimeoutBanner rendered through React by wrapping window.api.storeEmbedTakeNavEvents from the Web Inspector console (no sudo, no hosts blackhole, no 45s wait), sub-900 layout viewports reached by docking the inspector right inside a 1280 window. Live WebKit numbers -- 900 floor message 380.08 and actions right 884 unclipped so UI-SPEC E3 passes at its declared test point; 600 column 344px, message ellipsised to 80.08, actions right 584 unclipped; 500 column 244px, message 0, actions right 503.92, clipped by 3.92px as the harness said it would be and not claimed fixed. A pre-fix control (grid-template-columns auto injected) at 600 and 500 reproduced the harness's shipped row to the hundredth (column 419.65625px, actions right 659.66) and removing it restored the fixed numbers. The 9qy width clamp also measured -- a requested 800 left the window at 900. 12 measurement records, 6 frames read before scoring, source todo closed into completed/, dlu's README (e) points at the gate. Not verified -- minHeight, the longest-of-49-translations arm, the genuine 45s Rust timeout path. Before that, Quick 261015-lz5 routed all 30 macos_epic_embed.rs diagnostics through crate::shell_diag so a packaged build persists them to gamelib-shell.log (the source todo said 25 -- an undercount). Each literal dropped its `[shell] ` prefix because shell_diag re-adds it, so stderr output is byte-identical -- all 49 string literals in the file compare equal old-vs-new after prefix-stripping. New jest source gate macosEpicEmbedDiagPersistence.test.ts pins 0 eprintln!, 30 call sites and no double prefix, with an inline mutation arm; 50-UAT.md's sink row and Item 17 expected text corrected by dated addendum; source todo closed into completed/. Re-measured by the orchestrator -- cargo check clean, cargo test 16/16, jest 22/22, planning-gates 12/12. Unverified on a packaged launch; filed 2026-10-15-macos-epic-embed-shell-diag-persistence-unverified-on-a-packaged-launch.md (minor/macos/live-gate), which also carries the unrotated gamelib-shell.log observation. Before that, Quick 261015-dlu measured the App.css shell-column hypothesis in a static harness of the shipped stylesheets in WebKit (compiled WKWebView probe) and Chromium (chrome-headless-shell) and REFUTED it, the App grid never inflated and the content and navbar arms changed nothing, while the real clip was the WebView embed container declaring only grid-template-rows so its implicit auto column took the nowrap notice row's min-content (419.66px at a 600px viewport against a 334px content box), fixed with grid-template-columns minmax(0, 1fr), pinned per selector with an observed-red TDD arm, 16 of 16 across the two suites, evidence bundle landed, the 9qy open observation corrected, UI-SPEC E3 reviewed and left byte-unchanged, and a live-gate todo filed because nothing ran in the real app. Quick 261015-9qy declared minWidth 900 and minHeight 600 on the main window in tauri.conf.json (900 is the measured width from the Item 16 photographs, 600 is a judgment call), pinned both in tauriWindowConfig.test.ts, found the notice row CSS already ellipsises the message and already gives the actions flex-shrink 0 since 348e28057 so no CSS changed and the contract is now pinned per selector, UI-SPEC E3 now cites 900px as its test point, the store-embed clip todo closed, and the clamp itself is unverified on hardware with an App.css shell-column hypothesis left open. Quick 261015-7tt censused the 22 button is-link render sites and the button is-text hover state across all 10 themes, 50 resolver-chain ratios, 4 under 4.5 to 1 and each fixed with a theme-scoped hover-only override (dracula game menu 3.79 to 9.15, gruvbox_dark MainButton dropdown 3.91 to 12.06, nord-light and nord-dark is-text hover 3.36 and 4.41 to 5.13), pinned in themeTokens.test.ts at 270 of 270 with a mutation check, the dead settingsWrapper is-text rule deleted on a two-arm reachability proof, todo closed, nothing pixel-sampled. Phase 50 verified retrospectively at 10 of 16 truths — the goal is met and proved on hardware across a cold packaged jar and a warm signed-in jar with an unchallenged real sign-in, while G-50-16's timeout banner stays failed pending the owed macOS re-run of UAT Item 16. Five stale artifacts corrected (STATE, ROADMAP, 50-06-SUMMARY, 50-VALIDATION, and a discharge record added to 50-REVIEW, whose status was RIGHT to stay as it was — only 2 of its 12 live checks actually discharged, not most). The 2026-09-15 Epic Sign-in todo closed with no code on Item 2's pass, by its own falsifiable rule. Quick 261014-rso latched the Epic embed loadTimedOut raise so the G-50-16 timeout banner can surface — the renderer GAP-D drain now merges the flag stickily across one batch and a navigation failure no longer clears it, with jest property 46 observed red before the fix; scoped jest 56 to 58 and cargo gamelib-shell 390 to 394 both green, planning-gates 12/12. The macOS re-run of UAT Item 16 is owed and filed as a pending live-gate todo, since nothing off-hardware can confirm the banner actually paints. Phase 50 plans 01 through 05 complete across 3 waves (32 commits, cargo clean, 543 jest suites green with only the inherited library.tileSize red proven identical pre-phase). Plan 06 authored 50-UAT.md with 19 arms and filled 50-VALIDATION.md, then halted at a blocking-human gate — the live run needs a fresh build of HEAD because the running GameLib.app predates every phase-50 commit by 7 hours and belongs to another session. Phase 50 execution started"
-state_head: 84ede7baf8bf8f9623cc5ed4ce6189ac53140d90
+last_activity_desc: Milestone v0.8 completed and archived
+state_head: f23c8dd71aea649229a5a3d040e0542ebd715fc2
 progress:
   total_phases: 45
   completed_phases: 36
   total_plans: 554
   completed_plans: 545
   percent: 80
+current_phase: 50
+current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-09)
+See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 50 — Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic
+**Current focus:** Planning the next milestone — run `/gsd-new-milestone`. v0.8 Tauri Shell shipped 2026-10-16 as an **override closeout** (26 of 45 phases unverified; 429 artifacts acknowledged; 140 evidence-table rows left open — see `## Deferred Items`). Phase dirs 27–50 (+22) now live under `milestones/v0.8-phases/`; 5–26 stay in `phases/`.
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
 > v1.N → v0.(N+1)). Milestones are now: **v0.1** Steam Platform · **v0.2** Polish ·
 > **v0.3** Humble · **v0.4** Compatibility Data · **v0.5** macOS Compat Runtime (17–19,
-> done) · **v0.6** Store Search · **v0.7** Steam Native Install (21–25, current).
+> done) · **v0.6** Store Search · **v0.7** Steam Native Install (21–26, never formally
+> closed) · **v0.8** Tauri Shell (27–50, shipped 2026-10-16, override closeout).
 > The earlier v0.5-vs-v0.7 taxonomy split is resolved: macOS-compat = v0.5 (complete),
-> native-install = **v0.7** (this milestone). `package.json` set to 0.7.0.
+> native-install = **v0.7**. `package.json` is 0.8.0.
 
 > # ✅ PHASE 34.4.2 COMPLETE — 2026-08-19. BLOCKING LIVE GATE: **PASS 5/5**.
 >
@@ -74,57 +75,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 50 (Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic) — VERIFIED, GAPS FOUND
-Plan: 6 of 6
-Status: Verified with gaps — `50-VERIFICATION.md` `status: gaps_found`, 10 of 16 truths verified. The phase GOAL is met and was proved on hardware; the full SCOPE has unverified corners. One gap is failed and owed a macOS re-run (G-50-16, UAT Item 16); four UAT arms blocked, three of them on third-party preconditions or a deliberate decision rather than on defects.
-Last activity: 2026-10-16 - Completed quick task 261016-n7s: Amazon sign-in latch clears on a zero-installed profile via a clear-only observer on the existing library sync spawn (commits 36b900273, f140386ec, 60023a86e; source todo closed into completed/, live confirmation not done).
-
-Previous activity: 2026-10-11 - Completed quick task 261011-wik: filed the Windows Stores-tab embed implementation todo (store_embed_* macOS+Linux only; 38-E01 closed on the spike 027 harness, not the shipped app)
-
-Previous activity: 2026-10-11 - Completed quick task 261011-txc: Winetricks tab UX from the 45 live gate, 8 of 9 todo items landed, item 9 split to its own todo
-
-Previous activity: 2026-10-10 — Phase 49 complete, transitioned to Phase 9
-
-Previous activity: 2026-10-08 — Completed quick task 261008-fjj: Runner tiles gain role=button / disabled-keyed tabIndex / aria-disabled / aria-busy / Enter-Space activation; F-36-02 re-derived in the register; todo 2026-10-03 closed with the inert-mask limit stated
-
-Previous activity: 2026-10-08 — Completed quick task 261008-aoe: Retry in TauriLoginPanel hands back to host via onRetry; OAuthLogin and HumbleLogin remount the Dialog via overlayMountKey instead of window.location.reload()
-
-Previous activity: 2026-10-01 -- Completed quick task 261001-93f: built and self-proved a macOS pixel/geometry measurement instrument for Phase 38's two open items (38-E03(a), 38-E04(a)), pre-registered both items' pass/fail criteria before any live measurement, and wrote an operator run-sheet -- scores NEITHER gate, only the operator's drag-resize gesture and System Settings scale-factor change can.
-
-Previous activity: 2026-10-01 -- Completed quick task 261001-90h: filed two observability-gap todos (dev-secret-vault write/clear log collision; no attempt-marker for a Steam QR login). Doc-only; the briefed "QR error paths do not log" premise was refuted at HEAD and only the corrected framing was filed.
-
-Previous activity: 2026-09-30 - Completed quick task 260930-r22: authored live-gate RERUN-7; the q11 live gate remains OPEN pending an operator run
-
-Previous activity: 2026-09-30 -- Completed quick task 260930-qmu: closed the gamelib:// dev-build self-heal todo -- the installed app repaired a hijacked HKCU key live (46-POSTFIX R4 PASS); todo moved to completed/.
-
-Previous activity: 2026-09-30 -- Completed quick task 260930-o75: Phase 38 sitting 13 on Windows discharged 38-E01, 38-W04, 38-S16 and 38-S14 PASS and recorded branch (b) PASS on 38-E03/38-E04. Phase 38 now has 2 open items.
-
-Previous activity: 2026-09-30 - Completed quick task 260930-ol5: closed the macOS signing/notarization todo to `completed/` (`status: RESOLVED`, single `R096` rename), with the closure section naming the two things closing DROPS — `nt4`'s three confirmatory-only residuals, and the still-outstanding errand of clearing the three ad-hoc-ACL'd Keychain items; no follow-up todo created for either, deliberately left as an operator decision
-
-Previous activity: 2026-09-30 - Completed quick task 260930-nt4: consequence 2 of the macOS signing todo is MEASURED — the Keychain ACL honours an identity-based designated requirement, so a differently-built binary signed with the same identity reads silently (`elapsed=0s`) while an ad-hoc build blocks on a password prompt (`rc=142`); closure recommended in prose, frontmatter untouched, todo left in `pending/` for the operator's call
-
-Previous activity: 2026-09-30 -- Completed quick task 260930-lyk: the tray glyph is now an Auto/Light/Dark setting, and on Windows Auto follows the taskbar theme (SystemUsesLightTheme). Live Windows check passed (operator-reported).
-
-Previous activity: 2026-09-30 -- Completed quick task 260930-lyk: the tray glyph is now an Auto/Light/Dark setting, and on Windows Auto follows the taskbar theme (SystemUsesLightTheme). Live Windows check passed (operator-reported).
-
-Previous activity: 2026-09-29 -- Completed quick task 260929-ata: ran Phase 38 item `38-S10` LIVE on this Linux host -- Sitting 7, the SECOND Linux sitting. Tests section-gating matrix row 7 (native Steam installs OFF) inside the "Install with options..." dialog, a different scored surface from Sitting 6's primary-Install-button dispatch. Task 1's tracer relaunched `pnpm tauri:dev` (incremental rebuild), re-proved build identity, and re-measured the ledger baseline live (9 open/17 discharged/10 retired, matching planning-time exactly) rather than trusting the Sitting 6 snapshot; built a SECOND instrument, `atspi_dialog_probe.py` (AT-SPI accessibility-tree text probe), smoke-tested alongside the existing pixel-diff capture, so no fact rests on one screenshot glance. Task 2's operator-checkpoint self-skipped: the dev vault and real GameLib profile deliberately left in place after Sitting 6 meant Steam sign-in was still usable, confirmed live (Library showing 381 games) rather than assumed. Task 3 hit one real blocker mid-run -- the OS session locked from idle time (`loginctl LockedHint=yes`), which looked at first like a WebKitGTK blank-capture bug (a frozen, byte-identical frame surviving a full process relaunch) until a full-desktop screenshot showed the GDM lock curtain; this was NOT a GameLib defect, and was resolved by pausing for the operator to unlock the screen, with an independent re-verification (`LockedHint=no`, same PID/exe, normal rendering) before resuming rather than trusting the operator's "unlocked" claim at face value. WazHack (Sitting 6's game) had to be swapped for a fresh target, 7 Days to Die (appId 251570), because WazHack's own Sitting-6 PASS click had since completed a real Steam download -- confirmed live via a fresh owned/not-installed check rather than reused blindly. Result: **PASS** on all five independently-checked facts (platform row absent, library dropdown absent, wine section absent, free-space line absent, content-light notice present), cross-validated on both instruments, with zero transient renders across the dialog's open-animation frames. `38-S10` moved to `human_verification_discharged` in `38-VERIFICATION.md` (9->8 open, 17->18 discharged); `38-HUMAN-UAT.md` gained `## Sitting 7`; `34.13-UAT.md`'s `G-ROW-7 / tauri` origin receipt and body row walked back to DISCHARGED PASS (the pre-existing `(62:176)` census pin, which sits BEFORE this receipt and so cannot itself see a new error in it, left untouched -- the receipt block was parsed and validated in isolation instead); `ROADMAP.md`'s count paragraph updated. `pnpm planning-gates` 12/12; privacy gate passed on all committed evidence. Commit `e40379a63` (single deliverable commit for all three tasks, per this plan's design, distinct from an unrelated concurrent `65edd8cef` spike commit that landed on the branch during the operator's unlock wait and was explicitly excluded from the count). `38-S12` and `38-S16`'s Linux half remain as next candidates -- of the four registered Steam library paths on this host, only two are currently mounted, worth checking before attempting `38-S12` (which needs >1 registered library).
-
-Previous activity: 2026-09-29 -- Completed quick task 260928-tvk: ran Phase 38 item `38-S04` LIVE on this Linux host (Pop!_OS 22.04, X11) -- the FIRST Linux sitting Phase 38 has had (Sitting 6, after Windows sittings 1-5). Task 1 (2026-09-28) launched `pnpm tauri:dev` under the declared real-profile arm, proved build identity via `_NET_WM_PID` -> `/proc/<pid>/exe` -> `src-tauri/target/debug/gamelib-shell`, and self-tested the new `linux_sitting_capture.py` X11 capture instrument (fps 205-216, non-blank). The dev process did not survive into today's session, so Task 3's re-entry re-verified rather than trusted the prior state: relaunched (incremental rebuild, not a cold 30-minute compile) against the then-current HEAD `54a931199`, re-proved identity, and re-confirmed native Steam installs OFF (`~/.config/GameLib/config.json` `enableSteamNativeInstall=false`). The operator's Steam sign-in went through two rounds: GameLib's in-app Steam login landed first ("Connected" in the login screen) but the Steam desktop client itself was not yet running -- caught by independently re-checking `pgrep -x steam` rather than trusting the operator's "signed in" claim at face value, per this session's own instruction not to skip that verification. Once the client was confirmed running (library showing 381 games), Task 3 ran the positive control (P=0.1090, dialog viewed) before the scored click, then clicked the PRIMARY half of Install on WazHack (appId 264160, operator-named, independently confirmed owned/uninstalled) with native installs OFF: the arming log line `SteamGame: delegating install for appId 264160 via steam://install/264160` fired, max changed-pixel fraction over the scored burst was 0.0209 (well under the P/2=0.0545 flag threshold), and every viewed frame showed only GameLib's own in-place "Installing..." state -- never a dialog, modal, overlay or picker; zero new top-level GameLib windows at any point. Result: **PASS**. `38-S04` moved to `human_verification_discharged` in `38-VERIFICATION.md` (10->9 open, 16->17 discharged); `38-HUMAN-UAT.md` gained a `## Sitting 6` section; `34.13-UAT.md`'s origin receipt and body row walked back to DISCHARGED PASS (its pre-existing `(62:176)` parse-error pin left untouched); `ROADMAP.md`'s count paragraph updated. Two process-hygiene deviations recorded for future Linux sittings: the sidecar Node process runs in its own separate process group (needed an explicit extra `kill` in cleanup, not just the main `setsid` group), and a stray docked-devtools panel had to be closed before coordinate-based screenshots. `pnpm planning-gates` 12/12; privacy gate passed (no 17-digit runs, no token/password strings, all 5 evidence PNGs visually inspected for account identifiers). Commit `a9820f01d`. `38-S10`, `38-S12` and `38-S16`'s Linux half are the cheap next candidates -- the capture instrument now exists and is reusable as-is.
-
-Previous activity: 2026-09-29 -- Completed quick task 260929-9qr: recorded the operator's LOCKED decision on the Linux isolation todo (`2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`): accept one shared cookie jar on Linux and document the hygiene cost -- any embed on Linux can read any other embed's cookies, and the login windows' cookies, in-process -- over a wry / `tauri-runtime-wry` per-identifier `WebKitWebContext` patch (still UNVERIFIED, no such patch exists) and over keeping Linux off the embed (rejected as against the one-launcher core value). Confirmed the macOS-parity fact by measurement: `grep -rn data_store_identifier src-tauri/src src-tauri/Cargo.toml` returns 0 hits, so the shipped macOS embed already runs on the one default jar (ROADMAP.md's Phase 40 spike-018 note) -- Linux gives up the OPTION of per-store isolation, not an isolation any shipped build has. The todo moved to `platform: windows` / `ready: live-gate` and gained an appended `## Decision (2026-09-29)` section, but stays in `pending/`: the Windows half (`## Windows: UNVERIFIED`) is still open, and `38-E01`'s `spike_evidence_2026_09_28` plus `38-E03`/`38-E04`'s `blocked_by` still route to it by its `pending/` path -- the operator's option text said close this todo, but the file cannot move until the Windows result lands here. Re-scoped the Linux segments of `38-E03`/`38-E04` `blocked_by` in `38-VERIFICATION.md` so the isolation todo no longer reads as a gate on whether a Linux embed ships, keeping the pre-change text verbatim in new `linux_isolation_decided_2026_09_29` fields; amended `deferral_note` append-only to match. Neither item discharged, no count moved: `ledger-check.cjs --open 10 --discharged 16 --retired 10 --no-stale-premise` all PASS, `audit-uat by_phase['38']`=10 unchanged, `parse_gap_files` 0, total items 429. Appended a dated addendum to the sibling positioning todo (`2026-09-28-linux-add-child-embed-cannot-be-positioned-gtkbox-packing.md`) resolving the tension its own 2026-09-28 decision (`260928-upj`) flagged, and recording the shared-jar hygiene cost as a constraint for whoever builds the Linux embed. Built `9qr-check.py`, proved RED before every edit (10 FAILs against the unedited tree on `--items 38-E03`: T1/T2/T3/T4/L5/L6/L7/L8/L9/L11; then 5 more FAILs on `--state` before the STATE.md edit: S1/S2/S3/S4/S5), then all checks PASS pre- and post-commit against the pinned `54a931199` base; `todo-frontmatter-gate.py` exit 0; `pnpm planning-gates` 12/12; prettier confirms all three markdown paths `"ignored": true` (a `--check` there would be vacuous, correctly not run); ledger grew by exactly +2 physical lines (461->463, frontmatter fence 433->435), both below line 104, verified not to disturb in-flight quick `260928-tvk`'s cited ranges. One commit (`1f2d7b42e`) holds exactly the two todos, the ledger and the checker.
-
-Previous activity: 2026-09-28 -- Completed quick task 260928-tjj: collapsed THREE contradictory caller-routing comments across two `main.rs` cookie match arms into ONE platform-explicit, symbol-cited statement. The stale sentence the source todo named ("Every other caller (Humble/GOG/Amazon, all still routed through a live Tauri-managed window)") existed TWICE, not once -- the second copy sat ~700 lines below in the sibling `humble_login_cookies_for_domain` census arm with the same contradiction underneath it, so fixing only the named arm would have recreated the exact drift the task existed to end; file-wide count is now 0. The task brief's own non-macOS assumption was measured FALSE and deliberately not written in: GOG/Amazon early-return before ever reaching the arm off macOS (`if (!isMac) { return }`), and Epic's `isMac` ternary opens a REAL window there instead of passing its sentinel -- so off macOS every caller carries a real window label and none is expected to hit `no-window` by design. Comment-only, proven against a `BASE.sha` pin rather than a rangeless `git diff` that would read green vacuously once committed. `cargo test --bin gamelib-shell` 289/0/2 identical pre- and post-edit, including the comment-sensitive pin that scans this very arm with raw `contains()` over comment lines. One self-inflicted staging bug (a `git add` on a nonexistent pre-rename path, its error swallowed by `2>/dev/null` and a `;` instead of `&&`, committing a stale `result: pending`) was caught and corrected in a separate commit rather than amended or hidden -- `actuals.commits: 3`, not the flattering 2.
-
-Previous activity: 2026-09-28 -- Completed quick task 260928-sph: closed the todo `260928-raq` filed by extending `.planning/planning-frontmatter-gate.py` to walk all 89 phase VERIFICATION/UAT ledgers `audit-uat` reads, strictly parsing each and shrink-only-pinning the 3 known-bad terminal ones, so an unparseable open-status ledger (the Phase 38 failure shape) now turns the gate red instead of silently vanishing from the audit. No new gate file; `MINIMUM_EXPECTED_GATES` stays 12. Corrected the todo's own root-cause claim by measurement: the quotes in `aaae8a1d2`, not the colon in `e09fbc652`, were what hid Phase 38. `pnpm planning-gates` 12/12.
-
-Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a permanently-red Rust suite (288/1/2 -> 289/0/2) by making the F-34.4.2-12 pin assert the macOS-exclusion PROPERTY of each `.cookies()` guard rather than equality against one cfg spelling. The pin had been falsely red since `1a8e1827b` correctly narrowed the Linux arm's guard for the Windows/WebView2 carve-out -- the code was right, the test was stale, and the new guard satisfies the invariant more tightly than the literal it demanded. Not widened to fit: the property is asserted and the exact `(arm, guard)` census was re-derived under review, now sitting behind the property check. Detection proven permanently by a seven-row fixture table (2 accepts, 5 rejections, including a semantically-safe spelling rejected on purpose and recorded as a decision), plus a live mutate-restore RED/GREEN control. Production source verified byte-identical across the task.
-
-Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
-
-Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 80%
-
-History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
+Phase: Milestone v0.8 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-16 — Milestone v0.8 completed and archived
 
 ## Native-Install Arc Phase Map (21–25)
 
@@ -707,6 +661,576 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | Console / Steam | CONSOLE-02: Steam update feedback in Console launch — when a Steam game needs an update, GameLib shows "Launched in Steam" and dismisses while Steam silently updates; user has no in-app signal. Needs own design (Steam does not report update state back). From Phase 8 UAT (finding E). | Post-v0.2 | Phase 8 UAT (2026-07-04) |
 | Console / macOS | KNOWN LIMITATION — Launching a Steam game from Console mode on macOS shows a brief desktop-Space animation before the game appears. Cause: Console mode uses native fullscreen (its own macOS Space) so swipe-to-Space works; macOS must leave that Space when the game's window appears elsewhere. Not fixable from Electron without setSimpleFullScreen, which removes the swipe-able Space and has focus/chrome rough edges (prototyped + rejected in Phase 8 UAT test 11). `activate:false` on the steam:// handoff was tried and kept but does not remove the flash. Accepted as-is. | Accepted (won't fix) | Phase 8 UAT (2026-07-04) |
 | Humble Store | HSTORE-02: Read-only Humble bundle/deals listing in-app with "Buy on Humble" deep-links | Post-v0.3 | v0.3 requirements (separate data source; key management prioritized) |
+| v0.8 close 2026-10-16 | **Override closeout** — 429 items acknowledged via `audit-open acknowledge` (markers in the artifacts; verdict-preserving, self-invalidating), 140 evidence-table rows in five deferred-items.md ledgers left open because no row-level marker exists. 0 carried forward from a prior close. | override_closeout | 2026-10-16 (v0.8 close) |
+| debug_sessions | tray-icon-swap-noop | diagnosed | 2026-10-16 (v0.8 close) |
+| debug_sessions | 48-controller-mode-card-shrink-and-border | diagnosed | 2026-10-16 (v0.8 close) |
+| debug_sessions | deep-link-open-url-abort | investigating | 2026-10-16 (v0.8 close) |
+| debug_sessions | download-queue-require-crash | awaiting_human_verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | electron-steam-sync-fails-phase30 | diagnosed | 2026-10-16 (v0.8 close) |
+| debug_sessions | epic-timeout-banner-never-visible | diagnosed | 2026-10-16 (v0.8 close) |
+| debug_sessions | humankind-depot-full-stall | investigating | 2026-10-16 (v0.8 close) |
+| debug_sessions | humble-keys-empty-list-flashing-sync | awaiting_human_verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | humble-zero-keys-from-valid-orders | awaiting_human_verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | knowledge-base | unknown | 2026-10-16 (v0.8 close) |
+| debug_sessions | nile-spawn-app-side-latency | root-caused-no-fix-applied | 2026-10-16 (v0.8 close) |
+| debug_sessions | settings-unreachable-tauri | diagnosed | 2026-10-16 (v0.8 close) |
+| debug_sessions | steam-bottle-guided-setup-never-fires | resolved-pending-verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | steam-bottle-provision-stuck-loop | resolved-pending-verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | steam-depot-key-appid | awaiting_human_verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | steam-install-options-opens-nothing | reported | 2026-10-16 (v0.8 close) |
+| debug_sessions | steam-install-spinner-hangs-tauri | diagnosed | 2026-10-16 (v0.8 close) |
+| debug_sessions | steam-sync-false-failed-banner | awaiting_human_verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | uninstall-game-vanishes | parked | 2026-10-16 (v0.8 close) |
+| debug_sessions | wazhack-uninstall-reverts | awaiting_human_verify | 2026-10-16 (v0.8 close) |
+| debug_sessions | winetricks-window-not-resizable | awaiting_human_verify | 2026-10-16 (v0.8 close) |
+| todos | 2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md | (presence-only) | 2026-10-16 (v0.8 close) |
+| todos | 2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md | (presence-only) | 2026-10-16 (v0.8 close) |
+| todos | 2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md | (presence-only) | 2026-10-16 (v0.8 close) |
+| todos | 2026-10-03-library-sorting-is-title-only-add-a-sort-field-menu-playnite.md | (presence-only) | 2026-10-16 (v0.8 close) |
+| todos | 2026-10-03-login-sheet-title-bar-has-a-light-wedge-at-the-rounded-corner.md | (presence-only) | 2026-10-16 (v0.8 close) |
+| todos | 2026-10-11-stores-tab-embed-not-implemented-on-windows.md | (presence-only) | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260627-vq1-fix-qr-login-hang-set-qrsessionstate-don | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260628-kzf-fix-blank-steam-icon-on-manage-accounts- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260628-pi7-show-steam-last-played-on-game-details-p | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260629-9ly-fix-qr-login-library-race | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260629-rbn-fix-premature-steam-install-uninstall-no | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-kba-format-steam-install-size-as-human-reada | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-knr-install-info-platform-icon-folder-open-i | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-l27-extra-info-crossover-wine-rating-rows-re | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-lmo-complete-heroic-gamelib-rebrand-of-user- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-m3f-show-estimated-install-size-on-pre-insta | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-mkw-steam-grid-cover-art-falls-back-to-heade | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-nwb-crossover-compatibility-lookup-spike | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-qyc-ui-cleanup-relocate-rework-the-crossover | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260710-rjm-rework-gamepage-emulation-compat-rows-pe | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260711-htb-move-the-use-shared-wine-prefix-toggle-t | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260712-lkn-add-refresh-affordance-for-crossover-com | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260714-gnc-add-graphifyignore-to-scope-knowledge-gr | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260715-a7g-treat-remaster-remake-as-product-differe | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260718-jmt-fix-steam-download-progress-graph-cadenc | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260719-aog-steam-native-install-progress-polish-dow | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260726-q8f-extract-shared-stripsourcecomments-util- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260727-c42-consolidate-on-the-standalone-graphify-g | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260802-o3j-fix-wr-08-stripper-integrity-regression- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260803-eee-tauri-oauth-login-finalizing-state-on-ma | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260803-mcu-epic-sidlogin-smart-clipboard-paste-auto | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260804-n02-remove-logged-out-sidebar-anti-pattern-a | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260805-d62-colour-the-interactive-legendary-login-e | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260805-rwy-remove-manage-accounts-login-text | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260805-t0s-remove-patreon-from-the-menu-and-all-ref | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260805-u68-change-the-ko-fi-link-from-heroic-s-url- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260805-v1f-remove-discord-and-github-sponsors-from- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260806-teb-amazon-store-login-takes-too-long-need-t | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260813-ssg-fix-stale-avernum-5-retest-claim-in-stat | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260814-n2o-amend-plan-34-5-58-and-ledger-rows-for-f | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260814-r2d-fix-keyring-read-timeout-treated-as-no-t | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260814-u2u-fix-c4-01-forward-signals-in-meta-runts- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-bjr-port-heroic-2-22-1-fixes | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-j24-frameless-titlebar-remove-icon-left-alig | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-k25-hide-native-macos-window-title-hiddentit | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-kt0-manage-accounts-screen-replace-per-store | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-lta-change-title-tab-headings-to-accounts-li | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-opt-library-filter-visibility-facet-group-se | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-qf0-hoist-filterchiprow-above-the-recently-p | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260815-vvz-fix-the-dead-app-hide-sidecar-fallback-i | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260816-9o0-guard-gen-i18n-gate-scope-from-clobberin | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260816-a5o-teach-the-rust-quote-balance-check-about | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260816-hdg-normalize-steam-metadata-depot-signal-re | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260816-py8-phase-34-15-bookkeeping-corrections | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260816-qcn-steam-platform-signal-precedence-rule-an | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260816-vgc-fix-the-orphaned-depot-download-route-th | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260817-d61-defer-the-steam-keyring-read-from-startu | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260817-dib-make-the-install-watchdog-a-progress-bas | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260817-ihr-fix-the-steam-depot-downloader-s-single- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260817-pkx-fix-decompresspool-worker-threads-to-act | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260817-sw8-record-age-of-wonders-planetfall-718850- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260818-s5l-fix-the-55-eslint-errors-not-warnings-su | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260818-v81-fix-g-23-02-gap-healreconciledfilemodes- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260819-b1q-fix-applymachoexecutablefallback-fat-uni | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260819-ch5-fix-the-stale-finish-in-steam-label-on-i | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260819-r4r-cache-steam-library-on-startup | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260819-s8p-seed-steam-bottle-name-in-install-modal | complete (code) / conflict on task 3 co… | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260819-snf-remove-archived-wine-ge-from-the-wine-ma | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260820-fyl-fix-t-34-5-g6-14-keyring-cacheepoch-gene | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260820-ic0-add-the-missing-platform-branch-absence- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260820-kq0-steam-login-should-have-the-same-windowi | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260820-u29-fix-steam-login-form-tab-label-clipping- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260821-iri-make-humble-login-open-as-an-animated-di | missing | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260821-le0-fix-32-bit-mac-steam-titles-permanently- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260821-lge-mirror-provisionbridgebottle-s-crossover | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260821-o34-switch-the-gog-user-api-off-embed-gog-co | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260821-ooq-port-heroic-gamepad-fixes-nintendo-face- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260821-rb5-steam-case-c-residue-persist-a-resume-br | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260822-b05-fix-reconcilenonavailablegames-trapping- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260822-bp4-decrypt-symlink-linktarget-in-depot-mani | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260822-di1-inject-chrome-stripping-css-into-the-hum | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260822-dkf-stop-the-install-poller-grace-window-kil | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260822-eib-strip-the-humble-login-navbar-so-only-th | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260822-elw-add-a-create-a-steam-account-link-to-the | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260822-h37-write-34-9-review-fix-md-fix-pass-siblin | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260827-t9c-fix-phase-34-11-correctness-residual-rev | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260827-ua7-close-phase-34-11-residual-warnings-wr-0 | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260827-vpl-close-out-phase-34-11-final-three-residu | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260831-q93-fix-epic-cookie-census-dead-probe | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260831-vmc-epic-census-partial-unconfirmed-gate | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260901-8rm-shrink-tauri-macos-bundle-narrow-bundle- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260901-a2w-stop-shipping-stale-build-bin-helper-fil | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260901-b8z-repoint-frontenddist-at-renderer-only-dir | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260901-e7o-restore-runner-symlinks-in-tauri-bundle | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260901-ud5-unblock-the-pre-push-hook-all-four-gates | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260902-9wt-close-the-2026-08-06-phase-34-8-i18n-con | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260902-ad5-split-the-46-locale-fork-string-coverage | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260902-ofu-cr-01-legendary-logout-unconditional-cle | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260903-8rj-commit-orphaned-34-3-uat-file-and-retire | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260903-9dw-record-human-retest-pass-for-login-backg | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260903-itr-remove-browser-from-the-i18n-glossary-an | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260905-luf-steamgame-getgameinfo-returns-on-a-doubl | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260905-mv5-fix-the-4-sibling-unguarded-getgameinfo- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260906-gej-sweep-sidecar-bootstrap-for-unported-non | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260906-h2k-point-the-graphify-pretooluse-hooks-at-a | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260906-hq8-fix-runts-cjs-esbuild-spawn-on-windows-b | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260906-u8i-fill-the-794-missing-gamelib-locale-pairs | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260906-vdn-write-41-review-fix-md-recording-the-clo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-dbh-fix-pause-cancel-button-opening-install- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-e7a-audit-and-close-the-non-title-axis-of-th | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-f2g-guard-the-two-unguarded-getgameinfo-dere | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-j8n-persist-rpc-transport-failure-diagnostics | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-juv-fix-helper-process-orphan-on-app-quit-wi | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-o1b-split-f9-into-closed-and-parked-halves | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-odi-fix-gog-playtime-sync-lock-never-release | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-ov3-live-gate-the-keyring-get-bounded-classi | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-ppy-gog-importgame-reject-a-chosen-folder-wh | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-rjc-rewrite-stale-eos-native-dialog-todo-aga | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-seq-close-the-importgame-wineprefix-winevers | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260907-sxp-fix-install-stall-watchdog-so-a-trip-can | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-ci2-restore-steam-refreshinstallstate-focus- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-e64-fix-macos-shortcut-icon-generation-guard | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-fre-port-the-lost-boot-time-epic-gog-user-re | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-gx3-enforce-presence-baseline-totalpairs | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-gye-todo-triage-decorations-normalize-todo-f | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-k3x-port-checkrosettainstall-into-tauri-side | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-uic-add-gog-keyless-support-so-humble-gog-ke | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-vo4-humble-key-row-move-store-icon-left-at-t | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260908-wk0-port-the-boot-time-gog-queued-playtime-d | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260909-k5x-port-boot-time-gog-presence-call-into-si | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260909-pym-fix-cold-session-installdir-fallback | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260909-q2o-thread-the-depot-abortsignal-through-cdn | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260909-s8x-split-the-lint-ratchet-into-separate-pro | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260910-drs-reset-the-gog-presence-keep-alive-interv | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260910-et3-make-dev-vault-the-default-for-tauri-dev | partial | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-ayu-fix-state-md-frontmatter-invalid-yaml-an | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-ftc-fix-the-stranded-key-bug-a-server-reject | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-h49-close-gog-auth-json-outer-key-todo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-ijv-fix-the-red-pre-push-prettier-gate-and-c | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-qds-transcribe-the-req-43-19-live-gate-re-ru | awaiting_human_check | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-s4f-file-the-game-header-offset-todo-and-tra | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-t0p-fix-four-ui-defects-on-the-humble-keys-s | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260911-umj-shrink-shared-control-heights-app-wide-s | done | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-bij-fix-the-duplicate-key-corruption-in-34-5 | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-bul-correct-three-stale-phase-34-6-facts-in- | done | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-csq-add-a-uat-visibility-planning-gate-that- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-d84-align-the-humble-keys-game-column-header | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-it4-drain-the-undefined-css-custom-property- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-k09-gog-logo-centring-live-re-measure | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-n9i-fix-audit-open-current-focus-emitting-a- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-qop-getgameinfo-forcereload-stale-map | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260912-rvv-refresh-installed-before-savepath-read | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260913-901-fix-smoke-sidecar-hang | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260913-lkk-fix-smoke-sidecar-fail-open-signal | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260913-m9c-cold-boot-pooled-tls-socket-hold | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260915-ajd-change-listavailable-to-return-verb-titl | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260915-g9p-fix-humble-expiration-digest-leak-sentin | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260915-lhm-close-2026-08-24-winetricks-todo-narrow- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260916-cdb-rename-import-game-label-and-demote-it-t | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260917-8hr-file-three-release-run-failures-as-todos | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260917-u4d-close-the-d-32-adtraction-gap-todo-path- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260917-uik-sign-every-mach-o-under-contents-resourc | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260918-a1a-claude-md-region-source-markers | missing | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260918-amq-uat-expected-inline-convention | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260918-c6a-uat-reason-inline-then-park | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260919-sya-make-the-gsd-phase-status-vs-code-extens | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260919-tms-wrap-gamesubmenu-s-5-eos-overlay-call-si | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-k2d-fix-gamepage-wikilink-trans-key-to-i18nk | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-mzl-delete-the-dead-dialog-css-todo-item-3-a | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-nub-delete-the-dead-dialog-content-and-dialo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-o95-guard-or-parameterise-the-five-darwin-as | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-pec-record-the-live-wkwebview-measurements-i | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-pvt-delete-the-stray-trailing-content-tag-fr | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-rmj-fix-fr-gamepage-wikilink-entity | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-saw-refresh-i18n-fork-touched-snapshot | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260921-thi-fix-leaked-store-embed-rpc-timer | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-7pv-sweep-stray-trailing-envelope-tags-gate | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-8kv-delete-dead-dialog-logs-wrapper-css-rule | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-avw-add-push-triggers-so-ci-evaluates-main | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-e01-make-the-deadcode-baseline-environment-i | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-gxd-style-the-redeemsteamkeydialog-outcome-p | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-hjb-prune-unreachable-locale-directories-fro | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-iyj-collapse-43-language-literals | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-k2o-shrink-used-in-module-deadcode-ledger | partial (33 of 203 shipped; todo rewrit… | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-lh4-ship-src-bucket-c-and-fix-the-census | partial (tasks 0-4 of 6 shipped; tasks … | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-n7s-correct-the-tsconfig-widening-claim | missing | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-p57-make-tar-invocations-drive-letter-safe-o | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260922-vzw-clear-bucket-b-of-the-used-in-module-dea | missing | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-89z-retire-phase-38-electron-runtime-items | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-b31-ci-cargo-test | completed | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-ihw-fix-the-notarization-todos-unachievable-verif | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-mrx-bound-the-macos-notarization-wait-in-release | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-np3-record-the-live-notarization-run-in-the-todo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-o2s-fix-iswritable-windows-acl-group-grant | completed | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-ohg-close-the-linux-release-leg-todo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-p95-record-notarization-accepted-in-the-todo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-qe5-fix-checknintendo-trusting-chromium-stan | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-tip-fix-windows-packaged-build-darwin-runner | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-u3o-record-live-gate-results-extract-updater-todo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-uvt-close-notarization-todo-extract-residual | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260923-vdq-label-both-figures-in-the-install-dialog | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260924-g7r-share-one-steam-visibility-predicate-bet | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260924-pm3-correct-the-windows-code-signing-todo-re | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260924-rbx-add-a-dry-run-conditional-to-release-tau | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260924-swb-fix-library-card-art-never-recovering-fr | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260924-tjg-close-the-python3-git-bash-store-stub-to | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260924-vat-ignore-src-tauri-target-in-vite-watcher- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-88h-mt-disclosure-and-report-link-in-languag | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-9de-fix-checknintendo-axis-reads-right-stick-dea | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-i31-action-todo-make-the-humble-bare-date-ex | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-j58-exempt-keyless-humble-entitlements-from- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-kt4-widen-two-gog-keyless-only-humble-keys-s | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-m5i-fix-checkn64clone1-dpad-hat-comparisons- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-ms5-measure-non-standard-nintendo-pad-stick- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-nxt-split-compound-uat-item-38-c01-and-resol | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-o9b-close-obsolete-report-upstream-todo-and- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-op0-add-temporary-gamepad-act-dispatch-instr | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-oyr-retire-38-c04b-stick-click-expectation | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-pga-make-highlighted-game-cards-in-non-conso | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-r8j-phase-38-controller-sitting-close-out-di | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260925-uok-windows-gamelib-self-heal-on-launch | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260926-8j9-phase-38-windows-sitting-close-out | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260926-acw-give-controller-keyboard-focus-a-percept | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260926-bsl-correct-the-sitting-4-build-label-in-38- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260926-dxa-tauri-dev-pre-flight-rejects-a-foreign-r | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260926-f3l-gamelib-self-heal-skips-dev-builds-under | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260926-gs1-clear-store-filter-on-store-logout | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260926-jes-rename-notify-uninstalled-error-to-notif | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260928-sph-pick-up-and-resolve-the-pending-todo-at- | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260928-upj-record-the-decision-option-a-gtk-box-nat | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260930-9oq-fix-13-cr-01-urgency-badge-can-never-say | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 260930-hks-migrate-to-gsd-core-1-15-0-and-close-the | missing | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261001-apg-appimage-desk-run-of-the-linux-embed-live | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261001-ci5-record-the-local-linux-run-of-the-five-g | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261001-ci6-close-the-ci-runner-todo-on-a-green-pull | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261001-lgc-record-the-linux-embed-live-gate-and-clo | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261001-pez-mid-drag-frame-capture-for-the-linux-sto | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261008-qbb-dock-quit-applicationshouldterminate | missing | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261011-vl0-library-card-geometry-follow-ups-from-th | unknown | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261012-9aa-run-the-live-windows-gate-for-the-pendin | incomplete | 2026-10-16 (v0.8 close) |
+| quick_tasks | 261012-euq-fill-library-tilesize-label-and-valuetex | unknown | 2026-10-16 (v0.8 close) |
+| uat_gaps | 05/05-HUMAN-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 06/06-HUMAN-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 08/08-UAT.md | diagnosed | 2026-10-16 (v0.8 close) |
+| uat_gaps | 08.1/08.1-HUMAN-UAT.md | passed | 2026-10-16 (v0.8 close) |
+| uat_gaps | 13/13-HUMAN-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 14/14-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 17/17-UAT.md | testing | 2026-10-16 (v0.8 close) |
+| uat_gaps | 21/21-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 26/26-HUMAN-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 27/27-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 28/28-HUMAN-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 30/30-HUMAN-UAT.md | unknown | 2026-10-16 (v0.8 close) |
+| uat_gaps | 30/30-UAT.md | diagnosed | 2026-10-16 (v0.8 close) |
+| uat_gaps | 32/32-HUMAN-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 34.13/34.13-UAT.md | unknown | 2026-10-16 (v0.8 close) |
+| uat_gaps | 34.14/34.14-UAT.md | passed | 2026-10-16 (v0.8 close) |
+| uat_gaps | 34.15/34.15-UAT.md | passed | 2026-10-16 (v0.8 close) |
+| uat_gaps | 34.2/34.2-HUMAN-UAT.md | parked | 2026-10-16 (v0.8 close) |
+| uat_gaps | 34.3/34.3-UAT.md | superseded | 2026-10-16 (v0.8 close) |
+| uat_gaps | 34.5/34.5-UAT.md | partial | 2026-10-16 (v0.8 close) |
+| uat_gaps | 38/38-HUMAN-UAT.md | false | 2026-10-16 (v0.8 close) |
+| uat_gaps | 50/50-UAT.md | diagnosed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 05/05-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 06/06-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 08/08-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 13/13-VERIFICATION.md | gaps_found | 2026-10-16 (v0.8 close) |
+| verification_gaps | 19/19-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 21/21-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 26/26-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 28/28-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 30/30-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 32/32-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 33/33-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 34/34-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 34.13/34.13-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 35/35-VERIFICATION.md | human_needed | 2026-10-16 (v0.8 close) |
+| verification_gaps | 50/50-VERIFICATION.md | gaps_found | 2026-10-16 (v0.8 close) |
+| deferred_items | 15/deferred-items.md: Plan 15-01 - **Pre-existing lint error (out of scope):** `pnpm lint` reports 1 error in… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 17/deferred-items.md: From 17-11 (GAP 3 gap-closure) - **Pre-existing async leak in `src/backend/storeManager… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 17/deferred-items.md: From 17-12 (GAP-17-PFX86-PATH gap-closure) - **Pre-existing async leak in `src/backend/… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 23/deferred-items.md: Skip-and-warn policy for a Blocked key on a non-essential owned depot (G-23-01) — ✅ CLO… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 30/deferred-items.md: Plan 30-02 - **Pre-existing eslint errors in `src/backend/sidecar/handlers.ts` (lines 1… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 31/deferred-items.md: Plan 31-01 - **Pre-existing eslint error in `src/backend/sidecar/electronStub.ts`** (`@… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 31/deferred-items.md: Plan 31-02 - **Flaky `bootstrap.test.ts` failure when run alongside the full `src/backe… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 32/deferred-items.md: From Plan 32-01 - **Pre-existing `handlers.ts` lint errors (2x `@typescript-eslint/no-u… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.1/deferred-items.md: 34.1-13 Discovered while running `npx eslint` against `src/backend/__tests__/tauriShe… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.12/deferred-items.md: 34.12-04 Task 2 — pre-existing `i18nForkTouchedFiles.json` drift, unrelated to this … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From plan 34.2-03 - **Pre-existing eslint error in `src/backend/crossover_index/__tes… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From plan 34.2-07 - **Pre-existing leaked-timer crash in `src/backend/storeManagers/s… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From the phase-level post-merge test gate (orchestrator, /gsd-execute-phase 34.2) - *… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From plan 34.2-18 (gap cycle 2, CR-03/WR-01 closure) — CLOSED by gap cycle 3 - **11 o… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From plan 34.2-20 (gap cycle 3, WR-02 closure) **RESOLUTION NOTE, 2026-07-26 (gap cyc… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From plan 34.2-19 (gap cycle 3, structural containment) - **Re-observed: the pre-exis… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From gap cycle 3 (plans 34.2-19..34.2-23) Residual findings from `34.2-REVIEW-GAP-CYC… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: From gap cycle 4 (plans 34.2-25..34.2-29) Deliberate deferrals from `34.2-REVIEW-GAP-… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: Gap-cycle-4 findings CLOSED 2026-08-23 (quick task `260823-9ds`) Two of `34.2-REVIEW-… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.2/deferred-items.md: Gap cycle 4: closed **Count correction, 2026-08-23.** Every "17" in the sections abov… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: From plan 34.3-04 Full backend `npx jest` sweep (run as part of this plan's own verif… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: From plan 34.3-09 (Task 1, the blocking live-gate's automated sweep) Both items below… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: Supply-chain disclosure — AR-34.3-01 **Carry this entry into `34.3-SECURITY.md` when … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: From the phase-close gate — non-deterministic cross-suite flake Running the full `npx… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: ID — AR-34.3-01 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: Threat — T-34.1-SC (supply chain — cargo installs) | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: Origin — Plan 34.3-03, commit `3a83772d` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: Disclosed — 2026-07-26 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: Owner — Grayson Mitchell | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.3/deferred-items.md: Status — accepted, transitive review owed to secure-phase 34.3 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Plan 15 — `depot.test.ts` full-suite-only flake (2026-07-30) - **Found during:** Pl… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Plan 18 — `seam-parity-sweep.py` category/term tables are stale relative to plans 1… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Plan 19 — `seam-parity-sweep.py`'s S-07/S-10/S-11 staleness re-forwarded, not fixed… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Plan 18 — `helperProcess.test.ts` full-suite-only flake (2026-07-30) - **Found duri… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: **Found during:** Plan 21 Task 3's human checkpoint. The operator booted the app to… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: **Second observation, same boot:** the Humble session survived the relaunch — **no … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Scope and disposition - **Scope:** entirely outside plan 21's declared `files_modif… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Follow-up (2026-07-31, same day): signing hypothesis MECHANISM CONFIRMED, empirical… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Resolution of the "Always Allow" ambiguity (2026-07-31) The entry above listed two … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-08 / D-29-06 — owners assigned (plan 34, 2026-08-23) Both were **unassigned no… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-03 — **CLOSED 2026-08-23** (plan 32). D-29-02 — remains open, handed to plan 3… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Why **20+** reads per boot — **No caching anywhere in the keyring read path.** `Sid… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Why **each** read prompts at all — Hypothesis: `pnpm tauri:dev` re-links and ad-hoc… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Per-call item churn (service/account varying per call) — Ruled out — `KEYRING_SERVI… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Duplicate items, each carrying its own ACL — Ruled out — `security dump-keychain` →… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Allowlist bypassed / unlisted accounts being written — Ruled out — The one non-allo… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Absent entry — 40–102 ms | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: **Present** entry (real `steam-refresh-token` account) — **48.9 s**, then **291 s**… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: JS/TS (`src/frontend`, `src/preload`) — 0 unverified — The only 2 hits are `queryLo… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: Rust (`dispatch_rust_channel`) — 5 unverified — All five are `WebViewBuilder::build… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: after the fix — exit 0 — **exit 0**, 13 findings written | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: one hint reverted `1211`→`1202` — exit 1 — **exit 1**, same hard stop | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: restored — exit 0 — **exit 0** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: `--self-test` — exit 0 — **exit 0** — "every check rejects its corresponding bad in… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-01 — CLOSED (already fixed) — plan 30 — — (ledger only) | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-02 — **PARKED 2026-08-23** (operator) — UNDETERMINED, non-blocking — plan 32 →… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-03 — OPEN — plan 32 — `src/backend/humble/adapter.ts` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-04 — OPEN — plan 33 — `src-tauri/src/main.rs` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-05 — OPEN — plan 33 — `src-tauri/src/main.rs` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-06 — **PARKED 2026-08-23** (operator) — co-occurrence UNDETERMINED — plan 34 →… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-07 — OPEN — headline — plan 35 — `34.4.1-LIVE-GATE-RERUN-4.md` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-08 — RE-HOMED to 34.6, CONFIRMED 2026-08-23 — plan 34 → todo; owner signed off… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-09 — CLOSED (one REQ) — plan 30 — `.planning/REQUIREMENTS.md` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: D-29-10 — CLOSED at filing — plan 30 — — (ledger only) | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: NEW-01 — CLOSED — plan 31 — `seam-parity-sweep.py` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: completion line exists, exactly once, with `durationMs` — delete the `logInfo` call… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: revealed key reaches NO log sink — interpolate `key=${parsed.data.key}` into the li… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: 1 — `.title("GameLib")` — amended WR-07 gate FAILS — **FAILS** ✓ | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: 2 — `.title(some_other_var)` — amended WR-07 gate FAILS — **FAILS** ✓ | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: 3 — remove the provisional title — D-29-05 presence gate FAILS — **FAILS** ✓ | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.1/deferred-items.md: 4 — move the empty guard AFTER `set_title` — D-29-04 order gate FAILS — **FAILS** ✓ | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 05 — `helperProcess.test.ts` full-suite-only flake, reproduced again (2026-08-… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 05 — `seam-parity-sweep.py` real-tree run fails on a site outside this phase's… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 05 — pre-existing REQUIREMENTS.md checkbox/prose mismatches found, not fixed (… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 07 — `.planning/STATE.md`'s "Next action" line points at an unrelated Phase 34… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 09 — the autofill glyph's un-gated cross-platform injection remains unfixed, n… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 11 — seven `34.4.2-REVIEW.md` findings deliberately OUT of scope this cycle (2… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 11 — the debug arc's three commits landed with no phase plan documenting them … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 13 — what the deletion deliberately did NOT do (2026-08-05) **Not a gap — a sc… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 14 — the nile spawn tax that motivates the guard, and one silently-swallowed r… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 15 — gate run 2's orphaned findings folded into the ledger (2026-08-05) **Disp… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 16 — a fifth contract-authoring defect (an interaction, not a single unreachab… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 20 — RERUN-4 RAN, verdict FAIL 1/6; four new findings, three of them contract … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 23 — gap cycle 5 authoring: owners assigned to RERUN-4's four findings, F-34.4… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: Plan 24 — the blocking live gate RAN against `34.4.2-LIVE-GATE-RERUN-5.md`, verdict… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: F-34.4.2-19 Track 2 continuation — WR-03 deadline lead structurally ruled out; a ga… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: F-34.4.2-19 CLOSED — debug session resolved the root cause; three residuals recorde… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: RERUN-6 authored — D-G4/D-G5 locked, two findings retired, one NEW finding (2026-08… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.4.2/deferred-items.md: RERUN-6 RAN — verdict PASS 5/5, the phase's first full PASS; two NEW contract defec… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: **`src/backend/sidecar/__tests__/testContainment.test.ts` Block C — `pathShim.test.ts… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: **`src/backend/wine/manager/downloader/__tests__/utilities/rest.test.ts` — `unlinkFil… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: **`src/backend/__tests__/longRunningChannels.test.ts` — stripper-integrity self-check… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: Resolution — Wave 1 post-merge gate (orchestrator, 2026-07-29) - **Item 1 — RESOLVED.… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: Disposition of items 6-11 (F-34.5-G6-01..06) against this run > **UPDATE 2026-08-03T2… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: 23. Steam identity in the repo — DEVELOPER DECISION RECORDED 2026-08-02: redact forwa… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: 24. D-CYCLE6-A — Epic login is DESCOPED from Phase 34.5's blocking gate; ~~Phase 34.7… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: Found during the fifth blocking live gate (2026-08-19, plan 34.5-59) **VERDICT: PASS … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: SteamID3 account id (`userdata/<id>`) — 4, all `.planning/phases` — **0** — `49fdaad7… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.5/deferred-items.md: SteamID64 (the profile-URL number) — 37 — **37 — public since 2026-07-14** — `fb84eb8… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: `34.9-18-SUMMARY.md:45`: *"closing CR-01 and WR-01"* — both self-check PASSED, no dis… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: `34.9-19-SUMMARY.md:60`: *"Closed the one known blind spot (WR-02)"*; `:62-63`: IN-01… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: `34.9-20-SUMMARY.md:61`: *"Closed the second half of CR-01 ... It is now an unconditi… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: `34.9-21-SUMMARY.md:62`: *"CR-01 (the sole Critical finding from `34.9-REVIEW.md`) is… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: 18. C2-05 — the arm64-only guard is live and active in real CI, and gates an auto-pub… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: 19. C2-07 — the doc-comment accuracy pins couple CI to documentation wording, not jus… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: List B — every finding ID with a landed fix, confirmed against the repository Stage o… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: List B — every finding ID with a landed fix, confirmed against the repository - **C3-… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: List B — every finding ID with a landed fix, confirmed against the repository - **C4-… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: Closure protocol — why every cycle's own review is unledgered by construction Recorde… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: nile — 4.23s — 0.13s — 32.5x | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: legendary — 3.99s — 0.15s — 26.6x | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: gogdl — 2.99s — 0.11s — 27.2x | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: CR-01 — Critical — FIXED — 34.9-18 (`closeBundle` throw) + 34.9-20 (wired into `dist:… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: WR-01 — Warning — FIXED — 34.9-18 (`isContainedSymlinkTarget`, `meta/preserveRunnerSy… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: WR-02 — Warning — FIXED — 34.9-19 (`summarise()`'s `!fw.topLevelStubExists` branch, `… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: IN-01 — Info — FIXED — 34.9-19 (`meta/cleanDistMac.ts` doc-comment correction, pinned) | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: IN-02 — Info — FIXED — 34.9-19 (`meta/cleanDistMac.ts` doc-comment downgraded to defe… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: IN-03 — Info — FIXED — quick task 260822-hrf (commits `df7af9f4a` rename + `ab1ee0448… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-05 — Warning — FIXED — plan 34.16-01, commit `adc648eb6` (2026-08-25) -- CROSS-PHA… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-07 — Info — FIXED — quick task 260823-sok, closing item 19 opened by plan 34.9-27 … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: source under pin — `meta/cleanDistMac.ts` — `meta/cleanDist.ts` (via the test's `CLEA… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: the pins block — `meta/__tests__/cleanDistMac.test.ts:234-276` — `meta/__tests__/clea… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: IN-01 negative (protective) — — — `:467-471` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: IN-01 positive, 2× `toContain` — — — `:473-477` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: IN-02 negative (protective) — — — `:479-483` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: IN-02 positive, 3× `toContain` — — — `:485-492` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-01 — Critical — FIXED — 34.9-25 (pipe-to-`&&` conversion) + 34.9-26 (`34.9-PIPE-PR… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-02 — Warning — FIXED — 34.9-25 (conversion) + 34.9-26 (proof) — package.json `buil… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-03 — Warning — FIXED — 34.9-25 (conversion) + 34.9-26 (proof) — package.json `buil… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-04 — Warning — FIXED — 34.9-27 (package.json wiring pin) — meta/__tests__/verifyRu… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-05 — Warning — FIXED — plan 34.16-01, commit `adc648eb6` (2026-08-25), CROSS-PHASE… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-06 — Warning — FIXED — 34.9-24 (`resolvedTopLevelTargetExists`) — meta/verifyRunne… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-07 — Info — FIXED — quick task 260823-sok (item 19 closed; item opened by plan 34.… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C2-08 — Info — FIXED — 34.9-24 (`result.rejected` assertion) — meta/__tests__/preserv… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: "Either fix the pipe idiom (temp-file the esbuild output and check its own exit code,… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: "A wiring-pin test (C2-04) mirroring cleanDistMac.test.ts's existing package.json ass… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: "Ledger entries for C2-01 through C2-08 in deferred-items.md (or a landed fix), so th… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C3-01 — Warning — FIXED — 34.9-29 (`meta/runTs.cjs`, private-tmpdir compile wrapper) … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C3-02 — Warning — FIXED — 34.9-30 (`meta/lintTranslations.ts` doc-comment correction)… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C3-03 — Info — FIXED — 34.9-30 (`34.9-REVIEW-SWEEP-CHECK.cjs` polarity deny-list) — l… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C4-01 — Critical — FIXED — quick task 260814-u2u (commit `fdc5b24e7`) + 34.9-32 (`34.… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C4-02 — Warning — FIXED — quick task 260814-u2u (commit `fdc5b24e7`); confirmed live … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C4-03 — Warning — FIXED — quick task 260814-u2u (commit `fdc5b24e7`, D7 consequence);… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C4-04 — Warning — FIXED — quick task 260814-u2u (commit `fdc5b24e7`); confirmed live … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C4-05 — Warning — FIXED — quick task 260822-hrf (commit `a850e9d66`), closing item 21… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C5-01 — Warning — FIXED — quick task 260822-hrf (commit `06d7f6555`), closing item 22… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 34.9/deferred-items.md: C5-02 — Info — FIXED — quick task 260822-hrf (commit `b938aaace`), closing item 23 op… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-03-01 — RESOLVED 2026-08-30 (plan 35-24) — was: `meta/i18nForkTouchedFiles.json` i… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: Finding 2 — a dispatched-but-doomed launch produces NO user-visible signal Three distin… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-04-02 — the CrossOver index snapshot is deliberately NOT in `bundle.resources` **F… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-05-01 — RESOLVED 2026-08-29 (the prescribed method was corrected, not followed) — … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-05-02 — RESOLVED 2026-08-29 (scope corrected to ~48 sites, operator-approved) — wa… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-11-01 — the EOS remove confirmation cannot be app-styled without moving a destruct… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: 4. The REAL open defect, which is a different one The domain-scoped clear is **INCOMPLE… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: 6. Two secondary conflicts, both already-known shapes - Task 1's `generate_handler!` ac… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: Measured design constraints for the re-plan — a naive loop DOES NOT WORK Verified at so… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `legendary/user.ts` throws with a per-domain breakdown → `gamelib.log`. Good. | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `ipcMain.handle('logoutLegendary')` rejects → `window.api.logoutLegendary()` rejects. | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `GlobalState.epicLogout`'s `try/finally` does not swallow — correct — and rethrows. | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `Runner/index.tsx:44`'s `handleLogout` catches it and calls **`console.error`**. | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **Under Tauri, renderer `console.*` is visible only in the WKWebView inspector.** It re… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: Meanwhile `epicLogout`'s inner `.finally` has already cleared the Epic library state, a… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **(a) Toast/notification on logout failure.** Cheapest visible signal. Must not itself … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **(b) Leave the user signed-IN on a failed clear** — i.e. do not clear `epic` library s… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **(c) Accept it and say so in the release notes** — the failure is recorded in `gamelib… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-10-01 CLOSED 2026-08-29 — plus a regression the closing work uncovered **Closed by… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-08-02 — a running game ALSO holds a system-sleep assertion, mislabelled as a downl… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: What is genuinely unguarded now - `main.ts`'s registration ORDER for the Steam bottle c… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-18-01 — two pre-existing stale build-flag comments describe removed esbuild mechan… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-02 — RESOLVED-IN-PART: sink 2 is ALIVE when packaged; the defect is the 55 `epr… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-03 — `startInTray` hides the window AFTER creating it visible, so a "minimised"… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-04 — bare `gamelib://` scheme routing does not deliver on the test machine (UNR… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-06 — cross-reference: criterion 6 + criterion 10 share a shape Found: 2026-08-3… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-10 — the display wake lock is acquired TWICE for one game Found: criterion 15, … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-11 — a "download is in progress" system assertion is held while merely PLAYING … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-12 — CONFIRMED: `powerDisplayId` is never reset, so launcher.ts acquires once p… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-19-13 — startup race: the Epic library refresh always sees "offline" and serves ca… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **Seeding route — no vehicle exists.** This item prescribed "drive the login webview to… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **Census route — implemented, and inert.** This item's own text offered the census as a… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `utils.ts` `moveOnUnix`: `const destination = join(newInstallPath, basename(install_pat… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `gog/games.ts:794` `moveInstall` passes that already-complete path straight to `changeG… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `gog/library.ts:891-893`: ```ts if (cachedGameData.install.platform === 'osx') { newIns… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: How it was fixed (`260830-k4m`) Neither of the two routes suggested above was taken, an… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: D-35-ROUTE-01 — ROUTED TO PHASE 39, 2026-08-30: the two red planning gates and `WR-01` … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `fortnite.com` reads `before total=54` / `after total=54` despite clearing 1. The per-h… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: An external `strings` proxy counted `epicgames.com` occurrences 4 -> 6 **after** the cl… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: product: `post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s)` | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: independent index-walking parse of the same jar: **0** Epic-owned live records, 0 by do… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **0 `__cf_bm` anywhere** — no Cloudflare receipt, so no page load happens in teardown a… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: all four arithmetic reconciliations that the pre-fix run FAILED now hold: jar total 59-… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: not vacuous: BEFORE census measured `matched=8` (pre-fix baseline was 3); all 8 removed | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: no collateral damage: 0 non-Epic records lost; Humble/GOG/Amazon sessions intact **Resi… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: the product's own in-process post-clear census reads `matched=0` on **all five** Epic h… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: the external `strings` read of the same jar says those four names are still there. The … | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: the clear did not actually remove them (cf. [[wry-cookie-delete-lies-about-deleting]] —… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: they were re-created in the ~3s between the clear and the file write. **Caveat on the e… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `{legendary,gogdl,nile}/_internal/Python` — `Python.framework/Versions/3.12/Python` — d… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `{legendary,gogdl,nile}/_internal/Python.framework/Python` — `Versions/Current/Python` … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `{legendary,gogdl,nile}/_internal/Python.framework/Resources` — `Versions/Current/Resou… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `{legendary,gogdl,nile}/_internal/Python.framework/Versions/Current` — `3.12` — **MISSI… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: 1 — `{cwd: <abs>, name: 'gogLibrary'}` — `<abs>/config.json` — **NO — `undefined`** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: 2 — `{cwd: <abs>, configName: 'gogLibrary'}` — `<abs>/gogLibrary.json` — yes, incl. dot… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: 3 — `{cwd: 'store_cache', …}` (the literal value all 5 sites pass) — **`<process.cwd()>… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: Production construction sites — **5**, not 4 — plan misses `storeWriteHandlers.ts:364` … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: Production/type imports — 4 — `electron_store.ts:1`, `cache.ts:1`, `handlers.ts:73`, `c… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: Hook + its docs — 2 — `installElectronHook.ts` (intercepts `electron` **as well as** `e… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **`jest.mock('electron-store', …)` test files** — **37** — not mentioned by the plan at… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **Manual mock** — 1 — `src/backend/__mocks__/electron-store.ts` — does `jest.requireAct… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **Build config** — 1 — `package.json` `build:sidecar` carries `--external:electron-stor… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **AST gate** — 1 — `sidecar/__tests__/externalDynamicImportGate.test.ts`'s `FORBIDDEN_D… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: Doc comments naming it — ~30 — `storeChangeNotifier.ts`, `fileStore.ts`, `storePolicy.t… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `:2066` — ``clear_all_browsing_data()` MUST NOT appear anywhere in this file` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `:5742` — `D-08 is non-negotiable on every platform: never clear_all_browsing_data()` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `:6237` — `never-clear_all_browsing_data() discipline` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `api.spec.ts` (36 lines) — `renders the first page` — The app boots and the first rende… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `api.spec.ts` — `gets heroic, legendary, and gog versions` — The version-reporting IPC … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `settings.spec.ts` (67 lines) — `Settings` ×2 — The settings screen against stubbed `le… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `categories.spec.ts` (74 lines) — `categories` — Category/collection management in the … | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `languages_selector.spec.ts` (30 lines) — (language selector) — Language switching thro… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `webview_controls.spec.ts` (81 lines) — `webview` — The webview control surface — the s… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `packagingConfig.test.ts` — symlink plugin (F-34.9-01) — `electron.vite.config.ts` regi… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `artifactTargets.test.ts` — D-11 anti-collateral — `release:{linux,mac,win}` still EXIS… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `artifactTargets.test.ts` — successor — (new) — **ADDED**: the Tauri release path (`rel… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `installFormIpc.test.ts` — D-02 fork gate — `main.ts` AND `steamAuthFlowRegistration.ts… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `removeCopies.test.ts` — seam census — channel present in "all FOUR seam files" — **RE-… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `x64NonGoalSurvivor.test.ts` — category 1 — `electron-builder.yml` x64/win32 refs — **R… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `packagingConfig.test.ts` — 4 describes — `electron-builder.yml` per-platform staging g… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `cleanDist.test.ts` — artifactName pin + wiring pin — `electron-builder.yml` artifactNa… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `gameDetailsImportGate.test.ts` — Gates 5, 5-sanity, 6 — `main.ts` 19-channel delegatio… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `appShellImportGate.test.ts` — Gate 4 — `main.ts` delegates to `appshell/*` — **RETIRED… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `steamAuthFlows.test.ts` — 3 source gates — `main.ts` bottle-channel registration and O… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: dev sidecar spawn — `:6919`, `:6935` — `shell_diag(...)` — YES — stderr AND file | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **packaged sidecar spawn** — `:6967`, `:6981` — `eprintln!("[shell] ...")` — **NO — std… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `--archive` — OK | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `--compress` — OK | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `--remove-source-files` — OK | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `--no-human-readable` — **REJECTED** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `--info=name,progress` — **REJECTED** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `storeManagers/legendary/games.ts:767` — `sendFrontendMessage('refreshLibrary', 'legend… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `storeManagers/legendary/games.ts:1067` — `sendFrontendMessage('refreshLibrary', 'legen… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `storeManagers/sideload/library.ts:77` — `sendFrontendMessage('refreshLibrary', 'sidelo… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `storeManagers/nile/games.ts:512` — `sendFrontendMessage('refreshLibrary', 'nile')` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: **`sidecar/installedJsonWatcher.ts:86`** — **nothing** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: epicgames.com — **6** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: fortnite.com — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: unrealengine.com — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: twinmotion.com — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: metahuman.com — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: epicgames.com — 3 — **3** — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: fortnite.com — 1 — **1** — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: unrealengine.com — 1 — **1** — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: twinmotion.com — 1 — **1** — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: metahuman.com — 1 — **1** — 0 | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: flavour detection — `openrsync`, neither rejected flag in the argv (**-07**) | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: exit / `rm -rf` — exit 0, source removed, destination 7368 files / 419M, exe sha256 `36… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: recorded `install_path` — `/Users/graysonmitchell/GameLib/Endless Sky.app` — not double… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: game process — pid 17796, running from `.../GameLib/Endless Sky.app/Contents/MacOS/Endl… | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: gogdl argument — `launch "/Users/graysonmitchell/GameLib/Endless Sky.app"` | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `gamelib-shell.binarycookies` (dev) — 19:27:14 — 19:27:18 — **6** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 35/deferred-items.md: `com.gamelib.shell.binarycookies` (packaged) — 18:15:15 — 18:17:28 — **7** | un-markable evidence-table row (left open) | 2026-10-16 (v0.8 close) |
+| deferred_items | 37/deferred-items.md: From 37-03b (`pnpm test:ci` end-of-wave run, 2026-08-22) 1. **`meta/__tests__/genI18nGa… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 39/deferred-items.md: From Plan 39-02 Two `pnpm test --selectProjects Backend` failures observed while verify… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 41/deferred-items.md: 41-01: `pnpm lint` exceeds its `--max-warnings` ceiling repo-wide - **Found during:** 4… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 41/deferred-items.md: 41-07: pre-existing eslint warning at `meta/lintTranslations.ts:155` - **Found during:*… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 42/deferred-items.md: 42-06: `electronUntouched.test.ts` failure (unrelated to this plan) - **Found during:**… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 44/deferred-items.md: 44-06-01: `meta/__tests__/genI18nGateScope.test.ts` A-17 anti-rot check is red, pre-exi… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 48/deferred-items.md: Found by 48-07 (2026-10-07) - **`src/frontend/screens/Login/__tests__/overlayDismiss.te… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 48/deferred-items.md: Found by 48-13 (2026-10-09) - **`pageScrollDelta` / `canScrollForward` take one click t… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 49/deferred-items.md: Found during 49-09 1. **CLOSED 2026-10-09 during the Phase 49 closure chain's regressio… | acknowledged | 2026-10-16 (v0.8 close) |
+| deferred_items | 50/deferred-items.md: 50-05: `pnpm test:ci` full-suite run Observed 2 failing tests in `meta/__tests__/lintTr… | acknowledged | 2026-10-16 (v0.8 close) |
 
 ## Session Continuity
 
@@ -730,3 +1254,7 @@ History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE
 | fast | **Recorded the operator live gate for the Windows Stores embed (follow-up to 261012-f25).** `pnpm tauri:dev` on Windows at `36d88c94d`: W1-W7 PASS (Steam and GOG render, in-embed navigation, drag-resize, Library round trip, GOG -> Epic -> GOG, NavShell popover); Epic shows the panel as expected (D-05). Appended as a dated section to the todo, which stays `ready: live-gate` in pending/. | 2026-10-12 | COMPLETE. `pnpm planning-gates` 12/12. OWED: W8 non-100% zoom, W9 packaged NSIS build, W10 38-E01 P1-P5 against the shipped app. | — |
 | 261012-gn8 | **Store embed zoom-aware bounds (W8 fix).** Operator W8 FAIL on Windows at 120% Accessibility zoom: embed displaced, overlapping the grown chrome. Two causes: `useStoreEmbedHost` `flush()` sent CSS px while Rust positions in logical px (all three platforms; logical = CSS x zoom), and `store_embed_open`'s existing-embed branch re-applies the rect on Linux only, so returning from the Accessibility screen kept the 100% geometry on macOS/Windows. New `storeEmbedZoom.ts` (`readWebviewZoomFactor`, `scaleRectForZoom`, non-finite/<=0 -> 1); `flush()` scales open and setBounds payloads; MutationObserver on the root style re-flushes only on a real factor change (the property is published after `setZoom` resolves); one throttled setBounds after every ok open unless disposed. Single call sites for rect/open/setBounds kept; `src-tauri/` and `src/preload/` untouched. Todo records W8 FAIL + fix, stays `ready: live-gate`. | 2026-10-12 | COMPLETE (desk). RED then GREEN both tasks; helper + hook + reloadLoop 3 suites / 63 tests green; 3 mutation runs each turned its pin red; codecheck, `pnpm lint` PASS, scoped prettier, planning-gates 12/12. OWED: live W8 re-run R1-R6 on Windows, macOS/Linux live, window-resized-while-away case. Commits e97265b1c a8e03e290 2f87db8b8. | [261012-gn8-store-embed-zoom-aware-bounds-w8-fix](./quick/261012-gn8-store-embed-zoom-aware-bounds-w8-fix/) |
 | fast | **Recorded W8 PASS for the Windows Stores embed (follow-up to 261012-gn8).** Operator, `pnpm tauri:dev` at `47cd338b4`: the embed sits at the slot at 120% and 80% Accessibility zoom. Appended to the todo; the spike 017 1:1 viewport-to-logical finding in `spike-findings-gamelib` (SKILL.md + `references/tauri-embedded-store-browser.md`) now says it holds only at zoom 1. | 2026-10-12 | COMPLETE. `pnpm planning-gates` 12/12. OWED: W9 packaged NSIS, W10 38-E01 P1-P5, macOS/Linux compile and live, the window-resized-while-away case. | — |
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

@@ -1,5 +1,29 @@
 # Milestones
 
+## v0.8 Tauri Shell (Shipped: 2026-10-16)
+
+**Scope:** Phases 27–50 (plus parked Phase 22, swept in by the archiver). The Tauri v2 rearchitecture — Rust shell, headless Node sidecar over stdio JSON-RPC, real OS-keyring token storage — the incremental IPC re-plumb (slices 1–9, 34.1–34.6), Windows/Linux/macOS packaging with signing, notarization and an auto-update feed, the Electron cutover (35), and the post-cutover work that followed: the embedded login and store webviews (34.4.1, 40, 50), the sidebar-to-card-tabs navigation redesign (34.10–34.12), library filtering and the focus row (34.11, 48), the macOS onedir runner repackaging (34.9, 34.16, 34.18), Steam install-time wine/bottle parity (34.13–34.15), Humble key identity and the unified keys screen (42, 43), the native Winetricks UI (45), and cross-store signed-out/offline mode (49).
+
+**Stats:** 45 phases, 554 plans, 1212 tasks. Git range `c6af6b99b` (first Phase 27 commit, 2026-07-20) → `f23c8dd71` (2026-10-16): 6,240 commits over 88 days. `package.json` is `0.8.0`.
+
+**Closeout type: override_closeout.** Not a verified closeout. At close, 26 of the 45 phases were not both `phase_complete` and `verification_status: passed` (Phase 27 has no VERIFICATION.md at all; 28, 30, 32, 33, 34, 34.13, 35 are `human_needed`; 34.4.2, 34.6, 42, 48, 49 are `stale`; 50 is `gaps_found`; 34.7 is on hold and 47 was never planned). The only milestone audit, `v0.8-MILESTONE-AUDIT.md`, is a partial from 2026-07-22 covering Phases 27–28 at `gaps_found`; no full audit was run before close.
+
+**Known verification overrides: 429 newly acknowledged, 0 carried forward from a prior close (see STATE.md Deferred Items).** The pre-close artifact audit found 569 open items — 21 debug sessions, 6 todos, 235 quick tasks, 22 UAT gaps, 15 verification gaps, 270 deferred-items entries. 429 were acknowledged through `audit-open acknowledge` (7 only after their YAML frontmatter was repaired; 22 ledger entries by hand because their spans embed tables). **140 deferred-items rows were left open and are NOT acknowledged:** they are rows of evidence and disposition tables in the Phase 35, 34.9, 34.4.1, 34.3 and 34.5 ledgers, which the scanner surfaces as items by design and for which no row-level marker exists. They will resurface at the next `audit-open` scan.
+
+**Known Gaps (requirements):** `REQUIREMENTS.md` at close carried 365 checked and 110 unchecked boxes across its v0.2–v0.7 sections; it had no v0.8 section — v0.8's requirements (REQ-27-xx … REQ-50-xx) were tracked per phase in the roadmap's phase details. The whole file is archived as `milestones/v0.8-REQUIREMENTS.md`; the unchecked v0.2–v0.7 items (Phase 9 Quality Gate, Phase 23 G-23-01/G-23-02, the v0.3 HSTORE-02 listing, DETAIL-03, API-01) are carried forward, not closed.
+
+**Key accomplishments:**
+1. **Tauri v2 shell shipped and the Electron build removed** (27–35): Rust shell + Node SEA sidecar over stdio JSON-RPC, a `rustInvoke` sidecar→Rust channel, real OS-keyring token storage, and 200+ IPC channels re-plumbed slice by slice behind a `SEAM.md` ported-vs-stubbed boundary; the cutover was verified against a genuine release artifact (PID chain, sha256-identical bundled sidecar).
+2. **Cross-platform packaging with a fork-pointed update feed** (34, 34.16, 34.18): Windows/Linux/macOS builds, minisign updater keypair, macOS signing and notarization, Windows signing gated on a complete secret set, and an arm64-only macOS runner strategy with the onedir Python runner repackaging that removed the PyInstaller cold-start tax (34.9).
+3. **Embedded login and store surfaces under WKWebView** (34.4.1, 34.4.2, 40, 50): the Electron webview login seam replaced by a Tauri child webview with cookie-read and modal child-window attachment on macOS, in-app store/wiki browsing, and a Rust-managed raw WKWebView subview for the Epic store.
+4. **Navigation and library redesign** (34.10, 34.11, 34.12, 48): the sidebar replaced by app-level card tabs with a two-tier nav, a library filter panel (search, views, collections, cross-store facets), the onboarding tour re-anchored, and the focus row replacing the Settings top-section dropdown — each closed by WebKit-measured live gates.
+5. **Steam and Humble depth** (34.13–34.15, 36, 37, 42, 43): install-time wine/bottle form at GOG parity, platform-row depot signals and sync integrity, the login-to-Steam crossfade, the depot-decode/false-delisted defect cluster, evidenced Humble key platform identity, and a unified Humble Keys screen.
+6. **Cross-store signed-out/offline mode and the native Winetricks UI** (49, 45): one consolidated sign-in notice across five stores probed once at boot with latched expiry, Epic `--offline` launch, and a from-scratch in-app Winetricks surface.
+
+**Process record:** the full auto-extracted one-liner list for all 554 plans was written here by `milestone complete` and trimmed to the six items above; the per-plan one-liners remain in each `SUMMARY.md` under `milestones/v0.8-phases/`.
+
+---
+
 ## v0.1 Steam Platform (Shipped: 2026-06-29)
 
 **Delivered:** GameLib — a Heroic Games Launcher fork that adds Steam as a first-class platform alongside Epic, GOG, and Amazon: authenticate, browse, install, launch, and uninstall Steam games from one unified launcher.
@@ -126,10 +150,6 @@
 
 ---
 
-## v0.8 Tauri Shell (In progress — no ship date)
+## v0.8 Tauri Shell — superseded entry
 
-**Scope:** Phase 27 — a walking-skeleton spike proving a Tauri v2 (Rust shell + headless Node sidecar + stdio JSON-RPC transport) rearchitecture end-to-end against GameLib's real Steam store-manager code, while leaving the existing Electron build completely untouched — **extended 2026-07-22 with Phases 28–35, the incremental port that follows it:** 28 real `safeStorage` keyring, 29 sidecar store layer, 30–32 IPC re-plumb domain slices (install/uninstall/update-check, settings/config, downloads/queue), 33 the lifecycle cluster, 34 Windows/Linux packaging, 35 Electron cutover. Every phase except 35 ends with both builds working (REQ-27-06's additive/reversible invariant); 28 is order-constrained ahead of any token-writing channel because the sidecar and Electron share one store.
-
-**Status:** Phase 27 (Tauri Shell Walking Skeleton) is **complete — 5/5 plans**, all with matching SUMMARY.md, completed 2026-07-21. `SEAM.md` documents the ported-vs-stubbed boundary and an incremental-port checklist; the real `safeStorage` keyring port (spike 011's `keyring` crate path) is the next blocking increment before any token-writing channel can be wired, per STATE.md's "Open work" list.
-
-**Note on milestone status:** `STATE.md`'s `milestone:` frontmatter still reads `v0.7` as of this writing — it has not been formally advanced to `v0.8` even though Phase 27 (filed here as v0.8) is done. This milestone is recorded as open/in-progress rather than shipped because that advancement has not happened; no ship date is fabricated.
+The in-progress entry that stood here from 2026-07-22 (scope: Phase 27, extended with 28–35) was superseded by the shipped entry at the top of this file on 2026-10-16. Its note that `STATE.md`'s `milestone:` had not been advanced past v0.7 was resolved when STATE moved to v0.8.
