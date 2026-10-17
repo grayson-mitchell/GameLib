@@ -1,21 +1,17 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v0.8
-current_phase: 51
-current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
-status: executing
-stopped_at: "Completed 51-04-PLAN.md (Steam bridge i18n string inventory: 40 keys x 49 locales)"
-last_updated: "2026-10-17T07:00:36.542Z"
-last_activity: 2026-10-17
-last_activity_desc: Phase 51 execution started
-state_head: b67f1bad553c32503e16c79e08019af33859a166
-progress:
-  total_phases: 45
-  completed_phases: 36
-  total_plans: 554
-  completed_plans: 545
-  percent: 80
 milestone_name: Tauri Shell
+status: executing
+stopped_at: Completed 51-06-PLAN.md
+last_updated: "2026-10-17T07:44:51.750Z"
+last_activity: 2026-10-17
+progress:
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 19
+  completed_plans: 6
+  percent: 0
 ---
 
 # Project State
@@ -76,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 6 of 19
+Plan: 7 of 19
 Status: Ready to execute
-Last activity: 2026-10-17 — Phase 51 execution started
+Last activity: 2026-10-17
 
-Progress: [████████░░] 80%
+Progress: [███░░░░░░░] 32%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -516,6 +512,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 | Phase 51 P03 | ~22min | 3 tasks | 12 files |
 | Phase 51 P04 | ~50min | 2 tasks | 98 files |
 | Phase 51 P05 | 20min | 2 tasks | 3 files |
+| Phase 51 P06 | ~2h | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -605,6 +602,9 @@ Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries
 - [Phase 51]: machine-fill-gamelib unreachable (gateway-scoped key, HTTP 401); hand-filled all 48 locales in-session per the sanctioned fallback, validated with the real validateTranslation()
 - [Phase 51]: Caught 6 Persian strings violating the live 28-term glossary (Windows transliterated instead of kept literal) by running the project's real validator, not a hand-rolled reimplementation; fixed before any commit
 - [Phase 51]: D-51-12: removeSteamInstallCopy('bridge') deletes the per-game GameLibSteamBridge-<appId> bottle via removePerGameBridgeBottle after a full removal; legacy shared bottle and native/bottle sources are never touched.
+- [Phase 51]: returnKind is now the sole generator-facing return-shape discriminant (replacing structSize>8/type-string inference); GetSteamID fixed to the MSVC sret convention (void*, returns sretOut), not the old EDX:EAX register return
+- [Phase 51]: Stub emission is driven purely by stackBytes, never by params[], so a stub can never corrupt the caller's stack even with an incomplete/placeholder param description
+- [Phase 51]: Bare legacy accessors (SteamUser/SteamFriends) resolve per game at runtime via gamelib_bridge.cfg's iface.<Family>=<Version>, through a new g_iface_table + resolve_bare_iface
 
 ### Pending Todos
 
@@ -1262,8 +1262,8 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 
 ## Session Continuity
 
-Last session: 2026-10-17T06:49:32.665Z
-Stopped at: Completed 51-04-PLAN.md (Steam bridge i18n string inventory: 40 keys x 49 locales)
+Last session: 2026-10-17T07:44:51.743Z
+Stopped at: Completed 51-06-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
