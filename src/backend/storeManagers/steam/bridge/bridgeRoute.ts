@@ -119,7 +119,10 @@ export function resolveBridgeRoute(
   } = input
 
   const shared = {
-    stubbedInterfaces: verdict?.stubbedInterfaces ?? [],
+    // D-51-02: stubbedInterfaces lives on the persisted SCAN sub-object
+    // (SteamBridgeScanVerdict), not as a top-level SteamBridgeVerdict
+    // field -- there is no scan-independent notion of "served as a stub".
+    stubbedInterfaces: verdict?.scan?.stubbedInterfaces ?? [],
     identityFallback: verdict?.identityFallback ?? false,
     userRoute: verdict?.userRoute ?? null,
     installedIn: null as 'bridge' | 'bottle' | null

@@ -251,9 +251,8 @@ describe('resolveBridgeRoute', () => {
     expect(result.reason).toBe('pending-scan')
   })
 
-  it('copies stubbedInterfaces, identityFallback, and userRoute from the verdict verbatim on a bridge route', () => {
+  it('copies stubbedInterfaces (from verdict.scan), identityFallback, and userRoute from the verdict verbatim on a bridge route', () => {
     const verdict: SteamBridgeVerdict = {
-      stubbedInterfaces: ['SteamUserStats'],
       identityFallback: true,
       scan: {
         status: 'clean',
