@@ -64,6 +64,10 @@ import type {
   RedeemKeyResult,
   SteamBottleConfig,
   SteamBottleEligibilityVerdict,
+  SteamBottleLaunchWaitingCause,
+  SteamBridgeKnownBadReason,
+  SteamBridgeRouteReason,
+  SteamBridgeRouteVerdict,
   SteamUserData
 } from './steam'
 import type {
@@ -322,6 +326,23 @@ interface AsyncIPCFunctions {
   isSteamBottleEligible: (
     appName: string
   ) => Promise<SteamBottleEligibilityVerdict>
+  // Phase 51 Plan 03 (D-51-07/08/09/10/11): the composed bridge-vs-bottle
+  // route verdict for a single game, resolved by 51-07's pure resolver and
+  // read here by 51-09's backend. See SteamBridgeRouteVerdict's own doc
+  // comment (common/types/steam.ts) for the full field contract.
+  getSteamBridgeRoute: (appId: string) => Promise<SteamBridgeRouteVerdict>
+  // Phase 51 Plan 03 (D-51-10/11): persists the user's own bridge/bottle
+  // override (D-51-10's install-dialog toggle, D-51-11's "Try the bridge
+  // anyway" button) beside the scan verdict, via 51-09's bridgeVerdict.ts
+  // writer. `acknowledgeReason` is set when the override is a response to a
+  // specific dialog (e.g. a known-bad acknowledgement) so the backend can
+  // record which notice/dialog state the user was shown; omitted for a
+  // plain toggle flip.
+  setSteamBridgeUserRoute: (args: {
+    appId: string
+    userRoute: 'bottle' | 'bridge' | null
+    acknowledgeReason?: SteamBridgeRouteReason
+  }) => Promise<{ ok: boolean; error?: string }>
   // quick-260821-le0 (Task 3): sweeps EVERY recorded install root for a
   // Steam title in one action — see removeAllCopies.ts's own doc comment.
   // Registered on BOTH runtimes.
@@ -733,6 +754,31 @@ interface FrontendMessages {
     appName: string
     reason?: string
     fallbackAvailable?: boolean
+    // Phase 51 Plan 03 (D-51-07/09): the symbols a persisted scan found
+    // missing, surfaced alongside the setup-required notice so the user
+    // sees WHY the bridge is unavailable, not just that it is. Optional —
+    // absent for every pre-Phase-51 reason this message already carries.
+    missingSymbols?: string[]
+  }) => void
+  // Phase 51 Plan 03 (D-51-02/08): the one-time per-game notice fired when a
+  // game launches through a stubbed interface, an identity fallback
+  // (D-51-04), or past a known-bad acknowledgement — names the reason and,
+  // for a known-bad route, the taxonomy reason too, so 51-16's UI can render
+  // the exact wording without re-deriving it from SteamBridgeRouteVerdict.
+  steamBridgeRouteNotice: (payload: {
+    appName: string
+    reason: SteamBridgeRouteReason
+    knownBadReason: SteamBridgeKnownBadReason | null
+    missingSymbols: string[]
+  }) => void
+  // Phase 51 Plan 03 (D-51-16, folded todo): pushed when a bottled-Steam
+  // fallback launch has produced no game process within the grace window —
+  // `detectedCause` is the bottle-log-derived classification (`null` when no
+  // single cause could be distinguished from logs/bootstrap_log.txt /
+  // console_log.txt), per the todo's own prescription.
+  steamBottleLaunchWaiting: (payload: {
+    appName: string
+    detectedCause: SteamBottleLaunchWaitingCause | null
   }) => void
   // Phase 21 (21-10), D-10/D-11: pushed by clientSetup.ts's
   // ensureSteamClientReady() (native depot-download opt-in ON, non-bottle
