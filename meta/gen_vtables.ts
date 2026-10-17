@@ -39,30 +39,96 @@
  * coverage is validated downstream by Plan 24-05, not by this generator.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // ---------------------------------------------------------------------------
-// Types (manifest input shape)
+// Types (manifest input shape, schema v2)
 // ---------------------------------------------------------------------------
+//
+// Schema v2 (51-06): a manifest pins ONE interface VERSION -- many versions
+// of the same family (e.g. SteamUser016, SteamUser023, ...) are many
+// manifests, never one manifest with a version list. `family` is the
+// generator-stable grouping key a bare legacy accessor (`SteamUser()`)
+// resolves through `gamelib_bridge.cfg`'s `iface.<Family>=<Version>` line
+// (51-06 Task 2) -- `interface` is the literal, exact version string a
+// game's vtable ABI actually matches.
+
+export type ArchToken = 'x86' | 'x64'
+
+/** How a method's wire-marshaling param is carried across the frame
+ * (51-06 Task 3). Absent (or `'value'`) means "copy `paramWidth(type)` raw
+ * bytes" -- the original, pre-Task-3 behavior, unchanged for every existing
+ * method so this field is purely additive. */
+export type ParamKind = 'value' | 'in-string' | 'out-value' | 'out-buffer'
 
 export interface ParamSignature {
   name: string
   /** One of the recognized ABI type tokens -- see WIDTH_8_TYPES below. */
   type: string
+  /** Wire-marshaling kind (51-06 Task 3). Omitted (or `'value'`) is the
+   * original raw-byte-copy behavior. */
+  kind?: ParamKind
+  /** For `kind: 'out-value'` only -- the scalar type the out-value decodes
+   * to on the response side. */
+  valueType?: 'int32' | 'uint32' | 'float' | 'bool' | 'uint64'
+  /** For `kind: 'out-buffer'` only -- the name of the sibling param that
+   * carries this buffer's capacity. */
+  sizeParam?: string
 }
+
+/** The generator-facing return-shape category (51-06): drives which
+ * `emitVtableStub` branch a method takes, replacing the old
+ * structSize/type-string inference. */
+export type ReturnKind =
+  | 'void'
+  | 'int32'
+  | 'int64'
+  | 'float'
+  | 'double'
+  | 'pointer'
+  | 'string'
+  | 'class'
+
+const KNOWN_RETURN_KINDS: ReadonlySet<string> = new Set([
+  'void',
+  'int32',
+  'int64',
+  'float',
+  'double',
+  'pointer',
+  'string',
+  'class'
+])
 
 export interface MethodSignature {
   slot: number
   name: string
-  params: ParamSignature[]
+  /** Per-method override of the manifest's `mode` (51-06 Task 2). */
+  mode?: 'wire' | 'stub'
+  /** Display/Steamworks type name -- feeds the header comment and `cType`.
+   * NOT used to infer return shape anymore; see `returnKind`. */
   returns: string
+  returnKind: ReturnKind
   /**
-   * Only present for struct-by-value returns > 8 bytes -- triggers the
-   * hidden-return-pointer (sret) marshaling path (Pattern 2). Byte size of
-   * the returned struct.
+   * Only present for `returnKind: 'class'` -- byte size of the returned
+   * struct, copied into/out of the hidden sret buffer.
    */
   structSize?: number
+  /**
+   * i386 non-`this` stack bytes the callee pops, INCLUDING a 4-byte hidden
+   * sret pointer when `returnKind === 'class'`. Authoritative for a stub
+   * method's dummy-param count (51-06 Task 2); cross-checked against
+   * `computeRetN` for a wire method (`validateManifest`).
+   */
+  stackBytes: number
+  params: ParamSignature[]
+  /** 51-10: the helper-side flat dlsym name this method's wire dispatch
+   * resolves. Unused by this plan's generator paths. */
+  helperFlat?: string
+  /** A method with this set never calls `bridge_transact` -- it returns the
+   * constant immediately (51-06 Task 3). Unused by this plan's manifests. */
+  helperFallback?: number | boolean
   /**
    * Free-form note. Used to flag a synthetic ABI-exercise slot that is NOT a
    * real Steamworks method (e.g. the sret-exercise slot) so a reviewer never
@@ -71,12 +137,50 @@ export interface MethodSignature {
   note?: string
 }
 
-export interface InterfaceManifest {
+export interface ManifestSource {
+  /** e.g. `'hand-verified'`, `'synthetic'`, `'proton-lsteamclient'` (51-11). */
+  kind: string
+  /** Factual provenance reference -- NEVER vendored Valve header text
+   * (D-09): a doc/commit/file citation only. */
+  ref: string
+  file: string
+}
+
+export interface InterfaceManifestV2 {
+  schemaVersion: 2
+  /** Literal, exact interface VERSION string (e.g. `SteamUser023`). */
   interface: string
+  /** Generator-stable family grouping key (e.g. `SteamUser`) -- the bare
+   * legacy accessor name is derived from this (51-06 Task 2). */
+  family: string
+  /** Unique across every manifest, 1..0xFFFE (0 and 0xFFFF are reserved). */
   ordinal: number
-  sdkVersion: string
+  arches: ArchToken[]
+  /** Method-level default wire/stub mode. */
+  mode: 'wire' | 'stub'
+  /** `false` means this manifest does not yet declare every real slot of
+   * this interface version -- `validateManifest`'s slot-gap check is
+   * skipped while this is `false`. */
+  complete: boolean
+  /** 51-10: the Mac dylib accessor this manifest's wire methods dispatch
+   * through. Unused by this plan's generator paths. */
+  helperInterface?: string
+  /** Explicit flat SteamAPI_* export name for this interface version.
+   * Falls back to `SteamAPI_${toVersionedAccessorSuffix(interface)}` when
+   * absent. */
+  flatAccessor?: string
+  source: ManifestSource
+  /** Free-form authoring note (e.g. "51-11 completes the remaining
+   * slots..."). Never names a moved/synthetic method (the _TESTONLY gate
+   * greps meta/sdk for that suffix). */
+  note?: string
   methods: MethodSignature[]
 }
+
+/** Back-compat alias -- schema v2 IS the only manifest shape generated
+ * against; kept as a type alias so call sites reading "the manifest type"
+ * do not need to know the schema is versioned. */
+export type InterfaceManifest = InterfaceManifestV2
 
 // ---------------------------------------------------------------------------
 // ABI width/marshaling rules (24-RESEARCH.md Pattern 2)
@@ -94,12 +198,22 @@ export function paramWidth(type: string): number {
   return WIDTH_8_TYPES.has(type) ? 8 : 4
 }
 
+/**
+ * `returnKind === 'class'` is now the SOLE sret trigger (51-06) -- replacing
+ * the old `structSize > 8` inference, which could never distinguish a
+ * genuine 8-byte-or-less struct return (which MSVC member functions ALWAYS
+ * sret, per the Proton-verified GetSteamID/CSteamID case below) from an
+ * 8-byte register return (uint64/double).
+ */
 export function isSretReturn(method: MethodSignature): boolean {
-  return typeof method.structSize === 'number' && method.structSize > 8
+  return method.returnKind === 'class'
 }
 
 export function is64BitRegisterReturn(method: MethodSignature): boolean {
-  return !isSretReturn(method) && WIDTH_8_TYPES.has(method.returns)
+  return (
+    !isSretReturn(method) &&
+    (method.returnKind === 'int64' || method.returnKind === 'double')
+  )
 }
 
 /**
@@ -115,7 +229,7 @@ export function is64BitRegisterReturn(method: MethodSignature): boolean {
  * generic register-return path.
  */
 export function isStringReturn(method: MethodSignature): boolean {
-  return !isSretReturn(method) && method.returns === 'const char*'
+  return method.returnKind === 'string'
 }
 
 /**
@@ -131,15 +245,107 @@ export const STRING_RETURN_BUF_BYTES = 256
 /**
  * ret N -- total byte width of the non-`this` parameters PLUS 4 bytes for a
  * hidden sret pointer, if present. Computed for EVERY declared slot,
- * marshaled or stubbed (Pitfall 2).
+ * marshaled or stubbed (Pitfall 2). 51-06: driven purely by `returnKind`
+ * (Sigma param widths + 4 iff `returnKind === 'class'`), per the schema v2
+ * Artifacts spec -- `structSize` is no longer consulted here.
  */
 export function computeRetN(method: MethodSignature): number {
   const paramBytes = method.params.reduce(
     (sum, p) => sum + paramWidth(p.type),
     0
   )
-  const sretBytes = isSretReturn(method) ? 4 : 0
+  const sretBytes = method.returnKind === 'class' ? 4 : 0
   return paramBytes + sretBytes
+}
+
+// ---------------------------------------------------------------------------
+// Manifest validation (51-06 Task 1; Task 3 adds the wire-param-kind checks)
+// ---------------------------------------------------------------------------
+
+const MIN_ORDINAL = 1
+const MAX_ORDINAL = 0xfffe
+
+/**
+ * Structural validation for a single manifest. `allManifests` (defaulting
+ * to `[manifest]`, so a single-arg call is always safe) supplies the full
+ * loaded set for the cross-manifest duplicate-ordinal check -- `main()`
+ * passes the real loaded list; a unit test exercising only the
+ * single-manifest checks can omit it entirely.
+ *
+ * `main()` refuses to generate (exit 1, listing every error) when this
+ * returns a non-empty array for ANY loaded manifest (51-06 Task 1 action).
+ */
+export function validateManifest(
+  manifest: InterfaceManifestV2,
+  allManifests: InterfaceManifestV2[] = [manifest]
+): string[] {
+  const errors: string[] = []
+  const ctx = `${manifest.interface} (ordinal ${manifest.ordinal})`
+
+  if (manifest.ordinal === 0 || manifest.ordinal > MAX_ORDINAL) {
+    errors.push(
+      `${ctx}: ordinal must be in ${MIN_ORDINAL}..0x${MAX_ORDINAL.toString(16)} (0 and 0xFFFF are reserved)`
+    )
+  }
+
+  const duplicateOwners = allManifests.filter(
+    (m) => m.ordinal === manifest.ordinal && m !== manifest
+  )
+  if (duplicateOwners.length > 0) {
+    errors.push(
+      `${ctx}: duplicate ordinal shared with ${duplicateOwners
+        .map((m) => m.interface)
+        .join(', ')}`
+    )
+  }
+
+  const sortedSlots = [...manifest.methods]
+    .map((m) => m.slot)
+    .sort((a, b) => a - b)
+  if (manifest.complete) {
+    const expected = sortedSlots.map((_, i) => i)
+    const hasGapOrDup = sortedSlots.some((slot, i) => slot !== expected[i])
+    if (hasGapOrDup) {
+      errors.push(
+        `${ctx}: slot gap -- complete:true but slots are not a contiguous 0..n-1 range (got [${sortedSlots.join(', ')}])`
+      )
+    }
+  }
+
+  for (const method of manifest.methods) {
+    const methodCtx = `${ctx} slot ${method.slot} (${method.name})`
+
+    if (!KNOWN_RETURN_KINDS.has(method.returnKind)) {
+      errors.push(`${methodCtx}: unknown returnKind "${method.returnKind}"`)
+    }
+
+    if (
+      method.returnKind === 'class' &&
+      typeof method.structSize !== 'number'
+    ) {
+      errors.push(
+        `${methodCtx}: returnKind 'class' requires a numeric structSize`
+      )
+    }
+
+    if (method.name.endsWith('_TESTONLY')) {
+      errors.push(
+        `${methodCtx}: production manifest must not contain a _TESTONLY method`
+      )
+    }
+
+    const methodMode = method.mode ?? manifest.mode
+    if (methodMode === 'wire') {
+      const retN = computeRetN(method)
+      if (retN !== method.stackBytes) {
+        errors.push(
+          `${methodCtx}: wire method's computeRetN (${retN}) does not match declared stackBytes (${method.stackBytes})`
+        )
+      }
+    }
+  }
+
+  return errors
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +504,7 @@ function emitVtableStub(
     return (
       header +
       `static char ${funcName}_buf[STRING_RETURN_BUF_BYTES];\n` +
-      `static const char * __attribute__((thiscall)) ${funcName}(${signatureParams}) {\n` +
+      `static const char * THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
       `${argBufDecl}\n` +
       `  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;\n` +
@@ -314,26 +520,35 @@ function emitVtableStub(
   }
 
   if (sret) {
+    // Planner finding (2026-10-17, VERIFIED against Proton proton_9.0
+    // lsteamclient/winISteamUser.c): `CSteamID * __thiscall
+    // winISteamUser_SteamUser016_GetSteamID(struct w_steam_iface *_this,
+    // CSteamID *_ret)` -- the hidden return pointer is the FIRST stack
+    // argument after `this`, and the callee RETURNS that SAME pointer (not
+    // void). A stub that declares `void` here silently diverges from the
+    // real MSVC member-function convention every caller's generated code
+    // expects.
     const structSize = method.structSize ?? 0
     return (
       header +
-      `static void __attribute__((thiscall)) ${funcName}(${signatureParams}) {\n` +
+      `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
       `${argBufDecl}\n` +
       `  uint8_t retbuf[${structSize}]; uint32_t retlen = 0;\n` +
       `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${structSize}) {\n` +
       `    memset(sretOut, 0, ${structSize});\n` +
-      `    return;\n` +
+      `    return sretOut;\n` +
       `  }\n` +
       `  memcpy(sretOut, retbuf, ${structSize});\n` +
+      `  return sretOut;\n` +
       `}\n`
     )
   }
 
-  if (method.returns === 'void') {
+  if (method.returnKind === 'void') {
     return (
       header +
-      `static void __attribute__((thiscall)) ${funcName}(${signatureParams}) {\n` +
+      `static void THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
       `${argBufDecl}\n` +
       `  uint8_t retbuf[1]; uint32_t retlen = 0;\n` +
@@ -346,7 +561,7 @@ function emitVtableStub(
   const retWidth = is64BitRegisterReturn(method) ? 8 : 4
   return (
     header +
-    `static ${returnType} __attribute__((thiscall)) ${funcName}(${signatureParams}) {\n` +
+    `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
     `  (void)self;\n` +
     `${argBufDecl}\n` +
     `  uint8_t retbuf[${retWidth}]; uint32_t retlen = 0;\n` +
@@ -372,10 +587,19 @@ function emitVtableArray(manifest: InterfaceManifest): string {
   )
 }
 
+/** The flat SteamAPI_* export name for this manifest -- its explicit
+ * `flatAccessor` field when present, else the computed
+ * `SteamAPI_${toVersionedAccessorSuffix(interface)}` default. */
+function flatAccessorName(manifest: InterfaceManifestV2): string {
+  return (
+    manifest.flatAccessor ??
+    `SteamAPI_${toVersionedAccessorSuffix(manifest.interface)}`
+  )
+}
+
 function emitFlatAccessor(manifest: InterfaceManifest): string {
-  const suffix = toVersionedAccessorSuffix(manifest.interface)
   const instanceName = `g_${manifest.interface.toLowerCase()}_instance`
-  return `void *SteamAPI_${suffix}(void) { return &${instanceName}; }\n`
+  return `void *${flatAccessorName(manifest)}(void) { return &${instanceName}; }\n`
 }
 
 // ---------------------------------------------------------------------------
@@ -439,6 +663,21 @@ export function generateShimC(manifests: InterfaceManifest[]): string {
 // emitVtableStub() sizes each stub's transact buffer against can never
 // drift apart.
 #define STRING_RETURN_BUF_BYTES ${STRING_RETURN_BUF_BYTES}
+
+// 51-06: every generated vtable stub uses MSVC __thiscall -- but THAT
+// attribute is only meaningful (and only accepted by clang/gcc) on an i386
+// target; on every other target (including the x64 target 51-15 adds) a
+// __thiscall function would be rejected at compile time, and the x64 MSVC
+// member-function convention passes \`this\` in RCX by the platform's own
+// ordinary calling convention with no attribute needed at all. Guarding on
+// \`__i386__\` (not a generator-time flag) means ONE generated .c file
+// compiles correctly for both targets -- the arch becomes a build-time
+// parameter, never a forked generator.
+#if defined(__i386__)
+#define THISCALL __attribute__((thiscall))
+#else
+#define THISCALL
+#endif
 
 static SOCKET g_bridge_sock = INVALID_SOCKET;
 static uint32_t g_next_request_id = 1;
@@ -631,7 +870,7 @@ typedef void *vfn;
         .map((method) => emitVtableStub(m, method))
         .join('\n')
       return (
-        `// === ${m.interface} (ordinal ${m.ordinal}, sdkVersion ${m.sdkVersion}) ===\n\n` +
+        `// === ${m.interface} (ordinal ${m.ordinal}, family ${m.family}) ===\n\n` +
         `${stubs}\n${emitVtableArray(m)}`
       )
     })
@@ -653,9 +892,7 @@ typedef void *vfn;
 
 export function generateDefFile(manifests: InterfaceManifest[]): string {
   const sortedManifests = [...manifests].sort((a, b) => a.ordinal - b.ordinal)
-  const accessorExports = sortedManifests.map(
-    (m) => `SteamAPI_${toVersionedAccessorSuffix(m.interface)}`
-  )
+  const accessorExports = sortedManifests.map((m) => flatAccessorName(m))
   const lines = [
     'LIBRARY steam_api',
     'EXPORTS',
@@ -672,16 +909,32 @@ export function generateDefFile(manifests: InterfaceManifest[]): string {
 const SDK_DIR = join('meta', 'sdk')
 const OUT_DIR = join('native', 'steam-bridge', 'generated')
 
-function loadManifest(filename: string): InterfaceManifest {
-  const raw = readFileSync(join(SDK_DIR, filename), 'utf-8')
-  return JSON.parse(raw) as InterfaceManifest
+/**
+ * Loads every `*.manifest.json` in `meta/sdk`, sorted by ordinal -- 51-06:
+ * a directory listing, not a fixed, literal pair of `loadManifest()` calls,
+ * so adding the next manifest (51-11 onward) is "drop a file in meta/sdk",
+ * never a generator source edit.
+ */
+function loadAllManifests(): InterfaceManifestV2[] {
+  const files = readdirSync(SDK_DIR).filter((f) => f.endsWith('.manifest.json'))
+  const manifests = files.map(
+    (f) =>
+      JSON.parse(readFileSync(join(SDK_DIR, f), 'utf-8')) as InterfaceManifestV2
+  )
+  return manifests.sort((a, b) => a.ordinal - b.ordinal)
 }
 
 export function main(): void {
-  const manifests = [
-    loadManifest('isteamuser.manifest.json'),
-    loadManifest('isteamfriends.manifest.json')
-  ]
+  const manifests = loadAllManifests()
+
+  const allErrors = manifests.flatMap((m) => validateManifest(m, manifests))
+  if (allErrors.length > 0) {
+    console.error('gen_vtables: manifest validation failed:')
+    for (const error of allErrors) {
+      console.error(`  - ${error}`)
+    }
+    process.exit(1)
+  }
 
   mkdirSync(OUT_DIR, { recursive: true })
 

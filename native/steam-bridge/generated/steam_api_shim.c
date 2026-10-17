@@ -53,6 +53,21 @@
 // drift apart.
 #define STRING_RETURN_BUF_BYTES 256
 
+// 51-06: every generated vtable stub uses MSVC __thiscall -- but THAT
+// attribute is only meaningful (and only accepted by clang/gcc) on an i386
+// target; on every other target (including the x64 target 51-15 adds) a
+// __thiscall function would be rejected at compile time, and the x64 MSVC
+// member-function convention passes `this` in RCX by the platform's own
+// ordinary calling convention with no attribute needed at all. Guarding on
+// `__i386__` (not a generator-time flag) means ONE generated .c file
+// compiles correctly for both targets -- the arch becomes a build-time
+// parameter, never a forked generator.
+#if defined(__i386__)
+#define THISCALL __attribute__((thiscall))
+#else
+#define THISCALL
+#endif
+
 static SOCKET g_bridge_sock = INVALID_SOCKET;
 static uint32_t g_next_request_id = 1;
 
@@ -235,10 +250,10 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
 
 typedef void *vfn;
 
-// === SteamUser023 (ordinal 1, sdkVersion pinned-2026-07-18-rlabrecque-SteamworksSDK-master) ===
+// === SteamUser023 (ordinal 1, family SteamUser) ===
 
 // slot 0: GetHSteamUser() -> HSteamUser | __thiscall ret 0
-static uint32_t __attribute__((thiscall)) vt_SteamUser023_GetHSteamUser(void *self) {
+static uint32_t THISCALL vt_SteamUser023_GetHSteamUser(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -248,7 +263,7 @@ static uint32_t __attribute__((thiscall)) vt_SteamUser023_GetHSteamUser(void *se
 }
 
 // slot 1: BLoggedOn() -> bool | __thiscall ret 0
-static int __attribute__((thiscall)) vt_SteamUser023_BLoggedOn(void *self) {
+static int THISCALL vt_SteamUser023_BLoggedOn(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
@@ -257,89 +272,32 @@ static int __attribute__((thiscall)) vt_SteamUser023_BLoggedOn(void *self) {
   return ret;
 }
 
-// slot 2: GetSteamID() -> CSteamID | __thiscall ret 0
-static uint64_t __attribute__((thiscall)) vt_SteamUser023_GetSteamID(void *self) {
+// slot 2: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer)
+static void * THISCALL vt_SteamUser023_GetSteamID(void *self, void *sretOut) {
   (void)self;
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(1, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) return 0;
-  uint64_t ret; memcpy(&ret, retbuf, 8);
-  return ret;
-}
-
-// slot 3: BSetDurationControlOnlineState(int32 eNewState) -> bool | __thiscall ret 4
-static int __attribute__((thiscall)) vt_SteamUser023_BSetDurationControlOnlineState(void *self, int32_t eNewState) {
-  (void)self;
-  uint8_t argbuf[4];
-  memcpy(argbuf + 0, &eNewState, 4);
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(1, 3, argbuf, 4, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-}
-
-// slot 4: SetTwoIntTest_TESTONLY(int32 a, int32 b) -> void | __thiscall ret 8
-// NOTE: ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exists solely to exercise the generator's two-4-byte-param ret N computation (D-09/Pitfall 3).
-static void __attribute__((thiscall)) vt_SteamUser023_SetTwoIntTest_TESTONLY(void *self, int32_t a, int32_t b) {
-  (void)self;
-  uint8_t argbuf[8];
-  memcpy(argbuf + 0, &a, 4);
-  memcpy(argbuf + 4, &b, 4);
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(1, 4, argbuf, 8, retbuf, sizeof(retbuf), &retlen);
-}
-
-// slot 5: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0
-static uint32_t __attribute__((thiscall)) vt_SteamUser023_GetVoiceOptimalSampleRate(void *self) {
-  (void)self;
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(1, 5, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  uint32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-}
-
-// slot 6: GetUserStatsSummary_TESTONLY() -> UserStatsSummary_t | __thiscall ret 4 (SRET -- hidden return pointer)
-// NOTE: SRET EXERCISE ONLY -- synthetic slot, NOT a real Steamworks method. Exists solely to exercise the generator's hidden-return-pointer (sret) marshaling for struct returns > 8 bytes (D-09/Pitfall 3).
-static void __attribute__((thiscall)) vt_SteamUser023_GetUserStatsSummary_TESTONLY(void *self, void *sretOut) {
-  (void)self;
-  const uint8_t *argbuf = NULL;
-  uint8_t retbuf[16]; uint32_t retlen = 0;
-  if (!bridge_transact(1, 6, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 16) {
-    memset(sretOut, 0, 16);
-    return;
+  if (!bridge_transact(1, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
   }
-  memcpy(sretOut, retbuf, 16);
+  memcpy(sretOut, retbuf, 8);
+  return sretOut;
 }
 
-// slot 7: SetUint64Test_TESTONLY(uint64 hSteamID) -> void | __thiscall ret 8
-// NOTE: ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exists solely to exercise the generator's single-8-byte-param (uint64) ret N computation, distinct from the two-int-param case (D-09/Pitfall 3).
-static void __attribute__((thiscall)) vt_SteamUser023_SetUint64Test_TESTONLY(void *self, uint64_t hSteamID) {
-  (void)self;
-  uint8_t argbuf[8];
-  memcpy(argbuf + 0, &hSteamID, 8);
-  uint8_t retbuf[1]; uint32_t retlen = 0;
-  bridge_transact(1, 7, argbuf, 8, retbuf, sizeof(retbuf), &retlen);
-}
-
-static vfn g_steamuser023_vtbl[8] = {
+static vfn g_steamuser023_vtbl[3] = {
   (vfn)vt_SteamUser023_GetHSteamUser, // slot 0
   (vfn)vt_SteamUser023_BLoggedOn, // slot 1
   (vfn)vt_SteamUser023_GetSteamID, // slot 2
-  (vfn)vt_SteamUser023_BSetDurationControlOnlineState, // slot 3
-  (vfn)vt_SteamUser023_SetTwoIntTest_TESTONLY, // slot 4
-  (vfn)vt_SteamUser023_GetVoiceOptimalSampleRate, // slot 5
-  (vfn)vt_SteamUser023_GetUserStatsSummary_TESTONLY, // slot 6
-  (vfn)vt_SteamUser023_SetUint64Test_TESTONLY, // slot 7
 };
 struct FakeSteamUser023 { vfn *vptr; };
 static struct FakeSteamUser023 g_steamuser023_instance = { g_steamuser023_vtbl };
 
-// === SteamFriends018 (ordinal 2, sdkVersion pinned-2026-07-18-rlabrecque-SteamworksSDK-master) ===
+// === SteamFriends018 (ordinal 2, family SteamFriends) ===
 
 // slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
 static char vt_SteamFriends018_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
-static const char * __attribute__((thiscall)) vt_SteamFriends018_GetPersonaName(void *self) {
+static const char * THISCALL vt_SteamFriends018_GetPersonaName(void *self) {
   (void)self;
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
@@ -352,34 +310,8 @@ static const char * __attribute__((thiscall)) vt_SteamFriends018_GetPersonaName(
   return vt_SteamFriends018_GetPersonaName_buf;
 }
 
-// slot 1: SetPersonaNameTest_TESTONLY(const char* pchPersonaName) -> bool | __thiscall ret 4
-// NOTE: ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-pointer-param ret N computation (D-09/Pitfall 3).
-static int __attribute__((thiscall)) vt_SteamFriends018_SetPersonaNameTest_TESTONLY(void *self, const char * pchPersonaName) {
-  (void)self;
-  uint8_t argbuf[4];
-  memcpy(argbuf + 0, &pchPersonaName, 4);
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(2, 1, argbuf, 4, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int ret; memcpy(&ret, retbuf, 4);
-  return ret;
-}
-
-// slot 2: GetSmallFriendsGroupIcon_TESTONLY(int32 friendsGroupID) -> int32 | __thiscall ret 4
-// NOTE: ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-4-byte-param, register-return case (D-09/Pitfall 3).
-static int32_t __attribute__((thiscall)) vt_SteamFriends018_GetSmallFriendsGroupIcon_TESTONLY(void *self, int32_t friendsGroupID) {
-  (void)self;
-  uint8_t argbuf[4];
-  memcpy(argbuf + 0, &friendsGroupID, 4);
-  uint8_t retbuf[4]; uint32_t retlen = 0;
-  if (!bridge_transact(2, 2, argbuf, 4, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
-  int32_t ret; memcpy(&ret, retbuf, 4);
-  return ret;
-}
-
-static vfn g_steamfriends018_vtbl[3] = {
+static vfn g_steamfriends018_vtbl[1] = {
   (vfn)vt_SteamFriends018_GetPersonaName, // slot 0
-  (vfn)vt_SteamFriends018_SetPersonaNameTest_TESTONLY, // slot 1
-  (vfn)vt_SteamFriends018_GetSmallFriendsGroupIcon_TESTONLY, // slot 2
 };
 struct FakeSteamFriends018 { vfn *vptr; };
 static struct FakeSteamFriends018 g_steamfriends018_instance = { g_steamfriends018_vtbl };
