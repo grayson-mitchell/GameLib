@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: context exhaustion at 87% (2026-10-17)
-last_updated: "2026-10-17T02:39:27.241Z"
+stopped_at: 51-01 Task 3 checkpoint re-opened after root-cause fix (commit 2b15dbb59) — awaiting one more live Avernum 6 relaunch via the rebuilt packaged .app
+last_updated: "2026-10-17T04:40:26.565Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 51 execution started
-state_head: 8b5a9f0541d86b5696efe7619087495f49813226
+state_head: 2b15dbb59b70bc0fef8aae8d8f4fcb192ae3b2d4
 progress:
   total_phases: 45
   completed_phases: 36
@@ -590,6 +590,7 @@ Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries
 - [Phase quick-261015-7tt]: .settingsWrapper > .button.is-text deleted after a two-arm reachability proof (direct-child DOM walk + import-graph trace) found it unreachable from either settings host
 - [Phase quick-261015-7tt]: Self-check caught the Task 3 commit missing the todo's resolution section (staged-vs-disk mismatch); restored in a follow-up fix commit before closing out
 - [Phase quick-261015-pwy]: Scored the accepted first-paint-flash limitation as expected rather than reopening the shell/preload architectural question; refuted the screen.availWidth k-recomputation hazard by direct measurement, filing no new todo for it.
+- [Phase 51]: 51-01 Task 3 divergence: root-caused to resolveBridgeLaunchExe() never reconnecting a cold SteamUser CM session (missing the quick-260909-pym ensureConnected fix); fixed + a latent helperIntegration.test.ts isolation gap (child_process does not see jest's HOME mock) also fixed (commit 2b15dbb59). Packaged bundle rebuilt with the fix (/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/bundle/macos/GameLib.app, sidecar confirms the new code). Task 3 checkpoint NOT yet re-approved — needs one more live Play-button relaunch of Avernum 6 to confirm Mac Steam shows In-Game via the new per-appId helper.
 
 ### Pending Todos
 
@@ -1247,9 +1248,9 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 
 ## Session Continuity
 
-Last session: 2026-10-17T02:39:27.222Z
-Stopped at: context exhaustion at 87% (2026-10-17)
-Resume file: .planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca/51-CONTEXT.md
+Last session: 2026-10-17T04:40:26.548Z
+Stopped at: 51-01 Task 3 checkpoint re-opened after root-cause fix (commit 2b15dbb59) — awaiting one more live Avernum 6 relaunch via the rebuilt packaged .app
+Resume file: .planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca/51-01-PLAN.md
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
 | 261008-fr3 | **Guarded the `onError` call in `hydrateFocusRowSelection` (WR-03).** The "NEVER rejects" contract rested on one `try/catch` whose `catch` called `deps.onError` unguarded, so a throwing reporter escaped it and turned `GlobalState`'s `void` into an unhandled rejection. The reporter call now has its own `try/catch` with a `console.error` fallback carrying both errors. One test added; mutation-checked (fails with the guard removed, 36/36 with it). WR-03 marked `fixed` in `48-REVIEW-DISPOSITION.md`; todo moved to `completed/`. Fix commit `0cecb87b1`. | 2026-10-08 | COMPLETE. `prettier --check` green on both source paths; suite 36/36. | no quick dir — `/gsd-fast` writes none by design; branch `quick-261002-b63` |
