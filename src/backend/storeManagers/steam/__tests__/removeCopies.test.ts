@@ -135,6 +135,11 @@ jest.mock('../electronStores', () => ({
 }))
 
 // ── bottle mock — union of what library.ts AND games.ts import from it ──────
+// resolveBridgeBottleName/removePerGameBridgeBottle/DEFAULT_BRIDGE_BOTTLE_NAME
+// added for D-51-12 (phase 51 plan 05) — library.ts's removeSteamInstallCopy
+// now calls through this seam for the 'bridge' source. DEFAULT_BRIDGE_BOTTLE_NAME
+// is a plain string (not a jest.fn()) so the real `!==` comparison inside
+// removeSteamInstallCopy behaves identically to the real module's constant.
 jest.mock('../bottle', () => ({
   isBottleReady: jest.fn(),
   tellBottledSteamToInstall: jest.fn(),
@@ -145,7 +150,10 @@ jest.mock('../bottle', () => ({
   isBridgeBottleReady: jest.fn(),
   getBridgeBottleSettings: jest.fn(),
   provisionBridgeBottle: jest.fn(),
-  isBottleProvisioned: jest.fn()
+  isBottleProvisioned: jest.fn(),
+  resolveBridgeBottleName: jest.fn(),
+  removePerGameBridgeBottle: jest.fn(),
+  DEFAULT_BRIDGE_BOTTLE_NAME: 'GameLibSteamBridge'
 }))
 
 // ── depot mock ─────────────────────────────────────────────────────────────────
@@ -703,6 +711,187 @@ describe('removeSteamInstallCopy', () => {
       join(NATIVE_STEAMAPPS, 'common', 'SharedGame'),
       expect.anything()
     )
+  })
+})
+
+// ── Task 1 (D-51-12): removeSteamInstallCopy — bridge bottle cleanup ────────
+// Closes LD-5 (folded todo 2026-10-16-bridge-bottle-cleanup-gaps-after-per-game-bottles.md):
+// "Remove all copies" on a per-game bridge install must also delete the
+// emptied GameLibSteamBridge-<appId> bottle, via the existing
+// removePerGameBridgeBottle guard chain — never for the legacy shared
+// bottle, and never for 'native'/'bottle' sources.
+describe('removeSteamInstallCopy — bridge bottle cleanup (D-51-12)', () => {
+  const APP_ID = '206040'
+  const BRIDGE_STEAMAPPS = '/bridge/steamapps'
+  const BOTTLE_STEAMAPPS = '/bottle/steamapps'
+  const PER_GAME_BOTTLE = 'GameLibSteamBridge-206040'
+  const LEGACY_BOTTLE = 'GameLibSteamBridge'
+
+  function bottleMock() {
+    return jest.requireMock<{
+      getSteamBottleSettings: jest.Mock
+      getBottleSteamappsDir: jest.Mock
+      getBridgeBottleSettings: jest.Mock
+      resolveBridgeBottleName: jest.Mock
+      removePerGameBridgeBottle: jest.Mock
+    }>('../bottle')
+  }
+
+  beforeEach(() => {
+    const mock = bottleMock()
+    mock.getSteamBottleSettings.mockReturnValue({
+      wineCrossoverBottle: 'SteamBottle'
+    })
+    mock.getBridgeBottleSettings.mockReturnValue({
+      wineCrossoverBottle: PER_GAME_BOTTLE
+    })
+    mock.getBottleSteamappsDir.mockImplementation((name: string) =>
+      name === 'SteamBottle' ? BOTTLE_STEAMAPPS : BRIDGE_STEAMAPPS
+    )
+  })
+
+  it('per-game bridge bottle, full removal -> removePerGameBridgeBottle called once with appId, bottleRemoved:true', async () => {
+    const mock = bottleMock()
+    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
+    mock.removePerGameBridgeBottle.mockResolvedValue({ status: 'removed' })
+    addManifest(
+      APP_ID,
+      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
+      BRIDGE_STEAMAPPS
+    )
+
+    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+
+    expect(result).toEqual({
+      status: 'removed',
+      source: 'bridge',
+      manifestOnly: false,
+      bottleRemoved: true
+    })
+    expect(mock.removePerGameBridgeBottle).toHaveBeenCalledTimes(1)
+    expect(mock.removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('resolved bottle is the legacy GameLibSteamBridge -> removePerGameBridgeBottle NOT called, bottleRemoved absent', async () => {
+    const mock = bottleMock()
+    mock.resolveBridgeBottleName.mockReturnValue(LEGACY_BOTTLE)
+    addManifest(
+      APP_ID,
+      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
+      BRIDGE_STEAMAPPS
+    )
+
+    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+
+    expect(result).toEqual({
+      status: 'removed',
+      source: 'bridge',
+      manifestOnly: false
+    })
+    expect(result).not.toHaveProperty('bottleRemoved')
+    expect(mock.removePerGameBridgeBottle).not.toHaveBeenCalled()
+  })
+
+  it('manifestOnly removal (shared installdir) -> bottle NOT removed even though the bottle is per-game', async () => {
+    const mock = bottleMock()
+    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
+    addManifest(
+      APP_ID,
+      {
+        appid: APP_ID,
+        StateFlags: INSTALLED_FLAGS,
+        installdir: 'SharedGame'
+      },
+      BRIDGE_STEAMAPPS
+    )
+    addManifest(
+      '99999',
+      {
+        appid: '99999',
+        StateFlags: INSTALLED_FLAGS,
+        installdir: 'SharedGame'
+      },
+      BRIDGE_STEAMAPPS
+    )
+
+    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+
+    expect(result).toEqual({
+      status: 'removed',
+      source: 'bridge',
+      manifestOnly: true
+    })
+    expect(mock.removePerGameBridgeBottle).not.toHaveBeenCalled()
+  })
+
+  it("removePerGameBridgeBottle returning {status:'error'} -> removal still reports 'removed', bottleRemoved:false, and a logWarning names the bottle", async () => {
+    const mock = bottleMock()
+    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
+    mock.removePerGameBridgeBottle.mockResolvedValue({
+      status: 'error',
+      error: 'boom'
+    })
+    addManifest(
+      APP_ID,
+      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
+      BRIDGE_STEAMAPPS
+    )
+    const { logWarning } = jest.requireMock<{ logWarning: jest.Mock }>(
+      'backend/logger'
+    )
+
+    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bridge')
+
+    expect(result).toEqual({
+      status: 'removed',
+      source: 'bridge',
+      manifestOnly: false,
+      bottleRemoved: false
+    })
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining(PER_GAME_BOTTLE),
+      expect.anything()
+    )
+  })
+
+  it("source 'native' never resolves or calls removePerGameBridgeBottle", async () => {
+    const mock = bottleMock()
+    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
+    addManifest(APP_ID, {
+      appid: APP_ID,
+      StateFlags: INSTALLED_FLAGS,
+      installdir: 'HOARD'
+    })
+
+    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'native')
+
+    expect(result).toEqual({
+      status: 'removed',
+      source: 'native',
+      manifestOnly: false
+    })
+    expect(mock.resolveBridgeBottleName).not.toHaveBeenCalled()
+    expect(mock.removePerGameBridgeBottle).not.toHaveBeenCalled()
+  })
+
+  it("source 'bottle' never resolves or calls removePerGameBridgeBottle", async () => {
+    const mock = bottleMock()
+    mock.resolveBridgeBottleName.mockReturnValue(PER_GAME_BOTTLE)
+    addManifest(
+      APP_ID,
+      { appid: APP_ID, StateFlags: INSTALLED_FLAGS, installdir: 'HOARD' },
+      BOTTLE_STEAMAPPS
+    )
+
+    const result = await libraryModule.removeSteamInstallCopy(APP_ID, 'bottle')
+
+    expect(result).toEqual({
+      status: 'removed',
+      source: 'bottle',
+      manifestOnly: false
+    })
+    expect(mock.resolveBridgeBottleName).not.toHaveBeenCalled()
+    expect(mock.removePerGameBridgeBottle).not.toHaveBeenCalled()
   })
 })
 
