@@ -4,27 +4,44 @@
  * Windows-only Steam titles route through the out-of-process steam_api
  * bridge instead of the Phase 17/22 bottled-Steam fallback.
  *
- * Follows the EXACT `crossoverIndexSchema` precedent
- * (`src/backend/crossover_index/schema.ts`): a `version: z.literal(1)` guard
- * + a bounded array schema, parsed once at module load. Unlike the
- * 1000+-entry CrossOver index, this list is small and developer-curated
- * (`.min(1)`, not `.min(1000)`) -- a malformed entry (missing `appId`, wrong
- * `version`, etc.) throws AT LOAD, fail-loud, rather than silently dropping
- * (T-24-05 mitigation). This is a deliberate posture: the allowlist is a
- * trust boundary that drives a routing decision, and a curated/reviewed list
- * should never partially degrade -- either the whole bundled asset is
- * well-formed, or GameLib fails to start with a clear error.
+ * Phase 51 Plan 03 (ROADMAP sub-decision 3 / D-51-08) bumped the schema to
+ * `version: 2`: the static list stops being the sole routing input (it is
+ * demoted to `seed`, one input of 51-07's composed `SteamBridgeRouteVerdict`
+ * -- seed ∪ persisted verdict ∖ known-bad ∖ forced-bottle) and gained a
+ * second array, `knownBad`, of titles that get a dialog up front naming WHY
+ * the bridge is never attempted for them (D-51-08's closed reason taxonomy,
+ * `SteamBridgeKnownBadReason`). `version: 1` is no longer accepted at all --
+ * there is no discriminated-union fallback; a stale-schema bundled asset
+ * throws at load exactly like any other malformed one.
  *
- * `has(appId)` is the consumer-facing lookup (used by 24-08's
- * `isBridgeEligible()`). It numeric-guards `appId` with the SAME
- * `NUMERIC_APP_ID` regex used project-wide (`bottle.ts:826`,
- * `clientSetup.ts:40`) BEFORE lookup (T-24-07 mitigation) -- a non-numeric
- * appId returns false, it never throws. Only the bundled JSON itself is a
- * fail-loud boundary; a bad caller-supplied appId at the IPC-adjacent lookup
- * boundary must never crash the routing decision.
+ * Follows the EXACT `crossoverIndexSchema` precedent
+ * (`src/backend/crossover_index/schema.ts`): a `version: z.literal(2)` guard
+ * + bounded array schemas, parsed once at module load. Unlike the
+ * 1000+-entry CrossOver index, `seed` is small and developer-curated
+ * (`.min(1)`, not `.min(1000)`); `knownBad` starts empty (no owned
+ * DRM-wrapped title was identified during Phase 51 research -- 51-18's
+ * census adds evidence-backed entries later) so it has no `.min()` floor. A
+ * malformed entry (missing `appId`, wrong `version`, a `knownBad.reason`
+ * outside the closed taxonomy, etc.) throws AT LOAD, fail-loud, rather than
+ * silently dropping (T-24-05 mitigation). This is a deliberate posture: the
+ * allowlist is a trust boundary that drives a routing decision, and a
+ * curated/reviewed list should never partially degrade -- either the whole
+ * bundled asset is well-formed, or GameLib fails to start with a clear
+ * error.
+ *
+ * `has(appId)` is the seed-membership lookup (used by 24-08's
+ * `isBridgeEligible()` until 51-09 replaces its sole caller with the
+ * composed verdict). `knownBadReason(appId)` is the new D-51-08 lookup. Both
+ * numeric-guard `appId` with the SAME `NUMERIC_APP_ID` regex used
+ * project-wide (`bottle.ts:826`, `clientSetup.ts:40`) BEFORE lookup
+ * (T-24-07 mitigation) -- a non-numeric appId returns false/null, neither
+ * ever throws. Only the bundled JSON itself is a fail-loud boundary; a bad
+ * caller-supplied appId at the IPC-adjacent lookup boundary must never crash
+ * the routing decision.
  */
 
 import { z } from 'zod'
+import type { SteamBridgeKnownBadReason } from 'common/types/steam'
 // Static JSON import (tsconfig `resolveJsonModule: true`) so the curated
 // allowlist is INLINED into the main-process bundle by rollup. The prior
 // `readFileSync(join(__dirname, 'bridge-allowlist.json'))` broke at runtime:
@@ -39,17 +56,48 @@ import bridgeAllowlistJson from './bridge-allowlist.json'
 // the SAME regex value/name, do not redefine a divergent one.
 const NUMERIC_APP_ID = /^\d+$/
 
+// D-51-08's closed reason taxonomy, as a zod enum. Kept as a `const` tuple
+// (not inlined into `z.enum([...])`) so the exhaustiveness check below can
+// reference it.
+const KNOWN_BAD_REASONS = [
+  'drm-wrapped',
+  'win64-only',
+  'p2p-required',
+  'does-not-run'
+] as const satisfies readonly SteamBridgeKnownBadReason[]
+
+const knownBadReasonSchema = z.enum(KNOWN_BAD_REASONS)
+
+// Compile-time assertion that the zod enum's inferred type equals
+// SteamBridgeKnownBadReason (common/types/steam.ts), in BOTH directions: the
+// `satisfies` clause on KNOWN_BAD_REASONS above already catches an entry
+// that is not a valid SteamBridgeKnownBadReason; this Record literal catches
+// the other direction -- if SteamBridgeKnownBadReason ever gains or loses a
+// member, this object fails to typecheck (every key required, no extra key
+// permitted) because it must assign exactly one value per member.
+const _knownBadReasonExhaustiveness: Record<SteamBridgeKnownBadReason, true> = {
+  'drm-wrapped': true,
+  'win64-only': true,
+  'p2p-required': true,
+  'does-not-run': true
+}
+void _knownBadReasonExhaustiveness
+
+const allowlistEntrySchema = z.object({
+  appId: z.string().regex(NUMERIC_APP_ID),
+  title: z.string().min(1),
+  note: z.string().optional()
+})
+
 export const bridgeAllowlistSchema = z.object({
-  version: z.literal(1),
-  games: z
-    .array(
-      z.object({
-        appId: z.string().regex(NUMERIC_APP_ID),
-        title: z.string().min(1),
-        note: z.string().optional()
-      })
-    )
-    .min(1)
+  version: z.literal(2),
+  seed: z.array(allowlistEntrySchema).min(1),
+  // No `.min()` floor -- D-51-08: the known-bad list starts empty because
+  // research identified no owned DRM-wrapped title; 51-18's census adds
+  // evidence-backed entries. An empty array is a legitimate, intended state.
+  knownBad: z.array(
+    allowlistEntrySchema.extend({ reason: knownBadReasonSchema })
+  )
 })
 
 // Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
@@ -58,28 +106,46 @@ export const bridgeAllowlistSchema = z.object({
 type BridgeAllowlist = z.infer<typeof bridgeAllowlistSchema>
 
 function loadBridgeAllowlist(): BridgeAllowlist {
-  // `.parse()` (not `.safeParse()`) is deliberate -- a malformed bundled
-  // allowlist must throw at module load (fail-loud, D-02's curated/reviewed
-  // posture), not be silently swallowed into an empty/partial list.
+  // `.parse()` -- deliberately NOT the non-throwing parse variant -- a
+  // malformed bundled allowlist must throw at module load (fail-loud, D-02's
+  // curated/reviewed posture), not be silently swallowed into an
+  // empty/partial list.
   return bridgeAllowlistSchema.parse(bridgeAllowlistJson)
 }
 
 const bridgeAllowlistData = loadBridgeAllowlist()
 
-const appIdSet = new Set(bridgeAllowlistData.games.map((game) => game.appId))
+const seedAppIdSet = new Set(bridgeAllowlistData.seed.map((game) => game.appId))
+const knownBadReasonByAppId = new Map(
+  bridgeAllowlistData.knownBad.map((entry) => [entry.appId, entry.reason])
+)
 
 export const bridgeAllowlist = {
   /**
    * Returns true iff `appId` is present in the bundled, zod-validated
-   * bridge-eligibility allowlist. Numeric-guarded (T-24-07) -- a
-   * non-numeric appId returns false, never throws, so a malformed
-   * IPC-adjacent appId can never crash the bridge-vs-fallback routing
-   * decision.
+   * `seed` list (D-51-08: seed membership only -- NOT the composed
+   * bridge-vs-bottle verdict; 51-07 composes that from this plus the
+   * persisted scan verdict and the known-bad list). Numeric-guarded
+   * (T-24-07) -- a non-numeric appId returns false, never throws, so a
+   * malformed IPC-adjacent appId can never crash the routing decision.
    */
   has(appId: string): boolean {
     if (!NUMERIC_APP_ID.test(appId)) {
       return false
     }
-    return appIdSet.has(appId)
+    return seedAppIdSet.has(appId)
+  },
+
+  /**
+   * D-51-08: returns the closed-taxonomy reason `appId` is on the bundled
+   * known-bad list, or `null` when it is absent (including every
+   * non-numeric or unrecognized appId -- same numeric-guard-before-lookup
+   * shape as `has()` above, never throws).
+   */
+  knownBadReason(appId: string): SteamBridgeKnownBadReason | null {
+    if (!NUMERIC_APP_ID.test(appId)) {
+      return null
+    }
+    return knownBadReasonByAppId.get(appId) ?? null
   }
 }
