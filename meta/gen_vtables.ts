@@ -101,6 +101,13 @@ const KNOWN_RETURN_KINDS: ReadonlySet<string> = new Set([
   'class'
 ])
 
+/** 51-06 Task 3: by-value struct param types a wire method may never
+ * declare (kind 'value' or absent) -- too large/non-scalar to marshal as
+ * raw register-width bytes; a future method needing one of these as a
+ * genuine wire param must use a different kind (none exists for this
+ * yet) or stay a stub. */
+const STRUCT_PARAM_TYPES: ReadonlySet<string> = new Set(['CSteamID', 'CGameID'])
+
 export interface MethodSignature {
   slot: number
   name: string
@@ -342,6 +349,29 @@ export function validateManifest(
           `${methodCtx}: wire method's computeRetN (${retN}) does not match declared stackBytes (${method.stackBytes})`
         )
       }
+
+      // 51-06 Task 3: wire methods marshal by-value scalars, in-strings,
+      // out-values and bounded out-buffers -- anything else is rejected at
+      // generation time (never a silently-wrong marshal).
+      for (const p of method.params) {
+        const kind = p.kind ?? 'value'
+        const isPointerType = p.type.endsWith('*')
+        if (kind === 'value') {
+          if (isPointerType) {
+            errors.push(
+              `${methodCtx}: pointer param "${p.name}" (type "${p.type}") used as a wire param without an explicit kind (in-string/out-value/out-buffer)`
+            )
+          } else if (STRUCT_PARAM_TYPES.has(p.type)) {
+            errors.push(
+              `${methodCtx}: by-value struct param "${p.name}" (type "${p.type}") is not supported for wire params`
+            )
+          }
+        } else if (kind === 'out-buffer' && !p.sizeParam) {
+          errors.push(
+            `${methodCtx}: out-buffer param "${p.name}" is missing sizeParam`
+          )
+        }
+      }
     }
   }
 
@@ -374,10 +404,93 @@ function cType(type: string): string {
       return 'const char *'
     case 'void':
       return 'void'
+    // 51-06 Task 3: pointer-to-scalar out-value param types -- exactly the
+    // `valueType` enum's five members, each spelled with a trailing `*` in
+    // the manifest's `type` field (the pointer the caller passes to
+    // receive the decoded out-value).
+    case 'int32*':
+      return 'int32_t *'
+    case 'uint32*':
+      return 'uint32_t *'
+    case 'float*':
+      return 'float *'
+    case 'bool*':
+      return 'int *'
+    case 'uint64*':
+      return 'uint64_t *'
     default:
       return type.endsWith('*') ? type : 'uint32_t'
   }
 }
+
+// ---------------------------------------------------------------------------
+// Wire marshaling constants (51-06 Task 3)
+// ---------------------------------------------------------------------------
+
+/** Max bytes an in-string request field may carry (beyond its own 4-byte
+ * length prefix) -- keeps any single variable-length field, and therefore
+ * the whole request frame, comfortably under protocol.ts's MAX_FRAME_BYTES
+ * (65536) without needing a dynamic allocation in the generated stub. */
+export const WIRE_IN_STRING_MAX_BYTES = 4096
+
+/** Max bytes an out-buffer response field may carry (beyond its own 4-byte
+ * length prefix) -- same rationale as WIRE_IN_STRING_MAX_BYTES, and the
+ * same cap `validateManifest`/the generated decode both enforce on a
+ * declared `sizeParam` capacity. */
+export const WIRE_OUT_BUFFER_MAX_BYTES = 4096
+
+function valueTypeWidth(valueType: string): number {
+  return valueType === 'uint64' ? 8 : 4
+}
+
+function valueTypeCType(valueType: string): string {
+  switch (valueType) {
+    case 'uint64':
+      return 'uint64_t'
+    case 'float':
+      return 'float'
+    case 'bool':
+      return 'int'
+    case 'uint32':
+      return 'uint32_t'
+    default:
+      return 'int32_t'
+  }
+}
+
+/**
+ * 51-06 Task 3: the SINGLE documented wire layout both halves of the bridge
+ * must agree on -- this generator's shim-side encode/decode (emitVtableStub
+ * below) AND 51-10's helper-side `generateDispatchHeader`, which decodes
+ * the IDENTICAL request blob and encodes the IDENTICAL response blob from
+ * its own manifest read. Embedded verbatim as a block comment in the
+ * generated shim header so a reader never has to cross-reference this
+ * source file to understand what is on the wire.
+ */
+export const WIRE_LAYOUT_DOC = `Wire marshaling layout (51-06 Task 3; 51-10 mirrors this exactly):
+
+Request blob (per method, params in manifest declaration order):
+  - no kind, or kind 'value': paramWidth(type) raw bytes, host byte order.
+  - kind 'in-string': [u32 len][len bytes, NOT NUL-terminated]. A NULL
+    pointer packs len = 0xFFFFFFFF and no bytes. len is the real string's
+    byte length capped at WIRE_IN_STRING_MAX_BYTES.
+  - kind 'out-value': nothing -- an out-value param is NEVER sent.
+  - kind 'out-buffer': [u32 capacity] -- the sibling param named by
+    sizeParam, read at call time and capped at WIRE_OUT_BUFFER_MAX_BYTES.
+
+Response blob (per method):
+  - the return value: 0 bytes (returnKind 'void'), 4 bytes (int32/pointer/
+    float), 8 bytes (int64/double), [u32 len][bytes] (returnKind 'string',
+    decoded by the dedicated string-return branch), or structSize bytes
+    (returnKind 'class', the sret branch).
+  - then, for every 'out-value' param in declaration order: valueType's
+    width (int32/uint32/float/bool = 4 bytes, uint64 = 8 bytes).
+  - then, for every 'out-buffer' param in declaration order: [u32 len][len
+    bytes] -- len is what the helper actually has, which may exceed the
+    caller's capacity; the shim copies min(len, capacity) and NUL-
+    terminates only when the param's own type is a NUL-terminated string
+    type (e.g. 'char*').
+`
 
 /** "SteamUser023" -> "SteamUser_v023"; "SteamFriends018" -> "SteamFriends_v018" */
 export function toVersionedAccessorSuffix(interfaceName: string): string {
@@ -460,22 +573,80 @@ const FLAT_EXPORT_BODIES: Record<
 // Vtable stub emission
 // ---------------------------------------------------------------------------
 
+/**
+ * Max request-blob bytes a single param can contribute, per
+ * WIRE_LAYOUT_DOC: `'value'` (or absent) is the real ABI width;
+ * `'in-string'` is a 4-byte length prefix plus up to WIRE_IN_STRING_MAX_BYTES
+ * bytes; `'out-value'` sends nothing; `'out-buffer'` sends exactly a 4-byte
+ * capacity field.
+ */
+function wireParamMaxWidth(p: ParamSignature): number {
+  const kind = p.kind ?? 'value'
+  if (kind === 'in-string') return 4 + WIRE_IN_STRING_MAX_BYTES
+  if (kind === 'out-value') return 0
+  if (kind === 'out-buffer') return 4
+  return paramWidth(p.type)
+}
+
+/**
+ * 51-06 Task 3: request-blob encoding, driven by each param's `kind` per
+ * WIRE_LAYOUT_DOC. `argbuf` is sized at the WORST-CASE total (every
+ * in-string param at its max length) so it can be a plain stack array, but
+ * the ACTUAL bytes sent (`argOff`, the returned `lenExpr`) is a runtime
+ * value -- an in-string field's real length varies per call.
+ */
 function packArgsBlock(method: MethodSignature): {
   decl: string
   lenExpr: string
 } {
-  if (method.params.length === 0) {
+  const sendableParams = method.params.filter(
+    (p) => (p.kind ?? 'value') !== 'out-value'
+  )
+  if (sendableParams.length === 0) {
     return { decl: '  const uint8_t *argbuf = NULL;', lenExpr: '0' }
   }
-  const totalLen = method.params.reduce((sum, p) => sum + paramWidth(p.type), 0)
-  const lines: string[] = [`  uint8_t argbuf[${totalLen}];`]
-  let offset = 0
-  for (const p of method.params) {
-    const width = paramWidth(p.type)
-    lines.push(`  memcpy(argbuf + ${offset}, &${p.name}, ${width});`)
-    offset += width
+
+  const maxTotal = sendableParams.reduce(
+    (sum, p) => sum + wireParamMaxWidth(p),
+    0
+  )
+  const lines: string[] = [
+    `  uint8_t argbuf[${maxTotal}];`,
+    `  uint32_t argOff = 0;`
+  ]
+  for (const p of sendableParams) {
+    const kind = p.kind ?? 'value'
+    if (kind === 'in-string') {
+      lines.push(
+        `  {`,
+        `    uint32_t strLen;`,
+        `    if (${p.name} == NULL) {`,
+        `      strLen = 0xFFFFFFFFu;`,
+        `      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;`,
+        `    } else {`,
+        `      size_t rawLen = strlen(${p.name});`,
+        `      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);`,
+        `      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;`,
+        `      memcpy(argbuf + argOff, ${p.name}, strLen); argOff += strLen;`,
+        `    }`,
+        `  }`
+      )
+    } else if (kind === 'out-buffer') {
+      lines.push(
+        `  {`,
+        `    uint32_t cap = (uint32_t)${p.sizeParam};`,
+        `    if (cap > WIRE_OUT_BUFFER_MAX_BYTES) cap = WIRE_OUT_BUFFER_MAX_BYTES;`,
+        `    memcpy(argbuf + argOff, &cap, 4); argOff += 4;`,
+        `  }`
+      )
+    } else {
+      const width = paramWidth(p.type)
+      lines.push(
+        `  memcpy(argbuf + argOff, &${p.name}, ${width}); argOff += ${width};`
+      )
+    }
   }
-  return { decl: lines.join('\n'), lenExpr: String(totalLen) }
+  return { decl: lines.join('\n'), lenExpr: 'argOff' }
 }
 
 /**
@@ -588,10 +759,42 @@ function emitVtableStub(
     ? ' (STRING RETURN -- shim-owned buffer, CR-01)'
     : ''
   const stubDesc = methodMode === 'stub' ? ' (STUB)' : ''
+  const fallbackDesc =
+    method.helperFallback !== undefined ? ' (HELPER FALLBACK)' : ''
   const noteLine = method.note ? `// NOTE: ${method.note}\n` : ''
   const header =
     `// slot ${method.slot}: ${method.name}(${descParams}) -> ${method.returns} ` +
-    `| __thiscall ret ${retN}${sretDesc}${stringDesc}${stubDesc}\n${noteLine}`
+    `| __thiscall ret ${retN}${sretDesc}${stringDesc}${stubDesc}${fallbackDesc}\n${noteLine}`
+
+  // 51-06 Task 3: a method with `helperFallback` set never talks to the
+  // helper at all -- it answers the declared constant immediately, using
+  // the method's REAL params (unlike a stub, `helperFallback` methods have
+  // a trustworthy params[] -- e.g. RequestCurrentStats, which 51-11 found
+  // absent from the modern dylib and answers `true` shim-side).
+  if (method.helperFallback !== undefined) {
+    const fallbackLiteral =
+      typeof method.helperFallback === 'boolean'
+        ? method.helperFallback
+          ? '1'
+          : '0'
+        : String(method.helperFallback)
+    if (method.returnKind === 'void') {
+      return (
+        header +
+        `static void THISCALL ${funcName}(${signatureParams}) {\n` +
+        `  (void)self;\n` +
+        `}\n`
+      )
+    }
+    const returnType = cType(method.returns)
+    return (
+      header +
+      `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
+      `  (void)self;\n` +
+      `  return ${fallbackLiteral};\n` +
+      `}\n`
+    )
+  }
 
   if (methodMode === 'stub') {
     return emitStubBody(manifest, method, header, funcName, sret, stringReturn)
@@ -667,14 +870,73 @@ function emitVtableStub(
 
   const returnType = cType(method.returns)
   const retWidth = is64BitRegisterReturn(method) ? 8 : 4
+
+  // 51-06 Task 3: out-value/out-buffer response fields trail the base
+  // return value, per WIRE_LAYOUT_DOC -- decoded here, after the register
+  // return is already read, using a running `respOff` cursor.
+  const outValueParams = method.params.filter((p) => p.kind === 'out-value')
+  const outBufferParams = method.params.filter((p) => p.kind === 'out-buffer')
+
+  if (outValueParams.length === 0 && outBufferParams.length === 0) {
+    return (
+      header +
+      `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
+      `  (void)self;\n` +
+      `${argBufDecl}\n` +
+      `  uint8_t retbuf[${retWidth}]; uint32_t retlen = 0;\n` +
+      `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${retWidth}) return 0;\n` +
+      `  ${returnType} ret; memcpy(&ret, retbuf, ${retWidth});\n` +
+      `  return ret;\n` +
+      `}\n`
+    )
+  }
+
+  const extraMax =
+    outValueParams.reduce(
+      (sum, p) => sum + valueTypeWidth(p.valueType ?? 'int32'),
+      0
+    ) +
+    outBufferParams.length * (4 + WIRE_OUT_BUFFER_MAX_BYTES)
+  const retBufSize = retWidth + extraMax
+
+  const decodeLines: string[] = [`  uint32_t respOff = ${retWidth};`]
+  for (const p of outValueParams) {
+    const valueType = p.valueType ?? 'int32'
+    const width = valueTypeWidth(valueType)
+    const ct = valueTypeCType(valueType)
+    decodeLines.push(
+      `  if (${p.name} != NULL && retlen >= respOff + ${width}) {`,
+      `    ${ct} outVal; memcpy(&outVal, retbuf + respOff, ${width});`,
+      `    *${p.name} = outVal;`,
+      `  }`,
+      `  respOff += ${width};`
+    )
+  }
+  for (const p of outBufferParams) {
+    const nulTerminate = p.type === 'char*'
+    decodeLines.push(
+      `  if (retlen >= respOff + 4) {`,
+      `    uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;`,
+      `    uint32_t copyLen = declLen;`,
+      `    if (copyLen > WIRE_OUT_BUFFER_MAX_BYTES) copyLen = WIRE_OUT_BUFFER_MAX_BYTES;`,
+      `    if (${p.name} != NULL && retlen >= respOff + copyLen) {`,
+      `      memcpy(${p.name}, retbuf + respOff, copyLen);`,
+      ...(nulTerminate ? [`      ${p.name}[copyLen] = '\\0';`] : []),
+      `    }`,
+      `    respOff += declLen;`,
+      `  }`
+    )
+  }
+
   return (
     header +
     `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
     `  (void)self;\n` +
     `${argBufDecl}\n` +
-    `  uint8_t retbuf[${retWidth}]; uint32_t retlen = 0;\n` +
+    `  uint8_t retbuf[${retBufSize}]; uint32_t retlen = 0;\n` +
     `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${retWidth}) return 0;\n` +
     `  ${returnType} ret; memcpy(&ret, retbuf, ${retWidth});\n` +
+    `${decodeLines.join('\n')}\n` +
     `  return ret;\n` +
     `}\n`
   )
@@ -771,6 +1033,12 @@ export function generateShimC(manifests: InterfaceManifest[]): string {
 // emitVtableStub() sizes each stub's transact buffer against can never
 // drift apart.
 #define STRING_RETURN_BUF_BYTES ${STRING_RETURN_BUF_BYTES}
+
+/*
+${WIRE_LAYOUT_DOC}
+*/
+#define WIRE_IN_STRING_MAX_BYTES ${WIRE_IN_STRING_MAX_BYTES}
+#define WIRE_OUT_BUFFER_MAX_BYTES ${WIRE_OUT_BUFFER_MAX_BYTES}
 
 // 51-06 Task 2: bounded storage for every \`iface.<Family>=<Version>\`
 // pair \`gamelib_bridge.cfg\` carries -- the backend

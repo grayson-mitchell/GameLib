@@ -53,6 +53,35 @@
 // drift apart.
 #define STRING_RETURN_BUF_BYTES 256
 
+/*
+Wire marshaling layout (51-06 Task 3; 51-10 mirrors this exactly):
+
+Request blob (per method, params in manifest declaration order):
+  - no kind, or kind 'value': paramWidth(type) raw bytes, host byte order.
+  - kind 'in-string': [u32 len][len bytes, NOT NUL-terminated]. A NULL
+    pointer packs len = 0xFFFFFFFF and no bytes. len is the real string's
+    byte length capped at WIRE_IN_STRING_MAX_BYTES.
+  - kind 'out-value': nothing -- an out-value param is NEVER sent.
+  - kind 'out-buffer': [u32 capacity] -- the sibling param named by
+    sizeParam, read at call time and capped at WIRE_OUT_BUFFER_MAX_BYTES.
+
+Response blob (per method):
+  - the return value: 0 bytes (returnKind 'void'), 4 bytes (int32/pointer/
+    float), 8 bytes (int64/double), [u32 len][bytes] (returnKind 'string',
+    decoded by the dedicated string-return branch), or structSize bytes
+    (returnKind 'class', the sret branch).
+  - then, for every 'out-value' param in declaration order: valueType's
+    width (int32/uint32/float/bool = 4 bytes, uint64 = 8 bytes).
+  - then, for every 'out-buffer' param in declaration order: [u32 len][len
+    bytes] -- len is what the helper actually has, which may exceed the
+    caller's capacity; the shim copies min(len, capacity) and NUL-
+    terminates only when the param's own type is a NUL-terminated string
+    type (e.g. 'char*').
+
+*/
+#define WIRE_IN_STRING_MAX_BYTES 4096
+#define WIRE_OUT_BUFFER_MAX_BYTES 4096
+
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
 // (bridgeConfig.ts's `writeBridgeConfig`) writes one such line per family
