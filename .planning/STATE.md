@@ -5,10 +5,10 @@ current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
 stopped_at: "Completed 51-04-PLAN.md (Steam bridge i18n string inventory: 40 keys x 49 locales)"
-last_updated: "2026-10-17T06:49:40.322Z"
+last_updated: "2026-10-17T07:00:36.542Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 51 execution started
-state_head: b754f8592dd6c8e5f5d653af6ec3d30895b74aa0
+state_head: b67f1bad553c32503e16c79e08019af33859a166
 progress:
   total_phases: 45
   completed_phases: 36
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 5 of 19
+Plan: 6 of 19
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 51 execution started
 
@@ -515,6 +515,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 | Phase 51 P02 | 20min | 2 tasks | 6 files |
 | Phase 51 P03 | ~22min | 3 tasks | 12 files |
 | Phase 51 P04 | ~50min | 2 tasks | 98 files |
+| Phase 51 P05 | 20min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -603,6 +604,7 @@ Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries
 - [Phase 51]: D-51-07/08/09/10/11 shared types + IPC channels landed (types only); bridge-allowlist.json bumped to v2 (seed+knownBad, closed reason taxonomy, empty knownBad by design); shimCoverage.ts is now the sole owner of exported-symbol and served-interface-version coverage; persisted bridge verdict field (SteamMetadataCacheEntry.bridge) added with carry-forward-safe writers in bridgeVerdict.ts
 - [Phase 51]: machine-fill-gamelib unreachable (gateway-scoped key, HTTP 401); hand-filled all 48 locales in-session per the sanctioned fallback, validated with the real validateTranslation()
 - [Phase 51]: Caught 6 Persian strings violating the live 28-term glossary (Windows transliterated instead of kept literal) by running the project's real validator, not a hand-rolled reimplementation; fixed before any commit
+- [Phase 51]: D-51-12: removeSteamInstallCopy('bridge') deletes the per-game GameLibSteamBridge-<appId> bottle via removePerGameBridgeBottle after a full removal; legacy shared bottle and native/bottle sources are never touched.
 
 ### Pending Todos
 
