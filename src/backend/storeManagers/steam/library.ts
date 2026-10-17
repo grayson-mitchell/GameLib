@@ -44,7 +44,9 @@ import {
   getBridgeBottleSettings,
   isBottleProvisioned,
   listReadyBridgeBottleNames,
-  resolveBridgeBottleName
+  resolveBridgeBottleName,
+  removePerGameBridgeBottle,
+  DEFAULT_BRIDGE_BOTTLE_NAME
 } from './bottle'
 import {
   buildDepotPlan,
@@ -2117,9 +2119,21 @@ export async function enumerateSteamInstallCopies(
   return copies
 }
 
-/** quick-260821-le0: outcome of a single-root `removeSteamInstallCopy` call. */
+/**
+ * quick-260821-le0: outcome of a single-root `removeSteamInstallCopy` call.
+ * quick-261016-u1w/D-51-12 (phase 51 plan 05): the 'removed' variant's
+ * `bottleRemoved` is present ONLY for source 'bridge' when the resolved
+ * bottle was a per-game one (GameLibSteamBridge-<appId>) and a deletion was
+ * actually attempted — absent for 'native'/'bottle' sources and for a
+ * legacy-shared-bottle removal, where no bottle delete is ever attempted.
+ */
 export type RemoveCopyResult =
-  | { status: 'removed'; source: AcfSource; manifestOnly: boolean }
+  | {
+      status: 'removed'
+      source: AcfSource
+      manifestOnly: boolean
+      bottleRemoved?: boolean
+    }
   | { status: 'absent'; source: AcfSource }
   | { status: 'refused'; source: AcfSource; reason: string }
 
@@ -2167,6 +2181,13 @@ export async function removeSteamInstallCopy(
     )
     return { status: 'refused', source, reason: 'invalid appId' }
   }
+
+  // D-51-12: resolve ONCE up front, via the D-B single resolver — never
+  // re-derive per-game vs legacy locally. null only when appId somehow
+  // fails resolveBridgeBottleName's own numeric guard, which the check
+  // above already rules out for every caller.
+  const resolvedBridgeBottleName =
+    source === 'bridge' ? resolveBridgeBottleName(appId) : null
 
   const acfState = await readAcfState(appId, source)
 
@@ -2240,6 +2261,28 @@ export async function removeSteamInstallCopy(
     `SteamLibraryManager: removeSteamInstallCopy removed appId ${appId} source '${source}' at "${installRoot}"`,
     LogPrefix.Steam
   )
+
+  // D-51-12: only a per-game bridge bottle (never the legacy shared
+  // GameLibSteamBridge bottle, and never 'native'/'bottle' sources) is
+  // deleted here — removePerGameBridgeBottle's own guard chain (numeric
+  // appId, sanitizeBottleName, forbidden set, Bottles-root containment)
+  // already refuses every protected bottle, so this is not a second
+  // bespoke delete.
+  if (
+    source === 'bridge' &&
+    resolvedBridgeBottleName &&
+    resolvedBridgeBottleName !== DEFAULT_BRIDGE_BOTTLE_NAME
+  ) {
+    const bottleResult = await removePerGameBridgeBottle(appId)
+    const bottleRemoved = bottleResult.status === 'removed'
+    if (!bottleRemoved) {
+      logWarning(
+        `SteamLibraryManager: removeSteamInstallCopy left bridge bottle "${resolvedBridgeBottleName}" in place for appId ${appId} (removePerGameBridgeBottle returned '${bottleResult.status}')`,
+        LogPrefix.Steam
+      )
+    }
+    return { status: 'removed', source, manifestOnly: false, bottleRemoved }
+  }
 
   return { status: 'removed', source, manifestOnly: false }
 }
