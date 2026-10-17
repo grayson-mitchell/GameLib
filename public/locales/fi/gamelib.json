@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib lakkasi saamasta vastausta Steam-bottlen asetuksesta. Se voi olla edelleen käynnissä — tarkista, avautuiko Steam-asennusikkuna, ja yritä sitten uudelleen."
+            "statusPollTimeout": "GameLib lakkasi saamasta vastausta Steam-bottlen asetuksesta. Se voi olla edelleen käynnissä — tarkista, avautuiko Steam-asennusikkuna, ja yritä sitten uudelleen.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam tarvitsee sinun kirjautuvan sisään. Sen kirjautumisikkuna saattaa olla piilossa muiden ikkunoiden takana.",
+                    "otherSession": "Tämä peli on käynnissä toisella tietokoneella, ja Steam kysyy, pitäisikö se sulkea siellä.",
+                    "selfUpdate": "Steam päivittää itseään. Paina Pelaa uudelleen, kun se on käynnistynyt uudelleen."
+                },
+                "intro": "Windowsin Steam-asiakasohjelma ei ole vielä käynnistänyt peliä.",
+                "likelyCauses": "Todennäköiset syyt:",
+                "mostLikely": "Todennäköisimmin:",
+                "title": "Odotetaan Steamia…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Asentuu jaettuun pullotettuun Steam-asiakasohjelmaan. Tämän muuttaminen myöhemmin tarkoittaa pelin uudelleenasennusta.",
+                "label": "Käytä sen sijaan Windowsin Steam-asiakasohjelmaa"
+            },
+            "knownBad": {
+                "doesNotRun": "ei toimi sillan kautta",
+                "drmWrapped": "DRM:n suojaama Steamin API:n alla",
+                "p2pRequired": "vaatii vertaisverkkomoninpelin",
+                "win64Only": "vain 64-bittinen"
+            },
+            "limited": {
+                "body": "Saavutukset ja pilvitallennukset eivät synkronoidu tälle pelille sillan kautta.",
+                "identityFallback": "Steam ei suorittaisi tätä peliä omalla ID:llään, joten se toimii vain sinun Steam-identiteetilläsi.",
+                "title": "Jotkin Steamin ominaisuudet ovat rajoitettuja"
+            },
+            "route": {
+                "bottled": "Pullotettu Steam-asiakasohjelma",
+                "label": "Steam-reitti",
+                "missingSymbols": "Ei katettu: {{symbols}}",
+                "native": "Natiivi Steam-silta",
+                "reason": {
+                    "failedThisSession": "Silta epäonnistui aiemmin tässä istunnossa",
+                    "knownBad": "Tunnetusti ei toimi sillan kanssa: {{reason}}",
+                    "noSteamApi": "Tämä peli ei käytä Steamin API:a",
+                    "pendingScan": "Tarkistetaan latauksen valmistuttua",
+                    "scanClean": "Jokainen tämän pelin tekemä Steam-kutsu on katettu",
+                    "scanMiss": "Silta ei kata jokaista tämän pelin tekemää Steam-kutsua",
+                    "seed": "Tunnetusti toimii sillan kanssa",
+                    "userForcedBottle": "Valitsit Windowsin Steam-asiakasohjelman",
+                    "userForcedBridge": "Valitsit kokeilla siltaa",
+                    "win64NoShim": "64-bittinen peli, eikä tässä versiossa ole 64-bittistä siltaa"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib asentaa sen sen sijaan pullotettuun Windowsin Steam-asiakasohjelmaan.",
+                "cancel": "Keskeytä",
+                "knownBad": "Tunnetusti {{title}} ei toimi natiivin Steam-sillan kanssa: {{reason}}.",
+                "scanMiss": "Natiivi Steam-silta ei kata jokaista Steam-kutsua, jonka {{title}} tekee. Ei katettu: {{symbols}}.",
+                "title": "Tämä peli käyttää Windowsin Steam-asiakasohjelmaa",
+                "tryBridge": "Kokeile siltaa joka tapauksessa",
+                "useBottled": "Käytä pullotettua Steamia",
+                "win64NoShim": "{{title}} on 64-bittinen peli, eikä tässä GameLibin versiossa ole 64-bittistä siltaa."
+            },
+            "setup": {
+                "missingSymbols": "Silta ei kata: {{symbols}}",
+                "redownloadNote": "Palautuminen lataa pelin uudelleen pullotettuun Windowsin Steam-asiakasohjelmaan."
+            }
         },
         "download": {
             "error": {

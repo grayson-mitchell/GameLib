@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLibはSteamボトルのセットアップに関する応答を受信できなくなりました。まだ処理が続いている可能性があります — Steamインストーラーのウィンドウを確認してから、もう一度お試しください。"
+            "statusPollTimeout": "GameLibはSteamボトルのセットアップに関する応答を受信できなくなりました。まだ処理が続いている可能性があります — Steamインストーラーのウィンドウを確認してから、もう一度お試しください。",
+            "waiting": {
+                "cause": {
+                    "login": "Steamはサインインを必要としています。そのログインウィンドウは他のウィンドウの後ろに隠れている可能性があります。",
+                    "otherSession": "このゲームは別のコンピューターで実行されており、Steamはそこで閉じるかどうかを尋ねています。",
+                    "selfUpdate": "Steamは自己更新中です。再起動したら、もう一度プレイを押してください。"
+                },
+                "intro": "Windows版Steamクライアントはまだゲームを開始していない。",
+                "likelyCauses": "考えられる原因:",
+                "mostLikely": "最も可能性が高い:",
+                "title": "Steamを待っています…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "共有のボトル化されたSteamクライアントにインストールされる。後でこれを変更するとゲームの再インストールが必要になる。",
+                "label": "代わりにWindows版Steamクライアントを使用する"
+            },
+            "knownBad": {
+                "doesNotRun": "ブリッジを通して動作しない",
+                "drmWrapped": "Steam APIの下でDRMによって保護されている",
+                "p2pRequired": "ピアツーピアのマルチプレイヤーが必要",
+                "win64Only": "64ビットのみ"
+            },
+            "limited": {
+                "body": "実績とクラウドセーブはブリッジ経由でこのゲームに同期されない。",
+                "identityFallback": "Steamはこのゲームを独自のIDで実行しないため、あなたのSteamアイデンティティのみで動作する。",
+                "title": "一部のSteam機能が制限されている"
+            },
+            "route": {
+                "bottled": "ボトル化されたSteamクライアント",
+                "label": "Steamルート",
+                "missingSymbols": "カバーされていない: {{symbols}}",
+                "native": "ネイティブSteamブリッジ",
+                "reason": {
+                    "failedThisSession": "ブリッジはこのセッションで以前に失敗した",
+                    "knownBad": "ブリッジで動作しないことが分かっている: {{reason}}",
+                    "noSteamApi": "このゲームはSteamのAPIを使用しない",
+                    "pendingScan": "ダウンロード完了後に確認される",
+                    "scanClean": "このゲームが行うすべてのSteam呼び出しがカバーされている",
+                    "scanMiss": "ブリッジはこのゲームが行うすべてのSteam呼び出しをカバーしていない",
+                    "seed": "ブリッジで動作することが分かっている",
+                    "userForcedBottle": "Windows版Steamクライアントを選択した",
+                    "userForcedBridge": "ブリッジを試すことを選択した",
+                    "win64NoShim": "64ビットゲームで、このビルドには64ビットブリッジがない"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLibは代わりにボトル化されたWindows版Steamクライアントにインストールする。",
+                "cancel": "キャンセル",
+                "knownBad": "{{title}}はネイティブSteamブリッジで動作しないことが分かっている: {{reason}}。",
+                "scanMiss": "ネイティブSteamブリッジは{{title}}が行うすべてのSteam呼び出しをカバーしていない。カバーされていない: {{symbols}}。",
+                "title": "このゲームはWindows版Steamクライアントを使用する",
+                "tryBridge": "それでもブリッジを試す",
+                "useBottled": "ボトル化されたSteamを使用",
+                "win64NoShim": "{{title}}は64ビットゲームで、このGameLibのビルドには64ビットブリッジがない。"
+            },
+            "setup": {
+                "missingSymbols": "ブリッジはカバーしていない: {{symbols}}",
+                "redownloadNote": "フォールバックするとゲームがボトル化されたWindows版Steamクライアントに再度ダウンロードされる。"
+            }
         },
         "download": {
             "error": {

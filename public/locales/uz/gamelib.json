@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib Steam bottle sozlash haqida javob olishni to'xtatdi. U hali ishlab turgan bo'lishi mumkin — Steam o'rnatuvchi oynasini tekshiring, so'ng qayta urinib ko'ring."
+            "statusPollTimeout": "GameLib Steam bottle sozlash haqida javob olishni to'xtatdi. U hali ishlab turgan bo'lishi mumkin — Steam o'rnatuvchi oynasini tekshiring, so'ng qayta urinib ko'ring.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam sizdan tizimga kirishni talab qiladi. Uning kirish oynasi boshqa oynalar orqasida yashiringan bo'lishi mumkin.",
+                    "otherSession": "Bu o'yin boshqa kompyuterda ishlamoqda, va Steam uni u yerda yopish kerakmi deb so'ramoqda.",
+                    "selfUpdate": "Steam o'zini yangilamoqda. Qayta ishga tushgandan keyin yana Play tugmasini bosing."
+                },
+                "intro": "Windows Steam klienti hali o'yinni boshlamagan.",
+                "likelyCauses": "Mumkin bo'lgan sabablar:",
+                "mostLikely": "Eng ehtimolli:",
+                "title": "Steam kutilmoqda…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Umumiy bottle'dagi Steam klientiga o'rnatiladi. Buni keyinroq o'zgartirish o'yinni qayta o'rnatishni anglatadi.",
+                "label": "Buning o'rniga Windows Steam klientidan foydalaning"
+            },
+            "knownBad": {
+                "doesNotRun": "ko'prik orqali ishlamaydi",
+                "drmWrapped": "Steam API ostida DRM bilan himoyalangan",
+                "p2pRequired": "peer-to-peer ko'p o'yinchi rejimini talab qiladi",
+                "win64Only": "faqat 64-bit"
+            },
+            "limited": {
+                "body": "Yutuqlar va bulutli saqlashlar bu o'yin uchun ko'prik orqali sinxronlanmaydi.",
+                "identityFallback": "Steam bu o'yinni o'zining ID'si ostida ishga tushirmaydi, shuning uchun u faqat sizning Steam shaxsingiz bilan ishlaydi.",
+                "title": "Ba'zi Steam funksiyalari cheklangan"
+            },
+            "route": {
+                "bottled": "Bottle'dagi Steam klienti",
+                "label": "Steam marshruti",
+                "missingSymbols": "Qamrab olinmagan: {{symbols}}",
+                "native": "Mahalliy Steam ko'prigi",
+                "reason": {
+                    "failedThisSession": "Ko'prik bu sessiyada avvalroq muvaffaqiyatsiz bo'ldi",
+                    "knownBad": "Ko'prik bilan ishlamasligi ma'lum: {{reason}}",
+                    "noSteamApi": "Bu o'yin Steam API'sidan foydalanmaydi",
+                    "pendingScan": "Yuklab olish tugagandan keyin tekshiriladi",
+                    "scanClean": "Bu o'yin qiladigan har bir Steam chaqiruvi qamrab olingan",
+                    "scanMiss": "Ko'prik bu o'yin qiladigan har bir Steam chaqiruvini qamrab olmaydi",
+                    "seed": "Ko'prik bilan ishlashi ma'lum",
+                    "userForcedBottle": "Siz Windows Steam klientini tanladingiz",
+                    "userForcedBridge": "Siz ko'prikni sinab ko'rishni tanladingiz",
+                    "win64NoShim": "64-bitli o'yin, va bu build'da 64-bitli ko'prik yo'q"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib buning o'rniga uni bottle'dagi Windows Steam klientiga o'rnatadi.",
+                "cancel": "Bekor qilish",
+                "knownBad": "{{title}} mahalliy Steam ko'prigi bilan ishlamasligi ma'lum: {{reason}}.",
+                "scanMiss": "Mahalliy Steam ko'prigi {{title}} qiladigan har bir Steam chaqiruvini qamrab olmaydi. Qamrab olinmagan: {{symbols}}.",
+                "title": "Bu o'yin Windows Steam klientidan foydalanadi",
+                "tryBridge": "Baribir ko'prikni sinab ko'ring",
+                "useBottled": "Bottle'dagi Steam'dan foydalaning",
+                "win64NoShim": "{{title}} 64-bitli o'yin, va GameLib'ning bu build'ida 64-bitli ko'prik yo'q."
+            },
+            "setup": {
+                "missingSymbols": "Ko'prik qamrab olmaydi: {{symbols}}",
+                "redownloadNote": "Zaxira o'yinni yana bottle'dagi Windows Steam klientiga yuklab oladi."
+            }
         },
         "download": {
             "error": {

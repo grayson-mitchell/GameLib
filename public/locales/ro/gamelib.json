@@ -335,7 +335,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib nu a mai primit informații despre configurarea bottle-ului Steam. Este posibil să ruleze în continuare — verifică dacă există o fereastră de instalare Steam, apoi încearcă din nou."
+            "statusPollTimeout": "GameLib nu a mai primit informații despre configurarea bottle-ului Steam. Este posibil să ruleze în continuare — verifică dacă există o fereastră de instalare Steam, apoi încearcă din nou.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam are nevoie să te autentifici. Fereastra sa de autentificare poate fi ascunsă în spatele altor ferestre.",
+                    "otherSession": "Acest joc rulează pe alt computer, iar Steam întreabă dacă ar trebui închis acolo.",
+                    "selfUpdate": "Steam se actualizează singur. Apasă din nou pe Joacă după ce repornește."
+                },
+                "intro": "Clientul Steam pentru Windows nu a pornit încă jocul.",
+                "likelyCauses": "Cauze probabile:",
+                "mostLikely": "Cel mai probabil:",
+                "title": "Se așteaptă Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Se instalează în clientul Steam partajat în bottle. Schimbarea acestui lucru mai târziu înseamnă reinstalarea jocului.",
+                "label": "Folosește în schimb clientul Steam pentru Windows"
+            },
+            "knownBad": {
+                "doesNotRun": "nu funcționează prin pod",
+                "drmWrapped": "protejat prin DRM sub API-ul Steam",
+                "p2pRequired": "necesită multiplayer peer-to-peer",
+                "win64Only": "doar 64 de biți"
+            },
+            "limited": {
+                "body": "Realizările și salvările în cloud nu se sincronizează pentru acest joc prin pod.",
+                "identityFallback": "Steam nu ar rula acest joc sub propriul ID, așa că funcționează doar cu identitatea ta Steam.",
+                "title": "Unele funcții Steam sunt limitate"
+            },
+            "route": {
+                "bottled": "Client Steam în bottle",
+                "label": "Rută Steam",
+                "missingSymbols": "Neacoperit: {{symbols}}",
+                "native": "Pod nativ Steam",
+                "reason": {
+                    "failedThisSession": "Podul a eșuat mai devreme în această sesiune",
+                    "knownBad": "Cunoscut că nu funcționează cu podul: {{reason}}",
+                    "noSteamApi": "Acest joc nu folosește API-ul Steam",
+                    "pendingScan": "Verificat după finalizarea descărcării",
+                    "scanClean": "Fiecare apel Steam efectuat de acest joc este acoperit",
+                    "scanMiss": "Podul nu acoperă fiecare apel Steam efectuat de acest joc",
+                    "seed": "Cunoscut că funcționează cu podul",
+                    "userForcedBottle": "Ai ales clientul Steam pentru Windows",
+                    "userForcedBridge": "Ai ales să încerci podul",
+                    "win64NoShim": "Joc pe 64 de biți, iar această versiune nu are un pod pe 64 de biți"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib îl va instala în schimb în clientul Steam pentru Windows în bottle.",
+                "cancel": "Anulează",
+                "knownBad": "Se știe că {{title}} nu funcționează cu podul nativ Steam: {{reason}}.",
+                "scanMiss": "Podul nativ Steam nu acoperă fiecare apel Steam pe care îl face {{title}}. Neacoperit: {{symbols}}.",
+                "title": "Acest joc va folosi clientul Steam pentru Windows",
+                "tryBridge": "Încearcă podul oricum",
+                "useBottled": "Folosește Steam în bottle",
+                "win64NoShim": "{{title}} este un joc pe 64 de biți, iar această versiune de GameLib nu are un pod pe 64 de biți."
+            },
+            "setup": {
+                "missingSymbols": "Podul nu acoperă: {{symbols}}",
+                "redownloadNote": "Revenirea redescarcă jocul în clientul Steam pentru Windows în bottle."
+            }
         },
         "download": {
             "error": {

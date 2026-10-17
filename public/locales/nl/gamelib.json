@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib heeft geen update meer ontvangen over de Steam-bottle-installatie. Deze draait mogelijk nog — controleer of er een Steam-installatievenster is en probeer het opnieuw."
+            "statusPollTimeout": "GameLib heeft geen update meer ontvangen over de Steam-bottle-installatie. Deze draait mogelijk nog — controleer of er een Steam-installatievenster is en probeer het opnieuw.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam heeft nodig dat je inlogt. Het inlogvenster kan verborgen zijn achter andere vensters.",
+                    "otherSession": "Dit spel draait op een andere computer, en Steam vraagt of het daar gesloten moet worden.",
+                    "selfUpdate": "Steam werkt zichzelf bij. Druk opnieuw op Spelen zodra het opnieuw is opgestart."
+                },
+                "intro": "De Windows Steam-client is het spel nog niet gestart.",
+                "likelyCauses": "Waarschijnlijke oorzaken:",
+                "mostLikely": "Meest waarschijnlijk:",
+                "title": "Wachten op Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Wordt geïnstalleerd in de gedeelde Steam-client in bottle. Dit later wijzigen betekent het spel opnieuw installeren.",
+                "label": "Gebruik in plaats daarvan de Windows Steam-client"
+            },
+            "knownBad": {
+                "doesNotRun": "werkt niet via de brug",
+                "drmWrapped": "beschermd met DRM onder de API van Steam",
+                "p2pRequired": "vereist peer-to-peer multiplayer",
+                "win64Only": "alleen 64-bit"
+            },
+            "limited": {
+                "body": "Prestaties en cloudopslagen worden voor dit spel niet gesynchroniseerd via de brug.",
+                "identityFallback": "Steam zou dit spel niet onder zijn eigen ID uitvoeren, dus het werkt alleen met jouw Steam-identiteit.",
+                "title": "Sommige Steam-functies zijn beperkt"
+            },
+            "route": {
+                "bottled": "Steam-client in bottle",
+                "label": "Steam-route",
+                "missingSymbols": "Niet gedekt: {{symbols}}",
+                "native": "Native Steam-brug",
+                "reason": {
+                    "failedThisSession": "De brug is eerder deze sessie mislukt",
+                    "knownBad": "Bekend om niet met de brug te werken: {{reason}}",
+                    "noSteamApi": "Dit spel gebruikt de API van Steam niet",
+                    "pendingScan": "Gecontroleerd nadat de download is voltooid",
+                    "scanClean": "Elke Steam-aanroep die dit spel doet, wordt gedekt",
+                    "scanMiss": "De brug dekt niet elke Steam-aanroep die dit spel doet",
+                    "seed": "Bekend om met de brug te werken",
+                    "userForcedBottle": "Je hebt de Windows Steam-client gekozen",
+                    "userForcedBridge": "Je hebt ervoor gekozen de brug te proberen",
+                    "win64NoShim": "64-bit spel, en deze build heeft geen 64-bit brug"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib installeert het in plaats daarvan in de Windows Steam-client in bottle.",
+                "cancel": "Annuleren",
+                "knownBad": "{{title}} staat bekend om niet te werken met de native Steam-brug: {{reason}}.",
+                "scanMiss": "De native Steam-brug dekt niet elke Steam-aanroep die {{title}} doet. Niet gedekt: {{symbols}}.",
+                "title": "Dit spel gebruikt de Windows Steam-client",
+                "tryBridge": "Probeer de brug toch",
+                "useBottled": "Gebruik Steam in bottle",
+                "win64NoShim": "{{title}} is een 64-bit spel, en deze build van GameLib heeft geen 64-bit brug."
+            },
+            "setup": {
+                "missingSymbols": "De brug dekt niet: {{symbols}}",
+                "redownloadNote": "De terugval downloadt het spel opnieuw naar de Windows Steam-client in bottle."
+            }
         },
         "download": {
             "error": {

@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib berhenti menerima kabar tentang pengaturan bottle Steam. Proses ini mungkin masih berjalan — periksa jendela installer Steam, lalu coba lagi."
+            "statusPollTimeout": "GameLib berhenti menerima kabar tentang pengaturan bottle Steam. Proses ini mungkin masih berjalan — periksa jendela installer Steam, lalu coba lagi.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam membutuhkan Anda untuk masuk. Jendela masuknya mungkin tersembunyi di balik jendela lain.",
+                    "otherSession": "Game ini berjalan di komputer lain, dan Steam bertanya apakah harus menutupnya di sana.",
+                    "selfUpdate": "Steam sedang memperbarui dirinya sendiri. Tekan Main lagi setelah dimulai ulang."
+                },
+                "intro": "Klien Steam Windows belum memulai game.",
+                "likelyCauses": "Kemungkinan penyebab:",
+                "mostLikely": "Paling mungkin:",
+                "title": "Menunggu Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Terpasang ke dalam klien Steam bersama dalam bottle. Mengubah ini nanti berarti menginstal ulang game.",
+                "label": "Gunakan klien Steam Windows sebagai gantinya"
+            },
+            "knownBad": {
+                "doesNotRun": "tidak berjalan melalui jembatan",
+                "drmWrapped": "dilindungi oleh DRM di bawah API Steam",
+                "p2pRequired": "membutuhkan multiplayer peer-to-peer",
+                "win64Only": "hanya 64-bit"
+            },
+            "limited": {
+                "body": "Pencapaian dan penyimpanan cloud tidak disinkronkan untuk game ini melalui jembatan.",
+                "identityFallback": "Steam tidak akan menjalankan game ini dengan ID-nya sendiri, jadi game ini hanya berjalan dengan identitas Steam Anda.",
+                "title": "Beberapa fitur Steam dibatasi"
+            },
+            "route": {
+                "bottled": "Klien Steam dalam bottle",
+                "label": "Rute Steam",
+                "missingSymbols": "Tidak tercakup: {{symbols}}",
+                "native": "Jembatan Steam native",
+                "reason": {
+                    "failedThisSession": "Jembatan gagal sebelumnya dalam sesi ini",
+                    "knownBad": "Diketahui tidak berfungsi dengan jembatan: {{reason}}",
+                    "noSteamApi": "Game ini tidak menggunakan API Steam",
+                    "pendingScan": "Diperiksa setelah unduhan selesai",
+                    "scanClean": "Setiap panggilan Steam yang dilakukan game ini tercakup",
+                    "scanMiss": "Jembatan tidak mencakup setiap panggilan Steam yang dilakukan game ini",
+                    "seed": "Diketahui berfungsi dengan jembatan",
+                    "userForcedBottle": "Anda memilih klien Steam Windows",
+                    "userForcedBridge": "Anda memilih untuk mencoba jembatan",
+                    "win64NoShim": "Game 64-bit, dan build ini tidak memiliki jembatan 64-bit"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib akan menginstalnya sebagai gantinya ke klien Steam Windows dalam bottle.",
+                "cancel": "Batalkan",
+                "knownBad": "{{title}} diketahui tidak berfungsi dengan jembatan Steam native: {{reason}}.",
+                "scanMiss": "Jembatan Steam native tidak mencakup setiap panggilan Steam yang dilakukan {{title}}. Tidak tercakup: {{symbols}}.",
+                "title": "Game ini akan menggunakan klien Steam Windows",
+                "tryBridge": "Coba jembatan tetap saja",
+                "useBottled": "Gunakan Steam dalam bottle",
+                "win64NoShim": "{{title}} adalah game 64-bit, dan build GameLib ini tidak memiliki jembatan 64-bit."
+            },
+            "setup": {
+                "missingSymbols": "Jembatan tidak mencakup: {{symbols}}",
+                "redownloadNote": "Fallback mengunduh ulang game ke klien Steam Windows dalam bottle."
+            }
         },
         "download": {
             "error": {

@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib-ek Steam bottle-aren konfigurazioari buruzko erantzuna jasotzeari utzi dio. Oraindik exekutatzen ari daiteke — begiratu Steam instalatzailearen leiho bat dagoen, eta saiatu berriro."
+            "statusPollTimeout": "GameLib-ek Steam bottle-aren konfigurazioari buruzko erantzuna jasotzeari utzi dio. Oraindik exekutatzen ari daiteke — begiratu Steam instalatzailearen leiho bat dagoen, eta saiatu berriro.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam-ek saioa hastea behar du. Bere saio-hasiera leihoa beste leiho batzuen atzean ezkutatuta egon daiteke.",
+                    "otherSession": "Joko hau beste ordenagailu batean exekutatzen ari da, eta Steam-ek han itxi behar den galdetzen du.",
+                    "selfUpdate": "Steam bere burua eguneratzen ari da. Sakatu Jolastu berriro berrabiarazi ondoren."
+                },
+                "intro": "Windows-eko Steam bezeroak oraindik ez du jokoa abiarazi.",
+                "likelyCauses": "Arrazoi probableak:",
+                "mostLikely": "Probableena:",
+                "title": "Steam itxaroten…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Partekatutako Steam bezero bottle-an instalatzen da. Hau geroago aldatzeak jokoa berriro instalatzea esan nahi du.",
+                "label": "Erabili Windows-eko Steam bezeroa horren ordez"
+            },
+            "knownBad": {
+                "doesNotRun": "ez du zubitik funtzionatzen",
+                "drmWrapped": "Steam-en APIaren azpian DRM bidez babestuta",
+                "p2pRequired": "peer-to-peer multijokalaria behar du",
+                "win64Only": "64 bit soilik"
+            },
+            "limited": {
+                "body": "Lorpenak eta hodeiko gordetzeak ez dira sinkronizatzen joko honetarako zubiaren bidez.",
+                "identityFallback": "Steam-ek ez luke joko hau bere ID-arekin exekutatuko, beraz zure Steam identitatearekin bakarrik funtzionatzen du.",
+                "title": "Steam-en zenbait eginbide mugatuta daude"
+            },
+            "route": {
+                "bottled": "Steam bezeroa bottle-an",
+                "label": "Steam bidea",
+                "missingSymbols": "Estali gabe: {{symbols}}",
+                "native": "Steam zubi natiboa",
+                "reason": {
+                    "failedThisSession": "Zubiak huts egin zuen saio honetan lehenago",
+                    "knownBad": "Zubiarekin ez duela funtzionatzen jakina da: {{reason}}",
+                    "noSteamApi": "Joko honek ez du Steam-en APIa erabiltzen",
+                    "pendingScan": "Deskarga amaitu ondoren egiaztatzen da",
+                    "scanClean": "Joko honek egiten duen Steam dei guztiak estalita daude",
+                    "scanMiss": "Zubiak ez ditu joko honek egiten dituen Steam dei guztiak estaltzen",
+                    "seed": "Zubiarekin funtzionatzen duela jakina da",
+                    "userForcedBottle": "Windows-eko Steam bezeroa aukeratu duzu",
+                    "userForcedBridge": "Zubia probatzea aukeratu duzu",
+                    "win64NoShim": "64 biteko jokoa da, eta bertsio honek ez du 64 biteko zubirik"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib-ek horren ordez Windows-eko Steam bezero bottle-an instalatuko du.",
+                "cancel": "Ezeztatu",
+                "knownBad": "Jakina da {{title}} ez dela Steam zubi natiboarekin funtzionatzen: {{reason}}.",
+                "scanMiss": "Steam zubi natiboak ez ditu {{title}}-k egiten dituen Steam dei guztiak estaltzen. Estali gabe: {{symbols}}.",
+                "title": "Joko honek Windows-eko Steam bezeroa erabiliko du",
+                "tryBridge": "Probatu zubia hala ere",
+                "useBottled": "Erabili Steam bottle-an",
+                "win64NoShim": "{{title}} 64 biteko jokoa da, eta GameLib-en bertsio honek ez du 64 biteko zubirik."
+            },
+            "setup": {
+                "missingSymbols": "Zubiak ez du estaltzen: {{symbols}}",
+                "redownloadNote": "Atzera egiteak jokoa berriro deskargatzen du Windows-eko Steam bezero bottle-an."
+            }
         },
         "download": {
             "error": {

@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib holdt op med at høre tilbage om opsætningen af Steam-bottlen. Den kører muligvis stadig — kig efter et Steam-installationsvindue, og prøv så igen."
+            "statusPollTimeout": "GameLib holdt op med at høre tilbage om opsætningen af Steam-bottlen. Den kører muligvis stadig — kig efter et Steam-installationsvindue, og prøv så igen.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam kræver, at du logger ind. Dets login-vindue kan være skjult bag andre vinduer.",
+                    "otherSession": "Dette spil kører på en anden computer, og Steam spørger, om det skal lukkes der.",
+                    "selfUpdate": "Steam opdaterer sig selv. Tryk på Afspil igen, når det er genstartet."
+                },
+                "intro": "Windows Steam-klienten har endnu ikke startet spillet.",
+                "likelyCauses": "Sandsynlige årsager:",
+                "mostLikely": "Mest sandsynligt:",
+                "title": "Venter på Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Installeres i den delte Steam-klient i bottle. At ændre dette senere betyder, at spillet skal geninstalleres.",
+                "label": "Brug Windows Steam-klienten i stedet"
+            },
+            "knownBad": {
+                "doesNotRun": "kører ikke gennem broen",
+                "drmWrapped": "beskyttet af DRM under Steams API",
+                "p2pRequired": "kræver peer-to-peer multiplayer",
+                "win64Only": "kun 64-bit"
+            },
+            "limited": {
+                "body": "Præstationer og cloud-gemte data synkroniseres ikke for dette spil via broen.",
+                "identityFallback": "Steam vil ikke køre dette spil under sit eget ID, så det kører kun med din Steam-identitet.",
+                "title": "Nogle Steam-funktioner er begrænsede"
+            },
+            "route": {
+                "bottled": "Steam-klient i bottle",
+                "label": "Steam-rute",
+                "missingSymbols": "Ikke dækket: {{symbols}}",
+                "native": "Native Steam-bro",
+                "reason": {
+                    "failedThisSession": "Broen fejlede tidligere i denne session",
+                    "knownBad": "Kendt for ikke at virke med broen: {{reason}}",
+                    "noSteamApi": "Dette spil bruger ikke Steams API",
+                    "pendingScan": "Tjekkes, når downloadet er færdigt",
+                    "scanClean": "Alle Steam-kald, dette spil foretager, er dækket",
+                    "scanMiss": "Broen dækker ikke alle Steam-kald, dette spil foretager",
+                    "seed": "Kendt for at virke med broen",
+                    "userForcedBottle": "Du valgte Windows Steam-klienten",
+                    "userForcedBridge": "Du valgte at prøve broen",
+                    "win64NoShim": "64-bit spil, og denne build har ingen 64-bit bro"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib installerer det i stedet i Windows Steam-klienten i bottle.",
+                "cancel": "Afbryd",
+                "knownBad": "{{title}} er kendt for ikke at virke med den native Steam-bro: {{reason}}.",
+                "scanMiss": "Den native Steam-bro dækker ikke alle Steam-kald, {{title}} foretager. Ikke dækket: {{symbols}}.",
+                "title": "Dette spil vil bruge Windows Steam-klienten",
+                "tryBridge": "Prøv broen alligevel",
+                "useBottled": "Brug Steam i bottle",
+                "win64NoShim": "{{title}} er et 64-bit spil, og denne build af GameLib har ingen 64-bit bro."
+            },
+            "setup": {
+                "missingSymbols": "Broen dækker ikke: {{symbols}}",
+                "redownloadNote": "Tilbagefald downloader spillet igen til Windows Steam-klienten i bottle."
+            }
         },
         "download": {
             "error": {

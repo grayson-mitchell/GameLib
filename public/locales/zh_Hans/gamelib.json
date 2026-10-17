@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib 未能收到 Steam 容器设置的响应。它可能仍在运行——请检查是否有 Steam 安装程序窗口，然后重试。"
+            "statusPollTimeout": "GameLib 未能收到 Steam 容器设置的响应。它可能仍在运行——请检查是否有 Steam 安装程序窗口，然后重试。",
+            "waiting": {
+                "cause": {
+                    "login": "Steam 需要您登录。其登录窗口可能被其他窗口遮挡。",
+                    "otherSession": "此游戏正在另一台电脑上运行，Steam 正在询问是否应在那里关闭它。",
+                    "selfUpdate": "Steam 正在自我更新。重启后请再次按下游玩。"
+                },
+                "intro": "Windows 版 Steam 客户端尚未启动游戏。",
+                "likelyCauses": "可能的原因：",
+                "mostLikely": "最有可能：",
+                "title": "正在等待 Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "安装到共享的容器化 Steam 客户端中。之后更改此设置意味着需要重新安装游戏。",
+                "label": "改用 Windows 版 Steam 客户端"
+            },
+            "knownBad": {
+                "doesNotRun": "无法通过桥接运行",
+                "drmWrapped": "受 Steam API 之下的 DRM 保护",
+                "p2pRequired": "需要点对点多人游戏",
+                "win64Only": "仅限 64 位"
+            },
+            "limited": {
+                "body": "成就和云存档不会通过桥接为此游戏同步。",
+                "identityFallback": "Steam 不会以其自身 ID 运行此游戏，因此它仅以您的 Steam 身份运行。",
+                "title": "部分 Steam 功能受限"
+            },
+            "route": {
+                "bottled": "容器化的 Steam 客户端",
+                "label": "Steam 路线",
+                "missingSymbols": "未覆盖：{{symbols}}",
+                "native": "原生 Steam 桥接",
+                "reason": {
+                    "failedThisSession": "桥接此前在本次会话中已失败",
+                    "knownBad": "已知无法与桥接配合使用：{{reason}}",
+                    "noSteamApi": "此游戏不使用 Steam 的 API",
+                    "pendingScan": "在下载完成后进行检查",
+                    "scanClean": "此游戏发出的每个 Steam 调用都已覆盖",
+                    "scanMiss": "桥接未覆盖此游戏发出的每个 Steam 调用",
+                    "seed": "已知可与桥接配合使用",
+                    "userForcedBottle": "您选择了 Windows 版 Steam 客户端",
+                    "userForcedBridge": "您选择尝试桥接",
+                    "win64NoShim": "64 位游戏，此版本没有 64 位桥接"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib 将改为把它安装到容器化的 Windows 版 Steam 客户端中。",
+                "cancel": "取消",
+                "knownBad": "已知 {{title}} 无法与原生 Steam 桥接配合使用：{{reason}}。",
+                "scanMiss": "原生 Steam 桥接未覆盖 {{title}} 发出的每个 Steam 调用。未覆盖：{{symbols}}。",
+                "title": "此游戏将使用 Windows 版 Steam 客户端",
+                "tryBridge": "仍然尝试桥接",
+                "useBottled": "使用容器化的 Steam",
+                "win64NoShim": "{{title}} 是 64 位游戏，此 GameLib 版本没有 64 位桥接。"
+            },
+            "setup": {
+                "missingSymbols": "桥接未覆盖：{{symbols}}",
+                "redownloadNote": "回退会将游戏重新下载到容器化的 Windows 版 Steam 客户端中。"
+            }
         },
         "download": {
             "error": {

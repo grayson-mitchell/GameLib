@@ -324,6 +324,55 @@
         "checkingSteamInstallOptions": "Paigaldusvalikute kontrollimine…"
     },
     "steam": {
+        "bridge": {
+            "forceBottle": {
+                "help": "Paigaldub jagatud Steami kliendisse pudelis. Selle hilisem muutmine tähendab mängu uuesti paigaldamist.",
+                "label": "Kasuta selle asemel Windowsi Steami klienti"
+            },
+            "knownBad": {
+                "doesNotRun": "ei tööta silla kaudu",
+                "drmWrapped": "kaitstud DRM-iga Steami API all",
+                "p2pRequired": "vajab peer-to-peer mitmikmängu",
+                "win64Only": "ainult 64-bitine"
+            },
+            "limited": {
+                "body": "Saavutused ja pilvesalvestused ei sünkroonu selle mängu jaoks silla kaudu.",
+                "identityFallback": "Steam ei käivitaks seda mängu oma ID all, seega töötab see ainult sinu Steami identiteediga.",
+                "title": "Mõned Steami funktsioonid on piiratud"
+            },
+            "route": {
+                "bottled": "Steami klient pudelis",
+                "label": "Steami marsruut",
+                "missingSymbols": "Pole kaetud: {{symbols}}",
+                "native": "Steami natiivne sild",
+                "reason": {
+                    "failedThisSession": "Sild ebaõnnestus selles seansis varem",
+                    "knownBad": "Teadaolevalt ei tööta sillaga: {{reason}}",
+                    "noSteamApi": "See mäng ei kasuta Steami API-t",
+                    "pendingScan": "Kontrollitakse pärast allalaadimise lõppu",
+                    "scanClean": "Iga selle mängu tehtud Steami kõne on kaetud",
+                    "scanMiss": "Sild ei kata kõiki selle mängu tehtud Steami kõnesid",
+                    "seed": "Teadaolevalt töötab sillaga",
+                    "userForcedBottle": "Valisid Windowsi Steami kliendi",
+                    "userForcedBridge": "Valisid proovida silda",
+                    "win64NoShim": "64-bitine mäng ja sellel versioonil pole 64-bitist silda"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib paigaldab selle hoopis Windowsi Steami kliendisse pudelis.",
+                "cancel": "Tühista",
+                "knownBad": "Teadaolevalt ei tööta {{title}} Steami natiivse sillaga: {{reason}}.",
+                "scanMiss": "Steami natiivne sild ei kata kõiki Steami kõnesid, mida {{title}} teeb. Pole kaetud: {{symbols}}.",
+                "title": "See mäng kasutab Windowsi Steami klienti",
+                "tryBridge": "Proovi silda ikkagi",
+                "useBottled": "Kasuta Steami pudelis",
+                "win64NoShim": "{{title}} on 64-bitine mäng ja sellel GameLibi versioonil pole 64-bitist silda."
+            },
+            "setup": {
+                "missingSymbols": "Sild ei kata: {{symbols}}",
+                "redownloadNote": "Tagasilangemine laadib mängu uuesti alla Windowsi Steami kliendisse pudelis."
+            }
+        },
         "download": {
             "error": {
                 "decodeFailed": "Allalaaditud mänguandmeid ei õnnestunud lahti pakkida. See ei ole võrguprobleem.",
@@ -360,7 +409,18 @@
             "removeAllCopiesLabel": "Eemalda kõik koopiad…"
         },
         "bottle": {
-            "statusPollTimeout": "GameLib lõpetas Steami pudeli seadistuse kohta teadete ootamise. See võib siiski töötada — kontrolli, kas Steami installiakent on näha, ja proovi siis uuesti."
+            "statusPollTimeout": "GameLib lõpetas Steami pudeli seadistuse kohta teadete ootamise. See võib siiski töötada — kontrolli, kas Steami installiakent on näha, ja proovi siis uuesti.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam vajab sinu sisselogimist. Selle sisselogimisaken võib olla peidetud teiste akende taha.",
+                    "otherSession": "See mäng töötab teises arvutis ja Steam küsib, kas see tuleks seal sulgeda.",
+                    "selfUpdate": "Steam uuendab iseennast. Vajuta Mängi uuesti pärast taaskäivitumist."
+                },
+                "intro": "Windowsi Steami klient pole veel mängu käivitanud.",
+                "likelyCauses": "Tõenäolised põhjused:",
+                "mostLikely": "Kõige tõenäolisem:",
+                "title": "Ootab Steami…"
+            }
         }
     },
     "steamgriddb": {

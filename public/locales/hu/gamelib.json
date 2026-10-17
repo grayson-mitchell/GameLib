@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "A GameLib nem kapott több visszajelzést a Steam palack beállításáról. Lehet, hogy még fut — ellenőrizd, van-e Steam telepítő ablak, majd próbáld újra."
+            "statusPollTimeout": "A GameLib nem kapott több visszajelzést a Steam palack beállításáról. Lehet, hogy még fut — ellenőrizd, van-e Steam telepítő ablak, majd próbáld újra.",
+            "waiting": {
+                "cause": {
+                    "login": "A Steamnek szüksége van arra, hogy bejelentkezzen. A bejelentkezési ablaka más ablakok mögé rejtőzhet.",
+                    "otherSession": "Ez a játék egy másik számítógépen fut, és a Steam megkérdezi, hogy ott be kell-e zárni.",
+                    "selfUpdate": "A Steam frissíti önmagát. Nyomja meg újra a Játékot az újraindulás után."
+                },
+                "intro": "A Windows Steam kliens még nem indította el a játékot.",
+                "likelyCauses": "Valószínű okok:",
+                "mostLikely": "Legvalószínűbb:",
+                "title": "Várakozás a Steamra…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "A megosztott bottle-os Steam kliensbe települ. Ennek későbbi megváltoztatása a játék újratelepítését jelenti.",
+                "label": "Ehelyett használja a Windows Steam kliensét"
+            },
+            "knownBad": {
+                "doesNotRun": "nem fut a hídon keresztül",
+                "drmWrapped": "DRM-mel védett a Steam API alatt",
+                "p2pRequired": "peer-to-peer többjátékos módot igényel",
+                "win64Only": "csak 64 bites"
+            },
+            "limited": {
+                "body": "A teljesítmények és a felhőmentések nem szinkronizálódnak ehhez a játékhoz a hídon keresztül.",
+                "identityFallback": "A Steam nem futtatná ezt a játékot a saját ID-ja alatt, így csak az Ön Steam-identitásával fut.",
+                "title": "Néhány Steam-funkció korlátozott"
+            },
+            "route": {
+                "bottled": "Steam kliens bottle-ban",
+                "label": "Steam útvonal",
+                "missingSymbols": "Nem lefedett: {{symbols}}",
+                "native": "Natív Steam híd",
+                "reason": {
+                    "failedThisSession": "A híd korábban ebben a munkamenetben meghiúsult",
+                    "knownBad": "Ismert, hogy nem működik a híddal: {{reason}}",
+                    "noSteamApi": "Ez a játék nem használja a Steam API-ját",
+                    "pendingScan": "A letöltés befejezése után ellenőrizve",
+                    "scanClean": "Ennek a játéknak minden Steam-hívása lefedett",
+                    "scanMiss": "A híd nem fedi le ennek a játéknak minden Steam-hívását",
+                    "seed": "Ismert, hogy működik a híddal",
+                    "userForcedBottle": "A Windows Steam kliensét választotta",
+                    "userForcedBridge": "Úgy döntött, kipróbálja a hidat",
+                    "win64NoShim": "64 bites játék, és ebben a buildben nincs 64 bites híd"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "A GameLib ehelyett a bottle-os Windows Steam kliensbe telepíti.",
+                "cancel": "Mégse",
+                "knownBad": "Ismert, hogy a(z) {{title}} nem működik a natív Steam híddal: {{reason}}.",
+                "scanMiss": "A natív Steam híd nem fedi le minden Steam-hívását, amelyet a(z) {{title}} végez. Nem lefedett: {{symbols}}.",
+                "title": "Ez a játék a Windows Steam kliensét fogja használni",
+                "tryBridge": "A híd kipróbálása mindenképp",
+                "useBottled": "Steam használata bottle-ban",
+                "win64NoShim": "A(z) {{title}} egy 64 bites játék, és a GameLib ezen buildjében nincs 64 bites híd."
+            },
+            "setup": {
+                "missingSymbols": "A híd nem fedi le: {{symbols}}",
+                "redownloadNote": "A visszaesés újra letölti a játékot a bottle-os Windows Steam kliensbe."
+            }
         },
         "download": {
             "error": {

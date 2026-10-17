@@ -259,7 +259,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib n'a plus reçu de réponse concernant la configuration de la bouteille Steam. Elle est peut-être encore en cours d'exécution — vérifiez la présence d'une fenêtre d'installation Steam, puis réessayez."
+            "statusPollTimeout": "GameLib n'a plus reçu de réponse concernant la configuration de la bouteille Steam. Elle est peut-être encore en cours d'exécution — vérifiez la présence d'une fenêtre d'installation Steam, puis réessayez.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam a besoin que vous vous connectiez. Sa fenêtre de connexion peut être cachée derrière d'autres fenêtres.",
+                    "otherSession": "Ce jeu fonctionne sur un autre ordinateur, et Steam demande s'il faut le fermer là-bas.",
+                    "selfUpdate": "Steam se met à jour lui-même. Appuyez à nouveau sur Jouer une fois qu'il a redémarré."
+                },
+                "intro": "Le client Steam Windows n'a pas encore démarré le jeu.",
+                "likelyCauses": "Causes probables :",
+                "mostLikely": "Le plus probable :",
+                "title": "En attente de Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "S'installe dans le client Steam en bouteille partagé. Changer cela plus tard signifie réinstaller le jeu.",
+                "label": "Utilisez plutôt le client Steam Windows"
+            },
+            "knownBad": {
+                "doesNotRun": "ne fonctionne pas via le pont",
+                "drmWrapped": "protégé par DRM sous l'API de Steam",
+                "p2pRequired": "nécessite un multijoueur poste à poste",
+                "win64Only": "64 bits uniquement"
+            },
+            "limited": {
+                "body": "Les succès et les sauvegardes cloud ne se synchronisent pas pour ce jeu via le pont.",
+                "identityFallback": "Steam ne lancerait pas ce jeu sous son propre ID, donc il fonctionne uniquement avec votre identité Steam.",
+                "title": "Certaines fonctionnalités Steam sont limitées"
+            },
+            "route": {
+                "bottled": "Client Steam en bouteille",
+                "label": "Route Steam",
+                "missingSymbols": "Non couvert : {{symbols}}",
+                "native": "Pont natif Steam",
+                "reason": {
+                    "failedThisSession": "Le pont a échoué plus tôt dans cette session",
+                    "knownBad": "Connu pour ne pas fonctionner avec le pont : {{reason}}",
+                    "noSteamApi": "Ce jeu n'utilise pas l'API de Steam",
+                    "pendingScan": "Vérifié une fois le téléchargement terminé",
+                    "scanClean": "Chaque appel Steam effectué par ce jeu est couvert",
+                    "scanMiss": "Le pont ne couvre pas chaque appel Steam effectué par ce jeu",
+                    "seed": "Connu pour fonctionner avec le pont",
+                    "userForcedBottle": "Vous avez choisi le client Steam Windows",
+                    "userForcedBridge": "Vous avez choisi d'essayer le pont",
+                    "win64NoShim": "Jeu 64 bits, et cette version n'a pas de pont 64 bits"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib l'installera plutôt dans le client Steam Windows en bouteille.",
+                "cancel": "Annuler",
+                "knownBad": "{{title}} est connu pour ne pas fonctionner avec le pont natif Steam : {{reason}}.",
+                "scanMiss": "Le pont natif Steam ne couvre pas chaque appel Steam effectué par {{title}}. Non couvert : {{symbols}}.",
+                "title": "Ce jeu utilisera le client Steam Windows",
+                "tryBridge": "Essayer le pont quand même",
+                "useBottled": "Utiliser Steam en bouteille",
+                "win64NoShim": "{{title}} est un jeu 64 bits, et cette version de GameLib n'a pas de pont 64 bits."
+            },
+            "setup": {
+                "missingSymbols": "Le pont ne couvre pas : {{symbols}}",
+                "redownloadNote": "Le repli retélécharge le jeu dans le client Steam Windows en bouteille."
+            }
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib gère une seule bouteille CrossOver partagée pour Steam. Nommer une bouteille distincte par jeu n'est pas encore pris en charge.",

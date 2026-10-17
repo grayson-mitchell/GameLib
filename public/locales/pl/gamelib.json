@@ -342,7 +342,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib przestał otrzymywać odpowiedzi o konfiguracji bottle Steam. Proces może nadal działać — sprawdź, czy nie pojawiło się okno instalatora Steam, a następnie spróbuj ponownie."
+            "statusPollTimeout": "GameLib przestał otrzymywać odpowiedzi o konfiguracji bottle Steam. Proces może nadal działać — sprawdź, czy nie pojawiło się okno instalatora Steam, a następnie spróbuj ponownie.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam wymaga zalogowania. Jego okno logowania może być ukryte za innymi oknami.",
+                    "otherSession": "Ta gra działa na innym komputerze, a Steam pyta, czy należy ją tam zamknąć.",
+                    "selfUpdate": "Steam aktualizuje się samodzielnie. Naciśnij ponownie Graj po ponownym uruchomieniu."
+                },
+                "intro": "Klient Steam dla systemu Windows jeszcze nie uruchomił gry.",
+                "likelyCauses": "Prawdopodobne przyczyny:",
+                "mostLikely": "Najbardziej prawdopodobne:",
+                "title": "Oczekiwanie na Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Instaluje się we wspólnym kliencie Steam w bottle. Zmiana tego później oznacza ponowną instalację gry.",
+                "label": "Użyj zamiast tego klienta Steam dla systemu Windows"
+            },
+            "knownBad": {
+                "doesNotRun": "nie działa przez most",
+                "drmWrapped": "chronione DRM poniżej API Steam",
+                "p2pRequired": "wymaga trybu wieloosobowego peer-to-peer",
+                "win64Only": "tylko 64-bitowe"
+            },
+            "limited": {
+                "body": "Osiągnięcia i zapisy w chmurze nie synchronizują się dla tej gry przez most.",
+                "identityFallback": "Steam nie uruchomiłby tej gry pod własnym ID, więc działa tylko z Twoją tożsamością Steam.",
+                "title": "Niektóre funkcje Steam są ograniczone"
+            },
+            "route": {
+                "bottled": "Klient Steam w bottle",
+                "label": "Trasa Steam",
+                "missingSymbols": "Nieobjęte: {{symbols}}",
+                "native": "Natywny most Steam",
+                "reason": {
+                    "failedThisSession": "Most zawiódł wcześniej w tej sesji",
+                    "knownBad": "Wiadomo, że nie działa z mostem: {{reason}}",
+                    "noSteamApi": "Ta gra nie używa API Steam",
+                    "pendingScan": "Sprawdzane po zakończeniu pobierania",
+                    "scanClean": "Każde wywołanie Steam wykonywane przez tę grę jest objęte",
+                    "scanMiss": "Most nie obejmuje każdego wywołania Steam wykonywanego przez tę grę",
+                    "seed": "Wiadomo, że działa z mostem",
+                    "userForcedBottle": "Wybrałeś klienta Steam dla systemu Windows",
+                    "userForcedBridge": "Wybrałeś wypróbowanie mostu",
+                    "win64NoShim": "Gra 64-bitowa, a ta wersja nie ma mostu 64-bitowego"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib zainstaluje ją zamiast tego w kliencie Steam dla systemu Windows w bottle.",
+                "cancel": "Anuluj",
+                "knownBad": "Wiadomo, że {{title}} nie działa z natywnym mostem Steam: {{reason}}.",
+                "scanMiss": "Natywny most Steam nie obejmuje każdego wywołania Steam wykonywanego przez {{title}}. Nieobjęte: {{symbols}}.",
+                "title": "Ta gra będzie używać klienta Steam dla systemu Windows",
+                "tryBridge": "Mimo to wypróbuj most",
+                "useBottled": "Użyj Steam w bottle",
+                "win64NoShim": "{{title}} to gra 64-bitowa, a ta wersja GameLib nie ma mostu 64-bitowego."
+            },
+            "setup": {
+                "missingSymbols": "Most nie obejmuje: {{symbols}}",
+                "redownloadNote": "Powrót ponownie pobiera grę do klienta Steam dla systemu Windows w bottle."
+            }
         },
         "download": {
             "error": {

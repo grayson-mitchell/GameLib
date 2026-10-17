@@ -335,7 +335,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib ha deixat de rebre resposta sobre la configuració de la bottle de Steam. Pot ser que encara s'estigui executant — comprova si hi ha una finestra de l'instal·lador de Steam i torna-ho a provar."
+            "statusPollTimeout": "GameLib ha deixat de rebre resposta sobre la configuració de la bottle de Steam. Pot ser que encara s'estigui executant — comprova si hi ha una finestra de l'instal·lador de Steam i torna-ho a provar.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam necessita que inicieu sessió. La seva finestra d'inici de sessió pot estar amagada darrere d'altres finestres.",
+                    "otherSession": "Aquest joc s'està executant en un altre ordinador, i Steam pregunta si s'ha de tancar allà.",
+                    "selfUpdate": "Steam s'està actualitzant. Torneu a prémer Reprodueix un cop s'hagi reiniciat."
+                },
+                "intro": "El client de Steam de Windows encara no ha iniciat el joc.",
+                "likelyCauses": "Causes probables:",
+                "mostLikely": "Més probable:",
+                "title": "Esperant Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "S'instal·la al client de Steam en bottle compartit. Canviar-ho més tard significa reinstal·lar el joc.",
+                "label": "Utilitza el client de Steam de Windows en el seu lloc"
+            },
+            "knownBad": {
+                "doesNotRun": "no funciona a través del pont",
+                "drmWrapped": "protegit amb DRM per sota de l'API de Steam",
+                "p2pRequired": "necessita multijugador d'igual a igual",
+                "win64Only": "només 64 bits"
+            },
+            "limited": {
+                "body": "Els assoliments i els desaments al núvol no se sincronitzen per a aquest joc mitjançant el pont.",
+                "identityFallback": "Steam no executarà aquest joc amb el seu propi ID, així que només funciona amb la vostra identitat de Steam.",
+                "title": "Algunes funcions de Steam són limitades"
+            },
+            "route": {
+                "bottled": "Client de Steam en bottle",
+                "label": "Ruta de Steam",
+                "missingSymbols": "No cobert: {{symbols}}",
+                "native": "Pont natiu de Steam",
+                "reason": {
+                    "failedThisSession": "El pont ha fallat abans en aquesta sessió",
+                    "knownBad": "Se sap que no funciona amb el pont: {{reason}}",
+                    "noSteamApi": "Aquest joc no utilitza l'API de Steam",
+                    "pendingScan": "Es comprova després que acabi la baixada",
+                    "scanClean": "Totes les crides a Steam que fa aquest joc estan cobertes",
+                    "scanMiss": "El pont no cobreix totes les crides a Steam que fa aquest joc",
+                    "seed": "Se sap que funciona amb el pont",
+                    "userForcedBottle": "Heu triat el client de Steam de Windows",
+                    "userForcedBridge": "Heu triat provar el pont",
+                    "win64NoShim": "Joc de 64 bits, i aquesta versió no té pont de 64 bits"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "El GameLib l'instal·larà en el client de Steam de Windows en bottle en el seu lloc.",
+                "cancel": "Cancel·la",
+                "knownBad": "Se sap que {{title}} no funciona amb el pont natiu de Steam: {{reason}}.",
+                "scanMiss": "El pont natiu de Steam no cobreix totes les crides a Steam que fa {{title}}. No cobert: {{symbols}}.",
+                "title": "Aquest joc utilitzarà el client de Steam de Windows",
+                "tryBridge": "Prova el pont igualment",
+                "useBottled": "Utilitza Steam en bottle",
+                "win64NoShim": "{{title}} és un joc de 64 bits, i aquesta versió del GameLib no té pont de 64 bits."
+            },
+            "setup": {
+                "missingSymbols": "El pont no cobreix: {{symbols}}",
+                "redownloadNote": "Si torneu enrere, el joc es torna a baixar al client de Steam de Windows en bottle."
+            }
         },
         "download": {
             "error": {

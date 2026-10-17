@@ -349,7 +349,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib a zo paouezet klask keleier diwar-benn kefluniañ ar voutailh Steam. Marteze emañ c'hoazh war vont — sellit hag-eñ ez eus ur prenestr staliañ Steam, ha klaskit adarre goude."
+            "statusPollTimeout": "GameLib a zo paouezet klask keleier diwar-benn kefluniañ ar voutailh Steam. Marteze emañ c'hoazh war vont — sellit hag-eñ ez eus ur prenestr staliañ Steam, ha klaskit adarre goude.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam a c'houlenn ouzhoc'h kevreañ. Marteze eo kuzhet prenestr ar gevreadenn a-dreñv prenestroù all.",
+                    "otherSession": "O vont en-dro emañ ar c'hoari-mañ war un urzhiataer all, hag e c'houlenn Steam hag-eñ e tlefed e serriñ eno.",
+                    "selfUpdate": "Steam a hizivaat e-unan. Pouezit war C'hoari en-dro goude ma vo adloc'het."
+                },
+                "intro": "N'eo ket bet loc'het ar c'hoari c'hoazh gant arval Steam Windows.",
+                "likelyCauses": "Abegoù muiañ-liverek:",
+                "mostLikely": "Ar re muiañ-liverek:",
+                "title": "O c'hortoz Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Staliet e vez en arval Steam e voutailh rannet. Kemmañ an dra-se diwezhatoc'h a dalvez adstaliañ ar c'hoari.",
+                "label": "Implijit arval Steam Windows e lec'h-se"
+            },
+            "knownBad": {
+                "doesNotRun": "ne vont ket en-dro dre ar pont",
+                "drmWrapped": "gwarezet gant DRM dindan API Steam",
+                "p2pRequired": "ezhomm c'hoari lieswel peer-to-peer",
+                "win64Only": "64-bit hepken"
+            },
+            "limited": {
+                "body": "Ne sinkroniont ket an treuzwelusted hag ar enrolladennoù koumoul evit ar c'hoari-mañ dre ar pont.",
+                "identityFallback": "Steam ne grogo ket ar c'hoari-mañ dindan e ID e-unan, neuze e vo lakaet da vont en-dro gant ho tiegezh Steam hepken.",
+                "title": "Bevennet eo lod a arc'hweladurioù Steam"
+            },
+            "route": {
+                "bottled": "Arval Steam e voutailh",
+                "label": "Hent Steam",
+                "missingSymbols": "N'eo ket sikouret: {{symbols}}",
+                "native": "Pont orin Steam",
+                "reason": {
+                    "failedThisSession": "C'hwitet eo ar pont a-raok er sesion-mañ",
+                    "knownBad": "Anavezet evit ne vont ket en-dro gant ar pont: {{reason}}",
+                    "noSteamApi": "Ar c'hoari-mañ ne implij ket API Steam",
+                    "pendingScan": "Gwiriet goude m'eo echu ar pellgargañ",
+                    "scanClean": "Pep galv Steam a ra ar c'hoari-mañ a zo sikouret",
+                    "scanMiss": "Ar pont ne sikour ket pep galv Steam a ra ar c'hoari-mañ",
+                    "seed": "Anavezet evit mont en-dro gant ar pont",
+                    "userForcedBottle": "Dibabet hoc'h eus arval Steam Windows",
+                    "userForcedBridge": "Dibabet hoc'h eus klask ar pont",
+                    "win64NoShim": "C'hoari 64-bit, ha n'eus pont 64-bit ebet er savadur-mañ"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib a staliañ anezhañ en arval Steam Windows e voutailh e lec'h-se.",
+                "cancel": "Nullañ",
+                "knownBad": "Anavezet eo {{title}} evit ne vont ket en-dro gant pont orin Steam: {{reason}}.",
+                "scanMiss": "Ar pont orin Steam ne sikour ket pep galv Steam a ra {{title}}. N'eo ket sikouret: {{symbols}}.",
+                "title": "Ar c'hoari-mañ a implijo arval Steam Windows",
+                "tryBridge": "Klask ar pont memes tra",
+                "useBottled": "Implijañ Steam e voutailh",
+                "win64NoShim": "C'hoari 64-bit eo {{title}}, ha n'eus pont 64-bit ebet er savadur-mañ eus GameLib."
+            },
+            "setup": {
+                "missingSymbols": "Ar pont ne sikour ket: {{symbols}}",
+                "redownloadNote": "An distro a bellgarg ar c'hoari en-dro en arval Steam Windows e voutailh."
+            }
         },
         "download": {
             "error": {

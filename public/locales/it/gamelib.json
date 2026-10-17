@@ -335,7 +335,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib non riceve più aggiornamenti sulla configurazione della bottle Steam. Potrebbe essere ancora in corso — controlla se c'è una finestra dell'installer di Steam, poi riprova."
+            "statusPollTimeout": "GameLib non riceve più aggiornamenti sulla configurazione della bottle Steam. Potrebbe essere ancora in corso — controlla se c'è una finestra dell'installer di Steam, poi riprova.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam richiede l'accesso. La sua finestra di accesso potrebbe essere nascosta dietro altre finestre.",
+                    "otherSession": "Questo gioco è in esecuzione su un altro computer, e Steam chiede se chiuderlo lì.",
+                    "selfUpdate": "Steam si sta aggiornando da solo. Premi di nuovo Gioca una volta riavviato."
+                },
+                "intro": "Il client Steam di Windows non ha ancora avviato il gioco.",
+                "likelyCauses": "Cause probabili:",
+                "mostLikely": "Più probabile:",
+                "title": "In attesa di Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Si installa nel client Steam condiviso in bottle. Cambiarlo in seguito significa reinstallare il gioco.",
+                "label": "Usa invece il client Steam di Windows"
+            },
+            "knownBad": {
+                "doesNotRun": "non funziona tramite il bridge",
+                "drmWrapped": "protetto da DRM sotto l'API di Steam",
+                "p2pRequired": "richiede multiplayer peer-to-peer",
+                "win64Only": "solo 64 bit"
+            },
+            "limited": {
+                "body": "Gli obiettivi e i salvataggi cloud non si sincronizzano per questo gioco tramite il bridge.",
+                "identityFallback": "Steam non eseguirebbe questo gioco con il proprio ID, quindi funziona solo con la tua identità Steam.",
+                "title": "Alcune funzionalità di Steam sono limitate"
+            },
+            "route": {
+                "bottled": "Client Steam in bottle",
+                "label": "Percorso Steam",
+                "missingSymbols": "Non coperto: {{symbols}}",
+                "native": "Bridge nativo di Steam",
+                "reason": {
+                    "failedThisSession": "Il bridge è già fallito in precedenza in questa sessione",
+                    "knownBad": "Noto per non funzionare con il bridge: {{reason}}",
+                    "noSteamApi": "Questo gioco non utilizza l'API di Steam",
+                    "pendingScan": "Controllato al termine del download",
+                    "scanClean": "Ogni chiamata Steam effettuata da questo gioco è coperta",
+                    "scanMiss": "Il bridge non copre ogni chiamata Steam effettuata da questo gioco",
+                    "seed": "Noto per funzionare con il bridge",
+                    "userForcedBottle": "Hai scelto il client Steam di Windows",
+                    "userForcedBridge": "Hai scelto di provare il bridge",
+                    "win64NoShim": "Gioco a 64 bit, e questa build non ha un bridge a 64 bit"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib lo installerà invece nel client Steam di Windows in bottle.",
+                "cancel": "Annulla",
+                "knownBad": "{{title}} è noto per non funzionare con il bridge nativo di Steam: {{reason}}.",
+                "scanMiss": "Il bridge nativo di Steam non copre ogni chiamata Steam effettuata da {{title}}. Non coperto: {{symbols}}.",
+                "title": "Questo gioco utilizzerà il client Steam di Windows",
+                "tryBridge": "Prova comunque il bridge",
+                "useBottled": "Usa Steam in bottle",
+                "win64NoShim": "{{title}} è un gioco a 64 bit, e questa build di GameLib non ha un bridge a 64 bit."
+            },
+            "setup": {
+                "missingSymbols": "Il bridge non copre: {{symbols}}",
+                "redownloadNote": "Il fallback riscarica il gioco nel client Steam di Windows in bottle."
+            }
         },
         "download": {
             "error": {

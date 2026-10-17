@@ -335,7 +335,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib dejó de recibir noticias sobre la configuración del bottle de Steam. Puede que siga en curso: busca una ventana del instalador de Steam y vuelve a intentarlo."
+            "statusPollTimeout": "GameLib dejó de recibir noticias sobre la configuración del bottle de Steam. Puede que siga en curso: busca una ventana del instalador de Steam y vuelve a intentarlo.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam necesita que inicies sesión. Su ventana de inicio de sesión puede estar oculta detrás de otras ventanas.",
+                    "otherSession": "Este juego se está ejecutando en otro ordenador, y Steam pregunta si debe cerrarlo allí.",
+                    "selfUpdate": "Steam se está actualizando. Pulsa Jugar de nuevo una vez que se reinicie."
+                },
+                "intro": "El cliente de Steam de Windows todavía no ha iniciado el juego.",
+                "likelyCauses": "Causas probables:",
+                "mostLikely": "Lo más probable:",
+                "title": "Esperando a Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Se instala en el cliente de Steam en bottle compartido. Cambiar esto más adelante significa reinstalar el juego.",
+                "label": "Usa el cliente de Steam de Windows en su lugar"
+            },
+            "knownBad": {
+                "doesNotRun": "no funciona a través del puente",
+                "drmWrapped": "protegido con DRM por debajo de la API de Steam",
+                "p2pRequired": "necesita multijugador de igual a igual",
+                "win64Only": "solo 64 bits"
+            },
+            "limited": {
+                "body": "Los logros y las partidas guardadas en la nube no se sincronizan para este juego a través del puente.",
+                "identityFallback": "Steam no ejecutaría este juego con su propio ID, así que funciona solo con tu identidad de Steam.",
+                "title": "Algunas funciones de Steam están limitadas"
+            },
+            "route": {
+                "bottled": "Cliente de Steam en bottle",
+                "label": "Ruta de Steam",
+                "missingSymbols": "No cubierto: {{symbols}}",
+                "native": "Puente nativo de Steam",
+                "reason": {
+                    "failedThisSession": "El puente falló antes en esta sesión",
+                    "knownBad": "Se sabe que no funciona con el puente: {{reason}}",
+                    "noSteamApi": "Este juego no usa la API de Steam",
+                    "pendingScan": "Se comprueba después de que termine la descarga",
+                    "scanClean": "Todas las llamadas a Steam que hace este juego están cubiertas",
+                    "scanMiss": "El puente no cubre todas las llamadas a Steam que hace este juego",
+                    "seed": "Se sabe que funciona con el puente",
+                    "userForcedBottle": "Elegiste el cliente de Steam de Windows",
+                    "userForcedBridge": "Elegiste probar el puente",
+                    "win64NoShim": "Juego de 64 bits, y esta versión no tiene puente de 64 bits"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib lo instalará en su lugar en el cliente de Steam de Windows en bottle.",
+                "cancel": "Cancelar",
+                "knownBad": "Se sabe que {{title}} no funciona con el puente nativo de Steam: {{reason}}.",
+                "scanMiss": "El puente nativo de Steam no cubre todas las llamadas a Steam que hace {{title}}. No cubierto: {{symbols}}.",
+                "title": "Este juego usará el cliente de Steam de Windows",
+                "tryBridge": "Probar el puente de todos modos",
+                "useBottled": "Usar Steam en bottle",
+                "win64NoShim": "{{title}} es un juego de 64 bits, y esta versión de GameLib no tiene puente de 64 bits."
+            },
+            "setup": {
+                "missingSymbols": "El puente no cubre: {{symbols}}",
+                "redownloadNote": "Al volver atrás se descarga el juego de nuevo en el cliente de Steam de Windows en bottle."
+            }
         },
         "download": {
             "error": {

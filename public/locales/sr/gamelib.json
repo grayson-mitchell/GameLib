@@ -335,7 +335,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib je prestao da prima odgovore o podešavanju Steam bočice. Možda se i dalje izvršava — proverite da li postoji prozor Steam instalacije, pa pokušajte ponovo."
+            "statusPollTimeout": "GameLib je prestao da prima odgovore o podešavanju Steam bočice. Možda se i dalje izvršava — proverite da li postoji prozor Steam instalacije, pa pokušajte ponovo.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam zahteva da se prijavite. Njegov prozor za prijavu možda je skriven iza drugih prozora.",
+                    "otherSession": "Ova igra je pokrenuta na drugom računaru, a Steam pita da li treba da je zatvori tamo.",
+                    "selfUpdate": "Steam se sam ažurira. Pritisnite Play ponovo nakon što se ponovo pokrene."
+                },
+                "intro": "Windows Steam klijent još nije pokrenuo igru.",
+                "likelyCauses": "Verovatni uzroci:",
+                "mostLikely": "Najverovatnije:",
+                "title": "Čekanje na Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Instalira se u zajednički Steam klijent u bočici. Promena ovoga kasnije znači ponovnu instalaciju igre.",
+                "label": "Umesto toga koristite Windows Steam klijent"
+            },
+            "knownBad": {
+                "doesNotRun": "ne radi preko mosta",
+                "drmWrapped": "zaštićeno DRM-om ispod Steam API-ja",
+                "p2pRequired": "zahteva peer-to-peer multiplejer",
+                "win64Only": "samo 64-bitno"
+            },
+            "limited": {
+                "body": "Dostignuća i čuvanja u oblaku se ne sinhronizuju za ovu igru putem mosta.",
+                "identityFallback": "Steam neće pokrenuti ovu igru pod sopstvenim ID-om, pa radi samo sa vašim Steam identitetom.",
+                "title": "Neke Steam funkcije su ograničene"
+            },
+            "route": {
+                "bottled": "Steam klijent u bočici",
+                "label": "Steam ruta",
+                "missingSymbols": "Nije pokriveno: {{symbols}}",
+                "native": "Nativni Steam most",
+                "reason": {
+                    "failedThisSession": "Most je ranije u ovoj sesiji otkazao",
+                    "knownBad": "Poznato da ne radi sa mostom: {{reason}}",
+                    "noSteamApi": "Ova igra ne koristi Steam API",
+                    "pendingScan": "Proverava se nakon završetka preuzimanja",
+                    "scanClean": "Svaki Steam poziv koji ova igra pravi je pokriven",
+                    "scanMiss": "Most ne pokriva svaki Steam poziv koji ova igra pravi",
+                    "seed": "Poznato da radi sa mostom",
+                    "userForcedBottle": "Izabrali ste Windows Steam klijent",
+                    "userForcedBridge": "Izabrali ste da isprobate most",
+                    "win64NoShim": "64-bitna igra, a ova verzija nema 64-bitni most"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib će je umesto toga instalirati u Windows Steam klijent u bočici.",
+                "cancel": "Otkaži",
+                "knownBad": "Poznato je da {{title}} ne radi sa nativnim Steam mostom: {{reason}}.",
+                "scanMiss": "Nativni Steam most ne pokriva svaki Steam poziv koji {{title}} pravi. Nije pokriveno: {{symbols}}.",
+                "title": "Ova igra će koristiti Windows Steam klijent",
+                "tryBridge": "Ipak isprobaj most",
+                "useBottled": "Koristi Steam u bočici",
+                "win64NoShim": "{{title}} je 64-bitna igra, a ova verzija GameLib-a nema 64-bitni most."
+            },
+            "setup": {
+                "missingSymbols": "Most ne pokriva: {{symbols}}",
+                "redownloadNote": "Povratak ponovo preuzima igru u Windows Steam klijent u bočici."
+            }
         },
         "download": {
             "error": {

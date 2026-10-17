@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib가 Steam 병(bottle) 설정에 대한 응답을 더 이상 받지 못했습니다. 여전히 실행 중일 수 있으니 Steam 설치 프로그램 창을 확인한 후 다시 시도해 보세요."
+            "statusPollTimeout": "GameLib가 Steam 병(bottle) 설정에 대한 응답을 더 이상 받지 못했습니다. 여전히 실행 중일 수 있으니 Steam 설치 프로그램 창을 확인한 후 다시 시도해 보세요.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam에 로그인이 필요합니다. 로그인 창이 다른 창 뒤에 숨어 있을 수 있습니다.",
+                    "otherSession": "이 게임은 다른 컴퓨터에서 실행 중이며, Steam이 그곳에서 닫아야 하는지 묻고 있습니다.",
+                    "selfUpdate": "Steam이 자체 업데이트 중입니다. 재시작된 후 다시 플레이를 누르세요."
+                },
+                "intro": "Windows Steam 클라이언트가 아직 게임을 시작하지 않음.",
+                "likelyCauses": "가능한 원인:",
+                "mostLikely": "가장 가능성 높음:",
+                "title": "Steam 대기 중…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "공유 bottle 안의 Steam 클라이언트에 설치됨. 나중에 이를 변경하면 게임을 재설치해야 함.",
+                "label": "대신 Windows Steam 클라이언트 사용"
+            },
+            "knownBad": {
+                "doesNotRun": "브리지를 통해 작동하지 않음",
+                "drmWrapped": "Steam API 아래에서 DRM으로 보호됨",
+                "p2pRequired": "피어투피어 멀티플레이어 필요",
+                "win64Only": "64비트 전용"
+            },
+            "limited": {
+                "body": "업적과 클라우드 저장은 브리지를 통해 이 게임에 동기화되지 않음.",
+                "identityFallback": "Steam은 이 게임을 자체 ID로 실행하지 않으므로, 사용자의 Steam 아이덴티티로만 실행됨.",
+                "title": "일부 Steam 기능이 제한됨"
+            },
+            "route": {
+                "bottled": "bottle 안의 Steam 클라이언트",
+                "label": "Steam 경로",
+                "missingSymbols": "커버되지 않음: {{symbols}}",
+                "native": "네이티브 Steam 브리지",
+                "reason": {
+                    "failedThisSession": "이 세션에서 브리지가 이전에 실패함",
+                    "knownBad": "브리지와 작동하지 않는 것으로 알려짐: {{reason}}",
+                    "noSteamApi": "이 게임은 Steam API를 사용하지 않음",
+                    "pendingScan": "다운로드가 끝난 후 확인됨",
+                    "scanClean": "이 게임이 만드는 모든 Steam 호출이 커버됨",
+                    "scanMiss": "브리지는 이 게임이 만드는 모든 Steam 호출을 커버하지 않음",
+                    "seed": "브리지와 함께 작동하는 것으로 알려짐",
+                    "userForcedBottle": "Windows Steam 클라이언트를 선택함",
+                    "userForcedBridge": "브리지를 사용해 보기로 선택함",
+                    "win64NoShim": "64비트 게임이며, 이 빌드에는 64비트 브리지가 없음"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib가 대신 bottle 안의 Windows Steam 클라이언트에 설치함.",
+                "cancel": "취소",
+                "knownBad": "{{title}}은(는) 네이티브 Steam 브리지와 작동하지 않는 것으로 알려짐: {{reason}}.",
+                "scanMiss": "네이티브 Steam 브리지는 {{title}}이(가) 만드는 모든 Steam 호출을 커버하지 않음. 커버되지 않음: {{symbols}}.",
+                "title": "이 게임은 Windows Steam 클라이언트를 사용함",
+                "tryBridge": "그래도 브리지 시도",
+                "useBottled": "bottle 안의 Steam 사용",
+                "win64NoShim": "{{title}}은(는) 64비트 게임이며, 이 GameLib 빌드에는 64비트 브리지가 없음."
+            },
+            "setup": {
+                "missingSymbols": "브리지가 커버하지 않음: {{symbols}}",
+                "redownloadNote": "폴백하면 게임이 bottle 안의 Windows Steam 클라이언트로 다시 다운로드됨."
+            }
         },
         "download": {
             "error": {

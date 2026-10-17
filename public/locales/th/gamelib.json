@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib ไม่ได้รับการตอบกลับเกี่ยวกับการตั้งค่า Steam bottle อีกต่อไป อาจยังทำงานอยู่ — ลองตรวจสอบหน้าต่างตัวติดตั้ง Steam แล้วลองอีกครั้ง"
+            "statusPollTimeout": "GameLib ไม่ได้รับการตอบกลับเกี่ยวกับการตั้งค่า Steam bottle อีกต่อไป อาจยังทำงานอยู่ — ลองตรวจสอบหน้าต่างตัวติดตั้ง Steam แล้วลองอีกครั้ง",
+            "waiting": {
+                "cause": {
+                    "login": "Steam ต้องการให้คุณลงชื่อเข้าใช้ หน้าต่างเข้าสู่ระบบของมันอาจถูกซ่อนอยู่หลังหน้าต่างอื่น",
+                    "otherSession": "เกมนี้กำลังทำงานบนคอมพิวเตอร์เครื่องอื่น และ Steam กำลังถามว่าควรปิดมันที่นั่นหรือไม่",
+                    "selfUpdate": "Steam กำลังอัปเดตตัวเอง กดเล่นอีกครั้งเมื่อรีสตาร์ทเสร็จแล้ว"
+                },
+                "intro": "ไคลเอนต์ Steam ของ Windows ยังไม่ได้เริ่มเกม",
+                "likelyCauses": "สาเหตุที่เป็นไปได้:",
+                "mostLikely": "เป็นไปได้มากที่สุด:",
+                "title": "กำลังรอ Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "ติดตั้งลงในไคลเอนต์ Steam แบบ bottle ที่ใช้ร่วมกัน การเปลี่ยนแปลงนี้ภายหลังหมายถึงการติดตั้งเกมใหม่",
+                "label": "ใช้ไคลเอนต์ Steam ของ Windows แทน"
+            },
+            "knownBad": {
+                "doesNotRun": "ไม่ทำงานผ่านบริดจ์",
+                "drmWrapped": "ได้รับการป้องกันด้วย DRM ใต้ API ของ Steam",
+                "p2pRequired": "ต้องการผู้เล่นหลายคนแบบ peer-to-peer",
+                "win64Only": "64 บิตเท่านั้น"
+            },
+            "limited": {
+                "body": "ความสำเร็จและการบันทึกบนคลาวด์จะไม่ซิงค์สำหรับเกมนี้ผ่านบริดจ์",
+                "identityFallback": "Steam จะไม่รันเกมนี้ภายใต้ ID ของตัวเอง ดังนั้นมันจะทำงานกับตัวตน Steam ของคุณเท่านั้น",
+                "title": "คุณสมบัติบางอย่างของ Steam ถูกจำกัด"
+            },
+            "route": {
+                "bottled": "ไคลเอนต์ Steam แบบ bottle",
+                "label": "เส้นทาง Steam",
+                "missingSymbols": "ไม่ครอบคลุม: {{symbols}}",
+                "native": "บริดจ์ Steam แบบเนทีฟ",
+                "reason": {
+                    "failedThisSession": "บริดจ์ล้มเหลวก่อนหน้านี้ในเซสชันนี้",
+                    "knownBad": "ทราบว่าทำงานไม่ได้กับบริดจ์: {{reason}}",
+                    "noSteamApi": "เกมนี้ไม่ได้ใช้ API ของ Steam",
+                    "pendingScan": "ตรวจสอบหลังจากการดาวน์โหลดเสร็จสิ้น",
+                    "scanClean": "การเรียก Steam ทุกครั้งที่เกมนี้ทำนั้นครอบคลุมแล้ว",
+                    "scanMiss": "บริดจ์ไม่ครอบคลุมการเรียก Steam ทุกครั้งที่เกมนี้ทำ",
+                    "seed": "ทราบว่าทำงานได้กับบริดจ์",
+                    "userForcedBottle": "คุณเลือกไคลเอนต์ Steam ของ Windows",
+                    "userForcedBridge": "คุณเลือกที่จะลองใช้บริดจ์",
+                    "win64NoShim": "เกม 64 บิต และบิลด์นี้ไม่มีบริดจ์ 64 บิต"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib จะติดตั้งมันลงในไคลเอนต์ Steam ของ Windows แบบ bottle แทน",
+                "cancel": "ยกเลิก",
+                "knownBad": "ทราบว่า {{title}} ทำงานไม่ได้กับบริดจ์ Steam แบบเนทีฟ: {{reason}}",
+                "scanMiss": "บริดจ์ Steam แบบเนทีฟไม่ครอบคลุมการเรียก Steam ทุกครั้งที่ {{title}} ทำ ไม่ครอบคลุม: {{symbols}}",
+                "title": "เกมนี้จะใช้ไคลเอนต์ Steam ของ Windows",
+                "tryBridge": "ลองใช้บริดจ์อยู่ดี",
+                "useBottled": "ใช้ Steam แบบ bottle",
+                "win64NoShim": "{{title}} เป็นเกม 64 บิต และบิลด์ของ GameLib นี้ไม่มีบริดจ์ 64 บิต"
+            },
+            "setup": {
+                "missingSymbols": "บริดจ์ไม่ครอบคลุม: {{symbols}}",
+                "redownloadNote": "การถอยกลับจะดาวน์โหลดเกมอีกครั้งลงในไคลเอนต์ Steam ของ Windows แบบ bottle"
+            }
         },
         "download": {
             "error": {

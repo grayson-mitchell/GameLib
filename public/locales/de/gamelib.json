@@ -253,7 +253,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib hat keine Rückmeldung mehr zur Einrichtung der Steam-Bottle erhalten. Sie läuft möglicherweise noch — prüfen Sie, ob ein Steam-Installationsfenster geöffnet ist, und versuchen Sie es dann erneut."
+            "statusPollTimeout": "GameLib hat keine Rückmeldung mehr zur Einrichtung der Steam-Bottle erhalten. Sie läuft möglicherweise noch — prüfen Sie, ob ein Steam-Installationsfenster geöffnet ist, und versuchen Sie es dann erneut.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam benötigt Ihre Anmeldung. Das Anmeldefenster ist möglicherweise hinter anderen Fenstern verborgen.",
+                    "otherSession": "Dieses Spiel läuft auf einem anderen Computer, und Steam fragt, ob es dort geschlossen werden soll.",
+                    "selfUpdate": "Steam aktualisiert sich selbst. Drücken Sie nach dem Neustart erneut auf Spielen."
+                },
+                "intro": "Der Windows-Steam-Client hat das Spiel noch nicht gestartet.",
+                "likelyCauses": "Wahrscheinliche Ursachen:",
+                "mostLikely": "Am wahrscheinlichsten:",
+                "title": "Warten auf Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Wird in den gemeinsamen Steam-Client in der Bottle installiert. Eine spätere Änderung bedeutet, dass das Spiel neu installiert werden muss.",
+                "label": "Stattdessen den Windows-Steam-Client verwenden"
+            },
+            "knownBad": {
+                "doesNotRun": "läuft nicht über die Brücke",
+                "drmWrapped": "durch DRM unterhalb der Steam-API geschützt",
+                "p2pRequired": "benötigt Peer-to-Peer-Mehrspieler",
+                "win64Only": "nur 64-Bit"
+            },
+            "limited": {
+                "body": "Erfolge und Cloud-Speicherstände werden für dieses Spiel nicht über die Brücke synchronisiert.",
+                "identityFallback": "Steam würde dieses Spiel nicht unter seiner eigenen ID ausführen, daher läuft es nur mit Ihrer Steam-Identität.",
+                "title": "Einige Steam-Funktionen sind eingeschränkt"
+            },
+            "route": {
+                "bottled": "Steam-Client in der Bottle",
+                "label": "Steam-Route",
+                "missingSymbols": "Nicht abgedeckt: {{symbols}}",
+                "native": "Native Steam-Brücke",
+                "reason": {
+                    "failedThisSession": "Die Brücke ist in dieser Sitzung bereits fehlgeschlagen",
+                    "knownBad": "Bekannt dafür, nicht mit der Brücke zu funktionieren: {{reason}}",
+                    "noSteamApi": "Dieses Spiel verwendet nicht die API von Steam",
+                    "pendingScan": "Wird nach Abschluss des Downloads überprüft",
+                    "scanClean": "Jeder Steam-Aufruf dieses Spiels wird abgedeckt",
+                    "scanMiss": "Die Brücke deckt nicht jeden Steam-Aufruf ab, den dieses Spiel macht",
+                    "seed": "Bekannt dafür, mit der Brücke zu funktionieren",
+                    "userForcedBottle": "Sie haben den Windows-Steam-Client gewählt",
+                    "userForcedBridge": "Sie haben sich entschieden, die Brücke auszuprobieren",
+                    "win64NoShim": "64-Bit-Spiel, und dieser Build hat keine 64-Bit-Brücke"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib installiert es stattdessen in den Windows-Steam-Client in der Bottle.",
+                "cancel": "Abbrechen",
+                "knownBad": "{{title}} ist bekannt dafür, nicht mit der nativen Steam-Brücke zu funktionieren: {{reason}}.",
+                "scanMiss": "Die native Steam-Brücke deckt nicht jeden Steam-Aufruf ab, den {{title}} macht. Nicht abgedeckt: {{symbols}}.",
+                "title": "Dieses Spiel wird den Windows-Steam-Client verwenden",
+                "tryBridge": "Die Brücke trotzdem ausprobieren",
+                "useBottled": "Steam in der Bottle verwenden",
+                "win64NoShim": "{{title}} ist ein 64-Bit-Spiel, und dieser Build von GameLib hat keine 64-Bit-Brücke."
+            },
+            "setup": {
+                "missingSymbols": "Die Brücke deckt nicht ab: {{symbols}}",
+                "redownloadNote": "Der Rückfall lädt das Spiel erneut in den Windows-Steam-Client in der Bottle herunter."
+            }
         },
         "install": {
             "bottleNameReadonlyHelper": "GameLib verwaltet eine gemeinsame CrossOver-Bottle für Steam. Eine separate Bottle pro Spiel zu benennen wird noch nicht unterstützt.",

@@ -342,7 +342,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib nebegauna atsako apie Steam talpyklos (bottle) nustatymą. Procesas gali dar vykti — patikrinkite, ar neatidarytas Steam diegimo programos langas, tada bandykite dar kartą."
+            "statusPollTimeout": "GameLib nebegauna atsako apie Steam talpyklos (bottle) nustatymą. Procesas gali dar vykti — patikrinkite, ar neatidarytas Steam diegimo programos langas, tada bandykite dar kartą.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam reikia, kad prisijungtumėte. Jo prisijungimo langas gali būti paslėptas už kitų langų.",
+                    "otherSession": "Šis žaidimas veikia kitame kompiuteryje, ir Steam klausia, ar jį ten reikėtų uždaryti.",
+                    "selfUpdate": "Steam atsinaujina pats. Paspauskite Žaisti dar kartą, kai jis bus paleistas iš naujo."
+                },
+                "intro": "Windows Steam klientas dar nepaleido žaidimo.",
+                "likelyCauses": "Tikėtinos priežastys:",
+                "mostLikely": "Labiausiai tikėtina:",
+                "title": "Laukiama Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Diegiama į bendrą Steam klientą bottle. Vėlesnis šio keitimas reiškia žaidimo perdiegimą.",
+                "label": "Vietoj to naudokite Windows Steam klientą"
+            },
+            "knownBad": {
+                "doesNotRun": "neveikia per tiltą",
+                "drmWrapped": "apsaugotas DRM po Steam API",
+                "p2pRequired": "reikia peer-to-peer daugelio žaidėjų režimo",
+                "win64Only": "tik 64 bitų"
+            },
+            "limited": {
+                "body": "Pasiekimai ir debesijos išsaugojimai nesinchronizuojami šiam žaidimui per tiltą.",
+                "identityFallback": "Steam nepaleistų šio žaidimo su savo ID, todėl jis veikia tik su jūsų Steam tapatybe.",
+                "title": "Kai kurios Steam funkcijos yra ribotos"
+            },
+            "route": {
+                "bottled": "Steam klientas bottle",
+                "label": "Steam maršrutas",
+                "missingSymbols": "Nepadengta: {{symbols}}",
+                "native": "Vietinis Steam tiltas",
+                "reason": {
+                    "failedThisSession": "Tiltas šioje sesijoje jau anksčiau nepavyko",
+                    "knownBad": "Žinoma, kad neveikia su tiltu: {{reason}}",
+                    "noSteamApi": "Šis žaidimas nenaudoja Steam API",
+                    "pendingScan": "Tikrinama baigus atsisiuntimą",
+                    "scanClean": "Kiekvienas šio žaidimo atliekamas Steam iškvietimas yra padengtas",
+                    "scanMiss": "Tiltas nepadengia kiekvieno šio žaidimo atliekamo Steam iškvietimo",
+                    "seed": "Žinoma, kad veikia su tiltu",
+                    "userForcedBottle": "Pasirinkote Windows Steam klientą",
+                    "userForcedBridge": "Pasirinkote išbandyti tiltą",
+                    "win64NoShim": "64 bitų žaidimas, o šioje versijoje nėra 64 bitų tilto"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib vietoj to įdiegs jį į Windows Steam klientą bottle.",
+                "cancel": "Atšaukti",
+                "knownBad": "Žinoma, kad {{title}} neveikia su vietiniu Steam tiltu: {{reason}}.",
+                "scanMiss": "Vietinis Steam tiltas nepadengia kiekvieno Steam iškvietimo, kurį atlieka {{title}}. Nepadengta: {{symbols}}.",
+                "title": "Šis žaidimas naudos Windows Steam klientą",
+                "tryBridge": "Vis tiek išbandyti tiltą",
+                "useBottled": "Naudoti Steam bottle",
+                "win64NoShim": "{{title}} yra 64 bitų žaidimas, o šioje GameLib versijoje nėra 64 bitų tilto."
+            },
+            "setup": {
+                "missingSymbols": "Tiltas nepadengia: {{symbols}}",
+                "redownloadNote": "Grįžimas iš naujo atsisiunčia žaidimą į Windows Steam klientą bottle."
+            }
         },
         "download": {
             "error": {

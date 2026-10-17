@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib slutade få svar om Steam-bottle-konfigurationen. Den kan fortfarande köras — leta efter ett Steam-installationsfönster och försök sedan igen."
+            "statusPollTimeout": "GameLib slutade få svar om Steam-bottle-konfigurationen. Den kan fortfarande köras — leta efter ett Steam-installationsfönster och försök sedan igen.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam behöver att du loggar in. Dess inloggningsfönster kan vara dolt bakom andra fönster.",
+                    "otherSession": "Det här spelet körs på en annan dator, och Steam frågar om det ska stängas där.",
+                    "selfUpdate": "Steam uppdaterar sig självt. Tryck på Spela igen när det har startat om."
+                },
+                "intro": "Windows Steam-klienten har inte startat spelet än.",
+                "likelyCauses": "Troliga orsaker:",
+                "mostLikely": "Mest troligt:",
+                "title": "Väntar på Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Installeras i den delade Steam-klienten på bottle. Att ändra detta senare innebär att spelet måste installeras om.",
+                "label": "Använd Windows Steam-klienten istället"
+            },
+            "knownBad": {
+                "doesNotRun": "fungerar inte via bryggan",
+                "drmWrapped": "skyddad av DRM under Steams API",
+                "p2pRequired": "kräver peer-to-peer-multiplayer",
+                "win64Only": "endast 64-bitars"
+            },
+            "limited": {
+                "body": "Prestationer och molnsparningar synkroniseras inte för det här spelet via bryggan.",
+                "identityFallback": "Steam skulle inte köra det här spelet under sitt eget ID, så det körs bara med din Steam-identitet.",
+                "title": "Vissa Steam-funktioner är begränsade"
+            },
+            "route": {
+                "bottled": "Steam-klient på bottle",
+                "label": "Steam-rutt",
+                "missingSymbols": "Täcks inte: {{symbols}}",
+                "native": "Nativ Steam-brygga",
+                "reason": {
+                    "failedThisSession": "Bryggan misslyckades tidigare i den här sessionen",
+                    "knownBad": "Känd för att inte fungera med bryggan: {{reason}}",
+                    "noSteamApi": "Det här spelet använder inte Steams API",
+                    "pendingScan": "Kontrolleras när nedladdningen är klar",
+                    "scanClean": "Alla Steam-anrop som detta spel gör täcks",
+                    "scanMiss": "Bryggan täcker inte alla Steam-anrop som detta spel gör",
+                    "seed": "Känd för att fungera med bryggan",
+                    "userForcedBottle": "Du valde Windows Steam-klienten",
+                    "userForcedBridge": "Du valde att prova bryggan",
+                    "win64NoShim": "64-bitarsspel, och den här versionen har ingen 64-bitars brygga"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib installerar det istället i Windows Steam-klienten på bottle.",
+                "cancel": "Avbryt",
+                "knownBad": "{{title}} är känd för att inte fungera med den nativa Steam-bryggan: {{reason}}.",
+                "scanMiss": "Den nativa Steam-bryggan täcker inte alla Steam-anrop som {{title}} gör. Täcks inte: {{symbols}}.",
+                "title": "Det här spelet kommer att använda Windows Steam-klienten",
+                "tryBridge": "Prova bryggan ändå",
+                "useBottled": "Använd Steam på bottle",
+                "win64NoShim": "{{title}} är ett 64-bitarsspel, och den här versionen av GameLib har ingen 64-bitars brygga."
+            },
+            "setup": {
+                "missingSymbols": "Bryggan täcker inte: {{symbols}}",
+                "redownloadNote": "Återgången laddar ner spelet igen till Windows Steam-klienten på bottle."
+            }
         },
         "download": {
             "error": {

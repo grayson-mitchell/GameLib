@@ -349,7 +349,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "Stop GameLib ag cloisteáil scéala faoi shocrú an bhuidéil Steam. Seans go bhfuil sé ag rith fós — seiceáil an bhfuil fuinneog suiteálaí Steam ann, agus bain triail eile as."
+            "statusPollTimeout": "Stop GameLib ag cloisteáil scéala faoi shocrú an bhuidéil Steam. Seans go bhfuil sé ag rith fós — seiceáil an bhfuil fuinneog suiteálaí Steam ann, agus bain triail eile as.",
+            "waiting": {
+                "cause": {
+                    "login": "Teastaíonn uait logáil isteach ó Steam. D'fhéadfadh a fhuinneog logála isteach a bheith folaithe taobh thiar d'fhuinneoga eile.",
+                    "otherSession": "Tá an cluiche seo ag rith ar ríomhaire eile, agus fiafraíonn Steam ar cheart é a dhúnadh ansin.",
+                    "selfUpdate": "Tá Steam á nuashonrú féin. Brúigh Seinn arís nuair a bheidh sé atosaithe."
+                },
+                "intro": "Níl an cliant Steam Windows tar éis an cluiche a thosú fós.",
+                "likelyCauses": "Cúiseanna dóchúla:",
+                "mostLikely": "Is dóichí:",
+                "title": "Ag fanacht le Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Suiteáiltear isteach sa chliant Steam i mbuidéal roinnte é. Má athraítear é seo níos déanaí ciallaíonn sé an cluiche a athshuiteáil.",
+                "label": "Úsáid cliant Steam Windows ina ionad"
+            },
+            "knownBad": {
+                "doesNotRun": "ní ritheann sé tríd an droichead",
+                "drmWrapped": "cosanta ag DRM faoi bhun API Steam",
+                "p2pRequired": "teastaíonn ilimreoir piara-go-piara uaidh",
+                "win64Only": "64-giotán amháin"
+            },
+            "limited": {
+                "body": "Ní shioncronaíonn éachtaí ná sábhálacha néil don chluiche seo tríd an droichead.",
+                "identityFallback": "Ní rithfeadh Steam an cluiche seo faoina ID féin, mar sin ní ritheann sé ach le d'aitheantas Steam.",
+                "title": "Tá roinnt gnéithe Steam teoranta"
+            },
+            "route": {
+                "bottled": "Cliant Steam i mbuidéal",
+                "label": "Bealach Steam",
+                "missingSymbols": "Gan chlúdach: {{symbols}}",
+                "native": "Droichead dúchasach Steam",
+                "reason": {
+                    "failedThisSession": "Theip ar an droichead níos luaithe sa seisiún seo",
+                    "knownBad": "Ar eolas nach n-oibríonn sé leis an droichead: {{reason}}",
+                    "noSteamApi": "Ní úsáideann an cluiche seo API Steam",
+                    "pendingScan": "Seiceáiltear tar éis don íoslódáil críochnú",
+                    "scanClean": "Tá gach glao Steam a dhéanann an cluiche seo clúdaithe",
+                    "scanMiss": "Ní chlúdaíonn an droichead gach glao Steam a dhéanann an cluiche seo",
+                    "seed": "Ar eolas go n-oibríonn sé leis an droichead",
+                    "userForcedBottle": "Roghnaigh tú cliant Steam Windows",
+                    "userForcedBridge": "Roghnaigh tú triail a bhaint as an droichead",
+                    "win64NoShim": "Cluiche 64-giotán, agus níl droichead 64-giotán ag an leagan seo"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "Suiteálfaidh GameLib é ina ionad sin isteach i gcliant Steam Windows i mbuidéal.",
+                "cancel": "Cealaigh",
+                "knownBad": "Tá a fhios go bhfuil {{title}} nach n-oibríonn le droichead dúchasach Steam: {{reason}}.",
+                "scanMiss": "Ní chlúdaíonn droichead dúchasach Steam gach glao Steam a dhéanann {{title}}. Gan chlúdach: {{symbols}}.",
+                "title": "Úsáidfidh an cluiche seo cliant Steam Windows",
+                "tryBridge": "Triail an droichead mar sin féin",
+                "useBottled": "Úsáid Steam i mbuidéal",
+                "win64NoShim": "Is cluiche 64-giotán é {{title}}, agus níl droichead 64-giotán ag an leagan seo de GameLib."
+            },
+            "setup": {
+                "missingSymbols": "Ní chlúdaíonn an droichead: {{symbols}}",
+                "redownloadNote": "Íoslódálann an cúlú an cluiche arís isteach sa chliant Steam Windows i mbuidéal."
+            }
         },
         "download": {
             "error": {

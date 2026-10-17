@@ -356,7 +356,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "توقف GameLib عن تلقي ردود بشأن إعداد بوتل Steam. قد يكون لا يزال قيد التشغيل — تحقق من وجود نافذة مثبت Steam، ثم أعد المحاولة."
+            "statusPollTimeout": "توقف GameLib عن تلقي ردود بشأن إعداد بوتل Steam. قد يكون لا يزال قيد التشغيل — تحقق من وجود نافذة مثبت Steam، ثم أعد المحاولة.",
+            "waiting": {
+                "cause": {
+                    "login": "يحتاج Steam منك تسجيل الدخول. قد تكون نافذة تسجيل الدخول مخفية خلف نوافذ أخرى.",
+                    "otherSession": "هذه اللعبة تعمل على جهاز كمبيوتر آخر، ويسأل Steam عما إذا كان يجب إغلاقها هناك.",
+                    "selfUpdate": "يقوم Steam بتحديث نفسه. اضغط تشغيل مرة أخرى بعد إعادة التشغيل."
+                },
+                "intro": "لم يبدأ عميل Steam الخاص بـ Windows تشغيل اللعبة بعد.",
+                "likelyCauses": "الأسباب المحتملة:",
+                "mostLikely": "الأرجح:",
+                "title": "في انتظار Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "يُثبَّت داخل عميل Steam المعبأ المشترك. تغيير هذا لاحقًا يعني إعادة تثبيت اللعبة.",
+                "label": "استخدم عميل Steam الخاص بـ Windows بدلاً من ذلك"
+            },
+            "knownBad": {
+                "doesNotRun": "لا يعمل عبر الجسر",
+                "drmWrapped": "محمية بحماية DRM أسفل واجهة برمجة تطبيقات Steam",
+                "p2pRequired": "يحتاج إلى لعب جماعي من نظير إلى نظير",
+                "win64Only": "64 بت فقط"
+            },
+            "limited": {
+                "body": "الإنجازات والحفظ السحابي لا تتم مزامنتها لهذه اللعبة عبر الجسر.",
+                "identityFallback": "لن يشغّل Steam هذه اللعبة تحت معرّفه الخاص، لذا تعمل بهوية Steam الخاصة بك فقط.",
+                "title": "بعض ميزات Steam محدودة"
+            },
+            "route": {
+                "bottled": "عميل Steam المعبأ",
+                "label": "مسار Steam",
+                "missingSymbols": "غير مشمول: {{symbols}}",
+                "native": "جسر Steam الأصلي",
+                "reason": {
+                    "failedThisSession": "فشل الجسر في وقت سابق من هذه الجلسة",
+                    "knownBad": "معروف أنه لا يعمل مع الجسر: {{reason}}",
+                    "noSteamApi": "هذه اللعبة لا تستخدم واجهة برمجة تطبيقات Steam",
+                    "pendingScan": "يُتحقق منه بعد انتهاء التنزيل",
+                    "scanClean": "كل استدعاء لـ Steam تجريه هذه اللعبة مشمول",
+                    "scanMiss": "الجسر لا يغطي كل استدعاء لـ Steam تجريه هذه اللعبة",
+                    "seed": "معروف أنه يعمل مع الجسر",
+                    "userForcedBottle": "اخترت عميل Steam الخاص بـ Windows",
+                    "userForcedBridge": "اخترت تجربة الجسر",
+                    "win64NoShim": "لعبة 64 بت، وهذا الإصدار ليس له جسر 64 بت"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "سيقوم GameLib بتثبيتها بدلاً من ذلك داخل عميل Steam المعبأ الخاص بـ Windows.",
+                "cancel": "ألغِ",
+                "knownBad": "{{title}} معروف أنها لا تعمل مع جسر Steam الأصلي: {{reason}}.",
+                "scanMiss": "جسر Steam الأصلي لا يغطي كل استدعاء لـ Steam تجريه {{title}}. غير مشمول: {{symbols}}.",
+                "title": "ستستخدم هذه اللعبة عميل Steam الخاص بـ Windows",
+                "tryBridge": "حاول استخدام الجسر على أي حال",
+                "useBottled": "استخدام Steam المعبأ",
+                "win64NoShim": "{{title}} لعبة 64 بت، وهذا الإصدار من GameLib ليس له جسر 64 بت."
+            },
+            "setup": {
+                "missingSymbols": "الجسر لا يغطي: {{symbols}}",
+                "redownloadNote": "التراجع يعيد تنزيل اللعبة مرة أخرى داخل عميل Steam المعبأ الخاص بـ Windows."
+            }
         },
         "download": {
             "error": {

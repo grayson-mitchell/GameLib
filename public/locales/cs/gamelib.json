@@ -342,7 +342,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib přestal dostávat odpovědi ohledně nastavení bottle pro Steam. Proces možná stále běží — zkontrolujte, zda se nezobrazilo okno instalátoru Steamu, a zkuste to znovu."
+            "statusPollTimeout": "GameLib přestal dostávat odpovědi ohledně nastavení bottle pro Steam. Proces možná stále běží — zkontrolujte, zda se nezobrazilo okno instalátoru Steamu, a zkuste to znovu.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam vyžaduje přihlášení. Jeho přihlašovací okno může být skryté za jinými okny.",
+                    "otherSession": "Tato hra běží na jiném počítači a Steam se ptá, zda ji tam má zavřít.",
+                    "selfUpdate": "Steam se sám aktualizuje. Po restartování znovu stiskněte Hrát."
+                },
+                "intro": "Klient Steam pro Windows ještě hru nespustil.",
+                "likelyCauses": "Pravděpodobné příčiny:",
+                "mostLikely": "Nejpravděpodobnější:",
+                "title": "Čekání na Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Instaluje se do sdíleného klienta Steam v bottle. Pozdější změna znamená přeinstalování hry.",
+                "label": "Místo toho použijte klienta Steam pro Windows"
+            },
+            "knownBad": {
+                "doesNotRun": "nefunguje přes most",
+                "drmWrapped": "chráněno DRM pod API Steamu",
+                "p2pRequired": "vyžaduje multiplayer peer-to-peer",
+                "win64Only": "pouze 64bitové"
+            },
+            "limited": {
+                "body": "Úspěchy a cloudová uložení se pro tuto hru přes most nesynchronizují.",
+                "identityFallback": "Steam tuto hru nespustí pod vlastním ID, takže běží pouze s vaší identitou Steam.",
+                "title": "Některé funkce Steamu jsou omezené"
+            },
+            "route": {
+                "bottled": "Klient Steam v bottle",
+                "label": "Trasa Steam",
+                "missingSymbols": "Nepokryto: {{symbols}}",
+                "native": "Nativní most Steam",
+                "reason": {
+                    "failedThisSession": "Most v této relaci již dříve selhal",
+                    "knownBad": "Je známo, že nefunguje s mostem: {{reason}}",
+                    "noSteamApi": "Tato hra nepoužívá API Steamu",
+                    "pendingScan": "Zkontrolováno po dokončení stahování",
+                    "scanClean": "Každé volání Steam, které tato hra provádí, je pokryto",
+                    "scanMiss": "Most nepokrývá každé volání Steam, které tato hra provádí",
+                    "seed": "Je známo, že funguje s mostem",
+                    "userForcedBottle": "Zvolili jste klienta Steam pro Windows",
+                    "userForcedBridge": "Zvolili jste vyzkoušet most",
+                    "win64NoShim": "64bitová hra a tato verze nemá 64bitový most"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib ji místo toho nainstaluje do klienta Steam pro Windows v bottle.",
+                "cancel": "Zrušit",
+                "knownBad": "Je známo, že {{title}} nefunguje s nativním mostem Steam: {{reason}}.",
+                "scanMiss": "Nativní most Steam nepokrývá každé volání Steam, které {{title}} provádí. Nepokryto: {{symbols}}.",
+                "title": "Tato hra použije klienta Steam pro Windows",
+                "tryBridge": "Přesto vyzkoušet most",
+                "useBottled": "Použít Steam v bottle",
+                "win64NoShim": "{{title}} je 64bitová hra a tato verze GameLib nemá 64bitový most."
+            },
+            "setup": {
+                "missingSymbols": "Most nepokrývá: {{symbols}}",
+                "redownloadNote": "Návrat znovu stáhne hru do klienta Steam pro Windows v bottle."
+            }
         },
         "download": {
             "error": {

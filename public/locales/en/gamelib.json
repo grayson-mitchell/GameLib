@@ -364,7 +364,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again."
+            "statusPollTimeout": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam needs you to sign in. Its login window may be hidden behind other windows.",
+                    "otherSession": "This game is running on another computer, and Steam is asking whether to close it there.",
+                    "selfUpdate": "Steam is updating itself. Press Play again once it has restarted."
+                },
+                "intro": "The Windows Steam client has not started the game yet.",
+                "likelyCauses": "Likely causes:",
+                "mostLikely": "Most likely:",
+                "title": "Waiting for Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Installs into the shared bottled Steam client. Changing this later means reinstalling the game.",
+                "label": "Use the Windows Steam client instead"
+            },
+            "knownBad": {
+                "doesNotRun": "does not run through the bridge",
+                "drmWrapped": "protected by DRM below the Steam API",
+                "p2pRequired": "needs peer-to-peer multiplayer",
+                "win64Only": "64-bit only"
+            },
+            "limited": {
+                "body": "Achievements and cloud saves do not sync for this game via the bridge.",
+                "identityFallback": "Steam would not run this game under its own ID, so it runs with your Steam identity only.",
+                "title": "Some Steam features are limited"
+            },
+            "route": {
+                "bottled": "Bottled Steam client",
+                "label": "Steam route",
+                "missingSymbols": "Not covered: {{symbols}}",
+                "native": "Native Steam bridge",
+                "reason": {
+                    "failedThisSession": "The bridge failed earlier this session",
+                    "knownBad": "Known not to work with the bridge: {{reason}}",
+                    "noSteamApi": "This game does not use Steam's API",
+                    "pendingScan": "Checked after the download finishes",
+                    "scanClean": "Every Steam call this game makes is covered",
+                    "scanMiss": "The bridge does not cover every Steam call this game makes",
+                    "seed": "Known to work with the bridge",
+                    "userForcedBottle": "You chose the Windows Steam client",
+                    "userForcedBridge": "You chose to try the bridge",
+                    "win64NoShim": "64-bit game, and this build has no 64-bit bridge"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib will install it into the bottled Windows Steam client instead.",
+                "cancel": "Cancel",
+                "knownBad": "{{title}} is known not to work with the native Steam bridge: {{reason}}.",
+                "scanMiss": "The native Steam bridge does not cover every Steam call {{title}} makes. Not covered: {{symbols}}.",
+                "title": "This game will use the Windows Steam client",
+                "tryBridge": "Try the bridge anyway",
+                "useBottled": "Use bottled Steam",
+                "win64NoShim": "{{title}} is a 64-bit game, and this build of GameLib has no 64-bit bridge."
+            },
+            "setup": {
+                "missingSymbols": "The bridge does not cover: {{symbols}}",
+                "redownloadNote": "Falling back downloads the game again into the bottled Windows Steam client."
+            }
         },
         "download": {
             "error": {

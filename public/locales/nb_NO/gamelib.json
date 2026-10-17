@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib fikk ikke lenger svar om oppsettet av Steam-flasken. Den kan fortsatt kjøre — se etter et Steam-installasjonsvindu, og prøv deretter igjen."
+            "statusPollTimeout": "GameLib fikk ikke lenger svar om oppsettet av Steam-flasken. Den kan fortsatt kjøre — se etter et Steam-installasjonsvindu, og prøv deretter igjen.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam krever at du logger inn. Innloggingsvinduet kan være skjult bak andre vinduer.",
+                    "otherSession": "Dette spillet kjører på en annen datamaskin, og Steam spør om det skal lukkes der.",
+                    "selfUpdate": "Steam oppdaterer seg selv. Trykk Spill igjen når det har startet på nytt."
+                },
+                "intro": "Windows Steam-klienten har ikke startet spillet ennå.",
+                "likelyCauses": "Sannsynlige årsaker:",
+                "mostLikely": "Mest sannsynlig:",
+                "title": "Venter på Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Installeres i den delte Steam-klienten på flaske. Å endre dette senere betyr at spillet må installeres på nytt.",
+                "label": "Bruk Windows Steam-klienten i stedet"
+            },
+            "knownBad": {
+                "doesNotRun": "kjører ikke gjennom broen",
+                "drmWrapped": "beskyttet av DRM under Steams API",
+                "p2pRequired": "krever peer-to-peer flerspiller",
+                "win64Only": "kun 64-bit"
+            },
+            "limited": {
+                "body": "Prestasjoner og skylagrede lagringer synkroniseres ikke for dette spillet via broen.",
+                "identityFallback": "Steam vil ikke kjøre dette spillet under sin egen ID, så det kjører kun med din Steam-identitet.",
+                "title": "Noen Steam-funksjoner er begrenset"
+            },
+            "route": {
+                "bottled": "Steam-klient på flaske",
+                "label": "Steam-rute",
+                "missingSymbols": "Ikke dekket: {{symbols}}",
+                "native": "Native Steam-bro",
+                "reason": {
+                    "failedThisSession": "Broen feilet tidligere i denne økten",
+                    "knownBad": "Kjent for ikke å fungere med broen: {{reason}}",
+                    "noSteamApi": "Dette spillet bruker ikke Steams API",
+                    "pendingScan": "Sjekkes når nedlastingen er fullført",
+                    "scanClean": "Alle Steam-kall dette spillet gjør, er dekket",
+                    "scanMiss": "Broen dekker ikke alle Steam-kall dette spillet gjør",
+                    "seed": "Kjent for å fungere med broen",
+                    "userForcedBottle": "Du valgte Windows Steam-klienten",
+                    "userForcedBridge": "Du valgte å prøve broen",
+                    "win64NoShim": "64-bit spill, og denne builden har ingen 64-bit bro"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib installerer det i stedet i Windows Steam-klienten på flaske.",
+                "cancel": "Avbryt",
+                "knownBad": "{{title}} er kjent for ikke å fungere med den native Steam-broen: {{reason}}.",
+                "scanMiss": "Den native Steam-broen dekker ikke alle Steam-kall {{title}} gjør. Ikke dekket: {{symbols}}.",
+                "title": "Dette spillet vil bruke Windows Steam-klienten",
+                "tryBridge": "Prøv broen likevel",
+                "useBottled": "Bruk Steam på flaske",
+                "win64NoShim": "{{title}} er et 64-bit spill, og denne builden av GameLib har ingen 64-bit bro."
+            },
+            "setup": {
+                "missingSymbols": "Broen dekker ikke: {{symbols}}",
+                "redownloadNote": "Tilbakefallet laster ned spillet på nytt til Windows Steam-klienten på flaske."
+            }
         },
         "download": {
             "error": {

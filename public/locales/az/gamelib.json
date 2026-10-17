@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib Steam bottle qurulumu haqqında məlumat almağı dayandırdı. Hələ də işləyə bilər — Steam quraşdırıcı pəncərəsini yoxlayın, sonra yenidən cəhd edin."
+            "statusPollTimeout": "GameLib Steam bottle qurulumu haqqında məlumat almağı dayandırdı. Hələ də işləyə bilər — Steam quraşdırıcı pəncərəsini yoxlayın, sonra yenidən cəhd edin.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam sizdən daxil olmağınızı tələb edir. Onun giriş pəncərəsi digər pəncərələrin arxasında gizlənmiş ola bilər.",
+                    "otherSession": "Bu oyun başqa kompüterdə işləyir və Steam onu orada bağlamaq istəyib-istəmədiyinizi soruşur.",
+                    "selfUpdate": "Steam özünü yeniləyir. Yenidən başladıqdan sonra Oyna düyməsini yenidən basın."
+                },
+                "intro": "Windows Steam klienti hələ oyunu başlatmayıb.",
+                "likelyCauses": "Ehtimal olunan səbəblər:",
+                "mostLikely": "Ən çox ehtimal olunan:",
+                "title": "Steam gözlənilir…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Paylaşılan bağlanmış Steam klientinə quraşdırılır. Bunu sonra dəyişmək oyunu yenidən quraşdırmaq deməkdir.",
+                "label": "Bunun əvəzinə Windows Steam klientindən istifadə edin"
+            },
+            "knownBad": {
+                "doesNotRun": "Körpü vasitəsilə işləmir",
+                "drmWrapped": "Steam API-sinin altında DRM ilə qorunur",
+                "p2pRequired": "Peer-to-peer çoxoyunçulu rejim tələb edir",
+                "win64Only": "Yalnız 64-bit"
+            },
+            "limited": {
+                "body": "Nailiyyətlər və bulud saxlamaları bu oyun üçün körpü vasitəsilə sinxronlaşmır.",
+                "identityFallback": "Steam bu oyunu öz ID-si altında işlətməyəcək, ona görə yalnız sizin Steam kimliyinizlə işləyir.",
+                "title": "Bəzi Steam funksiyaları məhduddur"
+            },
+            "route": {
+                "bottled": "Bağlanmış Steam klienti",
+                "label": "Steam marşrutu",
+                "missingSymbols": "Əhatə olunmayıb: {{symbols}}",
+                "native": "Yerli Steam körpüsü",
+                "reason": {
+                    "failedThisSession": "Körpü bu sessiyada daha əvvəl uğursuz oldu",
+                    "knownBad": "Körpü ilə işləmədiyi bilinir: {{reason}}",
+                    "noSteamApi": "Bu oyun Steam API-sindən istifadə etmir",
+                    "pendingScan": "Yükləmə bitdikdən sonra yoxlanılır",
+                    "scanClean": "Bu oyunun etdiyi hər Steam çağırışı əhatə olunub",
+                    "scanMiss": "Körpü bu oyunun etdiyi hər Steam çağırışını əhatə etmir",
+                    "seed": "Körpü ilə işlədiyi bilinir",
+                    "userForcedBottle": "Windows Steam klientini seçdiniz",
+                    "userForcedBridge": "Körpünü sınamağı seçdiniz",
+                    "win64NoShim": "64-bit oyun, bu versiyada 64-bit körpü yoxdur"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib bunun əvəzinə onu bağlanmış Windows Steam klientinə quraşdıracaq.",
+                "cancel": "İmtina et",
+                "knownBad": "{{title}} yerli Steam körpüsü ilə işləmədiyi bilinir: {{reason}}.",
+                "scanMiss": "Yerli Steam körpüsü {{title}} tərəfindən edilən hər Steam çağırışını əhatə etmir. Əhatə olunmayıb: {{symbols}}.",
+                "title": "Bu oyun Windows Steam klientindən istifadə edəcək",
+                "tryBridge": "Yenə də körpünü sına",
+                "useBottled": "Bağlanmış Steam-dən istifadə et",
+                "win64NoShim": "{{title}} 64-bit oyundur və GameLib-in bu versiyasında 64-bit körpü yoxdur."
+            },
+            "setup": {
+                "missingSymbols": "Körpü əhatə etmir: {{symbols}}",
+                "redownloadNote": "Geri qayıtmaq oyunu yenidən bağlanmış Windows Steam klientinə yükləyir."
+            }
         },
         "download": {
             "error": {

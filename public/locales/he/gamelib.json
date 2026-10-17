@@ -335,7 +335,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib הפסיק לקבל עדכונים לגבי הגדרת ה-bottle של Steam. ייתכן שהתהליך עדיין פועל — בדוק אם חלון התקנה של Steam פתוח, ואז נסה שוב."
+            "statusPollTimeout": "GameLib הפסיק לקבל עדכונים לגבי הגדרת ה-bottle של Steam. ייתכן שהתהליך עדיין פועל — בדוק אם חלון התקנה של Steam פתוח, ואז נסה שוב.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam דורש ממך להתחבר. חלון ההתחברות שלו עשוי להיות מוסתר מאחורי חלונות אחרים.",
+                    "otherSession": "המשחק הזה פועל במחשב אחר, ו-Steam שואל אם לסגור אותו שם.",
+                    "selfUpdate": "Steam מעדכן את עצמו. לחץ שוב על שחק לאחר שהוא יופעל מחדש."
+                },
+                "intro": "לקוח Steam של Windows עדיין לא הפעיל את המשחק.",
+                "likelyCauses": "סיבות סבירות:",
+                "mostLikely": "הסביר ביותר:",
+                "title": "ממתין ל-Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "מותקן לתוך לקוח Steam המשותף ב-bottle. שינוי זה מאוחר יותר אומר התקנה מחדש של המשחק.",
+                "label": "השתמש בלקוח Steam של Windows במקום זאת"
+            },
+            "knownBad": {
+                "doesNotRun": "לא פועל דרך הגשר",
+                "drmWrapped": "מוגן ב-DRM מתחת ל-API של Steam",
+                "p2pRequired": "דורש ריבוי משתתפים עמית-לעמית",
+                "win64Only": "64-ביט בלבד"
+            },
+            "limited": {
+                "body": "הישגים ושמירות ענן אינם מסתנכרנים עבור המשחק הזה דרך הגשר.",
+                "identityFallback": "Steam לא יריץ את המשחק הזה תחת המזהה שלו, כך שהוא פועל רק עם זהות ה-Steam שלך.",
+                "title": "חלק מתכונות Steam מוגבלות"
+            },
+            "route": {
+                "bottled": "לקוח Steam ב-bottle",
+                "label": "מסלול Steam",
+                "missingSymbols": "לא מכוסה: {{symbols}}",
+                "native": "גשר Steam מובנה",
+                "reason": {
+                    "failedThisSession": "הגשר נכשל מוקדם יותר בסשן הזה",
+                    "knownBad": "ידוע שלא עובד עם הגשר: {{reason}}",
+                    "noSteamApi": "המשחק הזה אינו משתמש ב-API של Steam",
+                    "pendingScan": "נבדק לאחר שההורדה מסתיימת",
+                    "scanClean": "כל קריאת Steam שהמשחק הזה מבצע מכוסה",
+                    "scanMiss": "הגשר אינו מכסה כל קריאת Steam שהמשחק הזה מבצע",
+                    "seed": "ידוע שעובד עם הגשר",
+                    "userForcedBottle": "בחרת בלקוח Steam של Windows",
+                    "userForcedBridge": "בחרת לנסות את הגשר",
+                    "win64NoShim": "משחק 64-ביט, ולגרסה הזו אין גשר 64-ביט"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib יתקין אותו במקום זאת בלקוח Steam של Windows ב-bottle.",
+                "cancel": "ביטול",
+                "knownBad": "ידוע ש-{{title}} אינו עובד עם הגשר המובנה של Steam: {{reason}}.",
+                "scanMiss": "הגשר המובנה של Steam אינו מכסה כל קריאת Steam ש-{{title}} מבצע. לא מכוסה: {{symbols}}.",
+                "title": "המשחק הזה ישתמש בלקוח Steam של Windows",
+                "tryBridge": "נסה את הגשר בכל זאת",
+                "useBottled": "השתמש ב-Steam ב-bottle",
+                "win64NoShim": "{{title}} הוא משחק 64-ביט, ולגרסה זו של GameLib אין גשר 64-ביט."
+            },
+            "setup": {
+                "missingSymbols": "הגשר אינו מכסה: {{symbols}}",
+                "redownloadNote": "החזרה מורידה את המשחק שוב ללקוח Steam של Windows ב-bottle."
+            }
         },
         "download": {
             "error": {

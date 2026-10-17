@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib không còn nhận được phản hồi về việc thiết lập bottle Steam. Quá trình này có thể vẫn đang chạy — hãy kiểm tra cửa sổ cài đặt Steam, sau đó thử lại."
+            "statusPollTimeout": "GameLib không còn nhận được phản hồi về việc thiết lập bottle Steam. Quá trình này có thể vẫn đang chạy — hãy kiểm tra cửa sổ cài đặt Steam, sau đó thử lại.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam cần bạn đăng nhập. Cửa sổ đăng nhập của nó có thể bị ẩn sau các cửa sổ khác.",
+                    "otherSession": "Trò chơi này đang chạy trên một máy tính khác, và Steam đang hỏi có nên đóng nó ở đó không.",
+                    "selfUpdate": "Steam đang tự cập nhật. Nhấn Chơi lại sau khi khởi động lại."
+                },
+                "intro": "Client Steam Windows chưa khởi động trò chơi.",
+                "likelyCauses": "Các nguyên nhân có thể:",
+                "mostLikely": "Có khả năng nhất:",
+                "title": "Đang chờ Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "Cài đặt vào client Steam dùng chung trong bottle. Thay đổi điều này sau có nghĩa là phải cài đặt lại trò chơi.",
+                "label": "Thay vào đó, hãy dùng client Steam Windows"
+            },
+            "knownBad": {
+                "doesNotRun": "không chạy qua cầu nối",
+                "drmWrapped": "được bảo vệ bằng DRM bên dưới API của Steam",
+                "p2pRequired": "cần chế độ nhiều người chơi ngang hàng (peer-to-peer)",
+                "win64Only": "chỉ 64-bit"
+            },
+            "limited": {
+                "body": "Thành tựu và lưu trữ đám mây không đồng bộ cho trò chơi này qua cầu nối.",
+                "identityFallback": "Steam sẽ không chạy trò chơi này dưới ID riêng của nó, vì vậy nó chỉ chạy với danh tính Steam của bạn.",
+                "title": "Một số tính năng Steam bị giới hạn"
+            },
+            "route": {
+                "bottled": "Client Steam trong bottle",
+                "label": "Lộ trình Steam",
+                "missingSymbols": "Không được bao phủ: {{symbols}}",
+                "native": "Cầu nối Steam gốc",
+                "reason": {
+                    "failedThisSession": "Cầu nối đã thất bại trước đó trong phiên này",
+                    "knownBad": "Được biết là không hoạt động với cầu nối: {{reason}}",
+                    "noSteamApi": "Trò chơi này không sử dụng API của Steam",
+                    "pendingScan": "Được kiểm tra sau khi tải xuống hoàn tất",
+                    "scanClean": "Mọi lệnh gọi Steam mà trò chơi này thực hiện đều được bao phủ",
+                    "scanMiss": "Cầu nối không bao phủ mọi lệnh gọi Steam mà trò chơi này thực hiện",
+                    "seed": "Được biết là hoạt động với cầu nối",
+                    "userForcedBottle": "Bạn đã chọn client Steam Windows",
+                    "userForcedBridge": "Bạn đã chọn thử cầu nối",
+                    "win64NoShim": "Trò chơi 64-bit, và bản dựng này không có cầu nối 64-bit"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib sẽ thay vào đó cài đặt nó vào client Steam Windows trong bottle.",
+                "cancel": "Hủy",
+                "knownBad": "{{title}} được biết là không hoạt động với cầu nối Steam gốc: {{reason}}.",
+                "scanMiss": "Cầu nối Steam gốc không bao phủ mọi lệnh gọi Steam mà {{title}} thực hiện. Không được bao phủ: {{symbols}}.",
+                "title": "Trò chơi này sẽ sử dụng client Steam Windows",
+                "tryBridge": "Vẫn thử cầu nối",
+                "useBottled": "Dùng Steam trong bottle",
+                "win64NoShim": "{{title}} là trò chơi 64-bit, và bản dựng GameLib này không có cầu nối 64-bit."
+            },
+            "setup": {
+                "missingSymbols": "Cầu nối không bao phủ: {{symbols}}",
+                "redownloadNote": "Việc quay lại sẽ tải lại trò chơi vào client Steam Windows trong bottle."
+            }
         },
         "download": {
             "error": {

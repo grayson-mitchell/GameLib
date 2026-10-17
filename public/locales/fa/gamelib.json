@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib دیگر پاسخی درباره راه‌اندازی bottle مربوط به Steam دریافت نکرد. ممکن است هنوز در حال اجرا باشد — پنجره نصب‌کننده Steam را بررسی کنید و دوباره امتحان کنید."
+            "statusPollTimeout": "GameLib دیگر پاسخی درباره راه‌اندازی bottle مربوط به Steam دریافت نکرد. ممکن است هنوز در حال اجرا باشد — پنجره نصب‌کننده Steam را بررسی کنید و دوباره امتحان کنید.",
+            "waiting": {
+                "cause": {
+                    "login": "Steam نیاز دارد که وارد شوید. پنجره ورود آن ممکن است پشت پنجره‌های دیگر پنهان باشد.",
+                    "otherSession": "این بازی روی رایانه دیگری در حال اجراست، و Steam می‌پرسد که آیا باید آنجا بسته شود.",
+                    "selfUpdate": "Steam در حال به‌روزرسانی خودش است. پس از راه‌اندازی مجدد دوباره روی Play بزنید."
+                },
+                "intro": "کلاینت Steam Windows هنوز بازی را شروع نکرده است.",
+                "likelyCauses": "دلایل محتمل:",
+                "mostLikely": "محتمل‌ترین:",
+                "title": "در انتظار Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "در کلاینت Steam مشترک در bottle نصب می‌شود. تغییر این بعداً یعنی نصب مجدد بازی.",
+                "label": "در عوض از کلاینت Steam Windows استفاده کنید"
+            },
+            "knownBad": {
+                "doesNotRun": "از طریق پل اجرا نمی‌شود",
+                "drmWrapped": "محافظت‌شده با DRM زیر API سایت Steam",
+                "p2pRequired": "به چندنفره نظیر‌به‌نظیر نیاز دارد",
+                "win64Only": "فقط ۶۴ بیتی"
+            },
+            "limited": {
+                "body": "دستاوردها و ذخیره‌های ابری برای این بازی از طریق پل همگام‌سازی نمی‌شوند.",
+                "identityFallback": "Steam این بازی را با شناسه خودش اجرا نمی‌کند، بنابراین فقط با هویت Steam شما اجرا می‌شود.",
+                "title": "برخی از ویژگی‌های Steam محدود هستند"
+            },
+            "route": {
+                "bottled": "کلاینت Steam در bottle",
+                "label": "مسیر Steam",
+                "missingSymbols": "پوشش داده نشده: {{symbols}}",
+                "native": "پل بومی Steam",
+                "reason": {
+                    "failedThisSession": "پل زودتر در این جلسه با شکست مواجه شد",
+                    "knownBad": "شناخته‌شده برای عدم کار با پل: {{reason}}",
+                    "noSteamApi": "این بازی از API سایت Steam استفاده نمی‌کند",
+                    "pendingScan": "پس از پایان دانلود بررسی می‌شود",
+                    "scanClean": "هر فراخوانی Steam که این بازی انجام می‌دهد پوشش داده شده است",
+                    "scanMiss": "پل همه فراخوانی‌های Steam که این بازی انجام می‌دهد را پوشش نمی‌دهد",
+                    "seed": "شناخته‌شده برای کار با پل",
+                    "userForcedBottle": "شما کلاینت Steam Windows را انتخاب کردید",
+                    "userForcedBridge": "شما انتخاب کردید که پل را امتحان کنید",
+                    "win64NoShim": "بازی ۶۴ بیتی، و این نسخه پل ۶۴ بیتی ندارد"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib در عوض آن را در کلاینت Steam Windows در bottle نصب خواهد کرد.",
+                "cancel": "انصراف",
+                "knownBad": "شناخته‌شده است که {{title}} با پل بومی Steam کار نمی‌کند: {{reason}}.",
+                "scanMiss": "پل بومی Steam همه فراخوانی‌های Steam که {{title}} انجام می‌دهد را پوشش نمی‌دهد. پوشش داده نشده: {{symbols}}.",
+                "title": "این بازی از کلاینت Steam Windows استفاده خواهد کرد",
+                "tryBridge": "در هر صورت پل را امتحان کنید",
+                "useBottled": "استفاده از Steam در bottle",
+                "win64NoShim": "{{title}} یک بازی ۶۴ بیتی است، و این نسخه از GameLib پل ۶۴ بیتی ندارد."
+            },
+            "setup": {
+                "missingSymbols": "پل پوشش نمی‌دهد: {{symbols}}",
+                "redownloadNote": "بازگشت دوباره بازی را در کلاینت Steam Windows در bottle دانلود می‌کند."
+            }
         },
         "download": {
             "error": {

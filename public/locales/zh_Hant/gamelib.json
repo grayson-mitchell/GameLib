@@ -328,7 +328,67 @@
     },
     "steam": {
         "bottle": {
-            "statusPollTimeout": "GameLib 已無法取得 Steam bottle 設定的回應。它可能仍在執行中——請確認是否有 Steam 安裝程式視窗，然後再試一次。"
+            "statusPollTimeout": "GameLib 已無法取得 Steam bottle 設定的回應。它可能仍在執行中——請確認是否有 Steam 安裝程式視窗，然後再試一次。",
+            "waiting": {
+                "cause": {
+                    "login": "Steam 需要您登入。其登入視窗可能被其他視窗遮擋。",
+                    "otherSession": "此遊戲正在另一台電腦上執行，Steam 正在詢問是否應在那裡關閉它。",
+                    "selfUpdate": "Steam 正在自我更新。重新啟動後請再次按下遊玩。"
+                },
+                "intro": "Windows 版 Steam 用戶端尚未啟動遊戲。",
+                "likelyCauses": "可能的原因：",
+                "mostLikely": "最有可能：",
+                "title": "正在等待 Steam…"
+            }
+        },
+        "bridge": {
+            "forceBottle": {
+                "help": "安裝到共用的 Bottle 中的 Steam 用戶端。之後變更此設定表示需要重新安裝遊戲。",
+                "label": "改用 Windows 版 Steam 用戶端"
+            },
+            "knownBad": {
+                "doesNotRun": "無法透過橋接執行",
+                "drmWrapped": "受 Steam API 之下的 DRM 保護",
+                "p2pRequired": "需要點對點多人遊戲",
+                "win64Only": "僅限 64 位元"
+            },
+            "limited": {
+                "body": "成就與雲端存檔不會透過橋接為此遊戲同步。",
+                "identityFallback": "Steam 不會以其自身 ID 執行此遊戲，因此它僅以您的 Steam 身分執行。",
+                "title": "部分 Steam 功能受限"
+            },
+            "route": {
+                "bottled": "Bottle 中的 Steam 用戶端",
+                "label": "Steam 路線",
+                "missingSymbols": "未涵蓋：{{symbols}}",
+                "native": "原生 Steam 橋接",
+                "reason": {
+                    "failedThisSession": "橋接先前在本次工作階段中已失敗",
+                    "knownBad": "已知無法與橋接搭配使用：{{reason}}",
+                    "noSteamApi": "此遊戲不使用 Steam 的 API",
+                    "pendingScan": "在下載完成後進行檢查",
+                    "scanClean": "此遊戲發出的每個 Steam 呼叫都已涵蓋",
+                    "scanMiss": "橋接未涵蓋此遊戲發出的每個 Steam 呼叫",
+                    "seed": "已知可與橋接搭配使用",
+                    "userForcedBottle": "您選擇了 Windows 版 Steam 用戶端",
+                    "userForcedBridge": "您選擇嘗試橋接",
+                    "win64NoShim": "64 位元遊戲，此版本沒有 64 位元橋接"
+                }
+            },
+            "routeNotice": {
+                "bottledExplainer": "GameLib 將改為把它安裝到 Bottle 中的 Windows 版 Steam 用戶端。",
+                "cancel": "取消",
+                "knownBad": "已知 {{title}} 無法與原生 Steam 橋接搭配使用：{{reason}}。",
+                "scanMiss": "原生 Steam 橋接未涵蓋 {{title}} 發出的每個 Steam 呼叫。未涵蓋：{{symbols}}。",
+                "title": "此遊戲將使用 Windows 版 Steam 用戶端",
+                "tryBridge": "仍然嘗試橋接",
+                "useBottled": "使用 Bottle 中的 Steam",
+                "win64NoShim": "{{title}} 是 64 位元遊戲，此 GameLib 版本沒有 64 位元橋接。"
+            },
+            "setup": {
+                "missingSymbols": "橋接未涵蓋：{{symbols}}",
+                "redownloadNote": "回退將把遊戲重新下載到 Bottle 中的 Windows 版 Steam 用戶端。"
+            }
         },
         "download": {
             "error": {
