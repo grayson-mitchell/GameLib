@@ -60,6 +60,40 @@
       "stackBytes": 4,
       "params": [{ "name": "friendsGroupID", "type": "int32" }],
       "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-4-byte-param, register-return case."
+    },
+    {
+      "slot": 5,
+      "name": "GetStatTest_TESTONLY",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        { "name": "pchName", "type": "const char*", "kind": "in-string" },
+        {
+          "name": "pValue",
+          "type": "int32*",
+          "kind": "out-value",
+          "valueType": "int32"
+        }
+      ],
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises in-string request marshaling and out-value response marshaling."
+    },
+    {
+      "slot": 6,
+      "name": "GetDirTest_TESTONLY",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchDir",
+          "type": "char*",
+          "kind": "out-buffer",
+          "sizeParam": "cubBuffer"
+        },
+        { "name": "cubBuffer", "type": "uint32" }
+      ],
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises out-buffer response marshaling bounded by a sibling size param."
     }
   ]
 }

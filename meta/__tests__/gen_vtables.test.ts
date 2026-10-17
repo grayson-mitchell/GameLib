@@ -14,6 +14,7 @@ import {
   validateManifest,
   FLAT_EXPORTS_SUPERSET,
   STRING_RETURN_BUF_BYTES,
+  WIRE_LAYOUT_DOC,
   type InterfaceManifestV2
 } from '../gen_vtables'
 
@@ -595,6 +596,194 @@ describe('gen_vtables', () => {
       }
       const def = generateDefFile([isteamuser, x64Only], 'x86')
       expect(def).not.toContain('SteamUserX64Only')
+    })
+  })
+
+  describe('WIRE_LAYOUT_DOC (51-06 Task 3)', () => {
+    it('is exported and documents both the request and response blob layouts', () => {
+      expect(typeof WIRE_LAYOUT_DOC).toBe('string')
+      expect(WIRE_LAYOUT_DOC).toMatch(/in-string/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/out-value/)
+      expect(WIRE_LAYOUT_DOC).toMatch(/out-buffer/)
+    })
+  })
+
+  describe('wire marshaling: in-string, out-value, out-buffer (51-06 Task 3, fixture)', () => {
+    it('GetStatTest_TESTONLY: an in-string param packs [len][bytes] with a NULL-pointer sentinel length', () => {
+      const c = generateShimC([abiExercise])
+      const stub = c.match(
+        /vt_AbiExercise001_GetStatTest_TESTONLY\(void \*self[^{]*\) \{[\s\S]*?\n\}/
+      )
+      expect(stub).not.toBeNull()
+      const body = stub![0]
+      expect(body).toContain('if (pchName == NULL)')
+      expect(body).toContain('strLen = 0xFFFFFFFFu;')
+      expect(body).toContain('strlen(pchName)')
+    })
+
+    it('GetStatTest_TESTONLY: an out-value param is read from the response AFTER the return value, and skipped when the caller passes NULL', () => {
+      const c = generateShimC([abiExercise])
+      const stub = c.match(
+        /vt_AbiExercise001_GetStatTest_TESTONLY\(void \*self[^{]*\) \{[\s\S]*?\n\}/
+      )
+      const body = stub![0]
+      expect(body).toContain('if (pValue != NULL')
+      expect(body).toContain('*pValue = outVal;')
+      expect(body).not.toContain('bridge_transact(65520, 5, argbuf, 0')
+    })
+
+    it('GetDirTest_TESTONLY: an out-buffer param sends a capped [u32 capacity] taken from its sizeParam sibling', () => {
+      const c = generateShimC([abiExercise])
+      const stub = c.match(
+        /vt_AbiExercise001_GetDirTest_TESTONLY\(void \*self[^{]*\) \{[\s\S]*?\n\}/
+      )
+      expect(stub).not.toBeNull()
+      const body = stub![0]
+      expect(body).toContain('uint32_t cap = (uint32_t)cubBuffer;')
+      expect(body).toContain(
+        'if (cap > WIRE_OUT_BUFFER_MAX_BYTES) cap = WIRE_OUT_BUFFER_MAX_BYTES;'
+      )
+    })
+
+    it('GetDirTest_TESTONLY: the response decode truncates to min(declared len, capacity) and NUL-terminates a char* buffer', () => {
+      const c = generateShimC([abiExercise])
+      const stub = c.match(
+        /vt_AbiExercise001_GetDirTest_TESTONLY\(void \*self[^{]*\) \{[\s\S]*?\n\}/
+      )
+      const body = stub![0]
+      expect(body).toContain(
+        'if (copyLen > WIRE_OUT_BUFFER_MAX_BYTES) copyLen = WIRE_OUT_BUFFER_MAX_BYTES;'
+      )
+      expect(body).toContain("pchDir[copyLen] = '\\0';")
+    })
+  })
+
+  describe('helperFallback: no bridge_transact, returns the constant (51-06 Task 3)', () => {
+    const fallbackManifest: InterfaceManifestV2 = {
+      schemaVersion: 2,
+      interface: 'FallbackExercise001',
+      family: 'FallbackExercise',
+      ordinal: 103,
+      arches: ['x86'],
+      mode: 'wire',
+      complete: true,
+      source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+      methods: [
+        {
+          slot: 0,
+          name: 'RequestCurrentStatsTest_TESTONLY',
+          returns: 'bool',
+          returnKind: 'int32',
+          stackBytes: 0,
+          params: [],
+          helperFallback: 1
+        }
+      ]
+    }
+
+    it('emits a stub that returns the constant and never calls bridge_transact', () => {
+      const c = generateShimC([fallbackManifest])
+      const stub = c.match(
+        /vt_FallbackExercise001_RequestCurrentStatsTest_TESTONLY\([^{]*\) \{[\s\S]*?\n\}/
+      )
+      expect(stub).not.toBeNull()
+      const body = stub![0]
+      expect(body).toContain('return 1;')
+      expect(body).not.toContain('bridge_transact')
+    })
+  })
+
+  describe('validateManifest: wire-param-kind checks (51-06 Task 3)', () => {
+    const base: InterfaceManifestV2 = {
+      schemaVersion: 2,
+      interface: 'WireCheckExercise001',
+      family: 'WireCheckExercise',
+      ordinal: 104,
+      arches: ['x86'],
+      mode: 'wire',
+      complete: true,
+      source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+      methods: [
+        {
+          slot: 0,
+          name: 'DoThing',
+          returns: 'void',
+          returnKind: 'void',
+          stackBytes: 4,
+          params: [{ name: 'pchName', type: 'const char*' }]
+        }
+      ]
+    }
+
+    it('flags a pointer param used without an explicit kind', () => {
+      const errors = validateManifest(base)
+      expect(errors.some((e) => /pointer param.*without.*kind/i.test(e))).toBe(
+        true
+      )
+    })
+
+    it('flags an out-buffer param missing sizeParam', () => {
+      const bad: InterfaceManifestV2 = {
+        ...base,
+        methods: [
+          {
+            ...base.methods[0],
+            params: [{ name: 'pchDir', type: 'char*', kind: 'out-buffer' }]
+          }
+        ]
+      }
+      const errors = validateManifest(bad)
+      expect(errors.some((e) => /out-buffer.*sizeParam/i.test(e))).toBe(true)
+    })
+
+    it('flags a by-value struct param (CSteamID)', () => {
+      const bad: InterfaceManifestV2 = {
+        ...base,
+        methods: [
+          {
+            ...base.methods[0],
+            params: [{ name: 'steamID', type: 'CSteamID', kind: 'value' }]
+          }
+        ]
+      }
+      const errors = validateManifest(bad)
+      expect(errors.some((e) => /by-value struct param/i.test(e))).toBe(true)
+    })
+
+    it('does NOT flag an in-string/out-value/out-buffer param with a properly declared kind', () => {
+      const good: InterfaceManifestV2 = {
+        ...base,
+        methods: [
+          {
+            slot: 0,
+            name: 'DoThing',
+            returns: 'void',
+            returnKind: 'void',
+            stackBytes: 16,
+            params: [
+              { name: 'pchName', type: 'const char*', kind: 'in-string' },
+              {
+                name: 'pValue',
+                type: 'int32*',
+                kind: 'out-value',
+                valueType: 'int32'
+              },
+              {
+                name: 'pchDir',
+                type: 'char*',
+                kind: 'out-buffer',
+                sizeParam: 'cubBuffer'
+              },
+              { name: 'cubBuffer', type: 'uint32' }
+            ]
+          }
+        ]
+      }
+      expect(validateManifest(good)).toEqual([])
+    })
+
+    it('every committed abi-exercise fixture validates clean', () => {
+      expect(validateManifest(abiExercise)).toEqual([])
     })
   })
 })
