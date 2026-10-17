@@ -21,15 +21,34 @@
  * the CLANG COMPILE below is an in-repo spawn and goes through
  * `createFakeHomeProfile()` per the convention. The LATER real
  * `ensureBridgeHelperReady()` spawn is PRODUCTION code and -- per the
- * project's fakeHomeIsolation gate -- never carries an `env:` override of
- * its own; it inherits whatever `process.env` the jest WORKER already
- * has, which `jest.setupContainment.ts` has already redirected
- * HOME/APPDATA/etc to a contained root for every backend test file BEFORE
- * this file's own imports run. That is what makes `load_steam_api()` fail
- * (`resolve_dylib_path()` resolves under the contained HOME, where no real
- * `libsteam_api.dylib` exists) and the helper degrade to
- * HEALTH/HELLO-only / `not-inited` -- the exact state this test asserts,
- * with zero extra plumbing of its own.
+ * project's fakeHomeIsolation gate -- never hand-rolls an env literal of
+ * its own.
+ *
+ * CORRECTED (Phase 51 Plan 01, Task 3 live-tracer divergence follow-up,
+ * measured live 2026-10-17): this previously assumed `jest.setupContainment
+ * .ts`'s HOME redirection reaches that real spawn because it "has already
+ * redirected HOME/APPDATA/etc ... before this file's own imports run." That
+ * redirection is real but only for THIS TEST's own sandboxed JS
+ * (`process.env` / the mocked `os.homedir()`) -- `node:child_process`'s
+ * builtin module is loaded once, outside Jest's per-test-file VM sandbox,
+ * and builds a real spawned child's environment from the ACTUAL host
+ * `process.env`, never the sandboxed clone. Verified directly: a jest test
+ * that prints its own `process.env.HOME` sees the fake contained root, but
+ * `execFileSync('/usr/bin/printenv', ['HOME'])` run from inside that SAME
+ * test prints the developer's real `$HOME`. So the real
+ * `ensureBridgeHelperReady()` spawn below was never actually isolated --
+ * on a prior test host with no native Steam.app installed at all, there
+ * was simply no real `libsteam_api.dylib` anywhere to find (isolated or
+ * not), so `'not-inited'` held for the wrong reason. Once a genuine native
+ * Mac Steam.app exists at the real `$HOME`'s canonical
+ * `Library/Application Support/Steam/Steam.AppBundle/...` path (as it does
+ * on any machine that has run the Task 3 live checkpoint), the real spawn
+ * resolves the REAL dylib and `ensureBridgeHelperReady()` reports `'ready'`
+ * instead -- a false pass this test could not see. Fixed by explicitly
+ * handing the real spawn THIS SAME `createFakeHomeProfile()` instance's
+ * env via the test-only `__setBridgeHelperSpawnEnvForTests()` hook (mirrors
+ * `__setBridgeHelperPathForTests()`'s existing shape) -- real isolation,
+ * not ambient propagation that never happens.
  */
 import { execFileSync } from 'node:child_process'
 import { chmodSync, mkdtempSync, readFileSync } from 'node:fs'
@@ -44,7 +63,8 @@ import { steamBridgeHelperStateDir } from 'backend/constants/paths'
 import {
   ensureBridgeHelperReady,
   stopBridgeHelper,
-  __setBridgeHelperPathForTests
+  __setBridgeHelperPathForTests,
+  __setBridgeHelperSpawnEnvForTests
 } from '../helperProcess'
 import { encodeControl, decodeResponse, STATUS_OK } from '../protocol'
 // eslint-disable-next-line @typescript-eslint/no-var-requires -- meta/ is
@@ -168,10 +188,25 @@ describeDarwinOnly(
       chmodSync(compiledHelperPath, 0o755)
 
       __setBridgeHelperPathForTests(compiledHelperPath)
+      // Isolation follow-up (Task 3 live-tracer divergence, measured live
+      // 2026-10-17): jest.setupContainment.ts's HOME redirection is visible
+      // only to this test's OWN sandboxed JS (process.env/os.homedir()) --
+      // node:child_process's builtin is loaded outside that per-test-file
+      // sandbox and builds a real spawned child's env from the REAL host
+      // process.env, so it never actually isolated the real
+      // ensureBridgeHelperReady() spawn below. On a machine with a
+      // genuinely-installed native Steam.app this let the real
+      // libsteam_api.dylib resolve under the developer's real $HOME,
+      // flipping the assertion below from 'not-inited' to 'ready'. Pass
+      // THIS SAME createFakeHomeProfile() instance's env explicitly so the
+      // real spawn is isolated for real, per CLAUDE.md's "never a
+      // hand-rolled env literal -- use createFakeHomeProfile()" convention.
+      __setBridgeHelperSpawnEnvForTests(profile.childEnv())
     }, 30000)
 
     afterAll(() => {
       __setBridgeHelperPathForTests(null)
+      __setBridgeHelperSpawnEnvForTests(null)
       profile?.dispose()
     })
 

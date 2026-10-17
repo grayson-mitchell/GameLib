@@ -8,8 +8,11 @@
  *
  * Modeled directly on installLocation.ts's fetchInstalldir (the exact
  * precedent this task's <read_first> names): same numeric-appId guard ->
- * `SteamUser.getClient()` (no second logon) -> `getProductInfo` over the
- * already-authenticated CM connection -> never-throws-returns-undefined
+ * `SteamUser.getClient()`, reconnecting once via the sanctioned
+ * `ensureConnected()` seam on a cold session (no second logon -- T-21-11;
+ * `ensureConnected()` shares any in-flight attempt rather than opening a
+ * new one; quick-260909-pym parity, Phase 51 Plan 01) -> `getProductInfo`
+ * over the resulting CM connection -> never-throws-returns-undefined
  * discipline. A missing/absent Steam client, a non-numeric appId, or a PICS
  * failure all fall back to `undefined` -- a launch-exe lookup must not
  * hard-fail the caller's launch() flow.
@@ -33,7 +36,11 @@ import { logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from '../user'
 import { sanitizeInstalldir } from '../installLocation'
 import { getBridgeBottleSettings, getBottleSteamappsDir } from '../bottle'
-import { withTimeout, STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
+import {
+  withTimeout,
+  STEAM_PICS_TIMEOUT_MS,
+  STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS
+} from '../withTimeout'
 
 // Pattern repeated verbatim across bottle.ts, clientSetup.ts,
 // installLocation.ts, allowlist.ts, importScan.ts, shimGenerate.ts -- reuse
@@ -64,6 +71,20 @@ interface AppLaunchInfo {
  * Never throws: any guard failure, missing client, or PICS error logs a
  * warning and returns `undefined` -- the caller (games.ts launch() bridge
  * branch, Task 3) is responsible for surfacing an actual failure signal.
+ *
+ * Phase 51 Plan 01 (Task 3 live-tracer divergence, quick-260909-pym parity):
+ * a cold session's first Play click reaches here before anything else has
+ * paid for a CM connection -- `noteSteamAuthTrigger('user-play')` only
+ * unlocks the keyring read, it does not block on a logon. The ORIGINAL
+ * version of this function treated a null `getClient()` as terminal, so
+ * every first-launch-of-the-session bridge attempt silently fell back to
+ * the bottled-Steam path with no helper ever spawned (observed live:
+ * Avernum 5/6, 2026-10-17). `installLocation.ts`'s `fetchInstalldir` hit
+ * this exact shape and fixed it (quick-260909-pym) by awaiting
+ * `SteamUser.ensureConnected()` (bounded, shares any in-flight attempt --
+ * T-21-11's "never open a second logon" is unaffected since
+ * `ensureConnected()` IS the sanctioned reconnect seam) and retrying
+ * `getClient()` once before giving up. Mirrored here verbatim.
  */
 export async function resolveBridgeLaunchExe(
   appId: string
@@ -76,9 +97,24 @@ export async function resolveBridgeLaunchExe(
     return undefined
   }
 
-  const client = SteamUser.getClient()
+  let client = SteamUser.getClient()
   if (!client) {
-    return undefined
+    try {
+      await withTimeout(
+        SteamUser.ensureConnected(),
+        STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
+        'resolveBridgeLaunchExe ensureConnected'
+      )
+    } catch (err) {
+      logWarning(
+        `resolveBridgeLaunchExe: ensureConnected timed out/failed while resolving launch exe for appId ${appId}: ${String(err)}`,
+        LogPrefix.Steam
+      )
+    }
+    client = SteamUser.getClient()
+    if (!client) {
+      return undefined
+    }
   }
 
   try {

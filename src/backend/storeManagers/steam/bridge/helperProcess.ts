@@ -125,6 +125,34 @@ export function __setBridgeHelperPathForTests(path: string | null): void {
   bridgeHelperPathOverride = path
 }
 
+// Test-only override for the real, unmocked spawn's child env (Phase 51
+// Plan 01, Task 3 live-tracer divergence follow-up). `ensureHelperSpawned`
+// below passes NO `env` option in the default (null) case -- the production
+// spawn must inherit the real ambient environment, per the fakeHomeIsolation
+// gate's prohibition on a hand-rolled env literal. `jest.setupContainment.ts`
+// mutates `process.env`/`os.homedir()` as SEEN BY JEST'S OWN SANDBOXED JS,
+// but `node:child_process`'s builtin module is loaded once, outside that
+// per-test-file sandbox, and reads the REAL host `process.env` when building
+// a child's environment block -- so that containment never reaches a real
+// spawned child (measured live, 2026-10-17: a jest test observes
+// `process.env.HOME` redirected to a fake root while a child spawned from
+// that same test still inherits the developer's real `$HOME`). On a machine
+// with a genuinely-installed native Steam.app, `helperIntegration.test.ts`'s
+// real (unmocked) `ensureBridgeHelperReady()` call was therefore never
+// actually isolated -- it only ever asserted `'not-inited'` because no real
+// dylib existed at the real $HOME's canonical Steam path on prior test
+// hosts. Per CLAUDE.md's "never a hand-rolled env literal -- use
+// createFakeHomeProfile()" convention, the test now passes this hook
+// `createFakeHomeProfile()`'s own `.env` explicitly, closing the gap for
+// real rather than relying on ambient propagation that does not happen.
+let bridgeHelperSpawnEnvOverride: NodeJS.ProcessEnv | null = null
+
+export function __setBridgeHelperSpawnEnvForTests(
+  env: NodeJS.ProcessEnv | null
+): void {
+  bridgeHelperSpawnEnvOverride = env
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     const handle = setTimeout(resolve, ms)
@@ -168,7 +196,14 @@ function ensureHelperSpawned(appId: string): BridgeHelperEntry {
 
   const child = spawn(helperPath, ['--appid', appId, '--port', '0'], {
     cwd: stateDir,
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
+    // Unset (null) on every production path -- inherits the real ambient
+    // environment, unchanged. Only a test calling
+    // __setBridgeHelperSpawnEnvForTests() with createFakeHomeProfile()'s
+    // own env ever populates this; never a hand-rolled literal.
+    ...(bridgeHelperSpawnEnvOverride
+      ? { env: bridgeHelperSpawnEnvOverride }
+      : {})
   })
 
   let settlePortReady: (port: number | null) => void = () => {}

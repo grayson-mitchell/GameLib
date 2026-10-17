@@ -194,13 +194,60 @@ describe('resolveBridgeLaunchExe', () => {
     expect(jest.mocked(logWarning)).toHaveBeenCalled()
   })
 
-  it('returns undefined when SteamUser.getClient() is absent (no second logon attempted)', async () => {
+  it('returns undefined when SteamUser.getClient() is still absent after an ensureConnected retry (no second logon attempted)', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jest.mocked(SteamUser.getClient).mockReturnValue(undefined as any)
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
 
     const result = await resolveBridgeLaunchExe(APP_ID)
 
     expect(result).toBeUndefined()
+    expect(SteamUser.ensureConnected).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns undefined (never throws) when ensureConnected itself rejects/times out', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jest.mocked(SteamUser.getClient).mockReturnValue(undefined as any)
+    jest
+      .mocked(SteamUser.ensureConnected)
+      .mockRejectedValue(new Error('ensureConnected down'))
+
+    const result = await resolveBridgeLaunchExe(APP_ID)
+
+    expect(result).toBeUndefined()
+    expect(jest.mocked(logWarning)).toHaveBeenCalled()
+  })
+
+  it('quick-260909-pym parity: a cold client (getClient() null) that connects via ensureConnected() resolves the launch exe instead of bailing out', async () => {
+    const fakeClient = makeFakeClient({
+      getProductInfo: mockProductInfo(206060, {
+        config: {
+          installdir: 'Avernum 6',
+          launch: {
+            '0': { executable: 'Avernum6.exe' }
+          }
+        }
+      })
+    })
+    jest
+      .mocked(SteamUser.getClient)
+      // Cold on the first call (pre-reconnect), live once ensureConnected
+      // has resolved -- the exact shape a first-launch-of-the-session Play
+      // click hits (the Task 3 live-tracer divergence, 2026-10-17).
+      .mockReturnValueOnce(
+        undefined as unknown as ReturnType<typeof SteamUser.getClient>
+      )
+      .mockReturnValue(
+        fakeClient as unknown as ReturnType<typeof SteamUser.getClient>
+      )
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+
+    const result = await resolveBridgeLaunchExe('206060')
+
+    expect(result).toBe(
+      join(BRIDGE_STEAMAPPS_DIR, 'common', 'Avernum 6', 'Avernum6.exe')
+    )
+    expect(SteamUser.ensureConnected).toHaveBeenCalledTimes(1)
   })
 
   it('returns undefined (never throws) when getProductInfo rejects', async () => {
