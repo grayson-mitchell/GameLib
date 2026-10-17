@@ -30,6 +30,14 @@ import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
 import { sendFrontendMessage } from '../../ipc'
+import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
+import {
+  readBoundedTail,
+  classifyBottledSteamBlock,
+  bottledSteamLogPaths,
+  WAITING_FOR_STEAM_GRACE_MS,
+  WAITING_RECHECK_MS
+} from './bottleLaunchSignals'
 
 /** Default poll cadence while a match has already been seen. */
 const DEFAULT_POLL_INTERVAL_MS = 1500
@@ -194,7 +202,8 @@ async function runPollLoop(
   appId: string,
   entry: MonitorEntry,
   lowerPrefix: string,
-  pollIntervalMs: number
+  pollIntervalMs: number,
+  bottleDir: string
 ): Promise<void> {
   const startedAt = Date.now()
   // Session duration is measured from the FIRST MATCH, not from monitor
@@ -203,6 +212,16 @@ async function runPollLoop(
   let matchedAt = 0
   let everMatched = false
   let consecutiveFailures = 0
+  // D-51-16 (Phase 51 Plan 08): waiting-state check bookkeeping.
+  // `lastWaitingCheckAt === null` means "never checked yet" -- distinct
+  // from 0, which Date.now() can never actually produce in this context but
+  // which would otherwise read ambiguously. `lastDetectedCause === undefined`
+  // means the same thing for the classification itself, so the FIRST check
+  // always emits (even when the classifier returns null -- "no single
+  // cause" is itself the signal that the waiting state has begun).
+  let lastWaitingCheckAt: number | null = null
+  let lastDetectedCause: SteamBottleLaunchWaitingCause | null | undefined =
+    undefined
 
   while (true) {
     if (entry.cancelled || activeMonitors.get(appId) !== entry) return
@@ -294,6 +313,48 @@ async function runPollLoop(
       return
     }
     // no-op: empty-before-first-match, or still matching after first match.
+
+    // D-51-16 (Phase 51 Plan 08): bottled-Steam-only waiting state. Never
+    // runs for `kind: 'bridge'` (no Steam client lives in a bridge bottle),
+    // and never runs once a match has ever been seen -- `everMatched` is
+    // updated by the branch just above, so a tick whose `ps` poll just
+    // produced the FIRST match skips this block in the SAME tick.
+    if (entry.kind === 'bottled-steam' && !everMatched) {
+      const elapsedSinceStart = Date.now() - startedAt
+      const dueForCheck =
+        elapsedSinceStart >= WAITING_FOR_STEAM_GRACE_MS &&
+        (lastWaitingCheckAt === null ||
+          Date.now() - lastWaitingCheckAt >= WAITING_RECHECK_MS)
+
+      if (dueForCheck) {
+        lastWaitingCheckAt = Date.now()
+        const paths = bottledSteamLogPaths(bottleDir)
+
+        const bootstrapTail = await readBoundedTail(paths.bootstrap)
+        if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+        const consoleTail = await readBoundedTail(paths.console)
+        if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+
+        const detectedCause = classifyBottledSteamBlock({
+          bootstrapTail,
+          consoleTail,
+          appId,
+          launchStartedAt: startedAt
+        })
+
+        if (detectedCause !== lastDetectedCause) {
+          lastDetectedCause = detectedCause
+          logInfo(
+            `[bottle-waiting] appId=${appId} cause=${detectedCause ?? 'none'}`,
+            LogPrefix.Steam
+          )
+          sendFrontendMessage('steamBottleLaunchWaiting', {
+            appName: appId,
+            detectedCause
+          })
+        }
+      }
+    }
   }
 }
 
@@ -340,7 +401,7 @@ export function startBottleProcessMonitor(
 
   void (async () => {
     try {
-      await runPollLoop(appId, entry, lowerPrefix, pollIntervalMs)
+      await runPollLoop(appId, entry, lowerPrefix, pollIntervalMs, bottleDir)
     } catch (error) {
       logWarning(
         [`bottleProcessMonitor [${appId}]: poll loop failed`, error],
