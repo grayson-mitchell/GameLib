@@ -4,10 +4,10 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-08-PLAN.md
-last_updated: "2026-10-17T08:33:04.799Z"
+stopped_at: Completed 51-09-PLAN.md
+last_updated: "2026-10-17T10:24:15.419Z"
 last_activity: 2026-10-17
-state_head: cf71a47f4a8fe62d25b0ecc7c2f56841dc3d2890
+state_head: 4dab4b2936b0191c7bc45f67f4d6d735c89587a4
 progress:
   total_phases: 1
   completed_phases: 0
@@ -75,7 +75,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 9 of 19
+Plan: 10 of 19
 Status: Ready to execute
 Last activity: 2026-10-17
 
@@ -518,6 +518,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 | Phase 51 P06 | ~2h | 3 tasks | 8 files |
 | Phase 51 P07 | ~1h | 2 tasks | 7 files |
 | Phase 51 P08 | ~40min | 3 tasks | 10 files |
+| Phase 51 P09 | 18m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -615,6 +616,9 @@ Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries
 - [Phase 51]: classifyBottledSteamBlock precedence other-session > self-update > login (other-session is user-resolvable without touching GameLib)
 - [Phase 51]: resolveWaitingCauseOrder always returns the fixed canonical order [self-update, login, other-session]; GameStatus.tsx filters the detected cause out itself rather than the function reordering
 - [Phase 51]: bottledSteamLogPaths hardcodes Program Files (x86) only, no win32 Program Files fallback — out of scope, degrades gracefully to no detected cause
+- [Phase 51]: LOCATION vs ELIGIBILITY: launch()/uninstall() dispatch on findBridgeInstallBottle (where it lives), install() dispatches on bridgeRoute (where a NEW install should go)
+- [Phase 51]: D-51-05: install-time coverage miss deletes the per-game bridge bottle outright rather than migrating it; re-download through the proven Phase 17 bottled path
+- [Phase 51]: D-51-11: a forced bridge userRoute override is cleared once it misses, so a later install falls through to its ordinary route instead of re-forcing the same failure
 
 ### Pending Todos
 
@@ -1272,8 +1276,8 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 
 ## Session Continuity
 
-Last session: 2026-10-17T08:33:04.775Z
-Stopped at: Completed 51-08-PLAN.md
+Last session: 2026-10-17T10:24:15.401Z
+Stopped at: Completed 51-09-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
