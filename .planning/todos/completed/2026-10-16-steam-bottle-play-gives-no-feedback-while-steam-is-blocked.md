@@ -47,3 +47,26 @@ login window, or the one-session rule — still shows a dead Play button with no
 The wanted "Waiting for Steam…" message and the unmeasured question of which of the three causes
 is detectable from the bottle's `logs/` (`bootstrap_log.txt`, `console_log.txt`) are both untouched
 by this task and are still the next step.
+
+## Closed 2026-10-17 — Phase 51 (D-51-16)
+
+Closed by Phase 51 Plan 08. Planner measurement of a real GameLibSteam bottle found a clean
+signal for all three causes in `logs/bootstrap_log.txt` / `logs/console_log.txt`:
+
+- self-update: `bootstrap_log.txt` `Installing update...` … `Update complete, launching Steam...`
+- other-session: `console_log.txt` `GameAction [AppID <appId>, ActionID …] : LaunchApp waiting
+  for user response to KickingOtherSession "<title>"`
+- login: `console_log.txt` `LogonFailure <reason>` where `<reason>` is not `No Connection`
+
+`bottleLaunchSignals.ts` (`classifyBottledSteamBlock` + `readBoundedTail`, bounded to 64 KiB per
+tail) classifies which of the three a bottled launch's own logs show, with other-session beating
+self-update beating login when more than one matches. `bottleProcessMonitor.ts`'s poll loop emits
+`steamBottleLaunchWaiting { appName, detectedCause }` once 20 s have passed with no matched game
+process (never for a `kind: 'bridge'` launch — there is no Steam client in a bridge bottle),
+re-checking every 15 s and re-emitting only when the classification changes. The frontend
+(`BottleLaunchWaiting.ts`, `GameStatus.tsx`) renders "Waiting for Steam…" with the detected cause
+first when one was distinguished, clearing on the game's own `playing`/`done` transition either
+way.
+
+Commits: `b21002d5f`/`1de1f48d0` (classifier), `125ba2e3f`/`4e0c949a9` (monitor wiring),
+`2cc735c7e`/`67ef1c4b1` (frontend state + rendering).
