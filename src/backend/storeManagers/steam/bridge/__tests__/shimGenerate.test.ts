@@ -35,7 +35,11 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { placeShimForGame, SHIM_EXPORTED_SYMBOLS } from '../shimGenerate'
+// Phase 51 Plan 03: SHIM_EXPORTED_SYMBOLS (and its 24-CR-02 pin test) moved
+// to shimCoverage.ts / shimCoverage.test.ts -- this file no longer imports
+// it, since every remaining test here exercises placeShimForGame's own
+// behavior (via readDefExports() below), not the constant itself.
+import { placeShimForGame } from '../shimGenerate'
 import { scanSteamApiImports } from '../importScan'
 import { getBottleDir, resolveBridgeBottleName } from '../../bottle'
 
@@ -360,22 +364,6 @@ describe('shimGenerate', () => {
     for (const literal of dllStringLiterals) {
       expect(literal).toBe("'steam_api.dll'")
     }
-  })
-
-  it('24-CR-02: SHIM_EXPORTED_SYMBOLS set-equals the export list of the committed native/steam-bridge/generated/steam_api.def, in both directions', () => {
-    const def = readDef()
-    expect(def.header).toBe('LIBRARY steam_api')
-    expect(def.hasExports).toBe(true)
-    expect(def.symbols.length).toBeGreaterThan(0)
-    expect(new Set(def.symbols).size).toBe(def.symbols.length)
-
-    const defSet = new Set(def.symbols)
-    const missingFromShim = def.symbols.filter(
-      (s) => !SHIM_EXPORTED_SYMBOLS.has(s)
-    )
-    const notInDef = [...SHIM_EXPORTED_SYMBOLS].filter((s) => !defSet.has(s))
-    expect(missingFromShim).toEqual([])
-    expect(notInDef).toEqual([])
   })
 
   it('24-CR-02: a game importing every symbol steam_api.def exports (including the SteamUser/SteamFriends interface accessors) is placed, not rejected', async () => {

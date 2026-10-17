@@ -10,53 +10,94 @@ import { bridgeAllowlist, bridgeAllowlistSchema } from '../allowlist'
 const AVERNUM_6_APP_ID = '206060'
 const HOARD_APP_ID = '63000'
 
+// Phase 51 Plan 03: ROADMAP sub-decision 3 / D-51-08 bump the schema to
+// `version: 2` -- `games` is renamed `seed`, and a second `knownBad` array
+// (reason-tagged, closed taxonomy) is added. `version: 1` is no longer
+// accepted at all (no discriminated-union fallback -- the plan's own
+// behavior spec is explicit: "version 1 throws").
 function makeValidPayload() {
   return {
-    version: 1 as const,
-    games: [{ appId: '480', title: 'Spacewar' }]
+    version: 2 as const,
+    seed: [{ appId: '480', title: 'Spacewar' }],
+    knownBad: [] as { appId: string; title: string; reason: string }[]
   }
 }
 
 describe('bridgeAllowlistSchema', () => {
-  test('accepts a well-formed payload (version 1, >=1 game entry)', () => {
+  test('accepts a well-formed v2 payload (seed >=1 entry, knownBad may be empty)', () => {
     const result = bridgeAllowlistSchema.safeParse(makeValidPayload())
 
     expect(result.success).toBe(true)
   })
 
-  test('throws (via .parse()) on a payload with a missing `appId`', () => {
+  test('throws (via .parse()) on a payload with a missing `appId` in seed', () => {
     const payload = makeValidPayload()
     // @ts-expect-error -- intentionally malformed for the fail-loud test
-    delete payload.games[0].appId
+    delete payload.seed[0].appId
 
     expect(() => bridgeAllowlistSchema.parse(payload)).toThrow()
   })
 
-  test('throws (via .parse()) on a payload with `version: 2`', () => {
-    const payload = { ...makeValidPayload(), version: 2 }
+  test('throws (via .parse()) on a `version: 1` payload (v1 is no longer accepted)', () => {
+    const payload = { version: 1, games: [{ appId: '480', title: 'Spacewar' }] }
 
     expect(() => bridgeAllowlistSchema.parse(payload)).toThrow()
   })
 
-  test('throws (via .parse()) on a payload with an empty `games` array', () => {
-    const payload = { ...makeValidPayload(), games: [] }
+  test('throws (via .parse()) on a payload with an empty `seed` array', () => {
+    const payload = { ...makeValidPayload(), seed: [] }
 
     expect(() => bridgeAllowlistSchema.parse(payload)).toThrow()
   })
 
-  test('throws (via .parse()) on a non-numeric `appId`', () => {
+  test('throws (via .parse()) on a non-numeric `appId` in seed', () => {
     const payload = {
-      version: 1 as const,
-      games: [{ appId: 'not-a-number', title: 'Bad Entry' }]
+      version: 2 as const,
+      seed: [{ appId: 'not-a-number', title: 'Bad Entry' }],
+      knownBad: []
     }
 
     expect(() => bridgeAllowlistSchema.parse(payload)).toThrow()
   })
 
-  test('throws (via .parse()) on an empty `title`', () => {
+  test('throws (via .parse()) on an empty `title` in seed', () => {
     const payload = {
-      version: 1 as const,
-      games: [{ appId: '480', title: '' }]
+      version: 2 as const,
+      seed: [{ appId: '480', title: '' }],
+      knownBad: []
+    }
+
+    expect(() => bridgeAllowlistSchema.parse(payload)).toThrow()
+  })
+
+  test('accepts an EMPTY `knownBad` array (D-51-08: no owned DRM-wrapped title identified yet)', () => {
+    const result = bridgeAllowlistSchema.safeParse(makeValidPayload())
+
+    expect(result.success).toBe(true)
+  })
+
+  test('accepts a well-formed `knownBad` entry with a closed-taxonomy reason', () => {
+    const payload = {
+      ...makeValidPayload(),
+      knownBad: [{ appId: '999', title: 'Bad Game', reason: 'drm-wrapped' }]
+    }
+
+    expect(bridgeAllowlistSchema.safeParse(payload).success).toBe(true)
+  })
+
+  test('throws (via .parse()) on a `knownBad` entry with a reason outside the closed taxonomy', () => {
+    const payload = {
+      ...makeValidPayload(),
+      knownBad: [{ appId: '999', title: 'Bad Game', reason: 'drm' }]
+    }
+
+    expect(() => bridgeAllowlistSchema.parse(payload)).toThrow()
+  })
+
+  test('throws (via .parse()) on a `knownBad` entry missing a `reason`', () => {
+    const payload = {
+      ...makeValidPayload(),
+      knownBad: [{ appId: '999', title: 'Bad Game' }]
     }
 
     expect(() => bridgeAllowlistSchema.parse(payload)).toThrow()
@@ -73,7 +114,18 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('has() returns true for Avernum 6 (acceptance-set title)', () => {
+  test('the bundled bridge-allowlist.json is version 2 with an empty knownBad list', () => {
+    const raw = readFileSync(
+      join(__dirname, '..', 'bridge-allowlist.json'),
+      'utf-8'
+    )
+    const parsed = JSON.parse(raw)
+
+    expect(parsed.version).toBe(2)
+    expect(parsed.knownBad).toEqual([])
+  })
+
+  test('has() returns true for Avernum 6 (acceptance-set title, seed membership)', () => {
     expect(bridgeAllowlist.has(AVERNUM_6_APP_ID)).toBe(true)
   })
 
@@ -97,6 +149,19 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
 
   test('has() returns false for an empty-string appId', () => {
     expect(bridgeAllowlist.has('')).toBe(false)
+  })
+
+  test('knownBadReason() returns null for a seed-only (not known-bad) appId', () => {
+    expect(bridgeAllowlist.knownBadReason(AVERNUM_6_APP_ID)).toBeNull()
+  })
+
+  test('knownBadReason() returns null for a non-numeric appId, never throws', () => {
+    expect(() => bridgeAllowlist.knownBadReason('abc')).not.toThrow()
+    expect(bridgeAllowlist.knownBadReason('abc')).toBeNull()
+  })
+
+  test('knownBadReason() returns null for an absent numeric appId', () => {
+    expect(bridgeAllowlist.knownBadReason('999999999')).toBeNull()
   })
 })
 
