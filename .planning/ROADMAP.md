@@ -226,22 +226,40 @@ in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Ph
 **Plans:** 19 plans
 
 Plans:
+**Wave 1**
 - [ ] 51-01-PLAN.md — TRACER: per-game helper with real AppID, ephemeral port via gamelib_bridge.cfg, helper lifetime tied to the game; live check on Avernum 6 (D-51-01, D-51-03)
 - [ ] 51-02-PLAN.md — Import scan sees bare accessors / SteamInternal / GameServer families and steam_api64.dll; interface-version capture (hazard a, D-51-13 detection)
 - [ ] 51-03-PLAN.md — Contracts: route/IPC types, allowlist v2 (seed + known-bad), shimCoverage module, persisted bridge verdict (D-51-07/08/10)
 - [ ] 51-04-PLAN.md — All Phase 51 strings in gamelib.json, 49 locales, one commit
 - [ ] 51-05-PLAN.md — Remove-all-copies deletes the emptied per-game bridge bottle; close LD-5 todo (D-51-12)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 51-06-PLAN.md — Generator v2: multi-version manifests, MSVC class-return fix, stackBytes stubs, cfg-selected bare accessors, wire param kinds
 - [ ] 51-07-PLAN.md — Pure route resolver (seed ∪ verdict ∖ known-bad ∖ forced-bottle) + verdict-returning, version-capturing, arch-aware placement
 - [ ] 51-08-PLAN.md — "Waiting for Steam…" for blocked bottled launches from measured log signals; close todo (D-51-16)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 51-09-PLAN.md — games.ts routing on the verdict; scan-miss deletes bottle + D-05 with missing symbols; location-based launch/uninstall (D-51-05, D-51-07)
 - [ ] 51-10-PLAN.md — Generated helper dispatch table; identity-only helper mode
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 51-11-PLAN.md — Proton-inventory extractor; ISteamUtils/Apps/UserStats + old User/Friends versions for XCOM and Hoard (Hoard versions measured)
 - [ ] 51-12-PLAN.md — 480 identity fallback + one-time limited-features notice (D-51-04, D-51-02)
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 51-13-PLAN.md — Known-bad / scan-miss route-notice dialog with "Try the bridge anyway"; route IPC (D-51-08, D-51-11, D-51-10)
 - [ ] 51-14-PLAN.md — RemoteStorage (cloud-disabled), Matchmaking/Networking (unavailable) stubs + SteamGameServer stubs
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 51-15-PLAN.md — Win64 shim (steam_api64.dll), modern-SDK lookup family, ELEX set, disassembly ABI gate (D-51-13)
 - [ ] 51-16-PLAN.md — Route line + force-bottled toggle in the install dialog; route row on the game page (D-51-09, D-51-10, D-51-02)
 - [ ] 51-17-PLAN.md — Pre-install depot-manifest screen (D-51-06)
+
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 51-18-PLAN.md — Census tool + 51-UAT.md (D-51-15, D-51-14)
+
+**Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 51-19-PLAN.md — Live gates (Hoard Gate 4 re-run, XCOM, ELEX, Avernum 5/6), census re-run, seed/known-bad growth
+
+**Cross-cutting constraints:**
+- Spec-less probe fallback skipped: phase has no requirement IDs to probe (visible skip)

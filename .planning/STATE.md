@@ -1,13 +1,14 @@
 ---
 gsd_state_version: "1.0"
 milestone: v0.8
-current_phase_name: "Epic store in-app on macOS: a Rust-managed raw WKWebView subview for /store/epic"
+current_phase: 51
+current_phase_name: Widen the native Steam bridge — more interface proxies, scan-derived eligibility
 status: Awaiting next milestone
 stopped_at: Phase 51 context gathered
-last_updated: "2026-10-16T21:36:03.081Z"
+last_updated: "2026-10-17T02:32:02.104Z"
 last_activity: 2026-10-17
 last_activity_desc: Quick task 261017-cwf measured the Game Uninstalled terminal-icon todo on packaged macOS builds -- dev icon is tauri-plugin-notification's is_dev() Terminal attribution, not a GameLib defect; both the ad-hoc --debug bundle and the Developer-ID 0.8.0 release bundle deliver NO notification on macOS 26 and GameLib never appears in System Settings Notifications; new major todo 2026-10-17-packaged-macos-build-delivers-no-notifications, source todo closed, no code change; Phase 51 added 2026-10-17 (widen the native Steam bridge; scoped from the Phase 24 record; todo closed into todos/completed; Depends-on hand-corrected to Phase 24 and quick 261016-u1w); Quick task 261017-bqw unlinked the legacy GameLibSteamBridge appmanifest on bridge uninstall (fix dbb87081b, todo close d17199a80) -- the legacy branch of uninstallBridgeGame now rmSyncs appmanifest_<appId>.acf beside the install root so the post-uninstall refresh cannot re-mark the game installed and hide it from the grid; games.test.ts 274 to 276 on a real-filesystem fixture, lint 1089/1124 and 638/638, gates 12/12; desk-verified only, not run on CrossOver; source todo moved to todos/completed; Quick task 261016-wsq live-gated per-game bridge bottles on real CrossOver, 5 of 5 PASS, legacy-bottle uninstall revert measured as major; Quick task 261016-u1w per-game bridge bottles landed; Quick task 261016-t3e bottled-Steam process monitor landed; Milestone v0.8 completed and archived
-state_head: 324e60687c22c79c551d86b034a3ad366c351a1c
+state_head: efae9501da92ffe91fa7b5f2f0d468f88d4dd697
 progress:
   total_phases: 45
   completed_phases: 36
@@ -15,7 +16,6 @@ progress:
   completed_plans: 545
   percent: 80
 milestone_name: Tauri Shell
-current_phase: 50
 ---
 
 # Project State
@@ -75,8 +75,8 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: Milestone v0.8 complete — no active phase (next: `/gsd-new-milestone`)
-Plan: 0 of 0
+Phase: 51 (Widen the native Steam bridge — more interface proxies, scan-derived eligibility) — READY TO EXECUTE
+Plan: 0 of 19
 Status: Awaiting next milestone — v0.8 Tauri Shell shipped 2026-10-16 as an override closeout (see `## Deferred Items`); tag `v0.8` is local and unpushed
 Last activity: 2026-10-17 — Completed quick task 261017-cwf: actioned the "Uninstall notification shows a terminal icon" todo by measurement. The dev-build icon is `tauri-plugin-notification`'s own `is_dev()` branch (`set_application("com.apple.Terminal")`), so no GameLib change for the icon. The packaged `.app` was run as the todo asked, and both the ad-hoc `--debug` bundle and the Developer-ID-signed 0.8.0 release bundle deliver no notification at all on macOS 26 — never registered in System Settings → Notifications. Filed as a new `major` todo (`ready: code`); source todo closed with evidence.
 

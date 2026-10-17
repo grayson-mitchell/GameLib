@@ -1,7 +1,7 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v0.8 — Phase Details",
+  "milestone": "v0.8",
   "phases": [
     {
       "number": "1",
@@ -44,11 +44,6 @@
       "status": "complete"
     },
     {
-      "number": "08.1",
-      "name": "Steam Delisted Games & Library Filters",
-      "status": "complete"
-    },
-    {
       "number": "9",
       "name": "Quality Gate",
       "status": "pending"
@@ -71,7 +66,7 @@
     {
       "number": "13",
       "name": "Keys-Waiting + Giftable-Spares Views",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "14",
@@ -114,24 +109,19 @@
       "status": "complete"
     },
     {
-      "number": "22",
-      "name": "Steam Game Families (multiple bottle configs)",
-      "status": "pending"
-    },
-    {
       "number": "23",
       "name": "Steam full-ownership install (StateFlags=4)",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "24",
       "name": "macOS native Steam bridge (out-of-process steam_api proxy)",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "25",
       "name": "Steam depot download multi-host fan-out (throughput)",
-      "status": "pending"
+      "status": "complete"
     },
     {
       "number": "26",
@@ -139,8 +129,228 @@
       "status": "complete"
     },
     {
+      "number": "22",
+      "name": "Steam Game Families (multiple bottle configurations)",
+      "status": "pending"
+    },
+    {
       "number": "27",
       "name": "Tauri Shell Walking Skeleton",
+      "status": "complete"
+    },
+    {
+      "number": "28",
+      "name": "Tauri keyring (real safeStorage)",
+      "status": "complete"
+    },
+    {
+      "number": "29",
+      "name": "Tauri store layer",
+      "status": "complete"
+    },
+    {
+      "number": "30",
+      "name": "IPC re-plumb slice 1 (install/uninstall/update-check)",
+      "status": "complete"
+    },
+    {
+      "number": "31",
+      "name": "IPC re-plumb slice 2 (settings/config)",
+      "status": "complete"
+    },
+    {
+      "number": "32",
+      "name": "IPC re-plumb slice 3 (downloads/queue)",
+      "status": "complete"
+    },
+    {
+      "number": "33",
+      "name": "Tauri lifecycle cluster",
+      "status": "complete"
+    },
+    {
+      "number": "34",
+      "name": "Tauri packaging (Windows/Linux)",
+      "status": "complete"
+    },
+    {
+      "number": "35",
+      "name": "Electron cutover",
+      "status": "complete"
+    },
+    {
+      "number": "34.1",
+      "name": "Tauri IPC re-plumb slice 4 — app shell and window chrome",
+      "status": "complete"
+    },
+    {
+      "number": "34.2",
+      "name": "Tauri IPC re-plumb slice 5 — game details, settings and overrides",
+      "status": "complete"
+    },
+    {
+      "number": "34.3",
+      "name": "Tauri IPC re-plumb slice 6 — shell, files, logs and diagnostics",
+      "status": "complete"
+    },
+    {
+      "number": "34.4",
+      "name": "Tauri IPC re-plumb slice 7 — Steam completion and Humble",
+      "status": "complete"
+    },
+    {
+      "number": "34.4.1",
+      "name": "Tauri embedded-browser login seam",
+      "status": "complete"
+    },
+    {
+      "number": "34.4.2",
+      "name": "macOS login-window UX — modal child-window attachment + in-field autofill affordance",
+      "status": "complete"
+    },
+    {
+      "number": "34.5",
+      "name": "Tauri IPC re-plumb slice 8 — non-Steam runners, Wine and shortcuts",
+      "status": "complete"
+    },
+    {
+      "number": "34.6",
+      "name": "Tauri IPC re-plumb slice 9 — EOS overlay, SteamGridDB artwork, winetricks",
+      "status": "complete"
+    },
+    {
+      "number": "34.7",
+      "name": "Epic device-auth single sign-in path",
+      "status": "pending"
+    },
+    {
+      "number": "34.8",
+      "name": "Frontend i18n compliance for fork-added code",
+      "status": "complete"
+    },
+    {
+      "number": "34.9",
+      "name": "macOS runner onedir repackaging — eliminate the PyInstaller cold-start spawn tax",
+      "status": "complete"
+    },
+    {
+      "number": "34.10",
+      "name": "Navigation shell — horizontal card tabs replace the sidebar",
+      "status": "complete"
+    },
+    {
+      "number": "34.11",
+      "name": "Library filtering — search, views, collections and cross-store facets",
+      "status": "complete"
+    },
+    {
+      "number": "34.12",
+      "name": "Onboarding tour rework — re-anchor the disabled SidebarTour against the two-tier NavShell",
+      "status": "complete"
+    },
+    {
+      "number": "34.13",
+      "name": "Steam install-time wine/bottle form (GOG parity)",
+      "status": "complete"
+    },
+    {
+      "number": "34.14",
+      "name": "Steam platform-row depot signal — 'no Windows build' vs 'metadata not captured'",
+      "status": "complete"
+    },
+    {
+      "number": "34.15",
+      "name": "Steam platform-signal and sync integrity",
+      "status": "complete"
+    },
+    {
+      "number": "34.16",
+      "name": "macOS runner onedir x64 CI leg",
+      "status": "complete"
+    },
+    {
+      "number": "34.17",
+      "name": "`PathSelectionBox` input commit — Enter-to-commit and the unconfirmed paste failure",
+      "status": "complete"
+    },
+    {
+      "number": "34.18",
+      "name": "Retire the macOS x64 (Intel) CI leg — arm64-only macOS runners and app builds",
+      "status": "complete"
+    },
+    {
+      "number": "36",
+      "name": "Login-to-Steam crossfade and explicit login-in-flight mitigation",
+      "status": "complete"
+    },
+    {
+      "number": "37",
+      "name": "Steam defect cluster — depot decode failure, false-delisted games, install-error reporting",
+      "status": "complete"
+    },
+    {
+      "number": "38",
+      "name": "Deferred hardware and environment UAT gates — Windows/Linux machine and game controller",
+      "status": "complete"
+    },
+    {
+      "number": "39",
+      "name": "Post-cutover CI honesty — lint debt, the two red planning gates, dead `getLoginWindowSeam` branches",
+      "status": "complete"
+    },
+    {
+      "number": "40",
+      "name": "In-app store and wiki browsing under Tauri — embedded child webview",
+      "status": "complete"
+    },
+    {
+      "number": "41",
+      "name": "i18n gate honesty — make the translation and hardcoded-string gates report what they cannot see",
+      "status": "complete"
+    },
+    {
+      "number": "42",
+      "name": "Humble key platform identity — evidenced key_type table, per-platform redeem deep links",
+      "status": "complete"
+    },
+    {
+      "number": "43",
+      "name": "Humble Keys screen — unified list replacing the three tabs, with search, sort and filters",
+      "status": "complete"
+    },
+    {
+      "number": "44",
+      "name": "In-app Winetricks browse UI replacing the search-only panel",
+      "status": "pending"
+    },
+    {
+      "number": "45",
+      "name": "Native in-app Winetricks UI redesigned from scratch",
+      "status": "complete"
+    },
+    {
+      "number": "46",
+      "name": "Windows single-instance guard and gamelib:// deep-link registration",
+      "status": "complete"
+    },
+    {
+      "number": "47",
+      "name": "Migrate aggregated store search from CheapShark to IsThereAnyDeal",
+      "status": "pending"
+    },
+    {
+      "number": "48",
+      "name": "Focus row — move the library top section into the panel and widen it",
+      "status": "complete"
+    },
+    {
+      "number": "49",
+      "name": "Cross-store signed-out / offline mode",
+      "status": "complete"
+    },
+    {
+      "number": "50",
+      "name": "Epic store in-app on macOS — a Rust-managed raw WKWebView subview for /store/epic",
       "status": "complete"
     }
   ],
@@ -149,5 +359,5 @@
     "label": "Show progress",
     "reason": "Unsure of state — showing progress"
   },
-  "updated_at": "2026-10-16T05:09:35.286Z"
+  "updated_at": "2026-10-17T02:32:02.130Z"
 }
