@@ -1,154 +1,35 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-10T19:19:41Z",
-  "phase": "45",
-  "phase_name": "Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch",
-  "phase_dir": ".planning/phases/45-native-in-app-winetricks-ui-redesigned-from-scratch-one-self",
-  "plan": 12,
-  "task": 12,
-  "total_tasks": 12,
-  "status": "checkpoint",
-  "completed_tasks": [
-    {
-      "id": 1,
-      "name": "45-01 tracer + queue (wave 1)",
-      "status": "done",
-      "commit": "eec761a6e"
-    },
-    {
-      "id": 2,
-      "name": "45-03 English copy contract (wave 1)",
-      "status": "done",
-      "commit": "4a74d1d91"
-    },
-    {
-      "id": 3,
-      "name": "45-04 metadata/visibility (wave 1, TDD)",
-      "status": "done",
-      "commit": "0f31f236e"
-    },
-    {
-      "id": 4,
-      "name": "45-02 retire Phase 44 tree + GUI hatch (wave 2)",
-      "status": "done",
-      "commit": "08126ec40"
-    },
-    {
-      "id": 5,
-      "name": "45-09 locales batch A (wave 2)",
-      "status": "done",
-      "commit": "bba2a065f"
-    },
-    {
-      "id": 6,
-      "name": "45-10 locales batch B (wave 2)",
-      "status": "done",
-      "commit": "f7c5f2b54"
-    },
-    {
-      "id": 7,
-      "name": "wave 2 gate fix: longRunningCallSiteGuard read the deleted Winetricks component",
-      "status": "done",
-      "commit": "d62f65dcc"
-    },
-    {
-      "id": 8,
-      "name": "45-05 verbs.ts/deriveRowState.ts taxonomy (wave 3, TDD)",
-      "status": "done",
-      "commit": "7289b433d"
-    },
-    {
-      "id": 9,
-      "name": "45-06 output classifier + annotated catalog (wave 3, TDD); D-15 real-log measurement deferred to macOS",
-      "status": "done",
-      "commit": "5250c7a4e"
-    },
-    {
-      "id": 10,
-      "name": "45-07 tab body: rows, Suggested, task groups, Everything else (wave 4, TDD)",
-      "status": "done",
-      "commit": "8fdfd8834"
-    },
-    {
-      "id": 11,
-      "name": "45-08 sticky bar, log panel, environment banner, remountSafety port (wave 5, TDD)",
-      "status": "done",
-      "commit": "7050e3995"
-    },
-    {
-      "id": 12,
-      "name": "IPC-PORT-INVENTORY bucket line for the three 45-01 channels (preload-surface-gate was red)",
-      "status": "done",
-      "commit": "862017cb8"
-    },
-    {
-      "id": 13,
-      "name": "45-11 retired-key removal, i18n gate scope mirror (A-17 cleared), Phase 44 closed as superseded (wave 6)",
-      "status": "done",
-      "commit": "b18e52219"
-    },
-    {
-      "id": 14,
-      "name": "45-12 Task 1 authoring: 45-LIVE-GATE.md + 45-UAT.md (27 pending items)",
-      "status": "done",
-      "commit": "657716616"
-    }
-  ],
+  "timestamp": "2026-10-17T02:47:26.982Z",
+  "phase": "51",
+  "phase_name": "Widen the native Steam bridge: more interface proxies and scanner",
+  "phase_dir": ".planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [],
   "remaining_tasks": [
-    {
-      "id": 15,
-      "name": "45-12 Task 1 build step + Task 2 live gate G1-G9 on a packaged macOS build (operator, on the Mac) - Gate: blocking-human",
-      "status": "blocked"
-    },
-    {
-      "id": 16,
-      "name": "45-12 Task 3: transcribe operator results, score, file todos, SUMMARY (continuation executor after \"gate recorded\")",
-      "status": "not_started"
-    },
-    {
-      "id": 17,
-      "name": "phase tail: aggregate_results -> code_review_gate -> regression_gate -> verify_phase_goal (gsd-verifier, sonnet) -> update_roadmap -> close_phase_todos -> transition",
-      "status": "not_started"
-    }
+    {"id": "51-01", "name": "TRACER: per-game real-AppID helper (Avernum 6) — proves D-51-01 architecture end-to-end", "status": "not_started", "tdd_applicable": true},
+    {"id": "51-02", "name": "Import scanner + interface-version capture", "status": "not_started", "tdd_applicable": true},
+    {"id": "51-03", "name": "Shared IPC/route types + allowlist v2", "status": "not_started", "tdd_applicable": true},
+    {"id": "51-04", "name": "i18n string inventory across 48 locales", "status": "not_started", "tdd_applicable": false},
+    {"id": "51-05", "name": "Fix: remove-all-copies leaves empty dir", "status": "not_started", "tdd_applicable": true}
   ],
-  "blockers": [
-    "45-12 Task 2 requires the packaged macOS build, GPTK and a real bottle on the operator's Mac"
-  ],
+  "blockers": [],
   "async_jobs": [],
-  "human_actions_pending": [
-    {
-      "action": "Run the 45-12 live gate on the Mac per 45-LIVE-GATE.md (build from build_sha b18e52219; items G8, G6, G1+G2, G4, G3, G5, G7, G9, then the D-15 count), then reply \"gate recorded\" with 27 observations",
-      "context": "AUTO_MODE=false; the gate is blocking-human (precondition unmet on Windows)",
-      "blocking": true
-    }
-  ],
+  "human_actions_pending": [],
   "decisions": [
-    {
-      "decision": "Executors run sequentially on the main tree (branch quick-261002-b63), model sonnet, with the #4254 project_root_pin bound to /Users/graysonmitchell/Projects/GameLib and gsd_run query dispatch-isolation --force-isolation none recorded per plan",
-      "rationale": "workflow.use_worktrees=false in .planning/config.json forces ISOLATION=none; executor_model resolves to sonnet under the balanced profile",
-      "phase": "45"
-    },
-    {
-      "decision": "Executor prompts instruct the agent to Read execute-plan.md / summary.md / checkpoints.md / worktree-path-safety.md / executor-examples.md (plus tdd.md when phase.tdd-applicable is true) by absolute path instead of inlining ~125KB verbatim",
-      "rationale": "same content reaches the executor at zero orchestrator output cost; @-includes do not expand in Agent prompts (#3324)",
-      "phase": "45"
-    },
-    {
-      "decision": "Four known-red jest suites are carried deliberately, not fixed by the orchestrator: lintTranslations (completes when 45-10 lands), genI18nGateScope A-17 (45-11 owns meta/i18nForkTouchedFiles.json; committed list lacks UI/index.tsx, WinetricksSettings/index.tsx, WinetricksSettings/visibility.ts), findDeadcode (WinetricksLogLineKind -> 45-06; WinetricksVerbMetadata/HIDDEN_CATEGORIES/HIDDEN_VERBS -> 45-05/45-11 consumers; re-check after wave 3)",
-      "rationale": "each is an in-flight interface or artifact a later plan in this phase owns; fixing them early would be redone or would break the owning plan",
-      "phase": "45"
-    },
-    {
-      "decision": "Left the dev gamelib-shell (pid 87335, target/debug, tauri dev started 13:29) running and the stale .planning/milestone.lock (phase 48, pid 96479 dead since 2026-10-09 21:08) untracked",
-      "rationale": "no live-gate fixture depends on the dev process in waves 1-6; the lock belongs to a dead session and is not this phase's file",
-      "phase": "45"
-    }
+    {"decision": "Wave 1 (51-01..51-05) must dispatch gsd-executor subagents strictly sequentially, one at a time", "rationale": "Project config has workflow.use_worktrees=false, which forces serialization of every plan in a wave regardless of files_modified overlap or PARALLELIZATION setting (per sequential-root-pin.md)", "phase": "51"},
+    {"decision": "Verified no files_modified overlap across the 5 wave-1 plans before concluding serialization is forced purely by use_worktrees=false, not by a conflict", "rationale": "Confirms the plans are independently safe but the project config still mandates one-at-a-time dispatch", "phase": "51"},
+    {"decision": "TDD-applicability resolved per-plan via gsd_run query phase.tdd-applicable: 51-01=true, 51-02=true, 51-03=true, 51-04=false, 51-05=true", "rationale": "Determines whether tdd.md reference is embedded in each plan's dispatch prompt; 51-04 is i18n-only inventory work with no behavior change", "phase": "51"},
+    {"decision": "Phase title resolved as 'Widen the native Steam bridge: more interface proxies and scanner' from the phase directory slug, 51-01-PLAN.md frontmatter, and commit messages, since roadmap.analyze does not yet list phase 51", "rationale": "gsd_run query roadmap.analyze returned no phase-51 entry; ROADMAP.md apparently not yet updated for this new phase", "phase": "51"}
   ],
   "uncommitted_files": [
-    " M .planning/state.json",
-    "?? .planning/milestone.lock",
-    "?? .planning/debug/rust-test-ci-missing-sidecar.md"
+    "M .planning/STATE.md",
+    "M .planning/state.json",
+    "?? .planning/milestone.lock"
   ],
-  "next_action": "On the Mac: run the live gate per 45-LIVE-GATE.md, then resume the 45-12 checkpoint with \"gate recorded\" + per-item observations so Task 3 runs; then the execute-phase tail (code review, regression gate, verifier).",
-  "context_notes": "Windows session 2026-10-10/11 ran waves 2-7. Post-merge jest criterion on Windows: failing set == the 39-suite Windows baseline (memory windows-local-jest-failures.md). Platform-only steps were deferred honestly: 45-06 D-15 log measurement, 45-12 build/live gate. git checkout -- <file> fires husky post-checkout (pnpm i, \"Packages: -127\" steady state) - revert with git show HEAD:path > path."
+  "next_action": "Run /gsd-execute-phase 51 --wave 1. Re-derive PINNED_ROOT=/Users/graysonmitchell/Projects/GameLib, branch=quick-261002-b63, and dispatch gsd-executor for plan 51-01 (the tracer) first via Agent(), embedding execute-plan.md, templates/summary.md, references/checkpoints.md, references/tdd.md (51-01 is TDD-applicable), references/worktree-path-safety.md, and references/executor-examples.md verbatim in <execution_context>. Emit the heartbeat line '[checkpoint] phase 51 wave 1/1 plan 51-01 starting (0/5 plans done)' immediately before the dispatch. Then proceed sequentially through 51-02, 51-03, 51-04 (omit tdd.md embed — not TDD-applicable), 51-05 — never in parallel. After all 5 complete, stop (do not cascade into Wave 2 — the --wave 1 filter restricts scope to Wave 1 only).",
+  "context_notes": "No plan execution has started yet — this pause happened before the first Agent() dispatch for 51-01 was fired, during preparation (all 6 required reference files had already been read in full for embedding). .planning/STATE.md and state.json were already updated via gsd_run query state.begin-phase before this pause, so phase 51 is correctly marked as begun/executing. The untracked .planning/milestone.lock file is a stale, unrelated leftover from phase 50 (dead pid 71592, timestamped 2026-10-12) — not part of phase 51 work; worth clearing separately before any phase-50 milestone gate runs, but intentionally left untouched here since it predates this session's work."
 }
