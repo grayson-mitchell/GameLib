@@ -5,9 +5,9 @@ current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
 stopped_at: Completed 51-09-PLAN.md
-last_updated: "2026-10-17T10:24:15.419Z"
-last_activity: 2026-10-17
-state_head: 4dab4b2936b0191c7bc45f67f4d6d735c89587a4
+last_updated: "2026-10-17T19:14:13.782Z"
+last_activity: 2026-10-18
+state_head: d0a1c74d0e66d2fefcf795fbe0708abb78c1690e
 progress:
   total_phases: 1
   completed_phases: 0
@@ -77,7 +77,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
 Plan: 10 of 19
 Status: Ready to execute
-Last activity: 2026-10-17
+Last activity: 2026-10-18 - Completed quick task 261018-as3 - archived closed-milestone history out of STATE.md (207 KB to 53 KB)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -289,6 +289,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261016-wsq | Live-gated 261016-u1w per-game bridge bottles on real CrossOver 26.2 — 5 of 5 items PASS (per-game bottle provisioned in 14 s, depot landed in it, launch from it, deleted in 1 s and gone from cxbottle; legacy Avernum 6 still launches; refresh keeps both). T-u1w-06 MEASURED as major: a legacy-bottle uninstall reverts to installed in 3 s and hides the game from the grid — new ready-code todo filed. No code change. | 2026-10-17 | — | Docs only (this commit). Gate run inline by the orchestrator against a fresh detached pnpm tauri:dev (the operator's instance ran a pre-u1w sidecar and was quit by them). Per-arm table in evidence/README.md, log lines in gate-log-extract.txt, 3 frames. Machine restored as found from a P2 backup; teardown asserted empty. planning-gates 12/12. Every written path is prettier-ignored, so no formatter check was run. Not exercised: two per-game bottles at once, Remove all copies (LD-5), Avernum 5 past its own 16-bit-colour dialog. | [261016-wsq-run-the-per-game-bridge-bottles-live-gat](./quick/261016-wsq-run-the-per-game-bridge-bottles-live-gat/) |
 | 261017-bqw | **Legacy-bottle bridge uninstall no longer reverts to installed and hides the game.** `uninstallBridgeGame()`'s legacy branch now also `rmSync`s `appmanifest_<appId>.acf` from the shared `GameLibSteamBridge` steamapps dir in the same try as the install root, so the refresh that `markBridgeGameUninstalled` triggers has no manifest to read back (fix `dbb87081b`). Two real-filesystem jest cases pin the unlink to this appId in this bottle only; sibling and `GameLibSteam` manifests survive. games.test.ts 274 to 276; lint 1089/1124 prod, 638/638 tests; gates 12/12. Source todo closed to `todos/completed/`, sibling cleanup todo item 1 annotated. `!exePath` branch deliberately unchanged. | 2026-10-17 | d17199a80 | COMPLETE (desk). RED then GREEN on a real-filesystem fixture; NOT run on CrossOver (a live arm would uninstall Avernum 6 or HOARD, operator call). | [261017-bqw-unlink-the-legacy-bottle-appmanifest-on-](./quick/261017-bqw-unlink-the-legacy-bottle-appmanifest-on-/) |
 | 261017-cwf | Measured the macOS Game Uninstalled terminal-icon todo on packaged builds: the dev icon is tauri-plugin-notification's own is_dev() Terminal attribution (no GameLib fix), and both the ad-hoc --debug and Developer-ID 0.8.0 bundles deliver NO notification at all on macOS 26 (never registered in Notification Center) — new major todo, source todo closed, no code change | 2026-10-16 | 4335a0c7f | — | [261017-cwf-fix-the-macos-game-uninstalled-notificat](./quick/261017-cwf-fix-the-macos-game-uninstalled-notificat/) |
+| 261018-as3 | Archived closed-milestone history out of STATE.md byte-verbatim (207 KB to 53 KB): v0.1-v0.2 Performance Metrics blocks, Phase 48/49 decisions and 570 v0.8-close Deferred Items rows to STATE-HISTORY.md; 31 quick-task rows (16 oldest plus 15 stranded in Session Continuity) to quick/COMPLETED-INDEX.md; 12/12 planning gates pass | 2026-10-17 | d0a1c74d0 | — | [261018-as3-archive-state-md-history-into-state-hist](./quick/261018-as3-archive-state-md-history-into-state-hist/) |
 
 ## Deferred Items
 
