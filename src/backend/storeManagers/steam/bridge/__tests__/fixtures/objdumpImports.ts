@@ -27,7 +27,7 @@
  *    this machine]`. Only the file-format line, the "The Import Tables:"
  *    header, the `steam_api(64)?.dll` block, and one neighbouring DLL block
  *    are kept; the absolute bottle path before the exe filename is stripped
- *    (no `/Users/`, no bottle names, no user names). This machine's objdump
+ *    (no home directory, no bottle names, no user names). This machine's objdump
  *    is Apple LLVM objdump, which reports `file format coff-i386` /
  *    `coff-x86-64` (not GNU's `pei-i386`) and a `Hint/Ord  Name` two-column
  *    row layout with an interstitial `lookup ... time ...` line before each

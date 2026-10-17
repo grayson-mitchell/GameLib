@@ -1,6 +1,10 @@
 /**
  * Phase 24 Plan 05 (R3): objdump-based per-game `steam_api` import
- * enumeration.
+ * enumeration. Widened Phase 51 Plan 02, Task 1 (ROADMAP sub-decision 1,
+ * hazard (a) / D-51-13): the import table is now parsed for every member of
+ * the `steam_api(64)?.dll` block (bare accessors, `SteamGameServer*`,
+ * `SteamInternal_*`, not just `SteamAPI_*`) and for arch (`steam_api64.dll`
+ * -> 'x64'), never silently reported as "imports nothing".
  *
  * A drop-in shim must export EVERY symbol a game imports from
  * `steam_api.dll` (SPEC.md Constraint) or the game will not load. This
@@ -12,12 +16,14 @@
  * call-site convention (T-24-06 / ASVS V5): objdump is invoked as
  * `spawnAsync('/usr/bin/objdump', ['--private-headers', exePath])` --
  * NEVER `spawnAsync('objdump --private-headers ' + exePath)`. Parsing is
- * done in JS with a line-scoped regex filter; we do NOT shell out to
- * `grep` (24-RESEARCH.md Don't-Hand-Roll table).
+ * delegated to the pure, dependency-free `importParse.ts` (D-51-15: the
+ * closing census tool reuses it unchanged); we do NOT shell out to `grep`
+ * (24-RESEARCH.md Don't-Hand-Roll table).
  */
 
 import { spawnAsync } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
+import { parseSteamApiImportTable } from './importParse'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
 // allowlist.ts:33 -- reuse the SAME regex value/name, do not redefine a
@@ -26,63 +32,42 @@ const NUMERIC_APP_ID = /^\d+$/
 
 const OBJDUMP_BIN = '/usr/bin/objdump'
 
-// objdump --private-headers groups PE imports under a
-// "DLL Name: <name>.dll" heading, one heading per imported DLL, followed by
-// its own "vma: Hint/Ord Member-Name Bound-To" table until the next
-// "DLL Name:" heading (or EOF). We track section membership line-by-line
-// rather than a single multi-line regex so the parser is resilient to
-// objdump's exact column widths/whitespace (which vary slightly between
-// GNU objdump and Apple LLVM objdump).
-const STEAM_API_DLL_HEADING = /DLL Name:\s*steam_api\.dll\s*$/i
-const ANY_DLL_HEADING = /DLL Name:/i
-const STEAM_API_SYMBOL = /\b(SteamAPI_[A-Za-z0-9_]+)\b/
+const CONFLICTING_HEADINGS_ERROR =
+  'conflicting steam_api.dll and steam_api64.dll import headings'
 
 // Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
 // file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
 // over-broad `export` keyword).
 type ImportScanResult =
-  | { status: 'ok'; symbols: string[] }
+  | {
+      status: 'ok'
+      arch: 'x86' | 'x64' | 'none'
+      dll: string | null
+      symbols: string[]
+    }
   | { status: 'error'; error: string }
 
 /**
- * Pure parser: extracts the exact set of `SteamAPI_*` symbols imported
- * from `steam_api.dll`, in file order, from `objdump --private-headers`
- * stdout. Returns `[]` (not an error) when the binary imports nothing
- * from `steam_api.dll` (e.g. no such DLL heading present at all).
+ * Pure wrapper over `parseSteamApiImportTable`: extracts the exact set of
+ * symbols imported from the `steam_api(64)?.dll` block, in file order, from
+ * `objdump --private-headers` stdout. Returns `[]` (not an error) when the
+ * binary imports nothing from `steam_api(64)?.dll` (e.g. no such DLL
+ * heading present at all). Kept so existing callers (`shimGenerate.ts`)
+ * compile unchanged.
  */
 export function parseSteamApiImports(objdumpOutput: string): string[] {
-  const symbols: string[] = []
-  let inSteamApiSection = false
-
-  for (const line of objdumpOutput.split('\n')) {
-    if (STEAM_API_DLL_HEADING.test(line)) {
-      inSteamApiSection = true
-      continue
-    }
-    if (!inSteamApiSection) {
-      continue
-    }
-    if (ANY_DLL_HEADING.test(line)) {
-      // Entered the NEXT imported DLL's own block -- steam_api.dll's
-      // block has ended.
-      inSteamApiSection = false
-      continue
-    }
-    const match = line.match(STEAM_API_SYMBOL)
-    if (match) {
-      symbols.push(match[1])
-    }
-  }
-
-  return symbols
+  return parseSteamApiImportTable(objdumpOutput).symbols
 }
 
 /**
  * Runs `objdump --private-headers <exePath>` (argv-form only) and returns
- * the game's exact imported `steam_api` symbol set. Never throws --
- * objdump failure (non-zero exit / spawn error / missing file) is caught
- * and surfaced as a logged warning + a typed `{ status: 'error' }` result,
- * mirroring `killBottleWineServer`'s best-effort catch shape.
+ * the game's exact imported `steam_api(64)?.dll` arch, dll name, and symbol
+ * set. Never throws -- objdump failure (non-zero exit / spawn error /
+ * missing file) is caught and surfaced as a logged warning + a typed
+ * `{ status: 'error' }` result, mirroring `killBottleWineServer`'s
+ * best-effort catch shape. A binary reporting BOTH a `steam_api.dll` and a
+ * `steam_api64.dll` heading (never expected on a real PE) is also surfaced
+ * as a typed error rather than guessing which arch is real (T-51-06).
  */
 export async function scanSteamApiImports(
   appId: string,
@@ -121,5 +106,19 @@ export async function scanSteamApiImports(
     }
   }
 
-  return { status: 'ok', symbols: parseSteamApiImports(result.stdout) }
+  const parsed = parseSteamApiImportTable(result.stdout)
+  if (parsed.conflict) {
+    logWarning(
+      `scanSteamApiImports: ${CONFLICTING_HEADINGS_ERROR} for appId ${appId} ("${exePath}")`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: CONFLICTING_HEADINGS_ERROR }
+  }
+
+  return {
+    status: 'ok',
+    arch: parsed.arch,
+    dll: parsed.dll,
+    symbols: parsed.symbols
+  }
 }
