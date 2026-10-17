@@ -52,7 +52,8 @@ import {
   bridgeBottleNameFor,
   resolveBridgeBottleName,
   listReadyBridgeBottleNames,
-  removePerGameBridgeBottle
+  removePerGameBridgeBottle,
+  findBridgeInstallBottle
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
 import type { WineInstallation, GameSettings } from 'common/types'
@@ -1606,6 +1607,105 @@ describe('bottle.ts', () => {
               !p.includes('GameLibSteamBridge-206040')
           )
         ).toBe(false)
+      })
+    })
+
+    // Phase 51 Plan 09 (D-51-09): LOCATION, not eligibility -- answers "where
+    // does an EXISTING install's bits already live", for launch()/uninstall()
+    // to dispatch on. Deliberately NOT the same question resolveBridgeBottleName
+    // answers (D-B, "where should THIS be probed/provisioned next") -- a
+    // never-scanned title can resolve a per-game bottle NAME via D-B while
+    // findBridgeInstallBottle correctly returns null for it, because nothing
+    // has actually been placed there yet.
+    describe('findBridgeInstallBottle (D-51-09)', () => {
+      test('returns null for a non-numeric appId (never calls bridgeBottleNameFor past the guard)', () => {
+        expect(findBridgeInstallBottle('not-numeric')).toBeNull()
+        expect(findBridgeInstallBottle('')).toBeNull()
+      })
+
+      test('returns the per-game bottle name when it is ready AND holds this appId manifest', () => {
+        mockedExistsSync.mockImplementation((path: string) => {
+          if (
+            path.includes('GameLibSteamBridge-206040') &&
+            path.includes('cxbottle.conf')
+          ) {
+            return true
+          }
+          if (
+            path.includes('GameLibSteamBridge-206040') &&
+            path.includes('appmanifest_206040.acf')
+          ) {
+            return true
+          }
+          return false
+        })
+
+        expect(findBridgeInstallBottle('206040')).toBe(
+          'GameLibSteamBridge-206040'
+        )
+      })
+
+      test('returns null when the per-game bottle is ready but holds NO manifest for this appId (provisioned, never installed into)', () => {
+        mockedExistsSync.mockImplementation(
+          (path: string) =>
+            path.includes('GameLibSteamBridge-206040') &&
+            path.includes('cxbottle.conf')
+        )
+
+        expect(findBridgeInstallBottle('206040')).toBeNull()
+      })
+
+      test('falls back to the legacy bridge bottle when it is ready AND holds this appId manifest, and the per-game bottle is not ready', () => {
+        mockedExistsSync.mockImplementation((path: string) => {
+          if (path.includes('GameLibSteamBridge-206040')) return false
+          if (
+            path.includes(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+            path.includes('cxbottle.conf')
+          ) {
+            return true
+          }
+          if (
+            path.includes(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+            path.includes('appmanifest_206040.acf') &&
+            !path.includes('GameLibSteamBridge-206040')
+          ) {
+            return true
+          }
+          return false
+        })
+
+        expect(findBridgeInstallBottle('206040')).toBe(
+          DEFAULT_BRIDGE_BOTTLE_NAME
+        )
+      })
+
+      test('returns null when the legacy bottle is ready but holds no manifest for this appId, and the per-game bottle is not ready either (existing GameLibSteam-only install)', () => {
+        mockedExistsSync.mockImplementation(
+          (path: string) =>
+            path.includes(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+            !path.includes('GameLibSteamBridge-206040') &&
+            path.includes('cxbottle.conf')
+        )
+
+        expect(findBridgeInstallBottle('206040')).toBeNull()
+      })
+
+      test('returns null when neither bottle is ready at all', () => {
+        mockedExistsSync.mockReturnValue(false)
+
+        expect(findBridgeInstallBottle('206040')).toBeNull()
+      })
+
+      test('the per-game bottle wins even when the legacy bottle is ALSO ready and holds this appId manifest', () => {
+        mockedExistsSync.mockImplementation(
+          (path: string) =>
+            path.includes('cxbottle.conf') ||
+            path.includes('appmanifest_206040.acf')
+        )
+
+        expect(findBridgeInstallBottle('206040')).toBe(
+          'GameLibSteamBridge-206040'
+        )
       })
     })
 

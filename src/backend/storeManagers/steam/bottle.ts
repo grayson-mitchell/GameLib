@@ -1193,6 +1193,59 @@ export function resolveBridgeBottleName(appId: string): string | null {
 }
 
 /**
+ * Phase 51 Plan 09 (D-51-09): "where does an EXISTING bridge install's bits
+ * already live", as distinct from `resolveBridgeBottleName` above (step 3 of
+ * which answers "where should a NEW install go" and always returns a name,
+ * even for a game that has never been installed at all). `launch()` and
+ * `uninstall()` need the FIRST question — dispatching a launch/uninstall
+ * into a bottle that was never provisioned, or that holds no manifest for
+ * this appId, would act against nothing. Returns `null` when neither the
+ * per-game nor the legacy shared bridge bottle actually holds this appId's
+ * manifest (appmanifest_<appId>.acf) — including the brand-new,
+ * not-yet-installed case `resolveBridgeBottleName` falls back to its
+ * per-game name for.
+ *
+ * Resolution order mirrors `resolveBridgeBottleName`'s, with the per-game
+ * branch ALSO requiring the manifest check (resolveBridgeBottleName's step 1
+ * only requires "ready", since a fresh install target doesn't have a
+ * manifest yet by definition):
+ *  1. The per-game bottle (GameLibSteamBridge-<appId>), if ready AND it
+ *     holds this appId's manifest.
+ *  2. The legacy shared bottle (DEFAULT_BRIDGE_BOTTLE_NAME), if ready AND it
+ *     holds this appId's manifest.
+ *  3. Otherwise `null` — nothing is installed via the bridge for this appId.
+ */
+export function findBridgeInstallBottle(appId: string): string | null {
+  const perGameName = bridgeBottleNameFor(appId)
+  if (!perGameName) {
+    return null
+  }
+
+  if (
+    isBridgeBottleReady(perGameName) &&
+    existsSync(
+      join(getBottleSteamappsDir(perGameName), `appmanifest_${appId}.acf`)
+    )
+  ) {
+    return perGameName
+  }
+
+  if (
+    isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME) &&
+    existsSync(
+      join(
+        getBottleSteamappsDir(DEFAULT_BRIDGE_BOTTLE_NAME),
+        `appmanifest_${appId}.acf`
+      )
+    )
+  ) {
+    return DEFAULT_BRIDGE_BOTTLE_NAME
+  }
+
+  return null
+}
+
+/**
  * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
  * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
  * the already-locked CXBOTTLE_BIN root (sibling `wine` binary, exactly the
