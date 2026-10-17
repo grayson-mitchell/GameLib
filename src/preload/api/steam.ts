@@ -49,3 +49,9 @@ export const handleSteamMetadataSyncing = frontendListenerSlot('steamMetadataSyn
 // error, no runtime error, nothing arrives. Ledgered as
 // sidecar-send-channels-fail-silently.
 export const handleSteamSyncStatus = frontendListenerSlot('steamSyncStatus')
+
+// Phase 51 Plan 08 (D-51-16, folded todo): one-way push, mirrors
+// handleSteamBridgeSetupRequired above -- backend emits via
+// bottleProcessMonitor.ts's waiting-state check, 51-08's GlobalState
+// listener subscribes.
+export const handleSteamBottleLaunchWaiting = frontendListenerSlot('steamBottleLaunchWaiting')

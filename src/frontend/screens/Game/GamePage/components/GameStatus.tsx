@@ -1,10 +1,38 @@
 import React, { useContext } from 'react'
 import GameContext from '../../GameContext'
 import { GameInfo, InstallProgress } from 'common/types'
+import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
 import { getProgress } from 'frontend/helpers'
+import {
+  useBottleLaunchWaiting,
+  resolveWaitingCauseOrder
+} from 'frontend/state/BottleLaunchWaiting'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { LinearProgress } from '@mui/material'
+
+// D-51-16: maps each cause to its gamelib.json key -- no new hard-coded
+// copy, every string already lives under `steam.bottle.waiting.*` (51-04).
+const WAITING_CAUSE_KEYS: Record<
+  SteamBottleLaunchWaitingCause,
+  { key: string; defaultValue: string }
+> = {
+  'self-update': {
+    key: 'gamelib:steam.bottle.waiting.cause.selfUpdate',
+    defaultValue:
+      'Steam is updating itself. Press Play again once it has restarted.'
+  },
+  login: {
+    key: 'gamelib:steam.bottle.waiting.cause.login',
+    defaultValue:
+      'Steam needs you to sign in. Its login window may be hidden behind other windows.'
+  },
+  'other-session': {
+    key: 'gamelib:steam.bottle.waiting.cause.otherSession',
+    defaultValue:
+      'This game is running on another computer, and Steam is asking whether to close it there.'
+  }
+}
 
 interface Props {
   gameInfo: GameInfo
@@ -17,6 +45,13 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
   const { runner, is, statusContext } = useContext(GameContext)
+  // D-51-16 (folded todo): a bottled-Steam launch that has produced no game
+  // process within the grace window. The backend never emits this signal
+  // for a kind:'bridge' launch (bottleProcessMonitor.ts), so no extra
+  // runner/is check is needed here to keep bridge launches silent.
+  const waitingEntry = useBottleLaunchWaiting(
+    (state) => state.entries[gameInfo.app_name]
+  )
 
   function getInstallLabel(
     is_installed: boolean,
@@ -154,6 +189,12 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
     return t('status.notinstalled')
   }
 
+  const otherWaitingCauses = waitingEntry
+    ? resolveWaitingCauseOrder(waitingEntry.detectedCause).filter(
+        (cause) => cause !== waitingEntry.detectedCause
+      )
+    : []
+
   return (
     <div className="gameStatus">
       {(is.installing || is.updating) && (
@@ -162,6 +203,56 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
           className="installProgress"
           value={getProgress(progress)}
         />
+      )}
+      {waitingEntry && (
+        <div className="bottleLaunchWaiting">
+          <p style={{ fontStyle: 'italic' }}>
+            {tGamelib(
+              'gamelib:steam.bottle.waiting.title',
+              'Waiting for Steam…'
+            )}
+          </p>
+          <p>
+            {tGamelib(
+              'gamelib:steam.bottle.waiting.intro',
+              'The Windows Steam client has not started the game yet.'
+            )}
+          </p>
+          {waitingEntry.detectedCause && (
+            <p>
+              <strong>
+                {tGamelib(
+                  'gamelib:steam.bottle.waiting.mostLikely',
+                  'Most likely:'
+                )}
+              </strong>{' '}
+              {tGamelib(
+                WAITING_CAUSE_KEYS[waitingEntry.detectedCause].key,
+                WAITING_CAUSE_KEYS[waitingEntry.detectedCause].defaultValue
+              )}
+            </p>
+          )}
+          {otherWaitingCauses.length > 0 && (
+            <div>
+              <p>
+                {tGamelib(
+                  'gamelib:steam.bottle.waiting.likelyCauses',
+                  'Likely causes:'
+                )}
+              </p>
+              <ul>
+                {otherWaitingCauses.map((cause) => (
+                  <li key={cause}>
+                    {tGamelib(
+                      WAITING_CAUSE_KEYS[cause].key,
+                      WAITING_CAUSE_KEYS[cause].defaultValue
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
       <p
         style={{

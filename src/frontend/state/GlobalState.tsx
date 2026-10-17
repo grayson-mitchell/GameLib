@@ -68,6 +68,10 @@ import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
+import {
+  handleSteamBottleLaunchWaitingSignal,
+  useBottleLaunchWaiting
+} from './BottleLaunchWaiting'
 import { performSteamLogout } from './SteamSignOut'
 import { createOAuthLoginCompletion } from '../screens/WebView/useTauriOAuthLogin'
 
@@ -1488,6 +1492,16 @@ class GlobalState extends PureComponent<Props> {
     runner
   }: GameStatus) => {
     const { libraryStatus, gameUpdates } = this.state
+
+    // Phase 51 Plan 08 (D-51-16, folded todo): the "waiting for Steam"
+    // state ends either way the launch resolves -- the game's own process
+    // appearing (playing) or the launch itself ending (done). Runs before
+    // every other branch below (including the !currentApp early return) so
+    // neither path can skip it.
+    if (status === 'playing' || status === 'done') {
+      useBottleLaunchWaiting.getState().clear(appName)
+    }
+
     const currentApp = libraryStatus.find((game) => game.appName === appName)
 
     // add app to libraryStatus if it was not present
@@ -1659,6 +1673,16 @@ class GlobalState extends PureComponent<Props> {
     // cancel — never a silent auto-fallback, never a dead end.
     window.api.handleSteamBridgeSetupRequired(
       handleSteamBridgeSetupRequiredSignal
+    )
+
+    // Phase 51 Plan 08 (D-51-16, folded todo): single global listener that
+    // records a bottled-Steam launch's "waiting for Steam" classification --
+    // fires from bottleProcessMonitor.ts's waiting-state check once a
+    // launch has produced no game process within the grace window. The
+    // matching clear() call lives in handleGameStatus below, on the
+    // playing/done transitions that end the wait either way.
+    window.api.handleSteamBottleLaunchWaiting(
+      handleSteamBottleLaunchWaitingSignal
     )
 
     window.api.handleSteamMetadataSyncing((e, { syncing }) => {
