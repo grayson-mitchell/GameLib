@@ -104,6 +104,17 @@ export const builtBridgeShimPath = fixAsarPath(
   join(publicDir, 'bin', process.arch, 'darwin', 'steam_api.dll')
 )
 
+// Phase 51 Plan 07 (D-51-13): the bundled location of the (future) Win64
+// shim, same arch-parameterized layout as builtBridgeShimPath above -- the
+// Tauri macOS bundle already ships the whole `build/bin/${arch}/darwin`
+// directory (24-RESEARCH.md Pattern 5), so no packaging change is needed
+// to add this file once 51-15 builds it. Absent today (SHIM64_EXPORTED_SYMBOLS
+// is empty, shimCoverage.ts) -- shimGenerate.ts's placeShimForGame treats a
+// missing file at this path as a typed 'shim-not-built' result, not a throw.
+export const builtBridgeShim64Path = fixAsarPath(
+  join(publicDir, 'bin', process.arch, 'darwin', 'steam_api64.dll')
+)
+
 // Phase 24 Plan 06 (R2/R5, D-03): the bundled location of the compiled
 // native arm64 host helper binary (native/steam-bridge/helper/bridge_helper.c,
 // Plan 24-02). Plan 24-07 (packaging) compiles the C source into this exact
