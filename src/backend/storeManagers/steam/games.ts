@@ -1438,14 +1438,23 @@ export default class SteamGame implements Game {
     const shimResult = await placeShimForGame(this.appId, exePath, {
       bottleName: bridgeBottleName
     })
+    // Phase 51 Plan 07 (fix during integration, Rule 1): placeShimForGame
+    // now returns a typed 'miss' status (never 'error') when the shim's
+    // coverage check fails -- this call site's failure check must widen to
+    // include it, or a coverage miss would silently fall through as a
+    // success (the shim was never actually placed). 'no-steam-api' is
+    // deliberately NOT a failure here -- nothing needed placing.
     if (
       shimResult.status === 'error' ||
-      shimResult.status === 'shim-not-built'
+      shimResult.status === 'shim-not-built' ||
+      shimResult.status === 'miss'
     ) {
       const shimError =
         shimResult.status === 'shim-not-built'
           ? 'Bridge shim has not been built yet (packaging step pending)'
-          : shimResult.error
+          : shimResult.status === 'miss'
+            ? `Bridge shim does not cover required symbol(s): ${shimResult.verdict.missingSymbols.join(', ')}`
+            : shimResult.error
       logWarning(
         `SteamGame: installBridgeGame shim placement failed for appId ${this.appId}: ${shimError}`,
         LogPrefix.Steam

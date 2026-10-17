@@ -3252,6 +3252,44 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(result).toEqual({ status: 'done' })
   })
 
+  it("Phase 51 Plan 07 (fix during integration): placeShimForGame's typed 'miss' status is a real install failure, not a silent success -- markBridgeFailedThisSession applied, missing symbol named in the error", async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'miss',
+      verdict: {
+        status: 'miss',
+        arch: 'x86',
+        missingSymbols: ['SteamUser@unknown-version'],
+        interfaceVersions: {},
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'irrelevant',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(result).toEqual({
+      status: 'error',
+      error:
+        'Bridge shim does not cover required symbol(s): SteamUser@unknown-version'
+    })
+
+    // Poisoned this session, exactly like the 'shim-not-built'/'error'
+    // cases above -- a later install() for the same appId must route to
+    // the bottled fallback instead of retrying the same bridge miss.
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+    const secondGame = new SteamGame(APP_ID)
+    const secondResult = await secondGame.install({} as any)
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(secondResult).toEqual({ status: 'done' })
+  })
+
   it('D-A/D-B: new installs ALWAYS target the per-game bottle directly, even when the legacy bridge bottle already holds this appId manifest (the resolver is never consulted for new installs)', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     // Legacy bottle is ready; per-game bottle is NOT ready — if install()
