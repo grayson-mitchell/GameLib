@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-01-PLAN.md (Task 3 live checkpoint PASSED, plan closed)
-last_updated: "2026-10-17T05:15:29.633Z"
+stopped_at: Completed 51-02-PLAN.md (import scanner + interface-version capture)
+last_updated: "2026-10-17T05:39:35.748Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 51 execution started
-state_head: 69e89e025d3ebb59bfc19435ae0896e1763b5df4
+state_head: 10ccba59cef244c463d9ad8933c6c6ff455323be
 progress:
   total_phases: 45
   completed_phases: 36
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 2 of 19
+Plan: 3 of 19
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 51 execution started
 
@@ -512,6 +512,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 | Phase quick-261015-pwy P01 | 22min | 3 tasks | 7 files |
 | Phase quick-261015-rud P01 | - | 3 tasks | 7 files |
 | Phase 51 P01 | ~1h45m (across 4 continuations) | 3 tasks | 17 files |
+| Phase 51 P02 | 20min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -595,6 +596,8 @@ Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries
 - [Phase 51]: D-51-01 implemented as a per-appId Map registry (not pooled/shared); old singleton helperProcess state and shutdownBridgeHelper deleted outright per assumption_delta_decision: promote
 - [Phase 51]: Helper lifetime bound to the launching game's own tracked process lifetime via bottleProcessMonitor.onStopped (Claude's Discretion option chosen in 51-01)
 - [Phase 51]: 51-01 Task 3 live checkpoint fully PASSED on real Mac Steam hardware (Avernum 6/206060) after fixing a live-discovered cold-CM-reconnect bug in launchTarget.ts; corroborated by log/filesystem/process evidence, not self-reported
+- [Phase 51]: importParse.ts widens the scan to every imported member of the steam_api(64)?.dll block (bare accessors, SteamGameServer*, SteamInternal_*) with arch detection and fail-closed conflict handling, fixing ROADMAP hazard (a)
+- [Phase 51]: resolveRequiredInterfaceVersions auto-detects the runtime-lookup case internally (usesRuntimeInterfaceLookup) rather than exposing a separate caller-selected code path
 
 ### Pending Todos
 
@@ -1252,8 +1255,8 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 
 ## Session Continuity
 
-Last session: 2026-10-17T05:15:29.616Z
-Stopped at: Completed 51-01-PLAN.md (Task 3 live checkpoint PASSED, plan closed)
+Last session: 2026-10-17T05:39:35.731Z
+Stopped at: Completed 51-02-PLAN.md (import scanner + interface-version capture)
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
