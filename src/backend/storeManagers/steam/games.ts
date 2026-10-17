@@ -57,6 +57,7 @@ import {
   tellBottledSteamToLaunch,
   getSteamBottleSettings,
   getBottleSteamappsDir,
+  getBottleDir,
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
@@ -83,7 +84,11 @@ import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
 import { bridgeAllowlist } from './bridge/allowlist'
 import { placeShimForGame } from './bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from './bridge/launchTarget'
-import { ensureBridgeHelperReady } from './bridge/helperProcess'
+import {
+  ensureBridgeHelperReady,
+  stopBridgeHelper
+} from './bridge/helperProcess'
+import { writeBridgeConfig } from './bridge/bridgeConfig'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
@@ -2182,38 +2187,29 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * Phase 24 Plan 08 (R4/R6/R7): allowlisted-title bridge launch path. Runs
-   * the game's OWN resolved Windows `.exe` (resolveBridgeLaunchExe, Task 1)
-   * directly via `runWineCommand` against THIS game's own bridge bottle
+   * Phase 24 Plan 08 (R4/R6/R7), reordered by Phase 51 Plan 01 (D-51-01):
+   * allowlisted-title bridge launch path. Runs the game's OWN resolved
+   * Windows `.exe` (resolveBridgeLaunchExe, Task 1) directly via
+   * `runWineCommand` against THIS game's own bridge bottle
    * (getBridgeBottleSettings(appId), quick/261016-u1w D-B) — NEVER `tellBottledSteamToLaunch` /
    * `dispatchToBottledSteam`, since the bridge bottle has no bottled Steam
    * client to `-applaunch` through (RESEARCH Pattern 4's single largest
    * routing-shape delta).
    *
-   * Gated on `ensureBridgeHelperReady()` (24-06) FIRST — D-05/D-06: no game
-   * is ever launched with no live Steam identity. On EITHER a not-ready
-   * helper OR an unresolvable launch target, this marks the appId
+   * D-51-01 reorders the readiness gate to AFTER the exe/bottle existence
+   * gate: `placeShimForGame()` (byte-identity no-op, refreshes a stale
+   * pre-phase shim after an upgrade) and `ensureBridgeHelperReady()` both
+   * now run only once we already know there is a real exe to launch, then
+   * `writeBridgeConfig()` hands the per-appId helper's real, OS-assigned
+   * port to the game's own regenerated shim via `gamelib_bridge.cfg`
+   * beside the exe — there is no fixed port left for the shim to guess.
+   * On ANY of these steps failing, this marks the appId
    * bridge-failed-this-session (finding #3) and fires
    * `steamBridgeSetupRequired` itself (defensive — never assumes the
    * signal was already fired upstream) before returning `false` — never
    * optimistically flips any running state.
    */
   private async launchBridgeGame(): Promise<boolean> {
-    const helperReady = await ensureBridgeHelperReady(this.appId)
-    if (!helperReady.ready) {
-      logWarning(
-        `SteamGame: bridge helper not ready for appId ${this.appId} (status=${helperReady.status}) — not launching (no no-identity launch, D-05/D-06)`,
-        LogPrefix.Steam
-      )
-      markBridgeFailedThisSession(this.appId)
-      sendFrontendMessage('steamBridgeSetupRequired', {
-        appName: this.appId,
-        reason: helperReady.status,
-        fallbackAvailable: true
-      })
-      return false
-    }
-
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
       logWarning(
@@ -2243,9 +2239,10 @@ export default class SteamGame implements Game {
     // resulting dialog steers the user toward.
     // quick/261016-u1w (D-B threading): resolve THIS game's bottle once —
     // per-game bottle if ready, else the legacy shared bottle if that's
-    // actually where this appId's manifest lives — and reuse it for both
-    // the readiness gate below and the runWineCommand() gameSettings, so
-    // the game launches from the SAME bottle its exe was resolved against.
+    // actually where this appId's manifest lives — and reuse it for the
+    // existence gate, the shim refresh, the readiness gate, the config
+    // handoff, AND the runWineCommand() gameSettings below, so the game
+    // launches from the SAME bottle its exe was resolved against.
     const bridgeBottleSettings = getBridgeBottleSettings(this.appId)
     if (
       !isBridgeBottleReady(bridgeBottleSettings.wineCrossoverBottle) ||
@@ -2263,8 +2260,66 @@ export default class SteamGame implements Game {
       return false
     }
 
+    // D-51-01: byte-identity no-op on every normal launch — only does real
+    // work when the placed shim has gone stale (e.g. a shim-version bump
+    // shipped after this game was installed).
+    const shimResult = await placeShimForGame(this.appId, exePath, {
+      bottleName: bridgeBottleSettings.wineCrossoverBottle
+    })
+    if (
+      shimResult.status !== 'placed' &&
+      shimResult.status !== 'already-placed'
+    ) {
+      logWarning(
+        `SteamGame: launchBridgeGame could not (re)place the shim for appId ${this.appId}: ${shimResult.status === 'error' ? shimResult.error : shimResult.status}`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'shim-refresh-failed',
+        fallbackAvailable: true
+      })
+      return false
+    }
+
+    const helperReady = await ensureBridgeHelperReady(this.appId)
+    if (!helperReady.ready || helperReady.port === undefined) {
+      logWarning(
+        `SteamGame: bridge helper not ready for appId ${this.appId} (status=${helperReady.status}) — not launching (no no-identity launch, D-05/D-06)`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: helperReady.status,
+        fallbackAvailable: true
+      })
+      return false
+    }
+
+    const configResult = writeBridgeConfig({
+      exePath,
+      bottleName: bridgeBottleSettings.wineCrossoverBottle,
+      appId: this.appId,
+      port: helperReady.port
+    })
+    if (configResult.status === 'error') {
+      logWarning(
+        `SteamGame: launchBridgeGame failed to write gamelib_bridge.cfg for appId ${this.appId}: ${configResult.error}`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'bridge-config-write-failed',
+        fallbackAvailable: true
+      })
+      return false
+    }
+
     logInfo(
-      `SteamGame: launching appId ${this.appId} via the Steam bridge (${exePath})`,
+      `SteamGame: launching appId ${this.appId} via the Steam bridge (${exePath}, helper port=${helperReady.port})`,
       LogPrefix.Steam
     )
     try {
@@ -2277,6 +2332,32 @@ export default class SteamGame implements Game {
         startFolder: dirname(exePath),
         skipPrefixCheckIKnowWhatImDoing: true
       })
+
+      // Phase 51 Plan 01 Task 2 (D-51-01): the helper's lifetime is tied to
+      // THIS game's own process lifetime, never to the whole app session —
+      // the monitor's onStopped fires exactly once, when the matched
+      // process(es) are gone, and tears down only this appId's helper.
+      const installRoot = this.resolveBridgeGameInstallRoot(
+        exePath,
+        bridgeBottleSettings.wineCrossoverBottle
+      )
+      if (installRoot) {
+        const { startBottleProcessMonitor } =
+          await import('./bottleProcessMonitor')
+        startBottleProcessMonitor({
+          appId: this.appId,
+          installPath: installRoot,
+          bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
+          kind: 'bridge',
+          onStopped: () => stopBridgeHelper(this.appId)
+        })
+      } else {
+        logWarning(
+          `SteamGame: launchBridgeGame could not resolve an install root for appId ${this.appId} — no process monitor started, helper will outlive the game until app quit`,
+          LogPrefix.Steam
+        )
+      }
+
       return true
     } catch (error) {
       logWarning(

@@ -60,6 +60,11 @@ const STEAM_CLIENT_PROCESS_NAMES = [
 interface MonitorEntry {
   cancelled: boolean
   timers: Set<ReturnType<typeof setTimeout>>
+  onStopped?: () => void
+  /** Carried on the entry so a test can observe the default without the
+   * poll loop needing to branch on it (see StartBottleProcessMonitorArgs's
+   * own `kind` doc). */
+  kind: 'bottled-steam' | 'bridge'
 }
 
 const activeMonitors = new Map<string, MonitorEntry>()
@@ -69,6 +74,24 @@ export interface StartBottleProcessMonitorArgs {
   installPath: string
   bottleDir: string
   pollIntervalMs?: number
+  /**
+   * Phase 51 Plan 01 (D-51-01): which kind of bottled process this monitor
+   * is watching -- carried on the entry for future branching (none yet;
+   * this plan's own behaviour is identical for both kinds). Defaults to
+   * `'bottled-steam'` so every pre-existing caller (bottle.ts's own
+   * `tellBottledSteamToLaunch`) is unaffected.
+   */
+  kind?: 'bottled-steam' | 'bridge'
+  /**
+   * Phase 51 Plan 01 (D-51-01): called EXACTLY ONCE, the moment the
+   * matched process(es) that had previously been seen running are gone
+   * (the existing "matched process(es) gone" branch below) -- never when
+   * `stopBottleProcessMonitor()` cancels the monitor first (e.g. a second
+   * launch superseding this one), and never more than once per monitor.
+   * Wrapped in try/catch so a throwing callback can never abort the poll
+   * loop's own cleanup.
+   */
+  onStopped?: () => void
 }
 
 /**
@@ -249,6 +272,24 @@ async function runPollLoop(
         runner: 'steam',
         status: 'done'
       })
+      // Phase 51 Plan 01 (D-51-01): fires exactly once, here, on the ONLY
+      // branch that observes the game's own process(es) genuinely gone --
+      // never on the `stopBottleProcessMonitor()`-cancels-first path below,
+      // which never reaches this branch at all. Guarded so a throwing
+      // callback cannot prevent `clearEntry()` from running.
+      if (entry.onStopped) {
+        try {
+          entry.onStopped()
+        } catch (error) {
+          logWarning(
+            [
+              `bottleProcessMonitor [${appId}]: onStopped callback threw`,
+              error
+            ],
+            LogPrefix.Steam
+          )
+        }
+      }
       clearEntry(appId, entry)
       return
     }
@@ -268,7 +309,9 @@ export function startBottleProcessMonitor(
     appId,
     installPath,
     bottleDir,
-    pollIntervalMs = DEFAULT_POLL_INTERVAL_MS
+    pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
+    onStopped,
+    kind = 'bottled-steam'
   } = args
 
   if (!isMac) {
@@ -287,7 +330,12 @@ export function startBottleProcessMonitor(
 
   stopBottleProcessMonitor(appId)
 
-  const entry: MonitorEntry = { cancelled: false, timers: new Set() }
+  const entry: MonitorEntry = {
+    cancelled: false,
+    timers: new Set(),
+    onStopped,
+    kind
+  }
   activeMonitors.set(appId, entry)
 
   void (async () => {
@@ -315,4 +363,17 @@ export function __stopAllBottleProcessMonitors(): void {
   for (const appId of Array.from(activeMonitors.keys())) {
     stopBottleProcessMonitor(appId)
   }
+}
+
+/**
+ * Test-only observer: the `kind` an active monitor for `appId` was started
+ * with (or defaulted to) -- `undefined` if no monitor is active for that
+ * appId. Exists purely so a test can assert the documented default
+ * (`'bottled-steam'`) without the poll loop itself needing to branch on
+ * `kind` yet. Never called from production code.
+ */
+export function __getActiveMonitorKindForTests(
+  appId: string
+): 'bottled-steam' | 'bridge' | undefined {
+  return activeMonitors.get(appId)?.kind
 }

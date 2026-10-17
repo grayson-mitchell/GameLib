@@ -20,7 +20,8 @@ import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
   startBottleProcessMonitor,
   stopBottleProcessMonitor,
-  __stopAllBottleProcessMonitors
+  __stopAllBottleProcessMonitors,
+  __getActiveMonitorKindForTests
 } from '../bottleProcessMonitor'
 
 // Importing `getBottleDir` from '../bottle' evaluates the whole module, so
@@ -417,5 +418,131 @@ describe('bottleProcessMonitor.ts', () => {
 
     expect(mockedSpawnAsync).not.toHaveBeenCalled()
     expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+  })
+
+  // Phase 51 Plan 01 (D-51-01): onStopped + kind.
+  describe('onStopped + kind (D-51-01)', () => {
+    test('onStopped is called exactly once when the matched set empties after a match', async () => {
+      const onStopped = jest.fn()
+      mockedSpawnAsync
+        .mockResolvedValueOnce({ code: 0, stdout: matchedPsLine, stderr: '' })
+        .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onStopped
+      })
+
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onStopped).not.toHaveBeenCalled()
+
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+
+      // Further ticks (the monitor already tore itself down) never re-call it.
+      await jest.advanceTimersByTimeAsync(1500 * 3)
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+
+      jest.useRealTimers()
+    })
+
+    test('onStopped is never called when stopBottleProcessMonitor() cancels the monitor first', async () => {
+      const onStopped = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onStopped
+      })
+
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        { appName: '38410', runner: 'steam', status: 'playing' }
+      )
+
+      stopBottleProcessMonitor('38410')
+      await jest.advanceTimersByTimeAsync(1500 * 3)
+      await flushMicrotasks()
+
+      expect(onStopped).not.toHaveBeenCalled()
+
+      jest.useRealTimers()
+    })
+
+    test('onStopped is never called when a throwing callback is passed -- clearEntry still runs', async () => {
+      const onStopped = jest.fn(() => {
+        throw new Error('boom')
+      })
+      mockedSpawnAsync
+        .mockResolvedValueOnce({ code: 0, stdout: matchedPsLine, stderr: '' })
+        .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onStopped
+      })
+
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      expect(jest.getTimerCount()).toBe(0)
+
+      jest.useRealTimers()
+    })
+
+    test('kind defaults to "bottled-steam" when omitted', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      await flushMicrotasks()
+
+      expect(__getActiveMonitorKindForTests('38410')).toBe('bottled-steam')
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('kind is carried through as "bridge" when passed explicitly', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge'
+      })
+      await flushMicrotasks()
+
+      expect(__getActiveMonitorKindForTests('38410')).toBe('bridge')
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
   })
 })

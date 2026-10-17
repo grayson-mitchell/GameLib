@@ -41,6 +41,7 @@ import {
   tellBottledSteamToUninstall,
   getSteamBottleSettings,
   getBottleSteamappsDir,
+  getBottleDir,
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
@@ -60,7 +61,12 @@ import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { bridgeAllowlist } from '../bridge/allowlist'
 import { placeShimForGame } from '../bridge/shimGenerate'
 import { resolveBridgeLaunchExe } from '../bridge/launchTarget'
-import { ensureBridgeHelperReady } from '../bridge/helperProcess'
+import {
+  ensureBridgeHelperReady,
+  stopBridgeHelper
+} from '../bridge/helperProcess'
+import { writeBridgeConfig } from '../bridge/bridgeConfig'
+import { startBottleProcessMonitor } from '../bottleProcessMonitor'
 import { runWineCommand } from 'backend/launcher'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
@@ -242,6 +248,9 @@ jest.mock('../bottle', () => ({
   getSteamBottleSettings: jest.fn(),
   // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
   getBottleSteamappsDir: jest.fn(),
+  // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
+  // wiring resolves the bottle dir via this.
+  getBottleDir: jest.fn(),
   // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
   // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
   isBridgeBottleReady: jest.fn(),
@@ -276,10 +285,28 @@ jest.mock('../bridge/launchTarget', () => ({
   resolveBridgeLaunchExe: jest.fn()
 }))
 
-// ── bridge/helperProcess.ts mock (24-06) — ensureBridgeHelperReady() gate
-// consumed by launch()'s bridge branch (Task 3).
+// ── bridge/helperProcess.ts mock (24-06, widened Phase 51 Plan 01) —
+// ensureBridgeHelperReady() gate + stopBridgeHelper() teardown hook, both
+// consumed by launch()'s bridge branch.
 jest.mock('../bridge/helperProcess', () => ({
-  ensureBridgeHelperReady: jest.fn()
+  ensureBridgeHelperReady: jest.fn(),
+  stopBridgeHelper: jest.fn()
+}))
+
+// ── bridge/bridgeConfig.ts mock (Phase 51 Plan 01, D-51-01) — the
+// gamelib_bridge.cfg port handoff launchBridgeGame() writes right before
+// firing wine.
+jest.mock('../bridge/bridgeConfig', () => ({
+  writeBridgeConfig: jest.fn(),
+  BRIDGE_CONFIG_FILENAME: 'gamelib_bridge.cfg'
+}))
+
+// ── bottleProcessMonitor.ts mock (Phase 51 Plan 01 Task 2) —
+// startBottleProcessMonitor, dynamically imported by launchBridgeGame()
+// after a successful wine launch to tie the helper's lifetime to the
+// game's own process lifetime.
+jest.mock('../bottleProcessMonitor', () => ({
+  startBottleProcessMonitor: jest.fn()
 }))
 
 // ── backend/launcher.ts mock — runWineCommand, dynamically imported by
@@ -1524,11 +1551,11 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
 // routing — ensureBridgeHelperReady() readiness gate + resolveBridgeLaunchExe()
 // exe resolution + direct runWineCommand (never tellBottledSteamToLaunch).
 
-describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/finding-3)', () => {
+describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/finding-3), reordered by Phase 51 Plan 01 (D-51-01)', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let envMock: any
-  const RESOLVED_EXE_PATH =
-    '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+  const BRIDGE_STEAMAPPS_DIR = '/mock/bridge/bottle/steamapps'
+  const RESOLVED_EXE_PATH = `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Avernum4.exe`
 
   beforeEach(() => {
     __resetBridgeFailedSessionForTests()
@@ -1561,6 +1588,30 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     // overrides existsSync to false.
     ;(isBridgeBottleReady as jest.Mock).mockReset().mockReturnValue(true)
     ;(existsSync as jest.Mock).mockReset().mockReturnValue(true)
+    // Phase 51 Plan 01 (D-51-01): three new steps slot in between the
+    // existence gate and runWineCommand -- benign defaults here so every
+    // pre-existing test below that never mentions them keeps exercising
+    // the happy path; the dedicated tests for each override explicitly.
+    ;(placeShimForGame as jest.Mock)
+      .mockReset()
+      .mockResolvedValue({ status: 'placed', shimPath: RESOLVED_EXE_PATH })
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true,
+      port: 55123
+    })
+    ;(writeBridgeConfig as jest.Mock).mockReset().mockReturnValue({
+      status: 'written',
+      path: '/mock/.../gamelib_bridge.cfg'
+    })
+    ;(stopBridgeHelper as jest.Mock).mockReset()
+    ;(startBottleProcessMonitor as jest.Mock).mockReset()
+    ;(getBottleSteamappsDir as jest.Mock)
+      .mockReset()
+      .mockReturnValue(BRIDGE_STEAMAPPS_DIR)
+    ;(getBottleDir as jest.Mock)
+      .mockReset()
+      .mockReturnValue('/mock/bridge/bottle')
   })
 
   afterEach(() => {
@@ -1574,22 +1625,28 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     envMock.isLinux = true
   })
 
-  it('allowlisted launch: ensureBridgeHelperReady -> resolveBridgeLaunchExe -> runWineCommand with the RESOLVED exe path + getBridgeBottleSettings (NOT tellBottledSteamToLaunch, no <gameExePath> placeholder)', async () => {
+  it('allowlisted launch: resolveBridgeLaunchExe -> placeShimForGame -> ensureBridgeHelperReady -> writeBridgeConfig -> runWineCommand with the RESOLVED exe path + getBridgeBottleSettings (NOT tellBottledSteamToLaunch, no <gameExePath> placeholder)', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
-      status: 'ready',
-      ready: true
-    })
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
 
     const game = new SteamGame(APP_ID)
     const result = await game.launch({} as any)
 
-    expect(ensureBridgeHelperReady).toHaveBeenCalledWith(APP_ID)
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
+    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH, {
+      bottleName: 'GameLibSteamBridge'
+    })
+    expect(ensureBridgeHelperReady).toHaveBeenCalledWith(APP_ID)
+    expect(writeBridgeConfig).toHaveBeenCalledWith({
+      exePath: RESOLVED_EXE_PATH,
+      bottleName: 'GameLibSteamBridge',
+      appId: APP_ID,
+      port: 55123
+    })
     // quick/261016-u1w (D-B threading): getBridgeBottleSettings is now
-    // per-appId, so the resolved bottle used for both the readiness gate
-    // and runWineCommand's gameSettings is this game's OWN bridge bottle.
+    // per-appId, so the resolved bottle used for every readiness/config
+    // step and runWineCommand's gameSettings is this game's OWN bridge
+    // bottle.
     expect(getBridgeBottleSettings).toHaveBeenCalledWith(APP_ID)
     expect(runWineCommand).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1600,6 +1657,54 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     )
     expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
     expect(result).toBe(true)
+
+    // Phase 51 Plan 01 Task 2 (D-51-01): the monitor is started with
+    // kind:'bridge' and an onStopped that tears down THIS appId's helper.
+    expect(startBottleProcessMonitor).toHaveBeenCalledTimes(1)
+    const monitorArgs = (startBottleProcessMonitor as jest.Mock).mock
+      .calls[0][0]
+    expect(monitorArgs.appId).toBe(APP_ID)
+    expect(monitorArgs.kind).toBe('bridge')
+    expect(monitorArgs.bottleDir).toBe('/mock/bridge/bottle')
+    expect(typeof monitorArgs.onStopped).toBe('function')
+
+    monitorArgs.onStopped()
+    expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('placeShimForGame rejects (shim-not-built) — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired with reason shim-refresh-failed, ensureBridgeHelperReady never reached', async () => {
+    const SHIM_FAIL_APP_ID = '555555'
+    library.set(SHIM_FAIL_APP_ID, makeEntry({ title: 'Shim Refresh Failure' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'shim-not-built'
+    })
+
+    const game = new SteamGame(SHIM_FAIL_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(result).toBe(false)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: SHIM_FAIL_APP_ID,
+        reason: 'shim-refresh-failed',
+        fallbackAvailable: true
+      }
+    )
+
+    // Poisoned this session -- a later launch() for the SAME appId skips
+    // the bridge entirely (finding #3 lineage).
+    const secondResult = await game.launch({} as any)
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(SHIM_FAIL_APP_ID)
+    expect(secondResult).toBe(true)
   })
 
   it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId skips the bridge (finding #3 bypass)', async () => {
@@ -1609,6 +1714,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     library.set(FAILING_APP_ID, makeEntry({ title: 'Failing Bridge Game' }))
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
       status: 'unreachable',
       ready: false
@@ -1621,6 +1727,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const result = await game.launch({} as any)
 
     expect(runWineCommand).not.toHaveBeenCalled()
+    expect(writeBridgeConfig).not.toHaveBeenCalled()
     expect(result).toBe(false)
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
@@ -1639,20 +1746,54 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(secondResult).toBe(true)
   })
 
+  it('writeBridgeConfig rejects — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired with reason bridge-config-write-failed', async () => {
+    const CONFIG_FAIL_APP_ID = '444444'
+    library.set(
+      CONFIG_FAIL_APP_ID,
+      makeEntry({ title: 'Bridge Config Write Failure' })
+    )
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(writeBridgeConfig as jest.Mock).mockReturnValue({
+      status: 'error',
+      error: 'boom'
+    })
+
+    const game = new SteamGame(CONFIG_FAIL_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(result).toBe(false)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: CONFIG_FAIL_APP_ID,
+        reason: 'bridge-config-write-failed',
+        fallbackAvailable: true
+      }
+    )
+
+    const secondResult = await game.launch({} as any)
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(CONFIG_FAIL_APP_ID)
+    expect(secondResult).toBe(true)
+  })
+
   it('resolveBridgeLaunchExe returns undefined — launch() does NOT run a bare/undefined path, marks bridge-failed, fires steamBridgeSetupRequired', async () => {
     const NO_EXE_APP_ID = '777777'
     library.set(NO_EXE_APP_ID, makeEntry({ title: 'No Windows Launch Entry' }))
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
-      status: 'ready',
-      ready: true
-    })
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(undefined)
 
     const game = new SteamGame(NO_EXE_APP_ID)
     const result = await game.launch({} as any)
 
     expect(runWineCommand).not.toHaveBeenCalled()
+    expect(placeShimForGame).not.toHaveBeenCalled()
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
       {
@@ -1664,17 +1805,13 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(result).toBe(false)
   })
 
-  it('D-UAT-24-02: helper ready + resolveBridgeLaunchExe returns a path, but the exe is absent on disk (installed via a non-bridge path) — runWineCommand is NOT called, steamBridgeSetupRequired fired with reason bridge-not-installed, markBridgeFailedThisSession NOT applied (bridge stays eligible for a later install-through-bridge retry)', async () => {
+  it('D-UAT-24-02: resolveBridgeLaunchExe returns a path, but the exe is absent on disk (installed via a non-bridge path) — runWineCommand is NOT called, steamBridgeSetupRequired fired with reason bridge-not-installed, markBridgeFailedThisSession NOT applied (bridge stays eligible for a later install-through-bridge retry), and the shim/helper/config steps never even run', async () => {
     const NOT_INSTALLED_APP_ID = '666666'
     library.set(
       NOT_INSTALLED_APP_ID,
       makeEntry({ title: 'Installed via native/old-bottle path' })
     )
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
-      status: 'ready',
-      ready: true
-    })
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(existsSync as jest.Mock).mockReturnValue(false)
 
@@ -1682,6 +1819,8 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const result = await game.launch({} as any)
 
     expect(existsSync).toHaveBeenCalledWith(RESOLVED_EXE_PATH)
+    expect(placeShimForGame).not.toHaveBeenCalled()
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
     expect(runWineCommand).not.toHaveBeenCalled()
     expect(sendFrontendMessage).toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
@@ -1704,12 +1843,8 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(secondResult).toBe(true)
   })
 
-  it('D-UAT-24-02: helper ready + exe resolved + exe exists on disk + bridge bottle ready — happy path unchanged (runWineCommand fires)', async () => {
+  it('D-UAT-24-02: exe resolved + exe exists on disk + bridge bottle ready — happy path unchanged (runWineCommand fires, monitor starts)', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
-      status: 'ready',
-      ready: true
-    })
     ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
@@ -1718,10 +1853,11 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const result = await game.launch({} as any)
 
     expect(runWineCommand).toHaveBeenCalledTimes(1)
+    expect(startBottleProcessMonitor).toHaveBeenCalledTimes(1)
     expect(result).toBe(true)
   })
 
-  it('regression: a non-allowlisted title never calls ensureBridgeHelperReady/resolveBridgeLaunchExe/runWineCommand — existing bottled launch flow unchanged', async () => {
+  it('regression: a non-allowlisted title never calls resolveBridgeLaunchExe/placeShimForGame/ensureBridgeHelperReady/writeBridgeConfig/runWineCommand — existing bottled launch flow unchanged', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
@@ -1731,8 +1867,10 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const game = new SteamGame(APP_ID)
     await game.launch({} as any)
 
-    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
     expect(resolveBridgeLaunchExe).not.toHaveBeenCalled()
+    expect(placeShimForGame).not.toHaveBeenCalled()
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+    expect(writeBridgeConfig).not.toHaveBeenCalled()
     expect(runWineCommand).not.toHaveBeenCalled()
     expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
   })
