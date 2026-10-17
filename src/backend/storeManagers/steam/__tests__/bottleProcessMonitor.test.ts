@@ -18,6 +18,11 @@ import { sendFrontendMessage } from '../../../ipc'
 import { getBottleDir } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import {
+  readBoundedTail,
+  classifyBottledSteamBlock,
+  bottledSteamLogPaths
+} from '../bottleLaunchSignals'
+import {
   startBottleProcessMonitor,
   stopBottleProcessMonitor,
   __stopAllBottleProcessMonitors,
@@ -87,10 +92,43 @@ jest.mock('backend/constants/environment', () => ({
   isLinux: false
 }))
 
+// D-51-16 (Phase 51 Plan 08): the waiting-state check reads real log tails
+// and classifies them -- both mocked here so this file stays a pure
+// poll-loop-timing test, with bottleLaunchSignals.ts's own fixtures-based
+// unit tests (bottleLaunchSignals.test.ts) proving the real classification
+// logic separately. `readBoundedTail` defaults to an immediately-resolving
+// empty string; `classifyBottledSteamBlock` defaults to `null` (no cause
+// detected) -- both overridden per-test as needed.
+jest.mock('../bottleLaunchSignals', () => ({
+  readBoundedTail: jest.fn().mockResolvedValue(''),
+  classifyBottledSteamBlock: jest.fn().mockReturnValue(null),
+  bottledSteamLogPaths: jest.fn().mockReturnValue({
+    bootstrap:
+      '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/bootstrap_log.txt',
+    console:
+      '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/console_log.txt'
+  }),
+  WAITING_FOR_STEAM_GRACE_MS: 20000,
+  WAITING_RECHECK_MS: 15000
+}))
+
 const mockedSpawnAsync = spawnAsync as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
+const mockedReadBoundedTail = readBoundedTail as jest.Mock
+const mockedClassifyBottledSteamBlock = classifyBottledSteamBlock as jest.Mock
+const mockedBottledSteamLogPaths = bottledSteamLogPaths as jest.Mock
+
+// jest.config's `resetMocks: true` wipes mockReturnValue/mockResolvedValue
+// set in the `jest.mock(...)` factory above before EVERY test (see
+// clientSetup.test.ts's own docstring) -- these defaults are re-established
+// in beforeEach below rather than relying on the factory's one-time values.
+const FAKE_LOG_PATHS = {
+  bootstrap:
+    '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/bootstrap_log.txt',
+  console: '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/console_log.txt'
+}
 
 const bottleDir = getBottleDir(DEFAULT_STEAM_BOTTLE_NAME)
 const installPath = join(
@@ -117,6 +155,9 @@ describe('bottleProcessMonitor.ts', () => {
     mockedLogInfo.mockReset()
     mockedLogWarning.mockReset()
     mockedSendFrontendMessage.mockReset()
+    mockedReadBoundedTail.mockReset().mockResolvedValue('')
+    mockedClassifyBottledSteamBlock.mockReset().mockReturnValue(null)
+    mockedBottledSteamLogPaths.mockReset().mockReturnValue(FAKE_LOG_PATHS)
 
     envMock = jest.requireMock('backend/constants/environment')
     envMock.isMac = true
@@ -542,6 +583,220 @@ describe('bottleProcessMonitor.ts', () => {
       expect(__getActiveMonitorKindForTests('38410')).toBe('bridge')
 
       __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+  })
+
+  // Phase 51 Plan 08 (D-51-16, folded todo): waiting-state emission.
+  describe('waiting state (D-51-16)', () => {
+    const advanceByGraceWindow = async () => {
+      // 20000ms of elapsed-no-match time, in 1500ms poll ticks.
+      await jest.advanceTimersByTimeAsync(1500 * 14) // 21000ms elapsed
+      await flushMicrotasks()
+    }
+
+    test('no match after 20s emits exactly one steamBottleLaunchWaiting and logs appId+cause', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      mockedClassifyBottledSteamBlock.mockReturnValue('self-update')
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      await advanceByGraceWindow()
+
+      const waitingCalls = mockedSendFrontendMessage.mock.calls.filter(
+        (call) => call[0] === 'steamBottleLaunchWaiting'
+      )
+      expect(waitingCalls.length).toBe(1)
+      expect(waitingCalls[0][1]).toEqual({
+        appName: '38410',
+        detectedCause: 'self-update'
+      })
+      expect(
+        mockedLogInfo.mock.calls.some((call) =>
+          JSON.stringify(call).includes(
+            '[bottle-waiting] appId=38410 cause=self-update'
+          )
+        )
+      ).toBe(true)
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('no cause detected still emits once, with detectedCause: null and cause=none in the log', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      mockedClassifyBottledSteamBlock.mockReturnValue(null)
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      await advanceByGraceWindow()
+
+      const waitingCalls = mockedSendFrontendMessage.mock.calls.filter(
+        (call) => call[0] === 'steamBottleLaunchWaiting'
+      )
+      expect(waitingCalls.length).toBe(1)
+      expect(waitingCalls[0][1]).toEqual({
+        appName: '38410',
+        detectedCause: null
+      })
+      expect(
+        mockedLogInfo.mock.calls.some((call) =>
+          JSON.stringify(call).includes(
+            '[bottle-waiting] appId=38410 cause=none'
+          )
+        )
+      ).toBe(true)
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('re-emits only when detectedCause changes across 15s re-checks', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      mockedClassifyBottledSteamBlock.mockReturnValue('self-update')
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      await advanceByGraceWindow()
+      let waitingCalls = mockedSendFrontendMessage.mock.calls.filter(
+        (call) => call[0] === 'steamBottleLaunchWaiting'
+      )
+      expect(waitingCalls.length).toBe(1)
+
+      // Same cause across the next 15s recheck window: no re-emission.
+      await jest.advanceTimersByTimeAsync(15000)
+      await flushMicrotasks()
+      waitingCalls = mockedSendFrontendMessage.mock.calls.filter(
+        (call) => call[0] === 'steamBottleLaunchWaiting'
+      )
+      expect(waitingCalls.length).toBe(1)
+
+      // Cause changes: re-emits exactly once more.
+      mockedClassifyBottledSteamBlock.mockReturnValue('other-session')
+      await jest.advanceTimersByTimeAsync(15000)
+      await flushMicrotasks()
+      waitingCalls = mockedSendFrontendMessage.mock.calls.filter(
+        (call) => call[0] === 'steamBottleLaunchWaiting'
+      )
+      expect(waitingCalls.length).toBe(2)
+      expect(waitingCalls[1][1]).toEqual({
+        appName: '38410',
+        detectedCause: 'other-session'
+      })
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('a match after waiting emits playing and no further waiting messages', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      mockedClassifyBottledSteamBlock.mockReturnValue('login')
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      await advanceByGraceWindow()
+      expect(
+        mockedSendFrontendMessage.mock.calls.filter(
+          (call) => call[0] === 'steamBottleLaunchWaiting'
+        ).length
+      ).toBe(1)
+
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+
+      expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        { appName: '38410', runner: 'steam', status: 'playing' }
+      )
+
+      const waitingCallsAfterMatch =
+        mockedSendFrontendMessage.mock.calls.filter(
+          (call) => call[0] === 'steamBottleLaunchWaiting'
+        ).length
+
+      // Keep polling well past another recheck window: still no more.
+      await jest.advanceTimersByTimeAsync(15000)
+      await flushMicrotasks()
+      expect(
+        mockedSendFrontendMessage.mock.calls.filter(
+          (call) => call[0] === 'steamBottleLaunchWaiting'
+        ).length
+      ).toBe(waitingCallsAfterMatch)
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('kind "bridge" never emits steamBottleLaunchWaiting, even after the grace window', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      mockedClassifyBottledSteamBlock.mockReturnValue('self-update')
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge'
+      })
+
+      await advanceByGraceWindow()
+      await jest.advanceTimersByTimeAsync(15000 * 2)
+      await flushMicrotasks()
+
+      expect(
+        mockedSendFrontendMessage.mock.calls.filter(
+          (call) => call[0] === 'steamBottleLaunchWaiting'
+        ).length
+      ).toBe(0)
+      expect(mockedReadBoundedTail).not.toHaveBeenCalled()
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('stopBottleProcessMonitor during a pending tail read leaves jest.getTimerCount() at 0 and emits nothing afterwards', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      let resolveBootstrapTail: (value: string) => void = () => {}
+      mockedReadBoundedTail.mockImplementation(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveBootstrapTail = resolve
+          })
+      )
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      // Advance to the tick that crosses the grace window -- the pending
+      // readBoundedTail call is now in flight, unresolved.
+      await jest.advanceTimersByTimeAsync(1500 * 14)
+      await flushMicrotasks()
+      expect(mockedReadBoundedTail).toHaveBeenCalled()
+
+      stopBottleProcessMonitor('38410')
+      expect(jest.getTimerCount()).toBe(0)
+
+      // Resolve the pending read AFTER cancellation -- must produce no
+      // waiting message and leave the timer count at 0.
+      resolveBootstrapTail('Installing update...')
+      await flushMicrotasks()
+
+      expect(
+        mockedSendFrontendMessage.mock.calls.filter(
+          (call) => call[0] === 'steamBottleLaunchWaiting'
+        ).length
+      ).toBe(0)
+      expect(jest.getTimerCount()).toBe(0)
+
       jest.useRealTimers()
     })
   })
