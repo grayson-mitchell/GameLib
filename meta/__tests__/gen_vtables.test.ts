@@ -499,7 +499,7 @@ describe('gen_vtables', () => {
         {
           slot: 2,
           name: 'StubInt64Return',
-          returns: 'uint64',
+          returns: 'int64',
           returnKind: 'int64',
           stackBytes: 0,
           params: []

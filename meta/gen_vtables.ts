@@ -386,6 +386,23 @@ export function toVersionedAccessorSuffix(interfaceName: string): string {
   return `${match[1]}_v${match[2]}`
 }
 
+/**
+ * 51-06 Task 2: the bare legacy accessor (`SteamUser()`, `SteamUtils()`, ...)
+ * a game built against an old-style steam_api.dll imports is named after
+ * the family -- almost always identical to the family string itself, EXCEPT
+ * the two Steamworks families whose real export spelling single-cases the
+ * second word (`SteamMatchmaking`, not `SteamMatchMaking`; verified against
+ * a real steam_api.dll's export table, not guessed).
+ */
+const BARE_ACCESSOR_FAMILY_OVERRIDES: Readonly<Record<string, string>> = {
+  SteamMatchMaking: 'SteamMatchmaking',
+  SteamMatchMakingServers: 'SteamMatchmakingServers'
+}
+
+export function bareAccessorName(family: string): string {
+  return BARE_ACCESSOR_FAMILY_OVERRIDES[family] ?? family
+}
+
 // ---------------------------------------------------------------------------
 // Flat SteamAPI_* export superset (R3 finding #9 -- fixed, not manifest-driven)
 // ---------------------------------------------------------------------------
@@ -461,6 +478,91 @@ function packArgsBlock(method: MethodSignature): {
   return { decl: lines.join('\n'), lenExpr: String(totalLen) }
 }
 
+/**
+ * 51-06 Task 2: a stub method never calls `bridge_transact` -- it answers a
+ * canned zero/false/NULL/empty-string/zero-filled-sret value locally,
+ * matching `shimCoverage.ts`'s `ServedInterface.mode === 'stub'` semantics
+ * (D-51-02's one-time notice exists precisely because a stubbed interface
+ * never talks to the real Mac Steam client). Its C signature is driven
+ * ENTIRELY by `stackBytes` -- never by `method.params`, which for a stub
+ * slot may be an incomplete/placeholder description -- so a stub can never
+ * corrupt the caller's stack even if its declared params are wrong. A
+ * class-returning stub still takes the REAL hidden `sretOut` pointer (the
+ * caller's own buffer must be zero-filled and that same pointer returned,
+ * exactly like a wire sret stub) -- only the bytes BEYOND that 4-byte
+ * pointer become generic `uint32_t` dummies.
+ */
+function emitStubBody(
+  manifest: InterfaceManifest,
+  method: MethodSignature,
+  header: string,
+  funcName: string,
+  sret: boolean,
+  stringReturn: boolean
+): string {
+  const sretParam = sret ? 'void *sretOut' : ''
+  const dummyBytes = method.stackBytes - (sret ? 4 : 0)
+  const dummyCount = dummyBytes / 4
+  const dummyParams = Array.from(
+    { length: dummyCount },
+    (_, i) => `uint32_t dummy${i}`
+  ).join(', ')
+  const paramParts = [sretParam, dummyParams].filter(Boolean).join(', ')
+  const signatureParams = paramParts
+    ? `void *self, ${paramParts}`
+    : 'void *self'
+
+  if (sret) {
+    const structSize = method.structSize ?? 0
+    return (
+      header +
+      `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
+      `  (void)self;\n` +
+      `  memset(sretOut, 0, ${structSize});\n` +
+      `  return sretOut;\n` +
+      `}\n`
+    )
+  }
+
+  if (stringReturn) {
+    return (
+      header +
+      `static const char * THISCALL ${funcName}(${signatureParams}) {\n` +
+      `  (void)self;\n` +
+      `  return "";\n` +
+      `}\n`
+    )
+  }
+
+  if (method.returnKind === 'void') {
+    return (
+      header +
+      `static void THISCALL ${funcName}(${signatureParams}) {\n` +
+      `  (void)self;\n` +
+      `}\n`
+    )
+  }
+
+  const returnType = cType(method.returns)
+  const zeroLiteral =
+    method.returnKind === 'int64'
+      ? '0LL'
+      : method.returnKind === 'double'
+        ? '0.0'
+        : method.returnKind === 'float'
+          ? '0.0f'
+          : method.returnKind === 'pointer'
+            ? 'NULL'
+            : '0'
+  return (
+    header +
+    `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
+    `  (void)self;\n` +
+    `  return ${zeroLiteral};\n` +
+    `}\n`
+  )
+}
+
 function emitVtableStub(
   manifest: InterfaceManifest,
   method: MethodSignature
@@ -469,6 +571,7 @@ function emitVtableStub(
   const sret = isSretReturn(method)
   const stringReturn = isStringReturn(method)
   const funcName = `vt_${manifest.interface}_${method.name}`
+  const methodMode = method.mode ?? manifest.mode
 
   const realParams = method.params
     .map((p) => `${cType(p.type)} ${p.name}`)
@@ -484,10 +587,15 @@ function emitVtableStub(
   const stringDesc = stringReturn
     ? ' (STRING RETURN -- shim-owned buffer, CR-01)'
     : ''
+  const stubDesc = methodMode === 'stub' ? ' (STUB)' : ''
   const noteLine = method.note ? `// NOTE: ${method.note}\n` : ''
   const header =
     `// slot ${method.slot}: ${method.name}(${descParams}) -> ${method.returns} ` +
-    `| __thiscall ret ${retN}${sretDesc}${stringDesc}\n${noteLine}`
+    `| __thiscall ret ${retN}${sretDesc}${stringDesc}${stubDesc}\n${noteLine}`
+
+  if (methodMode === 'stub') {
+    return emitStubBody(manifest, method, header, funcName, sret, stringReturn)
+  }
 
   const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
 
@@ -664,6 +772,26 @@ export function generateShimC(manifests: InterfaceManifest[]): string {
 // drift apart.
 #define STRING_RETURN_BUF_BYTES ${STRING_RETURN_BUF_BYTES}
 
+// 51-06 Task 2: bounded storage for every \`iface.<Family>=<Version>\`
+// pair \`gamelib_bridge.cfg\` carries -- the backend
+// (bridgeConfig.ts's \`writeBridgeConfig\`) writes one such line per family
+// the game needs pinned to a specific interface VERSION, so a bare legacy
+// accessor (\`SteamUser()\`) knows which vtable instance to hand back. 64
+// entries and 64-byte fields are generous headroom over any real game's
+// handful of families; a longer line or a fuller table is silently
+// ignored (never a buffer overrun, never a crash on a malformed cfg).
+#define MAX_IFACE_CFG_ENTRIES 64
+#define MAX_IFACE_CFG_LINE_BYTES 256
+#define MAX_IFACE_CFG_FIELD_BYTES 64
+
+typedef struct {
+  char family[MAX_IFACE_CFG_FIELD_BYTES];
+  char version[MAX_IFACE_CFG_FIELD_BYTES];
+} GIfaceCfgEntry;
+
+static GIfaceCfgEntry g_iface_cfg_entries[MAX_IFACE_CFG_ENTRIES];
+static int g_iface_cfg_count = 0;
+
 // 51-06: every generated vtable stub uses MSVC __thiscall -- but THAT
 // attribute is only meaningful (and only accepted by clang/gcc) on an i386
 // target; on every other target (including the x64 target 51-15 adds) a
@@ -717,7 +845,30 @@ static void parse_bridge_port_from_buffer(const char *buf, uint32_t len) {
       if (parsed >= 1024 && parsed <= 65535) {
         g_bridge_port = (int)parsed;
       }
-      return;
+    } else if (
+      lineLen > 6 &&
+      lineLen <= MAX_IFACE_CFG_LINE_BYTES &&
+      strncmp(buf + lineStart, "iface.", 6) == 0 &&
+      g_iface_cfg_count < MAX_IFACE_CFG_ENTRIES
+    ) {
+      uint32_t lineEnd = lineStart + lineLen;
+      uint32_t eq = lineStart + 6;
+      while (eq < lineEnd && buf[eq] != '=') eq++;
+      if (eq < lineEnd) {
+        uint32_t familyLen = eq - (lineStart + 6);
+        uint32_t versionLen = lineEnd - (eq + 1);
+        if (
+          familyLen > 0 && familyLen < MAX_IFACE_CFG_FIELD_BYTES &&
+          versionLen > 0 && versionLen < MAX_IFACE_CFG_FIELD_BYTES
+        ) {
+          GIfaceCfgEntry *entry = &g_iface_cfg_entries[g_iface_cfg_count];
+          memcpy(entry->family, buf + lineStart + 6, familyLen);
+          entry->family[familyLen] = '\\0';
+          memcpy(entry->version, buf + eq + 1, versionLen);
+          entry->version[versionLen] = '\\0';
+          g_iface_cfg_count++;
+        }
+      }
     }
     while (i < len && (buf[i] == '\\n' || buf[i] == '\\r')) i++;
   }
@@ -880,9 +1031,13 @@ typedef void *vfn;
     (name) => FLAT_EXPORT_BODIES[name]
   ).join('\n')
   const accessors = sortedManifests.map((m) => emitFlatAccessor(m)).join('')
+  const ifaceTableAndBareAccessors =
+    emitIfaceTableAndBareAccessors(sortedManifests)
 
   return (
     `${header}${vtableSections}\n` +
+    `// === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===\n\n` +
+    `${ifaceTableAndBareAccessors}\n` +
     `// === Flat SteamAPI_* exports (acceptance-set superset, R3 finding #9) ===\n\n` +
     `${flatExports}\n\n` +
     `// === Per-interface flat accessors ===\n\n` +
@@ -890,14 +1045,105 @@ typedef void *vfn;
   )
 }
 
-export function generateDefFile(manifests: InterfaceManifest[]): string {
-  const sortedManifests = [...manifests].sort((a, b) => a.ordinal - b.ordinal)
+/**
+ * `arches`-guarded row open/close for a single manifest -- `#if
+ * defined(__i386__)` for an x86-only manifest, `#if defined(__x86_64__)`
+ * for an x64-only one, no guard at all for a manifest that targets both
+ * (every manifest this plan generates is x86-only; 51-15 adds the first
+ * x64/dual-arch manifests).
+ */
+function archGuard(arches: ArchToken[]): { open: string; close: string } {
+  const hasX86 = arches.includes('x86')
+  const hasX64 = arches.includes('x64')
+  if (hasX86 && !hasX64)
+    return { open: '#if defined(__i386__)\n', close: '#endif\n' }
+  if (hasX64 && !hasX86)
+    return { open: '#if defined(__x86_64__)\n', close: '#endif\n' }
+  return { open: '', close: '' }
+}
+
+/**
+ * `g_iface_table[]` -- one row per manifest (`version`, `family`,
+ * `instance`), each guarded on that manifest's own `arches` -- plus
+ * `resolve_bare_iface()` and one exported bare accessor per distinct
+ * family, matching 51-06 Task 2's artifact spec. The bare accessor reads
+ * `gamelib_bridge.cfg`'s `iface.<Family>=<Version>` pairs (parsed into
+ * `g_iface_cfg_entries` above) and returns the table instance whose
+ * (family, version) matches -- NULL when the cfg key is absent or names a
+ * version this shim does not serve.
+ */
+function emitIfaceTableAndBareAccessors(
+  manifests: InterfaceManifestV2[]
+): string {
+  const rows = manifests
+    .map((m) => {
+      const { open, close } = archGuard(m.arches)
+      const instanceName = `g_${m.interface.toLowerCase()}_instance`
+      return `${open}  { "${m.interface}", "${m.family}", &${instanceName} },\n${close}`
+    })
+    .join('')
+
+  const families = [...new Set(manifests.map((m) => m.family))].sort()
+  const bareAccessors = families
+    .map(
+      (family) =>
+        `void *${bareAccessorName(family)}(void) {\n` +
+        `  return resolve_bare_iface("${family}");\n` +
+        `}\n`
+    )
+    .join('\n')
+
+  return (
+    `typedef struct { const char *version; const char *family; void *instance; } GIfaceTableEntry;\n` +
+    `static const GIfaceTableEntry g_iface_table[] = {\n${rows}};\n` +
+    `#define G_IFACE_TABLE_LEN (sizeof(g_iface_table) / sizeof(g_iface_table[0]))\n\n` +
+    `static void *resolve_bare_iface(const char *family) {\n` +
+    `  load_bridge_port_once();\n` +
+    `  const char *version = NULL;\n` +
+    `  int i;\n` +
+    `  for (i = 0; i < g_iface_cfg_count; i++) {\n` +
+    `    if (strcmp(g_iface_cfg_entries[i].family, family) == 0) {\n` +
+    `      version = g_iface_cfg_entries[i].version;\n` +
+    `      break;\n` +
+    `    }\n` +
+    `  }\n` +
+    `  if (!version) return NULL;\n` +
+    `  for (i = 0; i < (int)G_IFACE_TABLE_LEN; i++) {\n` +
+    `    if (strcmp(g_iface_table[i].family, family) == 0 && strcmp(g_iface_table[i].version, version) == 0) {\n` +
+    `      return (void *)g_iface_table[i].instance;\n` +
+    `    }\n` +
+    `  }\n` +
+    `  return NULL;\n` +
+    `}\n\n` +
+    `${bareAccessors}`
+  )
+}
+
+/**
+ * 51-06 Task 2: `arch` selects which manifests this .def covers (default
+ * `'x86'`, the only target this plan builds) -- a manifest whose `arches`
+ * does not include the requested arch contributes neither its flat
+ * accessor nor its family's bare accessor. 51-15 calls this with `'x64'`
+ * to emit `steam_api64.def`'s own export list from the SAME manifest set.
+ */
+export function generateDefFile(
+  manifests: InterfaceManifest[],
+  arch: ArchToken = 'x86'
+): string {
+  const archManifests = manifests.filter((m) => m.arches.includes(arch))
+  const sortedManifests = [...archManifests].sort(
+    (a, b) => a.ordinal - b.ordinal
+  )
   const accessorExports = sortedManifests.map((m) => flatAccessorName(m))
+  const families = [...new Set(sortedManifests.map((m) => m.family))].sort()
+  const bareAccessorExports = families.map((f) => bareAccessorName(f))
+  const libraryName = arch === 'x64' ? 'steam_api64' : 'steam_api'
   const lines = [
-    'LIBRARY steam_api',
+    `LIBRARY ${libraryName}`,
     'EXPORTS',
     ...FLAT_EXPORTS_SUPERSET,
-    ...accessorExports
+    ...accessorExports,
+    ...bareAccessorExports
   ]
   return lines.join('\n') + '\n'
 }

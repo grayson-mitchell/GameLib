@@ -12,3 +12,5 @@ SteamAPI_RegisterCallResult
 SteamAPI_UnregisterCallResult
 SteamAPI_SteamUser_v023
 SteamAPI_SteamFriends_v018
+SteamFriends
+SteamUser

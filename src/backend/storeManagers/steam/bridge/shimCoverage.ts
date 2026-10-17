@@ -52,7 +52,17 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_RegisterCallResult',
   'SteamAPI_UnregisterCallResult',
   'SteamAPI_SteamUser_v023',
-  'SteamAPI_SteamFriends_v018'
+  'SteamAPI_SteamFriends_v018',
+  // 51-06 Task 2: the bare legacy accessors meta/gen_vtables.ts's
+  // `generateDefFile` now exports once per family that has an x86
+  // manifest -- resolved per game at runtime via gamelib_bridge.cfg's
+  // `iface.<Family>=<Version>` (bridgeConfig.ts). Importing the bare
+  // symbol is necessary but not sufficient coverage: the game's required
+  // interface VERSION (SteamUser016, say) still has to be a key in
+  // SHIM_SERVED_INTERFACE_VERSIONS below for the bridge to actually serve
+  // it -- 51-11 widens that map with the older versions XCOM/Hoard need.
+  'SteamUser',
+  'SteamFriends'
 ])
 
 // D-51-13: no Win64 shim target exists yet (research's zig cc prototype /

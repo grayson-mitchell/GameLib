@@ -53,6 +53,26 @@
 // drift apart.
 #define STRING_RETURN_BUF_BYTES 256
 
+// 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
+// pair `gamelib_bridge.cfg` carries -- the backend
+// (bridgeConfig.ts's `writeBridgeConfig`) writes one such line per family
+// the game needs pinned to a specific interface VERSION, so a bare legacy
+// accessor (`SteamUser()`) knows which vtable instance to hand back. 64
+// entries and 64-byte fields are generous headroom over any real game's
+// handful of families; a longer line or a fuller table is silently
+// ignored (never a buffer overrun, never a crash on a malformed cfg).
+#define MAX_IFACE_CFG_ENTRIES 64
+#define MAX_IFACE_CFG_LINE_BYTES 256
+#define MAX_IFACE_CFG_FIELD_BYTES 64
+
+typedef struct {
+  char family[MAX_IFACE_CFG_FIELD_BYTES];
+  char version[MAX_IFACE_CFG_FIELD_BYTES];
+} GIfaceCfgEntry;
+
+static GIfaceCfgEntry g_iface_cfg_entries[MAX_IFACE_CFG_ENTRIES];
+static int g_iface_cfg_count = 0;
+
 // 51-06: every generated vtable stub uses MSVC __thiscall -- but THAT
 // attribute is only meaningful (and only accepted by clang/gcc) on an i386
 // target; on every other target (including the x64 target 51-15 adds) a
@@ -106,7 +126,30 @@ static void parse_bridge_port_from_buffer(const char *buf, uint32_t len) {
       if (parsed >= 1024 && parsed <= 65535) {
         g_bridge_port = (int)parsed;
       }
-      return;
+    } else if (
+      lineLen > 6 &&
+      lineLen <= MAX_IFACE_CFG_LINE_BYTES &&
+      strncmp(buf + lineStart, "iface.", 6) == 0 &&
+      g_iface_cfg_count < MAX_IFACE_CFG_ENTRIES
+    ) {
+      uint32_t lineEnd = lineStart + lineLen;
+      uint32_t eq = lineStart + 6;
+      while (eq < lineEnd && buf[eq] != '=') eq++;
+      if (eq < lineEnd) {
+        uint32_t familyLen = eq - (lineStart + 6);
+        uint32_t versionLen = lineEnd - (eq + 1);
+        if (
+          familyLen > 0 && familyLen < MAX_IFACE_CFG_FIELD_BYTES &&
+          versionLen > 0 && versionLen < MAX_IFACE_CFG_FIELD_BYTES
+        ) {
+          GIfaceCfgEntry *entry = &g_iface_cfg_entries[g_iface_cfg_count];
+          memcpy(entry->family, buf + lineStart + 6, familyLen);
+          entry->family[familyLen] = '\0';
+          memcpy(entry->version, buf + eq + 1, versionLen);
+          entry->version[versionLen] = '\0';
+          g_iface_cfg_count++;
+        }
+      }
     }
     while (i < len && (buf[i] == '\n' || buf[i] == '\r')) i++;
   }
@@ -315,6 +358,46 @@ static vfn g_steamfriends018_vtbl[1] = {
 };
 struct FakeSteamFriends018 { vfn *vptr; };
 static struct FakeSteamFriends018 g_steamfriends018_instance = { g_steamfriends018_vtbl };
+
+// === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===
+
+typedef struct { const char *version; const char *family; void *instance; } GIfaceTableEntry;
+static const GIfaceTableEntry g_iface_table[] = {
+#if defined(__i386__)
+  { "SteamUser023", "SteamUser", &g_steamuser023_instance },
+#endif
+#if defined(__i386__)
+  { "SteamFriends018", "SteamFriends", &g_steamfriends018_instance },
+#endif
+};
+#define G_IFACE_TABLE_LEN (sizeof(g_iface_table) / sizeof(g_iface_table[0]))
+
+static void *resolve_bare_iface(const char *family) {
+  load_bridge_port_once();
+  const char *version = NULL;
+  int i;
+  for (i = 0; i < g_iface_cfg_count; i++) {
+    if (strcmp(g_iface_cfg_entries[i].family, family) == 0) {
+      version = g_iface_cfg_entries[i].version;
+      break;
+    }
+  }
+  if (!version) return NULL;
+  for (i = 0; i < (int)G_IFACE_TABLE_LEN; i++) {
+    if (strcmp(g_iface_table[i].family, family) == 0 && strcmp(g_iface_table[i].version, version) == 0) {
+      return (void *)g_iface_table[i].instance;
+    }
+  }
+  return NULL;
+}
+
+void *SteamFriends(void) {
+  return resolve_bare_iface("SteamFriends");
+}
+
+void *SteamUser(void) {
+  return resolve_bare_iface("SteamUser");
+}
 
 // === Flat SteamAPI_* exports (acceptance-set superset, R3 finding #9) ===
 
