@@ -142,6 +142,111 @@ export interface SteamMetadataCacheEntry {
    * community override export (Phase 19); do not omit even though nothing
    * reads it yet. */
   mac_arch_source?: 'minos' | 'macho'
+  /** Phase 51 Plan 03 (D-51-07/D-51-10): the PERSISTED bridge verdict for
+   * this appId — the scan result, the pre-install steam_api prescreen
+   * signal, the user's own bridge/bottle override, and the one-time-notice
+   * bookkeeping, all nested under one field so a single carry-forward
+   * obligation covers the whole family (exactly the `forcedWindowsViaBottle`
+   * precedent above, just one level deeper).
+   *
+   * What it means: `undefined` means "never scanned/decided" for every
+   * sub-field — NEVER coerce an absent `bridge` (or an absent sub-field
+   * inside it) into a routing-affecting value. `bridge.scan` is cleared
+   * (not the whole `bridge` object) when a later shim release covers its
+   * `missingSymbols` (`isScanVerdictNowCovered`, shimCoverage.ts) — the
+   * user's own `userRoute` override and notice bookkeeping must survive
+   * that clear untouched.
+   *
+   * Who writes it: ONLY `bridgeVerdict.ts`'s read-modify-write helpers
+   * (`writeBridgeScanVerdict`, `clearBridgeScanVerdict`,
+   * `setBridgeSteamApiPrescreen`, `setBridgeUserRoute`,
+   * `setBridgeNoticeAcknowledged`, `markBridgeLimitedNoticeShown`,
+   * `setBridgeIdentityFallback`) — every one of them spreads `...existing`
+   * before writing, never a bare `steamMetadataStore.set` with a fresh
+   * object literal (same discipline `markForcedWindowsViaBottle` already
+   * follows, games.ts).
+   *
+   * Who reads it: `bridgeVerdict.ts`'s `readBridgeVerdict` (the ONLY reader
+   * — never read `steamMetadataStore` directly for this field), which
+   * safe-parses the stored value and returns `undefined` (never throws) on
+   * a malformed/tampered entry — the opposite fail-safe posture from the
+   * bundled allowlist's fail-loud one, because this value is UNTRUSTED
+   * disk content, not a reviewed bundled asset (T-51-09).
+   *
+   * ⚠ CARRY-FORWARD WARNING: `steamMetadataStore.set` REPLACES the whole
+   * entry (T-18-02-04), so this field must be explicitly carried forward by
+   * any write that enumerates its payload — exactly as `forcedWindowsViaBottle`
+   * above. `games.ts`'s `fetchMetadataIfNeeded` success writer (the
+   * ENUMERATED `steamMetadataStore.set(this.appId, {...})` call at
+   * ~L870) is the one site that must gain a `bridge` carry-forward clause
+   * — that edit belongs to 51-09, not this plan; it is called out here so
+   * it is not missed. Without it, the next appdetails fetch silently drops
+   * every bridge verdict this field family persisted. */
+  bridge?: SteamBridgeVerdict
+}
+
+/** Phase 51 Plan 03 (D-51-07): a single persisted import-scan result,
+ * produced by 51-02's `scanSteamApiImports`/`resolveRequiredInterfaceVersions`
+ * and `shimCoverage.ts`'s `evaluateShimCoverage`, written by
+ * `bridgeVerdict.ts`'s `writeBridgeScanVerdict`.
+ *
+ * `shimExportSetVersion` is the stamp (`shimCoverage.ts`'s
+ * `SHIM_EXPORT_SET_VERSION` at scan time) that lets a later shim release
+ * auto-clear a stale `'miss'` verdict (`isScanVerdictNowCovered`) — no
+ * manual "retry" affordance is built for this case (D-51-07). */
+export interface SteamBridgeScanVerdict {
+  status: 'clean' | 'miss'
+  arch: 'x86' | 'x64'
+  /** Every imported symbol/version 51-02's scan could not satisfy, in the
+   * same `evaluateShimCoverage` ordering: unexported bare accessors, then
+   * unserved required interface versions, then raw version-resolution
+   * problem strings verbatim. Empty on a `'clean'` verdict. */
+  missingSymbols: string[]
+  /** family -> exact required interface version, from 51-02's
+   * `resolveRequiredInterfaceVersions`, persisted so the D-05 fallback
+   * dialog and the game page can name the exact version without re-scanning. */
+  interfaceVersions: Record<string, string>
+  /** The interface families served as stubs for THIS scan (D-51-02's notice
+   * trigger), from `evaluateShimCoverage`'s `stubbedInterfaces`. */
+  stubbedInterfaces: string[]
+  shimExportSetVersion: string
+  /** ISO-8601 timestamp of when this scan ran. */
+  scannedAt: string
+}
+
+/** Phase 51 Plan 03 (D-51-07/D-51-10): the full persisted bridge verdict for
+ * one appId — see `SteamMetadataCacheEntry.bridge`'s own doc comment for the
+ * carry-forward contract and the ownership rules (bridgeVerdict.ts writes,
+ * readBridgeVerdict reads). Every field is independently optional and
+ * independently absent-means-undecided; they are never coerced into one
+ * another (e.g. an absent `userRoute` never falls back to `scan.status`). */
+export interface SteamBridgeVerdict {
+  /** The most recent import-scan result, or absent when never scanned (or
+   * cleared by `isScanVerdictNowCovered`'s auto-clear). */
+  scan?: SteamBridgeScanVerdict
+  /** D-51-06: the pre-install depot-manifest-file-list prescreen signal —
+   * 'none' (no steam_api*.dll at all), 'x86'/'x64'/'both' (which flavor(s)
+   * are present), or 'unknown' (prescreen could not determine). Written
+   * BEFORE any download; independent of `scan`, which only runs post-install. */
+  steamApi?: 'none' | 'x86' | 'x64' | 'both' | 'unknown'
+  /** D-51-10/11: the user's own override — set by the install dialog's
+   * "Use the Windows Steam client instead" toggle (D-51-10) or the
+   * known-bad dialog's "Try the bridge anyway" button (D-51-11). Absent
+   * means no override was ever set; `setBridgeUserRoute(appId, undefined)`
+   * removes the key entirely rather than storing an undefined value. */
+  userRoute?: 'bottle' | 'bridge'
+  /** D-51-08: the `SteamBridgeRouteReason` the user acknowledged when they
+   * last dismissed/accepted a route-related dialog (e.g. a known-bad
+   * acknowledgement) — a plain string here (not the narrower
+   * `SteamBridgeRouteReason` type) so a future reason value never fails to
+   * round-trip through this store. */
+  noticeAcknowledgedFor?: string
+  /** D-51-02: true once the one-time "limited functionality" notice has
+   * been shown for this game — shown once per game, logged every time. */
+  limitedNoticeShown?: boolean
+  /** D-51-04: true when the bridge helper fell back to AppID 480
+   * identity-only for this game (real-AppID init failed). */
+  identityFallback?: boolean
 }
 
 // The `import type { SteamBottleConfig }` and its `export type { ... }`
