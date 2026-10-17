@@ -1,17 +1,20 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v0.8
-milestone_name: Tauri Shell
+current_phase: 51
+current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-06-PLAN.md
-last_updated: "2026-10-17T07:44:51.750Z"
+stopped_at: Completed 51-07-PLAN.md
+last_updated: "2026-10-17T08:11:30.100Z"
 last_activity: 2026-10-17
+state_head: 764deece87bbb7afe3d135d7dc87febdfe5b32ca
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 19
   completed_plans: 6
   percent: 0
+milestone_name: Tauri Shell
 ---
 
 # Project State
@@ -72,11 +75,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 7 of 19
+Plan: 8 of 19
 Status: Ready to execute
 Last activity: 2026-10-17
 
-Progress: [███░░░░░░░] 32%
+Progress: [░░░░░░░░░░] 0%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -513,6 +516,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 | Phase 51 P04 | ~50min | 2 tasks | 98 files |
 | Phase 51 P05 | 20min | 2 tasks | 3 files |
 | Phase 51 P06 | ~2h | 3 tasks | 8 files |
+| Phase 51 P07 | ~1h | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -605,6 +609,8 @@ Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries
 - [Phase 51]: returnKind is now the sole generator-facing return-shape discriminant (replacing structSize>8/type-string inference); GetSteamID fixed to the MSVC sret convention (void*, returns sretOut), not the old EDX:EAX register return
 - [Phase 51]: Stub emission is driven purely by stackBytes, never by params[], so a stub can never corrupt the caller's stack even with an incomplete/placeholder param description
 - [Phase 51]: Bare legacy accessors (SteamUser/SteamFriends) resolve per game at runtime via gamelib_bridge.cfg's iface.<Family>=<Version>, through a new g_iface_table + resolve_bare_iface
+- [Phase 51]: resolveBridgeRoute: D-51-13 win64-no-shim fail-closed precedes the user-forced-bridge override, so the fail-closed default can never be bypassed
+- [Phase 51]: placeShimForGame reads interface versions from the exact path about to be overwritten, using isGameLibShimBytes to fall back to persistedInterfaceVersions when that path already holds our own prior shim
 
 ### Pending Todos
 
@@ -1262,8 +1268,8 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 
 ## Session Continuity
 
-Last session: 2026-10-17T07:44:51.743Z
-Stopped at: Completed 51-06-PLAN.md
+Last session: 2026-10-17T08:11:30.083Z
+Stopped at: Completed 51-07-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 6/19 plans executed
+**Plans:** 7/19 plans executed
 
 Plans:
 **Wave 1**
@@ -235,7 +235,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 51-06-PLAN.md — Generator v2: multi-version manifests, MSVC class-return fix, stackBytes stubs, cfg-selected bare accessors, wire param kinds
-- [ ] 51-07-PLAN.md — Pure route resolver (seed ∪ verdict ∖ known-bad ∖ forced-bottle) + verdict-returning, version-capturing, arch-aware placement
+- [x] 51-07-PLAN.md — Pure route resolver (seed ∪ verdict ∖ known-bad ∖ forced-bottle) + verdict-returning, version-capturing, arch-aware placement
 - [ ] 51-08-PLAN.md — "Waiting for Steam…" for blocked bottled launches from measured log signals; close todo (D-51-16)
 
 **Wave 3** *(blocked on Wave 2 completion)*
