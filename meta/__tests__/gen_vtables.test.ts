@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 
 import {
@@ -10,74 +10,98 @@ import {
   is64BitRegisterReturn,
   paramWidth,
   toVersionedAccessorSuffix,
+  validateManifest,
   FLAT_EXPORTS_SUPERSET,
   STRING_RETURN_BUF_BYTES,
-  type InterfaceManifest
+  type InterfaceManifestV2
 } from '../gen_vtables'
 
-const isteamuser: InterfaceManifest = JSON.parse(
-  readFileSync(
-    join(__dirname, '..', 'sdk', 'isteamuser.manifest.json'),
-    'utf-8'
-  )
+const SDK_DIR = join(__dirname, '..', 'sdk')
+const FIXTURE_DIR = join(__dirname, 'fixtures')
+
+const isteamuser: InterfaceManifestV2 = JSON.parse(
+  readFileSync(join(SDK_DIR, 'isteamuser.manifest.json'), 'utf-8')
 )
-const isteamfriends: InterfaceManifest = JSON.parse(
-  readFileSync(
-    join(__dirname, '..', 'sdk', 'isteamfriends.manifest.json'),
-    'utf-8'
-  )
+const isteamfriends: InterfaceManifestV2 = JSON.parse(
+  readFileSync(join(SDK_DIR, 'isteamfriends.manifest.json'), 'utf-8')
+)
+const abiExercise: InterfaceManifestV2 = JSON.parse(
+  readFileSync(join(FIXTURE_DIR, 'abi-exercise.manifest.json'), 'utf-8')
 )
 
 describe('gen_vtables', () => {
   describe('manifest inputs (D-09 -- never a vendored Valve .h)', () => {
-    it('the generator source only references meta/sdk/*.manifest.json, never a .h include', () => {
+    it('the generator source only references meta/sdk, never a .h include', () => {
       const generatorSource = readFileSync(
         join(__dirname, '..', 'gen_vtables.ts'),
         'utf-8'
       )
-      expect(generatorSource).toContain('isteamuser.manifest')
-      expect(generatorSource).toContain('isteamfriends.manifest')
-      // No path anywhere in the generator ends in a vendored SDK header.
+      expect(generatorSource).toContain("'meta', 'sdk'")
       expect(generatorSource).not.toMatch(/isteamuser\.h/)
       expect(generatorSource).not.toMatch(/isteamfriends\.h/)
       expect(generatorSource).not.toMatch(/#include\s+"[^"]+\.h"/)
     })
+
+    it('loads every *.manifest.json in meta/sdk via a directory listing, not two literal loads', () => {
+      const generatorSource = readFileSync(
+        join(__dirname, '..', 'gen_vtables.ts'),
+        'utf-8'
+      )
+      expect(generatorSource).not.toMatch(
+        /loadManifest\(\s*['"]isteamuser\.manifest\.json['"]\s*\)/
+      )
+      expect(generatorSource).toContain('readdirSync')
+    })
+
+    it('no production manifest under meta/sdk/ contains a method whose name ends in _TESTONLY', () => {
+      const manifestFiles = readdirSync(SDK_DIR).filter((f) =>
+        f.endsWith('.manifest.json')
+      )
+      for (const file of manifestFiles) {
+        const manifest: InterfaceManifestV2 = JSON.parse(
+          readFileSync(join(SDK_DIR, file), 'utf-8')
+        )
+        const testonly = manifest.methods.filter((m) =>
+          m.name.endsWith('_TESTONLY')
+        )
+        expect(testonly).toEqual([])
+      }
+    })
   })
 
-  describe('computeRetN (Pattern 2 / Pitfall 2 -- per-slot stack cleanup)', () => {
+  describe('computeRetN (Pattern 2 / Pitfall 2 -- per-slot stack cleanup), now returnKind-driven', () => {
     it('a zero-arg slot (GetHSteamUser) emits ret 0', () => {
       const method = isteamuser.methods.find((m) => m.name === 'GetHSteamUser')!
       expect(computeRetN(method)).toBe(0)
     })
 
-    it('a single-int-param slot (BSetDurationControlOnlineState) emits ret 4', () => {
-      const method = isteamuser.methods.find(
-        (m) => m.name === 'BSetDurationControlOnlineState'
-      )!
-      expect(computeRetN(method)).toBe(4)
-    })
-
-    it('a two-int-param slot emits ret 8', () => {
-      const method = isteamuser.methods.find(
+    it('a two-int-param slot (fixture) emits ret 8', () => {
+      const method = abiExercise.methods.find(
         (m) => m.name === 'SetTwoIntTest_TESTONLY'
       )!
       expect(computeRetN(method)).toBe(8)
     })
 
-    it('a single-uint64-param slot emits ret 8 (distinct mechanism from the two-int case)', () => {
-      const method = isteamuser.methods.find(
+    it('a single-uint64-param slot (fixture) emits ret 8 (distinct mechanism from the two-int case)', () => {
+      const method = abiExercise.methods.find(
         (m) => m.name === 'SetUint64Test_TESTONLY'
       )!
       expect(paramWidth('uint64')).toBe(8)
       expect(computeRetN(method)).toBe(8)
     })
 
-    it('the sret-exercise slot (struct return > 8 bytes) adds 4 bytes for the hidden return pointer', () => {
-      const method = isteamuser.methods.find(
+    it('a class return (structSize > 8) adds 4 bytes for the hidden return pointer', () => {
+      const method = abiExercise.methods.find(
         (m) => m.name === 'GetUserStatsSummary_TESTONLY'
       )!
       expect(isSretReturn(method)).toBe(true)
       expect(computeRetN(method)).toBe(4) // 0 real params + 4-byte hidden sret pointer
+    })
+
+    it('GetSteamID (CSteamID, returnKind class, structSize 8) computes ret 4 -- a hidden pointer, not an 8-byte register return', () => {
+      const method = isteamuser.methods.find((m) => m.name === 'GetSteamID')!
+      expect(isSretReturn(method)).toBe(true)
+      expect(computeRetN(method)).toBe(4)
     })
   })
 
@@ -103,30 +127,43 @@ describe('gen_vtables', () => {
     })
   })
 
-  describe('GetSteamID 64-bit return marshaling (not a 4-byte return)', () => {
-    it('is64BitRegisterReturn is true for GetSteamID (CSteamID, EDX:EAX)', () => {
+  // Planner finding (2026-10-17, VERIFIED against Proton proton_9.0
+  // lsteamclient/winISteamUser.c): `CSteamID * __thiscall
+  // winISteamUser_SteamUser016_GetSteamID(struct w_steam_iface *_this,
+  // CSteamID *_ret)` -- the hidden return pointer travels as the FIRST stack
+  // argument after `this` (DEFINE_THISCALL_WRAPPER wrapper size 8, i.e. ret
+  // 4 after accounting for the implicit `this`), and the callee RETURNS that
+  // same pointer. The previous EDX:EAX register-return stub mis-handled this
+  // convention entirely -- this describe block replaces that defect's test.
+  describe('GetSteamID: MSVC class-return ABI fix (SRET, not EDX:EAX)', () => {
+    it('is64BitRegisterReturn is FALSE for GetSteamID -- it is a class return, not a register return', () => {
       const method = isteamuser.methods.find((m) => m.name === 'GetSteamID')!
-      expect(is64BitRegisterReturn(method)).toBe(true)
+      expect(is64BitRegisterReturn(method)).toBe(false)
+      expect(isSretReturn(method)).toBe(true)
     })
 
-    it('the generated stub declares a uint64_t return type and an 8-byte retbuf', () => {
+    it('the generated stub takes a hidden sretOut pointer, returns void *, and returns sretOut (Proton-verified convention)', () => {
       const c = generateShimC([isteamuser, isteamfriends])
-      const stubMatch = c.match(
-        /static uint64_t __attribute__\(\(thiscall\)\) vt_SteamUser023_GetSteamID\(void \*self\) \{[\s\S]*?\}/
+      expect(c).toContain(
+        'static void * THISCALL vt_SteamUser023_GetSteamID(void *self, void *sretOut) {'
       )
-      expect(stubMatch).not.toBeNull()
-      expect(stubMatch![0]).toContain('retbuf[8]')
-      expect(stubMatch![0]).not.toContain('retbuf[4]')
+      expect(c).toContain('memcpy(sretOut, retbuf, 8);')
+      expect(c).toContain('return sretOut;')
+      // The old defect signature must be fully gone.
+      expect(c).not.toMatch(
+        /static uint64_t __attribute__\(\(thiscall\)\) vt_SteamUser023_GetSteamID/
+      )
     })
   })
 
   describe('sret path is generated and distinct from the register-return path', () => {
-    it('the sret-exercise stub takes a hidden sretOut pointer and returns void', () => {
-      const c = generateShimC([isteamuser, isteamfriends])
+    it('a sret stub (fixture) takes a hidden sretOut pointer, returns void *, and returns sretOut', () => {
+      const c = generateShimC([abiExercise])
       expect(c).toContain(
-        'static void __attribute__((thiscall)) vt_SteamUser023_GetUserStatsSummary_TESTONLY(void *self, void *sretOut) {'
+        'static void * THISCALL vt_AbiExercise001_GetUserStatsSummary_TESTONLY(void *self, void *sretOut) {'
       )
       expect(c).toContain('memcpy(sretOut, retbuf, 16);')
+      expect(c).toContain('return sretOut;')
     })
 
     it('a register-return stub (GetHSteamUser) has no sretOut parameter', () => {
@@ -144,15 +181,15 @@ describe('gen_vtables', () => {
       )
     })
 
-    it('contains "ret 4" for the single-int-param slot', () => {
+    it('contains "ret 4 (SRET" for GetSteamID', () => {
       const c = generateShimC([isteamuser, isteamfriends])
       expect(c).toMatch(
-        /BSetDurationControlOnlineState\(int32 eNewState\) -> bool \| __thiscall ret 4/
+        /GetSteamID\([^)]*\) -> CSteamID \| __thiscall ret 4 \(SRET/
       )
     })
 
-    it('contains "ret 8" for the two-int-param slot and the uint64-param slot', () => {
-      const c = generateShimC([isteamuser, isteamfriends])
+    it('contains "ret 8" for the two-int-param slot and the uint64-param slot (fixture)', () => {
+      const c = generateShimC([abiExercise])
       expect(c).toMatch(
         /SetTwoIntTest_TESTONLY\([^)]*\) -> void \| __thiscall ret 8/
       )
@@ -246,12 +283,15 @@ describe('gen_vtables', () => {
       'steam_api_shim.c'
     )
 
-    it('24-CR-01: isStringReturn routes exactly GetPersonaName across both pinned manifests (a const char* PARAMETER is not a string return)', () => {
+    it('24-CR-01: isStringReturn routes exactly GetPersonaName across both pinned manifests', () => {
       const methods = [...isteamuser.methods, ...isteamfriends.methods]
       expect(methods.filter(isStringReturn).map((m) => m.name)).toEqual([
         'GetPersonaName'
       ])
-      const setName = methods.find(
+    })
+
+    it('24-CR-01 (fixture): a const char* PARAMETER is not a string return', () => {
+      const setName = abiExercise.methods.find(
         (m) => m.name === 'SetPersonaNameTest_TESTONLY'
       )
       expect(setName).toBeDefined()
@@ -310,5 +350,120 @@ describe('gen_vtables', () => {
         expect(Number(define![1])).toBeGreaterThanOrEqual(128)
       }
     )
+  })
+
+  describe('validateManifest', () => {
+    const base: InterfaceManifestV2 = {
+      schemaVersion: 2,
+      interface: 'TestIface001',
+      family: 'TestIface',
+      ordinal: 100,
+      arches: ['x86'],
+      mode: 'wire',
+      complete: true,
+      source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+      methods: [
+        {
+          slot: 0,
+          name: 'DoThing',
+          returns: 'int32',
+          returnKind: 'int32',
+          stackBytes: 0,
+          params: []
+        }
+      ]
+    }
+
+    it('a valid manifest has no errors', () => {
+      expect(validateManifest(base)).toEqual([])
+    })
+
+    it('flags ordinal 0', () => {
+      const errors = validateManifest({ ...base, ordinal: 0 })
+      expect(errors.some((e) => /ordinal/i.test(e))).toBe(true)
+    })
+
+    it('flags ordinal 0xFFFF (reserved for CONTROL)', () => {
+      const errors = validateManifest({ ...base, ordinal: 0xffff })
+      expect(errors.some((e) => /ordinal/i.test(e))).toBe(true)
+    })
+
+    it('flags a duplicate ordinal across manifests', () => {
+      const other: InterfaceManifestV2 = { ...base, interface: 'OtherIface001' }
+      const errors = validateManifest(base, [base, other])
+      expect(errors.some((e) => /duplicate ordinal/i.test(e))).toBe(true)
+    })
+
+    it('flags a slot gap when complete is true', () => {
+      const withGap: InterfaceManifestV2 = {
+        ...base,
+        methods: [
+          { ...base.methods[0], slot: 0 },
+          { ...base.methods[0], slot: 2, name: 'Other' }
+        ]
+      }
+      const errors = validateManifest(withGap)
+      expect(errors.some((e) => /slot gap/i.test(e))).toBe(true)
+    })
+
+    it('does NOT flag a slot gap when complete is false', () => {
+      const withGap: InterfaceManifestV2 = {
+        ...base,
+        complete: false,
+        methods: [
+          { ...base.methods[0], slot: 0 },
+          { ...base.methods[0], slot: 2, name: 'Other' }
+        ]
+      }
+      expect(validateManifest(withGap)).toEqual([])
+    })
+
+    it('flags a wire method whose computeRetN does not match stackBytes', () => {
+      const bad: InterfaceManifestV2 = {
+        ...base,
+        methods: [{ ...base.methods[0], stackBytes: 4 }]
+      }
+      const errors = validateManifest(bad)
+      expect(errors.some((e) => /computeRetN|stackBytes/i.test(e))).toBe(true)
+    })
+
+    it('flags an unknown returnKind', () => {
+      const bad: InterfaceManifestV2 = {
+        ...base,
+        methods: [{ ...base.methods[0], returnKind: 'nonsense' as never }]
+      }
+      const errors = validateManifest(bad)
+      expect(errors.some((e) => /returnKind/i.test(e))).toBe(true)
+    })
+
+    it('flags a class return without structSize', () => {
+      const bad: InterfaceManifestV2 = {
+        ...base,
+        methods: [{ ...base.methods[0], returnKind: 'class', stackBytes: 4 }]
+      }
+      const errors = validateManifest(bad)
+      expect(errors.some((e) => /structSize/i.test(e))).toBe(true)
+    })
+
+    it('flags a _TESTONLY method name', () => {
+      const bad: InterfaceManifestV2 = {
+        ...base,
+        methods: [{ ...base.methods[0], name: 'DoThing_TESTONLY' }]
+      }
+      const errors = validateManifest(bad)
+      expect(errors.some((e) => /_TESTONLY/.test(e))).toBe(true)
+    })
+
+    it('every committed meta/sdk manifest validates clean (no cross-manifest duplicates either)', () => {
+      const manifestFiles = readdirSync(SDK_DIR).filter((f) =>
+        f.endsWith('.manifest.json')
+      )
+      const manifests: InterfaceManifestV2[] = manifestFiles.map((f) =>
+        JSON.parse(readFileSync(join(SDK_DIR, f), 'utf-8'))
+      )
+      for (const manifest of manifests) {
+        expect(validateManifest(manifest, manifests)).toEqual([])
+      }
+    })
   })
 })

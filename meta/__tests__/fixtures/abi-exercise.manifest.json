@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "interface": "AbiExercise001",
+  "family": "AbiExercise",
+  "ordinal": 65520,
+  "arches": ["x86"],
+  "mode": "wire",
+  "complete": true,
+  "source": {
+    "kind": "synthetic",
+    "ref": "D-09/Pitfall 3 -- these slots are NOT real Steamworks methods, they exist solely to exercise the generator's ABI-marshaling paths",
+    "file": "abi-exercise.manifest.json"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "SetTwoIntTest_TESTONLY",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        { "name": "a", "type": "int32" },
+        { "name": "b", "type": "int32" }
+      ],
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises the generator's two-4-byte-param ret N computation."
+    },
+    {
+      "slot": 1,
+      "name": "SetUint64Test_TESTONLY",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [{ "name": "hSteamID", "type": "uint64" }],
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises the generator's single-8-byte-param (uint64) ret N computation, distinct from the two-int-param case."
+    },
+    {
+      "slot": 2,
+      "name": "GetUserStatsSummary_TESTONLY",
+      "returns": "UserStatsSummary_t",
+      "returnKind": "class",
+      "structSize": 16,
+      "stackBytes": 4,
+      "params": [],
+      "note": "SRET EXERCISE ONLY -- synthetic slot, NOT a real Steamworks method. Exercises the generator's hidden-return-pointer (sret) marshaling for struct returns."
+    },
+    {
+      "slot": 3,
+      "name": "SetPersonaNameTest_TESTONLY",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [{ "name": "pchPersonaName", "type": "const char*" }],
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-pointer-param ret N computation."
+    },
+    {
+      "slot": 4,
+      "name": "GetSmallFriendsGroupIcon_TESTONLY",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [{ "name": "friendsGroupID", "type": "int32" }],
+      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-4-byte-param, register-return case."
+    }
+  ]
+}

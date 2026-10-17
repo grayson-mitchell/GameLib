@@ -1,27 +1,26 @@
 {
+  "schemaVersion": 2,
   "interface": "SteamFriends018",
+  "family": "SteamFriends",
   "ordinal": 2,
-  "sdkVersion": "pinned-2026-07-18-rlabrecque-SteamworksSDK-master",
+  "arches": ["x86"],
+  "mode": "wire",
+  "complete": false,
+  "flatAccessor": "SteamAPI_SteamFriends_v018",
+  "source": {
+    "kind": "hand-verified",
+    "ref": "Proton proton_9.0 lsteamclient/winISteamFriends.c (GetPersonaName thunk signature)",
+    "file": "isteamfriends.manifest.json"
+  },
+  "note": "Partial manifest: only the slot directly verified against Proton's lsteamclient thunk signature is included. 51-11 completes the remaining real SteamFriends018 method slots from the same Proton inventory.",
   "methods": [
     {
       "slot": 0,
       "name": "GetPersonaName",
-      "params": [],
-      "returns": "const char*"
-    },
-    {
-      "slot": 1,
-      "name": "SetPersonaNameTest_TESTONLY",
-      "params": [{ "name": "pchPersonaName", "type": "const char*" }],
-      "returns": "bool",
-      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-pointer-param ret N computation (D-09/Pitfall 3)."
-    },
-    {
-      "slot": 2,
-      "name": "GetSmallFriendsGroupIcon_TESTONLY",
-      "params": [{ "name": "friendsGroupID", "type": "int32" }],
-      "returns": "int32",
-      "note": "ABI-EXERCISE SLOT ONLY -- synthetic, NOT a real Steamworks method. Exercises a single-4-byte-param, register-return case (D-09/Pitfall 3)."
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 0,
+      "params": []
     }
   ]
 }
