@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-02-PLAN.md (import scanner + interface-version capture)
-last_updated: "2026-10-17T05:39:35.748Z"
+stopped_at: "Completed 51-03-PLAN.md (shared bridge data contracts: types, allowlist v2, shimCoverage, persisted verdict)"
+last_updated: "2026-10-17T06:03:13.154Z"
 last_activity: 2026-10-17
 last_activity_desc: Phase 51 execution started
-state_head: 10ccba59cef244c463d9ad8933c6c6ff455323be
+state_head: bac8bed4ae7f6abc8e9156154d7d3e2ac925af21
 progress:
   total_phases: 45
   completed_phases: 36
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 3 of 19
+Plan: 4 of 19
 Status: Ready to execute
 Last activity: 2026-10-17 — Phase 51 execution started
 
@@ -513,6 +513,7 @@ History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood 
 | Phase quick-261015-rud P01 | - | 3 tasks | 7 files |
 | Phase 51 P01 | ~1h45m (across 4 continuations) | 3 tasks | 17 files |
 | Phase 51 P02 | 20min | 2 tasks | 6 files |
+| Phase 51 P03 | ~22min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -598,6 +599,7 @@ Decisions for Phase 47 and earlier, pre-October quick tasks and untagged entries
 - [Phase 51]: 51-01 Task 3 live checkpoint fully PASSED on real Mac Steam hardware (Avernum 6/206060) after fixing a live-discovered cold-CM-reconnect bug in launchTarget.ts; corroborated by log/filesystem/process evidence, not self-reported
 - [Phase 51]: importParse.ts widens the scan to every imported member of the steam_api(64)?.dll block (bare accessors, SteamGameServer*, SteamInternal_*) with arch detection and fail-closed conflict handling, fixing ROADMAP hazard (a)
 - [Phase 51]: resolveRequiredInterfaceVersions auto-detects the runtime-lookup case internally (usesRuntimeInterfaceLookup) rather than exposing a separate caller-selected code path
+- [Phase 51]: D-51-07/08/09/10/11 shared types + IPC channels landed (types only); bridge-allowlist.json bumped to v2 (seed+knownBad, closed reason taxonomy, empty knownBad by design); shimCoverage.ts is now the sole owner of exported-symbol and served-interface-version coverage; persisted bridge verdict field (SteamMetadataCacheEntry.bridge) added with carry-forward-safe writers in bridgeVerdict.ts
 
 ### Pending Todos
 
@@ -1255,8 +1257,8 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 
 ## Session Continuity
 
-Last session: 2026-10-17T05:39:35.731Z
-Stopped at: Completed 51-02-PLAN.md (import scanner + interface-version capture)
+Last session: 2026-10-17T06:03:13.138Z
+Stopped at: Completed 51-03-PLAN.md (shared bridge data contracts: types, allowlist v2, shimCoverage, persisted verdict)
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

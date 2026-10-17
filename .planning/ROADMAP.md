@@ -223,13 +223,13 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 2/19 plans executed
+**Plans:** 3/19 plans executed
 
 Plans:
 **Wave 1**
 - [x] 51-01-PLAN.md — TRACER: per-game helper with real AppID, ephemeral port via gamelib_bridge.cfg, helper lifetime tied to the game; live check on Avernum 6 (D-51-01, D-51-03)
 - [x] 51-02-PLAN.md — Import scan sees bare accessors / SteamInternal / GameServer families and steam_api64.dll; interface-version capture (hazard a, D-51-13 detection)
-- [ ] 51-03-PLAN.md — Contracts: route/IPC types, allowlist v2 (seed + known-bad), shimCoverage module, persisted bridge verdict (D-51-07/08/10)
+- [x] 51-03-PLAN.md — Contracts: route/IPC types, allowlist v2 (seed + known-bad), shimCoverage module, persisted bridge verdict (D-51-07/08/10)
 - [ ] 51-04-PLAN.md — All Phase 51 strings in gamelib.json, 49 locales, one commit
 - [ ] 51-05-PLAN.md — Remove-all-copies deletes the emptied per-game bridge bottle; close LD-5 todo (D-51-12)
 
