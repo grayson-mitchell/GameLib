@@ -33,7 +33,12 @@ import './SteamBridgeSetup.scss'
 // call is needed here.
 const SteamBridgeSetup = () => {
   const { t } = useTranslation('gamepage')
-  const { isOpen, appName, reason, fallbackAvailable, close } =
+  // D-51-09 (Task 3): the symbols/redownload copy lives in the `gamelib`
+  // catalog (steam.bridge.setup.*, 51-04), a separate namespace from this
+  // component's existing `gamepage` strings above -- hence the second,
+  // differently-named translator rather than reusing `t`.
+  const { t: tGamelib } = useTranslation('gamelib')
+  const { isOpen, appName, reason, fallbackAvailable, missingSymbols, close } =
     useSteamBridgeSetup()
 
   const [fallingBack, setFallingBack] = useState(false)
@@ -136,6 +141,22 @@ const SteamBridgeSetup = () => {
               defaultValue: 'Reason: {{reason}}',
               reason
             })}
+          </p>
+        ) : null}
+        {missingSymbols.length > 0 ? (
+          <p className="steamBridgeSetupReason">
+            {tGamelib('steam.bridge.setup.missingSymbols', {
+              defaultValue: 'The bridge does not cover: {{symbols}}',
+              symbols: missingSymbols.join(', ')
+            })}
+          </p>
+        ) : null}
+        {reason === 'scan-miss' || reason === 'win64-no-shim' ? (
+          <p className="steamBridgeSetupReason">
+            {tGamelib(
+              'steam.bridge.setup.redownloadNote',
+              'Falling back downloads the game again into the bottled Windows Steam client.'
+            )}
           </p>
         ) : null}
         {fallbackError ? (

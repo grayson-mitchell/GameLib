@@ -40,6 +40,7 @@ import {
 } from './state'
 import {
   startInstallPolling,
+  stopInstallPolling,
   startUninstallPolling,
   resumeInterruptedSteamInstall,
   markSteamInstallIncomplete,
@@ -98,7 +99,9 @@ import { resolveBridgeRoute, type BridgeRouteInput } from './bridge/bridgeRoute'
 import {
   readBridgeVerdict,
   writeBridgeScanVerdict,
-  clearBridgeScanVerdict
+  clearBridgeScanVerdict,
+  setBridgeSteamApiPrescreen,
+  setBridgeUserRoute
 } from './bridge/bridgeVerdict'
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import { builtBridgeShim64Path } from 'backend/constants/paths'
@@ -1486,8 +1489,77 @@ export default class SteamGame implements Game {
         `SteamGame: installBridgeGame shim placement failed for appId ${this.appId}: ${shimError}`,
         LogPrefix.Steam
       )
+
+      // Phase 51 Plan 09 (D-51-05/D-51-11), Task 3: a 'miss' (the bridge
+      // genuinely does not cover this title) and a win64 'shim-not-built'
+      // (no 64-bit shim was ever built to try) are BOTH a dead end for the
+      // bits already downloaded into the per-game bridge bottle -- re-
+      // download through the proven Phase 17 bottled path is the chosen
+      // fallback (D-51-05: move, not re-download, was rejected), so the
+      // per-game bottle is deleted rather than left holding orphaned bits a
+      // later retry would never reuse. A plain 'shim-not-built' with no x64
+      // arch (packaging step pending, not a coverage verdict) and a bare
+      // 'error' keep the pre-51-09 behavior below unchanged -- neither one
+      // is a scan verdict worth persisting or showing missing symbols for.
+      const isWin64NoShim =
+        shimResult.status === 'shim-not-built' && shimResult.arch === 'x64'
+      if (shimResult.status === 'miss' || isWin64NoShim) {
+        let missingSymbols: string[]
+        if (shimResult.status === 'miss') {
+          writeBridgeScanVerdict(this.appId, shimResult.verdict)
+          missingSymbols = shimResult.verdict.missingSymbols
+        } else {
+          missingSymbols = ['steam_api64.dll']
+        }
+        // The forced "Try the bridge anyway" attempt (D-51-11) is spent --
+        // clearing userRoute lets a later install() fall through to its
+        // ordinary route instead of re-forcing the bridge into the same
+        // miss.
+        setBridgeUserRoute(this.appId, undefined)
+        stopInstallPolling(this.appId)
+        const removeResult = await removePerGameBridgeBottle(this.appId)
+        if (removeResult.status === 'error') {
+          logWarning(
+            `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${this.appId} after a scan miss: ${removeResult.error}`,
+            LogPrefix.Steam
+          )
+        }
+        markBridgeFailedThisSession(this.appId)
+        // Two literal branches (not a shared ternary) so the reason string
+        // stays grep-able at each call site -- mirrors launchBridgeGame's
+        // own literal 'scan-miss' emission below.
+        if (isWin64NoShim) {
+          sendFrontendMessage('steamBridgeSetupRequired', {
+            appName: this.appId,
+            reason: 'win64-no-shim',
+            missingSymbols,
+            fallbackAvailable: true
+          })
+        } else {
+          sendFrontendMessage('steamBridgeSetupRequired', {
+            appName: this.appId,
+            reason: 'scan-miss',
+            missingSymbols,
+            fallbackAvailable: true
+          })
+        }
+        return { status: 'error', error: shimError }
+      }
+
       markBridgeFailedThisSession(this.appId)
       return { status: 'error', error: shimError }
+    }
+
+    // Phase 51 Plan 09 (D-51-06/D-51-07), Task 3: persist the scan verdict
+    // produced by THIS placement for every status that carries one --
+    // 'placed' and 'no-steam-api' both do, 'already-placed' (a byte-
+    // identical no-op) does not and leaves whatever was already persisted
+    // untouched, mirroring launchBridgeGame()'s identical truthy check.
+    if (shimResult.verdict) {
+      writeBridgeScanVerdict(this.appId, shimResult.verdict)
+    }
+    if (shimResult.status === 'no-steam-api') {
+      setBridgeSteamApiPrescreen(this.appId, 'none')
     }
 
     // 24-13 (D-UAT-24-05 wiring, was Rule-2 deviation during Task 3): the

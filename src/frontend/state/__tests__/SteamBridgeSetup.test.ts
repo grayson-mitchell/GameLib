@@ -18,13 +18,15 @@ describe('useSteamBridgeSetup store', () => {
       isOpen: false,
       appName: undefined,
       reason: undefined,
-      fallbackAvailable: true
+      fallbackAvailable: true,
+      missingSymbols: []
     })
   })
 
-  it('starts closed with no appName', () => {
+  it('starts closed with no appName and no missingSymbols', () => {
     expect(useSteamBridgeSetup.getState().isOpen).toBe(false)
     expect(useSteamBridgeSetup.getState().appName).toBeUndefined()
+    expect(useSteamBridgeSetup.getState().missingSymbols).toEqual([])
   })
 
   it('open(appName, opts) sets isOpen + appName + reason + fallbackAvailable', () => {
@@ -46,12 +48,34 @@ describe('useSteamBridgeSetup store', () => {
     expect(useSteamBridgeSetup.getState().reason).toBeUndefined()
   })
 
-  it('close() resets isOpen to false and clears appName', () => {
-    useSteamBridgeSetup.getState().open('440', { reason: 'x' })
+  it('D-51-09 (Task 3): open(appName, { missingSymbols }) keeps missingSymbols, and defaults to [] when the opts omit it', () => {
+    useSteamBridgeSetup.getState().open('440', {
+      reason: 'scan-miss',
+      missingSymbols: ['SteamUtils005', 'SteamUser023']
+    })
+
+    expect(useSteamBridgeSetup.getState().missingSymbols).toEqual([
+      'SteamUtils005',
+      'SteamUser023'
+    ])
+
+    useSteamBridgeSetup
+      .getState()
+      .open('441', { reason: 'bridge-launch-failed' })
+
+    expect(useSteamBridgeSetup.getState().missingSymbols).toEqual([])
+  })
+
+  it('close() resets isOpen to false, clears appName, and resets missingSymbols to []', () => {
+    useSteamBridgeSetup.getState().open('440', {
+      reason: 'scan-miss',
+      missingSymbols: ['SteamUtils005']
+    })
     useSteamBridgeSetup.getState().close()
 
     expect(useSteamBridgeSetup.getState().isOpen).toBe(false)
     expect(useSteamBridgeSetup.getState().appName).toBeUndefined()
+    expect(useSteamBridgeSetup.getState().missingSymbols).toEqual([])
   })
 })
 
@@ -61,7 +85,8 @@ describe('handleSteamBridgeSetupRequiredSignal (backend signal wiring)', () => {
       isOpen: false,
       appName: undefined,
       reason: undefined,
-      fallbackAvailable: true
+      fallbackAvailable: true,
+      missingSymbols: []
     })
   })
 
@@ -97,5 +122,25 @@ describe('handleSteamBridgeSetupRequiredSignal (backend signal wiring)', () => {
     // No signal fired in this test at all.
     expect(useSteamBridgeSetup.getState().isOpen).toBe(false)
     expect(useSteamBridgeSetup.getState().appName).toBeUndefined()
+  })
+
+  it('D-51-09 (Task 3): threads missingSymbols through from the backend signal to the store, defaulting to [] when absent', () => {
+    handleSteamBridgeSetupRequiredSignal({} as IpcRendererEvent, {
+      appName: '570',
+      reason: 'scan-miss',
+      fallbackAvailable: true,
+      missingSymbols: ['SteamUtils005']
+    })
+
+    expect(useSteamBridgeSetup.getState().missingSymbols).toEqual([
+      'SteamUtils005'
+    ])
+
+    handleSteamBridgeSetupRequiredSignal({} as IpcRendererEvent, {
+      appName: '571',
+      reason: 'bridge-launch-failed'
+    })
+
+    expect(useSteamBridgeSetup.getState().missingSymbols).toEqual([])
   })
 })

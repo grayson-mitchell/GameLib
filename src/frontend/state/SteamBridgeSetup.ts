@@ -6,9 +6,18 @@ interface SteamBridgeSetupState {
   appName?: string
   reason?: string
   fallbackAvailable: boolean
+  // D-51-09 (Task 3): which Steam API symbol(s) the bridge's scan verdict
+  // found missing, surfaced verbatim to the user by SteamBridgeSetup.tsx.
+  // Always an array -- [] (never undefined) when the opening signal carries
+  // none, so the component's `.length > 0` check needs no extra guard.
+  missingSymbols: string[]
   open: (
     appName: string,
-    opts?: { reason?: string; fallbackAvailable?: boolean }
+    opts?: {
+      reason?: string
+      fallbackAvailable?: boolean
+      missingSymbols?: string[]
+    }
   ) => void
   close: () => void
 }
@@ -29,14 +38,16 @@ export const useSteamBridgeSetup = create<SteamBridgeSetupState>()((set) => ({
   appName: undefined,
   reason: undefined,
   fallbackAvailable: true,
+  missingSymbols: [],
   open: (appName, opts = {}) =>
     set({
       isOpen: true,
       appName,
       reason: opts.reason,
-      fallbackAvailable: opts.fallbackAvailable ?? true
+      fallbackAvailable: opts.fallbackAvailable ?? true,
+      missingSymbols: opts.missingSymbols ?? []
     }),
-  close: () => set({ isOpen: false, appName: undefined })
+  close: () => set({ isOpen: false, appName: undefined, missingSymbols: [] })
 }))
 
 // Extracted as a standalone, directly-testable function (rather than an
@@ -50,8 +61,16 @@ export const handleSteamBridgeSetupRequiredSignal = (
   {
     appName,
     reason,
-    fallbackAvailable
-  }: { appName: string; reason?: string; fallbackAvailable?: boolean }
+    fallbackAvailable,
+    missingSymbols
+  }: {
+    appName: string
+    reason?: string
+    fallbackAvailable?: boolean
+    missingSymbols?: string[]
+  }
 ): void => {
-  useSteamBridgeSetup.getState().open(appName, { reason, fallbackAvailable })
+  useSteamBridgeSetup
+    .getState()
+    .open(appName, { reason, fallbackAvailable, missingSymbols })
 }
