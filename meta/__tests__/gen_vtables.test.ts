@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 
 import {
+  bareAccessorName,
   computeRetN,
   generateDefFile,
   generateShimC,
@@ -464,6 +465,136 @@ describe('gen_vtables', () => {
       for (const manifest of manifests) {
         expect(validateManifest(manifest, manifests)).toEqual([])
       }
+    })
+  })
+
+  describe('stub emission from stackBytes (51-06 Task 2)', () => {
+    const stubManifest: InterfaceManifestV2 = {
+      schemaVersion: 2,
+      interface: 'StubExercise001',
+      family: 'StubExercise',
+      ordinal: 101,
+      arches: ['x86'],
+      mode: 'stub',
+      complete: true,
+      source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+      methods: [
+        {
+          slot: 0,
+          name: 'StubThreeDummies',
+          returns: 'void',
+          returnKind: 'void',
+          stackBytes: 12,
+          params: []
+        },
+        {
+          slot: 1,
+          name: 'StubClassReturn',
+          returns: 'SomeStruct_t',
+          returnKind: 'class',
+          structSize: 16,
+          stackBytes: 8,
+          params: []
+        },
+        {
+          slot: 2,
+          name: 'StubInt64Return',
+          returns: 'uint64',
+          returnKind: 'int64',
+          stackBytes: 0,
+          params: []
+        }
+      ]
+    }
+
+    it('a stub method with stackBytes 12 takes self + three uint32_t dummies and never calls bridge_transact', () => {
+      const c = generateShimC([stubManifest])
+      const stub = c.match(
+        /static void THISCALL vt_StubExercise001_StubThreeDummies\([^{]*\) \{[\s\S]*?\n\}/
+      )
+      expect(stub).not.toBeNull()
+      expect(stub![0]).toContain(
+        'void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2'
+      )
+      expect(stub![0]).not.toContain('bridge_transact')
+    })
+
+    it('a stub with a class return takes the real sretOut pointer (not a dummy) plus one dummy for the remaining stackBytes, and zero-fills it', () => {
+      const c = generateShimC([stubManifest])
+      const stub = c.match(
+        /static void \* THISCALL vt_StubExercise001_StubClassReturn\([^{]*\) \{[\s\S]*?\n\}/
+      )
+      expect(stub).not.toBeNull()
+      expect(stub![0]).toContain('void *self, void *sretOut, uint32_t dummy0')
+      expect(stub![0]).toContain('memset(sretOut, 0, 16);')
+      expect(stub![0]).toContain('return sretOut;')
+      expect(stub![0]).not.toContain('bridge_transact')
+    })
+
+    it('a stub with an int64 return returns 0LL, never calling bridge_transact', () => {
+      const c = generateShimC([stubManifest])
+      const stub = c.match(
+        /static int64_t THISCALL vt_StubExercise001_StubInt64Return\([^{]*\) \{[\s\S]*?\n\}/
+      )
+      expect(stub).not.toBeNull()
+      expect(stub![0]).toContain('return 0LL;')
+      expect(stub![0]).not.toContain('bridge_transact')
+    })
+  })
+
+  describe('bareAccessorName (51-06 Task 2)', () => {
+    it('leaves a normal family name unchanged', () => {
+      expect(bareAccessorName('SteamUser')).toBe('SteamUser')
+      expect(bareAccessorName('SteamFriends')).toBe('SteamFriends')
+    })
+
+    it('fixes the double-capital families to their real export spelling', () => {
+      expect(bareAccessorName('SteamMatchMaking')).toBe('SteamMatchmaking')
+      expect(bareAccessorName('SteamMatchMakingServers')).toBe(
+        'SteamMatchmakingServers'
+      )
+    })
+  })
+
+  describe('g_iface_table and bare legacy accessors (51-06 Task 2)', () => {
+    it('emits one g_iface_table row per manifest, guarded on arches, and a bare accessor per family', () => {
+      const c = generateShimC([isteamuser, isteamfriends])
+      expect(c).toContain('g_iface_table')
+      expect(c).toContain('"SteamUser023", "SteamUser"')
+      expect(c).toContain('"SteamFriends018", "SteamFriends"')
+      expect(c).toMatch(/void \*SteamUser\(void\) \{/)
+      expect(c).toMatch(/void \*SteamFriends\(void\) \{/)
+    })
+
+    it('the cfg loader collects iface.<Family>=<Version> pairs bounded at 64 entries / 256-byte lines', () => {
+      const c = generateShimC([isteamuser, isteamfriends])
+      expect(c).toContain('#define MAX_IFACE_CFG_ENTRIES 64')
+      expect(c).toContain('MAX_IFACE_CFG_LINE_BYTES')
+      expect(c).toContain('"iface."')
+    })
+  })
+
+  describe('generateDefFile(manifests, arch) (51-06 Task 2)', () => {
+    it('defaults to x86 and exports the bare accessors once per family', () => {
+      const def = generateDefFile([isteamuser, isteamfriends])
+      const steamUserLines = def.split('\n').filter((l) => l === 'SteamUser')
+      const steamFriendsLines = def
+        .split('\n')
+        .filter((l) => l === 'SteamFriends')
+      expect(steamUserLines).toHaveLength(1)
+      expect(steamFriendsLines).toHaveLength(1)
+    })
+
+    it('excludes a manifest whose arches do not include the requested arch', () => {
+      const x64Only: InterfaceManifestV2 = {
+        ...isteamuser,
+        interface: 'SteamUserX64Only001',
+        family: 'SteamUserX64Only',
+        ordinal: 102,
+        arches: ['x64']
+      }
+      const def = generateDefFile([isteamuser, x64Only], 'x86')
+      expect(def).not.toContain('SteamUserX64Only')
     })
   })
 })
