@@ -23,11 +23,28 @@
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#define BRIDGE_PORT 54550
+// D-51-01: there is NO fixed, shared port left in this file at all -- each
+// per-appId native helper binds an OS-assigned ephemeral port and the
+// backend hands it to THIS specific game process via a small text file,
+// `gamelib_bridge.cfg`, written beside its own .exe
+// (src/backend/storeManagers/steam/bridge/bridgeConfig.ts). The shim reads
+// that file, once, lazily, from beside its OWN module path -- never from a
+// hardcoded port, never from a second/divergent filename.
+#define BRIDGE_CONFIG_FILENAME "gamelib_bridge.cfg"
+#define BRIDGE_CFG_READ_MAX 4096
+
+// Matches protocol.ts's CONTROL_ORDINAL / CONTROL_SLOT.hello exactly --
+// the connect-time handshake bridge_helper.c answers unconditionally
+// (independent of whether Steam itself is signed in), proving this really
+// is a GameLib per-appId helper before any real interface call is issued.
+#define BRIDGE_CONTROL_ORDINAL 0xffff
+#define BRIDGE_CONTROL_SLOT_HELLO 2
 
 // CR-01: byte capacity of each string-returning stub's shim-owned static
 // return buffer -- emitted directly from the generator's
@@ -39,14 +56,108 @@
 static SOCKET g_bridge_sock = INVALID_SOCKET;
 static uint32_t g_next_request_id = 1;
 
+// 0 until load_bridge_port_once() resolves a valid port out of
+// gamelib_bridge.cfg -- bridge_ensure_connected() refuses to connect while
+// it is 0 (D-51-01: fail closed, never a fixed-port fallback).
+static int g_bridge_port = 0;
+static int g_bridge_port_load_attempted = 0;
+
+// 51-07: an identity marker the version-capture pass can grep the shipped
+// DLL for, so it never mistakes a GameLib shim for a game's own original
+// steam_api.dll. Referenced from SteamAPI_Init() through a volatile read
+// below so the linker cannot dead-strip it as unused.
+static const char g_gamelib_shim_marker[] = "GameLibSteamBridgeShim/2";
+
+/*
+ * Scans `buf` (the raw bytes read from gamelib_bridge.cfg) line-by-line
+ * for a `port=<digits>` line and, if its value parses as a valid
+ * ephemeral/registered port (1024-65535), assigns g_bridge_port. Any other
+ * line (appid=, iface.*=, a trailing blank line) is silently skipped --
+ * this parser only ever looks for the one field it needs.
+ */
+static void parse_bridge_port_from_buffer(const char *buf, uint32_t len) {
+  uint32_t i = 0;
+  while (i < len) {
+    uint32_t lineStart = i;
+    while (i < len && buf[i] != '\n' && buf[i] != '\r') i++;
+    uint32_t lineLen = i - lineStart;
+    if (lineLen > 5 && strncmp(buf + lineStart, "port=", 5) == 0) {
+      char numBuf[16];
+      uint32_t numLen = lineLen - 5;
+      if (numLen >= sizeof(numBuf)) numLen = sizeof(numBuf) - 1;
+      memcpy(numBuf, buf + lineStart + 5, numLen);
+      numBuf[numLen] = '\0';
+      long parsed = strtol(numBuf, NULL, 10);
+      if (parsed >= 1024 && parsed <= 65535) {
+        g_bridge_port = (int)parsed;
+      }
+      return;
+    }
+    while (i < len && (buf[i] == '\n' || buf[i] == '\r')) i++;
+  }
+}
+
+/*
+ * Resolves gamelib_bridge.cfg's `port=` value into g_bridge_port -- ONCE,
+ * lazily, on first use (g_bridge_port_load_attempted guards every repeat
+ * call). The file is resolved beside THIS DLL's own on-disk path (never a
+ * caller-supplied/relative path): GetModuleHandleExA with
+ * GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS resolves the module that contains
+ * this very function, then GetModuleFileNameA yields that module's full
+ * path; the file name component is replaced with BRIDGE_CONFIG_FILENAME.
+ * On ANY failure (module path unresolvable, file missing, file
+ * unreadable, no valid `port=` line) g_bridge_port simply stays 0 --
+ * there is no fixed-port fallback (D-51-01): a missing/malformed cfg means
+ * bridge_ensure_connected() below refuses to connect at all, rather than
+ * ever guessing the old shared port.
+ */
+static void load_bridge_port_once(void) {
+  if (g_bridge_port_load_attempted) return;
+  g_bridge_port_load_attempted = 1;
+
+  HMODULE hModule = NULL;
+  if (!GetModuleHandleExA(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCSTR)&load_bridge_port_once,
+        &hModule)) {
+    return;
+  }
+
+  char cfgPath[MAX_PATH];
+  DWORD pathLen = GetModuleFileNameA(hModule, cfgPath, sizeof(cfgPath));
+  if (pathLen == 0 || pathLen >= sizeof(cfgPath)) {
+    return;
+  }
+
+  char *lastSlash = strrchr(cfgPath, '\\');
+  char *fileNameStart = lastSlash ? lastSlash + 1 : cfgPath;
+  size_t prefixLen = (size_t)(fileNameStart - cfgPath);
+  if (prefixLen + strlen(BRIDGE_CONFIG_FILENAME) >= sizeof(cfgPath)) {
+    return;
+  }
+  strcpy(fileNameStart, BRIDGE_CONFIG_FILENAME);
+
+  FILE *f = fopen(cfgPath, "rb");
+  if (!f) return;
+  char buf[BRIDGE_CFG_READ_MAX];
+  size_t readLen = fread(buf, 1, sizeof(buf), f);
+  fclose(f);
+  if (readLen == 0) return;
+
+  parse_bridge_port_from_buffer(buf, (uint32_t)readLen);
+}
+
 static int bridge_ensure_connected(void) {
   if (g_bridge_sock != INVALID_SOCKET) return 1;
+  load_bridge_port_once();
+  // D-51-01: fail closed -- never falls back to a fixed/guessed port.
+  if (g_bridge_port == 0) return 0;
   WSADATA w;
   if (WSAStartup(MAKEWORD(2, 2), &w) != 0) return 0;
   SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
   struct sockaddr_in a; memset(&a, 0, sizeof a);
   a.sin_family = AF_INET;
-  a.sin_port = htons(BRIDGE_PORT);
+  a.sin_port = htons((uint16_t)g_bridge_port);
   a.sin_addr.s_addr = inet_addr("127.0.0.1"); // loopback-only, never a routable interface
   if (connect(s, (struct sockaddr *)&a, sizeof a) != 0) { closesocket(s); return 0; }
   g_bridge_sock = s;
@@ -54,16 +165,20 @@ static int bridge_ensure_connected(void) {
 }
 
 /*
- * Marshal one interface-ordinal + method-slot call to the persistent bridge
- * connection and block for the response (Pattern 3). Returns 1 on ok, 0 on
- * transport/protocol error -- callers fall back to a safe zero/false value on
- * error (this shim is a compatibility layer, not a DRM gate, spike 008).
+ * One real attempt at marshaling an interface-ordinal + method-slot call
+ * over the persistent bridge connection. `*transportFailed` distinguishes
+ * a broken CONNECTION (worth retrying once on a fresh socket -- see
+ * bridge_transact below) from a legitimate error RESPONSE (a live, healthy
+ * connection that simply answered status != 0 -- never retried, since
+ * retrying would just repeat the same answer).
  */
-static int bridge_transact(uint16_t ordinal, uint16_t slot,
-                            const uint8_t *argBuf, uint32_t argLen,
-                            uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
+static int bridge_transact_once(uint16_t ordinal, uint16_t slot,
+                                 const uint8_t *argBuf, uint32_t argLen,
+                                 uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut,
+                                 int *transportFailed) {
   *retLenOut = 0;
-  if (!bridge_ensure_connected()) return 0;
+  *transportFailed = 0;
+  if (!bridge_ensure_connected()) { *transportFailed = 1; return 0; }
 
   uint32_t requestId = g_next_request_id++;
   uint32_t frameLen = 4 + 2 + 2 + argLen;
@@ -73,22 +188,49 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
   memcpy(header + 8, &ordinal, 2);
   memcpy(header + 10, &slot, 2);
 
-  if (send(g_bridge_sock, (const char *)header, sizeof(header), 0) != sizeof(header)) return 0;
-  if (argLen > 0 && send(g_bridge_sock, (const char *)argBuf, argLen, 0) != (int)argLen) return 0;
+  if (send(g_bridge_sock, (const char *)header, sizeof(header), 0) != sizeof(header)) { *transportFailed = 1; return 0; }
+  if (argLen > 0 && send(g_bridge_sock, (const char *)argBuf, argLen, 0) != (int)argLen) { *transportFailed = 1; return 0; }
 
   uint8_t respHeader[9];
-  if (recv(g_bridge_sock, (char *)respHeader, sizeof(respHeader), MSG_WAITALL) != (int)sizeof(respHeader)) return 0;
+  if (recv(g_bridge_sock, (char *)respHeader, sizeof(respHeader), MSG_WAITALL) != (int)sizeof(respHeader)) { *transportFailed = 1; return 0; }
   uint32_t respLen, respRequestId; uint8_t status;
   memcpy(&respLen, respHeader + 0, 4);
   memcpy(&respRequestId, respHeader + 4, 4);
   status = respHeader[8];
-  if (respRequestId != requestId || status != 0) return 0;
+  if (respRequestId != requestId) { *transportFailed = 1; return 0; }
+  if (status != 0) return 0; // legitimate error response -- healthy connection, do not retry
 
   uint32_t retLen = respLen - 5; // subtract request_id(4) + status(1)
-  if (retLen > retBufCap) return 0;
-  if (retLen > 0 && recv(g_bridge_sock, (char *)retBuf, retLen, MSG_WAITALL) != (int)retLen) return 0;
+  if (retLen > retBufCap) return 0; // caller-buffer mismatch -- not a transport failure
+  if (retLen > 0 && recv(g_bridge_sock, (char *)retBuf, retLen, MSG_WAITALL) != (int)retLen) { *transportFailed = 1; return 0; }
   *retLenOut = retLen;
   return 1;
+}
+
+/*
+ * Marshal one interface-ordinal + method-slot call to the persistent bridge
+ * connection and block for the response (Pattern 3). Returns 1 on ok, 0 on
+ * transport/protocol error -- callers fall back to a safe zero/false value on
+ * error (this shim is a compatibility layer, not a DRM gate, spike 008).
+ *
+ * Retries the WHOLE request exactly once, on a fresh connection, when the
+ * first attempt fails at the TRANSPORT level -- the helper's own 5s
+ * SO_RCVTIMEO closes an idle persistent connection, so a transport failure
+ * on an otherwise-healthy link usually just means "reconnect and resend",
+ * not a real protocol error.
+ */
+static int bridge_transact(uint16_t ordinal, uint16_t slot,
+                            const uint8_t *argBuf, uint32_t argLen,
+                            uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
+  int transportFailed = 0;
+  int ok = bridge_transact_once(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut, &transportFailed);
+  if (ok || !transportFailed) return ok;
+
+  if (g_bridge_sock != INVALID_SOCKET) {
+    closesocket(g_bridge_sock);
+    g_bridge_sock = INVALID_SOCKET;
+  }
+  return bridge_transact_once(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut, &transportFailed);
 }
 
 typedef void *vfn;
@@ -244,7 +386,13 @@ static struct FakeSteamFriends018 g_steamfriends018_instance = { g_steamfriends0
 
 // === Flat SteamAPI_* exports (acceptance-set superset, R3 finding #9) ===
 
-int SteamAPI_Init(void) { return 1; }
+int SteamAPI_Init(void) {
+  volatile const char *gamelib_marker_keepalive = g_gamelib_shim_marker;
+  (void)gamelib_marker_keepalive;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, retbuf, sizeof(retbuf), &retlen)) return 0;
+  return 1;
+}
 int SteamAPI_InitFlat(char *pErrMsg) { (void)pErrMsg; return 0; }
 void SteamAPI_Shutdown(void) {
   if (g_bridge_sock != INVALID_SOCKET) {

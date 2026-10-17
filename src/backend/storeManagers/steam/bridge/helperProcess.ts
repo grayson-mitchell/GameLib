@@ -1,43 +1,50 @@
 /**
- * Phase 24 Plan 06 (R2/R7, D-03/D-06) -- the shared, long-lived native
- * bridge-helper process lifecycle and its observable readiness signal.
+ * Phase 51 Plan 01 (D-51-01) -- the per-appId native bridge-helper process
+ * registry and its observable readiness signal.
  *
- * D-03 (shared-helper lifecycle): ONE shared helper is spawned LAZILY on
- * the first bridge launch and reused (a module-scoped ChildProcess handle)
- * for every bridge game until GameLib quits -- never a helper-per-launch,
- * never a helper-per-AppID. `spawnHelperIfNeeded()` is a no-op when a live
- * handle already exists.
+ * Supersedes Phase 24 Plan 06's D-03 (ONE shared, long-lived helper handle,
+ * reused across every bridge game) and D-04 (single generic identity-only
+ * AppID 480). D-51-01: every bridge launch spawns its OWN helper, told the
+ * game's real AppID over argv -- `helpers` below is a
+ * `Map<appId, BridgeHelperEntry>`, never a module-scoped singleton handle.
+ * D-51-03 (two bridge games running at once, no lock) falls directly out
+ * of this: a second appId simply gets a second entry in the map, spawned
+ * and polled completely independently of the first.
  *
- * D-06 (observable readiness): because bottle launches are fire-and-forget
- * (`runWineCommand({ wait: false })`), the bridge cannot assume success --
- * `ensureBridgeHelperReady()` probes the helper over the protocol.ts (24-02)
- * CONTROL frame:
+ * The OS assigns each helper's listening port (the native helper binds
+ * port 0 and reports whatever it got, `bridge_helper.c`'s `LISTEN` line) --
+ * there is no fixed, shared port left anywhere in this module. This file
+ * parses that `LISTEN` line off the child's own stderr to learn the port,
+ * then reuses the same CONTROL HEALTH/WHOAMI probe shape Phase 24 Plan 06
+ * established, now parameterized by that per-appId port instead of a
+ * fixed constant.
+ *
+ * D-06 (observable readiness, carried forward): because bottle launches are
+ * fire-and-forget (`runWineCommand({ wait: false })`), the bridge cannot
+ * assume success -- `ensureBridgeHelperReady()` probes the helper over the
+ * protocol.ts (24-02) CONTROL frame:
  *  - HEALTH: answerable by the helper immediately at process start, BEFORE
  *    `SteamAPI_InitFlat` completes -- proves "process up".
  *  - WHOAMI: answerable ok only AFTER `SteamAPI_InitFlat` succeeded against
  *    the live signed-in Mac Steam -- proves "init succeeded against a live
  *    session".
- * These are two DISTINCT states (review finding #7): "process up, no live
- * Steam session" (`status: 'not-inited'`) is reported differently from
+ * These are two DISTINCT states (24-02 review finding #7): "process up, no
+ * live Steam session" (`status: 'not-inited'`) is reported differently from
  * "helper never answered at all" (`status: 'unreachable'`) so a caller can
  * surface a meaningfully different failure message instead of one generic
  * timeout.
- *
- * Per D-04 (bridge_helper.c, 24-02 SUMMARY): the helper runs its single
- * `SteamAPI_InitFlat` once, BEFORE its accept loop starts serving
- * connections -- so once HEALTH succeeds, WHOAMI's answer is already
- * settled for that helper process's lifetime. The poll loop below therefore
- * only needs to keep retrying while the process itself is still coming up
- * (HEALTH not yet answering); once HEALTH answers, a single WHOAMI check is
- * enough to return a final result.
  */
 
 import { spawn, ChildProcess } from 'node:child_process'
 import { Socket } from 'node:net'
-import { dirname } from 'node:path'
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { steamBridgeHelperPath } from 'backend/constants/paths'
+import {
+  steamBridgeHelperPath,
+  steamBridgeHelperStateDir
+} from 'backend/constants/paths'
 import { sendFrontendMessage } from 'backend/ipc'
 import { registerLongLivedChild } from 'backend/longLivedChildren'
 import {
@@ -49,17 +56,27 @@ import {
 
 const NUMERIC_APP_ID = /^\d+$/
 
-// Same 127.0.0.1-only loopback port the native helper (bridge_helper.c,
-// 24-02) binds -- T-24-01, never a routable interface.
+// Same 127.0.0.1-only loopback host every native helper (bridge_helper.c)
+// binds -- T-51-01 (carries forward T-24-01), never a routable interface.
+// The PORT is no longer fixed -- see BridgeHelperEntry.port below.
 const BRIDGE_HELPER_HOST = '127.0.0.1'
-const BRIDGE_HELPER_PORT = 54550
+
+// Parses the native helper's own stderr announcement line, e.g.
+// `LISTEN 127.0.0.1:64321 appid=206060 mode=full` -- MUST match
+// bridge_helper.c's `logts("LISTEN", ...)` format byte-for-byte.
+const LISTEN_LINE = /LISTEN 127\.0\.0\.1:(\d+) appid=(\d+)/
+
+const MIN_EPHEMERAL_PORT = 1024
+const MAX_PORT = 65535
 
 // Bounded-poll budget (D-06, T-24-10 -- observable failure, never a hang).
-// Reused verbatim on every attempt to both wait for the freshly-spawned
-// process to start listening AND bound a single CONTROL round-trip.
+// Reused for TWO distinct waits: (1) the freshly-spawned process reporting
+// its LISTEN port at all, and (2) the HEALTH/WHOAMI CONTROL round-trip once
+// that port is known.
 const POLL_ATTEMPTS = 6
 const POLL_INTERVAL_MS = 250
 const PROBE_TIMEOUT_MS = 250
+const PORT_WAIT_BUDGET_MS = POLL_ATTEMPTS * POLL_INTERVAL_MS
 
 // Fixed request id -- each probe opens its own short-lived connection (no
 // request multiplexing across probes), so there is only ever one
@@ -74,15 +91,39 @@ type BridgeHelperReadyStatus = 'ready' | 'not-inited' | 'unreachable'
 interface EnsureBridgeHelperReadyResult {
   status: BridgeHelperReadyStatus
   ready: boolean
+  /** The helper's real, OS-assigned ephemeral port, whenever it is known --
+   * present on every outcome except the up-front invalid-appId rejection
+   * and a helper that never reported a LISTEN line at all. */
+  port?: number
   error?: string
 }
 
-// D-03: the ONE shared, long-lived helper handle. null when no helper has
-// been spawned yet (or the previous one exited/errored and was cleared).
-let helperProcess: ChildProcess | null = null
-// Quick task 260907-juv (Layer A): the unregister handle for this helper's entry on the
-// shared long-lived-child registry -- see `backend/longLivedChildren`'s module docblock.
-let unregisterLongLivedChild: (() => void) | null = null
+interface BridgeHelperEntry {
+  appId: string
+  child: ChildProcess
+  /** Null until the LISTEN line is parsed off the child's own stderr. */
+  port: number | null
+  /** Resolves to the real port once known, or `null` if the process exited
+   * (or errored) before ever reporting one. Settles exactly once. */
+  portReady: Promise<number | null>
+  unregister: () => void
+}
+
+// D-51-01: per-appId registry -- replaces the Phase 24 module-scoped
+// singleton ChildProcess handle. No module-level `let` of a ChildProcess
+// anywhere in this file (pinned by a source-assertion test,
+// helperProcess.test.ts).
+const helpers = new Map<string, BridgeHelperEntry>()
+
+// Test-only override for the packaged, fixed helper binary path -- lets
+// helperIntegration.test.ts point at a real, locally-compiled binary
+// without needing to fake the packaged bundle layout. Defaults to the real
+// packaged path; never set in production.
+let bridgeHelperPathOverride: string | null = null
+
+export function __setBridgeHelperPathForTests(path: string | null): void {
+  bridgeHelperPathOverride = path
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -93,64 +134,124 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * D-03: spawns the shared helper if (and only if) no live handle exists.
- * Called at the top of every `ensureBridgeHelperReady()` -- a second call
- * while the helper is already running is a pure no-op, never a second
- * spawn.
+ * D-51-01: spawns a helper for `appId` if (and only if) no live one already
+ * exists for that SAME appId -- the per-appId no-op-if-live guard that
+ * replaces Phase 24's single global one. Two different appIds always get
+ * two different entries (D-51-03, no lock).
  *
- * cwd is explicitly `dirname(steamBridgeHelperPath)` -- the bundled dir
- * 24-07 stages `steam_appid.txt`=480 into -- so the helper's own
- * `SteamAPI_InitFlat` resolves the generic identity AppID (finding #4 /
- * SPEC AppID-before-init non-negotiable). Argv-form spawn of the fixed,
- * packaged, arch-aware `steamBridgeHelperPath` only -- never an
- * attacker-supplied binary path (T-24-06).
+ * `cwd` is a per-appId staging directory under `steamBridgeHelperStateDir`
+ * -- NOT the packaged bundle dir Phase 24 used -- so two concurrently
+ * running helpers never race on the same `steam_appid.txt`. Argv-form
+ * spawn (T-24-06) of the fixed, packaged, arch-aware
+ * `steamBridgeHelperPath` (or the test override) ONLY -- never an
+ * attacker-supplied binary path. No `env` option is ever passed: the
+ * helper must inherit the REAL ambient environment (it needs the real
+ * $HOME to find Steam's own dylib) -- this is a production spawn, not an
+ * isolated child, and the project's fakeHomeIsolation gate
+ * (`src/backend/__tests__/fakeHomeIsolation.test.ts`) pins that this file
+ * never hand-rolls a home/config/state env block.
  */
-function spawnHelperIfNeeded(): void {
-  if (helperProcess && !helperProcess.killed) {
-    return
+function ensureHelperSpawned(appId: string): BridgeHelperEntry {
+  const existing = helpers.get(appId)
+  if (existing && !existing.child.killed) {
+    return existing
   }
 
+  const helperPath = bridgeHelperPathOverride ?? steamBridgeHelperPath
+  const stateDir = join(steamBridgeHelperStateDir, appId)
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 })
+
   logInfo(
-    `spawnHelperIfNeeded: spawning the shared bridge helper from ${steamBridgeHelperPath} (D-03)`,
+    `ensureHelperSpawned: spawning a bridge helper for appId ${appId} from ${helperPath} (D-51-01)`,
     LogPrefix.Steam
   )
 
-  const child = spawn(steamBridgeHelperPath, [], {
-    cwd: dirname(steamBridgeHelperPath),
+  const child = spawn(helperPath, ['--appid', appId, '--port', '0'], {
+    cwd: stateDir,
     stdio: ['ignore', 'pipe', 'pipe']
   })
 
+  let settlePortReady: (port: number | null) => void = () => {}
+  let portSettled = false
+  const portReady = new Promise<number | null>((resolve) => {
+    settlePortReady = resolve
+  })
+
+  const settlePortOnce = (port: number | null) => {
+    if (portSettled) return
+    portSettled = true
+    settlePortReady(port)
+  }
+
+  const handleStderrLine = (line: string) => {
+    const match = LISTEN_LINE.exec(line)
+    if (!match) return
+    const [, portStr, matchedAppId] = match
+    // T-51-05 (mitigate): only accept a LISTEN line whose own reported
+    // appid matches the appId THIS entry was spawned for, and whose port
+    // falls in the ephemeral/registered range -- never a privileged port,
+    // never another helper's announcement misattributed to this one.
+    if (matchedAppId !== appId) return
+    const port = Number(portStr)
+    if (
+      !Number.isInteger(port) ||
+      port < MIN_EPHEMERAL_PORT ||
+      port > MAX_PORT
+    ) {
+      return
+    }
+    const entry = helpers.get(appId)
+    if (entry && entry.child === child) {
+      entry.port = port
+    }
+    settlePortOnce(port)
+  }
+
   child.stdout?.on('data', (data: Buffer) => {
-    logInfo(`bridge helper: ${data.toString().trim()}`, LogPrefix.Steam)
+    logInfo(
+      `bridge helper [${appId}]: ${data.toString().trim()}`,
+      LogPrefix.Steam
+    )
   })
   child.stderr?.on('data', (data: Buffer) => {
-    logWarning(`bridge helper: ${data.toString().trim()}`, LogPrefix.Steam)
+    const text = data.toString()
+    logWarning(`bridge helper [${appId}]: ${text.trim()}`, LogPrefix.Steam)
+    for (const line of text.split('\n')) {
+      handleStderrLine(line)
+    }
   })
   child.on('exit', (code, signal) => {
     logWarning(
-      `bridge helper exited (code=${code} signal=${signal}) -- a future ensureBridgeHelperReady() call will respawn it`,
+      `bridge helper [${appId}] exited (code=${code} signal=${signal}) -- a future ensureBridgeHelperReady() call will respawn it`,
       LogPrefix.Steam
     )
-    if (helperProcess === child) {
-      helperProcess = null
+    settlePortOnce(null)
+    if (helpers.get(appId)?.child === child) {
+      helpers.delete(appId)
     }
   })
   child.on('error', (error) => {
-    logError(['bridge helper process error', error], LogPrefix.Steam)
-    if (helperProcess === child) {
-      helperProcess = null
+    logError([`bridge helper [${appId}] process error`, error], LogPrefix.Steam)
+    settlePortOnce(null)
+    if (helpers.get(appId)?.child === child) {
+      helpers.delete(appId)
     }
   })
 
-  helperProcess = child
-  // Quick task 260907-juv (Layer A): register so `handleExit()` (via
-  // `shutdownLongLivedChildren()`) can reach this helper gracefully on in-app quit. This
-  // is the ONLY production registration of `shutdownBridgeHelper` -- see that function's
-  // doc comment for why it must never be called directly from a quit path.
-  unregisterLongLivedChild = registerLongLivedChild(
-    'steam-bridge-helper',
-    shutdownBridgeHelper
+  const unregister = registerLongLivedChild(
+    `steam-bridge-helper-${appId}`,
+    () => stopBridgeHelper(appId)
   )
+
+  const entry: BridgeHelperEntry = {
+    appId,
+    child,
+    port: null,
+    portReady,
+    unregister
+  }
+  helpers.set(appId, entry)
+  return entry
 }
 
 interface ProbeResult {
@@ -159,15 +260,15 @@ interface ProbeResult {
 }
 
 /**
- * Opens one short-lived loopback connection and, over it, sends CONTROL
- * HEALTH then (only if HEALTH answered ok) CONTROL WHOAMI -- reusing the
- * helper's persistent-connection read loop (D-03/24-02) for a single
+ * Opens one short-lived loopback connection to `port` and, over it, sends
+ * CONTROL HEALTH then (only if HEALTH answered ok) CONTROL WHOAMI --
+ * reusing the helper's persistent-connection read loop for a single
  * request/response pair each, rather than a second connection per slot.
  * Bounded by `PROBE_TIMEOUT_MS` so a helper that never answers (or never
  * accepts the connection) resolves `{ healthOk: false, whoamiOk: false }`
  * instead of hanging (D-06).
  */
-function probeHealthAndWhoami(): Promise<ProbeResult> {
+function probeHealthAndWhoami(port: number): Promise<ProbeResult> {
   return new Promise((resolve) => {
     const socket = new Socket()
     let settled = false
@@ -191,7 +292,7 @@ function probeHealthAndWhoami(): Promise<ProbeResult> {
 
     socket.once('error', () => finish({ healthOk, whoamiOk: false }))
 
-    socket.connect(BRIDGE_HELPER_PORT, BRIDGE_HELPER_HOST, () => {
+    socket.connect(port, BRIDGE_HELPER_HOST, () => {
       socket.write(encodeControl(PROBE_REQUEST_ID, 'health'))
     })
 
@@ -234,21 +335,44 @@ function probeHealthAndWhoami(): Promise<ProbeResult> {
 }
 
 /**
- * D-03/D-06: lazily spawns the ONE shared bridge helper (reused across
- * every bridge game), then bounded-polls its CONTROL HEALTH/WHOAMI
- * readiness -- returning an observable ready/not-ready result rather than
- * assuming success, since the caller's own launch (`runWineCommand({ wait:
- * false })`) is fire-and-forget.
+ * Waits up to `PORT_WAIT_BUDGET_MS` (unref'd, Jest-safe) for `entry`'s
+ * LISTEN port to become known. Returns the port immediately if it is
+ * already known (the common case once a helper has been up for a moment).
+ */
+function waitForPort(entry: BridgeHelperEntry): Promise<number | null> {
+  if (entry.port !== null) {
+    return Promise.resolve(entry.port)
+  }
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (port: number | null) => {
+      if (settled) return
+      settled = true
+      resolve(port)
+    }
+    const timeout = setTimeout(() => finish(null), PORT_WAIT_BUDGET_MS)
+    timeout.unref?.()
+    entry.portReady.then(finish)
+  })
+}
+
+/**
+ * D-51-01/D-06: lazily spawns a per-appId bridge helper, waits (bounded)
+ * for it to report its own OS-assigned port, then bounded-polls its
+ * CONTROL HEALTH/WHOAMI readiness against that port -- returning an
+ * observable ready/not-ready result rather than assuming success, since
+ * the caller's own launch (`runWineCommand({ wait: false })`) is
+ * fire-and-forget.
  *
  *  - `appId` guarded with the same `/^\d+$/` rule as
  *    `ensureSteamClientReady`/`buildSteamProtocolUrl` (T-24-07 lineage).
- *  - HEALTH ok + WHOAMI ok -> `{ status: 'ready', ready: true }`.
+ *  - HEALTH ok + WHOAMI ok -> `{ status: 'ready', ready: true, port }`.
  *  - HEALTH ok, WHOAMI not ok (process up, no live Steam session) ->
- *    `{ status: 'not-inited', ready: false }` -- a DISTINCT reason from
- *    unreachable (finding #7) -- and fires `steamBridgeSetupRequired`.
- *  - HEALTH never answers within the poll budget ->
- *    `{ status: 'unreachable', ready: false }` (D-06 observable failure)
- *    and fires `steamBridgeSetupRequired`.
+ *    `{ status: 'not-inited', ready: false, port }` -- a DISTINCT reason
+ *    from unreachable (finding #7) -- and fires `steamBridgeSetupRequired`.
+ *  - Port never reported, OR HEALTH never answers within the poll budget ->
+ *    `{ status: 'unreachable', ready: false, port? }` (D-06 observable
+ *    failure) and fires `steamBridgeSetupRequired`.
  */
 export async function ensureBridgeHelperReady(
   appId: string
@@ -265,19 +389,36 @@ export async function ensureBridgeHelperReady(
     }
   }
 
-  spawnHelperIfNeeded()
+  const entry = ensureHelperSpawned(appId)
+  const port = await waitForPort(entry)
+
+  if (port === null) {
+    logWarning(
+      `ensureBridgeHelperReady: bridge helper for appId ${appId} never reported a LISTEN port within the poll budget`,
+      LogPrefix.Steam
+    )
+    sendFrontendMessage('steamBridgeSetupRequired', {
+      appName: appId,
+      reason: 'unreachable'
+    })
+    return {
+      status: 'unreachable',
+      ready: false,
+      error: 'Bridge helper unreachable within the poll budget'
+    }
+  }
 
   for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
     await sleep(POLL_INTERVAL_MS)
 
-    const { healthOk, whoamiOk } = await probeHealthAndWhoami()
+    const { healthOk, whoamiOk } = await probeHealthAndWhoami(port)
 
     if (!healthOk) {
       continue
     }
 
     if (whoamiOk) {
-      return { status: 'ready', ready: true }
+      return { status: 'ready', ready: true, port }
     }
 
     logWarning(
@@ -291,6 +432,7 @@ export async function ensureBridgeHelperReady(
     return {
       status: 'not-inited',
       ready: false,
+      port,
       error:
         'Bridge helper process is up but not initialized against a live Steam session'
     }
@@ -307,52 +449,59 @@ export async function ensureBridgeHelperReady(
   return {
     status: 'unreachable',
     ready: false,
+    port,
     error: 'Bridge helper unreachable within the poll budget'
   }
 }
 
 /**
- * Finding #8: torn down via `backend/longLivedChildren`'s registry, which
- * `handleExit()` (`backend/utils.ts`) fans out to immediately before `app.exit()` on
- * in-app quit (quick task 260907-juv, Layer A -- as of 2026-09-07; the `main.ts`
- * before-quit hook this comment used to name was deleted in the Phase 35 Tauri
- * cutover and never replaced until now). `spawnHelperIfNeeded()` registers this
- * function on that registry the moment the shared helper is first spawned, so this is
- * NOT called directly from any quit path -- only via the registry, and only from tests
- * that exercise this module's own behaviour directly. A no-op when no helper was ever
- * spawned -- safe to call unconditionally on every quit, including quits where no
- * bridge game was ever launched this session.
+ * D-51-01: tears down ONLY the helper for `appId`, via `backend/
+ * longLivedChildren`'s registry (never called directly from a quit path --
+ * see that module's own doc). Safe to call unconditionally, including for
+ * an appId whose helper was never spawned this session (a no-op).
  *
- * Note (Layer A alone does not cover every quit path): the red-X/Cmd+Q/`osascript`
- * quit path never reaches this function at all -- the sidecar is SIGKILLed by the Rust
- * shell before any JavaScript here could run. That path is covered separately by
- * Layer B (`src-tauri/src/main.rs`'s process-group reap of the sidecar's descendants).
+ * This is the per-appId replacement for Phase 24's old single-shared-helper
+ * teardown export (deleted entirely -- pinned by helperProcess.test.ts's
+ * own invariant test). bottleProcessMonitor.ts's `onStopped` hook (Phase 51
+ * Plan 01 Task 2) calls this the moment a bridge game's own process(es)
+ * exit, so a helper's lifetime is tied to its game's, never to the whole
+ * app session.
  */
-export function shutdownBridgeHelper(): void {
-  if (unregisterLongLivedChild) {
-    unregisterLongLivedChild()
-    unregisterLongLivedChild = null
-  }
-
-  if (!helperProcess) {
+export function stopBridgeHelper(appId: string): void {
+  const entry = helpers.get(appId)
+  if (!entry) {
     return
   }
 
+  entry.unregister()
+  helpers.delete(appId)
+
   logInfo(
-    'shutdownBridgeHelper: terminating the shared bridge helper (app quit, finding #8)',
+    `stopBridgeHelper: terminating the bridge helper for appId ${appId}`,
     LogPrefix.Steam
   )
-  const child = helperProcess
-  helperProcess = null
-  child.kill()
+  entry.child.kill()
 }
 
 /**
- * Test-only reset of the module-scoped shared-helper handle -- mirrors
- * bottle.ts's `__stopBottledRaiseLoops` test-hook convention. Never called
- * from production code.
+ * Tears down every currently-running bridge helper, regardless of appId --
+ * the full-app-quit fan-out. Each individual appId is ALSO independently
+ * registered on `backend/longLivedChildren`'s own registry (via
+ * `ensureHelperSpawned`), so `shutdownLongLivedChildren()` reaches every
+ * helper even if this function is never called directly.
+ */
+export function shutdownAllBridgeHelpers(): void {
+  for (const appId of Array.from(helpers.keys())) {
+    stopBridgeHelper(appId)
+  }
+}
+
+/**
+ * Test-only reset of the per-appId registry -- mirrors bottle.ts's
+ * `__stopBottledRaiseLoops` test-hook convention. Never called from
+ * production code.
  */
 export function __resetBridgeHelperStateForTests(): void {
-  helperProcess = null
-  unregisterLongLivedChild = null
+  helpers.clear()
+  bridgeHelperPathOverride = null
 }

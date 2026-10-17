@@ -1,18 +1,37 @@
 /**
- * Phase 24 Plan 02 (R2) -- the native arm64 host helper.
+ * Phase 51 Plan 01 (D-51-01) -- the native arm64 host helper, now spawned
+ * ONE PER BRIDGE LAUNCH, inited with the launching game's REAL AppID.
  *
- * Upgrades spike 005b's connect-per-call `bridge_server.c`
- * (.claude/skills/spike-findings-gamelib/sources/005b-bottle-to-host-tcp/bridge_server.c)
- * to D-03's persistent-channel design: ONE shared, long-lived process that
- * `dlopen`s the real `libsteam_api.dylib`, calls `SteamAPI_InitFlat` EXACTLY
- * ONCE at startup (D-04 -- the flat init takes no AppID; identity resolves
- * from a `steam_appid.txt` containing `480`/Spacewar in the working
- * directory), holds the inited `ISteamUser`/`ISteamFriends` accessor
- * pointers for the process lifetime, and serves marshaled requests over a
- * single persistent `127.0.0.1` loopback-only connection using the binary
- * frame defined in `src/backend/storeManagers/steam/bridge/protocol.ts`
- * (24-RESEARCH.md Pattern 3 -- the SAME frame the already-generated shim's
- * `bridge_transact()` speaks, native/steam-bridge/generated/steam_api_shim.c).
+ * Supersedes Phase 24 D-03 ("ONE shared, long-lived process, reused across
+ * every bridge game") and D-04 ("single generic AppID 480/Spacewar,
+ * resolved from a `steam_appid.txt` staged once next to the bundled
+ * binary"). "One Steam login" still holds -- Mac Steam itself is still the
+ * single signed-in client every helper's `dlopen`'d `libsteam_api.dylib`
+ * talks to -- but "one helper" does not: every bridge launch now gets its
+ * OWN helper process, told its appId over argv, writing its OWN
+ * `steam_appid.txt` into its OWN per-appId working directory (set by the
+ * spawning backend, `helperProcess.ts`'s per-appId staging dir under
+ * `steamBridgeHelperStateDir`) BEFORE it ever calls `SteamAPI_InitFlat` --
+ * so ISteamApps/ISteamUserStats/ISteamRemoteStorage (follow-on plans) and
+ * Mac Steam's own In-Game/playtime tracking all see the game's real AppID,
+ * never 480. D-51-03 (two bridge games running at once, no lock) falls
+ * directly out of this: two appIds simply mean two independent processes
+ * on two independent ports -- there is no shared state left to contend on.
+ *
+ * The OS assigns this helper's listening port (bind port 0, then
+ * `getsockname()` to learn what it got) rather than a fixed, well-known
+ * port -- there is no shared, predictable `BRIDGE_PORT` left anywhere in
+ * this file. The port is announced on ONE stderr line
+ * (`LISTEN 127.0.0.1:<port> appid=<id> mode=full`) that the spawning
+ * backend parses to learn it, and handed to the game's own regenerated
+ * shim via `gamelib_bridge.cfg` (`bridgeConfig.ts`) -- the shim fails
+ * closed (no fixed-port fallback) if that file is missing/malformed.
+ *
+ * Still ONE persistent `127.0.0.1` loopback-only connection per game
+ * process, speaking the SAME binary frame defined in
+ * `src/backend/storeManagers/steam/bridge/protocol.ts`
+ * (24-RESEARCH.md Pattern 3) that the generated shim's own
+ * `bridge_transact()` speaks (native/steam-bridge/generated/steam_api_shim.c).
  *
  * Wire frame (matches protocol.ts byte-for-byte):
  *   Request:  [4B LE total_len][4B LE request_id][2B LE ordinal][2B LE slot][N argBlob]
@@ -22,29 +41,38 @@
  *     status: 0=ok, 1=err/no-live-session (or not-inited, for CONTROL WHOAMI
  *     answered before init succeeds)
  *
- * CONTROL frame (review finding #7): a reserved ordinal (0xFFFF) reconciles
- * spike 005b's human-readable PING/WHOAMI text handshake into this binary
- * protocol so the 24-06 readiness probe can distinguish two states a single
- * liveness check cannot:
+ * CONTROL frame (Phase 24 review finding #7, extended D-51-01): a reserved
+ * ordinal (0xFFFF) reconciles the human-readable PING/WHOAMI text handshake
+ * into this binary protocol, now with a THIRD slot:
  *   - HEALTH (slot 0): answered immediately, BEFORE/independent of whether
  *     `SteamAPI_InitFlat` succeeded -- proves "process up". This is why
- *     init failure below does NOT exit(); it degrades to serving HEALTH ok
- *     / WHOAMI not-inited rather than crashing the whole helper (a
- *     deliberate divergence from spike 005b, which exits on init failure).
+ *     dylib-load/init failure below does NOT exit() -- it degrades to
+ *     serving HEALTH ok / WHOAMI not-inited rather than crashing the whole
+ *     helper.
  *   - WHOAMI (slot 1): answered ok+real-SteamID64-bytes ONLY once InitFlat
  *     succeeded against the live signed-in Mac Steam -- proves "init
  *     succeeded against a live session".
+ *   - HELLO (slot 2, D-51-01): answered STATUS_OK unconditionally (like
+ *     HEALTH, independent of init outcome) the moment the regenerated
+ *     shim's own `SteamAPI_Init()` connects -- proves "this is really a
+ *     GameLib per-appId helper, not a stale/foreign listener on the port
+ *     read out of gamelib_bridge.cfg". Logged once per connection, not once
+ *     per request.
  *
- * T-24-01 (mitigate): binds INADDR_LOOPBACK only -- never a routable/
- * all-interfaces bind.
+ * T-51-01 (mitigate, carries forward T-24-01): binds INADDR_LOOPBACK only
+ * -- never a routable/all-interfaces bind, per helper.
  * T-24-03 (mitigate): every inbound frame's declared length is bounds-
  * checked against MAX_FRAME_BYTES BEFORE any read of the body, into a
  * fixed-size (never attacker-sized) static buffer -- never allocates past
  * the cap.
  * T-24-SC (mitigate): the dylib path is built from $HOME (canonical,
  * OS/Steam-provided location), never from attacker-supplied input.
+ * T-51-03 (mitigate): the helper re-validates its own `--appid` argument
+ * (digits only, length <= 10) independently of whatever validation the
+ * spawning backend already did -- never trusts argv blindly.
  *
- * Compiled by clang at packaging time (Plan 24-07), not here.
+ * Compiled by clang at packaging time (Plan 24-07/meta/buildSteamBridgeShims.ts),
+ * not here.
  */
 
 #include <stdio.h>
@@ -62,8 +90,6 @@
 #include <arpa/inet.h>
 
 // === Frame constants (MUST match src/backend/storeManagers/steam/bridge/protocol.ts) ===
-
-#define BRIDGE_PORT 54550
 
 #define LENGTH_FIELD_BYTES 4
 #define REQUEST_ID_BYTES 4
@@ -97,6 +123,8 @@
 #define CONTROL_ORDINAL 0xffff
 #define CONTROL_SLOT_HEALTH 0
 #define CONTROL_SLOT_WHOAMI 1
+// D-51-01: the shim's own connect-time handshake slot (see module doc).
+#define CONTROL_SLOT_HELLO 2
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -106,10 +134,16 @@
 // request's real latency (pump_callbacks alone sleeps up to 150ms) so this
 // never fires during normal operation, but bounded so a partial-send stall
 // (crashed bottle mid-frame, wedged/malicious loopback peer) cannot freeze
-// the shared helper -- and therefore every OTHER bridge game and readiness
-// probe (WR-01's serialized accept loop makes an unbounded stall here
-// especially costly) -- forever.
+// this helper -- and, now that a game's own process lifetime owns this
+// helper's teardown (bottleProcessMonitor.ts), it never needs to wedge
+// another game's bridge session either, since each appId already has its
+// own helper -- forever.
 #define RECV_TIMEOUT_SECONDS 5
+
+// T-51-03: the longest digit-string this helper accepts as --appid. Real
+// Steam AppIDs are well under this; it exists purely to reject nonsense
+// input before it reaches anything else.
+#define MAX_APPID_DIGITS 10
 
 // === libsteam_api.dylib flat surface (dlsym'd once, held for process life) ===
 
@@ -130,13 +164,18 @@ static GetPersona_t   GetPersona;
 static void *g_user = NULL, *g_friends = NULL;
 // True once SteamAPI_InitFlat succeeded against a live session AND both
 // interface accessors resolved to non-NULL -- gates CONTROL WHOAMI and the
-// identity slots below. HEALTH is answerable regardless of this flag
-// (finding #7 -- "process up" vs "init succeeded").
+// identity slots below. HEALTH (and HELLO) are answerable regardless of
+// this flag (finding #7 -- "process up" vs "init succeeded").
 static int g_inited = 0;
 
-// One dlopen'd handle for the process's entire lifetime (D-04) -- never a
-// second dlopen of libsteam_api.dylib anywhere in this file.
+// One dlopen'd handle for this process's entire lifetime -- never a second
+// dlopen of libsteam_api.dylib anywhere in this file.
 static void *g_dylib_handle = NULL;
+
+// D-51-01: this helper's own real AppID, as given on argv, for the HELLO
+// log line and the process's self-description. Sized for MAX_APPID_DIGITS
+// plus the NUL terminator.
+static char g_appid[MAX_APPID_DIGITS + 1];
 
 // Fixed-size argument buffer -- T-24-03: sized to MAX_FRAME_BYTES exactly,
 // so an inbound frame's declared length is checked against this cap BEFORE
@@ -149,6 +188,20 @@ static void logts(const char *cat, const char *msg) {
   struct tm *g = gmtime(&t);
   strftime(ts, sizeof ts, "%Y-%m-%dT%H:%M:%SZ", g);
   fprintf(stderr, "[%s] %-6s %s\n", ts, cat, msg);
+}
+
+/*
+ * T-51-03: `--appid` must be 1-MAX_APPID_DIGITS ASCII digits and nothing
+ * else -- re-validated here independently of whatever the spawning backend
+ * (helperProcess.ts's own NUMERIC_APP_ID guard) already checked.
+ */
+static int is_valid_appid(const char *s) {
+  size_t len = strlen(s);
+  if (len == 0 || len > MAX_APPID_DIGITS) return 0;
+  for (size_t i = 0; i < len; i++) {
+    if (s[i] < '0' || s[i] > '9') return 0;
+  }
+  return 1;
 }
 
 /*
@@ -167,20 +220,22 @@ static void resolve_dylib_path(char *out, size_t outSize) {
 }
 
 /*
- * D-04: the helper carries ONE generic identity-only AppID (480/Spacewar)
- * for its whole life, resolved via a `steam_appid.txt` in the process's
- * working directory. Written here (idempotent, best-effort) so identity
- * resolution never silently fails with "No appID found" regardless of how
- * the helper is spawned -- the single init call below depends on this file
- * existing BEFORE it runs.
+ * D-51-01: writes THIS helper's own real AppID (never "480") into
+ * `steam_appid.txt` in the process's working directory -- the spawning
+ * backend sets that cwd to a per-appId staging directory
+ * (`steamBridgeHelperStateDir/<appId>/`) specifically so two concurrently
+ * running helpers (D-51-03) never race on this file. Idempotent,
+ * best-effort: a write failure is logged, never fatal -- the single
+ * `SteamAPI_InitFlat` call below still runs and simply resolves whatever
+ * identity (or lack of one) the cwd happens to carry.
  */
-static void ensure_steam_appid_file(void) {
+static void ensure_steam_appid_file(const char *appId) {
   FILE *f = fopen("steam_appid.txt", "w");
   if (!f) {
-    logts("WARN", "could not write steam_appid.txt in cwd (D-04 identity may fail to resolve)");
+    logts("WARN", "could not write steam_appid.txt in cwd (D-51-01 identity may fail to resolve)");
     return;
   }
-  fputs("480", f);
+  fputs(appId, f);
   fclose(f);
 }
 
@@ -197,7 +252,11 @@ static void pump_callbacks(void) {
 /*
  * dlopen's the real libsteam_api.dylib EXACTLY ONCE and resolves every flat
  * symbol this helper needs. Returns 1 on success, 0 on a fatal dlopen/dlsym
- * failure (helper cannot run at all without these).
+ * failure (Steam is not installed, or a Steam update changed an export this
+ * helper relies on) -- the caller does NOT exit() on a 0 return (D-51-01
+ * divergence from spike 005b, carried forward from 24-02): the helper must
+ * keep serving CONTROL HEALTH/HELLO even when libsteam_api.dylib itself
+ * could not be loaded at all.
  */
 static int load_steam_api(void) {
   char dylibPath[1024];
@@ -225,20 +284,18 @@ static int load_steam_api(void) {
 }
 
 /*
- * D-04: calls SteamAPI_InitFlat EXACTLY ONCE, with no AppID parameter (the
- * flat init contract). Structurally, this call -- and this call alone --
- * precedes the bind/listen/accept loop below; it is never retried, and
+ * Calls SteamAPI_InitFlat EXACTLY ONCE, with no AppID parameter (the flat
+ * init contract -- identity resolves from the `steam_appid.txt`
+ * `ensure_steam_appid_file()` already wrote into this process's own cwd,
+ * BEFORE this is called). Structurally, this call -- and this call alone
+ * -- precedes the bind/listen/accept loop below; it is never retried, and
  * there is no re-init path anywhere else in this file.
  *
- * Deliberately does NOT exit() on failure (divergence from spike 005b):
- * the helper must keep serving CONTROL HEALTH even when Steam is not
- * running/signed in, so the 24-06 probe can observe "process up" separately
- * from "init succeeded" (finding #7). g_inited gates every identity-bearing
- * slot and CONTROL WHOAMI; HEALTH is unconditional.
+ * Only reached when `load_steam_api()` succeeded -- see main()'s
+ * dylib-missing branch, which logs and skips this entirely rather than
+ * calling it against unresolved function pointers.
  */
-static void init_steam_api_once(void) {
-  ensure_steam_appid_file();
-
+static void init_steam_api_once(const char *appId) {
   char err[1024] = {0};
   int r = InitFlat(err);
   // WR-04: only invoke the interface accessors once InitFlat itself
@@ -259,13 +316,15 @@ static void init_steam_api_once(void) {
     char msg[1200];
     snprintf(
       msg, sizeof msg,
-      "InitFlat failed r=%d err=%s (is Steam running + signed in?) -- "
-      "serving HEALTH only until a real session is live",
-      r, err
+      "InitFlat failed r=%d err=%s appid=%s (is Steam running + signed in?) -- "
+      "serving HEALTH/HELLO only until a real session is live",
+      r, err, appId
     );
     logts("INIT", msg);
   } else {
-    logts("INIT", "SteamAPI ready (single InitFlat call, identity AppID 480)");
+    char msg[64];
+    snprintf(msg, sizeof msg, "SteamAPI ready (single InitFlat call, real appid=%s)", appId);
+    logts("INIT", msg);
   }
 }
 
@@ -299,7 +358,7 @@ static int recv_all(int fd, void *buf, size_t len) {
  * is retried, not treated as a closed connection. WR-03: SIGPIPE is
  * ignored process-wide at startup (main()), so a send() to a peer that has
  * already closed its end returns -1/EPIPE here (handled like any other
- * terminal send error) instead of raising SIGPIPE and killing the shared
+ * terminal send error) instead of raising SIGPIPE and killing this
  * helper. */
 static int send_all(int fd, const void *buf, size_t len) {
   const uint8_t *p = (const uint8_t *)buf;
@@ -334,9 +393,12 @@ static int send_response(int fd, uint32_t requestId, uint8_t status, const uint8
  * Dispatches one decoded request to the correct identity method / CONTROL
  * handler and sends the response. Never re-initializes Steamworks -- reads
  * the already-resolved g_user/g_friends pointers + g_inited flag only.
+ * `helloLogged` is connection-scoped state (owned by `serve_connection`'s
+ * stack frame) so the HELLO log line fires once per connection, not once
+ * per request on that connection.
  */
 static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, uint16_t slot,
-                                  const uint8_t *argBlob, uint32_t argLen) {
+                                  const uint8_t *argBlob, uint32_t argLen, int *helloLogged) {
   (void)argBlob;
   (void)argLen;
 
@@ -356,6 +418,19 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       uint8_t retbuf[8];
       memcpy(retbuf, &id, 8); // raw bytes, never parsed to a JS number
       send_response(fd, requestId, STATUS_OK, retbuf, 8);
+      return;
+    }
+    if (slot == CONTROL_SLOT_HELLO) {
+      // D-51-01: answerable pre-init, like HEALTH -- proves "this is a
+      // real GameLib per-appId helper", independent of whether Steam is
+      // signed in yet.
+      if (helloLogged && !*helloLogged) {
+        char msg[64];
+        snprintf(msg, sizeof msg, "shim attached appid=%s", g_appid);
+        logts("HELLO", msg);
+        *helloLogged = 1;
+      }
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
     send_response(fd, requestId, STATUS_ERR, NULL, 0); // unknown control slot
@@ -410,8 +485,8 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
 
   // ORDINAL_FLAT and any other ordinal: the flat SteamAPI_* surface is
   // marshaled client-side by the generated shim's own stubs (Plan 24-01);
-  // this phase's helper does not serve flat-ordinal requests over the
-  // wire. Answer a clean error rather than reading unbounded/hanging.
+  // this helper does not serve flat-ordinal requests over the wire. Answer
+  // a clean error rather than reading unbounded/hanging.
   send_response(fd, requestId, STATUS_ERR, NULL, 0);
 }
 
@@ -423,6 +498,7 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
  * or sends a malformed frame (T-24-03 -- abort, never read unbounded).
  */
 static void serve_connection(int fd) {
+  int helloLogged = 0;
   for (;;) {
     uint8_t lenField[LENGTH_FIELD_BYTES];
     if (!recv_all(fd, lenField, sizeof lenField)) break; // peer closed / error
@@ -456,23 +532,48 @@ static void serve_connection(int fd) {
     // so this recv can never write past the buffer.
     if (argLen > 0 && !recv_all(fd, g_argbuf, argLen)) break;
 
-    dispatch_and_respond(fd, requestId, ordinal, slot, g_argbuf, argLen);
+    dispatch_and_respond(fd, requestId, ordinal, slot, g_argbuf, argLen, &helloLogged);
   }
   close(fd);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
   // WR-03: ignore SIGPIPE process-wide before any socket I/O happens. Its
   // default disposition terminates the process, and writing to a socket
-  // whose peer has already closed (e.g. a bridge game/bottle exiting
-  // mid-request) raises it on macOS -- without this, that single peer's
-  // disconnect would kill the shared long-lived helper out from under
-  // every OTHER in-flight bridge game. send_all() above already treats
-  // the resulting EPIPE like any other terminal send error.
+  // whose peer has already closed (e.g. the bridge game exiting
+  // mid-request) raises it on macOS -- without this, a disconnect would
+  // kill this helper.  send_all() above already treats the resulting
+  // EPIPE like any other terminal send error.
   signal(SIGPIPE, SIG_IGN);
 
-  if (!load_steam_api()) return 2;
-  init_steam_api_once();
+  const char *appIdArg = NULL;
+  long portArg = 0;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--appid") == 0 && i + 1 < argc) {
+      appIdArg = argv[++i];
+    } else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
+      portArg = strtol(argv[++i], NULL, 10);
+    }
+  }
+
+  // T-51-03: reject before anything else runs -- no socket, no dylib load,
+  // no file write happens on a missing/invalid --appid.
+  if (!appIdArg || !is_valid_appid(appIdArg)) {
+    logts("FATAL", "missing or invalid --appid (required: 1-10 ASCII digits)");
+    return 6;
+  }
+  if (portArg < 0 || portArg > 65535) {
+    logts("FATAL", "invalid --port (must be 0-65535; 0 = OS-assigned ephemeral)");
+    return 6;
+  }
+
+  strncpy(g_appid, appIdArg, MAX_APPID_DIGITS);
+  g_appid[MAX_APPID_DIGITS] = '\0';
+
+  // D-51-01: write THIS helper's own real AppID BEFORE binding/listening,
+  // so the identity file is already correct the moment anything could
+  // possibly connect.
+  ensure_steam_appid_file(appIdArg);
 
   int s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0) {
@@ -484,19 +585,53 @@ int main(void) {
 
   struct sockaddr_in a = {0};
   a.sin_family = AF_INET;
-  a.sin_port = htons(BRIDGE_PORT);
-  // T-24-01: loopback-only bind, NEVER a routable/all-interfaces bind.
+  a.sin_port = htons((uint16_t)portArg);
+  // T-51-01 (carries forward T-24-01): loopback-only bind, NEVER a
+  // routable/all-interfaces bind -- per helper, every time.
   a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   if (bind(s, (struct sockaddr *)&a, sizeof a) < 0) {
-    logts("FATAL", "bind 127.0.0.1:54550 failed");
+    logts("FATAL", "bind 127.0.0.1 failed");
     return 4;
   }
+
+  // D-51-01: when the caller asked for port 0 (the normal case --
+  // helperProcess.ts always passes --port 0), learn whichever ephemeral
+  // port the OS actually assigned. There is no fixed, guessable port left
+  // in this file at all.
+  uint16_t actualPort = (uint16_t)portArg;
+  if (portArg == 0) {
+    struct sockaddr_in bound = {0};
+    socklen_t boundLen = sizeof bound;
+    if (getsockname(s, (struct sockaddr *)&bound, &boundLen) == 0) {
+      actualPort = ntohs(bound.sin_port);
+    } else {
+      logts("FATAL", "getsockname() failed after binding an ephemeral port");
+      return 4;
+    }
+  }
+
   if (listen(s, 8) < 0) {
     logts("FATAL", "listen failed");
     return 5;
   }
-  logts("LISTEN", "127.0.0.1:54550 (loopback-only, persistent-channel)");
+
+  char listenMsg[160];
+  snprintf(
+    listenMsg, sizeof listenMsg,
+    "127.0.0.1:%u appid=%s mode=full", (unsigned)actualPort, g_appid
+  );
+  logts("LISTEN", listenMsg);
+
+  // D-51-01: a missing/unloadable dylib (Steam not installed) is no longer
+  // fatal -- the helper keeps serving CONTROL HEALTH/HELLO so the backend's
+  // readiness probe gets a meaningful "not-inited" rather than the process
+  // simply never existing.
+  if (load_steam_api()) {
+    init_steam_api_once(g_appid);
+  } else {
+    logts("INIT", "dylib-missing -- g_inited stays 0, serving HEALTH/HELLO only");
+  }
 
   for (;;) {
     int c = accept(s, NULL, NULL);
@@ -505,8 +640,7 @@ int main(void) {
     // waiting for more bytes of an in-progress frame -- a partial-send
     // stall (crashed peer mid-frame) times out and closes the connection
     // (recv_all treats the resulting EAGAIN/EWOULDBLOCK as terminal, not
-    // EINTR-retried) instead of wedging the whole shared, serially-served
-    // helper indefinitely.
+    // EINTR-retried) instead of wedging this helper indefinitely.
     struct timeval recvTimeout;
     recvTimeout.tv_sec = RECV_TIMEOUT_SECONDS;
     recvTimeout.tv_usec = 0;

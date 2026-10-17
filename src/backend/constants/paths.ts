@@ -118,6 +118,16 @@ export const steamBridgeHelperPath = fixAsarPath(
   join(publicDir, 'bin', process.arch, 'darwin', 'steam-bridge-helper')
 )
 
+// Phase 51 Plan 01 (D-51-01): per-appId staging root for the bridge helper's
+// own cwd. Each running helper gets its OWN subdirectory
+// `<steamBridgeHelperStateDir>/<appId>/` so two concurrently-running
+// helpers (D-51-03, no lock) never race on the same `steam_appid.txt` --
+// the single shared staging dir `dirname(steamBridgeHelperPath)` (the
+// packaged bundle itself) used before this plan. Lives under `appFolder`
+// (GameLib's own writable config dir), never inside the packaged bundle,
+// which is read-only once signed/notarized.
+export const steamBridgeHelperStateDir = join(appFolder, 'steam-bridge')
+
 export const webviewPreloadPath = fixAsarPath(
   join('file://', publicDir, 'webviewPreload.js')
 )

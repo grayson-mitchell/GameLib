@@ -95,7 +95,12 @@ export const CONTROL_ORDINAL = 0xffff
 
 export const CONTROL_SLOT = {
   health: 0,
-  whoami: 1
+  whoami: 1,
+  // D-51-01 (Phase 51 Plan 01): the regenerated shim speaks this slot once
+  // per connection, right after connecting, to prove it is really talking
+  // to a per-appId GameLib helper (not a stale/foreign listener on the
+  // port it read out of gamelib_bridge.cfg) before issuing any real call.
+  hello: 2
 } as const
 
 // Not exported (this and DecodedRequest, DecodedResponse below): verified to have no
