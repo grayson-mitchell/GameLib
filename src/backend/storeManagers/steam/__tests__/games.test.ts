@@ -25,7 +25,8 @@ import SteamGame, {
   __resetBridgeFailedSessionForTests,
   markForcedWindowsViaBottle,
   clearForcedWindowsViaBottle,
-  __resetLoggedEmptyGameInfoMissesForTests
+  __resetLoggedEmptyGameInfoMissesForTests,
+  getBridgeRouteVerdict
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -240,37 +241,74 @@ jest.mock('backend/constants/environment', () => ({
 // tellBottledSteamTo*, getSteamBottleSettings). Fully replaced (not spied) —
 // bottle.ts pulls in backend/config's heavy transitive chain and lazily
 // imports backend/launcher, neither of which games.test.ts needs to exercise.
-jest.mock('../bottle', () => ({
-  isBottleReady: jest.fn(),
-  tellBottledSteamToInstall: jest.fn(),
-  tellBottledSteamToLaunch: jest.fn(),
-  tellBottledSteamToUninstall: jest.fn(),
-  getSteamBottleSettings: jest.fn(),
-  // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
-  getBottleSteamappsDir: jest.fn(),
-  // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
-  // wiring resolves the bottle dir via this.
-  getBottleDir: jest.fn(),
+jest.mock('../bottle', () => {
   // Phase 24 Plan 08 (R4): dedicated bridge bottle readiness/provisioning
   // surface — installBridgeGame()'s BLOCKER-1 inline provisioning call.
-  isBridgeBottleReady: jest.fn(),
-  getBridgeBottleSettings: jest.fn(),
-  provisionBridgeBottle: jest.fn(),
-  // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
-  removePerGameBridgeBottle: jest.fn(),
-  // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
-  // wipes a jest.fn()'s implementation before every test, but games.ts calls
-  // this directly as a pure, deterministic builder, so the factory gives it
-  // a real (mirrored) implementation that survives resetMocks.
-  bridgeBottleNameFor: (appId: string): string | null =>
-    /^\d+$/.test(appId) ? `GameLibSteamBridge-${appId}` : null
-}))
+  // Declared as a local const (not inline in the returned object) so
+  // findBridgeInstallBottle below can close over the SAME jest.fn() object
+  // identity -- resetMocks only clears a mock's calls/implementation, it
+  // never replaces the object reference, so every existing test that
+  // already drives isBridgeBottleReady for its own purposes also drives
+  // findBridgeInstallBottle's real-shaped reimplementation for free.
+  const isBridgeBottleReady = jest.fn()
+
+  return {
+    isBottleReady: jest.fn(),
+    tellBottledSteamToInstall: jest.fn(),
+    tellBottledSteamToLaunch: jest.fn(),
+    tellBottledSteamToUninstall: jest.fn(),
+    getSteamBottleSettings: jest.fn(),
+    // Phase 21 Plan 11 (D-15/SNI-08): bottle depot-download write target.
+    getBottleSteamappsDir: jest.fn(),
+    // Phase 51 Plan 01 (D-51-01): launchBridgeGame()'s bottleProcessMonitor
+    // wiring resolves the bottle dir via this.
+    getBottleDir: jest.fn(),
+    isBridgeBottleReady,
+    getBridgeBottleSettings: jest.fn(),
+    provisionBridgeBottle: jest.fn(),
+    // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
+    removePerGameBridgeBottle: jest.fn(),
+    // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
+    // wipes a jest.fn()'s implementation before every test, but games.ts calls
+    // this directly as a pure, deterministic builder, so the factory gives it
+    // a real (mirrored) implementation that survives resetMocks.
+    bridgeBottleNameFor: (appId: string): string | null =>
+      /^\d+$/.test(appId) ? `GameLibSteamBridge-${appId}` : null,
+    // Phase 51 Plan 09 (D-51-09): LOCATION, not eligibility. Plain function
+    // for the same resetMocks-survival reason as bridgeBottleNameFor above,
+    // reimplemented against isBridgeBottleReady's readiness signal (the
+    // dedicated bridge-readiness mock, never reused for unrelated purposes
+    // elsewhere in this file -- unlike the shared graceful-fs existsSync
+    // mock, which many unrelated describe blocks drive for their own
+    // purposes and would cross-contaminate if reused here). Every existing
+    // test that already sets isBridgeBottleReady(true) to reach the bridge
+    // branch gets a correct findBridgeInstallBottle result with zero
+    // per-test changes.
+    findBridgeInstallBottle: (appId: string): string | null => {
+      const perGameName = /^\d+$/.test(appId)
+        ? `GameLibSteamBridge-${appId}`
+        : null
+      if (perGameName && isBridgeBottleReady(perGameName)) {
+        return perGameName
+      }
+      if (isBridgeBottleReady('GameLibSteamBridge')) {
+        return 'GameLibSteamBridge'
+      }
+      return null
+    }
+  }
+})
 
 // ── bridge/allowlist.ts mock (24-03) — controls isBridgeEligible()'s
 // bridgeAllowlist.has(appId) lookup without pulling in the real bundled
 // bridge-allowlist.json/zod validation.
+// Phase 51 Plan 09 (D-51-07): knownBadReason added alongside has() --
+// assembleBridgeRouteInput() reads both. resetMocks:true means a test that
+// never sets this returns `undefined`; assembleBridgeRouteInput() coerces
+// with `?? null` so that default never misreads as "known bad" (which
+// requires a non-null reason) in every pre-existing test below.
 jest.mock('../bridge/allowlist', () => ({
-  bridgeAllowlist: { has: jest.fn() }
+  bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
 }))
 
 // ── bridge/shimGenerate.ts mock (24-05) — installBridgeGame()'s post-download
@@ -1707,6 +1745,195 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(secondResult).toBe(true)
   })
 
+  it('shim-not-built with arch x64 fires steamBridgeSetupRequired with reason win64-no-shim (D-51-13), not the generic shim-refresh-failed', async () => {
+    const WIN64_SHIM_APP_ID = '555556'
+    library.set(WIN64_SHIM_APP_ID, makeEntry({ title: 'Win64 Shim Missing' }))
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'shim-not-built',
+      arch: 'x64'
+    })
+
+    const game = new SteamGame(WIN64_SHIM_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(false)
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: WIN64_SHIM_APP_ID,
+        reason: 'win64-no-shim',
+        fallbackAvailable: true
+      }
+    )
+  })
+
+  it("D-51-09 (Task 2): placeShimForGame's typed 'miss' status at LAUNCH time persists the scan verdict (steamMetadataStore.set observed) and fires steamBridgeSetupRequired with reason scan-miss + missingSymbols, never calling runWineCommand", async () => {
+    const MISS_APP_ID = '555557'
+    library.set(MISS_APP_ID, makeEntry({ title: 'Launch-Time Miss' }))
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'miss',
+      verdict: {
+        status: 'miss',
+        arch: 'x86',
+        missingSymbols: ['SteamUtils005'],
+        interfaceVersions: {},
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'v1',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    const game = new SteamGame(MISS_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(false)
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      {
+        appName: MISS_APP_ID,
+        reason: 'scan-miss',
+        missingSymbols: ['SteamUtils005'],
+        fallbackAvailable: true
+      }
+    )
+    const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([id, value]) =>
+        id === MISS_APP_ID &&
+        value?.bridge?.scan?.status === 'miss' &&
+        value.bridge.scan.missingSymbols.includes('SteamUtils005')
+    )
+    expect(persistCall).toBeDefined()
+
+    // Poisoned this session -- a later launch() for the SAME appId skips
+    // the bridge entirely (finding #3 lineage), mirroring the shim-not-built
+    // case above.
+    const secondResult = await game.launch({} as any)
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(MISS_APP_ID)
+    expect(secondResult).toBe(true)
+  })
+
+  it("D-51-09 (Task 2): placeShimForGame's 'no-steam-api' status at launch skips ensureBridgeHelperReady/writeBridgeConfig entirely, calls runWineCommand directly, and persists the clean verdict", async () => {
+    const NO_STEAM_API_APP_ID = '555558'
+    library.set(
+      NO_STEAM_API_APP_ID,
+      makeEntry({ title: 'No Steam API Import' })
+    )
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'no-steam-api',
+      verdict: {
+        status: 'clean',
+        arch: 'x86',
+        missingSymbols: [],
+        interfaceVersions: {},
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'v1',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    const game = new SteamGame(NO_STEAM_API_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+    expect(writeBridgeConfig).not.toHaveBeenCalled()
+    expect(runWineCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commandParts: [RESOLVED_EXE_PATH],
+        wait: false
+      })
+    )
+    expect(result).toBe(true)
+    const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([id, value]) =>
+        id === NO_STEAM_API_APP_ID && value?.bridge?.scan?.status === 'clean'
+    )
+    expect(persistCall).toBeDefined()
+  })
+
+  it("D-51-09 (Task 2): placeShimForGame's 'placed' status at launch persists the clean verdict via writeBridgeScanVerdict (steamMetadataStore.set observed) and still reaches runWineCommand through the normal helper/config path", async () => {
+    const PLACED_APP_ID = '555559'
+    library.set(PLACED_APP_ID, makeEntry({ title: 'Freshly Re-placed Shim' }))
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'placed',
+      shimPath: RESOLVED_EXE_PATH,
+      verdict: {
+        status: 'clean',
+        arch: 'x86',
+        missingSymbols: [],
+        interfaceVersions: { SteamUtils: 'SteamUtils005' },
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'v2',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    const game = new SteamGame(PLACED_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(true)
+    expect(runWineCommand).toHaveBeenCalled()
+    // D-51-09: the FRESH verdict's own interfaceVersions pool is handed to
+    // writeBridgeConfig, not the (absent) persisted one.
+    expect(writeBridgeConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interfaceVersions: { SteamUtils: 'SteamUtils005' }
+      })
+    )
+    const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([id, value]) =>
+        id === PLACED_APP_ID &&
+        value?.bridge?.scan?.shimExportSetVersion === 'v2'
+    )
+    expect(persistCall).toBeDefined()
+  })
+
+  it("D-51-09 (Task 2): a previously-persisted scan verdict's interfaceVersions pool is threaded into placeShimForGame as persistedInterfaceVersions", async () => {
+    const PERSISTED_APP_ID = '555560'
+    library.set(
+      PERSISTED_APP_ID,
+      makeEntry({ title: 'Has A Persisted Verdict' })
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: {
+        scan: {
+          status: 'clean',
+          arch: 'x86',
+          missingSymbols: [],
+          interfaceVersions: { SteamUser: 'SteamUser023' },
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'v1',
+          scannedAt: '2026-01-01T00:00:00.000Z'
+        }
+      }
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    const game = new SteamGame(PERSISTED_APP_ID)
+    await game.launch({} as any)
+
+    expect(placeShimForGame).toHaveBeenCalledWith(
+      PERSISTED_APP_ID,
+      RESOLVED_EXE_PATH,
+      {
+        bottleName: 'GameLibSteamBridge',
+        persistedInterfaceVersions: { SteamUser: 'SteamUser023' }
+      }
+    )
+  })
+
   it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId skips the bridge (finding #3 bypass)', async () => {
     // A dedicated appId, never reused elsewhere in this file, so this
     // test's bridgeFailedThisSession mutation cannot leak into other tests.
@@ -1857,9 +2084,22 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(result).toBe(true)
   })
 
-  it('regression: a non-allowlisted title never calls resolveBridgeLaunchExe/placeShimForGame/ensureBridgeHelperReady/writeBridgeConfig/runWineCommand — existing bottled launch flow unchanged', async () => {
+  it('known-bad title (knownBadReason non-null) never calls resolveBridgeLaunchExe/placeShimForGame/ensureBridgeHelperReady/writeBridgeConfig/runWineCommand — routes to the bottled launch flow (D-51-07, resolveBridgeRoute rule 4)', async () => {
+    // Phase 51 Plan 09: a non-seed, never-scanned, bottle-eligible title now
+    // DEFAULTS to the bridge route (resolveBridgeRoute rule 11,
+    // 'pending-scan') -- bridgeAllowlist.has(false) alone no longer forces
+    // the bottled path. knownBadReason is the deterministic way to force it.
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
+      'incompatible'
+    )
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    // D-51-09: launch() dispatches on LOCATION (findBridgeInstallBottle), not
+    // ELIGIBILITY -- a known-bad title's install() would never have routed
+    // bits into the bridge bottle in the first place (resolveBridgeRoute
+    // rule 4), so the outer beforeEach's blanket isBridgeBottleReady:true
+    // default does not model this scenario and must be overridden here.
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
     ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
       status: 'done'
     })
@@ -1873,6 +2113,82 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(writeBridgeConfig).not.toHaveBeenCalled()
     expect(runWineCommand).not.toHaveBeenCalled()
     expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('non-seed, never-scanned, bottle-eligible title now routes to the bridge on launch (D-51-07, resolveBridgeRoute rule 11 — pending-scan)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+  })
+})
+
+// ── getBridgeRouteVerdict() — D-51-09 Task 2's installedIn (LOCATION) wiring ──
+
+describe('getBridgeRouteVerdict() — D-51-09 installedIn (LOCATION, not eligibility)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+
+  beforeEach(() => {
+    library.clear()
+    pendingFetches.clear()
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(bridgeAllowlist.has as jest.Mock).mockReset().mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock)
+      .mockReset()
+      .mockReturnValue(null)
+    ;(isBridgeBottleReady as jest.Mock).mockReset().mockReturnValue(false)
+    ;(existsSync as jest.Mock).mockReset().mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    envMock.isMac = false
+    envMock.isWindows = false
+    envMock.isLinux = true
+  })
+
+  it('rejects a non-numeric appId as not-eligible with installedIn null, never reaching checkBridgeRoute', async () => {
+    const result = await getBridgeRouteVerdict('not-numeric')
+
+    expect(result.route).toBe('not-eligible')
+    expect(result.installedIn).toBeNull()
+  })
+
+  it("installedIn is 'bridge' when findBridgeInstallBottle locates an existing bridge install, independent of the eligibility route", async () => {
+    // isBridgeBottleReady(true) drives the test-double findBridgeInstallBottle
+    // reimplementation (see the '../bottle' factory mock above) to a non-null
+    // result for ANY appId.
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    const result = await getBridgeRouteVerdict(APP_ID)
+
+    expect(result.installedIn).toBe('bridge')
+  })
+
+  it("installedIn is 'bottle' when no bridge bottle holds this install but the title is installed AND bottle-eligible (existing GameLibSteam install, D-51-09's core distinction)", async () => {
+    library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: true }))
+
+    const result = await getBridgeRouteVerdict(APP_ID)
+
+    expect(result.installedIn).toBe('bottle')
+  })
+
+  it('installedIn stays null when the title is not installed anywhere and no bridge bottle holds it', async () => {
+    library.set(APP_ID, makeEntry({ title: 'Avernum 4', is_installed: false }))
+
+    const result = await getBridgeRouteVerdict(APP_ID)
+
+    expect(result.installedIn).toBeNull()
   })
 })
 
@@ -3401,8 +3717,15 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(secondResult).toEqual({ status: 'done' })
   })
 
-  it('non-allowlisted bottle-eligible: install() takes the existing bottled path unchanged (regression)', async () => {
+  it('known-bad title (knownBadReason non-null): install() takes the bottled path (D-51-07, resolveBridgeRoute rule 4)', async () => {
+    // Phase 51 Plan 09: a non-seed, never-scanned, bottle-eligible title now
+    // DEFAULTS to the bridge route (resolveBridgeRoute rule 11,
+    // 'pending-scan') -- bridgeAllowlist.has(false) alone no longer forces
+    // the bottled path. knownBadReason is the deterministic way to force it.
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
+      'incompatible'
+    )
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
       status: 'done'
@@ -3415,6 +3738,18 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
     expect(result).toEqual({ status: 'done' })
+  })
+
+  it('non-seed, never-scanned, bottle-eligible title now routes to the bridge on install (D-51-07, resolveBridgeRoute rule 11 — pending-scan)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   it('BLOCKER 1: bridge bottle not ready — provisionBridgeBottle is called BEFORE any depot download; on success proceeds to depot download', async () => {
@@ -3464,8 +3799,11 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
-  it('isBridgeEligible() is false when the allowlist lacks the appId, even though the game is bottle-eligible', async () => {
+  it('isBridgeEligible() is false when knownBadReason is non-null, even though the game is bottle-eligible (D-51-07)', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
+      'incompatible'
+    )
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
       status: 'done'
@@ -3500,6 +3838,67 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(tellBottledSteamToInstall).toHaveBeenCalledWith(FALLBACK_TEST_APP_ID)
     expect(result).toEqual({ status: 'done' })
+  })
+
+  it("a title with userRoute 'bottle' takes the existing bottled branch regardless of seed/pending-scan default (D-51-07, resolveBridgeRoute rule 3)", async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { userRoute: 'bottle' }
+    })
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(isBridgeBottleReady).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(result).toEqual({ status: 'done' })
+  })
+
+  it('a persisted scan-miss whose missingSymbols are now ALL covered is auto-cleared (steamMetadataStore.set observed with scan removed) and install() routes to the bridge (D-51-07)', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: {
+        scan: {
+          status: 'miss',
+          arch: 'x86',
+          // SteamAPI_Init is in SHIM_EXPORTED_SYMBOLS (shimCoverage.ts) --
+          // a persisted miss naming it is "now covered" by the current shim.
+          missingSymbols: ['SteamAPI_Init'],
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'stale-version',
+          scannedAt: '2026-01-01T00:00:00.000Z'
+        }
+      }
+    })
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+
+    const game = new SteamGame(APP_ID)
+    await game.install({} as any)
+
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    const clearCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([id, value]) =>
+        id === APP_ID &&
+        value &&
+        typeof value === 'object' &&
+        'bridge' in value &&
+        value.bridge &&
+        !('scan' in value.bridge)
+    )
+    expect(clearCall).toBeDefined()
   })
 })
 
@@ -3662,7 +4061,14 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   it('B3: macOS bottle-eligible, provisioned — dispatches to the bottled Steam client', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
-      is_mac_native: false
+      is_mac_native: false,
+      // D-51-09: a non-seed, never-scanned, bottle-eligible title now
+      // defaults to the bridge route (rule 11, pending-scan) -- this
+      // describe block's B1-B4/F-series specs pin specific OTHER
+      // routing axes (native-install toggle, bottle readiness), so pin
+      // the bridge axis too via userRoute:'bottle' (rule 3) rather than
+      // relying on the obsolete default.
+      bridge: { userRoute: 'bottle' }
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
@@ -3684,7 +4090,9 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   it('B4: macOS bottle-eligible, un-provisioned — defers to guided setup', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
-      is_mac_native: false
+      is_mac_native: false,
+      // D-51-09: pin the bottle route (see B3's identical note).
+      bridge: { userRoute: 'bottle' }
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
@@ -3814,7 +4222,9 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
   it('F8: additive, never subtractive — an ALREADY bottle-eligible game with the override set is unchanged from B3', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
-      is_mac_native: false
+      is_mac_native: false,
+      // D-51-09: pin the bottle route (see B3's identical note).
+      bridge: { userRoute: 'bottle' }
     })
     ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
@@ -4534,7 +4944,14 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     it('W6: override absent — an ordinarily bottle-eligible game persists NO flag (it never needed one)', async () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
-        is_mac_native: false
+        is_mac_native: false,
+        // D-51-09: an ordinarily-bottle-eligible, non-seed, never-scanned
+        // title now DEFAULTS to the bridge route (rule 11, pending-scan) --
+        // this test is about the forcedWindowsViaBottle write discipline on
+        // the BOTTLE path specifically, so userRoute:'bottle' (rule 3) pins
+        // the route deterministically rather than relying on the obsolete
+        // "non-seed always stays bottled" assumption.
+        bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(false)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
@@ -4602,7 +5019,11 @@ describe('SteamGame — D-17 forced-verdict durability (34.13-14)', () => {
     it('A-19: the nativeBottleInstall provenance field is GONE — a committed bottle install writes no such key', async () => {
       mockStatefulMetadataStore({
         platformsCaptured: true,
-        is_mac_native: false
+        is_mac_native: false,
+        // D-51-09: see W6's identical note above — pin the bottle route
+        // deterministically so this test keeps exercising installBottleNative
+        // rather than the new bridge default.
+        bridge: { userRoute: 'bottle' }
       })
       ;(isSteamNativeInstallEnabled as jest.Mock).mockReturnValue(true)
       ;(isBottleReady as jest.Mock).mockReturnValue(true)
@@ -4734,7 +5155,16 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
   })
 
   it('platformsCaptured-uncaptured macOS install does NOT fall through to native — forces a synchronous capture and routes to guided setup', async () => {
-    mockStatefulMetadataStore({ platformsCaptured: undefined })
+    // D-51-09: see W6/A-19's identical note -- a non-seed, never-scanned,
+    // bottle-eligible title now defaults to the bridge route (rule 11),
+    // but this test is about ensurePlatformsCaptured's synchronous-capture
+    // mechanism, not bridge routing, so userRoute:'bottle' pins the route.
+    // The carry-forward added at fetchMetadataIfNeeded's write (D-51-07)
+    // preserves this field through the capture fetch below.
+    mockStatefulMetadataStore({
+      platformsCaptured: undefined,
+      bridge: { userRoute: 'bottle' }
+    })
     ;(axios.get as jest.Mock).mockResolvedValue(windowsOnlyFixture)
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
@@ -4777,7 +5207,13 @@ describe('SteamGame.install() ensurePlatformsCaptured() — Phase 17 Plan 09 (MA
   })
 
   it('already-captured game skips the fetch — no redundant network on the hot path', async () => {
-    mockStatefulMetadataStore({ platformsCaptured: true, is_mac_native: false })
+    // D-51-09: pin the bottle route — see the identical note on the
+    // 'platformsCaptured-uncaptured' test just above.
+    mockStatefulMetadataStore({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { userRoute: 'bottle' }
+    })
     ;(isBottleReady as jest.Mock).mockReturnValue(false)
 
     const game = new SteamGame(APP_ID)
@@ -5878,6 +6314,12 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
     ;(tellBottledSteamToUninstall as jest.Mock).mockReset()
     ;(resolveBridgeLaunchExe as jest.Mock).mockReset()
     ;(removePerGameBridgeBottle as jest.Mock).mockReset()
+    // Phase 51 Plan 09 (D-51-09): uninstall() now dispatches on LOCATION
+    // (findBridgeInstallBottle) rather than ELIGIBILITY (isBridgeEligible) --
+    // every test in this describe block is about an install that already
+    // lives in the bridge bottle, so isBridgeBottleReady defaults to true
+    // here and the 'not installed via bridge' cases override it locally.
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteamBridge'
     })
@@ -6072,6 +6514,12 @@ describe('SteamGame.uninstall() — Phase 24 Plan 08 bridge routing (R4/R6)', ()
 
   it('regression: a non-allowlisted title uninstall() never consults resolveBridgeLaunchExe, and (debug/steam-bottle-uninstall-reverts FINAL) routes to direct deletion instead of tellBottledSteamToUninstall', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    // D-51-09: uninstall() dispatches on LOCATION (findBridgeInstallBottle),
+    // not ELIGIBILITY -- this title is a legacy/Phase-17-style install that
+    // never lived in the bridge bottle, so the outer beforeEach's blanket
+    // isBridgeBottleReady:true default does not model this scenario and
+    // must be overridden here.
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
       wineCrossoverBottle: 'GameLibSteam'
@@ -6534,7 +6982,13 @@ describe('promptI386Recovery() — MAC32-03 i386 recovery (CONTEXT D-6)', () => 
       is_mac_native: true,
       mac_arch: '32',
       mac_arch_source: 'macho',
-      mac_arch_verified: true
+      mac_arch_verified: true,
+      // D-51-09: a confirmed-32-bit mac build is bottle-eligible via
+      // MAC32-02's own mac_arch==='32' branch, independent of is_mac_native
+      // -- same obsolete-default conflict as B3/B4/F8/W6/A-19 above. Pin
+      // the bottle route; this test is about i386-recovery's
+      // forceUninstall()->install() sequencing, not bridge routing.
+      bridge: { userRoute: 'bottle' }
     })
     dialogShowMessageBox.mockResolvedValue({ response: 0 })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)

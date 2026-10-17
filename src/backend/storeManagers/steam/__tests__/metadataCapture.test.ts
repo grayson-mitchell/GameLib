@@ -208,6 +208,27 @@ describe('source gate: the deliberate non-changes stay raw', () => {
   })
 })
 
+describe('source gate: Phase 51 Plan 09 bridge verdict carry-forward (D-51-07)', () => {
+  it("games.ts fetchMetadataIfNeeded's enumerated write carries forward an existing bridge field, mirroring forcedWindowsViaBottle", () => {
+    expect(gamesSource).toMatch(
+      /existingMeta\?\.bridge\s*\?\s*\{\s*bridge:\s*existingMeta\.bridge\s*\}\s*:\s*\{\}/
+    )
+  })
+
+  it('bridgeAllowlist.has( appears exactly once in games.ts — assembleBridgeRouteInput is the sole caller (assumption_delta_decision)', () => {
+    const occurrences = gamesSource.match(/bridgeAllowlist\.has\(/g) ?? []
+    expect(occurrences.length).toBe(1)
+  })
+
+  it('assembleBridgeRouteInput never reads forcedWindowsViaBottle (D-17 pin — composes isBottleEligibleFromPlatforms only)', () => {
+    const fnMatch = gamesSource.match(
+      /private assembleBridgeRouteInput\(\)[^{]*\{[\s\S]*?\n {2}\}/
+    )
+    expect(fnMatch).not.toBeNull()
+    expect(fnMatch![0]).not.toMatch(/forcedWindowsViaBottle/)
+  })
+})
+
 describe('source gate: the HARD PROHIBITION on steamPlatformRow.ts', () => {
   it('hasSteamWindowsDepot keeps its strict equality against the depot field', () => {
     expect(steamPlatformRowSource).toMatch(/is_windows_native === true/)

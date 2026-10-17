@@ -156,7 +156,10 @@ jest.mock('../bottle', () => ({
 }))
 
 jest.mock('../bridge/allowlist', () => ({
-  bridgeAllowlist: { has: jest.fn().mockReturnValue(false) }
+  bridgeAllowlist: {
+    has: jest.fn().mockReturnValue(false),
+    knownBadReason: jest.fn()
+  }
 }))
 jest.mock('../bridge/shimGenerate', () => ({
   placeShimForGame: jest.fn()

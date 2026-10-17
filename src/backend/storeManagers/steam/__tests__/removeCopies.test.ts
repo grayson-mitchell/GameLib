@@ -174,7 +174,7 @@ jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 
 // ── bridge/* mocks ─────────────────────────────────────────────────────────────
 jest.mock('../bridge/allowlist', () => ({
-  bridgeAllowlist: { has: jest.fn() }
+  bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
 }))
 jest.mock('../bridge/shimGenerate', () => ({ placeShimForGame: jest.fn() }))
 jest.mock('../bridge/launchTarget', () => ({
@@ -921,7 +921,13 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       mac_arch: '32',
       platformsCaptured: true,
-      is_mac_native: false
+      is_mac_native: false,
+      // D-51-09: a non-seed, never-scanned, bottle-eligible title now
+      // defaults to the bridge route (rule 11, pending-scan) -- this whole
+      // describe block is about route-time native-copy cleanup ahead of a
+      // BOTTLE install, so pin the route rather than relying on the
+      // obsolete "bridgeAllowlist.has(false) alone forces bottled" default.
+      bridge: { userRoute: 'bottle' }
     })
     // Short-circuit routeThroughBottle's remaining branches cleanly, after
     // removeDemotedNativeOrphan has run, without needing to drive the whole
@@ -989,7 +995,10 @@ describe('SteamGame.install() route-time auto-cleanup (Task 2)', () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       mac_arch: '64',
       platformsCaptured: true,
-      is_mac_native: false
+      is_mac_native: false,
+      // D-51-09: pin the bottle route — see the describe block's own
+      // beforeEach note above.
+      bridge: { userRoute: 'bottle' }
     })
     addManifest(APP_ID, {
       appid: APP_ID,

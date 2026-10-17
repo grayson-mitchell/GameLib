@@ -62,7 +62,8 @@ import {
   getBridgeBottleSettings,
   provisionBridgeBottle,
   bridgeBottleNameFor,
-  removePerGameBridgeBottle
+  removePerGameBridgeBottle,
+  findBridgeInstallBottle
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { noteSteamAuthTrigger } from './authTrigger'
@@ -89,6 +90,19 @@ import {
   stopBridgeHelper
 } from './bridge/helperProcess'
 import { writeBridgeConfig } from './bridge/bridgeConfig'
+// Phase 51 Plan 09 (D-51-07/09): the pure routing resolver + the persisted
+// verdict read/clear family + the current-shim coverage check. games.ts is
+// the sole assembler of resolveBridgeRoute's input and the sole writer of
+// the persisted verdict (bridgeRoute.ts's own header).
+import { resolveBridgeRoute, type BridgeRouteInput } from './bridge/bridgeRoute'
+import {
+  readBridgeVerdict,
+  writeBridgeScanVerdict,
+  clearBridgeScanVerdict
+} from './bridge/bridgeVerdict'
+import { isScanVerdictNowCovered } from './bridge/shimCoverage'
+import { builtBridgeShim64Path } from 'backend/constants/paths'
+import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 
 /** The project-wide appId shape guard (clientSetup.ts, installFormIpc.ts,
  * bottle.ts, bridge/allowlist.ts all carry the identical regex). Used by
@@ -891,7 +905,15 @@ export default class SteamGame implements Game {
             : {}),
         ...(existingMeta?.forcedWindowsViaBottle === true
           ? { forcedWindowsViaBottle: true as const }
-          : {})
+          : {}),
+        // D-51-07: the persisted bridge verdict (scan/userRoute/
+        // identityFallback/etc.) is a FOURTH standing carry-forward
+        // obligation on this enumerated write, identical in shape to
+        // forcedWindowsViaBottle just above -- steamMetadataStore.set
+        // REPLACES the whole entry (T-18-02-04), so a declined/refreshed
+        // appdetails write would otherwise silently wipe a scan result the
+        // bridge already paid for.
+        ...(existingMeta?.bridge ? { bridge: existingMeta.bridge } : {})
       })
 
       // Update in-memory library so subsequent getGameInfo calls return enriched data
@@ -1009,6 +1031,11 @@ export default class SteamGame implements Game {
     // keyring deferral gate as the first statement, before anything else in
     // this method runs.
     noteSteamAuthTrigger('user-install')
+    // D-51-07: auto-clear a stale persisted scan-miss before any routing
+    // decision below reads it — the top of install(), before the resume
+    // check, so a bridge route taken later in this same call already sees
+    // the cleared state.
+    this.clearStaleBridgeVerdict()
     // steam-startup-resume-crash (2026-07-18) / D-04 softened: a
     // startup-detected interrupted install is surfaced (steamResumePending)
     // but never auto-driven — the user's own Install click IS the resume
@@ -1993,31 +2020,96 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * Phase 24 Plan 08 (D-01/D-02, R4): true only for an allowlisted,
-   * bottle-eligible title that has NOT already failed the bridge earlier
-   * this session (finding #3 — bridgeFailedThisSession, module-scoped
-   * above). Composes `isBottleEligible()` exactly the way
-   * `isSteamNativeInstallEnabled()` already composes inside the same gate
-   * — a third instance of the same in-file pattern, not a new one
-   * (24-PATTERNS.md). A non-allowlisted bottle-eligible title is unaffected
-   * — it falls through to the existing D-15/D-13 opt-in branches below
-   * (regression, R7).
+   * Phase 51 Plan 09 (D-51-07/09): the SOLE input assembler for
+   * `resolveBridgeRoute()` (bridgeRoute.ts) — the only place in this file
+   * allowed to call `bridgeAllowlist.has` with an appId (assumption_delta_decision,
+   * acceptance-counted at exactly one call-site occurrence). Every other routing
+   * decision in this file goes through `bridgeRoute()` below instead of a
+   * second direct allowlist/verdict read.
    *
-   * D-17 (34.13-14) pin: composes `isBottleEligibleFromPlatforms()`, NOT the
-   * widened `isBottleEligible()` wrapper above. A D-17 forced install writes
-   * into the Phase 17 `GameLibSteam` bottle; the Phase 24
-   * `GameLibSteamBridge` bottle is a SEPARATE filesystem root that has never
-   * held those bits. Widening this composition to the forced verdict would
-   * swap one broken launch (host Steam client that never had the game) for
-   * another (bridge launch resolving nothing in a bottle that was never
-   * written to) — not a fix.
+   * D-17 (34.13-14) pin, carried forward unchanged: `platformsBottleEligible`
+   * reads `isBottleEligibleFromPlatforms()`, NEVER the widened
+   * `isBottleEligible()` / the D-17 forced-verdict wrapper — see
+   * `bridgeRoute.ts`'s own doc comment for why widening this would resolve a
+   * route into a bottle (`GameLibSteamBridge`) that a D-17 forced install
+   * never wrote a single byte into (that install went to `GameLibSteam`).
+   */
+  private assembleBridgeRouteInput(): BridgeRouteInput {
+    return {
+      platformsBottleEligible: this.isBottleEligibleFromPlatforms(),
+      isSeed: bridgeAllowlist.has(this.appId),
+      // `?? null`: bridgeAllowlist.knownBadReason's own contract already
+      // returns `null` for "no match", but this coerces any other falsy
+      // read (e.g. a test double that returns undefined) to the same
+      // not-known-bad default resolveBridgeRoute's `!== null` check needs.
+      knownBadReason: bridgeAllowlist.knownBadReason(this.appId) ?? null,
+      verdict: readBridgeVerdict(this.appId),
+      failedThisSession: bridgeFailedThisSession.has(this.appId),
+      win64ShimPresent: existsSync(builtBridgeShim64Path)
+    }
+  }
+
+  /**
+   * D-51-07: the single routing read for this appId. `resolveBridgeRoute()`
+   * is a pure function (bridgeRoute.ts) — this method is the sole place in
+   * games.ts that assembles its input and calls it.
+   */
+  private bridgeRoute(): SteamBridgeRouteVerdict {
+    return resolveBridgeRoute(this.assembleBridgeRouteInput())
+  }
+
+  /**
+   * D-51-09: the backend-authoritative bridge-route read, exposed over IPC
+   * by the exported `getBridgeRouteVerdict()` below (51-13's actual IPC
+   * surface) — the `checkBottleEligibility()` precedent for a second
+   * resolver. Forces platform capture first for the same reason
+   * `checkBottleEligibility()` does: a cold metadata cache must never read
+   * as a routing answer.
+   */
+  async checkBridgeRoute(): Promise<SteamBridgeRouteVerdict> {
+    await this.ensurePlatformsCaptured()
+    return this.bridgeRoute()
+  }
+
+  /**
+   * ROADMAP sub-decision 2 / D-51-07: delegates entirely to the pure
+   * resolver — true exactly when `bridgeRoute().route === 'bridge'`. The
+   * allowlist is no longer the gate by itself (assumption_delta_decision,
+   * 51-09): a non-seed, never-scanned, bottle-eligible title now ALSO
+   * routes to the bridge (reason `'pending-scan'`) and gets scanned on its
+   * own first install — superseding this method's pre-51-09 behavior, where
+   * a non-allowlisted title fell straight through to the D-15/D-13 opt-in
+   * branches below (see this file's test suite for the updated coverage).
+   *
+   * D-17 (34.13-14) pin, carried forward unchanged: `bridgeRoute()` (via
+   * `assembleBridgeRouteInput()`) composes ONLY
+   * `isBottleEligibleFromPlatforms()`, never the widened `isBottleEligible()`
+   * / the D-17 forced verdict — see that method's own doc comment above.
    */
   private isBridgeEligible(): boolean {
-    return (
-      this.isBottleEligibleFromPlatforms() &&
-      bridgeAllowlist.has(this.appId) &&
-      !bridgeFailedThisSession.has(this.appId)
-    )
+    return this.bridgeRoute().route === 'bridge'
+  }
+
+  /**
+   * D-51-07: auto-clears a persisted scan-miss the moment the currently
+   * shipped shim is proven to cover every symbol it used to miss —
+   * `isScanVerdictNowCovered()` (shimCoverage.ts) decides "now covered"
+   * against the CURRENT exported-symbol/served-interface tables, never a
+   * re-scan. No-op when there is no persisted miss, or the miss still isn't
+   * covered — `clearBridgeScanVerdict()` itself already no-ops on
+   * nothing-to-clear (bridgeVerdict.ts), so this can never fabricate a
+   * metadata entry.
+   */
+  private clearStaleBridgeVerdict(): void {
+    const verdict = readBridgeVerdict(this.appId)
+    const scan = verdict?.scan
+    if (scan?.status === 'miss' && isScanVerdictNowCovered(scan)) {
+      clearBridgeScanVerdict(this.appId)
+      logInfo(
+        `SteamGame: appId ${this.appId} — bridge verdict auto-cleared (D-51-07), the current shim now covers: ${scan.missingSymbols.join(', ')}`,
+        LogPrefix.Steam
+      )
+    }
   }
 
   /**
@@ -2145,14 +2237,31 @@ export default class SteamGame implements Game {
     // keyring deferral gate before ensurePlatformsCaptured() or anything
     // else in this method runs.
     noteSteamAuthTrigger('user-play')
+    // D-51-07: same auto-clear as install()'s top, before any routing
+    // decision below reads the persisted verdict.
+    this.clearStaleBridgeVerdict()
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
-      // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — the
-      // FIRST check inside this block, mirroring install()'s own bridge
-      // sub-branch above (BLOCKER 1 rationale: the bridge has its own
-      // readiness gate, ensureBridgeHelperReady(), independent of the
-      // unrelated Phase 17 GameLibSteam bottle's own state).
-      if (this.isBridgeEligible()) {
+      // Phase 51 Plan 09 (D-51-09): LOCATION, not eligibility — launch()
+      // must dispatch to wherever this install's bits actually live, never
+      // to where a NEW install would be routed (isBridgeEligible() /
+      // bridgeRoute() answers the latter question, which a never-scanned
+      // title now defaults to 'bridge' on (rule 11, pending-scan) even
+      // though nothing has been installed there yet). findBridgeInstallBottle
+      // is non-null only when a bridge bottle actually holds this appId's
+      // manifest — the FIRST check inside this block, mirroring install()'s
+      // own bridge sub-branch above (BLOCKER 1 rationale: the bridge has its
+      // own readiness gate, ensureBridgeHelperReady(), independent of the
+      // unrelated Phase 17 GameLibSteam bottle's own state). The session
+      // circuit breaker (finding #3) is orthogonal to location — a bridge
+      // launch that already failed once this session must keep falling back
+      // to the bottled flow even though the bits are still sitting in the
+      // bridge bottle from the earlier attempt, so it is checked here too,
+      // not folded into findBridgeInstallBottle itself.
+      if (
+        findBridgeInstallBottle(this.appId) !== null &&
+        !bridgeFailedThisSession.has(this.appId)
+      ) {
         return this.launchBridgeGame()
       }
 
@@ -2272,24 +2381,78 @@ export default class SteamGame implements Game {
     // D-51-01: byte-identity no-op on every normal launch — only does real
     // work when the placed shim has gone stale (e.g. a shim-version bump
     // shipped after this game was installed).
+    // D-51-09 (Task 2): the previously-persisted scan verdict's own
+    // interfaceVersions pool is threaded through as persistedInterfaceVersions
+    // -- per placeShimForGame's own header, this is the ONLY source left for
+    // an already-shimmed target (an older GameLib shim has no "original"
+    // dll version strings left to read).
+    const persistedScan = readBridgeVerdict(this.appId)?.scan
     const shimResult = await placeShimForGame(this.appId, exePath, {
-      bottleName: bridgeBottleSettings.wineCrossoverBottle
+      bottleName: bridgeBottleSettings.wineCrossoverBottle,
+      ...(persistedScan?.interfaceVersions
+        ? { persistedInterfaceVersions: persistedScan.interfaceVersions }
+        : {})
     })
+
+    if (shimResult.status === 'miss') {
+      logWarning(
+        `SteamGame: launchBridgeGame shim coverage miss for appId ${this.appId}: ${shimResult.verdict.missingSymbols.join(', ')}`,
+        LogPrefix.Steam
+      )
+      writeBridgeScanVerdict(this.appId, shimResult.verdict)
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'scan-miss',
+        missingSymbols: shimResult.verdict.missingSymbols,
+        fallbackAvailable: true
+      })
+      return false
+    }
+
     if (
-      shimResult.status !== 'placed' &&
-      shimResult.status !== 'already-placed'
+      shimResult.status === 'shim-not-built' ||
+      shimResult.status === 'error'
     ) {
       logWarning(
-        `SteamGame: launchBridgeGame could not (re)place the shim for appId ${this.appId}: ${shimResult.status === 'error' ? shimResult.error : shimResult.status}`,
+        `SteamGame: launchBridgeGame could not (re)place the shim for appId ${this.appId}: ${shimResult.status === 'error' ? shimResult.error : `shim-not-built (arch=${shimResult.arch})`}`,
         LogPrefix.Steam
       )
       markBridgeFailedThisSession(this.appId)
       sendFrontendMessage('steamBridgeSetupRequired', {
         appName: this.appId,
-        reason: 'shim-refresh-failed',
+        // D-51-13: a missing Win64 shim is its own named reason -- the
+        // target does not exist at all until 51-15, a different story from
+        // a generic placement failure.
+        reason:
+          shimResult.status === 'shim-not-built' && shimResult.arch === 'x64'
+            ? 'win64-no-shim'
+            : 'shim-refresh-failed',
         fallbackAvailable: true
       })
       return false
+    }
+
+    // Remaining statuses: 'placed' | 'already-placed' | 'no-steam-api'.
+    // 'placed' and 'no-steam-api' both carry a fresh verdict to persist
+    // (D-51-07); 'already-placed' is a true no-op with no verdict at all --
+    // the caller keeps whatever it already persisted (shimGenerate.ts's own
+    // header, D-UAT-24-04).
+    if (shimResult.verdict) {
+      writeBridgeScanVerdict(this.appId, shimResult.verdict)
+    }
+
+    // D-51-09 (Task 2): a title that imports nothing from
+    // steam_api(64)?.dll at all has nothing for the bridge helper to
+    // interpose on -- skip ensureBridgeHelperReady/writeBridgeConfig
+    // entirely and launch directly (mirrors there being no helper to spawn
+    // for a no-steam-api install in the first place).
+    if (shimResult.status === 'no-steam-api') {
+      logInfo(
+        `SteamGame: launching appId ${this.appId} via the Steam bridge bottle directly (no-steam-api, no helper)`,
+        LogPrefix.Steam
+      )
+      return this.fireBridgeWineLaunch(exePath, bridgeBottleSettings)
     }
 
     const helperReady = await ensureBridgeHelperReady(this.appId)
@@ -2307,11 +2470,21 @@ export default class SteamGame implements Game {
       return false
     }
 
+    // D-51-09 (Task 2): hand the shim's required interface-version pool to
+    // the cfg -- the FRESH verdict's own pool when this call just (re)placed
+    // or no-op-confirmed one ('placed' only has a verdict; 'already-placed'
+    // has none, so the previously-persisted scan's pool is reused since the
+    // shim itself did not change).
+    const interfaceVersionsForConfig =
+      shimResult.verdict?.interfaceVersions ?? persistedScan?.interfaceVersions
     const configResult = writeBridgeConfig({
       exePath,
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
       appId: this.appId,
-      port: helperReady.port
+      port: helperReady.port,
+      ...(interfaceVersionsForConfig
+        ? { interfaceVersions: interfaceVersionsForConfig }
+        : {})
     })
     if (configResult.status === 'error') {
       logWarning(
@@ -2331,6 +2504,21 @@ export default class SteamGame implements Game {
       `SteamGame: launching appId ${this.appId} via the Steam bridge (${exePath}, helper port=${helperReady.port})`,
       LogPrefix.Steam
     )
+    return this.fireBridgeWineLaunch(exePath, bridgeBottleSettings)
+  }
+
+  /**
+   * D-51-09 (Task 2): the actual `runWineCommand` + process-monitor firing,
+   * split out of `launchBridgeGame` so the no-steam-api branch (no helper,
+   * no `writeBridgeConfig`) and the normal helper-backed branch share the
+   * exact same wine-invocation and teardown-wiring code — duplicating this
+   * would risk the two paths drifting (e.g. one forgetting the monitor's
+   * `onStopped` -> `stopBridgeHelper` wiring).
+   */
+  private async fireBridgeWineLaunch(
+    exePath: string,
+    bridgeBottleSettings: GameSettings
+  ): Promise<boolean> {
     try {
       const { runWineCommand } = await import('backend/launcher')
       await runWineCommand({
@@ -2346,6 +2534,7 @@ export default class SteamGame implements Game {
       // THIS game's own process lifetime, never to the whole app session —
       // the monitor's onStopped fires exactly once, when the matched
       // process(es) are gone, and tears down only this appId's helper.
+      // stopBridgeHelper is a safe no-op when no-steam-api never spawned one.
       const installRoot = this.resolveBridgeGameInstallRoot(
         exePath,
         bridgeBottleSettings.wineCrossoverBottle
@@ -2462,9 +2651,12 @@ export default class SteamGame implements Game {
   async uninstall(_args: RemoveArgs): Promise<ExecResult> {
     await this.ensurePlatformsCaptured()
 
-    // Phase 24 Plan 08 (R4/D-01): allowlisted-title bridge routing — unaffected
-    // by the install_path routing fix below (see this method's own JSDoc).
-    if (this.isBridgeEligible()) {
+    // Phase 51 Plan 09 (D-51-09): LOCATION, not eligibility — see launch()'s
+    // identical comment above. uninstall() must act on wherever this
+    // install's bits actually live, never on where a NEW install would
+    // route (unaffected by the install_path routing fix below — see this
+    // method's own JSDoc).
+    if (findBridgeInstallBottle(this.appId) !== null) {
       return this.uninstallBridgeGame()
     }
 
@@ -3070,4 +3262,61 @@ export default class SteamGame implements Game {
       )
     })
   }
+}
+
+/**
+ * Phase 51 Plan 09 (D-51-09): the backend-authoritative bridge-route read,
+ * exposed over IPC by 51-13. Mirrors installFormIpc.ts's
+ * getSteamBottleEligibilityVerdict's numeric/type guard exactly -- an
+ * invalid appId is a REJECTED REQUEST, never a routing answer, so it fails
+ * closed to 'not-eligible' rather than resolving the pure resolver's own
+ * shape, which would misleadingly imply a platform check ran.
+ *
+ * installedIn is filled below via findBridgeInstallBottle (bottle.ts,
+ * LOCATION) and checkBottleEligibility() (an existing GameLibSteam install,
+ * also LOCATION) -- resolveBridgeRoute() itself never fills this field (see
+ * its own doc comment); it answers eligibility only.
+ */
+export async function getBridgeRouteVerdict(
+  appId: unknown
+): Promise<SteamBridgeRouteVerdict> {
+  if (typeof appId !== 'string' || !NUMERIC_APP_ID.test(appId)) {
+    logWarning(
+      'getBridgeRouteVerdict: rejected non-string or non-numeric appId (D-51-09)',
+      LogPrefix.Steam
+    )
+    return {
+      route: 'not-eligible',
+      reason: null,
+      knownBadReason: null,
+      missingSymbols: [],
+      noticeRequired: false,
+      stubbedInterfaces: [],
+      identityFallback: false,
+      userRoute: null,
+      installedIn: null
+    }
+  }
+
+  const game = new SteamGame(appId)
+  const verdict = await game.checkBridgeRoute()
+
+  // D-51-09 (Task 2): installedIn answers "where does THIS install's bits
+  // already live" (location), never "where would a NEW install go"
+  // (eligibility, verdict.route above) -- a never-scanned bottle-eligible
+  // title can have verdict.route === 'bridge' (rule 11's pending-scan
+  // default) while installedIn correctly stays 'bottle' for an existing
+  // GameLibSteam install the widened eligibility must never claim to have
+  // moved.
+  let installedIn: SteamBridgeRouteVerdict['installedIn'] = null
+  if (findBridgeInstallBottle(appId) !== null) {
+    installedIn = 'bridge'
+  } else if (
+    library.get(appId)?.is_installed === true &&
+    (await game.checkBottleEligibility())
+  ) {
+    installedIn = 'bottle'
+  }
+
+  return { ...verdict, installedIn }
 }

@@ -248,7 +248,7 @@ jest.mock('backend/launcher', () => ({
 // native ?? bottle ?? bridge precedence holds unless a test explicitly
 // opts a game into bridge eligibility.
 jest.mock('../bridge/allowlist', () => ({
-  bridgeAllowlist: { has: jest.fn() }
+  bridgeAllowlist: { has: jest.fn(), knownBadReason: jest.fn() }
 }))
 
 // ── platformCapture mock — captureOwnedAppPlatforms (34.15 D-03/D-04) ──────
