@@ -3,7 +3,7 @@
   "interface": "SteamNetworking005",
   "family": "SteamNetworking",
   "ordinal": 14,
-  "arches": ["x86"],
+  "arches": ["x86", "x64"],
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamNetworking_v005",

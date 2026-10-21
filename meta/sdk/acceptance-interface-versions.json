@@ -42,8 +42,8 @@
   },
   "STEAMUSERSTATS_INTERFACE_VERSION011": {
     "family": "SteamUserStats",
-    "arches": ["x86"],
-    "titles": ["63000"]
+    "arches": ["x86", "x64"],
+    "titles": ["63000", "411300"]
   },
   "STEAMREMOTESTORAGE_INTERFACE_VERSION005": {
     "family": "SteamRemoteStorage",
@@ -52,22 +52,52 @@
   },
   "SteamMatchMaking009": {
     "family": "SteamMatchmaking",
-    "arches": ["x86"],
-    "titles": ["200510", "63000"]
+    "arches": ["x86", "x64"],
+    "titles": ["200510", "63000", "411300"]
   },
   "SteamMatchMakingServers002": {
     "family": "SteamMatchmakingServers",
-    "arches": ["x86"],
-    "titles": ["200510", "63000"]
+    "arches": ["x86", "x64"],
+    "titles": ["200510", "63000", "411300"]
   },
   "SteamNetworking005": {
     "family": "SteamNetworking",
-    "arches": ["x86"],
-    "titles": ["200510", "63000"]
+    "arches": ["x86", "x64"],
+    "titles": ["200510", "63000", "411300"]
   },
   "STEAMREMOTESTORAGE_INTERFACE_VERSION010": {
     "family": "SteamRemoteStorage",
     "arches": ["x86"],
     "titles": ["63000"]
+  },
+  "SteamClient017": {
+    "family": "SteamClient",
+    "arches": ["x64"],
+    "titles": ["411300"]
+  },
+  "SteamUser019": {
+    "family": "SteamUser",
+    "arches": ["x64"],
+    "titles": ["411300"]
+  },
+  "SteamFriends015": {
+    "family": "SteamFriends",
+    "arches": ["x64"],
+    "titles": ["411300"]
+  },
+  "SteamUtils008": {
+    "family": "SteamUtils",
+    "arches": ["x64"],
+    "titles": ["411300"]
+  },
+  "STEAMAPPS_INTERFACE_VERSION008": {
+    "family": "SteamApps",
+    "arches": ["x64"],
+    "titles": ["411300"]
+  },
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION013": {
+    "family": "SteamRemoteStorage",
+    "arches": ["x64"],
+    "titles": ["411300"]
   }
 }

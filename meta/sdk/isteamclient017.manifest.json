@@ -1,0 +1,682 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamClient017",
+  "family": "SteamClient",
+  "ordinal": 16,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamClient_v017",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamClient.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "CreateSteamPipe",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFallback": 1
+    },
+    {
+      "slot": 1,
+      "name": "BReleaseSteamPipe",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "ConnectToGlobalUser",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        }
+      ],
+      "mode": "wire",
+      "helperFallback": 1
+    },
+    {
+      "slot": 3,
+      "name": "CreateLocalUser",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "phSteamPipe",
+          "type": "int32*"
+        },
+        {
+          "name": "eAccountType",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "ReleaseUser",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "hUser",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "GetISteamUser",
+      "returns": "void /*ISteamUser*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "GetISteamGameServer",
+      "returns": "void /*ISteamGameServer*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "SetLocalIPBinding",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unIP",
+          "type": "uint32"
+        },
+        {
+          "name": "usPort",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetISteamFriends",
+      "returns": "void /*ISteamFriends*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "GetISteamUtils",
+      "returns": "void /*ISteamUtils*/*",
+      "returnKind": "pointer",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GetISteamMatchmaking",
+      "returns": "void /*ISteamMatchmaking*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetISteamMatchmakingServers",
+      "returns": "void /*ISteamMatchmakingServers*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetISteamGenericInterface",
+      "returns": "void*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "GetISteamUserStats",
+      "returns": "void /*ISteamUserStats*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "GetISteamGameServerStats",
+      "returns": "void /*ISteamGameServerStats*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetISteamApps",
+      "returns": "void /*ISteamApps*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "GetISteamNetworking",
+      "returns": "void /*ISteamNetworking*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetISteamRemoteStorage",
+      "returns": "void /*ISteamRemoteStorage*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetISteamScreenshots",
+      "returns": "void /*ISteamScreenshots*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "RunFrame",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 20,
+      "name": "GetIPCCallCount",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 21,
+      "name": "SetWarningMessageHook",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pFunction",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "BShutdownIfAllPipesClosed",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 23,
+      "name": "GetISteamHTTP",
+      "returns": "void /*ISteamHTTP*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "DEPRECATED_GetISteamUnifiedMessages",
+      "returns": "void*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "GetISteamController",
+      "returns": "void /*ISteamController*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "GetISteamUGC",
+      "returns": "void /*ISteamUGC*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "GetISteamAppList",
+      "returns": "void /*ISteamAppList*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamUser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "GetISteamMusic",
+      "returns": "void /*ISteamMusic*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "GetISteamMusicRemote",
+      "returns": "void /*ISteamMusicRemote*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "GetISteamHTMLSurface",
+      "returns": "void /*ISteamHTMLSurface*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_a",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_a",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "Set_SteamAPI_CCheckCallbackRegisteredInProcess",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "func",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "GetISteamInventory",
+      "returns": "void /*ISteamInventory*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "GetISteamVideo",
+      "returns": "void /*ISteamVideo*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "GetISteamParentalSettings",
+      "returns": "void /*ISteamParentalSettings*/*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamuser",
+          "type": "int32"
+        },
+        {
+          "name": "hSteamPipe",
+          "type": "int32"
+        },
+        {
+          "name": "pchVersion",
+          "type": "const char*"
+        }
+      ]
+    }
+  ]
+}

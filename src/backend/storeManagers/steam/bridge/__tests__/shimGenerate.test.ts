@@ -533,27 +533,31 @@ describe('shimGenerate', () => {
     expect(result).toEqual({ status: 'shim-not-built', arch: 'x86' })
   })
 
-  it('x64: an exe importing steam_api64.dll targets steam_api64.dll (filename/source selection), sourced from the x64 shim -- but D-51-13 means SHIM64_EXPORTED_SYMBOLS is still empty today, so coverage is a named miss, never a silent placement', async () => {
+  it('x64: an exe importing steam_api64.dll targets steam_api64.dll (filename/source selection), sourced from the x64 shim -- a genuinely uncovered x64 symbol is a named miss, never a silent placement', async () => {
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',
       arch: 'x64',
-      symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
+      // 51-15: SHIM64_EXPORTED_SYMBOLS is now populated (D-51-13 GO) --
+      // SteamAPI_Init IS covered, but SteamHTTP (never widened by any
+      // Phase 51 plan to date, same still-uncovered example
+      // shimCoverage.test.ts uses) is not, so this stays a real miss
+      // rather than silently becoming 'placed'.
+      symbols: ['SteamAPI_Init', 'SteamHTTP']
     })
 
     const result = await placeShimForGame('1234', gameExePath, {
       shim64SourcePath: realShim64SourcePath
     })
 
-    // No x64 shim ships a real export list yet (SHIM64_EXPORTED_SYMBOLS is
-    // empty until 51-15) -- every x64 symbol is therefore uncovered, and
-    // the fail-closed default (T-51-16) means this is a named 'miss', not
-    // a silent 'placed'.
+    // The fail-closed default (T-51-16) means a genuinely uncovered x64
+    // symbol is a named 'miss', not a silent 'placed'.
     expect(result.status).toBe('miss')
     if (result.status === 'miss') {
       expect(result.verdict.arch).toBe('x64')
       expect(result.verdict.missingSymbols).toEqual(
-        expect.arrayContaining(['SteamAPI_Init', 'SteamAPI_Shutdown'])
+        expect.arrayContaining(['SteamHTTP'])
       )
+      expect(result.verdict.missingSymbols).not.toContain('SteamAPI_Init')
     }
     // Neither destination file is ever written on a miss.
     expect(existsSync(shim64DestPath())).toBe(false)

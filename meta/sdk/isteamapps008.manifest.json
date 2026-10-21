@@ -1,0 +1,467 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMAPPS_INTERFACE_VERSION008",
+  "family": "SteamApps",
+  "ordinal": 20,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamApps_v008",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamApps.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "BIsSubscribed",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "BIsLowViolence",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 2,
+      "name": "BIsCybercafe",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 3,
+      "name": "BIsVACBanned",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 4,
+      "name": "GetCurrentGameLanguage",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 5,
+      "name": "GetAvailableGameLanguages",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 6,
+      "name": "BIsSubscribedApp",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "BIsDlcInstalled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetEarliestPurchaseUnixTime",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "BIsSubscribedFromFreeWeekend",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 10,
+      "name": "GetDLCCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 11,
+      "name": "BGetDLCDataByIndex",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "iDLC",
+          "type": "int32"
+        },
+        {
+          "name": "pAppID",
+          "type": "uint32*"
+        },
+        {
+          "name": "pbAvailable",
+          "type": "bool*"
+        },
+        {
+          "name": "pchName",
+          "type": "char*"
+        },
+        {
+          "name": "cchNameBufferSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "InstallDLC",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "UninstallDLC",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "RequestAppProofOfPurchaseKey",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetCurrentBetaName",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchName",
+          "type": "char*"
+        },
+        {
+          "name": "cchNameBufferSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "MarkContentCorrupt",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bMissingFilesOnly",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetInstalledDepots",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        },
+        {
+          "name": "pvecDepots",
+          "type": "uint32*"
+        },
+        {
+          "name": "cMaxDepots",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetAppInstallDir",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        },
+        {
+          "name": "pchFolder",
+          "type": "char*"
+        },
+        {
+          "name": "cchFolderBufferSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "BIsAppInstalled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "GetAppOwner",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 4,
+      "params": [],
+      "structSize": 8
+    },
+    {
+      "slot": 21,
+      "name": "GetLaunchQueryParam",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetDlcDownloadProgress",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "punBytesDownloaded",
+          "type": "uint64*"
+        },
+        {
+          "name": "punBytesTotal",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "GetAppBuildId",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 24,
+      "name": "RequestAllProofOfPurchaseKeys",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 25,
+      "name": "GetFileDetails",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszFileName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "GetLaunchCommandLine",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pszCommandLine",
+          "type": "char*"
+        },
+        {
+          "name": "cubCommandLine",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "BIsSubscribedFromFamilySharing",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 28,
+      "name": "BIsTimedTrial",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "punSecondsAllowed",
+          "type": "uint32*"
+        },
+        {
+          "name": "punSecondsPlayed",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "SetDlcContext",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "GetNumBetas",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pnAvailable",
+          "type": "int32*"
+        },
+        {
+          "name": "pnPrivate",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "GetBetaInfo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "iBetaIndex",
+          "type": "int32"
+        },
+        {
+          "name": "punFlags",
+          "type": "uint32*"
+        },
+        {
+          "name": "punBuildID",
+          "type": "uint32*"
+        },
+        {
+          "name": "pchBetaName",
+          "type": "char*"
+        },
+        {
+          "name": "cchBetaName",
+          "type": "int32"
+        },
+        {
+          "name": "pchDescription",
+          "type": "char*"
+        },
+        {
+          "name": "cchDescription",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "SetActiveBeta",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchBetaName",
+          "type": "const char*"
+        }
+      ]
+    }
+  ]
+}

@@ -224,5 +224,13 @@
     "ResetAllStats": {
       "helperFlat": "SteamAPI_ISteamUserStats_ResetAllStats"
     }
+  },
+  "SteamClient": {
+    "CreateSteamPipe": {
+      "helperFallback": 1
+    },
+    "ConnectToGlobalUser": {
+      "helperFallback": 1
+    }
   }
 }

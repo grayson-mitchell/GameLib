@@ -3,7 +3,7 @@
   "interface": "STEAMUSERSTATS_INTERFACE_VERSION011",
   "family": "SteamUserStats",
   "ordinal": 10,
-  "arches": ["x86"],
+  "arches": ["x86", "x64"],
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamUserStats_v011",

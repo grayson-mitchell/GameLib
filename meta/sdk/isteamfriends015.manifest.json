@@ -1,0 +1,1061 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamFriends015",
+  "family": "SteamFriends",
+  "ordinal": 18,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamFriends_v015",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamFriends.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetPersonaName",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "SetPersonaName",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchPersonaName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "GetPersonaState",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 3,
+      "name": "GetFriendCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "iFriendFlags",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "GetFriendByIndex",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "iFriend",
+          "type": "int32"
+        },
+        {
+          "name": "iFriendFlags",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 5,
+      "name": "GetFriendRelationship",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "GetFriendPersonaState",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "GetFriendPersonaName",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetFriendGamePlayed",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pFriendGameInfo",
+          "type": "FriendGameInfo_t*"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "GetFriendPersonaNameHistory",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iPersonaName",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GetFriendSteamLevel",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetPlayerNickname",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDPlayer",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetFriendsGroupCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 13,
+      "name": "GetFriendsGroupIDByIndex",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "iFG",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "GetFriendsGroupName",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "friendsGroupID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetFriendsGroupMembersCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "friendsGroupID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "GetFriendsGroupMembersList",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "friendsGroupID",
+          "type": "uint32"
+        },
+        {
+          "name": "pOutSteamIDMembers",
+          "type": "CSteamID*"
+        },
+        {
+          "name": "nMembersCount",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "HasFriend",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iFriendFlags",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetClanCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 19,
+      "name": "GetClanByIndex",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "iClan",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 20,
+      "name": "GetClanName",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "GetClanTag",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetClanActivityCounts",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pnOnline",
+          "type": "int32*"
+        },
+        {
+          "name": "pnInGame",
+          "type": "int32*"
+        },
+        {
+          "name": "pnChatting",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "DownloadClanActivityCounts",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "psteamIDClans",
+          "type": "CSteamID*"
+        },
+        {
+          "name": "cClansToRequest",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "GetFriendCountFromSource",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDSource",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "GetFriendFromSourceByIndex",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDSource",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iFriend",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 26,
+      "name": "IsUserInSource",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "steamIDSource",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "SetInGameVoiceSpeaking",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "bSpeaking",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "ActivateGameOverlay",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchDialog",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "ActivateGameOverlayToUser",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pchDialog",
+          "type": "const char*"
+        },
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "ActivateGameOverlayToWebPage",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchURL",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "ActivateGameOverlayToStore",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "eFlag",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "SetPlayedWith",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDUserPlayedWith",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "ActivateGameOverlayInviteDialog",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "GetSmallFriendAvatar",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "GetMediumFriendAvatar",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "GetLargeFriendAvatar",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "RequestUserInformation",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "bRequireNameOnly",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 38,
+      "name": "RequestClanOfficerList",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 39,
+      "name": "GetClanOwner",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 40,
+      "name": "GetClanOfficerCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 41,
+      "name": "GetClanOfficerByIndex",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iOfficer",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 42,
+      "name": "GetUserRestrictions",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 43,
+      "name": "SetRichPresence",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 44,
+      "name": "ClearRichPresence",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 45,
+      "name": "GetFriendRichPresence",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 46,
+      "name": "GetFriendRichPresenceKeyCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 47,
+      "name": "GetFriendRichPresenceKeyByIndex",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iKey",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 48,
+      "name": "RequestFriendRichPresence",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 49,
+      "name": "InviteUserToGame",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchConnectString",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 50,
+      "name": "GetCoplayFriendCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 51,
+      "name": "GetCoplayFriend",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "iCoplayFriend",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 52,
+      "name": "GetFriendCoplayTime",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 53,
+      "name": "GetFriendCoplayGame",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 54,
+      "name": "JoinClanChatRoom",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 55,
+      "name": "LeaveClanChatRoom",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 56,
+      "name": "GetClanChatMemberCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 57,
+      "name": "GetChatMemberByIndex",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iUser",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 58,
+      "name": "SendClanChatMessage",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDClanChat",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchText",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 59,
+      "name": "GetClanChatMessage",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "steamIDClanChat",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iMessage",
+          "type": "int32"
+        },
+        {
+          "name": "prgchText",
+          "type": "void*"
+        },
+        {
+          "name": "cchTextMax",
+          "type": "int32"
+        },
+        {
+          "name": "peChatEntryType",
+          "type": "uint32*"
+        },
+        {
+          "name": "psteamidChatter",
+          "type": "CSteamID*"
+        }
+      ]
+    },
+    {
+      "slot": 60,
+      "name": "IsClanChatAdmin",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDClanChat",
+          "type": "CSteamID"
+        },
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 61,
+      "name": "IsClanChatWindowOpenInSteam",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClanChat",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 62,
+      "name": "OpenClanChatWindowInSteam",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClanChat",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 63,
+      "name": "CloseClanChatWindowInSteam",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClanChat",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 64,
+      "name": "SetListenForFriendsMessages",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bInterceptEnabled",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 65,
+      "name": "ReplyToFriendMessage",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchMsgToSend",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 66,
+      "name": "GetFriendMessage",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iMessageID",
+          "type": "int32"
+        },
+        {
+          "name": "pvData",
+          "type": "void*"
+        },
+        {
+          "name": "cubData",
+          "type": "int32"
+        },
+        {
+          "name": "peChatEntryType",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 67,
+      "name": "GetFollowerCount",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 68,
+      "name": "IsFollowing",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 69,
+      "name": "EnumerateFollowingList",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unStartIndex",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 70,
+      "name": "IsClanPublic",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 71,
+      "name": "IsClanOfficialGameGroup",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    }
+  ]
+}

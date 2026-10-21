@@ -124,11 +124,71 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamGameServerUtils'
 ])
 
-// D-51-13: no Win64 shim target exists yet (research's zig cc prototype /
-// the fail-closed rule is a later plan's call). Empty until 51-15 -- kept as
-// a real, exported constant (not a TODO comment) so every call site that
-// reads it today sees the honest "nothing" rather than an absent symbol.
-export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set()
+// 51-15: D-51-13 GO -- the Win64 shim ships. Mirrors
+// native/steam-bridge/generated/steam_api64.def's EXPORTS list exactly
+// (44 symbols: the 10-symbol flat superset + 11 GameServer flat stubs +
+// the 3-symbol modern-SDK lookup family, Win64-only -- never present in
+// the x86 steam_api.def -- + 10 versioned accessors + 10 bare accessors,
+// same CR-02 pin discipline as SHIM_EXPORTED_SYMBOLS above: an SDK
+// bump/export change in the generator must update this list in the same
+// review pass, verified by shimCoverage.test.ts against the committed
+// .def in both directions).
+export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
+  'SteamAPI_Init',
+  'SteamAPI_InitFlat',
+  'SteamAPI_Shutdown',
+  'SteamAPI_RestartAppIfNecessary',
+  'SteamAPI_IsSteamRunning',
+  'SteamAPI_RunCallbacks',
+  'SteamAPI_RegisterCallback',
+  'SteamAPI_UnregisterCallback',
+  'SteamAPI_RegisterCallResult',
+  'SteamAPI_UnregisterCallResult',
+  'SteamGameServer_Init',
+  'SteamGameServer_Shutdown',
+  'SteamGameServer_RunCallbacks',
+  'SteamGameServer_BSecure',
+  'SteamGameServer_GetSteamID',
+  'SteamGameServer_GetHSteamPipe',
+  'SteamGameServer_GetHSteamUser',
+  'SteamGameServer',
+  'SteamGameServerStats',
+  'SteamGameServerNetworking',
+  'SteamGameServerUtils',
+  // 51-15: the modern-SDK lookup family (ROADMAP sub-decision 1, D-51-13)
+  // -- Win64-only, never in the x86 steam_api.def's export list.
+  'SteamInternal_CreateInterface',
+  'SteamAPI_GetHSteamUser',
+  'SteamAPI_GetHSteamPipe',
+  // 261021-pgx (shared x86/x64): STEAMUSERSTATS_INTERFACE_VERSION011's
+  // arches widened to ['x86','x64'] this plan -- served on both.
+  'SteamAPI_SteamUserStats_v011',
+  // The three shared stub manifests (51-14), arches widened to
+  // ['x86','x64'] this plan.
+  'SteamAPI_SteamMatchMaking_v009',
+  'SteamAPI_SteamMatchMakingServers_v002',
+  'SteamAPI_SteamNetworking_v005',
+  // 51-15: ELEX's (411300) own measured Win64-only interface set.
+  'SteamAPI_SteamClient_v017',
+  'SteamAPI_SteamUser_v019',
+  'SteamAPI_SteamFriends_v015',
+  'SteamAPI_SteamUtils_v008',
+  'SteamAPI_SteamApps_v008',
+  'SteamAPI_SteamRemoteStorage_v013',
+  // 51-06 Task 2 bare legacy accessors -- one per distinct family with an
+  // x64 manifest (10: the shared trio's three plus ELEX's six plus
+  // SteamUserStats, same resolution mechanism as the x86 bare accessors).
+  'SteamApps',
+  'SteamClient',
+  'SteamFriends',
+  'SteamMatchmaking',
+  'SteamMatchmakingServers',
+  'SteamNetworking',
+  'SteamRemoteStorage',
+  'SteamUser',
+  'SteamUserStats',
+  'SteamUtils'
+])
 
 /** A single served interface version's coverage mode: `'wire'` means the
  * shim's helper dispatches real Steam calls for it; `'stub'` means the
@@ -195,20 +255,54 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   ]
 ])
 
-// D-51-13: empty until 51-15, same rationale as SHIM64_EXPORTED_SYMBOLS.
+// 51-15: D-51-13 GO -- one entry per manifest whose `arches` includes
+// x64. 261021-pgx's STEAMUSERSTATS_INTERFACE_VERSION011 is the one SHARED
+// entry (the SAME generated dispatch code serves it on both arches --
+// the wire protocol is a plain TCP byte frame, arch-neutral -- so it is
+// genuinely 'wire', exactly like its x86 Hoard coverage above); every
+// other entry is one of ELEX's (411300) own brand-new x64-only interfaces,
+// served as 'stub' because no macOS helper-dylib accessor for THESE
+// version strings has ever been measured against a real Mac Steam client
+// (D-09: never invented) -- D-51-02's one-time notice is what tells the
+// user these parts are stubbed.
 export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   string,
   ServedInterface
-> = new Map()
+> = new Map([
+  [
+    'STEAMUSERSTATS_INTERFACE_VERSION011',
+    { family: 'SteamUserStats', mode: 'wire' }
+  ],
+  ['SteamClient017', { family: 'SteamClient', mode: 'stub' }],
+  ['SteamUser019', { family: 'SteamUser', mode: 'stub' }],
+  ['SteamFriends015', { family: 'SteamFriends', mode: 'stub' }],
+  ['SteamUtils008', { family: 'SteamUtils', mode: 'stub' }],
+  ['STEAMAPPS_INTERFACE_VERSION008', { family: 'SteamApps', mode: 'stub' }],
+  [
+    'STEAMREMOTESTORAGE_INTERFACE_VERSION013',
+    { family: 'SteamRemoteStorage', mode: 'stub' }
+  ],
+  // The three shared stub manifests (51-14), arches widened to x64 this
+  // plan -- same stub behavior, arch-neutral (P2P join stays out of
+  // scope, 24-SPEC).
+  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'stub' }],
+  [
+    'SteamMatchMakingServers002',
+    { family: 'SteamMatchMakingServers', mode: 'stub' }
+  ],
+  ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }]
+])
 
-// D-51-13: whether the (future) Win64 shim answers an unserved required
+// 51-15: D-51-13 GO -- the Win64 shim answers an unserved required
 // interface version with a null-object fallback (a real pointer to a
-// do-nothing vtable) rather than reporting it missing outright. False today
-// -- there is no Win64 shim at all yet. `evaluateShimCoverageWith` below
-// takes this as an explicit parameter (not just reading the module-level
-// constant) so tests can exercise the `true` branch before any real Win64
-// shim exists.
-export const SHIM_X64_NULL_OBJECT_FALLBACK = false
+// do-nothing vtable, X64_NULL_OBJECT_SLOTS in meta/gen_vtables.ts) rather
+// than reporting it missing outright. ELEX's eight interfaces with no
+// GameLib manifest at all (SteamScreenshots, SteamHTTP, SteamUGC,
+// SteamUnifiedMessages, SteamController, SteamAppList, SteamMusic,
+// SteamMusicRemote) are answered this way. `evaluateShimCoverageWith`
+// below takes this as an explicit parameter (not just reading the
+// module-level constant) so tests can exercise either branch directly.
+export const SHIM_X64_NULL_OBJECT_FALLBACK = true
 
 interface ExportSetVersionInputs {
   x86ExportedSymbols: ReadonlySet<string>

@@ -3,7 +3,7 @@
   "interface": "SteamMatchMaking009",
   "family": "SteamMatchmaking",
   "ordinal": 12,
-  "arches": ["x86"],
+  "arches": ["x86", "x64"],
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamMatchMaking_v009",

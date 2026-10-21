@@ -31,6 +31,8 @@ import {
   isScanVerdictNowCovered
 } from '../shimCoverage'
 import {
+  ELEX_EXE_VERSION_STRINGS,
+  ELEX_X64_OBJDUMP_OUTPUT,
   HOARD_DLL_VERSION_STRINGS,
   HOARD_REUBEN_REAL_OBJDUMP_OUTPUT,
   XCOM_DLL_VERSION_STRINGS,
@@ -45,10 +47,18 @@ const STEAM_API_DEF_PATH = join(
   'generated',
   'steam_api.def'
 )
+// 51-15: steam_api64.def is the x64 sibling 51-15 Task 1/2 generate/build.
+const STEAM_API64_DEF_PATH = join(
+  REPO_ROOT,
+  'native',
+  'steam-bridge',
+  'generated',
+  'steam_api64.def'
+)
 const SDK_MANIFEST_DIR = join(REPO_ROOT, 'meta', 'sdk')
 
-function readDefExports(): string[] {
-  const lines = readFileSync(STEAM_API_DEF_PATH, 'utf-8')
+function readDefExports(defPath: string = STEAM_API_DEF_PATH): string[] {
+  const lines = readFileSync(defPath, 'utf-8')
     .split(/\r?\n/)
     .map((l) => l.trim())
   const exportsIdx = lines.indexOf('EXPORTS')
@@ -75,9 +85,33 @@ describe('SHIM_EXPORTED_SYMBOLS (24-CR-02 pin, moved from shimGenerate.test.ts)'
   })
 })
 
-describe('SHIM64_EXPORTED_SYMBOLS', () => {
-  test('is empty until 51-15 (no Win64 shim target exists yet)', () => {
-    expect(SHIM64_EXPORTED_SYMBOLS.size).toBe(0)
+// 51-15: D-51-13 GO -- same CR-02 pin discipline as SHIM_EXPORTED_SYMBOLS
+// above, against the x64 sibling .def.
+describe('SHIM64_EXPORTED_SYMBOLS (51-15 pin)', () => {
+  test('set-equals the export list of the committed native/steam-bridge/generated/steam_api64.def, in both directions', () => {
+    const defSymbols = readDefExports(STEAM_API64_DEF_PATH)
+    expect(defSymbols.length).toBeGreaterThan(0)
+    expect(new Set(defSymbols).size).toBe(defSymbols.length)
+
+    const defSet = new Set(defSymbols)
+    const missingFromShim = defSymbols.filter(
+      (s) => !SHIM64_EXPORTED_SYMBOLS.has(s)
+    )
+    const notInDef = [...SHIM64_EXPORTED_SYMBOLS].filter((s) => !defSet.has(s))
+    expect(missingFromShim).toEqual([])
+    expect(notInDef).toEqual([])
+  })
+
+  test('the modern-SDK lookup family is x64-only -- never present in the x86 steam_api.def', () => {
+    const x86Symbols = new Set(readDefExports(STEAM_API_DEF_PATH))
+    for (const name of [
+      'SteamInternal_CreateInterface',
+      'SteamAPI_GetHSteamUser',
+      'SteamAPI_GetHSteamPipe'
+    ]) {
+      expect(SHIM64_EXPORTED_SYMBOLS.has(name)).toBe(true)
+      expect(x86Symbols.has(name)).toBe(false)
+    }
   })
 })
 
@@ -120,13 +154,66 @@ describe('SHIM_SERVED_INTERFACE_VERSIONS (manifest pin)', () => {
   })
 })
 
-describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK', () => {
-  test('SHIM64_SERVED_INTERFACE_VERSIONS is empty until 51-15', () => {
-    expect(SHIM64_SERVED_INTERFACE_VERSIONS.size).toBe(0)
+describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-15)', () => {
+  test('keys equal the set of `interface` values across meta/sdk/*.manifest.json whose arches include x64', () => {
+    const manifestFiles = readdirSync(SDK_MANIFEST_DIR).filter((f) =>
+      f.endsWith('.manifest.json')
+    )
+    const x64Interfaces = new Set<string>()
+    for (const file of manifestFiles) {
+      const manifest = JSON.parse(
+        readFileSync(join(SDK_MANIFEST_DIR, file), 'utf-8')
+      )
+      const arches: string[] | undefined = manifest.arches
+      if (arches?.includes('x64')) {
+        x64Interfaces.add(manifest.interface)
+      }
+    }
+
+    expect(new Set(SHIM64_SERVED_INTERFACE_VERSIONS.keys())).toEqual(
+      x64Interfaces
+    )
   })
 
-  test('SHIM_X64_NULL_OBJECT_FALLBACK is false today', () => {
-    expect(SHIM_X64_NULL_OBJECT_FALLBACK).toBe(false)
+  // 261021-pgx (shared with Hoard on x86): the SAME generated dispatch code
+  // runs regardless of which arch the calling game is -- the wire protocol
+  // is a plain TCP byte frame, arch-neutral -- so a manifest that is
+  // genuinely wired on x86 is genuinely wired on x64 too.
+  test('STEAMUSERSTATS_INTERFACE_VERSION011 is served as wire on x64 (same dispatch code as its x86 Hoard coverage)', () => {
+    expect(
+      SHIM64_SERVED_INTERFACE_VERSIONS.get(
+        'STEAMUSERSTATS_INTERFACE_VERSION011'
+      )
+    ).toEqual({ family: 'SteamUserStats', mode: 'wire' })
+  })
+
+  // ELEX's own six brand-new x64-only interfaces have no verified macOS
+  // helper-dylib accessor (D-09: never invented) -- served, but stub.
+  test("ELEX's own six new interfaces are served as stub (no verified helper path)", () => {
+    for (const version of [
+      'SteamClient017',
+      'SteamUser019',
+      'SteamFriends015',
+      'SteamUtils008',
+      'STEAMAPPS_INTERFACE_VERSION008',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION013'
+    ]) {
+      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('stub')
+    }
+  })
+
+  test('the three shared stub manifests (51-14, widened to x64 this plan) stay stub on x64', () => {
+    for (const version of [
+      'SteamMatchMaking009',
+      'SteamMatchMakingServers002',
+      'SteamNetworking005'
+    ]) {
+      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('stub')
+    }
+  })
+
+  test('SHIM_X64_NULL_OBJECT_FALLBACK is true (D-51-13 GO)', () => {
+    expect(SHIM_X64_NULL_OBJECT_FALLBACK).toBe(true)
   })
 })
 
@@ -190,7 +277,11 @@ describe('evaluateShimCoverage', () => {
     expect(result.stubbedInterfaces).toEqual([])
   })
 
-  test('x64: with SHIM64 sets empty today, every symbol/version is missing', () => {
+  // 51-15: SHIM64 is now populated -- a real x64-exported symbol is
+  // covered, and an UNSERVED required version (SteamUtils005 is only ever
+  // served on x86; ELEX's own x64 SteamUtils version is SteamUtils008) now
+  // falls through to the x64 null-object fallback (stubbed), not missing.
+  test('x64: a real exported symbol is covered, and an unserved required version is stubbed via the null-object fallback (D-51-13)', () => {
     const result = evaluateShimCoverage({
       arch: 'x64',
       symbols: ['SteamAPI_Init', 'SteamUtils'],
@@ -198,11 +289,8 @@ describe('evaluateShimCoverage', () => {
       versionProblems: []
     })
 
-    expect(result.missingSymbols).toEqual([
-      'SteamAPI_Init',
-      'SteamUtils',
-      'SteamUtils005'
-    ])
+    expect(result.missingSymbols).toEqual([])
+    expect(result.stubbedInterfaces).toEqual(['SteamUtils'])
   })
 
   test('versionProblems are appended verbatim after missing symbols/versions', () => {
@@ -416,6 +504,55 @@ describe('evaluateShimCoverage (Hoard: 63000) -- 51-14: the second/last-group fa
     for (const family of widenedFamilies) {
       expect(result.stubbedInterfaces).not.toContain(family)
     }
+  })
+})
+
+// 51-15 Task 3 (D-51-14 ELEX acceptance): the one real Win64-only title.
+// ELEX imports SteamInternal_CreateInterface (runtime lookup, D-51-07) --
+// resolveRequiredInterfaceVersions walks EVERY known family found in the
+// exe's own version-string pool, not a fixed bare-accessor list.
+describe('evaluateShimCoverage (51-15 Task 3 acceptance check -- ELEX, 411300, Win64)', () => {
+  const elexSymbols = parseSteamApiImports(ELEX_X64_OBJDUMP_OUTPUT)
+  const { required: elexRequiredVersions, problems: elexVersionProblems } =
+    resolveRequiredInterfaceVersions({
+      importedSymbols: elexSymbols,
+      dllVersions: [],
+      exeVersions: ELEX_EXE_VERSION_STRINGS
+    })
+
+  test('resolves cleanly (no unknown-version/ambiguous problems) against the real captured import table', () => {
+    expect(elexVersionProblems).toEqual([])
+  })
+
+  test('zero missing symbols; SteamRemoteStorage plus every null-object-fallback family reports stubbed', () => {
+    const result = evaluateShimCoverage({
+      arch: 'x64',
+      symbols: elexSymbols,
+      requiredInterfaceVersions: elexRequiredVersions,
+      versionProblems: elexVersionProblems
+    })
+
+    expect(result.missingSymbols).toEqual([])
+    expect(result.stubbedInterfaces).toEqual(
+      expect.arrayContaining([
+        'SteamRemoteStorage',
+        // The eight families ELEX's exe requests that GameLib has no
+        // manifest for at all -- answered entirely by the x64 null-object
+        // fallback (ROADMAP sub-decision 1), never invented as a stub
+        // manifest with no measured basis (D-09).
+        'SteamScreenshots',
+        'SteamHTTP',
+        'SteamUGC',
+        'SteamUnifiedMessages',
+        'SteamController',
+        'SteamAppList',
+        'SteamMusic',
+        'SteamMusicRemote'
+      ])
+    )
+    // SteamUserStats is served 'wire' (the shared, genuinely-dispatched
+    // manifest) -- it must NOT appear in stubbedInterfaces.
+    expect(result.stubbedInterfaces).not.toContain('SteamUserStats')
   })
 })
 
