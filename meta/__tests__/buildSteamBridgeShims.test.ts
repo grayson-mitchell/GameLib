@@ -76,6 +76,21 @@ describe('buildSteamBridgeShims', () => {
     it('a chmod-755 step exists for the compiled helper (non-win32 downloadAsset convention)', () => {
       expect(sourceText).toMatch(/chmod\([^)]*helperOutputPath\(\)[^)]*0o755\)/)
     })
+
+    // 51-10 Task 2: bridge_helper.c now `#include "bridge_dispatch.h"` --
+    // the generated header 51-10 Task 1 emits into
+    // native/steam-bridge/generated/, a DIFFERENT directory from
+    // bridge_helper.c's own (native/steam-bridge/helper/). clang's quoted
+    // #include first searches the including file's own directory, so this
+    // -I is required for that #include to resolve at all.
+    it('includes -I pointing at native/steam-bridge/generated (51-10 Task 2)', () => {
+      const { args } = buildHelperCompileArgv('arm64')
+      const includeIndex = args.indexOf('-I')
+      expect(includeIndex).toBeGreaterThan(-1)
+      expect(args[includeIndex + 1]).toBe(
+        join('native', 'steam-bridge', 'generated')
+      )
+    })
   })
 
   describe('buildShimCompileArgv (real compile gate, finding #5a)', () => {
