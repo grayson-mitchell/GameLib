@@ -27,7 +27,7 @@ import {
 } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { resolve, relative, dirname, isAbsolute, join } from 'path'
+import { resolve, relative, dirname, isAbsolute, join, basename } from 'path'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
 import { SteamUser } from './user'
 import {
@@ -932,6 +932,72 @@ export async function buildDepotPlan(
   )
 
   return plan
+}
+
+/**
+ * D-51-06 (Phase 51 Plan 17): pure, side-effect-free classifier over an
+ * already-built plan's file list -- never touches the network or disk.
+ * Case-insensitive BASENAME match only (any directory), so
+ * `backup/steam_api.dll.bak` is correctly NOT counted (its basename is
+ * `steam_api.dll.bak`, not `steam_api.dll`).
+ */
+export function screenDepotPlanForSteamApi(
+  plan: Pick<DepotPlan, 'depots'>
+): 'none' | 'x86' | 'x64' | 'both' {
+  let hasX86 = false
+  let hasX64 = false
+  for (const depot of plan.depots) {
+    for (const file of depot.files) {
+      const name = basename(file.filename).toLowerCase()
+      if (name === 'steam_api.dll') {
+        hasX86 = true
+      } else if (name === 'steam_api64.dll') {
+        hasX64 = true
+      }
+    }
+  }
+  if (hasX86 && hasX64) return 'both'
+  if (hasX64) return 'x64'
+  if (hasX86) return 'x86'
+  return 'none'
+}
+
+/**
+ * D-51-06: the cheap pre-install screen ROADMAP sub-decision 2 left open --
+ * measured by research as NOT free (a second, separate buildDepotPlan call,
+ * PICS + manifest only, never chunk bytes). games.ts (Plan 17's install()
+ * wiring) calls this BEFORE routing a pending-scan bridge title, so a
+ * 64-bit-only title with no 64-bit shim never downloads into a bridge
+ * bottle it can never run in.
+ *
+ * NEVER throws/rejects -- every failure mode (no CM connection, a PICS
+ * error, an aborted signal) resolves 'unknown', which a caller must treat
+ * exactly like "never screened" (T-51-37: a screen failure must never block
+ * an install). `os` is always forced to 'windows' regardless of the
+ * caller's own `opts.os` -- the bridge route is Windows-only, so screening
+ * any other platform's depot selection would answer the wrong question.
+ */
+export async function prescreenBridgeDepots(
+  appId: string,
+  opts: DownloadSteamDepotsOpts
+): Promise<'none' | 'x86' | 'x64' | 'both' | 'unknown'> {
+  const prescreenStart = Date.now()
+  let result: 'none' | 'x86' | 'x64' | 'both' | 'unknown'
+  try {
+    const plan = await buildDepotPlan(appId, { ...opts, os: 'windows' })
+    result = screenDepotPlanForSteamApi(plan)
+  } catch (err) {
+    logWarning(
+      `[Timing] prescreenBridgeDepots: appId ${appId} failed, treating as 'unknown' (install proceeds): ${String(err)}`,
+      LogPrefix.Steam
+    )
+    result = 'unknown'
+  }
+  logInfo(
+    `[Timing] prescreenBridgeDepots: appId ${appId} result=${result} in ${Date.now() - prescreenStart}ms`,
+    LogPrefix.Steam
+  )
+  return result
 }
 
 // ─────────────────────────────────────────────────────────────────────────
