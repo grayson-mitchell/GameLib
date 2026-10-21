@@ -117,6 +117,31 @@ function emitListenLine(
 }
 
 /**
+ * Phase 51 Plan 12 (D-51-04): the identity-only fallback introduces a REAL
+ * async gap between the full helper's own probe finishing (not-inited) and
+ * the fallback helper's `spawn()` call -- `ensureBridgeHelperReady` awaits a
+ * real `sleep(POLL_INTERVAL_MS)` in between. A fallback test's own
+ * `emitListenLine(identityChild, ...)` call must not fire before
+ * `ensureHelperSpawned` has actually attached `identityChild`'s stderr
+ * listener (i.e. before the SECOND `mockedSpawn` call happens) -- an emit
+ * with no listener attached yet is simply lost. This polls real time
+ * (no fake timers in this file) until `mockedSpawn` has been called
+ * `count` times, bounded so a genuine regression fails fast rather than
+ * hanging.
+ */
+async function waitForSpawnCallCount(count: number): Promise<void> {
+  const MAX_ATTEMPTS = 40
+  const RETRY_MS = 25
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (mockedSpawn.mock.calls.length >= count) return
+    await new Promise((resolve) => setTimeout(resolve, RETRY_MS))
+  }
+  throw new Error(
+    `mockedSpawn never reached ${count} calls (stuck at ${mockedSpawn.mock.calls.length})`
+  )
+}
+
+/**
  * A fake `net.Socket` that answers a CONTROL HEALTH request, then (only if
  * queued) a CONTROL WHOAMI request, with the frames supplied via
  * `healthResponse`/`whoamiResponse`. `undefined` for either means "never
@@ -272,25 +297,159 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
   })
 
-  test('HEALTH ok but WHOAMI not-inited -> not-ready, reason distinct from unreachable (finding #7), port still included', async () => {
-    const child = new FakeChildProcess()
-    mockedSpawn.mockReturnValue(child)
-    MockedSocket.mockImplementation(
+  // ── Phase 51 Plan 12 (D-51-04): identity-only (480) fallback ───────────────
+  // A full-AppID helper's own WHOAMI failure no longer ends the call --
+  // ensureBridgeHelperReady now kills that child and tries a SECOND,
+  // identity-only helper for the SAME appId before reporting anything.
+
+  test('D-51-04: full HEALTH ok/WHOAMI not-ok -> full child killed, identity-only (480) fallback spawned with --identity-only --report-appid <appId> in cwd <stateDir>/<appId>/identity, its WHOAMI ok -> fallback-identity, ready:true, NO steamBridgeSetupRequired', async () => {
+    const fullChild = new FakeChildProcess()
+    const identityChild = new FakeChildProcess()
+    mockedSpawn
+      .mockReturnValueOnce(fullChild)
+      .mockReturnValueOnce(identityChild)
+    MockedSocket
+      // Full helper: HEALTH ok, WHOAMI err.
+      .mockImplementationOnce(
+        () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+      )
+      // Identity-only fallback: HEALTH ok, WHOAMI ok.
+      .mockImplementationOnce(
+        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+      )
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(fullChild, 55001, APP_ID_A)
+    // The identity-only child's own LISTEN line always echoes --appid 480,
+    // never the real appId -- but its stderr listener only exists once
+    // ensureHelperSpawned() has actually spawned it (a real async gap, see
+    // waitForSpawnCallCount's own doc).
+    await waitForSpawnCallCount(2)
+    emitListenLine(identityChild, 55002, '480')
+
+    const result = await pending
+
+    expect(result).toEqual({
+      status: 'fallback-identity',
+      ready: true,
+      port: 55002
+    })
+    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+
+    expect(fullChild.kill).toHaveBeenCalledTimes(1)
+    expect(identityChild.kill).not.toHaveBeenCalled()
+
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+    const [fullBinPath, fullArgs, fullOptions] = mockedSpawn.mock.calls[0]
+    const [identityBinPath, identityArgs, identityOptions] =
+      mockedSpawn.mock.calls[1]
+    expect(fullBinPath).toBe(steamBridgeHelperPath)
+    expect(fullArgs).toEqual(['--appid', APP_ID_A, '--port', '0'])
+    expect(fullOptions.cwd).toBe(join(steamBridgeHelperStateDir, APP_ID_A))
+
+    expect(identityBinPath).toBe(steamBridgeHelperPath)
+    expect(identityArgs).toEqual([
+      '--appid',
+      '480',
+      '--port',
+      '0',
+      '--identity-only',
+      '--report-appid',
+      APP_ID_A
+    ])
+    expect(identityOptions.cwd).toBe(
+      join(steamBridgeHelperStateDir, APP_ID_A, 'identity')
+    )
+  })
+
+  test('D-51-04: both the full helper AND the identity-only fallback fail WHOAMI -> not-inited, ready:false, exactly ONE steamBridgeSetupRequired(reason: not-inited)', async () => {
+    const fullChild = new FakeChildProcess()
+    const identityChild = new FakeChildProcess()
+    mockedSpawn
+      .mockReturnValueOnce(fullChild)
+      .mockReturnValueOnce(identityChild)
+    MockedSocket.mockImplementationOnce(
+      () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+    ).mockImplementationOnce(
       () => new FakeSocket(healthOkFrame, whoamiErrFrame)
     )
 
     const pending = ensureBridgeHelperReady(APP_ID_A)
-    emitListenLine(child, 55001, APP_ID_A)
+    emitListenLine(fullChild, 55001, APP_ID_A)
+    await waitForSpawnCallCount(2)
+    emitListenLine(identityChild, 55002, '480')
+
     const result = await pending
 
-    expect(result.ready).toBe(false)
-    expect(result.status).toBe('not-inited')
-    expect(result.status).not.toBe('unreachable')
-    expect(result.port).toBe(55001)
+    expect(result).toEqual({
+      status: 'not-inited',
+      ready: false,
+      port: 55002,
+      error:
+        'Bridge helper process is up but not initialized against a live Steam session'
+    })
+    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
     expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
       { appName: APP_ID_A, reason: 'not-inited' }
     )
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+  })
+
+  test('D-51-04: an unreachable full helper never attempts the identity-only fallback -- spawn called exactly once, status stays unreachable', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockImplementation(() => new FakeSocket(healthErrFrame))
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+
+    const result = await pending
+
+    expect(result.status).toBe('unreachable')
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+  }, 10000)
+
+  test('D-51-04: a live identity-only entry for an appId is reused by the next call (no respawn), reporting fallback-identity', async () => {
+    const fullChild = new FakeChildProcess()
+    const identityChild = new FakeChildProcess()
+    mockedSpawn
+      .mockReturnValueOnce(fullChild)
+      .mockReturnValueOnce(identityChild)
+    MockedSocket.mockImplementationOnce(
+      () => new FakeSocket(healthOkFrame, whoamiErrFrame)
+    )
+      .mockImplementationOnce(
+        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+      )
+      // Base implementation -- drives every socket AFTER the two
+      // mockImplementationOnce() calls above are exhausted, i.e. the
+      // SECOND ensureBridgeHelperReady() call's own re-probe of the
+      // reused, already-live identity-only entry.
+      .mockImplementation(() => new FakeSocket(healthOkFrame, whoamiOkFrame))
+
+    const first = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(fullChild, 55001, APP_ID_A)
+    await waitForSpawnCallCount(2)
+    emitListenLine(identityChild, 55002, '480')
+    expect(await first).toEqual({
+      status: 'fallback-identity',
+      ready: true,
+      port: 55002
+    })
+
+    // A SECOND call for the same appId -- the live identity-only entry is
+    // reused, not respawned, and still probes WHOAMI ok (no new FakeSocket
+    // implementation queued, so the mock keeps returning the last one --
+    // healthOk/whoamiOk).
+    const second = await ensureBridgeHelperReady(APP_ID_A)
+
+    expect(mockedSpawn).toHaveBeenCalledTimes(2)
+    expect(second).toEqual({
+      status: 'fallback-identity',
+      ready: true,
+      port: 55002
+    })
   })
 
   test('HEALTH answers err on every attempt (process never becomes healthy) -> unreachable, ready:false, steamBridgeSetupRequired fired (D-06)', async () => {

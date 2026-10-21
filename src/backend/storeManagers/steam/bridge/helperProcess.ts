@@ -86,7 +86,18 @@ const PROBE_REQUEST_ID = 1
 // Not exported (this and EnsureBridgeHelperReadyResult below): verified to have no
 // importer anywhere -- not in any tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune
 // flagged the previously-exported forms as over-broad `export` keywords).
-type BridgeHelperReadyStatus = 'ready' | 'not-inited' | 'unreachable'
+// 'fallback-identity' (Phase 51 Plan 12, D-51-04): the full-AppID helper's
+// own WHOAMI failed (Steam refused the real AppID -- family-shared title,
+// licence check) but a SECOND, identity-only helper (--appid 480
+// --identity-only --report-appid <appId>) came up and inited successfully
+// against the SAME live Steam session -- the game still launches, with
+// SteamID/persona flowing but every AppID-scoped interface answering as a
+// stub.
+type BridgeHelperReadyStatus =
+  | 'ready'
+  | 'not-inited'
+  | 'unreachable'
+  | 'fallback-identity'
 
 interface EnsureBridgeHelperReadyResult {
   status: BridgeHelperReadyStatus
@@ -107,6 +118,12 @@ interface BridgeHelperEntry {
    * (or errored) before ever reporting one. Settles exactly once. */
   portReady: Promise<number | null>
   unregister: () => void
+  /** Phase 51 Plan 12 (D-51-04): true when this entry is the identity-only
+   * 480 fallback helper (spawned after the full-AppID helper's own WHOAMI
+   * failed), false for a normal full-AppID helper. Registered under the
+   * SAME appId key either way -- `stopBridgeHelper`/`onStopped` tear it
+   * down identically regardless of which kind it is. */
+  identityOnly: boolean
 }
 
 // D-51-01: per-appId registry -- replaces the Phase 24 module-scoped
@@ -165,36 +182,67 @@ function sleep(ms: number): Promise<void> {
  * D-51-01: spawns a helper for `appId` if (and only if) no live one already
  * exists for that SAME appId -- the per-appId no-op-if-live guard that
  * replaces Phase 24's single global one. Two different appIds always get
- * two different entries (D-51-03, no lock).
+ * two different entries (D-51-03, no lock). A live entry is reused
+ * REGARDLESS of its own `identityOnly` flag -- `ensureBridgeHelperReady`
+ * never respawns an already-live identity-only fallback entry just to
+ * retry full mode (Phase 51 Plan 12, "no respawn" clause).
  *
  * `cwd` is a per-appId staging directory under `steamBridgeHelperStateDir`
  * -- NOT the packaged bundle dir Phase 24 used -- so two concurrently
- * running helpers never race on the same `steam_appid.txt`. Argv-form
- * spawn (T-24-06) of the fixed, packaged, arch-aware
- * `steamBridgeHelperPath` (or the test override) ONLY -- never an
- * attacker-supplied binary path. No `env` option is ever passed: the
- * helper must inherit the REAL ambient environment (it needs the real
- * $HOME to find Steam's own dylib) -- this is a production spawn, not an
- * isolated child, and the project's fakeHomeIsolation gate
+ * running helpers never race on the same `steam_appid.txt`. The
+ * identity-only fallback (D-51-04) gets its OWN `<stateDir>/<appId>/identity`
+ * subdirectory so its `steam_appid.txt` (always "480") never collides with
+ * a full-mode helper's for the same appId. Argv-form spawn (T-24-06) of the
+ * fixed, packaged, arch-aware `steamBridgeHelperPath` (or the test
+ * override) ONLY -- never an attacker-supplied binary path. No `env` option
+ * is ever passed: the helper must inherit the REAL ambient environment (it
+ * needs the real $HOME to find Steam's own dylib) -- this is a production
+ * spawn, not an isolated child, and the project's fakeHomeIsolation gate
  * (`src/backend/__tests__/fakeHomeIsolation.test.ts`) pins that this file
  * never hand-rolls a home/config/state env block.
  */
-function ensureHelperSpawned(appId: string): BridgeHelperEntry {
+function ensureHelperSpawned(
+  appId: string,
+  options?: { identityOnly?: boolean }
+): BridgeHelperEntry {
   const existing = helpers.get(appId)
   if (existing && !existing.child.killed) {
     return existing
   }
 
+  const identityOnly = options?.identityOnly ?? false
   const helperPath = bridgeHelperPathOverride ?? steamBridgeHelperPath
-  const stateDir = join(steamBridgeHelperStateDir, appId)
+  const stateDir = identityOnly
+    ? join(steamBridgeHelperStateDir, appId, 'identity')
+    : join(steamBridgeHelperStateDir, appId)
   mkdirSync(stateDir, { recursive: true, mode: 0o700 })
 
+  // D-51-04: the native helper's own LISTEN line always echoes whatever
+  // --appid it was itself given -- '480' for the identity-only fallback,
+  // the real appId for a full-mode helper -- never the registry key this
+  // entry is stored under (which is always the real appId, either way).
+  const expectedListenAppId = identityOnly ? '480' : appId
+
+  const args = identityOnly
+    ? [
+        '--appid',
+        '480',
+        '--port',
+        '0',
+        '--identity-only',
+        '--report-appid',
+        appId
+      ]
+    : ['--appid', appId, '--port', '0']
+
   logInfo(
-    `ensureHelperSpawned: spawning a bridge helper for appId ${appId} from ${helperPath} (D-51-01)`,
+    identityOnly
+      ? `ensureHelperSpawned: spawning an identity-only (480) fallback bridge helper for appId ${appId} from ${helperPath} (D-51-04)`
+      : `ensureHelperSpawned: spawning a bridge helper for appId ${appId} from ${helperPath} (D-51-01)`,
     LogPrefix.Steam
   )
 
-  const child = spawn(helperPath, ['--appid', appId, '--port', '0'], {
+  const child = spawn(helperPath, args, {
     cwd: stateDir,
     stdio: ['ignore', 'pipe', 'pipe'],
     // Unset (null) on every production path -- inherits the real ambient
@@ -223,10 +271,12 @@ function ensureHelperSpawned(appId: string): BridgeHelperEntry {
     if (!match) return
     const [, portStr, matchedAppId] = match
     // T-51-05 (mitigate): only accept a LISTEN line whose own reported
-    // appid matches the appId THIS entry was spawned for, and whose port
-    // falls in the ephemeral/registered range -- never a privileged port,
-    // never another helper's announcement misattributed to this one.
-    if (matchedAppId !== appId) return
+    // appid matches the appid THIS child was spawned with (expectedListenAppId
+    // -- '480' for an identity-only fallback, the real appId otherwise), and
+    // whose port falls in the ephemeral/registered range -- never a
+    // privileged port, never another helper's announcement misattributed to
+    // this one.
+    if (matchedAppId !== expectedListenAppId) return
     const port = Number(portStr)
     if (
       !Number.isInteger(port) ||
@@ -283,7 +333,8 @@ function ensureHelperSpawned(appId: string): BridgeHelperEntry {
     child,
     port: null,
     portReady,
-    unregister
+    unregister,
+    identityOnly
   }
   helpers.set(appId, entry)
   return entry
@@ -391,23 +442,78 @@ function waitForPort(entry: BridgeHelperEntry): Promise<number | null> {
   })
 }
 
+interface HelperReadinessProbe {
+  outcome: 'ready' | 'not-inited' | 'unreachable'
+  port?: number
+}
+
 /**
- * D-51-01/D-06: lazily spawns a per-appId bridge helper, waits (bounded)
- * for it to report its own OS-assigned port, then bounded-polls its
- * CONTROL HEALTH/WHOAMI readiness against that port -- returning an
+ * Waits (bounded) for `entry`'s own LISTEN port, then bounded-polls its
+ * CONTROL HEALTH/WHOAMI readiness against that port -- the shared probe
+ * shape reused for BOTH a full-AppID helper and the D-51-04 identity-only
+ * fallback helper. Never fires `steamBridgeSetupRequired` or logs itself --
+ * the caller (`ensureBridgeHelperReady`) owns every observable side effect,
+ * since the SAME outcome means something different depending on which
+ * stage (full vs. fallback) produced it.
+ */
+async function probeHelperReadiness(
+  entry: BridgeHelperEntry
+): Promise<HelperReadinessProbe> {
+  const port = await waitForPort(entry)
+  if (port === null) {
+    return { outcome: 'unreachable' }
+  }
+
+  for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+    await sleep(POLL_INTERVAL_MS)
+
+    const { healthOk, whoamiOk } = await probeHealthAndWhoami(port)
+
+    if (!healthOk) {
+      continue
+    }
+
+    if (whoamiOk) {
+      return { outcome: 'ready', port }
+    }
+
+    return { outcome: 'not-inited', port }
+  }
+
+  return { outcome: 'unreachable', port }
+}
+
+/**
+ * D-51-01/D-06/D-51-04: lazily spawns a per-appId bridge helper, waits
+ * (bounded) for it to report its own OS-assigned port, then bounded-polls
+ * its CONTROL HEALTH/WHOAMI readiness against that port -- returning an
  * observable ready/not-ready result rather than assuming success, since
  * the caller's own launch (`runWineCommand({ wait: false })`) is
  * fire-and-forget.
  *
  *  - `appId` guarded with the same `/^\d+$/` rule as
  *    `ensureSteamClientReady`/`buildSteamProtocolUrl` (T-24-07 lineage).
- *  - HEALTH ok + WHOAMI ok -> `{ status: 'ready', ready: true, port }`.
- *  - HEALTH ok, WHOAMI not ok (process up, no live Steam session) ->
- *    `{ status: 'not-inited', ready: false, port }` -- a DISTINCT reason
- *    from unreachable (finding #7) -- and fires `steamBridgeSetupRequired`.
- *  - Port never reported, OR HEALTH never answers within the poll budget ->
- *    `{ status: 'unreachable', ready: false, port? }` (D-06 observable
- *    failure) and fires `steamBridgeSetupRequired`.
+ *  - HEALTH ok + WHOAMI ok -> `{ status: 'ready', ready: true, port }`
+ *    (or `'fallback-identity'` instead of `'ready'` when this entry IS the
+ *    identity-only fallback, D-51-04).
+ *  - Full-AppID helper: HEALTH ok, WHOAMI not ok (process up, no live Steam
+ *    session FOR THIS APPID) -- D-51-04: rather than failing outright, this
+ *    kills the full child and spawns a second, identity-only (480) helper
+ *    for the SAME appId (`--identity-only --report-appid <appId>`). If
+ *    THAT one's WHOAMI succeeds -> `{ status: 'fallback-identity',
+ *    ready: true, port }`, no `steamBridgeSetupRequired` at all (finding
+ *    #7's distinct-reason split never applies to a successful fallback --
+ *    the game launches). If the identity-only helper ALSO fails WHOAMI
+ *    (Steam itself is not signed in/running, not just this appId) ->
+ *    `{ status: 'not-inited', ready: false, port }` with exactly ONE
+ *    `steamBridgeSetupRequired({ reason: 'not-inited' })` -- never two.
+ *  - Port never reported, OR HEALTH never answers within the poll budget,
+ *    for the FULL helper -> `{ status: 'unreachable', ready: false, port? }`
+ *    (D-06 observable failure) and fires `steamBridgeSetupRequired` --
+ *    no fallback attempt at all (an unreachable process proves nothing
+ *    about whether Steam itself would accept the real AppID).
+ *  - A live entry for `appId` (full OR identity-only) is reused as-is by a
+ *    later call -- never respawned just to retry the other mode.
  */
 export async function ensureBridgeHelperReady(
   appId: string
@@ -425,11 +531,13 @@ export async function ensureBridgeHelperReady(
   }
 
   const entry = ensureHelperSpawned(appId)
-  const port = await waitForPort(entry)
+  const probe = await probeHelperReadiness(entry)
 
-  if (port === null) {
+  if (probe.outcome === 'unreachable') {
     logWarning(
-      `ensureBridgeHelperReady: bridge helper for appId ${appId} never reported a LISTEN port within the poll budget`,
+      probe.port === undefined
+        ? `ensureBridgeHelperReady: bridge helper for appId ${appId} never reported a LISTEN port within the poll budget`
+        : `ensureBridgeHelperReady: bridge helper unreachable within the poll budget for appId ${appId} (D-06 observable failure)`,
       LogPrefix.Steam
     )
     sendFrontendMessage('steamBridgeSetupRequired', {
@@ -439,25 +547,26 @@ export async function ensureBridgeHelperReady(
     return {
       status: 'unreachable',
       ready: false,
+      ...(probe.port !== undefined ? { port: probe.port } : {}),
       error: 'Bridge helper unreachable within the poll budget'
     }
   }
 
-  for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
-    await sleep(POLL_INTERVAL_MS)
+  if (probe.outcome === 'ready') {
+    return entry.identityOnly
+      ? { status: 'fallback-identity', ready: true, port: probe.port }
+      : { status: 'ready', ready: true, port: probe.port }
+  }
 
-    const { healthOk, whoamiOk } = await probeHealthAndWhoami(port)
+  // probe.outcome === 'not-inited' from here on.
 
-    if (!healthOk) {
-      continue
-    }
-
-    if (whoamiOk) {
-      return { status: 'ready', ready: true, port }
-    }
-
+  if (entry.identityOnly) {
+    // D-51-04: the identity-only (480) fallback ALSO failed WHOAMI -- Steam
+    // itself is not signed in/running (not just this appId's own real-AppID
+    // init), so there is nothing left to fall back to. Exactly one
+    // steamBridgeSetupRequired for the whole call, fired here.
     logWarning(
-      `ensureBridgeHelperReady: bridge helper is up but not initialized against a live Steam session for appId ${appId} (finding #7 -- distinct from unreachable)`,
+      `ensureBridgeHelperReady: identity-only fallback also failed to initialize against a live Steam session for appId ${appId} (D-51-04)`,
       LogPrefix.Steam
     )
     sendFrontendMessage('steamBridgeSetupRequired', {
@@ -467,25 +576,55 @@ export async function ensureBridgeHelperReady(
     return {
       status: 'not-inited',
       ready: false,
-      port,
+      port: probe.port,
       error:
         'Bridge helper process is up but not initialized against a live Steam session'
     }
   }
 
+  // Full-AppID helper's own WHOAMI failed -- D-51-04: attempt the
+  // identity-only (480) fallback before reporting anything to the caller.
+  // Never fires steamBridgeSetupRequired for the full helper's own
+  // not-inited result -- the fallback attempt below decides the final
+  // outcome.
+  logInfo(
+    `ensureBridgeHelperReady: full-AppID WHOAMI failed for appId ${appId} -- attempting an identity-only (480) fallback (D-51-04)`,
+    LogPrefix.Steam
+  )
+  stopBridgeHelper(appId)
+  const fallbackEntry = ensureHelperSpawned(appId, { identityOnly: true })
+  const fallbackProbe = await probeHelperReadiness(fallbackEntry)
+
+  if (fallbackProbe.outcome === 'ready') {
+    logInfo(
+      `ensureBridgeHelperReady: identity-only fallback is ready for appId ${appId} (D-51-04) -- AppID-scoped interfaces answer as stubs`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'fallback-identity',
+      ready: true,
+      port: fallbackProbe.port
+    }
+  }
+
+  // fallbackProbe.outcome is 'not-inited' or 'unreachable' here -- either
+  // way Steam itself did not accept the identity-only fallback either, so
+  // this is reported identically to the identityOnly-reuse branch above:
+  // exactly one steamBridgeSetupRequired, reason 'not-inited'.
   logWarning(
-    `ensureBridgeHelperReady: bridge helper unreachable within the poll budget for appId ${appId} (D-06 observable failure)`,
+    `ensureBridgeHelperReady: identity-only fallback also failed to initialize for appId ${appId} -- Steam appears signed out (D-51-04)`,
     LogPrefix.Steam
   )
   sendFrontendMessage('steamBridgeSetupRequired', {
     appName: appId,
-    reason: 'unreachable'
+    reason: 'not-inited'
   })
   return {
-    status: 'unreachable',
+    status: 'not-inited',
     ready: false,
-    port,
-    error: 'Bridge helper unreachable within the poll budget'
+    ...(fallbackProbe.port !== undefined ? { port: fallbackProbe.port } : {}),
+    error:
+      'Bridge helper process is up but not initialized against a live Steam session'
   }
 }
 
