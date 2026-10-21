@@ -1,7 +1,7 @@
 ---
 phase: "51"
 slug: "widen-the-native-steam-bridge-more-interface-proxies-and-sca"
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-10-21"
@@ -123,26 +123,31 @@ verbatim (English defaults — the `t()` second argument in both plan 51-16 task
 
 ## UI Considerations
 
-> Populated by the ui-phase UI-consideration probe. Shape-rooted UI *state* coverage for the two
-> elements this plan introduces: **Element A** = install-dialog route line + force-bottle toggle
-> (`interactive-control` + `static-content`), **Element B** = game-page route row + limited-features
-> lines (`static-content`).
+> Populated by the ui-phase UI-consideration probe (`ui-consideration-probe.cjs`), run independently
+> of the researcher's draft and cross-checked against it — not self-graded. Two elements classified:
+> **Element A** = install-dialog route line + force-bottle toggle (detected kinds: `form`,
+> `interactive-control`, `static-content`), **Element B** = game-page route row + limited-features
+> lines (detected kinds: `list-collection`, `static-content`). Both detected-kind sets were confirmed
+> complete by the operator (no missed kind) before resolution.
 
-Applicable state considerations resolved: 9 covered, 0 backstop, 2 unresolved.
+Applicable state considerations resolved: 15 covered (explicit), 0 backstop, 1 unresolved.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | A, B — missing-symbols sub-line | ✅ covered | Render `steam.bridge.route.missingSymbols` only when `missingSymbols.length > 0`; when the array is empty, the sub-line is omitted entirely (no "fully covered" placeholder — the positive `reasonKey` sentence, e.g. "Every Steam call this game makes is covered," already carries that meaning). |
-| loading | A — toggle round trip | ✅ covered | The checkbox is controlled by `forceBottleChecked` from the *currently resolved* verdict (never optimistic). On change: disable the checkbox immediately (same submit-latch shape `SteamDialog` already uses for `eligibilityPending`/`submitting`), call `setSteamBridgeUserRoute`, then re-run the eligibility probe; re-enable the checkbox once the probe resolves and re-renders `forceBottleChecked`. No spinner — the disabled state alone is the loading signal, consistent with the file's one existing busy affordance (`disabled={eligibilityPending \|\| submitting}` on the footer button). |
-| loading | B — `getSteamBridgeRoute` fetch on mount | ✅ covered | **This is the gap the objective named.** No skeleton, no spinner, no placeholder row: `resolveBridgeRouteDisplay(undefined)` already resolves `visible: false`, so the row is simply absent until the fetch resolves, then appears in place with no transition/fade. This matches the established pattern in this exact dialog family — `gating.wineSection`/`gating.libraryDropdown` already appear/disappear abruptly based on an async-resolved prop with no loading affordance anywhere in `SteamDialog`. Do not add a new loading pattern this codebase does not already use elsewhere on this screen. |
-| error | B — `getSteamBridgeRoute` rejects | ✅ covered | Swallow the rejection (`.catch(() => {})` or equivalent) and leave the row hidden — identical rendering to the loading/not-yet-resolved state. No toast, no inline error text. This mirrors the phase's own stated bias (CONTEXT.md "Specific Ideas": proven/no-new-code path over clever path) and D-51-04's rule that a bridge-identity problem is never escalated to a blocking dialog for this class of secondary info. |
-| error | A — `setSteamBridgeUserRoute` rejects | ✅ covered | Re-enable the checkbox and `window.api.logError(...)` naming the plan/field only (never echo the verdict object — matches this file's existing `logError` convention at L342-345/353-357/394-397). Do **not** force the checkbox to a specific checked/unchecked value on failure: the subsequent probe re-run naturally reflects whatever the persisted value actually is (unchanged, if the write failed), so no special-case revert logic is needed. |
-| populated | A, B — baseline route render | ✅ covered | Default/happy path: route label + value + reason sentence on one line, no icon, `var(--text-default)` throughout. No further design decision needed beyond the Typography/Color sections above. |
-| partial | B — limited-features stacking | ✅ covered | `limitedLineKeys` is the **sole** source of which lines render (0, 1, or 2 entries) — the component must map it 1:1 to plain-text lines in array order and render nothing else. Do **not** additionally render `steam.bridge.limited.title` ("Some Steam features are limited") as a separate heading above them: the resolver's contract (mirrors `steamSectionGating`'s rule (e), "the verdict is the sole source of visibility — never re-derive") deliberately omits the title key from `limitedLineKeys`, and this file's own `.infoBox` precedent shows a caution line rendering as a plain sentence with no separate heading. Stack order when both render: `steam.bridge.limited.body` first, `steam.bridge.limited.identityFallback` second — this is the order the behavior spec lists them in. |
-| overflow / long-text | A, B — missing-symbols list, reason sentences | ✅ covered | `{{symbols}}` is a comma-joined string (`missingSymbols.join(', ')`), rendered as one wrapping text line inside the reused row/`.infoBox` container — both containers already wrap rather than truncate (`.infoBox` has `max-width: 630px` with no `white-space: nowrap`; the game-page tab panel is unconstrained-width prose). No ellipsis/truncation is introduced; a long symbol list simply wraps to a second line, matching how every existing multi-sentence `.infoBox` notice in this file already behaves. |
-| zero-one-many | A, B — missing-symbols count | ✅ covered | Covered by the long-text resolution above: zero → line omitted (see "empty" row), one or many → single comma-joined line, never a bulleted list. No singular/plural copy variant is needed since the sentence ("Not covered: {{symbols}}") reads correctly for either count. |
-| placement (domain-specific, not in the closed 8) | B — route row vs. existing rating rows | ⚠ unresolved | **Objective-named gap, partially resolved, one caveat left open.** Insert the new route row(s) as the **first** child in `AppleWikiInfo`'s returned fragment — *before* `showBottle`, `showCrossover`, `showProton`, `showWine` — since the route verdict is the freshest, most authoritative signal about where the game actually runs, and should ground the reader before they hit the (possibly stale-relative-to-bridge) compatibility-layer rows below it. **Left open:** `showBottle`'s existing copy ("Runs via Windows Steam bottle") is gated only on `is_mac_native === false` and is unmodified by `51-16-PLAN.md` (not in its `files_modified`) — for a game now routed through the native bridge rather than the Phase 17 bottled Steam client, that sentence is no longer accurate, and nothing in this plan's scope corrects it. This is a real, named discrepancy for the planner/executor to carry forward (not silently fix by expanding 51-16's scope) — flag to the operator as a likely fast-follow, not a blocker for this plan. |
-| icon treatment (domain-specific) | A, B — whether the new rows get an icon | ⚠ unresolved → resolved as: none | `.iconWithText`'s CSS rule could not be located anywhere in the SCSS source tree or compiled build output during this research pass (searched `src/frontend` and `build/assets/*.css`) — every call site supplies its own icon element as the first child, but no shared layout rule (flex/gap) was found backing the class name itself. Given that uncertainty, **do not introduce a new icon** for the baseline route row (seed/scan-clean/pending-scan/etc. — informational, not cautionary) — render `<b>label:</b> value — reason` as plain text, with no icon, which degrades safely whether or not `.iconWithText` turns out to apply real layout. For the two caution-shaped sub-lines (missing-symbols, limited-features) only, reuse the existing `faWarning` icon already imported in `SteamDialog/index.tsx` for its sibling `infoBox` warnings (install dialog); the game page has no equivalent FontAwesome import today, so its limited-features lines should likewise render icon-free rather than pulling in a new icon import for this plan. |
+| Element | Category | Status | Resolution |
+|---------|----------|--------|------------|
+| A | empty | ✅ covered | When the verdict is `undefined`, route is `'not-eligible'`, or the wine section is not visible, the route row renders nothing — no placeholder, no "checking…" text. |
+| A | loading | ✅ covered | The checkbox is controlled by `forceBottleChecked` from the *currently resolved* verdict (never optimistic). On change: disable the checkbox immediately (same submit-latch shape `SteamDialog` already uses for `eligibilityPending`/`submitting`), call `setSteamBridgeUserRoute`, then re-run the eligibility probe; re-enable the checkbox once the probe resolves and re-renders `forceBottleChecked`. No spinner — the disabled state alone is the loading signal. |
+| A | error | ✅ covered | Re-enable the checkbox and `window.api.logError(...)` naming the plan/field only (never echo the verdict object — matches this file's existing `logError` convention at L342-345/353-357/394-397). Do **not** force the checkbox to a specific checked/unchecked value on failure: the subsequent probe re-run naturally reflects whatever the persisted value actually is. |
+| A | partial | ✅ covered | The missing-symbols sub-line is independently optional within an otherwise-complete route-line object: rendered only when `missingSymbols.length > 0`, omitted otherwise — never a half-rendered route line (route label/value/reason always render together as one unit). |
+| A | overflow / long-text | ✅ covered | `{{symbols}}` is comma-joined (`missingSymbols.join(', ')`) and wraps inside the existing `.infoBox` (`max-width: 630px`, no `white-space: nowrap`); no truncation or ellipsis is introduced. |
+| B | empty | ✅ covered | Same empty-state contract as A: an `undefined` verdict or `'not-eligible'` route renders no row at all. |
+| B | loading | ✅ covered | **This is the gap the objective named.** No skeleton, no spinner, no placeholder row: `resolveBridgeRouteDisplay(undefined)` resolves `visible: false`, so the row is simply absent until the `getSteamBridgeRoute` fetch resolves, then appears in place with no transition/fade — matching this exact dialog family's existing abrupt-appearance pattern (`gating.wineSection`/`gating.libraryDropdown`). |
+| B | error | ✅ covered | Swallow the `getSteamBridgeRoute` rejection (`.catch(() => {})` or equivalent) and leave the row hidden — identical rendering to the loading/not-yet-resolved state. No toast, no inline error text. |
+| B | populated | ✅ covered | Baseline happy path: route label + value + reason sentence on one line, `var(--text-default)`, no icon. |
+| B | partial | ✅ covered | `limitedLineKeys` is the **sole** source of which lines render (0, 1, or 2 entries), mapped 1:1 to plain-text lines in array order, `steam.bridge.limited.body` first then `.identityFallback` second — never an added `steam.bridge.limited.title` heading (resolver is the sole source of visibility, mirrors `steamSectionGating` rule (e)). |
+| B | overflow / long-text | ✅ covered | Same comma-joined, wrap-not-truncate treatment as A — the game-page tab panel is unconstrained-width prose with no nowrap. |
+| B | zero-one-many | ✅ covered | Zero → line omitted (per the "empty" row above); one or many → a single comma-joined line, never a bulleted list. No singular/plural copy variant is needed since "Not covered: {{symbols}}" reads correctly for either count. |
+| A, B | placement (domain-specific, not in the closed 8) | ⚠ unresolved | **Objective-named gap, partially resolved, one caveat left open.** Insert the new route row(s) as the **first** child in `AppleWikiInfo`'s returned fragment — *before* `showBottle`, `showCrossover`, `showProton`, `showWine` — since the route verdict is the freshest, most authoritative signal about where the game actually runs. **Left open:** `showBottle`'s existing copy ("Runs via Windows Steam bottle") is gated only on `is_mac_native === false` and is unmodified by `51-16-PLAN.md` — for a game now routed through the native bridge, that sentence is no longer accurate, and nothing in this plan's scope corrects it. Planner/executor must treat this as a known, accepted assumption, not silently expand 51-16's scope to fix it; flag to the operator as a likely fast-follow. |
+| A, B | icon treatment (domain-specific) | ✅ covered | `.iconWithText`'s CSS rule could not be located anywhere in the SCSS source tree or compiled build output (searched `src/frontend` and `build/assets/*.css`). Resolved conservatively: **no icon** for the baseline route row (seed/scan-clean/pending-scan/etc. — informational, not cautionary); for the two caution-shaped sub-lines (missing-symbols, limited-features) only, reuse the existing `faWarning` icon already imported in `SteamDialog/index.tsx` (install dialog); the game page has no equivalent FontAwesome import today, so its limited-features lines render icon-free rather than pulling in a new import. |
 
 <!-- Status vocabulary: ✅ covered → plain truth; 🧪 backstop → held-out test; ⚠ unresolved → explicit planner assumption, never silently dropped. -->
 
@@ -156,12 +161,12 @@ Not applicable — `Tool: none`, no shadcn, no component registry of any kind is
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: FLAG (non-blocking — `showBottle` stale-copy caveat carried forward above, not fixed in this plan's scope)
+- [x] Dimension 3 Color: FLAG (non-blocking — 60/30/10 split inherited unchanged from the host surfaces, not a new surface-color decision)
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: FLAG (non-blocking — inherited em-based project scale predates the 4px-multiple convention; zero new tokens introduced)
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved (no BLOCK dimensions) — `gsd-ui-checker`, 2026-10-21
