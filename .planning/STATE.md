@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-12-PLAN.md
-last_updated: "2026-10-21T06:46:14.386Z"
+stopped_at: Completed 51-13-PLAN.md
+last_updated: "2026-10-21T07:34:19.278Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 51 execution started
-state_head: 5749093e6e8f91919cc69a0d6169ead95c7b6bcd
+state_head: f68cbc6250e1f9e7bdca8480f3ec6f5c645c841a
 progress:
   total_phases: 1
   completed_phases: 0
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 2 of 19
+Plan: 3 of 19
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 51 execution started
 
@@ -186,6 +186,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 51 P10 | 1h10m | 2 tasks | 10 files |
 | Phase 51 P11 | ~3h20m | 2 tasks | 24 files |
 | Phase 51 P12 | 70min | 2 tasks | 4 files |
+| Phase 51 P51-13 | 43min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -242,6 +243,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: 51-11 Task 1 skipped (operator instruction, no CrossOver network path to re-measure Hoard); Task 2/3 built a real Proton lsteamclient extractor (meta/extractProtonInventory.ts) replacing hand-authored manifests, completed SteamUser023/SteamFriends018 and added 5 new manifests for XCOM's measured first-group + older User/Friends versions (274 slots total); extended gen_vtables.ts's dispatch generator to support out-value response params; pending todo tracks the deferred Hoard measurement
 - [Phase 51]: D-51-04 identity-only fallback implemented as a second spawn under the same appId registry key; a BridgeHelperEntry's own identityOnly flag carries full-vs-fallback through reuse
 - [Phase 51]: D-51-02 maybeNotifyBridgeLimited placed in games.ts, called once per launchBridgeGame after the ready/fallback gate; its new games.test.ts coverage lives in a standalone describe at file-end to avoid a pre-existing order-dependent test fragility in an earlier describe
+- [Phase 51]: getSteamBridgeRoute delegates directly to games.ts's getBridgeRouteVerdict rather than a redundant installFormIpc.ts wrapper
+- [Phase 51]: acknowledgeReason validated against bridgeRoute.ts's NOTICE_REASONS set, not the full SteamBridgeRouteReason union
 
 ### Pending Todos
 
@@ -317,8 +320,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-21T06:46:14.374Z
-Stopped at: Completed 51-12-PLAN.md
+Last session: 2026-10-21T07:34:19.267Z
+Stopped at: Completed 51-13-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

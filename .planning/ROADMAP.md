@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 12/19 plans executed
+**Plans:** 13/19 plans executed
 
 Plans:
 **Wave 1**
@@ -247,7 +247,7 @@ Plans:
 - [x] 51-12-PLAN.md — 480 identity fallback + one-time limited-features notice (D-51-04, D-51-02)
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 51-13-PLAN.md — Known-bad / scan-miss route-notice dialog with "Try the bridge anyway"; route IPC (D-51-08, D-51-11, D-51-10)
+- [x] 51-13-PLAN.md — Known-bad / scan-miss route-notice dialog with "Try the bridge anyway"; route IPC (D-51-08, D-51-11, D-51-10)
 - [ ] 51-14-PLAN.md — RemoteStorage (cloud-disabled), Matchmaking/Networking (unavailable) stubs + SteamGameServer stubs
 
 **Wave 6** *(blocked on Wave 5 completion)*
