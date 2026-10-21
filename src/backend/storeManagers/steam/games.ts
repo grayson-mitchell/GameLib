@@ -1,4 +1,5 @@
 import axios from 'axios'
+import i18next from 'i18next'
 import { shell } from 'backend/platform'
 import { existsSync } from 'graceful-fs'
 import { rmSync } from 'node:fs'
@@ -14,6 +15,7 @@ import {
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { notify } from 'backend/dialog/dialog'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
@@ -28,7 +30,11 @@ import {
   deleteAbortController
 } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
-import { steamMetadataStore, steamLibraryStore } from './electronStores'
+import {
+  steamMetadataStore,
+  steamLibraryStore,
+  type SteamBridgeVerdict
+} from './electronStores'
 import { depotSignalCaptured } from './metadataCapture'
 import { resolvePlatformWrite } from './platformPrecedence'
 import {
@@ -101,7 +107,9 @@ import {
   writeBridgeScanVerdict,
   clearBridgeScanVerdict,
   setBridgeSteamApiPrescreen,
-  setBridgeUserRoute
+  setBridgeUserRoute,
+  markBridgeLimitedNoticeShown,
+  setBridgeIdentityFallback
 } from './bridge/bridgeVerdict'
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import { builtBridgeShim64Path } from 'backend/constants/paths'
@@ -2399,6 +2407,72 @@ export default class SteamGame implements Game {
    * signal was already fired upstream) before returning `false` — never
    * optimistically flips any running state.
    */
+  /**
+   * D-51-02/D-51-04 (Phase 51 Plan 12): the one-time "limited Steam
+   * features" notice plus the every-launch `[bridge-notice]` log line.
+   * Called from `launchBridgeGame()` once the helper has reported ready or
+   * fallback-identity, and before `runWineCommand` fires -- never for the
+   * no-steam-api branch, which spawns no helper and has nothing to stub.
+   *
+   * `setBridgeIdentityFallback` is persisted on EVERY call (true or false)
+   * so a game that regains real-AppID init after a prior fallback clears
+   * the stale flag -- the log line and `notify()` only fire when there is
+   * something limited to report (stubbed interfaces or an identity
+   * fallback); a clean verdict with no fallback logs nothing and never
+   * calls `notify()`. `notify()` itself is gated separately, by
+   * `verdict.limitedNoticeShown` (D-51-02: shown once per game, logged
+   * every time) -- `markBridgeLimitedNoticeShown` persists that flag the
+   * first time it fires.
+   */
+  private maybeNotifyBridgeLimited(
+    verdict: SteamBridgeVerdict | undefined,
+    identityFallback: boolean
+  ): void {
+    setBridgeIdentityFallback(this.appId, identityFallback)
+
+    const stubbedInterfaces = verdict?.scan?.stubbedInterfaces ?? []
+    const isLimited = identityFallback || stubbedInterfaces.length > 0
+    if (!isLimited) {
+      return
+    }
+
+    const reason = identityFallback
+      ? 'identity-fallback'
+      : `stubbed:${stubbedInterfaces.join(',')}`
+    logInfo(
+      `[bridge-notice] appId=${this.appId} reason=${reason}`,
+      LogPrefix.Steam
+    )
+
+    if (verdict?.limitedNoticeShown === true) {
+      return
+    }
+
+    const bodyParts = [
+      i18next.t(
+        'gamelib:steam.bridge.limited.body',
+        'Achievements and cloud saves do not sync for this game via the bridge.'
+      )
+    ]
+    if (identityFallback) {
+      bodyParts.push(
+        i18next.t(
+          'gamelib:steam.bridge.limited.identityFallback',
+          'Steam would not run this game under its own ID, so it runs with your Steam identity only.'
+        )
+      )
+    }
+
+    notify({
+      title: i18next.t(
+        'gamelib:steam.bridge.limited.title',
+        'Some Steam features are limited'
+      ),
+      body: bodyParts.join(' ')
+    })
+    markBridgeLimitedNoticeShown(this.appId)
+  }
+
   private async launchBridgeGame(): Promise<boolean> {
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
@@ -2541,6 +2615,18 @@ export default class SteamGame implements Game {
       })
       return false
     }
+
+    // D-51-02/D-51-04 (Phase 51 Plan 12): the helper is ready (status
+    // 'ready') or has fallen back to identity-only (status
+    // 'fallback-identity') -- either way the game IS about to launch, so
+    // this is the right point to log/notify about any limited
+    // functionality BEFORE runWineCommand fires. Re-reads the verdict
+    // fresh (not the `persistedScan` captured before placeShimForGame
+    // ran) so a 'placed'/'no-steam-api' write above is reflected.
+    this.maybeNotifyBridgeLimited(
+      readBridgeVerdict(this.appId),
+      helperReady.status === 'fallback-identity'
+    )
 
     // D-51-09 (Task 2): hand the shim's required interface-version pool to
     // the cfg -- the FRESH verdict's own pool when this call just (re)placed

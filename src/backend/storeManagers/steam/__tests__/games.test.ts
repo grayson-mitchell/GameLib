@@ -7671,3 +7671,202 @@ describe('SteamGame.fetchMetadataIfNeeded — is_delisted detection (CONSOLE-01 
     )
   })
 })
+
+// ── maybeNotifyBridgeLimited() — D-51-02/D-51-04 (Phase 51 Plan 12) ─────────
+//
+// Deliberately a STANDALONE top-level describe, appended at the END of the
+// file rather than nested inside "SteamGame.launch() — Phase 24 Plan 08
+// bridge routing" (where this behavior is actually wired in). That describe
+// (and several later ones -- "Phase 17 bottle routing", "SNI-08") share a
+// module-scoped `bridgeFailedThisSession` Set (games.ts) that is cleared in
+// EVERY test's beforeEach but is left SET by whichever test happens to run
+// last before those later describes -- an existing, order-dependent
+// fragility (not something this plan introduces or is in scope to fix:
+// `resolveBridgeRoute`'s rule 2, `failedThisSession -> bottle`, is what
+// "Phase 17"/"SNI-08"'s own tests implicitly rely on to avoid the Phase
+// 51-09 'pending-scan' default routing them to the bridge instead).
+// Measured empirically: inserting ANY extra test (even a no-op) at the END
+// of that describe flips 8 later, unrelated tests to failure by changing
+// which test last touches that shared Set. A standalone describe at the
+// very end of the file -- after every other describe has already run --
+// cannot disturb that ordering at all, so this builds its own complete
+// mock setup from scratch instead of reusing that describe's.
+describe('maybeNotifyBridgeLimited() — the one-time limited-features notice plus the every-launch [bridge-notice] log line', () => {
+  const RESOLVED_EXE_PATH =
+    '/mock/bridge/bottle/steamapps/common/Avernum 4/Avernum4.exe'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+  let setBridgeIdentityFallbackSpy: jest.SpyInstance
+  let markBridgeLimitedNoticeShownSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    __resetBridgeFailedSessionForTests()
+    library.clear()
+    pendingFetches.clear()
+    library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isMac = true
+    envMock.isWindows = false
+    envMock.isLinux = false
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
+      wineCrossoverBottle: 'GameLibSteamBridge'
+    })
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'placed',
+      shimPath: RESOLVED_EXE_PATH
+    })
+    ;(writeBridgeConfig as jest.Mock).mockReturnValue({
+      status: 'written',
+      path: '/mock/.../gamelib_bridge.cfg'
+    })
+    ;(runWineCommand as jest.Mock).mockResolvedValue({ stdout: '', stderr: '' })
+    ;(stopBridgeHelper as jest.Mock).mockReset()
+    ;(startBottleProcessMonitor as jest.Mock).mockReset()
+    ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
+      '/mock/bridge/bottle/steamapps'
+    )
+    ;(getBottleDir as jest.Mock).mockReturnValue('/mock/bridge/bottle')
+
+    // bridgeVerdict.ts is real/unmocked in this file -- spy (not replace) so
+    // the real steamMetadataStore.set() write still happens, mirroring this
+    // file's own setBridgeUserRoute spy precedent.
+    setBridgeIdentityFallbackSpy = jest.spyOn(
+      bridgeVerdictModule,
+      'setBridgeIdentityFallback'
+    )
+    markBridgeLimitedNoticeShownSpy = jest.spyOn(
+      bridgeVerdictModule,
+      'markBridgeLimitedNoticeShown'
+    )
+  })
+
+  afterEach(() => {
+    envMock.isMac = false
+    envMock.isWindows = false
+    envMock.isLinux = true
+    setBridgeIdentityFallbackSpy.mockRestore()
+    markBridgeLimitedNoticeShownSpy.mockRestore()
+  })
+
+  it('D-51-04: fallback-identity launch -> setBridgeIdentityFallback(appId, true), logs [bridge-notice] reason=identity-fallback, runWineCommand still called, steamBridgeSetupRequired never sent', async () => {
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'fallback-identity',
+      ready: true,
+      port: 55123
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    const { logInfo } = jest.requireMock('backend/logger')
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(true)
+    expect(runWineCommand).toHaveBeenCalledTimes(1)
+    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(APP_ID, true)
+    expect(logInfo).toHaveBeenCalledWith(
+      `[bridge-notice] appId=${APP_ID} reason=identity-fallback`,
+      'Steam'
+    )
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      expect.anything()
+    )
+    // D-51-02: first-ever launch for this appId -- notify() fires once,
+    // body = limited.body PLUS limited.identityFallback appended.
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(notify).toHaveBeenCalledWith({
+      title: 'gamelib:steam.bridge.limited.title',
+      body:
+        'gamelib:steam.bridge.limited.body ' +
+        'gamelib:steam.bridge.limited.identityFallback'
+    })
+    expect(markBridgeLimitedNoticeShownSpy).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('D-51-02: ready launch with stubbedInterfaces logs [bridge-notice] reason=stubbed:<list> on EVERY launch; notify() fires on the first launch only, then markBridgeLimitedNoticeShown persists so a later launch logs but never notifies again', async () => {
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true,
+      port: 55123
+    })
+    const { logInfo } = jest.requireMock('backend/logger')
+    const stubbedScan = {
+      status: 'clean' as const,
+      arch: 'x86' as const,
+      missingSymbols: [],
+      interfaceVersions: {},
+      stubbedInterfaces: ['SteamRemoteStorage', 'SteamNetworking'],
+      shimExportSetVersion: 'v1',
+      scannedAt: '2026-10-21T00:00:00Z'
+    }
+
+    // First launch: limitedNoticeShown not yet set.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { scan: stubbedScan }
+    })
+
+    const firstGame = new SteamGame(APP_ID)
+    await firstGame.launch({} as any)
+
+    expect(logInfo).toHaveBeenCalledWith(
+      `[bridge-notice] appId=${APP_ID} reason=stubbed:SteamRemoteStorage,SteamNetworking`,
+      'Steam'
+    )
+    expect(notify).toHaveBeenCalledTimes(1)
+    expect(markBridgeLimitedNoticeShownSpy).toHaveBeenCalledWith(APP_ID)
+    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(APP_ID, false)
+
+    // Second launch: the persisted verdict now carries limitedNoticeShown:
+    // true -- logs again (every launch), but notify() never fires again.
+    ;(notify as jest.Mock).mockClear()
+    ;(logInfo as jest.Mock).mockClear()
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { scan: stubbedScan, limitedNoticeShown: true }
+    })
+
+    const secondGame = new SteamGame(APP_ID)
+    await secondGame.launch({} as any)
+
+    expect(logInfo).toHaveBeenCalledWith(
+      `[bridge-notice] appId=${APP_ID} reason=stubbed:SteamRemoteStorage,SteamNetworking`,
+      'Steam'
+    )
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  it('D-51-02/D-51-04: a clean verdict with no stubbed interfaces and no identity fallback logs nothing, never notifies, but still persists setBridgeIdentityFallback(appId, false)', async () => {
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true,
+      port: 55123
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    const { logInfo } = jest.requireMock('backend/logger')
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(true)
+    expect(logInfo).not.toHaveBeenCalledWith(
+      expect.stringContaining('[bridge-notice]'),
+      expect.anything()
+    )
+    expect(notify).not.toHaveBeenCalled()
+    expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(APP_ID, false)
+  })
+})
