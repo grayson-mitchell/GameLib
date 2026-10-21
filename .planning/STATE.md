@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-16-PLAN.md
-last_updated: "2026-10-21T11:44:04.243Z"
+stopped_at: Completed 51-17-PLAN.md
+last_updated: "2026-10-21T12:06:32.694Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 51 execution started
-state_head: bfe1a6cb21a091d60ecd3857b58ceeb7e9713180
+state_head: 1de07f88455d178d2b57a19521db72ebff010d49
 progress:
   total_phases: 1
   completed_phases: 0
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 6 of 19
+Plan: 7 of 19
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 51 execution started
 
@@ -190,6 +190,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 51 P14 | 70min | 2 tasks | 15 files |
 | Phase 51 P15 | ~3h | 3 tasks | 24 files |
 | Phase 51 P16 | ~20min | 2 tasks | 6 files |
+| Phase 51 P17 | ~18min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -254,6 +255,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: 51-15: four new ELEX x64-only manifests (User019/Friends015/Utils008/Apps008) force-reverted family-wide wire-policy matches back to stub -- no verified macOS helper-dylib accessor exists for these version strings, D-09 forbids inventing one
 - [Phase 51]: 51-16: SteamDialog's route verdict is its own getSteamBridgeRoute round trip, independent of the parent's isSteamBottleEligible probe (kept the plan's files_modified scope)
 - [Phase 51]: 51-16: resolveBridgeRouteDisplay suppresses the reason sentence (not routeKey) when installedIn disagrees with the live route verdict, applied symmetrically to bridge and bottle
+- [Phase 51]: 51-17: prescreenBridgeDepots always forwards os:'windows' to buildDepotPlan regardless of the caller's own opts.os (bridge route is Windows-only)
+- [Phase 51]: 51-17: install()'s prescreen guard is route.reason==='pending-scan' AND steamApi undefined (not reason alone) -- an already-screened x64 title with a shim present can still resolve to pending-scan, and re-screening it would defeat T-51-37's once-per-title mitigation
+- [Phase 51]: 51-17: prescreenBridgeDepots's targetSteamappsDir/installdir are throwaway values -- buildDepotPlan never uses targetSteamappsDir and only uses installdir as a discarded PICS-name fallback, so resolving the real installdir would defeat the point of a cheap screen
 
 ### Pending Todos
 
@@ -330,8 +334,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-21T11:44:04.232Z
-Stopped at: Completed 51-16-PLAN.md
+Last session: 2026-10-21T12:06:32.683Z
+Stopped at: Completed 51-17-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
