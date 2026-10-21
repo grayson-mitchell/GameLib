@@ -414,7 +414,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib will install it into the bottled Windows Steam client instead.",
                 "cancel": "Cancel",
+                "error": "Starting the install failed: {{error}}",
                 "knownBad": "{{title}} is known not to work with the native Steam bridge: {{reason}}.",
+                "notFound": "Could not find this game to install it.",
                 "scanMiss": "The native Steam bridge does not cover every Steam call {{title}} makes. Not covered: {{symbols}}.",
                 "title": "This game will use the Windows Steam client",
                 "tryBridge": "Try the bridge anyway",

@@ -68,6 +68,7 @@ import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
 import { handleSteamBridgeSetupRequiredSignal } from './SteamBridgeSetup'
+import { handleSteamBridgeRouteNoticeSignal } from './SteamBridgeRouteNotice'
 import {
   handleSteamBottleLaunchWaitingSignal,
   useBottleLaunchWaiting
@@ -1674,6 +1675,15 @@ class GlobalState extends PureComponent<Props> {
     window.api.handleSteamBridgeSetupRequired(
       handleSteamBridgeSetupRequiredSignal
     )
+
+    // Phase 51 Plan 13 (D-51-08/11): single global listener that opens the
+    // up-front bridge ROUTE notice whenever the backend emits
+    // `steamBridgeRouteNotice` (games.ts's install(), gated on
+    // `bridgeRoute.noticeRequired`) -- distinct from the bridge-FAILURE
+    // listener immediately above: this one fires BEFORE any install
+    // attempt for a known-bad / persisted-scan-miss / win64-no-shim route,
+    // offering "Use bottled Steam" / "Try the bridge anyway" / "Cancel".
+    window.api.handleSteamBridgeRouteNotice(handleSteamBridgeRouteNoticeSignal)
 
     // Phase 51 Plan 08 (D-51-16, folded todo): single global listener that
     // records a bottled-Steam launch's "waiting for Steam" classification --
