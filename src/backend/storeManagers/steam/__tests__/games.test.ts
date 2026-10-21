@@ -57,7 +57,7 @@ import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
 import type { GameInfo, InstallParams } from 'common/types'
 import { isSteamNativeInstallEnabled } from '../nativeInstallSetting'
-import { downloadSteamDepots } from '../depot'
+import { downloadSteamDepots, prescreenBridgeDepots } from '../depot'
 import { ensureSteamClientReady } from '../clientSetup'
 import {
   resolveSteamInstallTarget,
@@ -367,11 +367,13 @@ jest.mock('../nativeInstallSetting', () => ({
   isSteamNativeInstallEnabled: jest.fn()
 }))
 
-// ── depot.ts mock — only downloadSteamDepots is needed by games.ts; depot.ts
-// itself pulls in steam-user's heavy internal manifest parser, which
-// games.test.ts has no reason to exercise.
+// ── depot.ts mock — downloadSteamDepots + prescreenBridgeDepots (D-51-06,
+// Plan 17) are the only two games.ts needs; depot.ts itself pulls in
+// steam-user's heavy internal manifest parser, which games.test.ts has no
+// reason to exercise.
 jest.mock('../depot', () => ({
-  downloadSteamDepots: jest.fn()
+  downloadSteamDepots: jest.fn(),
+  prescreenBridgeDepots: jest.fn()
 }))
 
 // ── Plan 09/10 seam mocks — clientSetup.ts / installLocation.ts. Plan 07
@@ -3964,6 +3966,213 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     await game.install({} as any)
 
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+  })
+
+  // ── D-51-06 (Plan 17): the cheap pre-install screen, run ONLY when
+  // route.route === 'bridge' && route.reason === 'pending-scan' && no
+  // steamApi is stored yet. ────────────────────────────────────────────────
+  describe('D-51-06 pre-install prescreen (Plan 17)', () => {
+    /** Stateful steamMetadataStore double, scoped identically to the
+     *  write-discipline describe's own local helper (not imported across
+     *  describes, per this plan's own instruction) — .get() must reflect the
+     *  prescreen's own setBridgeSteamApiPrescreen() write so the SECOND
+     *  bridgeRoute() computation (after the screen persists its result) sees
+     *  the freshly-persisted steamApi value, exactly like a real store. */
+    function mockStatefulMetadataStore(initial: Record<string, unknown>) {
+      let state: Record<string, unknown> | undefined = initial
+      ;(steamMetadataStore.get as jest.Mock).mockImplementation(() => state)
+      ;(steamMetadataStore.set as jest.Mock).mockImplementation((_id, meta) => {
+        state = meta
+      })
+    }
+
+    let setBridgeSteamApiPrescreenSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      ;(prescreenBridgeDepots as jest.Mock).mockReset()
+      // bridgeVerdict.ts is real/unmocked in this file -- spy (not replace)
+      // so the real steamMetadataStore.set() write still happens, mirroring
+      // this file's own setBridgeIdentityFallback spy precedent.
+      setBridgeSteamApiPrescreenSpy = jest.spyOn(
+        bridgeVerdictModule,
+        'setBridgeSteamApiPrescreen'
+      )
+    })
+
+    afterEach(() => {
+      setBridgeSteamApiPrescreenSpy.mockRestore()
+    })
+
+    it("x64 with no Win64 shim bundled: persists 'x64', route recomputes to bottle/win64-no-shim, notice fired, no download", async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(existsSync as jest.Mock).mockReturnValue(false) // no Win64 shim built
+      ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('x64')
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(prescreenBridgeDepots).toHaveBeenCalledWith(
+        APP_ID,
+        expect.objectContaining({ os: 'windows' })
+      )
+      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'x64')
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeRouteNotice',
+        {
+          appName: APP_ID,
+          reason: 'win64-no-shim',
+          knownBadReason: null,
+          missingSymbols: []
+        }
+      )
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+    })
+
+    it("x64 WITH a Win64 shim bundled: persists 'x64', route stays bridge -- installBridgeGame proceeds", async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(existsSync as jest.Mock).mockReturnValue(true) // Win64 shim present
+      ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('x64')
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'x64')
+      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+      expect(downloadSteamDepots).toHaveBeenCalled()
+      expect(result).toEqual({ status: 'done' })
+    })
+
+    it("prescreen 'none': persisted, installBridgeGame proceeds (placement later reports no-steam-api, no shim placed)", async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue('none')
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(APP_ID, 'none')
+      expect(downloadSteamDepots).toHaveBeenCalled()
+      expect(result).toEqual({ status: 'done' })
+    })
+
+    it.each(['x86', 'both', 'unknown'] as const)(
+      "prescreen result '%s': persisted, installBridgeGame proceeds (install then scan)",
+      async (prescreenResult) => {
+        mockStatefulMetadataStore({
+          platformsCaptured: true,
+          is_mac_native: false
+        })
+        ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+        ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+        ;(prescreenBridgeDepots as jest.Mock).mockResolvedValue(prescreenResult)
+        ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+        ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+
+        const game = new SteamGame(APP_ID)
+        const result = await game.install({} as any)
+
+        expect(setBridgeSteamApiPrescreenSpy).toHaveBeenCalledWith(
+          APP_ID,
+          prescreenResult
+        )
+        expect(downloadSteamDepots).toHaveBeenCalled()
+        expect(result).toEqual({ status: 'done' })
+      }
+    )
+
+    it('seed title skips the screen entirely (prescreenBridgeDepots not called)', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      await game.install({} as any)
+
+      expect(prescreenBridgeDepots).not.toHaveBeenCalled()
+    })
+
+    it('a title with a stored CLEAN scan verdict skips the screen (route reason is scan-clean, not pending-scan)', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: {
+          scan: {
+            status: 'clean',
+            arch: 'x86',
+            missingSymbols: [],
+            interfaceVersions: {},
+            stubbedInterfaces: [],
+            shimExportSetVersion: 'current',
+            scannedAt: '2026-01-01T00:00:00.000Z'
+          }
+        }
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      await game.install({} as any)
+
+      expect(prescreenBridgeDepots).not.toHaveBeenCalled()
+    })
+
+    it('a title with an already-stored steamApi skips the screen even though the route still resolves to bridge/pending-scan', async () => {
+      mockStatefulMetadataStore({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { steamApi: 'x64' }
+      })
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(existsSync as jest.Mock).mockReturnValue(true) // Win64 shim present
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(prescreenBridgeDepots).not.toHaveBeenCalled()
+      expect(downloadSteamDepots).toHaveBeenCalled()
+      expect(result).toEqual({ status: 'done' })
+    })
   })
 
   it('BLOCKER 1: bridge bottle not ready — provisionBridgeBottle is called BEFORE any depot download; on success proceeds to depot download', async () => {
