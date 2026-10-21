@@ -22,11 +22,17 @@ export const steamBottleStatus = makeHandlerInvoker('steamBottleStatus')
 // surface — registered on BOTH runtimes (main.ts + steamAuthFlowRegistration.ts).
 export const isSteamBottleEligible = makeHandlerInvoker('isSteamBottleEligible')
 export const persistBottleWineVersion = makeHandlerInvoker('persistBottleWineVersion')
+// Phase 51 Plan 13 (D-51-09/10/11): the composed bridge-vs-bottle route pair.
+export const getSteamBridgeRoute = makeHandlerInvoker('getSteamBridgeRoute')
+export const setSteamBridgeUserRoute = makeHandlerInvoker('setSteamBridgeUserRoute')
 // quick-260821-le0 (Task 3): sweeps every recorded install root for a Steam
 // title in one action — registered on BOTH runtimes.
 export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot('steamBottleSetupRequired')
+// Phase 51 Plan 13 (D-51-08/11): one-way push -- games.ts's install() emits,
+// Task 3's SteamBridgeRouteNotice.ts subscribes. No handler, listener only.
+export const handleSteamBridgeRouteNotice = frontendListenerSlot('steamBridgeRouteNotice')
 
 // Phase 21 (21-10), D-10/D-11: native Steam-CLIENT guided install +
 // prompt-to-launch — distinct from the bottle-provisioning trio above.

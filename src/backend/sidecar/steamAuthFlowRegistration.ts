@@ -57,6 +57,12 @@
  *   - `persistBottleWineVersion` -> `persistInstallFormWineVersion(wineVersion)`
  *     (`main.ts:948-950`), Phase 34.13 Plan 07, D-14 — same shared seam.
  *     The trio above is now a trio plus these two install-form channels.
+ *   - `getSteamBridgeRoute` -> `getBridgeRouteVerdict(appId)` (`games.ts`),
+ *     Phase 51 Plan 09/13, D-51-09: the composed bridge-vs-bottle route
+ *     verdict for a single game (SteamBridgeRouteVerdict, common/types/steam.ts).
+ *   - `setSteamBridgeUserRoute` -> `handleSetSteamBridgeUserRoute(args[0])`
+ *     (`installFormIpc.ts`), Phase 51 Plan 13, D-51-10/11: persists the
+ *     user's own bridge/bottle override and/or notice acknowledgement.
  *   - `steamRemoveAllCopies` -> `removeAllSteamInstallCopies(appName)`,
  *     quick-260821-le0 Task 3 — sweeps every recorded install root for a
  *     Steam title in one action, same shared-seam pattern as the pair above.
@@ -127,11 +133,15 @@ import {
   startGuidedClientInstall,
   ensureSteamClientReady
 } from '../storeManagers/steam/clientSetup'
-import { getSteamInstallSize } from '../storeManagers/steam/games'
+import {
+  getSteamInstallSize,
+  getBridgeRouteVerdict
+} from '../storeManagers/steam/games'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../storeManagers/steam/constants'
 import {
   getSteamBottleEligibilityVerdict,
-  persistInstallFormWineVersion
+  persistInstallFormWineVersion,
+  handleSetSteamBridgeUserRoute
 } from '../storeManagers/steam/installFormIpc'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
 
@@ -309,6 +319,26 @@ export function registerSteamAuthFlows(): void {
     'persistBottleWineVersion',
     async (_event: unknown, ...args: unknown[]) => {
       return persistInstallFormWineVersion(args[0])
+    }
+  )
+
+  // Phase 51 Plan 13 (D-51-09/10/11): the composed bridge-vs-bottle route
+  // pair -- getSteamBridgeRoute delegates to games.ts's own
+  // getBridgeRouteVerdict (which carries its own typeof/numeric guard, so
+  // this body passes args[0] through UNCAST), setSteamBridgeUserRoute
+  // delegates to installFormIpc.ts's handleSetSteamBridgeUserRoute (the
+  // validation core for T-51-30).
+  ipcMain.handle(
+    'getSteamBridgeRoute',
+    async (_event: unknown, ...args: unknown[]) => {
+      return getBridgeRouteVerdict(args[0])
+    }
+  )
+
+  ipcMain.handle(
+    'setSteamBridgeUserRoute',
+    async (_event: unknown, ...args: unknown[]) => {
+      return handleSetSteamBridgeUserRoute(args[0])
     }
   )
 

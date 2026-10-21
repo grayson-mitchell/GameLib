@@ -15,14 +15,22 @@
  * further edit to either registration site.
  */
 import type { WineInstallation } from 'common/types'
-import type { SteamBottleEligibilityVerdict } from 'common/types/steam'
+import type {
+  SteamBottleEligibilityVerdict,
+  SteamBridgeRouteReason
+} from 'common/types/steam'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { GlobalConfig } from 'backend/config'
-import SteamGame from './games'
+import SteamGame, { getBridgeRouteVerdict } from './games'
 import { steamBottleConfigStore, steamMetadataStore } from './electronStores'
 import { persistBottleWineVersion } from './bottle'
 import { depotSignalCaptured } from './metadataCapture'
 import { DEFAULT_STEAM_BOTTLE_NAME } from './constants'
+import { NOTICE_REASONS } from './bridge/bridgeRoute'
+import {
+  setBridgeUserRoute,
+  setBridgeNoticeAcknowledged
+} from './bridge/bridgeVerdict'
 
 // T-21-05 pattern, reused a fourth time in this directory (depot.ts,
 // installLocation.ts, clientSetup.ts). This is the ONE seam both the
@@ -136,13 +144,25 @@ export async function getSteamBottleEligibilityVerdict(
     steamBottleConfigStore.get_nodefault('wineCrossoverBottle') ??
     DEFAULT_STEAM_BOTTLE_NAME
 
+  // D-51-09 (Plan 13): the composed bridge-vs-bottle route verdict, carried
+  // on the SAME round trip so the install dialog's wine section can render
+  // the route line without a second IPC call (SteamBridgeRouteVerdict's own
+  // doc comment, common/types/steam.ts). Only computed when eligible --
+  // getBridgeRouteVerdict() re-validates appName itself (same numeric guard
+  // as this function), so this call is never reached on the rejected-request
+  // path above.
+  const bridgeRoute = eligible
+    ? await getBridgeRouteVerdict(appName)
+    : undefined
+
   return {
     eligible,
     hasWindowsDepot,
     hasMacDepot,
     platformsCaptured,
     wineVersion,
-    bottleName
+    bottleName,
+    ...(bridgeRoute ? { bridgeRoute } : {})
   }
 }
 
@@ -291,4 +311,74 @@ export async function persistInstallFormWineVersion(input: unknown): Promise<{
 
   persistBottleWineVersion(rebuilt)
   return { status: 'done' }
+}
+
+/**
+ * D-51-10/11 (Plan 13): the validation core for the `setSteamBridgeUserRoute`
+ * channel -- persists (or removes) the user's own bridge/bottle override
+ * and, when `acknowledgeReason` is present, records which notice the user
+ * just dismissed/accepted. Takes `unknown`, not a typed object (same T-51-10
+ * posture as `persistInstallFormWineVersion` above): the renderer payload is
+ * untrusted at runtime despite its `common/types/ipc.ts` contract.
+ *
+ * Every rejection below returns BEFORE either `bridgeVerdict.ts` writer runs
+ * -- no partial write on a structurally invalid payload (T-51-30).
+ *
+ * `acknowledgeReason` is validated against `NOTICE_REASONS`
+ * (`bridge/bridgeRoute.ts`) rather than the full `SteamBridgeRouteReason`
+ * union: only the three reasons that ever drive a notice/dialog
+ * ('known-bad', 'scan-miss', 'win64-no-shim') are legitimate acknowledgement
+ * targets -- a reason like 'seed' can never have been shown as a notice, so
+ * accepting it here would let an acknowledgement be recorded for a dialog
+ * that was never displayed.
+ */
+export async function handleSetSteamBridgeUserRoute(
+  raw: unknown
+): Promise<{ ok: boolean; error?: string }> {
+  if (typeof raw !== 'object' || raw === null) {
+    logWarning(
+      'handleSetSteamBridgeUserRoute: rejected a non-object payload (T-51-30)',
+      LogPrefix.Steam
+    )
+    return { ok: false, error: 'invalid-payload' }
+  }
+
+  const candidate = raw as Record<string, unknown>
+  const { appId, userRoute, acknowledgeReason } = candidate
+
+  if (typeof appId !== 'string' || !NUMERIC_APP_ID.test(appId)) {
+    logWarning(
+      'handleSetSteamBridgeUserRoute: rejected a non-string or non-numeric appId (T-51-30)',
+      LogPrefix.Steam
+    )
+    return { ok: false, error: 'invalid-appId' }
+  }
+
+  if (userRoute !== 'bottle' && userRoute !== 'bridge' && userRoute !== null) {
+    logWarning(
+      'handleSetSteamBridgeUserRoute: rejected an invalid userRoute (T-51-30)',
+      LogPrefix.Steam
+    )
+    return { ok: false, error: 'invalid-userRoute' }
+  }
+
+  if (acknowledgeReason !== undefined) {
+    if (
+      typeof acknowledgeReason !== 'string' ||
+      !NOTICE_REASONS.has(acknowledgeReason as SteamBridgeRouteReason)
+    ) {
+      logWarning(
+        'handleSetSteamBridgeUserRoute: rejected an acknowledgeReason outside the notice reasons (T-51-30)',
+        LogPrefix.Steam
+      )
+      return { ok: false, error: 'invalid-acknowledgeReason' }
+    }
+  }
+
+  setBridgeUserRoute(appId, userRoute === null ? undefined : userRoute)
+  if (typeof acknowledgeReason === 'string') {
+    setBridgeNoticeAcknowledged(appId, acknowledgeReason)
+  }
+
+  return { ok: true }
 }

@@ -35,7 +35,12 @@ jest.mock('../tauriTransport', () => ({
   listen: jest.fn()
 }))
 
-import { isSteamBottleEligible, persistBottleWineVersion } from '../api/steam'
+import {
+  isSteamBottleEligible,
+  persistBottleWineVersion,
+  getSteamBridgeRoute,
+  setSteamBridgeUserRoute
+} from '../api/steam'
 import type { WineInstallation } from 'common/types'
 
 const engine: WineInstallation = {
@@ -59,5 +64,24 @@ describe('steam.ts install-form preload exports (Phase 34.13 Plan 07)', () => {
     persistBottleWineVersion(engine)
 
     expect(mockedTauriInvoke).toHaveBeenCalledWith('persistBottleWineVersion', [engine])
+  })
+
+  // Phase 51 Plan 13 (D-51-09/10/11)
+  it('getSteamBridgeRoute invokes the exact channel name with args as an ARRAY', () => {
+    getSteamBridgeRoute('206040')
+
+    expect(mockedTauriInvoke).toHaveBeenCalledWith('getSteamBridgeRoute', ['206040'])
+  })
+
+  it('setSteamBridgeUserRoute invokes the exact channel name with args as an ARRAY', () => {
+    const args = {
+      appId: '63000',
+      userRoute: 'bottle' as const,
+      acknowledgeReason: 'known-bad' as const
+    }
+
+    setSteamBridgeUserRoute(args)
+
+    expect(mockedTauriInvoke).toHaveBeenCalledWith('setSteamBridgeUserRoute', [args])
   })
 })
