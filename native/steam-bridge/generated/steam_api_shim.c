@@ -331,6 +331,283 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
 
 typedef void *vfn;
 
+// 51-15: Win64 unknown-interface-version fallback -- see X64_NULL_OBJECT_SLOTS'
+// doc comment (meta/gen_vtables.ts) for why ONE generic zero-returning
+// function safely serves every slot's arity on this target.
+#if defined(__x86_64__)
+static void *vt_x64_null_object(void *self) { (void)self; return 0; }
+static vfn g_x64_null_object_vtbl[256] = {
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+  (vfn)vt_x64_null_object,
+};
+struct GLibX64NullObject { vfn *vptr; };
+static struct GLibX64NullObject g_x64_null_object_instance = { g_x64_null_object_vtbl };
+#endif
+
+// 51-15: forward declaration only -- the full definition (and
+// g_iface_table itself) lives in emitIfaceTableAndBareAccessors's output
+// below, which also defines every per-interface instance struct
+// vtableSections declares; this file's ISteamClient GetISteamXxx
+// version-lookup stubs (vtableSections, emitted BEFORE that section) and
+// SteamInternal_CreateInterface (emitted AFTER it) both call this SAME
+// function, so a plain prototype here is all either call site needs.
+static void *resolve_iface_by_exact_version(const char *version);
+
+#if defined(__i386__)
 // === SteamUser023 (ordinal 1, family SteamUser) ===
 
 // slot 0: GetHSteamUser() -> int32 | __thiscall ret 0
@@ -576,7 +853,9 @@ static vfn g_steamuser023_vtbl[33] = {
 };
 struct FakeSteamUser023 { vfn *vptr; };
 static struct FakeSteamUser023 g_steamuser023_instance = { g_steamuser023_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamFriends018 (ordinal 2, family SteamFriends) ===
 
 // slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
@@ -1137,7 +1416,9 @@ static vfn g_steamfriends018_vtbl[78] = {
 };
 struct FakeSteamFriends018 { vfn *vptr; };
 static struct FakeSteamFriends018 g_steamfriends018_instance = { g_steamfriends018_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamUser016 (ordinal 3, family SteamUser) ===
 
 // slot 0: GetHSteamUser() -> int32 | __thiscall ret 0
@@ -1306,7 +1587,9 @@ static vfn g_steamuser016_vtbl[22] = {
 };
 struct FakeSteamUser016 { vfn *vptr; };
 static struct FakeSteamUser016 g_steamuser016_instance = { g_steamuser016_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamFriends011 (ordinal 4, family SteamFriends) ===
 
 // slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
@@ -1764,7 +2047,9 @@ static vfn g_steamfriends011_vtbl[63] = {
 };
 struct FakeSteamFriends011 { vfn *vptr; };
 static struct FakeSteamFriends011 g_steamfriends011_instance = { g_steamfriends011_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamUtils005 (ordinal 5, family SteamUtils) ===
 
 // slot 0: GetSecondsSinceAppActive() -> uint32 | __thiscall ret 0
@@ -1966,7 +2251,9 @@ static vfn g_steamutils005_vtbl[23] = {
 };
 struct FakeSteamUtils005 { vfn *vptr; };
 static struct FakeSteamUtils005 g_steamutils005_instance = { g_steamutils005_vtbl };
+#endif
 
+#if defined(__i386__)
 // === STEAMAPPS_INTERFACE_VERSION004 (ordinal 6, family SteamApps) ===
 
 // slot 0: BIsSubscribed() -> bool | __thiscall ret 0
@@ -2129,7 +2416,9 @@ static vfn g_steamapps_interface_version004_vtbl[14] = {
 };
 struct FakeSTEAMAPPS_INTERFACE_VERSION004 { vfn *vptr; };
 static struct FakeSTEAMAPPS_INTERFACE_VERSION004 g_steamapps_interface_version004_instance = { g_steamapps_interface_version004_vtbl };
+#endif
 
+#if defined(__i386__)
 // === STEAMUSERSTATS_INTERFACE_VERSION010 (ordinal 7, family SteamUserStats) ===
 
 // slot 0: RequestCurrentStats() -> bool | __thiscall ret 0 (HELPER FALLBACK)
@@ -2672,7 +2961,9 @@ static vfn g_steamuserstats_interface_version010_vtbl[41] = {
 };
 struct FakeSTEAMUSERSTATS_INTERFACE_VERSION010 { vfn *vptr; };
 static struct FakeSTEAMUSERSTATS_INTERFACE_VERSION010 g_steamuserstats_interface_version010_instance = { g_steamuserstats_interface_version010_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamFriends013 (ordinal 8, family SteamFriends) ===
 
 // slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
@@ -3131,7 +3422,9 @@ static vfn g_steamfriends013_vtbl[63] = {
 };
 struct FakeSteamFriends013 { vfn *vptr; };
 static struct FakeSteamFriends013 g_steamfriends013_instance = { g_steamfriends013_vtbl };
+#endif
 
+#if defined(__i386__)
 // === STEAMAPPS_INTERFACE_VERSION005 (ordinal 9, family SteamApps) ===
 
 // slot 0: BIsSubscribed() -> bool | __thiscall ret 0
@@ -3341,7 +3634,9 @@ static vfn g_steamapps_interface_version005_vtbl[20] = {
 };
 struct FakeSTEAMAPPS_INTERFACE_VERSION005 { vfn *vptr; };
 static struct FakeSTEAMAPPS_INTERFACE_VERSION005 g_steamapps_interface_version005_instance = { g_steamapps_interface_version005_vtbl };
+#endif
 
+#if defined(__i386__)
 // === STEAMUSERSTATS_INTERFACE_VERSION011 (ordinal 10, family SteamUserStats) ===
 
 // slot 0: RequestCurrentStats() -> bool | __thiscall ret 0 (HELPER FALLBACK)
@@ -3913,7 +4208,9 @@ static vfn g_steamuserstats_interface_version011_vtbl[43] = {
 };
 struct FakeSTEAMUSERSTATS_INTERFACE_VERSION011 { vfn *vptr; };
 static struct FakeSTEAMUSERSTATS_INTERFACE_VERSION011 g_steamuserstats_interface_version011_instance = { g_steamuserstats_interface_version011_vtbl };
+#endif
 
+#if defined(__i386__)
 // === STEAMREMOTESTORAGE_INTERFACE_VERSION005 (ordinal 11, family SteamRemoteStorage) ===
 
 // slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
@@ -4136,7 +4433,9 @@ static vfn g_steamremotestorage_interface_version005_vtbl[31] = {
 };
 struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION005 { vfn *vptr; };
 static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION005 g_steamremotestorage_interface_version005_instance = { g_steamremotestorage_interface_version005_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamMatchMaking009 (ordinal 12, family SteamMatchmaking) ===
 
 // slot 0: GetFavoriteGameCount() -> int32 | __thiscall ret 0 (STUB)
@@ -4402,7 +4701,9 @@ static vfn g_steammatchmaking009_vtbl[38] = {
 };
 struct FakeSteamMatchMaking009 { vfn *vptr; };
 static struct FakeSteamMatchMaking009 g_steammatchmaking009_instance = { g_steammatchmaking009_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamMatchMakingServers002 (ordinal 13, family SteamMatchmakingServers) ===
 
 // slot 0: RequestInternetServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
@@ -4523,7 +4824,9 @@ static vfn g_steammatchmakingservers002_vtbl[17] = {
 };
 struct FakeSteamMatchMakingServers002 { vfn *vptr; };
 static struct FakeSteamMatchMakingServers002 g_steammatchmakingservers002_instance = { g_steammatchmakingservers002_vtbl };
+#endif
 
+#if defined(__i386__)
 // === SteamNetworking005 (ordinal 14, family SteamNetworking) ===
 
 // slot 0: SendP2PPacket(CSteamID steamIDRemote, const void* pubData, uint32 cubData, uint32 eP2PSendType, int32 nChannel) -> bool | __thiscall ret 24 (STUB)
@@ -4684,7 +4987,9 @@ static vfn g_steamnetworking005_vtbl[22] = {
 };
 struct FakeSteamNetworking005 { vfn *vptr; };
 static struct FakeSteamNetworking005 g_steamnetworking005_instance = { g_steamnetworking005_vtbl };
+#endif
 
+#if defined(__i386__)
 // === STEAMREMOTESTORAGE_INTERFACE_VERSION010 (ordinal 15, family SteamRemoteStorage) ===
 
 // slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
@@ -5054,6 +5359,7 @@ static vfn g_steamremotestorage_interface_version010_vtbl[52] = {
 };
 struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 { vfn *vptr; };
 static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 g_steamremotestorage_interface_version010_instance = { g_steamremotestorage_interface_version010_vtbl };
+#endif
 
 // === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===
 
@@ -5126,6 +5432,17 @@ static void *resolve_bare_iface(const char *family) {
   return NULL;
 }
 
+static void *resolve_iface_by_exact_version(const char *version) {
+  int i;
+  if (version == NULL) return NULL;
+  for (i = 0; i < (int)G_IFACE_TABLE_LEN; i++) {
+    if (strcmp(g_iface_table[i].version, version) == 0) {
+      return (void *)g_iface_table[i].instance;
+    }
+  }
+  return NULL;
+}
+
 void *SteamApps(void) {
   return resolve_bare_iface("SteamApps");
 }
@@ -5187,6 +5504,19 @@ void SteamAPI_UnregisterCallback(void *pCallback) { (void)pCallback; }
 void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }
 void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }
 
+// === Modern-SDK lookup family (51-15, Win64 only -- D-51-13) ===
+
+#if defined(__x86_64__)
+void *SteamInternal_CreateInterface(const char *pszVersion) {
+  void *resolved = resolve_iface_by_exact_version(pszVersion);
+  if (resolved != NULL) return resolved;
+  return (void *)&g_x64_null_object_instance;
+}
+int SteamAPI_GetHSteamUser(void) { return 1; }
+int SteamAPI_GetHSteamPipe(void) { return 1; }
+#endif
+
+
 // === SteamGameServer* flat stubs (51-14 Task 2, Pitfall 2 -- cdecl, caller-cleans, honest unavailable answers) ===
 
 int SteamGameServer_Init(void) { return 0; }
@@ -5203,18 +5533,48 @@ void *SteamGameServerUtils(void) { return NULL; }
 
 // === Per-interface flat accessors ===
 
+#if defined(__i386__)
 void *SteamAPI_SteamUser_v023(void) { return &g_steamuser023_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamFriends_v018(void) { return &g_steamfriends018_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamUser_v016(void) { return &g_steamuser016_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamFriends_v011(void) { return &g_steamfriends011_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamUtils_v005(void) { return &g_steamutils005_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamApps_v004(void) { return &g_steamapps_interface_version004_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamUserStats_v010(void) { return &g_steamuserstats_interface_version010_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamFriends_v013(void) { return &g_steamfriends013_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamApps_v005(void) { return &g_steamapps_interface_version005_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamUserStats_v011(void) { return &g_steamuserstats_interface_version011_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamRemoteStorage_v005(void) { return &g_steamremotestorage_interface_version005_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamMatchMaking_v009(void) { return &g_steammatchmaking009_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamMatchMakingServers_v002(void) { return &g_steammatchmakingservers002_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamNetworking_v005(void) { return &g_steamnetworking005_instance; }
+#endif
+#if defined(__i386__)
 void *SteamAPI_SteamRemoteStorage_v010(void) { return &g_steamremotestorage_interface_version010_instance; }
+#endif

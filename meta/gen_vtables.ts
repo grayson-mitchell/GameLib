@@ -628,6 +628,47 @@ const FLAT_EXPORT_BODIES: Record<
     'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }'
 }
 
+// 51-15: the modern-SDK lookup family (D-51-13 GO) -- Win64-only (ROADMAP
+// sub-decision 1: SteamInternal_CreateInterface, SteamAPI_GetHSteamUser,
+// SteamAPI_GetHSteamPipe). A game built against a modern steam_api64.dll
+// resolves EVERY interface through SteamInternal_CreateInterface(version),
+// never a per-version flat accessor -- these three symbols are therefore
+// emitted only into the x64 .def (generateDefFile's `arch === 'x64'`
+// branch) and only compiled under `#if defined(__x86_64__)` in the shim C
+// (generateShimC), never polluting the legacy x86 shim's export surface
+// (SHIM_EXPORTED_SYMBOLS' CR-02 pin stays untouched by this plan).
+export const MODERN_LOOKUP_FLAT_EXPORTS = [
+  'SteamInternal_CreateInterface',
+  'SteamAPI_GetHSteamUser',
+  'SteamAPI_GetHSteamPipe'
+] as const
+
+const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
+  (typeof MODERN_LOOKUP_FLAT_EXPORTS)[number],
+  string
+> = {
+  // Resolves by the EXACT version string the game passes
+  // (resolve_iface_by_exact_version, defined where g_iface_table is
+  // complete -- see emitIfaceTableAndBareAccessors -- and forward-declared
+  // in the preamble so the SteamClient-family GetISteamXxx lookup stubs in
+  // vtableSections, emitted earlier in the file, can call it too). An
+  // unknown version answers the x64 null-object fallback (ROADMAP
+  // sub-decision 1: reported as stubbed, never missing) -- there is no x86
+  // leg here at all, this symbol only ever compiles under __x86_64__.
+  SteamInternal_CreateInterface:
+    'void *SteamInternal_CreateInterface(const char *pszVersion) {\n' +
+    '  void *resolved = resolve_iface_by_exact_version(pszVersion);\n' +
+    '  if (resolved != NULL) return resolved;\n' +
+    '  return (void *)&g_x64_null_object_instance;\n' +
+    '}',
+  // 51-15: the bridge speaks exactly one pipe/user pair per per-appId
+  // helper (D-51-01) -- there is no real multi-pipe/multi-user concept to
+  // report, so both always answer the single constant handle 1 (never 0,
+  // which every real Steamworks game treats as "invalid handle").
+  SteamAPI_GetHSteamUser: 'int SteamAPI_GetHSteamUser(void) { return 1; }',
+  SteamAPI_GetHSteamPipe: 'int SteamAPI_GetHSteamPipe(void) { return 1; }'
+}
+
 // ---------------------------------------------------------------------------
 // Vtable stub emission
 // ---------------------------------------------------------------------------
@@ -793,6 +834,85 @@ function emitStubBody(
   )
 }
 
+// 51-15: Win64 unknown-interface-version fallback -- a real pointer to a
+// do-nothing vtable, so a game probing for an interface this bridge does
+// not serve gets a safely-callable null object (reported as stubbed, never
+// a crash) rather than a NULL deref. Win64 is caller-cleans (unlike i386
+// __thiscall, which is callee-cleans and therefore needs an arity-correct
+// stub per slot, see emitStubBody's dummy-param mechanism above) -- ONE
+// generic zero-returning function can safely serve every slot regardless
+// of the real interface's arity.
+export const X64_NULL_OBJECT_SLOTS = 256
+
+/** Generator-stable family grouping key for ISteamClient (51-15) -- the
+ * ONLY family whose GetISteamXxx accessor methods resolve by VERSION
+ * STRING at call time (the modern-SDK lookup family: ROADMAP sub-decision
+ * 1 / D-51-13) rather than returning a fixed per-manifest instance. */
+const STEAM_CLIENT_FAMILY = 'SteamClient'
+
+/** True for an ISteamClient `GetISteamXxx(..., const char *pchVersion)`
+ * accessor (51-15) -- every one of them takes an `HSteamUser`/`HSteamPipe`
+ * pair this bridge has no real multi-pipe/multi-user concept for (D-51-01:
+ * one pipe/user per per-appId helper) PLUS the `const char *` version
+ * string that is the only input the lookup actually needs. Every OTHER
+ * SteamClient-family method (CreateSteamPipe, ConnectToGlobalUser, ...)
+ * is unaffected and keeps following the ordinary stub/wire/helperFallback
+ * rule (e.g. a manifest-declared `helperFallback: 1`). */
+function isSteamClientVersionLookupMethod(
+  manifest: InterfaceManifest,
+  method: MethodSignature
+): boolean {
+  return (
+    manifest.family === STEAM_CLIENT_FAMILY &&
+    method.name.startsWith('GetISteam') &&
+    method.params.some((p) => p.type === 'const char*')
+  )
+}
+
+/**
+ * Emits a GetISteamXxx version-lookup stub: looks up `pchVersion` in
+ * `g_iface_table` via `resolve_iface_by_exact_version` (defined once,
+ * where `g_iface_table` is complete -- see `emitIfaceTableAndBareAccessors`
+ * -- and forward-declared in the preamble so this function, emitted
+ * earlier in the file as part of `vtableSections`, can call it) and falls
+ * back to the x64 null-object instance on a miss. The real HSteamUser/
+ * HSteamPipe params are kept in the signature (so a caller's generated
+ * code never corrupts its own stack/register expectations) but explicitly
+ * ignored in the body -- there is no real multi-pipe/multi-user state to
+ * validate them against (D-51-01).
+ */
+function emitSteamClientVersionLookupStub(
+  method: MethodSignature,
+  header: string,
+  funcName: string
+): string {
+  const versionParam = method.params.find((p) => p.type === 'const char*')!
+  const realParams = method.params
+    .map((p) => `${cType(p.type)} ${p.name}`)
+    .join(', ')
+  const signatureParams = realParams
+    ? `void *self, ${realParams}`
+    : 'void *self'
+  const ignoredParamLines = method.params
+    .filter((p) => p.name !== versionParam.name)
+    .map((p) => `  (void)${p.name};\n`)
+    .join('')
+  return (
+    header +
+    `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
+    `  (void)self;\n` +
+    ignoredParamLines +
+    `  void *resolved = resolve_iface_by_exact_version(${versionParam.name});\n` +
+    `  if (resolved != NULL) return resolved;\n` +
+    `#if defined(__x86_64__)\n` +
+    `  return (void *)&g_x64_null_object_instance;\n` +
+    `#else\n` +
+    `  return NULL;\n` +
+    `#endif\n` +
+    `}\n`
+  )
+}
+
 function emitVtableStub(
   manifest: InterfaceManifest,
   method: MethodSignature
@@ -824,6 +944,13 @@ function emitVtableStub(
   const header =
     `// slot ${method.slot}: ${method.name}(${descParams}) -> ${method.returns} ` +
     `| __thiscall ret ${retN}${sretDesc}${stringDesc}${stubDesc}${fallbackDesc}\n${noteLine}`
+
+  // 51-15: the modern-SDK lookup family -- checked FIRST (ahead of
+  // helperFallback/stub/wire) because an ISteamClient GetISteamXxx
+  // accessor is never any of those; it always resolves by version string.
+  if (isSteamClientVersionLookupMethod(manifest, method)) {
+    return emitSteamClientVersionLookupStub(method, header, funcName)
+  }
 
   // 51-06 Task 3: a method with `helperFallback` set never talks to the
   // helper at all -- it answers the declared constant immediately, using
@@ -1348,17 +1475,45 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
 
 typedef void *vfn;
 
+// 51-15: Win64 unknown-interface-version fallback -- see X64_NULL_OBJECT_SLOTS'
+// doc comment (meta/gen_vtables.ts) for why ONE generic zero-returning
+// function safely serves every slot's arity on this target.
+#if defined(__x86_64__)
+static void *vt_x64_null_object(void *self) { (void)self; return 0; }
+static vfn g_x64_null_object_vtbl[${X64_NULL_OBJECT_SLOTS}] = {
+${Array.from({ length: X64_NULL_OBJECT_SLOTS }, () => '  (vfn)vt_x64_null_object,').join('\n')}
+};
+struct GLibX64NullObject { vfn *vptr; };
+static struct GLibX64NullObject g_x64_null_object_instance = { g_x64_null_object_vtbl };
+#endif
+
+// 51-15: forward declaration only -- the full definition (and
+// g_iface_table itself) lives in emitIfaceTableAndBareAccessors's output
+// below, which also defines every per-interface instance struct
+// vtableSections declares; this file's ISteamClient GetISteamXxx
+// version-lookup stubs (vtableSections, emitted BEFORE that section) and
+// SteamInternal_CreateInterface (emitted AFTER it) both call this SAME
+// function, so a plain prototype here is all either call site needs.
+static void *resolve_iface_by_exact_version(const char *version);
+
 `
 
+  // 51-15: every vtable/table row is gated on its OWN manifest's `arches`
+  // -- archGuard(['x86']) wraps in `#if defined(__i386__)`,
+  // archGuard(['x64']) in `#if defined(__x86_64__)`, and a dual-arch
+  // manifest (both) gets no guard at all (compiles into both targets).
+  // This is what makes "the x64 build must never include an x86-only
+  // manifest's vtable, and the x86 build never an x64-only one" true.
   const vtableSections = sortedManifests
     .map((m) => {
+      const { open, close } = archGuard(m.arches)
       const stubs = [...m.methods]
         .sort((a, b) => a.slot - b.slot)
         .map((method) => emitVtableStub(m, method))
         .join('\n')
       return (
-        `// === ${m.interface} (ordinal ${m.ordinal}, family ${m.family}) ===\n\n` +
-        `${stubs}\n${emitVtableArray(m)}`
+        `${open}// === ${m.interface} (ordinal ${m.ordinal}, family ${m.family}) ===\n\n` +
+        `${stubs}\n${emitVtableArray(m)}${close}`
       )
     })
     .join('\n')
@@ -1366,10 +1521,22 @@ typedef void *vfn;
   const flatExports = FLAT_EXPORTS_SUPERSET.map(
     (name) => FLAT_EXPORT_BODIES[name]
   ).join('\n')
+  // 51-15: Win64-only (see MODERN_LOOKUP_FLAT_EXPORTS' doc comment).
+  const modernLookupExports =
+    `#if defined(__x86_64__)\n` +
+    MODERN_LOOKUP_FLAT_EXPORTS.map(
+      (name) => MODERN_LOOKUP_FLAT_EXPORT_BODIES[name]
+    ).join('\n') +
+    `\n#endif\n`
   const gameServerStubs = GAMESERVER_FLAT_STUBS.map(
     (name) => GAMESERVER_FLAT_STUB_BODIES[name]
   ).join('\n')
-  const accessors = sortedManifests.map((m) => emitFlatAccessor(m)).join('')
+  const accessors = sortedManifests
+    .map((m) => {
+      const { open, close } = archGuard(m.arches)
+      return `${open}${emitFlatAccessor(m)}${close}`
+    })
+    .join('')
   const ifaceTableAndBareAccessors =
     emitIfaceTableAndBareAccessors(sortedManifests)
 
@@ -1379,6 +1546,8 @@ typedef void *vfn;
     `${ifaceTableAndBareAccessors}\n` +
     `// === Flat SteamAPI_* exports (acceptance-set superset, R3 finding #9) ===\n\n` +
     `${flatExports}\n\n` +
+    `// === Modern-SDK lookup family (51-15, Win64 only -- D-51-13) ===\n\n` +
+    `${modernLookupExports}\n\n` +
     `// === SteamGameServer* flat stubs (51-14 Task 2, Pitfall 2 -- cdecl, caller-cleans, honest unavailable answers) ===\n\n` +
     `${gameServerStubs}\n\n` +
     `// === Per-interface flat accessors ===\n\n` +
@@ -1998,6 +2167,23 @@ function emitIfaceTableAndBareAccessors(
     `  }\n` +
     `  return NULL;\n` +
     `}\n\n` +
+    // 51-15: the single EXACT version-string lookup both
+    // SteamInternal_CreateInterface (emitted after this section) and the
+    // ISteamClient GetISteamXxx version-lookup stubs (vtableSections,
+    // emitted BEFORE this section via the preamble's forward declaration)
+    // share -- unlike resolve_bare_iface above, this never consults
+    // gamelib_bridge.cfg at all, it matches the literal string the game
+    // passed.
+    `static void *resolve_iface_by_exact_version(const char *version) {\n` +
+    `  int i;\n` +
+    `  if (version == NULL) return NULL;\n` +
+    `  for (i = 0; i < (int)G_IFACE_TABLE_LEN; i++) {\n` +
+    `    if (strcmp(g_iface_table[i].version, version) == 0) {\n` +
+    `      return (void *)g_iface_table[i].instance;\n` +
+    `    }\n` +
+    `  }\n` +
+    `  return NULL;\n` +
+    `}\n\n` +
     `${bareAccessors}`
   )
 }
@@ -2021,11 +2207,15 @@ export function generateDefFile(
   const families = [...new Set(sortedManifests.map((m) => m.family))].sort()
   const bareAccessorExports = families.map((f) => bareAccessorName(f))
   const libraryName = arch === 'x64' ? 'steam_api64' : 'steam_api'
+  // 51-15: the modern-SDK lookup family is Win64-only -- see
+  // MODERN_LOOKUP_FLAT_EXPORTS' doc comment.
+  const modernLookupExports = arch === 'x64' ? MODERN_LOOKUP_FLAT_EXPORTS : []
   const lines = [
     `LIBRARY ${libraryName}`,
     'EXPORTS',
     ...FLAT_EXPORTS_SUPERSET,
     ...GAMESERVER_FLAT_STUBS,
+    ...modernLookupExports,
     ...accessorExports,
     ...bareAccessorExports
   ]
@@ -2069,11 +2259,13 @@ export function main(): void {
   mkdirSync(OUT_DIR, { recursive: true })
 
   const shimC = generateShimC(manifests)
-  const defFile = generateDefFile(manifests)
+  const defFile = generateDefFile(manifests, 'x86')
+  const defFile64 = generateDefFile(manifests, 'x64')
   const dispatchHeader = generateDispatchHeader(manifests)
 
   writeFileSync(join(OUT_DIR, 'steam_api_shim.c'), shimC)
   writeFileSync(join(OUT_DIR, 'steam_api.def'), defFile)
+  writeFileSync(join(OUT_DIR, 'steam_api64.def'), defFile64)
   writeFileSync(join(OUT_DIR, 'bridge_dispatch.h'), dispatchHeader)
 
   const totalSlots = manifests.reduce((sum, m) => sum + m.methods.length, 0)

@@ -16,8 +16,10 @@ import {
   validateManifest,
   FLAT_EXPORTS_SUPERSET,
   GAMESERVER_FLAT_STUBS,
+  MODERN_LOOKUP_FLAT_EXPORTS,
   STRING_RETURN_BUF_BYTES,
   WIRE_LAYOUT_DOC,
+  X64_NULL_OBJECT_SLOTS,
   type InterfaceManifestV2
 } from '../gen_vtables'
 
@@ -1257,6 +1259,225 @@ describe('gen_vtables', () => {
           ]
         }
         expect(() => generateDispatchHeader([fallbackManifest])).not.toThrow()
+      })
+    })
+  })
+
+  // 51-15 Task 1: D-51-13 GO -- the Win64 shim target. `arch` is a
+  // generator/build/coverage parameter (assumption_delta_decision: promote)
+  // rather than a forked generator -- these tests exercise the x64-aware
+  // additions to the SAME generateShimC/generateDefFile this file's other
+  // describe blocks already cover for x86.
+  describe('51-15: Win64 shim generation (D-51-13 GO)', () => {
+    const x86OnlyManifest: InterfaceManifestV2 = {
+      schemaVersion: 2,
+      interface: 'GameLibX86Only001',
+      family: 'GameLibX86Only',
+      ordinal: 9001,
+      arches: ['x86'],
+      mode: 'stub',
+      complete: true,
+      flatAccessor: 'SteamAPI_GameLibX86Only_v001',
+      source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+      methods: [
+        {
+          slot: 0,
+          name: 'DoThing_TESTONLY',
+          returns: 'void',
+          returnKind: 'void',
+          stackBytes: 0,
+          params: []
+        }
+      ]
+    }
+    const x64OnlyManifest: InterfaceManifestV2 = {
+      schemaVersion: 2,
+      interface: 'GameLibX64Only001',
+      family: 'GameLibX64Only',
+      ordinal: 9002,
+      arches: ['x64'],
+      mode: 'stub',
+      complete: true,
+      flatAccessor: 'SteamAPI_GameLibX64Only_v001',
+      source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+      methods: [
+        {
+          slot: 0,
+          name: 'DoOtherThing_TESTONLY',
+          returns: 'void',
+          returnKind: 'void',
+          stackBytes: 0,
+          params: []
+        }
+      ]
+    }
+
+    describe('X64_NULL_OBJECT_SLOTS', () => {
+      it('is 256', () => {
+        expect(X64_NULL_OBJECT_SLOTS).toBe(256)
+      })
+
+      it('the generated null-object vtable array declares exactly that many slots, gated under __x86_64__', () => {
+        const c = generateShimC([x86OnlyManifest])
+        expect(c).toContain('#if defined(__x86_64__)')
+        expect(c).toContain(
+          `static vfn g_x64_null_object_vtbl[${X64_NULL_OBJECT_SLOTS}]`
+        )
+        const entryCount = (c.match(/\(vfn\)vt_x64_null_object,/g) ?? []).length
+        expect(entryCount).toBe(X64_NULL_OBJECT_SLOTS)
+      })
+    })
+
+    describe("generateDefFile(manifests, 'x64')", () => {
+      it('starts with LIBRARY steam_api64', () => {
+        const def = generateDefFile([x64OnlyManifest], 'x64')
+        expect(def.split('\n')[0]).toBe('LIBRARY steam_api64')
+      })
+
+      it("includes an x64-arched manifest's flat accessor but excludes an x86-only one", () => {
+        const def = generateDefFile([x86OnlyManifest, x64OnlyManifest], 'x64')
+        expect(def).toContain('SteamAPI_GameLibX64Only_v001')
+        expect(def).not.toContain('SteamAPI_GameLibX86Only_v001')
+      })
+
+      it("the x86 def excludes an x64-only manifest's flat accessor", () => {
+        const def = generateDefFile([x86OnlyManifest, x64OnlyManifest], 'x86')
+        expect(def).toContain('SteamAPI_GameLibX86Only_v001')
+        expect(def).not.toContain('SteamAPI_GameLibX64Only_v001')
+      })
+
+      it('lists SteamInternal_CreateInterface / SteamAPI_GetHSteamUser / SteamAPI_GetHSteamPipe on x64 but not on x86 (Win64-only modern lookup family)', () => {
+        const defX64 = generateDefFile([x86OnlyManifest], 'x64')
+        const defX86 = generateDefFile([x86OnlyManifest], 'x86')
+        for (const name of MODERN_LOOKUP_FLAT_EXPORTS) {
+          expect(defX64.split('\n')).toContain(name)
+          expect(defX86.split('\n')).not.toContain(name)
+        }
+      })
+    })
+
+    describe("arch-gated vtable/table rows (prohibition: x64 build never includes an x86-only manifest's vtable, and vice versa)", () => {
+      it("an x86-only manifest's vtable stub is wrapped in #if defined(__i386__)", () => {
+        const c = generateShimC([x86OnlyManifest])
+        expect(c).toMatch(/#if defined\(__i386__\)\n\/\/ === GameLibX86Only001/)
+      })
+
+      it("an x64-only manifest's vtable stub is wrapped in #if defined(__x86_64__)", () => {
+        const c = generateShimC([x64OnlyManifest])
+        expect(c).toMatch(
+          /#if defined\(__x86_64__\)\n\/\/ === GameLibX64Only001/
+        )
+      })
+
+      it("a dual-arch manifest's vtable stub carries no arch guard at all", () => {
+        const dualArch: InterfaceManifestV2 = {
+          ...x86OnlyManifest,
+          interface: 'GameLibDualArch001',
+          arches: ['x86', 'x64']
+        }
+        const c = generateShimC([dualArch])
+        expect(c).toContain('// === GameLibDualArch001')
+        expect(c).not.toMatch(/#if[^\n]*\n\/\/ === GameLibDualArch001/)
+      })
+
+      it("an x64-only manifest's flat accessor is also arch-gated", () => {
+        const c = generateShimC([x64OnlyManifest])
+        expect(c).toMatch(
+          /#if defined\(__x86_64__\)\nvoid \*SteamAPI_GameLibX64Only_v001/
+        )
+      })
+    })
+
+    describe('SteamInternal_CreateInterface (modern-SDK lookup family)', () => {
+      it('appears in the generated shim, gated under __x86_64__, and resolves by exact version string with an x64 null-object fallback', () => {
+        const c = generateShimC([x86OnlyManifest])
+        expect(c).toContain('SteamInternal_CreateInterface')
+        expect(c).toMatch(
+          /#if defined\(__x86_64__\)\nvoid \*SteamInternal_CreateInterface/
+        )
+        expect(c).toContain('resolve_iface_by_exact_version(pszVersion)')
+        expect(c).toContain('return (void *)&g_x64_null_object_instance;')
+      })
+
+      it('SteamAPI_GetHSteamUser and SteamAPI_GetHSteamPipe both answer the constant handle 1', () => {
+        const c = generateShimC([x86OnlyManifest])
+        expect(c).toContain('int SteamAPI_GetHSteamUser(void) { return 1; }')
+        expect(c).toContain('int SteamAPI_GetHSteamPipe(void) { return 1; }')
+      })
+
+      it('resolve_iface_by_exact_version is forward-declared before vtableSections and defined once, after g_iface_table is complete', () => {
+        const c = generateShimC([x86OnlyManifest])
+        const protoIdx = c.indexOf(
+          'static void *resolve_iface_by_exact_version(const char *version);'
+        )
+        const defIdx = c.indexOf(
+          'static void *resolve_iface_by_exact_version(const char *version) {'
+        )
+        const vtableIdx = c.indexOf('// === GameLibX86Only001')
+        expect(protoIdx).toBeGreaterThanOrEqual(0)
+        expect(defIdx).toBeGreaterThan(protoIdx)
+        expect(protoIdx).toBeLessThan(vtableIdx)
+        expect(defIdx).toBeGreaterThan(vtableIdx)
+      })
+    })
+
+    describe('SteamClient-family GetISteamXxx version-lookup special case', () => {
+      const steamClientManifest: InterfaceManifestV2 = {
+        schemaVersion: 2,
+        interface: 'SteamClient017',
+        family: 'SteamClient',
+        ordinal: 9003,
+        arches: ['x64'],
+        mode: 'stub',
+        complete: true,
+        source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+        methods: [
+          {
+            slot: 0,
+            name: 'GetISteamUser',
+            returns: 'void*',
+            returnKind: 'pointer',
+            stackBytes: 12,
+            params: [
+              { name: 'hSteamUser', type: 'HSteamUser' },
+              { name: 'hSteamPipe', type: 'HSteamPipe' },
+              { name: 'pchVersion', type: 'const char*' }
+            ]
+          },
+          {
+            slot: 1,
+            name: 'CreateSteamPipe',
+            returns: 'HSteamPipe',
+            returnKind: 'int32',
+            stackBytes: 0,
+            params: [],
+            helperFallback: 1
+          }
+        ]
+      }
+
+      it('GetISteamUser resolves by the version-string param and ignores hSteamUser/hSteamPipe', () => {
+        const c = generateShimC([steamClientManifest])
+        const match = c.match(
+          /static void \* THISCALL vt_SteamClient017_GetISteamUser\([^{]*\) \{[\s\S]*?\n\}/
+        )
+        expect(match).not.toBeNull()
+        const body = match![0]
+        expect(body).toContain('(void)hSteamUser;')
+        expect(body).toContain('(void)hSteamPipe;')
+        expect(body).not.toContain('(void)pchVersion;')
+        expect(body).toContain('resolve_iface_by_exact_version(pchVersion)')
+        expect(body).not.toContain('bridge_transact')
+      })
+
+      it('CreateSteamPipe (not a GetISteamXxx accessor) is unaffected and keeps its ordinary helperFallback behavior', () => {
+        const c = generateShimC([steamClientManifest])
+        expect(c).toContain(
+          'static uint32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {'
+        )
+        expect(c).toMatch(
+          /vt_SteamClient017_CreateSteamPipe\(void \*self\) \{\n {2}\(void\)self;\n {2}return 1;\n\}/
+        )
       })
     })
   })
