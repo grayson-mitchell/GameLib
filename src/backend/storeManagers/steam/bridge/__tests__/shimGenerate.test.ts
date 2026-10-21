@@ -629,13 +629,17 @@ describe('shimGenerate', () => {
   })
 
   it('24-CR-02: a game importing every symbol steam_api.def exports (including the SteamUser/SteamFriends interface accessors) is placed, not rejected', async () => {
-    // The two bare accessors (SteamUser/SteamFriends) now require a
-    // resolvable interface version (D-51-07) -- seed the original dll
-    // with exactly the versions shimCoverage.ts serves so this stays a
-    // true "fully covered" exercise, not an accidental miss.
+    // Every bare accessor the .def exports now requires a resolvable
+    // interface version (D-51-07) -- seed the original dll with exactly
+    // the versions shimCoverage.ts serves so this stays a true "fully
+    // covered" exercise, not an accidental miss. 51-11 widened the bare
+    // accessor set to SteamUtils/SteamApps/SteamUserStats (old-style
+    // version strings), so their version strings must be embedded here
+    // too, alongside SteamUser023/SteamFriends018.
     writeFileSync(
       shimDestPath(),
-      'original-dll-bytes-SteamUser023-SteamFriends018-embedded'
+      'original-dll-bytes-SteamUser023-SteamFriends018-SteamUtils005-' +
+        'STEAMAPPS_INTERFACE_VERSION004-STEAMUSERSTATS_INTERFACE_VERSION010-embedded'
     )
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',

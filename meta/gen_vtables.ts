@@ -1487,11 +1487,16 @@ function dispatchReturnWidth(method: MethodSignature): number | null {
  * Generation-time refusal (never a silently-wrong dispatch case) for a
  * dispatch-eligible wire method this generator cannot yet marshal
  * helper-side: a 'class' return whose structSize isn't 8, a 'pointer'/
- * 'float' return (no production manifest needs either yet), or an
- * 'out-value'/'out-buffer' param (deferred -- no production manifest uses
- * either on a dispatch-eligible method yet; a future plan extending
- * generateDispatchHeader to support them is expected to replace this
- * throw, not work around it).
+ * 'float' return (no production manifest needs either yet), an
+ * 'out-buffer' param (deferred -- no production manifest uses it on a
+ * dispatch-eligible method yet; a future plan extending
+ * generateDispatchHeader to support it is expected to replace this
+ * throw, not work around it), or an 'out-value' param paired with a
+ * 'void'/'string' return (51-11 adds 'out-value' response encoding for
+ * every OTHER return shape -- see emitDispatchCase -- but neither the
+ * void branch nor the string branch appends extra response bytes after
+ * the base return, and no production manifest needs that combination
+ * yet).
  */
 function assertDispatchable(
   manifest: InterfaceManifestV2,
@@ -1518,11 +1523,22 @@ function assertDispatchable(
       }, never silently mis-encoded (51-10)`
     )
   }
+  const hasOutValue = method.params.some(
+    (p) => (p.kind ?? 'value') === 'out-value'
+  )
+  if (
+    hasOutValue &&
+    (method.returnKind === 'void' || method.returnKind === 'string')
+  ) {
+    throw new Error(
+      `generateDispatchHeader: ${ctx} has returnKind "${method.returnKind}" with an 'out-value' param -- appending out-value response bytes after a void/string base return is deferred to a future plan, never silently wrong (51-10/51-11)`
+    )
+  }
   for (const p of method.params) {
     const kind: ParamKind = p.kind ?? 'value'
-    if (kind === 'out-value' || kind === 'out-buffer') {
+    if (kind === 'out-buffer') {
       throw new Error(
-        `generateDispatchHeader: ${ctx} param "${p.name}" has kind "${kind}" -- out-value/out-buffer dispatch decoding is deferred to a future plan, never silently wrong (51-10)`
+        `generateDispatchHeader: ${ctx} param "${p.name}" has kind "out-buffer" -- out-buffer dispatch decoding is deferred to a future plan, never silently wrong (51-10)`
       )
     }
   }
@@ -1585,6 +1601,19 @@ function emitDispatchCase(
   for (const p of method.params) {
     const kind = p.kind ?? 'value'
     const varName = `arg_${p.name}`
+    if (kind === 'out-value') {
+      // 51-11: nothing is read from the request for an out-value param
+      // (WIRE_LAYOUT_DOC) -- declare a zero-initialized local of the
+      // decoded scalar type and pass its address to the real flat call;
+      // the call site below passes `&${varName}` instead of `${varName}`.
+      // offsetExpr is deliberately NOT advanced -- no request bytes were
+      // consumed.
+      const valueType = p.valueType ?? 'int32'
+      const ct = valueTypeCType(valueType)
+      decls.push(`      ${ct} ${varName} = 0;`)
+      callArgs.push(`&${varName}`)
+      continue
+    }
     if (kind === 'in-string') {
       const bufName = `${flatVar}_${p.name}_buf`
       // The decoded length is kept in its own named local (`${varName}_len`)
@@ -1640,13 +1669,41 @@ function emitDispatchCase(
     )
   } else {
     const width = dispatchReturnWidth(method)
-    lines.push(
-      `      ${returnType} __ret = ${callExpr};`,
-      `      if (respCap < ${width}) { *respLen = 0; return 1; }`,
-      `      memcpy(resp, &__ret, ${width});`,
-      `      *respLen = ${width};`,
-      `      return 0;`
+    const outValueParams = method.params.filter(
+      (p) => (p.kind ?? 'value') === 'out-value'
     )
+    if (outValueParams.length === 0) {
+      lines.push(
+        `      ${returnType} __ret = ${callExpr};`,
+        `      if (respCap < ${width}) { *respLen = 0; return 1; }`,
+        `      memcpy(resp, &__ret, ${width});`,
+        `      *respLen = ${width};`,
+        `      return 0;`
+      )
+    } else {
+      // 51-11: WIRE_LAYOUT_DOC's response shape -- the base return value
+      // first, then every out-value param's valueType width, in
+      // declaration order. assertDispatchable above already refused this
+      // combination for a void/string base return, so `width` here is
+      // always a real register-return byte count.
+      const extraWidths = outValueParams.map((p) =>
+        valueTypeWidth(p.valueType ?? 'int32')
+      )
+      const totalWidth = extraWidths.reduce((sum, w) => sum + w, width!)
+      lines.push(
+        `      ${returnType} __ret = ${callExpr};`,
+        `      if (respCap < ${totalWidth}) { *respLen = 0; return 1; }`,
+        `      memcpy(resp, &__ret, ${width});`
+      )
+      let offset = width!
+      for (const p of outValueParams) {
+        const w = valueTypeWidth(p.valueType ?? 'int32')
+        const varName = `arg_${p.name}`
+        lines.push(`      memcpy(resp + ${offset}, &${varName}, ${w});`)
+        offset += w
+      }
+      lines.push(`      *respLen = ${offset};`, `      return 0;`)
+    }
   }
 
   lines.push(`    }`)

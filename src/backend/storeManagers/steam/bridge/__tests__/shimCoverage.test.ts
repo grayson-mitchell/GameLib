@@ -16,6 +16,8 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { parseSteamApiImports } from '../importScan'
+import { resolveRequiredInterfaceVersions } from '../interfaceVersions'
 import {
   SHIM_EXPORTED_SYMBOLS,
   SHIM64_EXPORTED_SYMBOLS,
@@ -28,6 +30,10 @@ import {
   evaluateShimCoverageWith,
   isScanVerdictNowCovered
 } from '../shimCoverage'
+import {
+  XCOM_DLL_VERSION_STRINGS,
+  XCOM_EU_OBJDUMP_OUTPUT
+} from './fixtures/objdumpImports'
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
 const STEAM_API_DEF_PATH = join(
@@ -161,15 +167,23 @@ describe('SHIM_EXPORT_SET_VERSION / computeExportSetVersion', () => {
 })
 
 describe('evaluateShimCoverage', () => {
+  // 51-11: SteamUtils/SteamUtils005 moved from "missing" to "covered" this
+  // plan -- SteamRemoteStorage stays the still-out-of-scope example (second
+  // locked interface group, not yet widened).
   test('x86: an exported symbol is covered, an un-exported bare accessor AND its unserved required version are both missing', () => {
     const result = evaluateShimCoverage({
       arch: 'x86',
-      symbols: ['SteamAPI_Init', 'SteamUtils'],
-      requiredInterfaceVersions: { SteamUtils: 'SteamUtils005' },
+      symbols: ['SteamAPI_Init', 'SteamRemoteStorage'],
+      requiredInterfaceVersions: {
+        SteamRemoteStorage: 'STEAMREMOTESTORAGE_INTERFACE_VERSION005'
+      },
       versionProblems: []
     })
 
-    expect(result.missingSymbols).toEqual(['SteamUtils', 'SteamUtils005'])
+    expect(result.missingSymbols).toEqual([
+      'SteamRemoteStorage',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION005'
+    ])
     expect(result.stubbedInterfaces).toEqual([])
   })
 
@@ -300,6 +314,103 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
   })
 })
 
+// 51-11 Task 3: the acceptance check named in the plan -- evaluateShimCoverage
+// on XCOM: Enemy Unknown's (200510) REAL captured import table (51-02's
+// fixtures/objdumpImports.ts) must report missing exactly the second/
+// last-group families (SteamRemoteStorage, SteamMatchmaking/
+// SteamMatchmakingServers, SteamNetworking -- their bare names AND their
+// required versions) plus the 9 out-of-scope SteamGameServer* bare names
+// (closed by a future 51-14), and NOTHING from the five families this plan
+// widened (SteamUser/SteamFriends/SteamUtils/SteamApps/SteamUserStats).
+//
+// No equivalent Hoard (63000) case here: Task 1 of this plan (measuring
+// Hoard's real interface versions from its original steam_api.dll) was
+// skipped this run on operator instruction -- the CrossOver bottle had no
+// network path to re-download Hoard, so there is no `dllVersions` pool to
+// resolve Hoard's required interface versions against at all. A
+// symbol-only check (no requiredInterfaceVersions) would score Hoard's
+// bare SteamUser/SteamUtils/SteamApps/etc. accessors as "covered" purely
+// because the BARE NAME is now exported -- true of the name, not provably
+// true of the UNMEASURED version Hoard's dll actually expects. Asserting
+// that would be exactly the misleading "passing result that isn't true"
+// this plan's operator deviation forbids. See the pending todo filed for
+// the deferred Hoard measurement.
+describe('evaluateShimCoverage (51-11 Task 3 acceptance check -- XCOM: Enemy Unknown, 200510)', () => {
+  const xcomSymbols = parseSteamApiImports(XCOM_EU_OBJDUMP_OUTPUT)
+  const { required: xcomRequiredVersions, problems: xcomVersionProblems } =
+    resolveRequiredInterfaceVersions({
+      importedSymbols: xcomSymbols,
+      dllVersions: XCOM_DLL_VERSION_STRINGS,
+      exeVersions: []
+    })
+
+  test('resolves cleanly (no unknown-version/ambiguous problems) against the real captured import table', () => {
+    expect(xcomVersionProblems).toEqual([])
+  })
+
+  test('missing is exactly the second/last-group families + their versions + the 9 GameServer* stubs; nothing from the five widened families', () => {
+    const result = evaluateShimCoverage({
+      arch: 'x86',
+      symbols: xcomSymbols,
+      requiredInterfaceVersions: xcomRequiredVersions,
+      versionProblems: xcomVersionProblems
+    })
+
+    const expectedMissingGameServerNames = [
+      'SteamGameServer',
+      'SteamGameServer_Shutdown',
+      'SteamGameServer_BSecure',
+      'SteamGameServer_GetSteamID',
+      'SteamGameServer_Init',
+      'SteamGameServerStats',
+      'SteamGameServerNetworking',
+      'SteamGameServerUtils',
+      'SteamGameServer_RunCallbacks'
+    ]
+    const expectedMissingBareNames = [
+      'SteamMatchmaking',
+      'SteamMatchmakingServers',
+      'SteamNetworking',
+      'SteamRemoteStorage'
+    ]
+    const expectedMissingVersions = [
+      'SteamMatchMaking009',
+      'SteamMatchMakingServers002',
+      'SteamNetworking005',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION005'
+    ]
+    const expectedMissing = [
+      ...expectedMissingGameServerNames,
+      ...expectedMissingBareNames,
+      ...expectedMissingVersions
+    ]
+
+    expect([...result.missingSymbols].sort()).toEqual(
+      [...expectedMissing].sort()
+    )
+    expect(result.stubbedInterfaces).toEqual([])
+
+    // Nothing from the five families this plan widened appears anywhere
+    // in the miss list -- the real acceptance assertion, not just a
+    // length check.
+    const widenedNames = [
+      'SteamUser',
+      'SteamFriends',
+      'SteamUtils',
+      'SteamApps',
+      'SteamUserStats',
+      'SteamUser016',
+      'SteamFriends011',
+      'SteamUtils005',
+      'STEAMAPPS_INTERFACE_VERSION004',
+      'STEAMUSERSTATS_INTERFACE_VERSION010'
+    ]
+    for (const name of widenedNames) {
+      expect(result.missingSymbols).not.toContain(name)
+    }
+  })
+})
+
 describe('isScanVerdictNowCovered', () => {
   test('returns true when the stored missing symbol is now exported', () => {
     expect(isScanVerdictNowCovered({ missingSymbols: ['SteamAPI_Init'] })).toBe(
@@ -307,10 +418,12 @@ describe('isScanVerdictNowCovered', () => {
     )
   })
 
+  // 51-11: SteamUtils is now covered -- SteamRemoteStorage (second locked
+  // group, not yet widened) is the still-genuinely-uncovered example.
   test('returns false when the stored missing symbol is still not covered', () => {
-    expect(isScanVerdictNowCovered({ missingSymbols: ['SteamUtils'] })).toBe(
-      false
-    )
+    expect(
+      isScanVerdictNowCovered({ missingSymbols: ['SteamRemoteStorage'] })
+    ).toBe(false)
   })
 
   test('returns true when the stored missing entry is now a served interface version', () => {
@@ -330,7 +443,7 @@ describe('isScanVerdictNowCovered', () => {
   test('returns true only when EVERY stored missing entry is now covered', () => {
     expect(
       isScanVerdictNowCovered({
-        missingSymbols: ['SteamAPI_Init', 'SteamUtils']
+        missingSymbols: ['SteamAPI_Init', 'SteamRemoteStorage']
       })
     ).toBe(false)
   })

@@ -53,6 +53,17 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_UnregisterCallResult',
   'SteamAPI_SteamUser_v023',
   'SteamAPI_SteamFriends_v018',
+  // 51-11: the first locked interface group (ISteamUtils, ISteamApps,
+  // ISteamUserStats) plus the older SteamUser016/SteamFriends011 bare
+  // accessor versions XCOM (200510) needs -- each manifest's own
+  // `flatAccessor`, mirrored here (meta/sdk/isteamuser016.manifest.json,
+  // isteamfriends011.manifest.json, isteamutils005.manifest.json,
+  // isteamapps004.manifest.json, isteamuserstats010.manifest.json).
+  'SteamAPI_SteamUser_v016',
+  'SteamAPI_SteamFriends_v011',
+  'SteamAPI_SteamUtils_v005',
+  'SteamAPI_SteamApps_v004',
+  'SteamAPI_SteamUserStats_v010',
   // 51-06 Task 2: the bare legacy accessors meta/gen_vtables.ts's
   // `generateDefFile` now exports once per family that has an x86
   // manifest -- resolved per game at runtime via gamelib_bridge.cfg's
@@ -60,9 +71,15 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   // symbol is necessary but not sufficient coverage: the game's required
   // interface VERSION (SteamUser016, say) still has to be a key in
   // SHIM_SERVED_INTERFACE_VERSIONS below for the bridge to actually serve
-  // it -- 51-11 widens that map with the older versions XCOM/Hoard need.
+  // it. 51-11 adds the SteamUtils/SteamApps/SteamUserStats bare
+  // accessors; Hoard's own measured versions remain a follow-up (Task 1
+  // of 51-11 was skipped this run -- no original steam_api.dll to
+  // measure against -- see 51-11-SUMMARY.md).
   'SteamUser',
-  'SteamFriends'
+  'SteamFriends',
+  'SteamUtils',
+  'SteamApps',
+  'SteamUserStats'
 ])
 
 // D-51-13: no Win64 shim target exists yet (research's zig cc prototype /
@@ -89,7 +106,21 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   ServedInterface
 > = new Map([
   ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
-  ['SteamFriends018', { family: 'SteamFriends', mode: 'wire' }]
+  ['SteamFriends018', { family: 'SteamFriends', mode: 'wire' }],
+  // 51-11: XCOM's (200510) measured first-group + User/Friends versions.
+  // 'wire' here follows the same precedent as SteamUser023/SteamFriends018
+  // above -- the VERSION is served (its bare accessor resolves to a real
+  // helper-backed instance) even though most of its individual methods
+  // are mode 'stub' per meta/sdk/wire-policy.json; D-51-02's one-time
+  // notice is what tells the user which parts are truthful vs. stubbed.
+  ['SteamUser016', { family: 'SteamUser', mode: 'wire' }],
+  ['SteamFriends011', { family: 'SteamFriends', mode: 'wire' }],
+  ['SteamUtils005', { family: 'SteamUtils', mode: 'wire' }],
+  ['STEAMAPPS_INTERFACE_VERSION004', { family: 'SteamApps', mode: 'wire' }],
+  [
+    'STEAMUSERSTATS_INTERFACE_VERSION010',
+    { family: 'SteamUserStats', mode: 'wire' }
+  ]
 ])
 
 // D-51-13: empty until 51-15, same rationale as SHIM64_EXPORTED_SYMBOLS.

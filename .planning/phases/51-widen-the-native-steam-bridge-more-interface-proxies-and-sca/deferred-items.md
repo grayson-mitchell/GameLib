@@ -30,3 +30,34 @@ change back to the Task 1 commit) reproduces the identical 3-suite failure
 `buildSteamBridgeShims.ts`'s own exports (beyond the pre-existing ones already named above),
 `protocol.ts`, or either steam bridge test file 51-10 modifies. Not fixed here, per the
 deviation-rules scope boundary.
+
+## 51-11: `pnpm lint` tests-scope ceiling already exceeded BEFORE this plan (648 vs 638)
+
+`pnpm lint` fails with "ESLint found too many warnings (maximum: 638)" in the tests scope
+(648 actual) both with and without this plan's changes. Measured directly via an isolated
+`git worktree add /tmp/gamelib-baseline-check 79ed9eb55 --detach` (the commit immediately
+before this plan's Task 2 RED commit, i.e. right after 51-10 landed) and running `pnpm lint`
+there: **648 problems (0 errors, 648 warnings)** -- the IDENTICAL count measured in the main
+tree with every 51-11 change applied. This plan's own new/modified test files
+(`extractProtonInventory.test.ts`, `shimCoverage.test.ts`, `shimGenerate.test.ts`,
+`gen_vtables.test.ts`) contribute zero warnings of their own (confirmed by grepping the lint
+output for each file's name -- none appear). The one genuine lint ERROR this plan did
+introduce (a `require()`-style import in `extractProtonInventory.test.ts`'s
+`resolveOrdinal` test) was fixed in place (Rule 1) before this entry was written; it is not
+part of the pre-existing count above. The 10-over ceiling breach itself predates 51-11
+entirely and is not fixed here, per the deviation-rules scope boundary -- a dedicated lint
+cleanup pass (or a `lint:tests` baseline re-pin) is the right fix, not a change bundled into
+this plan's own task scope.
+
+## 51-11: same three pre-existing failures, re-confirmed via the same `git stash` technique
+
+`pnpm jest meta` at Task 3 close-out reproduced the identical 3-suite failure
+(`findDeadcode.test.ts`, `hardcodedStringGate.test.ts` -- same 6 `GameStatus.tsx` violations,
+`genI18nGateScope.test.ts`). `git stash --include-untracked` back to 51-11's own Task 2 commit
+reproduces the SAME 3 failures byte-for-byte (`Test Suites: 3 failed, 3 total`, `202 passed`
+baseline), confirming none of them are caused by this plan's extractor, manifests, generator
+out-value extension, or shimCoverage widening. `findDeadcode.test.ts`'s baseline drift will
+grow again with this plan's new `meta/extractProtonInventory.ts` exports (not individually
+re-measured this run) -- the 51-07 entry's "a later plan (or a dedicated `find-deadcode`
+sweep) picks it up" recommendation still stands and now covers one more plan's worth of
+exports. Not fixed here, per the deviation-rules scope boundary.

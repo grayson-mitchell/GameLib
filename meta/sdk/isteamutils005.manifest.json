@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamUtils005",
+  "family": "SteamUtils",
+  "ordinal": 5,
+  "arches": ["x86"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamUtils_v005",
+  "helperInterface": "SteamAPI_SteamUtils_v011",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamUtils.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetSecondsSinceAppActive",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetSecondsSinceAppActive"
+    },
+    {
+      "slot": 1,
+      "name": "GetSecondsSinceComputerActive",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive"
+    },
+    {
+      "slot": 2,
+      "name": "GetConnectedUniverse",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetConnectedUniverse"
+    },
+    {
+      "slot": 3,
+      "name": "GetServerRealTime",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetServerRealTime"
+    },
+    {
+      "slot": 4,
+      "name": "GetIPCountry",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetIPCountry"
+    },
+    {
+      "slot": 5,
+      "name": "GetImageSize",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "iImage",
+          "type": "int32"
+        },
+        {
+          "name": "pnWidth",
+          "type": "uint32*"
+        },
+        {
+          "name": "pnHeight",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "GetImageRGBA",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "iImage",
+          "type": "int32"
+        },
+        {
+          "name": "pubDest",
+          "type": "uint8_t*"
+        },
+        {
+          "name": "nDestBufferSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "GetCSERIPPort",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unIP",
+          "type": "uint32*"
+        },
+        {
+          "name": "usPort",
+          "type": "uint16_t*"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetCurrentBatteryPower",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetCurrentBatteryPower"
+    },
+    {
+      "slot": 9,
+      "name": "GetAppID",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetAppID"
+    },
+    {
+      "slot": 10,
+      "name": "SetOverlayNotificationPosition",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eNotificationPosition",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "IsAPICallCompleted",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hSteamAPICall",
+          "type": "uint64"
+        },
+        {
+          "name": "pbFailed",
+          "type": "bool*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetAPICallFailureReason",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hSteamAPICall",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "GetAPICallResult",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "hSteamAPICall",
+          "type": "uint64"
+        },
+        {
+          "name": "pCallback",
+          "type": "void*"
+        },
+        {
+          "name": "cubCallback",
+          "type": "int32"
+        },
+        {
+          "name": "iCallbackExpected",
+          "type": "int32"
+        },
+        {
+          "name": "pbFailed",
+          "type": "bool*"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "RunFrame",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 15,
+      "name": "GetIPCCallCount",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 16,
+      "name": "SetWarningMessageHook",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pFunction",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "IsOverlayEnabled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_IsOverlayEnabled"
+    },
+    {
+      "slot": 18,
+      "name": "BOverlayNeedsPresent",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 19,
+      "name": "CheckFileSignature",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "szFileName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "ShowGamepadTextInput",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "eInputMode",
+          "type": "uint32"
+        },
+        {
+          "name": "eLineInputMode",
+          "type": "uint32"
+        },
+        {
+          "name": "pchDescription",
+          "type": "const char*"
+        },
+        {
+          "name": "unCharMax",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "GetEnteredGamepadTextLength",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 22,
+      "name": "GetEnteredGamepadTextInput",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchText",
+          "type": "char*"
+        },
+        {
+          "name": "cchText",
+          "type": "uint32"
+        }
+      ]
+    }
+  ]
+}

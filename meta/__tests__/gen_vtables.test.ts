@@ -178,11 +178,16 @@ describe('gen_vtables', () => {
   })
 
   describe('per-slot ret N annotations present in generated source (Pitfall 2 auditability)', () => {
+    // 51-11: isteamuser.manifest.json is now Proton-extracted (complete,
+    // all 33 real SteamUser023 slots) rather than hand-authored -- the
+    // extractor's classifyProtonReturn() reports GetHSteamUser's real C
+    // return type (`int32_t`) as "int32", not the old hand-picked semantic
+    // label "HSteamUser". Both map to the same 4-byte register return
+    // (cType('int32') -> int32_t, cType('HSteamUser') -> uint32_t); only
+    // the display string in this generated comment changed.
     it('contains "ret 0" for the zero-arg slot', () => {
       const c = generateShimC([isteamuser, isteamfriends])
-      expect(c).toMatch(
-        /GetHSteamUser\([^)]*\) -> HSteamUser \| __thiscall ret 0/
-      )
+      expect(c).toMatch(/GetHSteamUser\([^)]*\) -> int32 \| __thiscall ret 0/)
     })
 
     it('contains "ret 4 (SRET" for GetSteamID', () => {
@@ -287,11 +292,17 @@ describe('gen_vtables', () => {
       'steam_api_shim.c'
     )
 
-    it('24-CR-01: isStringReturn routes exactly GetPersonaName across both pinned manifests', () => {
+    // 51-11: isteamfriends.manifest.json is now Proton-extracted and
+    // complete (78 real SteamFriends018 slots), so many OTHER methods
+    // (GetFriendPersonaName, GetClanName, ...) are also genuinely
+    // const-char*-returning -- the pin narrows to "GetPersonaName is
+    // among them" rather than "is the only one", which was only ever true
+    // of the old hand-authored 1-method partial manifest.
+    it('24-CR-01: isStringReturn classifies GetPersonaName as a string return, across both pinned manifests', () => {
       const methods = [...isteamuser.methods, ...isteamfriends.methods]
-      expect(methods.filter(isStringReturn).map((m) => m.name)).toEqual([
+      expect(methods.filter(isStringReturn).map((m) => m.name)).toContain(
         'GetPersonaName'
-      ])
+      )
     })
 
     it('24-CR-01 (fixture): a const char* PARAMETER is not a string return', () => {
@@ -467,6 +478,30 @@ describe('gen_vtables', () => {
       )
       for (const manifest of manifests) {
         expect(validateManifest(manifest, manifests)).toEqual([])
+      }
+    })
+
+    // 51-11 Task 3: the enforced completeness gate -- every production
+    // manifest under meta/sdk/ must declare every real slot of its
+    // interface version (never a partial/placeholder manifest committed
+    // to the repo). Separate from the "validates clean" test above
+    // because `complete: false` is not itself a validateManifest error
+    // (it only SKIPS the slot-gap check) -- this test is the one place
+    // that refuses a manifest for being incomplete, not merely internally
+    // consistent.
+    it('every committed meta/sdk manifest has complete: true', () => {
+      const manifestFiles = readdirSync(SDK_DIR).filter((f) =>
+        f.endsWith('.manifest.json')
+      )
+      expect(manifestFiles.length).toBeGreaterThan(0)
+      for (const file of manifestFiles) {
+        const manifest: InterfaceManifestV2 = JSON.parse(
+          readFileSync(join(SDK_DIR, file), 'utf-8')
+        )
+        expect({ file, complete: manifest.complete }).toEqual({
+          file,
+          complete: true
+        })
       }
     })
   })

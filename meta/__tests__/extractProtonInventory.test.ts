@@ -6,7 +6,7 @@
  * Steamworks SDK header text anywhere in this file or the fixture (D-09).
  */
 
-import { readFileSync } from 'fs'
+import { readFileSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
 import {
@@ -244,17 +244,16 @@ describe('resolveOrdinal (append-only)', () => {
       'node_modules',
       '.gamelib-ordinals-test.json'
     )
-    const fs = require('fs') as typeof import('fs')
-    fs.writeFileSync(scratchPath, JSON.stringify({ A: 1, B: 2 }))
+    writeFileSync(scratchPath, JSON.stringify({ A: 1, B: 2 }))
     try {
       expect(resolveOrdinal('A', scratchPath)).toBe(1)
       expect(resolveOrdinal('C', scratchPath)).toBe(3)
-      const persisted = JSON.parse(fs.readFileSync(scratchPath, 'utf-8'))
+      const persisted = JSON.parse(readFileSync(scratchPath, 'utf-8'))
       expect(persisted).toEqual({ A: 1, B: 2, C: 3 })
       // Re-resolving C again must return the SAME value, never bump it.
       expect(resolveOrdinal('C', scratchPath)).toBe(3)
     } finally {
-      fs.rmSync(scratchPath, { force: true })
+      rmSync(scratchPath, { force: true })
     }
   })
 })
