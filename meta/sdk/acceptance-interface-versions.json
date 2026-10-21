@@ -1,9 +1,5 @@
 {
-  "SteamUser023": {
-    "family": "SteamUser",
-    "arches": ["x86"],
-    "titles": []
-  },
+  "SteamUser023": { "family": "SteamUser", "arches": ["x86"], "titles": [] },
   "SteamFriends018": {
     "family": "SteamFriends",
     "arches": ["x86"],
@@ -12,7 +8,7 @@
   "SteamUser016": {
     "family": "SteamUser",
     "arches": ["x86"],
-    "titles": ["200510"]
+    "titles": ["200510", "63000"]
   },
   "SteamFriends011": {
     "family": "SteamFriends",
@@ -22,7 +18,7 @@
   "SteamUtils005": {
     "family": "SteamUtils",
     "arches": ["x86"],
-    "titles": ["200510"]
+    "titles": ["200510", "63000"]
   },
   "STEAMAPPS_INTERFACE_VERSION004": {
     "family": "SteamApps",
@@ -33,5 +29,20 @@
     "family": "SteamUserStats",
     "arches": ["x86"],
     "titles": ["200510"]
+  },
+  "SteamFriends013": {
+    "family": "SteamFriends",
+    "arches": ["x86"],
+    "titles": ["63000"]
+  },
+  "STEAMAPPS_INTERFACE_VERSION005": {
+    "family": "SteamApps",
+    "arches": ["x86"],
+    "titles": ["63000"]
+  },
+  "STEAMUSERSTATS_INTERFACE_VERSION011": {
+    "family": "SteamUserStats",
+    "arches": ["x86"],
+    "titles": ["63000"]
   }
 }

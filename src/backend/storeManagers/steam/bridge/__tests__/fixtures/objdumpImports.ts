@@ -41,6 +41,13 @@
  * `ELEX.exe` (ELEX imports `SteamInternal_CreateInterface`, i.e. runtime
  * lookup -- D-51-07 -- so its per-interface versions live in the exe, not a
  * fixed accessor-to-version mapping baked into the dll's bare exports).
+ *
+ * `HOARD_DLL_VERSION_STRINGS` (quick task 261021-pgx) is the same
+ * `strings -a <binary> | grep -E '...'` extraction read directly off Hoard's
+ * (63000) real original `steam_api.dll` (104872 bytes -- NOT the
+ * 805888-byte Phase 24 shim), obtained and measured in a later session than
+ * `HOARD_REUBEN_REAL_OBJDUMP_OUTPUT` above -- see its own comment for full
+ * provenance.
  */
 
 export const AVERNUM_4_OBJDUMP_OUTPUT = `
@@ -318,6 +325,38 @@ export const XCOM_DLL_VERSION_STRINGS = [
   'SteamClient012',
   'SteamContentServer002',
   'SteamFriends011',
+  'SteamGameServer011',
+  'SteamGameServerStats001',
+  'SteamMatchMaking009',
+  'SteamMatchMakingServers002',
+  'SteamNetworking005',
+  'SteamUser016',
+  'SteamUtils005'
+]
+
+// `strings -a <Hoard's real original steam_api.dll> | grep -E
+// '^(Steam[A-Za-z]+0[0-9]{2}|STEAM[A-Z]+_INTERFACE_VERSION0[0-9]{2})$' | sort -u`,
+// read directly this session (261021-pgx) against
+// `/Users/graysonmitchell/Downloads/steam_api.dll`, 104872 bytes -- NOT the
+// 805888-byte Phase 24 shim. `[VERIFIED: strings -a, read directly this
+// session against the real binary on this machine]`.
+//
+// Provenance (operator's direct confirmation, recorded verbatim): freshly
+// installed from scratch on a separate Windows PC where XCOM is not even
+// installed, ruling out a copy mixup -- despite an unrelated, coincidental
+// byte-identical match to an XCOM XEW expansion dll already in this repo's
+// CrossOver fixtures, which is a documented coincidence, not evidence of
+// contamination.
+export const HOARD_DLL_VERSION_STRINGS = [
+  'STEAMAPPS_INTERFACE_VERSION005',
+  'STEAMHTTP_INTERFACE_VERSION002',
+  'STEAMREMOTESTORAGE_INTERFACE_VERSION010',
+  'STEAMSCREENSHOTS_INTERFACE_VERSION002',
+  'STEAMUNIFIEDMESSAGES_INTERFACE_VERSION001',
+  'STEAMUSERSTATS_INTERFACE_VERSION011',
+  'SteamClient012',
+  'SteamContentServer002',
+  'SteamFriends013',
   'SteamGameServer011',
   'SteamGameServerStats001',
   'SteamMatchMaking009',
