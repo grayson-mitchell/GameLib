@@ -80,7 +80,7 @@ import { noteSteamAuthTrigger } from './authTrigger'
 // locked->unlocked transition below — install()/update()/launch() only need
 // noteSteamAuthTrigger, not SteamUser itself.
 import { SteamUser } from './user'
-import { downloadSteamDepots } from './depot'
+import { downloadSteamDepots, prescreenBridgeDepots } from './depot'
 import { ensureSteamClientReady } from './clientSetup' // Plan 10 seam
 import {
   resolveSteamInstallTarget,
@@ -1143,7 +1143,33 @@ export default class SteamGame implements Game {
       // steamBottleSetupRequired deferral immediately below so the
       // DownloadManager clears the transient 'installing' badge the same
       // way -- nothing is installed and no ACF poller starts on this path.
-      const bridgeRoute = this.bridgeRoute()
+      let bridgeRoute = this.bridgeRoute()
+
+      // D-51-06 (Plan 17): the cheap pre-install screen ROADMAP sub-decision
+      // 2 left open -- measured by research as NOT free (a second, separate
+      // buildDepotPlan call), so it only runs for a title that would
+      // otherwise land on 'pending-scan' with no steamApi screened yet (a
+      // title already carrying a steamApi value -- even one that itself
+      // still resolves to 'pending-scan', e.g. a screened x64 title with the
+      // shim present -- has already paid this cost once and must not pay it
+      // again). A screen failure ('unknown') never blocks the install --
+      // depot.ts's prescreenBridgeDepots itself never throws.
+      if (
+        bridgeRoute.route === 'bridge' &&
+        bridgeRoute.reason === 'pending-scan' &&
+        readBridgeVerdict(this.appId)?.steamApi === undefined
+      ) {
+        const bridgeBottleName = bridgeBottleNameFor(this.appId)
+        const prescreenResult = await prescreenBridgeDepots(this.appId, {
+          targetSteamappsDir: bridgeBottleName
+            ? getBottleSteamappsDir(bridgeBottleName)
+            : '',
+          installdir: this.appId,
+          os: 'windows'
+        })
+        setBridgeSteamApiPrescreen(this.appId, prescreenResult)
+        bridgeRoute = this.bridgeRoute()
+      }
 
       if (
         bridgeRoute.route === 'bottle' &&
