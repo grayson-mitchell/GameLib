@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 15/19 plans executed
+**Plans:** 16/19 plans executed
 
 Plans:
 **Wave 1**
@@ -252,7 +252,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [x] 51-15-PLAN.md — Win64 shim (steam_api64.dll), modern-SDK lookup family, ELEX set, disassembly ABI gate (D-51-13)
-- [ ] 51-16-PLAN.md — Route line + force-bottled toggle in the install dialog; route row on the game page (D-51-09, D-51-10, D-51-02)
+- [x] 51-16-PLAN.md — Route line + force-bottled toggle in the install dialog; route row on the game page (D-51-09, D-51-10, D-51-02)
 - [ ] 51-17-PLAN.md — Pre-install depot-manifest screen (D-51-06)
 
 **Wave 7** *(blocked on Wave 6 completion)*

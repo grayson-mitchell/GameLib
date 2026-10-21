@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-15-PLAN.md
-last_updated: "2026-10-21T11:16:49.060Z"
+stopped_at: Completed 51-16-PLAN.md
+last_updated: "2026-10-21T11:44:04.243Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 51 execution started
-state_head: 5e42afe5c8f2735b03b7870e781678f49eda1083
+state_head: bfe1a6cb21a091d60ecd3857b58ceeb7e9713180
 progress:
   total_phases: 1
   completed_phases: 0
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 5 of 19
+Plan: 6 of 19
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 51 execution started
 
@@ -189,6 +189,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 51 P51-13 | 43min | 3 tasks | 14 files |
 | Phase 51 P14 | 70min | 2 tasks | 15 files |
 | Phase 51 P15 | ~3h | 3 tasks | 24 files |
+| Phase 51 P16 | ~20min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -251,6 +252,8 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: 51-15: the generator's existing explicit (self, sretOut, ...) C signature is already x64-ABI-correct with zero arch branching -- the research's free-function sret-shift rule does not apply to hand-declared signatures
 - [Phase 51]: 51-15: MODERN_LOOKUP_FLAT_EXPORTS (SteamInternal_CreateInterface/SteamAPI_GetHSteamUser/SteamAPI_GetHSteamPipe) are x64-only in both .def and compiled C, never polluting the x86 SHIM_EXPORTED_SYMBOLS CR-02 pin
 - [Phase 51]: 51-15: four new ELEX x64-only manifests (User019/Friends015/Utils008/Apps008) force-reverted family-wide wire-policy matches back to stub -- no verified macOS helper-dylib accessor exists for these version strings, D-09 forbids inventing one
+- [Phase 51]: 51-16: SteamDialog's route verdict is its own getSteamBridgeRoute round trip, independent of the parent's isSteamBottleEligible probe (kept the plan's files_modified scope)
+- [Phase 51]: 51-16: resolveBridgeRouteDisplay suppresses the reason sentence (not routeKey) when installedIn disagrees with the live route verdict, applied symmetrically to bridge and bottle
 
 ### Pending Todos
 
@@ -281,6 +284,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - **NEW BLOCKER found by 34.10-10 Task 2's verification, plan NOT closed**: `hardcodedStringGate.test.ts`'s one remaining failure is a real violation at `src/frontend/screens/WebView/index.tsx:347` (`'the Humble sign-in window closed or could not be reached'`) — but that line is **uncommitted WIP from the concurrent debug session** (`.planning/debug/humble-isloggedin-never-set.md`, F-34.4.2-19), confirmed via `git diff` (the string only exists in the working tree, not at HEAD). 34.10-10 is explicitly forbidden from touching that file (contamination rules) or widening the allowlist (T-34.10-25). Plan 34.10-10 stops here — Task 1 and Task 2's own artifacts are committed and correct, but the plan's "full suite green" success criterion cannot be met until the concurrent session either wraps that string in `t()` or commits/reverts its WIP. No action needed from 34.10-10 beyond re-running `pnpm jest --runInBand --silent --forceExit` once that session's WebView/index.tsx work is committed.
 - REQUIREMENTS.md has no Phase 34.9 traceability section -- REQ-34.9-01..11 are cited by ROADMAP.md, STATE.md, and every 34.9 plan/summary, but requirements.mark-complete cannot find them to check off. Pre-existing gap, not caused by plan 34.9-07; needs a REQUIREMENTS.md backfill pass (D-XX -> REQ mapping + traceability table) for the whole phase.
 - Phase 34.9-09: build-runners-onedir-macos.yml cannot be dispatched via gh workflow run until it exists on the repo's default branch (main) -- GitHub's workflow_dispatch requires this for ANY --ref, not just the pushed feature branch. Not resolvable within plan 34.9-09's authorized scope (no PR, no push to main). Blocks: real x64 onedir artifact (never built, no local fallback possible per constraint 1), pinning meta/runnersOnedirDigests.json's 6 sentinels, and full CI proof of the download-verify-extract round trip. See 34.9-CI-ROUNDTRIP.md.
+- 51-16 desk finding (not fixed, out of scope): meta/__tests__/hardcodedStringGate.test.ts has 6 pre-existing violations in GameStatus.tsx (Phase 51 Plan 08's file), unrelated to this plan's changes
 
 ### Quick Tasks Completed
 
@@ -326,8 +330,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-21T11:16:49.050Z
-Stopped at: Completed 51-15-PLAN.md
+Last session: 2026-10-21T11:44:04.232Z
+Stopped at: Completed 51-16-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
