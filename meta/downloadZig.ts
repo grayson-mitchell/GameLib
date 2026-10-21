@@ -37,14 +37,14 @@ import { finished } from 'node:stream/promises'
 // Pinned zig release (RELEASE_TAGS-shaped constant, per
 // meta/downloadHelperBinaries.ts's pinning precedent) -- a literal version
 // string, never "latest".
-export const ZIG_VERSION = '0.16.0'
+const ZIG_VERSION = '0.16.0'
 
 const ZIG_INDEX_URL = 'https://ziglang.org/download/index.json'
 const ZIG_TARGET = 'aarch64-macos'
 
 // Build-tooling directory -- NOT public/bin/**. Zig does not ship in the
 // packaged app.
-export const ZIG_TOOLS_DIR = join('.build-tools', 'zig')
+const ZIG_TOOLS_DIR = join('.build-tools', 'zig')
 const ZIG_VERSION_MARKER = join(ZIG_TOOLS_DIR, '.zig-version')
 
 interface ZigIndexTarget {

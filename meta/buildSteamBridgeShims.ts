@@ -111,6 +111,10 @@ const STEAM_APPID_SOURCE_PATH = join(
  * what the RUNTIME consumer (`publicDir`/`bin/${process.arch}/darwin` in
  * src/backend/constants/paths.ts) uses to resolve these files.
  */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts, which
+// lives outside this gate's tsconfig.json scope (include: ["src"]) -- that
+// real usage is invisible to ts-prune.
+// ts-prune-ignore-next
 export function resolveBridgeArch(
   env: NodeJS.ProcessEnv = process.env
 ): string {
@@ -128,6 +132,9 @@ export function resolveBridgeArch(
  * x86_64 bundle (CR-01). Throws for anything outside the two darwin arches
  * this bridge supports rather than silently falling back to host-native.
  */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export function machoArchFlag(arch: string): string {
   if (arch === 'arm64') {
     return 'arm64'
@@ -154,6 +161,9 @@ function bundledBinDir(arch: string = resolveBridgeArch()): string {
 }
 
 /** Matches steamBridgeHelperPath (src/backend/constants/paths.ts, Plan 24-06). */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export function helperOutputPath(arch: string = resolveBridgeArch()): string {
   return join(bundledBinDir(arch), 'steam-bridge-helper')
 }
@@ -163,6 +173,9 @@ export function helperOutputPath(arch: string = resolveBridgeArch()): string {
  * src/backend/constants/paths.ts's `builtBridgeShimPath` exactly; Plan
  * 24-05's `shimGenerate.ts` reads FROM this exact path at runtime.
  */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export function shimOutputPath(arch: string = resolveBridgeArch()): string {
   return join(bundledBinDir(arch), 'steam_api.dll')
 }
@@ -178,12 +191,18 @@ export function shimOutputPath(arch: string = resolveBridgeArch()): string {
  * the `.lib` (the `.pdb` still lands) while still perturbing the DLL's
  * CodeView build-id. Do not re-attempt either.
  */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export const SHIM_BUILD_BYPRODUCTS = [
   'steam_api.pdb',
   'steam_api_shim.lib'
 ] as const
 
 /** The two `SHIM_BUILD_BYPRODUCTS` names, joined under this arch's bundled darwin dir. */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export function shimByproductPaths(
   arch: string = resolveBridgeArch()
 ): string[] {
@@ -199,6 +218,9 @@ export function shimByproductPaths(
  * byproduct survives its own removal -- a real fs error (e.g. EACCES) must
  * still surface, not be swallowed.
  */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export function pruneShimBuildByproducts(
   arch: string = resolveBridgeArch()
 ): void {
@@ -213,6 +235,9 @@ export function pruneShimBuildByproducts(
 }
 
 /** Staged next to the built helper (finding #4 -- helper cwd resolution). */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export function steamAppIdOutputPath(
   arch: string = resolveBridgeArch()
 ): string {
@@ -253,6 +278,9 @@ export function buildHelperCompileArgv(arch: string = resolveBridgeArch()): {
  * `-target x86-windows-gnu` flag, the 24-01 generated source as input, and
  * the single shared output location (BLOCKER 2) without invoking real zig.
  */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
 export function buildShimCompileArgv(
   zigBinPath: string,
   arch: string = resolveBridgeArch()
@@ -360,6 +388,12 @@ async function compileShim(): Promise<void> {
   pruneShimBuildByproducts()
 }
 
+// Self-invoked only (the JEST_WORKER_ID guard below); kept `export` because
+// meta/__tests__/buildSteamBridgeShims.test.ts's B5 case slices compileShim's
+// body by searching the source text for the literal string
+// "export async function main" as its end-of-function delimiter -- dropping
+// `export` would silently break that string match, not just this export.
+// ts-prune-ignore-next
 export async function main(): Promise<void> {
   await compileHelper()
   await stageSteamAppId()

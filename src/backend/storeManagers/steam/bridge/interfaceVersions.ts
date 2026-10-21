@@ -163,7 +163,7 @@ export function parseInterfaceVersionStrings(bytes: Buffer): string[] {
   return Array.from(found).sort()
 }
 
-export type ReadInterfaceVersionStringsResult =
+type ReadInterfaceVersionStringsResult =
   | { status: 'ok'; versions: string[] }
   | { status: 'error'; error: string }
 
@@ -245,7 +245,7 @@ export async function readInterfaceVersionStrings(
   }
 }
 
-export type RequiredInterfaceVersionsResult = {
+type RequiredInterfaceVersionsResult = {
   required: Record<string, string>
   problems: string[]
 }

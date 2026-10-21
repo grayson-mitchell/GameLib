@@ -141,7 +141,7 @@ function linesAtOrAfter(tail: string, cutoffMs: number): ParsedLine[] {
   return result
 }
 
-export interface ClassifyBottledSteamBlockArgs {
+interface ClassifyBottledSteamBlockArgs {
   bootstrapTail: string
   consoleTail: string
   appId: string

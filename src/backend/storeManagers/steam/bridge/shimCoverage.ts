@@ -92,7 +92,7 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set()
  * shim's helper dispatches real Steam calls for it; `'stub'` means the
  * version is recognized but answers as a stub (D-51-02's one-time notice
  * fires for a stubbed interface). */
-export interface ServedInterface {
+interface ServedInterface {
   family: string
   mode: 'wire' | 'stub'
 }
@@ -193,7 +193,7 @@ export const SHIM_EXPORT_SET_VERSION = computeExportSetVersion({
   x64NullObjectFallback: SHIM_X64_NULL_OBJECT_FALLBACK
 })
 
-export interface EvaluateShimCoverageInput {
+interface EvaluateShimCoverageInput {
   arch: 'x86' | 'x64'
   /** Every imported symbol (bare accessors included, per 51-02's widened
    * importScan.ts) a game's binary needs. */
@@ -209,7 +209,7 @@ export interface EvaluateShimCoverageInput {
   versionProblems: string[]
 }
 
-export interface ShimCoverageResult {
+interface ShimCoverageResult {
   missingSymbols: string[]
   stubbedInterfaces: string[]
 }

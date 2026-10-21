@@ -45,7 +45,7 @@ export const BRIDGE_CONFIG_FILENAME = 'gamelib_bridge.cfg'
 const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
 
-export interface WriteBridgeConfigArgs {
+interface WriteBridgeConfigArgs {
   /** The game's own resolved `.exe` path -- the cfg is written BESIDE it. */
   exePath: string
   bottleName: string
@@ -58,7 +58,7 @@ export interface WriteBridgeConfigArgs {
   interfaceVersions?: Record<string, string>
 }
 
-export type WriteBridgeConfigResult =
+type WriteBridgeConfigResult =
   | { status: 'written'; path: string }
   | { status: 'error'; error: string }
 
