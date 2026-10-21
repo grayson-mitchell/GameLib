@@ -392,7 +392,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib zainstaluje ją zamiast tego w kliencie Steam dla systemu Windows w bottle.",
                 "cancel": "Anuluj",
+                "error": "Rozpoczęcie instalacji nie powiodło się: {{error}}",
                 "knownBad": "Wiadomo, że {{title}} nie działa z natywnym mostem Steam: {{reason}}.",
+                "notFound": "Nie można znaleźć tej gry, aby ją zainstalować.",
                 "scanMiss": "Natywny most Steam nie obejmuje każdego wywołania Steam wykonywanego przez {{title}}. Nieobjęte: {{symbols}}.",
                 "title": "Ta gra będzie używać klienta Steam dla systemu Windows",
                 "tryBridge": "Mimo to wypróbuj most",

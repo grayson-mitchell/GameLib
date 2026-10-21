@@ -392,7 +392,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib jo bo namesto tega namestil v Windows odjemalec Steam v bottle.",
                 "cancel": "Prekliči",
+                "error": "Zagon namestitve ni uspel: {{error}}",
                 "knownBad": "Znano je, da {{title}} ne deluje z izvornim mostom Steam: {{reason}}.",
+                "notFound": "Te igre ni bilo mogoče najti za namestitev.",
                 "scanMiss": "Izvorni most Steam ne pokriva vsakega klica Steam, ki ga opravi {{title}}. Ni pokrito: {{symbols}}.",
                 "title": "Ta igra bo uporabljala Windows odjemalec Steam",
                 "tryBridge": "Vseeno preizkusi most",

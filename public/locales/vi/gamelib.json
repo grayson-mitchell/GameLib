@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib sẽ thay vào đó cài đặt nó vào client Steam Windows trong bottle.",
                 "cancel": "Hủy",
+                "error": "Bắt đầu cài đặt không thành công: {{error}}",
                 "knownBad": "{{title}} được biết là không hoạt động với cầu nối Steam gốc: {{reason}}.",
+                "notFound": "Không tìm thấy trò chơi này để cài đặt.",
                 "scanMiss": "Cầu nối Steam gốc không bao phủ mọi lệnh gọi Steam mà {{title}} thực hiện. Không được bao phủ: {{symbols}}.",
                 "title": "Trò chơi này sẽ sử dụng client Steam Windows",
                 "tryBridge": "Vẫn thử cầu nối",

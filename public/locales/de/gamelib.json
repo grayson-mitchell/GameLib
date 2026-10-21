@@ -303,7 +303,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib installiert es stattdessen in den Windows-Steam-Client in der Bottle.",
                 "cancel": "Abbrechen",
+                "error": "Der Start der Installation ist fehlgeschlagen: {{error}}",
                 "knownBad": "{{title}} ist bekannt dafür, nicht mit der nativen Steam-Brücke zu funktionieren: {{reason}}.",
+                "notFound": "Dieses Spiel konnte zur Installation nicht gefunden werden.",
                 "scanMiss": "Die native Steam-Brücke deckt nicht jeden Steam-Aufruf ab, den {{title}} macht. Nicht abgedeckt: {{symbols}}.",
                 "title": "Dieses Spiel wird den Windows-Steam-Client verwenden",
                 "tryBridge": "Die Brücke trotzdem ausprobieren",

@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib installerer det i stedet i Windows Steam-klienten i bottle.",
                 "cancel": "Afbryd",
+                "error": "Det mislykkedes at starte installationen: {{error}}",
                 "knownBad": "{{title}} er kendt for ikke at virke med den native Steam-bro: {{reason}}.",
+                "notFound": "Kunne ikke finde dette spil til installation.",
                 "scanMiss": "Den native Steam-bro dækker ikke alle Steam-kald, {{title}} foretager. Ikke dækket: {{symbols}}.",
                 "title": "Dette spil vil bruge Windows Steam-klienten",
                 "tryBridge": "Prøv broen alligevel",

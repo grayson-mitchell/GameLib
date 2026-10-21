@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib installerar det istället i Windows Steam-klienten på bottle.",
                 "cancel": "Avbryt",
+                "error": "Det gick inte att starta installationen: {{error}}",
                 "knownBad": "{{title}} är känd för att inte fungera med den nativa Steam-bryggan: {{reason}}.",
+                "notFound": "Kunde inte hitta det här spelet för installation.",
                 "scanMiss": "Den nativa Steam-bryggan täcker inte alla Steam-anrop som {{title}} gör. Täcks inte: {{symbols}}.",
                 "title": "Det här spelet kommer att använda Windows Steam-klienten",
                 "tryBridge": "Prova bryggan ändå",

@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib bunun əvəzinə onu bağlanmış Windows Steam klientinə quraşdıracaq.",
                 "cancel": "İmtina et",
+                "error": "Quraşdırmanın başlanması uğursuz oldu: {{error}}",
                 "knownBad": "{{title}} yerli Steam körpüsü ilə işləmədiyi bilinir: {{reason}}.",
+                "notFound": "Bu oyun tapılıb quraşdırıla bilmədi.",
                 "scanMiss": "Yerli Steam körpüsü {{title}} tərəfindən edilən hər Steam çağırışını əhatə etmir. Əhatə olunmayıb: {{symbols}}.",
                 "title": "Bu oyun Windows Steam klientindən istifadə edəcək",
                 "tryBridge": "Yenə də körpünü sına",

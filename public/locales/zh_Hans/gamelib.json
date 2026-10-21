@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib 将改为把它安装到容器化的 Windows 版 Steam 客户端中。",
                 "cancel": "取消",
+                "error": "开始安装失败：{{error}}",
                 "knownBad": "已知 {{title}} 无法与原生 Steam 桥接配合使用：{{reason}}。",
+                "notFound": "未找到此游戏以进行安装。",
                 "scanMiss": "原生 Steam 桥接未覆盖 {{title}} 发出的每个 Steam 调用。未覆盖：{{symbols}}。",
                 "title": "此游戏将使用 Windows 版 Steam 客户端",
                 "tryBridge": "仍然尝试桥接",

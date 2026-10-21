@@ -385,7 +385,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib יתקין אותו במקום זאת בלקוח Steam של Windows ב-bottle.",
                 "cancel": "ביטול",
+                "error": "התחלת ההתקנה נכשלה: {{error}}",
                 "knownBad": "ידוע ש-{{title}} אינו עובד עם הגשר המובנה של Steam: {{reason}}.",
+                "notFound": "לא ניתן היה למצוא את המשחק הזה כדי להתקין אותו.",
                 "scanMiss": "הגשר המובנה של Steam אינו מכסה כל קריאת Steam ש-{{title}} מבצע. לא מכוסה: {{symbols}}.",
                 "title": "המשחק הזה ישתמש בלקוח Steam של Windows",
                 "tryBridge": "נסה את הגשר בכל זאת",

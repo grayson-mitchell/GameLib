@@ -385,7 +385,9 @@
             "routeNotice": {
                 "bottledExplainer": "El GameLib l'instal·larà en el client de Steam de Windows en bottle en el seu lloc.",
                 "cancel": "Cancel·la",
+                "error": "L'inici de la instal·lació ha fallat: {{error}}",
                 "knownBad": "Se sap que {{title}} no funciona amb el pont natiu de Steam: {{reason}}.",
+                "notFound": "No s'ha pogut trobar aquest joc per instal·lar-lo.",
                 "scanMiss": "El pont natiu de Steam no cobreix totes les crides a Steam que fa {{title}}. No cobert: {{symbols}}.",
                 "title": "Aquest joc utilitzarà el client de Steam de Windows",
                 "tryBridge": "Prova el pont igualment",

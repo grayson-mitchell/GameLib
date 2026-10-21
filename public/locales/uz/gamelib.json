@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib buning o'rniga uni bottle'dagi Windows Steam klientiga o'rnatadi.",
                 "cancel": "Bekor qilish",
+                "error": "O'rnatishni boshlash muvaffaqiyatsiz tugadi: {{error}}",
                 "knownBad": "{{title}} mahalliy Steam ko'prigi bilan ishlamasligi ma'lum: {{reason}}.",
+                "notFound": "Bu o'yin o'rnatish uchun topilmadi.",
                 "scanMiss": "Mahalliy Steam ko'prigi {{title}} qiladigan har bir Steam chaqiruvini qamrab olmaydi. Qamrab olinmagan: {{symbols}}.",
                 "title": "Bu o'yin Windows Steam klientidan foydalanadi",
                 "tryBridge": "Baribir ko'prikni sinab ko'ring",

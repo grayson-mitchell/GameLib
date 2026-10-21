@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib akan menginstalnya sebagai gantinya ke klien Steam Windows dalam bottle.",
                 "cancel": "Batalkan",
+                "error": "Memulai pemasangan gagal: {{error}}",
                 "knownBad": "{{title}} diketahui tidak berfungsi dengan jembatan Steam native: {{reason}}.",
+                "notFound": "Tidak dapat menemukan game ini untuk dipasang.",
                 "scanMiss": "Jembatan Steam native tidak mencakup setiap panggilan Steam yang dilakukan {{title}}. Tidak tercakup: {{symbols}}.",
                 "title": "Game ini akan menggunakan klien Steam Windows",
                 "tryBridge": "Coba jembatan tetap saja",

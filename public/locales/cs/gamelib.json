@@ -392,7 +392,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib ji místo toho nainstaluje do klienta Steam pro Windows v bottle.",
                 "cancel": "Zrušit",
+                "error": "Spuštění instalace se nezdařilo: {{error}}",
                 "knownBad": "Je známo, že {{title}} nefunguje s nativním mostem Steam: {{reason}}.",
+                "notFound": "Nepodařilo se najít tuto hru k instalaci.",
                 "scanMiss": "Nativní most Steam nepokrývá každé volání Steam, které {{title}} provádí. Nepokryto: {{symbols}}.",
                 "title": "Tato hra použije klienta Steam pro Windows",
                 "tryBridge": "Přesto vyzkoušet most",

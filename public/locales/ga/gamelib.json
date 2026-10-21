@@ -399,7 +399,9 @@
             "routeNotice": {
                 "bottledExplainer": "Suiteálfaidh GameLib é ina ionad sin isteach i gcliant Steam Windows i mbuidéal.",
                 "cancel": "Cealaigh",
+                "error": "Theip ar thosú na suiteála: {{error}}",
                 "knownBad": "Tá a fhios go bhfuil {{title}} nach n-oibríonn le droichead dúchasach Steam: {{reason}}.",
+                "notFound": "Níorbh fhéidir an cluiche seo a aimsiú chun é a shuiteáil.",
                 "scanMiss": "Ní chlúdaíonn droichead dúchasach Steam gach glao Steam a dhéanann {{title}}. Gan chlúdach: {{symbols}}.",
                 "title": "Úsáidfidh an cluiche seo cliant Steam Windows",
                 "tryBridge": "Triail an droichead mar sin féin",

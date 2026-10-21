@@ -385,7 +385,9 @@
             "routeNotice": {
                 "bottledExplainer": "O GameLib instalá-lo-á antes no cliente do Steam do Windows em bottle.",
                 "cancel": "Cancelar",
+                "error": "O início da instalação falhou: {{error}}",
                 "knownBad": "É sabido que {{title}} não funciona com a ponte nativa do Steam: {{reason}}.",
+                "notFound": "Não foi possível encontrar este jogo para o instalar.",
                 "scanMiss": "A ponte nativa do Steam não cobre todas as chamadas ao Steam que {{title}} faz. Não coberto: {{symbols}}.",
                 "title": "Este jogo usará o cliente do Steam do Windows",
                 "tryBridge": "Experimentar a ponte de qualquer forma",

@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLibは代わりにボトル化されたWindows版Steamクライアントにインストールする。",
                 "cancel": "キャンセル",
+                "error": "インストールの開始に失敗しました: {{error}}",
                 "knownBad": "{{title}}はネイティブSteamブリッジで動作しないことが分かっている: {{reason}}。",
+                "notFound": "インストールするこのゲームが見つかりませんでした。",
                 "scanMiss": "ネイティブSteamブリッジは{{title}}が行うすべてのSteam呼び出しをカバーしていない。カバーされていない: {{symbols}}。",
                 "title": "このゲームはWindows版Steamクライアントを使用する",
                 "tryBridge": "それでもブリッジを試す",

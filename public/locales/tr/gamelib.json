@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib bunun yerine onu bottle içindeki Windows Steam istemcisine kuracak.",
                 "cancel": "İptal",
+                "error": "Kurulumun başlatılması başarısız oldu: {{error}}",
                 "knownBad": "{{title}} yerel Steam köprüsüyle çalışmadığı bilinir: {{reason}}.",
+                "notFound": "Bu oyun kurulum için bulunamadı.",
                 "scanMiss": "Yerel Steam köprüsü {{title}}'ın yaptığı her Steam çağrısını kapsamaz. Kapsanmamış: {{symbols}}.",
                 "title": "Bu oyun Windows Steam istemcisini kullanacak",
                 "tryBridge": "Yine de köprüyü dene",

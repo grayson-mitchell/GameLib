@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib 將改為把它安裝到 Bottle 中的 Windows 版 Steam 用戶端。",
                 "cancel": "取消",
+                "error": "開始安裝失敗：{{error}}",
                 "knownBad": "已知 {{title}} 無法與原生 Steam 橋接搭配使用：{{reason}}。",
+                "notFound": "未找到此遊戲以進行安裝。",
                 "scanMiss": "原生 Steam 橋接未涵蓋 {{title}} 發出的每個 Steam 呼叫。未涵蓋：{{symbols}}。",
                 "title": "此遊戲將使用 Windows 版 Steam 用戶端",
                 "tryBridge": "仍然嘗試橋接",

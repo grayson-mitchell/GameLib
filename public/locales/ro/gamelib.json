@@ -385,7 +385,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib îl va instala în schimb în clientul Steam pentru Windows în bottle.",
                 "cancel": "Anulează",
+                "error": "Pornirea instalării a eșuat: {{error}}",
                 "knownBad": "Se știe că {{title}} nu funcționează cu podul nativ Steam: {{reason}}.",
+                "notFound": "Nu s-a putut găsi acest joc pentru a-l instala.",
                 "scanMiss": "Podul nativ Steam nu acoperă fiecare apel Steam pe care îl face {{title}}. Neacoperit: {{symbols}}.",
                 "title": "Acest joc va folosi clientul Steam pentru Windows",
                 "tryBridge": "Încearcă podul oricum",

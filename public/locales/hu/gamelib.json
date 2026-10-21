@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "A GameLib ehelyett a bottle-os Windows Steam kliensbe telepíti.",
                 "cancel": "Mégse",
+                "error": "A telepítés elindítása sikertelen: {{error}}",
                 "knownBad": "Ismert, hogy a(z) {{title}} nem működik a natív Steam híddal: {{reason}}.",
+                "notFound": "Nem sikerült megtalálni ezt a játékot a telepítéshez.",
                 "scanMiss": "A natív Steam híd nem fedi le minden Steam-hívását, amelyet a(z) {{title}} végez. Nem lefedett: {{symbols}}.",
                 "title": "Ez a játék a Windows Steam kliensét fogja használni",
                 "tryBridge": "A híd kipróbálása mindenképp",

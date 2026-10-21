@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib asentaa sen sen sijaan pullotettuun Windowsin Steam-asiakasohjelmaan.",
                 "cancel": "Keskeytä",
+                "error": "Asennuksen aloitus epäonnistui: {{error}}",
                 "knownBad": "Tunnetusti {{title}} ei toimi natiivin Steam-sillan kanssa: {{reason}}.",
+                "notFound": "Tätä peliä ei löytynyt asennusta varten.",
                 "scanMiss": "Natiivi Steam-silta ei kata jokaista Steam-kutsua, jonka {{title}} tekee. Ei katettu: {{symbols}}.",
                 "title": "Tämä peli käyttää Windowsin Steam-asiakasohjelmaa",
                 "tryBridge": "Kokeile siltaa joka tapauksessa",

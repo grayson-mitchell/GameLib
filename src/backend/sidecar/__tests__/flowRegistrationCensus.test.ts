@@ -89,7 +89,9 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Quick 261012-ca6 (2026-10-12): invoke 4 -> 6, send 3 -> 1 -- `addShortcut` and
   // `removeShortcut` moved from send to invoke so the renderer can learn the write's outcome.
   'shortcutsFlowRegistration.ts': { invoke: 6, send: 1 },
-  'steamAuthFlowRegistration.ts': { invoke: 18, send: 1 },
+  // Phase 51 Plan 13 (2026-10-21): invoke 18 -> 20 -- `getSteamBridgeRoute` and
+  // `setSteamBridgeUserRoute` registered for the bridge-routing notice dialog.
+  'steamAuthFlowRegistration.ts': { invoke: 20, send: 1 },
   // Quick 260908-ci2 (2026-09-08): send 0 -> 1 -- `shellWindowFocused`, restoring the
   // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
   // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated

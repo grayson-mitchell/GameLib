@@ -406,7 +406,9 @@
             "routeNotice": {
                 "bottledExplainer": "سيقوم GameLib بتثبيتها بدلاً من ذلك داخل عميل Steam المعبأ الخاص بـ Windows.",
                 "cancel": "ألغِ",
+                "error": "فشل بدء التثبيت: {{error}}",
                 "knownBad": "{{title}} معروف أنها لا تعمل مع جسر Steam الأصلي: {{reason}}.",
+                "notFound": "تعذّر العثور على هذه اللعبة لتثبيتها.",
                 "scanMiss": "جسر Steam الأصلي لا يغطي كل استدعاء لـ Steam تجريه {{title}}. غير مشمول: {{symbols}}.",
                 "title": "ستستخدم هذه اللعبة عميل Steam الخاص بـ Windows",
                 "tryBridge": "حاول استخدام الجسر على أي حال",

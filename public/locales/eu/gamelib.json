@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib-ek horren ordez Windows-eko Steam bezero bottle-an instalatuko du.",
                 "cancel": "Ezeztatu",
+                "error": "Instalazioa hasteak huts egin du: {{error}}",
                 "knownBad": "Jakina da {{title}} ez dela Steam zubi natiboarekin funtzionatzen: {{reason}}.",
+                "notFound": "Ezin izan da joko hau aurkitu instalatzeko.",
                 "scanMiss": "Steam zubi natiboak ez ditu {{title}}-k egiten dituen Steam dei guztiak estaltzen. Estali gabe: {{symbols}}.",
                 "title": "Joko honek Windows-eko Steam bezeroa erabiliko du",
                 "tryBridge": "Probatu zubia hala ere",

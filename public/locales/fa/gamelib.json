@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib در عوض آن را در کلاینت Steam Windows در bottle نصب خواهد کرد.",
                 "cancel": "انصراف",
+                "error": "شروع نصب ناموفق بود: {{error}}",
                 "knownBad": "شناخته‌شده است که {{title}} با پل بومی Steam کار نمی‌کند: {{reason}}.",
+                "notFound": "این بازی برای نصب پیدا نشد.",
                 "scanMiss": "پل بومی Steam همه فراخوانی‌های Steam که {{title}} انجام می‌دهد را پوشش نمی‌دهد. پوشش داده نشده: {{symbols}}.",
                 "title": "این بازی از کلاینت Steam Windows استفاده خواهد کرد",
                 "tryBridge": "در هر صورت پل را امتحان کنید",

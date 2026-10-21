@@ -408,10 +408,12 @@ describe('C-23: no async handler is wired bare to an onClick', () => {
   it('the census is non-vacuous', () => {
     // C-02's fix established the `onClick={() => void handler()}` rule in
     // SteamBottleSetup.tsx and the same pass edited SteamBridgeSetup.tsx
-    // without applying it. All three Steam setup surfaces carry an async
-    // handler behind a button, so all three must be enrolled.
+    // without applying it. All Steam setup/notice surfaces carry an async
+    // handler behind a button, so all of them must be enrolled. Phase 51
+    // Plan 13 (2026-10-21) added SteamBridgeRouteNotice's chooseRoute handler.
     expect(asyncHandlerSurfaces.map((c) => c.name).sort()).toEqual([
       'SteamBottleSetup',
+      'SteamBridgeRouteNotice',
       'SteamBridgeSetup',
       'SteamClientSetup'
     ])
@@ -433,7 +435,13 @@ describe('C-23: no async handler is wired bare to an onClick', () => {
         const knownBad = handlers.reduce(
           (acc, h) =>
             acc.replace(
-              new RegExp(`onClick=\\{\\(\\) => void ${h.name}\\(\\)\\}`, 'g'),
+              // [^)]* tolerates a call-site argument (e.g. chooseRoute('bottle')) --
+              // the handler NAME is what wiredBare's bare-reference detector keys
+              // on, not its arity, so a bare rewrite drops the call entirely.
+              new RegExp(
+                `onClick=\\{\\(\\) => void ${h.name}\\([^)]*\\)\\}`,
+                'g'
+              ),
               `onClick={${h.name}}`
             ),
           component.stripped

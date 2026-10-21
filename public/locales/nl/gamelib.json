@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib installeert het in plaats daarvan in de Windows Steam-client in bottle.",
                 "cancel": "Annuleren",
+                "error": "Het starten van de installatie is mislukt: {{error}}",
                 "knownBad": "{{title}} staat bekend om niet te werken met de native Steam-brug: {{reason}}.",
+                "notFound": "Kon dit spel niet vinden om te installeren.",
                 "scanMiss": "De native Steam-brug dekt niet elke Steam-aanroep die {{title}} doet. Niet gedekt: {{symbols}}.",
                 "title": "Dit spel gebruikt de Windows Steam-client",
                 "tryBridge": "Probeer de brug toch",

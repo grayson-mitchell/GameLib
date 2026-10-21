@@ -361,7 +361,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib paigaldab selle hoopis Windowsi Steami kliendisse pudelis.",
                 "cancel": "Tühista",
+                "error": "Paigaldamise alustamine ebaõnnestus: {{error}}",
                 "knownBad": "Teadaolevalt ei tööta {{title}} Steami natiivse sillaga: {{reason}}.",
+                "notFound": "Seda mängu paigaldamiseks ei leitud.",
                 "scanMiss": "Steami natiivne sild ei kata kõiki Steami kõnesid, mida {{title}} teeb. Pole kaetud: {{symbols}}.",
                 "title": "See mäng kasutab Windowsi Steami klienti",
                 "tryBridge": "Proovi silda ikkagi",

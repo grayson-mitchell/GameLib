@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib จะติดตั้งมันลงในไคลเอนต์ Steam ของ Windows แบบ bottle แทน",
                 "cancel": "ยกเลิก",
+                "error": "การเริ่มติดตั้งล้มเหลว: {{error}}",
                 "knownBad": "ทราบว่า {{title}} ทำงานไม่ได้กับบริดจ์ Steam แบบเนทีฟ: {{reason}}",
+                "notFound": "ไม่พบเกมนี้สำหรับการติดตั้ง",
                 "scanMiss": "บริดจ์ Steam แบบเนทีฟไม่ครอบคลุมการเรียก Steam ทุกครั้งที่ {{title}} ทำ ไม่ครอบคลุม: {{symbols}}",
                 "title": "เกมนี้จะใช้ไคลเอนต์ Steam ของ Windows",
                 "tryBridge": "ลองใช้บริดจ์อยู่ดี",

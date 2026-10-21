@@ -378,7 +378,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib가 대신 bottle 안의 Windows Steam 클라이언트에 설치함.",
                 "cancel": "취소",
+                "error": "설치 시작에 실패했습니다: {{error}}",
                 "knownBad": "{{title}}은(는) 네이티브 Steam 브리지와 작동하지 않는 것으로 알려짐: {{reason}}.",
+                "notFound": "설치할 게임을 찾을 수 없습니다.",
                 "scanMiss": "네이티브 Steam 브리지는 {{title}}이(가) 만드는 모든 Steam 호출을 커버하지 않음. 커버되지 않음: {{symbols}}.",
                 "title": "이 게임은 Windows Steam 클라이언트를 사용함",
                 "tryBridge": "그래도 브리지 시도",

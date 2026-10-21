@@ -309,7 +309,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib l'installera plutôt dans le client Steam Windows en bouteille.",
                 "cancel": "Annuler",
+                "error": "Le démarrage de l'installation a échoué : {{error}}",
                 "knownBad": "{{title}} est connu pour ne pas fonctionner avec le pont natif Steam : {{reason}}.",
+                "notFound": "Impossible de trouver ce jeu pour l'installer.",
                 "scanMiss": "Le pont natif Steam ne couvre pas chaque appel Steam effectué par {{title}}. Non couvert : {{symbols}}.",
                 "title": "Ce jeu utilisera le client Steam Windows",
                 "tryBridge": "Essayer le pont quand même",

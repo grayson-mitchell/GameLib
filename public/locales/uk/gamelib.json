@@ -392,7 +392,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib замість цього встановить її в клієнт Steam для Windows у бутлі.",
                 "cancel": "Скасувати",
+                "error": "Не вдалося почати встановлення: {{error}}",
                 "knownBad": "Відомо, що {{title}} не працює з нативним мостом Steam: {{reason}}.",
+                "notFound": "Не вдалося знайти цю гру для встановлення.",
                 "scanMiss": "Нативний міст Steam не охоплює кожен виклик Steam, який робить {{title}}. Не охоплено: {{symbols}}.",
                 "title": "Ця гра використовуватиме клієнт Steam для Windows",
                 "tryBridge": "Все одно спробувати міст",

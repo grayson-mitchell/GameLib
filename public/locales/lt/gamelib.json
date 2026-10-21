@@ -392,7 +392,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib vietoj to įdiegs jį į Windows Steam klientą bottle.",
                 "cancel": "Atšaukti",
+                "error": "Nepavyko pradėti diegimo: {{error}}",
                 "knownBad": "Žinoma, kad {{title}} neveikia su vietiniu Steam tiltu: {{reason}}.",
+                "notFound": "Nepavyko rasti šio žaidimo, kad būtų galima jį įdiegti.",
                 "scanMiss": "Vietinis Steam tiltas nepadengia kiekvieno Steam iškvietimo, kurį atlieka {{title}}. Nepadengta: {{symbols}}.",
                 "title": "Šis žaidimas naudos Windows Steam klientą",
                 "tryBridge": "Vis tiek išbandyti tiltą",

@@ -399,7 +399,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib a staliañ anezhañ en arval Steam Windows e voutailh e lec'h-se.",
                 "cancel": "Nullañ",
+                "error": "C'hwitet ez eus loc'hañ ar staliadur: {{error}}",
                 "knownBad": "Anavezet eo {{title}} evit ne vont ket en-dro gant pont orin Steam: {{reason}}.",
+                "notFound": "N'haller ket kavout ar c'hoari-mañ evit e staliañ.",
                 "scanMiss": "Ar pont orin Steam ne sikour ket pep galv Steam a ra {{title}}. N'eo ket sikouret: {{symbols}}.",
                 "title": "Ar c'hoari-mañ a implijo arval Steam Windows",
                 "tryBridge": "Klask ar pont memes tra",

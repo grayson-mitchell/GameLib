@@ -385,7 +385,9 @@
             "routeNotice": {
                 "bottledExplainer": "GameLib će je umjesto toga instalirati u Windows Steam klijent u bottleu.",
                 "cancel": "Odustani",
+                "error": "Pokretanje instalacije nije uspjelo: {{error}}",
                 "knownBad": "Poznato je da {{title}} ne radi s nativnim Steam mostom: {{reason}}.",
+                "notFound": "Ova igra nije pronađena za instalaciju.",
                 "scanMiss": "Nativni Steam most ne pokriva svaki Steam poziv koji {{title}} izvršava. Nije pokriveno: {{symbols}}.",
                 "title": "Ova igra će koristiti Windows Steam klijent",
                 "tryBridge": "Ipak isprobaj most",
