@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 9/19 plans executed
+**Plans:** 10/19 plans executed
 
 Plans:
 **Wave 1**
@@ -240,7 +240,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 51-09-PLAN.md — games.ts routing on the verdict; scan-miss deletes bottle + D-05 with missing symbols; location-based launch/uninstall (D-51-05, D-51-07)
-- [ ] 51-10-PLAN.md — Generated helper dispatch table; identity-only helper mode
+- [x] 51-10-PLAN.md — Generated helper dispatch table; identity-only helper mode
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 51-11-PLAN.md — Proton-inventory extractor; ISteamUtils/Apps/UserStats + old User/Friends versions for XCOM and Hoard (Hoard versions measured)

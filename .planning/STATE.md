@@ -2,12 +2,13 @@
 gsd_state_version: "1.0"
 milestone: v0.8
 current_phase: 51
-current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
+current_phase_name: Widen native Steam bridge — more interface proxies, scan-derived eligibility
 status: executing
-stopped_at: Completed 51-09-PLAN.md
-last_updated: "2026-10-17T19:14:13.782Z"
+stopped_at: Completed 51-10-PLAN.md
+last_updated: "2026-10-21T00:53:06.982Z"
 last_activity: 2026-10-18
-state_head: d0a1c74d0e66d2fefcf795fbe0708abb78c1690e
+last_activity_desc: Phase 51 execution started
+state_head: 2ea4a430ac12109094fc00eea3575bdb2af275de
 progress:
   total_phases: 1
   completed_phases: 0
@@ -24,7 +25,7 @@ milestone_name: Tauri Shell
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 51 — Widen the native Steam bridge: more interface proxies and scanner
+**Current focus:** Phase 51 — Widen native Steam bridge — more interface proxies, scan-derived eligibility
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -74,10 +75,10 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 10 of 19
+Phase: 51 (Widen native Steam bridge — more interface proxies, scan-derived eligibility) — EXECUTING
+Plan: 2 of 19
 Status: Ready to execute
-Last activity: 2026-10-18 - Completed quick task 261018-as3 - archived closed-milestone history out of STATE.md (207 KB to 53 KB)
+Last activity: 2026-10-18 — Phase 51 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -182,6 +183,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 51 P07 | ~1h | 2 tasks | 7 files |
 | Phase 51 P08 | ~40min | 3 tasks | 10 files |
 | Phase 51 P09 | 18m | 3 tasks | 11 files |
+| Phase 51 P10 | 1h10m | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -232,6 +234,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: LOCATION vs ELIGIBILITY: launch()/uninstall() dispatch on findBridgeInstallBottle (where it lives), install() dispatches on bridgeRoute (where a NEW install should go)
 - [Phase 51]: D-51-05: install-time coverage miss deletes the per-game bridge bottle outright rather than migrating it; re-download through the proven Phase 17 bottled path
 - [Phase 51]: D-51-11: a forced bridge userRoute override is cleared once it misses, so a later install falls through to its ordinary route instead of re-forcing the same failure
+- [Phase 51]: Dispatch generation requires every non-fallback wire method to declare helperFlat + manifest helperInterface (generation-time refusal otherwise) -- shim and helper tables can never silently diverge
+- [Phase 51]: CSteamID (returnKind class, structSize 8) is a plain 8-byte flat-ABI register return on the helper side, never a hidden sret pointer, matching the pre-existing GetSteamID_t typedef
+- [Phase 51]: out-value/out-buffer param kinds are refused in dispatch-eligible methods for now, deferred to a future plan -- no production manifest needs them yet
 
 ### Pending Todos
 
@@ -306,8 +311,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-17T10:24:15.401Z
-Stopped at: Completed 51-09-PLAN.md
+Last session: 2026-10-21T00:53:06.972Z
+Stopped at: Completed 51-10-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
