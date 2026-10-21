@@ -1,0 +1,50 @@
+DEFINE_THISCALL_WRAPPER(winIAbiFamily_AbiFamily002_GetWidgetCount, 4)
+DEFINE_THISCALL_WRAPPER(winIAbiFamily_AbiFamily002_GetWidgetID, 8)
+DEFINE_THISCALL_WRAPPER(winIAbiFamily_AbiFamily002_SetWidgetName, 8)
+
+int32_t __thiscall winIAbiFamily_AbiFamily002_GetWidgetCount(struct w_steam_iface *_this)
+{
+    struct IAbiFamily_AbiFamily002_GetWidgetCount_params params =
+    {
+        .linux_side = _this->u_iface,
+    };
+    TRACE("%p\n", _this);
+    STEAMCLIENT_CALL( IAbiFamily_AbiFamily002_GetWidgetCount, &params );
+    return params._ret;
+}
+
+CSteamID * __thiscall winIAbiFamily_AbiFamily002_GetWidgetID(struct w_steam_iface *_this, CSteamID *_ret)
+{
+    struct IAbiFamily_AbiFamily002_GetWidgetID_params params =
+    {
+        .linux_side = _this->u_iface,
+        ._ret = _ret,
+    };
+    TRACE("%p\n", _this);
+    STEAMCLIENT_CALL( IAbiFamily_AbiFamily002_GetWidgetID, &params );
+    return params._ret;
+}
+
+void __thiscall winIAbiFamily_AbiFamily002_SetWidgetName(struct w_steam_iface *_this, uint32_t widgetID, const char *pchName)
+{
+    struct IAbiFamily_AbiFamily002_SetWidgetName_params params =
+    {
+        .linux_side = _this->u_iface,
+        .widgetID = widgetID,
+        .pchName = pchName,
+    };
+    TRACE("%p\n", _this);
+    STEAMCLIENT_CALL( IAbiFamily_AbiFamily002_SetWidgetName, &params );
+}
+
+extern vtable_ptr winIAbiFamily_AbiFamily002_vtable;
+
+DEFINE_RTTI_DATA0(winIAbiFamily_AbiFamily002, 0, ".?AVIAbiFamily@@")
+
+__ASM_BLOCK_BEGIN(winIAbiFamily_AbiFamily002_vtables)
+    __ASM_VTABLE(winIAbiFamily_AbiFamily002,
+        VTABLE_ADD_FUNC(winIAbiFamily_AbiFamily002_GetWidgetCount)
+        VTABLE_ADD_FUNC(winIAbiFamily_AbiFamily002_GetWidgetID)
+        VTABLE_ADD_FUNC(winIAbiFamily_AbiFamily002_SetWidgetName)
+    );
+__ASM_BLOCK_END
