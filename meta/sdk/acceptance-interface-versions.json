@@ -44,5 +44,30 @@
     "family": "SteamUserStats",
     "arches": ["x86"],
     "titles": ["63000"]
+  },
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION005": {
+    "family": "SteamRemoteStorage",
+    "arches": ["x86"],
+    "titles": ["200510"]
+  },
+  "SteamMatchMaking009": {
+    "family": "SteamMatchmaking",
+    "arches": ["x86"],
+    "titles": ["200510", "63000"]
+  },
+  "SteamMatchMakingServers002": {
+    "family": "SteamMatchmakingServers",
+    "arches": ["x86"],
+    "titles": ["200510", "63000"]
+  },
+  "SteamNetworking005": {
+    "family": "SteamNetworking",
+    "arches": ["x86"],
+    "titles": ["200510", "63000"]
+  },
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION010": {
+    "family": "SteamRemoteStorage",
+    "arches": ["x86"],
+    "titles": ["63000"]
   }
 }

@@ -1,0 +1,720 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamMatchMaking009",
+  "family": "SteamMatchmaking",
+  "ordinal": 12,
+  "arches": ["x86"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamMatchMaking_v009",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamMatchmaking.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetFavoriteGameCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "GetFavoriteGame",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "iGame",
+          "type": "int32"
+        },
+        {
+          "name": "pnAppID",
+          "type": "uint32*"
+        },
+        {
+          "name": "pnIP",
+          "type": "uint32*"
+        },
+        {
+          "name": "pnConnPort",
+          "type": "uint16_t*"
+        },
+        {
+          "name": "pnQueryPort",
+          "type": "uint16_t*"
+        },
+        {
+          "name": "punFlags",
+          "type": "uint32*"
+        },
+        {
+          "name": "pRTime32LastPlayedOnServer",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "AddFavoriteGame",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "nIP",
+          "type": "uint32"
+        },
+        {
+          "name": "nConnPort",
+          "type": "uint32"
+        },
+        {
+          "name": "nQueryPort",
+          "type": "uint32"
+        },
+        {
+          "name": "unFlags",
+          "type": "uint32"
+        },
+        {
+          "name": "rTime32LastPlayedOnServer",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "RemoveFavoriteGame",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "nIP",
+          "type": "uint32"
+        },
+        {
+          "name": "nConnPort",
+          "type": "uint32"
+        },
+        {
+          "name": "nQueryPort",
+          "type": "uint32"
+        },
+        {
+          "name": "unFlags",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "RequestLobbyList",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 5,
+      "name": "AddRequestLobbyListStringFilter",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pchKeyToMatch",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValueToMatch",
+          "type": "const char*"
+        },
+        {
+          "name": "eComparisonType",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "AddRequestLobbyListNumericalFilter",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pchKeyToMatch",
+          "type": "const char*"
+        },
+        {
+          "name": "nValueToMatch",
+          "type": "int32"
+        },
+        {
+          "name": "eComparisonType",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "AddRequestLobbyListNearValueFilter",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchKeyToMatch",
+          "type": "const char*"
+        },
+        {
+          "name": "nValueToBeCloseTo",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "AddRequestLobbyListFilterSlotsAvailable",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nSlotsAvailable",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "AddRequestLobbyListDistanceFilter",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eLobbyDistanceFilter",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "AddRequestLobbyListResultCountFilter",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "cMaxResults",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "AddRequestLobbyListCompatibleMembersFilter",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetLobbyByIndex",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "iLobby",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 13,
+      "name": "CreateLobby",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eLobbyType",
+          "type": "uint32"
+        },
+        {
+          "name": "cMaxMembers",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "JoinLobby",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "LeaveLobby",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "InviteUserToLobby",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "steamIDInvitee",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetNumLobbyMembers",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetLobbyMemberByIndex",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iMember",
+          "type": "int32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 19,
+      "name": "GetLobbyData",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "SetLobbyData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "GetLobbyDataCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetLobbyDataByIndex",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iLobbyData",
+          "type": "int32"
+        },
+        {
+          "name": "pchKey",
+          "type": "char*"
+        },
+        {
+          "name": "cchKeyBufferSize",
+          "type": "int32"
+        },
+        {
+          "name": "pchValue",
+          "type": "char*"
+        },
+        {
+          "name": "cchValueBufferSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "DeleteLobbyData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "GetLobbyMemberData",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "SetLobbyMemberData",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "SendLobbyChatMsg",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pvMsgBody",
+          "type": "const void*"
+        },
+        {
+          "name": "cubMsgBody",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "GetLobbyChatEntry",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "iChatID",
+          "type": "int32"
+        },
+        {
+          "name": "pSteamIDUser",
+          "type": "CSteamID*"
+        },
+        {
+          "name": "pvData",
+          "type": "void*"
+        },
+        {
+          "name": "cubData",
+          "type": "int32"
+        },
+        {
+          "name": "peChatEntryType",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "RequestLobbyData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "SetLobbyGameServer",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "unGameServerIP",
+          "type": "uint32"
+        },
+        {
+          "name": "unGameServerPort",
+          "type": "uint32"
+        },
+        {
+          "name": "steamIDGameServer",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "GetLobbyGameServer",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "punGameServerIP",
+          "type": "uint32*"
+        },
+        {
+          "name": "punGameServerPort",
+          "type": "uint16_t*"
+        },
+        {
+          "name": "psteamIDGameServer",
+          "type": "CSteamID*"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "SetLobbyMemberLimit",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "cMaxMembers",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "GetLobbyMemberLimit",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "SetLobbyType",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "eLobbyType",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "SetLobbyJoinable",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "bLobbyJoinable",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "GetLobbyOwner",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 36,
+      "name": "SetLobbyOwner",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "steamIDNewOwner",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "SetLinkedLobby",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "steamIDLobbyDependent",
+          "type": "CSteamID"
+        }
+      ]
+    }
+  ]
+}

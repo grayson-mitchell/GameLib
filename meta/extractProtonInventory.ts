@@ -187,11 +187,29 @@ export function classifyProtonReturn(
   }
   if (trimmed.endsWith('*')) {
     const base = trimmed.slice(0, -1).trim()
+    // Proton's thunk generator only uses the hidden-sret-pointer
+    // convention (an extra, synthetic trailing `_ret` param) for a KNOWN
+    // by-value struct return (CSteamID/CGameID, the only two
+    // SRET_STRUCT_SIZE entries) -- any OTHER pointer return type (e.g.
+    // `void *`, an opaque handle such as ISteamMatchmakingServers'
+    // RequestInternetServerList) is a genuine register-returned pointer:
+    // the visible trailing param in that signature is a REAL argument,
+    // never a synthetic return slot, so it must not be stripped (fixed
+    // this session -- the generic "any trailing '*' is sret" branch threw
+    // "unrecognized struct type \"void\"" the moment a real `void *`
+    // return was extracted, Plan 51-14).
+    if (SRET_STRUCT_SIZE[base] !== undefined) {
+      return {
+        returnKind: 'class',
+        returns: base,
+        sret: true,
+        structBaseType: base
+      }
+    }
     return {
-      returnKind: 'class',
-      returns: base,
-      sret: true,
-      structBaseType: base
+      returnKind: 'pointer',
+      returns: mapProtonCType(trimmed),
+      sret: false
     }
   }
   const scalarReturnMap: Readonly<
@@ -365,12 +383,63 @@ export function parseProtonThunks(
 
   return order.map((methodName, slot) => {
     const wrapperSize = extractWrapperSize(text, family, version, methodName)
-    const { returnType, params } = extractSignature(
-      text,
-      family,
-      version,
-      methodName
-    )
+
+    // Plan 51-14: `winISteamMatchmakingServers.c`'s real, pinned
+    // SteamMatchMakingServers002 vtable lists `ReleaseRequest` (both in
+    // `DEFINE_THISCALL_WRAPPER` and the `__ASM_VTABLE` slot order) but
+    // never defines its `__thiscall` body anywhere in the file -- a
+    // genuine, narrow gap in Proton's own checked-in source (confirmed by
+    // direct inspection this session: the 7 request-list methods, then
+    // GetServerDetails, then CancelQuery follow each other with no
+    // ReleaseRequest text between them). D-09 forbids inventing a
+    // signature from outside knowledge (e.g. the public Steamworks SDK),
+    // so this falls back to the ONE fact Proton's source DOES give for
+    // this slot -- the wrapper's total stack width, via
+    // `DEFINE_THISCALL_WRAPPER` -- and assumes the minimal, safest shape
+    // (`void`, no params) for the rest. Every family this tool ever
+    // targets is manifest-level `mode: 'stub'` with no wire-policy entry
+    // (D-51-14), so this slot is NEVER dispatched for real: the generated
+    // stub only needs `stackBytes` right (so __thiscall callee-cleanup
+    // doesn't corrupt the caller's stack) -- `emitStubBody` derives its
+    // dummy param list from `stackBytes` alone, never from `params`-by-
+    // name, so the exact fabricated param count/names here are cosmetic.
+    let returnType: string
+    let params: string[]
+    try {
+      ;({ returnType, params } = extractSignature(
+        text,
+        family,
+        version,
+        methodName
+      ))
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !error.message.includes('no __thiscall signature found')
+      ) {
+        throw error
+      }
+      console.warn(
+        `parseProtonThunks: ${family} ${version} ${methodName} has no ` +
+          `__thiscall body in Proton's source (slot ${slot}) -- falling back ` +
+          `to a stackBytes-only stub shape (D-09: never inventing beyond the ` +
+          `wrapper's own factual stack width).`
+      )
+      returnType = 'void'
+      // One synthetic `this`-shaped leading entry so the `.slice(1)` below
+      // (which always strips the synthetic leading `_this` Proton's REAL
+      // signatures carry) still yields the right param count for the
+      // factual non-`this` stack width -- each named uniquely so
+      // `splitProtonParam` never collides two dummy params onto one name.
+      const dummyCount = (wrapperSize - 4) / 4
+      params = [
+        'struct w_steam_iface *_this',
+        ...Array.from(
+          { length: dummyCount },
+          (_, i) => `uint32_t _unknownArg${i}`
+        )
+      ]
+    }
     const { returnKind, returns, sret, structBaseType } =
       classifyProtonReturn(returnType)
 
@@ -380,7 +449,23 @@ export function parseProtonThunks(
     let realParams = params.slice(1)
     let structSize: number | undefined
     if (sret) {
-      realParams = realParams.slice(0, -1)
+      // MSVC thiscall-sret convention (confirmed directly against
+      // Proton's real signatures this session): the hidden return
+      // pointer is the FIRST stack param, right after `this` -- e.g.
+      // `winISteamFriends_SteamFriends018_GetFriendByIndex(_this, _ret,
+      // iFriend, iFriendFlags)`. Stripping the LAST element (the prior
+      // logic) wrongly dropped a REAL trailing arg while leaving the
+      // synthetic `_ret` in the output for any method with more than
+      // zero real args -- only coincidentally correct for the
+      // zero-real-arg case (GetSteamID), which is all 51-11 exercised.
+      // Fixed this session (Plan 51-14) when SteamMatchMaking009's
+      // GetLobbyOwner/GetLobbyByIndex/GetLobbyMemberByIndex exposed it;
+      // the already-committed isteamfriends*.manifest.json files predate
+      // this fix and are out of THIS plan's scope (stub-mode generation
+      // never reads `params` for code emission -- a documentary-only
+      // inaccuracy there, tracked as a deferred item, not regenerated
+      // here).
+      realParams = realParams.slice(1)
       structSize = structBaseType ? SRET_STRUCT_SIZE[structBaseType] : undefined
       if (structSize === undefined) {
         throw new Error(
