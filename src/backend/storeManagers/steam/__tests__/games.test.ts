@@ -3865,7 +3865,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(secondResult).toEqual({ status: 'done' })
   })
 
-  it('known-bad title (knownBadReason non-null): install() takes the bottled path (D-51-07, resolveBridgeRoute rule 4)', async () => {
+  it('Plan 13 (D-51-08): known-bad title (knownBadReason non-null), no acknowledgement -- install() fires steamBridgeRouteNotice and defers to setup WITHOUT ever reaching the bottled dispatch', async () => {
     // Phase 51 Plan 09: a non-seed, never-scanned, bottle-eligible title now
     // DEFAULTS to the bridge route (resolveBridgeRoute rule 11,
     // 'pending-scan') -- bridgeAllowlist.has(false) alone no longer forces
@@ -3884,8 +3884,74 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(placeShimForGame).not.toHaveBeenCalled()
     expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    // D-51-08: no silent heavy Windows Steam client -- the bottled dispatch
+    // never runs while the notice is unacknowledged.
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
+      appName: APP_ID,
+      reason: 'known-bad',
+      knownBadReason: 'incompatible',
+      missingSymbols: []
+    })
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
+  it("Plan 13 (D-51-11): known-bad title with userRoute 'bridge' (Try the bridge anyway) -- install() routes to installBridgeGame, no notice", async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
+      'incompatible'
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { userRoute: 'bridge' }
+    })
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBridgeRouteNotice',
+      expect.anything()
+    )
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).toHaveBeenCalled()
     expect(result).toEqual({ status: 'done' })
+  })
+
+  it('Plan 13 (D-51-08/11): a persisted unrecovered scan-miss, no acknowledgement -- install() fires steamBridgeRouteNotice with the persisted missingSymbols and defers to setup', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: {
+        scan: {
+          status: 'miss',
+          arch: 'x86',
+          missingSymbols: ['SteamUser@unknown-version'],
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'irrelevant',
+          scannedAt: '2026-01-01T00:00:00.000Z'
+        }
+      }
+    })
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.install({} as any)
+
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    expect(downloadSteamDepots).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
+      appName: APP_ID,
+      reason: 'scan-miss',
+      knownBadReason: null,
+      missingSymbols: ['SteamUser@unknown-version']
+    })
+    expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
   it('non-seed, never-scanned, bottle-eligible title now routes to the bridge on install (D-51-07, resolveBridgeRoute rule 11 — pending-scan)', async () => {
@@ -3947,11 +4013,16 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
 
-  it('isBridgeEligible() is false when knownBadReason is non-null, even though the game is bottle-eligible (D-51-07)', async () => {
+  it('Plan 13 (D-51-08): isBridgeEligible() is false when knownBadReason is non-null, and once noticeAcknowledgedFor matches the reason install() goes straight to the bottled branch with NO notice', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
       'incompatible'
     )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { noticeAcknowledgedFor: 'known-bad' }
+    })
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
       status: 'done'
@@ -3962,6 +4033,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
 
     expect(isBridgeBottleReady).not.toHaveBeenCalled()
     expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBridgeRouteNotice',
+      expect.anything()
+    )
   })
 
   it('finding #3 (fallback bypass): after markBridgeFailedThisSession(appId), install() routes to the bottled path despite the appId being allowlisted + bottle-eligible', async () => {

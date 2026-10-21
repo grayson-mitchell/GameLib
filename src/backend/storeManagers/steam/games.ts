@@ -1134,7 +1134,36 @@ export default class SteamGame implements Game {
       // readiness/provisioning path (installBridgeGame -> isBridgeBottleReady
       // / provisionBridgeBottle, 24-04) that must not be blocked by the
       // unrelated Phase 17 GameLibSteam bottle's own state (BLOCKER 1).
-      if (this.isBridgeEligible()) {
+      // D-51-08/11/13 (Plan 13): compute the composed route ONCE and act on
+      // it, rather than re-deriving eligibility via isBridgeEligible() alone
+      // -- a bottle route whose noticeRequired is true (known-bad/scan-miss/
+      // win64-no-shim, unless already acknowledged for that same reason)
+      // must pause for the user's explicit in-app choice (D-51-08) BEFORE
+      // any bottled-Steam dispatch below runs. Mirrors the
+      // steamBottleSetupRequired deferral immediately below so the
+      // DownloadManager clears the transient 'installing' badge the same
+      // way -- nothing is installed and no ACF poller starts on this path.
+      const bridgeRoute = this.bridgeRoute()
+
+      if (
+        bridgeRoute.route === 'bottle' &&
+        bridgeRoute.noticeRequired &&
+        bridgeRoute.reason !== null
+      ) {
+        logInfo(
+          `SteamGame: appId ${this.appId} bridge route (${bridgeRoute.reason}) requires a user notice before any install -- deferring to the in-app dialog`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('steamBridgeRouteNotice', {
+          appName: this.appId,
+          reason: bridgeRoute.reason,
+          knownBadReason: bridgeRoute.knownBadReason,
+          missingSymbols: bridgeRoute.missingSymbols
+        })
+        return { status: 'done', deferredToSetup: true }
+      }
+
+      if (bridgeRoute.route === 'bridge') {
         return this.installBridgeGame(args)
       }
 
