@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: Widen native Steam bridge — more interface proxies, scan-derived eligibility
 status: executing
-stopped_at: Completed 51-10-PLAN.md
-last_updated: "2026-10-21T00:53:06.982Z"
+stopped_at: Completed 51-11-PLAN.md
+last_updated: "2026-10-21T04:18:39.974Z"
 last_activity: 2026-10-18
 last_activity_desc: Phase 51 execution started
-state_head: 2ea4a430ac12109094fc00eea3575bdb2af275de
+state_head: e53295c1a8cdcfa47f639d3331f04490078aea58
 progress:
   total_phases: 1
   completed_phases: 0
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen native Steam bridge — more interface proxies, scan-derived eligibility) — EXECUTING
-Plan: 2 of 19
+Plan: 3 of 19
 Status: Ready to execute
 Last activity: 2026-10-18 — Phase 51 execution started
 
@@ -184,6 +184,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 51 P08 | ~40min | 3 tasks | 10 files |
 | Phase 51 P09 | 18m | 3 tasks | 11 files |
 | Phase 51 P10 | 1h10m | 2 tasks | 10 files |
+| Phase 51 P11 | ~3h20m | 2 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -237,6 +238,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: Dispatch generation requires every non-fallback wire method to declare helperFlat + manifest helperInterface (generation-time refusal otherwise) -- shim and helper tables can never silently diverge
 - [Phase 51]: CSteamID (returnKind class, structSize 8) is a plain 8-byte flat-ABI register return on the helper side, never a hidden sret pointer, matching the pre-existing GetSteamID_t typedef
 - [Phase 51]: out-value/out-buffer param kinds are refused in dispatch-eligible methods for now, deferred to a future plan -- no production manifest needs them yet
+- [Phase 51]: 51-11 Task 1 skipped (operator instruction, no CrossOver network path to re-measure Hoard); Task 2/3 built a real Proton lsteamclient extractor (meta/extractProtonInventory.ts) replacing hand-authored manifests, completed SteamUser023/SteamFriends018 and added 5 new manifests for XCOM's measured first-group + older User/Friends versions (274 slots total); extended gen_vtables.ts's dispatch generator to support out-value response params; pending todo tracks the deferred Hoard measurement
 
 ### Pending Todos
 
@@ -311,8 +313,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-21T00:53:06.972Z
-Stopped at: Completed 51-10-PLAN.md
+Last session: 2026-10-21T04:17:53.436Z
+Stopped at: Completed 51-11-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
