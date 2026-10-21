@@ -15,6 +15,7 @@ import {
   toVersionedAccessorSuffix,
   validateManifest,
   FLAT_EXPORTS_SUPERSET,
+  GAMESERVER_FLAT_STUBS,
   STRING_RETURN_BUF_BYTES,
   WIRE_LAYOUT_DOC,
   type InterfaceManifestV2
@@ -633,6 +634,60 @@ describe('gen_vtables', () => {
       }
       const def = generateDefFile([isteamuser, x64Only], 'x86')
       expect(def).not.toContain('SteamUserX64Only')
+    })
+  })
+
+  // 51-14 Task 2: Pitfall 2 -- XCOM's nine SteamGameServer* imports (plus
+  // two accessors XCOM doesn't import but a future title might) must all be
+  // honest, unavailable, cdecl-flat stubs so the exe loads at all.
+  describe('GAMESERVER_FLAT_STUBS (51-14 Task 2)', () => {
+    it('contains all eleven GameServer export names', () => {
+      expect([...GAMESERVER_FLAT_STUBS].sort()).toEqual(
+        [
+          'SteamGameServer_Init',
+          'SteamGameServer_Shutdown',
+          'SteamGameServer_RunCallbacks',
+          'SteamGameServer_BSecure',
+          'SteamGameServer_GetSteamID',
+          'SteamGameServer_GetHSteamPipe',
+          'SteamGameServer_GetHSteamUser',
+          'SteamGameServer',
+          'SteamGameServerStats',
+          'SteamGameServerNetworking',
+          'SteamGameServerUtils'
+        ].sort()
+      )
+    })
+
+    it('.def includes every GameServer flat stub name exactly once, arch-agnostic (not manifest-driven)', () => {
+      const def = generateDefFile([isteamuser, isteamfriends])
+      for (const name of GAMESERVER_FLAT_STUBS) {
+        const lines = def.split('\n').filter((l) => l === name)
+        expect(lines).toHaveLength(1)
+      }
+    })
+
+    it('SteamGameServer_Init returns 0, the four accessors return NULL, never a success value', () => {
+      const c = generateShimC([isteamuser, isteamfriends])
+      expect(c).toMatch(/int SteamGameServer_Init\(void\) \{\s*return 0;\s*\}/)
+      expect(c).toMatch(/void \*SteamGameServer\(void\) \{\s*return NULL;\s*\}/)
+      expect(c).toMatch(
+        /void \*SteamGameServerStats\(void\) \{\s*return NULL;\s*\}/
+      )
+      expect(c).toMatch(
+        /void \*SteamGameServerNetworking\(void\) \{\s*return NULL;\s*\}/
+      )
+      expect(c).toMatch(
+        /void \*SteamGameServerUtils\(void\) \{\s*return NULL;\s*\}/
+      )
+    })
+
+    it('every GameServer stub is declared cdecl (void) -- no THISCALL attribute on its declaration line', () => {
+      const c = generateShimC([isteamuser, isteamfriends])
+      for (const name of GAMESERVER_FLAT_STUBS) {
+        const re = new RegExp(`^((?!THISCALL).)*\\b${name}\\(void\\)`, 'm')
+        expect(c).toMatch(re)
+      }
     })
   })
 

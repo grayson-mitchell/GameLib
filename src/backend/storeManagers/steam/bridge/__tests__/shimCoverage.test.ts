@@ -316,18 +316,16 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
   })
 })
 
-// 51-11 Task 3: the acceptance check named in the plan -- evaluateShimCoverage
-// on XCOM: Enemy Unknown's (200510) REAL captured import table (51-02's
-// fixtures/objdumpImports.ts) must report missing exactly the second/
-// last-group families (SteamRemoteStorage, SteamMatchmaking/
-// SteamMatchmakingServers, SteamNetworking -- their bare names AND their
-// required versions) plus the 9 out-of-scope SteamGameServer* bare names
-// (closed by a future 51-14), and NOTHING from the five families this plan
-// widened (SteamUser/SteamFriends/SteamUtils/SteamApps/SteamUserStats).
+// 51-14 Task 2: the full locked interface order is now served -- the
+// second/last-group families (SteamRemoteStorage, SteamMatchmaking/
+// SteamMatchmakingServers, SteamNetworking) answer as stubs, and the 9
+// out-of-scope SteamGameServer* bare names XCOM imports are honest
+// unavailable flat stubs too. missingSymbols is now [] for XCOM; the
+// previously-missing families show up in stubbedInterfaces instead.
 //
-// Hoard's (63000) own measurement (261021-pgx) now has a real acceptance
-// check too -- see the second describe block below.
-describe('evaluateShimCoverage (51-11 Task 3 acceptance check -- XCOM: Enemy Unknown, 200510)', () => {
+// Hoard's (63000) own measurement (261021-pgx) is covered the same way --
+// see the second describe block below.
+describe('evaluateShimCoverage (51-14 Task 2 acceptance check -- XCOM: Enemy Unknown, 200510)', () => {
   const xcomSymbols = parseSteamApiImports(XCOM_EU_OBJDUMP_OUTPUT)
   const { required: xcomRequiredVersions, problems: xcomVersionProblems } =
     resolveRequiredInterfaceVersions({
@@ -340,7 +338,7 @@ describe('evaluateShimCoverage (51-11 Task 3 acceptance check -- XCOM: Enemy Unk
     expect(xcomVersionProblems).toEqual([])
   })
 
-  test('missing is exactly the second/last-group families + their versions + the 9 GameServer* stubs; nothing from the five widened families', () => {
+  test('zero missing symbols; the second/last-group families report stubbed, sorted', () => {
     const result = evaluateShimCoverage({
       arch: 'x86',
       symbols: xcomSymbols,
@@ -348,69 +346,36 @@ describe('evaluateShimCoverage (51-11 Task 3 acceptance check -- XCOM: Enemy Unk
       versionProblems: xcomVersionProblems
     })
 
-    const expectedMissingGameServerNames = [
-      'SteamGameServer',
-      'SteamGameServer_Shutdown',
-      'SteamGameServer_BSecure',
-      'SteamGameServer_GetSteamID',
-      'SteamGameServer_Init',
-      'SteamGameServerStats',
-      'SteamGameServerNetworking',
-      'SteamGameServerUtils',
-      'SteamGameServer_RunCallbacks'
-    ]
-    const expectedMissingBareNames = [
-      'SteamMatchmaking',
-      'SteamMatchmakingServers',
+    expect(result.missingSymbols).toEqual([])
+    expect([...result.stubbedInterfaces].sort()).toEqual([
+      'SteamMatchMaking',
+      'SteamMatchMakingServers',
       'SteamNetworking',
       'SteamRemoteStorage'
-    ]
-    const expectedMissingVersions = [
-      'SteamMatchMaking009',
-      'SteamMatchMakingServers002',
-      'SteamNetworking005',
-      'STEAMREMOTESTORAGE_INTERFACE_VERSION005'
-    ]
-    const expectedMissing = [
-      ...expectedMissingGameServerNames,
-      ...expectedMissingBareNames,
-      ...expectedMissingVersions
-    ]
+    ])
 
-    expect([...result.missingSymbols].sort()).toEqual(
-      [...expectedMissing].sort()
-    )
-    expect(result.stubbedInterfaces).toEqual([])
-
-    // Nothing from the five families this plan widened appears anywhere
-    // in the miss list -- the real acceptance assertion, not just a
-    // length check.
-    const widenedNames = [
+    // Nothing from the five families 51-11 widened appears in
+    // stubbedInterfaces -- those are served 'wire', not 'stub'.
+    const widenedFamilies = [
       'SteamUser',
       'SteamFriends',
       'SteamUtils',
       'SteamApps',
-      'SteamUserStats',
-      'SteamUser016',
-      'SteamFriends011',
-      'SteamUtils005',
-      'STEAMAPPS_INTERFACE_VERSION004',
-      'STEAMUSERSTATS_INTERFACE_VERSION010'
+      'SteamUserStats'
     ]
-    for (const name of widenedNames) {
-      expect(result.missingSymbols).not.toContain(name)
+    for (const family of widenedFamilies) {
+      expect(result.stubbedInterfaces).not.toContain(family)
     }
   })
 })
 
-// 261021-pgx: Hoard's (63000) own measured acceptance check -- the five
-// widened families now covered for Hoard specifically, against its own
-// REAL captured import table (HOARD_REUBEN_REAL_OBJDUMP_OUTPUT) and its own
-// REAL measured interface-version strings (HOARD_DLL_VERSION_STRINGS).
-// Hoard's import table has no SteamMatchmakingServers and no
+// 261021-pgx / 51-14: Hoard's (63000) own measured acceptance check --
+// the five widened (51-11) families stay covered for Hoard, and the
+// second/last-group families this plan adds now report stubbed instead of
+// missing. Hoard's import table has no SteamMatchmakingServers and no
 // SteamGameServer* names (unlike XCOM's 26-import table) -- simpler, only
 // 8 bare accessors.
-describe('evaluateShimCoverage (Hoard: 63000) -- the five widened families now covered for Hoard specifically', () => {
+describe('evaluateShimCoverage (Hoard: 63000) -- 51-14: the second/last-group families now stubbed for Hoard specifically', () => {
   const hoardSymbols = parseSteamApiImports(HOARD_REUBEN_REAL_OBJDUMP_OUTPUT)
   const { required: hoardRequiredVersions, problems: hoardVersionProblems } =
     resolveRequiredInterfaceVersions({
@@ -423,7 +388,7 @@ describe('evaluateShimCoverage (Hoard: 63000) -- the five widened families now c
     expect(hoardVersionProblems).toEqual([])
   })
 
-  test('missing is exactly SteamMatchmaking/SteamNetworking/SteamRemoteStorage + their versions; nothing from the five widened families', () => {
+  test('zero missing symbols; SteamMatchMaking/SteamNetworking/SteamRemoteStorage report stubbed, sorted', () => {
     const result = evaluateShimCoverage({
       arch: 'x86',
       symbols: hoardSymbols,
@@ -431,43 +396,24 @@ describe('evaluateShimCoverage (Hoard: 63000) -- the five widened families now c
       versionProblems: hoardVersionProblems
     })
 
-    const expectedMissingBareNames = [
-      'SteamMatchmaking',
+    expect(result.missingSymbols).toEqual([])
+    expect([...result.stubbedInterfaces].sort()).toEqual([
+      'SteamMatchMaking',
       'SteamNetworking',
       'SteamRemoteStorage'
-    ]
-    const expectedMissingVersions = [
-      'SteamMatchMaking009',
-      'SteamNetworking005',
-      'STEAMREMOTESTORAGE_INTERFACE_VERSION010'
-    ]
-    const expectedMissing = [
-      ...expectedMissingBareNames,
-      ...expectedMissingVersions
-    ]
+    ])
 
-    expect([...result.missingSymbols].sort()).toEqual(
-      [...expectedMissing].sort()
-    )
-    expect(result.stubbedInterfaces).toEqual([])
-
-    // Nothing from the five families this plan (and 51-11 before it)
-    // widened appears anywhere in the miss list -- the real "now covered
-    // for Hoard specifically" assertion, not just a length check.
-    const widenedNames = [
+    // Nothing from the five families 51-11 widened appears in
+    // stubbedInterfaces -- those are served 'wire', not 'stub'.
+    const widenedFamilies = [
       'SteamUser',
       'SteamFriends',
       'SteamUtils',
       'SteamApps',
-      'SteamUserStats',
-      'SteamUser016',
-      'SteamFriends013',
-      'SteamUtils005',
-      'STEAMAPPS_INTERFACE_VERSION005',
-      'STEAMUSERSTATS_INTERFACE_VERSION011'
+      'SteamUserStats'
     ]
-    for (const name of widenedNames) {
-      expect(result.missingSymbols).not.toContain(name)
+    for (const family of widenedFamilies) {
+      expect(result.stubbedInterfaces).not.toContain(family)
     }
   })
 })
