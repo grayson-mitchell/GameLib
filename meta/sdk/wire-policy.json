@@ -1,0 +1,153 @@
+{
+  "SteamUser": {
+    "GetHSteamUser": { "helperFlat": "SteamAPI_ISteamUser_GetHSteamUser" },
+    "BLoggedOn": { "helperFlat": "SteamAPI_ISteamUser_BLoggedOn" },
+    "GetSteamID": { "helperFlat": "SteamAPI_ISteamUser_GetSteamID" }
+  },
+  "SteamFriends": {
+    "GetPersonaName": { "helperFlat": "SteamAPI_ISteamFriends_GetPersonaName" },
+    "GetPersonaState": {
+      "helperFlat": "SteamAPI_ISteamFriends_GetPersonaState"
+    }
+  },
+  "SteamUtils": {
+    "GetSecondsSinceAppActive": {
+      "helperFlat": "SteamAPI_ISteamUtils_GetSecondsSinceAppActive"
+    },
+    "GetSecondsSinceComputerActive": {
+      "helperFlat": "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive"
+    },
+    "GetConnectedUniverse": {
+      "helperFlat": "SteamAPI_ISteamUtils_GetConnectedUniverse"
+    },
+    "GetServerRealTime": {
+      "helperFlat": "SteamAPI_ISteamUtils_GetServerRealTime"
+    },
+    "GetIPCountry": { "helperFlat": "SteamAPI_ISteamUtils_GetIPCountry" },
+    "GetCurrentBatteryPower": {
+      "helperFlat": "SteamAPI_ISteamUtils_GetCurrentBatteryPower"
+    },
+    "GetAppID": { "helperFlat": "SteamAPI_ISteamUtils_GetAppID" },
+    "IsOverlayEnabled": {
+      "helperFlat": "SteamAPI_ISteamUtils_IsOverlayEnabled"
+    },
+    "GetSteamUILanguage": {
+      "helperFlat": "SteamAPI_ISteamUtils_GetSteamUILanguage"
+    },
+    "IsSteamRunningInVR": {
+      "helperFlat": "SteamAPI_ISteamUtils_IsSteamRunningInVR"
+    },
+    "IsSteamInBigPictureMode": {
+      "helperFlat": "SteamAPI_ISteamUtils_IsSteamInBigPictureMode"
+    }
+  },
+  "SteamApps": {
+    "BIsSubscribed": { "helperFlat": "SteamAPI_ISteamApps_BIsSubscribed" },
+    "BIsLowViolence": { "helperFlat": "SteamAPI_ISteamApps_BIsLowViolence" },
+    "BIsCybercafe": { "helperFlat": "SteamAPI_ISteamApps_BIsCybercafe" },
+    "BIsVACBanned": { "helperFlat": "SteamAPI_ISteamApps_BIsVACBanned" },
+    "GetCurrentGameLanguage": {
+      "helperFlat": "SteamAPI_ISteamApps_GetCurrentGameLanguage"
+    },
+    "GetAvailableGameLanguages": {
+      "helperFlat": "SteamAPI_ISteamApps_GetAvailableGameLanguages"
+    },
+    "BIsSubscribedApp": {
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribedApp"
+    },
+    "BIsDlcInstalled": {
+      "helperFlat": "SteamAPI_ISteamApps_BIsDlcInstalled"
+    },
+    "GetEarliestPurchaseUnixTime": {
+      "helperFlat": "SteamAPI_ISteamApps_GetEarliestPurchaseUnixTime"
+    },
+    "BIsSubscribedFromFreeWeekend": {
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribedFromFreeWeekend"
+    },
+    "GetDLCCount": { "helperFlat": "SteamAPI_ISteamApps_GetDLCCount" },
+    "GetAppBuildId": { "helperFlat": "SteamAPI_ISteamApps_GetAppBuildId" },
+    "BIsAppInstalled": {
+      "helperFlat": "SteamAPI_ISteamApps_BIsAppInstalled"
+    },
+    "GetAppOwner": { "helperFlat": "SteamAPI_ISteamApps_GetAppOwner" },
+    "GetCurrentBetaName": {
+      "helperFlat": "SteamAPI_ISteamApps_GetCurrentBetaName",
+      "params": {
+        "pchName": { "kind": "out-buffer", "sizeParam": "cchNameBufferSize" }
+      }
+    }
+  },
+  "SteamUserStats": {
+    "RequestCurrentStats": { "helperFallback": true },
+    "GetStat": {
+      "helperFlat": "SteamAPI_ISteamUserStats_GetStatInt32",
+      "params": {
+        "pchName": { "kind": "in-string" },
+        "pData": { "kind": "out-value", "valueType": "int32" }
+      }
+    },
+    "GetStat_2": {
+      "helperFlat": "SteamAPI_ISteamUserStats_GetStatFloat",
+      "params": {
+        "pchName": { "kind": "in-string" },
+        "pData": { "kind": "out-value", "valueType": "float" }
+      }
+    },
+    "SetStat": {
+      "helperFlat": "SteamAPI_ISteamUserStats_SetStatInt32",
+      "params": { "pchName": { "kind": "in-string" } }
+    },
+    "SetStat_2": {
+      "helperFlat": "SteamAPI_ISteamUserStats_SetStatFloat",
+      "params": { "pchName": { "kind": "in-string" } }
+    },
+    "UpdateAvgRateStat": {
+      "helperFlat": "SteamAPI_ISteamUserStats_UpdateAvgRateStat",
+      "params": { "pchName": { "kind": "in-string" } }
+    },
+    "GetAchievement": {
+      "helperFlat": "SteamAPI_ISteamUserStats_GetAchievement",
+      "params": {
+        "pchName": { "kind": "in-string" },
+        "pbAchieved": { "kind": "out-value", "valueType": "bool" }
+      }
+    },
+    "SetAchievement": {
+      "helperFlat": "SteamAPI_ISteamUserStats_SetAchievement",
+      "params": { "pchName": { "kind": "in-string" } }
+    },
+    "ClearAchievement": {
+      "helperFlat": "SteamAPI_ISteamUserStats_ClearAchievement",
+      "params": { "pchName": { "kind": "in-string" } }
+    },
+    "GetAchievementAndUnlockTime": {
+      "helperFlat": "SteamAPI_ISteamUserStats_GetAchievementAndUnlockTime",
+      "params": {
+        "pchName": { "kind": "in-string" },
+        "pbAchieved": { "kind": "out-value", "valueType": "bool" },
+        "punUnlockTime": { "kind": "out-value", "valueType": "uint32" }
+      }
+    },
+    "StoreStats": { "helperFlat": "SteamAPI_ISteamUserStats_StoreStats" },
+    "GetAchievementDisplayAttribute": {
+      "helperFlat": "SteamAPI_ISteamUserStats_GetAchievementDisplayAttribute",
+      "params": {
+        "pchName": { "kind": "in-string" },
+        "pchKey": { "kind": "in-string" }
+      }
+    },
+    "IndicateAchievementProgress": {
+      "helperFlat": "SteamAPI_ISteamUserStats_IndicateAchievementProgress",
+      "params": { "pchName": { "kind": "in-string" } }
+    },
+    "GetNumAchievements": {
+      "helperFlat": "SteamAPI_ISteamUserStats_GetNumAchievements"
+    },
+    "GetAchievementName": {
+      "helperFlat": "SteamAPI_ISteamUserStats_GetAchievementName"
+    },
+    "ResetAllStats": {
+      "helperFlat": "SteamAPI_ISteamUserStats_ResetAllStats"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "SteamUser023": {
+    "family": "SteamUser",
+    "arches": ["x86"],
+    "titles": []
+  },
+  "SteamFriends018": {
+    "family": "SteamFriends",
+    "arches": ["x86"],
+    "titles": []
+  },
+  "SteamUser016": {
+    "family": "SteamUser",
+    "arches": ["x86"],
+    "titles": ["200510"]
+  },
+  "SteamFriends011": {
+    "family": "SteamFriends",
+    "arches": ["x86"],
+    "titles": ["200510"]
+  },
+  "SteamUtils005": {
+    "family": "SteamUtils",
+    "arches": ["x86"],
+    "titles": ["200510"]
+  },
+  "STEAMAPPS_INTERFACE_VERSION004": {
+    "family": "SteamApps",
+    "arches": ["x86"],
+    "titles": ["200510"]
+  },
+  "STEAMUSERSTATS_INTERFACE_VERSION010": {
+    "family": "SteamUserStats",
+    "arches": ["x86"],
+    "titles": ["200510"]
+  }
+}
