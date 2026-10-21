@@ -4,11 +4,11 @@ milestone: v0.8
 current_phase: 51
 current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
 status: executing
-stopped_at: Completed 51-14-PLAN.md
-last_updated: "2026-10-21T08:08:12.465Z"
+stopped_at: Completed 51-15-PLAN.md
+last_updated: "2026-10-21T11:16:49.060Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 51 execution started
-state_head: 9223c424170992e2a350760bd4ddbe2e02092fb5
+state_head: 5e42afe5c8f2735b03b7870e781678f49eda1083
 progress:
   total_phases: 1
   completed_phases: 0
@@ -76,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 4 of 19
+Plan: 5 of 19
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 51 execution started
 
@@ -188,6 +188,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 51 P12 | 70min | 2 tasks | 4 files |
 | Phase 51 P51-13 | 43min | 3 tasks | 14 files |
 | Phase 51 P14 | 70min | 2 tasks | 15 files |
+| Phase 51 P15 | ~3h | 3 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -247,6 +248,9 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: getSteamBridgeRoute delegates directly to games.ts's getBridgeRouteVerdict rather than a redundant installFormIpc.ts wrapper
 - [Phase 51]: acknowledgeReason validated against bridgeRoute.ts's NOTICE_REASONS set, not the full SteamBridgeRouteReason union
 - [Phase 51]: 51-14: family-casing split between Proton-fetch key and shimCoverage's served-family string for SteamMatchmaking/SteamMatchmakingServers; ReleaseRequest's missing Proton body gets a stackBytes-only fallback (D-09); two pre-existing extractProtonInventory.ts bugs (sret/pointer misclassification, sret param-stripping direction) fixed for new manifests only
+- [Phase 51]: 51-15: the generator's existing explicit (self, sretOut, ...) C signature is already x64-ABI-correct with zero arch branching -- the research's free-function sret-shift rule does not apply to hand-declared signatures
+- [Phase 51]: 51-15: MODERN_LOOKUP_FLAT_EXPORTS (SteamInternal_CreateInterface/SteamAPI_GetHSteamUser/SteamAPI_GetHSteamPipe) are x64-only in both .def and compiled C, never polluting the x86 SHIM_EXPORTED_SYMBOLS CR-02 pin
+- [Phase 51]: 51-15: four new ELEX x64-only manifests (User019/Friends015/Utils008/Apps008) force-reverted family-wide wire-policy matches back to stub -- no verified macOS helper-dylib accessor exists for these version strings, D-09 forbids inventing one
 
 ### Pending Todos
 
@@ -322,8 +326,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-21T08:08:12.455Z
-Stopped at: Completed 51-14-PLAN.md
+Last session: 2026-10-21T11:16:49.050Z
+Stopped at: Completed 51-15-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
