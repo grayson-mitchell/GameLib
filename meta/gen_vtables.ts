@@ -39,6 +39,7 @@
  * coverage is validated downstream by Plan 24-05, not by this generator.
  */
 
+import { createHash } from 'node:crypto'
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -1040,6 +1041,15 @@ ${WIRE_LAYOUT_DOC}
 #define WIRE_IN_STRING_MAX_BYTES ${WIRE_IN_STRING_MAX_BYTES}
 #define WIRE_OUT_BUFFER_MAX_BYTES ${WIRE_OUT_BUFFER_MAX_BYTES}
 
+// 51-10: digest of the sorted (interface, ordinal, slot, layout) wire-method
+// tuples this shim marshals -- computeWireTableHash(manifests), the SAME
+// function 51-10's helper-side generateDispatchHeader() calls against the
+// IDENTICAL manifest set. A reader (or a pin test) can diff this against
+// BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
+// shim and the helper's dispatch table drifting apart -- never a silent
+// mismatch between the two generated artifacts.
+#define BRIDGE_SHIM_TABLE_HASH "${computeWireTableHash(manifests)}"
+
 // 51-06 Task 2: bounded storage for every \`iface.<Family>=<Version>\`
 // pair \`gamelib_bridge.cfg\` carries -- the backend
 // (bridgeConfig.ts's \`writeBridgeConfig\`) writes one such line per family
@@ -1313,6 +1323,491 @@ typedef void *vfn;
   )
 }
 
+// ---------------------------------------------------------------------------
+// 51-10: helper-side dispatch table (generateDispatchHeader) + the shared
+// shim/helper table-hash (computeWireTableHash)
+// ---------------------------------------------------------------------------
+
+/**
+ * True for exactly the methods that travel the wire -- `mode === 'wire'`
+ * (per-method override, else the manifest default) AND NOT a
+ * `helperFallback` method (51-06 Task 3: a fallback method never calls
+ * `bridge_transact`, so it never reaches the helper and must never appear in
+ * the helper's own dispatch table or the shared table hash either).
+ */
+function isWireDispatchMethod(
+  manifest: InterfaceManifest,
+  method: MethodSignature
+): boolean {
+  const mode = method.mode ?? manifest.mode
+  return mode === 'wire' && method.helperFallback === undefined
+}
+
+/**
+ * A stable string capturing every field of a method's signature that
+ * affects wire marshaling -- returnKind/structSize (response shape) plus
+ * each param's type/kind/valueType/sizeParam (request shape). Two methods
+ * with the same name but a different layout produce a different key, so the
+ * hash below changes the moment either side's marshaling would actually
+ * change, never just when a slot number moves.
+ */
+function wireMethodLayoutKey(method: MethodSignature): string {
+  const paramsDesc = method.params
+    .map(
+      (p) =>
+        `${p.name}:${p.type}:${p.kind ?? 'value'}:${p.valueType ?? ''}:${p.sizeParam ?? ''}`
+    )
+    .join(',')
+  return `${method.returnKind}:${method.structSize ?? ''}:${paramsDesc}`
+}
+
+/**
+ * 51-10: the digest `computeRetN`'s sibling -- a single, order-independent
+ * fingerprint of every wire method's (interface, ordinal, slot, layout)
+ * tuple, embedded verbatim as `BRIDGE_SHIM_TABLE_HASH` in the generated
+ * shim (generateShimC above) and as `BRIDGE_DISPATCH_TABLE_HASH` in the
+ * generated helper dispatch header (generateDispatchHeader below). Both
+ * call this SAME function against the SAME loaded manifest set, so the two
+ * generated artifacts can never drift apart silently: a pin test (or a
+ * reviewer) diffing the two `#define`s catches it immediately.
+ *
+ * Sorted by (ordinal, slot) before hashing -- the result does not depend on
+ * manifest array order or method declaration order, only on the actual set
+ * of wire methods and their layouts.
+ */
+export function computeWireTableHash(manifests: InterfaceManifest[]): string {
+  const entries: { ordinal: number; slot: number; line: string }[] = []
+  for (const manifest of manifests) {
+    for (const method of manifest.methods) {
+      if (!isWireDispatchMethod(manifest, method)) continue
+      entries.push({
+        ordinal: manifest.ordinal,
+        slot: method.slot,
+        line: `${manifest.interface}|${manifest.ordinal}|${method.slot}|${wireMethodLayoutKey(method)}`
+      })
+    }
+  }
+  entries.sort((a, b) => a.ordinal - b.ordinal || a.slot - b.slot)
+  const canonical = entries.map((e) => e.line).join('\n')
+  return createHash('sha256').update(canonical).digest('hex').slice(0, 12)
+}
+
+/** Byte capacity of the single static scratch buffer `bridge_dispatch()`
+ * encodes every response into -- generous headroom over the largest real
+ * response this plan serves (GetPersonaName: 4-byte length prefix + up to
+ * 255 string bytes = 259) while staying far under `MAX_FRAME_BYTES`
+ * (protocol.ts). Exported so a test can pin the emitted `#define` against
+ * this single source of truth rather than a repeated literal. */
+export const BRIDGE_DISPATCH_RESP_SCRATCH_BYTES = 4096
+
+/** Max bytes `GetPersonaName`'s (and any future string-returning dispatch
+ * method's) helper-side encode will copy out of the native flat accessor's
+ * returned `const char *` -- CR-01's own reasoning applied to the OTHER
+ * direction of the wire: the helper owns a bounded local copy, never trusts
+ * an unbounded `strlen()` off a pointer it does not control the lifetime
+ * of. 255 (not 256) leaves room for the `\0` protocol.ts's own decode never
+ * needs on the wire (the length-prefixed blob has no terminator), matching
+ * `k_cchPersonaNameMax` - 1. */
+export const DISPATCH_STRING_RETURN_MAX_BYTES = 255
+
+/**
+ * Per-manifest, de-duplicated accessor var names -- `g_bd_self_<interface
+ * lowercased>` holds the resolved interface-instance pointer,
+ * `g_bd_accessor_<interface lowercased>` the dlsym'd accessor function
+ * pointer that produced it. Named after the INTERFACE (not the family):
+ * two manifests never share an `interface` string (ordinal-uniqueness,
+ * `validateManifest`), so these names can never collide.
+ */
+function dispatchSelfVarName(manifest: InterfaceManifestV2): string {
+  return `g_bd_self_${manifest.interface.toLowerCase()}`
+}
+
+function dispatchAccessorVarName(manifest: InterfaceManifestV2): string {
+  return `g_bd_accessor_${manifest.interface.toLowerCase()}`
+}
+
+/** `g_bd_flat_<Interface>_<Method>` -- the dlsym'd flat function pointer a
+ * single dispatch-table case calls through. Interface + method name is
+ * already globally unique (manifest ordinals are unique, and a manifest's
+ * own method names are unique within it), so no further qualification is
+ * needed. */
+function dispatchFlatVarName(
+  manifest: InterfaceManifestV2,
+  method: MethodSignature
+): string {
+  return `g_bd_flat_${manifest.interface}_${method.name}`
+}
+
+/**
+ * The helper-side (native arm64 flat ABI) C type for a wire param/return
+ * type token. Reuses the SAME `cType` the shim side uses -- deliberately:
+ * `CSteamID`/`CGameID` map to `uint64_t` on both sides because Steam's real
+ * flat macOS exports return/take these as plain 8-byte values (verified by
+ * the pre-51-10 hand-written `GetSteamID_t = uint64_t (*)(void *)` typedef
+ * this plan's generator now reproduces), never the hidden-sret-pointer
+ * shape the Windows MSVC VTABLE ABI requires on the shim side.
+ */
+function dispatchCType(type: string): string {
+  return cType(type)
+}
+
+/** Byte width `bridge_dispatch()` encodes a method's base return value as,
+ * on the wire response -- mirrors the shim's own `is64BitRegisterReturn` /
+ * `isSretReturn` byte-width reasoning, but for the helper-side ABI (no sret
+ * on this side at all, see `dispatchCType` above): `class` is a plain
+ * register-width return exactly like `int64`/`double`, never a hidden
+ * pointer. Returns `null` for `'void'` (no return bytes at all) and for any
+ * returnKind this generator does not (yet) know how to encode
+ * helper-side -- `'pointer'`/`'float'` have no current production use and
+ * are refused at generation time (see `assertDispatchable` below) rather
+ * than silently mis-encoded. */
+function dispatchReturnWidth(method: MethodSignature): number | null {
+  switch (method.returnKind) {
+    case 'void':
+      return 0
+    case 'int32':
+      return 4
+    case 'int64':
+    case 'double':
+      return 8
+    case 'class':
+      // 51-10: CSteamID (the only 'class' shape any manifest declares) is
+      // an 8-byte flat-ABI register return on this side -- see
+      // `dispatchCType`'s doc comment. A structSize other than 8 would mean
+      // some OTHER class shape this generator has never verified against a
+      // real flat export; refused at generation time instead (see
+      // `assertDispatchable`).
+      return method.structSize === 8 ? 8 : null
+    default:
+      return null
+  }
+}
+
+/**
+ * Generation-time refusal (never a silently-wrong dispatch case) for a
+ * dispatch-eligible wire method this generator cannot yet marshal
+ * helper-side: a 'class' return whose structSize isn't 8, a 'pointer'/
+ * 'float' return (no production manifest needs either yet), or an
+ * 'out-value'/'out-buffer' param (deferred -- no production manifest uses
+ * either on a dispatch-eligible method yet; a future plan extending
+ * generateDispatchHeader to support them is expected to replace this
+ * throw, not work around it).
+ */
+function assertDispatchable(
+  manifest: InterfaceManifestV2,
+  method: MethodSignature
+): void {
+  const ctx = `${manifest.interface} slot ${method.slot} (${method.name})`
+
+  if (!method.helperFlat) {
+    throw new Error(
+      `generateDispatchHeader: ${ctx} is a dispatch-eligible wire method with no helperFlat -- every non-fallback wire method must declare the helper-side flat dlsym name it dispatches to (51-10)`
+    )
+  }
+  if (!manifest.helperInterface) {
+    throw new Error(
+      `generateDispatchHeader: ${manifest.interface} has a dispatch-eligible wire method (${method.name}) but no manifest-level helperInterface -- every manifest with at least one dispatch-eligible wire method must declare the Mac dylib accessor it resolves through (51-10)`
+    )
+  }
+  if (method.returnKind !== 'string' && dispatchReturnWidth(method) === null) {
+    throw new Error(
+      `generateDispatchHeader: ${ctx} has returnKind "${method.returnKind}"${
+        method.returnKind === 'class'
+          ? ` with structSize ${method.structSize} (only 8 is supported helper-side)`
+          : ' -- unsupported helper-side return shape'
+      }, never silently mis-encoded (51-10)`
+    )
+  }
+  for (const p of method.params) {
+    const kind: ParamKind = p.kind ?? 'value'
+    if (kind === 'out-value' || kind === 'out-buffer') {
+      throw new Error(
+        `generateDispatchHeader: ${ctx} param "${p.name}" has kind "${kind}" -- out-value/out-buffer dispatch decoding is deferred to a future plan, never silently wrong (51-10)`
+      )
+    }
+  }
+}
+
+/**
+ * Emits ONE dispatch-table case: the identity-only app-scoped-family gate
+ * (T-51-25), the SteamUtils.GetAppID identity-only special case (D-51-04),
+ * the NULL-resolved-pointer guard (T-51-23), the request decode (per
+ * WIRE_LAYOUT_DOC -- 'value' and 'in-string' kinds only, see
+ * `assertDispatchable`), the flat call, and the response encode.
+ */
+function emitDispatchCase(
+  manifest: InterfaceManifestV2,
+  method: MethodSignature
+): string {
+  assertDispatchable(manifest, method)
+
+  const ordinal = manifest.ordinal
+  const slot = method.slot
+  const selfVar = dispatchSelfVarName(manifest)
+  const flatVar = dispatchFlatVarName(manifest, method)
+  const returnType = dispatchCType(method.returns)
+  const isIdentityGatedFamily =
+    manifest.family === 'SteamUserStats' ||
+    manifest.family === 'SteamRemoteStorage'
+  const isAppIdReport =
+    manifest.family === 'SteamUtils' && method.name === 'GetAppID'
+
+  const lines: string[] = []
+  lines.push(
+    `    case (((uint32_t)${ordinal}) << 16 | ${slot}u): { // ${manifest.interface}.${method.name}`
+  )
+
+  if (isIdentityGatedFamily) {
+    lines.push(
+      `      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: ${manifest.family} is app-scoped -- refused in identity-only mode`
+    )
+  }
+  if (isAppIdReport) {
+    lines.push(
+      `      if (g_bd_identity_only) { // D-51-04: identity-only reports the launching game's real AppID, never 480`
+    )
+    lines.push(`        uint32_t v = g_bd_report_appid;`)
+    lines.push(`        if (respCap < 4) { *respLen = 0; return 1; }`)
+    lines.push(`        memcpy(resp, &v, 4); *respLen = 4; return 0;`)
+    lines.push(`      }`)
+  }
+
+  lines.push(
+    `      if (${flatVar} == NULL || ${selfVar} == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called`
+  )
+
+  // --- request decode (value / in-string only -- assertDispatchable above
+  // refuses out-value/out-buffer) ---
+  const decls: string[] = []
+  const callArgs: string[] = [selfVar]
+  let offsetExpr = '0u'
+
+  for (const p of method.params) {
+    const kind = p.kind ?? 'value'
+    const varName = `arg_${p.name}`
+    if (kind === 'in-string') {
+      const bufName = `${flatVar}_${p.name}_buf`
+      // The decoded length is kept in its own named local (`${varName}_len`)
+      // -- never recomputed via strlen() on the copied buffer afterwards,
+      // since an embedded NUL byte inside a legitimately-sent string would
+      // make strlen() report a SHORTER length than what was actually
+      // decoded/copied, under-advancing every subsequent param's offset.
+      decls.push(
+        `      static char ${bufName}[${WIRE_IN_STRING_MAX_BYTES} + 1];`,
+        `      const char *${varName} = NULL;`,
+        `      uint32_t ${varName}_len = 0;`,
+        `      if (argLen < ${offsetExpr} + 4) { *respLen = 0; return 1; }`,
+        `      memcpy(&${varName}_len, arg + ${offsetExpr}, 4);`,
+        `      if (${varName}_len != 0xFFFFFFFFu) {`,
+        `        if (${varName}_len > ${WIRE_IN_STRING_MAX_BYTES} || argLen < ${offsetExpr} + 4 + ${varName}_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24`,
+        `        memcpy(${bufName}, arg + ${offsetExpr} + 4, ${varName}_len);`,
+        `        ${bufName}[${varName}_len] = '\\0';`,
+        `        ${varName} = ${bufName};`,
+        `      } else {`,
+        `        ${varName}_len = 0;`,
+        `      }`
+      )
+      callArgs.push(varName)
+      offsetExpr = `(${offsetExpr} + 4 + ${varName}_len)`
+    } else {
+      const width = paramWidth(p.type)
+      const ct = dispatchCType(p.type)
+      decls.push(
+        `      if (argLen < ${offsetExpr} + ${width}) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23`,
+        `      ${ct} ${varName}; memcpy(&${varName}, arg + ${offsetExpr}, ${width});`
+      )
+      callArgs.push(varName)
+      offsetExpr = `(${offsetExpr} + ${width})`
+    }
+  }
+  lines.push(...decls)
+
+  // --- call + response encode ---
+  const callExpr = `${flatVar}(${callArgs.join(', ')})`
+  if (method.returnKind === 'void') {
+    lines.push(`      ${callExpr};`, `      *respLen = 0; return 0;`)
+  } else if (method.returnKind === 'string') {
+    lines.push(
+      `      const char *result = ${callExpr};`,
+      `      if (result == NULL) { *respLen = 0; return 1; }`,
+      `      uint32_t strLen = (uint32_t)strlen(result);`,
+      `      if (strLen > ${DISPATCH_STRING_RETURN_MAX_BYTES}) strLen = ${DISPATCH_STRING_RETURN_MAX_BYTES};`,
+      `      if (respCap < 4 + strLen) { *respLen = 0; return 1; }`,
+      `      memcpy(resp, &strLen, 4);`,
+      `      memcpy(resp + 4, result, strLen);`,
+      `      *respLen = 4 + strLen;`,
+      `      return 0;`
+    )
+  } else {
+    const width = dispatchReturnWidth(method)
+    lines.push(
+      `      ${returnType} __ret = ${callExpr};`,
+      `      if (respCap < ${width}) { *respLen = 0; return 1; }`,
+      `      memcpy(resp, &__ret, ${width});`,
+      `      *respLen = ${width};`,
+      `      return 0;`
+    )
+  }
+
+  lines.push(`    }`)
+  return lines.join('\n')
+}
+
+/**
+ * 51-10: generates `native/steam-bridge/generated/bridge_dispatch.h` --
+ * the helper's half of the SAME wire this file's `generateShimC` already
+ * generates the shim's half of. `main()` writes this alongside
+ * `steam_api_shim.c`/`steam_api.def`, from the SAME loaded manifest set.
+ *
+ * Only manifests/methods with `isWireDispatchMethod` true are considered --
+ * every one of them MUST declare `helperFlat` (method) and `helperInterface`
+ * (manifest), enforced by `assertDispatchable` (never a silent shim/helper
+ * drift: a wire method the shim marshals that the helper cannot serve is a
+ * generation-time error, not a runtime STATUS_ERR surprise).
+ */
+export function generateDispatchHeader(
+  manifests: InterfaceManifestV2[]
+): string {
+  const sortedManifests = [...manifests].sort((a, b) => a.ordinal - b.ordinal)
+  const dispatchManifests = sortedManifests.filter((m) =>
+    m.methods.some((method) => isWireDispatchMethod(m, method))
+  )
+
+  // Validate every dispatch-eligible method up front (clear, grouped error
+  // reporting -- never a half-generated header on the first bad method).
+  for (const manifest of dispatchManifests) {
+    for (const method of manifest.methods) {
+      if (isWireDispatchMethod(manifest, method)) {
+        assertDispatchable(manifest, method)
+      }
+    }
+  }
+
+  const accessorTypedefs = `typedef void *(*BDAccessorFn_t)(void);\n`
+
+  const selfDecls = dispatchManifests
+    .map((m) => {
+      const ordinalDefine = `#define BD_ORDINAL_${m.interface} ${m.ordinal}`
+      return (
+        `${ordinalDefine}\n` +
+        `static BDAccessorFn_t ${dispatchAccessorVarName(m)};\n` +
+        `static void *${dispatchSelfVarName(m)};\n`
+      )
+    })
+    .join('')
+
+  const flatTypedefsAndDecls = dispatchManifests
+    .map((m) => {
+      const wireMethods = [...m.methods]
+        .filter((method) => isWireDispatchMethod(m, method))
+        .sort((a, b) => a.slot - b.slot)
+      return wireMethods
+        .map((method) => {
+          const typedefName = `BDFlatFn_${m.interface}_${method.name}_t`
+          const realParams = method.params
+            .map((p) => dispatchCType(p.type))
+            .join(', ')
+          const paramList = ['void *', realParams].filter(Boolean).join(', ')
+          const slotDefine = `#define BD_SLOT_${m.interface}_${method.name} ${method.slot}`
+          return (
+            `${slotDefine}\n` +
+            `typedef ${dispatchCType(method.returns)} (*${typedefName})(${paramList});\n` +
+            `static ${typedefName} ${dispatchFlatVarName(m, method)};\n`
+          )
+        })
+        .join('')
+    })
+    .join('')
+
+  const initBody = dispatchManifests
+    .map((m) => {
+      const accessorVar = dispatchAccessorVarName(m)
+      const selfVar = dispatchSelfVarName(m)
+      const accessorResolve =
+        `  ${accessorVar} = (BDAccessorFn_t)dlsym(dylibHandle, "${m.helperInterface}");\n` +
+        `  ${selfVar} = ${accessorVar} ? ${accessorVar}() : NULL;\n`
+      const wireMethods = [...m.methods]
+        .filter((method) => isWireDispatchMethod(m, method))
+        .sort((a, b) => a.slot - b.slot)
+      const flatResolves = wireMethods
+        .map((method) => {
+          const typedefName = `BDFlatFn_${m.interface}_${method.name}_t`
+          return `  ${dispatchFlatVarName(m, method)} = (${typedefName})dlsym(dylibHandle, "${method.helperFlat}");\n`
+        })
+        .join('')
+      return accessorResolve + flatResolves
+    })
+    .join('')
+
+  const dispatchCases = dispatchManifests
+    .map((m) => {
+      const wireMethods = [...m.methods]
+        .filter((method) => isWireDispatchMethod(m, method))
+        .sort((a, b) => a.slot - b.slot)
+      return wireMethods.map((method) => emitDispatchCase(m, method)).join('\n')
+    })
+    .join('\n')
+
+  return (
+    `/**\n` +
+    ` * GENERATED FILE -- DO NOT EDIT BY HAND.\n` +
+    ` * Produced by meta/gen_vtables.ts (\`pnpm gen-vtables\`), 51-10 -- the\n` +
+    ` * helper-side (native arm64, macOS) half of the SAME wire\n` +
+    ` * native/steam-bridge/generated/steam_api_shim.c marshals the shim side\n` +
+    ` * of. #include'd from native/steam-bridge/helper/bridge_helper.c.\n` +
+    ` *\n` +
+    ` * Interfaces covered: ${dispatchManifests.map((m) => m.interface).join(', ')}.\n` +
+    ` */\n` +
+    `#ifndef GAMELIB_BRIDGE_DISPATCH_H\n` +
+    `#define GAMELIB_BRIDGE_DISPATCH_H\n\n` +
+    `#include <dlfcn.h>\n` +
+    `#include <stdint.h>\n` +
+    `#include <string.h>\n\n` +
+    `/*\n${WIRE_LAYOUT_DOC}*/\n` +
+    `#define BD_WIRE_IN_STRING_MAX_BYTES ${WIRE_IN_STRING_MAX_BYTES}\n\n` +
+    `// Digest of the SAME sorted (interface, ordinal, slot, layout) wire-method\n` +
+    `// tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift\n` +
+    `// between the two means the shim and this dispatch table disagree about\n` +
+    `// what is on the wire.\n` +
+    `#define BRIDGE_DISPATCH_TABLE_HASH "${computeWireTableHash(manifests)}"\n\n` +
+    `// Response scratch -- bridge_dispatch() never writes past respCap, which\n` +
+    `// the caller (bridge_helper.c) sizes to this constant.\n` +
+    `#define BRIDGE_DISPATCH_RESP_SCRATCH_BYTES ${BRIDGE_DISPATCH_RESP_SCRATCH_BYTES}\n\n` +
+    `${accessorTypedefs}\n` +
+    `${selfDecls}\n` +
+    `${flatTypedefsAndDecls}\n` +
+    `// D-51-04: identity-only mode -- set once by bridge_helper.c's argv\n` +
+    `// parsing (--identity-only/--report-appid), read by every dispatch case\n` +
+    `// above that gates an app-scoped family or special-cases SteamUtils\n` +
+    `// GetAppID.\n` +
+    `static int g_bd_identity_only = 0;\n` +
+    `static uint32_t g_bd_report_appid = 0;\n\n` +
+    `void bridge_dispatch_set_identity_only(int on, uint32_t reportAppId) {\n` +
+    `  g_bd_identity_only = on ? 1 : 0;\n` +
+    `  g_bd_report_appid = reportAppId;\n` +
+    `}\n\n` +
+    `// NULL-tolerant: a dlsym failure here leaves the affected self/flat\n` +
+    `// pointer NULL, and every dispatch case above checks for NULL before\n` +
+    `// calling through (T-51-23) -- never fatal to the whole helper.\n` +
+    `int bridge_dispatch_init(void *dylibHandle) {\n` +
+    `  if (!dylibHandle) return 0;\n` +
+    `${initBody}` +
+    `  return 1;\n` +
+    `}\n\n` +
+    `uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uint32_t argLen,\n` +
+    `                         uint8_t *resp, uint32_t respCap, uint32_t *respLen) {\n` +
+    `  (void)arg; (void)argLen;\n` +
+    `  *respLen = 0;\n` +
+    `  switch (((uint32_t)ordinal << 16) | (uint32_t)slot) {\n` +
+    `${dispatchCases}\n` +
+    `    default:\n` +
+    `      return 1; // T-51-23: unknown (ordinal, slot) pair -- never read\n` +
+    `  }\n` +
+    `}\n\n` +
+    `#endif /* GAMELIB_BRIDGE_DISPATCH_H */\n`
+  )
+}
+
 /**
  * `arches`-guarded row open/close for a single manifest -- `#if
  * defined(__i386__)` for an x86-only manifest, `#if defined(__x86_64__)`
@@ -1454,9 +1949,11 @@ export function main(): void {
 
   const shimC = generateShimC(manifests)
   const defFile = generateDefFile(manifests)
+  const dispatchHeader = generateDispatchHeader(manifests)
 
   writeFileSync(join(OUT_DIR, 'steam_api_shim.c'), shimC)
   writeFileSync(join(OUT_DIR, 'steam_api.def'), defFile)
+  writeFileSync(join(OUT_DIR, 'bridge_dispatch.h'), dispatchHeader)
 
   const totalSlots = manifests.reduce((sum, m) => sum + m.methods.length, 0)
   console.log(

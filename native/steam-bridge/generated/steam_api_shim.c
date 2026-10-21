@@ -82,6 +82,15 @@ Response blob (per method):
 #define WIRE_IN_STRING_MAX_BYTES 4096
 #define WIRE_OUT_BUFFER_MAX_BYTES 4096
 
+// 51-10: digest of the sorted (interface, ordinal, slot, layout) wire-method
+// tuples this shim marshals -- computeWireTableHash(manifests), the SAME
+// function 51-10's helper-side generateDispatchHeader() calls against the
+// IDENTICAL manifest set. A reader (or a pin test) can diff this against
+// BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
+// shim and the helper's dispatch table drifting apart -- never a silent
+// mismatch between the two generated artifacts.
+#define BRIDGE_SHIM_TABLE_HASH "33b383832d84"
+
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
 // (bridgeConfig.ts's `writeBridgeConfig`) writes one such line per family

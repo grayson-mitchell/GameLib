@@ -7,6 +7,7 @@
   "mode": "wire",
   "complete": false,
   "flatAccessor": "SteamAPI_SteamUser_v023",
+  "helperInterface": "SteamAPI_SteamUser_v023",
   "source": {
     "kind": "hand-verified",
     "ref": "Proton proton_9.0 lsteamclient/winISteamUser.c (SteamUser016_GetHSteamUser/BLoggedOn/GetSteamID thunk signatures, cross-referenced against SteamUser023's own slot order)",
@@ -20,7 +21,8 @@
       "returns": "HSteamUser",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "helperFlat": "SteamAPI_ISteamUser_GetHSteamUser"
     },
     {
       "slot": 1,
@@ -28,7 +30,8 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "helperFlat": "SteamAPI_ISteamUser_BLoggedOn"
     },
     {
       "slot": 2,
@@ -37,7 +40,8 @@
       "returnKind": "class",
       "structSize": 8,
       "stackBytes": 4,
-      "params": []
+      "params": [],
+      "helperFlat": "SteamAPI_ISteamUser_GetSteamID"
     }
   ]
 }

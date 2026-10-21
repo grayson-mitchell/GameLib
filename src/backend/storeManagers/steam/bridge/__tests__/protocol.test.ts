@@ -1,3 +1,6 @@
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+
 import {
   CONTROL_ORDINAL,
   CONTROL_SLOT,
@@ -13,6 +16,28 @@ import {
   encodeRequest,
   encodeResponse
 } from '../protocol'
+
+// 51-10: meta/sdk/*.manifest.json is read directly (readFileSync/readdirSync
+// only -- no cross-boundary TS import, meta/ is outside src/'s tsconfig
+// `include`) so this test can assert ordinal uniqueness against the REAL
+// committed manifests, the same files meta/gen_vtables.ts's own
+// validateManifest() already walks at generation time.
+const SDK_DIR = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'meta',
+  'sdk'
+)
+
+interface ManifestForOrdinalCheck {
+  interface: string
+  ordinal: number
+}
 
 describe('protocol -- request round-trip', () => {
   it('recovers request_id/ordinal/slot/argBlob byte-for-byte', () => {
@@ -187,5 +212,42 @@ describe('protocol -- CONTROL HEALTH/WHOAMI round-trip (review finding #7)', () 
     expect(healthResponse.status).toBe(STATUS_OK)
     expect(whoamiNotInitedResponse.status).toBe(STATUS_ERR)
     expect(whoamiNotInitedResponse.status).not.toBe(healthResponse.status)
+  })
+})
+
+// 51-10 (Task 1 must_haves truth): "Ordinals are assigned once, in the
+// manifests; a pin test fails on any duplicate or reserved ordinal and on
+// drift between the shim's and the helper's tables." This describe block is
+// the ordinal half of that pin -- meta/__tests__/gen_vtables.test.ts's
+// computeWireTableHash equality tests are the drift half.
+describe('meta/sdk manifest ordinals (51-10 pin -- every ordinal unique, in-range, never CONTROL)', () => {
+  const manifestFiles = readdirSync(SDK_DIR).filter((f) =>
+    f.endsWith('.manifest.json')
+  )
+  const manifests: ManifestForOrdinalCheck[] = manifestFiles.map((f) =>
+    JSON.parse(readFileSync(join(SDK_DIR, f), 'utf-8'))
+  )
+
+  it('at least one manifest is present (the pin is vacuous otherwise)', () => {
+    expect(manifests.length).toBeGreaterThan(0)
+  })
+
+  it('every manifest ordinal is unique', () => {
+    const ordinals = manifests.map((m) => m.ordinal)
+    const unique = new Set(ordinals)
+    expect(unique.size).toBe(ordinals.length)
+  })
+
+  it('every manifest ordinal falls within 1..0xFFFE', () => {
+    for (const m of manifests) {
+      expect(m.ordinal).toBeGreaterThanOrEqual(1)
+      expect(m.ordinal).toBeLessThanOrEqual(0xfffe)
+    }
+  })
+
+  it('no manifest ordinal is the reserved CONTROL_ORDINAL', () => {
+    for (const m of manifests) {
+      expect(m.ordinal).not.toBe(CONTROL_ORDINAL)
+    }
   })
 })

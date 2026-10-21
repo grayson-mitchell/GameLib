@@ -7,6 +7,7 @@
   "mode": "wire",
   "complete": false,
   "flatAccessor": "SteamAPI_SteamFriends_v018",
+  "helperInterface": "SteamAPI_SteamFriends_v018",
   "source": {
     "kind": "hand-verified",
     "ref": "Proton proton_9.0 lsteamclient/winISteamFriends.c (GetPersonaName thunk signature)",
@@ -20,7 +21,8 @@
       "returns": "const char*",
       "returnKind": "string",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "helperFlat": "SteamAPI_ISteamFriends_GetPersonaName"
     }
   ]
 }

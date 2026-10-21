@@ -4,7 +4,9 @@ import { join } from 'path'
 import {
   bareAccessorName,
   computeRetN,
+  computeWireTableHash,
   generateDefFile,
+  generateDispatchHeader,
   generateShimC,
   isSretReturn,
   isStringReturn,
@@ -797,6 +799,375 @@ describe('gen_vtables', () => {
           !/_TESTONLY method/.test(e)
       )
       expect(task3WireKindErrors).toEqual([])
+    })
+  })
+
+  // 51-10: helper-side dispatch table generation. Both pinned manifests
+  // (meta/sdk/isteamuser.manifest.json, isteamfriends.manifest.json) now
+  // declare helperInterface/helperFlat for every method -- these tests
+  // exercise generateDispatchHeader() against the SAME real manifests the
+  // shim is generated from.
+  describe('computeWireTableHash (51-10)', () => {
+    it('is a 12-character lowercase hex digest', () => {
+      const hash = computeWireTableHash([isteamuser, isteamfriends])
+      expect(hash).toMatch(/^[0-9a-f]{12}$/)
+    })
+
+    it('is independent of manifest array order', () => {
+      const a = computeWireTableHash([isteamuser, isteamfriends])
+      const b = computeWireTableHash([isteamfriends, isteamuser])
+      expect(a).toBe(b)
+    })
+
+    it('changes when a wire method layout changes', () => {
+      const original = computeWireTableHash([isteamuser])
+      const mutated: InterfaceManifestV2 = {
+        ...isteamuser,
+        methods: isteamuser.methods.map((m) =>
+          m.name === 'BLoggedOn'
+            ? {
+                ...m,
+                params: [{ name: 'extra', type: 'int32' }],
+                stackBytes: 4
+              }
+            : m
+        )
+      }
+      expect(computeWireTableHash([mutated])).not.toBe(original)
+    })
+
+    it('excludes helperFallback methods (they never reach the helper, 51-06 Task 3)', () => {
+      const withFallback: InterfaceManifestV2 = {
+        ...isteamuser,
+        methods: [
+          ...isteamuser.methods,
+          {
+            slot: 3,
+            name: 'FallbackOnly_TESTONLY',
+            returns: 'bool',
+            returnKind: 'int32',
+            stackBytes: 0,
+            params: [],
+            helperFallback: true
+          }
+        ]
+      }
+      expect(computeWireTableHash([withFallback])).toBe(
+        computeWireTableHash([isteamuser])
+      )
+    })
+
+    it('BRIDGE_SHIM_TABLE_HASH (generateShimC) and BRIDGE_DISPATCH_TABLE_HASH (generateDispatchHeader) are the same digest for the real pinned manifests', () => {
+      const expected = computeWireTableHash([isteamuser, isteamfriends])
+      const shim = generateShimC([isteamuser, isteamfriends])
+      const dispatch = generateDispatchHeader([isteamuser, isteamfriends])
+
+      const shimHash = shim.match(/BRIDGE_SHIM_TABLE_HASH "([0-9a-f]+)"/)
+      const dispatchHash = dispatch.match(
+        /BRIDGE_DISPATCH_TABLE_HASH "([0-9a-f]+)"/
+      )
+      expect(shimHash).not.toBeNull()
+      expect(dispatchHash).not.toBeNull()
+      expect(shimHash![1]).toBe(expected)
+      expect(dispatchHash![1]).toBe(expected)
+    })
+  })
+
+  describe('generateDispatchHeader (51-10)', () => {
+    const dispatch = generateDispatchHeader([isteamuser, isteamfriends])
+
+    it('emits bridge_dispatch_init, bridge_dispatch, bridge_dispatch_set_identity_only and the table hash', () => {
+      expect(dispatch).toContain('int bridge_dispatch_init(void *dylibHandle)')
+      expect(dispatch).toMatch(/uint8_t bridge_dispatch\(/)
+      expect(dispatch).toContain(
+        'void bridge_dispatch_set_identity_only(int on, uint32_t reportAppId)'
+      )
+      expect(dispatch).toMatch(/#define BRIDGE_DISPATCH_TABLE_HASH "[0-9a-f]+"/)
+    })
+
+    it('emits a typed void*-self-first typedef + NULL-tolerant dlsym for each of the four production wire methods', () => {
+      for (const flat of [
+        'SteamAPI_ISteamUser_GetHSteamUser',
+        'SteamAPI_ISteamUser_BLoggedOn',
+        'SteamAPI_ISteamUser_GetSteamID',
+        'SteamAPI_ISteamFriends_GetPersonaName'
+      ]) {
+        expect(dispatch).toContain(`dlsym(dylibHandle, "${flat}")`)
+      }
+      expect(dispatch).toContain(
+        'typedef uint64_t (*BDFlatFn_SteamUser023_GetSteamID_t)(void *);'
+      )
+      expect(dispatch).toContain(
+        'typedef const char * (*BDFlatFn_SteamFriends018_GetPersonaName_t)(void *);'
+      )
+    })
+
+    it('resolves each distinct helperInterface accessor once and calls it to get the self pointer', () => {
+      expect(dispatch).toContain(
+        'dlsym(dylibHandle, "SteamAPI_SteamUser_v023")'
+      )
+      expect(dispatch).toContain(
+        'dlsym(dylibHandle, "SteamAPI_SteamFriends_v018")'
+      )
+      expect(dispatch).toContain(
+        'g_bd_self_steamuser023 = g_bd_accessor_steamuser023 ? g_bd_accessor_steamuser023() : NULL;'
+      )
+    })
+
+    it('GetSteamID decodes/encodes 8 bytes', () => {
+      const caseBody = dispatch.match(
+        /SteamUser023\.GetSteamID\n([\s\S]*?)\n {4}\}/
+      )
+      expect(caseBody).not.toBeNull()
+      expect(caseBody![1]).toContain('memcpy(resp, &__ret, 8);')
+    })
+
+    it('BLoggedOn and GetHSteamUser decode/encode a 4-byte int', () => {
+      const loggedOn = dispatch.match(
+        /SteamUser023\.BLoggedOn\n([\s\S]*?)\n {4}\}/
+      )
+      const hSteamUser = dispatch.match(
+        /SteamUser023\.GetHSteamUser\n([\s\S]*?)\n {4}\}/
+      )
+      expect(loggedOn![1]).toContain('memcpy(resp, &__ret, 4);')
+      expect(hSteamUser![1]).toContain('memcpy(resp, &__ret, 4);')
+    })
+
+    it('GetPersonaName encodes [u32 len][bytes] capped at 255', () => {
+      const caseBody = dispatch.match(
+        /SteamFriends018\.GetPersonaName\n([\s\S]*?)\n {4}\}/
+      )
+      expect(caseBody).not.toBeNull()
+      const body = caseBody![1]
+      expect(body).toContain('if (strLen > 255) strLen = 255;')
+      expect(body).toContain('memcpy(resp, &strLen, 4);')
+      expect(body).toContain('memcpy(resp + 4, result, strLen);')
+    })
+
+    it('an unknown (ordinal, slot) pair falls through the default case and returns STATUS_ERR (1)', () => {
+      expect(dispatch).toMatch(
+        /default:\s*\n\s*return 1; \/\/ T-51-23: unknown \(ordinal, slot\) pair -- never read/
+      )
+    })
+
+    it('a NULL-resolved flat or self pointer is checked BEFORE any call', () => {
+      const caseBody = dispatch.match(
+        /SteamUser023\.GetSteamID\n([\s\S]*?)\n {4}\}/
+      )!
+      const body = caseBody[1]
+      const nullCheckIdx = body.indexOf('== NULL')
+      const callIdx = body.indexOf('g_bd_flat_SteamUser023_GetSteamID(')
+      expect(nullCheckIdx).toBeGreaterThanOrEqual(0)
+      expect(callIdx).toBeGreaterThan(nullCheckIdx)
+    })
+
+    describe('identity-only gating (D-51-04, T-51-25)', () => {
+      const userStatsManifest: InterfaceManifestV2 = {
+        schemaVersion: 2,
+        interface: 'SteamUserStats013',
+        family: 'SteamUserStats',
+        ordinal: 50,
+        arches: ['x86'],
+        mode: 'wire',
+        complete: false,
+        helperInterface: 'SteamAPI_SteamUserStats_v013',
+        source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+        methods: [
+          {
+            slot: 0,
+            name: 'GetStatInt32Test_TESTONLY',
+            returns: 'bool',
+            returnKind: 'int32',
+            stackBytes: 0,
+            params: [],
+            helperFlat: 'SteamAPI_ISteamUserStats_GetStatInt32Test_TESTONLY'
+          }
+        ]
+      }
+
+      it('an app-scoped family (SteamUserStats) answers STATUS_ERR when g_bd_identity_only is set, before touching the flat pointer', () => {
+        const c = generateDispatchHeader([userStatsManifest])
+        const caseBody = c.match(
+          /SteamUserStats013\.GetStatInt32Test_TESTONLY\n([\s\S]*?)\n {4}\}/
+        )
+        expect(caseBody).not.toBeNull()
+        const body = caseBody![1]
+        const gateIdx = body.indexOf('if (g_bd_identity_only)')
+        const nullCheckIdx = body.indexOf('== NULL')
+        expect(gateIdx).toBeGreaterThanOrEqual(0)
+        expect(gateIdx).toBeLessThan(nullCheckIdx)
+        expect(body).toContain('*respLen = 0; return 1;')
+      })
+
+      it('SteamRemoteStorage is gated the same way', () => {
+        const remoteStorageManifest: InterfaceManifestV2 = {
+          ...userStatsManifest,
+          interface: 'SteamRemoteStorage016',
+          family: 'SteamRemoteStorage',
+          ordinal: 51,
+          helperInterface: 'SteamAPI_SteamRemoteStorage_v016',
+          methods: [
+            {
+              ...userStatsManifest.methods[0],
+              name: 'FileExistsTest_TESTONLY',
+              helperFlat: 'SteamAPI_ISteamRemoteStorage_FileExistsTest_TESTONLY'
+            }
+          ]
+        }
+        const c = generateDispatchHeader([remoteStorageManifest])
+        expect(c).toMatch(
+          /if \(g_bd_identity_only\) \{ \*respLen = 0; return 1; \}/
+        )
+      })
+
+      it('SteamUtils GetAppID reports g_bd_report_appid when identity-only, falling through to the real call otherwise', () => {
+        const steamUtilsManifest: InterfaceManifestV2 = {
+          schemaVersion: 2,
+          interface: 'SteamUtils011',
+          family: 'SteamUtils',
+          ordinal: 52,
+          arches: ['x86'],
+          mode: 'wire',
+          complete: false,
+          helperInterface: 'SteamAPI_SteamUtils_v011',
+          source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+          methods: [
+            {
+              slot: 0,
+              name: 'GetAppID',
+              returns: 'uint32',
+              returnKind: 'int32',
+              stackBytes: 0,
+              params: [],
+              helperFlat: 'SteamAPI_ISteamUtils_GetAppID'
+            }
+          ]
+        }
+        const c = generateDispatchHeader([steamUtilsManifest])
+        const caseBody = c.match(/SteamUtils011\.GetAppID\n([\s\S]*?)\n {4}\}/)
+        expect(caseBody).not.toBeNull()
+        const body = caseBody![1]
+        expect(body).toContain('if (g_bd_identity_only) {')
+        expect(body).toContain('uint32_t v = g_bd_report_appid;')
+        expect(body).toContain('memcpy(resp, &v, 4); *respLen = 4; return 0;')
+        // Falls through to the real flat call when NOT identity-only.
+        expect(body).toContain('g_bd_flat_SteamUtils011_GetAppID(')
+      })
+    })
+
+    describe('generation-time refusals (never a silently-wrong dispatch case)', () => {
+      const base: InterfaceManifestV2 = {
+        schemaVersion: 2,
+        interface: 'DispatchCheck001',
+        family: 'DispatchCheck',
+        ordinal: 60,
+        arches: ['x86'],
+        mode: 'wire',
+        complete: true,
+        helperInterface: 'SteamAPI_DispatchCheck_v001',
+        source: { kind: 'synthetic', ref: 'unit test', file: 'n/a' },
+        methods: [
+          {
+            slot: 0,
+            name: 'DoThing_TESTONLY',
+            returns: 'void',
+            returnKind: 'void',
+            stackBytes: 0,
+            params: [],
+            helperFlat: 'SteamAPI_IDispatchCheck_DoThing_TESTONLY'
+          }
+        ]
+      }
+
+      it('throws when a dispatch-eligible wire method has no helperFlat', () => {
+        const bad: InterfaceManifestV2 = {
+          ...base,
+          methods: [{ ...base.methods[0], helperFlat: undefined }]
+        }
+        expect(() => generateDispatchHeader([bad])).toThrow(/helperFlat/)
+      })
+
+      it('throws when the manifest has no helperInterface', () => {
+        const bad: InterfaceManifestV2 = {
+          ...base,
+          helperInterface: undefined
+        }
+        expect(() => generateDispatchHeader([bad])).toThrow(/helperInterface/)
+      })
+
+      it('throws when a dispatch-eligible method declares an out-value param', () => {
+        const bad: InterfaceManifestV2 = {
+          ...base,
+          methods: [
+            {
+              ...base.methods[0],
+              params: [
+                {
+                  name: 'pValue',
+                  type: 'int32*',
+                  kind: 'out-value',
+                  valueType: 'int32'
+                }
+              ]
+            }
+          ]
+        }
+        expect(() => generateDispatchHeader([bad])).toThrow(/out-value/)
+      })
+
+      it('throws when a dispatch-eligible method declares an out-buffer param', () => {
+        const bad: InterfaceManifestV2 = {
+          ...base,
+          methods: [
+            {
+              ...base.methods[0],
+              params: [
+                {
+                  name: 'pchDir',
+                  type: 'char*',
+                  kind: 'out-buffer',
+                  sizeParam: 'cubBuffer'
+                }
+              ]
+            }
+          ]
+        }
+        expect(() => generateDispatchHeader([bad])).toThrow(/out-buffer/)
+      })
+
+      it('throws when a class return has a structSize other than 8', () => {
+        const bad: InterfaceManifestV2 = {
+          ...base,
+          methods: [
+            {
+              ...base.methods[0],
+              name: 'GetSummary_TESTONLY',
+              helperFlat: 'SteamAPI_IDispatchCheck_GetSummary_TESTONLY',
+              returns: 'Summary_t',
+              returnKind: 'class',
+              structSize: 16
+            }
+          ]
+        }
+        expect(() => generateDispatchHeader([bad])).toThrow(/structSize/)
+      })
+
+      it('a stub or fallback method with helperFlat missing is NOT flagged (never dispatch-eligible)', () => {
+        const stubManifest: InterfaceManifestV2 = {
+          ...base,
+          mode: 'stub',
+          methods: [{ ...base.methods[0], helperFlat: undefined }]
+        }
+        expect(() => generateDispatchHeader([stubManifest])).not.toThrow()
+
+        const fallbackManifest: InterfaceManifestV2 = {
+          ...base,
+          methods: [
+            { ...base.methods[0], helperFlat: undefined, helperFallback: true }
+          ]
+        }
+        expect(() => generateDispatchHeader([fallbackManifest])).not.toThrow()
+      })
     })
   })
 })
