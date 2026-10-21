@@ -8,7 +8,7 @@
  * Implements:
  *   - The flat SteamAPI_* exports (acceptance-set superset, R3 finding #9).
  *   - Per-interface __thiscall C++ vtables (spike 006's proven ABI mechanism)
- *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011.
+ *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010.
  *
  * ABI ground truth (24-RESEARCH.md Pattern 2): MSVC __thiscall -- `this` in
  * ECX, callee cleans the stack; ret N = summed non-`this` param widths (+4 for
@@ -3914,6 +3914,1147 @@ static vfn g_steamuserstats_interface_version011_vtbl[43] = {
 struct FakeSTEAMUSERSTATS_INTERFACE_VERSION011 { vfn *vptr; };
 static struct FakeSTEAMUSERSTATS_INTERFACE_VERSION011 g_steamuserstats_interface_version011_instance = { g_steamuserstats_interface_version011_vtbl };
 
+// === STEAMREMOTESTORAGE_INTERFACE_VERSION005 (ordinal 11, family SteamRemoteStorage) ===
+
+// slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileForget(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileDelete(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileShare(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 5: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileExists(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FilePersisted(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileSize(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
+static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileTimestamp(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 10: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 13: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_IsCloudEnabledForAccount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_IsCloudEnabledForApp(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 17: UGCDownload(uint64 hContent) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 18: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 16 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetCachedUGCCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 22: PublishFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 28 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_PublishFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 23: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 24 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 24: UpdatePublishedFile(w_RemoteStorageUpdatePublishedFileRequest_t updatePublishedFileRequest) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UpdatePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8, uint32_t dummy9) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 25: GetPublishedFileDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 26: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 27: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 28: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 29: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 30: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+static vfn g_steamremotestorage_interface_version005_vtbl[31] = {
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileWrite, // slot 0
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileRead, // slot 1
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileForget, // slot 2
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileDelete, // slot 3
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileShare, // slot 4
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SetSyncPlatforms, // slot 5
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FileExists, // slot 6
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_FilePersisted, // slot 7
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileSize, // slot 8
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileTimestamp, // slot 9
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetSyncPlatforms, // slot 10
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileCount, // slot 11
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetFileNameAndSize, // slot 12
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetQuota, // slot 13
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_IsCloudEnabledForAccount, // slot 14
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_IsCloudEnabledForApp, // slot 15
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SetCloudEnabledForApp, // slot 16
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UGCDownload, // slot 17
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetUGCDetails, // slot 18
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UGCRead, // slot 19
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetCachedUGCCount, // slot 20
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetCachedUGCHandle, // slot 21
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_PublishFile, // slot 22
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_PublishWorkshopFile, // slot 23
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UpdatePublishedFile, // slot 24
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_GetPublishedFileDetails, // slot 25
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_DeletePublishedFile, // slot 26
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_EnumerateUserPublishedFiles, // slot 27
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_SubscribePublishedFile, // slot 28
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_EnumerateUserSubscribedFiles, // slot 29
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION005_UnsubscribePublishedFile, // slot 30
+};
+struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION005 { vfn *vptr; };
+static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION005 g_steamremotestorage_interface_version005_instance = { g_steamremotestorage_interface_version005_vtbl };
+
+// === SteamMatchMaking009 (ordinal 12, family SteamMatchmaking) ===
+
+// slot 0: GetFavoriteGameCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamMatchMaking009_GetFavoriteGameCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: GetFavoriteGame(int32 iGame, uint32* pnAppID, uint32* pnIP, uint16_t* pnConnPort, uint16_t* pnQueryPort, uint32* punFlags, uint32* pRTime32LastPlayedOnServer) -> bool | __thiscall ret 28 (STUB)
+static int THISCALL vt_SteamMatchMaking009_GetFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: AddFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer) -> int32 | __thiscall ret 24 (STUB)
+static int32_t THISCALL vt_SteamMatchMaking009_AddFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: RemoveFavoriteGame(uint32 nAppID, uint32 nIP, uint32 nConnPort, uint32 nQueryPort, uint32 unFlags) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamMatchMaking009_RemoveFavoriteGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: RequestLobbyList() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_SteamMatchMaking009_RequestLobbyList(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 5: AddRequestLobbyListStringFilter(const char* pchKeyToMatch, const char* pchValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListStringFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 6: AddRequestLobbyListNumericalFilter(const char* pchKeyToMatch, int32 nValueToMatch, uint32 eComparisonType) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNumericalFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 7: AddRequestLobbyListNearValueFilter(const char* pchKeyToMatch, int32 nValueToBeCloseTo) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListNearValueFilter(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 8: AddRequestLobbyListFilterSlotsAvailable(int32 nSlotsAvailable) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListFilterSlotsAvailable(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 9: AddRequestLobbyListDistanceFilter(uint32 eLobbyDistanceFilter) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListDistanceFilter(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 10: AddRequestLobbyListResultCountFilter(int32 cMaxResults) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListResultCountFilter(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 11: AddRequestLobbyListCompatibleMembersFilter(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamMatchMaking009_AddRequestLobbyListCompatibleMembersFilter(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 12: GetLobbyByIndex(int32 iLobby) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamMatchMaking009_GetLobbyByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 13: CreateLobby(uint32 eLobbyType, int32 cMaxMembers) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamMatchMaking009_CreateLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 14: JoinLobby(CSteamID steamIDLobby) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamMatchMaking009_JoinLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 15: LeaveLobby(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamMatchMaking009_LeaveLobby(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 16: InviteUserToLobby(CSteamID steamIDLobby, CSteamID steamIDInvitee) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamMatchMaking009_InviteUserToLobby(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 17: GetNumLobbyMembers(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamMatchMaking009_GetNumLobbyMembers(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: GetLobbyMemberByIndex(CSteamID steamIDLobby, int32 iMember) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamMatchMaking009_GetLobbyMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 19: GetLobbyData(CSteamID steamIDLobby, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamMatchMaking009_GetLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return "";
+}
+
+// slot 20: SetLobbyData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamMatchMaking009_SetLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: GetLobbyDataCount(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyDataCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: GetLobbyDataByIndex(CSteamID steamIDLobby, int32 iLobbyData, char* pchKey, int32 cchKeyBufferSize, char* pchValue, int32 cchValueBufferSize) -> bool | __thiscall ret 28 (STUB)
+static int THISCALL vt_SteamMatchMaking009_GetLobbyDataByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: DeleteLobbyData(CSteamID steamIDLobby, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamMatchMaking009_DeleteLobbyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 24: GetLobbyMemberData(CSteamID steamIDLobby, CSteamID steamIDUser, const char* pchKey) -> const char* | __thiscall ret 20 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamMatchMaking009_GetLobbyMemberData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return "";
+}
+
+// slot 25: SetLobbyMemberData(CSteamID steamIDLobby, const char* pchKey, const char* pchValue) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamMatchMaking009_SetLobbyMemberData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 26: SendLobbyChatMsg(CSteamID steamIDLobby, const void* pvMsgBody, int32 cubMsgBody) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamMatchMaking009_SendLobbyChatMsg(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: GetLobbyChatEntry(CSteamID steamIDLobby, int32 iChatID, CSteamID* pSteamIDUser, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 28 (STUB)
+static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyChatEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 28: RequestLobbyData(CSteamID steamIDLobby) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamMatchMaking009_RequestLobbyData(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 29: SetLobbyGameServer(CSteamID steamIDLobby, uint32 unGameServerIP, uint32 unGameServerPort, CSteamID steamIDGameServer) -> void | __thiscall ret 24 (STUB)
+static void THISCALL vt_SteamMatchMaking009_SetLobbyGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+}
+
+// slot 30: GetLobbyGameServer(CSteamID steamIDLobby, uint32* punGameServerIP, uint16_t* punGameServerPort, CSteamID* psteamIDGameServer) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamMatchMaking009_GetLobbyGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 31: SetLobbyMemberLimit(CSteamID steamIDLobby, int32 cMaxMembers) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamMatchMaking009_SetLobbyMemberLimit(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 32: GetLobbyMemberLimit(CSteamID steamIDLobby) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamMatchMaking009_GetLobbyMemberLimit(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 33: SetLobbyType(CSteamID steamIDLobby, uint32 eLobbyType) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamMatchMaking009_SetLobbyType(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 34: SetLobbyJoinable(CSteamID steamIDLobby, bool bLobbyJoinable) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamMatchMaking009_SetLobbyJoinable(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: GetLobbyOwner(CSteamID steamIDLobby) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamMatchMaking009_GetLobbyOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 36: SetLobbyOwner(CSteamID steamIDLobby, CSteamID steamIDNewOwner) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamMatchMaking009_SetLobbyOwner(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 37: SetLinkedLobby(CSteamID steamIDLobby, CSteamID steamIDLobbyDependent) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamMatchMaking009_SetLinkedLobby(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steammatchmaking009_vtbl[38] = {
+  (vfn)vt_SteamMatchMaking009_GetFavoriteGameCount, // slot 0
+  (vfn)vt_SteamMatchMaking009_GetFavoriteGame, // slot 1
+  (vfn)vt_SteamMatchMaking009_AddFavoriteGame, // slot 2
+  (vfn)vt_SteamMatchMaking009_RemoveFavoriteGame, // slot 3
+  (vfn)vt_SteamMatchMaking009_RequestLobbyList, // slot 4
+  (vfn)vt_SteamMatchMaking009_AddRequestLobbyListStringFilter, // slot 5
+  (vfn)vt_SteamMatchMaking009_AddRequestLobbyListNumericalFilter, // slot 6
+  (vfn)vt_SteamMatchMaking009_AddRequestLobbyListNearValueFilter, // slot 7
+  (vfn)vt_SteamMatchMaking009_AddRequestLobbyListFilterSlotsAvailable, // slot 8
+  (vfn)vt_SteamMatchMaking009_AddRequestLobbyListDistanceFilter, // slot 9
+  (vfn)vt_SteamMatchMaking009_AddRequestLobbyListResultCountFilter, // slot 10
+  (vfn)vt_SteamMatchMaking009_AddRequestLobbyListCompatibleMembersFilter, // slot 11
+  (vfn)vt_SteamMatchMaking009_GetLobbyByIndex, // slot 12
+  (vfn)vt_SteamMatchMaking009_CreateLobby, // slot 13
+  (vfn)vt_SteamMatchMaking009_JoinLobby, // slot 14
+  (vfn)vt_SteamMatchMaking009_LeaveLobby, // slot 15
+  (vfn)vt_SteamMatchMaking009_InviteUserToLobby, // slot 16
+  (vfn)vt_SteamMatchMaking009_GetNumLobbyMembers, // slot 17
+  (vfn)vt_SteamMatchMaking009_GetLobbyMemberByIndex, // slot 18
+  (vfn)vt_SteamMatchMaking009_GetLobbyData, // slot 19
+  (vfn)vt_SteamMatchMaking009_SetLobbyData, // slot 20
+  (vfn)vt_SteamMatchMaking009_GetLobbyDataCount, // slot 21
+  (vfn)vt_SteamMatchMaking009_GetLobbyDataByIndex, // slot 22
+  (vfn)vt_SteamMatchMaking009_DeleteLobbyData, // slot 23
+  (vfn)vt_SteamMatchMaking009_GetLobbyMemberData, // slot 24
+  (vfn)vt_SteamMatchMaking009_SetLobbyMemberData, // slot 25
+  (vfn)vt_SteamMatchMaking009_SendLobbyChatMsg, // slot 26
+  (vfn)vt_SteamMatchMaking009_GetLobbyChatEntry, // slot 27
+  (vfn)vt_SteamMatchMaking009_RequestLobbyData, // slot 28
+  (vfn)vt_SteamMatchMaking009_SetLobbyGameServer, // slot 29
+  (vfn)vt_SteamMatchMaking009_GetLobbyGameServer, // slot 30
+  (vfn)vt_SteamMatchMaking009_SetLobbyMemberLimit, // slot 31
+  (vfn)vt_SteamMatchMaking009_GetLobbyMemberLimit, // slot 32
+  (vfn)vt_SteamMatchMaking009_SetLobbyType, // slot 33
+  (vfn)vt_SteamMatchMaking009_SetLobbyJoinable, // slot 34
+  (vfn)vt_SteamMatchMaking009_GetLobbyOwner, // slot 35
+  (vfn)vt_SteamMatchMaking009_SetLobbyOwner, // slot 36
+  (vfn)vt_SteamMatchMaking009_SetLinkedLobby, // slot 37
+};
+struct FakeSteamMatchMaking009 { vfn *vptr; };
+static struct FakeSteamMatchMaking009 g_steammatchmaking009_instance = { g_steammatchmaking009_vtbl };
+
+// === SteamMatchMakingServers002 (ordinal 13, family SteamMatchmakingServers) ===
+
+// slot 0: RequestInternetServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
+static void * THISCALL vt_SteamMatchMakingServers002_RequestInternetServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return NULL;
+}
+
+// slot 1: RequestLANServerList(uint32 iApp, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 8 (STUB)
+static void * THISCALL vt_SteamMatchMakingServers002_RequestLANServerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return NULL;
+}
+
+// slot 2: RequestFriendsServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
+static void * THISCALL vt_SteamMatchMakingServers002_RequestFriendsServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return NULL;
+}
+
+// slot 3: RequestFavoritesServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
+static void * THISCALL vt_SteamMatchMakingServers002_RequestFavoritesServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return NULL;
+}
+
+// slot 4: RequestHistoryServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
+static void * THISCALL vt_SteamMatchMakingServers002_RequestHistoryServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return NULL;
+}
+
+// slot 5: RequestSpectatorServerList(uint32 iApp, MatchMakingKeyValuePair_t** ppchFilters, uint32 nFilters, w_ISteamMatchmakingServerListResponse_106* pRequestServersResponse) -> void* | __thiscall ret 16 (STUB)
+static void * THISCALL vt_SteamMatchMakingServers002_RequestSpectatorServerList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return NULL;
+}
+
+// slot 6: ReleaseRequest(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers002_ReleaseRequest(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 7: GetServerDetails(void* hRequest, int32 iServer) -> gameserveritem_t_105* | __thiscall ret 8 (STUB)
+static void * THISCALL vt_SteamMatchMakingServers002_GetServerDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return NULL;
+}
+
+// slot 8: CancelQuery(void* hRequest) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers002_CancelQuery(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 9: RefreshQuery(void* hRequest) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers002_RefreshQuery(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 10: IsRefreshing(void* hRequest) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamMatchMakingServers002_IsRefreshing(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: GetServerCount(void* hRequest) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers002_GetServerCount(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: RefreshServer(void* hRequest, int32 iServer) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamMatchMakingServers002_RefreshServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 13: PingServer(uint32 unIP, uint32 usPort, w_ISteamMatchmakingPingResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers002_PingServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: PlayerDetails(uint32 unIP, uint32 usPort, w_ISteamMatchmakingPlayersResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers002_PlayerDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: ServerRules(uint32 unIP, uint32 usPort, w_ISteamMatchmakingRulesResponse* pRequestServersResponse) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamMatchMakingServers002_ServerRules(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: CancelServerQuery(int32 hServerQuery) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamMatchMakingServers002_CancelServerQuery(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+static vfn g_steammatchmakingservers002_vtbl[17] = {
+  (vfn)vt_SteamMatchMakingServers002_RequestInternetServerList, // slot 0
+  (vfn)vt_SteamMatchMakingServers002_RequestLANServerList, // slot 1
+  (vfn)vt_SteamMatchMakingServers002_RequestFriendsServerList, // slot 2
+  (vfn)vt_SteamMatchMakingServers002_RequestFavoritesServerList, // slot 3
+  (vfn)vt_SteamMatchMakingServers002_RequestHistoryServerList, // slot 4
+  (vfn)vt_SteamMatchMakingServers002_RequestSpectatorServerList, // slot 5
+  (vfn)vt_SteamMatchMakingServers002_ReleaseRequest, // slot 6
+  (vfn)vt_SteamMatchMakingServers002_GetServerDetails, // slot 7
+  (vfn)vt_SteamMatchMakingServers002_CancelQuery, // slot 8
+  (vfn)vt_SteamMatchMakingServers002_RefreshQuery, // slot 9
+  (vfn)vt_SteamMatchMakingServers002_IsRefreshing, // slot 10
+  (vfn)vt_SteamMatchMakingServers002_GetServerCount, // slot 11
+  (vfn)vt_SteamMatchMakingServers002_RefreshServer, // slot 12
+  (vfn)vt_SteamMatchMakingServers002_PingServer, // slot 13
+  (vfn)vt_SteamMatchMakingServers002_PlayerDetails, // slot 14
+  (vfn)vt_SteamMatchMakingServers002_ServerRules, // slot 15
+  (vfn)vt_SteamMatchMakingServers002_CancelServerQuery, // slot 16
+};
+struct FakeSteamMatchMakingServers002 { vfn *vptr; };
+static struct FakeSteamMatchMakingServers002 g_steammatchmakingservers002_instance = { g_steammatchmakingservers002_vtbl };
+
+// === SteamNetworking005 (ordinal 14, family SteamNetworking) ===
+
+// slot 0: SendP2PPacket(CSteamID steamIDRemote, const void* pubData, uint32 cubData, uint32 eP2PSendType, int32 nChannel) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_SteamNetworking005_SendP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: IsP2PPacketAvailable(uint32* pcubMsgSize, int32 nChannel) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworking005_IsP2PPacketAvailable(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: ReadP2PPacket(void* pubDest, uint32 cubDest, uint32* pcubMsgSize, CSteamID* psteamIDRemote, int32 nChannel) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamNetworking005_ReadP2PPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: AcceptP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworking005_AcceptP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: CloseP2PSessionWithUser(CSteamID steamIDRemote) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworking005_CloseP2PSessionWithUser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 5: CloseP2PChannelWithUser(CSteamID steamIDRemote, int32 nChannel) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworking005_CloseP2PChannelWithUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: GetP2PSessionState(CSteamID steamIDRemote, P2PSessionState_t* pConnectionState) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworking005_GetP2PSessionState(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: AllowP2PPacketRelay(bool bAllow) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamNetworking005_AllowP2PPacketRelay(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: CreateListenSocket(int32 nVirtualP2PPort, uint32 nIP, uint32 nPort, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamNetworking005_CreateListenSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: CreateP2PConnectionSocket(CSteamID steamIDTarget, int32 nVirtualPort, int32 nTimeoutSec, bool bAllowUseOfPacketRelay) -> uint32 | __thiscall ret 20 (STUB)
+static uint32_t THISCALL vt_SteamNetworking005_CreateP2PConnectionSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: CreateConnectionSocket(uint32 nIP, uint32 nPort, int32 nTimeoutSec) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamNetworking005_CreateConnectionSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: DestroySocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworking005_DestroySocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: DestroyListenSocket(uint32 hSocket, bool bNotifyRemoteEnd) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworking005_DestroyListenSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: SendDataOnSocket(uint32 hSocket, void* pubData, uint32 cubData, bool bReliable) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamNetworking005_SendDataOnSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: IsDataAvailableOnSocket(uint32 hSocket, uint32* pcubMsgSize) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamNetworking005_IsDataAvailableOnSocket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: RetrieveDataFromSocket(uint32 hSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamNetworking005_RetrieveDataFromSocket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: IsDataAvailable(uint32 hListenSocket, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworking005_IsDataAvailable(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 17: RetrieveData(uint32 hListenSocket, void* pubDest, uint32 cubDest, uint32* pcubMsgSize, uint32* phSocket) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamNetworking005_RetrieveData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: GetSocketInfo(uint32 hSocket, CSteamID* pSteamIDRemote, int32* peSocketStatus, uint32* punIPRemote, uint16_t* punPortRemote) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamNetworking005_GetSocketInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: GetListenSocketInfo(uint32 hListenSocket, uint32* pnIP, uint16_t* pnPort) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamNetworking005_GetListenSocketInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: GetSocketConnectionType(uint32 hSocket) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamNetworking005_GetSocketConnectionType(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: GetMaxPacketSize(uint32 hSocket) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamNetworking005_GetMaxPacketSize(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamnetworking005_vtbl[22] = {
+  (vfn)vt_SteamNetworking005_SendP2PPacket, // slot 0
+  (vfn)vt_SteamNetworking005_IsP2PPacketAvailable, // slot 1
+  (vfn)vt_SteamNetworking005_ReadP2PPacket, // slot 2
+  (vfn)vt_SteamNetworking005_AcceptP2PSessionWithUser, // slot 3
+  (vfn)vt_SteamNetworking005_CloseP2PSessionWithUser, // slot 4
+  (vfn)vt_SteamNetworking005_CloseP2PChannelWithUser, // slot 5
+  (vfn)vt_SteamNetworking005_GetP2PSessionState, // slot 6
+  (vfn)vt_SteamNetworking005_AllowP2PPacketRelay, // slot 7
+  (vfn)vt_SteamNetworking005_CreateListenSocket, // slot 8
+  (vfn)vt_SteamNetworking005_CreateP2PConnectionSocket, // slot 9
+  (vfn)vt_SteamNetworking005_CreateConnectionSocket, // slot 10
+  (vfn)vt_SteamNetworking005_DestroySocket, // slot 11
+  (vfn)vt_SteamNetworking005_DestroyListenSocket, // slot 12
+  (vfn)vt_SteamNetworking005_SendDataOnSocket, // slot 13
+  (vfn)vt_SteamNetworking005_IsDataAvailableOnSocket, // slot 14
+  (vfn)vt_SteamNetworking005_RetrieveDataFromSocket, // slot 15
+  (vfn)vt_SteamNetworking005_IsDataAvailable, // slot 16
+  (vfn)vt_SteamNetworking005_RetrieveData, // slot 17
+  (vfn)vt_SteamNetworking005_GetSocketInfo, // slot 18
+  (vfn)vt_SteamNetworking005_GetListenSocketInfo, // slot 19
+  (vfn)vt_SteamNetworking005_GetSocketConnectionType, // slot 20
+  (vfn)vt_SteamNetworking005_GetMaxPacketSize, // slot 21
+};
+struct FakeSteamNetworking005 { vfn *vptr; };
+static struct FakeSteamNetworking005 g_steamnetworking005_instance = { g_steamnetworking005_vtbl };
+
+// === STEAMREMOTESTORAGE_INTERFACE_VERSION010 (ordinal 15, family SteamRemoteStorage) ===
+
+// slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileForget(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileDelete(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileShare(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 5: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: FileWriteStreamOpen(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamOpen(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 7: FileWriteStreamWriteChunk(uint64 writeHandle, const void* pvData, int32 cubData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamWriteChunk(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: FileWriteStreamClose(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamClose(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: FileWriteStreamCancel(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamCancel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileExists(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FilePersisted(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileSize(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
+static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileTimestamp(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 14: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 17: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_IsCloudEnabledForAccount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_IsCloudEnabledForApp(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 21: UGCDownload(uint64 hContent, uint32 unPriority) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 22: GetUGCDownloadProgress(uint64 hContent, int32* pnBytesDownloaded, int32* pnBytesExpected) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUGCDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 24: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead, uint32 cOffset) -> int32 | __thiscall ret 20 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 25: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetCachedUGCCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 27: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags, uint32 eWorkshopFileType) -> uint64 | __thiscall ret 32 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 28: CreatePublishedFileUpdateRequest(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_CreatePublishedFileUpdateRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 29: UpdatePublishedFileFile(uint64 updateHandle, const char* pchFile) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 30: UpdatePublishedFilePreviewFile(uint64 updateHandle, const char* pchPreviewFile) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFilePreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 31: UpdatePublishedFileTitle(uint64 updateHandle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 32: UpdatePublishedFileDescription(uint64 updateHandle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 33: UpdatePublishedFileVisibility(uint64 updateHandle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 34: UpdatePublishedFileTags(uint64 updateHandle, w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: CommitPublishedFileUpdate(uint64 updateHandle) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_CommitPublishedFileUpdate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 36: GetPublishedFileDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 37: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 38: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 39: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 40: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 41: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 42: UpdatePublishedFileSetChangeDescription(uint64 updateHandle, const char* pchChangeDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileSetChangeDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 43: GetPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 44: UpdateUserPublishedItemVote(uint64 unPublishedFileId, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdateUserPublishedItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 45: GetUserPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUserPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 46: EnumerateUserSharedWorkshopFiles(CSteamID steamId, uint32 unStartIndex, w_SteamParamStringArray_t* pRequiredTags, w_SteamParamStringArray_t* pExcludedTags) -> uint64 | __thiscall ret 20 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserSharedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 47: PublishVideo(uint32 eVideoProvider, const char* pchVideoAccount, const char* pchVideoIdentifier, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 36 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_PublishVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 48: SetUserPublishedFileAction(uint64 unPublishedFileId, uint32 eAction) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetUserPublishedFileAction(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 49: EnumeratePublishedFilesByUserAction(uint32 eAction, uint32 unStartIndex) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumeratePublishedFilesByUserAction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 50: EnumeratePublishedWorkshopFiles(uint32 eEnumerationType, uint32 unStartIndex, uint32 unCount, uint32 unDays, w_SteamParamStringArray_t* pTags, w_SteamParamStringArray_t* pUserTags) -> uint64 | __thiscall ret 24 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumeratePublishedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 51: UGCDownloadToLocation(uint64 hContent, const char* pchLocation, uint32 unPriority) -> uint64 | __thiscall ret 16 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCDownloadToLocation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0LL;
+}
+
+static vfn g_steamremotestorage_interface_version010_vtbl[52] = {
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWrite, // slot 0
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileRead, // slot 1
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileForget, // slot 2
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileDelete, // slot 3
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileShare, // slot 4
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetSyncPlatforms, // slot 5
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamOpen, // slot 6
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamWriteChunk, // slot 7
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamClose, // slot 8
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileWriteStreamCancel, // slot 9
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FileExists, // slot 10
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_FilePersisted, // slot 11
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileSize, // slot 12
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileTimestamp, // slot 13
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetSyncPlatforms, // slot 14
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileCount, // slot 15
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetFileNameAndSize, // slot 16
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetQuota, // slot 17
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_IsCloudEnabledForAccount, // slot 18
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_IsCloudEnabledForApp, // slot 19
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetCloudEnabledForApp, // slot 20
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCDownload, // slot 21
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUGCDownloadProgress, // slot 22
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUGCDetails, // slot 23
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCRead, // slot 24
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetCachedUGCCount, // slot 25
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetCachedUGCHandle, // slot 26
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_PublishWorkshopFile, // slot 27
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_CreatePublishedFileUpdateRequest, // slot 28
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileFile, // slot 29
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFilePreviewFile, // slot 30
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileTitle, // slot 31
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileDescription, // slot 32
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileVisibility, // slot 33
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileTags, // slot 34
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_CommitPublishedFileUpdate, // slot 35
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetPublishedFileDetails, // slot 36
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_DeletePublishedFile, // slot 37
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserPublishedFiles, // slot 38
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SubscribePublishedFile, // slot 39
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserSubscribedFiles, // slot 40
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UnsubscribePublishedFile, // slot 41
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdatePublishedFileSetChangeDescription, // slot 42
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetPublishedItemVoteDetails, // slot 43
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UpdateUserPublishedItemVote, // slot 44
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_GetUserPublishedItemVoteDetails, // slot 45
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumerateUserSharedWorkshopFiles, // slot 46
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_PublishVideo, // slot 47
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_SetUserPublishedFileAction, // slot 48
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumeratePublishedFilesByUserAction, // slot 49
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_EnumeratePublishedWorkshopFiles, // slot 50
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION010_UGCDownloadToLocation, // slot 51
+};
+struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 { vfn *vptr; };
+static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 g_steamremotestorage_interface_version010_instance = { g_steamremotestorage_interface_version010_vtbl };
+
 // === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===
 
 typedef struct { const char *version; const char *family; void *instance; } GIfaceTableEntry;
@@ -3948,6 +5089,21 @@ static const GIfaceTableEntry g_iface_table[] = {
 #if defined(__i386__)
   { "STEAMUSERSTATS_INTERFACE_VERSION011", "SteamUserStats", &g_steamuserstats_interface_version011_instance },
 #endif
+#if defined(__i386__)
+  { "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "SteamRemoteStorage", &g_steamremotestorage_interface_version005_instance },
+#endif
+#if defined(__i386__)
+  { "SteamMatchMaking009", "SteamMatchmaking", &g_steammatchmaking009_instance },
+#endif
+#if defined(__i386__)
+  { "SteamMatchMakingServers002", "SteamMatchmakingServers", &g_steammatchmakingservers002_instance },
+#endif
+#if defined(__i386__)
+  { "SteamNetworking005", "SteamNetworking", &g_steamnetworking005_instance },
+#endif
+#if defined(__i386__)
+  { "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "SteamRemoteStorage", &g_steamremotestorage_interface_version010_instance },
+#endif
 };
 #define G_IFACE_TABLE_LEN (sizeof(g_iface_table) / sizeof(g_iface_table[0]))
 
@@ -3976,6 +5132,22 @@ void *SteamApps(void) {
 
 void *SteamFriends(void) {
   return resolve_bare_iface("SteamFriends");
+}
+
+void *SteamMatchmaking(void) {
+  return resolve_bare_iface("SteamMatchmaking");
+}
+
+void *SteamMatchmakingServers(void) {
+  return resolve_bare_iface("SteamMatchmakingServers");
+}
+
+void *SteamNetworking(void) {
+  return resolve_bare_iface("SteamNetworking");
+}
+
+void *SteamRemoteStorage(void) {
+  return resolve_bare_iface("SteamRemoteStorage");
 }
 
 void *SteamUser(void) {
@@ -4015,6 +5187,20 @@ void SteamAPI_UnregisterCallback(void *pCallback) { (void)pCallback; }
 void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }
 void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }
 
+// === SteamGameServer* flat stubs (51-14 Task 2, Pitfall 2 -- cdecl, caller-cleans, honest unavailable answers) ===
+
+int SteamGameServer_Init(void) { return 0; }
+void SteamGameServer_Shutdown(void) { }
+void SteamGameServer_RunCallbacks(void) { }
+int SteamGameServer_BSecure(void) { return 0; }
+uint64_t SteamGameServer_GetSteamID(void) { return 0; }
+int SteamGameServer_GetHSteamPipe(void) { return 0; }
+int SteamGameServer_GetHSteamUser(void) { return 0; }
+void *SteamGameServer(void) { return NULL; }
+void *SteamGameServerStats(void) { return NULL; }
+void *SteamGameServerNetworking(void) { return NULL; }
+void *SteamGameServerUtils(void) { return NULL; }
+
 // === Per-interface flat accessors ===
 
 void *SteamAPI_SteamUser_v023(void) { return &g_steamuser023_instance; }
@@ -4027,3 +5213,8 @@ void *SteamAPI_SteamUserStats_v010(void) { return &g_steamuserstats_interface_ve
 void *SteamAPI_SteamFriends_v013(void) { return &g_steamfriends013_instance; }
 void *SteamAPI_SteamApps_v005(void) { return &g_steamapps_interface_version005_instance; }
 void *SteamAPI_SteamUserStats_v011(void) { return &g_steamuserstats_interface_version011_instance; }
+void *SteamAPI_SteamRemoteStorage_v005(void) { return &g_steamremotestorage_interface_version005_instance; }
+void *SteamAPI_SteamMatchMaking_v009(void) { return &g_steammatchmaking009_instance; }
+void *SteamAPI_SteamMatchMakingServers_v002(void) { return &g_steammatchmakingservers002_instance; }
+void *SteamAPI_SteamNetworking_v005(void) { return &g_steamnetworking005_instance; }
+void *SteamAPI_SteamRemoteStorage_v010(void) { return &g_steamremotestorage_interface_version010_instance; }

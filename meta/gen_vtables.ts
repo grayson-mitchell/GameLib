@@ -420,7 +420,18 @@ function cType(type: string): string {
     case 'uint64*':
       return 'uint64_t *'
     default:
-      return type.endsWith('*') ? type : 'uint32_t'
+      // 51-14 Task 2: a pointer-returning method whose base type is an
+      // opaque Proton/Steamworks struct the generated shim never defines
+      // (e.g. `gameserveritem_t_105*` from
+      // ISteamMatchmakingServers::GetServerDetails) must NOT echo that
+      // unknown type name into the stub's C declaration -- the shim has
+      // no struct definition for it and would fail to compile. A stub
+      // never constructs or dereferences the real struct anyway, so any
+      // pointer-sized return type is ABI-equivalent; fall back to a
+      // generic `void *` for any trailing-`*` type not in the explicit
+      // cases above (which already cover every pointer-to-scalar
+      // `valueType` the wire path needs).
+      return type.endsWith('*') ? 'void *' : 'uint32_t'
   }
 }
 
@@ -533,6 +544,53 @@ export const FLAT_EXPORTS_SUPERSET = [
   'SteamAPI_RegisterCallResult',
   'SteamAPI_UnregisterCallResult'
 ] as const
+
+// 51-14 Task 2 / 51-RESEARCH Pitfall 2: XCOM's nine SteamGameServer* bare
+// imports (plus two accessors no acceptance-set title imports yet,
+// SteamGameServer_GetHSteamPipe/_GetHSteamUser, kept as a superset the
+// same way FLAT_EXPORTS_SUPERSET already is) -- Windows PE import
+// resolution is all-or-nothing per DLL, so EVERY imported symbol must
+// resolve or the whole exe refuses to load, even though GameServer /
+// dedicated-server support is out of scope (D-51-14, 24-SPEC). Plain
+// cdecl functions (never THISCALL -- these are flat C exports, not
+// vtable methods) declared with `(void)` parameter lists: cdecl is
+// caller-cleans on i386, so a real arity this stub doesn't know about can
+// never corrupt the stack the way a THISCALL callee-cleans mismatch
+// would.
+export const GAMESERVER_FLAT_STUBS = [
+  'SteamGameServer_Init',
+  'SteamGameServer_Shutdown',
+  'SteamGameServer_RunCallbacks',
+  'SteamGameServer_BSecure',
+  'SteamGameServer_GetSteamID',
+  'SteamGameServer_GetHSteamPipe',
+  'SteamGameServer_GetHSteamUser',
+  'SteamGameServer',
+  'SteamGameServerStats',
+  'SteamGameServerNetworking',
+  'SteamGameServerUtils'
+] as const
+
+const GAMESERVER_FLAT_STUB_BODIES: Record<
+  (typeof GAMESERVER_FLAT_STUBS)[number],
+  string
+> = {
+  SteamGameServer_Init: 'int SteamGameServer_Init(void) { return 0; }',
+  SteamGameServer_Shutdown: 'void SteamGameServer_Shutdown(void) { }',
+  SteamGameServer_RunCallbacks: 'void SteamGameServer_RunCallbacks(void) { }',
+  SteamGameServer_BSecure: 'int SteamGameServer_BSecure(void) { return 0; }',
+  SteamGameServer_GetSteamID:
+    'uint64_t SteamGameServer_GetSteamID(void) { return 0; }',
+  SteamGameServer_GetHSteamPipe:
+    'int SteamGameServer_GetHSteamPipe(void) { return 0; }',
+  SteamGameServer_GetHSteamUser:
+    'int SteamGameServer_GetHSteamUser(void) { return 0; }',
+  SteamGameServer: 'void *SteamGameServer(void) { return NULL; }',
+  SteamGameServerStats: 'void *SteamGameServerStats(void) { return NULL; }',
+  SteamGameServerNetworking:
+    'void *SteamGameServerNetworking(void) { return NULL; }',
+  SteamGameServerUtils: 'void *SteamGameServerUtils(void) { return NULL; }'
+}
 
 const FLAT_EXPORT_BODIES: Record<
   (typeof FLAT_EXPORTS_SUPERSET)[number],
@@ -1308,6 +1366,9 @@ typedef void *vfn;
   const flatExports = FLAT_EXPORTS_SUPERSET.map(
     (name) => FLAT_EXPORT_BODIES[name]
   ).join('\n')
+  const gameServerStubs = GAMESERVER_FLAT_STUBS.map(
+    (name) => GAMESERVER_FLAT_STUB_BODIES[name]
+  ).join('\n')
   const accessors = sortedManifests.map((m) => emitFlatAccessor(m)).join('')
   const ifaceTableAndBareAccessors =
     emitIfaceTableAndBareAccessors(sortedManifests)
@@ -1318,6 +1379,8 @@ typedef void *vfn;
     `${ifaceTableAndBareAccessors}\n` +
     `// === Flat SteamAPI_* exports (acceptance-set superset, R3 finding #9) ===\n\n` +
     `${flatExports}\n\n` +
+    `// === SteamGameServer* flat stubs (51-14 Task 2, Pitfall 2 -- cdecl, caller-cleans, honest unavailable answers) ===\n\n` +
+    `${gameServerStubs}\n\n` +
     `// === Per-interface flat accessors ===\n\n` +
     `${accessors}`
   )
@@ -1962,6 +2025,7 @@ export function generateDefFile(
     `LIBRARY ${libraryName}`,
     'EXPORTS',
     ...FLAT_EXPORTS_SUPERSET,
+    ...GAMESERVER_FLAT_STUBS,
     ...accessorExports,
     ...bareAccessorExports
   ]

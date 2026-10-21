@@ -634,12 +634,17 @@ describe('shimGenerate', () => {
     // the versions shimCoverage.ts serves so this stays a true "fully
     // covered" exercise, not an accidental miss. 51-11 widened the bare
     // accessor set to SteamUtils/SteamApps/SteamUserStats (old-style
-    // version strings), so their version strings must be embedded here
-    // too, alongside SteamUser023/SteamFriends018.
+    // version strings); 51-14 widens it again to
+    // SteamRemoteStorage/SteamMatchmaking/SteamMatchmakingServers/
+    // SteamNetworking (the GameServer* names are flat exports, not family
+    // accessors, so they need no version string here). All must be
+    // embedded, alongside SteamUser023/SteamFriends018.
     writeFileSync(
       shimDestPath(),
       'original-dll-bytes-SteamUser023-SteamFriends018-SteamUtils005-' +
-        'STEAMAPPS_INTERFACE_VERSION004-STEAMUSERSTATS_INTERFACE_VERSION010-embedded'
+        'STEAMAPPS_INTERFACE_VERSION004-STEAMUSERSTATS_INTERFACE_VERSION010-' +
+        'STEAMREMOTESTORAGE_INTERFACE_VERSION005-SteamMatchMaking009-' +
+        'SteamMatchMakingServers002-SteamNetworking005-embedded'
     )
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',

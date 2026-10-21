@@ -87,7 +87,41 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamFriends',
   'SteamUtils',
   'SteamApps',
-  'SteamUserStats'
+  'SteamUserStats',
+  // 51-14 Task 1: the second/last-group families (ROADMAP sub-decision 1)
+  // -- ISteamRemoteStorage (cloud-disabled), ISteamMatchmaking /
+  // ISteamMatchmakingServers / ISteamNetworking (unavailable). Flat
+  // accessors first (meta/sdk/isteamremotestorage005.manifest.json,
+  // isteammatchmaking009.manifest.json,
+  // isteammatchmakingservers002.manifest.json,
+  // isteamnetworking005.manifest.json, plus Hoard's (63000) own measured
+  // RemoteStorage version, isteamremotestorage010.manifest.json), then
+  // the four bare legacy accessors meta/gen_vtables.ts's generateDefFile
+  // now exports for these families.
+  'SteamAPI_SteamRemoteStorage_v005',
+  'SteamAPI_SteamMatchMaking_v009',
+  'SteamAPI_SteamMatchMakingServers_v002',
+  'SteamAPI_SteamNetworking_v005',
+  'SteamAPI_SteamRemoteStorage_v010',
+  'SteamRemoteStorage',
+  'SteamMatchmaking',
+  'SteamMatchmakingServers',
+  'SteamNetworking',
+  // 51-14 Task 2 / 51-RESEARCH Pitfall 2: XCOM's nine SteamGameServer*
+  // bare imports (plus two accessors no acceptance-set title imports yet)
+  // -- meta/gen_vtables.ts's GAMESERVER_FLAT_STUBS, cdecl flat exports,
+  // never manifest-driven.
+  'SteamGameServer_Init',
+  'SteamGameServer_Shutdown',
+  'SteamGameServer_RunCallbacks',
+  'SteamGameServer_BSecure',
+  'SteamGameServer_GetSteamID',
+  'SteamGameServer_GetHSteamPipe',
+  'SteamGameServer_GetHSteamUser',
+  'SteamGameServer',
+  'SteamGameServerStats',
+  'SteamGameServerNetworking',
+  'SteamGameServerUtils'
 ])
 
 // D-51-13: no Win64 shim target exists yet (research's zig cc prototype /
@@ -137,6 +171,27 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   [
     'STEAMUSERSTATS_INTERFACE_VERSION011',
     { family: 'SteamUserStats', mode: 'wire' }
+  ],
+  // 51-14: the second/last-group families -- served, but 'stub' (not
+  // 'wire'): ROADMAP sub-decision 1 answers ISteamRemoteStorage as
+  // cloud-disabled and ISteamMatchmaking/ISteamMatchmakingServers/
+  // ISteamNetworking as unavailable (P2P join stays out of scope per
+  // 24-SPEC). D-51-02's one-time notice is what tells the user these
+  // parts are stubbed.
+  [
+    'STEAMREMOTESTORAGE_INTERFACE_VERSION005',
+    { family: 'SteamRemoteStorage', mode: 'stub' }
+  ],
+  ['SteamMatchMaking009', { family: 'SteamMatchMaking', mode: 'stub' }],
+  [
+    'SteamMatchMakingServers002',
+    { family: 'SteamMatchMakingServers', mode: 'stub' }
+  ],
+  ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }],
+  // Hoard's (63000) own measured RemoteStorage version.
+  [
+    'STEAMREMOTESTORAGE_INTERFACE_VERSION010',
+    { family: 'SteamRemoteStorage', mode: 'stub' }
   ]
 ])
 

@@ -169,22 +169,23 @@ describe('SHIM_EXPORT_SET_VERSION / computeExportSetVersion', () => {
 })
 
 describe('evaluateShimCoverage', () => {
-  // 51-11: SteamUtils/SteamUtils005 moved from "missing" to "covered" this
-  // plan -- SteamRemoteStorage stays the still-out-of-scope example (second
-  // locked interface group, not yet widened).
+  // 51-14: SteamRemoteStorage/SteamMatchmaking/SteamMatchmakingServers/
+  // SteamNetworking moved from "missing" to "stubbed" this plan --
+  // SteamHTTP stays a still-out-of-scope example (never widened by any
+  // Phase 51 plan to date).
   test('x86: an exported symbol is covered, an un-exported bare accessor AND its unserved required version are both missing', () => {
     const result = evaluateShimCoverage({
       arch: 'x86',
-      symbols: ['SteamAPI_Init', 'SteamRemoteStorage'],
+      symbols: ['SteamAPI_Init', 'SteamHTTP'],
       requiredInterfaceVersions: {
-        SteamRemoteStorage: 'STEAMREMOTESTORAGE_INTERFACE_VERSION005'
+        SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION001'
       },
       versionProblems: []
     })
 
     expect(result.missingSymbols).toEqual([
-      'SteamRemoteStorage',
-      'STEAMREMOTESTORAGE_INTERFACE_VERSION005'
+      'SteamHTTP',
+      'STEAMHTTP_INTERFACE_VERSION001'
     ])
     expect(result.stubbedInterfaces).toEqual([])
   })
@@ -425,12 +426,13 @@ describe('isScanVerdictNowCovered', () => {
     )
   })
 
-  // 51-11: SteamUtils is now covered -- SteamRemoteStorage (second locked
-  // group, not yet widened) is the still-genuinely-uncovered example.
+  // 51-14: SteamRemoteStorage is now covered -- SteamHTTP (never widened
+  // by any Phase 51 plan to date) is the still-genuinely-uncovered
+  // example.
   test('returns false when the stored missing symbol is still not covered', () => {
-    expect(
-      isScanVerdictNowCovered({ missingSymbols: ['SteamRemoteStorage'] })
-    ).toBe(false)
+    expect(isScanVerdictNowCovered({ missingSymbols: ['SteamHTTP'] })).toBe(
+      false
+    )
   })
 
   test('returns true when the stored missing entry is now a served interface version', () => {
@@ -450,7 +452,7 @@ describe('isScanVerdictNowCovered', () => {
   test('returns true only when EVERY stored missing entry is now covered', () => {
     expect(
       isScanVerdictNowCovered({
-        missingSymbols: ['SteamAPI_Init', 'SteamRemoteStorage']
+        missingSymbols: ['SteamAPI_Init', 'SteamHTTP']
       })
     ).toBe(false)
   })
