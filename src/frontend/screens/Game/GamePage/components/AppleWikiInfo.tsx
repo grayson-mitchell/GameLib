@@ -1,12 +1,14 @@
-import { MouseEvent, useContext, useState } from 'react'
+import { MouseEvent, useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import GameContext from '../../GameContext'
 import { Refresh, WineBar } from '@mui/icons-material'
 import { IconButton, Rating } from '@mui/material'
 import { createNewWindow } from 'frontend/helpers'
 import { GameInfo } from 'common/types'
+import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import { ratingTier } from './appleRating'
 import { protonTierToStars } from './protonRating'
+import { resolveBridgeRouteDisplay } from './bridgeRouteDisplay'
 import CrossoverIcon from 'frontend/assets/crossover_icon.svg?react'
 
 interface Props {
@@ -18,6 +20,36 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
   const { t: tGamelib } = useTranslation('gamelib')
   const { wikiInfo, is, refreshWikiInfo } = useContext(GameContext)
   const [refreshing, setRefreshing] = useState(false)
+
+  // Plan 16 (D-51-09/D-51-02): the game-page route row + limited-features
+  // lines. Fetched once per game via its own bridge-route IPC round trip
+  // (below). Declared before the early `!wikiInfo`/`is.native` returns below
+  // so this hook always runs in the same order across renders (Rules of
+  // Hooks), independent of whether those two values change between them.
+  const [bridgeVerdict, setBridgeVerdict] = useState<
+    SteamBridgeRouteVerdict | undefined
+  >(undefined)
+
+  useEffect(() => {
+    if (gameInfo.runner !== 'steam') {
+      return
+    }
+    let bridgeRouteCancelled = false
+    window.api
+      .getSteamBridgeRoute(gameInfo.app_name)
+      .then((verdict) => {
+        if (!bridgeRouteCancelled) setBridgeVerdict(verdict)
+      })
+      .catch(() => {
+        // D-51-09: fail-closed-and-silent -- resolveBridgeRouteDisplay
+        // treats an undefined verdict the same as 'not-eligible', so the
+        // row simply stays hidden.
+        if (!bridgeRouteCancelled) setBridgeVerdict(undefined)
+      })
+    return () => {
+      bridgeRouteCancelled = true
+    }
+  }, [gameInfo.runner, gameInfo.app_name])
 
   const onClickRefresh = async (event: MouseEvent<HTMLButtonElement>) => {
     // Stop the parent <a onClick={onClickCrossover}> from opening CodeWeavers.
@@ -63,6 +95,8 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
     gameInfo.runner === 'steam' &&
     gameInfo.is_mac_native === false &&
     gameInfo.steamPlatformsCaptured === true
+
+  const bridgeLine = resolveBridgeRouteDisplay(bridgeVerdict)
 
   const onClickCrossover = () => {
     if (codeweavers?.slug) {
@@ -166,6 +200,48 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
           <b>{t('info.wine-rating', 'Wine emulation')}:</b>
           {ratingTier(applegamingwiki?.wineRating ?? '', tGamelib).label}
         </a>
+      )}
+      {bridgeLine.visible && (
+        <span className="iconWithText steamBridgeRouteRow">
+          <b>
+            {tGamelib('gamelib:steam.bridge.route.label', 'Steam route')}
+            {': '}
+          </b>
+          {tGamelib(
+            bridgeLine.routeKey === 'native'
+              ? 'gamelib:steam.bridge.route.native'
+              : 'gamelib:steam.bridge.route.bottled',
+            bridgeLine.routeKey === 'native'
+              ? 'Native Steam bridge'
+              : 'Bottled Steam client'
+          )}
+          {bridgeLine.reasonKey && (
+            <>
+              {' — '}
+              {tGamelib(`gamelib:${bridgeLine.reasonKey}`, {
+                reason: bridgeLine.reasonParams.reasonKey
+                  ? tGamelib(`gamelib:${bridgeLine.reasonParams.reasonKey}`)
+                  : undefined
+              })}
+            </>
+          )}
+          {bridgeLine.missingSymbols.length > 0 && (
+            <span className="steamBridgeMissingSymbols">
+              {' '}
+              {tGamelib(
+                'gamelib:steam.bridge.route.missingSymbols',
+                'Not covered: {{symbols}}',
+                { symbols: bridgeLine.missingSymbols.join(', ') }
+              )}
+            </span>
+          )}
+          {bridgeLine.limitedLineKeys.map((key) => (
+            <span key={key} className="steamBridgeLimitedLine">
+              {' '}
+              {tGamelib(`gamelib:${key}`)}
+            </span>
+          ))}
+        </span>
       )}
     </>
   )
