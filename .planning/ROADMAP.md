@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 17/19 plans executed
+**Plans:** 18/19 plans executed
 
 Plans:
 **Wave 1**
@@ -256,7 +256,7 @@ Plans:
 - [x] 51-17-PLAN.md — Pre-install depot-manifest screen (D-51-06)
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 51-18-PLAN.md — Census tool + 51-UAT.md (D-51-15, D-51-14)
+- [x] 51-18-PLAN.md — Census tool + 51-UAT.md (D-51-15, D-51-14)
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 51-19-PLAN.md — Live gates (Hoard Gate 4 re-run, XCOM, ELEX, Avernum 5/6), census re-run, seed/known-bad growth
