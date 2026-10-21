@@ -61,3 +61,25 @@ grow again with this plan's new `meta/extractProtonInventory.ts` exports (not in
 re-measured this run) -- the 51-07 entry's "a later plan (or a dedicated `find-deadcode`
 sweep) picks it up" recommendation still stands and now covers one more plan's worth of
 exports. Not fixed here, per the deviation-rules scope boundary.
+
+## 51-14: pre-existing sret param-stripping bug in `isteamfriends*.manifest.json` (not regenerated)
+
+`extractProtonInventory.ts`'s `parseProtonThunks` stripped the sret hidden-return-pointer
+(`_ret`) from the WRONG end of the real-params list -- it assumed `_ret` was always the
+LAST stack param, but Proton's actual MSVC thiscall-sret convention places it FIRST (right
+after `this`). This was discovered this plan when `SteamMatchMaking009`'s `GetLobbyOwner`/
+`GetLobbyByIndex`/`GetLobbyMemberByIndex` exposed it (methods with a real arg AFTER the
+hidden pointer) and fixed in `extractProtonInventory.ts` (commit in this plan's Task 1).
+
+The already-committed `meta/sdk/isteamfriends.manifest.json`, `isteamfriends011.manifest.json`,
+and `isteamfriends013.manifest.json` (51-11) have the SAME bug baked into their `methods[]`
+arrays for every `GetXByIndex`-shaped sret method (`GetFriendByIndex`, `GetClanByIndex`,
+`GetFriendFromSourceByIndex`, `GetClanOwner`, `GetClanOfficerByIndex`, `GetCoplayFriend`,
+`GetChatMemberByIndex`) -- their `params[]` lists wrongly keep the synthetic `_ret` entry
+and drop a real trailing arg. This is **documentary-only**: `gen_vtables.ts`'s stub
+generation (`emitStubBody`) derives its dummy param list purely from `method.stackBytes`,
+never from `params[]` by name, so the compiled shim is unaffected either way. Not regenerated
+in this plan, per the deviation-rules scope boundary -- these three files are outside this
+plan's `files_modified`, and re-running the extractor against them is an unrelated diff. A
+future plan touching `ISteamFriends` (or a dedicated extractor-output refresh) should
+regenerate them.
