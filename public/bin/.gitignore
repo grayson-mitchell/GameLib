@@ -24,3 +24,12 @@
 **/steam_api.pdb
 **/steam_api_shim.lib
 **/steam_appid.txt
+
+# 51-15 Task 2 (D-51-13 GO): the Win64 shim, built beside steam_api.dll by
+# the SAME buildSteamBridgeShims.ts compile gate -- never committed, same
+# rationale as the x86 rules above. steam_api64.pdb is the x64 compile's
+# own debug-symbol byproduct (steam_api_shim.lib is already covered by the
+# rule above -- measured: zig cc names the import lib after the SOURCE
+# file, not -o, so the x64 build's .lib is the SAME name as the x86 one).
+**/steam_api64.dll
+**/steam_api64.pdb

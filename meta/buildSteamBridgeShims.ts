@@ -88,6 +88,13 @@ const SHIM_DEF_PATH = join(
   'generated',
   'steam_api.def'
 )
+// 51-15 Task 2: 51-15 Task 1's generated x64 export table (D-51-13 GO).
+const SHIM_DEF64_PATH = join(
+  'native',
+  'steam-bridge',
+  'generated',
+  'steam_api64.def'
+)
 // D-04: the committed source-of-truth for the identity-only AppID (480,
 // Spacewar). Staged (copied, never regenerated) next to the built helper by
 // stageSteamAppId() below.
@@ -181,6 +188,20 @@ export function shimOutputPath(arch: string = resolveBridgeArch()): string {
 }
 
 /**
+ * 51-15 Task 2: the Win64 shim's single shared bundled location, beside
+ * (not replacing) `shimOutputPath`'s x86 `steam_api.dll` -- the EXISTING
+ * `src-tauri/tauri.macos.conf.json` bundle rule already covers the whole
+ * `build/bin/arm64/darwin/` directory (D-51-13), so no Tauri config change
+ * is needed for this second file to ship.
+ */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
+export function shim64OutputPath(arch: string = resolveBridgeArch()): string {
+  return join(bundledBinDir(arch), 'steam_api64.dll')
+}
+
+/**
  * `zig cc -shared`'s OWN debug-symbol (`.pdb`) and import-library (`.lib`)
  * linker byproducts -- not build output this repo or its runtime ever reads.
  * They added 2,822,208 B to every shipped macOS `.app` (todo item 6,
@@ -229,6 +250,55 @@ export function pruneShimBuildByproducts(
     if (existsSync(path)) {
       throw new Error(
         `Failed to remove shim build byproduct -- still present at ${path}`
+      )
+    }
+  }
+}
+
+/**
+ * 51-15 Task 2: the x64 compile's OWN zig-cc linker byproducts. MEASURED
+ * directly (scratchpad proof, not guessed): zig cc names the `.pdb` after
+ * the `-o` OUTPUT filename (`steam_api64.pdb` for `steam_api64.dll`) but
+ * the import `.lib` after the SOURCE filename regardless of `-o`
+ * (`steam_api_shim.lib`, identical to the x86 build's own byproduct name)
+ * -- never `steam_api64_shim.lib`. This list and the x86
+ * `SHIM_BUILD_BYPRODUCTS` therefore literally share one entry; that is
+ * expected, not a bug, and is why `compileShim()` (x86) must prune its
+ * byproducts BEFORE `compileShim64()` runs -- `main()`'s own sequencing
+ * already guarantees this (helper, x86 shim, x64 shim, in that order).
+ */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
+export const SHIM64_BUILD_BYPRODUCTS = [
+  'steam_api64.pdb',
+  'steam_api_shim.lib'
+] as const
+
+/** The two `SHIM64_BUILD_BYPRODUCTS` names, joined under this arch's bundled darwin dir. */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
+export function shim64ByproductPaths(
+  arch: string = resolveBridgeArch()
+): string[] {
+  return SHIM64_BUILD_BYPRODUCTS.map((name) => join(bundledBinDir(arch), name))
+}
+
+/** Same fail-loud post-condition as `pruneShimBuildByproducts` above, for
+ * the x64 build's own byproducts -- neither list ever names a keeper
+ * `.dll` (T-24-06-shaped guard, carried over from the x86 precedent). */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
+export function pruneShim64BuildByproducts(
+  arch: string = resolveBridgeArch()
+): void {
+  for (const path of shim64ByproductPaths(arch)) {
+    rmSync(path, { force: true })
+    if (existsSync(path)) {
+      throw new Error(
+        `Failed to remove x64 shim build byproduct -- still present at ${path}`
       )
     }
   }
@@ -296,6 +366,37 @@ export function buildShimCompileArgv(
       shimOutputPath(arch),
       SHIM_SOURCE_PATH,
       SHIM_DEF_PATH,
+      '-lws2_32'
+    ]
+  }
+}
+
+/**
+ * 51-15 Task 2 (D-51-13 GO): the SAME generated shim SOURCE
+ * (`steam_api_shim.c`, arch-neutral -- 51-15 Task 1's THISCALL macro and
+ * explicit hidden-pointer signatures compile correctly under both
+ * targets with no forked generator), cross-compiled a SECOND time with
+ * `-target x86_64-windows-gnu` against the x64 export table 51-15 Task 1
+ * generated (`steam_api64.def`), to the Win64 shim's own bundled location.
+ */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
+// this gate's tsconfig.json scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
+export function buildShim64CompileArgv(
+  zigBinPath: string,
+  arch: string = resolveBridgeArch()
+): { command: string; args: string[] } {
+  return {
+    command: zigBinPath,
+    args: [
+      'cc',
+      '-target',
+      'x86_64-windows-gnu',
+      '-shared',
+      '-o',
+      shim64OutputPath(arch),
+      SHIM_SOURCE_PATH,
+      SHIM_DEF64_PATH,
       '-lws2_32'
     ]
   }
@@ -388,6 +489,45 @@ async function compileShim(): Promise<void> {
   pruneShimBuildByproducts()
 }
 
+/**
+ * 51-15 Task 2: the SECOND real zig-cc COMPILE GATE, for the Win64 shim --
+ * same fail-loud shape as `compileShim()` above (non-zero exit or a
+ * missing `.dll` FAILS the build), proving the x64-targeted
+ * `steam_api_shim.c`/`steam_api64.def` pair 51-15 Task 1 generates
+ * actually assembles under a real PE32+ toolchain. Runs AFTER
+ * `compileShim()` (see `main()`) -- not because of a dependency between
+ * the two outputs, but because `SHIM64_BUILD_BYPRODUCTS` and
+ * `SHIM_BUILD_BYPRODUCTS` share the `steam_api_shim.lib` name (measured:
+ * zig cc names the import lib after the SOURCE file, not `-o`), so x86's
+ * own prune must already have run before this one starts.
+ */
+async function compileShim64(): Promise<void> {
+  if (!existsSync(SHIM_SOURCE_PATH) || !existsSync(SHIM_DEF64_PATH)) {
+    throw new Error(
+      `Missing generated x64 shim source (${SHIM_SOURCE_PATH} / ${SHIM_DEF64_PATH}) -- run \`pnpm gen-vtables\` first (51-15 Task 1)`
+    )
+  }
+
+  const zigBinPath = await downloadZig()
+  mkdirSync(bundledBinDir(), { recursive: true })
+  const { command, args } = buildShim64CompileArgv(zigBinPath)
+  console.log(`Compile gate (x64): ${command} ${args.join(' ')}`)
+  const result = await spawnArgv(command, args)
+
+  if (result.code !== 0) {
+    throw new Error(
+      `COMPILE GATE FAILED (51-15 Task 2, x64): zig cc exited ${result.code} -- the generated x64 shim source does not assemble:\n${result.stderr}`
+    )
+  }
+  if (!existsSync(shim64OutputPath())) {
+    throw new Error(
+      `COMPILE GATE FAILED (51-15 Task 2, x64): zig cc exited 0 but no .dll was emitted at ${shim64OutputPath()}`
+    )
+  }
+  console.log(`Compile gate PASSED (x64) -> ${shim64OutputPath()}`)
+  pruneShim64BuildByproducts()
+}
+
 // Self-invoked only (the JEST_WORKER_ID guard below); kept `export` because
 // meta/__tests__/buildSteamBridgeShims.test.ts's B5 case slices compileShim's
 // body by searching the source text for the literal string
@@ -398,6 +538,7 @@ export async function main(): Promise<void> {
   await compileHelper()
   await stageSteamAppId()
   await compileShim()
+  await compileShim64()
 }
 
 // See meta/gen_vtables.ts for why this can't use the usual

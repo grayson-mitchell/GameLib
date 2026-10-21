@@ -4,12 +4,17 @@ import { join } from 'path'
 
 import {
   buildHelperCompileArgv,
+  buildShim64CompileArgv,
   buildShimCompileArgv,
   helperOutputPath,
   machoArchFlag,
+  pruneShim64BuildByproducts,
   pruneShimBuildByproducts,
   resolveBridgeArch,
+  SHIM64_BUILD_BYPRODUCTS,
   SHIM_BUILD_BYPRODUCTS,
+  shim64ByproductPaths,
+  shim64OutputPath,
   shimByproductPaths,
   shimOutputPath,
   steamAppIdOutputPath
@@ -59,6 +64,13 @@ describe('buildSteamBridgeShims', () => {
       expect(shimOutputPath('x64')).toBe(
         join('public', 'bin', 'x64', 'darwin', 'steam_api.dll')
       )
+    })
+
+    it('51-15 Task 2: shim64OutputPath sits BESIDE shimOutputPath, same darwin dir, different filename', () => {
+      expect(shim64OutputPath('arm64')).toBe(
+        join('public', 'bin', 'arm64', 'darwin', 'steam_api64.dll')
+      )
+      expect(shim64OutputPath('arm64')).not.toBe(shimOutputPath('arm64'))
     })
   })
 
@@ -118,6 +130,38 @@ describe('buildSteamBridgeShims', () => {
 
     it('the resolved zig binary path drives the command (obtained via downloadZig.ts)', () => {
       const { command } = buildShimCompileArgv(
+        join('.build-tools', 'zig', 'zig'),
+        'arm64'
+      )
+      expect(command).toBe(join('.build-tools', 'zig', 'zig'))
+    })
+  })
+
+  describe('buildShim64CompileArgv (51-15 Task 2: second compile target -- steam_api64.dll)', () => {
+    it('uses zig cc -target x86_64-windows-gnu with the 51-15 Task 1 generated x64 source/def as input', () => {
+      const { command, args } = buildShim64CompileArgv('/path/to/zig', 'arm64')
+      expect(command).toBe('/path/to/zig')
+      expect(args[0]).toBe('cc')
+      expect(args).toContain('-target')
+      expect(args).toContain('x86_64-windows-gnu')
+      expect(args).toContain(
+        join('native', 'steam-bridge', 'generated', 'steam_api_shim.c')
+      )
+      expect(args).toContain(
+        join('native', 'steam-bridge', 'generated', 'steam_api64.def')
+      )
+    })
+
+    it('emits to shim64OutputPath, beside (never overwriting) the x86 steam_api.dll', () => {
+      const { args } = buildShim64CompileArgv('/path/to/zig', 'arm64')
+      const outIndex = args.indexOf('-o')
+      expect(outIndex).toBeGreaterThan(-1)
+      expect(args[outIndex + 1]).toBe(shim64OutputPath('arm64'))
+      expect(args[outIndex + 1]).not.toBe(shimOutputPath('arm64'))
+    })
+
+    it('the resolved zig binary path drives the command, same as the x86 argv builder', () => {
+      const { command } = buildShim64CompileArgv(
         join('.build-tools', 'zig', 'zig'),
         'arm64'
       )
@@ -280,24 +324,116 @@ describe('buildSteamBridgeShims', () => {
       expect(paths).not.toContain(steamAppIdOutputPath('arm64'))
     })
 
-    it('B5: both COMPILE GATE FAILED throws survive, and the prune is not wrapped in try/catch inside compileShim', () => {
+    it('51-15 Task 2: shim64ByproductPaths(arm64) returns the x64 .pdb and the SAME .lib name as the x86 build (measured: zig cc names the .lib after the source file, not -o)', () => {
+      const paths = shim64ByproductPaths('arm64')
+      expect(paths).toHaveLength(2)
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          join('public', 'bin', 'arm64', 'darwin', 'steam_api64.pdb'),
+          join('public', 'bin', 'arm64', 'darwin', 'steam_api_shim.lib')
+        ])
+      )
+    })
+
+    it('51-15 Task 2: OVER-REACH GUARD -- neither the x64 byproduct list nor its paths ever name a keeper file (the x64 .dll included)', () => {
+      expect(SHIM64_BUILD_BYPRODUCTS).not.toContain('steam_api64.dll')
+      expect(SHIM64_BUILD_BYPRODUCTS).not.toContain('steam_api.dll')
+      expect(SHIM64_BUILD_BYPRODUCTS).not.toContain('steam-bridge-helper')
+      expect(SHIM64_BUILD_BYPRODUCTS).not.toContain('steam_appid.txt')
+
+      const paths = shim64ByproductPaths('arm64')
+      expect(paths).not.toContain(shim64OutputPath('arm64'))
+      expect(paths).not.toContain(shimOutputPath('arm64'))
+      expect(paths).not.toContain(helperOutputPath('arm64'))
+      expect(paths).not.toContain(steamAppIdOutputPath('arm64'))
+    })
+
+    it('51-15 Task 2: pruneShim64BuildByproducts removes the x64 .pdb/.lib without touching the x64 .dll or any x86 artifact', () => {
+      const tmp = mkdtempSync(join(tmpdir(), 'gamelib-shim64-prune-'))
+      const previousCwd = process.cwd()
+      try {
+        const darwinDir = join(tmp, 'public', 'bin', 'arm64', 'darwin')
+        mkdirSync(darwinDir, { recursive: true })
+        const dll64Bytes = Buffer.from([9, 8, 7, 6, 5, 4, 3, 2, 1, 0])
+        writeFileSync(join(darwinDir, 'steam_api64.dll'), dll64Bytes)
+        writeFileSync(join(darwinDir, 'steam_api64.pdb'), 'pdb64-sentinel')
+        writeFileSync(join(darwinDir, 'steam_api_shim.lib'), 'lib-sentinel')
+        writeFileSync(join(darwinDir, 'steam_api.dll'), 'x86-dll-sentinel')
+
+        process.chdir(tmp)
+        pruneShim64BuildByproducts('arm64')
+
+        expect(() => readFileSync(join(darwinDir, 'steam_api64.pdb'))).toThrow()
+        expect(() =>
+          readFileSync(join(darwinDir, 'steam_api_shim.lib'))
+        ).toThrow()
+        const dll64After = readFileSync(join(darwinDir, 'steam_api64.dll'))
+        expect(Buffer.compare(dll64After, dll64Bytes)).toBe(0)
+        expect(readFileSync(join(darwinDir, 'steam_api.dll'), 'utf-8')).toBe(
+          'x86-dll-sentinel'
+        )
+      } finally {
+        process.chdir(previousCwd)
+        rmSync(tmp, { recursive: true, force: true })
+      }
+    })
+
+    it('B5: both COMPILE GATE FAILED throws survive (x86), and the prune is not wrapped in try/catch inside compileShim', () => {
       const stripped = sourceText
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*\/\/.*$/gm, '')
-      expect(stripped.match(/COMPILE GATE FAILED/g) ?? []).toHaveLength(2)
+      // 51-15 Task 2: 4 total now -- 2 for compileShim (x86), 2 for the new
+      // compileShim64 (x64) below.
+      expect(stripped.match(/COMPILE GATE FAILED/g) ?? []).toHaveLength(4)
 
-      const fnStart = stripped.indexOf('async function compileShim')
+      const fnStart = stripped.indexOf('async function compileShim(')
       expect(fnStart).toBeGreaterThan(-1)
       // Slice just the compileShim body (from its declaration to the next
-      // top-level export) and assert no try/catch lives inside it.
+      // top-level function, compileShim64) and assert no try/catch lives
+      // inside it.
       const nextFnIndex = stripped.indexOf(
-        '\nexport async function main',
+        '\nasync function compileShim64',
         fnStart
       )
       expect(nextFnIndex).toBeGreaterThan(fnStart)
       const compileShimBody = stripped.slice(fnStart, nextFnIndex)
       expect(compileShimBody).not.toMatch(/try\s*{/)
       expect(compileShimBody).not.toMatch(/catch\s*[({]/)
+    })
+
+    it('B5b (51-15 Task 2): both COMPILE GATE FAILED throws survive (x64), and the prune is not wrapped in try/catch inside compileShim64', () => {
+      const stripped = sourceText
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+
+      const fnStart = stripped.indexOf('async function compileShim64')
+      expect(fnStart).toBeGreaterThan(-1)
+      // Slice just the compileShim64 body (from its declaration to the
+      // next top-level export) and assert no try/catch lives inside it.
+      const nextFnIndex = stripped.indexOf(
+        '\nexport async function main',
+        fnStart
+      )
+      expect(nextFnIndex).toBeGreaterThan(fnStart)
+      const compileShim64Body = stripped.slice(fnStart, nextFnIndex)
+      expect(compileShim64Body).not.toMatch(/try\s*{/)
+      expect(compileShim64Body).not.toMatch(/catch\s*[({]/)
+      expect(compileShim64Body).toContain('COMPILE GATE FAILED')
+    })
+
+    it('51-15 Task 2: main() builds the helper, then the x86 shim, then the x64 shim, in that order', () => {
+      const stripped = sourceText
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      const mainStart = stripped.indexOf('export async function main')
+      expect(mainStart).toBeGreaterThan(-1)
+      const mainBody = stripped.slice(mainStart)
+      const helperIdx = mainBody.indexOf('compileHelper()')
+      const shimIdx = mainBody.indexOf('compileShim()')
+      const shim64Idx = mainBody.indexOf('compileShim64()')
+      expect(helperIdx).toBeGreaterThan(-1)
+      expect(shimIdx).toBeGreaterThan(helperIdx)
+      expect(shim64Idx).toBeGreaterThan(shimIdx)
     })
 
     it('B6: the prune has a fail-loud post-condition naming a surviving byproduct', () => {
