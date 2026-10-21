@@ -22,7 +22,7 @@ import type {
  * stale explanation to a route no longer in effect.
  */
 
-export interface SteamBridgeRouteDisplay {
+interface SteamBridgeRouteDisplay {
   visible: boolean
   routeKey: 'native' | 'bottled'
   reasonKey: string | null

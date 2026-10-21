@@ -22,7 +22,7 @@ import type {
  * in a local if/else chain.
  */
 
-export interface SteamBridgeRouteLine {
+interface SteamBridgeRouteLine {
   visible: boolean
   routeKey: 'native' | 'bottled'
   reasonKey: string | null
