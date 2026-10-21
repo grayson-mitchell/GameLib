@@ -31,6 +31,8 @@ import {
   isScanVerdictNowCovered
 } from '../shimCoverage'
 import {
+  HOARD_DLL_VERSION_STRINGS,
+  HOARD_REUBEN_REAL_OBJDUMP_OUTPUT,
   XCOM_DLL_VERSION_STRINGS,
   XCOM_EU_OBJDUMP_OUTPUT
 } from './fixtures/objdumpImports'
@@ -323,18 +325,8 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
 // (closed by a future 51-14), and NOTHING from the five families this plan
 // widened (SteamUser/SteamFriends/SteamUtils/SteamApps/SteamUserStats).
 //
-// No equivalent Hoard (63000) case here: Task 1 of this plan (measuring
-// Hoard's real interface versions from its original steam_api.dll) was
-// skipped this run on operator instruction -- the CrossOver bottle had no
-// network path to re-download Hoard, so there is no `dllVersions` pool to
-// resolve Hoard's required interface versions against at all. A
-// symbol-only check (no requiredInterfaceVersions) would score Hoard's
-// bare SteamUser/SteamUtils/SteamApps/etc. accessors as "covered" purely
-// because the BARE NAME is now exported -- true of the name, not provably
-// true of the UNMEASURED version Hoard's dll actually expects. Asserting
-// that would be exactly the misleading "passing result that isn't true"
-// this plan's operator deviation forbids. See the pending todo filed for
-// the deferred Hoard measurement.
+// Hoard's (63000) own measurement (261021-pgx) now has a real acceptance
+// check too -- see the second describe block below.
 describe('evaluateShimCoverage (51-11 Task 3 acceptance check -- XCOM: Enemy Unknown, 200510)', () => {
   const xcomSymbols = parseSteamApiImports(XCOM_EU_OBJDUMP_OUTPUT)
   const { required: xcomRequiredVersions, problems: xcomVersionProblems } =
@@ -404,6 +396,75 @@ describe('evaluateShimCoverage (51-11 Task 3 acceptance check -- XCOM: Enemy Unk
       'SteamUtils005',
       'STEAMAPPS_INTERFACE_VERSION004',
       'STEAMUSERSTATS_INTERFACE_VERSION010'
+    ]
+    for (const name of widenedNames) {
+      expect(result.missingSymbols).not.toContain(name)
+    }
+  })
+})
+
+// 261021-pgx: Hoard's (63000) own measured acceptance check -- the five
+// widened families now covered for Hoard specifically, against its own
+// REAL captured import table (HOARD_REUBEN_REAL_OBJDUMP_OUTPUT) and its own
+// REAL measured interface-version strings (HOARD_DLL_VERSION_STRINGS).
+// Hoard's import table has no SteamMatchmakingServers and no
+// SteamGameServer* names (unlike XCOM's 26-import table) -- simpler, only
+// 8 bare accessors.
+describe('evaluateShimCoverage (Hoard: 63000) -- the five widened families now covered for Hoard specifically', () => {
+  const hoardSymbols = parseSteamApiImports(HOARD_REUBEN_REAL_OBJDUMP_OUTPUT)
+  const { required: hoardRequiredVersions, problems: hoardVersionProblems } =
+    resolveRequiredInterfaceVersions({
+      importedSymbols: hoardSymbols,
+      dllVersions: HOARD_DLL_VERSION_STRINGS,
+      exeVersions: []
+    })
+
+  test('resolves cleanly (no unknown-version/ambiguous problems) against the real captured import table', () => {
+    expect(hoardVersionProblems).toEqual([])
+  })
+
+  test('missing is exactly SteamMatchmaking/SteamNetworking/SteamRemoteStorage + their versions; nothing from the five widened families', () => {
+    const result = evaluateShimCoverage({
+      arch: 'x86',
+      symbols: hoardSymbols,
+      requiredInterfaceVersions: hoardRequiredVersions,
+      versionProblems: hoardVersionProblems
+    })
+
+    const expectedMissingBareNames = [
+      'SteamMatchmaking',
+      'SteamNetworking',
+      'SteamRemoteStorage'
+    ]
+    const expectedMissingVersions = [
+      'SteamMatchMaking009',
+      'SteamNetworking005',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION010'
+    ]
+    const expectedMissing = [
+      ...expectedMissingBareNames,
+      ...expectedMissingVersions
+    ]
+
+    expect([...result.missingSymbols].sort()).toEqual(
+      [...expectedMissing].sort()
+    )
+    expect(result.stubbedInterfaces).toEqual([])
+
+    // Nothing from the five families this plan (and 51-11 before it)
+    // widened appears anywhere in the miss list -- the real "now covered
+    // for Hoard specifically" assertion, not just a length check.
+    const widenedNames = [
+      'SteamUser',
+      'SteamFriends',
+      'SteamUtils',
+      'SteamApps',
+      'SteamUserStats',
+      'SteamUser016',
+      'SteamFriends013',
+      'SteamUtils005',
+      'STEAMAPPS_INTERFACE_VERSION005',
+      'STEAMUSERSTATS_INTERFACE_VERSION011'
     ]
     for (const name of widenedNames) {
       expect(result.missingSymbols).not.toContain(name)

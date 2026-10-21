@@ -64,6 +64,15 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_SteamUtils_v005',
   'SteamAPI_SteamApps_v004',
   'SteamAPI_SteamUserStats_v010',
+  // 261021-pgx: Hoard's (63000) own measured versions -- the 3 new flat
+  // accessors (51-11's SteamUser016/SteamUtils005 already serve Hoard,
+  // see SHIM_SERVED_INTERFACE_VERSIONS below). See
+  // meta/sdk/isteamfriends013.manifest.json,
+  // meta/sdk/isteamapps005.manifest.json,
+  // meta/sdk/isteamuserstats011.manifest.json.
+  'SteamAPI_SteamFriends_v013',
+  'SteamAPI_SteamApps_v005',
+  'SteamAPI_SteamUserStats_v011',
   // 51-06 Task 2: the bare legacy accessors meta/gen_vtables.ts's
   // `generateDefFile` now exports once per family that has an x86
   // manifest -- resolved per game at runtime via gamelib_bridge.cfg's
@@ -71,10 +80,9 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   // symbol is necessary but not sufficient coverage: the game's required
   // interface VERSION (SteamUser016, say) still has to be a key in
   // SHIM_SERVED_INTERFACE_VERSIONS below for the bridge to actually serve
-  // it. 51-11 adds the SteamUtils/SteamApps/SteamUserStats bare
-  // accessors; Hoard's own measured versions remain a follow-up (Task 1
-  // of 51-11 was skipped this run -- no original steam_api.dll to
-  // measure against -- see 51-11-SUMMARY.md).
+  // it. 51-11 added the SteamUtils/SteamApps/SteamUserStats bare
+  // accessors; Hoard's (63000) own measured versions are now served too
+  // (261021-pgx).
   'SteamUser',
   'SteamFriends',
   'SteamUtils',
@@ -119,6 +127,15 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   ['STEAMAPPS_INTERFACE_VERSION004', { family: 'SteamApps', mode: 'wire' }],
   [
     'STEAMUSERSTATS_INTERFACE_VERSION010',
+    { family: 'SteamUserStats', mode: 'wire' }
+  ],
+  // 261021-pgx: Hoard's (63000) measured versions -- SteamUser016/
+  // SteamUtils005 above already match Hoard's own measured strings; these
+  // 3 are the versions Hoard needs that XCOM didn't.
+  ['SteamFriends013', { family: 'SteamFriends', mode: 'wire' }],
+  ['STEAMAPPS_INTERFACE_VERSION005', { family: 'SteamApps', mode: 'wire' }],
+  [
+    'STEAMUSERSTATS_INTERFACE_VERSION011',
     { family: 'SteamUserStats', mode: 'wire' }
   ]
 ])

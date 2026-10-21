@@ -17,6 +17,9 @@ SteamAPI_SteamFriends_v011
 SteamAPI_SteamUtils_v005
 SteamAPI_SteamApps_v004
 SteamAPI_SteamUserStats_v010
+SteamAPI_SteamFriends_v013
+SteamAPI_SteamApps_v005
+SteamAPI_SteamUserStats_v011
 SteamApps
 SteamFriends
 SteamUser

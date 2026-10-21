@@ -216,17 +216,13 @@
       "params": [
         {
           "name": "pchName",
-          "type": "char*",
-          "kind": "out-buffer",
-          "sizeParam": "cchNameBufferSize"
+          "type": "char*"
         },
         {
           "name": "cchNameBufferSize",
           "type": "int32"
         }
-      ],
-      "mode": "wire",
-      "helperFlat": "SteamAPI_ISteamApps_GetCurrentBetaName"
+      ]
     },
     {
       "slot": 16,
