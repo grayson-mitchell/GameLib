@@ -50,7 +50,7 @@ import {
   DialogHeader,
   DialogContent
 } from 'frontend/components/UI/Dialog'
-import { SelectField } from 'frontend/components/UI'
+import { SelectField, ToggleSwitch } from 'frontend/components/UI'
 import { MenuItem } from '@mui/material'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -61,6 +61,8 @@ import {
 } from 'frontend/state/InstallGameModal'
 import { AvailablePlatforms } from '..'
 import type { SteamSectionGatingVerdict } from '../steamSectionGating'
+import { resolveBridgeRouteLine } from '../steamBridgeRouteLine'
+import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import {
   SteamDialogLibraryOption,
   defaultSteamLibraryPath,
@@ -183,6 +185,71 @@ export default function SteamDialog({
   // a wedge rather than a guard. The handler below now releases it on every
   // non-success terminal path.
   const [submitting, setSubmitting] = useState(false)
+
+  // Plan 16 (D-51-09/D-51-10): the wine section's route line + force-bottled
+  // toggle. This is its own round trip through `getSteamBridgeRoute` --
+  // NOT a second read of the parent's `isSteamBottleEligible` probe
+  // (`gating`/`eligibilityPending` above) -- because this plan's files are
+  // scoped to this dialog and `steamBridgeRouteLine.ts` alone
+  // (51-16-PLAN.md `files_modified`), never the parent `InstallModal/index.tsx`
+  // or the shared `steamEligibilityProbe.ts` hook. `resolveBridgeRouteLine`
+  // is the ONLY place this verdict is interpreted -- see that module's rule
+  // (e): no local if/else may re-derive any of its output.
+  const [bridgeVerdict, setBridgeVerdict] = useState<
+    SteamBridgeRouteVerdict | undefined
+  >(undefined)
+
+  useEffect(() => {
+    // `bridgeRouteCancelled`, not the generic `cancelled` Effect B below
+    // uses -- `steamDialogSource.test.ts`'s positional disk-space gate
+    // locates Effect B by searching for the FIRST `let cancelled = false` in
+    // the file, so a second occurrence ahead of it would silently relocate
+    // that gate onto the wrong effect.
+    let bridgeRouteCancelled = false
+    window.api
+      .getSteamBridgeRoute(appName)
+      .then((verdict) => {
+        if (!bridgeRouteCancelled) setBridgeVerdict(verdict)
+      })
+      .catch(() => {
+        // D-51-09: fail-closed-and-silent, mirroring the D-25 eligibility
+        // probe's own rule -- `resolveBridgeRouteLine` treats an undefined
+        // verdict the same as `not-eligible`, so the line just stays hidden.
+        if (!bridgeRouteCancelled) setBridgeVerdict(undefined)
+      })
+    return () => {
+      bridgeRouteCancelled = true
+    }
+  }, [appName])
+
+  const bridgeLine = resolveBridgeRouteLine(bridgeVerdict, gating.wineSection)
+
+  // D-51-10: persist the user's choice, then re-probe the SAME channel so
+  // the line (and the checkbox itself) reflects the just-written verdict --
+  // never flip local state optimistically, which could drift from what the
+  // backend actually persisted.
+  const handleForceBottleToggle = useCallback(() => {
+    const nextChecked = !bridgeLine.forceBottleChecked
+    void (async () => {
+      try {
+        await window.api.setSteamBridgeUserRoute({
+          appId: appName,
+          userRoute: nextChecked ? 'bottle' : null
+        })
+      } catch (err) {
+        window.api.logError(
+          `SteamDialog: setSteamBridgeUserRoute failed (${String(err)})`
+        )
+      }
+      try {
+        const verdict = await window.api.getSteamBridgeRoute(appName)
+        setBridgeVerdict(verdict)
+      } catch {
+        // Leave the previous verdict rather than wedging the toggle on a
+        // transient re-probe failure.
+      }
+    })()
+  }, [appName, bridgeLine.forceBottleChecked])
 
   // D-24: `undefined` on a deliberate "Install with options..." click;
   // populated only when `startSteamQuickInstall` degraded into this dialog
@@ -480,13 +547,72 @@ export default function SteamDialog({
         )}
         {children}
         {gating.wineSection && (
-          <div className="infoBox">
-            <FontAwesomeIcon icon={faWarning} />
-            {tGamelib(
-              'gamelib:steam.install.sharedBottleNotice',
-              'The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.'
+          <>
+            <div className="infoBox">
+              <FontAwesomeIcon icon={faWarning} />
+              {tGamelib(
+                'gamelib:steam.install.sharedBottleNotice',
+                'The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.'
+              )}
+            </div>
+            {bridgeLine.visible && (
+              <div className="infoBox steamBridgeRouteLine">
+                <p>
+                  <b>
+                    {tGamelib(
+                      'gamelib:steam.bridge.route.label',
+                      'Steam route'
+                    )}
+                    {': '}
+                  </b>
+                  {tGamelib(
+                    bridgeLine.routeKey === 'native'
+                      ? 'gamelib:steam.bridge.route.native'
+                      : 'gamelib:steam.bridge.route.bottled',
+                    bridgeLine.routeKey === 'native'
+                      ? 'Native Steam bridge'
+                      : 'Bottled Steam client'
+                  )}
+                  {bridgeLine.reasonKey && (
+                    <>
+                      {' — '}
+                      {tGamelib(`gamelib:${bridgeLine.reasonKey}`, {
+                        reason: bridgeLine.reasonParams.reasonKey
+                          ? tGamelib(
+                              `gamelib:${bridgeLine.reasonParams.reasonKey}`
+                            )
+                          : undefined
+                      })}
+                    </>
+                  )}
+                </p>
+                {bridgeLine.missingSymbols.length > 0 && (
+                  <p>
+                    {tGamelib(
+                      'gamelib:steam.bridge.route.missingSymbols',
+                      'Not covered: {{symbols}}',
+                      { symbols: bridgeLine.missingSymbols.join(', ') }
+                    )}
+                  </p>
+                )}
+                {bridgeLine.showForceBottleToggle && (
+                  <ToggleSwitch
+                    htmlId="steam-bridge-force-bottle"
+                    title={tGamelib(
+                      'gamelib:steam.bridge.forceBottle.label',
+                      'Use the Windows Steam client instead'
+                    )}
+                    description={tGamelib(
+                      'gamelib:steam.bridge.forceBottle.help',
+                      'Installs into the shared bottled Steam client. Changing this later means reinstalling the game.'
+                    )}
+                    value={bridgeLine.forceBottleChecked}
+                    handleChange={() => handleForceBottleToggle()}
+                  />
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
         {gating.libraryDropdown && (
           <SelectField

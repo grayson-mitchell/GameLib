@@ -137,17 +137,17 @@ describe('resolveBridgeRouteLine', () => {
     }
   })
 
-  it('has at most one import line, and it is the shared steam type -- zero React / frontend imports', () => {
+  it('has at most one import statement, and it is the shared steam type -- zero React / frontend imports', () => {
     const source = readFileSync(
       join(__dirname, '..', 'steamBridgeRouteLine.ts'),
       'utf8'
     )
-    const importLines = source
+    const importStartLines = source
       .split('\n')
       .filter((line) => line.startsWith('import'))
-    expect(importLines.length).toBeLessThanOrEqual(1)
-    if (importLines.length === 1) {
-      expect(importLines[0]).toContain('common/types/steam')
+    expect(importStartLines.length).toBeLessThanOrEqual(1)
+    if (importStartLines.length === 1) {
+      expect(source).toMatch(/^import[^;]*common\/types\/steam/m)
     }
   })
 })
