@@ -50,8 +50,8 @@
  * `__setBridgeHelperPathForTests()`'s existing shape) -- real isolation,
  * not ambient propagation that never happens.
  */
-import { execFileSync } from 'node:child_process'
-import { chmodSync, mkdtempSync, readFileSync } from 'node:fs'
+import { execFileSync, spawn } from 'node:child_process'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
 import { Socket } from 'node:net'
 import { join, resolve } from 'node:path'
 
@@ -66,7 +66,13 @@ import {
   __setBridgeHelperPathForTests,
   __setBridgeHelperSpawnEnvForTests
 } from '../helperProcess'
-import { encodeControl, decodeResponse, STATUS_OK } from '../protocol'
+import {
+  encodeControl,
+  encodeRequest,
+  decodeResponse,
+  STATUS_ERR,
+  STATUS_OK
+} from '../protocol'
 // eslint-disable-next-line @typescript-eslint/no-var-requires -- meta/ is
 // outside src/'s tsconfig `include`; other real-build suites (e.g.
 // lzmaNativeBinding.test.ts) already cross this same boundary with a
@@ -161,6 +167,42 @@ function sendControlHello(port: number): Promise<number> {
   })
 }
 
+/**
+ * Sends one request frame over an ALREADY-OPEN, already-connected socket
+ * and resolves with the decoded response -- unlike `sendControlHello`
+ * above (which opens and tears down its own short-lived socket per call),
+ * this reuses the SAME connection across multiple calls so a test can
+ * prove the helper's `serve_connection()` read loop really does keep
+ * serving sequential frames after an error response (R2's own acceptance
+ * bar: >=2 sequential requests over one persistent connection).
+ */
+function sendFrameOnSocket(
+  socket: Socket,
+  frame: Buffer
+): Promise<{ status: number; retBlob: Buffer }> {
+  return new Promise((resolvePromise, rejectPromise) => {
+    let received = Buffer.alloc(0)
+    const timeout = setTimeout(() => {
+      socket.off('data', onData)
+      rejectPromise(new Error('frame response timed out'))
+    }, 2000)
+
+    const onData = (chunk: Buffer) => {
+      received = Buffer.concat([received, chunk])
+      try {
+        const decoded = decodeResponse(received)
+        clearTimeout(timeout)
+        socket.off('data', onData)
+        resolvePromise(decoded)
+      } catch {
+        // Truncated -- wait for more bytes.
+      }
+    }
+    socket.on('data', onData)
+    socket.write(frame)
+  })
+}
+
 describeDarwinOnly(
   'helperIntegration (real compiled bridge_helper.c -- darwin only, skipped elsewhere: Mach-O clang compile + macOS-only dylib resolution)',
   () => {
@@ -240,6 +282,103 @@ describeDarwinOnly(
 
       await expectPortEventuallyClosed(first.port as number)
       await expectPortEventuallyClosed(second.port as number)
+    }, 30000)
+
+    // 51-10 Task 2, D-51-04: the compiled helper spawned directly (not
+    // through ensureBridgeHelperReady(), which has no argv for this) with
+    // --identity-only --report-appid really does print mode=identity-only
+    // on its own LISTEN line.
+    test('--identity-only --report-appid prints mode=identity-only on the LISTEN line (D-51-04)', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'identity-only-'))
+      mkdirSync(stageDir, { recursive: true })
+
+      const child = spawn(
+        compiledHelperPath,
+        [
+          '--appid',
+          '480',
+          '--port',
+          '0',
+          '--identity-only',
+          '--report-appid',
+          AVERNUM_APP_ID
+        ],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          // Per gamelib-conventions (fake-HOME isolation, two-profile
+          // rule): this is an in-repo direct spawn of the compiled binary,
+          // never a hand-rolled env literal.
+          env: profile.childEnv()
+        }
+      )
+
+      try {
+        const listenLine = await new Promise<string>(
+          (resolvePromise, rejectPromise) => {
+            let stderr = ''
+            const timeout = setTimeout(() => {
+              rejectPromise(
+                new Error(
+                  `no LISTEN line within timeout -- stderr so far: ${stderr}`
+                )
+              )
+            }, 5000)
+            child.stderr?.on('data', (data: Buffer) => {
+              stderr += data.toString()
+              const match = /LISTEN .*$/m.exec(stderr)
+              if (match) {
+                clearTimeout(timeout)
+                resolvePromise(match[0])
+              }
+            })
+          }
+        )
+        expect(listenLine).toContain('mode=identity-only')
+      } finally {
+        child.kill()
+      }
+    }, 10000)
+
+    // T-51-23/T-51-25: an unknown (ordinal, slot) pair -- here a made-up
+    // ordinal no manifest declares -- answers STATUS_ERR, and the SAME
+    // persistent connection keeps serving a next frame afterward (R2's own
+    // acceptance bar: >=2 sequential requests over one connection, never a
+    // close-on-error).
+    test('an unknown ordinal frame answers STATUS_ERR and keeps the connection open for the next frame', async () => {
+      const THIRD_APP_ID = '400'
+      const ready = await ensureBridgeHelperReady(THIRD_APP_ID)
+      expect(typeof ready.port).toBe('number')
+      const port = ready.port as number
+
+      try {
+        const socket = new Socket()
+        await new Promise<void>((resolvePromise, rejectPromise) => {
+          socket.once('error', rejectPromise)
+          socket.connect(port, '127.0.0.1', () => resolvePromise())
+        })
+
+        try {
+          const UNKNOWN_ORDINAL = 9999
+          const unknownOrdinalFrame = encodeRequest(1, UNKNOWN_ORDINAL, 0)
+          const first = await sendFrameOnSocket(socket, unknownOrdinalFrame)
+          expect(first.status).toBe(STATUS_ERR)
+
+          // The SAME connection, a SECOND frame (CONTROL HELLO -- always
+          // answerable regardless of init state) -- proves the connection
+          // was never closed after the error response above.
+          const second = await sendFrameOnSocket(
+            socket,
+            encodeControl(2, 'hello')
+          )
+          expect(second.status).toBe(STATUS_OK)
+        } finally {
+          socket.destroy()
+        }
+      } finally {
+        stopBridgeHelper(THIRD_APP_ID)
+        await expectPortEventuallyClosed(port)
+      }
     }, 30000)
   }
 )

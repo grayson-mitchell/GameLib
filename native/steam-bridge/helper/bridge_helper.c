@@ -22,10 +22,24 @@
  * `getsockname()` to learn what it got) rather than a fixed, well-known
  * port -- there is no shared, predictable `BRIDGE_PORT` left anywhere in
  * this file. The port is announced on ONE stderr line
- * (`LISTEN 127.0.0.1:<port> appid=<id> mode=full`) that the spawning
- * backend parses to learn it, and handed to the game's own regenerated
- * shim via `gamelib_bridge.cfg` (`bridgeConfig.ts`) -- the shim fails
- * closed (no fixed-port fallback) if that file is missing/malformed.
+ * (`LISTEN 127.0.0.1:<port> appid=<id> mode=full` or `mode=identity-only`,
+ * D-51-04 -- see Task 2 below) that the spawning backend parses to learn
+ * it, and handed to the game's own regenerated shim via
+ * `gamelib_bridge.cfg` (`bridgeConfig.ts`) -- the shim fails closed (no
+ * fixed-port fallback) if that file is missing/malformed.
+ *
+ * Phase 51 Plan 10 (51-10): every non-CONTROL request is now dispatched
+ * through a SINGLE generated table (`bridge_dispatch`,
+ * native/steam-bridge/generated/bridge_dispatch.h, produced by
+ * meta/gen_vtables.ts's `generateDispatchHeader()` from the SAME
+ * meta/sdk manifests the shim is generated from) rather
+ * than a hand-written per-interface, per-method dlsym block -- one manifest
+ * now drives both ends of the wire. `--identity-only`/`--report-appid`
+ * (D-51-04) put the helper into a mode where an app-scoped family
+ * (SteamUserStats, SteamRemoteStorage) answers STATUS_ERR and
+ * SteamUtils.GetAppID reports the launching game's real AppID instead of
+ * calling through -- `bridge_dispatch_set_identity_only()`, called once at
+ * startup from argv, below.
  *
  * Still ONE persistent `127.0.0.1` loopback-only connection per game
  * process, speaking the SAME binary frame defined in
@@ -89,6 +103,14 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+// 51-10: the generated helper-side dispatch table -- bridge_dispatch_init,
+// bridge_dispatch, bridge_dispatch_set_identity_only (see module doc).
+// Produced by meta/gen_vtables.ts's generateDispatchHeader() from the SAME
+// meta/sdk manifests native/steam-bridge/generated/
+// steam_api_shim.c is generated from -- resolved via buildSteamBridgeShims.ts's
+// `-I native/steam-bridge/generated` compile flag.
+#include "bridge_dispatch.h"
+
 // === Frame constants (MUST match src/backend/storeManagers/steam/bridge/protocol.ts) ===
 
 #define LENGTH_FIELD_BYTES 4
@@ -103,20 +125,6 @@
 // MAX_FRAME_BYTES exactly. Also sizes the fixed argument buffer below, so
 // no read into an attacker-controlled-size allocation is ever possible.
 #define MAX_FRAME_BYTES 65536
-
-// Interface ordinals -- matches the 24-01 generator's assignment exactly
-// (native/steam-bridge/generated/steam_api_shim.c: ordinal 1 = SteamUser023,
-// ordinal 2 = SteamFriends018; meta/sdk/*.manifest.json).
-#define ORDINAL_FLAT 0
-#define ORDINAL_USER 1
-#define ORDINAL_FRIENDS 2
-
-// SteamUser023 slots actually served this phase (meta/sdk/isteamuser.manifest.json)
-#define USER_SLOT_BLOGGEDON 1
-#define USER_SLOT_GETSTEAMID 2
-
-// SteamFriends018 slots actually served this phase (meta/sdk/isteamfriends.manifest.json)
-#define FRIENDS_SLOT_GETPERSONANAME 0
 
 // Reserved CONTROL ordinal (review finding #7) -- never a real Steamworks
 // interface, placed at the top of the uint16 range.
@@ -149,23 +157,18 @@
 
 typedef int         (*InitFlat_t)(char *);
 typedef void        (*RunCallbacks_t)(void);
-typedef void *      (*Accessor_t)(void);
-typedef uint64_t    (*GetSteamID_t)(void *);
-typedef int         (*BLoggedOn_t)(void *);
-typedef const char *(*GetPersona_t)(void *);
 
 static InitFlat_t     InitFlat;
 static RunCallbacks_t RunCB;
-static Accessor_t     GetUser, GetFriends;
-static GetSteamID_t   GetSteamID;
-static BLoggedOn_t    BLoggedOn;
-static GetPersona_t   GetPersona;
 
-static void *g_user = NULL, *g_friends = NULL;
-// True once SteamAPI_InitFlat succeeded against a live session AND both
-// interface accessors resolved to non-NULL -- gates CONTROL WHOAMI and the
-// identity slots below. HEALTH (and HELLO) are answerable regardless of
-// this flag (finding #7 -- "process up" vs "init succeeded").
+// True once SteamAPI_InitFlat succeeded against a live session -- gates
+// CONTROL WHOAMI and every real interface dispatch. HEALTH (and HELLO) are
+// answerable regardless of this flag (finding #7 -- "process up" vs "init
+// succeeded"). 51-10: per-interface self/flat-function resolution now
+// happens in bridge_dispatch_init() (bridge_dispatch.h), called below once
+// InitFlat succeeds -- this flag no longer also encodes "every interface
+// accessor resolved", since bridge_dispatch's own per-case NULL checks
+// (T-51-23) already protect against a partial dylib-resolution failure.
 static int g_inited = 0;
 
 // One dlopen'd handle for this process's entire lifetime -- never a second
@@ -181,6 +184,13 @@ static char g_appid[MAX_APPID_DIGITS + 1];
 // so an inbound frame's declared length is checked against this cap BEFORE
 // any recv() into it; never allocated/resized based on attacker input.
 static uint8_t g_argbuf[MAX_FRAME_BYTES];
+
+// 51-10: the single scratch buffer every bridge_dispatch call encodes
+// its response into -- bridge_dispatch itself never writes past
+// BRIDGE_DISPATCH_RESP_SCRATCH_BYTES (bridge_dispatch.h, generated from
+// the same constant gen_vtables.ts sizes it against), so this array can
+// never be overrun regardless of which dispatch case ran.
+static uint8_t g_dispatch_respbuf[BRIDGE_DISPATCH_RESP_SCRATCH_BYTES];
 
 static void logts(const char *cat, const char *msg) {
   char ts[32];
@@ -270,13 +280,13 @@ static int load_steam_api(void) {
 
   InitFlat   = (InitFlat_t)dlsym(g_dylib_handle, "SteamAPI_InitFlat");
   RunCB      = (RunCallbacks_t)dlsym(g_dylib_handle, "SteamAPI_RunCallbacks");
-  GetUser    = (Accessor_t)dlsym(g_dylib_handle, "SteamAPI_SteamUser_v023");
-  GetFriends = (Accessor_t)dlsym(g_dylib_handle, "SteamAPI_SteamFriends_v018");
-  GetSteamID = (GetSteamID_t)dlsym(g_dylib_handle, "SteamAPI_ISteamUser_GetSteamID");
-  BLoggedOn  = (BLoggedOn_t)dlsym(g_dylib_handle, "SteamAPI_ISteamUser_BLoggedOn");
-  GetPersona = (GetPersona_t)dlsym(g_dylib_handle, "SteamAPI_ISteamFriends_GetPersonaName");
 
-  if (!InitFlat || !RunCB || !GetUser || !GetFriends || !GetSteamID || !BLoggedOn || !GetPersona) {
+  // 51-10: every per-interface accessor/flat-function dlsym now lives in
+  // the generated bridge_dispatch_init() (bridge_dispatch.h), called from
+  // init_steam_api_once() below once InitFlat succeeds -- NULL-tolerant by
+  // design (T-51-23: a missing symbol there degrades that one dispatch
+  // case to STATUS_ERR, never this whole helper).
+  if (!InitFlat || !RunCB) {
     logts("FATAL", "dlsym failed -- libsteam_api.dylib is present but missing an expected export");
     return 0;
   }
@@ -298,20 +308,20 @@ static int load_steam_api(void) {
 static void init_steam_api_once(const char *appId) {
   char err[1024] = {0};
   int r = InitFlat(err);
-  // WR-04: only invoke the interface accessors once InitFlat itself
-  // reports success. Calling GetUser()/GetFriends() when r != 0 (Steam
-  // not running/signed in) is outside the documented Steamworks contract
-  // -- if the real dylib dereferences not-yet-initialized internal global
-  // state inside these accessors on a failed init, it can crash the
-  // helper instead of returning NULL, defeating the "process up, no
-  // session" HEALTH/WHOAMI split (finding #7) this whole init path exists
-  // to preserve. g_user/g_friends stay NULL on init failure.
-  if (r == 0) {
-    g_user = GetUser();
-    g_friends = GetFriends();
+  g_inited = (r == 0);
+  // WR-04/51-10: only resolve the generated dispatch table's per-interface
+  // accessors/flat functions once InitFlat itself reports success --
+  // calling an interface accessor before a live session exists is outside
+  // the documented Steamworks contract (if the real dylib dereferences
+  // not-yet-initialized internal global state inside an accessor, it can
+  // crash the helper rather than returning NULL, defeating the "process
+  // up, no session" HEALTH/WHOAMI split, finding #7). bridge_dispatch_init
+  // is itself NULL-tolerant per symbol (see its own doc comment); a
+  // partial resolution failure degrades the affected dispatch case to
+  // STATUS_ERR, never this whole helper.
+  if (g_inited) {
+    bridge_dispatch_init(g_dylib_handle);
   }
-
-  g_inited = (r == 0 && g_user != NULL && g_friends != NULL);
   if (!g_inited) {
     char msg[1200];
     snprintf(
@@ -390,18 +400,16 @@ static int send_response(int fd, uint32_t requestId, uint8_t status, const uint8
 }
 
 /*
- * Dispatches one decoded request to the correct identity method / CONTROL
- * handler and sends the response. Never re-initializes Steamworks -- reads
- * the already-resolved g_user/g_friends pointers + g_inited flag only.
- * `helloLogged` is connection-scoped state (owned by `serve_connection`'s
- * stack frame) so the HELLO log line fires once per connection, not once
- * per request on that connection.
+ * Dispatches one decoded request to the correct CONTROL handler, or (every
+ * other ordinal) through the single generated bridge_dispatch table
+ * (51-10), and sends the response. Never re-initializes Steamworks --
+ * reads the g_inited flag and bridge_dispatch's own already-resolved
+ * self/flat pointers only. `helloLogged` is connection-scoped state (owned
+ * by `serve_connection`'s stack frame) so the HELLO log line fires once
+ * per connection, not once per request on that connection.
  */
 static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, uint16_t slot,
                                   const uint8_t *argBlob, uint32_t argLen, int *helloLogged) {
-  (void)argBlob;
-  (void)argLen;
-
   if (ordinal == CONTROL_ORDINAL) {
     if (slot == CONTROL_SLOT_HEALTH) {
       // Answerable pre-init / independent of init outcome -- "process up".
@@ -409,12 +417,22 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       return;
     }
     if (slot == CONTROL_SLOT_WHOAMI) {
+      // 51-10: WHOAMI calls the generated dispatch table's resolved
+      // SteamUser023.GetSteamID self/flat pointers DIRECTLY (never through
+      // bridge_dispatch itself) -- this is the one hand-written CONTROL
+      // feature that still needs a specific identity method, and keeping
+      // it off bridge_dispatch keeps that function's only real call site
+      // the one in the non-CONTROL branch below.
       if (!g_inited) {
         send_response(fd, requestId, STATUS_ERR, NULL, 0); // not-inited
         return;
       }
       pump_callbacks();
-      uint64_t id = GetSteamID(g_user);
+      if (g_bd_flat_SteamUser023_GetSteamID == NULL || g_bd_self_steamuser023 == NULL) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint64_t id = g_bd_flat_SteamUser023_GetSteamID(g_bd_self_steamuser023);
       uint8_t retbuf[8];
       memcpy(retbuf, &id, 8); // raw bytes, never parsed to a JS number
       send_response(fd, requestId, STATUS_OK, retbuf, 8);
@@ -444,50 +462,15 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
     return;
   }
 
-  if (ordinal == ORDINAL_USER) {
-    if (slot == USER_SLOT_GETSTEAMID) {
-      pump_callbacks();
-      uint64_t id = GetSteamID(g_user);
-      uint8_t retbuf[8];
-      memcpy(retbuf, &id, 8);
-      send_response(fd, requestId, STATUS_OK, retbuf, 8);
-      return;
-    }
-    if (slot == USER_SLOT_BLOGGEDON) {
-      int logged = BLoggedOn(g_user);
-      uint8_t retbuf[4];
-      memcpy(retbuf, &logged, 4);
-      send_response(fd, requestId, STATUS_OK, retbuf, 4);
-      return;
-    }
-    // Any other SteamUser023 slot is not served this phase (API/callback
-    // breadth is a tracked follow-up, per 24-RESEARCH.md Pattern 1) --
-    // answer a clean error rather than hanging or guessing.
-    send_response(fd, requestId, STATUS_ERR, NULL, 0);
-    return;
-  }
-
-  if (ordinal == ORDINAL_FRIENDS) {
-    if (slot == FRIENDS_SLOT_GETPERSONANAME) {
-      pump_callbacks();
-      const char *persona = GetPersona(g_friends);
-      if (!persona) {
-        send_response(fd, requestId, STATUS_ERR, NULL, 0);
-        return;
-      }
-      uint32_t len = (uint32_t)strlen(persona);
-      send_response(fd, requestId, STATUS_OK, (const uint8_t *)persona, len);
-      return;
-    }
-    send_response(fd, requestId, STATUS_ERR, NULL, 0);
-    return;
-  }
-
-  // ORDINAL_FLAT and any other ordinal: the flat SteamAPI_* surface is
-  // marshaled client-side by the generated shim's own stubs (Plan 24-01);
-  // this helper does not serve flat-ordinal requests over the wire. Answer
-  // a clean error rather than reading unbounded/hanging.
-  send_response(fd, requestId, STATUS_ERR, NULL, 0);
+  // 51-10: every real (non-CONTROL) interface call is served by the single
+  // generated dispatch table -- unknown (ordinal, slot), an unresolved
+  // symbol, and every param-bounds check all live in bridge_dispatch
+  // itself (bridge_dispatch.h), generated from the SAME manifests the
+  // shim's own stubs are generated from.
+  uint32_t respLen = 0;
+  uint8_t status = bridge_dispatch(ordinal, slot, argBlob, argLen,
+                                    g_dispatch_respbuf, sizeof(g_dispatch_respbuf), &respLen);
+  send_response(fd, requestId, status, g_dispatch_respbuf, respLen);
 }
 
 /*
@@ -547,12 +530,26 @@ int main(int argc, char **argv) {
   signal(SIGPIPE, SIG_IGN);
 
   const char *appIdArg = NULL;
+  const char *reportAppIdArg = NULL;
   long portArg = 0;
+  int identityOnly = 0;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--appid") == 0 && i + 1 < argc) {
       appIdArg = argv[++i];
     } else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
       portArg = strtol(argv[++i], NULL, 10);
+    } else if (strcmp(argv[i], "--identity-only") == 0) {
+      // D-51-04: real-AppID init failed upstream (Steam refused the AppID,
+      // family-shared title, licence check) -- the backend falls back to
+      // launching with this helper in identity-only mode rather than
+      // refusing the game outright. No value: a bare flag.
+      identityOnly = 1;
+    } else if (strcmp(argv[i], "--report-appid") == 0 && i + 1 < argc) {
+      // D-51-04: the LAUNCHING game's real AppID (never 480) -- what
+      // SteamUtils.GetAppID reports back in identity-only mode, even
+      // though --appid/steam_appid.txt itself stays 480 so the real
+      // AppID-scoped interfaces never see it.
+      reportAppIdArg = argv[++i];
     }
   }
 
@@ -566,9 +563,20 @@ int main(int argc, char **argv) {
     logts("FATAL", "invalid --port (must be 0-65535; 0 = OS-assigned ephemeral)");
     return 6;
   }
+  // T-51-03 (same re-validation discipline as --appid): a malformed
+  // --report-appid is rejected here, independently of whatever the
+  // spawning backend already validated.
+  if (reportAppIdArg && !is_valid_appid(reportAppIdArg)) {
+    logts("FATAL", "invalid --report-appid (required: 1-10 ASCII digits)");
+    return 6;
+  }
 
   strncpy(g_appid, appIdArg, MAX_APPID_DIGITS);
   g_appid[MAX_APPID_DIGITS] = '\0';
+
+  bridge_dispatch_set_identity_only(
+    identityOnly, reportAppIdArg ? (uint32_t)strtoul(reportAppIdArg, NULL, 10) : 0
+  );
 
   // D-51-01: write THIS helper's own real AppID BEFORE binding/listening,
   // so the identity file is already correct the moment anything could
@@ -619,7 +627,8 @@ int main(int argc, char **argv) {
   char listenMsg[160];
   snprintf(
     listenMsg, sizeof listenMsg,
-    "127.0.0.1:%u appid=%s mode=full", (unsigned)actualPort, g_appid
+    "127.0.0.1:%u appid=%s mode=%s", (unsigned)actualPort, g_appid,
+    identityOnly ? "identity-only" : "full"
   );
   logts("LISTEN", listenMsg);
 
