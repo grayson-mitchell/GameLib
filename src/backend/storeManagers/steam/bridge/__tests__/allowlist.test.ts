@@ -114,7 +114,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('the bundled bridge-allowlist.json is version 2 with an empty knownBad list', () => {
+  test('the bundled bridge-allowlist.json is version 2 with XCOM as its one evidence-backed knownBad entry (51-19)', () => {
     const raw = readFileSync(
       join(__dirname, '..', 'bridge-allowlist.json'),
       'utf-8'
@@ -122,7 +122,30 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     const parsed = JSON.parse(raw)
 
     expect(parsed.version).toBe(2)
-    expect(parsed.knownBad).toEqual([])
+    expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
+      '200510'
+    ])
+    expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
+  })
+
+  test('every seed and knownBad entry carries a real evidence note (51-19)', () => {
+    // A note is the only record of WHY a title is on either list. 653d9685b
+    // shipped both seed notes as `<<ccr:…>>` placeholders unnoticed, so a
+    // placeholder is rejected too, not just an empty string.
+    const raw = readFileSync(
+      join(__dirname, '..', 'bridge-allowlist.json'),
+      'utf-8'
+    )
+    const parsed = JSON.parse(raw)
+    const entries: { appId: string; note?: string }[] = [
+      ...parsed.seed,
+      ...parsed.knownBad
+    ]
+
+    for (const entry of entries) {
+      expect(entry.note?.trim()).toBeTruthy()
+      expect(entry.note).not.toMatch(/<<ccr:/)
+    }
   })
 
   test('has() returns true for Avernum 6 (acceptance-set title, seed membership)', () => {

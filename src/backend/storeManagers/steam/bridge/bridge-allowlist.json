@@ -4,13 +4,20 @@
     {
       "appId": "206040",
       "title": "Avernum 5",
-      "note": "<<ccr:1aa3a46b3d20,string,408B>>"
+      "note": "Windows-only (mac:false); Spiderweb engine sibling of Avernum 4/6 -- expected minimal steam_api footprint (Init/Shutdown). Added as the immediately-testable Gate 3 target: not previously installed, so a fresh GameLib install exercises the full bridge install path (Avernum 6/HOARD are blocked by D-UAT-24-02, already-installed via non-bridge paths). Import coverage confirmed via 24-05 importScan at install. 51-UAT item 2 (2026-10-22, fresh Mac): launches through its own per-game bottle with real identity and Mac Steam In-Game (bridge path PASS); the item recorded an issue for helper teardown on first launch, not for this title. Operator observation: the game is not really playable under wine (in-game menu disappears) -- a wine-level limitation, kept in seed by operator decision."
     },
     {
       "appId": "206060",
       "title": "Avernum 6",
-      "note": "<<ccr:727c3d9967f1,string,354B>>"
+      "note": "Windows-only (mac:false); Spiderweb engine sibling of Avernum 4 -- expected minimal steam_api footprint (Init/Shutdown). Replaces Avernum 4 (206020), which does not run under CrossOver. Import coverage confirmed via 24-05 importScan at install (24-10 Gate 3). VERIFIED PLAYABLE through the bridge on real Apple-Silicon HW 2026-07-21 (24-UAT Gate 3 PASS). 51-UAT item 1 PASS (2026-10-22, fresh Mac, per-game bottle GameLibSteamBridge-206060): LISTEN/INIT/HELLO, placed shim == SHIM32, Mac Steam In-Game, port freed on quit."
     }
   ],
-  "knownBad": []
+  "knownBad": [
+    {
+      "appId": "200510",
+      "title": "XCOM: Enemy Unknown",
+      "reason": "drm-wrapped",
+      "note": "51-UAT item 5 (2026-10-22): scan clean and the shim loads, but XComGame.exe reads PE resources STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writes XComGame.exe.<pid>.STEAMSTART, idles ~30s and exits without ever calling SteamAPI_Init -- Steam CEG waiting for a Windows Steam client a bridge bottle cannot provide. Inferred from a CrossOver --cx-log trace; confirmation via bottled Steam is todo 2026-10-22-confirm-xcom-ceg-diagnosis-via-bottled-steam.md."
+    }
+  ]
 }
