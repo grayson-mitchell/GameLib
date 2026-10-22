@@ -163,6 +163,108 @@ describe('classifyBottledSteamBlock', () => {
   })
 })
 
+describe('classifyBottledSteamBlock -- 2026-10-22 measured GameLibSteam lines', () => {
+  const crlf = (lines: string[]) => lines.join('\r\n') + '\r\n'
+
+  const signedOutLogin = crlf([
+    '[2026-10-22 22:21:30] [ None ] SetLoginState: WaitingForCredentials - OK',
+    '[2026-10-22 22:21:30] [ WaitingForCredentials ] UI Request: connect'
+  ])
+  const preExistingSignIn = crlf([
+    '[2026-10-22 22:20:50] [ None ] SetLoginState: WaitingForCredentials - OK'
+  ])
+  const signedIn = crlf([
+    '[2026-10-22 22:21:30] [ None ] SetLoginState: WaitingForCredentials - OK',
+    '[2026-10-22 22:21:49] [ WaitingForCredentials ] SetLoginState: WaitingForServerResponse - OK',
+    '[2026-10-22 22:22:01] [ WaitingForLibraryReady ] SetLoginState: Success - OK'
+  ])
+  const downloadBootstrap = crlf([
+    '[2026-10-22 22:13:40] Verifying installation...',
+    '[2026-10-22 22:13:40] Downloading update...',
+    '[2026-10-22 22:13:42] Downloading update (5,597 of 336,229 KB)...'
+  ])
+  const normalBootstrap = crlf([
+    '[2026-10-22 22:21:25] Verifying installation...',
+    '[2026-10-22 22:21:25] Verifying file sizes only',
+    '[2026-10-22 22:21:25] Verification complete'
+  ])
+  const otherSessionConsole =
+    '[2026-10-22 22:21:40] GameAction [AppID 38410, ActionID 1] : LaunchApp waiting for user response to KickingOtherSession "Xenonauts 2"'
+
+  const loginLaunch = new Date(2026, 9, 22, 22, 21, 23).getTime()
+  const updateLaunch = new Date(2026, 9, 22, 22, 13, 39).getTime()
+
+  const classify = (
+    args: Partial<{
+      bootstrapTail: string
+      consoleTail: string
+      loginTail: string
+      launchStartedAt: number
+    }>
+  ) =>
+    classifyBottledSteamBlock({
+      bootstrapTail: '',
+      consoleTail: '',
+      loginTail: '',
+      appId: '38410',
+      launchStartedAt: loginLaunch,
+      ...args
+    })
+
+  test('WaitingForCredentials after Play classifies as login', () => {
+    expect(classify({ loginTail: signedOutLogin })).toBe('login')
+  })
+
+  test('WaitingForCredentials from before Play (already at sign-in) still classifies as login', () => {
+    expect(classify({ loginTail: preExistingSignIn })).toBe('login')
+  })
+
+  test('a tail whose latest SetLoginState is Success does not classify as login', () => {
+    expect(classify({ loginTail: signedIn })).toBeNull()
+  })
+
+  test('the self-update download phase classifies as self-update', () => {
+    expect(
+      classify({
+        bootstrapTail: downloadBootstrap,
+        launchStartedAt: updateLaunch
+      })
+    ).toBe('self-update')
+  })
+
+  test('a normal start (verification lines only) is not classified', () => {
+    expect(classify({ bootstrapTail: normalBootstrap })).toBeNull()
+  })
+
+  test('Downloading update lines older than the cutoff do not count', () => {
+    expect(classify({ bootstrapTail: downloadBootstrap })).toBeNull()
+  })
+
+  test('precedence: other-session > self-update > login', () => {
+    const all = {
+      bootstrapTail: downloadBootstrap,
+      consoleTail: otherSessionConsole,
+      loginTail: signedOutLogin,
+      launchStartedAt: updateLaunch
+    }
+    expect(classify(all)).toBe('other-session')
+    expect(classify({ ...all, consoleTail: '' })).toBe('self-update')
+  })
+
+  test('LogonFailure still classifies as login, No Connection still does not', () => {
+    expect(
+      classify({
+        consoleTail: '[2026-10-22 22:21:30] LogonFailure Access Denied'
+      })
+    ).toBe('login')
+    expect(
+      classify({
+        consoleTail: '[2026-10-22 22:21:30] LogonFailure No Connection'
+      })
+    ).toBeNull()
+  })
+})
+
 describe('readBoundedTail', () => {
   let dir: string
 
@@ -227,6 +329,16 @@ describe('bottledSteamLogPaths', () => {
         'Steam',
         'logs',
         'bootstrap_log.txt'
+      )
+    )
+    expect(paths.login).toBe(
+      join(
+        '/fake/bottle',
+        'drive_c',
+        'Program Files (x86)',
+        'Steam',
+        'logs',
+        'steamui_login.txt'
       )
     )
     expect(paths.console).toBe(

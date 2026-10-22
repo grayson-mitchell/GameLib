@@ -4,15 +4,27 @@
  * three measured bottled-Steam launch blockers the bottle's OWN logs show,
  * plus the bounded log-tail reader it consumes.
  *
- * Planner measurement 2026-10-17 of a real GameLibSteam bottle found a
- * clean signal for all three causes:
- *  - self-update:    bootstrap_log.txt `Installing update...`
+ * Measured signals (2026-10-17 planner measurement, extended 2026-10-22 from
+ * the 51-UAT item 11 gate's own GameLibSteam bottle):
+ *  - self-update:    bootstrap_log.txt `Installing update...` OR
+ *                     `Downloading update...` / `Downloading update (n of m
+ *                     KB)...` at/after the launch cutoff. `Verifying
+ *                     installation...` / `Verification complete` are logged
+ *                     on EVERY start (22:21:25 with no update) and never
+ *                     count.
  *  - other-session:  console_log.txt `GameAction [AppID <appId>, ...] :
  *                     LaunchApp waiting for user response to
  *                     KickingOtherSession "<title>"`
- *  - login:          console_log.txt `LogonFailure <reason>` where
- *                     `<reason>` is not `No Connection` (that reason means
- *                     "not even trying to log on", not a login failure).
+ *  - login:          steamui_login.txt, the LAST `SetLoginState: <state>`
+ *                     line being `WaitingForCredentials` (22:21:30 /
+ *                     22:20:50), OR console_log.txt `LogonFailure <reason>`
+ *                     where `<reason>` is not `No Connection`.
+ *
+ * Known limit of the no-cutoff login-state rule: a stale
+ * `WaitingForCredentials` can show if bottled Steam exited at its sign-in
+ * screen and was not restarted by this launch. If a gate shows that, bound
+ * it: require the latest `SetLoginState:` line to be at/after the latest
+ * `Client version:` line that is itself at/after `launchStartedAt - 5000`.
  *
  * `classifyBottledSteamBlock` is pure (string tails in, enum out) so it is
  * directly unit-testable against fixtures shaped like the real logs without
@@ -88,6 +100,7 @@ export async function readBoundedTail(
 export function bottledSteamLogPaths(bottleDir: string): {
   bootstrap: string
   console: string
+  login: string
 } {
   const logsDir = join(
     bottleDir,
@@ -98,7 +111,8 @@ export function bottledSteamLogPaths(bottleDir: string): {
   )
   return {
     bootstrap: join(logsDir, 'bootstrap_log.txt'),
-    console: join(logsDir, 'console_log.txt')
+    console: join(logsDir, 'console_log.txt'),
+    login: join(logsDir, 'steamui_login.txt')
   }
 }
 
@@ -112,7 +126,7 @@ interface ParsedLine {
 const TIMESTAMP_PREFIX = /^\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\]/
 
 function parseTimestampedLine(line: string): ParsedLine | null {
-  const match = TIMESTAMP_PREFIX.exec(line)
+  const match = TIMESTAMP_PREFIX.exec(line.replace(/\r$/, ''))
   if (!match) return null
   const [, year, month, day, hour, minute, second] = match
   const timestampMs = new Date(
@@ -123,7 +137,7 @@ function parseTimestampedLine(line: string): ParsedLine | null {
     Number(minute),
     Number(second)
   ).getTime()
-  return { timestampMs, rest: line.slice(match[0].length) }
+  return { timestampMs, rest: line.replace(/\r$/, '').slice(match[0].length) }
 }
 
 /** Every timestamped line in `tail` whose timestamp is at/after `cutoffMs`.
@@ -144,6 +158,7 @@ function linesAtOrAfter(tail: string, cutoffMs: number): ParsedLine[] {
 interface ClassifyBottledSteamBlockArgs {
   bootstrapTail: string
   consoleTail: string
+  loginTail?: string
   appId: string
   launchStartedAt: number
 }
@@ -163,6 +178,7 @@ interface ClassifyBottledSteamBlockArgs {
 export function classifyBottledSteamBlock({
   bootstrapTail,
   consoleTail,
+  loginTail = '',
   appId,
   launchStartedAt
 }: ClassifyBottledSteamBlockArgs): SteamBottleLaunchWaitingCause | null {
@@ -178,10 +194,16 @@ export function classifyBottledSteamBlock({
   )
   if (hasOtherSession) return 'other-session'
 
-  const hasSelfUpdate = bootstrapLines.some((line) =>
-    line.rest.includes('Installing update...')
+  const hasSelfUpdate = bootstrapLines.some(
+    (line) =>
+      line.rest.includes('Installing update...') ||
+      line.rest.includes('Downloading update')
   )
   if (hasSelfUpdate) return 'self-update'
+
+  const loginStates = [...loginTail.matchAll(/SetLoginState: (\w+)/g)]
+  const latestLoginState = loginStates[loginStates.length - 1]?.[1]
+  if (latestLoginState === 'WaitingForCredentials') return 'login'
 
   const hasLogin = consoleLines.some(
     (line) =>
