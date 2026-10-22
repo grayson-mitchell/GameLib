@@ -33,6 +33,9 @@
  * column header, or a trailing hex-looking token from the lookup line).
  */
 
+// Exported for meta/bridgeCensus.ts, which lints under tsconfig.meta.json --
+// outside ts-prune's tsconfig.json project, so its import is invisible here.
+// ts-prune-ignore-next
 export type ImportTableResult = {
   dll: 'steam_api.dll' | 'steam_api64.dll' | null
   arch: 'x86' | 'x64' | 'none'
