@@ -104,6 +104,59 @@ Next steps now point at **productionizing the shallow (out-of-process `steam_api
   shipping answer. The **deep `lsteamclient` tier stays deferred** (Valve/CodeWeavers-scale)
   unless a macOS-aware Wine builtin toolchain + overlay/injection story appears.
 
+## Phase 51 live-gate evidence (2026-10-22): the case for a steamclient-level middle tier
+
+The shallow tier shipped (Phases 24 and 51: a per-game `steam_api.dll` shim, then TCP, then a
+native helper). The 51-19 live gates on a fresh Apple-silicon Mac then showed where intercepting
+at the **`steam_api`** layer stops working:
+
+- **Steam CEG DRM (XCOM 200510, 51-UAT item 5).** The shim loads and the scan is clean, but
+  `XComGame.exe` reads its `STEAM_SPLIT_GUID` / `STEAM_GUIDD` / `STEAM_MINSTANCE` resources,
+  writes `XComGame.exe.<pid>.STEAMSTART`, waits ~30s for a Windows Steam client, and exits without
+  ever calling `SteamAPI_Init`. CEG and SteamStub talk to the Steam *client*, below `steam_api`,
+  so a `steam_api` shim cannot satisfy them. XCOM is now `knownBad: drm-wrapped`.
+- **Per-interface-version stubbing (ELEX 411300, item 6).** Every interface version needs its own
+  manifest and wire-or-stub decision. The Win64 core interfaces (SteamUser019,
+  STEAMAPPS_INTERFACE_VERSION008, SteamUtils008, SteamClient017) shipped as `stub`, so ELEX
+  stops at "not subscribed".
+- **Version-dispatch bugs live in that per-version layer** (51-REVIEW CR-01, CR-02, CR-03:
+  arch-blind coverage clearing, the `SteamMatchMaking`/`SteamMatchmaking` family-key mismatch,
+  x64 NULL bare accessors).
+
+**How Proton avoids all three:** the game keeps Valve's real `steam_api.dll`, which locates
+`steamclient.dll` through `HKCU\Software\Valve\Steam\ActiveProcess` (`SteamClientDll`, `pid`),
+written by Proton's small `steam.exe` helper. `steamclient.dll` is `lsteamclient`, which forwards
+to the native client. DRM finds a "running Steam" and reaches the real client the same way the
+game does.
+
+**A middle tier that spike 004 did not consider:** keep the shallow tier's out-of-process
+**transport** (a PE DLL built with `zig cc`, so no `winegcc`/`winebuild`; TCP to the native
+helper, which already loads the Mac `steamclient.dylib`), but move the **layer** down to Proton's:
+
+1. A `steamclient.dll` / `steamclient64.dll` shim, built like today's `steam_api` shim, that
+   answers `CreateInterface` and marshals ISteamClient-level calls to the helper.
+2. A stub `steam.exe` plus the `ActiveProcess` registry keys in each bridge bottle.
+3. The game's own `steam_api.dll` stays in place (no shim placement, no import scan for routing).
+
+If it works, it covers CEG/SteamStub titles and replaces most per-`steam_api`-version work. The
+remaining per-version surface is ISteamClient's own `GetISteamXxx(…, pchVersion)` dispatch,
+which is the layer `meta/extractProtonInventory.ts` already mirrors from Proton's
+`lsteamclient/winI<Family>.c`.
+
+**Unknowns that gate it (spike first, `/gsd-spike`):**
+- **Does CEG/SteamStub reach the client only through `steamclient.dll`?** Or does it also use
+  shared memory, named pipes or events that a real `steam.exe` creates? On Linux, Proton's
+  `steam.exe` helper may set more up than the registry keys. Read Proton's `steam_helper`
+  source before assuming.
+- **Can the Mac `steamclient.dylib` serve ISteamClient-level calls** for an arbitrary AppID
+  from an out-of-process helper (the D-51-04 identity question again, one layer down)?
+- **Marshalling cost and correctness at the ISteamClient level** (callbacks, call results, pipe
+  and user handles) compared with today's flat-API marshalling.
+
+Test case already in hand: XCOM 200510 (CEG), on the operator's Mac. Confirm it runs under
+bottled Steam first (todo `2026-10-22-confirm-xcom-ceg-diagnosis-via-bottled-steam.md`), so a
+middle-tier failure can be told apart from a wine-level one.
+
 ## Relationship to Phase 22
 
 Phase 22 (multiple CrossOver bottles / "game families") is the **fallback** for
