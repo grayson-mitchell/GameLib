@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 24/30 plans executed
+**Plans:** 25/30 plans executed
 
 Plans:
 **Wave 1**
@@ -269,7 +269,7 @@ Plans:
 
 **Gap closure — Wave 2** *(blocked on gap Wave 1)*
 - [x] 51-23-PLAN.md — Bridge process monitor starts before the wine child is awaited; launcher-exit and give-up paths stop the helper (D-51-01)
-- [ ] 51-25-PLAN.md — Hoard to knownBad on evidence; playVerified seed field; census reports routed vs verified running
+- [x] 51-25-PLAN.md — Hoard to knownBad on evidence; playVerified seed field; census reports routed vs verified running
 - [ ] 51-26-PLAN.md — Live accessor probe, then wire Win64 SteamUser019/Friends015/Utils008/Apps008 (D-51-13)
 
 **Gap closure — Wave 3-6** *(live, sequential)*
