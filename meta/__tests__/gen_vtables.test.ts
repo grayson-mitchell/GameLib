@@ -3,6 +3,7 @@ import { join } from 'path'
 
 import {
   bareAccessorName,
+  cfgFamilyName,
   computeRetN,
   computeWireTableHash,
   generateDefFile,
@@ -22,6 +23,11 @@ import {
   X64_NULL_OBJECT_SLOTS,
   type InterfaceManifestV2
 } from '../gen_vtables'
+import { BARE_ACCESSOR_FAMILY } from '../../src/backend/storeManagers/steam/bridge/interfaceVersions'
+import {
+  SHIM_SERVED_INTERFACE_VERSIONS,
+  SHIM64_SERVED_INTERFACE_VERSIONS
+} from '../../src/backend/storeManagers/steam/bridge/shimCoverage'
 
 const SDK_DIR = join(__dirname, '..', 'sdk')
 const FIXTURE_DIR = join(__dirname, 'fixtures')
@@ -35,6 +41,13 @@ const isteamfriends: InterfaceManifestV2 = JSON.parse(
 const abiExercise: InterfaceManifestV2 = JSON.parse(
   readFileSync(join(FIXTURE_DIR, 'abi-exercise.manifest.json'), 'utf-8')
 )
+
+function loadAllManifests(): InterfaceManifestV2[] {
+  return readdirSync(SDK_DIR)
+    .filter((f) => f.endsWith('.manifest.json'))
+    .map((f) => JSON.parse(readFileSync(join(SDK_DIR, f), 'utf-8')))
+    .filter((m) => m.schemaVersion === 2 && m.family)
+}
 
 describe('gen_vtables', () => {
   describe('manifest inputs (D-09 -- never a vendored Valve .h)', () => {
@@ -589,11 +602,90 @@ describe('gen_vtables', () => {
       expect(bareAccessorName('SteamFriends')).toBe('SteamFriends')
     })
 
-    it('fixes the double-capital families to their real export spelling', () => {
-      expect(bareAccessorName('SteamMatchMaking')).toBe('SteamMatchmaking')
-      expect(bareAccessorName('SteamMatchMakingServers')).toBe(
+    it('keeps the Proton/export spelling (lowercase m) unchanged', () => {
+      expect(bareAccessorName('SteamMatchmaking')).toBe('SteamMatchmaking')
+      expect(bareAccessorName('SteamMatchmakingServers')).toBe(
         'SteamMatchmakingServers'
       )
+    })
+  })
+
+  describe('cfgFamilyName (CR-02)', () => {
+    it('maps the manifest spelling to the backend cfg spelling', () => {
+      expect(cfgFamilyName('SteamMatchmaking')).toBe('SteamMatchMaking')
+      expect(cfgFamilyName('SteamMatchmakingServers')).toBe(
+        'SteamMatchMakingServers'
+      )
+      expect(cfgFamilyName('SteamUser')).toBe('SteamUser')
+    })
+
+    it('generated C looks matchmaking up under the cfg spelling, exports under the real spelling', () => {
+      const mm = loadAllManifests().filter((m) =>
+        /^SteamMatchmaking(Servers)?$/.test(m.family)
+      )
+      expect(mm.length).toBeGreaterThanOrEqual(2)
+      const c = generateShimC(mm)
+      expect(c).toContain('{ "SteamMatchMaking009", "SteamMatchMaking",')
+      expect(c).toContain(
+        '{ "SteamMatchMakingServers002", "SteamMatchMakingServers",'
+      )
+      expect(c).toMatch(
+        /void \*SteamMatchmaking\(void\) \{\n  return resolve_bare_iface\("SteamMatchMaking"\);/
+      )
+      expect(c).toMatch(
+        /void \*SteamMatchmakingServers\(void\) \{\n  return resolve_bare_iface\("SteamMatchMakingServers"\);/
+      )
+      expect(c).not.toContain('resolve_bare_iface("SteamMatchmaking")')
+    })
+  })
+
+  describe('family spelling pin across manifest / backend cfg / served map (CR-02)', () => {
+    function familyMismatches(manifests: InterfaceManifestV2[]): string[] {
+      const out: string[] = []
+      for (const m of manifests) {
+        const bare = bareAccessorName(m.family)
+        if (!(bare in BARE_ACCESSOR_FAMILY)) {
+          out.push(
+            `${m.interface}: bare export ${bare} not in BARE_ACCESSOR_FAMILY`
+          )
+          continue
+        }
+        if (cfgFamilyName(m.family) !== BARE_ACCESSOR_FAMILY[bare]) {
+          out.push(
+            `${m.interface}: cfg ${cfgFamilyName(m.family)} != backend ${BARE_ACCESSOR_FAMILY[bare]}`
+          )
+        }
+      }
+      for (const m of manifests) {
+        for (const map of [
+          SHIM_SERVED_INTERFACE_VERSIONS,
+          SHIM64_SERVED_INTERFACE_VERSIONS
+        ]) {
+          const served = map.get(m.interface)
+          if (served && served.family !== cfgFamilyName(m.family)) {
+            out.push(
+              `${m.interface}: served ${served.family} != cfg ${cfgFamilyName(m.family)}`
+            )
+          }
+        }
+      }
+      return out
+    }
+
+    it('every manifest family agrees with BARE_ACCESSOR_FAMILY and served maps', () => {
+      const manifests = loadAllManifests()
+      expect(manifests.length).toBeGreaterThan(10)
+      // every manifest family must itself be a bare accessor key (not vacuous)
+      expect(familyMismatches(manifests)).toEqual([])
+    })
+
+    it('negative control: a drifted family is reported', () => {
+      const mm = loadAllManifests().find(
+        (m) => m.interface === 'SteamMatchMaking009'
+      )!
+      const bad = { ...mm, family: 'SteamMatchMakingX' }
+      expect(familyMismatches([mm])).toEqual([])
+      expect(familyMismatches([bad]).length).toBeGreaterThan(0)
     })
   })
 

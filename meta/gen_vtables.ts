@@ -512,20 +512,27 @@ export function toVersionedAccessorSuffix(interfaceName: string): string {
 }
 
 /**
- * 51-06 Task 2: the bare legacy accessor (`SteamUser()`, `SteamUtils()`, ...)
- * a game built against an old-style steam_api.dll imports is named after
- * the family -- almost always identical to the family string itself, EXCEPT
- * the two Steamworks families whose real export spelling single-cases the
- * second word (`SteamMatchmaking`, not `SteamMatchMaking`; verified against
- * a real steam_api.dll's export table, not guessed).
+ * Three spellings of the two Matchmaking families (CR-02):
+ *  - Proton / manifest / real steam_api.dll export: `SteamMatchmaking`,
+ *    `SteamMatchmakingServers` (lowercase m). The manifest `family` is also
+ *    the Proton fetch key (`winISteamMatchmaking_...`) and MUST stay as is.
+ *  - cfg / backend / version-string: `SteamMatchMaking`,
+ *    `SteamMatchMakingServers` (capital M). The backend writes
+ *    `iface.SteamMatchMaking=...` and the shim strcmp()s case-sensitively.
+ * `bareAccessorName` is the export spelling (= manifest spelling);
+ * `cfgFamilyName` is what g_iface_table and resolve_bare_iface must use.
  */
-const BARE_ACCESSOR_FAMILY_OVERRIDES: Readonly<Record<string, string>> = {
-  SteamMatchMaking: 'SteamMatchmaking',
-  SteamMatchMakingServers: 'SteamMatchmakingServers'
+export const CFG_FAMILY_OVERRIDES: Readonly<Record<string, string>> = {
+  SteamMatchmaking: 'SteamMatchMaking',
+  SteamMatchmakingServers: 'SteamMatchMakingServers'
+}
+
+export function cfgFamilyName(manifestFamily: string): string {
+  return CFG_FAMILY_OVERRIDES[manifestFamily] ?? manifestFamily
 }
 
 export function bareAccessorName(family: string): string {
-  return BARE_ACCESSOR_FAMILY_OVERRIDES[family] ?? family
+  return family
 }
 
 // ---------------------------------------------------------------------------
@@ -2131,7 +2138,7 @@ function emitIfaceTableAndBareAccessors(
     .map((m) => {
       const { open, close } = archGuard(m.arches)
       const instanceName = `g_${m.interface.toLowerCase()}_instance`
-      return `${open}  { "${m.interface}", "${m.family}", &${instanceName} },\n${close}`
+      return `${open}  { "${m.interface}", "${cfgFamilyName(m.family)}", &${instanceName} },\n${close}`
     })
     .join('')
 
@@ -2140,7 +2147,7 @@ function emitIfaceTableAndBareAccessors(
     .map(
       (family) =>
         `void *${bareAccessorName(family)}(void) {\n` +
-        `  return resolve_bare_iface("${family}");\n` +
+        `  return resolve_bare_iface("${cfgFamilyName(family)}");\n` +
         `}\n`
     )
     .join('\n')

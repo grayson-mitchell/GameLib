@@ -7378,8 +7378,8 @@ static const GIfaceTableEntry g_iface_table[] = {
 #if defined(__i386__)
   { "STEAMREMOTESTORAGE_INTERFACE_VERSION005", "SteamRemoteStorage", &g_steamremotestorage_interface_version005_instance },
 #endif
-  { "SteamMatchMaking009", "SteamMatchmaking", &g_steammatchmaking009_instance },
-  { "SteamMatchMakingServers002", "SteamMatchmakingServers", &g_steammatchmakingservers002_instance },
+  { "SteamMatchMaking009", "SteamMatchMaking", &g_steammatchmaking009_instance },
+  { "SteamMatchMakingServers002", "SteamMatchMakingServers", &g_steammatchmakingservers002_instance },
   { "SteamNetworking005", "SteamNetworking", &g_steamnetworking005_instance },
 #if defined(__i386__)
   { "STEAMREMOTESTORAGE_INTERFACE_VERSION010", "SteamRemoteStorage", &g_steamremotestorage_interface_version010_instance },
@@ -7448,11 +7448,11 @@ void *SteamFriends(void) {
 }
 
 void *SteamMatchmaking(void) {
-  return resolve_bare_iface("SteamMatchmaking");
+  return resolve_bare_iface("SteamMatchMaking");
 }
 
 void *SteamMatchmakingServers(void) {
-  return resolve_bare_iface("SteamMatchmakingServers");
+  return resolve_bare_iface("SteamMatchMakingServers");
 }
 
 void *SteamNetworking(void) {
