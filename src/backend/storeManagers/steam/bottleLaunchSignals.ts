@@ -158,7 +158,7 @@ function linesAtOrAfter(tail: string, cutoffMs: number): ParsedLine[] {
 interface ClassifyBottledSteamBlockArgs {
   bootstrapTail: string
   consoleTail: string
-  loginTail?: string
+  loginTail: string
   appId: string
   launchStartedAt: number
 }
@@ -178,7 +178,7 @@ interface ClassifyBottledSteamBlockArgs {
 export function classifyBottledSteamBlock({
   bootstrapTail,
   consoleTail,
-  loginTail = '',
+  loginTail,
   appId,
   launchStartedAt
 }: ClassifyBottledSteamBlockArgs): SteamBottleLaunchWaitingCause | null {

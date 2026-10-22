@@ -334,10 +334,13 @@ async function runPollLoop(
         if (entry.cancelled || activeMonitors.get(appId) !== entry) return
         const consoleTail = await readBoundedTail(paths.console)
         if (entry.cancelled || activeMonitors.get(appId) !== entry) return
+        const loginTail = await readBoundedTail(paths.login)
+        if (entry.cancelled || activeMonitors.get(appId) !== entry) return
 
         const detectedCause = classifyBottledSteamBlock({
           bootstrapTail,
           consoleTail,
+          loginTail,
           appId,
           launchStartedAt: startedAt
         })

@@ -106,7 +106,9 @@ jest.mock('../bottleLaunchSignals', () => ({
     bootstrap:
       '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/bootstrap_log.txt',
     console:
-      '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/console_log.txt'
+      '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/console_log.txt',
+    login:
+      '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/steamui_login.txt'
   }),
   WAITING_FOR_STEAM_GRACE_MS: 20000,
   WAITING_RECHECK_MS: 15000
@@ -127,7 +129,9 @@ const mockedBottledSteamLogPaths = bottledSteamLogPaths as jest.Mock
 const FAKE_LOG_PATHS = {
   bootstrap:
     '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/bootstrap_log.txt',
-  console: '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/console_log.txt'
+  console:
+    '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/console_log.txt',
+  login: '/fake/bottle/drive_c/Program Files (x86)/Steam/logs/steamui_login.txt'
 }
 
 const bottleDir = getBottleDir(DEFAULT_STEAM_BOTTLE_NAME)
@@ -796,6 +800,70 @@ describe('bottleProcessMonitor.ts', () => {
         ).length
       ).toBe(0)
       expect(jest.getTimerCount()).toBe(0)
+
+      jest.useRealTimers()
+    })
+
+    test('the login tail is read and passed to the classifier; cause=login is logged and sent', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      mockedReadBoundedTail.mockImplementation(async (path: string) =>
+        path === FAKE_LOG_PATHS.login
+          ? '[2026-10-22 22:21:30] [ None ] SetLoginState: WaitingForCredentials - OK'
+          : ''
+      )
+      mockedClassifyBottledSteamBlock.mockImplementation(
+        ({ loginTail }: { loginTail: string }) =>
+          loginTail.includes('WaitingForCredentials') ? 'login' : null
+      )
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      await advanceByGraceWindow()
+
+      const waitingCalls = mockedSendFrontendMessage.mock.calls.filter(
+        (call) => call[0] === 'steamBottleLaunchWaiting'
+      )
+      expect(waitingCalls.length).toBe(1)
+      expect(waitingCalls[0][1]).toEqual({
+        appName: '38410',
+        detectedCause: 'login'
+      })
+      expect(
+        mockedLogInfo.mock.calls.some((call) =>
+          JSON.stringify(call).includes(
+            '[bottle-waiting] appId=38410 cause=login'
+          )
+        )
+      ).toBe(true)
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('a monitor cancelled between the console read and the login read never classifies', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      let resolveLogin: (value: string) => void = () => {}
+      mockedReadBoundedTail.mockImplementation((path: string) =>
+        path === FAKE_LOG_PATHS.login
+          ? new Promise<string>((resolve) => {
+              resolveLogin = resolve
+            })
+          : Promise.resolve('')
+      )
+
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      await jest.advanceTimersByTimeAsync(1500 * 14)
+      await flushMicrotasks()
+      expect(mockedReadBoundedTail).toHaveBeenCalledWith(FAKE_LOG_PATHS.login)
+
+      stopBottleProcessMonitor('38410')
+      resolveLogin('[2026-10-22 22:21:30] SetLoginState: WaitingForCredentials')
+      await flushMicrotasks()
+
+      expect(mockedClassifyBottledSteamBlock).not.toHaveBeenCalled()
 
       jest.useRealTimers()
     })

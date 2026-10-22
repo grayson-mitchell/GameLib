@@ -35,6 +35,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail: '',
         consoleTail,
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -49,6 +50,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail: '',
         consoleTail,
+        loginTail: '',
         appId: '40700',
         launchStartedAt
       })
@@ -62,6 +64,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail,
         consoleTail: '',
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -76,6 +79,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail,
         consoleTail: '',
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -89,6 +93,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail: '',
         consoleTail,
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -102,6 +107,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail: '',
         consoleTail,
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -119,6 +125,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail,
         consoleTail,
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -131,6 +138,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail,
         consoleTail: consoleTailLoginOnly,
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -145,6 +153,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail: '',
         consoleTail,
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
@@ -156,6 +165,7 @@ describe('classifyBottledSteamBlock', () => {
       classifyBottledSteamBlock({
         bootstrapTail: '[2026-10-16 20:12:56] Some unrelated bootstrap line',
         consoleTail: '[2026-10-16 20:13:00] Some unrelated console line',
+        loginTail: '',
         appId: '38410',
         launchStartedAt
       })
