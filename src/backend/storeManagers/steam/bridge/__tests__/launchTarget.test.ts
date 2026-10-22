@@ -124,6 +124,41 @@ describe('resolveBridgeLaunchExe', () => {
     )
   })
 
+  it('splits a backslash-separated subfolder executable into path segments -- 51-19 live gate (XCOM 200510)', async () => {
+    // PICS carries Windows-style separators verbatim. Joined as-is on macOS
+    // the backslashes are literal filename characters, so objdump was handed
+    // a path that does not exist.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- jest mock handle, never invoked unbound
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(200510, {
+          config: {
+            installdir: 'XCom-Enemy-Unknown',
+            launch: {
+              '0': {
+                executable: 'Binaries\\Win32\\XComGame.exe',
+                config: { oslist: 'windows' }
+              }
+            }
+          }
+        })
+      }) as never
+    )
+
+    const result = await resolveBridgeLaunchExe('200510')
+
+    expect(result).toBe(
+      join(
+        BRIDGE_STEAMAPPS_DIR,
+        'common',
+        'XCom-Enemy-Unknown',
+        'Binaries',
+        'Win32',
+        'XComGame.exe'
+      )
+    )
+  })
+
   it('prefers an explicit windows entry over an untagged sibling', async () => {
     jest.mocked(SteamUser.getClient).mockReturnValue(
       makeFakeClient({

@@ -176,7 +176,10 @@ export async function resolveBridgeLaunchExe(
     )
     const gameInstallDir = join(steamappsDir, 'common', installdir)
 
-    return join(gameInstallDir, windowsEntry.executable)
+    // PICS stores the executable with Windows separators (XCOM 200510:
+    // `Binaries\Win32\XComGame.exe`). On macOS a backslash is a filename
+    // character, so split it into segments or the joined path does not exist.
+    return join(gameInstallDir, ...windowsEntry.executable.split('\\'))
   } catch (error) {
     logWarning(
       [
