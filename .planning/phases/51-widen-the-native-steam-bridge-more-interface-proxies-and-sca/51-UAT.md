@@ -1,5 +1,5 @@
 ---
-status: testing
+status: diagnosed
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 source:
   - 51-01-SUMMARY.md
@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-21T12:30:34Z
+updated: 2026-10-22T09:45:00Z
 ---
 
 ## Preconditions
@@ -46,86 +46,135 @@ legacy-bottle launch-time-miss evidence.
 
 ## Current Test
 
-number: 1
-name: Avernum 6 (206060) D-51-01 identity
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. Avernum 6 (206060) D-51-01 identity
 
 expected: Play launches Avernum 6 through the per-game bridge path; Mac Steam shows In-Game; `gamelib.log` has `LISTEN 127.0.0.1:<port> appid=206060` (port != 54550) and `HELLO shim attached appid=206060`; the placed `steam_api.dll` next to `Avernum6.exe` has size == SHIM32, `grep -ac 127.0.0.1 <dll>` >= 1, `grep -ac GameLibSteamBridgeShim/2 <dll>` >= 1; quitting the game ends In-Game on Mac Steam and frees the port.
-result: pending
+result: pass — 2026-10-22, packaged debug bundle at HEAD 171b4cbf2, fresh Mac (fresh install into a new per-game bottle `GameLibSteamBridge-206060`; no Windows Steam set up). SHIM32=894464, SHIM64=841728. Session 3: `LISTEN 127.0.0.1:50416 appid=206060 mode=full` (sessions 1-2 used 50405), `INIT SteamAPI ready (single InitFlat call, real appid=206060)`, real SteamID64 returned (matches account, …7096), `HELLO shim attached appid=206060` on every launch. Placed `steam_api.dll` = 894464 (== SHIM32), `grep -ac 127.0.0.1` = 1, `grep -ac GameLibSteamBridgeShim/2` = 1. Operator confirmed Mac Steam In-Game. Quit at 20:13:58: game stopped after 171s, then `stopBridgeHelper` SIGTERM, and `lsof` showed 50416 no longer listening (50405 was freed the same way at 20:10:40). Side findings (todos, not item failures): the game's pre-launch settings window and the game window open behind GameLib (2026-10-22-wine-launched-game-windows-open-behind-gamelib.md). The first two installs failed on the missing/misplaced CrossOver and silently flipped the route to bottled Steam until restart (2026-10-22-no-crossover-notice-falsely-promises-gamelib-will-set-it-up.md).
 
 ### 2. Avernum 5 (206040) per-game bottle regression
 
 expected: Same hooks as item 1, from the Avernum 5 per-game bottle (`GameLibSteamBridge-206040`) rather than the legacy shared bottle — Play launches through the bridge, Mac Steam shows In-Game, `LISTEN 127.0.0.1:<port> appid=206040` (its own port, distinct from item 1's), `HELLO shim attached appid=206040`, placed `steam_api.dll` size == SHIM32 with the same `grep -ac` checks, and quitting frees the port and clears In-Game.
-result: pending
+result: issue — 2026-10-22, packaged debug bundle at HEAD 171b4cbf2, fresh Mac. Launch half passed: a new per-game bottle `GameLibSteamBridge-206040` was created ("no Windows Steam client installed — R6"), not the legacy shared bottle. `LISTEN 127.0.0.1:50481 appid=206040 mode=full` (its own port, distinct from item 1's 50405/50416), `INIT SteamAPI ready (… real appid=206040)`, `HELLO shim attached appid=206040`. Placed `steam_api.dll` = 894464 (== SHIM32), `grep -ac 127.0.0.1` = 1, `grep -ac GameLibSteamBridgeShim/2` = 1. Operator confirmed Mac Steam In-Game. Teardown FAILED on the first launch: after the game was force-quit (20:16-20:18), `steam-bridge-helper --appid 206040` was still LISTENing on 50481 at 6m39s of age, and no `bottleProcessMonitor [206040]` line was ever logged for that launch. Cause: `runWineCommand` (`launcher.ts:1453`) resolves only on the wine child's `close`; `wait: false` only skips `wineserver --wait`. `fireBridgeWineLaunch` starts the monitor after that await, and CrossOver's `winewrapper.exe --run` stays a child of the sidecar for the game's whole lifetime. So each launch's monitor starts only after its own game has exited. Corroborated on relaunch 20:20:55: `winewrapper` pid 26675 (ppid = sidecar) was still alive 1:35 into play, yet `game started` was logged at 20:20:57. That match came from the first launch's late-started monitor, which then stopped the helper at 20:25:05 (`gone after 248s`). The same thing happened on item 1's first launch (20:08:09, never matched). Todo: 2026-10-22-bridge-process-monitor-starts-after-game-exits.md. Also: the operator reports Avernum 5 is not really playable under wine (the in-game menu disappears), so its seed entry needs review in Task 2.
 
 ### 3. Legacy Hoard (63000, shared GameLibSteamBridge, Phase-24 shim) launch-time miss
 
 expected: Pressing Play on the legacy-bottle Hoard install does NOT launch (the Phase-24 2-interface shim is still in place there, pre-widening); the D-05 dialog lists `<Family>@unknown-version` entries for the families Hoard actually imports; `gamelib.log` shows the miss verdict naming those same entries. MUST run before item 4 — item 4's uninstall-then-reinstall destroys this legacy-bottle evidence.
-result: pending
+result: skipped — fresh Mac (2026-10-22): no legacy shared `GameLibSteamBridge` bottle and no Phase-24 two-interface shim install of Hoard has ever existed on this machine, so the launch-time-miss precondition cannot be reproduced. Item 4 runs as a plain fresh install instead of uninstall-then-reinstall.
 
 ### 4. Hoard Gate 4 re-run (24-UAT Gate 4)
 
 expected: Uninstall the legacy Hoard copy, then a fresh install routes to the per-game bottle `GameLibSteamBridge-63000`; the game reaches playable single-player. Part A: `gamelib.log` shows `HELLO` + `INIT … SteamAPI ready` for appid=63000. Part B: a real SteamID64 + persona are served (USER/FRIENDS dispatch lines logged). The new bottle has no `steam.exe`. The placed `steam_api.dll` size == SHIM32. Mac Steam shows In-Game Hoard. A `[bridge-notice] appId=63000 reason=stubbed:…` line is logged and the game page shows the limited-features line (D-51-02's one-time stubbed-interfaces notice).
-result: pending
+result: issue — 2026-10-22, packaged debug bundle at HEAD 171b4cbf2, fresh Mac. Hoard does NOT reach playable single-player: Reuben.exe shows a crash dialog. The operator reports this is the exact crash Hoard has always had under CrossOver, before the bridge existed, so it is a Hoard-under-Wine incompatibility, not a bridge regression. Bridge half passed: a fresh install created the per-game bottle `GameLibSteamBridge-63000` ("no Windows Steam client installed — R6", so no `steam.exe`); `LISTEN 127.0.0.1:50759 appid=63000 mode=full`; `INIT SteamAPI ready (single InitFlat call, real appid=63000)`; `HELLO shim attached appid=63000` on both launches (20:31:07, 20:31:52); `[bridge-notice] appId=63000 reason=stubbed:SteamMatchMaking,SteamNetworking,SteamRemoteStorage`; the game page shows the limited-features line (operator confirmed). Part B (USER/FRIENDS dispatch) not observed: no dispatch lines were logged before the crash. Route to the bridge only happened after a detour: the first install was delegated to Mac Steam (`steam://install/63000`), which installed the i386 native build and was never checked (poller gave up after 60s). The second, GameLib-direct install detected `mac_arch '32'`, and the operator-confirmed i386 recovery reinstalled through the bridge (todo 2026-10-22-steam-direct-download-default-on-and-verify-arch-after-delegated-install.md). D-51-14's Hoard acceptance anchor is therefore UNMET for a reason outside the bridge. Task 2 should add 63000 to knownBad with this item as evidence.
 
 ### 5. XCOM: Enemy Unknown (200510)
 
 expected: A fresh bridge install loads the exe (the 9 out-of-scope `SteamGameServer*` bare imports resolve against the GameServer flat stubs, so the exe does not fail to load on an eagerly-bound IAT entry) and reaches the main menu; the verdict is clean (no missing symbols) against SteamUser016/SteamFriends011/SteamUtils005/STEAMAPPS_INTERFACE_VERSION004/STEAMUSERSTATS_INTERFACE_VERSION010.
-result: pending
+result: issue — 2026-10-22, packaged debug bundle, sidecar at c1a641a21. Does NOT reach the main menu: XComGame.exe is Steam CEG-protected (DRM), so it cannot run through the bridge. Install path: the first install failed on a launch-exe path bug (`Binaries\Win32\XComGame.exe` joined unsplit, so objdump got a nonexistent path), fixed in c1a641a21 with a regression test. The reinstall then hit a separate depot-downloader bug: 11 real files under `XEW/` are claimed by depots 200522 and 225341 at different sizes, left UNRESOLVED, so the install was recorded as StateFlags=1026 (todo 2026-10-22-unresolved-cross-depot-file-collisions-leave-install-stuck-at-1026.md). Worked around by hand for this gate: StateFlags set 1026 -> 4 in the bridge bottle's appmanifest (original archived). Exe-load half PASSED: verdict clean, x86, missingSymbols [] against SteamUser016/SteamFriends011/SteamUtils005/STEAMAPPS_INTERFACE_VERSION004/STEAMUSERSTATS_INTERFACE_VERSION010 (stubbed: SteamMatchMaking, SteamNetworking, SteamMatchMakingServers, SteamRemoteStorage). The exe loaded with no unresolved IAT entry, and the shim `steam_api.dll` mapped as native. Helper `LISTEN 127.0.0.1:55018 appid=200510`, `INIT SteamAPI ready`. No `HELLO` on either GameLib launch (21:35:32, 21:37:02); the process exited after ~31s with no window. Diagnosed with a hand-run CrossOver `--cx-log --debugmsg +loaddll,+seh` capture: right after steam_api.dll attaches, the main thread reads the PE resources `STEAM_SPLIT_GUID`, `STEAM_GUIDD`, `STEAM_MINSTANCE`, writes `XComGame.exe.<pid>.STEAMSTART`, then idles ~30s and exits without ever calling SteamAPI_Init. That is CEG waiting for a Windows Steam client over Steam IPC, which a bridge bottle (no steam.exe, by design) cannot provide. Task 2: add 200510 to knownBad with reason `drm-wrapped` and this item as evidence. Todo 2026-10-22-detect-steam-ceg-drm-in-bridge-prescreen.md covers detecting this up front.
 
 ### 6. ELEX (411300) Win64
 
 expected: A fresh bridge install's pre-install prescreen logs the title as x64 (D-51-06/17); `steam_api64.dll` is placed next to `ELEX.exe` with size == SHIM64; the game reaches the main menu; Mac Steam shows In-Game ELEX.
-result: pending
+result: issue — 2026-10-22, packaged debug bundle, sidecar at c1a641a21. Does NOT reach the main menu: on launch ELEX shows the Steam error "Your account is not subscribed to this application [AppID: 411300]". The account does own 411300. Cause, by design of 51-15: the Win64 shim serves ELEX's core interfaces SteamUser019 / STEAMAPPS_INTERFACE_VERSION008 / SteamUtils008 / SteamClient017 as `stub` only (SHIM64_SERVED_INTERFACE_VERSIONS, shimCoverage.ts: "no macOS helper-dylib accessor for THESE version strings has ever been measured … D-09: never invented"). Only STEAMUSERSTATS_INTERFACE_VERSION011 is wired, so ELEX's subscription check gets a stubbed false. The launch-time notice confirms it: `[bridge-notice] appId=411300 reason=stubbed:SteamClient,SteamController,SteamGameServer,SteamUser,SteamUtils,SteamAppList,SteamApps,…`. Passed: a per-game bottle `GameLibSteamBridge-411300`; `steam_api64.dll` placed next to `ELEX/system/ELEX.exe` at 841728 bytes (== SHIM64); post-install scan clean, `arch: x64`, missingSymbols []; helper `LISTEN 127.0.0.1:55236 appid=411300 mode=full`, `INIT SteamAPI ready (… real appid=411300)`; `HELLO shim attached appid=411300` (22:05:17), so the Win64 shim loads and attaches. Failed sub-check: the pre-install prescreen did NOT log the title as x64. It logged `prescreenBridgeDepots: appId 411300 result=none` (21:13:17), and Hoard (63000) and XCOM (200510) got the same `none` with persisted `steamApi: "none"`. Cause: `screenDepotPlanForSteamApi` (depot.ts) takes the POSIX `basename()` of depot filenames that use Windows separators (`system\steam_api64.dll`), so any steam_api*.dll in a subfolder is missed; only root-level DLLs, like the Avernums', match. Routing still worked only because the post-install scan caught everything (todo 2026-10-22-bridge-prescreen-always-returns-none.md). Mac Steam In-Game not checked, because the game stops at the error. The x64 core-interface wiring is gap-closure work (todo 2026-10-22-wire-win64-core-steam-interfaces.md).
 
 ### 7. D-51-03 two bridge games at once
 
 expected: Avernum 6 and Hoard running simultaneously each get their own per-game helper — `lsof -nP -iTCP -sTCP:LISTEN` shows two distinct `steam-bridge-helper` pids on two distinct LISTEN ports; both games stay responsive; neither launch is refused by a single-helper collision dialog.
-result: pending
+result: pass — 2026-10-22, packaged debug bundle at HEAD 171b4cbf2. Pair substituted to Avernum 6 + Avernum 5 because Hoard cannot run under wine (item 4); this tests the same two-helper behaviour. Two distinct `steam-bridge-helper` pids, 36822 (`--appid 206040`) and 36865 (`--appid 206060`), on two distinct LISTEN ports, 51296 and 51306 (`lsof -nP -iTCP -sTCP:LISTEN`). `HELLO shim attached` for 206040 at 20:40:46 and for 206060 at 20:40:48. Both games running concurrently. No single-helper collision dialog or refusal logged.
 
 ### 8. D-51-09/D-51-10 route visibility
 
 expected: The install dialog's wine section for an eligible, not-yet-installed title (e.g. Avernum 5 before it is installed) shows "Native Steam bridge — Known to work with the bridge" and a "Use the Windows Steam client instead" toggle; toggling it on and installing lands the title in the `GameLibSteam` bottled-Steam path instead of a bridge bottle; the game page's Extra info panel shows the route row beside the compatibility rating once installed.
-result: pending
+result: pass — 2026-10-22, packaged debug bundle (sidecar 171b4cbf2 for the game-page check, c1a641a21 for the install). Install dialog for not-yet-installed Avernum 4 (206020): the wine section showed "Native Steam bridge — Known to work with the bridge" with a "Use the Windows Steam client instead" toggle (operator confirmed). With the toggle on, the install landed in the bottled-Steam path: Windows `Steam.exe` was provisioned in `GameLibSteam`, `steamapps/common/Avernum 4` installed with appmanifest StateFlags=4, the install was logged as `source bottle`, and no `GameLibSteamBridge-206020` bottle was created. Game page route row: Avernum 6 shows "Steam route: Native Steam bridge — Known to work with the bridge" beside the rating; Avernum 4 shows "Bottled Steam client — You chose the Windows Steam client". Contract wording note: the row is in the game page's **Install info** tab (rendered by AppleWikiInfo, GamePage/index.tsx:627-628, per 51-UI-SPEC "next to the AppleGamingWiki rating"), not the "Extra info" panel this item names. Implementation matches the UI spec. UX finding: the toggled install queued behind XCOM, and its Windows-Steam setup prompt only appeared ~24 min later, while the operator was starting ELEX, so it read as an ELEX prompt. The download queue also logged "Finished Installation of 206020" at the moment it deferred to guided setup (already in todo 2026-10-22-steam-client-setup-downloads-not-shown-in-downloads-progress.md).
 
 ### 9. D-51-08/D-51-11 route-notice dialog
 
 expected: On a known-bad title (one 51-19's own running census classifies known-bad, or any owned title carrying a persisted scan miss), the install dialog names the specific reason and offers two buttons: "Use bottled Steam" (installs through the ordinary bottled path) and "Try the bridge anyway" (D-51-11 — installs then re-scans; a miss lands on the ordinary D-05 fallback dialog). If no owned title currently qualifies as known-bad or scan-missed, record result: skipped — no owned known-bad or scan-miss title (census 51-18) instead of exercising the dialog.
-result: pending
+result: skipped — no owned known-bad or scan-miss title (census 51-18). On this fresh Mac no installed or uninstalled owned title currently carries a persisted scan miss, and the bundled knownBad list is still empty. The titles this gate proved incompatible (Hoard 63000 crashes under wine; XCOM 200510 is CEG `drm-wrapped`; ELEX 411300 fails on stubbed Win64 ownership interfaces) only join knownBad in Task 2, after this item, so none could drive the route-notice dialog here.
 
 ### 10. D-51-12 Remove all copies on a per-game bridge install
 
 expected: Uninstalling a per-game bridge title (e.g. Avernum 5 from `GameLibSteamBridge-206040`) deletes that `GameLibSteamBridge-<appId>` bottle directory entirely; the legacy `GameLibSteamBridge` bottle and the Phase 17 `GameLibSteam` bottle are both left untouched (`ls ~/Library/Application Support/CrossOver/Bottles` unchanged apart from the removed directory).
-result: pending
+result: pass — 2026-10-22, packaged debug bundle, sidecar c1a641a21. Uninstalling Avernum 5 (206040, per-game bridge install) logged `removePerGameBridgeBottle: removed per-game bridge bottle "GameLibSteamBridge-206040" for appId "206040"` (22:27:24). `ls ~/Library/Application Support/CrossOver/Bottles` before/after diff: exactly one line removed (`GameLibSteamBridge-206040`). `GameLibSteam` (the Phase 17 bottled-Steam bottle, holding Avernum 4) and the other five per-game bridge bottles are untouched. Fresh-Mac caveat: the legacy shared `GameLibSteamBridge` bottle never existed on this machine, so its "left untouched" half could not be observed. Pre/post listings archived in the session scratchpad.
 
 ### 11. D-51-16 Waiting for Steam
 
 expected: With the bottled Steam client blocked from completing login (signed out, or the same account already playing on another machine) and Play pressed on a `GameLibSteam` (bottled) game, the game page shows "Waiting for Steam…" within roughly 20 seconds, naming the detected cause first in the canonical order [self-update, login, other-session]; a `[bottle-waiting]` line is logged; the waiting state clears once the game actually starts.
-result: pending
+result: issue — 2026-10-22, packaged debug bundle, sidecar c1a641a21, bottled-Steam title Avernum 4 (206020) in `GameLibSteam`. Waiting state itself PASSED on both runs. Run 1 (bottled Steam self-updating on first start): Play 22:13:39, `[bottle-waiting] appId=206020 cause=none` 22:13:59 (20s), `cause=self-update` 22:14:30 once Steam's bootstrap log reached the install phase, game started 22:16:12 after sign-in. Run 2 (operator signed out of bottled Steam first, watching the page): Play 22:21:23, the page moved to "Waiting for Steam…" (operator observed), `[bottle-waiting] … cause=none` 22:21:43 (20s); the operator signed in, the game started 22:22:05 (`GameAction … Completed`), and the waiting message cleared (operator observed). Cause naming FAILED for the signed-out case: no `cause=login` was ever named. The login classifier only matches `LogonFailure <reason>` in console_log.txt, and a fresh sign-in prompt is not a logon failure. Self-update was also unnamed during its ~25s *download* phase, because the classifier matches only bootstrap "Installing update...", not "Downloading update (n of m KB)...". Todo 2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md.
 
 ### 12. D-51-04 desk probe (named real-profile arm)
 
 expected: Running the bundled bridge helper binary directly with `--appid <an unowned AppID> --port 0` reports WHOAMI not-inited; running it with `--appid 480 --identity-only --report-appid <the same unowned AppID>` reports ready. Both outcomes confirm the live fallback precondition the unit tests only assume.
-result: pending
+result: pass — 2026-10-22, named real-profile arm (live signed-in Mac Steam; HOME deliberately inherited), against the bundled helper `GameLib.app/Contents/Resources/build/bin/arm64/darwin/steam-bridge-helper`, using a scratchpad CONTROL-WHOAMI client (ordinal 0xFFFF, slot 1). Unowned AppID 1245620 (absent from the account's owned library cache). Arm A: `--appid 1245620 --port 0` gave `LISTEN … appid=1245620 mode=full` then WHOAMI status=1 (not-inited). Arm B: `--appid 480 --identity-only --report-appid 1245620 --port 0` gave `LISTEN … appid=480 mode=identity-only` then WHOAMI status=0 (ready), real SteamID64 returned (matches account, …7096). Both probe helpers were SIGTERMed afterwards and none were left running.
 
 ### 13. D-51-15 census
 
 expected: `pnpm bridge-census` run against the final, fully-landed tree prints "N of M routed to the bridge" with every miss classified (win64-no-shim / missing-symbols / unknown-version / known-bad / no-binary); the exact numbers from that run are recorded here verbatim once executed.
-result: pending
+result: pass — 2026-10-22, `pnpm bridge-census` against the final tree (HEAD 541544990, allowlist with XCOM knownBad), on this fresh Mac's real bottles. Verbatim: "3 of 6 routed to the bridge (bridge=3, known-bad=1, missing-symbols=1, unknown-version=1)". Rows: 206020 Avernum 4 x86 bridge; 200510 XCOM x86 known-bad drm-wrapped; 206060 Avernum 6 x86 bridge; 411300 ELEX x64 bridge; 63000 HOARD x86 unknown-version (SteamUtils, SteamUser, SteamFriends, SteamMatchMaking, SteamUserStats, SteamNetworking, SteamApps, SteamRemoteStorage all @unknown-version); 648410 Colony Ship x64 missing-symbols (SteamInternal_FindOrCreateUserInterface, SteamInternal_ContextInit). Every miss is classified. Reading it honestly: "routed" is not "runs". ELEX counts as bridge but fails at boot on stubbed Win64 ownership interfaces (item 6). Avernum 4 counts as bridge from its import table, but this machine installed it through bottled Steam (item 8). Hoard's unknown-version disagrees with the live scan, which resolved all of Hoard's versions; 51-18 already recorded this census/live divergence for Hoard. Colony Ship 648410 is a cancelled partial download (20:45:15), so its row reflects incomplete files. Of the gate-tested bridge titles, Avernum 6 is the one that both routes and plays to completion; Avernum 5 routes and launches but is not really playable under wine.
 
 ## Summary
 
 total: 13
-passed: 0
-issues: 0
-pending: 13
-skipped: 0
+passed: 6
+issues: 5
+pending: 0
+skipped: 2
 blocked: 0
+
+Run 2026-10-22 on a fresh Apple-silicon Mac (no prior Steam, CrossOver or bottles). Items 1-4, 7 and 12 ran with the sidecar at 171b4cbf2; items 5, 6, 8-11 and 13 ran at c1a641a21+ (c1a641a21 fixed backslash launch-exe paths mid-gate; 541544990 grew the allowlist).
+
+D-51-14 acceptance: UNMET. Hoard (63000) is not playable through the bridge because it crashes under wine regardless of the bridge (item 4). XCOM is CEG DRM-wrapped (item 5), and ELEX stops on stubbed Win64 ownership interfaces (item 6). Avernum 6 passes; Avernum 5 launches through the bridge.
+
+ROADMAP hazard (b) acknowledged: for titles that still route to the shared `GameLibSteam` bottled-Steam path (now including knownBad XCOM, and any user-forced title like Avernum 4 here), per-executable Wine overrides under `HKCU\Software\Wine\AppDefaults\<game>.exe` remain the documented stopgap. Nothing in this phase removes that path.
 
 ## Gaps
 
-<!-- YAML format for plan-phase --gaps consumption -- none yet, testing has not started -->
+<!-- YAML format for plan-phase --gaps consumption -->
+- truth: "Quitting a bridge game frees its helper port on the game's first launch"
+  status: failed
+  reason: "Avernum 5 first launch: helper still LISTENing 6m39s after the game was gone; no bottleProcessMonitor line for that launch"
+  severity: major
+  test: 2
+  root_cause: "fireBridgeWineLaunch awaits runWineCommand, which resolves only on winewrapper close, before starting the monitor; each launch's monitor starts after its own game exits"
+  artifacts: [src/backend/storeManagers/steam/games.ts, src/backend/launcher.ts, src/backend/storeManagers/steam/bottleProcessMonitor.ts]
+  missing: ["start the monitor without awaiting the wine child"]
+  debug_session: ".planning/todos/pending/2026-10-22-bridge-process-monitor-starts-after-game-exits.md"
+- truth: "Hoard (63000) reaches playable single-player through the bridge (D-51-14 anchor)"
+  status: failed
+  reason: "User reported: crash dialog; Hoard crashed under CrossOver before the bridge existed, exact same behavior"
+  severity: major
+  test: 4
+  root_cause: "Hoard is incompatible with wine/CrossOver itself; the bridge half (LISTEN/INIT/HELLO, stubbed notice, limited-features line) passed"
+  artifacts: []
+  missing: ["a wine-level fix or a decision to retire Hoard as the acceptance anchor"]
+  debug_session: ""
+- truth: "XCOM (200510) reaches its main menu through the bridge"
+  status: failed
+  reason: "User reported: pressed play, nothing launched"
+  severity: major
+  test: 5
+  root_cause: "Steam CEG DRM: the exe reads STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writes .STEAMSTART, waits for a Windows Steam client and exits without SteamAPI_Init (inferred from a cx-log trace)"
+  artifacts: [src/backend/storeManagers/steam/bridge/bridge-allowlist.json]
+  missing: ["CEG detection in prescreen/scan", "bottled-Steam confirmation run"]
+  debug_session: ".planning/todos/pending/2026-10-22-detect-steam-ceg-drm-in-bridge-prescreen.md"
+- truth: "ELEX (411300) reaches its main menu through the Win64 bridge, and the prescreen logs it as x64"
+  status: failed
+  reason: "User reported: Steam error 'Your account is not subscribed to this application [AppID: 411300]'"
+  severity: major
+  test: 6
+  root_cause: "SHIM64_SERVED_INTERFACE_VERSIONS serves SteamUser019/SteamApps008/SteamUtils008/SteamClient017 as stub only. Separately, the prescreen takes POSIX basename() of backslash depot paths, so subfolder steam_api*.dll is missed"
+  artifacts: [src/backend/storeManagers/steam/bridge/shimCoverage.ts, src/backend/storeManagers/steam/depot.ts]
+  missing: ["wire the x64 core interfaces after a live accessor probe", "normalise separators in screenDepotPlanForSteamApi"]
+  debug_session: ".planning/todos/pending/2026-10-22-wire-win64-core-steam-interfaces.md"
+- truth: "Waiting for Steam names the detected cause for a signed-out bottled Steam"
+  status: failed
+  reason: "cause=none for the whole wait while the operator sat at the sign-in prompt; self-update also unnamed during its download phase"
+  severity: minor
+  test: 11
+  root_cause: "classifyBottledSteamBlock matches only LogonFailure for login and only 'Installing update...' for self-update"
+  artifacts: [src/backend/storeManagers/steam/bottleLaunchSignals.ts]
+  missing: ["sign-in prompt and update-download detection"]
+  debug_session: ".planning/todos/pending/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
