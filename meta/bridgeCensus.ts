@@ -66,6 +66,7 @@ import { parse as parseVdf } from '@node-steam/vdf'
 
 import {
   parseSteamApiImportTable,
+  runtimeLoadedSteamApiMarker,
   type ImportTableResult
 } from '../src/backend/storeManagers/steam/bridge/importParse'
 import {
@@ -84,6 +85,7 @@ import {
 
 export type CensusClass =
   | 'bridge'
+  | 'no-steam-api'
   | 'win64-no-shim'
   | 'missing-symbols'
   | 'unknown-version'
@@ -99,6 +101,9 @@ export interface CensusRow {
   arch: 'x86' | 'x64' | 'none'
   class: CensusClass
   detail: string
+  /** True only when the title is routed AND its seed entry carries a
+   * playVerified record citing live evidence. Routed is not runs. */
+  verified: boolean
 }
 
 export interface CensusTitleInput {
@@ -108,6 +113,12 @@ export interface CensusTitleInput {
   /** The closed-taxonomy known-bad reason string, or null/undefined when
    * `appid` is not on the bundled known-bad list. */
   knownBadReason?: string | null
+  /** The seed entry carries a `playVerified` record (live evidence). */
+  playVerified?: boolean
+  /** A steam_api*.dll ships (non-shim) in the install tree although the
+   * launch exe's import table has no steam_api entry -- the exe loads it at
+   * runtime. Same signal the live path records as `<dll>@runtime-loaded`. */
+  runtimeLoadedDll?: 'steam_api.dll' | 'steam_api64.dll' | null
   /** `null` when no scannable PE exe (with or without a steam_api import)
    * was found anywhere under the title's installdir at all. */
   exe: {
@@ -146,9 +157,11 @@ export const DEFAULT_COVERAGE_DEPS: CensusCoverageDeps = {
  *     mirroring the live route resolver's own precedence, D-51-08).
  *  2. `exe === null` -> 'no-binary' (nothing objdump-able was found at all).
  *  3. `exe.arch === 'none'` (an exe WAS found, but imports nothing from
- *     `steam_api(64)?.dll`) -> 'bridge', flagged `no-steam-api` -- trivially
- *     bridge-eligible since there is nothing to serve, but flagged so the
- *     operator does not mistake it for a real coverage proof.
+ *     `steam_api(64)?.dll`): when a steam_api*.dll ships in the install tree
+ *     (`runtimeLoadedDll`) -> 'missing-symbols' with the live path's
+ *     `<dll>@runtime-loaded` marker (the exe loads it at runtime, so the
+ *     import table proves nothing); otherwise -> 'no-steam-api', routed but
+ *     labelled so it is never mistaken for a coverage proof.
  *  4. `arch === 'x64'` and the x64 export set is structurally empty ->
  *     'win64-no-shim', without ever calling into coverage resolution --
  *     there is nothing to evaluate against.
@@ -169,43 +182,58 @@ export function classifyCensusTitle(
     name: input.name,
     installdir: input.installdir
   }
+  const withVerified = (row: Omit<CensusRow, 'verified'>): CensusRow => ({
+    ...row,
+    verified:
+      input.playVerified === true &&
+      (row.class === 'bridge' || row.class === 'no-steam-api')
+  })
 
   if (input.knownBadReason) {
-    return {
+    return withVerified({
       ...base,
       arch: input.exe?.arch ?? 'none',
       class: 'known-bad',
       detail: input.knownBadReason
-    }
+    })
   }
 
   if (input.exe === null) {
-    return {
+    return withVerified({
       ...base,
       arch: 'none',
       class: 'no-binary',
       detail: 'no scannable PE executable found under installdir'
-    }
+    })
   }
 
   const { arch, symbols, dllVersions, exeVersions } = input.exe
 
   if (arch === 'none') {
-    return {
+    if (input.runtimeLoadedDll) {
+      return withVerified({
+        ...base,
+        arch: 'none',
+        class: 'missing-symbols',
+        detail: runtimeLoadedSteamApiMarker(input.runtimeLoadedDll)
+      })
+    }
+    return withVerified({
       ...base,
       arch: 'none',
-      class: 'bridge',
-      detail: 'no-steam-api, flagged'
-    }
+      class: 'no-steam-api',
+      detail:
+        'launch exe imports no steam_api and none ships in the install tree'
+    })
   }
 
   if (arch === 'x64' && deps.x64ExportedSymbols.size === 0) {
-    return {
+    return withVerified({
       ...base,
       arch: 'x64',
       class: 'win64-no-shim',
       detail: 'no Win64 shim capability built (SHIM64 export set empty)'
-    }
+    })
   }
 
   const { required, problems } = deps.resolveRequiredInterfaceVersions({
@@ -215,12 +243,12 @@ export function classifyCensusTitle(
   })
 
   if (problems.length > 0) {
-    return {
+    return withVerified({
       ...base,
       arch,
       class: 'unknown-version',
       detail: problems.join(', ')
-    }
+    })
   }
 
   const coverage = deps.evaluateShimCoverage({
@@ -231,39 +259,45 @@ export function classifyCensusTitle(
   })
 
   if (coverage.missingSymbols.length > 0) {
-    return {
+    return withVerified({
       ...base,
       arch,
       class: 'missing-symbols',
       detail: coverage.missingSymbols.join(', ')
-    }
+    })
   }
 
-  return { ...base, arch, class: 'bridge', detail: '' }
+  return withVerified({ ...base, arch, class: 'bridge', detail: '' })
 }
 
 /**
- * Routed = class 'bridge' count. A 'no-binary' row can never contribute to
+ * Routed = class 'bridge' or 'no-steam-api' count; verified = rows whose
+ * seed entry carries live play evidence. A 'no-binary' row can never contribute to
  * `routed` (its class is never 'bridge'), but it DOES count toward `total`
  * -- the census reports what fraction of the whole owned set routes to the
  * bridge, not just the subset that had a scannable exe at all.
  */
 export function summarizeCensus(rows: CensusRow[]): {
   routed: number
+  verified: number
   total: number
   byClass: Record<string, number>
 } {
   const byClass: Record<string, number> = {}
   let routed = 0
+  let verified = 0
 
   for (const row of rows) {
     byClass[row.class] = (byClass[row.class] ?? 0) + 1
-    if (row.class === 'bridge') {
+    if (row.class === 'bridge' || row.class === 'no-steam-api') {
       routed++
+    }
+    if (row.verified) {
+      verified++
     }
   }
 
-  return { routed, total: rows.length, byClass }
+  return { routed, verified, total: rows.length, byClass }
 }
 
 /** Markdown table + the "N of M routed to the bridge" summary line the
@@ -271,12 +305,12 @@ export function summarizeCensus(rows: CensusRow[]): {
 export function formatCensusMarkdown(rows: CensusRow[]): string {
   const summary = summarizeCensus(rows)
   const header =
-    '| AppID | Name | Installdir | Arch | Class | Detail |\n' +
-    '|---|---|---|---|---|---|'
+    '| AppID | Name | Installdir | Arch | Class | Verified | Detail |\n' +
+    '|---|---|---|---|---|---|---|'
   const body = rows
     .map(
       (r) =>
-        `| ${r.appid} | ${r.name} | ${r.installdir} | ${r.arch} | ${r.class} | ${r.detail} |`
+        `| ${r.appid} | ${r.name} | ${r.installdir} | ${r.arch} | ${r.class} | ${r.verified ? 'yes' : 'no'} | ${r.detail} |`
     )
     .join('\n')
   const byClassSummary = Object.entries(summary.byClass)
@@ -288,7 +322,7 @@ export function formatCensusMarkdown(rows: CensusRow[]): string {
     header,
     body,
     '',
-    `${summary.routed} of ${summary.total} routed to the bridge (${byClassSummary})`
+    `${summary.routed} of ${summary.total} routed to the bridge; ${summary.verified} of ${summary.total} verified running through the bridge (${byClassSummary})`
   ].join('\n')
 }
 
@@ -447,6 +481,62 @@ function runObjdump(exePath: string): string | null {
   return result.stdout
 }
 
+function loadPlayVerified(): Set<string> {
+  const allowlistPath = join(
+    process.cwd(),
+    'src/backend/storeManagers/steam/bridge/bridge-allowlist.json'
+  )
+  if (!existsSync(allowlistPath)) {
+    return new Set()
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(allowlistPath, 'utf-8')) as {
+      seed?: Array<{ appId: string; playVerified?: unknown }>
+    }
+    return new Set(
+      (parsed.seed ?? []).filter((e) => e.playVerified).map((e) => e.appId)
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+/** Finds a non-shim steam_api(64).dll anywhere under `dir` (same depth bound
+ * as walkExes). Prefers steam_api64.dll when both ship, matching the live
+ * path's rule. */
+function findRuntimeSteamApiDll(
+  dir: string,
+  depth: number,
+  found: Set<'steam_api.dll' | 'steam_api64.dll'>
+): void {
+  if (depth > MAX_EXE_DEPTH || !existsSync(dir)) {
+    return
+  }
+  let entries
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      findRuntimeSteamApiDll(full, depth + 1, found)
+    } else if (entry.isFile()) {
+      const lower = entry.name.toLowerCase()
+      if (lower === 'steam_api.dll' || lower === 'steam_api64.dll') {
+        try {
+          if (!isGameLibShimBytes(readFileSync(full))) {
+            found.add(lower)
+          }
+        } catch {
+          // unreadable -- treat as absent
+        }
+      }
+    }
+  }
+}
+
 function loadKnownBad(): Map<string, string> {
   const allowlistPath = join(
     process.cwd(),
@@ -478,7 +568,7 @@ interface ChosenExe {
  * guessed, mirroring `scanSteamApiImports`'s fail-closed T-51-06 posture.
  * Falls back to the largest exe (by file size) when none import
  * `steam_api(64)?.dll` at all -- its import table is then `arch: 'none'`,
- * `symbols: []`, classified `bridge` + `no-steam-api, flagged`.
+ * `symbols: []`, classified `no-steam-api` (or runtime-loaded `missing-symbols`).
  */
 function chooseExe(exePaths: string[]): ChosenExe | null {
   let largest: { path: string; size: number } | null = null
@@ -517,9 +607,11 @@ function chooseExe(exePaths: string[]): ChosenExe | null {
 
 async function classifyInstalledTitle(
   entry: ManifestEntry,
-  knownBad: Map<string, string>
+  knownBad: Map<string, string>,
+  playVerifiedSet: Set<string>
 ): Promise<CensusRow> {
   const knownBadReason = knownBad.get(entry.appid) ?? null
+  const playVerified = playVerifiedSet.has(entry.appid)
 
   const exePaths: string[] = []
   walkExes(entry.installPath, 0, exePaths)
@@ -531,6 +623,7 @@ async function classifyInstalledTitle(
       name: entry.name,
       installdir: entry.installdir,
       knownBadReason,
+      playVerified,
       exe: null
     })
   }
@@ -538,6 +631,17 @@ async function classifyInstalledTitle(
   const { arch, symbols } = chosen.table
   let dllVersions: string[] = []
   let exeVersions: string[] = []
+
+  let runtimeLoadedDll: 'steam_api.dll' | 'steam_api64.dll' | null = null
+  if (arch === 'none') {
+    const found = new Set<'steam_api.dll' | 'steam_api64.dll'>()
+    findRuntimeSteamApiDll(entry.installPath, 0, found)
+    runtimeLoadedDll = found.has('steam_api64.dll')
+      ? 'steam_api64.dll'
+      : found.has('steam_api.dll')
+        ? 'steam_api.dll'
+        : null
+  }
 
   if (arch !== 'none') {
     const dllName = arch === 'x64' ? 'steam_api64.dll' : 'steam_api.dll'
@@ -569,6 +673,8 @@ async function classifyInstalledTitle(
     name: entry.name,
     installdir: entry.installdir,
     knownBadReason,
+    playVerified,
+    runtimeLoadedDll,
     exe: { arch, symbols, dllVersions, exeVersions }
   })
 }
@@ -580,6 +686,7 @@ async function classifyInstalledTitle(
  * prints an ACF field beyond appid/name/installdir (T-51-39). */
 export async function runCensus(): Promise<CensusRow[]> {
   const knownBad = loadKnownBad()
+  const playVerifiedSet = loadPlayVerified()
   const seen = new Map<string, ManifestEntry>()
 
   for (const bottleDir of findBridgeBottles()) {
@@ -593,7 +700,7 @@ export async function runCensus(): Promise<CensusRow[]> {
 
   const rows: CensusRow[] = []
   for (const entry of seen.values()) {
-    rows.push(await classifyInstalledTitle(entry, knownBad))
+    rows.push(await classifyInstalledTitle(entry, knownBad, playVerifiedSet))
   }
   return rows
 }

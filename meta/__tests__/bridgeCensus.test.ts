@@ -18,6 +18,7 @@
 
 import {
   classifyCensusTitle,
+  formatCensusMarkdown,
   summarizeCensus,
   type CensusRow
 } from '../bridgeCensus'
@@ -153,7 +154,7 @@ describe('classifyCensusTitle', () => {
     expect(row.class).toBe('no-binary')
   })
 
-  it('an exe found with no steam_api import at all classifies "bridge" flagged no-steam-api', () => {
+  it('an exe with no steam_api import and no steam_api dll in the tree classifies "no-steam-api" (routed, labelled)', () => {
     const row = classifyCensusTitle({
       appid: '2706020',
       name: 'All Will Fall',
@@ -167,8 +168,47 @@ describe('classifyCensusTitle', () => {
       }
     })
 
-    expect(row.class).toBe('bridge')
-    expect(row.detail).toBe('no-steam-api, flagged')
+    expect(row.class).toBe('no-steam-api')
+    expect(row.detail).toBe(
+      'launch exe imports no steam_api and none ships in the install tree'
+    )
+    expect(summarizeCensus([row]).routed).toBe(1)
+  })
+
+  it('an exe with no import but a shipped steam_api64.dll classifies "missing-symbols" with the runtime-loaded marker', () => {
+    const row = classifyCensusTitle({
+      appid: '1',
+      name: 'Loader',
+      installdir: 'Loader',
+      runtimeLoadedDll: 'steam_api64.dll',
+      exe: { arch: 'none', symbols: [], dllVersions: [], exeVersions: [] }
+    })
+
+    expect(row.class).toBe('missing-symbols')
+    expect(row.detail).toBe('steam_api64.dll@runtime-loaded')
+    expect(summarizeCensus([row]).routed).toBe(0)
+  })
+
+  it('verified is true only for a routed row with playVerified', () => {
+    const exe = {
+      arch: 'x86' as const,
+      symbols: ['SteamUser'],
+      dllVersions: ['SteamUser023'],
+      exeVersions: []
+    }
+    const mk = (playVerified: boolean, knownBadReason?: string) =>
+      classifyCensusTitle({
+        appid: '1',
+        name: 'N',
+        installdir: 'N',
+        playVerified,
+        knownBadReason,
+        exe
+      })
+
+    expect(mk(true).verified).toBe(true)
+    expect(mk(false).verified).toBe(false)
+    expect(mk(true, 'does-not-run').verified).toBe(false)
   })
 
   it('a row carries only appid, name, installdir, arch, class, detail -- never a path or account field', () => {
@@ -186,7 +226,44 @@ describe('classifyCensusTitle', () => {
     })
 
     expect(Object.keys(row).sort()).toEqual(
-      ['appid', 'arch', 'class', 'detail', 'installdir', 'name'].sort()
+      [
+        'appid',
+        'arch',
+        'class',
+        'detail',
+        'installdir',
+        'name',
+        'verified'
+      ].sort()
+    )
+  })
+})
+
+describe('formatCensusMarkdown', () => {
+  it('prints the Verified column and the routed/verified summary line', () => {
+    const mk = (
+      appid: string,
+      cls: CensusRow['class'],
+      verified: boolean
+    ): CensusRow => ({
+      appid,
+      name: appid,
+      installdir: appid,
+      arch: 'x86',
+      class: cls,
+      detail: '',
+      verified
+    })
+    const out = formatCensusMarkdown([
+      mk('1', 'bridge', true),
+      mk('2', 'bridge', false),
+      mk('3', 'known-bad', false)
+    ])
+
+    expect(out).toContain('| Verified |')
+    expect(out).toContain('| bridge | yes |')
+    expect(out).toContain(
+      '2 of 3 routed to the bridge; 1 of 3 verified running through the bridge (bridge=2, known-bad=1)'
     )
   })
 })
@@ -199,7 +276,8 @@ describe('summarizeCensus', () => {
       installdir: 'Bridge A',
       arch: 'x86',
       class: 'bridge',
-      detail: ''
+      detail: '',
+      verified: false
     },
     {
       appid: '2',
@@ -207,7 +285,8 @@ describe('summarizeCensus', () => {
       installdir: 'Bridge B',
       arch: 'x64',
       class: 'bridge',
-      detail: ''
+      detail: '',
+      verified: false
     },
     {
       appid: '3',
@@ -215,7 +294,8 @@ describe('summarizeCensus', () => {
       installdir: 'Missing',
       arch: 'x86',
       class: 'missing-symbols',
-      detail: 'SteamAPI_SteamScreenshots_v003'
+      detail: 'SteamAPI_SteamScreenshots_v003',
+      verified: false
     },
     {
       appid: '4',
@@ -223,7 +303,8 @@ describe('summarizeCensus', () => {
       installdir: 'No Binary',
       arch: 'none',
       class: 'no-binary',
-      detail: 'no scannable PE executable found under installdir'
+      detail: 'no scannable PE executable found under installdir',
+      verified: false
     }
   ]
 
@@ -247,7 +328,8 @@ describe('summarizeCensus', () => {
         installdir: 'Solo No Binary',
         arch: 'none',
         class: 'no-binary',
-        detail: 'no scannable PE executable found under installdir'
+        detail: 'no scannable PE executable found under installdir',
+        verified: false
       }
     ]
 
