@@ -937,6 +937,8 @@ export async function buildDepotPlan(
 /**
  * D-51-06 (Phase 51 Plan 17): pure, side-effect-free classifier over an
  * already-built plan's file list -- never touches the network or disk.
+ * Depot filenames use Windows separators (`system\steam_api64.dll`); they are
+ * separator-normalised before the basename is taken.
  * Case-insensitive BASENAME match only (any directory), so
  * `backup/steam_api.dll.bak` is correctly NOT counted (its basename is
  * `steam_api.dll.bak`, not `steam_api.dll`).
@@ -948,7 +950,9 @@ export function screenDepotPlanForSteamApi(
   let hasX64 = false
   for (const depot of plan.depots) {
     for (const file of depot.files) {
-      const name = basename(file.filename).toLowerCase()
+      // Depot manifest filenames use Windows separators; POSIX basename()
+      // would not split them (todo 2026-10-22-bridge-prescreen-always-returns-none).
+      const name = basename(file.filename.replace(/\\/g, '/')).toLowerCase()
       if (name === 'steam_api.dll') {
         hasX86 = true
       } else if (name === 'steam_api64.dll') {

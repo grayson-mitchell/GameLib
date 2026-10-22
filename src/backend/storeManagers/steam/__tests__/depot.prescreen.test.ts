@@ -242,6 +242,40 @@ describe('screenDepotPlanForSteamApi — pure file-list classifier', () => {
   it('an empty depots array classifies as none', () => {
     expect(screenDepotPlanForSteamApi({ depots: [] })).toBe('none')
   })
+
+  describe('Windows-separator depot filenames (real manifests use backslashes)', () => {
+    const screen = (files: string[]) =>
+      screenDepotPlanForSteamApi({
+        depots: [
+          {
+            depotId: '1',
+            gid: '1',
+            key: Buffer.alloc(0),
+            files: files.map(makeDepotFile)
+          }
+        ]
+      })
+
+    it("ELEX system\\steam_api64.dll -> 'x64'", () => {
+      expect(screen(['system\\steam_api64.dll', 'system\\ELEX.exe'])).toBe(
+        'x64'
+      )
+    })
+    it("XCOM Binaries\\Win32\\steam_api.dll -> 'x86'", () => {
+      expect(screen(['Binaries\\Win32\\steam_api.dll'])).toBe('x86')
+    })
+    it("Hoard win32\\ + win64\\ -> 'both'", () => {
+      expect(screen(['win32\\steam_api.dll', 'win64\\steam_api64.dll'])).toBe(
+        'both'
+      )
+    })
+    it("backup\\steam_api.dll.bak -> 'none'", () => {
+      expect(screen(['backup\\steam_api.dll.bak'])).toBe('none')
+    })
+    it("root STEAM_API.DLL -> 'x86'", () => {
+      expect(screen(['STEAM_API.DLL'])).toBe('x86')
+    })
+  })
 })
 
 describe('prescreenBridgeDepots — guarded second plan-build, never throws', () => {
