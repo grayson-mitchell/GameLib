@@ -13,7 +13,7 @@ import { getGameInfo, getStoreName } from 'frontend/helpers'
 import { hasProgress } from 'frontend/hooks/hasProgress'
 import ContextProvider from 'frontend/state/ContextProvider'
 import ProgressHeader from '../ProgressHeader'
-import { heroArtSources, heroPercent } from './heroModel'
+import { heroArtSources, heroCoverSources, heroPercent } from './heroModel'
 
 type Props = {
   element?: DMQueueElement
@@ -95,19 +95,21 @@ export default function DownloadHero({ element, state }: Props) {
       : tGamelib('gamelib:downloadManager.progressPaused', 'Paused')
 
   const art = heroArtSources(gameInfo)
-  const cover = gameInfo?.art_cover || gameInfo?.art_square
-
   const library = [
     ...epic.library,
     ...gog.library,
     ...amazon.library,
     ...steam.library
   ]
-  const title =
-    library.find((val) => val.app_name === appName && val.runner === runner)
-      ?.title ??
-    gameInfo?.title ??
-    appName
+  const libraryEntry = library.find(
+    (val) => val.app_name === appName && val.runner === runner
+  )
+  const title = libraryEntry?.title ?? gameInfo?.title ?? appName
+  const cover = heroCoverSources({
+    art_cover: gameInfo?.art_cover || libraryEntry?.art_cover,
+    art_square: gameInfo?.art_square || libraryEntry?.art_square,
+    overrides: libraryEntry?.overrides ?? gameInfo?.overrides
+  })
 
   const translatedTypes = {
     install: t2('download-manager.install-type.install', 'Install'),
@@ -157,7 +159,8 @@ export default function DownloadHero({ element, state }: Props) {
           {cover && (
             <CachedImage
               className="downloadHero__cover"
-              src={cover}
+              src={cover.src}
+              fallback={cover.fallback}
               alt={title}
             />
           )}
