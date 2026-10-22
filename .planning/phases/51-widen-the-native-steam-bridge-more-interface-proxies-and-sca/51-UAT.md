@@ -115,6 +115,21 @@ result: pass — 2026-10-22, named real-profile arm (live signed-in Mac Steam; H
 expected: `pnpm bridge-census` run against the final, fully-landed tree prints "N of M routed to the bridge" with every miss classified (win64-no-shim / missing-symbols / unknown-version / known-bad / no-binary); the exact numbers from that run are recorded here verbatim once executed.
 result: pass — 2026-10-22, `pnpm bridge-census` against the final tree (HEAD 541544990, allowlist with XCOM knownBad), on this fresh Mac's real bottles. Verbatim: "3 of 6 routed to the bridge (bridge=3, known-bad=1, missing-symbols=1, unknown-version=1)". Rows: 206020 Avernum 4 x86 bridge; 200510 XCOM x86 known-bad drm-wrapped; 206060 Avernum 6 x86 bridge; 411300 ELEX x64 bridge; 63000 HOARD x86 unknown-version (SteamUtils, SteamUser, SteamFriends, SteamMatchMaking, SteamUserStats, SteamNetworking, SteamApps, SteamRemoteStorage all @unknown-version); 648410 Colony Ship x64 missing-symbols (SteamInternal_FindOrCreateUserInterface, SteamInternal_ContextInit). Every miss is classified. Reading it honestly: "routed" is not "runs". ELEX counts as bridge but fails at boot on stubbed Win64 ownership interfaces (item 6). Avernum 4 counts as bridge from its import table, but this machine installed it through bottled Steam (item 8). Hoard's unknown-version disagrees with the live scan, which resolved all of Hoard's versions; 51-18 already recorded this census/live divergence for Hoard. Colony Ship 648410 is a cancelled partial download (20:45:15), so its row reflects incomplete files. Of the gate-tested bridge titles, Avernum 6 is the one that both routes and plays to completion; Avernum 5 routes and launches but is not really playable under wine.
 
+### 14. Re-gate of item 2 — helper teardown on the first launch (Avernum 6, 206060)
+
+expected: On the session's first Play of Avernum 6, `bottleProcessMonitor [206060]: matched process(es) — game started` is logged while the game runs; after a normal quit, `matched process(es) gone` then `stopBridgeHelper` are logged and within 30s `pgrep -fl "steam-bridge-helper --appid 206060"` prints nothing and `lsof -nP -iTCP -sTCP:LISTEN` no longer shows its port; a second launch followed by a force-quit of the game process gives the same teardown; Mac Steam In-Game clears both times.
+result: pending
+
+### 15. Re-gate of item 6 — ELEX (411300) through the wired Win64 shim
+
+expected: Play launches ELEX from `GameLibSteamBridge-411300`; the placed `steam_api64.dll` next to `ELEX/system/ELEX.exe` has size == the new SHIM64 (848896); `HELLO shim attached appid=411300`; no "not subscribed" error; the game reaches its main menu; Mac Steam shows In-Game ELEX; the `[bridge-notice] appId=411300 reason=stubbed:` line does not list SteamUser, SteamUtils, SteamApps or SteamFriends.
+result: pending
+
+### 16. Re-gate of item 11 — Waiting for Steam names sign-in (Avernum 4, 206020)
+
+expected: With bottled Steam signed out (Steam > Sign out in the GameLibSteam client), Play on Avernum 4 shows "Waiting for Steam…" within roughly 20s naming the sign-in cause; `[bottle-waiting] appId=206020 cause=login` is logged within 35s of Play; after signing in the game starts and the waiting state clears. If bottled Steam has an update pending, `cause=self-update` is logged during its `Downloading update` phase; otherwise that half is fixture-proven only (51-24).
+result: pending
+
 ## Summary
 
 total: 13
