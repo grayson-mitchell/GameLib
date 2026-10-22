@@ -11,29 +11,6 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { LinearProgress } from '@mui/material'
 
-// D-51-16: maps each cause to its gamelib.json key -- no new hard-coded
-// copy, every string already lives under `steam.bottle.waiting.*` (51-04).
-const WAITING_CAUSE_KEYS: Record<
-  SteamBottleLaunchWaitingCause,
-  { key: string; defaultValue: string }
-> = {
-  'self-update': {
-    key: 'gamelib:steam.bottle.waiting.cause.selfUpdate',
-    defaultValue:
-      'Steam is updating itself. Press Play again once it has restarted.'
-  },
-  login: {
-    key: 'gamelib:steam.bottle.waiting.cause.login',
-    defaultValue:
-      'Steam needs you to sign in. Its login window may be hidden behind other windows.'
-  },
-  'other-session': {
-    key: 'gamelib:steam.bottle.waiting.cause.otherSession',
-    defaultValue:
-      'This game is running on another computer, and Steam is asking whether to close it there.'
-  }
-}
-
 interface Props {
   gameInfo: GameInfo
   handleUpdate: () => void
@@ -52,6 +29,29 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
   const waitingEntry = useBottleLaunchWaiting(
     (state) => state.entries[gameInfo.app_name]
   )
+
+  // D-51-16: every cause's copy lives under `steam.bottle.waiting.*` (51-04).
+  // Literal t() calls, not a key/default map, so the hard-coded string gate
+  // can see each key alongside its default.
+  function waitingCauseText(cause: SteamBottleLaunchWaitingCause): string {
+    switch (cause) {
+      case 'self-update':
+        return tGamelib(
+          'gamelib:steam.bottle.waiting.cause.selfUpdate',
+          'Steam is updating itself. Press Play again once it has restarted.'
+        )
+      case 'login':
+        return tGamelib(
+          'gamelib:steam.bottle.waiting.cause.login',
+          'Steam needs you to sign in. Its login window may be hidden behind other windows.'
+        )
+      case 'other-session':
+        return tGamelib(
+          'gamelib:steam.bottle.waiting.cause.otherSession',
+          'This game is running on another computer, and Steam is asking whether to close it there.'
+        )
+    }
+  }
 
   function getInstallLabel(
     is_installed: boolean,
@@ -226,10 +226,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
                   'Most likely:'
                 )}
               </strong>{' '}
-              {tGamelib(
-                WAITING_CAUSE_KEYS[waitingEntry.detectedCause].key,
-                WAITING_CAUSE_KEYS[waitingEntry.detectedCause].defaultValue
-              )}
+              {waitingCauseText(waitingEntry.detectedCause)}
             </p>
           )}
           {otherWaitingCauses.length > 0 && (
@@ -242,12 +239,7 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
               </p>
               <ul>
                 {otherWaitingCauses.map((cause) => (
-                  <li key={cause}>
-                    {tGamelib(
-                      WAITING_CAUSE_KEYS[cause].key,
-                      WAITING_CAUSE_KEYS[cause].defaultValue
-                    )}
-                  </li>
+                  <li key={cause}>{waitingCauseText(cause)}</li>
                 ))}
               </ul>
             </div>

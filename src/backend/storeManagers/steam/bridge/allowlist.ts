@@ -74,14 +74,15 @@ const knownBadReasonSchema = z.enum(KNOWN_BAD_REASONS)
 // that is not a valid SteamBridgeKnownBadReason; this Record literal catches
 // the other direction -- if SteamBridgeKnownBadReason ever gains or loses a
 // member, this object fails to typecheck (every key required, no extra key
-// permitted) because it must assign exactly one value per member.
+// permitted) because it must assign exactly one value per member. Left
+// unreferenced on purpose: the `_` prefix satisfies no-unused-vars, and a
+// column-0 `void` here trips sidecarRejectionGuard's floating-promise check.
 const _knownBadReasonExhaustiveness: Record<SteamBridgeKnownBadReason, true> = {
   'drm-wrapped': true,
   'win64-only': true,
   'p2p-required': true,
   'does-not-run': true
 }
-void _knownBadReasonExhaustiveness
 
 const allowlistEntrySchema = z.object({
   appId: z.string().regex(NUMERIC_APP_ID),
