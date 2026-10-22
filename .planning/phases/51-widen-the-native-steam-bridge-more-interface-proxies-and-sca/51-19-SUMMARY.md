@@ -99,9 +99,11 @@ without the bridge. The census reads "3 of 6 routed to the bridge".**
 
 ### Not met
 
-- **Task 2 acceptance "`graphify update .` exited 0": not run.** `graphify` is not installed on
-  this new Mac and no `graphify-out/` exists, so CLAUDE.md's graphify rules currently describe a
-  tool that is absent here. It was not installed without asking.
+- **Task 2 acceptance "`graphify update .` exited 0": met late.** `graphify` was not installed
+  on this new Mac when Task 2 ran. On the operator's instruction it was then installed
+  (`brew install pipx` then `pipx install graphifyy`, giving graphify 0.9.93 on Python 3.15; the
+  old machine had 0.9.70). A cold `graphify update .` exited 0: 59080 nodes, 117146 edges,
+  2398 communities in `graphify-out/` (gitignored local state).
 - **D-51-14 acceptance: unmet** for Hoard, XCOM and ELEX (causes above and in 51-UAT Gaps).
 
 ### Gate-time workarounds (recorded in the UAT, not shipped)
