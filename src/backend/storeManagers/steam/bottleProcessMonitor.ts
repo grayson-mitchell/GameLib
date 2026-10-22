@@ -20,10 +20,19 @@
  * on the first match (LD-4) — a Steam block the user simply waits out still
  * resolves correctly once the game actually starts, however long that takes.
  *
- * Exports exactly three names: `startBottleProcessMonitor`,
- * `stopBottleProcessMonitor`, `__stopAllBottleProcessMonitors`. Production
- * never calls the stop-all hook — it exists purely so tests can guarantee
- * `jest.getTimerCount()` returns to 0 between cases.
+ * Exports: `startBottleProcessMonitor` (returns a `BottleProcessMonitorHandle`
+ * or null), `stopBottleProcessMonitor`, `__stopAllBottleProcessMonitors` and
+ * `__getActiveMonitorKindForTests`. Production never calls the test hooks —
+ * they exist so tests can guarantee `jest.getTimerCount()` returns to 0
+ * between cases and observe the default `kind`.
+ *
+ * Plan 51-23: a caller that launches through a wrapper process (the bridge's
+ * `winewrapper.exe --run`) signals that wrapper's exit via the handle's
+ * `launcherExited()`. When no game process was ever matched, the launcher's
+ * own exit is the bound for the no-match case instead of a deadline (LD-4 /
+ * CONTEXT: "Deadline on first process match ... is deliberately absent"), so
+ * a crashed or failed launch still stops its helper. `onStopped` fires once
+ * on every terminal path except supersede/cancel.
  */
 import { relative, sep } from 'node:path'
 import { spawnAsync } from 'backend/utils'
@@ -69,6 +78,11 @@ interface MonitorEntry {
   cancelled: boolean
   timers: Set<ReturnType<typeof setTimeout>>
   onStopped?: () => void
+  /** True once any game process has matched (read by launcherExited). */
+  everMatched: boolean
+  matchedAt: number
+  /** Guards onStopped to fire at most once per monitor. */
+  stoppedFired: boolean
   /** Carried on the entry so a test can observe the default without the
    * poll loop needing to branch on it (see StartBottleProcessMonitorArgs's
    * own `kind` doc). */
@@ -198,6 +212,43 @@ function clearEntry(appId: string, entry: MonitorEntry): void {
   }
 }
 
+/** Fire entry.onStopped at most once; a throwing callback is logged. */
+function fireStoppedOnce(appId: string, entry: MonitorEntry): void {
+  if (entry.stoppedFired) return
+  entry.stoppedFired = true
+  if (!entry.onStopped) return
+  try {
+    entry.onStopped()
+  } catch (error) {
+    logWarning(
+      [`bottleProcessMonitor [${appId}]: onStopped callback threw`, error],
+      LogPrefix.Steam
+    )
+  }
+}
+
+/** First-match bookkeeping shared by the poll loop and launcherExited(). */
+function recordFirstMatch(
+  appId: string,
+  entry: MonitorEntry,
+  matches: Array<{ pid: string; command: string }>
+): void {
+  entry.everMatched = true
+  entry.matchedAt = Date.now()
+  logInfo(
+    [
+      `bottleProcessMonitor [${appId}]: matched process(es) — game started`,
+      matches.map((m) => `${m.pid} ${m.command}`).join('; ')
+    ],
+    LogPrefix.Steam
+  )
+  sendFrontendMessage('gameStatusUpdate', {
+    appName: appId,
+    runner: 'steam',
+    status: 'playing'
+  })
+}
+
 async function runPollLoop(
   appId: string,
   entry: MonitorEntry,
@@ -206,11 +257,10 @@ async function runPollLoop(
   bottleDir: string
 ): Promise<void> {
   const startedAt = Date.now()
-  // Session duration is measured from the FIRST MATCH, not from monitor
-  // start: the no-deadline wait for a blocked Steam (measured at ~6 minutes
-  // on 2026-10-16) is not play time and must not inflate the logged figure.
-  let matchedAt = 0
-  let everMatched = false
+  // Session duration is measured from the FIRST MATCH (entry.matchedAt), not
+  // from monitor start: the no-deadline wait for a blocked Steam (measured at
+  // ~6 minutes on 2026-10-16) is not play time and must not inflate the
+  // logged figure.
   let consecutiveFailures = 0
   // D-51-16 (Phase 51 Plan 08): waiting-state check bookkeeping.
   // `lastWaitingCheckAt === null` means "never checked yet" -- distinct
@@ -228,7 +278,7 @@ async function runPollLoop(
 
     const noMatchElapsed = Date.now() - startedAt
     const interval =
-      !everMatched && noMatchElapsed > NO_MATCH_BACKOFF_AFTER_MS
+      !entry.everMatched && noMatchElapsed > NO_MATCH_BACKOFF_AFTER_MS
         ? NO_MATCH_BACKOFF_INTERVAL_MS
         : pollIntervalMs
     await trackedSleep(entry, interval)
@@ -252,36 +302,25 @@ async function runPollLoop(
           `bottleProcessMonitor [${appId}]: giving up after ${MAX_CONSECUTIVE_SPAWN_FAILURES} consecutive ps failures`,
           LogPrefix.Steam
         )
-        if (everMatched) {
+        if (entry.everMatched) {
           sendFrontendMessage('gameStatusUpdate', {
             appName: appId,
             runner: 'steam',
             status: 'done'
           })
         }
+        // Review WR-05: the give-up path must also stop the helper.
+        fireStoppedOnce(appId, entry)
         clearEntry(appId, entry)
         return
       }
       continue
     }
 
-    if (matches.length > 0 && !everMatched) {
-      everMatched = true
-      matchedAt = Date.now()
-      logInfo(
-        [
-          `bottleProcessMonitor [${appId}]: matched process(es) — game started`,
-          matches.map((m) => `${m.pid} ${m.command}`).join('; ')
-        ],
-        LogPrefix.Steam
-      )
-      sendFrontendMessage('gameStatusUpdate', {
-        appName: appId,
-        runner: 'steam',
-        status: 'playing'
-      })
-    } else if (matches.length === 0 && everMatched) {
-      const elapsedSeconds = Math.round((Date.now() - matchedAt) / 1000)
+    if (matches.length > 0 && !entry.everMatched) {
+      recordFirstMatch(appId, entry, matches)
+    } else if (matches.length === 0 && entry.everMatched) {
+      const elapsedSeconds = Math.round((Date.now() - entry.matchedAt) / 1000)
       logInfo(
         `bottleProcessMonitor [${appId}]: matched process(es) gone after ${elapsedSeconds}s of play — game stopped`,
         LogPrefix.Steam
@@ -296,19 +335,7 @@ async function runPollLoop(
       // never on the `stopBottleProcessMonitor()`-cancels-first path below,
       // which never reaches this branch at all. Guarded so a throwing
       // callback cannot prevent `clearEntry()` from running.
-      if (entry.onStopped) {
-        try {
-          entry.onStopped()
-        } catch (error) {
-          logWarning(
-            [
-              `bottleProcessMonitor [${appId}]: onStopped callback threw`,
-              error
-            ],
-            LogPrefix.Steam
-          )
-        }
-      }
+      fireStoppedOnce(appId, entry)
       clearEntry(appId, entry)
       return
     }
@@ -319,7 +346,7 @@ async function runPollLoop(
     // and never runs once a match has ever been seen -- `everMatched` is
     // updated by the branch just above, so a tick whose `ps` poll just
     // produced the FIRST match skips this block in the SAME tick.
-    if (entry.kind === 'bottled-steam' && !everMatched) {
+    if (entry.kind === 'bottled-steam' && !entry.everMatched) {
       const elapsedSinceStart = Date.now() - startedAt
       const dueForCheck =
         elapsedSinceStart >= WAITING_FOR_STEAM_GRACE_MS &&
@@ -361,6 +388,16 @@ async function runPollLoop(
   }
 }
 
+/** Returned by startBottleProcessMonitor so a launcher wrapper can signal exit. */
+export interface BottleProcessMonitorHandle {
+  /**
+   * The launch wrapper process has exited (cleanly or not). If a game process
+   * was already matched this is a no-op; otherwise one immediate check runs
+   * and, finding nothing, the monitor stops and fires onStopped once.
+   */
+  launcherExited(): void
+}
+
 /**
  * Start polling for the given bottled game's own process(es). Never throws,
  * never blocks the caller, and is a complete no-op on any non-macOS host or
@@ -368,7 +405,7 @@ async function runPollLoop(
  */
 export function startBottleProcessMonitor(
   args: StartBottleProcessMonitorArgs
-): void {
+): BottleProcessMonitorHandle | null {
   const {
     appId,
     installPath,
@@ -379,7 +416,7 @@ export function startBottleProcessMonitor(
   } = args
 
   if (!isMac) {
-    return
+    return null
   }
 
   const prefix = deriveWindowsPrefix(bottleDir, installPath)
@@ -388,7 +425,7 @@ export function startBottleProcessMonitor(
       `bottleProcessMonitor [${appId}]: installPath "${installPath}" does not live under bottle "${bottleDir}"'s drive_c — no process monitor started`,
       LogPrefix.Steam
     )
-    return
+    return null
   }
   const lowerPrefix = prefix.toLowerCase()
 
@@ -398,6 +435,9 @@ export function startBottleProcessMonitor(
     cancelled: false,
     timers: new Set(),
     onStopped,
+    everMatched: false,
+    matchedAt: 0,
+    stoppedFired: false,
     kind
   }
   activeMonitors.set(appId, entry)
@@ -413,6 +453,39 @@ export function startBottleProcessMonitor(
       clearEntry(appId, entry)
     }
   })()
+
+  const isLive = () => !entry.cancelled && activeMonitors.get(appId) === entry
+  return {
+    launcherExited() {
+      if (!isLive() || entry.everMatched) return
+      void (async () => {
+        try {
+          let matches: Array<{ pid: string; command: string }> = []
+          try {
+            matches = await matchedProcesses(lowerPrefix)
+          } catch {
+            // A ps failure counts as "no match".
+          }
+          if (!isLive() || entry.everMatched) return
+          if (matches.length > 0) {
+            recordFirstMatch(appId, entry, matches)
+            return
+          }
+          logInfo(
+            `bottleProcessMonitor [${appId}]: launcher exited before any game process matched — stopping`,
+            LogPrefix.Steam
+          )
+          fireStoppedOnce(appId, entry)
+          clearEntry(appId, entry)
+        } catch (error) {
+          logWarning(
+            [`bottleProcessMonitor [${appId}]: launcherExited failed`, error],
+            LogPrefix.Steam
+          )
+        }
+      })()
+    }
+  }
 }
 
 /** Cancel and fully tear down the monitor for one appId. No-op if unknown. */

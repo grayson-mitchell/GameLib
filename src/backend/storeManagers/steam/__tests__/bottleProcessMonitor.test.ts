@@ -591,6 +591,169 @@ describe('bottleProcessMonitor.ts', () => {
     })
   })
 
+  // Phase 51 Plan 23: launcherExited() handle + onStopped on every
+  // non-supersede terminal path (51-UAT item 2, review WR-05).
+  describe('launcherExited handle (51-23)', () => {
+    const startBridge = (onStopped?: () => void) =>
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        kind: 'bridge',
+        onStopped
+      })
+
+    test('returns a handle when started, null when not (non-mac, prefix outside drive_c)', () => {
+      jest.useFakeTimers()
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      expect(startBridge()).not.toBeNull()
+      __stopAllBottleProcessMonitors()
+
+      envMock.isMac = false
+      expect(startBridge()).toBeNull()
+      envMock.isMac = true
+
+      expect(
+        startBottleProcessMonitor({
+          appId: '1',
+          installPath: '/elsewhere/game',
+          bottleDir,
+          kind: 'bridge'
+        })
+      ).toBeNull()
+      jest.useRealTimers()
+    })
+
+    test('launcherExited before any match with nothing running fires onStopped once and clears', async () => {
+      const onStopped = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      const handle = startBridge(onStopped)
+
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      expect(
+        mockedLogInfo.mock.calls.some((c) =>
+          JSON.stringify(c).includes(
+            'launcher exited before any game process matched'
+          )
+        )
+      ).toBe(true)
+      expect(jest.getTimerCount()).toBe(0)
+
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      jest.useRealTimers()
+    })
+
+    test('launcherExited before any match but a game process exists records the match and does not stop', async () => {
+      const onStopped = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      const handle = startBridge(onStopped)
+
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(onStopped).not.toHaveBeenCalled()
+      expect(mockedSendFrontendMessage).toHaveBeenCalledWith(
+        'gameStatusUpdate',
+        { appName: '38410', runner: 'steam', status: 'playing' }
+      )
+
+      // The poll loop later owns teardown, firing onStopped once.
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      jest.useRealTimers()
+    })
+
+    test('launcherExited after a match is a no-op', async () => {
+      const onStopped = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      const handle = startBridge(onStopped)
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(onStopped).not.toHaveBeenCalled()
+      jest.useRealTimers()
+    })
+
+    test('launcherExited on a superseded entry does not fire either onStopped', async () => {
+      const firstStopped = jest.fn()
+      const secondStopped = jest.fn()
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      const first = startBridge(firstStopped)
+      startBridge(secondStopped)
+
+      first?.launcherExited()
+      await flushMicrotasks()
+      expect(firstStopped).not.toHaveBeenCalled()
+      expect(secondStopped).not.toHaveBeenCalled()
+      jest.useRealTimers()
+    })
+
+    test('ps give-up after 20 consecutive failures fires onStopped exactly once (WR-05)', async () => {
+      const onStopped = jest.fn()
+      mockedSpawnAsync.mockRejectedValue(new Error('ps wedged'))
+      jest.useFakeTimers()
+      startBridge(onStopped)
+
+      for (let i = 0; i < 25; i++) {
+        await jest.advanceTimersByTimeAsync(1500)
+        await flushMicrotasks()
+      }
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      expect(jest.getTimerCount()).toBe(0)
+      jest.useRealTimers()
+    })
+
+    test('a throwing onStopped is caught on the launcherExited path', async () => {
+      const onStopped = jest.fn(() => {
+        throw new Error('boom')
+      })
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      const handle = startBridge(onStopped)
+
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      expect(
+        mockedLogWarning.mock.calls.some((c) =>
+          JSON.stringify(c).includes('onStopped callback threw')
+        )
+      ).toBe(true)
+      jest.useRealTimers()
+    })
+
+    test('a ps failure during the immediate check counts as no match', async () => {
+      const onStopped = jest.fn()
+      mockedSpawnAsync.mockRejectedValue(new Error('ps wedged'))
+      jest.useFakeTimers()
+      const handle = startBridge(onStopped)
+
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(onStopped).toHaveBeenCalledTimes(1)
+      jest.useRealTimers()
+    })
+  })
+
   // Phase 51 Plan 08 (D-51-16, folded todo): waiting-state emission.
   describe('waiting state (D-51-16)', () => {
     const advanceByGraceWindow = async () => {
