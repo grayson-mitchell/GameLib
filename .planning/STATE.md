@@ -78,7 +78,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
 Plan: 18 of 19 complete — Plan 19 (final, Wave 8) at Task 1 checkpoint
 Status: Plan 19 blocked on human-verify checkpoint (live UAT gates 1-12), awaiting operator
-Last activity: 2026-10-22 — Plan 19 automation prep done (packaged bundle built, shims recorded, logs archived); live UAT items 1-12 pending operator walkthrough
+Last activity: 2026-10-22 - Completed quick task 261022-tc3: Downloads hero tile uses portrait art
 
 Progress: [░░░░░░░░░░] 0% (18/19 plans; `state.update-progress`'s automatic recompute is a documented no-op this phase -- the v0.8 milestone is already archived/shipped while Phase 51 continues under it, per 51-18-PLAN.md's own note -- hand-corrected here from a stale "Plan: 8 of 19"/0% left behind by the same no-op on earlier plans in this phase)
 
@@ -320,6 +320,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261017-cwf | Measured the macOS Game Uninstalled terminal-icon todo on packaged builds: the dev icon is tauri-plugin-notification's own is_dev() Terminal attribution (no GameLib fix), and both the ad-hoc --debug and Developer-ID 0.8.0 bundles deliver NO notification at all on macOS 26 (never registered in Notification Center) — new major todo, source todo closed, no code change | 2026-10-16 | 4335a0c7f | — | [261017-cwf-fix-the-macos-game-uninstalled-notificat](./quick/261017-cwf-fix-the-macos-game-uninstalled-notificat/) |
 | 261018-as3 | Archived closed-milestone history out of STATE.md byte-verbatim (207 KB to 53 KB): v0.1-v0.2 Performance Metrics blocks, Phase 48/49 decisions and 570 v0.8-close Deferred Items rows to STATE-HISTORY.md; 31 quick-task rows (16 oldest plus 15 stranded in Session Continuity) to quick/COMPLETED-INDEX.md; 12/12 planning gates pass | 2026-10-17 | d0a1c74d0 | — | [261018-as3-archive-state-md-history-into-state-hist](./quick/261018-as3-archive-state-md-history-into-state-hist/) |
 | 261021-pgx | Record Hoard's (63000) measured Steam interface versions and build the 3 missing manifests (SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011) | 2026-10-21 | 8628ea5a7 | — | [261021-pgx-record-hoard-s-measured-steam-interface-versions-and-build-t](./quick/261021-pgx-record-hoard-s-measured-steam-interface-versions-and-build-t/) |
+| 261022-tc3 | Downloads hero tile now uses portrait art (`art_square`, user overrides first) instead of cropping landscape `art_cover` into the 3:4 tile; new `heroCoverSources` helper + 6 tests | 2026-10-22 | 76fcb630d | code-verified; live Downloads check pending | [261022-tc3-downloads-tab-game-tile-uses-clipped-hor](./quick/261022-tc3-downloads-tab-game-tile-uses-clipped-hor/) |
 
 ## Deferred Items
 
