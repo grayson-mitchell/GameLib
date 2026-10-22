@@ -36,6 +36,41 @@ export function heroArtSources(
   return src === undefined ? null : { src, fallback }
 }
 
+interface HeroCoverInfo {
+  art_cover?: string
+  art_square?: string
+  overrides?: { art_cover?: string; art_square?: string }
+}
+
+/**
+ * Orders the hero's 3:4 cover tile candidates: override portrait, portrait
+ * `art_square`, override landscape, landscape `art_cover`. Portrait comes first
+ * because the tile is 3:4 and `art_square` is the portrait art (for Steam,
+ * library_600x900; `art_cover` is the landscape header.jpg). This mirrors the
+ * Library GameCard precedence. Falsy values are dropped and duplicates
+ * collapsed; returns `null` when there is no art.
+ */
+export function heroCoverSources(
+  info?: HeroCoverInfo
+): { src: string; fallback: string[] } | null {
+  if (!info) return null
+
+  const ordered: string[] = []
+  for (const candidate of [
+    info.overrides?.art_square,
+    info.art_square,
+    info.overrides?.art_cover,
+    info.art_cover
+  ]) {
+    if (candidate && !ordered.includes(candidate)) {
+      ordered.push(candidate)
+    }
+  }
+
+  const [src, ...fallback] = ordered
+  return src === undefined ? null : { src, fallback }
+}
+
 /**
  * The bar's fill percent: 0 when nothing is downloading or the value is not a
  * finite number, otherwise clamped to 0..100.

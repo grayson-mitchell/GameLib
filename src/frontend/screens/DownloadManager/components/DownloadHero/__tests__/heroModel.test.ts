@@ -1,4 +1,4 @@
-import { heroArtSources, heroPercent } from '../heroModel'
+import { heroArtSources, heroCoverSources, heroPercent } from '../heroModel'
 
 describe('heroArtSources', () => {
   it('prefers art_background, then art_cover, then art_square as fallbacks', () => {
@@ -40,6 +40,54 @@ describe('heroArtSources', () => {
 
   it('returns null when every source is empty', () => {
     expect(heroArtSources({ art_cover: '', art_square: '' })).toBeNull()
+  })
+})
+
+describe('heroCoverSources', () => {
+  it('prefers art_square (portrait) over art_cover (landscape)', () => {
+    expect(heroCoverSources({ art_cover: 'c', art_square: 's' })).toEqual({
+      src: 's',
+      fallback: ['c']
+    })
+  })
+
+  it('prefers the override portrait art above all', () => {
+    expect(
+      heroCoverSources({
+        overrides: { art_square: 'os' },
+        art_square: 's',
+        art_cover: 'c'
+      })
+    ).toEqual({ src: 'os', fallback: ['s', 'c'] })
+  })
+
+  it('orders overrides.art_cover after art_square', () => {
+    expect(
+      heroCoverSources({
+        overrides: { art_cover: 'oc' },
+        art_square: 's',
+        art_cover: 'c'
+      })
+    ).toEqual({ src: 's', fallback: ['oc', 'c'] })
+  })
+
+  it('falls back to art_cover when there is no portrait art', () => {
+    expect(heroCoverSources({ art_cover: 'c' })).toEqual({
+      src: 'c',
+      fallback: []
+    })
+  })
+
+  it('skips empty strings and collapses duplicates', () => {
+    expect(heroCoverSources({ art_cover: 'x', art_square: 'x' })).toEqual({
+      src: 'x',
+      fallback: []
+    })
+  })
+
+  it('returns null for undefined or all-empty input', () => {
+    expect(heroCoverSources(undefined)).toBeNull()
+    expect(heroCoverSources({ art_cover: '', art_square: '' })).toBeNull()
   })
 })
 
