@@ -4,14 +4,14 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
-last_updated: "2026-10-22T09:42:26.379Z"
-last_activity: 2026-10-22
+last_updated: "2026-10-22T10:33:33.178Z"
+last_activity: 2026-10-22 -- Phase 51 planning complete
 progress:
   total_phases: 1
-  completed_phases: 1
-  total_plans: 19
+  completed_phases: 0
+  total_plans: 30
   completed_plans: 19
-  percent: 100
+  percent: 0
 ---
 
 # Project State
@@ -73,8 +73,8 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
 Plan: 19 of 19 complete — Plan 19 (live gates) done 2026-10-22: 51-UAT 6 pass / 5 issue / 2 skipped, census "3 of 6 routed to the bridge"; D-51-14 Hoard anchor UNMET (Hoard crashes under wine regardless of the bridge)
-Status: Verification gaps_found (3/7 must-haves) — mechanism live-verified, outcome ("most" titles run via the bridge) not shown; next: /gsd-plan-phase 51 --gaps (51-VERIFICATION.md + 51-UAT.md Gaps + 51-REVIEW.md CR-01..04)
-Last activity: 2026-10-22
+Status: Ready to execute
+Last activity: 2026-10-22 -- Phase 51 planning complete
 
 Progress: [██████████] 100%
 
