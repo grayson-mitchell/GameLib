@@ -21,6 +21,11 @@
 
 import { createHash } from 'node:crypto'
 
+import {
+  BARE_ACCESSOR_FAMILY,
+  usesRuntimeInterfaceLookup
+} from './interfaceVersions'
+
 // Mirrors meta/gen_vtables.ts's FLAT_EXPORTS_SUPERSET PLUS the two
 // per-interface accessor exports `generateDefFile` appends
 // (`...accessorExports`, meta/gen_vtables.ts) -- the single source of
@@ -302,6 +307,9 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
 // SteamMusicRemote) are answered this way. `evaluateShimCoverageWith`
 // below takes this as an explicit parameter (not just reading the
 // module-level constant) so tests can exercise either branch directly.
+// CR-03: the fallback covers only families reached through runtime lookup
+// (SteamInternal_CreateInterface / SteamClient); a bare accessor import of an
+// unserved version is a recorded miss because resolve_bare_iface returns NULL.
 export const SHIM_X64_NULL_OBJECT_FALLBACK = true
 
 interface ExportSetVersionInputs {
@@ -326,8 +334,8 @@ function sortedServedEntries(
  * sha256 over sorted x86 exports + '|' + sorted x64 exports + '|' + sorted
  * served versions (with their modes) + '|' + the fallback flag, first 12 hex
  * chars. A later release whose shim covers a previously-missing symbol
- * changes this value, which is exactly the signal `isScanVerdictNowCovered`
- * below uses to auto-clear a stale verdict (no manual "retry" affordance).
+ * changes this value. The stamp is persisted for diagnostics; it is NOT read
+ * by `isScanVerdictNowCovered`, which does a per-arch membership test (IN-01).
  *
  * Exported (not just used to compute SHIM_EXPORT_SET_VERSION below) so
  * shimCoverage.test.ts can prove the hash actually changes when a symbol is
@@ -426,7 +434,19 @@ export function evaluateShimCoverageWith(
       // with a real (do-nothing) pointer rather than nothing at all -- that
       // is a stub, not a missing symbol. Arch-scoped: the fallback never
       // applies to x86 (there is no x86 null-object fallback concept).
-      if (input.arch === 'x64' && sets.x64NullObjectFallback) {
+      // CR-03: the shim's resolve_bare_iface returns NULL for an unserved
+      // version, so the fallback only holds for a family reached purely
+      // through runtime lookup (SteamInternal_CreateInterface/SteamClient);
+      // a bare accessor import of that family is a genuine miss.
+      const reachedBare = input.symbols.some(
+        (s) => BARE_ACCESSOR_FAMILY[s] === family
+      )
+      if (
+        input.arch === 'x64' &&
+        sets.x64NullObjectFallback &&
+        usesRuntimeInterfaceLookup(input.symbols) &&
+        !reachedBare
+      ) {
         stubbedInterfaces.push(family)
       } else {
         missingSymbols.push(version)
@@ -465,29 +485,26 @@ export function evaluateShimCoverage(
 
 /**
  * D-51-07: re-runs the "is this now covered" membership test on a PERSISTED
- * scan verdict's stored `missingSymbols` list ONLY (never a full re-scan --
- * that only happens on the next real install/launch). Returns true iff
- * EVERY stored entry is now either an exported symbol (either arch) or a key
- * in either served-versions map (wire OR stub -- being recognized at all is
- * "covered" for this purpose; whether it is wired or stubbed is a separate,
- * later concern for D-51-02's notice). A differently-shaped stored entry
- * (e.g. a problem string like `SteamUser@unknown-version`, never a bare
- * symbol or version string) can never match either lookup, so it is never
- * covered -- exactly the fail-safe direction D-51-07 wants: an ambiguous
- * historical miss does not silently clear itself.
+ * scan verdict's stored `missingSymbols` list ONLY (never a full re-scan).
+ * Arch-scoped (CR-01): an entry is covered iff the export set or the
+ * served-versions map of the SCANNED arch contains it -- an x86 miss of an
+ * x64-only symbol must never auto-clear. A differently-shaped entry (e.g.
+ * `SteamUser@unknown-version`) matches neither lookup and is never covered.
  *
- * Takes a minimal structural shape (not the full `SteamBridgeScanVerdict`
- * from electronStores.ts) to preserve this module's zero-backend-import
- * boundary -- a real scan verdict satisfies this shape structurally.
+ * Takes a minimal structural shape to preserve this module's
+ * zero-backend-import boundary.
  */
 export function isScanVerdictNowCovered(scan: {
+  arch: 'x86' | 'x64'
   missingSymbols: string[]
 }): boolean {
-  const isCovered = (entry: string): boolean =>
-    SHIM_EXPORTED_SYMBOLS.has(entry) ||
-    SHIM64_EXPORTED_SYMBOLS.has(entry) ||
-    SHIM_SERVED_INTERFACE_VERSIONS.has(entry) ||
-    SHIM64_SERVED_INTERFACE_VERSIONS.has(entry)
-
-  return scan.missingSymbols.every(isCovered)
+  const exported =
+    scan.arch === 'x86' ? SHIM_EXPORTED_SYMBOLS : SHIM64_EXPORTED_SYMBOLS
+  const served =
+    scan.arch === 'x86'
+      ? SHIM_SERVED_INTERFACE_VERSIONS
+      : SHIM64_SERVED_INTERFACE_VERSIONS
+  return scan.missingSymbols.every(
+    (entry) => exported.has(entry) || served.has(entry)
+  )
 }

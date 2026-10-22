@@ -284,7 +284,7 @@ describe('evaluateShimCoverage', () => {
   test('x64: a real exported symbol is covered, and an unserved required version is stubbed via the null-object fallback (D-51-13)', () => {
     const result = evaluateShimCoverage({
       arch: 'x64',
-      symbols: ['SteamAPI_Init', 'SteamUtils'],
+      symbols: ['SteamAPI_Init', 'SteamInternal_CreateInterface'],
       requiredInterfaceVersions: { SteamUtils: 'SteamUtils005' },
       versionProblems: []
     })
@@ -345,14 +345,14 @@ describe('evaluateShimCoverageWith (pure core, exercises the x64 null-object fal
     const result = evaluateShimCoverageWith(
       {
         x86ExportedSymbols: new Set(),
-        x64ExportedSymbols: new Set(['SteamUser']),
+        x64ExportedSymbols: new Set(['SteamInternal_CreateInterface']),
         x86ServedVersions: new Map(),
         x64ServedVersions: new Map(), // empty -- SteamUser023 is unserved on x64
         x64NullObjectFallback: true
       },
       {
         arch: 'x64',
-        symbols: ['SteamUser'],
+        symbols: ['SteamInternal_CreateInterface'],
         requiredInterfaceVersions: { SteamUser: 'SteamUser023' },
         versionProblems: []
       }
@@ -558,29 +558,39 @@ describe('evaluateShimCoverage (51-15 Task 3 acceptance check -- ELEX, 411300, W
 
 describe('isScanVerdictNowCovered', () => {
   test('returns true when the stored missing symbol is now exported', () => {
-    expect(isScanVerdictNowCovered({ missingSymbols: ['SteamAPI_Init'] })).toBe(
-      true
-    )
+    expect(
+      isScanVerdictNowCovered({
+        arch: 'x86',
+        missingSymbols: ['SteamAPI_Init']
+      })
+    ).toBe(true)
   })
 
   // 51-14: SteamRemoteStorage is now covered -- SteamHTTP (never widened
   // by any Phase 51 plan to date) is the still-genuinely-uncovered
   // example.
   test('returns false when the stored missing symbol is still not covered', () => {
-    expect(isScanVerdictNowCovered({ missingSymbols: ['SteamHTTP'] })).toBe(
-      false
-    )
+    expect(
+      isScanVerdictNowCovered({
+        arch: 'x86',
+        missingSymbols: ['SteamHTTP']
+      })
+    ).toBe(false)
   })
 
   test('returns true when the stored missing entry is now a served interface version', () => {
-    expect(isScanVerdictNowCovered({ missingSymbols: ['SteamUser023'] })).toBe(
-      true
-    )
+    expect(
+      isScanVerdictNowCovered({
+        arch: 'x86',
+        missingSymbols: ['SteamUser023']
+      })
+    ).toBe(true)
   })
 
   test('a differently-shaped stored entry (e.g. "SteamUser@unknown-version") is never covered', () => {
     expect(
       isScanVerdictNowCovered({
+        arch: 'x86',
         missingSymbols: ['SteamUser@unknown-version']
       })
     ).toBe(false)
@@ -589,8 +599,122 @@ describe('isScanVerdictNowCovered', () => {
   test('returns true only when EVERY stored missing entry is now covered', () => {
     expect(
       isScanVerdictNowCovered({
+        arch: 'x86',
         missingSymbols: ['SteamAPI_Init', 'SteamHTTP']
       })
     ).toBe(false)
+  })
+})
+
+describe('isScanVerdictNowCovered is arch-scoped (CR-01)', () => {
+  const cases: Array<['x86' | 'x64', string, boolean]> = [
+    ['x86', 'SteamInternal_CreateInterface', false],
+    ['x64', 'SteamInternal_CreateInterface', true],
+    ['x86', 'SteamUser019', false],
+    ['x64', 'SteamUser023', false],
+    ['x86', 'SteamUser016', true],
+    ['x86', 'SteamUser@unknown-version', false]
+  ]
+  test.each(cases)('%s scan with miss %s -> %s', (arch, entry, expected) => {
+    expect(isScanVerdictNowCovered({ arch, missingSymbols: [entry] })).toBe(
+      expected
+    )
+  })
+
+  test('empty missingSymbols is covered on either arch', () => {
+    expect(isScanVerdictNowCovered({ arch: 'x86', missingSymbols: [] })).toBe(
+      true
+    )
+    expect(isScanVerdictNowCovered({ arch: 'x64', missingSymbols: [] })).toBe(
+      true
+    )
+  })
+})
+
+describe('x64 null-object fallback is runtime-lookup only (CR-03)', () => {
+  test('a bare accessor import with an unserved version is missing, not stubbed', () => {
+    const result = evaluateShimCoverageWith(
+      {
+        x86ExportedSymbols: new Set(),
+        x64ExportedSymbols: new Set(['SteamUser', 'SteamAPI_Init']),
+        x86ServedVersions: new Map(),
+        x64ServedVersions: new Map(),
+        x64NullObjectFallback: true
+      },
+      {
+        arch: 'x64',
+        symbols: ['SteamUser', 'SteamAPI_Init'],
+        requiredInterfaceVersions: { SteamUser: 'SteamUser020' },
+        versionProblems: []
+      }
+    )
+    expect(result.missingSymbols).toContain('SteamUser020')
+    expect(result.stubbedInterfaces).not.toContain('SteamUser')
+  })
+
+  test('a runtime-lookup-only family is stubbed', () => {
+    const symbols = [
+      'SteamInternal_CreateInterface',
+      'SteamAPI_GetHSteamUser',
+      'SteamAPI_GetHSteamPipe'
+    ]
+    const result = evaluateShimCoverageWith(
+      {
+        x86ExportedSymbols: new Set(),
+        x64ExportedSymbols: new Set(symbols),
+        x86ServedVersions: new Map(),
+        x64ServedVersions: new Map(),
+        x64NullObjectFallback: true
+      },
+      {
+        arch: 'x64',
+        symbols,
+        requiredInterfaceVersions: {
+          SteamScreenshots: 'STEAMSCREENSHOTS_INTERFACE_VERSION003'
+        },
+        versionProblems: []
+      }
+    )
+    expect(result.stubbedInterfaces).toContain('SteamScreenshots')
+    expect(result.missingSymbols).toEqual([])
+  })
+
+  test('a bare import of the family wins over runtime lookup', () => {
+    const symbols = ['SteamInternal_CreateInterface', 'SteamUser']
+    const result = evaluateShimCoverageWith(
+      {
+        x86ExportedSymbols: new Set(),
+        x64ExportedSymbols: new Set(symbols),
+        x86ServedVersions: new Map(),
+        x64ServedVersions: new Map(),
+        x64NullObjectFallback: true
+      },
+      {
+        arch: 'x64',
+        symbols,
+        requiredInterfaceVersions: { SteamUser: 'SteamUser020' },
+        versionProblems: []
+      }
+    )
+    expect(result.missingSymbols).toContain('SteamUser020')
+  })
+
+  test('x86 unserved version is always missing', () => {
+    const result = evaluateShimCoverageWith(
+      {
+        x86ExportedSymbols: new Set(),
+        x64ExportedSymbols: new Set(),
+        x86ServedVersions: new Map(),
+        x64ServedVersions: new Map(),
+        x64NullObjectFallback: true
+      },
+      {
+        arch: 'x86',
+        symbols: ['SteamInternal_CreateInterface'],
+        requiredInterfaceVersions: { SteamUser: 'SteamUser020' },
+        versionProblems: []
+      }
+    )
+    expect(result.missingSymbols).toContain('SteamUser020')
   })
 })
