@@ -73,7 +73,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
 Plan: 19 of 19 complete — Plan 19 (live gates) done 2026-10-22: 51-UAT 6 pass / 5 issue / 2 skipped, census "3 of 6 routed to the bridge"; D-51-14 Hoard anchor UNMET (Hoard crashes under wine regardless of the bridge)
-Status: All plans executed — phase code review and goal verification pending; 51-UAT.md is `diagnosed` with 5 gaps ready for /gsd-plan-phase 51 --gaps
+Status: Verification gaps_found (3/7 must-haves) — mechanism live-verified, outcome ("most" titles run via the bridge) not shown; next: /gsd-plan-phase 51 --gaps (51-VERIFICATION.md + 51-UAT.md Gaps + 51-REVIEW.md CR-01..04)
 Last activity: 2026-10-22
 
 Progress: [██████████] 100%
