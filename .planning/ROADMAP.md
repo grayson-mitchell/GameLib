@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 19/19 plans complete
+**Plans:** 19/30 plans complete (51-20..51-30 are gap closure from 51-VERIFICATION.md, 2026-10-22)
 
 Plans:
 **Wave 1**
@@ -260,6 +260,23 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [x] 51-19-PLAN.md — Live gates (Hoard Gate 4 re-run, XCOM, ELEX, Avernum 5/6), census re-run, seed/known-bad growth
+
+**Gap closure — Wave 1**
+- [ ] 51-20-PLAN.md — CR-01 arch-scoped isScanVerdictNowCovered; CR-03 x64 null-object fallback only for runtime-lookup families
+- [ ] 51-21-PLAN.md — CR-02 matchmaking family spelling: cfgFamilyName in the generator, regenerate, cross-source pin test
+- [ ] 51-22-PLAN.md — Prescreen backslash basename fix; CR-04 runtime-loaded steam_api is a miss, never downgrade the prescreen
+- [ ] 51-24-PLAN.md — Waiting for Steam names sign-in (steamui_login.txt) and the self-update download phase (D-51-16)
+
+**Gap closure — Wave 2** *(blocked on gap Wave 1)*
+- [ ] 51-23-PLAN.md — Bridge process monitor starts before the wine child is awaited; launcher-exit and give-up paths stop the helper (D-51-01)
+- [ ] 51-25-PLAN.md — Hoard to knownBad on evidence; playVerified seed field; census reports routed vs verified running
+- [ ] 51-26-PLAN.md — Live accessor probe, then wire Win64 SteamUser019/Friends015/Utils008/Apps008 (D-51-13)
+
+**Gap closure — Wave 3-6** *(live, sequential)*
+- [ ] 51-27-PLAN.md — Packaged re-gates: helper teardown, ELEX through the wired Win64 shim, Waiting-for-Steam sign-in cause
+- [ ] 51-28-PLAN.md — Operator decision re-baselining the D-51-14 anchor; XCOM bottled-Steam confirmation
+- [ ] 51-29-PLAN.md — Rule-drawn representative sample of owned Windows-only titles, installed and played
+- [ ] 51-30-PLAN.md — Closing census on the sample (routed vs verified running), seed/known-bad growth, operator "most" verdict
 
 **Cross-cutting constraints:**
 - Spec-less probe fallback skipped: phase has no requirement IDs to probe (visible skip)
