@@ -9,7 +9,11 @@
     {
       "appId": "206060",
       "title": "Avernum 6",
-      "note": "Windows-only (mac:false); Spiderweb engine sibling of Avernum 4 -- expected minimal steam_api footprint (Init/Shutdown). Replaces Avernum 4 (206020), which does not run under CrossOver. Import coverage confirmed via 24-05 importScan at install (24-10 Gate 3). VERIFIED PLAYABLE through the bridge on real Apple-Silicon HW 2026-07-21 (24-UAT Gate 3 PASS). 51-UAT item 1 PASS (2026-10-22, fresh Mac, per-game bottle GameLibSteamBridge-206060): LISTEN/INIT/HELLO, placed shim == SHIM32, Mac Steam In-Game, port freed on quit."
+      "note": "Windows-only (mac:false); Spiderweb engine sibling of Avernum 4 -- expected minimal steam_api footprint (Init/Shutdown). Replaces Avernum 4 (206020), which does not run under CrossOver. Import coverage confirmed via 24-05 importScan at install (24-10 Gate 3). VERIFIED PLAYABLE through the bridge on real Apple-Silicon HW 2026-07-21 (24-UAT Gate 3 PASS). 51-UAT item 1 PASS (2026-10-22, fresh Mac, per-game bottle GameLibSteamBridge-206060): LISTEN/INIT/HELLO, placed shim == SHIM32, Mac Steam In-Game, port freed on quit.",
+      "playVerified": {
+        "evidence": "51-UAT item 1 (fresh Mac, per-game bottle, Mac Steam In-Game, played 171s, port freed on quit); 24-UAT Gate 3 PASS 2026-07-21",
+        "date": "2026-10-22"
+      }
     }
   ],
   "knownBad": [
@@ -18,6 +22,12 @@
       "title": "XCOM: Enemy Unknown",
       "reason": "drm-wrapped",
       "note": "51-UAT item 5 (2026-10-22): scan clean and the shim loads, but XComGame.exe reads PE resources STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writes XComGame.exe.<pid>.STEAMSTART, idles ~30s and exits without ever calling SteamAPI_Init -- Steam CEG waiting for a Windows Steam client a bridge bottle cannot provide. Inferred from a CrossOver --cx-log trace; confirmation via bottled Steam is todo 2026-10-22-confirm-xcom-ceg-diagnosis-via-bottled-steam.md."
+    },
+    {
+      "appId": "63000",
+      "title": "HOARD",
+      "reason": "does-not-run",
+      "note": "51-UAT item 4 (2026-10-22, packaged debug bundle, fresh Mac): the bridge half passed (per-game bottle GameLibSteamBridge-63000, LISTEN/INIT/HELLO for appid 63000, stubbed-interface notice shown) but Reuben.exe shows a crash dialog before reaching single-player. The operator confirms this is the same crash Hoard has always had under CrossOver, before the bridge existed: a Wine-level incompatibility, not a bridge defect. Part B (USER/FRIENDS dispatch) never observed. Retiring Hoard as the D-51-14 acceptance anchor is an operator decision recorded by 51-28."
     }
   ]
 }

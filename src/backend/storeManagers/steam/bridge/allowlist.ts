@@ -90,15 +90,29 @@ const allowlistEntrySchema = z.object({
   note: z.string().optional()
 })
 
+// playVerified: a live gate observed the title reach a playable state through
+// the bridge. Seed membership alone only means "routes to the bridge without a
+// notice" -- it is NOT a claim that the title runs. Seed entries only.
+const playVerifiedSchema = z.object({
+  evidence: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+})
+
+const seedEntrySchema = allowlistEntrySchema.extend({
+  playVerified: playVerifiedSchema.optional()
+})
+
+const knownBadEntrySchema = allowlistEntrySchema
+  .extend({ reason: knownBadReasonSchema })
+  .strict()
+
 export const bridgeAllowlistSchema = z.object({
   version: z.literal(2),
-  seed: z.array(allowlistEntrySchema).min(1),
+  seed: z.array(seedEntrySchema).min(1),
   // No `.min()` floor -- D-51-08: the known-bad list starts empty because
   // research identified no owned DRM-wrapped title; 51-18's census adds
   // evidence-backed entries. An empty array is a legitimate, intended state.
-  knownBad: z.array(
-    allowlistEntrySchema.extend({ reason: knownBadReasonSchema })
-  )
+  knownBad: z.array(knownBadEntrySchema)
 })
 
 // Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx

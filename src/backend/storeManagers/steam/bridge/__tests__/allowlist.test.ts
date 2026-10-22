@@ -104,6 +104,53 @@ describe('bridgeAllowlistSchema', () => {
   })
 })
 
+describe('playVerified schema', () => {
+  const withPv = (pv: unknown) => ({
+    ...makeValidPayload(),
+    seed: [{ appId: '480', title: 'Spacewar', playVerified: pv }]
+  })
+
+  test('accepts a valid playVerified on a seed entry', () => {
+    expect(
+      bridgeAllowlistSchema.safeParse(
+        withPv({ evidence: 'UAT item 1', date: '2026-10-22' })
+      ).success
+    ).toBe(true)
+  })
+
+  test('rejects empty evidence', () => {
+    expect(
+      bridgeAllowlistSchema.safeParse(
+        withPv({ evidence: '', date: '2026-10-22' })
+      ).success
+    ).toBe(false)
+  })
+
+  test('rejects a non-ISO date', () => {
+    expect(
+      bridgeAllowlistSchema.safeParse(
+        withPv({ evidence: 'UAT', date: '22/10/2026' })
+      ).success
+    ).toBe(false)
+  })
+
+  test('rejects playVerified on a knownBad entry', () => {
+    expect(
+      bridgeAllowlistSchema.safeParse({
+        ...makeValidPayload(),
+        knownBad: [
+          {
+            appId: '9',
+            title: 'X',
+            reason: 'does-not-run',
+            playVerified: { evidence: 'UAT', date: '2026-10-22' }
+          }
+        ]
+      }).success
+    ).toBe(false)
+  })
+})
+
 describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () => {
   test('the bundled bridge-allowlist.json itself parses cleanly against bridgeAllowlistSchema', () => {
     const raw = readFileSync(
@@ -123,9 +170,38 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
 
     expect(parsed.version).toBe(2)
     expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
-      '200510'
+      '200510',
+      '63000'
     ])
     expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
+  })
+
+  test('HOARD (63000) is known-bad as does-not-run, citing 51-UAT item 4', () => {
+    expect(bridgeAllowlist.knownBadReason(HOARD_APP_ID)).toBe('does-not-run')
+    const parsed = JSON.parse(
+      readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
+    )
+    const hoard = parsed.knownBad.find(
+      (e: { appId: string }) => e.appId === HOARD_APP_ID
+    )
+    expect(hoard.note).toMatch(/51-UAT item 4/)
+  })
+
+  test('every seed playVerified record cites a UAT item; Avernum 6 has one, Avernum 5 does not', () => {
+    const parsed = JSON.parse(
+      readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
+    )
+    for (const e of parsed.seed as {
+      playVerified?: { evidence: string }
+    }[]) {
+      if (e.playVerified) {
+        expect(e.playVerified.evidence).toContain('UAT')
+      }
+    }
+    const byId = (id: string) =>
+      parsed.seed.find((e: { appId: string }) => e.appId === id)
+    expect(byId('206060').playVerified.date).toBe('2026-10-22')
+    expect(byId('206040').playVerified).toBeUndefined()
   })
 
   test('every seed and knownBad entry carries a real evidence note (51-19)', () => {
