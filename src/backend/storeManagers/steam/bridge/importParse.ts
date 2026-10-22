@@ -127,3 +127,15 @@ export function parseSteamApiImportTable(
 
   return { dll, arch, symbols, conflict }
 }
+
+/**
+ * CR-04 (Phase 51 Plan 22): scan-miss marker for a title whose launch exe
+ * imports nothing from steam_api but whose install tree ships the DLL, i.e.
+ * it loads it at runtime. Same `@`-form as `<Family>@unknown-version`, so
+ * `isScanVerdictNowCovered` can never treat it as covered (fail-safe).
+ */
+export function runtimeLoadedSteamApiMarker(
+  dll: 'steam_api.dll' | 'steam_api64.dll'
+): string {
+  return `${dll}@runtime-loaded`
+}

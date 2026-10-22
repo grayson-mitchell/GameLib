@@ -1529,7 +1529,10 @@ export default class SteamGame implements Game {
     }
 
     const shimResult = await placeShimForGame(this.appId, exePath, {
-      bottleName: bridgeBottleName
+      bottleName: bridgeBottleName,
+      gameInstallRoot:
+        this.resolveBridgeGameInstallRoot(exePath, bridgeBottleName) ??
+        undefined
     })
     // Phase 51 Plan 07 (fix during integration, Rule 1): placeShimForGame
     // now returns a typed 'miss' status (never 'error') when the shim's
@@ -1621,9 +1624,7 @@ export default class SteamGame implements Game {
     if (shimResult.verdict) {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
     }
-    if (shimResult.status === 'no-steam-api') {
-      setBridgeSteamApiPrescreen(this.appId, 'none')
-    }
+    this.reconcileBridgePrescreen(shimResult)
 
     // 24-13 (D-UAT-24-05 wiring, was Rule-2 deviation during Task 3): the
     // `pollerSource: 'bridge'` passed to installDepotDownload above starts a
@@ -1654,6 +1655,37 @@ export default class SteamGame implements Game {
     clearBridgeFailedThisSession(this.appId)
 
     return { status: 'done' }
+  }
+
+  /**
+   * CR-04: reconcile the persisted steam_api prescreen with a placement
+   * result. 'none' is only ever written over undefined/'none'/'unknown'
+   * (never downgrading a real x86/x64/both), and a persisted 'none' is
+   * upgraded to the scanned arch when the placement found a real import.
+   */
+  private reconcileBridgePrescreen(shimResult: {
+    status: string
+    verdict?: { arch: 'x86' | 'x64' }
+  }): void {
+    const current = readBridgeVerdict(this.appId)?.steamApi
+    if (shimResult.status === 'no-steam-api') {
+      if (
+        current === undefined ||
+        current === 'none' ||
+        current === 'unknown'
+      ) {
+        setBridgeSteamApiPrescreen(this.appId, 'none')
+      }
+      return
+    }
+    if (
+      (shimResult.status === 'placed' ||
+        shimResult.status === 'already-placed') &&
+      shimResult.verdict &&
+      current === 'none'
+    ) {
+      setBridgeSteamApiPrescreen(this.appId, shimResult.verdict.arch)
+    }
   }
 
   /**
@@ -2590,6 +2622,11 @@ export default class SteamGame implements Game {
     const persistedScan = readBridgeVerdict(this.appId)?.scan
     const shimResult = await placeShimForGame(this.appId, exePath, {
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
+      gameInstallRoot:
+        this.resolveBridgeGameInstallRoot(
+          exePath,
+          bridgeBottleSettings.wineCrossoverBottle
+        ) ?? undefined,
       ...(persistedScan?.interfaceVersions
         ? { persistedInterfaceVersions: persistedScan.interfaceVersions }
         : {})
@@ -2642,6 +2679,8 @@ export default class SteamGame implements Game {
     if (shimResult.verdict) {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
     }
+    // CR-04: already-installed titles self-heal a wrong persisted 'none'.
+    this.reconcileBridgePrescreen(shimResult)
 
     // D-51-09 (Task 2): a title that imports nothing from
     // steam_api(64)?.dll at all has nothing for the bridge helper to

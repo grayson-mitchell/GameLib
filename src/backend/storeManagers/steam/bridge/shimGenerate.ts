@@ -42,6 +42,7 @@
  */
 
 import { copyFileSync, existsSync, readFileSync, statSync } from 'node:fs'
+import { lstat, readdir, readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
@@ -56,6 +57,7 @@ import {
   sanitizeBottleName
 } from '../bottle'
 import { scanSteamApiImports } from './importScan'
+import { runtimeLoadedSteamApiMarker } from './importParse'
 import {
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
@@ -128,6 +130,47 @@ function isContainedWithin(
 ): boolean {
   const rel = relative(rootAbsPath, candidateAbsPath)
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+}
+
+const RUNTIME_WALK_MAX_DEPTH = 4
+
+/**
+ * CR-04 / T-51-45: bounded walk of the game's install tree for plain
+ * (non-GameLib-shim) steam_api(64).dll files. Async fs only, depth-limited,
+ * never follows symlinks. Returns the lowercase DLL names found.
+ */
+async function findRuntimeLoadedSteamApiDlls(
+  root: string
+): Promise<Set<'steam_api.dll' | 'steam_api64.dll'>> {
+  const found = new Set<'steam_api.dll' | 'steam_api64.dll'>()
+  const walk = async (dir: string, depth: number): Promise<void> => {
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) continue
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (depth < RUNTIME_WALK_MAX_DEPTH) await walk(full, depth + 1)
+        continue
+      }
+      if (!entry.isFile()) continue
+      const lower = entry.name.toLowerCase()
+      if (lower !== 'steam_api.dll' && lower !== 'steam_api64.dll') continue
+      try {
+        if ((await lstat(full)).isSymbolicLink()) continue
+        if (isGameLibShimBytes(await readFile(full))) continue
+      } catch {
+        continue
+      }
+      found.add(lower)
+    }
+  }
+  await walk(root, 0)
+  return found
 }
 
 /**
@@ -239,6 +282,8 @@ export async function placeShimForGame(
     shimSourcePath?: string
     shim64SourcePath?: string
     persistedInterfaceVersions?: Record<string, string>
+    /** CR-04: root of the game's install tree, walked when the exe imports nothing. */
+    gameInstallRoot?: string
   }
 ): Promise<PlaceShimResult> {
   if (!NUMERIC_APP_ID.test(appId)) {
@@ -289,6 +334,33 @@ export async function placeShimForGame(
   const scannedAt = new Date().toISOString()
 
   if (importResult.arch === 'none') {
+    const walkRoot =
+      opts?.gameInstallRoot &&
+      isContainedWithin(bottleDir, resolve(opts.gameInstallRoot))
+        ? resolve(opts.gameInstallRoot)
+        : dirname(resolvedExePath)
+    const runtimeDlls = await findRuntimeLoadedSteamApiDlls(walkRoot)
+    if (runtimeDlls.size > 0) {
+      const names = (['steam_api.dll', 'steam_api64.dll'] as const).filter(
+        (n) => runtimeDlls.has(n)
+      )
+      logInfo(
+        `placeShimForGame: appId ${appId} launch exe imports no steam_api but the install tree ships ${names.join(', ')} -- runtime-loaded, recording a miss (CR-04)`,
+        LogPrefix.Steam
+      )
+      return {
+        status: 'miss',
+        verdict: {
+          status: 'miss',
+          arch: runtimeDlls.has('steam_api64.dll') ? 'x64' : 'x86',
+          missingSymbols: names.map(runtimeLoadedSteamApiMarker),
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
+          scannedAt
+        }
+      }
+    }
     logInfo(
       `placeShimForGame: appId ${appId} imports nothing from steam_api(64)?.dll -- no-steam-api`,
       LogPrefix.Steam

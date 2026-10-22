@@ -485,6 +485,118 @@ describe('shimGenerate', () => {
     expect(existsSync(shimDestPath())).toBe(false)
   })
 
+  describe('CR-04: runtime-loaded steam_api in the install tree', () => {
+    const noImports = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'none',
+        symbols: []
+      })
+
+    it('x64 DLL in a subfolder -> miss naming steam_api64.dll@runtime-loaded', async () => {
+      noImports()
+      mkdirSync(join(gameDir, 'Plugins', 'x86_64'), { recursive: true })
+      writeFileSync(
+        join(gameDir, 'Plugins', 'x86_64', 'steam_api64.dll'),
+        'plain-game-dll'
+      )
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('miss')
+      if (result.status === 'miss') {
+        expect(result.verdict.status).toBe('miss')
+        expect(result.verdict.arch).toBe('x64')
+        expect(result.verdict.missingSymbols).toEqual([
+          'steam_api64.dll@runtime-loaded'
+        ])
+      }
+      expect(existsSync(shimDestPath())).toBe(false)
+      expect(existsSync(shim64DestPath())).toBe(false)
+    })
+
+    it('x86 DLL -> miss arch x86 with steam_api.dll@runtime-loaded', async () => {
+      noImports()
+      mkdirSync(join(gameDir, 'bin'), { recursive: true })
+      writeFileSync(join(gameDir, 'bin', 'Steam_API.dll'), 'plain-game-dll')
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('miss')
+      if (result.status === 'miss') {
+        expect(result.verdict.arch).toBe('x86')
+        expect(result.verdict.missingSymbols).toEqual([
+          'steam_api.dll@runtime-loaded'
+        ])
+      }
+    })
+
+    it('both DLLs -> both markers (x86 first), arch x64', async () => {
+      noImports()
+      mkdirSync(join(gameDir, 'a'), { recursive: true })
+      writeFileSync(join(gameDir, 'a', 'steam_api.dll'), 'plain')
+      writeFileSync(join(gameDir, 'a', 'steam_api64.dll'), 'plain')
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('miss')
+      if (result.status === 'miss') {
+        expect(result.verdict.arch).toBe('x64')
+        expect(result.verdict.missingSymbols).toEqual([
+          'steam_api.dll@runtime-loaded',
+          'steam_api64.dll@runtime-loaded'
+        ])
+      }
+    })
+
+    it('no steam_api DLL within depth 4 -> unchanged no-steam-api', async () => {
+      noImports()
+      const deep = join(gameDir, 'a', 'b', 'c', 'd', 'e')
+      mkdirSync(deep, { recursive: true })
+      writeFileSync(join(deep, 'steam_api.dll'), 'plain')
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('no-steam-api')
+    })
+
+    it('a GameLib shim DLL is ignored by the walk', async () => {
+      noImports()
+      writeFileSync(
+        join(gameDir, 'steam_api.dll'),
+        'GameLibSteamBridgeShim bytes'
+      )
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('no-steam-api')
+    })
+
+    it('an explicit gameInstallRoot outside the bottle falls back to the exe dir', async () => {
+      noImports()
+      const outside = join(root, 'outside-bottle')
+      mkdirSync(outside, { recursive: true })
+      writeFileSync(join(outside, 'steam_api.dll'), 'plain')
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath,
+        gameInstallRoot: outside
+      })
+
+      expect(result.status).toBe('no-steam-api')
+    })
+  })
+
   it('returns a typed "shim-not-built" result (not a throw) when the built x86 shim is absent -- dev-time expected state', async () => {
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',

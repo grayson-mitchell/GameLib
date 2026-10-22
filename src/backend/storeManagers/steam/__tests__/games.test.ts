@@ -1678,9 +1678,11 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const result = await game.launch({} as any)
 
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
-    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH, {
-      bottleName: 'GameLibSteamBridge'
-    })
+    expect(placeShimForGame).toHaveBeenCalledWith(
+      APP_ID,
+      RESOLVED_EXE_PATH,
+      expect.objectContaining({ bottleName: 'GameLibSteamBridge' })
+    )
     expect(ensureBridgeHelperReady).toHaveBeenCalledWith(APP_ID)
     expect(writeBridgeConfig).toHaveBeenCalledWith({
       exePath: RESOLVED_EXE_PATH,
@@ -1828,6 +1830,36 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(secondResult).toBe(true)
   })
 
+  it('CR-04: a runtime-loaded steam_api miss at launch takes the scan-miss path with the marker in missingSymbols', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'miss',
+      verdict: {
+        status: 'miss',
+        arch: 'x64',
+        missingSymbols: ['steam_api64.dll@runtime-loaded'],
+        interfaceVersions: {},
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'v2',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    const result = await new SteamGame(APP_ID).launch({} as any)
+
+    expect(result).toBeDefined()
+    expect(runWineCommand).not.toHaveBeenCalled()
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      expect.objectContaining({
+        reason: 'scan-miss',
+        missingSymbols: ['steam_api64.dll@runtime-loaded']
+      })
+    )
+  })
+
   it("D-51-09 (Task 2): placeShimForGame's 'no-steam-api' status at launch skips ensureBridgeHelperReady/writeBridgeConfig entirely, calls runWineCommand directly, and persists the clean verdict", async () => {
     const NO_STEAM_API_APP_ID = '555558'
     library.set(
@@ -1934,10 +1966,10 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(placeShimForGame).toHaveBeenCalledWith(
       PERSISTED_APP_ID,
       RESOLVED_EXE_PATH,
-      {
+      expect.objectContaining({
         bottleName: 'GameLibSteamBridge',
         persistedInterfaceVersions: { SteamUser: 'SteamUser023' }
-      }
+      })
     )
   })
 
@@ -3579,9 +3611,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(resolveBridgeLaunchExe).toHaveBeenCalledWith(APP_ID)
     // quick/261016-u1w: placeShimForGame now receives the per-game bottle
     // name explicitly, rather than relying on shimGenerate's own default.
-    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH, {
-      bottleName: `GameLibSteamBridge-${APP_ID}`
-    })
+    expect(placeShimForGame).toHaveBeenCalledWith(
+      APP_ID,
+      RESOLVED_EXE_PATH,
+      expect.objectContaining({
+        bottleName: `GameLibSteamBridge-${APP_ID}`,
+        gameInstallRoot: expect.stringContaining('Avernum 4')
+      })
+    )
     expect(result).toEqual({ status: 'done' })
   })
 
@@ -3756,6 +3793,65 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(library.get(APP_ID)?.is_installed).toBe(true)
   })
 
+  it("CR-04: install with persisted steamApi 'x64' and a no-steam-api placement never downgrades the prescreen to 'none'", async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { steamApi: 'x64' }
+    })
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'no-steam-api',
+      verdict: {
+        status: 'clean',
+        arch: 'x86',
+        missingSymbols: [],
+        interfaceVersions: {},
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'v2',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    await new SteamGame(APP_ID).install({} as any)
+
+    const noneWrite = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([id, value]) => id === APP_ID && value?.bridge?.steamApi === 'none'
+    )
+    expect(noneWrite).toBeUndefined()
+  })
+
+  it("CR-04: install with persisted steamApi 'none' and a placed verdict arch x86 upgrades the prescreen to 'x86'", async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { steamApi: 'none' }
+    })
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'placed',
+      shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+      verdict: {
+        status: 'clean',
+        arch: 'x86',
+        missingSymbols: [],
+        interfaceVersions: {},
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'v2',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    await new SteamGame(APP_ID).install({} as any)
+
+    const upgrade = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([id, value]) => id === APP_ID && value?.bridge?.steamApi === 'x86'
+    )
+    expect(upgrade).toBeDefined()
+  })
+
   it('D-A/D-B: new installs ALWAYS target the per-game bottle directly, even when the legacy bridge bottle already holds this appId manifest (the resolver is never consulted for new installs)', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     // Legacy bottle is ready; per-game bottle is NOT ready — if install()
@@ -3779,9 +3875,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(provisionBridgeBottle).toHaveBeenCalledWith({
       bottleName: `GameLibSteamBridge-${APP_ID}`
     })
-    expect(placeShimForGame).toHaveBeenCalledWith(APP_ID, RESOLVED_EXE_PATH, {
-      bottleName: `GameLibSteamBridge-${APP_ID}`
-    })
+    expect(placeShimForGame).toHaveBeenCalledWith(
+      APP_ID,
+      RESOLVED_EXE_PATH,
+      expect.objectContaining({
+        bottleName: `GameLibSteamBridge-${APP_ID}`,
+        gameInstallRoot: expect.stringContaining('Avernum 4')
+      })
+    )
     expect(result).toEqual({ status: 'done' })
   })
 
