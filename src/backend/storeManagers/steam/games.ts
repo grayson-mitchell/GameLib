@@ -2771,30 +2771,43 @@ export default class SteamGame implements Game {
     exePath: string,
     bridgeBottleSettings: GameSettings
   ): Promise<boolean> {
+    const reportLaunchFailure = (error: unknown) => {
+      logWarning(
+        [`SteamGame: bridge launch failed for appId ${this.appId}`, error],
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'bridge-launch-failed',
+        fallbackAvailable: true
+      })
+    }
+
     try {
       const { runWineCommand } = await import('backend/launcher')
-      await runWineCommand({
-        commandParts: [exePath],
-        gameSettings: bridgeBottleSettings,
-        wait: false,
-        protonVerb: 'run',
-        startFolder: dirname(exePath),
-        skipPrefixCheckIKnowWhatImDoing: true
-      })
+      const { startBottleProcessMonitor } =
+        await import('./bottleProcessMonitor')
 
       // Phase 51 Plan 01 Task 2 (D-51-01): the helper's lifetime is tied to
       // THIS game's own process lifetime, never to the whole app session —
       // the monitor's onStopped fires exactly once, when the matched
       // process(es) are gone, and tears down only this appId's helper.
       // stopBridgeHelper is a safe no-op when no-steam-api never spawned one.
+      //
+      // Plan 51-23 (51-UAT item 2): the monitor MUST start before the wine
+      // child is awaited. runWineCommand resolves only on the child's
+      // `close`, and CrossOver's `winewrapper.exe --run` lives as long as the
+      // game, so starting the monitor after the await meant it started after
+      // its own game had exited. The wine promise is therefore never awaited:
+      // its settlement is routed to the monitor's launcherExited() instead.
       const installRoot = this.resolveBridgeGameInstallRoot(
         exePath,
         bridgeBottleSettings.wineCrossoverBottle
       )
+      let handle: ReturnType<typeof startBottleProcessMonitor> = null
       if (installRoot) {
-        const { startBottleProcessMonitor } =
-          await import('./bottleProcessMonitor')
-        startBottleProcessMonitor({
+        handle = startBottleProcessMonitor({
           appId: this.appId,
           installPath: installRoot,
           bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
@@ -2808,18 +2821,25 @@ export default class SteamGame implements Game {
         )
       }
 
+      const winePromise = runWineCommand({
+        commandParts: [exePath],
+        gameSettings: bridgeBottleSettings,
+        wait: false,
+        protonVerb: 'run',
+        startFolder: dirname(exePath),
+        skipPrefixCheckIKnowWhatImDoing: true
+      })
+      void winePromise.then(
+        () => handle?.launcherExited(),
+        (error: unknown) => {
+          reportLaunchFailure(error)
+          handle?.launcherExited()
+        }
+      )
+
       return true
     } catch (error) {
-      logWarning(
-        [`SteamGame: bridge launch failed for appId ${this.appId}`, error],
-        LogPrefix.Steam
-      )
-      markBridgeFailedThisSession(this.appId)
-      sendFrontendMessage('steamBridgeSetupRequired', {
-        appName: this.appId,
-        reason: 'bridge-launch-failed',
-        fallbackAvailable: true
-      })
+      reportLaunchFailure(error)
       return false
     }
   }

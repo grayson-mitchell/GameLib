@@ -83,3 +83,7 @@ in this plan, per the deviation-rules scope boundary -- these three files are ou
 plan's `files_modified`, and re-running the extractor against them is an unrelated diff. A
 future plan touching `ISteamFriends` (or a dedicated extractor-output refresh) should
 regenerate them.
+
+## 51-23: review WR-06 deferred
+
+Helper child handles are not `unref()`'d (`src/backend/storeManagers/steam/helperProcess.ts:245-255,295-324`). A leaked helper therefore keeps the sidecar's event loop alive past stdin EOF, and is orphaned when the shell SIGKILLs the sidecar (sidecar exit contract). The review's proposed fix: `child.unref()` plus unref of the stdout/stderr streams, and a stdin-EOF path that calls `shutdownAllBridgeHelpers`. Deferred from this gap round, not dropped, so the phase close sees it.

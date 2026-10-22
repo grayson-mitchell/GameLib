@@ -2123,6 +2123,100 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(result).toBe(true)
   })
 
+  describe('51-23: monitor starts before the wine child is awaited', () => {
+    const flush = async () => {
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+    }
+
+    beforeEach(() => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+    })
+
+    it('resolves true with a never-settling wine child; monitor already started, before runWineCommand', async () => {
+      const handle = { launcherExited: jest.fn() }
+      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
+      ;(runWineCommand as jest.Mock).mockReturnValue(new Promise(() => {}))
+
+      const result = await new SteamGame(APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(startBottleProcessMonitor).toHaveBeenCalledTimes(1)
+      const monitorArgs = (startBottleProcessMonitor as jest.Mock).mock
+        .calls[0][0]
+      expect(monitorArgs.kind).toBe('bridge')
+      monitorArgs.onStopped()
+      expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
+      expect(
+        (startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder[0]
+      ).toBeLessThan((runWineCommand as jest.Mock).mock.invocationCallOrder[0])
+      expect(handle.launcherExited).not.toHaveBeenCalled()
+    })
+
+    it('wine child resolving calls launcherExited once', async () => {
+      const handle = { launcherExited: jest.fn() }
+      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
+      let resolveWine: (v: unknown) => void = () => {}
+      ;(runWineCommand as jest.Mock).mockReturnValue(
+        new Promise((r) => {
+          resolveWine = r
+        })
+      )
+
+      await new SteamGame(APP_ID).launch({} as any)
+      resolveWine({ stdout: '', stderr: '' })
+      await flush()
+
+      expect(handle.launcherExited).toHaveBeenCalledTimes(1)
+    })
+
+    it('wine child rejecting marks failed, sends bridge-launch-failed, calls launcherExited once', async () => {
+      const handle = { launcherExited: jest.fn() }
+      ;(startBottleProcessMonitor as jest.Mock).mockReturnValue(handle)
+      let rejectWine: (e: unknown) => void = () => {}
+      ;(runWineCommand as jest.Mock).mockReturnValue(
+        new Promise((_r, rej) => {
+          rejectWine = rej
+        })
+      )
+
+      await new SteamGame(APP_ID).launch({} as any)
+      rejectWine(new Error('spawn failed'))
+      await flush()
+
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        {
+          appName: APP_ID,
+          reason: 'bridge-launch-failed',
+          fallbackAvailable: true
+        }
+      )
+      expect(jest.requireMock('backend/logger').logWarning).toHaveBeenCalled()
+      expect(handle.launcherExited).toHaveBeenCalledTimes(1)
+    })
+
+    it('null install root: warns, still launches wine, rejection handler works with a null handle', async () => {
+      ;(getBottleSteamappsDir as jest.Mock).mockReturnValue(
+        '/somewhere/else/steamapps'
+      )
+      ;(runWineCommand as jest.Mock).mockRejectedValue(new Error('boom'))
+
+      const result = await new SteamGame(APP_ID).launch({} as any)
+      await flush()
+
+      expect(result).toBe(true)
+      expect(startBottleProcessMonitor).not.toHaveBeenCalled()
+      expect(runWineCommand).toHaveBeenCalledTimes(1)
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.objectContaining({ reason: 'bridge-launch-failed' })
+      )
+    })
+  })
+
   it('known-bad title (knownBadReason non-null) never calls resolveBridgeLaunchExe/placeShimForGame/ensureBridgeHelperReady/writeBridgeConfig/runWineCommand — routes to the bottled launch flow (D-51-07, resolveBridgeRoute rule 4)', async () => {
     // Phase 51 Plan 09: a non-seed, never-scanned, bottle-eligible title now
     // DEFAULTS to the bridge route (resolveBridgeRoute rule 11,
