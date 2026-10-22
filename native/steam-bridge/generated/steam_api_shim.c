@@ -89,7 +89,7 @@ Response blob (per method):
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "7ca9fac60fe6"
+#define BRIDGE_SHIM_TABLE_HASH "09f936380b4b"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -5800,22 +5800,36 @@ static struct FakeSteamClient017 g_steamclient017_instance = { g_steamclient017_
 #if defined(__x86_64__)
 // === SteamUser019 (ordinal 17, family SteamUser) ===
 
-// slot 0: GetHSteamUser() -> int32 | __thiscall ret 0 (STUB)
+// slot 0: GetHSteamUser() -> int32 | __thiscall ret 0
 static int32_t THISCALL vt_SteamUser019_GetHSteamUser(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(17, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 1: BLoggedOn() -> bool | __thiscall ret 0 (STUB)
+// slot 1: BLoggedOn() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamUser019_BLoggedOn(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(17, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 2: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+// slot 2: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer)
 static void * THISCALL vt_SteamUser019_GetSteamID(void *self, void *sretOut) {
   (void)self;
-  memset(sretOut, 0, 8);
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(17, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
   return sretOut;
 }
 
@@ -6006,10 +6020,19 @@ static struct FakeSteamUser019 g_steamuser019_instance = { g_steamuser019_vtbl }
 #if defined(__x86_64__)
 // === SteamFriends015 (ordinal 18, family SteamFriends) ===
 
-// slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+// slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends015_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamFriends015_GetPersonaName(void *self) {
   (void)self;
-  return "";
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(18, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends015_GetPersonaName_buf[0] = '\0';
+    return vt_SteamFriends015_GetPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends015_GetPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends015_GetPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends015_GetPersonaName_buf;
 }
 
 // slot 1: SetPersonaName(const char* pchPersonaName) -> uint64 | __thiscall ret 4 (STUB)
@@ -6018,10 +6041,14 @@ static uint64_t THISCALL vt_SteamFriends015_SetPersonaName(void *self, uint32_t 
   return 0LL;
 }
 
-// slot 2: GetPersonaState() -> uint32 | __thiscall ret 0 (STUB)
+// slot 2: GetPersonaState() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamFriends015_GetPersonaState(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(18, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 3: GetFriendCount(int32 iFriendFlags) -> int32 | __thiscall ret 4 (STUB)
@@ -6516,34 +6543,59 @@ static struct FakeSteamFriends015 g_steamfriends015_instance = { g_steamfriends0
 #if defined(__x86_64__)
 // === SteamUtils008 (ordinal 19, family SteamUtils) ===
 
-// slot 0: GetSecondsSinceAppActive() -> uint32 | __thiscall ret 0 (STUB)
+// slot 0: GetSecondsSinceAppActive() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamUtils008_GetSecondsSinceAppActive(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 1: GetSecondsSinceComputerActive() -> uint32 | __thiscall ret 0 (STUB)
+// slot 1: GetSecondsSinceComputerActive() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamUtils008_GetSecondsSinceComputerActive(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 2: GetConnectedUniverse() -> uint32 | __thiscall ret 0 (STUB)
+// slot 2: GetConnectedUniverse() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamUtils008_GetConnectedUniverse(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 3: GetServerRealTime() -> uint32 | __thiscall ret 0 (STUB)
+// slot 3: GetServerRealTime() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamUtils008_GetServerRealTime(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 3, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 4: GetIPCountry() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+// slot 4: GetIPCountry() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamUtils008_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils008_GetIPCountry(void *self) {
   (void)self;
-  return "";
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamUtils008_GetIPCountry_buf[0] = '\0';
+    return vt_SteamUtils008_GetIPCountry_buf;
+  }
+  memcpy(vt_SteamUtils008_GetIPCountry_buf, retbuf, retlen);
+  vt_SteamUtils008_GetIPCountry_buf[retlen] = '\0';
+  return vt_SteamUtils008_GetIPCountry_buf;
 }
 
 // slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
@@ -6564,16 +6616,24 @@ static int THISCALL vt_SteamUtils008_GetCSERIPPort(void *self, uint32_t dummy0, 
   return 0;
 }
 
-// slot 8: GetCurrentBatteryPower() -> uint32 | __thiscall ret 0 (STUB)
+// slot 8: GetCurrentBatteryPower() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamUtils008_GetCurrentBatteryPower(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 8, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 9: GetAppID() -> uint32 | __thiscall ret 0 (STUB)
+// slot 9: GetAppID() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamUtils008_GetAppID(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 9, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
@@ -6615,10 +6675,14 @@ static void THISCALL vt_SteamUtils008_SetWarningMessageHook(void *self, uint32_t
   (void)self;
 }
 
-// slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0 (STUB)
+// slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamUtils008_IsOverlayEnabled(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 17, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
@@ -6651,16 +6715,29 @@ static int THISCALL vt_SteamUtils008_GetEnteredGamepadTextInput(void *self, uint
   return 0;
 }
 
-// slot 23: GetSteamUILanguage() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+// slot 23: GetSteamUILanguage() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamUtils008_GetSteamUILanguage_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_SteamUtils008_GetSteamUILanguage(void *self) {
   (void)self;
-  return "";
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamUtils008_GetSteamUILanguage_buf[0] = '\0';
+    return vt_SteamUtils008_GetSteamUILanguage_buf;
+  }
+  memcpy(vt_SteamUtils008_GetSteamUILanguage_buf, retbuf, retlen);
+  vt_SteamUtils008_GetSteamUILanguage_buf[retlen] = '\0';
+  return vt_SteamUtils008_GetSteamUILanguage_buf;
 }
 
-// slot 24: IsSteamRunningInVR() -> bool | __thiscall ret 0 (STUB)
+// slot 24: IsSteamRunningInVR() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamUtils008_IsSteamRunningInVR(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 24, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 25: SetOverlayNotificationInset(int32 nHorizontalInset, int32 nVerticalInset) -> void | __thiscall ret 8 (STUB)
@@ -6668,10 +6745,14 @@ static void THISCALL vt_SteamUtils008_SetOverlayNotificationInset(void *self, ui
   (void)self;
 }
 
-// slot 26: IsSteamInBigPictureMode() -> bool | __thiscall ret 0 (STUB)
+// slot 26: IsSteamInBigPictureMode() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamUtils008_IsSteamInBigPictureMode(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(19, 26, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 27: StartVRDashboard() -> void | __thiscall ret 0 (STUB)
@@ -6716,70 +6797,130 @@ static struct FakeSteamUtils008 g_steamutils008_instance = { g_steamutils008_vtb
 #if defined(__x86_64__)
 // === STEAMAPPS_INTERFACE_VERSION008 (ordinal 20, family SteamApps) ===
 
-// slot 0: BIsSubscribed() -> bool | __thiscall ret 0 (STUB)
+// slot 0: BIsSubscribed() -> bool | __thiscall ret 0
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 1: BIsLowViolence() -> bool | __thiscall ret 0 (STUB)
+// slot 1: BIsLowViolence() -> bool | __thiscall ret 0
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 2: BIsCybercafe() -> bool | __thiscall ret 0 (STUB)
+// slot 2: BIsCybercafe() -> bool | __thiscall ret 0
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 3: BIsVACBanned() -> bool | __thiscall ret 0 (STUB)
+// slot 3: BIsVACBanned() -> bool | __thiscall ret 0
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 3, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 4: GetCurrentGameLanguage() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+// slot 4: GetCurrentGameLanguage() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage(void *self) {
   (void)self;
-  return "";
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[0] = '\0';
+    return vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf;
+  }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf, retbuf, retlen);
+  vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf[retlen] = '\0';
+  return vt_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_buf;
 }
 
-// slot 5: GetAvailableGameLanguages() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+// slot 5: GetAvailableGameLanguages() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[STRING_RETURN_BUF_BYTES];
 static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages(void *self) {
   (void)self;
-  return "";
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 5, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[0] = '\0';
+    return vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf;
+  }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf, retbuf, retlen);
+  vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf[retlen] = '\0';
+  return vt_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_buf;
 }
 
-// slot 6: BIsSubscribedApp(uint32 appID) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp(void *self, uint32_t dummy0) {
+// slot 6: BIsSubscribedApp(uint32 appID) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp(void *self, uint32_t appID) {
   (void)self;
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &appID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 7: BIsDlcInstalled(uint32 appID) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled(void *self, uint32_t dummy0) {
+// slot 7: BIsDlcInstalled(uint32 appID) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled(void *self, uint32_t appID) {
   (void)self;
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &appID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 8: GetEarliestPurchaseUnixTime(uint32 nAppID) -> uint32 | __thiscall ret 4 (STUB)
-static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime(void *self, uint32_t dummy0) {
+// slot 8: GetEarliestPurchaseUnixTime(uint32 nAppID) -> uint32 | __thiscall ret 4
+static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime(void *self, uint32_t nAppID) {
   (void)self;
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &nAppID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 9: BIsSubscribedFromFreeWeekend() -> bool | __thiscall ret 0 (STUB)
+// slot 9: BIsSubscribedFromFreeWeekend() -> bool | __thiscall ret 0
 static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 9, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 10: GetDLCCount() -> int32 | __thiscall ret 0 (STUB)
+// slot 10: GetDLCCount() -> int32 | __thiscall ret 0
 static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 10, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
@@ -6827,16 +6968,28 @@ static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppInstallDir(void
   return 0;
 }
 
-// slot 19: BIsAppInstalled(uint32 appID) -> bool | __thiscall ret 4 (STUB)
-static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled(void *self, uint32_t dummy0) {
+// slot 19: BIsAppInstalled(uint32 appID) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled(void *self, uint32_t appID) {
   (void)self;
-  return 0;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &appID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 19, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
-// slot 20: GetAppOwner() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+// slot 20: GetAppOwner() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer)
 static void * THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner(void *self, void *sretOut) {
   (void)self;
-  memset(sretOut, 0, 8);
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
   return sretOut;
 }
 
@@ -6852,10 +7005,14 @@ static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetDlcDownloadProgress(voi
   return 0;
 }
 
-// slot 23: GetAppBuildId() -> int32 | __thiscall ret 0 (STUB)
+// slot 23: GetAppBuildId() -> int32 | __thiscall ret 0
 static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId(void *self) {
   (void)self;
-  return 0;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(20, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 24: RequestAllProofOfPurchaseKeys() -> void | __thiscall ret 0 (STUB)

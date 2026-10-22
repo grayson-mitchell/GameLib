@@ -264,12 +264,19 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
 // x64. 261021-pgx's STEAMUSERSTATS_INTERFACE_VERSION011 is the one SHARED
 // entry (the SAME generated dispatch code serves it on both arches --
 // the wire protocol is a plain TCP byte frame, arch-neutral -- so it is
-// genuinely 'wire', exactly like its x86 Hoard coverage above); every
-// other entry is one of ELEX's (411300) own brand-new x64-only interfaces,
-// served as 'stub' because no macOS helper-dylib accessor for THESE
-// version strings has ever been measured against a real Mac Steam client
-// (D-09: never invented) -- D-51-02's one-time notice is what tells the
-// user these parts are stubbed.
+// genuinely 'wire', exactly like its x86 Hoard coverage above).
+//
+// 51-26: ELEX's (411300) four core interfaces -- SteamUser019,
+// SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008 -- are
+// now 'wire'. This is the live measurement D-09 required: a probe
+// against the signed-in Mac Steam client with AppID 411300 exercised the
+// helper accessors the x64 manifests reuse from their x86 siblings
+// (BIsSubscribed, BIsSubscribedApp(411300), GetSteamID, GetAppID 411300
+// and GetPersonaName all matched; BLoggedOn returned false through the
+// Mac accessor, accepted by the operator as the existing x86 behaviour).
+// SteamClient017 stays 'stub': it is the factory object, not a
+// per-family accessor, and no helper accessor exists for it. The other
+// x64-only families stay 'stub' -- never measured, never invented.
 export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   string,
   ServedInterface
@@ -279,10 +286,10 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
     { family: 'SteamUserStats', mode: 'wire' }
   ],
   ['SteamClient017', { family: 'SteamClient', mode: 'stub' }],
-  ['SteamUser019', { family: 'SteamUser', mode: 'stub' }],
-  ['SteamFriends015', { family: 'SteamFriends', mode: 'stub' }],
-  ['SteamUtils008', { family: 'SteamUtils', mode: 'stub' }],
-  ['STEAMAPPS_INTERFACE_VERSION008', { family: 'SteamApps', mode: 'stub' }],
+  ['SteamUser019', { family: 'SteamUser', mode: 'wire' }],
+  ['SteamFriends015', { family: 'SteamFriends', mode: 'wire' }],
+  ['SteamUtils008', { family: 'SteamUtils', mode: 'wire' }],
+  ['STEAMAPPS_INTERFACE_VERSION008', { family: 'SteamApps', mode: 'wire' }],
   [
     'STEAMREMOTESTORAGE_INTERFACE_VERSION013',
     { family: 'SteamRemoteStorage', mode: 'stub' }

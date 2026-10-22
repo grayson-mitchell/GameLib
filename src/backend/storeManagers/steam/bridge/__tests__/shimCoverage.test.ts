@@ -187,15 +187,24 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
     ).toEqual({ family: 'SteamUserStats', mode: 'wire' })
   })
 
-  // ELEX's own six brand-new x64-only interfaces have no verified macOS
-  // helper-dylib accessor (D-09: never invented) -- served, but stub.
-  test("ELEX's own six new interfaces are served as stub (no verified helper path)", () => {
+  // 51-26: ELEX's four core interfaces were wired after a live probe
+  // against the signed-in Mac Steam (D-09 measurement).
+  test("ELEX's four core interfaces are served as wire (51-26 live probe)", () => {
     for (const version of [
-      'SteamClient017',
       'SteamUser019',
       'SteamFriends015',
       'SteamUtils008',
-      'STEAMAPPS_INTERFACE_VERSION008',
+      'STEAMAPPS_INTERFACE_VERSION008'
+    ]) {
+      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('wire')
+    }
+  })
+
+  // SteamClient017 is the factory object (no helper accessor); remote
+  // storage 013 was never probed -- both stay stub.
+  test('SteamClient017 and the x64 RemoteStorage013 stay stub', () => {
+    for (const version of [
+      'SteamClient017',
       'STEAMREMOTESTORAGE_INTERFACE_VERSION013'
     ]) {
       expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('stub')
@@ -553,6 +562,17 @@ describe('evaluateShimCoverage (51-15 Task 3 acceptance check -- ELEX, 411300, W
     // SteamUserStats is served 'wire' (the shared, genuinely-dispatched
     // manifest) -- it must NOT appear in stubbedInterfaces.
     expect(result.stubbedInterfaces).not.toContain('SteamUserStats')
+    // 51-26: the four core families are served 'wire' on x64 now.
+    for (const family of [
+      'SteamUser',
+      'SteamFriends',
+      'SteamUtils',
+      'SteamApps'
+    ]) {
+      expect(result.stubbedInterfaces).not.toContain(family)
+    }
+    // SteamClient is still the stubbed factory.
+    expect(result.stubbedInterfaces).toContain('SteamClient')
   })
 })
 

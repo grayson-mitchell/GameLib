@@ -7,6 +7,7 @@
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamApps_v008",
+  "helperInterface": "SteamAPI_SteamApps_v009",
   "source": {
     "kind": "proton-lsteamclient",
     "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
@@ -19,7 +20,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribed"
     },
     {
       "slot": 1,
@@ -27,7 +30,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsLowViolence"
     },
     {
       "slot": 2,
@@ -35,7 +40,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsCybercafe"
     },
     {
       "slot": 3,
@@ -43,7 +50,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsVACBanned"
     },
     {
       "slot": 4,
@@ -51,7 +60,9 @@
       "returns": "const char*",
       "returnKind": "string",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetCurrentGameLanguage"
     },
     {
       "slot": 5,
@@ -59,7 +70,9 @@
       "returns": "const char*",
       "returnKind": "string",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetAvailableGameLanguages"
     },
     {
       "slot": 6,
@@ -72,7 +85,9 @@
           "name": "appID",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribedApp"
     },
     {
       "slot": 7,
@@ -85,7 +100,9 @@
           "name": "appID",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsDlcInstalled"
     },
     {
       "slot": 8,
@@ -98,7 +115,9 @@
           "name": "nAppID",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetEarliestPurchaseUnixTime"
     },
     {
       "slot": 9,
@@ -106,7 +125,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribedFromFreeWeekend"
     },
     {
       "slot": 10,
@@ -114,7 +135,9 @@
       "returns": "int32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetDLCCount"
     },
     {
       "slot": 11,
@@ -267,7 +290,9 @@
           "name": "appID",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsAppInstalled"
     },
     {
       "slot": 20,
@@ -276,7 +301,9 @@
       "returnKind": "class",
       "stackBytes": 4,
       "params": [],
-      "structSize": 8
+      "structSize": 8,
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetAppOwner"
     },
     {
       "slot": 21,
@@ -318,7 +345,9 @@
       "returns": "int32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetAppBuildId"
     },
     {
       "slot": 24,

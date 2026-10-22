@@ -7,6 +7,7 @@
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamUtils_v008",
+  "helperInterface": "SteamAPI_SteamUtils_v011",
   "source": {
     "kind": "proton-lsteamclient",
     "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
@@ -19,7 +20,9 @@
       "returns": "uint32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetSecondsSinceAppActive"
     },
     {
       "slot": 1,
@@ -27,7 +30,9 @@
       "returns": "uint32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive"
     },
     {
       "slot": 2,
@@ -35,7 +40,9 @@
       "returns": "uint32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetConnectedUniverse"
     },
     {
       "slot": 3,
@@ -43,7 +50,9 @@
       "returns": "uint32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetServerRealTime"
     },
     {
       "slot": 4,
@@ -51,7 +60,9 @@
       "returns": "const char*",
       "returnKind": "string",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetIPCountry"
     },
     {
       "slot": 5,
@@ -118,7 +129,9 @@
       "returns": "uint32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetCurrentBatteryPower"
     },
     {
       "slot": 9,
@@ -126,7 +139,9 @@
       "returns": "uint32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetAppID"
     },
     {
       "slot": 10,
@@ -235,7 +250,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_IsOverlayEnabled"
     },
     {
       "slot": 18,
@@ -318,7 +335,9 @@
       "returns": "const char*",
       "returnKind": "string",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_GetSteamUILanguage"
     },
     {
       "slot": 24,
@@ -326,7 +345,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_IsSteamRunningInVR"
     },
     {
       "slot": 25,
@@ -351,7 +372,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUtils_IsSteamInBigPictureMode"
     },
     {
       "slot": 27,

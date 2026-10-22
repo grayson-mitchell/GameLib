@@ -1057,6 +1057,28 @@ describe('gen_vtables', () => {
     })
   })
 
+  describe('Win64 core interfaces reuse the x86 helper accessors (51-26)', () => {
+    const header = generateDispatchHeader(loadAllManifests())
+    const load = (name: string): InterfaceManifestV2 =>
+      JSON.parse(readFileSync(join(SDK_DIR, name), 'utf-8'))
+
+    it.each([
+      ['isteamuser019', 'isteamuser016', 'steamuser019'],
+      ['isteamfriends015', 'isteamfriends011', 'steamfriends015'],
+      ['isteamutils008', 'isteamutils005', 'steamutils008'],
+      ['isteamapps008', 'isteamapps004', 'steamapps_interface_version008']
+    ])('%s dlsyms the same accessor string as %s', (x64, x86, suffix) => {
+      const x64Manifest = load(`${x64}.manifest.json`)
+      const x86Manifest = load(`${x86}.manifest.json`)
+      expect(x64Manifest.helperInterface).toBeTruthy()
+      expect(x64Manifest.helperInterface).toBe(x86Manifest.helperInterface)
+      const line = new RegExp(
+        `g_bd_accessor_${suffix} = \\(BDAccessorFn_t\\)dlsym\\(dylibHandle, "${x64Manifest.helperInterface}"\\)`
+      )
+      expect(header).toMatch(line)
+    })
+  })
+
   describe('generateDispatchHeader (51-10)', () => {
     const dispatch = generateDispatchHeader([isteamuser, isteamfriends])
 

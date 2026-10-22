@@ -7,6 +7,7 @@
   "mode": "stub",
   "complete": true,
   "flatAccessor": "SteamAPI_SteamUser_v019",
+  "helperInterface": "SteamAPI_SteamUser_v023",
   "source": {
     "kind": "proton-lsteamclient",
     "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
@@ -19,7 +20,9 @@
       "returns": "int32",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_GetHSteamUser"
     },
     {
       "slot": 1,
@@ -27,7 +30,9 @@
       "returns": "bool",
       "returnKind": "int32",
       "stackBytes": 0,
-      "params": []
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_BLoggedOn"
     },
     {
       "slot": 2,
@@ -36,7 +41,9 @@
       "returnKind": "class",
       "stackBytes": 4,
       "params": [],
-      "structSize": 8
+      "structSize": 8,
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_GetSteamID"
     },
     {
       "slot": 3,

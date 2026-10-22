@@ -5,7 +5,7 @@
  * native/steam-bridge/generated/steam_api_shim.c marshals the shim side
  * of. #include'd from native/steam-bridge/helper/bridge_helper.c.
  *
- * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011.
+ * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008.
  */
 #ifndef GAMELIB_BRIDGE_DISPATCH_H
 #define GAMELIB_BRIDGE_DISPATCH_H
@@ -45,7 +45,7 @@ Response blob (per method):
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "7ca9fac60fe6"
+#define BRIDGE_DISPATCH_TABLE_HASH "09f936380b4b"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
@@ -83,6 +83,18 @@ static void *g_bd_self_steamapps_interface_version005;
 #define BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION011 10
 static BDAccessorFn_t g_bd_accessor_steamuserstats_interface_version011;
 static void *g_bd_self_steamuserstats_interface_version011;
+#define BD_ORDINAL_SteamUser019 17
+static BDAccessorFn_t g_bd_accessor_steamuser019;
+static void *g_bd_self_steamuser019;
+#define BD_ORDINAL_SteamFriends015 18
+static BDAccessorFn_t g_bd_accessor_steamfriends015;
+static void *g_bd_self_steamfriends015;
+#define BD_ORDINAL_SteamUtils008 19
+static BDAccessorFn_t g_bd_accessor_steamutils008;
+static void *g_bd_self_steamutils008;
+#define BD_ORDINAL_STEAMAPPS_INTERFACE_VERSION008 20
+static BDAccessorFn_t g_bd_accessor_steamapps_interface_version008;
+static void *g_bd_self_steamapps_interface_version008;
 
 #define BD_SLOT_SteamUser023_GetHSteamUser 0
 typedef int32_t (*BDFlatFn_SteamUser023_GetHSteamUser_t)(void *);
@@ -297,6 +309,96 @@ static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_t g_bd_fl
 #define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats 21
 typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats_t)(void *, int);
 static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats;
+#define BD_SLOT_SteamUser019_GetHSteamUser 0
+typedef int32_t (*BDFlatFn_SteamUser019_GetHSteamUser_t)(void *);
+static BDFlatFn_SteamUser019_GetHSteamUser_t g_bd_flat_SteamUser019_GetHSteamUser;
+#define BD_SLOT_SteamUser019_BLoggedOn 1
+typedef int (*BDFlatFn_SteamUser019_BLoggedOn_t)(void *);
+static BDFlatFn_SteamUser019_BLoggedOn_t g_bd_flat_SteamUser019_BLoggedOn;
+#define BD_SLOT_SteamUser019_GetSteamID 2
+typedef uint64_t (*BDFlatFn_SteamUser019_GetSteamID_t)(void *);
+static BDFlatFn_SteamUser019_GetSteamID_t g_bd_flat_SteamUser019_GetSteamID;
+#define BD_SLOT_SteamFriends015_GetPersonaName 0
+typedef const char * (*BDFlatFn_SteamFriends015_GetPersonaName_t)(void *);
+static BDFlatFn_SteamFriends015_GetPersonaName_t g_bd_flat_SteamFriends015_GetPersonaName;
+#define BD_SLOT_SteamFriends015_GetPersonaState 2
+typedef uint32_t (*BDFlatFn_SteamFriends015_GetPersonaState_t)(void *);
+static BDFlatFn_SteamFriends015_GetPersonaState_t g_bd_flat_SteamFriends015_GetPersonaState;
+#define BD_SLOT_SteamUtils008_GetSecondsSinceAppActive 0
+typedef uint32_t (*BDFlatFn_SteamUtils008_GetSecondsSinceAppActive_t)(void *);
+static BDFlatFn_SteamUtils008_GetSecondsSinceAppActive_t g_bd_flat_SteamUtils008_GetSecondsSinceAppActive;
+#define BD_SLOT_SteamUtils008_GetSecondsSinceComputerActive 1
+typedef uint32_t (*BDFlatFn_SteamUtils008_GetSecondsSinceComputerActive_t)(void *);
+static BDFlatFn_SteamUtils008_GetSecondsSinceComputerActive_t g_bd_flat_SteamUtils008_GetSecondsSinceComputerActive;
+#define BD_SLOT_SteamUtils008_GetConnectedUniverse 2
+typedef uint32_t (*BDFlatFn_SteamUtils008_GetConnectedUniverse_t)(void *);
+static BDFlatFn_SteamUtils008_GetConnectedUniverse_t g_bd_flat_SteamUtils008_GetConnectedUniverse;
+#define BD_SLOT_SteamUtils008_GetServerRealTime 3
+typedef uint32_t (*BDFlatFn_SteamUtils008_GetServerRealTime_t)(void *);
+static BDFlatFn_SteamUtils008_GetServerRealTime_t g_bd_flat_SteamUtils008_GetServerRealTime;
+#define BD_SLOT_SteamUtils008_GetIPCountry 4
+typedef const char * (*BDFlatFn_SteamUtils008_GetIPCountry_t)(void *);
+static BDFlatFn_SteamUtils008_GetIPCountry_t g_bd_flat_SteamUtils008_GetIPCountry;
+#define BD_SLOT_SteamUtils008_GetCurrentBatteryPower 8
+typedef uint32_t (*BDFlatFn_SteamUtils008_GetCurrentBatteryPower_t)(void *);
+static BDFlatFn_SteamUtils008_GetCurrentBatteryPower_t g_bd_flat_SteamUtils008_GetCurrentBatteryPower;
+#define BD_SLOT_SteamUtils008_GetAppID 9
+typedef uint32_t (*BDFlatFn_SteamUtils008_GetAppID_t)(void *);
+static BDFlatFn_SteamUtils008_GetAppID_t g_bd_flat_SteamUtils008_GetAppID;
+#define BD_SLOT_SteamUtils008_IsOverlayEnabled 17
+typedef int (*BDFlatFn_SteamUtils008_IsOverlayEnabled_t)(void *);
+static BDFlatFn_SteamUtils008_IsOverlayEnabled_t g_bd_flat_SteamUtils008_IsOverlayEnabled;
+#define BD_SLOT_SteamUtils008_GetSteamUILanguage 23
+typedef const char * (*BDFlatFn_SteamUtils008_GetSteamUILanguage_t)(void *);
+static BDFlatFn_SteamUtils008_GetSteamUILanguage_t g_bd_flat_SteamUtils008_GetSteamUILanguage;
+#define BD_SLOT_SteamUtils008_IsSteamRunningInVR 24
+typedef int (*BDFlatFn_SteamUtils008_IsSteamRunningInVR_t)(void *);
+static BDFlatFn_SteamUtils008_IsSteamRunningInVR_t g_bd_flat_SteamUtils008_IsSteamRunningInVR;
+#define BD_SLOT_SteamUtils008_IsSteamInBigPictureMode 26
+typedef int (*BDFlatFn_SteamUtils008_IsSteamInBigPictureMode_t)(void *);
+static BDFlatFn_SteamUtils008_IsSteamInBigPictureMode_t g_bd_flat_SteamUtils008_IsSteamInBigPictureMode;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed 0
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence 1
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe 2
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned 3
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage 4
+typedef const char * (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages 5
+typedef const char * (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp 6
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp_t)(void *, uint32_t);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled 7
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled_t)(void *, uint32_t);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime 8
+typedef uint32_t (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime_t)(void *, uint32_t);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend 9
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount 10
+typedef int32_t (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled 19
+typedef int (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled_t)(void *, uint32_t);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner 20
+typedef uint64_t (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner;
+#define BD_SLOT_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId 23
+typedef int32_t (*BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId_t)(void *);
+static BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId_t g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId;
 
 // D-51-04: identity-only mode -- set once by bridge_helper.c's argv
 // parsing (--identity-only/--report-appid), read by every dispatch case
@@ -406,6 +508,44 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_GetNumAchievements = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetNumAchievements_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetNumAchievements");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementName_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementName");
   g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ResetAllStats");
+  g_bd_accessor_steamuser019 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUser_v023");
+  g_bd_self_steamuser019 = g_bd_accessor_steamuser019 ? g_bd_accessor_steamuser019() : NULL;
+  g_bd_flat_SteamUser019_GetHSteamUser = (BDFlatFn_SteamUser019_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
+  g_bd_flat_SteamUser019_BLoggedOn = (BDFlatFn_SteamUser019_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
+  g_bd_flat_SteamUser019_GetSteamID = (BDFlatFn_SteamUser019_GetSteamID_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetSteamID");
+  g_bd_accessor_steamfriends015 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamFriends_v018");
+  g_bd_self_steamfriends015 = g_bd_accessor_steamfriends015 ? g_bd_accessor_steamfriends015() : NULL;
+  g_bd_flat_SteamFriends015_GetPersonaName = (BDFlatFn_SteamFriends015_GetPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaName");
+  g_bd_flat_SteamFriends015_GetPersonaState = (BDFlatFn_SteamFriends015_GetPersonaState_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaState");
+  g_bd_accessor_steamutils008 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUtils_v011");
+  g_bd_self_steamutils008 = g_bd_accessor_steamutils008 ? g_bd_accessor_steamutils008() : NULL;
+  g_bd_flat_SteamUtils008_GetSecondsSinceAppActive = (BDFlatFn_SteamUtils008_GetSecondsSinceAppActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceAppActive");
+  g_bd_flat_SteamUtils008_GetSecondsSinceComputerActive = (BDFlatFn_SteamUtils008_GetSecondsSinceComputerActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive");
+  g_bd_flat_SteamUtils008_GetConnectedUniverse = (BDFlatFn_SteamUtils008_GetConnectedUniverse_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetConnectedUniverse");
+  g_bd_flat_SteamUtils008_GetServerRealTime = (BDFlatFn_SteamUtils008_GetServerRealTime_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetServerRealTime");
+  g_bd_flat_SteamUtils008_GetIPCountry = (BDFlatFn_SteamUtils008_GetIPCountry_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetIPCountry");
+  g_bd_flat_SteamUtils008_GetCurrentBatteryPower = (BDFlatFn_SteamUtils008_GetCurrentBatteryPower_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetCurrentBatteryPower");
+  g_bd_flat_SteamUtils008_GetAppID = (BDFlatFn_SteamUtils008_GetAppID_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetAppID");
+  g_bd_flat_SteamUtils008_IsOverlayEnabled = (BDFlatFn_SteamUtils008_IsOverlayEnabled_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsOverlayEnabled");
+  g_bd_flat_SteamUtils008_GetSteamUILanguage = (BDFlatFn_SteamUtils008_GetSteamUILanguage_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSteamUILanguage");
+  g_bd_flat_SteamUtils008_IsSteamRunningInVR = (BDFlatFn_SteamUtils008_IsSteamRunningInVR_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamRunningInVR");
+  g_bd_flat_SteamUtils008_IsSteamInBigPictureMode = (BDFlatFn_SteamUtils008_IsSteamInBigPictureMode_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamInBigPictureMode");
+  g_bd_accessor_steamapps_interface_version008 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamApps_v009");
+  g_bd_self_steamapps_interface_version008 = g_bd_accessor_steamapps_interface_version008 ? g_bd_accessor_steamapps_interface_version008() : NULL;
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribed");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsLowViolence");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsCybercafe");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsVACBanned");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetCurrentGameLanguage");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAvailableGameLanguages");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribedApp");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsDlcInstalled");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetEarliestPurchaseUnixTime");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsSubscribedFromFreeWeekend");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetDLCCount");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_BIsAppInstalled");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppOwner");
+  g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId = (BDFlatFn_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId_t)dlsym(dylibHandle, "SteamAPI_ISteamApps_GetAppBuildId");
   return 1;
 }
 
@@ -1430,6 +1570,279 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
       if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       int arg_bAchievementsToo; memcpy(&arg_bAchievementsToo, arg + 0u, 4);
       int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION011_ResetAllStats(g_bd_self_steamuserstats_interface_version011, arg_bAchievementsToo);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)17) << 16 | 0u): { // SteamUser019.GetHSteamUser
+      if (g_bd_flat_SteamUser019_GetHSteamUser == NULL || g_bd_self_steamuser019 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_SteamUser019_GetHSteamUser(g_bd_self_steamuser019);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)17) << 16 | 1u): { // SteamUser019.BLoggedOn
+      if (g_bd_flat_SteamUser019_BLoggedOn == NULL || g_bd_self_steamuser019 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUser019_BLoggedOn(g_bd_self_steamuser019);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)17) << 16 | 2u): { // SteamUser019.GetSteamID
+      if (g_bd_flat_SteamUser019_GetSteamID == NULL || g_bd_self_steamuser019 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint64_t __ret = g_bd_flat_SteamUser019_GetSteamID(g_bd_self_steamuser019);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 8);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)18) << 16 | 0u): { // SteamFriends015.GetPersonaName
+      if (g_bd_flat_SteamFriends015_GetPersonaName == NULL || g_bd_self_steamfriends015 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_SteamFriends015_GetPersonaName(g_bd_self_steamfriends015);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)18) << 16 | 2u): { // SteamFriends015.GetPersonaState
+      if (g_bd_flat_SteamFriends015_GetPersonaState == NULL || g_bd_self_steamfriends015 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamFriends015_GetPersonaState(g_bd_self_steamfriends015);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 0u): { // SteamUtils008.GetSecondsSinceAppActive
+      if (g_bd_flat_SteamUtils008_GetSecondsSinceAppActive == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils008_GetSecondsSinceAppActive(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 1u): { // SteamUtils008.GetSecondsSinceComputerActive
+      if (g_bd_flat_SteamUtils008_GetSecondsSinceComputerActive == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils008_GetSecondsSinceComputerActive(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 2u): { // SteamUtils008.GetConnectedUniverse
+      if (g_bd_flat_SteamUtils008_GetConnectedUniverse == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils008_GetConnectedUniverse(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 3u): { // SteamUtils008.GetServerRealTime
+      if (g_bd_flat_SteamUtils008_GetServerRealTime == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils008_GetServerRealTime(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 4u): { // SteamUtils008.GetIPCountry
+      if (g_bd_flat_SteamUtils008_GetIPCountry == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_SteamUtils008_GetIPCountry(g_bd_self_steamutils008);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 8u): { // SteamUtils008.GetCurrentBatteryPower
+      if (g_bd_flat_SteamUtils008_GetCurrentBatteryPower == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils008_GetCurrentBatteryPower(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 9u): { // SteamUtils008.GetAppID
+      if (g_bd_identity_only) { // D-51-04: identity-only reports the launching game's real AppID, never 480
+        uint32_t v = g_bd_report_appid;
+        if (respCap < 4) { *respLen = 0; return 1; }
+        memcpy(resp, &v, 4); *respLen = 4; return 0;
+      }
+      if (g_bd_flat_SteamUtils008_GetAppID == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils008_GetAppID(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 17u): { // SteamUtils008.IsOverlayEnabled
+      if (g_bd_flat_SteamUtils008_IsOverlayEnabled == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUtils008_IsOverlayEnabled(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 23u): { // SteamUtils008.GetSteamUILanguage
+      if (g_bd_flat_SteamUtils008_GetSteamUILanguage == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_SteamUtils008_GetSteamUILanguage(g_bd_self_steamutils008);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 24u): { // SteamUtils008.IsSteamRunningInVR
+      if (g_bd_flat_SteamUtils008_IsSteamRunningInVR == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUtils008_IsSteamRunningInVR(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)19) << 16 | 26u): { // SteamUtils008.IsSteamInBigPictureMode
+      if (g_bd_flat_SteamUtils008_IsSteamInBigPictureMode == NULL || g_bd_self_steamutils008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUtils008_IsSteamInBigPictureMode(g_bd_self_steamutils008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 0u): { // STEAMAPPS_INTERFACE_VERSION008.BIsSubscribed
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribed(g_bd_self_steamapps_interface_version008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 1u): { // STEAMAPPS_INTERFACE_VERSION008.BIsLowViolence
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsLowViolence(g_bd_self_steamapps_interface_version008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 2u): { // STEAMAPPS_INTERFACE_VERSION008.BIsCybercafe
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsCybercafe(g_bd_self_steamapps_interface_version008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 3u): { // STEAMAPPS_INTERFACE_VERSION008.BIsVACBanned
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsVACBanned(g_bd_self_steamapps_interface_version008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 4u): { // STEAMAPPS_INTERFACE_VERSION008.GetCurrentGameLanguage
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetCurrentGameLanguage(g_bd_self_steamapps_interface_version008);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 5u): { // STEAMAPPS_INTERFACE_VERSION008.GetAvailableGameLanguages
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAvailableGameLanguages(g_bd_self_steamapps_interface_version008);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 6u): { // STEAMAPPS_INTERFACE_VERSION008.BIsSubscribedApp
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_appID; memcpy(&arg_appID, arg + 0u, 4);
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedApp(g_bd_self_steamapps_interface_version008, arg_appID);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 7u): { // STEAMAPPS_INTERFACE_VERSION008.BIsDlcInstalled
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_appID; memcpy(&arg_appID, arg + 0u, 4);
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsDlcInstalled(g_bd_self_steamapps_interface_version008, arg_appID);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 8u): { // STEAMAPPS_INTERFACE_VERSION008.GetEarliestPurchaseUnixTime
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_nAppID; memcpy(&arg_nAppID, arg + 0u, 4);
+      uint32_t __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetEarliestPurchaseUnixTime(g_bd_self_steamapps_interface_version008, arg_nAppID);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 9u): { // STEAMAPPS_INTERFACE_VERSION008.BIsSubscribedFromFreeWeekend
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsSubscribedFromFreeWeekend(g_bd_self_steamapps_interface_version008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 10u): { // STEAMAPPS_INTERFACE_VERSION008.GetDLCCount
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetDLCCount(g_bd_self_steamapps_interface_version008);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 19u): { // STEAMAPPS_INTERFACE_VERSION008.BIsAppInstalled
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_appID; memcpy(&arg_appID, arg + 0u, 4);
+      int __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_BIsAppInstalled(g_bd_self_steamapps_interface_version008, arg_appID);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 20u): { // STEAMAPPS_INTERFACE_VERSION008.GetAppOwner
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint64_t __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppOwner(g_bd_self_steamapps_interface_version008);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 8);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)20) << 16 | 23u): { // STEAMAPPS_INTERFACE_VERSION008.GetAppBuildId
+      if (g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId == NULL || g_bd_self_steamapps_interface_version008 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_STEAMAPPS_INTERFACE_VERSION008_GetAppBuildId(g_bd_self_steamapps_interface_version008);
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &__ret, 4);
       *respLen = 4;
