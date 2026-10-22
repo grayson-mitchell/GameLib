@@ -33,7 +33,7 @@
  * column header, or a trailing hex-looking token from the lookup line).
  */
 
-type ImportTableResult = {
+export type ImportTableResult = {
   dll: 'steam_api.dll' | 'steam_api64.dll' | null
   arch: 'x86' | 'x64' | 'none'
   symbols: string[]
