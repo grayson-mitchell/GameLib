@@ -1,21 +1,17 @@
 ---
-gsd_state_version: "1.0"
+gsd_state_version: 1.0
 milestone: v0.8
-current_phase: 51
-current_phase_name: "Widen the native Steam bridge: more interface proxies and scanner"
+milestone_name: Tauri Shell
 status: executing
-stopped_at: Completed 51-18-PLAN.md
-last_updated: "2026-10-21T18:20:05.973Z"
+stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
+last_updated: "2026-10-22T09:42:26.379Z"
 last_activity: 2026-10-22
-last_activity_desc: Phase 51 execution started
-state_head: 2631cd3db3360a047c45ae19fdd0ca7be56cf402
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 19
-  completed_plans: 6
-  percent: 0
-milestone_name: Tauri Shell
+  completed_plans: 19
+  percent: 100
 ---
 
 # Project State
@@ -76,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 18 of 19 complete — Plan 19 (final, Wave 8) at Task 1 checkpoint
-Status: Plan 19 blocked on human-verify checkpoint (live UAT gates 1-12), awaiting operator
-Last activity: 2026-10-22 - Completed quick task 261022-tc3: Downloads hero tile uses portrait art
+Plan: 19 of 19 complete — Plan 19 (live gates) done 2026-10-22: 51-UAT 6 pass / 5 issue / 2 skipped, census "3 of 6 routed to the bridge"; D-51-14 Hoard anchor UNMET (Hoard crashes under wine regardless of the bridge)
+Status: All plans executed — phase code review and goal verification pending; 51-UAT.md is `diagnosed` with 5 gaps ready for /gsd-plan-phase 51 --gaps
+Last activity: 2026-10-22
 
-Progress: [░░░░░░░░░░] 0% (18/19 plans; `state.update-progress`'s automatic recompute is a documented no-op this phase -- the v0.8 milestone is already archived/shipped while Phase 51 continues under it, per 51-18-PLAN.md's own note -- hand-corrected here from a stale "Plan: 8 of 19"/0% left behind by the same no-op on earlier plans in this phase)
+Progress: [██████████] 100%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -337,8 +333,8 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-21T12:36:13.867Z
-Stopped at: Completed 51-18-PLAN.md
+Last session: 2026-10-22T09:42:26.374Z
+Stopped at: Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.
