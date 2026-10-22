@@ -223,7 +223,7 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 19/30 plans complete (51-20..51-30 are gap closure from 51-VERIFICATION.md, 2026-10-22)
+**Plans:** 20/30 plans executed
 
 Plans:
 **Wave 1**
@@ -262,7 +262,7 @@ Plans:
 - [x] 51-19-PLAN.md — Live gates (Hoard Gate 4 re-run, XCOM, ELEX, Avernum 5/6), census re-run, seed/known-bad growth
 
 **Gap closure — Wave 1**
-- [ ] 51-20-PLAN.md — CR-01 arch-scoped isScanVerdictNowCovered; CR-03 x64 null-object fallback only for runtime-lookup families
+- [x] 51-20-PLAN.md — CR-01 arch-scoped isScanVerdictNowCovered; CR-03 x64 null-object fallback only for runtime-lookup families
 - [ ] 51-21-PLAN.md — CR-02 matchmaking family spelling: cfgFamilyName in the generator, regenerate, cross-source pin test
 - [ ] 51-22-PLAN.md — Prescreen backslash basename fix; CR-04 runtime-loaded steam_api is a miss, never downgrade the prescreen
 - [ ] 51-24-PLAN.md — Waiting for Steam names sign-in (steamui_login.txt) and the self-update download phase (D-51-16)

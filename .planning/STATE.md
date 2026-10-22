@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
-last_updated: "2026-10-22T10:33:33.178Z"
-last_activity: 2026-10-22 -- Phase 51 planning complete
+last_updated: "2026-10-22T10:37:03.308Z"
+last_activity: 2026-10-22
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 30
-  completed_plans: 19
+  completed_plans: 20
   percent: 0
 ---
 
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 51 — Widen the native Steam bridge: more interface proxies and scanner
+**Current focus:** Phase 51 — widen-the-native-steam-bridge-more-interface-proxies-and-sca
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,12 +71,12 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 51 (Widen the native Steam bridge: more interface proxies and scanner) — EXECUTING
-Plan: 19 of 19 complete — Plan 19 (live gates) done 2026-10-22: 51-UAT 6 pass / 5 issue / 2 skipped, census "3 of 6 routed to the bridge"; D-51-14 Hoard anchor UNMET (Hoard crashes under wine regardless of the bridge)
+Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
+Plan: 2 of 30
 Status: Ready to execute
-Last activity: 2026-10-22 -- Phase 51 planning complete
+Last activity: 2026-10-22
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -333,7 +333,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-22T09:42:26.374Z
+Last session: 2026-10-22T10:37:03.304Z
 Stopped at: Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)
 Resume file: None
 
