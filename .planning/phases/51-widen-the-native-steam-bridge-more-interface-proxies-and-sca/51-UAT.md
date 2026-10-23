@@ -139,13 +139,17 @@ result: pass — 2026-10-23, packaged debug bundle, bottled Steam (`GameLibSteam
 
 expected: `pnpm bridge-census` (or the install dialog's scan verdict) first shows 230070 as x86 and requiring SteamApps, SteamUserStats and SteamRemoteStorage; if it shows no-steam-api or x64, the fallback is Legends of Eisenwald (246760). With the default route the game installs, Play launches it from `GameLibSteamBridge-230070`, `HELLO shim attached appid=230070` is logged, it reaches a playable state, and Mac Steam shows In-Game. Operator reports playable yes/no and the install dialog's route line.
 result: pass — 2026-10-23, packaged debug bundle. Operator: "main menu yes, play game yes. yes shows in-game". Anchor condition as run: the operator chose "Play AoD now, decide after", and AoD ships both AoD.exe (x86) and AoD64.exe (x64); the game ran on its x64 build (AoD64.exe), so this gates the x64 runtime-lookup path (SteamInternal_CreateInterface, like ELEX), not the bare-accessor shape originally preferred. Install via the bridge: 21:18:49 `prescreenBridgeDepots: appId 230070 result=both in 2086ms`; per-game bottle GameLibSteamBridge-230070 created 21:19:00; StateFlags=4 written 21:20:02; `placeShimForGame: overwrote steam_api64.dll for appId 230070 ... (8 imported symbol(s) covered)`. Persisted verdict: steamApi both, scan clean, arch x64; required interfaces include SteamApps STEAMAPPS_INTERFACE_VERSION008, SteamUserStats STEAMUSERSTATS_INTERFACE_VERSION011, SteamRemoteStorage STEAMREMOTESTORAGE_INTERFACE_VERSION013 (stubbed), plus SteamUser019, SteamFriends015, SteamUtils008. Launch (21:21): helper `LISTEN 127.0.0.1:<port> appid=230070 mode=full`, `INIT SteamAPI ready (single InitFlat call, real appid=230070)`, `[bridge-notice] appId=230070 reason=stubbed:...`, game started 21:21:14, `HELLO shim attached appid=230070` 21:21:21, game gone after 452s 21:28:47 followed by `stopBridgeHelper`. Mac Steam showed In-Game. steam_api64.dll on disk is 848896 bytes (the shim); the x86 steam_api.dll is untouched at 213072 bytes. CENSUS DISCREPANCY: `pnpm bridge-census` reports `| 230070 | The Age of Decadence | Age of Decadence | x86 | missing-symbols | no | SteamInternal_CreateInterface, SteamAPI_GetHSteamUser, SteamAPI_GetHSteamPipe, ... |` (summary: 6 of 7 routed to the bridge; 1 of 7 verified running; 2 of 7 fully covered by the shim). The census scanned the x86 AoD.exe and steam_api.dll while install-time scan, shim placement and launch all used x64, so for a dual-arch title the census contradicts what actually runs. Filed as a todo; 51-30's closing census depends on it.
+### 19. Representative sample — install through the default route and play (D-51-15 input)
+
+expected: Every sampled title installs through GameLib's default route on the packaged build; its install logs `prescreenBridgeDepots: appId <id> result=<x>` and the route; every bridge-routed title is launched and reaches playable state or has its failure cause recorded; bottle-routed titles record their route reason. Per title also record the install-time persisted scan verdict (steam_metadata.json `bridge.scan`) and the launched exe from the log, and flag dual-arch titles (the census scans the x86 binary of those).
+result: pending — sample list and rule approved at the 51-29 Task 2 checkpoint; per-title table written by 51-30
 
 ## Summary
 
-total: 18
+total: 19
 passed: 9
 issues: 6
-pending: 0
+pending: 1
 skipped: 2
 blocked: 1
 
