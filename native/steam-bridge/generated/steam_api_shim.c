@@ -137,8 +137,8 @@ static int g_bridge_port_load_attempted = 0;
 
 // 51-07: an identity marker the version-capture pass can grep the shipped
 // DLL for, so it never mistakes a GameLib shim for a game's own original
-// steam_api.dll. Referenced from SteamAPI_Init() through a volatile read
-// below so the linker cannot dead-strip it as unused.
+// steam_api.dll. Referenced from SteamAPI_Init() through a store to a
+// volatile pointer object below so neither the linker nor -O2 can drop it.
 static const char g_gamelib_shim_marker[] = "GameLibSteamBridgeShim/2";
 
 /*
@@ -7635,7 +7635,7 @@ void *SteamUtils(void) {
 // === Flat SteamAPI_* exports (acceptance-set superset, R3 finding #9) ===
 
 int SteamAPI_Init(void) {
-  volatile const char *gamelib_marker_keepalive = g_gamelib_shim_marker;
+  const char *volatile gamelib_marker_keepalive = g_gamelib_shim_marker;
   (void)gamelib_marker_keepalive;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, retbuf, sizeof(retbuf), &retlen)) return 0;

@@ -131,6 +131,18 @@ describe('gen_vtables', () => {
       expect(slot2?.name).toBe('GetSteamID')
     })
 
+    it('the identity marker keepalive is a volatile POINTER object (survives -O2)', () => {
+      // Regression found by quick 261023-tyf: at -O2 a pointer-to-volatile
+      // local is dead and gets deleted, taking the GameLibSteamBridgeShim/2
+      // string out of both DLLs (measured: 0 occurrences). A store to a
+      // volatile pointer object has to be emitted.
+      const c = generateShimC([isteamuser, isteamfriends])
+      expect(c).toContain(
+        'const char *volatile gamelib_marker_keepalive = g_gamelib_shim_marker;'
+      )
+      expect(c).not.toContain('volatile const char *gamelib_marker_keepalive')
+    })
+
     it('the generated vtable array lists GetHSteamUser, BLoggedOn, GetSteamID in that order', () => {
       const c = generateShimC([isteamuser, isteamfriends])
       const arrayMatch = c.match(
