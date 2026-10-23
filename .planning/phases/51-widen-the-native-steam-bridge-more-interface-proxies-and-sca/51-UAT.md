@@ -118,32 +118,34 @@ result: pass — 2026-10-22, `pnpm bridge-census` against the final tree (HEAD 5
 ### 14. Re-gate of item 2 — helper teardown on the first launch (Avernum 6, 206060)
 
 expected: On the session's first Play of Avernum 6, `bottleProcessMonitor [206060]: matched process(es) — game started` is logged while the game runs; after a normal quit, `matched process(es) gone` then `stopBridgeHelper` are logged and within 30s `pgrep -fl "steam-bridge-helper --appid 206060"` prints nothing and `lsof -nP -iTCP -sTCP:LISTEN` no longer shows its port; a second launch followed by a force-quit of the game process gives the same teardown; Mac Steam In-Game clears both times.
-result: pending
+result: pass — 2026-10-23, HEAD c8729c36a packaged debug bundle. Operator: "14 pass". Log (gamelib.log): first Play of the session 17:15:42 spawns the helper (LISTEN, INIT, HELLO shim attached appid=206060) and 17:15:44 logs `bottleProcessMonitor [206060]: matched process(es) — game started` while the game runs (line 70, no longer deferred until exit); 17:17:39 `matched process(es) gone after 115s of play — game stopped` then `stopBridgeHelper: terminating the bridge helper for appId 206060` and `bridge helper [206060] exited (code=null signal=SIGTERM)` (lines 75-77). Second and third launches repeat the same sequence: gone 17:18:49 after 26s (lines 103-106) and 17:19:06 after 8s (lines 126-129), each followed by stopBridgeHelper and helper exit. The executor did not run pgrep/lsof; the teardown is evidenced by the helper-exit lines and the operator's pass.
 
 ### 15. Re-gate of item 6 — ELEX (411300) through the wired Win64 shim
 
 expected: Play launches ELEX from `GameLibSteamBridge-411300`; the placed `steam_api64.dll` next to `ELEX/system/ELEX.exe` has size == the new SHIM64 (848896); `HELLO shim attached appid=411300`; no "not subscribed" error; the game reaches its main menu; Mac Steam shows In-Game ELEX; the `[bridge-notice] appId=411300 reason=stubbed:` line does not list SteamUser, SteamUtils, SteamApps or SteamFriends.
-result: pending
+result: issue — 2026-10-23, HEAD c8729c36a packaged debug bundle. Operator: "15 elex does not reach main menu stuck on loading message, but the rest works. noting ELEX is a 'does not run' rating". Bridge half PASSED: launched from GameLibSteamBridge-411300 (line 147), placed ELEX/system/steam_api64.dll is 848896 bytes == SHIM64, `bottleProcessMonitor [411300]: matched process(es) — game started` 17:19:40 (line 148), `HELLO shim attached appid=411300` 17:19:41 (line 149), and the `[bridge-notice] appId=411300 reason=stubbed:` line (145) lists SteamClient, SteamController, SteamGameServer, SteamAppList, SteamHTTP, SteamMusicRemote, SteamMusic, SteamRemoteStorage, SteamScreenshots ... and none of SteamUser, SteamUtils, SteamApps or SteamFriends; no "not subscribed" error. Observed: ELEX hangs on its loading screen and never reaches the main menu (game gone 17:22:49 after 188s, line 156). The wiring gap (stubbed core interfaces, item 6) is closed; the title still does not run for a reason past the bridge handshake, undiagnosed. Disposition per operator: 411300 goes on knownBad as does-not-run (not seed).
 
 ### 16. Re-gate of item 11 — Waiting for Steam names sign-in (Avernum 4, 206020)
 
 expected: With bottled Steam signed out (Steam > Sign out in the GameLibSteam client), Play on Avernum 4 shows "Waiting for Steam…" within roughly 20s naming the sign-in cause; `[bottle-waiting] appId=206020 cause=login` is logged within 35s of Play; after signing in the game starts and the waiting state clears. If bottled Steam has an update pending, `cause=self-update` is logged during its `Downloading update` phase; otherwise that half is fixture-proven only (51-24).
-result: pending
+result: blocked — 2026-10-23, HEAD c8729c36a packaged debug bundle. Precondition not reached, not a classifier failure. Operator: "did not see message saying waiting for steam, also after quite game game page still says 'launching'". Bottled Steam's steamui_login.txt shows both launches (17:22:59-17:23:11 and 17:24:39-17:24:51) going WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials: Steam auto-signed-in with remembered credentials despite the sign-out, so `[bottle-waiting] appId=206020 cause=none` (line 171) is correct. The login half of 51-24 stays unproven live; to exercise cause=login the sign-out must also clear remembered credentials (untick remember me or remove the account). The self-update half was not exercised (no update pending). NEW ISSUE found during this item: after quitting Avernum 4 the game page stays on "Launching". The backend saw the stop both times (`matched process(es) gone after 65s of play — game stopped` line 200; `gone after 34s` line 218, each followed by refreshLibrary origin=game-status), but `SteamGame.stop: ... no-op` plus "Aborting not possible. Could not find a matching abort controller for 206020" (lines 196-199) and `raiseFrontmostBottledProcess [launch]: no matching process within ~18s` (lines 169, 212) precede it. Filed as todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md.
 
 ## Summary
 
-total: 13
-passed: 6
-issues: 5
+total: 16
+passed: 7
+issues: 6
 pending: 0
 skipped: 2
-blocked: 0
+blocked: 1
 
 Run 2026-10-22 on a fresh Apple-silicon Mac (no prior Steam, CrossOver or bottles). Items 1-4, 7 and 12 ran with the sidecar at 171b4cbf2; items 5, 6, 8-11 and 13 ran at c1a641a21+ (c1a641a21 fixed backslash launch-exe paths mid-gate; 541544990 grew the allowlist).
 
 D-51-14 acceptance: UNMET. Hoard (63000) is not playable through the bridge because it crashes under wine regardless of the bridge (item 4). XCOM is CEG DRM-wrapped (item 5), and ELEX stops on stubbed Win64 ownership interfaces (item 6). Avernum 6 passes; Avernum 5 launches through the bridge.
 
 ROADMAP hazard (b) acknowledged: for titles that still route to the shared `GameLibSteam` bottled-Steam path (now including knownBad XCOM, and any user-forced title like Avernum 4 here), per-executable Wine overrides under `HKCU\Software\Wine\AppDefaults\<game>.exe` remain the documented stopgap. Nothing in this phase removes that path.
+
+Re-gate 2026-10-23 (plan 51-27, packaged build at c8729c36a): item 14 passes and closes the helper-teardown gap (item 2). Item 15 closes the stubbed Win64 core-interface gap (item 6) at the wiring level but records an issue: ELEX hangs on its loading screen and is classified does-not-run (knownBad). Item 16 is blocked: bottled Steam auto-signed-in with remembered credentials, so the login-cause half of the item 11 gap is still unproven live; it also surfaced a stuck-on-Launching defect after a bottled-Steam game exits.
 
 ## Gaps
 
@@ -193,3 +195,30 @@ ROADMAP hazard (b) acknowledged: for titles that still route to the shared `Game
   artifacts: [src/backend/storeManagers/steam/bottleLaunchSignals.ts]
   missing: ["sign-in prompt and update-download detection"]
   debug_session: ".planning/todos/pending/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
+- truth: "ELEX (411300) reaches its main menu through the Win64 bridge"
+  status: failed
+  reason: "Re-gate item 15: wiring verified (no stubbed core interfaces, no subscription error) but ELEX hangs on its loading screen; operator rates it does-not-run"
+  severity: major
+  test: 15
+  root_cause: "undiagnosed past the bridge handshake"
+  artifacts: [src/backend/storeManagers/steam/bridge/bridge-allowlist.json]
+  missing: ["none planned: 411300 is knownBad does-not-run"]
+  debug_session: ".planning/todos/pending/2026-10-22-wire-win64-core-steam-interfaces.md"
+- truth: "Waiting for Steam names the sign-in cause for a signed-out bottled Steam"
+  status: unverified
+  reason: "Re-gate item 16 blocked: bottled Steam auto-signed-in with remembered credentials, so the login state was never reached"
+  severity: minor
+  test: 16
+  root_cause: "test precondition: sign-out did not clear remembered credentials"
+  artifacts: [src/backend/storeManagers/steam/bottleLaunchSignals.ts]
+  missing: ["re-run with remembered credentials cleared"]
+  debug_session: ".planning/todos/pending/2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md"
+- truth: "A bottled-Steam game's page returns from Launching to Play after the game exits"
+  status: failed
+  reason: "Item 16: backend logs game stopped twice, page stays on Launching"
+  severity: major
+  test: 16
+  root_cause: ""
+  artifacts: []
+  missing: ["investigate"]
+  debug_session: ".planning/todos/pending/2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md"

@@ -28,6 +28,12 @@
       "title": "HOARD",
       "reason": "does-not-run",
       "note": "51-UAT item 4 (2026-10-22, packaged debug bundle, fresh Mac): the bridge half passed (per-game bottle GameLibSteamBridge-63000, LISTEN/INIT/HELLO for appid 63000, stubbed-interface notice shown) but Reuben.exe shows a crash dialog before reaching single-player. The operator confirms this is the same crash Hoard has always had under CrossOver, before the bridge existed: a Wine-level incompatibility, not a bridge defect. Part B (USER/FRIENDS dispatch) never observed. Retiring Hoard as the D-51-14 acceptance anchor is an operator decision recorded by 51-28."
+    },
+    {
+      "appId": "411300",
+      "title": "ELEX",
+      "reason": "does-not-run",
+      "note": "51-UAT item 15 (2026-10-23, packaged debug bundle): the bridge half passed with the wired Win64 shim (per-game bottle GameLibSteamBridge-411300, placed steam_api64.dll 848896 bytes == SHIM64, HELLO shim attached appid=411300, no not-subscribed error, the stubbed-interface notice no longer lists SteamUser/SteamUtils/SteamApps/SteamFriends) but ELEX hangs on its loading screen and never reaches the main menu. The operator rates ELEX does-not-run; the cause past the bridge handshake is not diagnosed."
     }
   ]
 }

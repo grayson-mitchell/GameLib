@@ -30,3 +30,7 @@ Fix direction:
   or the absence of a logged-on line in `connection_log.txt` / `console_log.txt` while
   `GameAction … LaunchApp` is waiting. Measure on a signed-out bottle before choosing.
 - Add fixtures built from the real log lines above.
+
+## Re-gate 2026-10-23 (plan 51-27, 51-UAT item 16: blocked)
+
+The login half of 51-24 is still unproven live. Bottled Steam auto-signed-in with remembered credentials despite the sign-out (steamui_login.txt went WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials), so `cause=none` was correct. To exercise `cause=login` the sign-out must also clear remembered credentials (untick "remember me" or remove the account). The self-update half was not exercised (no update pending).

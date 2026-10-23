@@ -39,3 +39,7 @@ Fix direction (gap closure):
 
 Until then, 64-bit titles that check ownership at boot should not be advertised as "Known to work
 with the bridge".
+
+## Re-gate 2026-10-23 (plan 51-27, 51-UAT item 15: issue)
+
+The wiring from plan 51-26 is live-verified: placed steam_api64.dll is 848896 bytes == SHIM64, the stubbed-interface notice no longer lists SteamUser, SteamUtils, SteamApps or SteamFriends, and the "not subscribed" error is gone. ELEX itself still hangs on its loading screen and never reaches the main menu; the operator rates it does-not-run and 411300 is now knownBad. Left pending because closure was tied to ELEX reaching its menu; the remaining question is whether another title exercises the Win64 core interfaces to a menu (51-29 sample installs), or whether to close this as wiring-done.

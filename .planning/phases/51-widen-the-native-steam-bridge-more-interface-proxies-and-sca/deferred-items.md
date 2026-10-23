@@ -87,3 +87,7 @@ regenerate them.
 ## 51-23: review WR-06 deferred
 
 Helper child handles are not `unref()`'d (`src/backend/storeManagers/steam/helperProcess.ts:245-255,295-324`). A leaked helper therefore keeps the sidecar's event loop alive past stdin EOF, and is orphaned when the shell SIGKILLs the sidecar (sidecar exit contract). The review's proposed fix: `child.unref()` plus unref of the stdout/stderr streams, and a stdin-EOF path that calls `shutdownAllBridgeHelpers`. Deferred from this gap round, not dropped, so the phase close sees it.
+
+## 51-27
+
+- `pnpm planning-gates`: preload-surface-gate.py (phase 34.5) fails on channels getSteamBridgeRoute and setSteamBridgeUserRoute missing from IPC-PORT-INVENTORY.md. Pre-existing, unrelated to 51-27 (todo-frontmatter gate passes).

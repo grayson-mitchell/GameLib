@@ -161,7 +161,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('the bundled bridge-allowlist.json is version 2 with XCOM as its one evidence-backed knownBad entry (51-19)', () => {
+  test('the bundled bridge-allowlist.json is version 2 with XCOM as its evidence-backed knownBad entries (51-19, 51-27)', () => {
     const raw = readFileSync(
       join(__dirname, '..', 'bridge-allowlist.json'),
       'utf-8'
@@ -171,7 +171,8 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(parsed.version).toBe(2)
     expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
       '200510',
-      '63000'
+      '63000',
+      '411300'
     ])
     expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
   })
@@ -185,6 +186,20 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
       (e: { appId: string }) => e.appId === HOARD_APP_ID
     )
     expect(hoard.note).toMatch(/51-UAT item 4/)
+  })
+
+  test('ELEX (411300) is known-bad as does-not-run, citing 51-UAT item 15, and is not in seed', () => {
+    expect(bridgeAllowlist.knownBadReason('411300')).toBe('does-not-run')
+    const parsed = JSON.parse(
+      readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
+    )
+    const elex = parsed.knownBad.find(
+      (e: { appId: string }) => e.appId === '411300'
+    )
+    expect(elex.note).toMatch(/51-UAT item 15/)
+    expect(
+      parsed.seed.some((e: { appId: string }) => e.appId === '411300')
+    ).toBe(false)
   })
 
   test('every seed playVerified record cites a UAT item; Avernum 6 has one, Avernum 5 does not', () => {

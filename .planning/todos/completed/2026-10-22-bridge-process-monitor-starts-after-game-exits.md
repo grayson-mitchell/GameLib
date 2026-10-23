@@ -43,3 +43,7 @@ or move `startBottleProcessMonitor` above the await. Tests should assert the mon
 while the `runWineCommand` promise is still pending. Check the bottled-Steam (`GameLibSteam`)
 launch path for the same ordering, since D-51-16's Waiting-for-Steam state lives in the same
 monitor.
+
+## Closed 2026-10-23
+
+Fixed by plan 51-23 and re-gated live by plan 51-27, 51-UAT item 14 (pass): on the packaged build the first Play of Avernum 6 logged `bottleProcessMonitor [206060]: matched process(es) — game started` while the game ran, and each of three launches ended with `game stopped`, `stopBridgeHelper` and a helper exit.
