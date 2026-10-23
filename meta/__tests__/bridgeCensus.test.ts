@@ -477,13 +477,13 @@ describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
 
 describe('quick 261024-f0w: dual-arch exe selection', () => {
   const x86Table = {
-    dll: 'steam_api.dll',
+    dll: 'steam_api.dll' as const,
     arch: 'x86' as const,
     symbols: ['SteamAPI_Init', 'SteamAPI_SteamScreenshots_v003'],
     conflict: false
   }
   const x64Table = {
-    dll: 'steam_api64.dll',
+    dll: 'steam_api64.dll' as const,
     arch: 'x64' as const,
     symbols: ['SteamUser'],
     conflict: false
