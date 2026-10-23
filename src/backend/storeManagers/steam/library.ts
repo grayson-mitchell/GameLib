@@ -1441,6 +1441,27 @@ export default class SteamLibraryManager implements LibraryManager {
         // would read a stale is_installed from steamLibraryStore.
         steamLibraryStore.set('games', Array.from(library.values()))
         sendFrontendMessage('pushGameToLibrary', updated)
+
+        // quick 261024-exo: arch-check backstop for a delegated steam://install
+        // whose poll already stopped (no-manifest window or MAX_TICKS expired
+        // while the app stayed open) — focus reconciliation is then the only
+        // thing that sees the false->true flip. Fire-and-forget like MAC32-03,
+        // placed AFTER the badge flip so it can never delay it. A live poll
+        // runs the same check on its own 'installed' tick, so skip when one is
+        // registered (no double prompt); verifyMacArchGroundTruth's cached-
+        // verdict early return makes repeat focus events cheap.
+        if (
+          isNowInstalled &&
+          source === 'native' &&
+          isMac &&
+          !activePolls.has(appIdStr)
+        ) {
+          void verifyMacArchGroundTruth(
+            appIdStr,
+            installedData.installPath,
+            'native'
+          )
+        }
       }
     }
   }

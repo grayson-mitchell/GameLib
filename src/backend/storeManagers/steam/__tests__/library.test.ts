@@ -6745,3 +6745,180 @@ describe('verifyMacArchGroundTruth() — MAC32-03', () => {
     expect(library.has(APP_ID)).toBe(false)
   })
 })
+
+// ── quick 261024-exo: arch check after a delegated steam://install ────────────
+
+describe('delegated install -> verifyMacArchGroundTruth (quick 261024-exo)', () => {
+  const APP_ID = '226840'
+  const STEAMAPPS = join('/steam', 'steamapps')
+  const INSTALL_PATH = join(STEAMAPPS, 'common', 'oldgame')
+  const MACOS_DIR = join(INSTALL_PATH, 'OldGame.app', 'Contents', 'MacOS')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let envMock: any
+  let manifestPresent = false
+
+  // flushAsync() waits on setImmediate, which fake timers freeze — drain the
+  // microtask queue instead (verifyMacArchGroundTruth is sync-probe + awaits).
+  const flushMicrotasks = async () => {
+    for (let i = 0; i < 25; i++) await Promise.resolve()
+  }
+
+  const seedGame = () =>
+    library.set(APP_ID, {
+      runner: 'steam',
+      app_name: APP_ID,
+      title: 'Old Game',
+      is_installed: false,
+      install: {},
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      canRunOffline: true,
+      installable: true
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+  beforeEach(() => {
+    jest.useFakeTimers()
+    envMock = jest.requireMock('backend/constants/environment')
+    envMock.isWindows = false
+    envMock.isMac = true
+    envMock.isLinux = false
+    manifestPresent = false
+    library.clear()
+    seedGame()
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    jest.mocked(listReadyBridgeBottleNames).mockReturnValue([])
+    jest.mocked(isBottleProvisioned).mockReturnValue(false)
+    jest
+      .mocked(getFileSize)
+      .mockImplementation((bytes: unknown) => `${bytes} B`)
+    ;(existsSync as jest.Mock).mockImplementation(
+      (p: string) => !String(p).includes('appmanifest_') || manifestPresent
+    )
+    ;(readdirSync as jest.Mock).mockImplementation((dir: string) => {
+      if (dir === STEAMAPPS) return [`appmanifest_${APP_ID}.acf`]
+      if (dir === INSTALL_PATH) return ['OldGame.app']
+      if (dir === MACOS_DIR) return ['OldGame']
+      return []
+    })
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(execFileSync as jest.Mock).mockReset()
+    ;(execFileSync as jest.Mock).mockImplementation((cmd: string) => {
+      if (cmd === 'lipo') return 'i386\n'
+      throw new Error(`unexpected command ${cmd}`)
+    })
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      art_cover: 'cover.jpg'
+    })
+    ;(steamMetadataStore.set as jest.Mock).mockReset()
+    ;(dialog.showMessageBox as jest.Mock).mockReset()
+    ;(dialog.showMessageBox as jest.Mock).mockResolvedValue({ response: 1 })
+  })
+
+  afterEach(() => {
+    stopInstallPolling(APP_ID)
+    envMock.isMac = false
+    envMock.isLinux = true
+    library.clear()
+    jest.useRealTimers()
+  })
+
+  const installedAcf = {
+    AppState: {
+      appid: APP_ID,
+      StateFlags: '4',
+      installdir: 'oldgame',
+      SizeOnDisk: '50000'
+    }
+  }
+  const downloadingAcf = {
+    AppState: {
+      appid: APP_ID,
+      StateFlags: '1026',
+      installdir: 'oldgame',
+      SizeOnDisk: '0',
+      BytesDownloaded: '5',
+      BytesToDownload: '10'
+    }
+  }
+
+  async function runDelegatedPoll(source: 'native' | 'bottle') {
+    if (source === 'bottle') {
+      jest.mocked(getBottleSteamappsDir).mockReturnValue(STEAMAPPS)
+      jest
+        .mocked(getSteamBottleSettings)
+        .mockReturnValue({ wineCrossoverBottle: 'GameLibSteam' } as never)
+    }
+    startInstallPolling(APP_ID, {
+      intervalMs: 10,
+      source,
+      delegatedToSteamClient: true
+    })
+    await jest.advanceTimersByTimeAsync(30) // absent
+    manifestPresent = true
+    ;(vdf.parse as jest.Mock).mockReturnValue(downloadingAcf)
+    await jest.advanceTimersByTimeAsync(20)
+    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    await jest.advanceTimersByTimeAsync(20)
+    await flushMicrotasks()
+  }
+
+  it('E1: a delegated native poll reaching FullyInstalled runs the Mach-O check and offers i386 recovery', async () => {
+    await runDelegatedPoll('native')
+
+    expect(library.get(APP_ID)?.is_installed).toBe(true)
+    expect(steamMetadataStore.set).toHaveBeenCalledWith(
+      APP_ID,
+      expect.objectContaining({ mac_arch: '32', mac_arch_verified: true })
+    )
+    expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
+  })
+
+  it('E2: no Mach-O check or dialog on a non-mac host, nor for a delegated bottle poll', async () => {
+    envMock.isMac = false
+    await runDelegatedPoll('native')
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(dialog.showMessageBox).not.toHaveBeenCalled()
+
+    stopInstallPolling(APP_ID)
+    envMock.isMac = true
+    manifestPresent = false
+    seedGame()
+    await runDelegatedPoll('bottle')
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(dialog.showMessageBox).not.toHaveBeenCalled()
+  })
+
+  it('E3: focus reconciliation catches a native false->true flip with no live poll and offers i386 recovery once', async () => {
+    manifestPresent = true
+    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+
+    await new SteamLibraryManager().refreshInstallState()
+    await flushMicrotasks()
+
+    expect(library.get(APP_ID)?.is_installed).toBe(true)
+    expect(sendFrontendMessage).toHaveBeenCalledWith(
+      'pushGameToLibrary',
+      expect.objectContaining({ app_name: APP_ID, is_installed: true })
+    )
+    expect(dialog.showMessageBox).toHaveBeenCalledTimes(1)
+  })
+
+  it('E4: with a live poll registered for the appId, focus reconciliation flips the badge but leaves the arch check to the poll', async () => {
+    manifestPresent = true
+    ;(vdf.parse as jest.Mock).mockReturnValue(installedAcf)
+    // Long interval: the poll is registered but never ticks during the test.
+    startInstallPolling(APP_ID, {
+      intervalMs: 1_000_000,
+      delegatedToSteamClient: true
+    })
+
+    await new SteamLibraryManager().refreshInstallState()
+    await flushMicrotasks()
+
+    expect(library.get(APP_ID)?.is_installed).toBe(true)
+    expect(execFileSync).not.toHaveBeenCalled()
+    expect(dialog.showMessageBox).not.toHaveBeenCalled()
+  })
+})
