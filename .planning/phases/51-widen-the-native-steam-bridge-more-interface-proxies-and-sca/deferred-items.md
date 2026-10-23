@@ -91,3 +91,4 @@ Helper child handles are not `unref()`'d (`src/backend/storeManagers/steam/helpe
 ## 51-27
 
 - `pnpm planning-gates`: preload-surface-gate.py (phase 34.5) fails on channels getSteamBridgeRoute and setSteamBridgeUserRoute missing from IPC-PORT-INVENTORY.md. Pre-existing, unrelated to 51-27 (todo-frontmatter gate passes).
+  - **RESOLVED 2026-10-24 by quick task 261024-e5n.** The two channels now have a dedicated bucket line in `.planning/IPC-PORT-INVENTORY.md` (section `## Phase 51 — Plan 13 — native Steam bridge route verdict`), and `## Totals` -> `Unique channels` rose from 220 to 222. The channels were in fact introduced by plan 51-13 (`378dad7e6`), which corrects the "pre-existing, unrelated" framing above: the failure was pre-existing relative to 51-27 but was caused by 51-13.
