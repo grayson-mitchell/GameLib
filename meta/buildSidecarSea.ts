@@ -1098,7 +1098,7 @@ async function obtainOfficialNodeBinary(triple: string): Promise<string> {
  * official nodejs.org node is ~100 MB, while Homebrew's shared-libnode
  * launcher is ~67 KB.
  */
-export const SHARED_LIBNODE_SIZE_FLOOR_BYTES = 20 * 1024 * 1024
+const SHARED_LIBNODE_SIZE_FLOOR_BYTES = 20 * 1024 * 1024
 
 // Matches a library NAME `libnode.<...>.dylib|so`, not any "node" substring.
 const LIBNODE_LINKAGE_RE =

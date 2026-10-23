@@ -110,11 +110,6 @@ export function getAppInfoDepotOrder(appId: string): string[] | undefined {
 }
 
 /** Test seam. */
-export function recordAppInfoDepotOrder(appId: string, ids: string[]): void {
-  orderByApp.set(appId, ids)
-}
-
-/** Test seam. */
 export function clearAppInfoDepotOrder(): void {
   orderByApp.clear()
 }
