@@ -280,3 +280,48 @@ Plans:
 
 **Cross-cutting constraints:**
 - Spec-less probe fallback skipped: phase has no requirement IDs to probe (visible skip)
+
+### Phase 52: Bridge-backed steamclient.dll for SteamStub titles
+
+**Goal:** Steam games wrapped with Steamworks DRM ("SteamStub", a `.bind` PE section) run through
+the native Steam bridge in their own per-game bottle. The stub's launch check is answered by the
+genuine signed-in Mac Steam client, with no Windows Steam client in the bottle and the exe
+unmodified. Today such a game finds no client, falls back to `steam://run/<appid>` and exits
+silently after about 2 s. Filed 2026-10-24 from
+`.planning/todos/pending/2026-10-23-forwarding-steamclient-dll-for-steamstub-titles.md`.
+
+**Evidence (spikes 038, 039):** the stub reads `HKCU\Software\Valve\Steam\ActiveProcess\SteamClientDll64`
+(`SteamClientDll` on x86), loads that DLL and calls `CreateInterface("SteamClient017")`, then
+`("SteamClient014")`. That's the public client surface, which Proton's `lsteamclient` forwards on Linux.
+A ~30-line forwarder returning the game's own shim interfaces worked as plumbing (039), but the
+stub still exited (code 51) with no `HELLO` at the helper. The shim's generated `SteamClient017`
+methods are local `HELPER FALLBACK`/`STUB` constants, so nothing reached the native client.
+
+**Scope:**
+1. `meta/gen_vtables.ts`: `SteamClient017` and `014` genuinely forward to the helper's native
+   `ISteamClient` (pipe/user handles served helper-side, not constants). `GetISteam*` logs the
+   versions requested on the real path, and hands out forwarding proxies for the versions the stub needs.
+2. The forwarder `steamclient.dll` / `steamclient64.dll` (zig-built, as spike 039), resolving
+   through the game's own shim module so the helper keeps one connection.
+3. Bottle setup at launch: write `ActiveProcess\SteamClientDll`/`SteamClientDll64`/`Universe`/`pid`
+   and place the DLLs. Never create `HKLM\Software\Valve\Steam` (spike 036: its presence diverts the
+   game into `steam.exe -applaunch`).
+4. `.bind` detection at install/scan time, so a SteamStub title is known before launch and gets an
+   honest notice rather than "game stopped after 2s of play".
+5. The five missing modern-SDK `SteamInternal_*` exports and DLL-importer scan gap Grim Dawn hits
+   next (`2026-10-23-x64-shim-lacks-modern-sdk-steaminternal-exports-and-scan-misses-dll-importers.md`).
+
+**Boundary (locked):** every answer the stub receives comes from the native client. No stand-in
+that answers on its own, no DRM reconstruction. CEG titles (spikes 035–037) stay out of scope and
+keep the `drm-wrapped` → bottled-Steam route.
+
+**Done when:** Grim Dawn (219990) launches from GameLib through its per-game bridge bottle, gets
+past SteamStub (no `steam://run` in a `--cx-log` trace), reaches its main menu, and Mac Steam
+shows it In-Game.
+
+**Requirements**: TBD
+**Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 52 to break down)
