@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 220 |
-| Ported to sidecar | 65 |
+| Unique channels | 222 |
+| Ported to sidecar | 67 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -558,6 +558,22 @@ was ever in an unported bucket line. Per CONTEXT.md's explicit instruction, the 
 one-channel `## Totals` → live-union offset (caused by `getEpicGamesStatus`) is preserved, not
 "fixed" — both removed channels were fully accounted for in the live union already, so the offset
 moves by the same −2 as the two totals it sits between and stays at exactly one channel.
+
+## Phase 51 — Plan 13 — native Steam bridge route verdict (2 channels) — **PORTED**
+
+Added 2026-10-24 by quick task `261024-e5n`. Both channels are BRAND NEW: they were created by
+`378dad7e6` (plan 51-13, 2026-10-21) and are not late-discovered pre-existing channels. Both are
+invoke-kind (`makeHandlerInvoker`, `src/preload/api/steam.ts`) and registered only in the sidecar, in
+`steamAuthFlowRegistration.ts`. There is no Electron leg, so following the `getLoginBackground` /
+Phase 40 Plan 05 precedent, `Ported to sidecar` rises along with `Unique channels`. The bucket lives
+here rather than in the Phase 34.4 Slice 7 section because that section's name count is pinned by its
+`ported-channels-gate.py`. This is at least the fourth channel to reach `src/preload/` through a path
+with no inventory step, after the "THIRD channel ... via a quick task" note in the Totals area.
+
+**Unique channels raised 220 → 222, Ported to sidecar raised 65 → 67 (quick 261024-e5n, 2026-10-24):**
+both numbers moved together by +2 and `Unported` (159) is unchanged.
+
+`getSteamBridgeRoute`, `setSteamBridgeUserRoute`
 
 ## Not an IPC channel, but blocks Phase 35
 
