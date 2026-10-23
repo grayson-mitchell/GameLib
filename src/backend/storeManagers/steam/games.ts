@@ -101,7 +101,11 @@ import { writeBridgeConfig } from './bridge/bridgeConfig'
 // verdict read/clear family + the current-shim coverage check. games.ts is
 // the sole assembler of resolveBridgeRoute's input and the sole writer of
 // the persisted verdict (bridgeRoute.ts's own header).
-import { resolveBridgeRoute, type BridgeRouteInput } from './bridge/bridgeRoute'
+import {
+  resolveBridgeRoute,
+  NOTICE_REASONS,
+  type BridgeRouteInput
+} from './bridge/bridgeRoute'
 import {
   readBridgeVerdict,
   writeBridgeScanVerdict,
@@ -1137,9 +1141,10 @@ export default class SteamGame implements Game {
       // D-51-08/11/13 (Plan 13): compute the composed route ONCE and act on
       // it, rather than re-deriving eligibility via isBridgeEligible() alone
       // -- a route whose noticeRequired is true (bottle: drm-wrapped
-      // known-bad/scan-miss/win64-no-shim; bridge: a non-DRM known-bad title,
-      // per the D-51-08 amendment of 2026-10-23; unless already acknowledged
-      // for that same reason) must pause for the user's explicit in-app
+      // known-bad/win64-no-shim; bridge: a non-DRM known-bad title or a
+      // persisted scan-miss, both informational, per the D-51-08 amendments
+      // of 2026-10-23 (og0, oq7); unless already acknowledged for that same
+      // reason) must pause for the user's explicit in-app
       // choice BEFORE any bottled-Steam dispatch or bridge install below
       // runs. A bridge-route notice is informational: the bridge is still
       // attempted once the user proceeds. Mirrors the
@@ -1179,9 +1184,12 @@ export default class SteamGame implements Game {
         bridgeRoute.noticeRequired &&
         bridgeRoute.reason !== null
       ) {
-        // A bridge verdict can only carry noticeRequired for a known-bad title.
-        const noticeReason =
-          bridgeRoute.route === 'bridge' ? 'known-bad' : bridgeRoute.reason
+        // Bridge rows 8-11 can only owe a known-bad notice; bridge row 7
+        // carries 'scan-miss' (quick 261023-oq7). Anything outside the
+        // notice vocabulary is a known-bad notice.
+        const noticeReason = NOTICE_REASONS.has(bridgeRoute.reason)
+          ? bridgeRoute.reason
+          : 'known-bad'
         logInfo(
           `SteamGame: appId ${this.appId} ${bridgeRoute.route} route (${noticeReason}) requires a user notice before any install -- deferring to the in-app dialog`,
           LogPrefix.Steam

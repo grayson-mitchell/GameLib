@@ -4119,40 +4119,102 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(result).toEqual({ status: 'done' })
   })
 
-  it('Plan 13 (D-51-08/11): a persisted unrecovered scan-miss, no acknowledgement -- install() fires steamBridgeRouteNotice with the persisted missingSymbols and defers to setup', async () => {
-    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
-    ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
-    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
-      platformsCaptured: true,
-      is_mac_native: false,
-      bridge: {
-        scan: {
-          status: 'miss',
-          arch: 'x86',
-          missingSymbols: ['SteamUser@unknown-version'],
-          interfaceVersions: {},
-          stubbedInterfaces: [],
-          shimExportSetVersion: 'irrelevant',
-          scannedAt: '2026-01-01T00:00:00.000Z'
-        }
-      }
-    })
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
-
-    const game = new SteamGame(APP_ID)
-    const result = await game.install({} as any)
-
-    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
-    expect(downloadSteamDepots).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
-      appName: APP_ID,
-      reason: 'scan-miss',
-      knownBadReason: null,
+  describe('quick 261023-oq7: scan-miss routes to the bridge behind an informational notice', () => {
+    const missScan = {
+      status: 'miss',
+      arch: 'x86',
       missingSymbols: ['SteamUser@unknown-version'],
-      route: 'bottle',
-      userRoute: null
+      interfaceVersions: {},
+      stubbedInterfaces: [],
+      shimExportSetVersion: 'irrelevant',
+      scannedAt: '2026-01-01T00:00:00.000Z'
+    }
+    const arrange = (
+      bridge: Record<string, unknown> = {},
+      knownBad: string | null = null
+    ) => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(knownBad)
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { scan: missScan, ...bridge }
+      })
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(downloadSteamDepots as jest.Mock).mockResolvedValue({ status: 'done' })
+      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+    }
+    const noticeCalls = () =>
+      (sendFrontendMessage as jest.Mock).mock.calls.filter(
+        (c) => c[0] === 'steamBridgeRouteNotice'
+      )
+
+    it('unacknowledged: one scan-miss notice on route bridge, deferred, nothing installed', async () => {
+      arrange()
+      const result = await new SteamGame(APP_ID).install({} as any)
+
+      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+      expect(noticeCalls()).toEqual([
+        [
+          'steamBridgeRouteNotice',
+          {
+            appName: APP_ID,
+            reason: 'scan-miss',
+            knownBadReason: null,
+            missingSymbols: ['SteamUser@unknown-version'],
+            route: 'bridge',
+            userRoute: null
+          }
+        ]
+      ])
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
     })
-    expect(result).toEqual({ status: 'done', deferredToSetup: true })
+
+    it('acknowledged for scan-miss: no notice, downloads through the bridge', async () => {
+      arrange({ noticeAcknowledgedFor: 'scan-miss' })
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(noticeCalls()).toEqual([])
+      expect(downloadSteamDepots).toHaveBeenCalled()
+      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    })
+
+    it('does-not-run + miss: exactly one combined notice', async () => {
+      arrange({}, 'does-not-run')
+      await new SteamGame(APP_ID).install({} as any)
+
+      const calls = noticeCalls()
+      expect(calls).toHaveLength(1)
+      expect(calls[0][1]).toMatchObject({
+        reason: 'scan-miss',
+        knownBadReason: 'does-not-run',
+        route: 'bridge'
+      })
+    })
+
+    it('drm-wrapped + miss: known-bad notice on route bottle', async () => {
+      arrange({}, 'drm-wrapped')
+      await new SteamGame(APP_ID).install({} as any)
+
+      const calls = noticeCalls()
+      expect(calls).toHaveLength(1)
+      expect(calls[0][1]).toMatchObject({
+        reason: 'known-bad',
+        route: 'bottle'
+      })
+    })
+
+    it("userRoute 'bottle' + miss: no notice, bottled path", async () => {
+      arrange({ userRoute: 'bottle' })
+      await new SteamGame(APP_ID).install({} as any)
+
+      expect(noticeCalls()).toEqual([])
+      expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
+    })
   })
 
   describe.each(['63000', '411300'])(

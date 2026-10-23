@@ -5,6 +5,8 @@
  * Win64-shim presence) to a `SteamBridgeRouteVerdict` -- the composed
  * eligibility is "seed UNION persisted scan verdict MINUS DRM-wrapped
  * known-bad MINUS forced-bottle MINUS failed-this-session", computed here and ONLY here.
+ * Amended 2026-10-23 (quick 261023-oq7): a persisted scan miss is no longer
+ * subtracted -- it routes to the bridge (row 7) carrying its missing symbols.
  * 51-09's `games.ts` is the sole place that assembles this function's input
  * (reading the persisted per-appId metadata cache, the allowlist, the
  * session-scoped failure set, etc.) and the sole place that persists/
@@ -34,7 +36,8 @@ import { isScanVerdictNowCovered } from './shimCoverage'
  * landing requires a one-time notice before the user proceeds (D-51-08's
  * `noticeAcknowledgedFor` clears it). 'known-bad' lands on bottle for a
  * 'drm-wrapped' title and is an informational bridge-route notice for any
- * other known-bad reason (amended 2026-10-23). Exported for 51-16's dialog/notice
+ * other known-bad reason (amended 2026-10-23). 'scan-miss' is an
+ * informational bridge-route notice since quick 261023-oq7. Exported for 51-16's dialog/notice
  * wiring and for this module's own tests. */
 export const NOTICE_REASONS: ReadonlySet<SteamBridgeRouteReason> = new Set([
   'known-bad',
@@ -88,16 +91,16 @@ function isAcknowledged(
  *     drm-wrapped routes to bottled Steam. Every other known-bad reason
  *     (does-not-run, win64-only, p2p-required) falls through rows 5-11 as
  *     if the title were not known-bad.
- *  5. A persisted scan miss not yet auto-cleared (and the user has not
- *     overridden to 'bridge') -> bottle / 'scan-miss', notice required
- *     unless already acknowledged for 'scan-miss' (D-51-11 offers the
- *     override).
- *  6. An x64 title with no Win64 shim target -> bottle / 'win64-no-shim',
- *     fail-closed (D-51-13), notice required unless acknowledged. This row
- *     is checked BEFORE row 7 so the fail-closed default can never be
- *     bypassed by a forced-bridge override.
- *  7. `verdict.userRoute === 'bridge'` -> bridge / 'user-forced-bridge'
- *     (D-51-11).
+ *  5. An x64 title with no Win64 shim target -> bottle / 'win64-no-shim',
+ *     fail-closed (D-51-13), notice required unless acknowledged. Checked
+ *     BEFORE rows 6-7 so the fail-closed default can never be bypassed by a
+ *     forced-bridge override. Carries any uncovered missing symbols.
+ *  6. `verdict.userRoute === 'bridge'` -> bridge / 'user-forced-bridge'
+ *     (D-51-11); carries the missing symbols, no notice.
+ *  7. A persisted scan miss not yet auto-cleared -> bridge / 'scan-miss'
+ *     with the missing symbols; notice (informational) required unless
+ *     acknowledged for 'scan-miss'. Amended 2026-10-23 (quick 261023-oq7):
+ *     this used to be a bottle row. It precedes seed (row 8).
  *  8. Seed membership -> bridge / 'seed'.
  *  9. The title ships no `steam_api*.dll` at all -> bridge / 'no-steam-api'.
  *  10/11. A clean scan -> bridge / 'scan-clean'; anything else reaching this
@@ -105,11 +108,18 @@ function isAcknowledged(
  *     bridge / 'pending-scan'.
  *
  * `knownBadReason` is carried on every row from 4 onward. On a bridge
- * outcome (rows 7-11) `noticeRequired` is true for a known-bad title unless
+ * outcome (rows 8-11) `noticeRequired` is true for a known-bad title unless
  * it has been acknowledged for 'known-bad' or the user forced 'bridge'
  * (the override already went through a dialog); that notice is
- * informational, the bridge is still attempted. A later bottle row (5, 6)
- * keeps its own reason and notice, so the user never sees a second dialog.
+ * informational, the bridge is still attempted. Only row 5 can still win as
+ * a bottle row for a known-bad title and keeps its own reason and notice.
+ * A known-bad + scan-miss title gets ONE combined dialog (row 7) that
+ * acknowledges 'scan-miss'; a later D-51-07 auto-clear drops it into rows
+ * 8-11, where the known-bad notice fires once more (the situation changed).
+ *
+ * Amended 2026-10-23 (quick 261023-oq7): see row 7. Routing and launching a
+ * miss is deliberate: static-import misses are expected to fail at load,
+ * and their recorded missingSymbols drive shim widening.
  *
  * `stubbedInterfaces`/`identityFallback`/`userRoute` are always copied
  * verbatim from the persisted verdict (or their empty/null defaults) on
@@ -160,13 +170,14 @@ export function resolveBridgeRoute(
     reason: SteamBridgeRouteReason,
     extra?: {
       knownBadReason?: SteamBridgeKnownBadReason | null
+      missingSymbols?: string[]
       noticeRequired?: boolean
     }
   ): SteamBridgeRouteVerdict => ({
     route: 'bridge',
     reason,
     knownBadReason: extra?.knownBadReason ?? null,
-    missingSymbols: [],
+    missingSymbols: extra?.missingSymbols ?? [],
     noticeRequired: extra?.noticeRequired ?? false,
     ...shared
   })
@@ -214,35 +225,45 @@ export function resolveBridgeRoute(
     })
   }
 
-  // 5. A persisted scan miss, unless D-51-07's auto-clear now covers it, or
-  // the user has overridden to 'bridge'.
+  // A persisted scan miss that D-51-07's auto-clear does not now cover.
   const scan = verdict?.scan
-  if (
-    scan?.status === 'miss' &&
-    !isScanVerdictNowCovered(scan) &&
-    verdict?.userRoute !== 'bridge'
-  ) {
-    return toBottle('scan-miss', {
-      knownBadReason,
-      missingSymbols: scan.missingSymbols,
-      noticeRequired: !isAcknowledged(verdict, 'scan-miss')
-    })
-  }
+  const scanMiss = scan?.status === 'miss' && !isScanVerdictNowCovered(scan)
+  const missingSymbols = scanMiss ? scan.missingSymbols : []
 
-  // 6. D-51-13 fail-closed: an x64 title with no Win64 shim target. Checked
-  // BEFORE row 7 (user-forced-bridge) so this default can never be
-  // bypassed by the override.
+  // 5. D-51-13 fail-closed: an x64 title with no Win64 shim target. Checked
+  // BEFORE the user-forced-bridge and scan-miss rows so this default can
+  // never be bypassed by the override.
   const isX64 = verdict?.steamApi === 'x64' || scan?.arch === 'x64'
   if (isX64 && !win64ShimPresent) {
     return toBottle('win64-no-shim', {
       knownBadReason,
+      missingSymbols,
       noticeRequired: !isAcknowledged(verdict, 'win64-no-shim')
     })
   }
 
-  // 7. D-51-11's "Try the bridge anyway" override.
+  // 6. D-51-11's "Try the bridge anyway" override (also the answer to the
+  // scan-miss informational notice).
   if (verdict?.userRoute === 'bridge') {
-    return toBridge('user-forced-bridge', bridgeKnownBad)
+    return toBridge('user-forced-bridge', { ...bridgeKnownBad, missingSymbols })
+  }
+
+  // 7. Amended 2026-10-23 (quick 261023-oq7): a persisted scan miss routes
+  // to the BRIDGE carrying its missing symbols, behind a one-time
+  // informational notice acknowledged as 'scan-miss'. Must precede seed
+  // (row 8): the allowlist membership is independent of the scan. Per the
+  // user, bottled Steam is a narrow fallback to eliminate. Caveat: an exe
+  // whose STATIC imports the shim lacks will most likely fail at load with a
+  // Windows "entry point not found" error. That is expected by design, and
+  // the recorded missingSymbols drive shim widening. A `<dll>@runtime-loaded`
+  // marker (51-22, CR-04) is a miss without that load-time failure, and
+  // such titles may play.
+  if (scanMiss) {
+    return toBridge('scan-miss', {
+      knownBadReason,
+      missingSymbols,
+      noticeRequired: !isAcknowledged(verdict, 'scan-miss')
+    })
   }
 
   // 8. Bundled seed list membership, never scanned yet.

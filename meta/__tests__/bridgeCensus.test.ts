@@ -190,7 +190,7 @@ describe('classifyCensusTitle', () => {
     expect(row.detail).toBe(
       'launch exe imports no steam_api and none ships in the install tree'
     )
-    expect(summarizeCensus([row]).routed).toBe(1)
+    expect(summarizeCensus([row]).covered).toBe(1)
   })
 
   it('an exe with no import but a shipped steam_api64.dll classifies "missing-symbols" with the runtime-loaded marker', () => {
@@ -204,7 +204,7 @@ describe('classifyCensusTitle', () => {
 
     expect(row.class).toBe('missing-symbols')
     expect(row.detail).toBe('steam_api64.dll@runtime-loaded')
-    expect(summarizeCensus([row]).routed).toBe(0)
+    expect(summarizeCensus([row]).covered).toBe(0)
   })
 
   it('verified is true only for a routed row with playVerified', () => {
@@ -281,7 +281,7 @@ describe('formatCensusMarkdown', () => {
     expect(out).toContain('| Verified |')
     expect(out).toContain('| bridge | yes |')
     expect(out).toContain(
-      '2 of 3 routed to the bridge; 1 of 3 verified running through the bridge (bridge=2, known-bad=1)'
+      '3 of 3 routed to the bridge; 1 of 3 verified running through the bridge; 2 of 3 fully covered by the shim (bridge=2, known-bad=1)'
     )
   })
 })
@@ -326,10 +326,44 @@ describe('summarizeCensus', () => {
     }
   ]
 
-  it('counts routed as the number of class "bridge" rows, and total as every row including no-binary', () => {
+  it('classes: routed follows the resolver, covered is bridge + no-steam-api', () => {
+    const mk = (cls: CensusRow['class'], detail = ''): CensusRow => ({
+      appid: cls + detail,
+      name: cls,
+      installdir: cls,
+      arch: 'x86',
+      class: cls,
+      detail,
+      verified: false
+    })
+    const summary = summarizeCensus([
+      mk('bridge'),
+      mk('no-steam-api'),
+      mk('missing-symbols', 'X'),
+      mk('unknown-version', 'Y'),
+      mk('known-bad', 'does-not-run'),
+      mk('known-bad', 'drm-wrapped'),
+      mk('win64-no-shim'),
+      mk('no-binary')
+    ])
+    expect(summary.routed).toBe(5)
+    expect(summary.covered).toBe(2)
+    expect(summary.total).toBe(8)
+  })
+
+  it('formatCensusMarkdown keeps the 51-30 prefix', () => {
+    const out = formatCensusMarkdown(rows)
+    expect(out).toMatch(
+      /[0-9]+ of [0-9]+ routed to the bridge; [0-9]+ of [0-9]+ verified running through the bridge/
+    )
+    expect(out).toContain('fully covered by the shim')
+  })
+
+  it('counts routed per the resolver (scan-miss counts), covered as bridge rows, and total as every row including no-binary', () => {
     const summary = summarizeCensus(rows)
 
-    expect(summary.routed).toBe(2)
+    expect(summary.routed).toBe(3)
+    expect(summary.covered).toBe(2)
     expect(summary.total).toBe(4)
     expect(summary.byClass).toEqual({
       bridge: 2,
@@ -352,5 +386,6 @@ describe('summarizeCensus', () => {
     ]
 
     expect(summarizeCensus(onlyNoBinary).routed).toBe(0)
+    expect(summarizeCensus(onlyNoBinary).covered).toBe(0)
   })
 })

@@ -3,7 +3,10 @@
  * research session's one-shot owned-Windows-library import census against
  * whatever coverage the build actually SHIPS, on demand, forever. No
  * threshold is pre-set: the tool reports N of M titles routed to the
- * bridge, with every miss classified.
+ * bridge, with every miss classified. Amended 2026-10-23 (quick 261023-oq7):
+ * "routed" follows the live resolver (scan-miss titles are placed and
+ * launched anyway); "covered" is the old routed meaning and the D-51-15
+ * coverage verdict; "verified" is live play evidence.
  *
  * Two halves, same split as `captureShellScrollback.ts`/
  * `extractProtonInventory.ts`:
@@ -272,34 +275,49 @@ export function classifyCensusTitle(
   return withVerified({ ...base, arch, class: 'bridge', detail: '' })
 }
 
+/** Rows the live resolver sends to the bridge (amended 2026-10-23, quick
+ * 261023-oq7): every class except win64-no-shim, no-binary (counted
+ * conservatively as not routed) and known-bad 'drm-wrapped'. */
+function isRoutedToBridge(row: CensusRow): boolean {
+  if (row.class === 'win64-no-shim' || row.class === 'no-binary') return false
+  if (row.class === 'known-bad' && row.detail === 'drm-wrapped') return false
+  return true
+}
+
 /**
- * Routed = class 'bridge' or 'no-steam-api' count; verified = rows whose
- * seed entry carries live play evidence. A 'no-binary' row can never contribute to
- * `routed` (its class is never 'bridge'), but it DOES count toward `total`
- * -- the census reports what fraction of the whole owned set routes to the
- * bridge, not just the subset that had a scannable exe at all.
+ * routed = what the resolver sends to the bridge (see `isRoutedToBridge`),
+ * which now includes scan-miss and non-DRM known-bad titles that are placed
+ * and launched anyway. covered = class 'bridge' or 'no-steam-api': the shim
+ * fully covers the title, and this is the D-51-15 coverage verdict.
+ * verified = rows whose seed entry carries live play evidence. A 'no-binary'
+ * row never counts as routed or covered, but it DOES count toward `total`.
  */
 export function summarizeCensus(rows: CensusRow[]): {
   routed: number
+  covered: number
   verified: number
   total: number
   byClass: Record<string, number>
 } {
   const byClass: Record<string, number> = {}
   let routed = 0
+  let covered = 0
   let verified = 0
 
   for (const row of rows) {
     byClass[row.class] = (byClass[row.class] ?? 0) + 1
-    if (row.class === 'bridge' || row.class === 'no-steam-api') {
+    if (isRoutedToBridge(row)) {
       routed++
+    }
+    if (row.class === 'bridge' || row.class === 'no-steam-api') {
+      covered++
     }
     if (row.verified) {
       verified++
     }
   }
 
-  return { routed, verified, total: rows.length, byClass }
+  return { routed, covered, verified, total: rows.length, byClass }
 }
 
 /** Markdown table + the "N of M routed to the bridge" summary line the
@@ -324,7 +342,7 @@ export function formatCensusMarkdown(rows: CensusRow[]): string {
     header,
     body,
     '',
-    `${summary.routed} of ${summary.total} routed to the bridge; ${summary.verified} of ${summary.total} verified running through the bridge (${byClassSummary})`
+    `${summary.routed} of ${summary.total} routed to the bridge; ${summary.verified} of ${summary.total} verified running through the bridge; ${summary.covered} of ${summary.total} fully covered by the shim (${byClassSummary})`
   ].join('\n')
 }
 

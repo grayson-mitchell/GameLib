@@ -767,6 +767,8 @@ interface FrontendMessages {
   // the exact wording without re-deriving it from SteamBridgeRouteVerdict.
   // D-51-08 amendment (2026-10-23): a 'known-bad' notice on route 'bridge' is
   // informational -- the bridge is still attempted once the user proceeds.
+  // Quick 261023-oq7: 'scan-miss' now also arrives on route 'bridge' as an
+  // informational notice (it used to be a bottle notice).
   // `userRoute` is sent back unchanged on acknowledgement so an existing
   // override is never wiped.
   steamBridgeRouteNotice: (payload: {

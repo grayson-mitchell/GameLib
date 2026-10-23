@@ -186,15 +186,16 @@ describe('resolveBridgeRoute', () => {
       expect(result.reason).toBe('user-forced-bottle')
     })
 
-    it('a scan miss wins; one notice, per the scan-miss acknowledgement only', () => {
+    it('a scan miss routes to the bridge with one combined notice, cleared only by the scan-miss acknowledgement', () => {
       const result = resolveBridgeRoute({
         ...baseInput,
         knownBadReason: 'does-not-run',
         verdict: missVerdict({ noticeAcknowledgedFor: 'known-bad' })
       })
-      expect(result.route).toBe('bottle')
+      expect(result.route).toBe('bridge')
       expect(result.reason).toBe('scan-miss')
       expect(result.knownBadReason).toBe('does-not-run')
+      expect(result.missingSymbols).toEqual(['NotARealSymbol_v999'])
       expect(result.noticeRequired).toBe(true)
       const acked = resolveBridgeRoute({
         ...baseInput,
@@ -202,6 +203,16 @@ describe('resolveBridgeRoute', () => {
         verdict: missVerdict({ noticeAcknowledgedFor: 'scan-miss' })
       })
       expect(acked.noticeRequired).toBe(false)
+    })
+
+    it('drm-wrapped + an uncovered miss still lands on bottle / known-bad', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'drm-wrapped',
+        verdict: missVerdict()
+      })
+      expect(result.route).toBe('bottle')
+      expect(result.reason).toBe('known-bad')
     })
 
     it('x64 with no Win64 shim lands on bottle / win64-no-shim (T-og0-02)', () => {
@@ -232,43 +243,98 @@ describe('resolveBridgeRoute', () => {
     )
   })
 
-  it('row 5: a persisted scan miss, not covered, userRoute not bridge -> bottle / scan-miss (D-51-11 offers the override)', () => {
-    const verdict: SteamBridgeVerdict = {
-      scan: {
-        status: 'miss',
-        arch: 'x86',
-        missingSymbols: ['NotARealSymbol_v999'],
-        interfaceVersions: {},
-        stubbedInterfaces: [],
-        shimExportSetVersion: 'irrelevant',
-        scannedAt: '2026-01-01T00:00:00.000Z'
-      }
-    }
-    const result = resolveBridgeRoute({ ...baseInput, verdict })
-    expect(result.route).toBe('bottle')
+  const uncoveredMiss = (
+    extra: SteamBridgeVerdict = {},
+    arch: 'x86' | 'x64' = 'x86'
+  ): SteamBridgeVerdict => ({
+    scan: {
+      status: 'miss',
+      arch,
+      missingSymbols: ['NotARealSymbol_v999'],
+      interfaceVersions: {},
+      stubbedInterfaces: [],
+      shimExportSetVersion: 'irrelevant',
+      scannedAt: '2026-01-01T00:00:00.000Z'
+    },
+    ...extra
+  })
+
+  it('row 7: a persisted scan miss, not covered, no userRoute -> bridge / scan-miss with its symbols (amended 2026-10-23)', () => {
+    const result = resolveBridgeRoute({
+      ...baseInput,
+      verdict: uncoveredMiss()
+    })
+    expect(result.route).toBe('bridge')
     expect(result.reason).toBe('scan-miss')
     expect(result.missingSymbols).toEqual(['NotARealSymbol_v999'])
+    expect(result.knownBadReason).toBeNull()
     expect(result.noticeRequired).toBe(true)
   })
 
-  it('row 5: scan-miss notice NOT required when already acknowledged for scan-miss', () => {
-    const verdict: SteamBridgeVerdict = {
-      noticeAcknowledgedFor: 'scan-miss',
-      scan: {
-        status: 'miss',
-        arch: 'x86',
-        missingSymbols: ['NotARealSymbol_v999'],
-        interfaceVersions: {},
-        stubbedInterfaces: [],
-        shimExportSetVersion: 'irrelevant',
-        scannedAt: '2026-01-01T00:00:00.000Z'
-      }
-    }
-    const result = resolveBridgeRoute({ ...baseInput, verdict })
-    expect(result.noticeRequired).toBe(false)
+  it('row 7: scan-miss notice NOT required when acknowledged for scan-miss, still required when acknowledged for known-bad only', () => {
+    const acked = resolveBridgeRoute({
+      ...baseInput,
+      verdict: uncoveredMiss({ noticeAcknowledgedFor: 'scan-miss' })
+    })
+    expect(acked.noticeRequired).toBe(false)
+    const other = resolveBridgeRoute({
+      ...baseInput,
+      verdict: uncoveredMiss({ noticeAcknowledgedFor: 'known-bad' })
+    })
+    expect(other.noticeRequired).toBe(true)
   })
 
-  it('row 5: D-51-07 auto-clear -- a persisted miss whose symbols are ALL now covered by the real shim does not route to bottle', () => {
+  it('row 7: precedes seed', () => {
+    const result = resolveBridgeRoute({
+      ...baseInput,
+      isSeed: true,
+      verdict: uncoveredMiss()
+    })
+    expect(result.reason).toBe('scan-miss')
+  })
+
+  it('row 3/2/6: user-forced-bottle, failed-this-session and user-forced-bridge all beat an uncovered miss', () => {
+    expect(
+      resolveBridgeRoute({
+        ...baseInput,
+        verdict: uncoveredMiss({ userRoute: 'bottle' })
+      }).reason
+    ).toBe('user-forced-bottle')
+    expect(
+      resolveBridgeRoute({
+        ...baseInput,
+        failedThisSession: true,
+        verdict: uncoveredMiss()
+      }).reason
+    ).toBe('failed-this-session')
+    const forced = resolveBridgeRoute({
+      ...baseInput,
+      verdict: uncoveredMiss({ userRoute: 'bridge' })
+    })
+    expect(forced.route).toBe('bridge')
+    expect(forced.reason).toBe('user-forced-bridge')
+    expect(forced.noticeRequired).toBe(false)
+    expect(forced.missingSymbols).toEqual(['NotARealSymbol_v999'])
+  })
+
+  it('row 5: an x64 uncovered miss with no Win64 shim -> bottle / win64-no-shim carrying the symbols; with a shim -> bridge / scan-miss', () => {
+    const noShim = resolveBridgeRoute({
+      ...baseInput,
+      verdict: uncoveredMiss({ steamApi: 'x64' }, 'x64')
+    })
+    expect(noShim.route).toBe('bottle')
+    expect(noShim.reason).toBe('win64-no-shim')
+    expect(noShim.missingSymbols).toEqual(['NotARealSymbol_v999'])
+    const shim = resolveBridgeRoute({
+      ...baseInput,
+      win64ShimPresent: true,
+      verdict: uncoveredMiss({ steamApi: 'x64' }, 'x64')
+    })
+    expect(shim.route).toBe('bridge')
+    expect(shim.reason).toBe('scan-miss')
+  })
+
+  it('row 7: D-51-07 auto-clear -- a persisted miss whose symbols are ALL now covered by the real shim is never scan-miss and carries no symbols', () => {
     const verdict: SteamBridgeVerdict = {
       scan: {
         status: 'miss',
@@ -285,9 +351,10 @@ describe('resolveBridgeRoute', () => {
     const result = resolveBridgeRoute({ ...baseInput, verdict })
     expect(result.route).toBe('bridge')
     expect(result.reason).toBe('pending-scan')
+    expect(result.missingSymbols).toEqual([])
   })
 
-  it('row 6: x64 import, no Win64 shim target -> bottle / win64-no-shim (D-51-13 fail-closed)', () => {
+  it('row 5: x64 import, no Win64 shim target -> bottle / win64-no-shim (D-51-13 fail-closed)', () => {
     const verdict: SteamBridgeVerdict = { steamApi: 'x64' }
     const result = resolveBridgeRoute({
       ...baseInput,
@@ -299,7 +366,7 @@ describe('resolveBridgeRoute', () => {
     expect(result.noticeRequired).toBe(true)
   })
 
-  it('row 6: fail-closed also derives x64-ness from a persisted scan.arch, not just steamApi', () => {
+  it('row 5: fail-closed also derives x64-ness from a persisted scan.arch, not just steamApi', () => {
     const verdict: SteamBridgeVerdict = {
       scan: {
         status: 'clean',
@@ -320,7 +387,7 @@ describe('resolveBridgeRoute', () => {
     expect(result.reason).toBe('win64-no-shim')
   })
 
-  it('row 6: win64-no-shim fail-closed overrides EVEN a user-forced-bridge override -- never bypassable', () => {
+  it('row 5: win64-no-shim fail-closed overrides EVEN a user-forced-bridge override -- never bypassable', () => {
     const verdict: SteamBridgeVerdict = {
       userRoute: 'bridge',
       steamApi: 'x64'
@@ -334,7 +401,7 @@ describe('resolveBridgeRoute', () => {
     expect(result.reason).toBe('win64-no-shim')
   })
 
-  it('row 6: win64-no-shim notice NOT required when already acknowledged', () => {
+  it('row 5: win64-no-shim notice NOT required when already acknowledged', () => {
     const verdict: SteamBridgeVerdict = {
       noticeAcknowledgedFor: 'win64-no-shim',
       steamApi: 'x64'
@@ -347,7 +414,7 @@ describe('resolveBridgeRoute', () => {
     expect(result.noticeRequired).toBe(false)
   })
 
-  it('row 6: x64 import WITH a Win64 shim target present does not fail closed', () => {
+  it('row 5: x64 import WITH a Win64 shim target present does not fail closed', () => {
     const verdict: SteamBridgeVerdict = { steamApi: 'x64' }
     const result = resolveBridgeRoute({
       ...baseInput,
@@ -357,7 +424,7 @@ describe('resolveBridgeRoute', () => {
     expect(result.route).toBe('bridge')
   })
 
-  it('row 7: verdict.userRoute bridge -> bridge / user-forced-bridge (D-51-11)', () => {
+  it('row 6: verdict.userRoute bridge -> bridge / user-forced-bridge (D-51-11)', () => {
     const verdict: SteamBridgeVerdict = { userRoute: 'bridge' }
     const result = resolveBridgeRoute({ ...baseInput, verdict })
     expect(result.route).toBe('bridge')
@@ -427,7 +494,9 @@ describe('resolveBridgeRoute', () => {
     expect(result.installedIn).toBeNull()
   })
 
-  it('missingSymbols is [] on every route except scan-miss', () => {
+  it('missingSymbols is non-empty only when an uncovered miss exists', () => {
+    const miss = resolveBridgeRoute({ ...baseInput, verdict: uncoveredMiss() })
+    expect(miss.missingSymbols).not.toEqual([])
     const seedResult = resolveBridgeRoute({ ...baseInput, isSeed: true })
     expect(seedResult.missingSymbols).toEqual([])
 
