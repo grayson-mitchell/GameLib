@@ -355,19 +355,25 @@ export function parsePeSectionNames(buf: Buffer): string[] {
 | A7 | Callback-pointer ISteamClient methods are not needed by the stub | Pattern 4 | Stub fails in an uncovered method; log would not show shim-local calls (Open Q 2) |
 | A8 | Bool return width is safe for the new bool-returning flat calls | Pitfall 5 | Garbage truthiness; mask to 1 byte |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the stub read `ActiveProcess\pid` (or require a live process)?**
    - Known: 038 b1 opened the key with no values and fell back; p1/f1 had a responder-written `pid`.
    - Unclear: whether the missing pid alone changes the outcome.
    - Recommendation: first live run without `pid`; if the stub exits, bring the question to the user before adding any live-process writer, since it edges toward the Proton `steam.exe` stub pattern.
+   - RESOLVED: first live run without `pid` (52-08 writes none); if the stub reads it before exiting, 52-11 Task 3 is a blocking user decision checkpoint. No pid writer is planned.
 2. **How to see shim-local method calls (e.g. callback setters) the stub makes?**
    - Known: forwarded calls log helper-side; local ones leave no trace.
    - Recommendation: keep the set of local-only methods tiny (callback pointers only). If a gap shows, add a `CONTROL` "note" slot so the shim can tell the helper which local method was invoked (a log, not an answer). Decide only if needed.
+   - RESOLVED: only the callback-pointer setters (slots 21, 31, 32, 33) and SetLocalIPBinding (slot 7, ABI mismatch) stay local (52-01). The CONTROL "note" slot is deferred (deferred-items.md) and becomes a permitted round change only if a 52-11 round shows a silent exit after the last forwarded call.
 3. **Notice shape for `.bind` titles.** Log-only vs `notify()` vs a new route reason with dialog and i18n. Recommend log plus one-time `notify()`; escalate only if the user wants a dialog.
+   - RESOLVED: log line plus one-time `notify()` per title per session, no dialog or route reason (52-06 strings, 52-09 wiring).
 4. **Gate the registry/forwarder on `drmWrapper === 'steamstub'` or always for bridge bottles?** Recommend gated.
+   - RESOLVED: gated on `drmWrapper === 'steamstub'` (52-09).
 5. **Scratch bottle `GameLibSpikeGD`** listed in the brief is not present in `~/Library/Application Support/CrossOver/Bottles` (only `GameLibSteamBridge-219990`). The plan must either recreate it by APFS clone or run the gate in the product bottle with a backup.
+   - RESOLVED: fresh APFS clone `GameLibGate52GD` of `GameLibSteamBridge-219990` per run via the 52-10 harness; the product bottle is touched only by GameLib's own launch in 52-12.
 6. **x86 scope.** Grim Dawn done-when is x64; x86 forwarder/manifests can follow once x64 is live.
+   - RESOLVED: x64 only; the x86 `steamclient.dll`, x86 SteamClient manifests and the `SteamClientDll` value are deferred (deferred-items.md, written by 52-10).
 
 ## Environment Availability
 

@@ -303,9 +303,14 @@ methods are local `HELPER FALLBACK`/`STUB` constants, so nothing reached the nat
    versions requested on the real path, and hands out forwarding proxies for the versions the stub needs.
 2. The forwarder `steamclient.dll` / `steamclient64.dll` (zig-built, as spike 039), resolving
    through the game's own shim module so the helper keeps one connection.
+   *Planning note:* x64 `steamclient64.dll` only; the x86 `steamclient.dll` is deferred (decision 6,
+   `deferred-items.md`).
 3. Bottle setup at launch: write `ActiveProcess\SteamClientDll`/`SteamClientDll64`/`Universe`/`pid`
    and place the DLLs. Never create `HKLM\Software\Valve\Steam` (spike 036: its presence diverts the
    game into `steam.exe -applaunch`).
+   *Planning note:* only `SteamClientDll64` and `Universe` are written. The x86 `SteamClientDll` value is
+   deferred (decision 6), and `pid` is not written on the first live run (decision 1); it is added only
+   if the user decides so at 52-11's checkpoint.
 4. `.bind` detection at install/scan time, so a SteamStub title is known before launch and gets an
    honest notice rather than "game stopped after 2s of play".
 5. The five missing modern-SDK `SteamInternal_*` exports and DLL-importer scan gap Grim Dawn hits
@@ -321,7 +326,28 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 0 plans
+**Plans:** 12 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 52 to break down)
+
+**Wave 1** *(parallel)*
+- [ ] 52-01-PLAN.md — SteamClient017/014 forward to the native client: manifests + policy, forwarded GetISteam* (no null object), pointer-presence dispatch, FWD logging, identity-only gate
+- [ ] 52-04-PLAN.md — Zero-import PE section parser (.bind); drmWrapper on the persisted scan verdict
+- [ ] 52-05-PLAN.md — Bounded static-import closure (exe -> Engine.dll) in scanSteamApiImports
+- [ ] 52-06-PLAN.md — SteamStub notice strings in all 49 gamelib catalogs
+
+**Wave 2-3** *(serial after 52-01: shared generated sources and helper build)*
+- [ ] 52-02-PLAN.md — Helper CONTROL slot 3 CREATE_INTERFACE asks SteamInternal_CreateInterface; protocol constant; integration tests
+- [ ] 52-03-PLAN.md — zig-built steamclient64.dll forwarder (CreateInterface only, resolves the loaded shim); build + prune + path constant
+
+**Wave 4**
+- [ ] 52-07-PLAN.md — x64 shim exports GameLibBridge_CreateInterface + five SteamInternal_*; regen + pins
+- [ ] 52-08-PLAN.md — steamClientSetup.ts (HKCU-only reg add, forwarder placement) and .bind detection in placeShimForGame
+
+**Wave 5**
+- [ ] 52-09-PLAN.md — launchBridgeGame wires SteamStub setup; honest unforwarded notice (log + one-time notify)
+
+**Wave 6-8** *(live, sequential)*
+- [ ] 52-10-PLAN.md — Desk gate, scratch-clone harness, live-gate contract + reachability review, deferred note (authors, does not run)
+- [ ] 52-11-PLAN.md — Discovery rounds in a scratch clone (cap 3), pid decision checkpoint
+- [ ] 52-12-PLAN.md — Done-when: GameLib launch of Grim Dawn, cx-log trace, bottle hygiene; close both todos on pass
