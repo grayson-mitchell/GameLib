@@ -141,6 +141,9 @@ jest.mock('../electronStores', () => ({
 // is a plain string (not a jest.fn()) so the real `!==` comparison inside
 // removeSteamInstallCopy behaves identically to the real module's constant.
 jest.mock('../bottle', () => ({
+  // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present
+  isCrossoverInstalled: async () => true,
+  CROSSOVER_MISSING: 'crossover-missing',
   isBottleReady: jest.fn(),
   tellBottledSteamToInstall: jest.fn(),
   tellBottledSteamToLaunch: jest.fn(),
