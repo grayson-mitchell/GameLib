@@ -136,6 +136,55 @@ function readDef(): { header: string; hasExports: boolean; symbols: string[] } {
 
 const readDefExports = (): string[] => readDef().symbols
 
+// Quick 261024-br4: a minimal PE32 builder (a trimmed copy of
+// peSteamDrm.test.ts's). `cegNames` become named RT_RCDATA entries; an empty
+// list yields a clean PE with no resource directory at all.
+function buildMinimalPe(cegNames: string[]): Buffer {
+  const buf = Buffer.alloc(0x800)
+  const pe = 0x80
+  const opt = pe + 24
+  const optSize = 224
+  const sections = cegNames.length > 0 ? 2 : 1
+  buf.write('MZ', 0, 'latin1')
+  buf.writeUInt32LE(pe, 0x3c)
+  buf.writeUInt32LE(0x00004550, pe)
+  buf.writeUInt16LE(0x14c, pe + 4)
+  buf.writeUInt16LE(sections, pe + 6)
+  buf.writeUInt16LE(optSize, pe + 20)
+  buf.writeUInt16LE(0x10b, opt)
+  buf.writeUInt32LE(16, opt + 92)
+  const sec = (i: number, name: string, va: number, raw: number) => {
+    const b = opt + optSize + i * 40
+    buf.write(name, b, 'latin1')
+    buf.writeUInt32LE(0x200, b + 8)
+    buf.writeUInt32LE(va, b + 12)
+    buf.writeUInt32LE(0x200, b + 16)
+    buf.writeUInt32LE(raw, b + 20)
+  }
+  sec(0, '.text', 0x1000, 0x400)
+  if (cegNames.length > 0) {
+    const rsrc = 0x600
+    sec(1, '.rsrc', 0x2000, rsrc)
+    buf.writeUInt32LE(0x2000, opt + 96 + 16)
+    buf.writeUInt32LE(0x200, opt + 96 + 20)
+    // root: one ID entry (10 = RT_RCDATA) -> subdirectory at +0x18
+    buf.writeUInt16LE(1, rsrc + 14)
+    buf.writeUInt32LE(10, rsrc + 16)
+    buf.writeUInt32LE((0x80000000 | 0x18) >>> 0, rsrc + 20)
+    const sub = rsrc + 0x18
+    buf.writeUInt16LE(cegNames.length, sub + 12)
+    let str = 0x18 + 16 + cegNames.length * 8
+    cegNames.forEach((n, i) => {
+      buf.writeUInt32LE((0x80000000 | str) >>> 0, sub + 16 + i * 8)
+      buf.writeUInt32LE(0x1f0, sub + 16 + i * 8 + 4)
+      buf.writeUInt16LE(n.length, rsrc + str)
+      buf.write(n, rsrc + str + 2, 'utf16le')
+      str += 2 + n.length * 2
+    })
+  }
+  return buf
+}
+
 describe('isGameLibShimBytes', () => {
   it('is true for a buffer containing the GameLibSteamBridgeShim marker', () => {
     expect(
@@ -916,5 +965,82 @@ describe('shimGenerate', () => {
       expect(result.shimPath).toBe(shimDestPath())
       expect(result.verdict?.missingSymbols).toEqual([])
     }
+  })
+
+  describe('quick 261024-br4: Steam CEG detection on the game exe', () => {
+    const okImports = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
+      })
+
+    it('a CEG exe keeps its normal status (shim still placed) and carries drm ceg', async () => {
+      writeFileSync(
+        gameExePath,
+        buildMinimalPe(['STEAM_SPLIT_GUID', 'STEAM_GUIDD'])
+      )
+      okImports()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('placed')
+      expect(result.drm).toEqual({
+        kind: 'ceg',
+        markers: ['STEAM_SPLIT_GUID', 'STEAM_GUIDD']
+      })
+      expect(existsSync(shimDestPath())).toBe(true)
+    })
+
+    it('a clean PE exe carries drm null', async () => {
+      writeFileSync(gameExePath, buildMinimalPe([]))
+      okImports()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('placed')
+      expect(result.drm).toBeNull()
+    })
+
+    it('a non-PE exe carries no drm key', async () => {
+      okImports()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('placed')
+      expect('drm' in result).toBe(false)
+    })
+
+    it('an error result never reads the exe for DRM (non-numeric appId, exe outside the bottle)', async () => {
+      writeFileSync(gameExePath, buildMinimalPe(['STEAM_SPLIT_GUID']))
+      const outsidePath = join(root, 'outside-bottle', 'Game.exe')
+      mkdirSync(join(root, 'outside-bottle'), { recursive: true })
+      writeFileSync(outsidePath, buildMinimalPe(['STEAM_SPLIT_GUID']))
+      const mockedLogWarning = jest.requireMock('backend/logger')
+        .logWarning as jest.Mock
+      mockedLogWarning.mockClear()
+
+      const badAppId = await placeShimForGame('not-numeric', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+      const outside = await placeShimForGame('1234', outsidePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(badAppId.status).toBe('error')
+      expect(outside.status).toBe('error')
+      expect('drm' in badAppId).toBe(false)
+      expect('drm' in outside).toBe(false)
+      const drmLogs = mockedLogWarning.mock.calls.filter(([msg]) =>
+        /Steam (CEG|DRM)/.test(String(msg))
+      )
+      expect(drmLogs).toEqual([])
+    })
   })
 })

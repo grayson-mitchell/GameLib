@@ -85,8 +85,9 @@ function isAcknowledged(
  *  2. `failedThisSession` -> bottle / 'failed-this-session'.
  *  3. `verdict.userRoute === 'bottle'` -> bottle / 'user-forced-bottle'
  *     (D-51-10).
- *  4. A 'drm-wrapped' known-bad match (and the user has not overridden to
- *     'bridge') -> bottle / 'known-bad', notice required unless already
+ *  4. A 'drm-wrapped' known-bad match, bundled OR detected CEG
+ *     (`verdict.drm === 'ceg'`, quick 261024-br4), and the user has not
+ *     overridden to 'bridge' -> bottle / 'known-bad', notice required unless already
  *     acknowledged for 'known-bad' (D-51-08). Amended 2026-10-23: ONLY
  *     drm-wrapped routes to bottled Steam. Every other known-bad reason
  *     (does-not-run, win64-only, p2p-required) falls through rows 5-11 as
@@ -134,11 +135,18 @@ export function resolveBridgeRoute(
   const {
     platformsBottleEligible,
     isSeed,
-    knownBadReason,
+    knownBadReason: bundledKnownBadReason,
     verdict,
     failedThisSession,
     win64ShimPresent
   } = input
+
+  // Quick 261024-br4: a detected Steam CEG exe (persisted outside `scan`, so
+  // it survives a shim export-set bump) IS a 'drm-wrapped' known-bad title.
+  // CEG beats a bundled non-DRM reason: a title bundled as 'does-not-run'
+  // must not hide a detected CEG and fall through to the bridge.
+  const knownBadReason: SteamBridgeKnownBadReason | null =
+    verdict?.drm === 'ceg' ? 'drm-wrapped' : bundledKnownBadReason
 
   const shared = {
     // D-51-02: stubbedInterfaces lives on the persisted SCAN sub-object

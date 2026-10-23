@@ -550,3 +550,94 @@ describe('resolveBridgeRoute', () => {
     expect(source).not.toMatch(/steamMetadataStore/)
   })
 })
+
+describe('quick 261024-br4: detected CEG (verdict.drm)', () => {
+  it("drm 'ceg' with no bundled reason -> bottle / known-bad / drm-wrapped, notice required", () => {
+    const result = resolveBridgeRoute({
+      ...baseInput,
+      verdict: { drm: 'ceg' }
+    })
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+    expect(result.noticeRequired).toBe(true)
+  })
+
+  it("drm 'ceg' acknowledged for known-bad -> notice not required", () => {
+    const result = resolveBridgeRoute({
+      ...baseInput,
+      verdict: { drm: 'ceg', noticeAcknowledgedFor: 'known-bad' }
+    })
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+    expect(result.noticeRequired).toBe(false)
+  })
+
+  it("drm 'ceg' with userRoute 'bridge' -> bridge / user-forced-bridge, drm-wrapped carried, no notice", () => {
+    const result = resolveBridgeRoute({
+      ...baseInput,
+      verdict: { drm: 'ceg', userRoute: 'bridge' }
+    })
+    expect(result.route).toBe('bridge')
+    expect(result.reason).toBe('user-forced-bridge')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+    expect(result.noticeRequired).toBe(false)
+  })
+
+  it("drm 'ceg' beats a bundled does-not-run reason", () => {
+    const result = resolveBridgeRoute({
+      ...baseInput,
+      knownBadReason: 'does-not-run',
+      verdict: { drm: 'ceg' }
+    })
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+  })
+
+  it("drm 'ceg' survives a scan miss the current shim auto-clears", () => {
+    const result = resolveBridgeRoute({
+      ...baseInput,
+      isSeed: true,
+      verdict: {
+        drm: 'ceg',
+        scan: {
+          status: 'miss',
+          arch: 'x86',
+          // exported by the shipped shim, so isScanVerdictNowCovered is true
+          missingSymbols: ['SteamUser'],
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'older',
+          scannedAt: '2026-01-01T00:00:00.000Z'
+        }
+      }
+    })
+    expect(result.route).toBe('bottle')
+    expect(result.reason).toBe('known-bad')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+  })
+
+  it('rows 1-3 still take precedence over a detected CEG', () => {
+    expect(
+      resolveBridgeRoute({
+        ...baseInput,
+        platformsBottleEligible: false,
+        verdict: { drm: 'ceg' }
+      }).route
+    ).toBe('not-eligible')
+    expect(
+      resolveBridgeRoute({
+        ...baseInput,
+        failedThisSession: true,
+        verdict: { drm: 'ceg' }
+      }).reason
+    ).toBe('failed-this-session')
+    expect(
+      resolveBridgeRoute({
+        ...baseInput,
+        verdict: { drm: 'ceg', userRoute: 'bottle' }
+      }).reason
+    ).toBe('user-forced-bottle')
+  })
+})

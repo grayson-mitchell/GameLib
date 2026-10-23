@@ -45,7 +45,10 @@ const bridgeVerdictSchema = z.object({
   userRoute: z.enum(['bottle', 'bridge']).optional(),
   noticeAcknowledgedFor: z.string().optional(),
   limitedNoticeShown: z.boolean().optional(),
-  identityFallback: z.boolean().optional()
+  identityFallback: z.boolean().optional(),
+  // Quick 261024-br4: without this key the non-strict object strips `drm`
+  // on read and a detected CEG would be silently forgotten.
+  drm: z.enum(['ceg']).optional()
 })
 
 /**
@@ -195,6 +198,32 @@ export function setBridgeUserRoute(
   steamMetadataStore.set(appId, {
     ...existing,
     bridge: userRoute === undefined ? restBridge : { ...restBridge, userRoute }
+  })
+}
+
+/**
+ * Quick 261024-br4: persists (or removes) the post-install Steam DRM
+ * finding (`SteamBridgeVerdict.drm`). Same shape as `setBridgeUserRoute`:
+ * passing `undefined` REMOVES the key rather than storing an undefined
+ * value, and is a no-op (no store churn, no fabricated entry) when there is
+ * no stored `drm` to remove.
+ */
+export function writeBridgeDrmVerdict(
+  appId: string,
+  drm: SteamBridgeVerdict['drm'] | undefined
+): void {
+  if (rejectNonNumeric('writeBridgeDrmVerdict', appId)) return
+
+  if (drm === undefined) {
+    const stored = steamMetadataStore.get(appId)
+    if (stored?.bridge?.drm === undefined) return
+  }
+
+  const existing = getOrCreateEntryForWrite(appId)
+  const { drm: _existingDrm, ...restBridge } = existing.bridge ?? {}
+  steamMetadataStore.set(appId, {
+    ...existing,
+    bridge: drm === undefined ? restBridge : { ...restBridge, drm }
   })
 }
 

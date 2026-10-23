@@ -51,7 +51,15 @@
  * persists and 51-07's `resolveBridgeRoute` reads back.
  */
 
-import { copyFileSync, existsSync, readFileSync, statSync } from 'node:fs'
+import {
+  closeSync,
+  copyFileSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  readSync,
+  statSync
+} from 'node:fs'
 import { lstat, readdir, readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
@@ -68,6 +76,7 @@ import {
 } from '../bottle'
 import { scanSteamApiImports } from './importScan'
 import { runtimeLoadedSteamApiMarker } from './importParse'
+import { detectSteamDrmInPe } from './peSteamDrm'
 import {
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
@@ -117,7 +126,7 @@ export function isGameLibShimBytes(buf: Buffer): boolean {
 // Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
 // file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
 // over-broad `export` keyword).
-type PlaceShimResult =
+type PlaceShimResultBase =
   | {
       status: 'placed' | 'already-placed'
       shimPath: string
@@ -134,6 +143,16 @@ type PlaceShimResult =
   | { status: 'no-steam-api'; verdict: SteamBridgeScanVerdict }
   | { status: 'shim-not-built'; arch: 'x86' | 'x64' }
   | { status: 'error'; error: string }
+
+/** Quick 261024-br4: Steam CEG DRM found in the game exe. */
+export type SteamExeDrmSignal = { kind: 'ceg'; markers: string[] }
+
+/** `drm`: an object means CEG was detected; `null` means the exe parsed as
+ * a PE and is not CEG; absent means not checked (an 'error' result) or the
+ * PE did not parse (treated as not CEG). */
+type PlaceShimResult = PlaceShimResultBase & {
+  drm?: SteamExeDrmSignal | null
+}
 
 /**
  * True iff `candidateAbsPath` resolves to a location strictly inside
@@ -303,8 +322,85 @@ async function readVersionsOrEmpty(
  * `builtBridgeShimPath`/`builtBridgeShim64Path` (BLOCKER 2) -- callers
  * never need to pass them; the parameters exist so this module's own
  * tests can point at fixture files without mocking module-level constants.
+ *
+ * Quick 261024-br4 (Steam CEG DRM): every non-'error' result also carries a
+ * `drm` signal from a ranged PE resource scan of the game exe
+ * (`peSteamDrm.ts`). The scan runs only AFTER the appId / bottle-name /
+ * containment validation has passed (T-24-06, T-br4-03), so no byte of an
+ * out-of-bottle path is ever read. The shim is still placed either way: the
+ * caller decides, so a user's forced 'bridge' route keeps working.
  */
 export async function placeShimForGame(
+  appId: string,
+  gameExePath: string,
+  opts?: Parameters<typeof placeShimForGameInner>[2]
+): Promise<PlaceShimResult> {
+  const result = await placeShimForGameInner(appId, gameExePath, opts)
+  if (result.status === 'error') return result
+  const drm = detectExeSteamDrm(appId, resolve(gameExePath))
+  return drm === undefined ? result : { ...result, drm }
+}
+
+/**
+ * Quick 261024-br4: fd-based ranged reads of the exe into the pure
+ * `peSteamDrm.ts` scanner -- never slurps the exe (T-br4-02), and the fd is
+ * always closed. Returns undefined when the PE did not parse or the read
+ * failed (logged, treated as not CEG). A SteamStub `.bind` section is
+ * logged only: it never changes routing (SteamStub is in scope for the
+ * bridge; bottled Steam is a narrow fallback).
+ */
+function detectExeSteamDrm(
+  appId: string,
+  exePath: string
+): SteamExeDrmSignal | null | undefined {
+  let fd: number | null = null
+  try {
+    fd = openSync(exePath, 'r')
+    const handle = fd
+    const result = detectSteamDrmInPe((offset, length) => {
+      const buf = Buffer.alloc(length)
+      const n = readSync(handle, buf, 0, length, offset)
+      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
+    })
+    if (!result.parsed) {
+      logWarning(
+        `placeShimForGame: Steam DRM detection could not parse the exe as a PE for appId ${appId} -- treating as not CEG`,
+        LogPrefix.Steam
+      )
+      return undefined
+    }
+    if (result.hasBindSection) {
+      logInfo(
+        `placeShimForGame: SteamStub .bind section present in the exe for appId ${appId} (informational, no routing change)`,
+        LogPrefix.Steam
+      )
+    }
+    if (result.cegMarkers.length > 0) {
+      logWarning(
+        `placeShimForGame: Steam CEG DRM detected in the exe for appId ${appId} (${result.cegMarkers.join(', ')})`,
+        LogPrefix.Steam
+      )
+      return { kind: 'ceg', markers: result.cegMarkers }
+    }
+    return null
+  } catch (error) {
+    logWarning(
+      `placeShimForGame: Steam DRM detection could not read the exe for appId ${appId} -- treating as not CEG (${String(error)})`,
+      LogPrefix.Steam
+    )
+    return undefined
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd)
+      } catch {
+        // nothing left to release
+      }
+    }
+  }
+}
+
+async function placeShimForGameInner(
   appId: string,
   gameExePath: string,
   opts?: {
@@ -315,7 +411,7 @@ export async function placeShimForGame(
     /** CR-04: root of the game's install tree, walked when the exe imports nothing. */
     gameInstallRoot?: string
   }
-): Promise<PlaceShimResult> {
+): Promise<PlaceShimResultBase> {
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
       `placeShimForGame: rejected non-numeric appId "${appId}" -- not placing a shim (T-24-06)`,

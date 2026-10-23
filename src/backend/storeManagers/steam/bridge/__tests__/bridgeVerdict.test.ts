@@ -40,7 +40,8 @@ import {
   setBridgeUserRoute,
   setBridgeNoticeAcknowledged,
   markBridgeLimitedNoticeShown,
-  setBridgeIdentityFallback
+  setBridgeIdentityFallback,
+  writeBridgeDrmVerdict
 } from '../bridgeVerdict'
 
 const mockedStore = steamMetadataStore as unknown as {
@@ -289,10 +290,74 @@ describe('every writer rejects a non-numeric appId without touching the store', 
     [
       'setBridgeIdentityFallback',
       () => setBridgeIdentityFallback(NON_NUMERIC_APP_ID, true)
+    ],
+    [
+      'writeBridgeDrmVerdict',
+      () => writeBridgeDrmVerdict(NON_NUMERIC_APP_ID, 'ceg')
     ]
   ])('%s', (_name, fn) => {
     fn()
 
     expect(mockedStore.get(NON_NUMERIC_APP_ID)).toBeUndefined()
+  })
+})
+
+describe('writeBridgeDrmVerdict (quick 261024-br4)', () => {
+  it("persists bridge.drm 'ceg' and keeps scan, userRoute and the other fields", () => {
+    mockedStore.set(APP_ID, {
+      art_cover: 'cover.jpg',
+      art_square: '',
+      extra: { reqs: [] },
+      bridge: {
+        scan: makeScanVerdict(),
+        userRoute: 'bottle',
+        noticeAcknowledgedFor: 'known-bad',
+        identityFallback: true
+      }
+    })
+
+    writeBridgeDrmVerdict(APP_ID, 'ceg')
+
+    const stored = mockedStore.get(APP_ID) as Record<string, unknown>
+    expect(stored.art_cover).toBe('cover.jpg')
+    expect(readBridgeVerdict(APP_ID)).toEqual({
+      scan: makeScanVerdict(),
+      userRoute: 'bottle',
+      noticeAcknowledgedFor: 'known-bad',
+      identityFallback: true,
+      drm: 'ceg'
+    })
+  })
+
+  it('removes the key entirely when passed undefined', () => {
+    writeBridgeDrmVerdict(APP_ID, 'ceg')
+    setBridgeUserRoute(APP_ID, 'bridge')
+
+    writeBridgeDrmVerdict(APP_ID, undefined)
+
+    const stored = mockedStore.get(APP_ID) as {
+      bridge: Record<string, unknown>
+    }
+    expect('drm' in stored.bridge).toBe(false)
+    expect(readBridgeVerdict(APP_ID)).toEqual({ userRoute: 'bridge' })
+  })
+
+  it('undefined is a no-op (no fabricated entry) when nothing is stored', () => {
+    writeBridgeDrmVerdict(APP_ID, undefined)
+
+    expect(mockedStore.get(APP_ID)).toBeUndefined()
+    expect(mockedLogInfo).not.toHaveBeenCalled()
+  })
+
+  it('an unknown stored drm value makes the whole verdict read as invalid', () => {
+    mockedStore.set(APP_ID, {
+      art_cover: '',
+      art_square: '',
+      extra: { reqs: [] },
+      bridge: { userRoute: 'bridge', drm: 'denuvo' }
+    })
+
+    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+    expect(mockedLogWarning).toHaveBeenCalled()
   })
 })

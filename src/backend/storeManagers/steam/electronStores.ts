@@ -247,6 +247,15 @@ export interface SteamBridgeVerdict {
   /** D-51-04: true when the bridge helper fell back to AppID 480
    * identity-only for this game (real-AppID init failed). */
   identityFallback?: boolean
+  /** Quick 261024-br4: Steam DRM detected in the game exe by the
+   * post-install PE scan (`peSteamDrm.ts`). 'ceg' means the exe carries
+   * Steam CEG resources, which only a Windows Steam client can serve, so the
+   * resolver routes the title to bottled Steam as known-bad 'drm-wrapped'.
+   * Kept at the top level, NOT inside `scan`: `isScanVerdictNowCovered`
+   * auto-clears `scan` on a shim export-set bump, and DRM is a property of
+   * the exe that must survive that. Absent means not detected or never
+   * checked; `writeBridgeDrmVerdict(appId, undefined)` removes the key. */
+  drm?: 'ceg'
 }
 
 // The `import type { SteamBottleConfig }` and its `export type { ... }`
