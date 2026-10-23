@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
 Plan: 10 of 30
 Status: Ready to execute
-Last activity: 2026-10-24 - Completed quick task 261023-vkv: deliver macOS notifications via UNUserNotificationCenter in packaged builds
+Last activity: 2026-10-24 - Completed quick task 261024-br4: detect Steam CEG DRM in the bridge scan
 
 Progress: [█████████░] 93%
 
@@ -324,6 +324,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261023-tyf | Steam bridge shims build as release (`-O2 -fno-sanitize=undefined`): UBSan runtime gone from both DLLs (x86 894464→286720, x64 848896→223744 bytes); marker keepalive fixed to `const char *volatile` so `GameLibSteamBridgeShim/2` survives -O2. | 2026-10-23 | 1ffb5b315 | | [261023-tyf-build-steam-bridge-shims-as-release-buil](./quick/261023-tyf-build-steam-bridge-shims-as-release-buil/) |
 | 261023-ue0 | `gamelib_bridge.cfg` written beside every placed shim DLL (Unity `_Data/Plugins/x86_64/` layout), not only beside the exe; `placeShimForGame` reports all runtime shim paths on `already-placed`/`placed-miss`; every copy rewritten each launch. Live HELLO check on 1167950 pending. | 2026-10-23 | ae050a4db | | [261023-ue0-write-gamelib-bridge-cfg-beside-every-pl](./quick/261023-ue0-write-gamelib-bridge-cfg-beside-every-pl/) |
 | 261023-vkv | Packaged macOS notifications delivered via `UNUserNotificationCenter` (startup `.alert\|.sound` auth + `willPresent` delegate; plugin kept for `tauri:dev`/non-bundle); delivery failures logged via `logWarning`, startup auth to `gamelib-shell.log`. Live banner verified on an Apple-Development-signed bundle; ad-hoc bundles are refused (`UNErrorDomain` 1). | 2026-10-24 | 687ee4234 | live-verified (team-signed bundle) | [261023-vkv-deliver-macos-notifications-via-unuserno](./quick/261023-vkv-deliver-macos-notifications-via-unuserno/) |
+| 261024-br4 | Steam CEG auto-detected in the bridge scan: zero-import PE parser (`peSteamDrm.ts`) finds `STEAM_SPLIT_GUID`/`STEAM_GUIDD`/`STEAM_MINSTANCE` RCDATA; persisted as `bridge.drm`, resolver row 4 treats it as `drm-wrapped`; install/launch show a DRM dialog instead of a silent exit; census counts CEG as known-bad. `.bind` reported only, never routed. Live: both XCOM exes detected. | 2026-10-24 | b9240cba8 | live-verified (detector on XCOM exes) | [261024-br4-detect-steam-ceg-drm-in-the-bridge-pre-s](./quick/261024-br4-detect-steam-ceg-drm-in-the-bridge-pre-s/) |
 | fast | Add/Remove shortcuts hidden for Steam games in GameSubMenu (stubs only logged, so the item notified a false "Shortcuts were created"); todo filed for the real feature. | 2026-10-24 | 08a964f8f | | — |
 | fast | Prescreen backslash todo annotated: fix already landed in `2ba070588` (51-22), wider `steam/` sweep found nothing else; todo stays pending, closed by 51-30 item 19. | 2026-10-24 | ee974f8df | | — |
 
