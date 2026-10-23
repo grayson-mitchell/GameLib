@@ -34,3 +34,20 @@ Fix: normalise first, e.g. `basename(file.filename.replace(/\\/g, '/'))`, matchi
 `Binaries\Win32\steam_api.dll`. This is the same backslash family as `c1a641a21`
 (`resolveBridgeLaunchExe`). Sweep the bridge code for other `basename`/`join` calls on PICS or
 depot paths while there.
+
+## Status 2026-10-24: code fixed, close waits on the live check
+
+- **Fix landed** in `2ba070588` (51-22). `depot.ts:955` now reads
+  `basename(file.filename.replace(/\\/g, '/')).toLowerCase()`. Fixtures in
+  `src/backend/storeManagers/steam/__tests__/depot.prescreen.test.ts` cover ELEX
+  `system\steam_api64.dll` (x64), XCOM `Binaries\Win32\steam_api.dll` (x86), Hoard `win32\` +
+  `win64\` (both), and a `backup\steam_api.dll.bak` negative case (none).
+- **Sweep:** 51-22 checked `depot.ts` and `bridge/*`. A later pass (quick 261024-bia, not
+  executed) checked the rest of `steam/` and found nothing else to fix. `resolveContainedPath`
+  and the `linktarget` path already normalise `\`, `games.ts` gets `exePath` from
+  `bridge/launchTarget.ts`, which splits on `\`, and the other files only join local filesystem
+  paths.
+- **Do not close by hand.** 51-22 keeps this todo pending until a live install shows a
+  non-`none` prescreen. 51-30 item 19 moves it to `completed/` if a title with its steam_api DLL
+  in a subfolder logs `result=x86|x64|both`. If that title logs `none`, 51-30 records a 51-UAT
+  gap instead. `51-30-PLAN.md` refers to this file at its `pending/` path.
