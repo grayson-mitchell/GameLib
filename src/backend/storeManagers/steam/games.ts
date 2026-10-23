@@ -1136,10 +1136,13 @@ export default class SteamGame implements Game {
       // unrelated Phase 17 GameLibSteam bottle's own state (BLOCKER 1).
       // D-51-08/11/13 (Plan 13): compute the composed route ONCE and act on
       // it, rather than re-deriving eligibility via isBridgeEligible() alone
-      // -- a bottle route whose noticeRequired is true (known-bad/scan-miss/
-      // win64-no-shim, unless already acknowledged for that same reason)
-      // must pause for the user's explicit in-app choice (D-51-08) BEFORE
-      // any bottled-Steam dispatch below runs. Mirrors the
+      // -- a route whose noticeRequired is true (bottle: drm-wrapped
+      // known-bad/scan-miss/win64-no-shim; bridge: a non-DRM known-bad title,
+      // per the D-51-08 amendment of 2026-10-23; unless already acknowledged
+      // for that same reason) must pause for the user's explicit in-app
+      // choice BEFORE any bottled-Steam dispatch or bridge install below
+      // runs. A bridge-route notice is informational: the bridge is still
+      // attempted once the user proceeds. Mirrors the
       // steamBottleSetupRequired deferral immediately below so the
       // DownloadManager clears the transient 'installing' badge the same
       // way -- nothing is installed and no ACF poller starts on this path.
@@ -1172,19 +1175,24 @@ export default class SteamGame implements Game {
       }
 
       if (
-        bridgeRoute.route === 'bottle' &&
+        bridgeRoute.route !== 'not-eligible' &&
         bridgeRoute.noticeRequired &&
         bridgeRoute.reason !== null
       ) {
+        // A bridge verdict can only carry noticeRequired for a known-bad title.
+        const noticeReason =
+          bridgeRoute.route === 'bridge' ? 'known-bad' : bridgeRoute.reason
         logInfo(
-          `SteamGame: appId ${this.appId} bridge route (${bridgeRoute.reason}) requires a user notice before any install -- deferring to the in-app dialog`,
+          `SteamGame: appId ${this.appId} ${bridgeRoute.route} route (${noticeReason}) requires a user notice before any install -- deferring to the in-app dialog`,
           LogPrefix.Steam
         )
         sendFrontendMessage('steamBridgeRouteNotice', {
           appName: this.appId,
-          reason: bridgeRoute.reason,
+          reason: noticeReason,
           knownBadReason: bridgeRoute.knownBadReason,
-          missingSymbols: bridgeRoute.missingSymbols
+          missingSymbols: bridgeRoute.missingSymbols,
+          route: bridgeRoute.route,
+          userRoute: bridgeRoute.userRoute
         })
         return { status: 'done', deferredToSetup: true }
       }

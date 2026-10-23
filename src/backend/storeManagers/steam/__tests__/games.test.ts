@@ -2224,7 +2224,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     // the bottled path. knownBadReason is the deterministic way to force it.
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
-      'incompatible'
+      'drm-wrapped'
     )
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     // D-51-09: launch() dispatches on LOCATION (findBridgeInstallBottle), not
@@ -4069,7 +4069,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     // the bottled path. knownBadReason is the deterministic way to force it.
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
-      'incompatible'
+      'drm-wrapped'
     )
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
     ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
@@ -4087,8 +4087,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(sendFrontendMessage).toHaveBeenCalledWith('steamBridgeRouteNotice', {
       appName: APP_ID,
       reason: 'known-bad',
-      knownBadReason: 'incompatible',
-      missingSymbols: []
+      knownBadReason: 'drm-wrapped',
+      missingSymbols: [],
+      route: 'bottle',
+      userRoute: null
     })
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
@@ -4096,7 +4098,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   it("Plan 13 (D-51-11): known-bad title with userRoute 'bridge' (Try the bridge anyway) -- install() routes to installBridgeGame, no notice", async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
-      'incompatible'
+      'drm-wrapped'
     )
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
@@ -4146,10 +4148,81 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       appName: APP_ID,
       reason: 'scan-miss',
       knownBadReason: null,
-      missingSymbols: ['SteamUser@unknown-version']
+      missingSymbols: ['SteamUser@unknown-version'],
+      route: 'bottle',
+      userRoute: null
     })
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
   })
+
+  describe.each(['63000', '411300'])(
+    'D-51-08 amendment 2026-10-23: non-DRM known-bad title %s stays on the bridge',
+    (badAppId) => {
+      const arrange = (bridge?: Record<string, unknown>) => {
+        library.set(badAppId, makeEntry({ title: 'Does Not Run' }))
+        ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+        ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
+          'does-not-run'
+        )
+        ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+          platformsCaptured: true,
+          is_mac_native: false,
+          ...(bridge ? { bridge } : {})
+        })
+        ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+        ;(isBottleReady as jest.Mock).mockReturnValue(true)
+        ;(downloadSteamDepots as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+        ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+          status: 'done'
+        })
+      }
+
+      it('unacknowledged: fires the informational known-bad notice on route bridge and defers', async () => {
+        arrange()
+        const result = await new SteamGame(badAppId).install({} as any)
+
+        expect(sendFrontendMessage).toHaveBeenCalledWith(
+          'steamBridgeRouteNotice',
+          {
+            appName: badAppId,
+            reason: 'known-bad',
+            knownBadReason: 'does-not-run',
+            missingSymbols: [],
+            route: 'bridge',
+            userRoute: null
+          }
+        )
+        expect(downloadSteamDepots).not.toHaveBeenCalled()
+        expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+        expect(result).toEqual({ status: 'done', deferredToSetup: true })
+      })
+
+      it('acknowledged: no notice, installs through the bridge, never the bottle', async () => {
+        arrange({ noticeAcknowledgedFor: 'known-bad' })
+        await new SteamGame(badAppId).install({} as any)
+
+        expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+          'steamBridgeRouteNotice',
+          expect.anything()
+        )
+        expect(downloadSteamDepots).toHaveBeenCalled()
+        expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+      })
+
+      it("userRoute 'bottle': no known-bad notice, takes the bottled path", async () => {
+        arrange({ userRoute: 'bottle' })
+        await new SteamGame(badAppId).install({} as any)
+
+        expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+          'steamBridgeRouteNotice',
+          expect.anything()
+        )
+        expect(tellBottledSteamToInstall).toHaveBeenCalledWith(badAppId)
+      })
+    }
+  )
 
   it('non-seed, never-scanned, bottle-eligible title now routes to the bridge on install (D-51-07, resolveBridgeRoute rule 11 — pending-scan)', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
@@ -4224,7 +4297,9 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
           appName: APP_ID,
           reason: 'win64-no-shim',
           knownBadReason: null,
-          missingSymbols: []
+          missingSymbols: [],
+          route: 'bottle',
+          userRoute: null
         }
       )
       expect(result).toEqual({ status: 'done', deferredToSetup: true })
@@ -4420,7 +4495,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
   it('Plan 13 (D-51-08): isBridgeEligible() is false when knownBadReason is non-null, and once noticeAcknowledgedFor matches the reason install() goes straight to the bottled branch with NO notice', async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
     ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(
-      'incompatible'
+      'drm-wrapped'
     )
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,

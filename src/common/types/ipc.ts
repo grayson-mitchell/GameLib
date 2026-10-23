@@ -765,11 +765,17 @@ interface FrontendMessages {
   // (D-51-04), or past a known-bad acknowledgement — names the reason and,
   // for a known-bad route, the taxonomy reason too, so 51-16's UI can render
   // the exact wording without re-deriving it from SteamBridgeRouteVerdict.
+  // D-51-08 amendment (2026-10-23): a 'known-bad' notice on route 'bridge' is
+  // informational -- the bridge is still attempted once the user proceeds.
+  // `userRoute` is sent back unchanged on acknowledgement so an existing
+  // override is never wiped.
   steamBridgeRouteNotice: (payload: {
     appName: string
     reason: SteamBridgeRouteReason
     knownBadReason: SteamBridgeKnownBadReason | null
     missingSymbols: string[]
+    route: 'bridge' | 'bottle'
+    userRoute: 'bridge' | 'bottle' | null
   }) => void
   // Phase 51 Plan 03 (D-51-16, folded todo): pushed when a bottled-Steam
   // fallback launch has produced no game process within the grace window —
