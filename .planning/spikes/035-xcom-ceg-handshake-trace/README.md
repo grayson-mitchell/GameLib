@@ -1,14 +1,14 @@
 ---
-spike: 034
+spike: 035
 name: xcom-ceg-handshake-trace
 type: standard
 validates: "Given XComEW.exe in a clean bridge bottle with GameLib's shim in place, when traced with +sync,+reg,+file, then we see exactly which named objects, registry keys and files the CEG start stub waits on"
 verdict: VALIDATED
-related: [007, 008, 033, 035]
+related: [007, 008, 033, 036]
 tags: [steam, macos, bridge, ceg, drm, xcom, proton, dipc]
 ---
 
-# Spike 034: XCOM CEG handshake trace
+# Spike 035: XCOM CEG handshake trace
 
 ## What This Validates
 
@@ -89,8 +89,8 @@ were never given a chance; the helper sat at INIT the whole time.
 - The blocker is **not** "needs a Windows Steam client". It's "needs someone to ACK the DIPC
   start request". Proton shows the ACK alone can be enough on the Windows side, with no
   STEAMSTART parsing.
-- Open question for 035: does the ACK alone get it past this point, and what does CEG ask for
+- Open question for 036: does the ACK alone get it past this point, and what does CEG ask for
   after that (the real ownership and integrity check may come later, through steamclient or
   steam_api)?
 - The handle mapping (which of ACK/TERM is waited on) is ambiguous from handle numbers alone;
-  035's experiment decides it.
+  036's experiment decides it.

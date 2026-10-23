@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spike 034/035: launch XComEW.exe in GameLibSpikeXCOM with GameLib's real bridge helper (appid 200510).
+# Spike 035/036: launch XComEW.exe in GameLibSpikeXCOM with GameLib's real bridge helper (appid 200510).
 # usage: WATCH=45 DEBUG=+reg,+sync ./run.sh <label> [windows-exe-to-run-instead ...]
 # Logs: logs/<label>.{helper,wine}.log. Always kills the helper + wineserver on exit.
 set -uo pipefail

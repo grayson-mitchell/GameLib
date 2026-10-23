@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spike 034: build a scratch bridge bottle (GameLibSpikeXCOM, APFS clone of a bridge bottle) holding a
+# Spike 035: build a scratch bridge bottle (GameLibSpikeXCOM, APFS clone of a bridge bottle) holding a
 # SHADOW TREE of XCOM -- symlinks to the GameLibSteam install, except XEW/Binaries/Win32 which is a real
 # dir so steam_api.dll can be the GameLib shim. The original install is never modified.
 set -euo pipefail
