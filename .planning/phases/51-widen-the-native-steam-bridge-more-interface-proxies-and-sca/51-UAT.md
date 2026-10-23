@@ -142,7 +142,9 @@ result: pass — 2026-10-23, packaged debug bundle. Operator: "main menu yes, pl
 ### 19. Representative sample — install through the default route and play (D-51-15 input)
 
 expected: Every sampled title installs through GameLib's default route on the packaged build; its install logs `prescreenBridgeDepots: appId <id> result=<x>` and the route; every bridge-routed title is launched and reaches playable state or has its failure cause recorded; bottle-routed titles record their route reason. Per title also record the install-time persisted scan verdict (steam_metadata.json `bridge.scan`) and the launched exe from the log, and flag dual-arch titles (the census scans the x86 binary of those).
-result: pending — sample list and rule approved at the 51-29 Task 2 checkpoint; per-title table written by 51-30
+result: pending — sample drawn and approved at the 51-29 Task 2 checkpoint (operator: "Known size only, redraw (Recommended)"); per-title table written by 51-30
+
+Sample rule (fixed before any install): 197 owned Windows-only titles; exclude already-measured and allowlist seed/knownBad appIds; eligible = Steam type game, known developer, KNOWN parseable size <= 15 GB (75 titles); order by sha256("gamelib-51-29:" + appId) ascending; take 12, at most 2 per developer. Sizes are approximate (store minimum-requirements text). Drawn (appId, title, developer, GB, CrossOver rating): 1167950 Vampire's Fall: Origins, Early Morning Studio, 1.5, none; 1119730 Ranch Simulator, Toxic Dog, 15, none; 219990 Grim Dawn, Crate Entertainment, 5, 5; 1363080 Manor Lords, Slavic Magic, 15, 5; 1284190 The Planet Crafter, Miju Games, 4, 5; 648800 Raft, Redbeet Interactive, 10, 4; 1782460 Hell Clock, Rogue Snail, 2, none; 284100 Unclaimed World, Refactored Games, 0.6, none; 1691190 Rogue Waters, Ice Code Games, 6, none; 427410 Abiotic Factor, Deep Field Games, 10, none; 3410180 Overlooting, Posing Possums, 0.5, none; 1603180 Mining Mechs, Delayed Victory, 0.2, none. Total approx 69.8 GB. Titles without steam_api are outside the Steamworks-using denominator.
 
 ## Summary
 
