@@ -32,3 +32,13 @@ Fix directions to try:
   or `NSRunningApplication.activate` on the wine pid.
 - Or have GameLib give up focus, or minimise / hide itself, on launch. Heroic's "minimise on
   launch" setting is a precedent; check whether GameLib's copy works under Tauri.
+
+## Closed 2026-10-24
+
+Fixed by quick task 261024-g3m (`9dfa1631d`, `7ada31352`): `raiseWineGameWindow` runs on the
+monitor's first match. Live-checked on the packaged debug bundle: Play on Avernum 6 (206060), bridge
+route, brought the window to the front without a Dock click. The sidecar logged
+`raiseWineGameWindow [bridge:206060]: raised (Avernum 6.exe pid=40916)`. An earlier failed check
+ran a sidecar bundle built before the fix (`build/main/sidecar.js` at 11:19, fix committed at 11:41).
+
+Not live-checked: the bottled-Steam route (same hook) and the sideloaded Wine name-based raise.

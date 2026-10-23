@@ -22,7 +22,11 @@ Shared pid-then-name targeted `osascript`/System Events raise helper (`raiseWine
 ## Deviations
 None. (Test-only note: after `__stopWineWindowRaises()` the raise promise never resolves because its timer is cleared, so tests do not await it.)
 
-## Human-verify (pending, todo left in `.planning/todos/pending/`)
+## Live check (2026-10-24): PASS on the bridge route
+- Avernum 6 (206060), packaged debug bundle: window came to front; log `raiseWineGameWindow [bridge:206060]: raised (Avernum 6.exe pid=40916)`. First attempt ran a stale `build/main/sidecar.js` (built before the fix); passed after `pnpm build:sidecar-sea` + app restart. Todo moved to completed.
+- Bottled-Steam and sideload routes still not live-checked.
+
+## Human-verify (original instructions)
 - Live check (packaged debug bundle, macOS): launch Avernum 6 (206060) via the bridge route and press Play. Expected: pre-game settings window (or the game window with bypass ticked) comes to front without clicking the Dock icon; sidecar log shows `raiseWineGameWindow [bridge:206060]: raised ...`. If not, record whether the log shows a miss (pid/name lookup problem) or a hit while the window stays behind (GameLib re-taking focus / cooperative-activation refusal); next options are the `minimizeOnLaunch` path in `launcher.ts` (~L150/L185, unverified under Tauri) and a native `NSRunningApplication` route.
 - Secondary: one bottled-Steam launch and one sideloaded Wine launch.
 - A first run may show the macOS "GameLib wants to control System Events" Automation prompt, the same consent the bottled path's existing raise uses.
