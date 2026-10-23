@@ -2525,6 +2525,20 @@ export default class SteamGame implements Game {
     this.clearStaleBridgeVerdict()
     await this.ensurePlatformsCaptured()
     if (this.isBottleEligible()) {
+      // quick/261024-gvu: single-flight. While a bottle/bridge monitor for
+      // this appId is live (still starting, or already running) a second Play
+      // must not queue another `-applaunch` / wine exe — the monitor keeps
+      // owning the launching/playing status.
+      const { getBottleProcessMonitorPhase } =
+        await import('./bottleProcessMonitor')
+      const livePhase = getBottleProcessMonitorPhase(this.appId)
+      if (livePhase) {
+        logInfo(
+          `SteamGame: appId ${this.appId} launch already ${livePhase} — not dispatching another`,
+          LogPrefix.Steam
+        )
+        return true
+      }
       // Phase 51 Plan 09 (D-51-09): LOCATION, not eligibility — launch()
       // must dispatch to wherever this install's bits actually live, never
       // to where a NEW install would be routed (isBridgeEligible() /
@@ -3640,6 +3654,22 @@ export default class SteamGame implements Game {
       // resume) can tell this run is tearing down rather than still live.
       inFlight.aborted = true
       callAbortController(this.appId)
+      return
+    }
+
+    // quick/261024-gvu: a pending bottle/bridge monitor holds `launching`
+    // with no deadline (LD-4); ending it is the user's escape hatch. This does
+    // NOT kill the game process (Steam/Wine still owns it) — it only ends
+    // GameLib's wait/tracking and emits the terminal `done`.
+    const { getBottleProcessMonitorPhase, stopBottleProcessMonitor } =
+      await import('./bottleProcessMonitor')
+    const livePhase = getBottleProcessMonitorPhase(this.appId)
+    if (livePhase) {
+      logInfo(
+        `SteamGame.stop: ending ${livePhase} launch monitor for appId ${this.appId} (the game process itself is not killed)`,
+        LogPrefix.Steam
+      )
+      stopBottleProcessMonitor(this.appId)
       return
     }
 

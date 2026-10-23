@@ -72,7 +72,11 @@ import {
   stopBridgeHelper
 } from '../bridge/helperProcess'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
-import { startBottleProcessMonitor } from '../bottleProcessMonitor'
+import {
+  startBottleProcessMonitor,
+  getBottleProcessMonitorPhase,
+  stopBottleProcessMonitor
+} from '../bottleProcessMonitor'
 import { runWineCommand } from 'backend/launcher'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
@@ -355,7 +359,11 @@ jest.mock('../bridge/bridgeConfig', () => ({
 // after a successful wine launch to tie the helper's lifetime to the
 // game's own process lifetime.
 jest.mock('../bottleProcessMonitor', () => ({
-  startBottleProcessMonitor: jest.fn()
+  startBottleProcessMonitor: jest.fn(),
+  // quick/261024-gvu: single-flight probe + stop; with resetMocks these return
+  // undefined (falsy = no live monitor) unless a test sets them.
+  getBottleProcessMonitorPhase: jest.fn(),
+  stopBottleProcessMonitor: jest.fn()
 }))
 
 // ── backend/launcher.ts mock — runWineCommand, dynamically imported by
@@ -1543,6 +1551,47 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
     expect(result).toBe(true)
   })
 
+  it.each(['starting', 'running'] as const)(
+    '261024-gvu: a live %s monitor blocks a second dispatch (no tellBottledSteamToLaunch), resolves true and logs once',
+    async (phase) => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false
+      })
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(phase)
+      const { logInfo } = jest.requireMock('backend/logger')
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.launch({} as any)
+
+      expect(result).toBe(true)
+      expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+      expect(shellOpenExternal).not.toHaveBeenCalled()
+      const guardLogs = (logInfo as jest.Mock).mock.calls.filter((c) =>
+        String(c[0]).includes(`launch already ${phase}`)
+      )
+      expect(guardLogs.length).toBe(1)
+      expect(String(guardLogs[0][0])).toContain(APP_ID)
+    }
+  )
+
+  it('261024-gvu: phase null leaves bottled routing unchanged', async () => {
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false
+    })
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+      status: 'done'
+    })
+
+    const game = new SteamGame(APP_ID)
+    expect(await game.launch({} as any)).toBe(true)
+    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(APP_ID)
+  })
+
   it('D-10/scope-fence: NON-eligible (Mac-native) — launch() STILL calls shell.openExternal with steam://rungameid/<appId> (native path unchanged)', async () => {
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
@@ -2535,6 +2584,31 @@ describe('SteamGame.stop() — no-op', () => {
   it('stop() resolves void without throwing (Steam owns process lifecycle)', async () => {
     const game = new SteamGame(APP_ID)
     await expect(game.stop()).resolves.toBeUndefined()
+  })
+})
+
+describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
+  const warnedNoOp = () => {
+    const { logWarning } = jest.requireMock('backend/logger')
+    return (logWarning as jest.Mock).mock.calls.some((c) =>
+      String(c[0]).includes('Steam owns process lifecycle')
+    )
+  }
+
+  it('ends a live monitor instead of the no-op warning', async () => {
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('starting')
+    const game = new SteamGame(APP_ID)
+    await game.stop()
+    expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
+    expect(warnedNoOp()).toBe(false)
+  })
+
+  it('phase null keeps the no-op warning and does not stop a monitor', async () => {
+    ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue(null)
+    const game = new SteamGame(APP_ID)
+    await game.stop()
+    expect(stopBottleProcessMonitor).not.toHaveBeenCalled()
+    expect(warnedNoOp()).toBe(true)
   })
 })
 
