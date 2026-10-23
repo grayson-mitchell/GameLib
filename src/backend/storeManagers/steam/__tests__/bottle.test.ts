@@ -129,6 +129,19 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Steam: 'Steam' }
 }))
 
+// quick 261024-cjq: the CrossOver location resolver is mocked with PLAIN
+// functions closing over mutable state (they survive resetMocks). Default: a
+// CrossOver at /Applications. Its own behaviour is covered by
+// crossoverLocation.test.ts.
+const CX_BIN_DIR =
+  '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin'
+const cxState: { binDir: string | undefined } = { binDir: CX_BIN_DIR }
+jest.mock('../crossoverLocation', () => ({
+  resolveCrossoverBinDir: () => cxState.binDir,
+  resolveCrossoverBinDirAsync: async () => cxState.binDir,
+  crossoverBinDirFromWineBin: (bin: string) => bin
+}))
+
 const mockedExistsSync = existsSync as jest.Mock
 const mockedMkdirSync = mkdirSync as jest.Mock
 const mockedReaddirSync = readdirSync as jest.Mock
@@ -153,6 +166,7 @@ const defaultWine: WineInstallation = {
 
 describe('bottle.ts', () => {
   beforeEach(() => {
+    cxState.binDir = CX_BIN_DIR
     mockedExistsSync.mockReset()
     mockedMkdirSync.mockReset()
     mockedReaddirSync.mockReset()
@@ -2294,5 +2308,51 @@ describe('bottle.ts', () => {
         expect(fnSource).not.toContain('STEAM_SETUP_EXE_URL')
       })
     })
+  })
+})
+
+describe('quick 261024-cjq: CrossOver precondition', () => {
+  beforeEach(() => {
+    cxState.binDir = CX_BIN_DIR
+    mockedExistsSync.mockReset()
+    mockedSpawnAsync.mockReset()
+    mockedSet.mockReset()
+    mockedGlobalConfigGet.mockReturnValue({
+      getSettings: () => ({ wineCrossoverBottle: 'GameLib' })
+    })
+  })
+
+  test('provisionBridgeBottle returns crossover-missing without spawning when no cxbottle resolves', async () => {
+    cxState.binDir = undefined
+    mockedExistsSync.mockReturnValue(false)
+    const result = await provisionBridgeBottle({
+      bottleName: 'GameLibSteamBridge'
+    })
+    expect(result.status).toBe('error')
+    expect(result.errorCode).toBe('crossover-missing')
+    expect(result.error).toMatch(/CrossOver is required/)
+    expect(mockedSpawnAsync).not.toHaveBeenCalled()
+    expect(mockedSet).not.toHaveBeenCalled()
+  })
+
+  test('provisionBottle returns crossover-missing before any store write or spawn', async () => {
+    cxState.binDir = undefined
+    mockedExistsSync.mockReturnValue(false)
+    const result = await provisionBottle()
+    expect(result.status).toBe('error')
+    expect(result.errorCode).toBe('crossover-missing')
+    expect(result.error).toMatch(/CrossOver is required/)
+    expect(mockedSet).not.toHaveBeenCalled()
+    expect(mockedSpawnAsync).not.toHaveBeenCalled()
+  })
+
+  test('spawns the cxbottle of the resolved (~/Applications) install, not /Applications', async () => {
+    cxState.binDir = `${userHome}/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin`
+    mockedExistsSync.mockReturnValue(false)
+    mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+    await provisionBridgeBottle({ bottleName: 'GameLibSteamBridge' })
+    expect(mockedSpawnAsync.mock.calls[0][0]).toBe(
+      `${userHome}/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle`
+    )
   })
 })

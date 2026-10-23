@@ -313,7 +313,11 @@ interface AsyncIPCFunctions {
   steamBottleProvision: (args?: {
     bottleName?: string
     wineVersion?: WineInstallation
-  }) => Promise<{ status: 'done' | 'error'; error?: string }>
+  }) => Promise<{
+    status: 'done' | 'error'
+    error?: string
+    errorCode?: 'crossover-missing'
+  }>
   isSteamBottleProvisioned: () => Promise<boolean>
   steamBottleStatus: () => Promise<
     Pick<SteamBottleConfig, 'provisioned' | 'bottleName'>

@@ -47,6 +47,10 @@ import {
 } from './constants'
 import { steamBottleConfigStore } from './electronStores'
 import { library } from './state'
+import {
+  resolveCrossoverBinDir,
+  resolveCrossoverBinDirAsync
+} from './crossoverLocation'
 
 // ── Phase 24 (24-04): dedicated bridge bottle (macOS native Steam bridge) ──
 // D-08/R6/Pitfall 1: the bridge bottle is a SEPARATE, shared CrossOver
@@ -58,19 +62,34 @@ import { library } from './state'
 // resolve the Phase 17 bottle.
 export const DEFAULT_BRIDGE_BOTTLE_NAME = 'GameLibSteamBridge'
 
-// CrossOver's cxbottle CLI binary — resolved location per the 17-01 spike
-// (spike/steam-bottle/FINDINGS.md MECHANISM DECISION). Locked, not derived.
-const CXBOTTLE_BIN =
-  '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/cxbottle'
-
-// Single source of truth (GAP-17-CEF-RECREATE-RUNNING): derive the sibling
-// `wineserver` binary and the CrossOver root from CXBOTTLE_BIN rather than
-// hardcoding a second absolute path.
-//   CrossOver bin dir = dirname(CXBOTTLE_BIN)
+// CrossOver's cxbottle CLI lives in the CrossOver install's bin dir. Where
+// that install is (/Applications, ~/Applications, anywhere mdfind finds it) is
+// resolved by ./crossoverLocation — nothing here hard-codes it (quick
+// 261024-cjq). GAP-17-CEF-RECREATE-RUNNING: the sibling `wineserver` binary and
+// the CrossOver root are derived from the resolved bin dir:
 //   wineserver binary = <bin dir>/wineserver
 //   CX_ROOT           = dirname(<bin dir>)  (.../SharedSupport/CrossOver)
-const WINESERVER_BIN = join(dirname(CXBOTTLE_BIN), 'wineserver')
-const CX_ROOT = dirname(dirname(CXBOTTLE_BIN))
+const cxbottleIn = (binDir: string): string => join(binDir, 'cxbottle')
+const wineserverIn = (binDir: string): string => join(binDir, 'wineserver')
+const cxRootFrom = (binDir: string): string => dirname(binDir)
+
+function persistedWineBins(): string[] {
+  const bin = steamBottleConfigStore.get_nodefault('wineVersion')?.bin
+  return bin ? [bin] : []
+}
+
+export const CROSSOVER_MISSING = 'crossover-missing' as const
+const CROSSOVER_REQUIRED_MESSAGE =
+  'CrossOver is required. Install CrossOver from https://www.codeweavers.com/crossover, then try again.'
+
+/** True when a CrossOver install with a cxbottle can be located. */
+export async function isCrossoverInstalled(): Promise<boolean> {
+  return (
+    (await resolveCrossoverBinDirAsync({
+      hintWineBins: persistedWineBins()
+    })) !== undefined
+  )
+}
 
 /**
  * Directory of a named CrossOver bottle.
@@ -606,7 +625,11 @@ async function raiseBottledGameWindow(context: string): Promise<void> {
 
 // ── 17-04: bottle provisioning ──────────────────────────────────────────────
 
-export type ProvisionBottleResult = { status: 'done' | 'error'; error?: string }
+export type ProvisionBottleResult = {
+  status: 'done' | 'error'
+  error?: string
+  errorCode?: typeof CROSSOVER_MISSING
+}
 
 /**
  * GAP-17-CEF-RECREATE-RUNNING: stop the target bottle's OWN Wine processes so a
@@ -625,13 +648,26 @@ export type ProvisionBottleResult = { status: 'done' | 'error'; error?: string }
  * own libraries. Best-effort: a kill failure logs a warning and MUST NOT abort
  * provisioning (the rmSync fallback + recreate still run).
  */
-async function killBottleWineServer(bottleName: string): Promise<void> {
+async function killBottleWineServer(
+  bottleName: string,
+  knownBinDir?: string
+): Promise<void> {
+  const binDir =
+    knownBinDir ??
+    (await resolveCrossoverBinDirAsync({ hintWineBins: persistedWineBins() }))
+  if (!binDir) {
+    logWarning(
+      `killBottleWineServer: no CrossOver install found, skipping wineserver -k for "${bottleName}"`,
+      LogPrefix.Steam
+    )
+    return
+  }
   try {
-    await spawnAsync(WINESERVER_BIN, ['-k'], {
+    await spawnAsync(wineserverIn(binDir), ['-k'], {
       env: {
         ...process.env,
         WINEPREFIX: getBottleDir(bottleName),
-        CX_ROOT
+        CX_ROOT: cxRootFrom(binDir)
       }
     })
   } catch (error) {
@@ -718,6 +754,30 @@ export async function provisionBottle(opts?: {
     }
   }
 
+  // (1d) quick 261024-cjq: CrossOver precondition. Resolved right after the
+  // engine guard and before any store write or spawn. A ready bottle with
+  // CrossOver since uninstalled still short-circuits 'done' (step 3), so the
+  // missing-CrossOver error is returned only when a recreate or a create is
+  // actually needed.
+  const binDir = await resolveCrossoverBinDirAsync({
+    wineVersion: opts?.wineVersion,
+    hintWineBins: persistedWineBins()
+  })
+  const needsCxbottle =
+    !isBottleReady(bottleName) ||
+    (isBottleProvisioned(bottleName) && bottleWineArch(bottleName) === 'win32')
+  if (!binDir && needsCxbottle) {
+    logWarning(
+      `provisionBottle: CrossOver not found, cannot provision bottle "${bottleName}"`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      errorCode: CROSSOVER_MISSING,
+      error: CROSSOVER_REQUIRED_MESSAGE
+    }
+  }
+
   // (2) Persist the chosen wine/bottle identity before composing settings.
   steamBottleConfigStore.set('bottleName', bottleName)
   steamBottleConfigStore.set('wineCrossoverBottle', bottleName)
@@ -743,9 +803,9 @@ export async function provisionBottle(opts?: {
     // GAP-17-CEF-RECREATE-RUNNING: stop the bottle's OWN Wine processes first —
     // WINEPREFIX-scoped (T-17-DoS) — so `cxbottle --delete` does not abort while
     // the bottled Steam client/steamwebhelper is still running.
-    await killBottleWineServer(bottleName)
+    await killBottleWineServer(bottleName, binDir)
     try {
-      await spawnAsync(CXBOTTLE_BIN, [
+      await spawnAsync(cxbottleIn(binDir as string), [
         '--bottle',
         bottleName,
         '--delete',
@@ -796,7 +856,7 @@ export async function provisionBottle(opts?: {
   // download/install step.
   if (!isBottleProvisioned(bottleName)) {
     try {
-      const { code, stderr } = await spawnAsync(CXBOTTLE_BIN, [
+      const { code, stderr } = await spawnAsync(cxbottleIn(binDir as string), [
         '--create',
         '--bottle',
         bottleName,
@@ -1248,7 +1308,7 @@ export function findBridgeInstallBottle(appId: string): string | null {
 /**
  * D-UAT-24-06 gap closure (24-15) — GENERALIZED (debug/steam-bottle-
  * uninstall-reverts): resolves CrossOver's OWN wine binary — derived from
- * the already-locked CXBOTTLE_BIN root (sibling `wine` binary, exactly the
+ * the resolved CrossOver bin dir (sibling `wine` binary, exactly the
  * path backend/utils/compatibility_layers.ts's getCrossover() computes) —
  * rather than importing that async detector (which would force callers
  * async and ripple to their synchronous callers, see module docstring
@@ -1264,7 +1324,11 @@ export function findBridgeInstallBottle(appId: string): string | null {
  * (dev/CI/non-macOS), so the caller can fall back to another wineVersion.
  */
 function resolveCrossoverWine(label: string): WineInstallation | undefined {
-  const crossoverWineBin = join(dirname(CXBOTTLE_BIN), 'wine')
+  const binDir = resolveCrossoverBinDir({ hintWineBins: persistedWineBins() })
+  if (!binDir) {
+    return undefined
+  }
+  const crossoverWineBin = join(binDir, 'wine')
   if (!existsSync(crossoverWineBin)) {
     return undefined
   }
@@ -1272,7 +1336,7 @@ function resolveCrossoverWine(label: string): WineInstallation | undefined {
     bin: crossoverWineBin,
     name: label,
     type: 'crossover',
-    wineserver: WINESERVER_BIN
+    wineserver: wineserverIn(binDir)
   }
 }
 
@@ -1488,13 +1552,28 @@ export async function removePerGameBridgeBottle(
   // rmSync fallback if the dir survives.
   await killBottleWineServer(name)
 
-  try {
-    await spawnAsync(CXBOTTLE_BIN, ['--bottle', name, '--delete', '--force'])
-  } catch (error) {
+  const removeBinDir = await resolveCrossoverBinDirAsync({
+    hintWineBins: persistedWineBins()
+  })
+  if (!removeBinDir) {
     logWarning(
-      ['removePerGameBridgeBottle: cxbottle --delete threw', error],
+      `removePerGameBridgeBottle: no CrossOver install found, skipping cxbottle --delete for "${name}" (rmSync fallback follows)`,
       LogPrefix.Steam
     )
+  } else {
+    try {
+      await spawnAsync(cxbottleIn(removeBinDir), [
+        '--bottle',
+        name,
+        '--delete',
+        '--force'
+      ])
+    } catch (error) {
+      logWarning(
+        ['removePerGameBridgeBottle: cxbottle --delete threw', error],
+        LogPrefix.Steam
+      )
+    }
   }
 
   if (existsSync(bottleDir)) {
@@ -1581,10 +1660,28 @@ export async function provisionBridgeBottle(opts: {
     return { status: 'done' }
   }
 
+  // (3b) quick 261024-cjq: CrossOver precondition, after the ready
+  // short-circuit and before any spawn.
+  const binDir = await resolveCrossoverBinDirAsync({
+    wineVersion: opts.wineVersion,
+    hintWineBins: persistedWineBins()
+  })
+  if (!binDir) {
+    logWarning(
+      `provisionBridgeBottle: CrossOver not found, cannot create bridge bottle "${bottleName}"`,
+      LogPrefix.Steam
+    )
+    return {
+      status: 'error',
+      errorCode: CROSSOVER_MISSING,
+      error: CROSSOVER_REQUIRED_MESSAGE
+    }
+  }
+
   // (4) CREATE via the SAME locked cxbottle mechanism provisionBottle()
   // uses (argv form only, arguments as discrete words) — win10_64 template.
   try {
-    const { code, stderr } = await spawnAsync(CXBOTTLE_BIN, [
+    const { code, stderr } = await spawnAsync(cxbottleIn(binDir), [
       '--create',
       '--bottle',
       bottleName,
@@ -1621,7 +1718,7 @@ export async function provisionBridgeBottle(opts: {
   // (5) Tooling hygiene (SPEC constraint — avoid cxstart, kill wineserver
   // between runs): best-effort cleanup after creation so a fresh bottle
   // never leaves a wedged wineserver behind. Never fails provisioning.
-  await killBottleWineServer(bottleName)
+  await killBottleWineServer(bottleName, binDir)
 
   logInfo(
     `provisionBridgeBottle: bridge bottle "${bottleName}" created (no Windows Steam client installed — R6)`,
