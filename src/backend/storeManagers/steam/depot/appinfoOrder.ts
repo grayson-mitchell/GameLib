@@ -70,7 +70,8 @@ export function extractDepotOrder(vdfText: string): string[] | undefined {
   let found = false
   const order: string[] = []
 
-  for (const { t, quoted } of tokenize(vdfText)) {
+  for (const token of tokenize(vdfText)) {
+    const { t, quoted } = token
     if (!quoted && t === '{') {
       stack.push(pendingKey ?? '')
       depth++
