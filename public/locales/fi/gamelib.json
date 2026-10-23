@@ -409,7 +409,6 @@
             "libraryMissingOnlyNotice": "Steam-kirjastoosi ei saatu yhteyttä. Yhdistä asema uudelleen ja yritä sitten uudelleen.",
             "libraryPickerLabel": "Valitse Steam-kirjasto",
             "libraryPrimarySuffix": "oletus",
-            "noCrossoverEngine": "CrossOver-asennusta ei löytynyt. GameLib asentaa sen, kun asennus käynnistyy.",
             "sharedBottleNotice": "Tässä valitsemaasi wine-versiota käytetään kaikissa Steam-peleissä, jotka tarvitsevat bottlen — ei vain tässä. Sen muuttaminen myöhemmin vaikuttaa myös niiden muiden pelien toimintaan.",
             "withOptionsLabel": "Asenna asetuksin…",
             "bottleNameReadonlyHelper": "GameLib hallinnoi yhtä jaettua CrossOver-pulloa Steamille. Erillisen pullon nimeäminen jokaiselle pelille ei ole vielä tuettu.",

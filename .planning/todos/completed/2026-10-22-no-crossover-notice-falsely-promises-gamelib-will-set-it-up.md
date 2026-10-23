@@ -56,3 +56,15 @@ which tells them nothing. The flag was set again, so the route flips to bottled 
    `markBridgeFailedThisSession`. Gate on CrossOver presence before routing.
 5. Resolve `cxbottle` from the same CrossOver path `getCrossover()` / the selected engine uses,
    never a hard-coded `/Applications`.
+
+## Closed
+
+2026-10-24, quick 261024-cjq:
+
+1. CrossOver location is resolved in one place (`steam/crossoverLocation.ts`): selected engine, then /Applications, then ~/Applications, then mdfind via `getCrossover()`. The hard-coded `/Applications/CrossOver.app` cxbottle path is gone from `bottle.ts`.
+2. `provisionBottle` and `provisionBridgeBottle` check for cxbottle before any store write or spawn and return `errorCode: 'crossover-missing'` ("CrossOver is required...") instead of a raw ENOENT. The bottled-Steam setup dialog maps that code to the same message.
+3. `install()` gates on `isCrossoverInstalled()` first inside the bottle-routed branch. A missing CrossOver never calls `markBridgeFailedThisSession`, so it never reroutes to bottled Steam; the next Install after installing CrossOver still takes the bridge route.
+4. Setup-deferred installs (`deferredToSetup`) are logged as "deferred to setup" and are not added to the finished list; they no longer log "Finished Installation".
+5. The install-dialog notice no longer promises GameLib will set CrossOver up; it says CrossOver is required and links to codeweavers.com. The stale `steam.install.noCrossoverEngine` key was removed from every non-en catalogue (key-presence invalidation) and the presence baseline re-recorded.
+
+Deviation: a bottle that is already ready with CrossOver since uninstalled still short-circuits `done` in the provisioners (existing fast path unchanged).

@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Steam 라이브러리에 접근할 수 없습니다. 드라이브를 다시 연결한 후 다시 시도하세요.",
             "libraryPickerLabel": "Steam 라이브러리 선택",
             "libraryPrimarySuffix": "기본값",
-            "noCrossoverEngine": "CrossOver 설치가 발견되지 않았습니다. 설치가 시작되면 GameLib가 자동으로 설정합니다.",
             "sharedBottleNotice": "여기서 선택한 wine 버전은 병(bottle)이 필요한 모든 Steam 게임에 사용됩니다 — 이 게임뿐만이 아닙니다. 나중에 변경하면 해당 게임들의 실행 방식도 함께 바뀝니다.",
             "withOptionsLabel": "옵션과 함께 설치…"
         },

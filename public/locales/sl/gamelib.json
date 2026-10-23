@@ -425,7 +425,6 @@
             "libraryMissingOnlyNotice": "Vaše knjižnice Steam ni bilo mogoče doseči. Znova povežite pogon, nato poskusite znova.",
             "libraryPickerLabel": "Izberi knjižnico Steam",
             "libraryPrimarySuffix": "privzeta",
-            "noCrossoverEngine": "Namestitve CrossOver ni bilo mogoče najti. GameLib jo bo nastavil ob začetku namestitve.",
             "sharedBottleNotice": "Različica wine, ki jo izberete tukaj, se uporablja za vsako Steam igro, ki potrebuje bottle — ne le za to. Poznejša sprememba bo vplivala tudi na delovanje teh iger.",
             "withOptionsLabel": "Namesti z možnostmi …"
         },

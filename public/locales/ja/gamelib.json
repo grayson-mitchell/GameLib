@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Steamライブラリに接続できませんでした。ドライブを再接続してから、もう一度お試しください。",
             "libraryPickerLabel": "Steamライブラリを選択",
             "libraryPrimarySuffix": "既定",
-            "noCrossoverEngine": "CrossOverのインストールが見つかりませんでした。インストール開始時にGameLibがセットアップします。",
             "sharedBottleNotice": "ここで選択したWineのバージョンは、このゲームだけでなく、ボトルを必要とするすべてのSteamゲームで使用されます。後で変更すると、それらのゲームの動作にも影響します。",
             "withOptionsLabel": "オプション付きでインストール…"
         },

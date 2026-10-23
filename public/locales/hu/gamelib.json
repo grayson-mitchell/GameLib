@@ -409,7 +409,6 @@
             "libraryMissingOnlyNotice": "A Steam könyvtárad nem érhető el. Csatlakoztasd újra a meghajtót, majd próbáld újra.",
             "libraryPickerLabel": "Steam könyvtár kiválasztása",
             "libraryPrimarySuffix": "alapértelmezett",
-            "noCrossoverEngine": "Nem található CrossOver telepítés. A GameLib telepít egyet, amikor a telepítés elindul.",
             "sharedBottleNotice": "Az itt kiválasztott Wine verziót minden olyan Steam játék használja, amelynek palackra van szüksége — nem csak ez az egy. Ha később módosítod, az azokra a játékokra is hatással lesz.",
             "withOptionsLabel": "Telepítés beállításokkal…",
             "bottleNameReadonlyHelper": "A GameLib egyetlen közös CrossOver bottle-t kezel a Steam számára. Külön bottle elnevezése játékonként még nem támogatott.",

@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "无法访问你的 Steam 库。请重新连接驱动器后重试。",
             "libraryPickerLabel": "选择 Steam 库",
             "libraryPrimarySuffix": "默认",
-            "noCrossoverEngine": "未找到 CrossOver 安装。安装开始时，GameLib 会自动设置一个。",
             "sharedBottleNotice": "你在此处选择的 wine 版本将用于所有需要容器的 Steam 游戏——而不仅仅是这一个。之后更改此设置也会影响那些游戏的运行方式。",
             "withOptionsLabel": "使用选项安装…"
         },

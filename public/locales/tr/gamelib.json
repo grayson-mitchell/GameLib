@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Steam kütüphanenize ulaşılamadı. Sürücüyü yeniden bağlayın, ardından tekrar deneyin.",
             "libraryPickerLabel": "Steam kütüphanesi seçin",
             "libraryPrimarySuffix": "varsayılan",
-            "noCrossoverEngine": "CrossOver kurulumu bulunamadı. Yükleme başladığında GameLib bir tane kuracak.",
             "sharedBottleNotice": "Burada seçtiğiniz wine sürümü, bottle gerektiren tüm Steam oyunları için kullanılır — yalnızca bu oyun için değil. Bunu daha sonra değiştirmek, o oyunların çalışma şeklini de değiştirir.",
             "withOptionsLabel": "Seçeneklerle yükle…"
         },

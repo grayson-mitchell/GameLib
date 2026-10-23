@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Steam kutubxonangizga ulanib bo'lmadi. Diskni qayta ulang, so'ng qayta urinib ko'ring.",
             "libraryPickerLabel": "Steam kutubxonasini tanlang",
             "libraryPrimarySuffix": "standart",
-            "noCrossoverEngine": "CrossOver o'rnatilishi topilmadi. GameLib o'rnatish boshlanganda uni sozlab qo'yadi.",
             "sharedBottleNotice": "Bu yerda tanlagan wine versiyasi bottle talab qiladigan har bir Steam o'yini uchun ishlatiladi — faqat shu o'yin uchun emas. Uni keyinroq o'zgartirish o'sha o'yinlarning ishlashiga ham ta'sir qiladi.",
             "withOptionsLabel": "Parametrlar bilan o'rnatish…"
         },

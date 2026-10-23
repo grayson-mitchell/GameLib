@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Không thể kết nối tới thư viện Steam của bạn. Kết nối lại ổ đĩa rồi thử lại.",
             "libraryPickerLabel": "Chọn thư viện Steam",
             "libraryPrimarySuffix": "mặc định",
-            "noCrossoverEngine": "Không tìm thấy bản cài đặt CrossOver nào. GameLib sẽ thiết lập một bản khi bắt đầu cài đặt.",
             "sharedBottleNotice": "Phiên bản wine bạn chọn ở đây được dùng cho mọi trò chơi Steam cần bottle — không chỉ trò chơi này. Thay đổi sau này cũng sẽ ảnh hưởng đến cách các trò chơi đó chạy.",
             "withOptionsLabel": "Cài đặt với tùy chọn…"
         },

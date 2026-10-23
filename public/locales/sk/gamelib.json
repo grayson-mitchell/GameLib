@@ -425,7 +425,6 @@
             "libraryMissingOnlyNotice": "Vašu knižnicu Steam sa nepodarilo nájsť. Pripojte disk znova a skúste to znova.",
             "libraryPickerLabel": "Vybrať knižnicu Steam",
             "libraryPrimarySuffix": "predvolená",
-            "noCrossoverEngine": "Nebola nájdená žiadna inštalácia CrossOver. GameLib ju nastaví pri spustení inštalácie.",
             "withOptionsLabel": "Inštalovať s možnosťami…",
             "sharedBottleNotice": "Verzia wine, ktorú tu vyberiete, sa použije pre každú hru Steam vyžadujúcu bottle — nielen pre túto. Jej neskoršia zmena ovplyvní aj chod týchto hier."
         },

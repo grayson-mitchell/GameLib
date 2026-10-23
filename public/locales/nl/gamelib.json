@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Je Steam-bibliotheek kon niet worden bereikt. Sluit de schijf opnieuw aan en probeer het dan opnieuw.",
             "libraryPickerLabel": "Steam-bibliotheek kiezen",
             "libraryPrimarySuffix": "standaard",
-            "noCrossoverEngine": "Er is geen CrossOver-installatie gevonden. GameLib stelt er een in zodra de installatie start.",
             "sharedBottleNotice": "De wine-versie die je hier kiest, wordt gebruikt voor elke Steam-game die een bottle nodig heeft — niet alleen deze. Als je dit later wijzigt, verandert dat ook hoe die andere games werken.",
             "withOptionsLabel": "Installeren met opties…"
         },

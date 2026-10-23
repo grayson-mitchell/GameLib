@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Ezin izan da zure Steam liburutegira iritsi. Konektatu berriro unitatea eta saiatu berriro.",
             "libraryPickerLabel": "Aukeratu Steam liburutegia",
             "libraryPrimarySuffix": "lehenetsia",
-            "noCrossoverEngine": "Ez da CrossOver instalaziorik aurkitu. GameLib-ek bat konfiguratuko du instalazioa hasten denean.",
             "sharedBottleNotice": "Hemen aukeratzen duzun wine bertsioa bottle bat behar duen Steam joko guztietan erabiltzen da — ez soilik honetan. Geroago aldatzeak joko horiek nola exekutatzen diren ere aldatuko du.",
             "withOptionsLabel": "Instalatu aukerekin…"
         },

@@ -439,7 +439,6 @@
             "libraryMissingOnlyNotice": "تعذر الوصول إلى مكتبة Steam الخاصة بك. أعد توصيل القرص، ثم أعد المحاولة.",
             "libraryPickerLabel": "اختر مكتبة Steam",
             "libraryPrimarySuffix": "افتراضي",
-            "noCrossoverEngine": "لم يتم العثور على أي تثبيت لـ CrossOver. سيقوم GameLib بإعداد واحد عند بدء التثبيت.",
             "sharedBottleNotice": "يُستخدم إصدار Wine الذي تختاره هنا لكل لعبة Steam تحتاج إلى بوتل — وليس هذه اللعبة فقط. تغييره لاحقًا سيؤثر أيضًا على طريقة تشغيل تلك الألعاب.",
             "withOptionsLabel": "التثبيت مع خيارات…"
         },

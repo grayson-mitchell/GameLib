@@ -418,7 +418,6 @@
             "libraryMissingOnlyNotice": "Não foi possível acessar sua biblioteca do Steam. Reconecte a unidade e tente novamente.",
             "libraryPickerLabel": "Escolher biblioteca do Steam",
             "libraryPrimarySuffix": "padrão",
-            "noCrossoverEngine": "Nenhuma instalação do CrossOver foi encontrada. O GameLib configurará uma quando a instalação começar.",
             "sharedBottleNotice": "A versão do wine escolhida aqui é usada em todo jogo do Steam que precisar de uma bottle — não apenas este. Alterá-la depois também afetará como esses outros jogos funcionam.",
             "withOptionsLabel": "Instalar com opções…"
         },

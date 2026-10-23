@@ -158,9 +158,9 @@ export default function WineSelector({
 
   // The empty-state this path had none of: a macOS user with no CrossOver
   // install saw a present, empty, greyed-out engine dropdown and no
-  // explanation. The install itself is still correct (it proceeds into the
-  // guided bottle setup, which provisions CrossOver), so this is copy, not
-  // a gate.
+  // explanation. GameLib does NOT install CrossOver (quick 261024-cjq): the
+  // install fails with "CrossOver is required" until the user installs it, so
+  // the notice says so and links to the vendor.
   const showNoCrossoverEngineNotice =
     effectiveCrossoverOnly && engineOptions.length === 0
 
@@ -263,8 +263,23 @@ export default function WineSelector({
             <span className="smallInputInfo">
               {tGamelib(
                 'gamelib:steam.install.noCrossoverEngine',
-                'No CrossOver installation was found. GameLib will set one up when the install starts.'
-              )}
+                'No CrossOver installation was found. CrossOver is required to install this game. Install it from codeweavers.com, then reopen this dialog.'
+              )}{' '}
+              <a
+                className="underlined"
+                href=""
+                onClick={(event) => {
+                  event.preventDefault()
+                  window.api.openExternalUrl(
+                    'https://www.codeweavers.com/crossover'
+                  )
+                }}
+              >
+                {tGamelib(
+                  'gamelib:steam.install.getCrossover',
+                  'Get CrossOver'
+                )}
+              </a>
             </span>
           )}
           {isKnownNotToWork && (

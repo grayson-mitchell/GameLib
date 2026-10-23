@@ -41,6 +41,7 @@ const MAX_STATUS_POLL_ATTEMPTS = 200
 // minimal and is flagged as /gsd-ui-phase-refinable.
 const SteamBottleSetup = () => {
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const { isOpen, appName, close } = useSteamBottleSetup()
 
   const [phase, setPhase] = useState<Phase>('consent')
@@ -331,15 +332,22 @@ const SteamBottleSetup = () => {
       // without any user choice (the Phase-17 global fallback, or a
       // persisted correction), and since D-16 emptied `engineOptions` it is
       // invisible and unselectable while still being submitted to a
-      // `cxbottle`-only provisioner. `undefined` makes `provisionBottle`
-      // derive its own engine, which is what the "GameLib will set one up
-      // when the install starts" notice already promises the user.
+      // `cxbottle`-only provisioner. `undefined` lets `provisionBottle`
+      // resolve CrossOver itself, and fail with errorCode 'crossover-missing'
+      // if none is installed (GameLib never installs CrossOver).
       const result = await window.api.steamBottleProvision({
         bottleName: crossoverBottle || undefined,
         wineVersion: resolveSubmittedBottleEngine(wineVersion)
       })
       if (result.status === 'error') {
-        setProvisionError(result.error)
+        setProvisionError(
+          result.errorCode === 'crossover-missing'
+            ? tGamelib(
+                'gamelib:steam.install.crossoverRequired',
+                'CrossOver is required to install Windows games on macOS. Install it from codeweavers.com, then try again.'
+              )
+            : result.error
+        )
         setPhase('error')
       }
     } catch (error) {

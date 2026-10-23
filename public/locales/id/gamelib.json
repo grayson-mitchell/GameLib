@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Library Steam Anda tidak dapat dijangkau. Sambungkan kembali drive-nya, lalu coba lagi.",
             "libraryPickerLabel": "Pilih library Steam",
             "libraryPrimarySuffix": "bawaan",
-            "noCrossoverEngine": "Tidak ditemukan instalasi CrossOver. GameLib akan menyiapkannya saat instalasi dimulai.",
             "sharedBottleNotice": "Versi wine yang Anda pilih di sini digunakan untuk setiap game Steam yang memerlukan bottle — bukan hanya game ini. Mengubahnya nanti juga akan mengubah cara game-game tersebut berjalan.",
             "withOptionsLabel": "Instal dengan opsi…"
         },

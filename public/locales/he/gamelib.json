@@ -418,7 +418,6 @@
             "libraryMissingOnlyNotice": "לא ניתן היה להגיע לספריית ה-Steam שלך. חבר מחדש את הכונן ונסה שוב.",
             "libraryPickerLabel": "בחר ספריית Steam",
             "libraryPrimarySuffix": "ברירת מחדל",
-            "noCrossoverEngine": "לא נמצאה התקנת CrossOver. GameLib יגדיר אחת כאשר ההתקנה תתחיל.",
             "sharedBottleNotice": "גרסת ה-wine שתבחר כאן משמשת עבור כל משחק Steam שדורש bottle — לא רק עבור משחק זה. שינוי שלה בהמשך ישפיע גם על אופן הפעולה של אותם משחקים.",
             "withOptionsLabel": "התקן עם אפשרויות…"
         },

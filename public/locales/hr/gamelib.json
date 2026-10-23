@@ -419,8 +419,7 @@
             "libraryPickerLabel": "Odaberite Steam biblioteku",
             "libraryPrimarySuffix": "zadano",
             "sharedBottleNotice": "Verzija Winea koju ovdje odaberete koristi se za svaku Steam igru kojoj je potreban bottle — ne samo za ovu. Kasnija promjena utjecat će i na rad tih igara.",
-            "withOptionsLabel": "Instaliraj s opcijama…",
-            "noCrossoverEngine": "Nije pronađena instalacija CrossOver-a. GameLib će je postaviti kada instalacija započne."
+            "withOptionsLabel": "Instaliraj s opcijama…"
         },
         "resumeAvailable": {
             "notify": "Prekinuta instalacija za {{game}} spremna je za nastavak — kliknite Instaliraj za nastavak"

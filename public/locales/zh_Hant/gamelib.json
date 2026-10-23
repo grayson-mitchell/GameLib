@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "無法連接到您的 Steam 庫。請重新連接磁碟機後再試一次。",
             "libraryPickerLabel": "選擇 Steam 庫",
             "libraryPrimarySuffix": "預設",
-            "noCrossoverEngine": "找不到 CrossOver 安裝。安裝開始時 GameLib 會自動設定一個。",
             "sharedBottleNotice": "此處選擇的 wine 版本會套用於每個需要 bottle 的 Steam 遊戲——而不只是這一款。之後變更此設定也會影響那些遊戲的執行方式。",
             "withOptionsLabel": "以選項安裝……"
         },

@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Steam-biblioteket ditt kunne ikke nås. Koble til stasjonen på nytt, og prøv deretter igjen.",
             "libraryPickerLabel": "Velg Steam-bibliotek",
             "libraryPrimarySuffix": "standard",
-            "noCrossoverEngine": "Ingen CrossOver-installasjon ble funnet. GameLib setter opp én når installasjonen starter.",
             "sharedBottleNotice": "Wine-versjonen du velger her, brukes for hvert Steam-spill som trenger en flaske — ikke bare dette. Å endre den senere endrer også hvordan disse spillene kjører.",
             "withOptionsLabel": "Installer med alternativer…"
         },

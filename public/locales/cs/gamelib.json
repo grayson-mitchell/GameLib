@@ -419,7 +419,6 @@
             "contentLightNotice": "Toto se instaluje přímo přes klienta Steam, takže tady není co vybírat. Zapněte nativní instalace Steamu v Nastavení, chcete-li spravovat umístění instalace a kompatibilitu s Windows z GameLib.",
             "forceWindowsHelp": "Tato hra má nativní verzi pro macOS, ale místo ní můžete nainstalovat verzi pro Windows přes bottle Wine — užitečné, pokud nativní verzi chybí funkce nebo má horší výkon.",
             "libraryPrimarySuffix": "výchozí",
-            "noCrossoverEngine": "Nebyla nalezena žádná instalace CrossOver. GameLib ji nastaví při spuštění instalace.",
             "sharedBottleNotice": "Verze Wine, kterou zde vyberete, se používá pro každou hru Steam, která potřebuje bottle — nejen pro tuto. Její pozdější změna ovlivní i chod těchto her.",
             "withOptionsLabel": "Instalovat s možnostmi…",
             "contentLightSingleLibraryNotice": "V tomto systému je pouze jedna knihovna Steam, takže tu není z čeho vybírat — GameLib do ní tuto hru nainstaluje.",

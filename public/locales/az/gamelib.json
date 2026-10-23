@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "Steam kitabxananıza çatmaq mümkün olmadı. Diski yenidən qoşun, sonra yenidən cəhd edin.",
             "libraryPickerLabel": "Steam kitabxanasını seçin",
             "libraryPrimarySuffix": "standart",
-            "noCrossoverEngine": "Heç bir CrossOver quraşdırması tapılmadı. Quraşdırma başlayanda GameLib bir tanə quracaq.",
             "sharedBottleNotice": "Burada seçdiyiniz wine versiyası bottle tələb edən hər Steam oyunu üçün istifadə olunur — təkcə bu oyun üçün deyil. Bunu sonradan dəyişmək həmin oyunların işləmə tərzini də dəyişəcək.",
             "withOptionsLabel": "Seçimlərlə quraşdır…"
         },

@@ -432,7 +432,6 @@
             "libraryMissingOnlyNotice": "Níorbh fhéidir teacht ar do leabharlann Steam. Athcheangail an tiomántán, agus bain triail eile as.",
             "libraryPickerLabel": "Roghnaigh leabharlann Steam",
             "libraryPrimarySuffix": "réamhshocrú",
-            "noCrossoverEngine": "Níor aimsíodh aon suiteáil CrossOver. Cuirfidh GameLib ceann ar bun nuair a thosóidh an tsuiteáil.",
             "sharedBottleNotice": "Úsáidtear an leagan wine a roghnaíonn tú anseo do gach cluiche Steam a bhfuil buidéal de dhíth air — ní hé an ceann seo amháin. Athróidh athrú air níos déanaí conas a fheidhmíonn na cluichí sin freisin.",
             "withOptionsLabel": "Suiteáil le roghanna…"
         },

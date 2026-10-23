@@ -425,7 +425,6 @@
             "libraryMissingOnlyNotice": "Nie udało się połączyć z biblioteką Steam. Podłącz dysk ponownie, a następnie spróbuj ponownie.",
             "libraryPickerLabel": "Wybierz bibliotekę Steam",
             "libraryPrimarySuffix": "domyślna",
-            "noCrossoverEngine": "Nie znaleziono instalacji CrossOver. GameLib skonfiguruje ją po rozpoczęciu instalacji.",
             "sharedBottleNotice": "Wybrana tutaj wersja wine jest używana przez każdą grę Steam wymagającą bottle — nie tylko tę. Zmiana jej później wpłynie także na działanie tych gier.",
             "withOptionsLabel": "Instaluj z opcjami…"
         },

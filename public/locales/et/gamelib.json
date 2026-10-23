@@ -385,7 +385,6 @@
         },
         "install": {
             "libraryPrimarySuffix": "vaikimisi",
-            "noCrossoverEngine": "CrossOver paigaldust ei leitud. GameLib seadistab selle paigaldamise alguses.",
             "withOptionsLabel": "Paigalda valikutega…",
             "bottleNameReadonlyHelper": "GameLib haldab Steami jaoks ühte jagatud CrossOver pudelit. Iga mängu jaoks eraldi pudeli nimetamine pole veel toetatud.",
             "contentLightNotice": "See paigaldatakse Steami enda kliendi kaudu, seega pole siin midagi valida. Lülita seadetes sisse Steami natiivsed installid, et hallata paigalduskohta ja Windowsi ühilduvust GameLibist.",

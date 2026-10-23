@@ -418,7 +418,6 @@
             "libraryMissingOnlyNotice": "Vašoj Steam biblioteci nije moguće pristupiti. Ponovo povežite disk, pa pokušajte ponovo.",
             "libraryPickerLabel": "Izaberite Steam biblioteku",
             "libraryPrimarySuffix": "podrazumevano",
-            "noCrossoverEngine": "Nije pronađena CrossOver instalacija. GameLib će je podesiti kada instalacija počne.",
             "sharedBottleNotice": "Verzija wine-a koju ovde izaberete koristi se za svaku Steam igru kojoj je potrebna bočica — ne samo za ovu. Kasnija izmena će uticati i na rad tih igara.",
             "withOptionsLabel": "Instaliraj sa opcijama…"
         },

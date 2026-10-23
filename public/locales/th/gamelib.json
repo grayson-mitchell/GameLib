@@ -411,7 +411,6 @@
             "libraryMissingOnlyNotice": "ไม่สามารถเข้าถึงคลัง Steam ของคุณได้ เชื่อมต่อไดรฟ์ใหม่แล้วลองอีกครั้ง",
             "libraryPickerLabel": "เลือกคลัง Steam",
             "libraryPrimarySuffix": "ค่าเริ่มต้น",
-            "noCrossoverEngine": "ไม่พบการติดตั้ง CrossOver GameLib จะตั้งค่าให้เมื่อเริ่มการติดตั้ง",
             "sharedBottleNotice": "เวอร์ชัน wine ที่คุณเลือกที่นี่จะถูกใช้กับทุกเกม Steam ที่ต้องใช้ bottle — ไม่ใช่แค่เกมนี้ การเปลี่ยนแปลงในภายหลังจะส่งผลต่อการทำงานของเกมเหล่านั้นด้วย",
             "withOptionsLabel": "ติดตั้งพร้อมตัวเลือก…"
         },

@@ -425,7 +425,6 @@
             "libraryMissingOnlyNotice": "Nepavyko pasiekti jūsų Steam bibliotekos. Iš naujo prijunkite diską ir bandykite dar kartą.",
             "libraryPickerLabel": "Pasirinkite Steam biblioteką",
             "libraryPrimarySuffix": "~Numatytasis",
-            "noCrossoverEngine": "Nerasta CrossOver diegimo. GameLib ją nustatys, kai prasidės diegimas.",
             "sharedBottleNotice": "Čia pasirinkta Wine versija bus naudojama visiems Steam žaidimams, kuriems reikia talpyklos (bottle), — ne tik šiam. Vėliau ją pakeitus, pasikeis ir tų žaidimų veikimas.",
             "withOptionsLabel": "Diegti su parinktimis…"
         },
