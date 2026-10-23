@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
 Plan: 12 of 30
 Status: Ready to execute
-Last activity: 2026-10-23
+Last activity: 2026-10-24 - Completed quick task 261024-g3m: raise Wine/CrossOver game window to front on launch
 
 Progress: [███████░░░] 69%
 
@@ -334,6 +334,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Prescreen backslash todo annotated: fix already landed in `2ba070588` (51-22), wider `steam/` sweep found nothing else; todo stays pending, closed by 51-30 item 19. | 2026-10-24 | ee974f8df | | — |
 | 261024-exo | Steam direct download (`enableSteamNativeInstall`) defaults ON for fresh profiles (persisted `false` respected — existing profiles keep their saved value); delegated `steam://install` / bottled-Steam polls drop the 60 s grace window (stop on installed, 600 ticks with no manifest, 10 absent ticks after one was seen, or `MAX_TICKS`), so `verifyMacArchGroundTruth` / i386 recovery now fires after a Steam-delegated install; focus `refreshInstallState()` catches native installs with no live poll. Deferred: stale `nonAvailableGames` noise, arch check for installs finishing while GameLib is closed. | 2026-10-24 | 934ae58b8, ff50f6747, 27837977c | unit-tested (jest 1838/1838, codecheck clean); live gate pending | [261024-exo-default-steam-direct-download-on-verify](./quick/261024-exo-default-steam-direct-download-on-verify/) |
 | 261024-f0w | `pnpm bridge-census` scans the persisted-verdict arch (`bridge.scan.arch`) of dual-arch titles (230070 now x64 / bridge); the old allowlist-driven "Verified" column becomes "Play recorded (allowlist)" plus a new Evidence column (verified = HELLO + clean game Player.log; else unverified / init-failed). Live: 0 of 19 verified, 1691190 init-failed. | 2026-10-24 | 1b2f315b3 | | [261024-f0w-bridge-census-scans-x64-of-dual-arch-tit](./quick/261024-f0w-bridge-census-scans-x64-of-dual-arch-tit/) |
+| 261024-g3m | Wine/CrossOver game windows no longer left behind GameLib on macOS: new `raiseWineGameWindow` (osascript System Events `set frontmost`, matched pid first then exe-name fallback, bounded 12 tries + settle re-raise) fired from `bottleProcessMonitor` first match (bridge + bottled-steam) and the sideload Wine launch. Todo stays pending. | 2026-10-24 | 9dfa1631d, 7ada31352 | unit-tested (385 jest, tsc/prettier/lint clean); live gate pending (Avernum 6 206060 bridge) | [261024-g3m-wine-crossover-launched-game-windows-ope](./quick/261024-g3m-wine-crossover-launched-game-windows-ope/) |
 | fast | Pre-push lint unblocked: 2 `no-regex-spaces` errors fixed in gen_vtables.test.ts and needless `async` dropped from mocks in four Steam test files; tests-scope warnings 666 -> 648 and `TESTS_CEILING` re-pinned to 648. | 2026-10-24 | 63add37d1 | | — |
 
 ## Deferred Items
