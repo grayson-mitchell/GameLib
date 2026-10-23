@@ -335,6 +335,15 @@
     },
     "steam": {
         "bottle": {
+            "finishInstall": {
+                "button": "Start Steam to finish",
+                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
+                "finishingShort": "Finishing in Steam…",
+                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
+                "showSteam": "Show Steam",
+                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
+                "status": "Downloaded. Start Steam to finish installing."
+            },
             "statusPollTimeout": "GameLib non riceve più aggiornamenti sulla configurazione della bottle Steam. Potrebbe essere ancora in corso — controlla se c'è una finestra dell'installer di Steam, poi riprova.",
             "waiting": {
                 "cause": {

@@ -34,11 +34,24 @@ export function getStatusLabel({
     // preserved (checked first, matching the backend's own precedence).
     installing:
       runner === 'steam'
-        ? statusContext === 'steam-waiting-for-restart'
-          ? t('gamepage:status.steamWaitingRestart', 'Restart Steam to finish')
-          : statusContext === 'steam-paused'
-            ? t('gamepage:status.steamPaused', 'Paused')
-            : t('gamepage:status.steamInstalling', 'Installing…')
+        ? statusContext === 'steam-waiting-for-bottled-steam'
+          ? t(
+              'gamelib:steam.bottle.finishInstall.button',
+              'Start Steam to finish'
+            )
+          : statusContext === 'steam-finishing-in-bottled-steam'
+            ? t(
+                'gamelib:steam.bottle.finishInstall.finishingShort',
+                'Finishing in Steam…'
+              )
+            : statusContext === 'steam-waiting-for-restart'
+              ? t(
+                  'gamepage:status.steamWaitingRestart',
+                  'Restart Steam to finish'
+                )
+              : statusContext === 'steam-paused'
+                ? t('gamepage:status.steamPaused', 'Paused')
+                : t('gamepage:status.steamInstalling', 'Installing…')
         : `${t('gamepage:status.downloading', 'Downloading')} ${Math.ceil(
             percent || 0
           )}%`,

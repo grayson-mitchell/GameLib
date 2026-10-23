@@ -410,6 +410,15 @@
             "removeAllCopiesLabel": "Eemalda kõik koopiad…"
         },
         "bottle": {
+            "finishInstall": {
+                "button": "Start Steam to finish",
+                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
+                "finishingShort": "Finishing in Steam…",
+                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
+                "showSteam": "Show Steam",
+                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
+                "status": "Downloaded. Start Steam to finish installing."
+            },
             "statusPollTimeout": "GameLib lõpetas Steami pudeli seadistuse kohta teadete ootamise. See võib siiski töötada — kontrolli, kas Steami installiakent on näha, ja proovi siis uuesti.",
             "waiting": {
                 "cause": {

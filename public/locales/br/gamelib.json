@@ -349,6 +349,15 @@
     },
     "steam": {
         "bottle": {
+            "finishInstall": {
+                "button": "Start Steam to finish",
+                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
+                "finishingShort": "Finishing in Steam…",
+                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
+                "showSteam": "Show Steam",
+                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
+                "status": "Downloaded. Start Steam to finish installing."
+            },
             "statusPollTimeout": "GameLib a zo paouezet klask keleier diwar-benn kefluniañ ar voutailh Steam. Marteze emañ c'hoazh war vont — sellit hag-eñ ez eus ur prenestr staliañ Steam, ha klaskit adarre goude.",
             "waiting": {
                 "cause": {

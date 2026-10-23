@@ -328,6 +328,15 @@
     },
     "steam": {
         "bottle": {
+            "finishInstall": {
+                "button": "Start Steam to finish",
+                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
+                "finishingShort": "Finishing in Steam…",
+                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
+                "showSteam": "Show Steam",
+                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
+                "status": "Downloaded. Start Steam to finish installing."
+            },
             "statusPollTimeout": "GameLib가 Steam 병(bottle) 설정에 대한 응답을 더 이상 받지 못했습니다. 여전히 실행 중일 수 있으니 Steam 설치 프로그램 창을 확인한 후 다시 시도해 보세요.",
             "waiting": {
                 "cause": {

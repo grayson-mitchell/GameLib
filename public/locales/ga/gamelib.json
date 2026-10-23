@@ -349,6 +349,15 @@
     },
     "steam": {
         "bottle": {
+            "finishInstall": {
+                "button": "Start Steam to finish",
+                "finishing": "Steam is finishing the install. It may update itself or ask you to sign in first.",
+                "finishingShort": "Finishing in Steam…",
+                "notify": "Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.",
+                "showSteam": "Show Steam",
+                "startFailed": "Could not start Steam to finish installing {{game}}: {{error}}",
+                "status": "Downloaded. Start Steam to finish installing."
+            },
             "statusPollTimeout": "Stop GameLib ag cloisteáil scéala faoi shocrú an bhuidéil Steam. Seans go bhfuil sé ag rith fós — seiceáil an bhfuil fuinneog suiteálaí Steam ann, agus bain triail eile as.",
             "waiting": {
                 "cause": {
