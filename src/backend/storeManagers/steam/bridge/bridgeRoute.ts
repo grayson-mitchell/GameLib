@@ -3,8 +3,8 @@
  * brain. `resolveBridgeRoute` is a PURE function from (platform eligibility,
  * seed membership, known-bad reason, persisted verdict, session failure,
  * Win64-shim presence) to a `SteamBridgeRouteVerdict` -- the composed
- * eligibility is "seed UNION persisted scan verdict MINUS known-bad MINUS
- * forced-bottle MINUS failed-this-session", computed here and ONLY here.
+ * eligibility is "seed UNION persisted scan verdict MINUS DRM-wrapped
+ * known-bad MINUS forced-bottle MINUS failed-this-session", computed here and ONLY here.
  * 51-09's `games.ts` is the sole place that assembles this function's input
  * (reading the persisted per-appId metadata cache, the allowlist, the
  * session-scoped failure set, etc.) and the sole place that persists/
@@ -32,7 +32,9 @@ import { isScanVerdictNowCovered } from './shimCoverage'
 
 /** D-51-08/11/13: the subset of `SteamBridgeRouteReason` values whose
  * landing requires a one-time notice before the user proceeds (D-51-08's
- * `noticeAcknowledgedFor` clears it). Exported for 51-16's dialog/notice
+ * `noticeAcknowledgedFor` clears it). 'known-bad' lands on bottle for a
+ * 'drm-wrapped' title and is an informational bridge-route notice for any
+ * other known-bad reason (amended 2026-10-23). Exported for 51-16's dialog/notice
  * wiring and for this module's own tests. */
 export const NOTICE_REASONS: ReadonlySet<SteamBridgeRouteReason> = new Set([
   'known-bad',
@@ -80,9 +82,12 @@ function isAcknowledged(
  *  2. `failedThisSession` -> bottle / 'failed-this-session'.
  *  3. `verdict.userRoute === 'bottle'` -> bottle / 'user-forced-bottle'
  *     (D-51-10).
- *  4. A known-bad match (and the user has not overridden to 'bridge') ->
- *     bottle / 'known-bad', notice required unless already acknowledged
- *     for 'known-bad' (D-51-08).
+ *  4. A 'drm-wrapped' known-bad match (and the user has not overridden to
+ *     'bridge') -> bottle / 'known-bad', notice required unless already
+ *     acknowledged for 'known-bad' (D-51-08). Amended 2026-10-23: ONLY
+ *     drm-wrapped routes to bottled Steam. Every other known-bad reason
+ *     (does-not-run, win64-only, p2p-required) falls through rows 5-11 as
+ *     if the title were not known-bad.
  *  5. A persisted scan miss not yet auto-cleared (and the user has not
  *     overridden to 'bridge') -> bottle / 'scan-miss', notice required
  *     unless already acknowledged for 'scan-miss' (D-51-11 offers the
@@ -98,6 +103,13 @@ function isAcknowledged(
  *  10/11. A clean scan -> bridge / 'scan-clean'; anything else reaching this
  *     point (never scanned, or a stale miss D-51-07 just auto-cleared) ->
  *     bridge / 'pending-scan'.
+ *
+ * `knownBadReason` is carried on every row from 4 onward. On a bridge
+ * outcome (rows 7-11) `noticeRequired` is true for a known-bad title unless
+ * it has been acknowledged for 'known-bad' or the user forced 'bridge'
+ * (the override already went through a dialog); that notice is
+ * informational, the bridge is still attempted. A later bottle row (5, 6)
+ * keeps its own reason and notice, so the user never sees a second dialog.
  *
  * `stubbedInterfaces`/`identityFallback`/`userRoute` are always copied
  * verbatim from the persisted verdict (or their empty/null defaults) on
@@ -145,15 +157,29 @@ export function resolveBridgeRoute(
   })
 
   const toBridge = (
-    reason: SteamBridgeRouteReason
+    reason: SteamBridgeRouteReason,
+    extra?: {
+      knownBadReason?: SteamBridgeKnownBadReason | null
+      noticeRequired?: boolean
+    }
   ): SteamBridgeRouteVerdict => ({
     route: 'bridge',
     reason,
-    knownBadReason: null,
+    knownBadReason: extra?.knownBadReason ?? null,
     missingSymbols: [],
-    noticeRequired: false,
+    noticeRequired: extra?.noticeRequired ?? false,
     ...shared
   })
+
+  // A known-bad title that stays on the bridge gets the one-time
+  // informational notice, unless acknowledged or the user forced 'bridge'.
+  const bridgeKnownBad = {
+    knownBadReason,
+    noticeRequired:
+      knownBadReason !== null &&
+      verdict?.userRoute !== 'bridge' &&
+      !isAcknowledged(verdict, 'known-bad')
+  }
 
   // 1. Platform eligibility gates everything else.
   if (!platformsBottleEligible) {
@@ -177,9 +203,11 @@ export function resolveBridgeRoute(
     return toBottle('user-forced-bottle')
   }
 
-  // 4. D-51-08's bundled known-bad list, unless the user has overridden to
-  // 'bridge' (D-51-11's "Try the bridge anyway").
-  if (knownBadReason !== null && verdict?.userRoute !== 'bridge') {
+  // 4. D-51-08's bundled known-bad list, DRM-wrapped only (amended
+  // 2026-10-23), unless the user has overridden to 'bridge' (D-51-11's "Try
+  // the bridge anyway"). Other reasons fall through with knownBadReason
+  // carried.
+  if (knownBadReason === 'drm-wrapped' && verdict?.userRoute !== 'bridge') {
     return toBottle('known-bad', {
       knownBadReason,
       noticeRequired: !isAcknowledged(verdict, 'known-bad')
@@ -195,6 +223,7 @@ export function resolveBridgeRoute(
     verdict?.userRoute !== 'bridge'
   ) {
     return toBottle('scan-miss', {
+      knownBadReason,
       missingSymbols: scan.missingSymbols,
       noticeRequired: !isAcknowledged(verdict, 'scan-miss')
     })
@@ -206,33 +235,34 @@ export function resolveBridgeRoute(
   const isX64 = verdict?.steamApi === 'x64' || scan?.arch === 'x64'
   if (isX64 && !win64ShimPresent) {
     return toBottle('win64-no-shim', {
+      knownBadReason,
       noticeRequired: !isAcknowledged(verdict, 'win64-no-shim')
     })
   }
 
   // 7. D-51-11's "Try the bridge anyway" override.
   if (verdict?.userRoute === 'bridge') {
-    return toBridge('user-forced-bridge')
+    return toBridge('user-forced-bridge', bridgeKnownBad)
   }
 
   // 8. Bundled seed list membership, never scanned yet.
   if (isSeed) {
-    return toBridge('seed')
+    return toBridge('seed', bridgeKnownBad)
   }
 
   // 9. No steam_api*.dll import at all -- nothing for the bridge to serve,
   // so there is nothing for it to miss either.
   if (verdict?.steamApi === 'none') {
-    return toBridge('no-steam-api')
+    return toBridge('no-steam-api', bridgeKnownBad)
   }
 
   // 10. A clean scan.
   if (scan?.status === 'clean') {
-    return toBridge('scan-clean')
+    return toBridge('scan-clean', bridgeKnownBad)
   }
 
   // 11. Otherwise: never scanned, or a stale miss D-51-07's auto-clear just
   // cleared (the only way a 'miss' scan can reach this far without having
   // returned at row 5 above).
-  return toBridge('pending-scan')
+  return toBridge('pending-scan', bridgeKnownBad)
 }

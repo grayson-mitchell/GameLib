@@ -153,8 +153,10 @@ export const DEFAULT_COVERAGE_DEPS: CensusCoverageDeps = {
  *
  * Precedence (each branch is mutually exclusive with the ones below it):
  *  1. `knownBadReason` present -> 'known-bad' (checked first: a known-bad
- *     title is never attempted regardless of what its exe looks like,
- *     mirroring the live route resolver's own precedence, D-51-08).
+ *     title is classified regardless of what its exe looks like. Only a
+ *     'drm-wrapped' title is never attempted on the bridge; the live
+ *     resolver (amended 2026-10-23) keeps the other reasons on the bridge
+ *     behind a notice, but the census still counts them as known-bad).
  *  2. `exe === null` -> 'no-binary' (nothing objdump-able was found at all).
  *  3. `exe.arch === 'none'` (an exe WAS found, but imports nothing from
  *     `steam_api(64)?.dll`): when a steam_api*.dll ships in the install tree

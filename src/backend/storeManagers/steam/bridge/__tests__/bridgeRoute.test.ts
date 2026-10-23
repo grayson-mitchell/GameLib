@@ -81,6 +81,155 @@ describe('resolveBridgeRoute', () => {
     })
     expect(result.route).toBe('bridge')
     expect(result.reason).toBe('user-forced-bridge')
+    expect(result.knownBadReason).toBe('drm-wrapped')
+    expect(result.noticeRequired).toBe(false)
+  })
+
+  describe('row 4 amendment 2026-10-23: only drm-wrapped routes to bottle', () => {
+    const missVerdict = (
+      extra: SteamBridgeVerdict = {}
+    ): SteamBridgeVerdict => ({
+      scan: {
+        status: 'miss',
+        arch: 'x86',
+        missingSymbols: ['NotARealSymbol_v999'],
+        interfaceVersions: {},
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'irrelevant',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      },
+      ...extra
+    })
+
+    it('does-not-run, no verdict -> bridge / pending-scan with the notice required', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'does-not-run'
+      })
+      expect(result.route).toBe('bridge')
+      expect(result.reason).toBe('pending-scan')
+      expect(result.knownBadReason).toBe('does-not-run')
+      expect(result.noticeRequired).toBe(true)
+    })
+
+    it('keeps the seed reason and carries knownBadReason', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        isSeed: true,
+        knownBadReason: 'does-not-run'
+      })
+      expect(result.route).toBe('bridge')
+      expect(result.reason).toBe('seed')
+      expect(result.knownBadReason).toBe('does-not-run')
+      expect(result.noticeRequired).toBe(true)
+    })
+
+    it('keeps scan-clean and carries knownBadReason', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'does-not-run',
+        verdict: {
+          scan: {
+            status: 'clean',
+            arch: 'x86',
+            missingSymbols: [],
+            interfaceVersions: {},
+            stubbedInterfaces: [],
+            shimExportSetVersion: 'irrelevant',
+            scannedAt: '2026-01-01T00:00:00.000Z'
+          }
+        }
+      })
+      expect(result.route).toBe('bridge')
+      expect(result.reason).toBe('scan-clean')
+      expect(result.knownBadReason).toBe('does-not-run')
+      expect(result.noticeRequired).toBe(true)
+    })
+
+    it.each(['does-not-run', 'win64-only', 'p2p-required'] as const)(
+      '%s: stays on the bridge; acknowledged -> notice no longer required',
+      (reason) => {
+        const pending = resolveBridgeRoute({
+          ...baseInput,
+          knownBadReason: reason
+        })
+        expect(pending.route).toBe('bridge')
+        expect(pending.noticeRequired).toBe(true)
+        const acked = resolveBridgeRoute({
+          ...baseInput,
+          knownBadReason: reason,
+          verdict: { noticeAcknowledgedFor: 'known-bad' }
+        })
+        expect(acked.route).toBe('bridge')
+        expect(acked.knownBadReason).toBe(reason)
+        expect(acked.noticeRequired).toBe(false)
+      }
+    )
+
+    it('drm-wrapped still routes to bottle / known-bad (XCOM)', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'drm-wrapped'
+      })
+      expect(result.route).toBe('bottle')
+      expect(result.reason).toBe('known-bad')
+      expect(result.noticeRequired).toBe(true)
+    })
+
+    it('userRoute bottle wins over a non-DRM known-bad (row 3)', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'does-not-run',
+        verdict: { userRoute: 'bottle' }
+      })
+      expect(result.route).toBe('bottle')
+      expect(result.reason).toBe('user-forced-bottle')
+    })
+
+    it('a scan miss wins; one notice, per the scan-miss acknowledgement only', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'does-not-run',
+        verdict: missVerdict({ noticeAcknowledgedFor: 'known-bad' })
+      })
+      expect(result.route).toBe('bottle')
+      expect(result.reason).toBe('scan-miss')
+      expect(result.knownBadReason).toBe('does-not-run')
+      expect(result.noticeRequired).toBe(true)
+      const acked = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'does-not-run',
+        verdict: missVerdict({ noticeAcknowledgedFor: 'scan-miss' })
+      })
+      expect(acked.noticeRequired).toBe(false)
+    })
+
+    it('x64 with no Win64 shim lands on bottle / win64-no-shim (T-og0-02)', () => {
+      const result = resolveBridgeRoute({
+        ...baseInput,
+        knownBadReason: 'does-not-run',
+        verdict: { steamApi: 'x64' }
+      })
+      expect(result.route).toBe('bottle')
+      expect(result.reason).toBe('win64-no-shim')
+      expect(result.knownBadReason).toBe('does-not-run')
+      expect(result.noticeRequired).toBe(true)
+    })
+
+    it.each(['does-not-run', 'win64-only', 'p2p-required'] as const)(
+      '%s + userRoute bridge -> user-forced-bridge, no notice',
+      (reason) => {
+        const result = resolveBridgeRoute({
+          ...baseInput,
+          knownBadReason: reason,
+          verdict: { userRoute: 'bridge' }
+        })
+        expect(result.route).toBe('bridge')
+        expect(result.reason).toBe('user-forced-bridge')
+        expect(result.knownBadReason).toBe(reason)
+        expect(result.noticeRequired).toBe(false)
+      }
+    )
   })
 
   it('row 5: a persisted scan miss, not covered, userRoute not bridge -> bottle / scan-miss (D-51-11 offers the override)', () => {

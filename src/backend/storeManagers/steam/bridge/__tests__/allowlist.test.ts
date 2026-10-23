@@ -177,6 +177,12 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
   })
 
+  test('the real bundle: 63000 and 411300 are does-not-run, 200510 is drm-wrapped (D-51-08 amendment)', () => {
+    expect(bridgeAllowlist.knownBadReason('63000')).toBe('does-not-run')
+    expect(bridgeAllowlist.knownBadReason('411300')).toBe('does-not-run')
+    expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
+  })
+
   test('HOARD (63000) is known-bad as does-not-run, citing 51-UAT item 4', () => {
     expect(bridgeAllowlist.knownBadReason(HOARD_APP_ID)).toBe('does-not-run')
     const parsed = JSON.parse(

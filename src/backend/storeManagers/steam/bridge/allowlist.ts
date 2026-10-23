@@ -9,8 +9,10 @@
  * demoted to `seed`, one input of 51-07's composed `SteamBridgeRouteVerdict`
  * -- seed ∪ persisted verdict ∖ known-bad ∖ forced-bottle) and gained a
  * second array, `knownBad`, of titles that get a dialog up front naming WHY
- * the bridge is never attempted for them (D-51-08's closed reason taxonomy,
- * `SteamBridgeKnownBadReason`). `version: 1` is no longer accepted at all --
+ * the bridge is not expected to work for them (D-51-08's closed reason
+ * taxonomy, `SteamBridgeKnownBadReason`). Amended 2026-10-23: only
+ * 'drm-wrapped' entries skip the bridge for bottled Steam; the other
+ * reasons stay on the bridge behind a one-time informational notice. `version: 1` is no longer accepted at all --
  * there is no discriminated-union fallback; a stale-schema bundled asset
  * throws at load exactly like any other malformed one.
  *
@@ -18,9 +20,9 @@
  * (`src/backend/crossover_index/schema.ts`): a `version: z.literal(2)` guard
  * + bounded array schemas, parsed once at module load. Unlike the
  * 1000+-entry CrossOver index, `seed` is small and developer-curated
- * (`.min(1)`, not `.min(1000)`); `knownBad` starts empty (no owned
- * DRM-wrapped title was identified during Phase 51 research -- 51-18's
- * census adds evidence-backed entries later) so it has no `.min()` floor. A
+ * (`.min(1)`, not `.min(1000)`); `knownBad` holds only
+ * evidence-backed entries (XCOM 200510, Hoard 63000, ELEX 411300 so far)
+ * and may legitimately be empty, so it has no `.min()` floor. A
  * malformed entry (missing `appId`, wrong `version`, a `knownBad.reason`
  * outside the closed taxonomy, etc.) throws AT LOAD, fail-loud, rather than
  * silently dropping (T-24-05 mitigation). This is a deliberate posture: the
@@ -109,9 +111,8 @@ const knownBadEntrySchema = allowlistEntrySchema
 export const bridgeAllowlistSchema = z.object({
   version: z.literal(2),
   seed: z.array(seedEntrySchema).min(1),
-  // No `.min()` floor -- D-51-08: the known-bad list starts empty because
-  // research identified no owned DRM-wrapped title; 51-18's census adds
-  // evidence-backed entries. An empty array is a legitimate, intended state.
+  // No `.min()` floor -- D-51-08: the known-bad list holds only
+  // evidence-backed entries; an empty array is a legitimate, intended state.
   knownBad: z.array(knownBadEntrySchema)
 })
 

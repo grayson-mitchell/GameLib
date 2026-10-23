@@ -142,6 +142,24 @@ describe('classifyCensusTitle', () => {
     expect(row.detail).toBe('drm-wrapped')
   })
 
+  it('a does-not-run title (Hoard 63000) still classifies "known-bad" in the census', () => {
+    const row = classifyCensusTitle({
+      appid: '63000',
+      name: 'Hoard',
+      installdir: 'Hoard',
+      knownBadReason: 'does-not-run',
+      exe: {
+        arch: 'x86',
+        symbols: ['SteamUser'],
+        dllVersions: ['SteamUser023'],
+        exeVersions: []
+      }
+    })
+
+    expect(row.class).toBe('known-bad')
+    expect(row.detail).toBe('does-not-run')
+  })
+
   it('no scannable PE exe found under installdir classifies "no-binary"', () => {
     const row = classifyCensusTitle({
       appid: '38410',
