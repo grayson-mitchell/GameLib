@@ -1,0 +1,14 @@
+2026-10-23T08:40:49.908Z +2ms ActiveProcess\pid=208 -> 0
+2026-10-23T08:40:49.909Z +3ms drm thread: consume=00000068 produce=0000006C ack=1
+2026-10-23T08:40:50.049Z +143ms game started pid=232 cmd="C:\XCOM\XEW\Binaries\Win32\XComEW.exe" 
+2026-10-23T08:40:51.113Z +1207ms DIPC request: CONSUME signalled
+2026-10-23T08:40:51.114Z +1207ms dir \BaseNamedObjects\Session\1: saw STEAM_DATA.232 (Section)
+2026-10-23T08:40:51.114Z +1207ms dir \BaseNamedObjects\Session\1: saw STEAM_DRM_IPC (Section)
+2026-10-23T08:40:51.114Z +1208ms dir \BaseNamedObjects\Session\1: saw STEAM_DIPC_CONSUME (Semaphore)
+2026-10-23T08:40:51.114Z +1208ms dir \BaseNamedObjects\Session\1: saw STEAM_TERM_EVENT_232_7498500 (Event)
+2026-10-23T08:40:51.114Z +1208ms dir \BaseNamedObjects\Session\1: saw STEAM_START_ACK_EVENT_232_7498500 (Event)
+2026-10-23T08:40:51.114Z +1208ms ACK event STEAM_START_ACK_EVENT_232_7498500 -> open ok (err 0)
+2026-10-23T08:40:51.114Z +1208ms dir \BaseNamedObjects\Session\1: 18 entries scanned, end status 0x8000001a
+2026-10-23T08:40:51.114Z +1208ms SetEvent(ACK) -> 1
+2026-10-23T08:40:51.115Z +1208ms PRODUCE released (prev 0)
+2026-10-23T08:40:51.117Z +1210ms game exited code=0 (0x00000000)
