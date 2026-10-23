@@ -1,0 +1,7 @@
+*.dll
+*.exe
+*.lib
+logs/*.cxlog
+logs/*.wine.log
+logs/b1-main.txt
+steam_appid.txt

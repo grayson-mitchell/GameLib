@@ -119,7 +119,9 @@ int main(int argc, char **argv) {
     const char *dll = getenv("DIPC_CLIENTDLL");
     logf("SteamClientDll=%s -> %ld", dll, RegSetKeyValueA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess",
          "SteamClientDll", REG_SZ, dll, (DWORD)strlen(dll) + 1));
-    RegSetKeyValueA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess", "SteamClientDll64", REG_SZ, dll, (DWORD)strlen(dll) + 1);
+    const char *dll64 = getenv("DIPC_CLIENTDLL64") ? getenv("DIPC_CLIENTDLL64") : dll;   /* 038: x64 games read this one */
+    logf("SteamClientDll64=%s", dll64);
+    RegSetKeyValueA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess", "SteamClientDll64", REG_SZ, dll64, (DWORD)strlen(dll64) + 1);
     RegSetKeyValueA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess", "Universe", REG_SZ, "Public", 7);
   }
   SetEnvironmentVariableA("SteamPath", "C:\\Program Files (x86)\\Steam");

@@ -1,0 +1,6 @@
+2026-10-23T09:56:15.931Z +1ms ActiveProcess\pid=208 -> 0
+2026-10-23T09:56:15.931Z +2ms SteamClientDll=C:\Program Files (x86)\Steam\steamclient.dll -> 0
+2026-10-23T09:56:15.931Z +2ms SteamClientDll64=C:\Program Files (x86)\Steam\steamclient64.dll
+2026-10-23T09:56:15.932Z +3ms drm thread: consume=00000068 produce=0000006C ack=1
+2026-10-23T09:56:16.069Z +139ms game started pid=232 cmd="C:\Program Files (x86)\Steam\steamapps\common\Grim Dawn\x64\Grim Dawn.exe" 
+2026-10-23T09:56:17.244Z +1314ms game exited code=53 (0x00000035)

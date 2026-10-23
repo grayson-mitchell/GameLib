@@ -17,7 +17,7 @@ for i in $(seq 50); do PORT=$(grep -oE 'LISTEN 127\.0\.0\.1:[0-9]+' "logs/$LABEL
 printf 'port=%s\n' "$PORT" > "$W/gamelib_bridge.cfg"
 ENVS=(); if [ -n "${ENV_FILE:-}" ]; then while IFS= read -r l; do [ -n "$l" ] && ENVS+=("$l"); done < "$ENV_FILE"; fi
 if [ $# -gt 0 ]; then CMD=("$@"); else CMD=('C:\XCOM\XEW\Binaries\Win32\XComEW.exe'); fi
-( cd "$W" && exec env CX_BOTTLE="$BOTTLE" WINEDEBUG="${DEBUG:--all}" ${EXTRA_ENV:-} "${ENVS[@]}" "$CX/wine" ${CXLOG:+--cx-log "$SPIKE/logs/$LABEL.cxlog" --debugmsg "$CXLOG"} "${CMD[@]}" > "$SPIKE/logs/$LABEL.wine.log" 2>&1 ) &
+( cd "$W" && exec env CX_BOTTLE="$BOTTLE" WINEDEBUG="${DEBUG:--all}" ${EXTRA_ENV:-} ${ENVS[@]+"${ENVS[@]}"} "$CX/wine" ${CXLOG:+--cx-log "$SPIKE/logs/$LABEL.cxlog" --debugmsg "$CXLOG"} "${CMD[@]}" > "$SPIKE/logs/$LABEL.wine.log" 2>&1 ) &
 T0=$(date +%s)
 if [ "${INTERACTIVE:-0}" = 1 ]; then sleep 8; while pgrep -f 'XComEW.exe' >/dev/null; do sleep 2; done
 else sleep "${WATCH:-45}"; fi
