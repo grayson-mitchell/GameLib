@@ -80,3 +80,18 @@ reached the native client. Step 1 therefore shrinks to the forwarder (spike 039'
 weight moves to `meta/gen_vtables.ts`: make `SteamClient017`/`014` genuinely forward (pipe/user
 handles served helper-side), log requested `GetISteam*` versions on the real path, and add
 forwarding proxies for whatever the stub asks for.
+
+## Recurrence: Raft (648800), 2026-10-24 10:38
+
+Raft is the second SteamStub title in the 51-29 sample. The scan logged
+`SteamStub .bind section present in the exe for appId 648800 (informational, no routing change)`,
+so the game routed to the bridge. The helper reached `INIT SteamAPI ready`. Raft.exe ran for
+about 4 s, there was no `HELLO`, and the log shows
+`launcher exited before any game process matched — stopping`. Mac Steam's brief In-Game was the
+helper's own `SteamAPI_Init` and it ended when the helper was killed. This is the same signature
+as Grim Dawn: the stub fails its Steam check and exits before the game loads steam_api.
+
+With two of eight sampled titles behind SteamStub, the forwarder matters. Until it lands, the
+"informational, no routing change" choice sends every SteamStub title to a launch that cannot
+succeed. Interim option: treat a `.bind` hit as a scan miss that also needs the forwarder, and
+surface it as "not yet supported" rather than a silent ~4 s exit.
