@@ -10,8 +10,8 @@
 //! authorization, by the plugin's own design) and any non-`.app` run keep the plugin:
 //! [`backend`] gates every entry point, and `currentNotificationCenter` is never called unless
 //! it says `UserNotifications`. Failures are returned as the `notification:*` strings from
-//! `notification_backend`, which the sidecar logs through `logWarning` (stderr is /dev/null in a
-//! packaged build, so `eprintln!` here is dev visibility only).
+//! `notification_backend`, which the sidecar logs through `logWarning`; the startup authorization
+//! outcome goes to `gamelib-shell.log` via `shell_diag` (stderr is /dev/null in a packaged build).
 
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -102,11 +102,11 @@ pub fn init_at_startup() {
         if let Some(e) = &err {
             let _ = STARTUP_AUTH_ERROR.set(e.clone());
         }
-        eprintln!(
-            "[shell] notification authorization: granted={} error={:?}",
+        crate::shell_diag(&format!(
+            "notification authorization: granted={} error={:?}",
             granted.as_bool(),
             err
-        );
+        ));
     });
     center.requestAuthorizationWithOptions_completionHandler(
         UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound,
