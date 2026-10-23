@@ -192,6 +192,17 @@ export const RUST_DIALOG_SAVE = 'dialog_save' as const
 export const RUST_NOTIFICATION_SHOW = 'notification_show' as const
 
 /**
+ * Prefix of the `notification_show` rejection when macOS notification authorization is denied.
+ * Mirrors the Rust `authorization_gate` contract in `src-tauri/src/notification_backend.rs`;
+ * the sidecar matches it with `startsWith`. The other four prefixes the arm can return
+ * (`notification:authorization-not-determined`, `notification:settings-timeout`,
+ * `notification:delivery-failed: <reason>`, `notification:delivery-timeout`) need no constant,
+ * because only a denial changes TS behaviour (it is logged once per process).
+ */
+export const RUST_NOTIFICATION_AUTH_DENIED_PREFIX =
+  'notification:authorization-denied' as const
+
+/**
  * Rust-side channel name: reveal a path in the OS file manager via `tauri-plugin-opener`'s
  * `reveal_item_in_dir` (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s
  * `shell.showItemInFolder()`. Fire-and-forget from the caller's perspective (electronStub does

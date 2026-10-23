@@ -4,6 +4,7 @@ import { ButtonOptions, DialogType } from 'common/types'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
+import { RUST_NOTIFICATION_AUTH_DENIED_PREFIX } from 'common/types/sidecarTransport'
 
 // 260919-sch: native-vs-in-app dialog policy, recorded here because this is
 // the module a future caller reads when choosing a path.
@@ -82,6 +83,10 @@ type NotifyType = {
   body: string
 }
 
+// A denial persists until the user changes it in System Settings, so logging it on every
+// notify() would flood the log; other failures are per-delivery and are logged each time.
+let loggedNotificationAuthDenied = false
+
 function notify({ body, title }: NotifyType) {
   if (Notification.isSupported() && !isSteamDeckGameMode) {
     const mainWindow = getMainWindow()
@@ -91,6 +96,20 @@ function notify({ body, title }: NotifyType) {
     })
 
     notify.on('click', () => mainWindow?.show())
+    notify.on('failed', (_event: unknown, error: string) => {
+      const denied = error.startsWith(RUST_NOTIFICATION_AUTH_DENIED_PREFIX)
+      if (denied) {
+        if (loggedNotificationAuthDenied) return
+        loggedNotificationAuthDenied = true
+      }
+      const hint = denied
+        ? ' — enable GameLib in System Settings → Notifications'
+        : ''
+      logWarning(
+        `notify(): "${title}" was not delivered (${error})${hint}`,
+        LogPrefix.Backend
+      )
+    })
     notify.show()
   } else {
     // REQ-30-07/D-09: a logged no-op, not a silent one -- names the title and the reason,

@@ -580,9 +580,11 @@ export const dialog = {
 // never throws (total-method convention, mirrors showErrorBox's shape). No icon/nativeImage
 // plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
 //
-// Zero-change consumer: backend/dialog/dialog.ts's notify() already gates on
-// Notification.isSupported() with an established logged-no-op fallback -- no changes needed
-// there beyond isSupported() returning true.
+// Quick task 261023-vkv: show() now reports a rejected notification_show through an
+// Electron-shaped 'failed' event (listener gets `(event, error: string)`), so the consumer --
+// backend/dialog/dialog.ts's notify() -- can log it. The logging lives there, not here: this
+// module must not import backend/logger (module-scope rule near the top of this file).
+// notify() also gates on Notification.isSupported() with its established logged-no-op fallback.
 
 interface NotificationOptions {
   title?: string
@@ -593,6 +595,11 @@ interface NotificationOptions {
   timeoutType?: 'default' | 'never'
   silent?: boolean
 }
+
+// Widened so dialog.ts's `() => void` click handler and `(event, error: string)` failed handler
+// both fit, as Electron's overloaded `on` allows.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NotificationListener = (...args: any[]) => void
 
 export class Notification {
   static isSupported(): boolean {
@@ -605,7 +612,15 @@ export class Notification {
     this.options = options ?? {}
   }
 
-  on(_event?: string, _listener?: () => void): this {
+  private readonly listeners = new Map<string, NotificationListener[]>()
+
+  // Only 'failed' is ever emitted; other events (e.g. 'click') are accepted and ignored.
+  on(event?: string, listener?: NotificationListener): this {
+    if (event && listener) {
+      const list = this.listeners.get(event) ?? []
+      list.push(listener)
+      this.listeners.set(event, list)
+    }
     return this
   }
 
@@ -613,10 +628,23 @@ export class Notification {
     requestRustInvoke(RUST_NOTIFICATION_SHOW, [
       { title: this.options.title, body: this.options.body }
     ]).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error)
       console.warn(
         `[electronStub] Notification.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
-        error instanceof Error ? error.message : String(error)
+        message
       )
+      for (const listener of this.listeners.get('failed') ?? []) {
+        try {
+          listener({ sender: this }, message)
+        } catch (listenerError) {
+          console.warn(
+            "[electronStub] Notification 'failed' listener threw:",
+            listenerError instanceof Error
+              ? listenerError.message
+              : String(listenerError)
+          )
+        }
+      }
     })
   }
 
