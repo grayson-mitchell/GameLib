@@ -89,6 +89,44 @@ the Mac.
   `Compatibility profiles…`/`forward-compatible 3.2+` warnings in a `CX_DEBUGMSG=+wgl` log.
 - Launch-health checks must not rely on `pgrep` alone; winedbg keeps a crashed process "alive".
 
+## Follow-up: the ~30 s freeze at the splash (and at quit)
+
+A human run of `./play.sh` (2026-10-23) confirmed the game **plays fine in-game**. The only issue:
+the splash screen froze for roughly 30 s, looking like a crash, and quitting did the same. The
+"ad" is the Big Sandwich Games / Stratecade developer and publisher splash
+(`fe/scripts/screen_splash.nut`, timer-driven fades).
+
+What was ruled out, and what was found:
+
+- **Not the Steam bridge.** `play.sh` runs without the host bridge, but the shim's connects to
+  `127.0.0.1:50759` are refused in under 1 ms each (`+winsock` trace), with nothing listening.
+- **Not a blocked call.** `+winsock,+dsound,+mmdevapi` timing showed main-thread gaps of 7.1 s and
+  25.1 s with no traced calls. A native sample put the game process (`Reuben.exe`, found by args;
+  CrossOver's `winewrapper.exe` is a separate process) at **~105 % CPU** throughout. It is busy,
+  not waiting.
+- **Root cause (`+relay`, main thread, calls per 3 s bucket):** the engine loads assets
+  synchronously on the main thread during the splash (`buildings/set01/*.chmodel`, `*.chanim`,
+  …).
+  - Each small read is surrounded by `SetFilePointerEx` END → CUR → SET, a file-size re-check from
+    the game's own CRT (`ret=0049f129`, inside Reuben.exe).
+  - That's **~165 seeks per read** (299,326 seeks vs 1,816 reads on one handle), i.e. ~35k seeks/s
+    while rendering drops to near zero.
+  - Each seek costs two wine syscalls (`NtSetInformationFile` + `NtQueryInformationFile`).
+  - An earlier phase (t+0–6 s) is dominated by file-time conversions and heap churn, likely the
+    directory scan.
+- **Not caused by the GL steering patch.** It's the game's loader pattern multiplied by
+  wine-on-macOS syscall cost under Rosetta. The same loader runs unpatched (and on Proton), where
+  native syscalls make it cheap.
+- **Quit freeze: not traced.** It is plausibly the same kind of file-I/O storm (saving state), but
+  that is unverified.
+- **Possible mitigation (not built):** a per-game IAT hook of `SetFilePointerEx`/`GetFileSizeEx`
+  in the shim that answers size and position queries for read-only handles from a user-space
+  cache. That is non-trivial and risky for files opened for writing, so it's only worth it if the
+  stall bothers users.
+
+Scripts: `sample-stall.sh` (CPU and native sample during the stall), `ps-probe.sh` (find the real
+game process).
+
 ## How to Run
 
 ```bash

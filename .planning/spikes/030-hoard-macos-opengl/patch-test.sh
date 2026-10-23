@@ -11,4 +11,4 @@ OFF=$((0x43575e - 0x401000 + 0x400))
 cur=$(xxd -s $OFF -l 2 -p "$EXE"); [ "$cur" = "7476" ] || { echo "unexpected bytes $cur at $OFF"; exit 1; }
 printf '\xeb' | dd of="$EXE" bs=1 seek=$OFF conv=notrunc 2>/dev/null
 echo "patched: $(xxd -s $OFF -l 2 -p "$EXE")"
-WINEDEBUG="" WATCH="${WATCH:-25}" ./run.sh "${1:-patched}" CX_DEBUGMSG="+wgl,+seh" CX_LOG="$PWD/logs/${1:-patched}.cxlog"
+WINEDEBUG="" WATCH="${WATCH:-25}" ./run.sh "${1:-patched}" CX_DEBUGMSG="${CX_DEBUGMSG:-+wgl,+seh}" CX_LOG="$PWD/logs/${1:-patched}.cxlog"
