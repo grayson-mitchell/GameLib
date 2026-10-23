@@ -142,9 +142,67 @@ result: pass — 2026-10-23, packaged debug bundle. Operator: "main menu yes, pl
 ### 19. Representative sample — install through the default route and play (D-51-15 input)
 
 expected: Every sampled title installs through GameLib's default route on the packaged build; its install logs `prescreenBridgeDepots: appId <id> result=<x>` and the route; every bridge-routed title is launched and reaches playable state or has its failure cause recorded; bottle-routed titles record their route reason. Per title also record the install-time persisted scan verdict (steam_metadata.json `bridge.scan`) and the launched exe from the log, and flag dual-arch titles (the census scans the x86 binary of those).
-result: pending — sample drawn and approved at the 51-29 Task 2 checkpoint (operator: "Known size only, redraw (Recommended)"); per-title table written by 51-30
+result: pass — 2026-10-24, 51-30. Every one of the 12 sampled titles has a recorded outcome (51-29 operator evidence, gamelib.log and gamelib.log archives, steam_metadata.json). Sample drawn and approved at the 51-29 Task 2 checkpoint (operator: "Known size only, redraw (Recommended)"). Outcome counts: 12 of 12 routed to the bridge, none bottled; 6 play offline without a clean in-game Steam init; 6 do not run; 0 verified running (HELLO plus a clean game-side Steam init). No dual-arch title in the sample. Per-title record (prescreen from gamelib.log; scan arch/status from steam_metadata.json bridge.scan; "n/l" = no prescreen line in any retained log):
+
+| appId | Title | Prescreen | Route | Persisted scan | Bridge play outcome |
+|---|---|---|---|---|---|
+| 1167950 | Vampire's Fall: Origins | result=x64 | bridge | x64 miss (steam_api64.dll runtime-loaded, Unity plugin) | HELLO yes; plays offline; game log EntryPointNotFound SteamAPI_ISteamClient_GetISteamUser (flat API) |
+| 219990 | Grim Dawn | n/l | bridge | x64 miss | NOT playable: exits after 2s; SteamStub .bind, then modern-SDK exports; no HELLO |
+| 1284190 | The Planet Crafter | n/l | bridge | x64 miss (runtime-loaded, Unity plugin) | HELLO yes; plays offline 116s; same flat-API failure |
+| 1782460 | Hell Clock | result=x64 | bridge | x64 miss (runtime-loaded, Unity plugin) | no HELLO; plays offline 137s; EntryPointNotFound SteamInternal_SteamAPI_Init (modern-SDK exports) |
+| 1363080 | Manor Lords | n/l | bridge, no-steam-api, no helper | x86 clean (reads the UE bootstrap exe; Win64 shipping binary and Engine/.../Win64/steam_api64.dll missed) | n.a. no shim placed; plays offline with the Valve DLL, no Steam |
+| 1691190 | Rogue Waters | result=x64 | bridge | x64 miss (runtime-loaded, Unity plugin) | HELLO yes; NOT playable: hangs on loading screen twice; GetISteamUser and SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck missing (flat API) |
+| 427410 | Abiotic Factor | result=x64 | bridge, no-steam-api | x86 clean (UE bootstrap exe) | n.a. no shim placed; plays offline 82s |
+| 648800 | Raft | result=x64 | bridge (SteamStub .bind informational) | x64 miss (runtime-loaded) | NOT playable: exits after about 4s; SteamStub; no HELLO |
+| 284100 | Unclaimed World | result=both | bridge | x64 miss (steam_api.dll and steam_api64.dll runtime-loaded) | NOT playable: startup error, Windows Media Player missing in the bottle (bottle runtime component, not a bridge defect); no HELLO |
+| 1119730 | Ranch Simulator | result=x64 | bridge, no-steam-api | x86 clean (UE bootstrap exe) | NOT playable: exits after 2-3s; no shim placed; UE scan miss then modern-SDK exports |
+| 1603180 | Mining Mechs | result=x64 | bridge | x64 miss (Steamworks_x64.dll imports SteamInternal_SteamAPI_Init/ContextInit/FindOrCreateUserInterface) | NOT playable: serious-problem dialog, gone after 44s; no HELLO |
+| 3410180 | Overlooting | result=x64 | bridge | x64 miss (runtime-loaded; DRM detector could not parse the 322 MB exe as PE) | NOT playable: same dialog; no HELLO |
+
+Prescreen todo disposition (live half of 51-22): Rogue Waters (1691190) ships its steam_api64.dll in a subfolder (`RogueWaters_Data/Plugins/x86_64/steam_api64.dll`, listed from its bottle) and logged `prescreenBridgeDepots: appId 1691190 result=x64 in 5062ms` (08:45:53, 2026-10-24); Vampire's Fall: Origins (`Vampire's Fall Origins_Data/Plugins/x86_64/steam_api64.dll`) logged `result=x64` (21:45:48, 2026-10-23), and Raft, Hell Clock, Ranch Simulator, Abiotic Factor logged x64 for subfolder DLLs too. No subfolder-DLL title logged `none`, so there is no 51-22 regression and the todo is closed (moved to completed/). Prescreen lines for 219990, 1284190 and 1363080 are absent from every retained log (including the .pre-51-28, .pre-51-29 and .51-29-batch0 archives).
 
 Sample rule (fixed before any install): 197 owned Windows-only titles; exclude already-measured and allowlist seed/knownBad appIds; eligible = Steam type game, known developer, KNOWN parseable size <= 15 GB (75 titles); order by sha256("gamelib-51-29:" + appId) ascending; take 12, at most 2 per developer. Sizes are approximate (store minimum-requirements text). Drawn (appId, title, developer, GB, CrossOver rating): 1167950 Vampire's Fall: Origins, Early Morning Studio, 1.5, none; 1119730 Ranch Simulator, Toxic Dog, 15, none; 219990 Grim Dawn, Crate Entertainment, 5, 5; 1363080 Manor Lords, Slavic Magic, 15, 5; 1284190 The Planet Crafter, Miju Games, 4, 5; 648800 Raft, Redbeet Interactive, 10, 4; 1782460 Hell Clock, Rogue Snail, 2, none; 284100 Unclaimed World, Refactored Games, 0.6, none; 1691190 Rogue Waters, Ice Code Games, 6, none; 427410 Abiotic Factor, Deep Field Games, 10, none; 3410180 Overlooting, Posing Possums, 0.5, none; 1603180 Mining Mechs, Delayed Victory, 0.2, none. Total approx 69.8 GB. Titles without steam_api are outside the Steamworks-using denominator.
+
+Seed and knownBad disposition (strict criterion, operator decision 2026-10-24 "keep it strict": verified = HELLO shim attached for the appId AND a clean game-side Steam init in the game's own log; no game log is unverified; Mac Steam In-Game never counts). No sampled title meets it, so no seed entry was added. The existing seed entries stay: under the strict rule AoD (230070, item 18) and Avernum 6 (206060, item 1) are "played with shim attached but unverified" (no game-side log confirming a clean Steam init), as is the XCOM CEG evidence of item 17 (which was bottled Steam, not the bridge). Unclaimed World (284100), the only non-bridge failure, was NOT added to knownBad: no existing reason fits honestly (drm-wrapped, win64-only and p2p-required are false; does-not-run implies a Wine-level incompatibility, but the cause is a missing Windows runtime component the bottle could provision, with pending todo 2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md). Every other failing title is a fixable bridge or scan defect with a pending todo and is not on knownBad.
+
+
+
+Sample rule (fixed before any install): 197 owned Windows-only titles; exclude already-measured and allowlist seed/knownBad appIds; eligible = Steam type game, known developer, KNOWN parseable size <= 15 GB (75 titles); order by sha256("gamelib-51-29:" + appId) ascending; take 12, at most 2 per developer. Sizes are approximate (store minimum-requirements text). Drawn (appId, title, developer, GB, CrossOver rating): 1167950 Vampire's Fall: Origins, Early Morning Studio, 1.5, none; 1119730 Ranch Simulator, Toxic Dog, 15, none; 219990 Grim Dawn, Crate Entertainment, 5, 5; 1363080 Manor Lords, Slavic Magic, 15, 5; 1284190 The Planet Crafter, Miju Games, 4, 5; 648800 Raft, Redbeet Interactive, 10, 4; 1782460 Hell Clock, Rogue Snail, 2, none; 284100 Unclaimed World, Refactored Games, 0.6, none; 1691190 Rogue Waters, Ice Code Games, 6, none; 427410 Abiotic Factor, Deep Field Games, 10, none; 3410180 Overlooting, Posing Possums, 0.5, none; 1603180 Mining Mechs, Delayed Victory, 0.2, none. Total approx 69.8 GB. Titles without steam_api are outside the Steamworks-using denominator.
+
+### 20. D-51-15 closing census on the representative sample
+
+expected: pnpm bridge-census against the sample prints N of M routed and K of M verified running with every row classified; numbers recorded verbatim.
+result: pass — 2026-10-24, 51-30, after quick 261024-f0w (strict criterion: HELLO plus a clean game-side Steam init; "Play recorded (allowlist)" is a separate column). Every row is classified. The census covers the 19 installed titles (the 12 sampled plus Avernum 4, Avernum 6, AoD, XCOM, ELEX, HOARD and Colony Ship). Verbatim summary line:
+
+`18 of 19 routed to the bridge; 0 of 19 verified running through the bridge (HELLO + clean game log; 1 init-failed, 18 unverified); 2 of 19 play recorded in the allowlist; 15 of 19 symbols covered by the shim (static scan) (bridge=3, known-bad=3, missing-symbols=1, no-steam-api=12)`
+
+Verbatim table:
+
+| AppID | Name | Installdir | Arch | Class (static scan) | Play recorded (allowlist) | Evidence | Detail |
+|---|---|---|---|---|---|---|---|
+| 200510 | XCOM: Enemy Unknown | XCom-Enemy-Unknown | x86 | known-bad | no | unverified (no per-game bridge bottle) | drm-wrapped |
+| 206020 | Avernum 4 | Avernum 4 | x86 | bridge | no | unverified (no per-game bridge bottle) |  |
+| 1119730 | Ranch Simulator | Ranch Simulator | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 1167950 | Vampire's Fall: Origins | Vampire's Fall Origins | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 1284190 | The Planet Crafter | The Planet Crafter | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 1363080 | Manor Lords | Manor Lords | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 1603180 | Mining Mechs | Mining Mechs | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 1691190 | Rogue Waters | RogueWaters | none | no-steam-api | no | init-failed (SteamAPI_ISteamClient_GetISteamUser) | launch exe imports no steam_api and none ships in the install tree |
+| 1782460 | Hell Clock | Hell Clock | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 206060 | Avernum 6 | Avernum 6 | x86 | bridge | yes | unverified (no HELLO) |  |
+| 219990 | Grim Dawn | Grim Dawn | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree; SteamStub .bind section (informational) |
+| 230070 | The Age of Decadence | Age of Decadence | x64 | bridge | yes | unverified (no HELLO) |  |
+| 284100 | Unclaimed World | Unclaimed World | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 3410180 | Overlooting | Overlooting | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 411300 | ELEX | ELEX | x64 | known-bad | no | unverified (no HELLO) | does-not-run |
+| 427410 | Abiotic Factor | AbioticFactor | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree |
+| 63000 | HOARD | Hoard | x86 | known-bad | no | unverified (no HELLO) | does-not-run |
+| 648410 | Colony Ship: A Post-Earth Role Playing Game | Colony Ship RPG | x64 | missing-symbols | no | unverified (no HELLO) | SteamInternal_FindOrCreateUserInterface, SteamInternal_ContextInit |
+| 648800 | Raft | Raft | none | no-steam-api | no | unverified (no HELLO) | launch exe imports no steam_api and none ships in the install tree; SteamStub .bind section (informational) |
+
+Static-class blind spot (recorded, not fixed here): the class column reads `no-steam-api` for runtime-loaded and Unity-plugin steam_api (for example 1691190, 1167950, 1284190) and for Unreal titles whose bootstrap exe was scanned instead of the shipping binary, so the 12 `no-steam-api` rows are not evidence that those titles do not use Steamworks; the install trees of all 12 sampled titles ship a steam_api DLL (persisted scans show runtime-loaded misses). Tracked by todos 2026-10-23-x64-shim-lacks-modern-sdk-steaminternal-exports-and-scan-misses-dll-importers.md (part 2) and 2026-10-24-bridge-scan-reads-unreal-bootstrap-exe-and-misses-the-shipping-binary.md. The Evidence column's "unverified (no HELLO)" reflects retained gamelib.log / gamelib.log.old only; it undercounts HELLOs seen in earlier sittings.
+
+Separate count, never folded into K: played with shim attached but unverified under the strict rule (HELLO recorded in a live session, no clean game-side Steam init or no game log): AoD 230070 (item 18, 452s, no game log), Avernum 6 206060 (item 1), plus the sample titles whose HELLO was logged but whose game log shows a Steam-init failure (1167950, 1284190, 1691190, init-failed). Of these only 1167950 and 1284190 play (offline).
 
 ## Summary
 

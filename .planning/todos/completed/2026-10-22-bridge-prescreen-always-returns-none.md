@@ -51,3 +51,7 @@ depot paths while there.
   non-`none` prescreen. 51-30 item 19 moves it to `completed/` if a title with its steam_api DLL
   in a subfolder logs `result=x86|x64|both`. If that title logs `none`, 51-30 records a 51-UAT
   gap instead. `51-30-PLAN.md` refers to this file at its `pending/` path.
+
+## Closed
+
+Closed 2026-10-24, plan 51-30 (51-UAT item 19). Live check: Rogue Waters (appId 1691190) ships `RogueWaters_Data/Plugins/x86_64/steam_api64.dll` in a subfolder and logged `prescreenBridgeDepots: appId 1691190 result=x64 in 5062ms` (08:45:53, 2026-10-24) instead of `none`. Vampire's Fall: Origins (1167950, `..._Data/Plugins/x86_64/steam_api64.dll`) logged `result=x64` (21:45:48, 2026-10-23); Raft, Hell Clock, Ranch Simulator and Abiotic Factor also logged `result=x64` for subfolder DLLs. No subfolder-DLL title logged `none`.
