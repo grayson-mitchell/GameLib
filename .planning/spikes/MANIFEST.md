@@ -172,6 +172,11 @@ Investigation/feasibility only — not building the bridge.
   `steam_appid.txt` / `SteamAppId` returns "No appID found" and every interface accessor returns
   NULL. For a bottled game this is the game's own appID; `480` (Spacewar) suffices for
   identity-only handshakes. Host helper needs no code signing/entitlements to load the dylib. *(005a)*
+- **CEG-wrapped titles cannot run through the bridge alone.** CEG's start stub (in the game exe, before
+  `SteamAPI_Init`) sends a DIPC start request (`STEAM_DIPC_CONSUME`/`SREAM_DIPC_PRODUCE`, `STEAM_START_ACK_EVENT_*`,
+  `<exe>.<pid>.STEAMSTART`). Only a genuine Windows Steam client's servicing lets it continue. A bare ACK
+  (Proton-style) or a registered `SteamClientDll` makes it exit 0; the native Mac client has no handler. Do not
+  replicate Steam's answer (DRM circumvention). `drm-wrapped` → bottled Steam is the justified exception. *(035–037)*
 - **Known-hard gap: P2P / multiplayer *join*.** Single-player, auth, persona, listen-server
   hosting, and server-browsing are proven; inbound P2P handshake needs `InitRelayNetworkAccess()`
   + proactive `AcceptP2PSessionWithUser` and remains only partially fixed upstream. *(004b)*
@@ -277,6 +282,7 @@ manager, dialog, launcher.
 | 034 | known-fixes-v2-hoard | standard | Given the extended known-fixes schema (notes/per-game-compat-fixes-architecture.md), when ONE local-override file for Hoard selects either profile (a) shimFeatures.wgl.hideExtensions or (b) Mesa overlay + dllOverrides + GALLIUM_DRIVER, then a launch through the real Steam bridge path applies it, the unmodified game runs, and turning the profile off restores the bottle exactly (ledger) | ⏳ PLANNED | steam, macos, known-fixes, shim, overlays, dll-overrides, ledger, hoard |
 | 035 | xcom-ceg-handshake-trace | standard | Given XComEW.exe (XCOM: Enemy Within, 200510) in a bridge bottle with the shim, when traced +sync,+reg,+file, then the CEG start stub's exact handshake is named | ✓ VALIDATED (pre-init: STEAM_DIPC_CONSUME/SREAM_DIPC_PRODUCE semaphores + STEAM_START_ACK_EVENT_<pid>_<n> + <exe>.<pid>.STEAMSTART request, 30s wait → exit; identical to the protocol Proton's steam_helper `steam_drm_thread` answers) | steam, macos, bridge, ceg, drm, xcom, proton, dipc |
 | 036 | proton-style-dipc-responder | standard | Given 035's handshake, when a Proton-style steam.exe responder ACKs the DIPC start request in the bridge bottle, then XComEW.exe passes the CEG wait and reaches SteamAPI_Init | ⚠ PARTIAL (ACK found+accepted, but game then exits 0 = 'Steam will relaunch me'; oracle under genuine bottled Steam shows the same request, ~1ms ACK, then the game loads ActiveProcess\\SteamClientDll's steamclient.dll and continues to menu → missing piece is a bridge-backed steamclient.dll (Proton's lsteamclient slot), not the DIPC answer; env/shim/relaunch ruled out; CrossOver wineserver ignores CX_BOTTLE) | steam, macos, bridge, ceg, drm, xcom, proton, dipc, oracle |
+| 037 | ceg-steamclient-probe | standard | Given 036's accepted ACK, when ActiveProcess\\SteamClientDll names a probe steamclient.dll (Proton's lsteamclient slot), then XComEW.exe loads it post-ACK and reveals what CEG asks the client | ✗ INVALIDATED (registered client never loaded; game still exits 2ms after ACK → continuation depends on genuine Windows Steam's DIPC servicing; Mac client has no runtime handler; reproducing Steam's answer = DRM circumvention, stopped at the boundary → CEG titles need a genuine Windows Steam client: drm-wrapped → bottled Steam route confirmed justified) | steam, macos, bridge, ceg, drm, xcom, boundary |
 
 > **Overall Idea C feasibility (spikes 009–012):** A Rust/Tauri rearchitecture is **FEASIBLE but is
 > a deliberate reshape, not a free lunch** — and the divorce from Heroic upstream is its dominant

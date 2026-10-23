@@ -104,7 +104,9 @@ question requires otherwise.
   the bottle detaches stdout.
 - **Bottle/wineserver hygiene (bridge line, 007+):** do NOT launch via `cxstart` — it detaches and
   **wedges the bottle's `wineserver`**, silently swallowing later `wine` output. Use `bin/wine`, and
-  run `.../bin/wineserver -k` between runs to reset. Real 32-bit Windows games live under the bottle
+  run `WINEPREFIX="$HOME/Library/Application Support/CrossOver/Bottles/<bottle>" .../bin/wineserver -k`
+  between runs to reset — **`bin/wineserver` ignores `CX_BOTTLE`**, so `CX_BOTTLE=<b> wineserver -k` silently
+  kills nothing (036: a "cleaned-up" bottled Steam survived and swallowed two later runs). Real 32-bit Windows games live under the bottle
   at `.../GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps/common/<game>/`.
 - **Rust toolchain (Tauri line, 009–012):** `cargo`/`rustc` **are** installed locally (1.94.x). The
   `keyring` crate (feature `apple-native`) builds and round-trips the macOS Keychain with no extra
@@ -118,6 +120,12 @@ question requires otherwise.
   `RestartAppIfNecessary`) are **advisory** — many games ignore them; the bridge is a compatibility
   layer, not a DRM gate.
 
+- **Bridge-bottle game experiments without touching an install (035):** APFS-clone a bridge bottle
+  (`cp -cR`) and build a **shadow tree** of symlinks into the real install, with only the directory holding
+  `steam_api.dll` made real. CrossOver's `bin/wine` ignores `WINEDEBUG`; trace with `--cx-log <file>
+  --debugmsg +sync,+reg,+file`. When a question is "what does genuine Steam do", boot the bottled Windows
+  client as an **oracle** and diff traces; to read a launched process's env, dump its PEB from a tiny PE
+  (Wine's `+process` doesn't trace CRT `getenv`).
 - **Login-UX spikes (019–022):** the shared fixture is spike 019's DummyStore
   (`019-dummy-oauth-store/store-server.mjs`, zero-dep Node ESM, port 17940) — an OAuth 2.0
   auth-code-grant provider with a hot-editable login form. Scripted flows against it MUST run

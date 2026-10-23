@@ -112,6 +112,16 @@ int main(int argc, char **argv) {
   CreateEventW(NULL, FALSE, FALSE, L"Global\\Valve_SteamIPC_Class");
   logf("ActiveProcess\\pid=%lu -> %ld", pid, RegSetKeyValueW(HKEY_CURRENT_USER, L"Software\\Valve\\Steam\\ActiveProcess",
        L"pid", REG_DWORD, &pid, sizeof(pid)));
+  /* DIPC_CLIENTDLL=<win path>: register a steamclient.dll the way Proton's lsteamclient
+   * steamclient_init_registry does (spike 037) -- HKCU only; HKLM\Software\Valve\Steam stays absent
+   * because its presence diverts the game into "steam.exe -applaunch" (036 o1). */
+  if (getenv("DIPC_CLIENTDLL")) {
+    const char *dll = getenv("DIPC_CLIENTDLL");
+    logf("SteamClientDll=%s -> %ld", dll, RegSetKeyValueA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess",
+         "SteamClientDll", REG_SZ, dll, (DWORD)strlen(dll) + 1));
+    RegSetKeyValueA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess", "SteamClientDll64", REG_SZ, dll, (DWORD)strlen(dll) + 1);
+    RegSetKeyValueA(HKEY_CURRENT_USER, "Software\\Valve\\Steam\\ActiveProcess", "Universe", REG_SZ, "Public", 7);
+  }
   SetEnvironmentVariableA("SteamPath", "C:\\Program Files (x86)\\Steam");
   if (!getenv("SteamGameId")) SetEnvironmentVariableA("SteamGameId", "200510");
   if (!getenv("SteamAppId")) SetEnvironmentVariableA("SteamAppId", "200510");
