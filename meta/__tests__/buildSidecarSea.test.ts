@@ -35,7 +35,9 @@ import {
   triplePlatform,
   expectedMachoArch,
   nodeDistName,
-  nodeDistUrls
+  nodeDistUrls,
+  classifyNodeBase,
+  formatPostjectFailure
 } from '../buildSidecarSea'
 
 const SENTINEL_FUSE = 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2'
@@ -824,5 +826,95 @@ describe('WR-10-style source-scan guard: the inline-fallback warning cannot come
       '  )'
     ].join('\n')
     expect(oldWarningSource).toMatch(/inline single-thread/)
+  })
+})
+
+// ── quick 261024-eg9: shared-libnode base detection ───────────────────────
+
+describe('classifyNodeBase (shared-libnode vs self-contained node)', () => {
+  const OTOOL_HOMEBREW = [
+    '/opt/homebrew/Cellar/node@22/22.23.4/bin/node:',
+    '\t@rpath/libnode.127.dylib (compatibility version 0.0.0, current version 0.0.0)',
+    '\t/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 1900.180.0)',
+    '\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)'
+  ].join('\n')
+  const OTOOL_OFFICIAL = [
+    '/usr/local/bin/node:',
+    '\t/usr/lib/libc++.1.dylib (compatibility version 1.0.0)',
+    '\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0)'
+  ].join('\n')
+
+  test('darwin otool listing @rpath/libnode is shared-libnode at any size', () => {
+    expect(
+      classifyNodeBase({ linkage: OTOOL_HOMEBREW, sizeBytes: 110_000_000 })
+    ).toBe('shared-libnode')
+    expect(
+      classifyNodeBase({ linkage: OTOOL_HOMEBREW, sizeBytes: 67_024 })
+    ).toBe('shared-libnode')
+  })
+
+  test('darwin otool without libnode at ~110 MB is self-contained', () => {
+    expect(
+      classifyNodeBase({ linkage: OTOOL_OFFICIAL, sizeBytes: 110_000_000 })
+    ).toBe('self-contained')
+  })
+
+  test('linux ldd listing libnode.so is shared-libnode', () => {
+    expect(
+      classifyNodeBase({
+        linkage: '\tlibnode.so.127 => /usr/lib/libnode.so.127 (0x00007f)',
+        sizeBytes: 110_000_000
+      })
+    ).toBe('shared-libnode')
+  })
+
+  test('no linkage text: the size floor decides', () => {
+    expect(classifyNodeBase({ linkage: undefined, sizeBytes: 67_024 })).toBe(
+      'shared-libnode'
+    )
+    expect(classifyNodeBase({ linkage: '', sizeBytes: 67_024 })).toBe(
+      'shared-libnode'
+    )
+    expect(
+      classifyNodeBase({ linkage: undefined, sizeBytes: 100_000_000 })
+    ).toBe('self-contained')
+  })
+
+  test('a path that merely contains "node" does not match', () => {
+    expect(
+      classifyNodeBase({
+        linkage: '/opt/homebrew/bin/node:\n\t/usr/lib/libz.1.dylib (x)',
+        sizeBytes: 100_000_000
+      })
+    ).toBe('self-contained')
+  })
+})
+
+describe('formatPostjectFailure', () => {
+  test('carries the exit code and both labeled streams', () => {
+    const msg = formatPostjectFailure(
+      1,
+      'Error: Could not find the sentinel NODE_SEA_FUSE',
+      ''
+    )
+    expect(msg).toContain('postject exited 1')
+    expect(msg).toContain('Could not find the sentinel')
+    expect(msg).toMatch(/stdout:/)
+    expect(msg).toMatch(/stderr:/)
+  })
+})
+
+describe('shared-libnode wiring (comment-stripped source guards)', () => {
+  function stripped(): string {
+    return readFileSync(join(__dirname, '..', 'buildSidecarSea.ts'), 'utf-8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+  }
+  test('copyNodeBinary native branch consults the classifier', () => {
+    expect(stripped()).toMatch(/classifyNodeBase|detectNodeBase/)
+    expect(stripped()).toMatch(/obtainOfficialNodeBinary/)
+  })
+  test('injectBlob error path uses inject.stdout', () => {
+    expect(stripped()).toMatch(/inject\.stdout/)
   })
 })
