@@ -18,7 +18,9 @@ const RESET_STATE = {
   appName: undefined,
   reason: undefined,
   knownBadReason: null,
-  missingSymbols: []
+  missingSymbols: [],
+  route: undefined,
+  userRoute: null
 }
 
 describe('useSteamBridgeRouteNotice store', () => {
@@ -32,6 +34,8 @@ describe('useSteamBridgeRouteNotice store', () => {
     expect(useSteamBridgeRouteNotice.getState().reason).toBeUndefined()
     expect(useSteamBridgeRouteNotice.getState().knownBadReason).toBeNull()
     expect(useSteamBridgeRouteNotice.getState().missingSymbols).toEqual([])
+    expect(useSteamBridgeRouteNotice.getState().route).toBeUndefined()
+    expect(useSteamBridgeRouteNotice.getState().userRoute).toBeNull()
   })
 
   it('open(payload) sets isOpen + every field from the payload', () => {
@@ -39,7 +43,9 @@ describe('useSteamBridgeRouteNotice store', () => {
       appName: '440',
       reason: 'known-bad',
       knownBadReason: 'drm-wrapped',
-      missingSymbols: []
+      missingSymbols: [],
+      route: 'bottle',
+      userRoute: null
     })
 
     expect(useSteamBridgeRouteNotice.getState().isOpen).toBe(true)
@@ -51,12 +57,31 @@ describe('useSteamBridgeRouteNotice store', () => {
     expect(useSteamBridgeRouteNotice.getState().missingSymbols).toEqual([])
   })
 
+  it('open(payload) saves route and userRoute; close() resets them', () => {
+    useSteamBridgeRouteNotice.getState().open({
+      appName: '63000',
+      reason: 'known-bad',
+      knownBadReason: 'does-not-run',
+      missingSymbols: [],
+      route: 'bridge',
+      userRoute: 'bottle'
+    })
+    expect(useSteamBridgeRouteNotice.getState().route).toBe('bridge')
+    expect(useSteamBridgeRouteNotice.getState().userRoute).toBe('bottle')
+
+    useSteamBridgeRouteNotice.getState().close()
+    expect(useSteamBridgeRouteNotice.getState().route).toBeUndefined()
+    expect(useSteamBridgeRouteNotice.getState().userRoute).toBeNull()
+  })
+
   it('open(payload) carries missingSymbols verbatim for a scan-miss payload', () => {
     useSteamBridgeRouteNotice.getState().open({
       appName: '570',
       reason: 'scan-miss',
       knownBadReason: null,
-      missingSymbols: ['SteamUtils005', 'SteamUser023']
+      missingSymbols: ['SteamUtils005', 'SteamUser023'],
+      route: 'bottle',
+      userRoute: null
     })
 
     expect(useSteamBridgeRouteNotice.getState().missingSymbols).toEqual([
@@ -70,7 +95,9 @@ describe('useSteamBridgeRouteNotice store', () => {
       appName: '440',
       reason: 'known-bad',
       knownBadReason: 'drm-wrapped',
-      missingSymbols: []
+      missingSymbols: [],
+      route: 'bottle',
+      userRoute: null
     })
     useSteamBridgeRouteNotice.getState().close()
 
@@ -94,7 +121,9 @@ describe('handleSteamBridgeRouteNoticeSignal (backend signal wiring)', () => {
       appName: '2010',
       reason: 'win64-no-shim',
       knownBadReason: null,
-      missingSymbols: []
+      missingSymbols: [],
+      route: 'bottle',
+      userRoute: null
     })
 
     expect(useSteamBridgeRouteNotice.getState().isOpen).toBe(true)
@@ -115,9 +144,32 @@ describe('resolveRouteNoticeContent — D-51-08/11/13', () => {
         appName: '440',
         reason: 'known-bad',
         knownBadReason: 'drm-wrapped',
-        missingSymbols: []
+        missingSymbols: [],
+        route: 'bottle',
+        userRoute: null
       })
-    ).toEqual({ bodyKey: 'knownBad', showTryBridge: true })
+    ).toEqual({
+      bodyKey: 'knownBad',
+      showTryBridge: true,
+      informational: false
+    })
+  })
+
+  it("'known-bad' on route 'bridge' -> informational, no Try-the-bridge-anyway (D-51-08 amendment)", () => {
+    expect(
+      resolveRouteNoticeContent({
+        appName: '63000',
+        reason: 'known-bad',
+        knownBadReason: 'does-not-run',
+        missingSymbols: [],
+        route: 'bridge',
+        userRoute: null
+      })
+    ).toEqual({
+      bodyKey: 'knownBad',
+      showTryBridge: false,
+      informational: true
+    })
   })
 
   it("'scan-miss' -> { bodyKey: 'scanMiss', showTryBridge: true }", () => {
@@ -126,9 +178,15 @@ describe('resolveRouteNoticeContent — D-51-08/11/13', () => {
         appName: '570',
         reason: 'scan-miss',
         knownBadReason: null,
-        missingSymbols: ['SteamUtils005']
+        missingSymbols: ['SteamUtils005'],
+        route: 'bottle',
+        userRoute: null
       })
-    ).toEqual({ bodyKey: 'scanMiss', showTryBridge: true })
+    ).toEqual({
+      bodyKey: 'scanMiss',
+      showTryBridge: true,
+      informational: false
+    })
   })
 
   it("'win64-no-shim' -> { bodyKey: 'win64NoShim', showTryBridge: false } (D-51-13: never offer an override past the fail-closed default)", () => {
@@ -137,9 +195,15 @@ describe('resolveRouteNoticeContent — D-51-08/11/13', () => {
         appName: '2010',
         reason: 'win64-no-shim',
         knownBadReason: null,
-        missingSymbols: []
+        missingSymbols: [],
+        route: 'bottle',
+        userRoute: null
       })
-    ).toEqual({ bodyKey: 'win64NoShim', showTryBridge: false })
+    ).toEqual({
+      bodyKey: 'win64NoShim',
+      showTryBridge: false,
+      informational: false
+    })
   })
 })
 

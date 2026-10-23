@@ -26,10 +26,26 @@ import {
 // win64-no-shim per D-51-13's fail-closed default) persists the user's
 // forced 'bridge' override and retries install() through the bridge.
 // "Cancel" is a dead-end-free third option -- nothing is dispatched.
+//
+// D-51-08 amendment (2026-10-23): a non-DRM known-bad title stays on the
+// bridge. Its notice is the INFORMATIONAL variant (`informational`): only
+// "Install anyway" (acknowledges 'known-bad', keeping the stored userRoute
+// as-is, then retries install through the bridge) and Cancel -- never "Use
+// bottled Steam" or "Try the bridge anyway". When a later bottle row
+// (scan-miss / win64-no-shim) wins for such a title, the single dialog
+// shown there also names the known-bad reason.
 const SteamBridgeRouteNotice = () => {
   const { t } = useTranslation('gamelib')
-  const { isOpen, appName, reason, knownBadReason, missingSymbols, close } =
-    useSteamBridgeRouteNotice()
+  const {
+    isOpen,
+    appName,
+    reason,
+    knownBadReason,
+    missingSymbols,
+    route,
+    userRoute: storedUserRoute,
+    close
+  } = useSteamBridgeRouteNotice()
 
   const [gameTitle, setGameTitle] = useState<string>()
   const [busyRoute, setBusyRoute] = useState<'bottle' | 'bridge' | null>(null)
@@ -62,11 +78,13 @@ const SteamBridgeRouteNotice = () => {
     return null
   }
 
-  const { bodyKey, showTryBridge } = resolveRouteNoticeContent({
+  const { bodyKey, showTryBridge, informational } = resolveRouteNoticeContent({
     appName,
     reason,
     knownBadReason,
-    missingSymbols
+    missingSymbols,
+    route: route ?? 'bottle',
+    userRoute: storedUserRoute
   })
   const title = gameTitle ?? appName
 
@@ -74,12 +92,15 @@ const SteamBridgeRouteNotice = () => {
     close()
   }
 
-  // Shared by both "Use bottled Steam" and "Try the bridge anyway" -- the
-  // only difference between the two is the userRoute/acknowledgeReason pair
-  // persisted before the SAME installSteamGame(appName, gameInfo) retry
-  // (34.13-08 D-17 marshalling precedent, SteamBridgeSetup.tsx).
-  const chooseRoute = async (userRoute: 'bottle' | 'bridge') => {
-    setBusyRoute(userRoute)
+  // Shared by "Use bottled Steam", "Try the bridge anyway" and the
+  // informational "Install anyway" -- the only difference between them is the
+  // userRoute/acknowledgeReason pair persisted before the SAME
+  // installSteamGame(appName, gameInfo) retry (34.13-08 D-17 marshalling
+  // precedent, SteamBridgeSetup.tsx). 'acknowledge' persists the notice
+  // acknowledgement for 'known-bad' and passes the stored userRoute back
+  // unchanged.
+  const chooseRoute = async (choice: 'bottle' | 'bridge' | 'acknowledge') => {
+    setBusyRoute(choice === 'bottle' ? 'bottle' : 'bridge')
     setError(undefined)
 
     try {
@@ -94,9 +115,15 @@ const SteamBridgeRouteNotice = () => {
       }
 
       await window.api.setSteamBridgeUserRoute(
-        userRoute === 'bottle'
-          ? { appId: appName, userRoute: null, acknowledgeReason: reason }
-          : { appId: appName, userRoute: 'bridge' }
+        choice === 'acknowledge'
+          ? {
+              appId: appName,
+              userRoute: storedUserRoute,
+              acknowledgeReason: 'known-bad'
+            }
+          : choice === 'bottle'
+            ? { appId: appName, userRoute: null, acknowledgeReason: reason }
+            : { appId: appName, userRoute: 'bridge' }
       )
       await installSteamGame(appName, info)
       close()
@@ -146,18 +173,38 @@ const SteamBridgeRouteNotice = () => {
       className="steamBridgeRouteNoticeDialog"
     >
       <DialogHeader onClose={handleCancel}>
-        {t(
-          'steam.bridge.routeNotice.title',
-          'This game will use the Windows Steam client'
-        )}
+        {informational
+          ? t(
+              'steam.bridge.routeNotice.titleBridge',
+              'This game may not work with the native Steam bridge'
+            )
+          : t(
+              'steam.bridge.routeNotice.title',
+              'This game will use the Windows Steam client'
+            )}
       </DialogHeader>
       <DialogContent>
         <p>{renderBody()}</p>
+        {!informational && knownBadReason && reason !== 'known-bad' ? (
+          <p>
+            {t('steam.bridge.route.reason.knownBad', {
+              defaultValue: 'Known not to work with the bridge: {{reason}}',
+              reason: t(
+                `steam.bridge.knownBad.${knownBadReasonKey(knownBadReason)}`
+              )
+            })}
+          </p>
+        ) : null}
         <p>
-          {t(
-            'steam.bridge.routeNotice.bottledExplainer',
-            'GameLib will install it into the bottled Windows Steam client instead.'
-          )}
+          {informational
+            ? t(
+                'steam.bridge.routeNotice.bridgeExplainer',
+                'GameLib will still install it through the native Steam bridge, but it will probably not run.'
+              )
+            : t(
+                'steam.bridge.routeNotice.bottledExplainer',
+                'GameLib will install it into the bottled Windows Steam client instead.'
+              )}
         </p>
         {error ? <p className="steamBridgeSetupError">{error}</p> : null}
       </DialogContent>
@@ -165,13 +212,23 @@ const SteamBridgeRouteNotice = () => {
         {/* 34.13 review C-23: `void` on every onClick so no promise floats
             off an event handler -- each handler's body is entirely inside
             try/catch/finally above. */}
-        <button
-          onClick={() => void chooseRoute('bottle')}
-          disabled={busyRoute !== null}
-          className="button is-primary"
-        >
-          {t('steam.bridge.routeNotice.useBottled', 'Use bottled Steam')}
-        </button>
+        {informational ? (
+          <button
+            onClick={() => void chooseRoute('acknowledge')}
+            disabled={busyRoute !== null}
+            className="button is-primary"
+          >
+            {t('steam.bridge.routeNotice.installAnyway', 'Install anyway')}
+          </button>
+        ) : (
+          <button
+            onClick={() => void chooseRoute('bottle')}
+            disabled={busyRoute !== null}
+            className="button is-primary"
+          >
+            {t('steam.bridge.routeNotice.useBottled', 'Use bottled Steam')}
+          </button>
+        )}
         {showTryBridge ? (
           <button
             onClick={() => void chooseRoute('bridge')}

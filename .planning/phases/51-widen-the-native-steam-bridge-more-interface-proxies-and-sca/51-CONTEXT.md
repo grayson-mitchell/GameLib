@@ -71,6 +71,13 @@ entry and this file cite.
 - **D-51-08:** A title on the bundled **known-bad list gets a dialog up front naming the reason**
   (DRM-wrapped, 64-bit only, …), then routes to bottled Steam. The bridge is never attempted
   silently for a known-bad title. The dialog carries a third button per D-51-11.
+  - **Amended 2026-10-23 (quick 261023-og0):** only `drm-wrapped` routes to bottled Steam. Titles
+    known-bad as `does-not-run`, `win64-only` or `p2p-required` (Hoard 63000, ELEX 411300) stay on
+    the bridge path and get a one-time informational notice ("Install anyway" / Cancel, no "Try the
+    bridge anyway") before install. If a later row (scan-miss, win64-no-shim) routes such a title to
+    bottle, that row's reason and notice win, and its single dialog also names the known-bad reason.
+    The census still counts these titles as known-bad. Rationale (user): bottled Steam is a narrow
+    fallback the project aims to eliminate, and Hoard and ELEX must not move to it.
 
 ### Route visibility and user override
 - **D-51-09:** The route is shown in **both** the install dialog's wine section (one-line verdict:
@@ -83,6 +90,7 @@ entry and this file cite.
 - **D-51-11:** The user can **force a bridge attempt for a known-bad or scan-missed title**: the
   D-51-08 dialog offers "Try the bridge anyway", which runs the normal install-then-scan path; a miss
   lands on the ordinary D-05 fallback. The known-bad list is therefore self-correcting.
+  - See the D-51-08 amendment of 2026-10-23: the known-bad override now applies only to `drm-wrapped`.
 - **D-51-12 (folded todo LD-5):** `removeSteamInstallCopy('bridge')` **deletes the emptied per-game
   bridge bottle** via `removePerGameBridgeBottle` (guard chain from `261016-u1w`) when the bottle is
   per-game. Legacy-bottle behaviour unchanged.

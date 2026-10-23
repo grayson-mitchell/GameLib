@@ -413,12 +413,15 @@
             },
             "routeNotice": {
                 "bottledExplainer": "GameLib will install it into the bottled Windows Steam client instead.",
+                "bridgeExplainer": "GameLib will still install it through the native Steam bridge, but it will probably not run.",
                 "cancel": "Cancel",
                 "error": "Starting the install failed: {{error}}",
+                "installAnyway": "Install anyway",
                 "knownBad": "{{title}} is known not to work with the native Steam bridge: {{reason}}.",
                 "notFound": "Could not find this game to install it.",
                 "scanMiss": "The native Steam bridge does not cover every Steam call {{title}} makes. Not covered: {{symbols}}.",
                 "title": "This game will use the Windows Steam client",
+                "titleBridge": "This game may not work with the native Steam bridge",
                 "tryBridge": "Try the bridge anyway",
                 "useBottled": "Use bottled Steam",
                 "win64NoShim": "{{title}} is a 64-bit game, and this build of GameLib has no 64-bit bridge."
