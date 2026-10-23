@@ -91,6 +91,12 @@ the Mac.
 
 ## Follow-up: the ~30 s freeze at the splash (and at quit)
 
+> **CORRECTED by spike 033.** The seek-storm explanation below is **wrong**. A user-space seek cache
+> removed 99.97 % of real seeks and the freeze stayed at ~24 s. Relay call counts misled the
+> analysis, and relay tracing also distorts the freeze itself (frame gaps drop to ≤2.9 s under
+> `+relay`). An in-shim sampling profiler puts ~80 % of freeze time in **x87-heavy game code**
+> (`Reuben.exe+0x10db00…0x10e700`, FFT-like), which is slow under Rosetta 2. See 033.
+
 A human run of `./play.sh` (2026-10-23) confirmed the game **plays fine in-game**. The only issue:
 the splash screen froze for roughly 30 s, looking like a crash, and quitting did the same. The
 "ad" is the Big Sandwich Games / Stratecade developer and publisher splash
