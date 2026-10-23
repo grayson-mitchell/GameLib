@@ -151,7 +151,18 @@ const SteamBridgeSetup = () => {
             })}
           </p>
         ) : null}
-        {reason === 'scan-miss' || reason === 'win64-no-shim' ? (
+        {reason === 'drm-wrapped' ? (
+          // quick 261024-br4: a detected (or bundled) Steam CEG title.
+          <p className="steamBridgeSetupReason">
+            {tGamelib(
+              'steam.bridge.setup.drmCeg',
+              'This game uses Steam CEG copy protection, which only the Windows Steam client can satisfy. The native Steam bridge cannot run it.'
+            )}
+          </p>
+        ) : null}
+        {reason === 'scan-miss' ||
+        reason === 'win64-no-shim' ||
+        reason === 'drm-wrapped' ? (
           <p className="steamBridgeSetupReason">
             {tGamelib(
               'steam.bridge.setup.redownloadNote',

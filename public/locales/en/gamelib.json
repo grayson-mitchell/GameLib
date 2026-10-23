@@ -427,6 +427,7 @@
                 "win64NoShim": "{{title}} is a 64-bit game, and this build of GameLib has no 64-bit bridge."
             },
             "setup": {
+                "drmCeg": "This game uses Steam CEG copy protection, which only the Windows Steam client can satisfy. The native Steam bridge cannot run it.",
                 "missingSymbols": "The bridge does not cover: {{symbols}}",
                 "redownloadNote": "Falling back downloads the game again into the bottled Windows Steam client."
             }

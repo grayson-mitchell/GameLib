@@ -113,7 +113,8 @@ import {
   setBridgeSteamApiPrescreen,
   setBridgeUserRoute,
   markBridgeLimitedNoticeShown,
-  setBridgeIdentityFallback
+  setBridgeIdentityFallback,
+  writeBridgeDrmVerdict
 } from './bridge/bridgeVerdict'
 import { isScanVerdictNowCovered } from './bridge/shimCoverage'
 import { builtBridgeShim64Path } from 'backend/constants/paths'
@@ -1625,6 +1626,44 @@ export default class SteamGame implements Game {
     if (shimResult.verdict) {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
     }
+
+    // Quick 261024-br4: Steam CEG DRM (XCOM 200510's silent ~30s exit). A
+    // CEG exe asks the Windows Steam client for a per-user build key, and a
+    // bridge bottle has no Windows Steam client -- so it can never run here.
+    // DRM is the one justified route into bottled Steam (a narrow fallback).
+    // Mirrors the win64-no-shim dead end above: the downloaded bits are
+    // orphaned (D-51-05: the fallback re-downloads, nothing is moved), so
+    // the per-game bridge bottle is removed. userRoute is NOT cleared: by
+    // construction it is not 'bridge' here, and a forced 'bridge' proceeds.
+    const cegMarkers = this.persistBridgeDrmSignal(
+      shimResult.drm,
+      'installBridgeGame'
+    )
+    if (cegMarkers) {
+      logWarning(
+        `SteamGame: installBridgeGame found Steam CEG DRM in the exe for appId ${this.appId} (${cegMarkers.join(', ')}) -- CEG needs the Windows Steam client, which a bridge bottle does not have; stopping the bridge install`,
+        LogPrefix.Steam
+      )
+      stopInstallPolling(this.appId)
+      const removeResult = await removePerGameBridgeBottle(this.appId)
+      if (removeResult.status === 'error') {
+        logWarning(
+          `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${this.appId} after detecting Steam CEG DRM: ${removeResult.error}`,
+          LogPrefix.Steam
+        )
+      }
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'drm-wrapped',
+        fallbackAvailable: true
+      })
+      return {
+        status: 'error',
+        error: `Steam CEG DRM detected (${cegMarkers.join(', ')}): this game needs the Windows Steam client`
+      }
+    }
+
     if (shimResult.status === 'placed-miss') {
       logWarning(
         `SteamGame: installBridgeGame shim coverage miss for appId ${this.appId}: ${shimResult.verdict.missingSymbols.join(', ')} -- shim placed anyway; a static-import miss is expected to fail at load with a Windows entry-point error`,
@@ -1670,6 +1709,31 @@ export default class SteamGame implements Game {
    * (never downgrading a real x86/x64/both), and a persisted 'none' is
    * upgraded to the scanned arch when the placement found a real import.
    */
+  /**
+   * Quick 261024-br4: persists `placeShimForGame`'s Steam DRM signal
+   * (`bridge.drm`) and decides whether it is a dead end. An absent signal
+   * (not checked / PE did not parse) leaves the stored value alone; `null`
+   * (parsed, not CEG) clears a stale 'ceg'. Returns the CEG markers when the
+   * caller must stop, or null -- including when the user forced 'bridge'
+   * (D-51-11), which is logged and honoured.
+   */
+  private persistBridgeDrmSignal(
+    drm: { kind: 'ceg'; markers: string[] } | null | undefined,
+    caller: 'installBridgeGame' | 'launchBridgeGame'
+  ): string[] | null {
+    if (drm === undefined) return null
+    writeBridgeDrmVerdict(this.appId, drm ? 'ceg' : undefined)
+    if (drm?.kind !== 'ceg') return null
+    if (readBridgeVerdict(this.appId)?.userRoute === 'bridge') {
+      logWarning(
+        `SteamGame: ${caller} found Steam CEG DRM for appId ${this.appId} (${drm.markers.join(', ')}) but the user forced the bridge -- continuing`,
+        LogPrefix.Steam
+      )
+      return null
+    }
+    return drm.markers
+  }
+
   private reconcileBridgePrescreen(shimResult: {
     status: string
     verdict?: { arch: 'x86' | 'x64' }
@@ -2678,6 +2742,29 @@ export default class SteamGame implements Game {
     if (shimResult.verdict) {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
     }
+
+    // Quick 261024-br4: an already-installed Steam CEG title (XCOM 200510)
+    // would otherwise idle ~30s and exit silently. Same dialog as install,
+    // but the bottle is NOT removed -- launch never deletes (mirrors the
+    // win64-no-shim handling above). A forced 'bridge' proceeds.
+    const cegMarkers = this.persistBridgeDrmSignal(
+      shimResult.drm,
+      'launchBridgeGame'
+    )
+    if (cegMarkers) {
+      logWarning(
+        `SteamGame: launchBridgeGame found Steam CEG DRM in the exe for appId ${this.appId} (${cegMarkers.join(', ')}) -- CEG needs the Windows Steam client, which a bridge bottle does not have; not launching`,
+        LogPrefix.Steam
+      )
+      markBridgeFailedThisSession(this.appId)
+      sendFrontendMessage('steamBridgeSetupRequired', {
+        appName: this.appId,
+        reason: 'drm-wrapped',
+        fallbackAvailable: true
+      })
+      return false
+    }
+
     // CR-04: already-installed titles self-heal a wrong persisted 'none'.
     this.reconcileBridgePrescreen(shimResult)
 

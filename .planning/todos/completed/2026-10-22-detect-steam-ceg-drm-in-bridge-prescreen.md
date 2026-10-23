@@ -35,3 +35,14 @@ Fix direction:
 - Teach `pnpm bridge-census` the same classification so the census number counts CEG titles as
   misses, not as bridge-routed.
 - Until then, Task 2 of 51-19 adds 200510 to `knownBad` as `drm-wrapped` by hand.
+
+## Closed
+
+2026-10-24, quick 261024-br4: CEG is now detected automatically.
+
+1. `placeShimForGame` runs a ranged PE resource scan (`bridge/peSteamDrm.ts`, zero imports) on the game exe after the appId/bottle/containment checks. RT_RCDATA names `STEAM_SPLIT_GUID` / `STEAM_GUIDD` / `STEAM_MINSTANCE` mark the exe as CEG. The finding is persisted as `bridge.drm: 'ceg'`, outside `scan` so a shim export-set bump cannot clear it, and `resolveBridgeRoute` folds it into row 4 as known-bad `drm-wrapped` with the D-51-08 notice. A detected CEG beats a bundled non-DRM reason. A user's "Try the bridge anyway" (`userRoute: 'bridge'`) is still honoured.
+2. Install and launch now show the `drm-wrapped` setup dialog (with a CEG line and the re-download note) instead of failing silently. Install also removes the per-game bridge bottle; launch keeps it.
+3. `pnpm bridge-census` counts a CEG title as a known-bad `drm-wrapped` miss, not as bridge-routed.
+4. Live, read-only check of the operator's GameLibSteam bottle: `XComGame.exe` and `XComEW.exe` both parse and report all three markers (`STEAM_GUIDD`, `STEAM_MINSTANCE`, `STEAM_SPLIT_GUID`), with no `.bind` section.
+5. **Deviation:** a SteamStub `.bind` section is detected and reported (a backend log line, census detail text) but deliberately NOT routed. Todo 2026-10-23 "forwarding steamclient dll for SteamStub titles" puts SteamStub in scope for the bridge, and bottled Steam is a narrow fallback where only DRM that needs a Windows Steam client (CEG) justifies a new route into it.
+6. The hand-added 200510 `knownBad` entry in `bridge-allowlist.json` stays in place as a belt-and-braces guard.

@@ -1779,6 +1779,84 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     )
   })
 
+  describe('quick 261024-br4: Steam CEG DRM detected at launch', () => {
+    const CEG_APP_ID = '555558'
+    const CEG_DRM = { kind: 'ceg', markers: ['STEAM_SPLIT_GUID'] }
+
+    beforeEach(() => {
+      library.set(CEG_APP_ID, makeEntry({ title: 'CEG Title' }))
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+      ;(removePerGameBridgeBottle as jest.Mock).mockReset()
+    })
+
+    it('returns false with the drm-wrapped dialog, persists drm, keeps the bottle', async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH,
+        drm: CEG_DRM
+      })
+
+      const game = new SteamGame(CEG_APP_ID)
+      const result = await game.launch({} as any)
+
+      expect(result).toBe(false)
+      expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+      expect(runWineCommand).not.toHaveBeenCalled()
+      expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        {
+          appName: CEG_APP_ID,
+          reason: 'drm-wrapped',
+          fallbackAvailable: true
+        }
+      )
+      const drmPersistCall = (
+        steamMetadataStore.set as jest.Mock
+      ).mock.calls.find(
+        ([id, value]) => id === CEG_APP_ID && value?.bridge?.drm === 'ceg'
+      )
+      expect(drmPersistCall).toBeDefined()
+
+      // Breaker armed: the next launch skips the bridge.
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+      ;(placeShimForGame as jest.Mock).mockClear()
+      await game.launch({} as any)
+      expect(placeShimForGame).not.toHaveBeenCalled()
+      expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(CEG_APP_ID)
+    })
+
+    it("with userRoute 'bridge' proceeds to the helper and the wine launch", async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { userRoute: 'bridge' }
+      })
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH,
+        drm: CEG_DRM
+      })
+
+      const game = new SteamGame(CEG_APP_ID)
+      const result = await game.launch({} as any)
+
+      expect(result).toBe(true)
+      expect(ensureBridgeHelperReady).toHaveBeenCalledWith(CEG_APP_ID)
+      expect(runWineCommand).toHaveBeenCalled()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+    })
+  })
+
   describe('quick 261023-oq7: a miss launches through the bridge', () => {
     const MISS_APP_ID = '555557'
     const missVerdict = (symbols: string[], arch: 'x86' | 'x64' = 'x86') => ({
@@ -3946,6 +4024,133 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     )
     expect(persistCall).toBeDefined()
     expect(library.get(APP_ID)?.is_installed).toBe(true)
+  })
+
+  describe('quick 261024-br4: Steam CEG DRM detected at install', () => {
+    const CEG_DRM = { kind: 'ceg', markers: ['STEAM_SPLIT_GUID'] }
+    const drmPersistCall = () =>
+      (steamMetadataStore.set as jest.Mock).mock.calls.find(
+        ([id, value]) => id === APP_ID && value?.bridge?.drm === 'ceg'
+      )
+
+    beforeEach(() => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'removed'
+      })
+    })
+
+    it('stops the install, removes the per-game bottle, persists drm and fires setup-required drm-wrapped', async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        verdict: {
+          status: 'clean',
+          arch: 'x86',
+          missingSymbols: [],
+          interfaceVersions: {},
+          stubbedInterfaces: [],
+          shimExportSetVersion: 'v-ceg',
+          scannedAt: '2026-01-01T00:00:00.000Z'
+        },
+        drm: CEG_DRM
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result).toEqual({
+        status: 'error',
+        error: expect.stringContaining('Steam CEG DRM detected')
+      })
+      const scanPersistCall = (
+        steamMetadataStore.set as jest.Mock
+      ).mock.calls.find(
+        ([id, value]) =>
+          id === APP_ID && value?.bridge?.scan?.shimExportSetVersion === 'v-ceg'
+      )
+      expect(scanPersistCall).toBeDefined()
+      expect(drmPersistCall()).toBeDefined()
+      expect(stopInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+      expect(removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
+      expect(setBridgeUserRouteSpy).not.toHaveBeenCalledWith(APP_ID, undefined)
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        {
+          appName: APP_ID,
+          reason: 'drm-wrapped',
+          fallbackAvailable: true
+        }
+      )
+      expect(library.get(APP_ID)?.is_installed).not.toBe(true)
+
+      // The breaker is armed: a later install() of the same appId is routed
+      // away from the bridge (failed-this-session -> bottled Steam).
+      ;(placeShimForGame as jest.Mock).mockClear()
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+      await new SteamGame(APP_ID).install({} as any)
+      expect(placeShimForGame).not.toHaveBeenCalled()
+    })
+
+    it("with userRoute 'bridge' completes as a normal bridge install, still persisting drm", async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { userRoute: 'bridge' }
+      })
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        drm: CEG_DRM
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result).toEqual({ status: 'done' })
+      expect(drmPersistCall()).toBeDefined()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+      expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
+      expect(library.get(APP_ID)?.is_installed).toBe(true)
+    })
+
+    it("drm null clears a persisted drm 'ceg' and completes normally", async () => {
+      // userRoute 'bridge' is what lets a title already persisted as CEG
+      // reach installBridgeGame at all (otherwise row 4 routes it to bottle).
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { userRoute: 'bridge', drm: 'ceg' }
+      })
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`,
+        drm: null
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result).toEqual({ status: 'done' })
+      const clearCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+        ([id, value]) =>
+          id === APP_ID &&
+          value?.bridge?.userRoute === 'bridge' &&
+          !('drm' in value.bridge)
+      )
+      expect(clearCall).toBeDefined()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+    })
   })
 
   it("D-51-09 (Task 3): placeShimForGame's 'no-steam-api' status at install time persists the verdict AND sets the steam_api prescreen to 'none'", async () => {
