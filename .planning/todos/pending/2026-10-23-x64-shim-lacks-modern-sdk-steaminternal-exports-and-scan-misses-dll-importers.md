@@ -101,3 +101,12 @@ The gap blocks or degrades three more sampled titles, reached through three diff
 `SteamInternal_SteamAPI_Init` is the common entry for every SDK 1.58+ title, whatever its engine.
 Together with the two flat-API misses it is the highest-yield single export. Do part 1 first.
 Re-test 1782460 and 1603180 alongside 219990 and 648410.
+- **Overlooting (3410180, Godot).** GodotSteam's `libgodotsteam.windows.template_release.x86_64.dll`
+  imports `SteamInternal_SteamAPI_Init`, `ContextInit`, `FindOrCreateUserInterface` and
+  `FindOrCreateGameServerInterface` from the placed shim. The operator saw the same crash dialog
+  as Mining Mechs. No `HELLO`. **Does not run.** Side note: the exe is 322 MB because Godot embeds
+  its `.pck`, and the DRM detector logged `could not parse the exe as a PE ... treating as not CEG`.
+  Check the parser's size or read limit, since a large exe is a valid PE.
+
+That makes four engines (Unity, GameMaker, Godot, UE) through four different wrappers, all
+stopped by the same missing exports.
