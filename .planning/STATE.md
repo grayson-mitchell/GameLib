@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
 Plan: 10 of 30
 Status: Ready to execute
-Last activity: 2026-10-23
+Last activity: 2026-10-24 - Completed quick task 261023-vkv: deliver macOS notifications via UNUserNotificationCenter in packaged builds
 
 Progress: [█████████░] 93%
 
@@ -323,6 +323,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261023-oq7 | Scan-miss no longer routes to bottled Steam: resolver row 7 sends it to the bridge with a one-time informational notice; `placeShimForGame` places the shim despite a miss (`placed-miss`) so install keeps the download and launch runs; census split into routed/verified/covered. | 2026-10-23 | 6d5433cf3 | | [261023-oq7-scan-miss-routes-through-the-bridge-with](./quick/261023-oq7-scan-miss-routes-through-the-bridge-with/) |
 | 261023-tyf | Steam bridge shims build as release (`-O2 -fno-sanitize=undefined`): UBSan runtime gone from both DLLs (x86 894464→286720, x64 848896→223744 bytes); marker keepalive fixed to `const char *volatile` so `GameLibSteamBridgeShim/2` survives -O2. | 2026-10-23 | 1ffb5b315 | | [261023-tyf-build-steam-bridge-shims-as-release-buil](./quick/261023-tyf-build-steam-bridge-shims-as-release-buil/) |
 | 261023-ue0 | `gamelib_bridge.cfg` written beside every placed shim DLL (Unity `_Data/Plugins/x86_64/` layout), not only beside the exe; `placeShimForGame` reports all runtime shim paths on `already-placed`/`placed-miss`; every copy rewritten each launch. Live HELLO check on 1167950 pending. | 2026-10-23 | ae050a4db | | [261023-ue0-write-gamelib-bridge-cfg-beside-every-pl](./quick/261023-ue0-write-gamelib-bridge-cfg-beside-every-pl/) |
+| 261023-vkv | Packaged macOS notifications delivered via `UNUserNotificationCenter` (startup `.alert\|.sound` auth + `willPresent` delegate; plugin kept for `tauri:dev`/non-bundle); delivery failures logged via `logWarning`, startup auth to `gamelib-shell.log`. Live banner verified on an Apple-Development-signed bundle; ad-hoc bundles are refused (`UNErrorDomain` 1). | 2026-10-24 | 687ee4234 | live-verified (team-signed bundle) | [261023-vkv-deliver-macos-notifications-via-unuserno](./quick/261023-vkv-deliver-macos-notifications-via-unuserno/) |
 
 ## Deferred Items
 

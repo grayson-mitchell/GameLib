@@ -54,3 +54,21 @@ somewhere a packaged build can see it — the sidecar log, not stderr. Verify on
 (install/uninstall/move finished, download paused/canceled/failed, shortcuts, wine manager, repair).
 
 Evidence: `.planning/quick/261017-cwf-fix-the-macos-game-uninstalled-notificat/evidence/`.
+
+## Closed 2026-10-24 — quick 261023-vkv
+
+Packaged macOS builds now deliver through `UNUserNotificationCenter`
+(`src-tauri/src/macos_notifications.rs`, backend choice in `notification_backend.rs`). Startup
+requests `.alert | .sound` once and registers a `willPresent` delegate so banners show while
+GameLib is frontmost. `tauri:dev` and non-`.app` runs keep `tauri-plugin-notification`. Failures
+come back as `notification:*` strings that `notify()` logs via `logWarning` (a denial once per
+process); the startup authorization outcome goes to `gamelib-shell.log`.
+
+Commits: `687ee4234` (Rust delivery), `b153ff2f7` (sidecar failure logging), `278d90520`
+(startup authorization to the shell log).
+
+Verified live 2026-10-24 on the packaged bundle signed with an Apple Development identity (Team
+S7U223QWXJ): banner shown, `granted=true error=None`. The same bundle ad-hoc/linker-signed (as
+`tauri build --debug` emits it) is refused with `UNErrorDomain error 1` and no prompt, so a
+packaged-build notification check needs a team-signed bundle. Not exercised live: the denial path,
+the `tauri:dev` regression, and a notarized Developer-ID release.
