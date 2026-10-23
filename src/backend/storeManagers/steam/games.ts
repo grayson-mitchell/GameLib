@@ -1551,80 +1551,60 @@ export default class SteamGame implements Game {
         undefined
     })
     // Phase 51 Plan 07 (fix during integration, Rule 1): placeShimForGame
-    // now returns a typed 'miss' status (never 'error') when the shim's
-    // coverage check fails -- this call site's failure check must widen to
-    // include it, or a coverage miss would silently fall through as a
-    // success (the shim was never actually placed). 'no-steam-api' is
-    // deliberately NOT a failure here -- nothing needed placing.
+    // returns typed statuses rather than throwing. 'no-steam-api' is
+    // deliberately NOT a failure here -- nothing needed placing. Amended
+    // 2026-10-23 (quick 261023-oq7, user: "Place shim anyway"): a coverage
+    // miss is 'placed-miss' -- the shim WAS placed -- and falls through to
+    // the success path below (verdict persisted, install completes). It is
+    // no longer a failure here.
     if (
       shimResult.status === 'error' ||
-      shimResult.status === 'shim-not-built' ||
-      shimResult.status === 'miss'
+      shimResult.status === 'shim-not-built'
     ) {
       const shimError =
         shimResult.status === 'shim-not-built'
           ? 'Bridge shim has not been built yet (packaging step pending)'
-          : shimResult.status === 'miss'
-            ? `Bridge shim does not cover required symbol(s): ${shimResult.verdict.missingSymbols.join(', ')}`
-            : shimResult.error
+          : shimResult.error
       logWarning(
         `SteamGame: installBridgeGame shim placement failed for appId ${this.appId}: ${shimError}`,
         LogPrefix.Steam
       )
 
-      // Phase 51 Plan 09 (D-51-05/D-51-11), Task 3: a 'miss' (the bridge
-      // genuinely does not cover this title) and a win64 'shim-not-built'
-      // (no 64-bit shim was ever built to try) are BOTH a dead end for the
-      // bits already downloaded into the per-game bridge bottle -- re-
-      // download through the proven Phase 17 bottled path is the chosen
-      // fallback (D-51-05: move, not re-download, was rejected), so the
-      // per-game bottle is deleted rather than left holding orphaned bits a
-      // later retry would never reuse. A plain 'shim-not-built' with no x64
-      // arch (packaging step pending, not a coverage verdict) and a bare
-      // 'error' keep the pre-51-09 behavior below unchanged -- neither one
-      // is a scan verdict worth persisting or showing missing symbols for.
+      // Phase 51 Plan 09 (D-51-05/D-51-11), Task 3: a win64 'shim-not-built'
+      // (no 64-bit shim was ever built to try) is a dead end for the bits
+      // already downloaded into the per-game bridge bottle -- re-download
+      // through the proven Phase 17 bottled path is the chosen fallback
+      // (D-51-05: move, not re-download, was rejected), so the per-game
+      // bottle is deleted rather than left holding orphaned bits a later
+      // retry would never reuse. Amended 2026-10-23 (quick 261023-oq7):
+      // this applies to win64-no-shim ONLY; an import-scan miss no longer
+      // takes this path. A plain 'shim-not-built' with no x64 arch
+      // (packaging step pending) and a bare 'error' keep the pre-51-09
+      // behavior below unchanged.
       const isWin64NoShim =
         shimResult.status === 'shim-not-built' && shimResult.arch === 'x64'
-      if (shimResult.status === 'miss' || isWin64NoShim) {
-        let missingSymbols: string[]
-        if (shimResult.status === 'miss') {
-          writeBridgeScanVerdict(this.appId, shimResult.verdict)
-          missingSymbols = shimResult.verdict.missingSymbols
-        } else {
-          missingSymbols = ['steam_api64.dll']
-        }
+      if (isWin64NoShim) {
+        const missingSymbols = ['steam_api64.dll']
         // The forced "Try the bridge anyway" attempt (D-51-11) is spent --
         // clearing userRoute lets a later install() fall through to its
         // ordinary route instead of re-forcing the bridge into the same
-        // miss.
+        // dead end.
         setBridgeUserRoute(this.appId, undefined)
         stopInstallPolling(this.appId)
         const removeResult = await removePerGameBridgeBottle(this.appId)
         if (removeResult.status === 'error') {
           logWarning(
-            `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${this.appId} after a scan miss: ${removeResult.error}`,
+            `SteamGame: installBridgeGame could not remove the per-game bridge bottle for appId ${this.appId} after a win64-no-shim: ${removeResult.error}`,
             LogPrefix.Steam
           )
         }
         markBridgeFailedThisSession(this.appId)
-        // Two literal branches (not a shared ternary) so the reason string
-        // stays grep-able at each call site -- mirrors launchBridgeGame's
-        // own literal 'scan-miss' emission below.
-        if (isWin64NoShim) {
-          sendFrontendMessage('steamBridgeSetupRequired', {
-            appName: this.appId,
-            reason: 'win64-no-shim',
-            missingSymbols,
-            fallbackAvailable: true
-          })
-        } else {
-          sendFrontendMessage('steamBridgeSetupRequired', {
-            appName: this.appId,
-            reason: 'scan-miss',
-            missingSymbols,
-            fallbackAvailable: true
-          })
-        }
+        sendFrontendMessage('steamBridgeSetupRequired', {
+          appName: this.appId,
+          reason: 'win64-no-shim',
+          missingSymbols,
+          fallbackAvailable: true
+        })
         return { status: 'error', error: shimError }
       }
 
@@ -1637,8 +1617,19 @@ export default class SteamGame implements Game {
     // 'placed' and 'no-steam-api' both do, 'already-placed' (a byte-
     // identical no-op) does not and leaves whatever was already persisted
     // untouched, mirroring launchBridgeGame()'s identical truthy check.
+    // 'placed-miss' (quick 261023-oq7) also carries one: the miss verdict is
+    // persisted so the resolver keeps routing the title with its symbols. The
+    // user's explicit 'bridge' choice (D-51-11) is NOT cleared here -- that
+    // clear existed so a forced bridge would not be re-forced into a failing
+    // miss, and a miss is no longer a failure.
     if (shimResult.verdict) {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
+    }
+    if (shimResult.status === 'placed-miss') {
+      logWarning(
+        `SteamGame: installBridgeGame shim coverage miss for appId ${this.appId}: ${shimResult.verdict.missingSymbols.join(', ')} -- shim placed anyway; a static-import miss is expected to fail at load with a Windows entry-point error`,
+        LogPrefix.Steam
+      )
     }
     this.reconcileBridgePrescreen(shimResult)
 
@@ -1696,6 +1687,7 @@ export default class SteamGame implements Game {
     }
     if (
       (shimResult.status === 'placed' ||
+        shimResult.status === 'placed-miss' ||
         shimResult.status === 'already-placed') &&
       shimResult.verdict &&
       current === 'none'
@@ -2648,22 +2640,6 @@ export default class SteamGame implements Game {
         : {})
     })
 
-    if (shimResult.status === 'miss') {
-      logWarning(
-        `SteamGame: launchBridgeGame shim coverage miss for appId ${this.appId}: ${shimResult.verdict.missingSymbols.join(', ')}`,
-        LogPrefix.Steam
-      )
-      writeBridgeScanVerdict(this.appId, shimResult.verdict)
-      markBridgeFailedThisSession(this.appId)
-      sendFrontendMessage('steamBridgeSetupRequired', {
-        appName: this.appId,
-        reason: 'scan-miss',
-        missingSymbols: shimResult.verdict.missingSymbols,
-        fallbackAvailable: true
-      })
-      return false
-    }
-
     if (
       shimResult.status === 'shim-not-built' ||
       shimResult.status === 'error'
@@ -2687,8 +2663,15 @@ export default class SteamGame implements Game {
       return false
     }
 
-    // Remaining statuses: 'placed' | 'already-placed' | 'no-steam-api'.
-    // 'placed' and 'no-steam-api' both carry a fresh verdict to persist
+    // Remaining statuses: 'placed' | 'placed-miss' | 'already-placed' |
+    // 'no-steam-api'. Amended 2026-10-23 (quick 261023-oq7): a coverage miss
+    // no longer aborts the launch -- the shim was placed anyway and the
+    // title runs through the bridge. A static-import miss will most likely
+    // fail at load with a Windows entry-point error INSIDE the wine
+    // process; that happens after runWineCommand returns and is not
+    // detected as a launch failure. Only real failures below (helper not
+    // ready, cfg write, wine launch) arm the breaker.
+    // 'placed', 'placed-miss' and 'no-steam-api' all carry a fresh verdict to persist
     // (D-51-07); 'already-placed' is a true no-op with no verdict at all --
     // the caller keeps whatever it already persisted (shimGenerate.ts's own
     // header, D-UAT-24-04).

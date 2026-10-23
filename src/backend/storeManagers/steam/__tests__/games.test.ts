@@ -1778,86 +1778,134 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     )
   })
 
-  it("D-51-09 (Task 2): placeShimForGame's typed 'miss' status at LAUNCH time persists the scan verdict (steamMetadataStore.set observed) and fires steamBridgeSetupRequired with reason scan-miss + missingSymbols, never calling runWineCommand", async () => {
+  describe('quick 261023-oq7: a miss launches through the bridge', () => {
     const MISS_APP_ID = '555557'
-    library.set(MISS_APP_ID, makeEntry({ title: 'Launch-Time Miss' }))
-    ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
-      status: 'done'
-    })
-    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
-    ;(placeShimForGame as jest.Mock).mockResolvedValue({
-      status: 'miss',
-      verdict: {
-        status: 'miss',
-        arch: 'x86',
-        missingSymbols: ['SteamUtils005'],
-        interfaceVersions: {},
-        stubbedInterfaces: [],
-        shimExportSetVersion: 'v1',
-        scannedAt: '2026-01-01T00:00:00.000Z'
-      }
+    const missVerdict = (symbols: string[], arch: 'x86' | 'x64' = 'x86') => ({
+      status: 'miss' as const,
+      arch,
+      missingSymbols: symbols,
+      interfaceVersions: { SteamUser: 'SteamUser023' },
+      stubbedInterfaces: [],
+      shimExportSetVersion: 'v1',
+      scannedAt: '2026-01-01T00:00:00.000Z'
     })
 
-    const game = new SteamGame(MISS_APP_ID)
-    const result = await game.launch({} as any)
-
-    expect(result).toBe(false)
-    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
-    expect(runWineCommand).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith(
-      'steamBridgeSetupRequired',
-      {
-        appName: MISS_APP_ID,
-        reason: 'scan-miss',
-        missingSymbols: ['SteamUtils005'],
-        fallbackAvailable: true
-      }
-    )
-    const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
-      ([id, value]) =>
-        id === MISS_APP_ID &&
-        value?.bridge?.scan?.status === 'miss' &&
-        value.bridge.scan.missingSymbols.includes('SteamUtils005')
-    )
-    expect(persistCall).toBeDefined()
-
-    // Poisoned this session -- a later launch() for the SAME appId skips
-    // the bridge entirely (finding #3 lineage), mirroring the shim-not-built
-    // case above.
-    const secondResult = await game.launch({} as any)
-    expect(tellBottledSteamToLaunch).toHaveBeenCalledWith(MISS_APP_ID)
-    expect(secondResult).toBe(true)
-  })
-
-  it('CR-04: a runtime-loaded steam_api miss at launch takes the scan-miss path with the marker in missingSymbols', async () => {
-    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
-    ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
-    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
-    ;(placeShimForGame as jest.Mock).mockResolvedValue({
-      status: 'miss',
-      verdict: {
-        status: 'miss',
-        arch: 'x64',
-        missingSymbols: ['steam_api64.dll@runtime-loaded'],
-        interfaceVersions: {},
-        stubbedInterfaces: [],
-        shimExportSetVersion: 'v2',
-        scannedAt: '2026-01-01T00:00:00.000Z'
-      }
-    })
-
-    const result = await new SteamGame(APP_ID).launch({} as any)
-
-    expect(result).toBeDefined()
-    expect(runWineCommand).not.toHaveBeenCalled()
-    expect(sendFrontendMessage).toHaveBeenCalledWith(
-      'steamBridgeSetupRequired',
-      expect.objectContaining({
-        reason: 'scan-miss',
-        missingSymbols: ['steam_api64.dll@runtime-loaded']
+    beforeEach(() => {
+      library.set(MISS_APP_ID, makeEntry({ title: 'Launch-Time Miss' }))
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(tellBottledSteamToLaunch as jest.Mock).mockResolvedValue({
+        status: 'done'
       })
-    )
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+    })
+
+    it("'placed-miss' persists the verdict, sets up helper and cfg, runs the game, and sends no setup-required", async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed-miss',
+        shimPaths: [RESOLVED_EXE_PATH],
+        verdict: missVerdict(['SteamUtils005'])
+      })
+
+      const result = await new SteamGame(MISS_APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(ensureBridgeHelperReady).toHaveBeenCalledWith(MISS_APP_ID)
+      expect(writeBridgeConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          interfaceVersions: { SteamUser: 'SteamUser023' }
+        })
+      )
+      expect(runWineCommand).toHaveBeenCalled()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+      const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+        ([id, value]) =>
+          id === MISS_APP_ID &&
+          value?.bridge?.scan?.status === 'miss' &&
+          value.bridge.scan.missingSymbols.includes('SteamUtils005')
+      )
+      expect(persistCall).toBeDefined()
+      // Not poisoned: a later launch still goes through the bridge.
+      await new SteamGame(MISS_APP_ID).launch({} as any)
+      expect(tellBottledSteamToLaunch).not.toHaveBeenCalled()
+    })
+
+    it('CR-04: a runtime-loaded miss launches with the marker persisted in missingSymbols', async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed-miss',
+        shimPaths: [RESOLVED_EXE_PATH],
+        verdict: missVerdict(['steam_api64.dll@runtime-loaded'], 'x64')
+      })
+
+      const result = await new SteamGame(MISS_APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(runWineCommand).toHaveBeenCalled()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+      const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+        ([id, value]) =>
+          id === MISS_APP_ID &&
+          value?.bridge?.scan?.missingSymbols?.includes(
+            'steam_api64.dll@runtime-loaded'
+          )
+      )
+      expect(persistCall).toBeDefined()
+    })
+
+    it("'already-placed' with a persisted miss launches through the helper and does not overwrite the persisted miss", async () => {
+      ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+        platformsCaptured: true,
+        is_mac_native: false,
+        bridge: { scan: missVerdict(['steam_api64.dll@runtime-loaded'], 'x64') }
+      })
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH
+      })
+
+      const result = await new SteamGame(MISS_APP_ID).launch({} as any)
+
+      expect(result).toBe(true)
+      expect(ensureBridgeHelperReady).toHaveBeenCalled()
+      expect(runWineCommand).toHaveBeenCalled()
+      const overwrite = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+        ([id, value]) =>
+          id === MISS_APP_ID && value?.bridge?.scan?.status === 'clean'
+      )
+      expect(overwrite).toBeUndefined()
+    })
+
+    it("helper not ready after a 'placed-miss': the breaker and dialog still fire (real failures unchanged)", async () => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed-miss',
+        shimPaths: [RESOLVED_EXE_PATH],
+        verdict: missVerdict(['SteamUtils005'])
+      })
+      ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+        status: 'not-inited',
+        ready: false
+      })
+
+      const game = new SteamGame(MISS_APP_ID)
+      const result = await game.launch({} as any)
+
+      expect(result).toBe(false)
+      expect(runWineCommand).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.objectContaining({
+          appName: MISS_APP_ID,
+          reason: 'not-inited'
+        })
+      )
+    })
   })
 
   it("D-51-09 (Task 2): placeShimForGame's 'no-steam-api' status at launch skips ensureBridgeHelperReady/writeBridgeConfig entirely, calls runWineCommand directly, and persists the clean verdict", async () => {
@@ -3716,13 +3764,10 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(result).toEqual({ status: 'done' })
   })
 
-  it("Phase 51 Plan 07 (fix during integration), extended by Phase 51 Plan 09 Task 3 (D-51-05/D-51-11): placeShimForGame's typed 'miss' status is a real install failure, not a silent success -- markBridgeFailedThisSession applied, missing symbol named in the error, the scan verdict persisted, the per-game bottle deleted, the forced userRoute cleared, and markBridgeGameInstalled NOT reached", async () => {
+  it("quick 261023-oq7: placeShimForGame's 'placed-miss' status completes the install as a bridge install -- verdict persisted, bottle kept, breaker not armed, no setup-required, userRoute not cleared, no bottled dispatch", async () => {
     ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
     ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
     ;(isBottleReady as jest.Mock).mockReturnValue(true)
-    ;(removePerGameBridgeBottle as jest.Mock).mockResolvedValue({
-      status: 'removed'
-    })
     const missVerdict = {
       status: 'miss' as const,
       arch: 'x86' as const,
@@ -3733,30 +3778,22 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       scannedAt: '2026-01-01T00:00:00.000Z'
     }
     ;(placeShimForGame as jest.Mock).mockResolvedValue({
-      status: 'miss',
+      status: 'placed-miss',
+      shimPaths: [`${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/steam_api.dll`],
       verdict: missVerdict
     })
 
     const game = new SteamGame(APP_ID)
     const result = await game.install({} as any)
 
-    expect(result).toEqual({
-      status: 'error',
-      error:
-        'Bridge shim does not cover required symbol(s): SteamUser@unknown-version'
-    })
-    expect(removePerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
-    expect(stopInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
-    expect(setBridgeUserRouteSpy).toHaveBeenCalledWith(APP_ID, undefined)
-    expect(sendFrontendMessage).toHaveBeenCalledWith(
+    expect(result).toEqual({ status: 'done' })
+    expect(removePerGameBridgeBottle).not.toHaveBeenCalled()
+    expect(setBridgeUserRouteSpy).not.toHaveBeenCalledWith(APP_ID, undefined)
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
       'steamBridgeSetupRequired',
-      {
-        appName: APP_ID,
-        reason: 'scan-miss',
-        missingSymbols: ['SteamUser@unknown-version'],
-        fallbackAvailable: true
-      }
+      expect.anything()
     )
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
     const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
       ([id, value]) =>
         id === APP_ID &&
@@ -3764,24 +3801,16 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         value.bridge.scan.missingSymbols.includes('SteamUser@unknown-version')
     )
     expect(persistCall).toBeDefined()
-    // markBridgeGameInstalled is never reached on a miss -- the library
-    // entry's is_installed/install_path stay unflipped (other, unrelated
-    // pushGameToLibrary calls fire for the steamResumePending bookkeeping
-    // above, so assert on the library entry's shape directly rather than
-    // on sendFrontendMessage's call list as a whole).
-    expect(library.get(APP_ID)?.is_installed).not.toBe(true)
-    expect(library.get(APP_ID)?.install?.install_path).toBeUndefined()
 
-    // Poisoned this session, exactly like the 'shim-not-built'/'error'
-    // cases above -- a later install() for the same appId must route to
-    // the bottled fallback instead of retrying the same bridge miss.
-    ;(tellBottledSteamToInstall as jest.Mock).mockResolvedValue({
-      status: 'done'
+    // Breaker not armed: a later install() is not routed to the bottle for
+    // 'failed-this-session'.
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: { scan: missVerdict, noticeAcknowledgedFor: 'scan-miss' }
     })
-    const secondGame = new SteamGame(APP_ID)
-    const secondResult = await secondGame.install({} as any)
-    expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
-    expect(secondResult).toEqual({ status: 'done' })
+    await new SteamGame(APP_ID).install({} as any)
+    expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
   it("D-51-09 (Task 3): placeShimForGame's shim-not-built with arch x64 at INSTALL time (win64-no-shim) deletes the per-game bottle, clears userRoute, and fires steamBridgeSetupRequired with reason win64-no-shim and the literal steam_api64.dll missing symbol", async () => {
@@ -3814,7 +3843,7 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
         fallbackAvailable: true
       }
     )
-    // win64-no-shim carries no verdict (unlike 'miss') -- nothing scan-shaped
+    // win64-no-shim carries no verdict (unlike 'placed-miss') -- nothing scan-shaped
     // should be persisted for it.
     const scanPersistCall = (
       steamMetadataStore.set as jest.Mock

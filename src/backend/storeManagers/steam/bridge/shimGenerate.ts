@@ -16,11 +16,21 @@
  * in `meta/gen_vtables.ts`), not a per-game-tailored export set. This
  * module's objdump-derived import set (via `importScan.ts`) is used to
  * VALIDATE coverage (superset ⊇ game imports), not to drive per-game
- * generation. A game whose imports exceed the superset is rejected with
- * NO auto-remediation -- surfaced to the caller via a typed 'miss' result
- * (Phase 51 Plan 07: this used to throw the verdict away as a bare
- * `'error'`; it now returns the full `SteamBridgeScanVerdict` for the
- * caller to persist, D-51-07).
+ * generation. A game whose imports exceed the superset was, originally,
+ * rejected with NO auto-remediation -- surfaced to the caller via a typed
+ * 'miss' result (Phase 51 Plan 07: this used to throw the verdict away as a
+ * bare `'error'`; it returned the full `SteamBridgeScanVerdict` for the
+ * caller to persist, D-51-07). SUPERSEDED, see the next paragraph.
+ *
+ * Amended 2026-10-23 (quick 261023-oq7, user: "Place shim anyway"): a
+ * coverage miss no longer withholds the shim. The shim is placed anyway and
+ * the result is 'placed-miss' carrying the same miss verdict, which the
+ * caller persists. Per the user, bottled Steam is a narrow fallback to
+ * eliminate; the recorded missingSymbols drive shim widening. Caveat: an
+ * exe whose STATIC imports the shim lacks will most likely fail at load
+ * with a Windows "entry point not found" error. That is expected by design.
+ * A `<dll>@runtime-loaded` marker (51-22, CR-04) is a miss without that
+ * load-time failure, and such titles may play.
  *
  * BLOCKER 2: the compiled x86 `.dll` is read from `builtBridgeShimPath`
  * (`backend/constants/paths.ts`, 24-01) -- the SAME shared location 24-07
@@ -113,7 +123,12 @@ type PlaceShimResult =
       shimPath: string
       verdict?: SteamBridgeScanVerdict
     }
-  | { status: 'miss'; verdict: SteamBridgeScanVerdict }
+  | {
+      // quick 261023-oq7: the shim was placed despite a coverage miss.
+      status: 'placed-miss'
+      shimPaths: string[]
+      verdict: SteamBridgeScanVerdict
+    }
   | { status: 'no-steam-api'; verdict: SteamBridgeScanVerdict }
   | { status: 'shim-not-built'; arch: 'x86' | 'x64' }
   | { status: 'error'; error: string }
@@ -134,15 +149,23 @@ function isContainedWithin(
 
 const RUNTIME_WALK_MAX_DEPTH = 4
 
+interface RuntimeSteamApiDll {
+  name: 'steam_api.dll' | 'steam_api64.dll'
+  path: string
+  /** True when the file at `path` is already a GameLib shim (quick 261023-oq7). */
+  isGameLibShim: boolean
+}
+
 /**
- * CR-04 / T-51-45: bounded walk of the game's install tree for plain
- * (non-GameLib-shim) steam_api(64).dll files. Async fs only, depth-limited,
- * never follows symlinks. Returns the lowercase DLL names found.
+ * CR-04 / T-51-45: bounded walk of the game's install tree for
+ * steam_api(64).dll files -- the game's own AND, since quick 261023-oq7
+ * (the shim is placed over a runtime-loaded dll), GameLib shims, flagged
+ * `isGameLibShim`. Async fs only, depth-limited, never follows symlinks.
  */
 async function findRuntimeLoadedSteamApiDlls(
   root: string
-): Promise<Set<'steam_api.dll' | 'steam_api64.dll'>> {
-  const found = new Set<'steam_api.dll' | 'steam_api64.dll'>()
+): Promise<RuntimeSteamApiDll[]> {
+  const found: RuntimeSteamApiDll[] = []
   const walk = async (dir: string, depth: number): Promise<void> => {
     let entries
     try {
@@ -160,13 +183,14 @@ async function findRuntimeLoadedSteamApiDlls(
       if (!entry.isFile()) continue
       const lower = entry.name.toLowerCase()
       if (lower !== 'steam_api.dll' && lower !== 'steam_api64.dll') continue
+      let isShim: boolean
       try {
         if ((await lstat(full)).isSymbolicLink()) continue
-        if (isGameLibShimBytes(await readFile(full))) continue
+        isShim = isGameLibShimBytes(await readFile(full))
       } catch {
         continue
       }
-      found.add(lower)
+      found.push({ name: lower, path: full, isGameLibShim: isShim })
     }
   }
   await walk(root, 0)
@@ -255,8 +279,12 @@ async function readVersionsOrEmpty(
  * whatever verdict it already persisted). Otherwise -- including when the
  * game's own, byte-DIFFERENT original `steam_api(64)?.dll` is present, or
  * an OLDER GameLib shim release is present -- the interface-version
- * capture and coverage check run first, and only on a covered pass does
- * `copyFileSync` OVERWRITE the target.
+ * capture and coverage check run first, and then `copyFileSync` OVERWRITES
+ * the target. Amended 2026-10-23 (quick 261023-oq7): this used to happen
+ * "only on a covered pass"; a coverage miss now places the shim anyway and
+ * returns 'placed-miss' (user: "Place shim anyway"). Caveat: a static-import
+ * miss will most likely fail at load with a Windows entry-point error --
+ * expected by design; a `<dll>@runtime-loaded` miss may play.
  *
  * Interface-version capture (D-51-07): when the file currently at
  * `shimPath` is the game's own original dll (`!isGameLibShimBytes`), its
@@ -340,19 +368,90 @@ export async function placeShimForGame(
         ? resolve(opts.gameInstallRoot)
         : dirname(resolvedExePath)
     const runtimeDlls = await findRuntimeLoadedSteamApiDlls(walkRoot)
-    if (runtimeDlls.size > 0) {
+    if (runtimeDlls.length > 0) {
       const names = (['steam_api.dll', 'steam_api64.dll'] as const).filter(
-        (n) => runtimeDlls.has(n)
+        (n) => runtimeDlls.some((d) => d.name === n)
       )
-      logInfo(
-        `placeShimForGame: appId ${appId} launch exe imports no steam_api but the install tree ships ${names.join(', ')} -- runtime-loaded, recording a miss (CR-04)`,
+      const sourceFor = (name: 'steam_api.dll' | 'steam_api64.dll') =>
+        name === 'steam_api64.dll'
+          ? (opts?.shim64SourcePath ?? builtBridgeShim64Path)
+          : (opts?.shimSourcePath ?? builtBridgeShimPath)
+
+      // A non-shim entry needs a built source to be replaced; refuse before
+      // copying anything if one is missing.
+      for (const dll of runtimeDlls) {
+        if (!dll.isGameLibShim && !existsSync(sourceFor(dll.name))) {
+          const missingArch = dll.name === 'steam_api64.dll' ? 'x64' : 'x86'
+          logInfo(
+            `placeShimForGame: built ${missingArch} shim not present yet for runtime-loaded ${dll.name} -- appId ${appId}`,
+            LogPrefix.Steam
+          )
+          return { status: 'shim-not-built', arch: missingArch }
+        }
+      }
+
+      // Entries that need a (re)copy: every game-original dll, plus any
+      // GameLib shim that is no longer byte-identical to the current build.
+      // (A shim entry whose source is not built cannot be refreshed; leave it.)
+      const toCopy = runtimeDlls.filter((d) => {
+        const source = sourceFor(d.name)
+        if (!d.isGameLibShim) return true
+        return existsSync(source) && !isByteIdentical(d.path, source)
+      })
+
+      if (toCopy.length === 0) {
+        // Every entry is a current GameLib shim: a prior placed-miss. Never
+        // downgrade to 'no-steam-api' (that would overwrite the persisted
+        // miss and its marker); no verdict, the caller keeps its own.
+        logInfo(
+          `placeShimForGame: appId ${appId} runtime-loaded shim(s) already present and current (idempotent, no-op)`,
+          LogPrefix.Steam
+        )
+        return { status: 'already-placed', shimPath: runtimeDlls[0].path }
+      }
+
+      const shimPaths: string[] = []
+      for (const dll of toCopy) {
+        const target = resolve(dll.path)
+        // T-oq7-03: every copy target must sit inside the bridge bottle.
+        if (!isContainedWithin(bottleDir, target)) {
+          logWarning(
+            `placeShimForGame: refused to place over "${dll.path}" -- outside bridge bottle "${bottleName}" (T-oq7-03)`,
+            LogPrefix.Steam
+          )
+          return {
+            status: 'error',
+            error: `Runtime-loaded dll path is outside the bridge bottle: "${dll.path}"`
+          }
+        }
+        try {
+          copyFileSync(sourceFor(dll.name), target)
+        } catch (error) {
+          logError(
+            [
+              `placeShimForGame: copyFileSync failed for runtime-loaded ${dll.name}, appId ${appId}`,
+              error
+            ],
+            LogPrefix.Steam
+          )
+          return {
+            status: 'error',
+            error: `Failed to place shim: ${String(error)}`
+          }
+        }
+        shimPaths.push(target)
+      }
+
+      logWarning(
+        `placeShimForGame: appId ${appId} launch exe imports no steam_api but the install tree ships ${names.join(', ')} -- runtime-loaded, recording a miss and placing the shim anyway (quick 261023-oq7, CR-04)`,
         LogPrefix.Steam
       )
       return {
-        status: 'miss',
+        status: 'placed-miss',
+        shimPaths,
         verdict: {
           status: 'miss',
-          arch: runtimeDlls.has('steam_api64.dll') ? 'x64' : 'x86',
+          arch: names.includes('steam_api64.dll') ? 'x64' : 'x86',
           missingSymbols: names.map(runtimeLoadedSteamApiMarker),
           interfaceVersions: {},
           stubbedInterfaces: [],
@@ -459,13 +558,24 @@ export async function placeShimForGame(
     versionProblems: problems
   })
 
-  if (coverage.missingSymbols.length > 0) {
+  try {
+    copyFileSync(shimSourcePath, shimPath)
+  } catch (error) {
     logError(
-      `placeShimForGame: rejected placement for appId ${appId} -- shim coverage miss: ${coverage.missingSymbols.join(', ')} (Constraint: a drop-in shim must cover every imported symbol/interface version; the target file is left unmodified)`,
+      [`placeShimForGame: copyFileSync failed for appId ${appId}`, error],
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: `Failed to place shim: ${String(error)}` }
+  }
+
+  if (coverage.missingSymbols.length > 0) {
+    logWarning(
+      `placeShimForGame: shim coverage miss for appId ${appId}: ${coverage.missingSymbols.join(', ')} -- placing anyway (quick 261023-oq7). A static-import miss is expected to fail at load with a Windows entry-point error`,
       LogPrefix.Steam
     )
     return {
-      status: 'miss',
+      status: 'placed-miss',
+      shimPaths: [shimPath],
       verdict: {
         status: 'miss',
         arch,
@@ -476,16 +586,6 @@ export async function placeShimForGame(
         scannedAt
       }
     }
-  }
-
-  try {
-    copyFileSync(shimSourcePath, shimPath)
-  } catch (error) {
-    logError(
-      [`placeShimForGame: copyFileSync failed for appId ${appId}`, error],
-      LogPrefix.Steam
-    )
-    return { status: 'error', error: `Failed to place shim: ${String(error)}` }
   }
 
   logInfo(

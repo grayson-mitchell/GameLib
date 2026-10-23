@@ -285,7 +285,7 @@ describe('shimGenerate', () => {
     expect(existsSync(shimDestPath())).toBe(true)
   })
 
-  it('returns a "miss" verdict (not an error) when the shim export set does not cover an imported flat symbol, and leaves no file behind', async () => {
+  it('returns "placed-miss" (not an error) when the shim export set does not cover an imported flat symbol, and places the shim anyway', async () => {
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',
       arch: 'x86',
@@ -296,17 +296,31 @@ describe('shimGenerate', () => {
       shimSourcePath: realShimSourcePath
     })
 
-    expect(result.status).toBe('miss')
-    if (result.status === 'miss') {
+    expect(result.status).toBe('placed-miss')
+    if (result.status === 'placed-miss') {
+      expect(result.verdict.status).toBe('miss')
       expect(result.verdict.missingSymbols).toContain(
         'SteamAPI_ISteamRemoteStorage_v016'
       )
       expect(result.verdict.arch).toBe('x86')
+      expect(result.shimPaths).toEqual([shimDestPath()])
     }
-    expect(existsSync(shimDestPath())).toBe(false)
+    expect(existsSync(shimDestPath())).toBe(true)
+    expect(readFileSync(shimDestPath())).toEqual(
+      readFileSync(realShimSourcePath)
+    )
+
+    // A second call is an identity no-op with no verdict (keeps the miss).
+    const second = await placeShimForGame('1234', gameExePath, {
+      shimSourcePath: realShimSourcePath
+    })
+    expect(second).toEqual({
+      status: 'already-placed',
+      shimPath: shimDestPath()
+    })
   })
 
-  it('on a coverage miss, leaves a pre-seeded, byte-different target file UNMODIFIED (never overwrite with an insufficient shim)', async () => {
+  it('on a coverage miss, OVERWRITES a pre-seeded, byte-different target file with the shim (quick 261023-oq7)', async () => {
     writeFileSync(shimDestPath(), 'the-games-own-steam_api.dll-bytes')
     mockedScanSteamApiImports.mockResolvedValue({
       status: 'ok',
@@ -318,13 +332,13 @@ describe('shimGenerate', () => {
       shimSourcePath: realShimSourcePath
     })
 
-    expect(result.status).toBe('miss')
-    expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
-      'the-games-own-steam_api.dll-bytes'
+    expect(result.status).toBe('placed-miss')
+    expect(readFileSync(shimDestPath())).toEqual(
+      readFileSync(realShimSourcePath)
     )
   })
 
-  it('a missing/unresolvable required interface version is a named miss (T-51-16): the byte-different target survives untouched', async () => {
+  it('a missing/unresolvable required interface version is a named miss (T-51-16): the shim is still placed (quick 261023-oq7)', async () => {
     // The original dll is present but carries NO recognizable version
     // string for the imported bare accessor -- resolveRequiredInterfaceVersions
     // reports "<Family>@unknown-version", which evaluateShimCoverage
@@ -340,14 +354,37 @@ describe('shimGenerate', () => {
       shimSourcePath: realShimSourcePath
     })
 
-    expect(result.status).toBe('miss')
-    if (result.status === 'miss') {
+    expect(result.status).toBe('placed-miss')
+    if (result.status === 'placed-miss') {
       expect(result.verdict.missingSymbols).toContain(
         'SteamUser@unknown-version'
       )
     }
-    expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
-      'no-version-strings-in-here-at-all'
+    expect(readFileSync(shimDestPath())).toEqual(
+      readFileSync(realShimSourcePath)
+    )
+  })
+
+  it('on a coverage miss, interface versions are still captured from the ORIGINAL dll before it is overwritten (quick 261023-oq7)', async () => {
+    writeFileSync(shimDestPath(), 'orig SteamUser023 orig')
+    mockedScanSteamApiImports.mockResolvedValue({
+      status: 'ok',
+      arch: 'x86',
+      symbols: ['SteamUser', 'SteamAPI_ISteamRemoteStorage_v016']
+    })
+
+    const result = await placeShimForGame('1234', gameExePath, {
+      shimSourcePath: realShimSourcePath
+    })
+
+    expect(result.status).toBe('placed-miss')
+    if (result.status === 'placed-miss') {
+      expect(result.verdict.interfaceVersions).toMatchObject({
+        SteamUser: 'SteamUser023'
+      })
+    }
+    expect(readFileSync(shimDestPath())).toEqual(
+      readFileSync(realShimSourcePath)
     )
   })
 
@@ -416,8 +453,8 @@ describe('shimGenerate', () => {
       shimSourcePath: realShimSourcePath
     })
 
-    expect(result.status).toBe('miss')
-    if (result.status === 'miss') {
+    expect(result.status).toBe('placed-miss')
+    if (result.status === 'placed-miss') {
       expect(result.verdict.missingSymbols).toContain(
         'SteamUser@unknown-version'
       )
@@ -493,66 +530,136 @@ describe('shimGenerate', () => {
         symbols: []
       })
 
-    it('x64 DLL in a subfolder -> miss naming steam_api64.dll@runtime-loaded', async () => {
+    const MARK_X86 = 'GameLibSteamBridgeShim x86 build'
+    const MARK_X64 = 'GameLibSteamBridgeShim x64 build'
+    const withMarkedSources = () => {
+      writeFileSync(realShimSourcePath, MARK_X86)
+      writeFileSync(realShim64SourcePath, MARK_X64)
+    }
+
+    it('x64 DLL in a subfolder -> placed-miss naming steam_api64.dll@runtime-loaded, x64 shim copied over it', async () => {
       noImports()
+      withMarkedSources()
       mkdirSync(join(gameDir, 'Plugins', 'x86_64'), { recursive: true })
-      writeFileSync(
-        join(gameDir, 'Plugins', 'x86_64', 'steam_api64.dll'),
-        'plain-game-dll'
-      )
+      const dll = join(gameDir, 'Plugins', 'x86_64', 'steam_api64.dll')
+      writeFileSync(dll, 'plain-game-dll')
 
       const result = await placeShimForGame('1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: realShim64SourcePath
       })
 
-      expect(result.status).toBe('miss')
-      if (result.status === 'miss') {
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
         expect(result.verdict.status).toBe('miss')
         expect(result.verdict.arch).toBe('x64')
         expect(result.verdict.missingSymbols).toEqual([
           'steam_api64.dll@runtime-loaded'
         ])
+        expect(result.shimPaths).toEqual([dll])
       }
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
       expect(existsSync(shimDestPath())).toBe(false)
-      expect(existsSync(shim64DestPath())).toBe(false)
     })
 
-    it('x86 DLL -> miss arch x86 with steam_api.dll@runtime-loaded', async () => {
+    it('x86 DLL -> placed-miss arch x86 with steam_api.dll@runtime-loaded, x86 shim copied', async () => {
       noImports()
+      withMarkedSources()
       mkdirSync(join(gameDir, 'bin'), { recursive: true })
-      writeFileSync(join(gameDir, 'bin', 'Steam_API.dll'), 'plain-game-dll')
+      const dll = join(gameDir, 'bin', 'Steam_API.dll')
+      writeFileSync(dll, 'plain-game-dll')
 
       const result = await placeShimForGame('1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: realShim64SourcePath
       })
 
-      expect(result.status).toBe('miss')
-      if (result.status === 'miss') {
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
         expect(result.verdict.arch).toBe('x86')
         expect(result.verdict.missingSymbols).toEqual([
           'steam_api.dll@runtime-loaded'
         ])
       }
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X86)
     })
 
-    it('both DLLs -> both markers (x86 first), arch x64', async () => {
+    it('both DLLs -> both markers (x86 first), arch x64, each replaced from its own source', async () => {
       noImports()
+      withMarkedSources()
       mkdirSync(join(gameDir, 'a'), { recursive: true })
       writeFileSync(join(gameDir, 'a', 'steam_api.dll'), 'plain')
       writeFileSync(join(gameDir, 'a', 'steam_api64.dll'), 'plain')
 
       const result = await placeShimForGame('1234', gameExePath, {
-        shimSourcePath: realShimSourcePath
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: realShim64SourcePath
       })
 
-      expect(result.status).toBe('miss')
-      if (result.status === 'miss') {
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
         expect(result.verdict.arch).toBe('x64')
         expect(result.verdict.missingSymbols).toEqual([
           'steam_api.dll@runtime-loaded',
           'steam_api64.dll@runtime-loaded'
         ])
       }
+      expect(readFileSync(join(gameDir, 'a', 'steam_api.dll'), 'utf-8')).toBe(
+        MARK_X86
+      )
+      expect(readFileSync(join(gameDir, 'a', 'steam_api64.dll'), 'utf-8')).toBe(
+        MARK_X64
+      )
+    })
+
+    it('a second call with the shim in place is already-placed with no verdict, never no-steam-api', async () => {
+      noImports()
+      withMarkedSources()
+      const dll = join(gameDir, 'steam_api64.dll')
+      writeFileSync(dll, 'plain-game-dll')
+      const opts = {
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: realShim64SourcePath
+      }
+      await placeShimForGame('1234', gameExePath, opts)
+
+      const second = await placeShimForGame('1234', gameExePath, opts)
+
+      expect(second).toEqual({ status: 'already-placed', shimPath: dll })
+    })
+
+    it('an OLDER GameLib shim in place is re-copied and reported as placed-miss with the marker verdict', async () => {
+      noImports()
+      withMarkedSources()
+      const dll = join(gameDir, 'steam_api.dll')
+      writeFileSync(dll, 'GameLibSteamBridgeShim OLD release')
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: realShim64SourcePath
+      })
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toEqual([
+          'steam_api.dll@runtime-loaded'
+        ])
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X86)
+    })
+
+    it('steam_api64.dll with no x64 source built -> shim-not-built x64, nothing copied', async () => {
+      noImports()
+      const dll = join(gameDir, 'steam_api64.dll')
+      writeFileSync(dll, 'plain-game-dll')
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: join(root, 'never-built', 'steam_api64.dll')
+      })
+
+      expect(result).toEqual({ status: 'shim-not-built', arch: 'x64' })
+      expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
     })
 
     it('no steam_api DLL within depth 4 -> unchanged no-steam-api', async () => {
@@ -568,18 +675,22 @@ describe('shimGenerate', () => {
       expect(result.status).toBe('no-steam-api')
     })
 
-    it('a GameLib shim DLL is ignored by the walk', async () => {
+    it('a lone GameLib shim DLL is no longer ignored: an up-to-date one is already-placed', async () => {
       noImports()
       writeFileSync(
         join(gameDir, 'steam_api.dll'),
         'GameLibSteamBridgeShim bytes'
       )
+      writeFileSync(realShimSourcePath, 'GameLibSteamBridgeShim bytes')
 
       const result = await placeShimForGame('1234', gameExePath, {
         shimSourcePath: realShimSourcePath
       })
 
-      expect(result.status).toBe('no-steam-api')
+      expect(result).toEqual({
+        status: 'already-placed',
+        shimPath: join(gameDir, 'steam_api.dll')
+      })
     })
 
     it('an explicit gameInstallRoot outside the bottle falls back to the exe dir', async () => {
@@ -662,17 +773,19 @@ describe('shimGenerate', () => {
     })
 
     // The fail-closed default (T-51-16) means a genuinely uncovered x64
-    // symbol is a named 'miss', not a silent 'placed'.
-    expect(result.status).toBe('miss')
-    if (result.status === 'miss') {
+    // symbol is a named 'placed-miss', not a silent 'placed'.
+    expect(result.status).toBe('placed-miss')
+    if (result.status === 'placed-miss') {
       expect(result.verdict.arch).toBe('x64')
       expect(result.verdict.missingSymbols).toEqual(
         expect.arrayContaining(['SteamHTTP'])
       )
       expect(result.verdict.missingSymbols).not.toContain('SteamAPI_Init')
     }
-    // Neither destination file is ever written on a miss.
-    expect(existsSync(shim64DestPath())).toBe(false)
+    // quick 261023-oq7: the x64 shim is placed anyway; the x86 target never is.
+    expect(readFileSync(shim64DestPath())).toEqual(
+      readFileSync(realShim64SourcePath)
+    )
     expect(existsSync(shimDestPath())).toBe(false)
   })
 
