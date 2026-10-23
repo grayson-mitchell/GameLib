@@ -142,7 +142,7 @@ jest.mock('../electronStores', () => ({
 // removeSteamInstallCopy behaves identically to the real module's constant.
 jest.mock('../bottle', () => ({
   // quick 261024-cjq: plain function (survives resetMocks) — CrossOver present
-  isCrossoverInstalled: async () => true,
+  isCrossoverInstalled: () => Promise.resolve(true),
   CROSSOVER_MISSING: 'crossover-missing',
   isBottleReady: jest.fn(),
   tellBottledSteamToInstall: jest.fn(),
@@ -552,9 +552,9 @@ describe('enumerateSteamInstallCopies', () => {
     // for bottle, getBridgeBottleSettings for bridge) — these ARE
     // cross-module calls and are safely mockable.
     const order: string[] = []
-    ;(getSteamLibraries as jest.Mock).mockImplementation(async () => {
+    ;(getSteamLibraries as jest.Mock).mockImplementation(() => {
       order.push('native')
-      return [NATIVE_LIB]
+      return Promise.resolve([NATIVE_LIB])
     })
     const bottleMock = jest.requireMock<{
       getSteamBottleSettings: jest.Mock
@@ -1125,11 +1125,13 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       ])
     const removeSpy = jest
       .spyOn(libraryModule, 'removeSteamInstallCopy')
-      .mockImplementation(async (appId, source) => ({
-        status: 'removed',
-        source,
-        manifestOnly: false
-      }))
+      .mockImplementation((appId, source) =>
+        Promise.resolve({
+          status: 'removed',
+          source,
+          manifestOnly: false
+        })
+      )
     const pollSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)
@@ -1157,15 +1159,19 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       ])
     const removeSpy = jest
       .spyOn(libraryModule, 'removeSteamInstallCopy')
-      .mockImplementation(async (appId, source) => {
+      .mockImplementation((appId, source) => {
         if (source === 'bottle') {
-          return {
+          return Promise.resolve({
             status: 'refused',
             source,
             reason: 'uninstall already in progress'
-          }
+          })
         }
-        return { status: 'removed', source, manifestOnly: false }
+        return Promise.resolve({
+          status: 'removed',
+          source,
+          manifestOnly: false
+        })
       })
     const pollSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
@@ -1187,9 +1193,13 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .mockResolvedValue([mockCopy('native'), mockCopy('bridge')])
     const removeSpy = jest
       .spyOn(libraryModule, 'removeSteamInstallCopy')
-      .mockImplementation(async (appId, source) => {
-        if (source === 'native') throw new Error('disk error')
-        return { status: 'removed', source, manifestOnly: false }
+      .mockImplementation((appId, source) => {
+        if (source === 'native') return Promise.reject(new Error('disk error'))
+        return Promise.resolve({
+          status: 'removed',
+          source,
+          manifestOnly: false
+        })
       })
     const pollSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
@@ -1233,11 +1243,13 @@ describe('removeAllSteamInstallCopies (Task 3)', () => {
       .mockResolvedValue([mockCopy('native'), mockCopy('bottle')])
     const removeSpy = jest
       .spyOn(libraryModule, 'removeSteamInstallCopy')
-      .mockImplementation(async (appId, source) => ({
-        status: 'removed',
-        source,
-        manifestOnly: false
-      }))
+      .mockImplementation((appId, source) =>
+        Promise.resolve({
+          status: 'removed',
+          source,
+          manifestOnly: false
+        })
+      )
     const pollSpy = jest
       .spyOn(libraryModule, 'pollUninstallOnce')
       .mockResolvedValue(undefined)

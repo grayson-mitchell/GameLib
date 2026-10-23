@@ -159,7 +159,7 @@ function setupPlanPlumbing(fakeClient: ReturnType<typeof makeFakeClient>) {
         cb: (err: Error | null, raw: Buffer) => void
       ) => cb(null, Buffer.from(`raw-${depotId}`))
     )
-  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => `${raw}`)
+  jest.mocked(decryptFilename).mockImplementation((raw: unknown) => String(raw))
 }
 
 describe('screenDepotPlanForSteamApi — pure file-list classifier', () => {

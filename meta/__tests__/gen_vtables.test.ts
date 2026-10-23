@@ -642,10 +642,10 @@ describe('gen_vtables', () => {
         '{ "SteamMatchMakingServers002", "SteamMatchMakingServers",'
       )
       expect(c).toMatch(
-        /void \*SteamMatchmaking\(void\) \{\n  return resolve_bare_iface\("SteamMatchMaking"\);/
+        /void \*SteamMatchmaking\(void\) \{\n {2}return resolve_bare_iface\("SteamMatchMaking"\);/
       )
       expect(c).toMatch(
-        /void \*SteamMatchmakingServers\(void\) \{\n  return resolve_bare_iface\("SteamMatchMakingServers"\);/
+        /void \*SteamMatchmakingServers\(void\) \{\n {2}return resolve_bare_iface\("SteamMatchMakingServers"\);/
       )
       expect(c).not.toContain('resolve_bare_iface("SteamMatchmaking")')
     })

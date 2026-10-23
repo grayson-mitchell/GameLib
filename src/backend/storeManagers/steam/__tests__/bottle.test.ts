@@ -138,7 +138,7 @@ const CX_BIN_DIR =
 const cxState: { binDir: string | undefined } = { binDir: CX_BIN_DIR }
 jest.mock('../crossoverLocation', () => ({
   resolveCrossoverBinDir: () => cxState.binDir,
-  resolveCrossoverBinDirAsync: async () => cxState.binDir,
+  resolveCrossoverBinDirAsync: () => Promise.resolve(cxState.binDir),
   crossoverBinDirFromWineBin: (bin: string) => bin
 }))
 
@@ -748,9 +748,9 @@ describe('bottle.ts', () => {
           steamSetupExe: false
         }
         setBottleFs(flags)
-        mockedSpawnAsync.mockImplementation(async () => {
+        mockedSpawnAsync.mockImplementation(() => {
           flags.conf = true
-          return { code: 0, stdout: '', stderr: '' }
+          return Promise.resolve({ code: 0, stdout: '', stderr: '' })
         })
 
         const result = await provisionBottle({ bottleName: 'GameLibSteam' })
@@ -772,9 +772,9 @@ describe('bottle.ts', () => {
           steamSetupExe: false
         }
         setBottleFs(flags)
-        mockedSpawnAsync.mockImplementation(async () => {
+        mockedSpawnAsync.mockImplementation(() => {
           flags.conf = true
-          return { code: 0, stdout: '', stderr: '' }
+          return Promise.resolve({ code: 0, stdout: '', stderr: '' })
         })
 
         const result = await provisionBottle({ bottleName: 'GameLibSteam' })
@@ -835,9 +835,9 @@ describe('bottle.ts', () => {
           steamSetupExe: false
         }
         setBottleFs(flags)
-        mockedSpawnAsync.mockImplementation(async () => {
+        mockedSpawnAsync.mockImplementation(() => {
           flags.conf = true
-          return { code: 0, stdout: '', stderr: '' }
+          return Promise.resolve({ code: 0, stdout: '', stderr: '' })
         })
         const crossover: WineInstallation = {
           bin: '/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine',
@@ -876,9 +876,9 @@ describe('bottle.ts', () => {
       }
       setBottleFs(flags)
       // Simulate `cxbottle --create` producing cxbottle.conf on disk.
-      mockedSpawnAsync.mockImplementation(async () => {
+      mockedSpawnAsync.mockImplementation(() => {
         flags.conf = true
-        return { code: 0, stdout: '', stderr: '' }
+        return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
       const result = await provisionBottle({ bottleName: 'GameLibSteam' })
@@ -899,9 +899,9 @@ describe('bottle.ts', () => {
         steamSetupExe: false
       }
       setBottleFs(flags)
-      mockedSpawnAsync.mockImplementation(async () => {
+      mockedSpawnAsync.mockImplementation(() => {
         flags.conf = true
-        return { code: 0, stdout: '', stderr: '' }
+        return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
       await provisionBottle({ bottleName: 'GameLibSteam' })
@@ -930,9 +930,9 @@ describe('bottle.ts', () => {
         steamSetupExe: false
       }
       setBottleFs(flags)
-      mockedSpawnAsync.mockImplementation(async () => {
+      mockedSpawnAsync.mockImplementation(() => {
         flags.conf = true
-        return { code: 0, stdout: '', stderr: '' }
+        return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
       await provisionBottle({ bottleName: 'GameLibSteam' })
@@ -981,9 +981,9 @@ describe('bottle.ts', () => {
         steamSetupExe: false
       }
       setBottleFs(flags)
-      mockedSpawnAsync.mockImplementation(async () => {
+      mockedSpawnAsync.mockImplementation(() => {
         flags.conf = true
-        return { code: 0, stdout: '', stderr: '' }
+        return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
       await provisionBottle({ bottleName: 'GameLibSteam' })
@@ -1069,9 +1069,9 @@ describe('bottle.ts', () => {
         steamSetupExe: false
       }
       setBottleFs(flags)
-      mockedSpawnAsync.mockImplementation(async () => {
+      mockedSpawnAsync.mockImplementation(() => {
         flags.conf = true
-        return { code: 0, stdout: '', stderr: '' }
+        return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
       const result = await provisionBottle({ bottleName: 'GameLibSteam' })
@@ -1178,9 +1178,9 @@ describe('bottle.ts', () => {
       }
       setBottleFs(flags)
       mockedReadFileSync.mockReturnValue('"WineArch" = "win64"')
-      mockedSpawnAsync.mockImplementation(async () => {
+      mockedSpawnAsync.mockImplementation(() => {
         flags.conf = true
-        return { code: 0, stdout: '', stderr: '' }
+        return Promise.resolve({ code: 0, stdout: '', stderr: '' })
       })
 
       await provisionBottle({ bottleName: 'GameLibSteam' })

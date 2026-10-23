@@ -969,10 +969,12 @@ describe('bottleProcessMonitor.ts', () => {
 
     test('the login tail is read and passed to the classifier; cause=login is logged and sent', async () => {
       mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
-      mockedReadBoundedTail.mockImplementation(async (path: string) =>
-        path === FAKE_LOG_PATHS.login
-          ? '[2026-10-22 22:21:30] [ None ] SetLoginState: WaitingForCredentials - OK'
-          : ''
+      mockedReadBoundedTail.mockImplementation((path: string) =>
+        Promise.resolve(
+          path === FAKE_LOG_PATHS.login
+            ? '[2026-10-22 22:21:30] [ None ] SetLoginState: WaitingForCredentials - OK'
+            : ''
+        )
       )
       mockedClassifyBottledSteamBlock.mockImplementation(
         ({ loginTail }: { loginTail: string }) =>

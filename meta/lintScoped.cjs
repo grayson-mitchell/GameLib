@@ -76,7 +76,15 @@ const SRC_CEILING = 1124
 // none of 51-19's commits (a type-export fix and a STATE.md correction,
 // neither touching a test file) contribute any warnings of their own. 656
 // is RED against this tree, 657 is GREEN.
-const TESTS_CEILING = 657
+//
+// Lowered 657 -> 648 on 2026-10-24 (pre-push unblock, quick-261002-b63):
+// the tree had drifted to 666 warnings plus 2 `no-regex-spaces` errors in
+// gen_vtables.test.ts. Fixed both errors and removed needless `async` from
+// mocks in removeCopies, bottle, bottleProcessMonitor and depot.prescreen
+// tests (plus one template-literal warning), then measured 648 problems
+// (0 errors, 648 warnings) via `node meta/lintScoped.cjs --tests`. 647 is
+// RED against this tree, 648 is GREEN.
+const TESTS_CEILING = 648
 
 // Each floor is 50% of the same commit's measured linted-file count for
 // that scope, rounded down (src: 751 files -> 375; tests: 441 files ->
