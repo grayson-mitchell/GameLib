@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
 Plan: 9 of 30
 Status: Ready to execute
-Last activity: 2026-10-23 - Completed quick task 261023-og0: known-bad routes to bottled Steam only for DRM (phase 51 gap closure paused before 51-28)
+Last activity: 2026-10-23 - Completed quick task 261023-oq7: scan-miss routes through the bridge (shim placed despite a miss); phase 51 gap closure paused before 51-28
 
 Progress: [█████████░] 90%
 
@@ -318,6 +318,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261021-pgx | Record Hoard's (63000) measured Steam interface versions and build the 3 missing manifests (SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011) | 2026-10-21 | 8628ea5a7 | — | [261021-pgx-record-hoard-s-measured-steam-interface-versions-and-build-t](./quick/261021-pgx-record-hoard-s-measured-steam-interface-versions-and-build-t/) |
 | 261022-tc3 | Downloads hero tile now uses portrait art (`art_square`, user overrides first) instead of cropping landscape `art_cover` into the 3:4 tile; new `heroCoverSources` helper + 6 tests | 2026-10-22 | 76fcb630d | code-verified; live Downloads check pending | [261022-tc3-downloads-tab-game-tile-uses-clipped-hor](./quick/261022-tc3-downloads-tab-game-tile-uses-clipped-hor/) |
 | 261023-og0 | Amended D-51-08: `knownBad` routes to bottled Steam only for `drm-wrapped`; `does-not-run`/`win64-only`/`p2p-required` titles (Hoard 63000, ELEX 411300) stay on the bridge with a one-time informational "Install anyway" notice. | 2026-10-23 | 6ab44d3c9 | | [261023-og0-amend-d-51-08-known-bad-routes-to-bottle](./quick/261023-og0-amend-d-51-08-known-bad-routes-to-bottle/) |
+| 261023-oq7 | Scan-miss no longer routes to bottled Steam: resolver row 7 sends it to the bridge with a one-time informational notice; `placeShimForGame` places the shim despite a miss (`placed-miss`) so install keeps the download and launch runs; census split into routed/verified/covered. | 2026-10-23 | 6d5433cf3 | | [261023-oq7-scan-miss-routes-through-the-bridge-with](./quick/261023-oq7-scan-miss-routes-through-the-bridge-with/) |
 
 ## Deferred Items
 
