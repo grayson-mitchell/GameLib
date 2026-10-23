@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"; R=../../..
 "$R/.build-tools/zig/zig" cc -target x86-windows-gnu -O2 -shared -o steamclient.dll steamclient_probe.c steamclient.def
-rm -f steamclient.pdb steamclient.lib
+rm -f steamclient.pdb steamclient.lib steamclient_probe.lib
 DST="$HOME/Library/Application Support/CrossOver/Bottles/GameLibSpikeXCOM/drive_c/Program Files (x86)/Steam"
 mkdir -p "$DST"; cp steamclient.dll "$DST/steamclient.dll"
 /usr/bin/objdump -p steamclient.dll | grep -c 'Steam_\|CreateInterface\|Breakpad' | sed 's/^/exports: /'

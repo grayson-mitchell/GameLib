@@ -3,3 +3,4 @@ logs/*.wine.log
 *.dll
 *.exe
 *.STEAMSTART
+*.lib
