@@ -91,6 +91,12 @@ type PollOptions = {
   source?: AcfSource
   isNativeHandoff?: boolean
   skippedDepots?: string[]
+  /** True only when Steam (native `steam://install`, or the bottled Steam
+   *  client's tellBottledSteamToInstall dispatch) owns the download, so
+   *  GameLib must wait for Steam to start/self-update/log in and for the
+   *  user to confirm Steam's dialog before any appmanifest exists. Install-
+   *  poller-only (quick 261024-exo). */
+  delegatedToSteamClient?: boolean
 }
 
 /**
@@ -1901,11 +1907,29 @@ const activePolls = new Map<
      *  exact scenario) would silently lose one of the two notices it must
      *  show. */
     notifiedDepotSkipped: boolean
+    /** quick 261024-exo: true when Steam owns the download (steam://install
+     *  or bottled-Steam dispatch). Selects the long no-manifest window and
+     *  the manifest-gone stop instead of the 20-tick GRACE_TICKS branch. */
+    delegatedToSteamClient: boolean
+    /** quick 261024-exo: consecutive 'absent' ticks AFTER a manifest was seen
+     *  (seenDownloading). Reset on every 'downloading' tick; reaching
+     *  MANIFEST_GONE_TICKS on a delegated poll means Steam-side cancel. */
+    absentTicksSinceSeen: number
   }
 >()
 
 const GRACE_TICKS = 20 // ≈60 s at 3 000 ms default interval — stop if no manifest appeared
 const MAX_TICKS = 7200 // ≈6 h at 3 000 ms default interval — absolute safety cap
+// quick 261024-exo: delegated (Steam-owned) installs. 600 ticks ≈ 30 min at
+// 3 000 ms covers a fresh-Mac Steam self-update + login + the user's time on
+// Steam's install dialog. 10 consecutive absent ticks (≈30 s) after a manifest
+// was seen = cancelled/removed in Steam, tolerant of Steam briefly rewriting
+// the acf. MAX_TICKS stays the absolute ceiling. Sidecar exit contract: the
+// interval is unref'd and each tick is a bounded local ACF read — no new
+// handle, socket or network call — so a longer-lived poll cannot hold the
+// event loop past stdin EOF.
+const DELEGATED_NO_MANIFEST_TICKS = 600
+const MANIFEST_GONE_TICKS = 10
 /** T-AOG (quick/260719-aog): consecutive frozen 'downloading' ticks (at the
  *  default 3 000 ms poll interval, ≈9 s) before a genuinely in-flight
  *  download is surfaced as 'steam-paused' rather than a silently frozen
@@ -2436,7 +2460,10 @@ export async function pollInstallOnce(
   const poll = activePolls.get(appId)
 
   if (result.state === 'downloading') {
-    if (poll) poll.seenDownloading = true
+    if (poll) {
+      poll.seenDownloading = true
+      poll.absentTicksSinceSeen = 0
+    }
 
     // GAP-17-BOTTLE-PROGRESS: the bottle install has no DownloadManager
     // feeding the frontend progress store — the ACF's own byte counts are
@@ -2700,6 +2727,9 @@ export async function pollInstallOnce(
     }
   }
   // 'absent': no message — grace/cap logic is in startInstallPolling's setInterval callback
+  if (result.state === 'absent' && poll?.seenDownloading) {
+    poll.absentTicksSinceSeen++
+  }
 }
 
 /**
@@ -2717,6 +2747,10 @@ export async function pollInstallOnce(
  *     for this appId (user likely cancelled Steam's install dialog —
  *     T-03-06 mitigation; the in-flight exception is 260822-dkf, see the
  *     grace branch below)
+ *   - delegatedToSteamClient polls only (quick 261024-exo): no manifest ever
+ *     appeared after DELEGATED_NO_MANIFEST_TICKS, or the manifest disappeared
+ *     for MANIFEST_GONE_TICKS consecutive ticks after having appeared (these
+ *     replace the GRACE_TICKS rule for such polls)
  *   - MAX_TICKS elapsed (D-01 focus backstop takes over — T-03-06 mitigation)
  *
  * The second parameter accepts EITHER a plain intervalMs number (existing
@@ -2766,6 +2800,17 @@ export function startInstallPolling(
         LogPrefix.Steam
       )
     }
+    if (
+      typeof intervalMsOrOptions !== 'number' &&
+      intervalMsOrOptions.delegatedToSteamClient === true &&
+      !existingEntry.delegatedToSteamClient
+    ) {
+      existingEntry.delegatedToSteamClient = true
+      logInfo(
+        `Steam: upgrading in-flight install poll for appId ${appId} to delegatedToSteamClient (quick 261024-exo)`,
+        LogPrefix.Steam
+      )
+    }
     return // idempotent — no second interval either way
   }
 
@@ -2773,29 +2818,34 @@ export function startInstallPolling(
     intervalMs,
     source,
     isNativeHandoff,
-    skippedDepots
+    skippedDepots,
+    delegatedToSteamClient
   }: {
     intervalMs: number
     source: AcfSource
     isNativeHandoff: boolean
     skippedDepots: string[]
+    delegatedToSteamClient: boolean
   } =
     typeof intervalMsOrOptions === 'number'
       ? {
           intervalMs: intervalMsOrOptions,
           source: 'native',
           isNativeHandoff: false,
-          skippedDepots: []
+          skippedDepots: [],
+          delegatedToSteamClient: false
         }
       : {
           intervalMs: intervalMsOrOptions.intervalMs ?? 3000,
           source: intervalMsOrOptions.source ?? 'native',
           isNativeHandoff: intervalMsOrOptions.isNativeHandoff ?? false,
-          skippedDepots: intervalMsOrOptions.skippedDepots ?? []
+          skippedDepots: intervalMsOrOptions.skippedDepots ?? [],
+          delegatedToSteamClient:
+            intervalMsOrOptions.delegatedToSteamClient ?? false
         }
 
   logInfo(
-    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source}, isNativeHandoff ${isNativeHandoff}, skippedDepots ${skippedDepots.length})`,
+    `Steam: starting install polling for appId ${appId} (interval ${intervalMs}ms, source ${source}, isNativeHandoff ${isNativeHandoff}, skippedDepots ${skippedDepots.length}, delegatedToSteamClient ${delegatedToSteamClient})`,
     LogPrefix.Steam
   )
 
@@ -2807,7 +2857,9 @@ export function startInstallPolling(
     stalledTicks: 0,
     isNativeHandoff,
     skippedDepots,
-    notifiedDepotSkipped: false
+    notifiedDepotSkipped: false,
+    delegatedToSteamClient,
+    absentTicksSinceSeen: 0
   }
 
   const timer = setInterval(async () => {
@@ -2866,7 +2918,36 @@ export function startInstallPolling(
     // written the manifest — so the only way this branch fires after a
     // completed native run is a run that produced no manifest at all, which
     // is a correct stop.
-    if (
+    if (entry.delegatedToSteamClient) {
+      // quick 261024-exo: Steam owns the download — wait for it to start,
+      // self-update and log in; stop only on a long no-manifest window or a
+      // manifest that appeared and then vanished (cancel/uninstall in Steam).
+      let delegatedStopReason: string | null = null
+      if (
+        !entry.seenDownloading &&
+        entry.ticks >= DELEGATED_NO_MANIFEST_TICKS
+      ) {
+        delegatedStopReason = `no manifest after ${entry.ticks} ticks; Steam install dialog likely cancelled or Steam never started`
+      } else if (
+        entry.seenDownloading &&
+        entry.absentTicksSinceSeen >= MANIFEST_GONE_TICKS
+      ) {
+        delegatedStopReason =
+          'manifest disappeared after appearing; install cancelled or removed in Steam'
+      }
+      if (delegatedStopReason) {
+        logWarning(
+          `Steam: install polling for appId ${appId} stopped — ${delegatedStopReason}`,
+          LogPrefix.Steam
+        )
+        sendFrontendMessage('gameStatusUpdate', {
+          appName: appId,
+          runner: 'steam',
+          status: 'done'
+        })
+        stopInstallPolling(appId)
+      }
+    } else if (
       !entry.seenDownloading &&
       entry.ticks >= GRACE_TICKS &&
       !isNativeInstallInFlight(appId)

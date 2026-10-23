@@ -5227,6 +5227,120 @@ describe('startInstallPolling() idempotency and stopInstallPolling()', () => {
     setIntervalSpy.mockRestore()
   })
 
+  // ── quick 261024-exo: delegatedToSteamClient poll lifecycle ────────────────
+
+  const delegatedAcf = (flags: string) => ({
+    AppState: {
+      appid: '730',
+      StateFlags: flags,
+      installdir: 'csgo',
+      SizeOnDisk: '0',
+      BytesDownloaded: '5000000',
+      BytesToDownload: '10000000'
+    }
+  })
+  const doneCalls = () =>
+    (sendFrontendMessage as jest.Mock).mock.calls.filter(
+      ([channel, payload]) =>
+        channel === 'gameStatusUpdate' && payload?.status === 'done'
+    )
+
+  it('D1: a delegated poll survives the 60 s grace window with no manifest, and stops only after DELEGATED_NO_MANIFEST_TICKS', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    jest.mocked(sendFrontendMessage).mockClear()
+
+    const interval = 10
+    startInstallPolling('730', {
+      intervalMs: interval,
+      delegatedToSteamClient: true
+    })
+    await jest.advanceTimersByTimeAsync(interval * 21)
+    expect(doneCalls()).toHaveLength(0)
+    const ticksSoFar = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 5)
+    expect((existsSync as jest.Mock).mock.calls.length).toBeGreaterThan(
+      ticksSoFar
+    )
+
+    // DELEGATED_NO_MANIFEST_TICKS = 600; already advanced 26 ticks.
+    await jest.advanceTimersByTimeAsync(interval * 580)
+    expect(doneCalls()).toHaveLength(1)
+    const ticksAtStop = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 5)
+    expect((existsSync as jest.Mock).mock.calls.length).toBe(ticksAtStop)
+  })
+
+  it('D2: a delegated poll stops after MANIFEST_GONE_TICKS consecutive absent ticks once a manifest was seen; a single absent tick does not stop it', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    jest.mocked(sendFrontendMessage).mockClear()
+
+    const interval = 10
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    startInstallPolling('730', {
+      intervalMs: interval,
+      delegatedToSteamClient: true
+    })
+    await jest.advanceTimersByTimeAsync(interval * 3) // downloading x3
+
+    // One absent tick between downloading ticks: counter resets.
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    await jest.advanceTimersByTimeAsync(interval)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    await jest.advanceTimersByTimeAsync(interval * 3)
+    expect(doneCalls()).toHaveLength(0)
+
+    // Now the manifest is gone for good.
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    await jest.advanceTimersByTimeAsync(interval * 9)
+    expect(doneCalls()).toHaveLength(0)
+    await jest.advanceTimersByTimeAsync(interval * 2)
+    expect(doneCalls()).toHaveLength(1)
+  })
+
+  it('D3: a delegated poll that goes absent -> downloading -> installed stops via the installed branch (library flip + done), not the gone/no-manifest branches', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/steam'])
+    isNativeInstallInFlightSpy = jest
+      .spyOn(gamesModule, 'isNativeInstallInFlight')
+      .mockReturnValue(false)
+    ;(readFileSync as jest.Mock).mockReturnValue('content')
+    jest.mocked(sendFrontendMessage).mockClear()
+
+    const interval = 10
+    ;(existsSync as jest.Mock).mockReturnValue(false)
+    startInstallPolling('730', {
+      intervalMs: interval,
+      delegatedToSteamClient: true
+    })
+    await jest.advanceTimersByTimeAsync(interval * 30) // well past 20-tick grace
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+    ;(vdf.parse as jest.Mock).mockReturnValue(delegatedAcf('1026'))
+    await jest.advanceTimersByTimeAsync(interval * 2)
+    ;(vdf.parse as jest.Mock).mockReturnValue({
+      AppState: {
+        appid: '730',
+        StateFlags: '4',
+        installdir: 'csgo',
+        SizeOnDisk: '50000'
+      }
+    })
+    await jest.advanceTimersByTimeAsync(interval * 2)
+
+    expect(library.get('730')?.is_installed).toBe(true)
+    expect(doneCalls().length).toBeGreaterThanOrEqual(1)
+    const callsAfter = (existsSync as jest.Mock).mock.calls.length
+    await jest.advanceTimersByTimeAsync(interval * 5)
+    expect((existsSync as jest.Mock).mock.calls.length).toBe(callsAfter)
+  })
+
   // ── 17-03: startInstallPolling(appId, { source: 'bottle' }) ────────────────
 
   it('startInstallPolling(appId, { source: "bottle" }) polls the bottle steamapps root, not the native one', async () => {

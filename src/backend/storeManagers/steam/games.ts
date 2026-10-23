@@ -1305,7 +1305,12 @@ export default class SteamGame implements Game {
 
       // Start bottle-scoped ACF polling (D-07) — the bottle's own steamapps
       // root is distinct from the native root (RESEARCH.md Pitfall 2).
-      startInstallPolling(this.appId, { source: 'bottle' })
+      // quick 261024-exo: the bottled Steam client owns this download, so the
+      // poller waits for its manifest well past the 60 s non-delegated grace.
+      startInstallPolling(this.appId, {
+        source: 'bottle',
+        delegatedToSteamClient: true
+      })
 
       return { status: 'done' }
     }
@@ -1335,7 +1340,10 @@ export default class SteamGame implements Game {
     // sends 'installing' / 'done' status updates to the frontend and flips
     // the badge when StateFlags bit 4 is set. Install state is never
     // optimistically flipped here (D-02) — only ACF confirms.
-    startInstallPolling(this.appId)
+    // quick 261024-exo: delegatedToSteamClient keeps the poll alive through
+    // Steam's startup/self-update and the user's install dialog (a failed
+    // dispatch never reaches here, so no poller means no false installing).
+    startInstallPolling(this.appId, { delegatedToSteamClient: true })
 
     return { status: 'done' }
   }

@@ -2713,7 +2713,9 @@ describe('SteamGame.install() — GAME-02', () => {
   it('GAME-02/D-07: install() calls startInstallPolling with this.appId after successful openExternal', async () => {
     const game = new SteamGame(APP_ID)
     await game.install({} as any)
-    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID)
+    expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
+      delegatedToSteamClient: true
+    })
   })
 
   it('D-07: install() does NOT call startInstallPolling when appId is non-numeric (T-03-01 guard)', async () => {
@@ -3583,7 +3585,8 @@ describe('SteamGame.install() — Phase 17 bottle routing (D-10/D-11)', () => {
     expect(shellOpenExternal).not.toHaveBeenCalled()
     expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
+      source: 'bottle',
+      delegatedToSteamClient: true
     })
     expect(startInstallPollingSpy).toHaveBeenCalledTimes(1)
     expect(result).toEqual({ status: 'done' })
@@ -3772,7 +3775,8 @@ describe('SteamGame.install() — SNI-08 bottle depot-download opt-in (D-15)', (
     expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
     expect(downloadSteamDepots).not.toHaveBeenCalled()
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
+      source: 'bottle',
+      delegatedToSteamClient: true
     })
     expect(result).toEqual({ status: 'done' })
   })
@@ -5235,7 +5239,8 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
 
     assertExactlyOneRoute('bottle-dispatch', terminals)
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
+      source: 'bottle',
+      delegatedToSteamClient: true
     })
   })
 
@@ -5330,7 +5335,8 @@ describe('SteamGame.install() — D-17 Windows-via-bottle override (34.13-06)', 
     assertExactlyOneRoute('bottle-dispatch', terminals)
     expect(tellBottledSteamToInstall).toHaveBeenCalledWith(APP_ID)
     expect(startInstallPollingSpy).toHaveBeenCalledWith(APP_ID, {
-      source: 'bottle'
+      source: 'bottle',
+      delegatedToSteamClient: true
     })
   })
 
