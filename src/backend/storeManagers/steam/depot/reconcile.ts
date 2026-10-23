@@ -131,6 +131,28 @@ async function regularFileShape(
   return { ok: true, size: st.size }
 }
 
+function isDirOrSymlink(f: DepotPlanFile): boolean {
+  return !!f.flags && (f.flags & (DIRECTORY_FLAG | SYMLINK_FLAG)) !== 0
+}
+
+/** True when the file at `dest` has the size AND whole-file sha1 of at least
+ *  one of `claims`. */
+async function matchesAnyClaim(
+  dest: string,
+  claims: DepotPlanFile[]
+): Promise<boolean> {
+  let size: number
+  try {
+    size = (await stat(dest)).size
+  } catch {
+    return false
+  }
+  const sameSize = claims.filter((c) => Number(c.size) === size)
+  if (!sameSize.length) return false
+  const got = await sha1File(dest)
+  return sameSize.some((c) => got === expectedSha(c))
+}
+
 async function regularFileVerified(
   dest: string,
   file: DepotPlanFile
@@ -253,10 +275,11 @@ interface StructuralVerifyResult {
  * An `unresolved` path collision (two chunked entries claiming one
  * destination path — see depot/pathCollisions.ts) means at least one of
  * those entries structurally cannot be satisfied on disk simultaneously, so
- * it will legitimately mismatch here and force the safe 1026 fallback. That
- * is the correct, honest answer for a plan `pathCollisions.ts` deliberately
- * declined to resolve, but it IS a behaviour change from before this
- * function existed: such a title could previously still earn a 4.
+ * it cannot be satisfied by BOTH. A collided regular-file path therefore
+ * passes iff the file on disk is whole-file sha1-identical to one of the
+ * claims (the content actually written); anything else still mismatches and
+ * forces the safe 1026 fallback. (debug/cross-depot-collision-1026: Steam's
+ * own winner rule is only established for one depot pair, see that session.)
  *
  * Fails CLOSED like every other function in this file: a thrown
  * PathTraversalError from resolveContainedPath is NOT caught here — it
@@ -279,6 +302,30 @@ export async function verifyStructuralIntegrity(
     mismatchCount++
     if (mismatches.length < MISMATCH_REPORT_CAP) {
       mismatches.push({ filename, ...m })
+    }
+  }
+
+  // Cross-depot collisions (debug/cross-depot-collision-1026): two depots of
+  // one app can ship the SAME path as two different real files (XCOM 200510,
+  // depots 200522 vs 225341 under XEW/). Only one can be on disk, and the
+  // write loop's last-write-wins order is not a decision anyone made, so
+  // judging the file against whichever claim happens to be iterated is
+  // arbitrary. For such a path the file on disk passes iff it is byte-for-byte
+  // (whole-file sha1) one of the claims -- the content actually written. A
+  // truncated, partial or foreign file matches no claim and still fails.
+  const contentClaims = new Map<string, DepotPlanFile[]>()
+  for (const depot of plan.depots) {
+    for (const file of depot.files) {
+      if (
+        isDirOrSymlink(file) ||
+        !file.chunks.length ||
+        Number(file.size) === 0
+      )
+        continue
+      const key = file.filename.replace(/\\/g, '/')
+      const bucket = contentClaims.get(key)
+      if (bucket) bucket.push(file)
+      else contentClaims.set(key, [file])
     }
   }
 
@@ -310,6 +357,15 @@ export async function verifyStructuralIntegrity(
 
       const shape = await regularFileShape(dest, file)
       if (!shape.ok) {
+        const rivals = contentClaims.get(file.filename.replace(/\\/g, '/'))
+        if (
+          shape.reason === 'wrong-size' &&
+          rivals &&
+          rivals.length > 1 &&
+          (await matchesAnyClaim(dest, rivals))
+        ) {
+          continue
+        }
         record(file.filename, {
           reason: shape.reason,
           expectedSize: Number(file.size),

@@ -65,6 +65,10 @@ import {
 } from './depot/reconcile'
 import { resolveDepotPathCollisions } from './depot/pathCollisions'
 import {
+  getAppInfoDepotOrder,
+  withAppInfoOrderCapture
+} from './depot/appinfoOrder'
+import {
   classifyDepotError,
   isNonRetryableDepotError,
   type DepotErrorAction
@@ -220,6 +224,13 @@ interface DepotPlanEntry {
   /** Per-depot decryption key from getDepotDecryptionKey. */
   key: Buffer
   files: DepotPlanFile[]
+  /** The app whose PICS appinfo this depot was enumerated from. */
+  ownerAppId?: string
+  /** Zero-based position of this depot in the RAW appinfo `depots` section of
+   *  `ownerAppId` (Steam's own order -- see depot/appinfoOrder.ts). Undefined
+   *  when that order could not be recovered. Only comparable between depots
+   *  with the same `ownerAppId`. */
+  appinfoRank?: number
 }
 
 /**
@@ -533,7 +544,9 @@ async function fetchAppInfo(
 ): Promise<SteamAppInfo> {
   // G-30-02 (30-07): bounded — see getOwnedSets above.
   const { apps } = await withTimeout(
-    client.getProductInfo([numericAppId], [], true),
+    withAppInfoOrderCapture(client, () =>
+      client.getProductInfo([numericAppId], [], true)
+    ),
     STEAM_PICS_TIMEOUT_MS,
     'fetchAppInfo getProductInfo'
   )
@@ -556,7 +569,9 @@ async function fetchDlcInfos(
   // G-30-02 (30-07): bounded — see getOwnedSets above. WR-03: many-appid bulk
   // fetch over the full DLC id list, so it uses STEAM_PICS_BULK_TIMEOUT_MS too.
   const { apps } = await withTimeout(
-    client.getProductInfo(dlcIds, [], true),
+    withAppInfoOrderCapture(client, () =>
+      client.getProductInfo(dlcIds, [], true)
+    ),
     STEAM_PICS_BULK_TIMEOUT_MS,
     'fetchDlcInfos getProductInfo'
   )
@@ -872,6 +887,10 @@ export async function buildDepotPlan(
       }
       throw err
     }
+    entry.ownerAppId = descriptor.ownerAppId
+    const rawOrder = getAppInfoDepotOrder(descriptor.ownerAppId)
+    const rank = rawOrder ? rawOrder.indexOf(descriptor.id) : -1
+    if (rank >= 0) entry.appinfoRank = rank
     depots.push(entry)
     // D-03: totalBytes is downstream of the `continue` above — a skipped
     // depot's files never reach this accumulation, so the reduced plan's
@@ -904,7 +923,7 @@ export async function buildDepotPlan(
   // depots are correctly selected, so this must be resolved on the plan before
   // the write loop can race on it. Every dropped entry is size 0, so
   // `totalBytes` — already summed above — needs no compensating arithmetic.
-  resolveDepotPathCollisions({ appId, depots })
+  totalBytes -= resolveDepotPathCollisions({ appId, depots }).droppedBytes
 
   logInfo(
     `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (${depots.length} depot(s))`,

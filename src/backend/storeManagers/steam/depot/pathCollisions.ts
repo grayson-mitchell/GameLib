@@ -45,6 +45,10 @@ interface PathCollisionReport {
    *  guessing a winner here would be the same class of silent corruption this
    *  module exists to remove. */
   unresolved: string[]
+  /** Bytes of real-file entries dropped by the appinfo-order rule; the caller
+   *  must subtract this from its already-summed totalBytes. Directory markers
+   *  are size 0 and contribute nothing. */
+  droppedBytes: number
 }
 
 /**
@@ -84,16 +88,16 @@ function hasContent(f: DepotPlanFile): boolean {
  * Resolve cross-depot path collisions IN PLACE on `plan.depots[].files`.
  *
  * Mutates rather than rebuilding because the plan is freshly constructed and
- * solely owned by `buildDepotPlan` at the single call site, and because every
- * dropped entry is size 0 — so `plan.totalBytes`, already summed by the caller,
- * stays correct with no compensating arithmetic (the same reasoning the
- * skipped-depot accounting above it relies on).
+ * solely owned by `buildDepotPlan` at the single call site. Directory markers
+ * are size 0, but a losing REAL file is not -- the caller subtracts the
+ * returned `droppedBytes` from its already-summed totalBytes.
  *
  * Returns what it did so the caller can log it and tests can assert on it.
  */
 export function resolveDepotPathCollisions(
   plan: Pick<DepotPlan, 'appId' | 'depots'>
 ): PathCollisionReport {
+  const depotById = new Map(plan.depots.map((d) => [d.depotId, d]))
   // path -> every (depot, file) claiming it
   const byPath = new Map<string, { depotId: string; file: DepotPlanFile }[]>()
 
@@ -135,6 +139,46 @@ export function resolveDepotPathCollisions(
       continue
     }
 
+    // debug/cross-depot-collision-1026: two or more REAL files. Observed rule
+    // (XCOM 200510, depots 225341 vs 200522, repaired by the real Steam
+    // client): the depot LATER in the app's raw appinfo `depots` order wins
+    // and the earlier depot's file is not kept. Applied only when every
+    // claimant has a recovered rank in the SAME app's appinfo; otherwise the
+    // collision stays UNRESOLVED (the verifier's content-actually-written
+    // fallback then applies). The rule rests on a single observed pair.
+    if (emptyDirs.length === 0 && content.length === claims.length) {
+      const ranked = claims.map((c) => ({
+        c,
+        entry: depotById.get(c.depotId)
+      }))
+      const owner = ranked[0].entry?.ownerAppId
+      const orderKnown =
+        owner !== undefined &&
+        ranked.every(
+          (r) =>
+            r.entry?.ownerAppId === owner && r.entry.appinfoRank !== undefined
+        ) &&
+        new Set(ranked.map((r) => r.entry?.appinfoRank)).size === ranked.length
+      if (orderKnown) {
+        const winner = ranked.reduce((a, b) =>
+          (b.entry?.appinfoRank ?? -1) > (a.entry?.appinfoRank ?? -1) ? b : a
+        )
+        const losers = ranked.filter((r) => r !== winner)
+        for (const l of losers) drop.add(l.c.file)
+        resolved.push(path)
+        logWarning(
+          `buildDepotPlan: appId=${plan.appId} RESOLVED cross-depot file ` +
+            `collision on "${path}" — winner depot ${winner.c.depotId} ` +
+            `(size=${Number(winner.c.file.size)}, appinfo rank ` +
+            `${winner.entry?.appinfoRank}), dropped depot(s) ` +
+            `${losers.map((l) => `${l.c.depotId} (size=${Number(l.c.file.size)}, rank ${l.entry?.appinfoRank})`).join(', ')} ` +
+            `by rule "later in the app's appinfo depot order wins".`,
+          LogPrefix.Steam
+        )
+        continue
+      }
+    }
+
     // Anything else — two real files, a symlink against a file, several
     // content entries — is NOT decided here. Report it and change nothing.
     unresolved.push(path)
@@ -158,10 +202,12 @@ export function resolveDepotPathCollisions(
     }
     logInfo(
       `buildDepotPlan: appId=${plan.appId} resolved ${resolved.length} ` +
-        `cross-depot path collision(s), dropped ${drop.size} directory marker(s)`,
+        `cross-depot path collision(s), dropped ${drop.size} losing entr(ies)`,
       LogPrefix.Steam
     )
   }
 
-  return { resolved, unresolved }
+  let droppedBytes = 0
+  for (const f of drop) droppedBytes += Number(f.size)
+  return { resolved, unresolved, droppedBytes }
 }

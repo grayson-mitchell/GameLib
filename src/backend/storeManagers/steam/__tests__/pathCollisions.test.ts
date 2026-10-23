@@ -150,7 +150,11 @@ describe('resolveDepotPathCollisions', () => {
 
       const report = resolveDepotPathCollisions(p)
 
-      expect(report).toEqual({ resolved: [], unresolved: [] })
+      expect(report).toEqual({
+        resolved: [],
+        unresolved: [],
+        droppedBytes: 0
+      })
       expect(names(p, 0)).toEqual(['sound', 'a.bin'])
       expect(names(p, 1)).toEqual(['b.bin'])
       expect(jest.mocked(logWarning)).not.toHaveBeenCalled()
@@ -195,7 +199,11 @@ describe('resolveDepotPathCollisions', () => {
 
       const report = resolveDepotPathCollisions(p)
 
-      expect(report).toEqual({ resolved: [], unresolved: [] })
+      expect(report).toEqual({
+        resolved: [],
+        unresolved: [],
+        droppedBytes: 0
+      })
       expect(names(p, 0)).toEqual(['Master.dat'])
     })
   })

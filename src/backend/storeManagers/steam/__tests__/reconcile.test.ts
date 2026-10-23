@@ -408,6 +408,79 @@ describe('verifyStructuralIntegrity (quick 260908-nbd)', () => {
     expect(result.checked).toBe(2)
   })
 
+  describe('cross-depot file collisions (debug/cross-depot-collision-1026)', () => {
+    function claim(content: Buffer): DepotPlanFile {
+      return {
+        filename: 'XEW\\XComGame\\Config\\DefaultGame.ini',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 's', cb_original: content.length, offset: 0 }]
+      }
+    }
+    const a = Buffer.from('depot-200522-claim')
+    const b = Buffer.from('depot-225341-claim-is-longer')
+    const twoDepotPlan = () =>
+      makePlan([
+        {
+          depotId: '200522',
+          gid: 'g1',
+          key: Buffer.from('k'),
+          files: [claim(a)]
+        },
+        {
+          depotId: '225341',
+          gid: 'g2',
+          key: Buffer.from('k'),
+          files: [claim(b)]
+        }
+      ])
+
+    it.each([
+      ['first claim', a],
+      ['second claim', b]
+    ])('passes when the file on disk is the %s', async (_n, written) => {
+      mkdirSync(join(dir, 'XEW/XComGame/Config'), { recursive: true })
+      writeFileSync(join(dir, 'XEW/XComGame/Config/DefaultGame.ini'), written)
+      const result = await verifyStructuralIntegrity(twoDepotPlan(), dir)
+      expect(result.ok).toBe(true)
+    })
+
+    it('still fails when the file on disk matches neither claim by size', async () => {
+      mkdirSync(join(dir, 'XEW/XComGame/Config'), { recursive: true })
+      writeFileSync(join(dir, 'XEW/XComGame/Config/DefaultGame.ini'), 'trunc')
+      const result = await verifyStructuralIntegrity(twoDepotPlan(), dir)
+      expect(result.ok).toBe(false)
+    })
+
+    it('still fails when the size matches a claim but the content matches none', async () => {
+      mkdirSync(join(dir, 'XEW/XComGame/Config'), { recursive: true })
+      writeFileSync(
+        join(dir, 'XEW/XComGame/Config/DefaultGame.ini'),
+        Buffer.alloc(a.length, 'x')
+      )
+      // same size as claim a only passes the size gate for claim b's check
+      const result = await verifyStructuralIntegrity(twoDepotPlan(), dir)
+      expect(result.ok).toBe(false)
+    })
+
+    it('a NON-collided wrong-size file is still a mismatch', async () => {
+      writeFileSync(join(dir, 'solo.bin'), 'abc')
+      const solo: DepotPlanFile = {
+        filename: 'solo.bin',
+        size: 99,
+        sha_content: 'x',
+        chunks: [{ sha: 's', cb_original: 99, offset: 0 }]
+      }
+      const result = await verifyStructuralIntegrity(
+        makePlan([
+          { depotId: '1', gid: 'g', key: Buffer.from('k'), files: [solo] }
+        ]),
+        dir
+      )
+      expect(result.ok).toBe(false)
+    })
+  })
+
   it('the observed 38410 master.dat shape — a planned regular file present as an EMPTY DIRECTORY — mismatches as not-a-file', async () => {
     mkdirSync(join(dir, 'master.dat'))
     const file: DepotPlanFile = {
