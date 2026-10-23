@@ -56,3 +56,26 @@ walk. Re-test 219990 and 648410 after the fix.
 
 Measurement note for 51-29/51-30: Grim Dawn counts as bridge-routed, does not run, cause
 missing modern-SDK exports. That is a bridge defect, so it stays off `knownBad`.
+
+## Correction from spike 038 (2026-10-23): the 2-second exit is SteamStub, not the import miss
+
+Traced in an APFS clone of `GameLibSteamBridge-219990`
+(`.planning/spikes/038-steamstub-grimdawn-probe/`, `evidence.txt`):
+
+- **Wine does not refuse the load.** The five missing exports show up as
+  `warn:module:import_dll No implementation for steam_api64.dll.SteamInternal_* imported from ...Engine.dll`.
+  Wine binds them to stubs that fail only when called. `steam_api64.dll` and `Engine.dll` both
+  reach `PROCESS_ATTACH`, so "Engine.dll fails" above is wrong under CrossOver.
+- **The Steam build is DRM-wrapped.** `x64\Grim Dawn.exe` (and the x86 and `compat` exes) carry a
+  SteamStub `.bind` section. "Grim Dawn has no DRM" holds for the GOG build, not this one. After
+  the DLL inits, the stub opens `HKCU\Software\Valve\Steam\ActiveProcess` (missing), then
+  `HKLM\Software\Wow6432Node\Valve` (missing), then calls `ShellExecute("steam://run/219990//")`,
+  which is a no-op in a bridge bottle, and the process exits. That's the observed 2 s. Engine.dll's
+  missing imports are never reached.
+- **Both fixes are needed, in this order:** SteamStub has to pass first (todo
+  `2026-10-23-forwarding-steamclient-dll-for-steamstub-titles.md`), then this todo's five exports
+  are what Engine.dll hits next. Fixing this one alone won't make Grim Dawn run.
+
+So the 51-29/51-30 measurement note should read "does not run; SteamStub-wrapped (blocked on the
+forwarding steamclient), then missing modern-SDK exports". It's still a bridge defect, not a
+`knownBad` entry, because a forwarding client is in scope (unlike CEG, 035–037).
