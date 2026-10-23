@@ -79,3 +79,25 @@ Traced in an APFS clone of `GameLibSteamBridge-219990`
 So the 51-29/51-30 measurement note should read "does not run; SteamStub-wrapped (blocked on the
 forwarding steamclient), then missing modern-SDK exports". It's still a bridge defect, not a
 `knownBad` entry, because a forwarding client is in scope (unlike CEG, 035–037).
+
+## More titles hitting the missing exports (51-29 sample, 2026-10-24)
+
+The gap blocks or degrades three more sampled titles, reached through three different engines:
+
+- **Hell Clock (1782460, Unity).** Steamworks.NET `SteamAPI.InitEx` P/Invokes
+  `SteamInternal_SteamAPI_Init` and gets `EntryPointNotFoundException` (`Player.log`, from
+  `HellClock.Steam.SteamManager.Awake`). No `HELLO`. The game plays offline.
+- **Mining Mechs (1603180, GameMaker).** The runner loads the GameMaker Steamworks extension
+  `Steamworks_x64.dll` at runtime. It imports `SteamInternal_SteamAPI_Init`,
+  `SteamInternal_ContextInit` and `SteamInternal_FindOrCreateUserInterface` from the placed shim
+  and calls `SteamAPI_InitEx`. Wine binds the missing imports to stubs that fault when called.
+  The game then shows a "...encountered a serious problem..." dialog and exits after 44 s
+  (10:45:28 to 10:46:12). No `HELLO`. **Does not run.**
+- **Ranch Simulator (1119730, UE).** The Shipping exe imports `SteamInternal_SteamAPI_Init`. It is
+  masked today by the UE scan miss
+  (`2026-10-24-bridge-scan-reads-unreal-bootstrap-exe-and-misses-the-shipping-binary.md`) and
+  will be reached once that miss is fixed.
+
+`SteamInternal_SteamAPI_Init` is the common entry for every SDK 1.58+ title, whatever its engine.
+Together with the two flat-API misses it is the highest-yield single export. Do part 1 first.
+Re-test 1782460 and 1603180 alongside 219990 and 648410.
