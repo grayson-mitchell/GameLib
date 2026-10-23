@@ -22,6 +22,7 @@ import {
   classifyBottledSteamBlock,
   bottledSteamLogPaths
 } from '../bottleLaunchSignals'
+import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 import {
   startBottleProcessMonitor,
   stopBottleProcessMonitor,
@@ -80,6 +81,12 @@ jest.mock('../../../ipc', () => ({
   sendFrontendMessage: jest.fn()
 }))
 
+jest.mock('backend/utils/wineWindowRaise', () => ({
+  raiseWineGameWindow: jest.fn(),
+  windowsExeNameFromCommand: jest.requireActual('backend/utils/wineWindowRaise')
+    .windowsExeNameFromCommand
+}))
+
 interface EnvironmentDouble {
   isMac: boolean
   isWindows: boolean
@@ -115,6 +122,7 @@ jest.mock('../bottleLaunchSignals', () => ({
 }))
 
 const mockedSpawnAsync = spawnAsync as jest.Mock
+const mockedRaise = raiseWineGameWindow as jest.Mock
 const mockedLogInfo = logInfo as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
 const mockedSendFrontendMessage = sendFrontendMessage as jest.Mock
@@ -159,6 +167,7 @@ describe('bottleProcessMonitor.ts', () => {
     mockedLogInfo.mockReset()
     mockedLogWarning.mockReset()
     mockedSendFrontendMessage.mockReset()
+    mockedRaise.mockReset().mockResolvedValue(undefined)
     mockedReadBoundedTail.mockReset().mockResolvedValue('')
     mockedClassifyBottledSteamBlock.mockReset().mockReturnValue(null)
     mockedBottledSteamLogPaths.mockReset().mockReturnValue(FAKE_LOG_PATHS)
@@ -1030,6 +1039,84 @@ describe('bottleProcessMonitor.ts', () => {
 
       expect(mockedClassifyBottledSteamBlock).not.toHaveBeenCalled()
 
+      jest.useRealTimers()
+    })
+  })
+
+  describe('first-match window raise (261024-g3m)', () => {
+    const start = (kind?: 'bridge' | 'bottled-steam') =>
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        ...(kind ? { kind } : {})
+      })
+
+    test('bridge kind: raises once with pid and exe name; later polls do not re-raise', async () => {
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      start('bridge')
+      await jest.advanceTimersByTimeAsync(1500 * 4)
+      await flushMicrotasks()
+      expect(mockedRaise).toHaveBeenCalledTimes(1)
+      expect(mockedRaise).toHaveBeenCalledWith({
+        context: 'bridge:38410',
+        pids: ['4242'],
+        processNames: ['fallout2.exe']
+      })
+      jest.useRealTimers()
+    })
+
+    test('default (bottled-steam) kind uses its own context', async () => {
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      start()
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(mockedRaise).toHaveBeenCalledTimes(1)
+      expect(mockedRaise.mock.calls[0][0].context).toBe('bottled-steam:38410')
+      jest.useRealTimers()
+    })
+
+    test('a match recorded via launcherExited() raises exactly once', async () => {
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: matchedPsLine,
+        stderr: ''
+      })
+      jest.useFakeTimers()
+      const handle = start('bridge')
+      handle?.launcherExited()
+      await flushMicrotasks()
+      expect(mockedRaise).toHaveBeenCalledTimes(1)
+      jest.useRealTimers()
+    })
+
+    test('a synchronously throwing raise does not stop playing/done', async () => {
+      mockedRaise.mockImplementation(() => {
+        throw new Error('boom')
+      })
+      mockedSpawnAsync
+        .mockResolvedValueOnce({ code: 0, stdout: matchedPsLine, stderr: '' })
+        .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      start('bridge')
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      const statuses = mockedSendFrontendMessage.mock.calls.map(
+        (c) => c[1].status
+      )
+      expect(statuses).toEqual(['playing', 'done'])
       jest.useRealTimers()
     })
   })

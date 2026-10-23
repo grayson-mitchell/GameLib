@@ -33,11 +33,20 @@
  * CONTEXT: "Deadline on first process match ... is deliberately absent"), so
  * a crashed or failed launch still stops its helper. `onStopped` fires once
  * on every terminal path except supersede/cancel.
+ *
+ * quick/261024-g3m: on the first match (both `bridge` and `bottled-steam`
+ * kinds) the matched pid(s) and their exe names are handed to
+ * `raiseWineGameWindow` (fire-and-forget, best-effort) so the game window
+ * comes to the front instead of opening behind GameLib.
  */
 import { relative, sep } from 'node:path'
 import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { isMac } from 'backend/constants/environment'
+import {
+  raiseWineGameWindow,
+  windowsExeNameFromCommand
+} from 'backend/utils/wineWindowRaise'
 import { sendFrontendMessage } from '../../ipc'
 import type { SteamBottleLaunchWaitingCause } from 'common/types/steam'
 import {
@@ -247,6 +256,25 @@ function recordFirstMatch(
     runner: 'steam',
     status: 'playing'
   })
+  try {
+    const processNames = [
+      ...new Set(
+        matches
+          .map((m) => windowsExeNameFromCommand(m.command))
+          .filter((n): n is string => n !== null)
+      )
+    ]
+    void raiseWineGameWindow({
+      context: `${entry.kind}:${appId}`,
+      pids: matches.map((m) => m.pid),
+      processNames
+    })
+  } catch (error) {
+    logWarning(
+      [`bottleProcessMonitor [${appId}]: window raise failed to start`, error],
+      LogPrefix.Steam
+    )
+  }
 }
 
 async function runPollLoop(
