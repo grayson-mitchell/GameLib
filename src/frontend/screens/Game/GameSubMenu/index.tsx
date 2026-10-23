@@ -522,19 +522,23 @@ export default function GamesSubmenu({
                   ? t('button.sideload.edit', 'Edit App/Game')
                   : t('button.edit-game', 'Edit Game')}
               </button>{' '}
-              {shortcutsBusy ? (
-                refreshCircle()
-              ) : (
-                <button
-                  onClick={async () => handleShortcuts()}
-                  className="link button is-text is-link buttonWithIcon"
-                >
-                  <ShortcutIcon />
-                  {hasShortcuts
-                    ? t('submenu.removeShortcut', 'Remove shortcuts')
-                    : t('submenu.addShortcut', 'Add shortcut')}
-                </button>
-              )}
+              {/* Steam is excluded until SteamGame.addShortcuts/removeShortcuts exist: the stubs
+                  only log, so the handler reported success and notified "Shortcuts were created"
+                  while nothing was written. */}
+              {!isSteam &&
+                (shortcutsBusy ? (
+                  refreshCircle()
+                ) : (
+                  <button
+                    onClick={async () => handleShortcuts()}
+                    className="link button is-text is-link buttonWithIcon"
+                  >
+                    <ShortcutIcon />
+                    {hasShortcuts
+                      ? t('submenu.removeShortcut', 'Remove shortcuts')
+                      : t('submenu.addShortcut', 'Add shortcut')}
+                  </button>
+                ))}
               <button
                 onClick={async () => {
                   if (isSteam) {
