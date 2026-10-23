@@ -25,6 +25,13 @@
  *    shared and per-game bridge bottles, finds each title's own exe,
  *    objdumps it, and classifies.
  *
+ * Exe selection (quick 261024-f0w): every candidate exe is objdumped and the
+ * one whose arch matches the persisted `steam_metadata.json`
+ * `<appId>.bridge.scan.arch` verdict (what install scanned and launch ran) is
+ * chosen -- a dual-arch title (AoD.exe x86 + AoD64.exe x64) is no longer
+ * measured by whichever exe walks first. With no verdict the first importer
+ * is kept and the row's detail says the arch is unconfirmed.
+ *
  * T-51-39 (mitigate, low): a row ever printed or returned contains ONLY
  * appid/name/installdir/arch/class/detail -- never a full filesystem path
  * under the user's HOME, and never any other ACF field (no account data).
@@ -136,6 +143,10 @@ export interface CensusTitleInput {
   /** Quick 261024-br4: the chosen exe's Steam DRM scan (`peSteamDrm.ts`).
    * `null`/absent when not scanned or the PE did not parse (not CEG). */
   steamDrm?: { cegMarkers: string[]; hasBindSection: boolean } | null
+  /** Quick 261024-f0w: set when the chosen exe's arch was not confirmed by a
+   * persisted install verdict (dual-arch install). Appended to `detail`;
+   * names an arch, never a path. */
+  archNote?: string
   /** `null` when no scannable PE exe (with or without a steam_api import)
    * was found anywhere under the title's installdir at all. */
   exe: {
@@ -207,7 +218,11 @@ export function classifyCensusTitle(
   input: CensusTitleInput,
   deps: CensusCoverageDeps = DEFAULT_COVERAGE_DEPS
 ): CensusRow {
-  const row = classifyCensusTitleCore(input, deps)
+  let row = classifyCensusTitleCore(input, deps)
+  if (input.archNote) {
+    const note = input.archNote
+    row = { ...row, detail: row.detail ? `${row.detail}; ${note}` : note }
+  }
   if (input.steamDrm?.hasBindSection && row.class !== 'known-bad') {
     const note = 'SteamStub .bind section (informational)'
     return { ...row, detail: row.detail ? `${row.detail}; ${note}` : note }
@@ -405,6 +420,13 @@ const STEAMAPPS_SUBPATH = join(
   'Program Files (x86)',
   'Steam',
   'steamapps'
+)
+// Quick 261024-f0w: the app's persisted per-title metadata. `cache.ts`
+// opens `CacheStore('steam_metadata')` with `cwd: 'store_cache'`, and
+// `sidecar/pathShim.ts` resolves userData to this directory on macOS.
+const STEAM_METADATA_PATH = join(
+  homedir(),
+  'Library/Application Support/gamelib/store_cache/steam_metadata.json'
 )
 const OBJDUMP_BIN = '/usr/bin/objdump'
 const MAX_EXE_DEPTH = 4
@@ -627,17 +649,84 @@ interface ChosenExe {
 }
 
 /**
- * Picks the exe that imports `steam_api(64)?.dll` (per the action text:
- * "pick the exe with a steam_api import"), running objdump on each
- * candidate until one is found. A binary reporting BOTH a `steam_api.dll`
- * and a `steam_api64.dll` heading (`table.conflict`) is skipped rather than
- * guessed, mirroring `scanSteamApiImports`'s fail-closed T-51-06 posture.
- * Falls back to the largest exe (by file size) when none import
- * `steam_api(64)?.dll` at all -- its import table is then `arch: 'none'`,
- * `symbols: []`, classified `no-steam-api` (or runtime-loaded `missing-symbols`).
+ * Quick 261024-f0w: reads `<appId>.bridge.scan.arch` out of the persisted
+ * `steam_metadata.json` text. Mirrors `bridgeScanVerdictSchema.arch` in
+ * `bridgeVerdict.ts` without importing it (zero-backend-import). Total:
+ * malformed JSON, a missing entry or an arch outside x86/x64 all read as
+ * "never scanned" (`undefined`) -- the file is untrusted disk content.
  */
-function chooseExe(exePaths: string[]): ChosenExe | null {
+export function readPersistedScanArch(
+  metadataJsonText: string | null,
+  appId: string
+): 'x86' | 'x64' | undefined {
+  if (!metadataJsonText) return undefined
+  try {
+    const parsed = JSON.parse(metadataJsonText) as unknown
+    if (!parsed || typeof parsed !== 'object') return undefined
+    const entry = (parsed as Record<string, unknown>)[appId] as
+      | { bridge?: { scan?: { arch?: unknown } } }
+      | null
+      | undefined
+    const arch = entry?.bridge?.scan?.arch
+    return arch === 'x86' || arch === 'x64' ? arch : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Quick 261024-f0w: pure exe selection over objdump-parsed, non-conflict,
+ * steam_api-importing candidates (walk order). The arch install/launch
+ * actually scanned is the persisted `bridge.scan.arch` verdict, so it is
+ * reused here rather than re-implementing a "prefer x64" heuristic.
+ * `resolveBridgeLaunchExe` is not callable from the census: it needs a PICS
+ * round-trip over a live CM session plus backend imports.
+ *
+ * `archNote` is '' when there is nothing to flag. Never contains a path.
+ */
+export function selectCensusExe(
+  candidates: ChosenExe[],
+  persistedArch: 'x86' | 'x64' | undefined
+): { chosen: ChosenExe; archNote: string } | null {
+  if (candidates.length === 0) return null
+  const first = candidates[0]
+  const hasBoth =
+    candidates.some((c) => c.table.arch === 'x86') &&
+    candidates.some((c) => c.table.arch === 'x64')
+
+  if (persistedArch) {
+    const match = candidates.find((c) => c.table.arch === persistedArch)
+    if (match) return { chosen: match, archNote: '' }
+    return {
+      chosen: first,
+      archNote: `persisted ${persistedArch} arch is not among the scanned exes`
+    }
+  }
+  if (hasBoth) {
+    return {
+      chosen: first,
+      archNote: `dual-arch install, no persisted bridge.scan verdict: ${first.table.arch} arch unconfirmed`
+    }
+  }
+  return { chosen: first, archNote: '' }
+}
+
+/**
+ * Objdumps EVERY candidate exe (no early return), keeps the importing,
+ * non-conflict ones (a binary reporting BOTH a `steam_api.dll` and a
+ * `steam_api64.dll` heading is skipped rather than guessed, mirroring
+ * `scanSteamApiImports`'s fail-closed T-51-06 posture) and delegates the
+ * choice to `selectCensusExe`. Falls back to the largest exe (by file size)
+ * when none import `steam_api(64)?.dll` at all -- its import table is then
+ * `arch: 'none'`, `symbols: []`, classified `no-steam-api` (or runtime-loaded
+ * `missing-symbols`).
+ */
+function chooseExe(
+  exePaths: string[],
+  persistedArch: 'x86' | 'x64' | undefined
+): { chosen: ChosenExe; archNote: string } | null {
   let largest: { path: string; size: number } | null = null
+  const candidates: ChosenExe[] = []
 
   for (const exePath of exePaths) {
     try {
@@ -658,23 +747,38 @@ function chooseExe(exePaths: string[]): ChosenExe | null {
       continue
     }
     if (table.arch !== 'none') {
-      return { path: exePath, table }
+      candidates.push({ path: exePath, table })
     }
   }
 
+  const selected = selectCensusExe(candidates, persistedArch)
+  if (selected) return selected
   if (!largest) {
     return null
   }
   return {
-    path: largest.path,
-    table: { dll: null, arch: 'none', symbols: [], conflict: false }
+    chosen: {
+      path: largest.path,
+      table: { dll: null, arch: 'none', symbols: [], conflict: false }
+    },
+    archNote: ''
+  }
+}
+
+/** Never throws; the app-written metadata cache, or null when absent. */
+function loadSteamMetadataText(): string | null {
+  try {
+    return readFileSync(STEAM_METADATA_PATH, 'utf-8')
+  } catch {
+    return null
   }
 }
 
 async function classifyInstalledTitle(
   entry: ManifestEntry,
   knownBad: Map<string, string>,
-  playVerifiedSet: Set<string>
+  playVerifiedSet: Set<string>,
+  persistedArch: 'x86' | 'x64' | undefined
 ): Promise<CensusRow> {
   const knownBadReason = knownBad.get(entry.appid) ?? null
   const playVerified = playVerifiedSet.has(entry.appid)
@@ -682,8 +786,8 @@ async function classifyInstalledTitle(
   const exePaths: string[] = []
   walkExes(entry.installPath, 0, exePaths)
 
-  const chosen = chooseExe(exePaths)
-  if (!chosen) {
+  const selected = chooseExe(exePaths, persistedArch)
+  if (!selected) {
     return classifyCensusTitle({
       appid: entry.appid,
       name: entry.name,
@@ -694,6 +798,7 @@ async function classifyInstalledTitle(
     })
   }
 
+  const { chosen, archNote } = selected
   const steamDrm = scanExeSteamDrm(chosen.path)
   const { arch, symbols } = chosen.table
   let dllVersions: string[] = []
@@ -743,6 +848,7 @@ async function classifyInstalledTitle(
     playVerified,
     runtimeLoadedDll,
     steamDrm,
+    archNote: archNote || undefined,
     exe: { arch, symbols, dllVersions, exeVersions }
   })
 }
@@ -786,6 +892,7 @@ function scanExeSteamDrm(
 export async function runCensus(): Promise<CensusRow[]> {
   const knownBad = loadKnownBad()
   const playVerifiedSet = loadPlayVerified()
+  const metadataText = loadSteamMetadataText()
   const seen = new Map<string, ManifestEntry>()
 
   for (const bottleDir of findBridgeBottles()) {
@@ -799,7 +906,14 @@ export async function runCensus(): Promise<CensusRow[]> {
 
   const rows: CensusRow[] = []
   for (const entry of seen.values()) {
-    rows.push(await classifyInstalledTitle(entry, knownBad, playVerifiedSet))
+    rows.push(
+      await classifyInstalledTitle(
+        entry,
+        knownBad,
+        playVerifiedSet,
+        readPersistedScanArch(metadataText, entry.appid)
+      )
+    )
   }
   return rows
 }

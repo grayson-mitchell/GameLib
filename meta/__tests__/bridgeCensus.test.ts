@@ -19,6 +19,8 @@
 import {
   classifyCensusTitle,
   formatCensusMarkdown,
+  readPersistedScanArch,
+  selectCensusExe,
   summarizeCensus,
   type CensusRow
 } from '../bridgeCensus'
@@ -470,5 +472,111 @@ describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
 
     expect(row.class).toBe('known-bad')
     expect(row.detail).toBe('does-not-run')
+  })
+})
+
+describe('quick 261024-f0w: dual-arch exe selection', () => {
+  const x86Table = {
+    dll: 'steam_api.dll',
+    arch: 'x86' as const,
+    symbols: ['SteamAPI_Init', 'SteamAPI_SteamScreenshots_v003'],
+    conflict: false
+  }
+  const x64Table = {
+    dll: 'steam_api64.dll',
+    arch: 'x64' as const,
+    symbols: ['SteamUser'],
+    conflict: false
+  }
+  const aod = [
+    { path: 'common/Age of Decadence/AoD.exe', table: x86Table },
+    { path: 'common/Age of Decadence/AoD64.exe', table: x64Table }
+  ]
+
+  it('readPersistedScanArch reads bridge.scan.arch for the appId', () => {
+    const text = JSON.stringify({
+      '230070': {
+        art_cover: '',
+        bridge: {
+          steamApi: 'both',
+          scan: { status: 'clean', arch: 'x64' }
+        }
+      }
+    })
+    expect(readPersistedScanArch(text, '230070')).toBe('x64')
+  })
+
+  it('readPersistedScanArch is total over missing and malformed input', () => {
+    const noScan = JSON.stringify({ '1': { bridge: { steamApi: 'both' } } })
+    const badArch = JSON.stringify({
+      '1': { bridge: { scan: { arch: 'arm' } } }
+    })
+    expect(readPersistedScanArch(noScan, '1')).toBeUndefined()
+    expect(readPersistedScanArch(noScan, '2')).toBeUndefined()
+    expect(readPersistedScanArch(badArch, '1')).toBeUndefined()
+    expect(readPersistedScanArch('{not json', '1')).toBeUndefined()
+    expect(readPersistedScanArch('null', '1')).toBeUndefined()
+    expect(readPersistedScanArch(null, '1')).toBeUndefined()
+  })
+
+  it('persisted x64 picks AoD64.exe even though AoD.exe is first', () => {
+    const sel = selectCensusExe(aod, 'x64')
+    expect(sel?.chosen.path).toContain('AoD64.exe')
+    expect(sel?.chosen.table.arch).toBe('x64')
+    expect(sel?.archNote).toBe('')
+  })
+
+  it('persisted x86 picks AoD.exe', () => {
+    const sel = selectCensusExe(aod, 'x86')
+    expect(sel?.chosen.path.endsWith('AoD.exe')).toBe(true)
+  })
+
+  it('no persisted verdict keeps the first importer and says the arch is unconfirmed', () => {
+    const sel = selectCensusExe(aod, undefined)
+    expect(sel?.chosen.path.endsWith('AoD.exe')).toBe(true)
+    expect(sel?.archNote).toMatch(/dual-arch install/)
+    expect(sel?.archNote).toMatch(/unconfirmed/)
+  })
+
+  it('a persisted arch absent from the scanned exes falls back with a note', () => {
+    const sel = selectCensusExe([aod[0]], 'x64')
+    expect(sel?.chosen.table.arch).toBe('x86')
+    expect(sel?.archNote).toMatch(/not among the scanned exes/)
+  })
+
+  it('single-arch and empty candidate lists behave as before', () => {
+    expect(selectCensusExe([aod[1]], undefined)?.archNote).toBe('')
+    expect(selectCensusExe([aod[1]], 'x64')?.archNote).toBe('')
+    expect(selectCensusExe([], 'x64')).toBeNull()
+  })
+
+  it('AoD regression: the selected x64 candidate classifies as arch x64, not the x86 symbol list', () => {
+    const sel = selectCensusExe(aod, 'x64')!
+    const row = classifyCensusTitle({
+      appid: '230070',
+      name: 'The Age of Decadence',
+      installdir: 'Age of Decadence',
+      knownBadReason: null,
+      archNote: sel.archNote || undefined,
+      exe: {
+        arch: sel.chosen.table.arch,
+        symbols: sel.chosen.table.symbols,
+        dllVersions: ['SteamUser019'],
+        exeVersions: []
+      }
+    })
+    expect(row.arch).toBe('x64')
+    expect(row.detail).not.toContain('SteamAPI_SteamScreenshots_v003')
+  })
+
+  it('an archNote is appended to the detail', () => {
+    const row = classifyCensusTitle({
+      appid: '1',
+      name: 'N',
+      installdir: 'N',
+      archNote: 'dual-arch install, arch unconfirmed',
+      exe: null
+    })
+    expect(row.detail).toMatch(/; dual-arch install, arch unconfirmed$/)
   })
 })
