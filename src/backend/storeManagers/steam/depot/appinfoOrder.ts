@@ -22,9 +22,7 @@ const PICS_PRODUCT_INFO_REQUEST = 8903
 /** appId -> depot ids in the order they appear in the raw appinfo VDF. */
 const orderByApp = new Map<string, string[]>()
 
-type Token = string | '{' | '}'
-
-function* tokenize(text: string): Generator<{ t: Token; quoted: boolean }> {
+function* tokenize(text: string): Generator<{ t: string; quoted: boolean }> {
   let i = 0
   const n = text.length
   while (i < n) {
