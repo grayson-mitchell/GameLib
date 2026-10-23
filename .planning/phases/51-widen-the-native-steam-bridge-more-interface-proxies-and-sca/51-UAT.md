@@ -206,10 +206,10 @@ Separate count, never folded into K: played with shim attached but unverified un
 
 ## Summary
 
-total: 19
-passed: 9
+total: 20
+passed: 11
 issues: 6
-pending: 1
+pending: 0
 skipped: 2
 blocked: 1
 
@@ -220,6 +220,8 @@ D-51-14 anchor re-baselined by operator decision 2026-10-23 (option named-title,
 ROADMAP hazard (b) acknowledged: for titles that still route to the shared `GameLibSteam` bottled-Steam path (now including knownBad XCOM, and any user-forced title like Avernum 4 here), per-executable Wine overrides under `HKCU\Software\Wine\AppDefaults\<game>.exe` remain the documented stopgap. Nothing in this phase removes that path.
 
 Re-gate 2026-10-23 (plan 51-27, packaged build at c8729c36a): item 14 passes and closes the helper-teardown gap (item 2). Item 15 closes the stubbed Win64 core-interface gap (item 6) at the wiring level but records an issue: ELEX hangs on its loading screen and is classified does-not-run (knownBad). Item 16 is blocked: bottled Steam auto-signed-in with remembered credentials, so the login-cause half of the item 11 gap is still unproven live; it also surfaced a stuck-on-Launching defect after a bottled-Steam game exits.
+
+"Most" verdict (D-51-15, 2026-10-24): goal NOT met. Item 20, verbatim: `18 of 19 routed to the bridge; 0 of 19 verified running through the bridge (HELLO + clean game log; 1 init-failed, 18 unverified)`, so N=18, K=0, M=19 on the strict criterion (HELLO plus a clean game-side Steam init; no game log is unverified; Mac Steam In-Game never counts). In the item 19 sample 12 of 12 were bridge-routed, 6 play offline, 6 do not run, 0 verified. Operator option: unmet-follow-up, answer recorded verbatim: "Unmet, follow-up phase (Recommended)"; follow-up phase name: Steam bridge coverage: modern-SDK exports, flat API, engine-layout scan, SteamStub forwarder, bottle runtime components. Phase 51 closes on the mechanism it built (per-app bridge bottle, helper, shim, routing, census evidence). Dominant miss classes, ranked by sample reach: (1) modern-SDK SteamInternal exports, (2) flat API for Unity Steamworks.NET, (3) Unreal bootstrap-exe scan miss, (4) SteamStub forwarding steamclient, (5) bottle Windows runtime components. The follow-up phase is to be added with /gsd-add-phase.
 
 ## Gaps
 
