@@ -4,7 +4,7 @@ name: hoard-mesa-opengl
 type: standard
 validates: "Given unpatched Hoard needs a GL 3.3 compatibility context macOS cannot provide (030), when Mesa's Windows opengl32.dll is dropped beside the exe in the bottle, then the game gets a 3.3 compat context and runs — first via llvmpipe (CPU), then via zink (Vulkan→MoltenVK→Metal)"
 verdict: PARTIAL
-related: [030, 008]
+related: [030, 008, 032]
 tags: [steam, macos, crossover, opengl, mesa, softpipe, llvmpipe, zink, moltenvk, compatibility-profile, hoard, game-fix]
 ---
 

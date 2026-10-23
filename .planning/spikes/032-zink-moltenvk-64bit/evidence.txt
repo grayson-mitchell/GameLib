@@ -1,0 +1,51 @@
+032 evidence — mesa-dist-win 26.2.4 (release-mingw + tests-mingw) test_wgl.exe --gtest_filter=wgl.basic_create
+Bottle GameLibSteamBridge-63000 (temp C:\spike032, AppDefaults\test_wgl.exe\DllOverrides opengl32=native), CrossOver 26.3, Apple M5 Ultra, 2026-10-23
+
+== 6-way matrix (arch x GALLIUM_DRIVER)
+  x64 softpipe: PASS  faults=0  vulkan-1.dll loaded=0  
+  x64 llvmpipe: PASS  faults=0  vulkan-1.dll loaded=0  
+  x64 zink: FAIL  faults=0  vulkan-1.dll loaded=1  Value of: wnd.valid()
+  x86 softpipe: PASS  faults=0  vulkan-1.dll loaded=0  
+  x86 llvmpipe: FAIL  faults=0  vulkan-1.dll loaded=0  Value of: wnd.valid()
+  x86 zink: FAIL  faults=0  vulkan-1.dll loaded=1  Value of: wnd.valid()
+
+== x64 zink: Vulkan call sequence (logs/x64-zink-vk.cxlog) — instance destroyed, vkCreateDevice never called
+  vkEnumerateInstanceVersion
+  vkEnumerateInstanceExtensionProperties
+  vkCreateInstance
+  vkEnumeratePhysicalDevices
+  vkGetPhysicalDeviceProperties
+  vkGetPhysicalDeviceQueueFamilyProperties
+  vkGetPhysicalDeviceFormatProperties
+  vkGetPhysicalDeviceMemoryProperties
+  vkEnumerateDeviceExtensionProperties
+  vkGetPhysicalDeviceFeatures2
+  vkGetPhysicalDeviceProperties2
+  vkDestroyInstance
+
+== winevulkan: MoltenVK device extensions relevant to zink (92 total, logs/host-dev-exts.txt)
+  present: VK_EXT_image_robustness
+  present: VK_EXT_robustness2
+  present: VK_EXT_scalar_block_layout
+  present: VK_EXT_swapchain_maintenance1
+  present: VK_KHR_maintenance1
+  present: VK_KHR_timeline_semaphore
+  ABSENT:  VK_EXT_custom_border_color
+  ABSENT:  VK_EXT_line_rasterization
+  hidden by winevulkan: "VK_EXT_headless_surface" is not supported.
+  hidden by winevulkan: "VK_EXT_metal_objects" is not supported.
+  hidden by winevulkan: "VK_EXT_metal_surface" is not supported.
+  hidden by winevulkan: "VK_GOOGLE_display_timing" is not supported.
+  hidden by winevulkan: "VK_KHR_portability_subset" is not supported.
+  hidden by winevulkan: "VK_MVK_macos_surface" is not supported.
+  hidden by winevulkan: "VK_MVK_moltenvk" is not supported.
+
+== native probe of CrossOver's own lib64/libMoltenVK.dylib (mvk_probe.c, x86_64 under Rosetta)
+  {"device":"Apple M5 Ultra","api":"1.2.290","logicOp":0,"robustBufferAccess2":0,"robustImageAccess2":1,"nullDescriptor":0,"timelineSemaphore":1,"customBorderColors":0}
+  MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=0: "nullDescriptor":0
+  MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=1: "nullDescriptor":0
+  MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=2: "nullDescriptor":0
+
+== zink_screen.c @ mesa-26.2.4, zink_internal_create_screen():
+  if (!screen->info.rb2_feats.nullDescriptor) { mesa_loge("Zink requires the nullDescriptor feature of KHR/EXT robustness2."); goto fail; }
+  (check_base_requirements — logicOp / custom_border_color / line_rasterization — only WARNS)
