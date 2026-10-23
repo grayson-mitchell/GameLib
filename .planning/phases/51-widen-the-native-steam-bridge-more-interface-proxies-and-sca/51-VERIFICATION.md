@@ -1,116 +1,95 @@
 ---
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
-verified: 2026-10-22T00:00:00Z
+verified: 2026-10-24T00:00:00Z
 status: gaps_found
-score: 3/7 must-haves verified
+score: 6/7 must-haves verified
 overrides_applied: 0
+re_verification:
+  previous_status: gaps_found
+  previous_score: 3/7
+  gaps_closed:
+    - "Prescreen classifies depots by steam_api dll arch (2ba070588, 1df09a29d; live result=x64 on a subfolder DLL, item 19; todo closed)"
+    - "Helper lifetime tied to game (b8a020087, b6012f368; todo 2026-10-22-bridge-process-monitor-starts-after-game-exits.md completed)"
+    - "Persisted scan verdict correct and stable, CR-01..CR-04 (e56b66d7e, a3e2cc099, 1df09a29d)"
+    - "D-51-14 acceptance anchor re-baselined: Hoard to knownBad does-not-run, replacement anchor The Age of Decadence 230070 passes (item 18)"
+    - "XCOM CEG diagnosis confirmed through bottled Steam (item 17); 200510 knownBad drm-wrapped; CEG detection landed (br4)"
+    - "Census separates routed from verified running; dual-arch scan fixed (quick 261024-f0w, 1b2f315b3, 4f65448a4)"
+    - "Win64 core interfaces wired (547055ad6); ELEX now fails past the handshake and is knownBad does-not-run"
+  gaps_remaining:
+    - "Most Windows-only Steam games run through the bridge (ROADMAP goal): recorded NOT met by operator decision 2026-10-24, tracked to a follow-up phase"
+  regressions: []
 gaps:
-  - truth: "Most Windows-only Steam games on macOS run through the bridge; bottled Steam is the fallback for a measured residue (ROADMAP goal)"
+  - truth: "Most Windows-only Steam games on macOS run through the bridge; bottled Steam is the fallback for a measured residue (ROADMAP goal, D-51-15)"
     status: failed
-    reason: "Census reports '3 of 6 routed (bridge=3, known-bad=1, missing-symbols=1, unknown-version=1)', but routed is not runs. Of the 3 routed, only Avernum 6 plays; Avernum 5 is unplayable under wine (seed kept by operator decision); ELEX fails at boot; Avernum 4 was installed via bottled Steam. Effective working set is 1 of 6 (2 counting Avernum 5 loosely). Mechanism (per-game bottles, scan-derived routing, fallback) works; the 'most' outcome is not shown."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/shimCoverage.ts"
-        issue: "SHIM64_SERVED_INTERFACE_VERSIONS serves SteamUser019/SteamApps008/SteamUtils008/SteamClient017 as stub only"
-    missing:
-      - "Win64 core interfaces wired after a live accessor probe (todo 2026-10-22-wire-win64-core-steam-interfaces.md)"
-      - "Census must count only titles proven to run; re-run on a representative owned library (6 titles, 1 working, is too small and too Spiderweb-weighted)"
-  - truth: "D-51-14 acceptance: Hoard (63000) playable through the bridge (24-UAT Gate 4 re-run)"
-    status: failed
-    reason: "UAT item 4: Hoard crashes under wine regardless of the bridge. Bridge half passed (LISTEN/INIT/HELLO, stubbed notice). Part B (USER/FRIENDS dispatch) never observed. The locked acceptance anchor is unmet and no replacement anchor was nominated."
-    artifacts: []
-    missing:
-      - "Operator decision to retire Hoard as anchor, plus a replacement title proven to run with Apps/UserStats/RemoteStorage via the bridge"
-      - "Add 63000 to knownBad with item 4 as evidence (UAT says Task 2 should; allowlist currently lists only 200510)"
-  - truth: "Acceptance title per added interface (Apps, UserStats, RemoteStorage) runs through the bridge (D-51-14)"
-    status: failed
-    reason: "XCOM is CEG DRM (knownBad drm-wrapped, confirmed only by a cx-log trace; bottled-Steam confirmation todo still open). ELEX fails 'not subscribed' because Win64 core interfaces are stub-only. No gate shows a non-Avernum title playing."
+    reason: "Operator decision 2026-10-24 (51-UAT items 19 and 20, 51-30-SUMMARY, STATE.md): recorded NOT met, option unmet-follow-up. Strict criterion (HELLO plus clean game-side Steam init; no game log is unverified; Mac Steam In-Game never counts). Closing census over the 19 installed titles: N=18 routed to the bridge, K=0 verified running, M=19 (1 init-failed, 18 unverified; 2 play recorded in the allowlist; 15 of 19 symbols covered by the static scan). Accepted, not re-litigated."
     artifacts:
       - path: "src/backend/storeManagers/steam/bridge/bridge-allowlist.json"
-        issue: "seed has only Avernum 5 and 6, the same two as before the phase; seed growth is the stated phase growth mechanism and produced zero new entries"
+        issue: "seed is Avernum 5/6 plus AoD 230070 (AoD and Avernum 6 recorded as played with shim attached but unverified); no title meets the strict criterion"
     missing:
-      - "At least one non-Spiderweb title demonstrated to play via the bridge"
-  - truth: "Prescreen (D-51-06/17) classifies depots by steam_api dll arch before install"
-    status: failed
-    reason: "screenDepotPlanForSteamApi (depot.ts:~951) uses POSIX basename() on backslash depot paths, so any steam_api*.dll in a subfolder returns 'none'. Live: Hoard, XCOM, ELEX all logged result=none. Code confirmed still present in the repo. Review CR-04 also notes exe-only scans send runtime-loaded steam_api titles to the bridge with no shim and erase prescreen evidence."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/depot.ts"
-        issue: "basename(file.filename) does not split on backslash"
-    missing:
-      - "Normalise separators before basename (todo 2026-10-22-bridge-prescreen-always-returns-none.md)"
-      - "Fix review CR-04"
-  - truth: "Quitting a bridge game frees its per-game helper (D-51-01/D-51-03 lifetime)"
-    status: failed
-    reason: "UAT item 2: on first launch the helper kept LISTENing 6m39s after the game was gone; bridge process monitor starts only after runWineCommand resolves (game exit). Subsequent launches stop the previous helper late, so helpers leak."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/games.ts"
-        issue: "fireBridgeWineLaunch awaits wine child before starting monitor"
-      - path: "src/backend/storeManagers/steam/bottleProcessMonitor.ts"
-        issue: "monitor start ordering"
-    missing:
-      - "Start monitor without awaiting the wine child (todo 2026-10-22-bridge-process-monitor-starts-after-game-exits.md)"
-  - truth: "Persisted scan verdict is correct and stable (D-51-07)"
-    status: failed
-    reason: "Code review CR-01 (isScanVerdictNowCovered ignores arch; a persisted miss auto-clears and loops a full re-download), CR-02 (Matchmaking bare accessors return NULL because family casing differs between backend and shim; confirmed by the orchestrator), CR-03 (x64 coverage reports unserved bare-accessor version as stubbed while shim returns NULL). 51-REVIEW.md lists no resolution commit for these; only 18ac8cda1 (regression gate) landed after. Verify and fix before closing."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/shimCoverage.ts"
-        issue: "arch-blind isScanVerdictNowCovered; stubbed vs NULL mismatch on x64"
-    missing:
-      - "Fix CR-01..CR-04 or record explicit overrides/deferrals"
-  - truth: "D-51-16 Waiting for Steam names the detected cause"
-    status: partial
-    reason: "Waiting state appears within ~20s and clears (verified live) but cause=login is never named for a sign-in prompt and self-update download phase is unnamed (classifyBottledSteamBlock too narrow). Minor."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/bottleLaunchSignals.ts"
-        issue: "matches only LogonFailure and 'Installing update...'"
-    missing:
-      - "Sign-in prompt and update-download detection"
+      - "Follow-up phase: Steam bridge coverage (modern-SDK exports, flat API, engine-layout scan, SteamStub forwarding); see pending todos below"
+deferred: []
 human_verification: []
 ---
 
-# Phase 51: Widen the native Steam bridge — Verification Report
+# Phase 51: Widen the native Steam bridge: Verification Report
 
 **Phase Goal:** Most Windows-only Steam games on macOS run through the Phase 24 bridge in their own per-game bottle; the shared Phase 17 `GameLibSteam` bottle becomes the fallback for a measured residue instead of the default.
+**Verified:** 2026-10-24
 **Status:** gaps_found
-**Re-verification:** No, initial.
-**Contract note:** The ROADMAP lists requirements as TBD and no IDs were minted. The contract used is the ROADMAP goal and sub-decisions, the plan must_haves, and CONTEXT D-51-* decisions. I did not read all 19 PLAN/SUMMARY files line by line; the verdict leans on the live UAT (13 gates on real hardware), the code review, and spot checks of the repo (below).
+**Re-verification:** Yes, after gap-closure plans 51-20 through 51-30.
+
+**Why `gaps_found` and not `human_needed`:** the one remaining item is not a pending human check. It is a recorded, observable failure of a must-have (K=0 of M=19), accepted by the operator as unmet and tracked to a follow-up phase. No human verification items remain (UAT pending: 0). `gaps_found` is the honest status; it is the explicit acceptance, not a hidden failure. Summary: the phase ships its mechanism; the "most" goal is unmet by recorded operator decision.
 
 ## Observable Truths
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Per-game bridge bottles, per-game helper with real AppID and ephemeral port (D-51-01/03) | VERIFIED | UAT 1, 7 pass: distinct helpers/ports, real SteamID, HELLO/INIT |
-| 2 | Eligibility is scan-derived, persisted, with known-bad and D-05 fallback (sub-decision 2) | VERIFIED (mechanism) / WARNING | Route resolver, verdict store, census and UAT 8/10 show the mechanism. CR-01/02/03 undermine correctness; UAT 9 skipped so route-notice dialog not exercised live |
-| 3 | Route visibility and force-bottled toggle (D-51-09/10), remove-all-copies bottle cleanup (D-51-12), 480 identity fallback (D-51-04) | VERIFIED | UAT 8, 10, 12 pass |
-| 4 | Interface set widened so the Hoard set works; Hoard Gate 4 playable (sub-decision 1, D-51-14) | FAILED | UAT 4: Hoard crashes under wine; Part B unobserved |
-| 5 | Win64 hazard (a): fail closed and 64-bit shim reachable | FAILED (partial) | Shim64 builds, loads and attaches (ELEX HELLO), but core interfaces stub-only, so ELEX cannot run; prescreen misses subfolder dlls |
-| 6 | "Most" measured, bridge default, bottled Steam is residue (D-51-15, goal) | FAILED | 3 of 6 routed, ~1 of 6 plays. Residue is the majority in practice |
-| 7 | Helper lifetime tied to game | FAILED | UAT 2 teardown leak |
+| 1 | Per-game bridge bottles, per-game helper with real AppID and ephemeral port (D-51-01/03) | VERIFIED | UAT 1, 7 (prior); AoD run in `GameLibSteamBridge-230070` with HELLO appid=230070 (item 18) |
+| 2 | Eligibility is scan-derived, persisted, with known-bad and fallback (sub-decision 2) | VERIFIED | CR-01/03 fixed e56b66d7e (arch-scoped), CR-02 a3e2cc099, CR-04 1df09a29d; 12 of 12 sampled titles routed with recorded persisted verdicts (item 19) |
+| 3 | Route visibility, force-bottled toggle, bottle cleanup, 480 fallback (D-51-09/10/12/04) | VERIFIED | UAT 8, 10, 12 (prior), unchanged |
+| 4 | Interface set widened; D-51-14 acceptance anchor demonstrated (Apps/UserStats/RemoteStorage) | VERIFIED | Hoard retired to knownBad (63000 does-not-run); replacement anchor AoD 230070 passes item 18 (main menu, in-game, 452s) with allowlist entry present. Anchor played on its x64 runtime-lookup path, noted in the allowlist entry |
+| 5 | Win64 hazard (a): fail closed, 64-bit shim reachable, core interfaces wired | VERIFIED | 547055ad6 wires SteamUser019/Friends015/Utils008/Apps008; AoD64 attaches via the 64-bit shim. ELEX now fails past the bridge handshake (loading-screen hang), tracked as knownBad, a title defect not a wiring gap |
+| 6 | Prescreen classifies by arch before install | VERIFIED | `depot.ts:955` now `basename(file.filename.replace(/\\/g, '/'))`; live `result=x64` for Rogue Waters 1691190 subfolder DLL; todo in `completed/` |
+| 7 | Helper lifetime tied to game | VERIFIED | b8a020087 monitor starts before awaiting the wine child; todo completed. Residual quit behaviour is a separate pending todo (Stop is a no-op), not this truth |
+| G | "Most" Windows-only games run through the bridge (D-51-15, ROADMAP goal) | FAILED (accepted) | N=18, K=0, M=19 strict; operator "Unmet, follow-up phase (Recommended)" |
 
-**Score:** 3/7 (truths 1, 3 fully; 2 counted verified mechanism-only).
+**Score:** 6/7 must-haves verified (G is the ROADMAP goal and is counted as the one failure; truths 1-7 are the plan contract).
 
-## Spot checks against the repo (not taken on faith)
+## Closure checks requested
 
-- `depot.ts` ~951: `basename(file.filename)` still present, so the prescreen backslash bug is real and unfixed.
-- `shimCoverage.ts` 268-280: Win64 `SteamUser019`, `SteamUtils008`, `STEAMAPPS_INTERFACE_VERSION008`, `SteamClient017` are `mode: 'stub'`; only UserStats011 is wired. Matches the ELEX failure.
-- `bridge-allowlist.json`: seed still Avernum 5 and 6 only; knownBad has only 200510 (Hoard not added despite UAT note).
-- Thirteen `2026-10-22-*` todos exist under `.planning/todos/pending/` (13 counted).
-- Regression gate: not re-run by me; I accept the orchestrator's account that the residual failures predate the phase or are load flakes.
+| Gap | Result | Evidence |
+|---|---|---|
+| AoD 230070 anchor (item 18) | CLOSED | Item 18 pass; `bridge-allowlist.json` seed contains 230070 with evidence string |
+| XCOM CEG (item 17) | CLOSED | Item 17 pass: Enemy Within reaches menu under bottled Windows Steam; 200510 knownBad `drm-wrapped`; confirm-diagnosis todo completed |
+| Prescreen todo | CLOSED | `todos/completed/2026-10-22-bridge-prescreen-always-returns-none.md`; absent from pending |
+| Census dual-arch | CLOSED | quick 261024-f0w commits 4f65448a4, 1b2f315b3; closing census classifies every row |
+| Hoard knownBad (prior gap) | CLOSED | knownBad now 200510 drm-wrapped, 63000 and 411300 does-not-run |
 
-## Anti-patterns / blockers
+## Tests
 
-- Review CR-01..CR-04 are open blockers unless resolved (no evidence of resolution).
-- `deferred-items.md` records pre-existing lint ceiling and test failures; informational.
+Per the orchestrator, the bridge, census, shim-build and games suites ran green (741 tests, 16 suites); I did not re-run them. Pre-existing failures excluded by instruction: preload-surface-gate, lzmaNativeBinding, lzmaNativeSeaRealBuild, genI18nGateScope, machineFillGamelib, and two no-regex-spaces lint errors in `meta/__tests__/gen_vtables.test.ts`.
 
-## Deferred items
+## Failing-title defect classes (tracked by pending todos; no new gaps opened)
 
-None matched. No later milestone phase was confirmed to cover Win64 core interfaces or non-Spiderweb acceptance; I did not find explicit coverage, so these remain gaps.
+- `2026-10-22-wire-win64-core-steam-interfaces.md` (ELEX hang past handshake)
+- `2026-10-23-x64-shim-lacks-modern-sdk-steaminternal-exports-and-scan-misses-dll-importers.md`
+- `2026-10-23-bridge-shim-lacks-steamworks-flat-api-for-unity-steamworks-net-games.md`
+- `2026-10-24-bridge-scan-reads-unreal-bootstrap-exe-and-misses-the-shipping-binary.md`
+- `2026-10-23-forwarding-steamclient-dll-for-steamstub-titles.md`
+- `2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`
+- `2026-10-24-stop-is-a-no-op-for-bridge-launched-games.md`
+- `2026-10-23-wire-steam-bridge-launch-into-known-fixes.md`
+- Bottled-route defects: `2026-10-23-bottled-launch-gives-up-after-20s-while-steam-is-still-starting-the-game.md`, `2026-10-23-bottled-route-restart-steam-to-finish-is-a-dead-end.md`, `2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md`, `2026-10-22-waiting-for-steam-misses-sign-in-prompt-and-update-download.md`
+- Other: `2026-10-22-unresolved-cross-depot-file-collisions-leave-install-stuck-at-1026.md`, `2026-10-24-play-button-flickers-back-to-play-between-launching-and-playing.md`
+
+## Anti-patterns
+
+None blocking found in the spot checks. Census blind spot noted in item 20: static class labels can read `no-steam-api` for titles whose scan misses a loaded DLL (covered by the engine-layout/DLL-importer todos above).
 
 ## Gaps Summary
 
-The infrastructure half of the phase is delivered and live-verified: per-game bottles, scan-derived routing, known-bad list, UI route visibility, census tooling. The outcome half is not. The phase goal is that most Windows-only titles run through the bridge, and across the six titles measured, one (Avernum 6) demonstrably plays. The locked acceptance anchor (Hoard) fails for a reason outside the bridge, but the acceptance set was never substituted with a title that works. Recommend `/gsd-plan-phase 51 --gaps` for: (1) CR-01..04 fixes, (2) prescreen separator fix, (3) monitor-start ordering, (4) Win64 core-interface wiring with live probe and ELEX re-gate, (5) acceptance re-baseline: retire Hoard (add to knownBad), nominate a replacement, and make the census distinguish routed from verified-running. Gap 7 (waiting-cause naming) is minor and could be deferred by explicit override.
-
-Overrides available if the operator accepts them: Hoard-as-anchor (alternative evidence: bridge half passes, crash is wine-level) is a plausible override once a replacement or explicit retirement is recorded.
+The mechanism half is delivered and verified: per-game bottles, scan-derived persisted routing, known-bad list, visible route, a strict-criterion census, and a working x64 path (AoD). All previously open defects (CR-01..04, prescreen, monitor ordering, anchor, census) are closed with commits and evidence. The outcome half, "most" games running through the bridge, is not achieved: 18 of 19 titles route to the bridge but none is verified running on the strict criterion. This is the operator's recorded decision (unmet-follow-up) and is not re-opened. Recommended next step: a follow-up phase scoped from the pending todos above, with the goal restated against the strict census.
 
 ---
-_Verified: 2026-10-22_
+_Verified: 2026-10-24_
 _Verifier: Claude (gsd-verifier)_
