@@ -17,6 +17,7 @@
  */
 
 import {
+  classifyBridgeEvidence,
   classifyCensusTitle,
   formatCensusMarkdown,
   readPersistedScanArch,
@@ -209,7 +210,7 @@ describe('classifyCensusTitle', () => {
     expect(summarizeCensus([row]).covered).toBe(0)
   })
 
-  it('verified is true only for a routed row with playVerified', () => {
+  it('playRecorded is true only for a routed row with playVerified', () => {
     const exe = {
       arch: 'x86' as const,
       symbols: ['SteamUser'],
@@ -226,9 +227,9 @@ describe('classifyCensusTitle', () => {
         exe
       })
 
-    expect(mk(true).verified).toBe(true)
-    expect(mk(false).verified).toBe(false)
-    expect(mk(true, 'does-not-run').verified).toBe(false)
+    expect(mk(true).playRecorded).toBe(true)
+    expect(mk(false).playRecorded).toBe(false)
+    expect(mk(true, 'does-not-run').playRecorded).toBe(false)
   })
 
   it('a row carries only appid, name, installdir, arch, class, detail -- never a path or account field', () => {
@@ -251,20 +252,24 @@ describe('classifyCensusTitle', () => {
         'arch',
         'class',
         'detail',
+        'evidence',
+        'evidenceDetail',
         'installdir',
         'name',
-        'verified'
+        'playRecorded'
       ].sort()
     )
   })
 })
 
 describe('formatCensusMarkdown', () => {
-  it('prints the Verified column and the routed/verified summary line', () => {
+  it('prints the Play recorded and Evidence columns and the verified summary line', () => {
     const mk = (
       appid: string,
       cls: CensusRow['class'],
-      verified: boolean
+      evidence: CensusRow['evidence'],
+      evidenceDetail: string,
+      playRecorded = false
     ): CensusRow => ({
       appid,
       name: appid,
@@ -272,18 +277,24 @@ describe('formatCensusMarkdown', () => {
       arch: 'x86',
       class: cls,
       detail: '',
-      verified
+      playRecorded,
+      evidence,
+      evidenceDetail
     })
     const out = formatCensusMarkdown([
-      mk('1', 'bridge', true),
-      mk('2', 'bridge', false),
-      mk('3', 'known-bad', false)
+      mk('1', 'bridge', 'verified', '', true),
+      mk('2', 'bridge', 'init-failed', 'SteamAPI_Init'),
+      mk('3', 'known-bad', 'unverified', 'no HELLO')
     ])
 
-    expect(out).toContain('| Verified |')
-    expect(out).toContain('| bridge | yes |')
     expect(out).toContain(
-      '3 of 3 routed to the bridge; 1 of 3 verified running through the bridge; 2 of 3 fully covered by the shim (bridge=2, known-bad=1)'
+      '| AppID | Name | Installdir | Arch | Class (static scan) | Play recorded (allowlist) | Evidence | Detail |'
+    )
+    expect(out).toContain('| bridge | yes | verified |')
+    expect(out).toContain('init-failed (SteamAPI_Init)')
+    expect(out).toContain('unverified (no HELLO)')
+    expect(out).toContain(
+      '3 of 3 routed to the bridge; 1 of 3 verified running through the bridge (HELLO + clean game log; 1 init-failed, 1 unverified); 1 of 3 play recorded in the allowlist; 2 of 3 symbols covered by the shim (static scan) (bridge=2, known-bad=1)'
     )
   })
 })
@@ -297,7 +308,9 @@ describe('summarizeCensus', () => {
       arch: 'x86',
       class: 'bridge',
       detail: '',
-      verified: false
+      playRecorded: false,
+      evidence: 'unverified',
+      evidenceDetail: 'x'
     },
     {
       appid: '2',
@@ -306,7 +319,9 @@ describe('summarizeCensus', () => {
       arch: 'x64',
       class: 'bridge',
       detail: '',
-      verified: false
+      playRecorded: false,
+      evidence: 'unverified',
+      evidenceDetail: 'x'
     },
     {
       appid: '3',
@@ -315,7 +330,9 @@ describe('summarizeCensus', () => {
       arch: 'x86',
       class: 'missing-symbols',
       detail: 'SteamAPI_SteamScreenshots_v003',
-      verified: false
+      playRecorded: false,
+      evidence: 'unverified',
+      evidenceDetail: 'x'
     },
     {
       appid: '4',
@@ -324,7 +341,9 @@ describe('summarizeCensus', () => {
       arch: 'none',
       class: 'no-binary',
       detail: 'no scannable PE executable found under installdir',
-      verified: false
+      playRecorded: false,
+      evidence: 'unverified',
+      evidenceDetail: 'x'
     }
   ]
 
@@ -336,7 +355,9 @@ describe('summarizeCensus', () => {
       arch: 'x86',
       class: cls,
       detail,
-      verified: false
+      playRecorded: false,
+      evidence: 'unverified',
+      evidenceDetail: 'x'
     })
     const summary = summarizeCensus([
       mk('bridge'),
@@ -358,7 +379,7 @@ describe('summarizeCensus', () => {
     expect(out).toMatch(
       /[0-9]+ of [0-9]+ routed to the bridge; [0-9]+ of [0-9]+ verified running through the bridge/
     )
-    expect(out).toContain('fully covered by the shim')
+    expect(out).toContain('symbols covered by the shim')
   })
 
   it('counts routed per the resolver (scan-miss counts), covered as bridge rows, and total as every row including no-binary', () => {
@@ -383,7 +404,9 @@ describe('summarizeCensus', () => {
         arch: 'none',
         class: 'no-binary',
         detail: 'no scannable PE executable found under installdir',
-        verified: false
+        playRecorded: false,
+        evidence: 'unverified',
+        evidenceDetail: 'x'
       }
     ]
 
@@ -578,5 +601,149 @@ describe('quick 261024-f0w: dual-arch exe selection', () => {
       exe: null
     })
     expect(row.detail).toMatch(/; dual-arch install, arch unconfirmed$/)
+  })
+})
+
+describe('quick 261024-f0w: classifyBridgeEvidence', () => {
+  const hello = (id: string) =>
+    `bridge helper [${id}]: [2026-10-23T21:19:34Z] HELLO  shim attached appid=${id}\n`
+  const rogueLog =
+    'Unity intercepted Exception: EntryPointNotFoundException: SteamAPI_ISteamClient_GetISteamUser assembly:<unknown assembly> type:<unknown type> member:(null)\n' +
+    '  at Steamworks.SteamAPI.Init () [0x00000] in <filename unknown>:0\n'
+  const clean = 'Initialize engine version: 2021.3\nLoaded scene\n'
+
+  it('1691190 RogueWaters is init-failed carrying the missing symbol', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: '1691190',
+        appLogTexts: [hello('1691190')],
+        gameLogTexts: [rogueLog]
+      })
+    ).toEqual({
+      status: 'init-failed',
+      detail: 'SteamAPI_ISteamClient_GetISteamUser'
+    })
+  })
+
+  it('a SteamInternal_ EntryPointNotFoundException is init-failed with that symbol', () => {
+    const r = classifyBridgeEvidence({
+      appid: '1',
+      appLogTexts: [hello('1')],
+      gameLogTexts: [
+        'EntryPointNotFoundException: SteamInternal_FindOrCreateUserInterface assembly:x'
+      ]
+    })
+    expect(r).toEqual({
+      status: 'init-failed',
+      detail: 'SteamInternal_FindOrCreateUserInterface'
+    })
+  })
+
+  it('SteamAPI_Init and SteamAPI_InitEx failure text are init-failed', () => {
+    const run = (text: string) =>
+      classifyBridgeEvidence({
+        appid: '1',
+        appLogTexts: [hello('1')],
+        gameLogTexts: [text]
+      })
+    expect(run('[Steamworks.NET] SteamAPI_Init() failed.')).toEqual({
+      status: 'init-failed',
+      detail: 'SteamAPI_Init'
+    })
+    expect(run('SteamAPI_InitEx returned false')).toEqual({
+      status: 'init-failed',
+      detail: 'SteamAPI_InitEx'
+    })
+  })
+
+  it('a HELLO and a clean game log is verified', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: '1',
+        appLogTexts: [hello('1')],
+        gameLogTexts: [clean]
+      }).status
+    ).toBe('verified')
+  })
+
+  it('a HELLO with no game log is unverified', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: '1',
+        appLogTexts: [hello('1')],
+        gameLogTexts: []
+      })
+    ).toEqual({ status: 'unverified', detail: 'no game log found' })
+  })
+
+  it('no HELLO is unverified, and near-miss appids do not vouch', () => {
+    const run = (appLog: string) =>
+      classifyBridgeEvidence({
+        appid: '230070',
+        appLogTexts: [appLog],
+        gameLogTexts: [clean]
+      })
+    expect(run('')).toEqual({ status: 'unverified', detail: 'no HELLO' })
+    expect(run(hello('2300700')).status).toBe('unverified')
+    expect(run(hello('23007')).status).toBe('unverified')
+    expect(run(hello('230070')).status).toBe('verified')
+  })
+
+  it('a bare Init stack frame or a non-Steam missing symbol is not a failure', () => {
+    const r = classifyBridgeEvidence({
+      appid: '1',
+      appLogTexts: [hello('1')],
+      gameLogTexts: [
+        'at Steamworks.SteamAPI.Init () [0x00000]\nEntryPointNotFoundException: SomeOtherLib_Foo assembly:x'
+      ]
+    })
+    expect(r.status).toBe('verified')
+  })
+
+  it('a non-numeric appid is unverified', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: '1.*',
+        appLogTexts: [hello('1')],
+        gameLogTexts: [clean]
+      }).status
+    ).toBe('unverified')
+  })
+
+  it('classifyCensusTitle without evidence reads unverified / evidence not collected', () => {
+    const row = classifyCensusTitle({
+      appid: '1',
+      name: 'N',
+      installdir: 'N',
+      exe: null
+    })
+    expect(row.evidence).toBe('unverified')
+    expect(row.evidenceDetail).toBe('evidence not collected')
+  })
+
+  it('summarizeCensus counts verified from evidence, not playRecorded', () => {
+    const mk = (
+      evidence: CensusRow['evidence'],
+      playRecorded: boolean
+    ): CensusRow => ({
+      appid: evidence,
+      name: 'n',
+      installdir: 'n',
+      arch: 'x86',
+      class: 'bridge',
+      detail: '',
+      playRecorded,
+      evidence,
+      evidenceDetail: ''
+    })
+    const s = summarizeCensus([
+      mk('verified', false),
+      mk('init-failed', true),
+      mk('unverified', true)
+    ])
+    expect(s.verified).toBe(1)
+    expect(s.initFailed).toBe(1)
+    expect(s.unverified).toBe(1)
+    expect(s.playRecorded).toBe(2)
   })
 })

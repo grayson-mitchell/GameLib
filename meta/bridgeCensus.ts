@@ -6,7 +6,10 @@
  * bridge, with every miss classified. Amended 2026-10-23 (quick 261023-oq7):
  * "routed" follows the live resolver (scan-miss titles are placed and
  * launched anyway); "covered" is the old routed meaning and the D-51-15
- * coverage verdict; "verified" is live play evidence.
+ * coverage verdict. Amended 2026-10-24 (quick 261024-f0w): "verified" means
+ * the helper logged a HELLO for the appid AND the game's own Unity
+ * Player.log shows no Steam-init failure; the allowlist's playVerified
+ * record is shown separately as "Play recorded (allowlist)".
  *
  * Two halves, same split as `captureShellScrollback.ts`/
  * `extractProtonInventory.ts`:
@@ -33,7 +36,8 @@
  * is kept and the row's detail says the arch is unconfirmed.
  *
  * T-51-39 (mitigate, low): a row ever printed or returned contains ONLY
- * appid/name/installdir/arch/class/detail -- never a full filesystem path
+ * appid/name/installdir/arch/class/detail/playRecorded/evidence/
+ * evidenceDetail -- never a full filesystem path
  * under the user's HOME, and never any other ACF field (no account data).
  * `CensusTitleInput.installdir` is always the bare ACF `installdir` value
  * (a folder NAME, e.g. "Avernum 6"), never the resolved absolute install
@@ -80,7 +84,7 @@ import {
 } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 
 import { parse as parseVdf } from '@node-steam/vdf'
 
@@ -122,9 +126,20 @@ export interface CensusRow {
   arch: 'x86' | 'x64' | 'none'
   class: CensusClass
   detail: string
-  /** True only when the title is routed AND its seed entry carries a
-   * playVerified record citing live evidence. Routed is not runs. */
-  verified: boolean
+  /** True only when the title is routed AND its allowlist seed entry carries
+   * a playVerified record. That record is NOT proof the bridge ran the game
+   * (it cites Mac Steam In-Game status, which the helper's own SteamAPI_Init
+   * produces), so it is shown as "Play recorded (allowlist)", never verified. */
+  playRecorded: boolean
+  /** 'verified' = HELLO for this appid AND a found, clean game log. */
+  evidence: 'verified' | 'unverified' | 'init-failed'
+  /** A Steam symbol name or a short fixed reason; never a path or log line. */
+  evidenceDetail: string
+}
+
+export interface BridgeEvidence {
+  status: 'verified' | 'unverified' | 'init-failed'
+  detail: string
 }
 
 export interface CensusTitleInput {
@@ -147,6 +162,9 @@ export interface CensusTitleInput {
    * persisted install verdict (dual-arch install). Appended to `detail`;
    * names an arch, never a path. */
   archNote?: string
+  /** Quick 261024-f0w: the live-log evidence verdict; absent reads as
+   * 'unverified' / 'evidence not collected'. */
+  evidence?: BridgeEvidence
   /** `null` when no scannable PE exe (with or without a steam_api import)
    * was found anywhere under the title's installdir at all. */
   exe: {
@@ -239,15 +257,19 @@ function classifyCensusTitleCore(
     name: input.name,
     installdir: input.installdir
   }
-  const withVerified = (row: Omit<CensusRow, 'verified'>): CensusRow => ({
+  const withFlags = (
+    row: Omit<CensusRow, 'playRecorded' | 'evidence' | 'evidenceDetail'>
+  ): CensusRow => ({
     ...row,
-    verified:
+    playRecorded:
       input.playVerified === true &&
-      (row.class === 'bridge' || row.class === 'no-steam-api')
+      (row.class === 'bridge' || row.class === 'no-steam-api'),
+    evidence: input.evidence?.status ?? 'unverified',
+    evidenceDetail: input.evidence?.detail ?? 'evidence not collected'
   })
 
   if (input.steamDrm && input.steamDrm.cegMarkers.length > 0) {
-    return withVerified({
+    return withFlags({
       ...base,
       arch: input.exe?.arch ?? 'none',
       class: 'known-bad',
@@ -256,7 +278,7 @@ function classifyCensusTitleCore(
   }
 
   if (input.knownBadReason) {
-    return withVerified({
+    return withFlags({
       ...base,
       arch: input.exe?.arch ?? 'none',
       class: 'known-bad',
@@ -265,7 +287,7 @@ function classifyCensusTitleCore(
   }
 
   if (input.exe === null) {
-    return withVerified({
+    return withFlags({
       ...base,
       arch: 'none',
       class: 'no-binary',
@@ -277,14 +299,14 @@ function classifyCensusTitleCore(
 
   if (arch === 'none') {
     if (input.runtimeLoadedDll) {
-      return withVerified({
+      return withFlags({
         ...base,
         arch: 'none',
         class: 'missing-symbols',
         detail: runtimeLoadedSteamApiMarker(input.runtimeLoadedDll)
       })
     }
-    return withVerified({
+    return withFlags({
       ...base,
       arch: 'none',
       class: 'no-steam-api',
@@ -294,7 +316,7 @@ function classifyCensusTitleCore(
   }
 
   if (arch === 'x64' && deps.x64ExportedSymbols.size === 0) {
-    return withVerified({
+    return withFlags({
       ...base,
       arch: 'x64',
       class: 'win64-no-shim',
@@ -309,7 +331,7 @@ function classifyCensusTitleCore(
   })
 
   if (problems.length > 0) {
-    return withVerified({
+    return withFlags({
       ...base,
       arch,
       class: 'unknown-version',
@@ -325,7 +347,7 @@ function classifyCensusTitleCore(
   })
 
   if (coverage.missingSymbols.length > 0) {
-    return withVerified({
+    return withFlags({
       ...base,
       arch,
       class: 'missing-symbols',
@@ -333,7 +355,7 @@ function classifyCensusTitleCore(
     })
   }
 
-  return withVerified({ ...base, arch, class: 'bridge', detail: '' })
+  return withFlags({ ...base, arch, class: 'bridge', detail: '' })
 }
 
 /** Rows the live resolver sends to the bridge (amended 2026-10-23, quick
@@ -349,14 +371,19 @@ function isRoutedToBridge(row: CensusRow): boolean {
  * routed = what the resolver sends to the bridge (see `isRoutedToBridge`),
  * which now includes scan-miss and non-DRM known-bad titles that are placed
  * and launched anyway. covered = class 'bridge' or 'no-steam-api': the shim
- * fully covers the title, and this is the D-51-15 coverage verdict.
- * verified = rows whose seed entry carries live play evidence. A 'no-binary'
- * row never counts as routed or covered, but it DOES count toward `total`.
+ * fully covers the title's symbols (static scan), the D-51-15 coverage
+ * verdict. verified = rows whose evidence is 'verified' (HELLO + clean game
+ * log). playRecorded = the allowlist's playVerified record, kept apart. A
+ * 'no-binary' row never counts as routed or covered, but it DOES count
+ * toward `total`.
  */
 export function summarizeCensus(rows: CensusRow[]): {
   routed: number
   covered: number
   verified: number
+  initFailed: number
+  unverified: number
+  playRecorded: number
   total: number
   byClass: Record<string, number>
 } {
@@ -364,6 +391,9 @@ export function summarizeCensus(rows: CensusRow[]): {
   let routed = 0
   let covered = 0
   let verified = 0
+  let initFailed = 0
+  let unverified = 0
+  let playRecorded = 0
 
   for (const row of rows) {
     byClass[row.class] = (byClass[row.class] ?? 0) + 1
@@ -373,12 +403,79 @@ export function summarizeCensus(rows: CensusRow[]): {
     if (row.class === 'bridge' || row.class === 'no-steam-api') {
       covered++
     }
-    if (row.verified) {
+    if (row.evidence === 'verified') {
       verified++
+    } else if (row.evidence === 'init-failed') {
+      initFailed++
+    } else {
+      unverified++
+    }
+    if (row.playRecorded) {
+      playRecorded++
     }
   }
 
-  return { routed, covered, verified, total: rows.length, byClass }
+  return {
+    routed,
+    covered,
+    verified,
+    initFailed,
+    unverified,
+    playRecorded,
+    total: rows.length,
+    byClass
+  }
+}
+
+/**
+ * Quick 261024-f0w: pure live-evidence check. Order: no HELLO -> unverified;
+ * no game log -> unverified; failure marker -> init-failed; else verified.
+ * Mac Steam In-Game status is deliberately NOT an input: it comes from the
+ * helper's own SteamAPI_Init, not from the game.
+ */
+export function classifyBridgeEvidence(input: {
+  appid: string
+  appLogTexts: string[]
+  gameLogTexts: string[]
+}): BridgeEvidence {
+  if (!/^\d+$/.test(input.appid)) {
+    return { status: 'unverified', detail: 'no HELLO' }
+  }
+  const hello = new RegExp(
+    `HELLO\\s+shim attached appid=${input.appid}(?![0-9])`
+  )
+  if (!input.appLogTexts.some((t) => hello.test(t))) {
+    return { status: 'unverified', detail: 'no HELLO' }
+  }
+  if (input.gameLogTexts.length === 0) {
+    return { status: 'unverified', detail: 'no game log found' }
+  }
+  for (const text of input.gameLogTexts) {
+    const missing = text.match(
+      /EntryPointNotFoundException:\s*((?:SteamAPI|SteamInternal)_\w+)/
+    )
+    if (missing) {
+      return { status: 'init-failed', detail: missing[1] }
+    }
+  }
+  const initFail =
+    /(SteamAPI[_.]Init(Ex)?)\s*(\(\))?[^\n]*?(failed|returned false)/i
+  for (const text of input.gameLogTexts) {
+    const m = text.match(initFail)
+    if (m) {
+      return {
+        status: 'init-failed',
+        detail: m[2] ? 'SteamAPI_InitEx' : 'SteamAPI_Init'
+      }
+    }
+  }
+  return { status: 'verified', detail: '' }
+}
+
+function evidenceCell(r: CensusRow): string {
+  return r.evidence === 'verified'
+    ? 'verified'
+    : `${r.evidence} (${r.evidenceDetail})`
 }
 
 /** Markdown table + the "N of M routed to the bridge" summary line the
@@ -386,12 +483,12 @@ export function summarizeCensus(rows: CensusRow[]): {
 export function formatCensusMarkdown(rows: CensusRow[]): string {
   const summary = summarizeCensus(rows)
   const header =
-    '| AppID | Name | Installdir | Arch | Class | Verified | Detail |\n' +
-    '|---|---|---|---|---|---|---|'
+    '| AppID | Name | Installdir | Arch | Class (static scan) | Play recorded (allowlist) | Evidence | Detail |\n' +
+    '|---|---|---|---|---|---|---|---|'
   const body = rows
     .map(
       (r) =>
-        `| ${r.appid} | ${r.name} | ${r.installdir} | ${r.arch} | ${r.class} | ${r.verified ? 'yes' : 'no'} | ${r.detail} |`
+        `| ${r.appid} | ${r.name} | ${r.installdir} | ${r.arch} | ${r.class} | ${r.playRecorded ? 'yes' : 'no'} | ${evidenceCell(r)} | ${r.detail} |`
     )
     .join('\n')
   const byClassSummary = Object.entries(summary.byClass)
@@ -403,7 +500,7 @@ export function formatCensusMarkdown(rows: CensusRow[]): string {
     header,
     body,
     '',
-    `${summary.routed} of ${summary.total} routed to the bridge; ${summary.verified} of ${summary.total} verified running through the bridge; ${summary.covered} of ${summary.total} fully covered by the shim (${byClassSummary})`
+    `${summary.routed} of ${summary.total} routed to the bridge; ${summary.verified} of ${summary.total} verified running through the bridge (HELLO + clean game log; ${summary.initFailed} init-failed, ${summary.unverified} unverified); ${summary.playRecorded} of ${summary.total} play recorded in the allowlist; ${summary.covered} of ${summary.total} symbols covered by the shim (static scan) (${byClassSummary})`
   ].join('\n')
 }
 
@@ -428,6 +525,12 @@ const STEAM_METADATA_PATH = join(
   homedir(),
   'Library/Application Support/gamelib/store_cache/steam_metadata.json'
 )
+// Quick 261024-f0w: the app log (+ rotated sibling); `logger/paths.ts` darwin
+// branch. Carries the helper's `HELLO  shim attached appid=<id>` lines.
+const APP_LOG_PATHS = [
+  join(homedir(), 'Library/Logs/GameLib/gamelib.log'),
+  join(homedir(), 'Library/Logs/GameLib/gamelib.log.old')
+]
 const OBJDUMP_BIN = '/usr/bin/objdump'
 const MAX_EXE_DEPTH = 4
 
@@ -479,6 +582,8 @@ interface ManifestEntry {
   name: string
   installdir: string
   installPath: string
+  /** Internal only (never on a CensusRow): the bottle directory name. */
+  bottleName: string
 }
 
 interface AcfAppState {
@@ -489,7 +594,10 @@ interface AcfAppState {
  * throws -- a missing dir, unreadable file, or corrupt/incomplete ACF is a
  * normal "nothing to report for this entry" outcome, the same discipline
  * `acfInstalldir.ts`'s `readAcfInstalldir` already follows. */
-function readManifests(steamappsDir: string): ManifestEntry[] {
+function readManifests(
+  steamappsDir: string,
+  bottleName: string
+): ManifestEntry[] {
   if (!existsSync(steamappsDir)) {
     return []
   }
@@ -512,7 +620,8 @@ function readManifests(steamappsDir: string): ManifestEntry[] {
         appid: match[1],
         name,
         installdir,
-        installPath: join(steamappsDir, 'common', installdir)
+        installPath: join(steamappsDir, 'common', installdir),
+        bottleName
       })
     } catch {
       continue // corrupt ACF -- same discipline as acfInstalldir.ts
@@ -587,6 +696,67 @@ function loadPlayVerified(): Set<string> {
   } catch {
     return new Set()
   }
+}
+
+/** Quick 261024-f0w: Unity's `Player.log` files under
+ * `drive_c/users/crossover/AppData/LocalLow/<Company>/<Product>/` (exactly two
+ * levels, readdir-based). Player.log only, not Player-prev.log: it is the
+ * latest run. Never throws. */
+function findUnityPlayerLogs(bottleDir: string): string[] {
+  const lowDir = join(
+    bottleDir,
+    'drive_c',
+    'users',
+    'crossover',
+    'AppData',
+    'LocalLow'
+  )
+  const out: string[] = []
+  try {
+    for (const company of readdirSync(lowDir, { withFileTypes: true })) {
+      if (!company.isDirectory()) continue
+      for (const product of readdirSync(join(lowDir, company.name), {
+        withFileTypes: true
+      })) {
+        if (!product.isDirectory()) continue
+        const log = join(lowDir, company.name, product.name, 'Player.log')
+        if (existsSync(log)) out.push(log)
+      }
+    }
+  } catch {
+    // no LocalLow -- no game logs
+  }
+  return out
+}
+
+function readTexts(paths: string[]): string[] {
+  const out: string[] = []
+  for (const p of paths) {
+    try {
+      out.push(readFileSync(p, 'utf-8'))
+    } catch {
+      // missing or unreadable -- skipped
+    }
+  }
+  return out
+}
+
+/** Only a per-game `GameLibSteamBridge-<appId>` bottle can attribute a
+ * Player.log to one title; shared bottles read 'unverified'. */
+function collectEvidence(
+  entry: ManifestEntry,
+  appLogTexts: string[]
+): BridgeEvidence {
+  if (entry.bottleName !== `GameLibSteamBridge-${entry.appid}`) {
+    return { status: 'unverified', detail: 'no per-game bridge bottle' }
+  }
+  return classifyBridgeEvidence({
+    appid: entry.appid,
+    appLogTexts,
+    gameLogTexts: readTexts(
+      findUnityPlayerLogs(join(BOTTLES_DIR, entry.bottleName))
+    )
+  })
 }
 
 /** Finds a non-shim steam_api(64).dll anywhere under `dir` (same depth bound
@@ -778,8 +948,10 @@ async function classifyInstalledTitle(
   entry: ManifestEntry,
   knownBad: Map<string, string>,
   playVerifiedSet: Set<string>,
-  persistedArch: 'x86' | 'x64' | undefined
+  persistedArch: 'x86' | 'x64' | undefined,
+  appLogTexts: string[]
 ): Promise<CensusRow> {
+  const evidence = collectEvidence(entry, appLogTexts)
   const knownBadReason = knownBad.get(entry.appid) ?? null
   const playVerified = playVerifiedSet.has(entry.appid)
 
@@ -794,6 +966,7 @@ async function classifyInstalledTitle(
       installdir: entry.installdir,
       knownBadReason,
       playVerified,
+      evidence,
       exe: null
     })
   }
@@ -849,6 +1022,7 @@ async function classifyInstalledTitle(
     runtimeLoadedDll,
     steamDrm,
     archNote: archNote || undefined,
+    evidence,
     exe: { arch, symbols, dllVersions, exeVersions }
   })
 }
@@ -893,11 +1067,12 @@ export async function runCensus(): Promise<CensusRow[]> {
   const knownBad = loadKnownBad()
   const playVerifiedSet = loadPlayVerified()
   const metadataText = loadSteamMetadataText()
+  const appLogTexts = readTexts(APP_LOG_PATHS)
   const seen = new Map<string, ManifestEntry>()
 
   for (const bottleDir of findBridgeBottles()) {
     const steamappsDir = join(bottleDir, STEAMAPPS_SUBPATH)
-    for (const entry of readManifests(steamappsDir)) {
+    for (const entry of readManifests(steamappsDir, basename(bottleDir))) {
       if (!seen.has(entry.appid)) {
         seen.set(entry.appid, entry)
       }
@@ -911,7 +1086,8 @@ export async function runCensus(): Promise<CensusRow[]> {
         entry,
         knownBad,
         playVerifiedSet,
-        readPersistedScanArch(metadataText, entry.appid)
+        readPersistedScanArch(metadataText, entry.appid),
+        appLogTexts
       )
     )
   }
