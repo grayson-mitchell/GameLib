@@ -45,6 +45,10 @@ Measurement caveat for 51-29/51-30: Mac Steam's In-Game status for such a title 
 the bridge helper's own `SteamAPI_Init`, not from the game. "Verified running through the
 bridge" must require `HELLO` **and** no Steam-init failure in the game's own log.
 
+As of quick 261024-f0w (2026-10-24) `pnpm bridge-census` applies this: its Evidence column reads
+gamelib.log `HELLO` plus the bottle's Unity `Player.log` and reports verified / unverified /
+init-failed (symbol).
+
 Likely phase-sized rather than a quick task. Unity + Steamworks.NET is a large share of
 Windows-only Steam titles, so this may be the biggest single lever on D-51-15's "most".
 
