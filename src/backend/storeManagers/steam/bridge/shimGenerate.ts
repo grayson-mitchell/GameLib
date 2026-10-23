@@ -121,6 +121,8 @@ type PlaceShimResult =
   | {
       status: 'placed' | 'already-placed'
       shimPath: string
+      // quick 261023-ue0: runtime-loaded branch only -- EVERY live shim path.
+      shimPaths?: string[]
       verdict?: SteamBridgeScanVerdict
     }
   | {
@@ -399,6 +401,12 @@ export async function placeShimForGame(
         return existsSync(source) && !isByteIdentical(d.path, source)
       })
 
+      // quick 261023-ue0: the backend writes gamelib_bridge.cfg beside every
+      // reported shim, so every live shim must be reported -- including
+      // already-current ones. Every entry is a GameLib shim once this call
+      // returns.
+      const allShimPaths = runtimeDlls.map((d) => resolve(d.path))
+
       if (toCopy.length === 0) {
         // Every entry is a current GameLib shim: a prior placed-miss. Never
         // downgrade to 'no-steam-api' (that would overwrite the persisted
@@ -407,10 +415,13 @@ export async function placeShimForGame(
           `placeShimForGame: appId ${appId} runtime-loaded shim(s) already present and current (idempotent, no-op)`,
           LogPrefix.Steam
         )
-        return { status: 'already-placed', shimPath: runtimeDlls[0].path }
+        return {
+          status: 'already-placed',
+          shimPath: runtimeDlls[0].path,
+          shimPaths: allShimPaths
+        }
       }
 
-      const shimPaths: string[] = []
       for (const dll of toCopy) {
         const target = resolve(dll.path)
         // T-oq7-03: every copy target must sit inside the bridge bottle.
@@ -439,7 +450,6 @@ export async function placeShimForGame(
             error: `Failed to place shim: ${String(error)}`
           }
         }
-        shimPaths.push(target)
       }
 
       logWarning(
@@ -448,7 +458,7 @@ export async function placeShimForGame(
       )
       return {
         status: 'placed-miss',
-        shimPaths,
+        shimPaths: allShimPaths,
         verdict: {
           status: 'miss',
           arch: names.includes('steam_api64.dll') ? 'x64' : 'x86',

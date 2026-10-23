@@ -625,7 +625,32 @@ describe('shimGenerate', () => {
 
       const second = await placeShimForGame('1234', gameExePath, opts)
 
-      expect(second).toEqual({ status: 'already-placed', shimPath: dll })
+      expect(second).toEqual({
+        status: 'already-placed',
+        shimPath: dll,
+        shimPaths: [dll]
+      })
+    })
+
+    it('quick 261023-ue0: mixed current + original shims -> placed-miss reports BOTH paths', async () => {
+      noImports()
+      withMarkedSources()
+      const current = join(gameDir, 'steam_api.dll')
+      writeFileSync(current, MARK_X86)
+      mkdirSync(join(gameDir, 'Plugins', 'x86_64'), { recursive: true })
+      const original = join(gameDir, 'Plugins', 'x86_64', 'steam_api64.dll')
+      writeFileSync(original, 'plain-game-dll')
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: realShim64SourcePath
+      })
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect([...result.shimPaths].sort()).toEqual([current, original].sort())
+      }
+      expect(readFileSync(original, 'utf-8')).toBe(MARK_X64)
     })
 
     it('an OLDER GameLib shim in place is re-copied and reported as placed-miss with the marker verdict', async () => {
@@ -689,7 +714,8 @@ describe('shimGenerate', () => {
 
       expect(result).toEqual({
         status: 'already-placed',
-        shimPath: join(gameDir, 'steam_api.dll')
+        shimPath: join(gameDir, 'steam_api.dll'),
+        shimPaths: [join(gameDir, 'steam_api.dll')]
       })
     })
 

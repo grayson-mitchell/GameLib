@@ -1688,7 +1688,8 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       exePath: RESOLVED_EXE_PATH,
       bottleName: 'GameLibSteamBridge',
       appId: APP_ID,
-      port: 55123
+      port: 55123,
+      shimPaths: [RESOLVED_EXE_PATH]
     })
     // quick/261016-u1w (D-B threading): getBridgeBottleSettings is now
     // per-appId, so the resolved bottle used for every readiness/config
@@ -1904,6 +1905,72 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
           appName: MISS_APP_ID,
           reason: 'not-inited'
         })
+      )
+    })
+  })
+
+  describe('quick 261023-ue0: shimPaths handed to writeBridgeConfig', () => {
+    const UE0_APP_ID = '555558'
+    const UNITY_SHIM = `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4/Game_Data/Plugins/x86_64/steam_api64.dll`
+    const missVerdict = {
+      status: 'miss' as const,
+      arch: 'x64' as const,
+      missingSymbols: ['steam_api64.dll@runtime-loaded'],
+      interfaceVersions: {},
+      stubbedInterfaces: [],
+      shimExportSetVersion: 'v1',
+      scannedAt: '2026-01-01T00:00:00.000Z'
+    }
+
+    beforeEach(() => {
+      library.set(UE0_APP_ID, makeEntry({ title: 'Unity Runtime' }))
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+    })
+
+    const launchWith = async (shimResult: object) => {
+      ;(placeShimForGame as jest.Mock).mockResolvedValue(shimResult)
+      return new SteamGame(UE0_APP_ID).launch({} as any)
+    }
+
+    it("'placed' passes [shimPath]", async () => {
+      await launchWith({ status: 'placed', shimPath: RESOLVED_EXE_PATH })
+      expect(writeBridgeConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ shimPaths: [RESOLVED_EXE_PATH] })
+      )
+    })
+
+    it("'placed-miss' passes every shimPaths entry", async () => {
+      await launchWith({
+        status: 'placed-miss',
+        shimPaths: [RESOLVED_EXE_PATH, UNITY_SHIM],
+        verdict: missVerdict
+      })
+      expect(writeBridgeConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ shimPaths: [RESOLVED_EXE_PATH, UNITY_SHIM] })
+      )
+    })
+
+    it("'already-placed' with shimPaths rewrites the cfg at the Unity Plugins path on a repeat launch", async () => {
+      await launchWith({
+        status: 'already-placed',
+        shimPath: UNITY_SHIM,
+        shimPaths: [UNITY_SHIM]
+      })
+      expect(writeBridgeConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ shimPaths: [UNITY_SHIM] })
+      )
+    })
+
+    it("'already-placed' with only shimPath (static branch) passes [shimPath]", async () => {
+      await launchWith({
+        status: 'already-placed',
+        shimPath: RESOLVED_EXE_PATH
+      })
+      expect(writeBridgeConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ shimPaths: [RESOLVED_EXE_PATH] })
       )
     })
   })

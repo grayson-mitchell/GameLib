@@ -2728,11 +2728,19 @@ export default class SteamGame implements Game {
     // shim itself did not change).
     const interfaceVersionsForConfig =
       shimResult.verdict?.interfaceVersions ?? persistedScan?.interfaceVersions
+    // quick 261023-ue0: the shim reads the cfg beside ITS OWN module, so
+    // hand writeBridgeConfig every shim path (rewritten on every launch,
+    // including 'already-placed').
+    const shimPaths =
+      shimResult.status === 'placed-miss'
+        ? shimResult.shimPaths
+        : (shimResult.shimPaths ?? [shimResult.shimPath])
     const configResult = writeBridgeConfig({
       exePath,
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
       appId: this.appId,
       port: helperReady.port,
+      shimPaths,
       ...(interfaceVersionsForConfig
         ? { interfaceVersions: interfaceVersionsForConfig }
         : {})
@@ -2752,7 +2760,7 @@ export default class SteamGame implements Game {
     }
 
     logInfo(
-      `SteamGame: launching appId ${this.appId} via the Steam bridge (${exePath}, helper port=${helperReady.port})`,
+      `SteamGame: launching appId ${this.appId} via the Steam bridge (${exePath}, helper port=${helperReady.port}, cfg copies=${1 + (configResult.extraPaths?.length ?? 0)})`,
       LogPrefix.Steam
     )
     return this.fireBridgeWineLaunch(exePath, bridgeBottleSettings)
