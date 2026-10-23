@@ -43,3 +43,25 @@ with the bridge".
 ## Re-gate 2026-10-23 (plan 51-27, 51-UAT item 15: issue)
 
 The wiring from plan 51-26 is live-verified: placed steam_api64.dll is 848896 bytes == SHIM64, the stubbed-interface notice no longer lists SteamUser, SteamUtils, SteamApps or SteamFriends, and the "not subscribed" error is gone. ELEX itself still hangs on its loading screen and never reaches the main menu; the operator rates it does-not-run and 411300 is now knownBad. Left pending because closure was tied to ELEX reaching its menu; the remaining question is whether another title exercises the Win64 core interfaces to a menu (51-29 sample installs), or whether to close this as wiring-done.
+
+## Closed 2026-10-24: wiring done, playable level not verified
+
+Closed as wiring-done (operator decision 2026-10-24, "Close as wiring-done (Recommended)").
+
+- Done and live-verified (51-UAT item 15): plan 51-26 wires `SteamUser019`, `SteamFriends015`,
+  `SteamUtils008` and `STEAMAPPS_INTERFACE_VERSION008` to the Mac helper. The placed
+  `steam_api64.dll` matched SHIM64, `HELLO shim attached appid=411300` was logged, and the
+  "not subscribed" error is gone.
+- Not verified: a Win64 title reaching its menu through these interfaces. ELEX hangs on its
+  loading screen and is knownBad `does-not-run`. Under the strict criterion (HELLO plus a clean
+  game-side Steam init) this todo's original closure condition is unmet, and nothing here claims it.
+- The 51-29 sample (51-UAT items 19 and 20) answered the open question above: no Win64 title got
+  as far as these core interfaces. Every x64 failure stopped earlier, at a miss with its own pending todo:
+  flat API for Unity/Steamworks.NET (`2026-10-23-bridge-shim-lacks-steamworks-flat-api-...`),
+  modern-SDK `SteamInternal_*` exports (`2026-10-23-x64-shim-lacks-modern-sdk-...`), SteamStub
+  (Grim Dawn, Raft), and the Unreal bootstrap-exe scan miss
+  (`2026-10-24-bridge-scan-reads-unreal-bootstrap-exe-...`).
+- Playable-level Win64 coverage carries forward to the follow-up phase named in the 51-30 verdict
+  ("Steam bridge coverage: modern-SDK exports, flat API, engine-layout scan, SteamStub forwarder,
+  bottle runtime components"). The advice above still holds: do not advertise a 64-bit title as
+  "Known to work with the bridge" until one passes the strict criterion.
