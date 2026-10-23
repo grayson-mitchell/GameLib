@@ -3,7 +3,9 @@
  * allowed to depot-download Steam games in-process instead of delegating to
  * `steam://install`. Reads the same `enableSteamNativeInstall` GlobalConfig
  * key the frontend toggle (EnableSteamNativeInstall.tsx) writes via
- * `useSetting`. Defaults to false (opt-in, safety valve) when unset.
+ * `useSetting`. Defaults to ON when unset (quick 261024-exo); an explicit
+ * persisted false is respected, and the `steam://install` path remains the
+ * OFF safety valve.
  *
  * This is the ONLY place that should read `enableSteamNativeInstall` — the
  * install() branch point (Plan 07) and the bottle branch (Plan 11) both
@@ -12,5 +14,5 @@
 import { GlobalConfig } from 'backend/config'
 
 export function isSteamNativeInstallEnabled(): boolean {
-  return GlobalConfig.get().getSettings().enableSteamNativeInstall ?? false
+  return GlobalConfig.get().getSettings().enableSteamNativeInstall ?? true
 }

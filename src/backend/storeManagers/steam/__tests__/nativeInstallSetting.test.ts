@@ -34,10 +34,10 @@ describe('nativeInstallSetting.ts', () => {
   })
 
   describe('isSteamNativeInstallEnabled', () => {
-    it('returns false when the GlobalConfig setting is unset (default OFF)', () => {
+    it('returns true when the GlobalConfig setting is unset (default ON, quick 261024-exo)', () => {
       mockSettings({})
 
-      expect(isSteamNativeInstallEnabled()).toBe(false)
+      expect(isSteamNativeInstallEnabled()).toBe(true)
     })
 
     it('returns true when the setting is explicitly true', () => {

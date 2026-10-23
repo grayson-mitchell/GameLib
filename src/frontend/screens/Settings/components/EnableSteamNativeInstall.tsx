@@ -10,7 +10,7 @@ const EnableSteamNativeInstall = () => {
   const { isDefault } = useContext(SettingsContext)
   const [enableSteamNativeInstall, setEnableSteamNativeInstall] = useSetting(
     'enableSteamNativeInstall',
-    false
+    true
   )
 
   if (!isDefault) {
