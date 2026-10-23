@@ -27,13 +27,14 @@ import {
 // forced 'bridge' override and retries install() through the bridge.
 // "Cancel" is a dead-end-free third option -- nothing is dispatched.
 //
-// D-51-08 amendment (2026-10-23): a non-DRM known-bad title stays on the
-// bridge. Its notice is the INFORMATIONAL variant (`informational`): only
-// "Install anyway" (acknowledges 'known-bad', keeping the stored userRoute
-// as-is, then retries install through the bridge) and Cancel -- never "Use
-// bottled Steam" or "Try the bridge anyway". When a later bottle row
-// (scan-miss / win64-no-shim) wins for such a title, the single dialog
-// shown there also names the known-bad reason.
+// D-51-08 amendments (2026-10-23): a non-DRM known-bad title, and (quick
+// 261023-oq7) a persisted scan-miss title, stay on the bridge. Their notice
+// is the INFORMATIONAL variant (`informational`): only "Install anyway"
+// (acknowledges the payload's own reason -- 'known-bad' or 'scan-miss' --
+// keeping the stored userRoute as-is, then retries install through the
+// bridge) and Cancel -- never "Use bottled Steam" or "Try the bridge
+// anyway". A known-bad + scan-miss title gets this ONE dialog, which adds
+// the known-bad line (`showKnownBadLine`) and acknowledges 'scan-miss'.
 const SteamBridgeRouteNotice = () => {
   const { t } = useTranslation('gamelib')
   const {
@@ -78,14 +79,15 @@ const SteamBridgeRouteNotice = () => {
     return null
   }
 
-  const { bodyKey, showTryBridge, informational } = resolveRouteNoticeContent({
-    appName,
-    reason,
-    knownBadReason,
-    missingSymbols,
-    route: route ?? 'bottle',
-    userRoute: storedUserRoute
-  })
+  const { bodyKey, showTryBridge, informational, showKnownBadLine } =
+    resolveRouteNoticeContent({
+      appName,
+      reason,
+      knownBadReason,
+      missingSymbols,
+      route: route ?? 'bottle',
+      userRoute: storedUserRoute
+    })
   const title = gameTitle ?? appName
 
   const handleCancel = () => {
@@ -97,7 +99,7 @@ const SteamBridgeRouteNotice = () => {
   // userRoute/acknowledgeReason pair persisted before the SAME
   // installSteamGame(appName, gameInfo) retry (34.13-08 D-17 marshalling
   // precedent, SteamBridgeSetup.tsx). 'acknowledge' persists the notice
-  // acknowledgement for 'known-bad' and passes the stored userRoute back
+  // acknowledgement for the payload's reason and passes the stored userRoute back
   // unchanged.
   const chooseRoute = async (choice: 'bottle' | 'bridge' | 'acknowledge') => {
     setBusyRoute(choice === 'bottle' ? 'bottle' : 'bridge')
@@ -119,7 +121,7 @@ const SteamBridgeRouteNotice = () => {
           ? {
               appId: appName,
               userRoute: storedUserRoute,
-              acknowledgeReason: 'known-bad'
+              acknowledgeReason: reason
             }
           : choice === 'bottle'
             ? { appId: appName, userRoute: null, acknowledgeReason: reason }
@@ -185,7 +187,7 @@ const SteamBridgeRouteNotice = () => {
       </DialogHeader>
       <DialogContent>
         <p>{renderBody()}</p>
-        {!informational && knownBadReason && reason !== 'known-bad' ? (
+        {showKnownBadLine && knownBadReason ? (
           <p>
             {t('steam.bridge.route.reason.knownBad', {
               defaultValue: 'Known not to work with the bridge: {{reason}}',

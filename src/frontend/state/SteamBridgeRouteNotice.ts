@@ -14,8 +14,9 @@ export interface SteamBridgeRouteNoticePayload {
   reason: SteamBridgeRouteReason
   knownBadReason: SteamBridgeKnownBadReason | null
   missingSymbols: string[]
-  // D-51-08 amendment (2026-10-23): a 'known-bad' notice on route 'bridge' is
-  // informational -- the bridge is still attempted once the user proceeds.
+  // D-51-08 amendments (2026-10-23): a 'known-bad' or 'scan-miss' notice on
+  // route 'bridge' is informational -- the bridge is still attempted once the
+  // user proceeds.
   route: 'bridge' | 'bottle'
   // Sent back unchanged on acknowledgement so an existing override survives.
   userRoute: 'bridge' | 'bottle' | null
@@ -103,32 +104,56 @@ export const handleSteamBridgeRouteNoticeSignal = (
 export interface RouteNoticeContent {
   bodyKey: 'knownBad' | 'scanMiss' | 'win64NoShim'
   showTryBridge: boolean
-  // True for a known-bad notice on the bridge route: proceed-or-cancel only,
-  // the bridge is still attempted.
+  // True for any notice on the bridge route (non-DRM known-bad, scan-miss):
+  // proceed-or-cancel only, the bridge is still attempted.
   informational: boolean
+  // Whether the dialog adds the known-bad line: a known-bad reason is set but
+  // is not already the notice's own reason (one combined dialog, quick
+  // 261023-oq7).
+  showKnownBadLine: boolean
 }
 
 // D-51-08/11: maps the backend's NOTICE_REASONS (bridgeRoute.ts) to the
 // dialog's body copy key and whether "Try the bridge anyway" is offered --
 // D-51-13's win64-no-shim fail-closed default never offers an override
-// (hidden per this plan's objective), scan-miss always does, and a known-bad
-// notice offers it only on the bottle route (a bridge-route known-bad notice
-// is informational and the bridge is attempted anyway).
+// (hidden per this plan's objective). Since quick 261023-oq7 a scan-miss
+// arrives on route 'bridge' and is informational like a bridge-route
+// known-bad notice (the bridge is attempted anyway; no override to offer).
+// A bottle-route known-bad notice (drm-wrapped) offers "Try the bridge
+// anyway".
 export function resolveRouteNoticeContent(
   payload: SteamBridgeRouteNoticePayload
 ): RouteNoticeContent {
+  const showKnownBadLine =
+    payload.knownBadReason !== null && payload.reason !== 'known-bad'
   switch (payload.reason) {
     case 'known-bad':
       return payload.route === 'bridge'
-        ? { bodyKey: 'knownBad', showTryBridge: false, informational: true }
-        : { bodyKey: 'knownBad', showTryBridge: true, informational: false }
+        ? {
+            bodyKey: 'knownBad',
+            showTryBridge: false,
+            informational: true,
+            showKnownBadLine
+          }
+        : {
+            bodyKey: 'knownBad',
+            showTryBridge: true,
+            informational: false,
+            showKnownBadLine
+          }
     case 'scan-miss':
-      return { bodyKey: 'scanMiss', showTryBridge: true, informational: false }
+      return {
+        bodyKey: 'scanMiss',
+        showTryBridge: false,
+        informational: payload.route === 'bridge',
+        showKnownBadLine
+      }
     case 'win64-no-shim':
       return {
         bodyKey: 'win64NoShim',
         showTryBridge: false,
-        informational: false
+        informational: false,
+        showKnownBadLine
       }
     default:
       // Defensive default -- the backend only ever fires this signal for
@@ -137,7 +162,12 @@ export function resolveRouteNoticeContent(
       // crash the dialog. scan-miss's copy is the most generic of the
       // three ("does not cover every Steam call"), so it is the safer
       // unknown-reason fallback.
-      return { bodyKey: 'scanMiss', showTryBridge: true, informational: false }
+      return {
+        bodyKey: 'scanMiss',
+        showTryBridge: false,
+        informational: payload.route === 'bridge',
+        showKnownBadLine
+      }
   }
 }
 

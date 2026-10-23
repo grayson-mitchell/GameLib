@@ -138,71 +138,104 @@ describe('handleSteamBridgeRouteNoticeSignal (backend signal wiring)', () => {
 })
 
 describe('resolveRouteNoticeContent — D-51-08/11/13', () => {
-  it("'known-bad' -> { bodyKey: 'knownBad', showTryBridge: true }", () => {
+  const payload = (
+    reason: 'known-bad' | 'scan-miss' | 'win64-no-shim',
+    route: 'bridge' | 'bottle',
+    knownBadReason: 'drm-wrapped' | 'does-not-run' | null = null
+  ) => ({
+    appName: '570',
+    reason,
+    knownBadReason,
+    missingSymbols: ['SteamUtils005'],
+    route,
+    userRoute: null
+  })
+
+  it("'known-bad' on route 'bottle' -> Try-the-bridge-anyway, not informational, no extra line", () => {
     expect(
-      resolveRouteNoticeContent({
-        appName: '440',
-        reason: 'known-bad',
-        knownBadReason: 'drm-wrapped',
-        missingSymbols: [],
-        route: 'bottle',
-        userRoute: null
-      })
+      resolveRouteNoticeContent(payload('known-bad', 'bottle', 'drm-wrapped'))
     ).toEqual({
       bodyKey: 'knownBad',
       showTryBridge: true,
-      informational: false
+      informational: false,
+      showKnownBadLine: false
     })
   })
 
   it("'known-bad' on route 'bridge' -> informational, no Try-the-bridge-anyway (D-51-08 amendment)", () => {
     expect(
-      resolveRouteNoticeContent({
-        appName: '63000',
-        reason: 'known-bad',
-        knownBadReason: 'does-not-run',
-        missingSymbols: [],
-        route: 'bridge',
-        userRoute: null
-      })
+      resolveRouteNoticeContent(payload('known-bad', 'bridge', 'does-not-run'))
     ).toEqual({
       bodyKey: 'knownBad',
       showTryBridge: false,
-      informational: true
+      informational: true,
+      showKnownBadLine: false
     })
   })
 
-  it("'scan-miss' -> { bodyKey: 'scanMiss', showTryBridge: true }", () => {
+  it("'scan-miss' on route 'bridge' -> informational, no override, no known-bad line", () => {
+    expect(resolveRouteNoticeContent(payload('scan-miss', 'bridge'))).toEqual({
+      bodyKey: 'scanMiss',
+      showTryBridge: false,
+      informational: true,
+      showKnownBadLine: false
+    })
+  })
+
+  it("'scan-miss' + known-bad on route 'bridge' -> one combined dialog with the known-bad line", () => {
     expect(
-      resolveRouteNoticeContent({
-        appName: '570',
-        reason: 'scan-miss',
-        knownBadReason: null,
-        missingSymbols: ['SteamUtils005'],
-        route: 'bottle',
-        userRoute: null
-      })
+      resolveRouteNoticeContent(payload('scan-miss', 'bridge', 'does-not-run'))
     ).toEqual({
       bodyKey: 'scanMiss',
-      showTryBridge: true,
-      informational: false
+      showTryBridge: false,
+      informational: true,
+      showKnownBadLine: true
+    })
+  })
+
+  it("'scan-miss' on route 'bottle' (no longer produced) -> not informational, no override", () => {
+    expect(resolveRouteNoticeContent(payload('scan-miss', 'bottle'))).toEqual({
+      bodyKey: 'scanMiss',
+      showTryBridge: false,
+      informational: false,
+      showKnownBadLine: false
     })
   })
 
   it("'win64-no-shim' -> { bodyKey: 'win64NoShim', showTryBridge: false } (D-51-13: never offer an override past the fail-closed default)", () => {
     expect(
-      resolveRouteNoticeContent({
-        appName: '2010',
-        reason: 'win64-no-shim',
-        knownBadReason: null,
-        missingSymbols: [],
-        route: 'bottle',
-        userRoute: null
-      })
+      resolveRouteNoticeContent(payload('win64-no-shim', 'bottle'))
     ).toEqual({
       bodyKey: 'win64NoShim',
       showTryBridge: false,
-      informational: false
+      informational: false,
+      showKnownBadLine: false
+    })
+  })
+
+  it("'win64-no-shim' + does-not-run -> the known-bad line is shown", () => {
+    expect(
+      resolveRouteNoticeContent(
+        payload('win64-no-shim', 'bottle', 'does-not-run')
+      )
+    ).toEqual({
+      bodyKey: 'win64NoShim',
+      showTryBridge: false,
+      informational: false,
+      showKnownBadLine: true
+    })
+  })
+
+  it('default branch (unknown reason): scanMiss copy, no override, informational by route', () => {
+    const unknown = {
+      ...payload('scan-miss', 'bridge', 'does-not-run'),
+      reason: 'seed'
+    } as unknown as Parameters<typeof resolveRouteNoticeContent>[0]
+    expect(resolveRouteNoticeContent(unknown)).toEqual({
+      bodyKey: 'scanMiss',
+      showTryBridge: false,
+      informational: true,
+      showKnownBadLine: true
     })
   })
 })

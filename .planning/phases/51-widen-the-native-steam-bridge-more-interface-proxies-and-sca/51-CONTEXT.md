@@ -58,6 +58,14 @@ entry and this file cite.
   `GameLibSteam`" option; re-download was chosen because it is the live-gated path with no new
   install-path / attribution / install-script bookkeeping, and misses are meant to be rare. The move
   is a later optimisation if the census (D-51-15) shows a high miss rate.
+  - **Amended 2026-10-23 (quick 261023-oq7, user: "Place shim anyway"):** on an import-scan miss
+    the install keeps the download and places the shim anyway; launch runs it. There is no bottle
+    deletion, no circuit breaker and no bottled-Steam offer for a miss. The D-05 dialog remains for
+    win64-no-shim and for real helper / cfg / launch failures. A static-import miss is expected to
+    fail at load with a Windows "entry point not found" error, by design; the missing symbols are
+    recorded and drive shim widening. A runtime-loaded (`@runtime-loaded`) miss has no load-time
+    failure and may play. The shim placed over a runtime-loaded dll is recognised on later
+    launches, so the miss is never downgraded to `no-steam-api`.
 - **D-51-06:** **Pre-install screen on the depot manifest file list**, run before any download:
   `steam_api64.dll` only with no 32-bit shim target → bottled Steam, no bridge attempt;
   no `steam_api*.dll` at all → bridge bottle, no shim placed; `steam_api.dll` present → install then
@@ -78,6 +86,13 @@ entry and this file cite.
     bottle, that row's reason and notice win, and its single dialog also names the known-bad reason.
     The census still counts these titles as known-bad. Rationale (user): bottled Steam is a narrow
     fallback the project aims to eliminate, and Hoard and ELEX must not move to it.
+  - **Amended 2026-10-23 (quick 261023-oq7):** a persisted scan miss routes to the bridge with its
+    missing symbols and a one-time informational notice ("Install anyway" / Cancel), acknowledged as
+    `scan-miss` and suppressed by userRoute `bridge`. The og0 sub-bullet's "If a later row
+    (scan-miss, ...)" now holds for win64-no-shim only. A known-bad + scan-miss title gets one
+    dialog naming both. Unchanged: user-forced-bottle, failed-this-session, win64-no-shim and
+    drm-wrapped still route to bottled Steam. Rationale (user): bottled Steam is a narrow fallback
+    to eliminate; the recorded missing symbols drive shim widening.
 
 ### Route visibility and user override
 - **D-51-09:** The route is shown in **both** the install dialog's wine section (one-line verdict:
@@ -91,6 +106,8 @@ entry and this file cite.
   D-51-08 dialog offers "Try the bridge anyway", which runs the normal install-then-scan path; a miss
   lands on the ordinary D-05 fallback. The known-bad list is therefore self-correcting.
   - See the D-51-08 amendment of 2026-10-23: the known-bad override now applies only to `drm-wrapped`.
+  - Quick 261023-oq7: "Try the bridge anyway" is no longer offered for a scan miss, and "a miss lands
+    on the ordinary D-05 fallback" is superseded by the D-51-05 amendment.
 - **D-51-12 (folded todo LD-5):** `removeSteamInstallCopy('bridge')` **deletes the emptied per-game
   bridge bottle** via `removePerGameBridgeBottle` (guard chain from `261016-u1w`) when the bottle is
   per-game. Legacy-bottle behaviour unchanged.
@@ -109,6 +126,8 @@ entry and this file cite.
   research produces the import census once; the phase closes by re-running it against the shipped
   shim and reporting N of M titles routed to the bridge, each miss classified (64-bit, missing
   symbols, known-bad). The number is the verdict; no threshold is pre-set.
+  - Quick 261023-oq7: the census "routed" now counts launch-anyway titles, so the coverage verdict
+    is the "fully covered by the shim" clause.
 - **D-51-16 (folded todo):** The bottled-Steam fallback's dead Play button is **in scope**: surface a
   "Waiting for Steam…" state when a fallback launch has produced no game process within the grace
   window, naming the likely causes. Start by measuring which of the three causes (self-update
