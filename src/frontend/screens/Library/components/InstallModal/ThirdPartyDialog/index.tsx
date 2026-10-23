@@ -14,6 +14,11 @@ import {
 import { install, writeConfig } from 'frontend/helpers'
 import { hasAnticheatInfo } from 'frontend/hooks/hasAnticheatInfo'
 import ContextProvider from 'frontend/state/ContextProvider'
+import useGlobalState from 'frontend/state/GlobalStateV2'
+import {
+  crossoverRiskDialogOptions,
+  resolveCrossoverInstallRisk
+} from '../crossoverInstallRisk'
 import { InstallProgress } from 'frontend/types'
 import React, { useCallback, useContext } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -47,13 +52,15 @@ export default function ThirdPartyDialog({
   platformToInstall
 }: Props) {
   const { t } = useTranslation('gamepage')
-  const { platform } = useContext(ContextProvider)
+  const { t: tGamelib } = useTranslation('gamelib')
+  const { platform, showDialogModal } = useContext(ContextProvider)
+  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
   const isWin = platform === 'win32'
   const progress = {} as InstallProgress
 
   const anticheatInfo = hasAnticheatInfo(gameInfo)
 
-  const handleInstall = useCallback(async () => {
+  const proceedInstall = useCallback(async () => {
     // Write Default game config with prefix on linux
     if (!isWin) {
       const gameSettings = await window.api.requestGameSettings(appName)
@@ -84,6 +91,39 @@ export default function ThirdPartyDialog({
       showDialogModal: () => backdropClick()
     })
   }, [appName, t, winePrefix, wineVersion, crossoverBottle, platformToInstall])
+
+  // Quick 261024-ho4: confirm before a CrossOver install rated below 4 of 5.
+  const handleInstall = useCallback(async () => {
+    const risk = resolveCrossoverInstallRisk({
+      platform,
+      installsViaCrossover:
+        platformToInstall === 'Windows' && wineVersion?.type === 'crossover',
+      rating: crossoverRatings[appName]
+    })
+    if (risk.kind === 'confirm') {
+      showDialogModal({
+        showDialog: true,
+        ...crossoverRiskDialogOptions(
+          risk,
+          gameInfo.title,
+          tGamelib,
+          () => void proceedInstall()
+        )
+      })
+      return
+    }
+    await proceedInstall()
+  }, [
+    platform,
+    platformToInstall,
+    wineVersion,
+    crossoverRatings,
+    appName,
+    showDialogModal,
+    gameInfo,
+    tGamelib,
+    proceedInstall
+  ])
 
   return (
     <>

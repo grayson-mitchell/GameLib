@@ -9,7 +9,7 @@ import { Runner, WineInstallation } from 'common/types'
 import { Trans, useTranslation } from 'react-i18next'
 import { removeSpecialcharacters } from 'frontend/helpers'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faWarning } from '@fortawesome/free-solid-svg-icons'
+import { faCircleInfo, faWarning } from '@fortawesome/free-solid-svg-icons'
 import { WineVersionListItem } from 'frontend/screens/Settings/components/WineVersionSelector'
 import { MenuItem } from '@mui/material'
 import { useAwaited } from 'frontend/hooks/useAwaited'
@@ -176,8 +176,14 @@ export default function WineSelector({
   // CrossOver-bottle install path (showBottle) for a confirmed macOS Steam
   // rating <=2 -- an absent (never looked up) or null ("unrated") rating is
   // NOT evidence of a problem and must show no warning. This is a sibling
-  // render only; it must NEVER be wired into the Install button's `disabled`
-  // prop or otherwise gate/delay the install.
+  // render only. It must NEVER be wired into the Install button's `disabled`
+  // prop. 2026-10-24, quick 261024-ho4: the "or otherwise gate/delay the
+  // install" half of the original rule was deliberately REVERSED for ratings
+  // below 4. The Steam, Download and ThirdParty dialogs now ask for
+  // confirmation before installing, through `resolveCrossoverInstallRisk`
+  // (ratings <= 2 use the known-not-to-work copy, a 3 uses the
+  // may-have-problems copy). The `disabled` half still holds: a confirm step,
+  // never a disabled button. This hint itself stays a passive sibling render.
   const isKnownNotToWork =
     platform === 'darwin' &&
     runner === 'steam' &&
@@ -281,6 +287,15 @@ export default function WineSelector({
                 )}
               </a>
             </span>
+          )}
+          {platform === 'darwin' && showBottle && crossoverRating === null && (
+            <div className="infoBox">
+              <FontAwesomeIcon icon={faCircleInfo} />
+              {tGamelib(
+                'gamelib:installFlows.crossoverRating.unratedNotice',
+                'No CrossOver rating found for this game. CodeWeavers has no compatibility report for it, so there is no early warning either way.'
+              )}
+            </div>
           )}
           {isKnownNotToWork && (
             <div className="infoBox">

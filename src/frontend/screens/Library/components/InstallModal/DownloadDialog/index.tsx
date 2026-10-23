@@ -35,6 +35,11 @@ import {
   getPreferredInstallLanguage
 } from 'frontend/helpers'
 import { diskSpaceLabels } from '../diskSpaceLabels'
+import {
+  crossoverRiskDialogOptions,
+  resolveCrossoverInstallRisk
+} from '../crossoverInstallRisk'
+import useGlobalState from 'frontend/state/GlobalStateV2'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { InstallProgress } from 'frontend/types'
 import React, {
@@ -111,6 +116,7 @@ export default function DownloadDialog({
   ) as InstallProgress
   const { libraryStatus, platform, showDialogModal } =
     useContext(ContextProvider)
+  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
 
   const isWin = platform === 'win32'
 
@@ -266,13 +272,41 @@ export default function DownloadDialog({
     }
   }
 
-  async function handleInstall(path?: string, ignoreAnticheat = false) {
+  async function handleInstall(
+    path?: string,
+    ignoreAnticheat = false,
+    ignoreCrossoverRating = false
+  ) {
     if (
       anticheatInfo &&
       ['Denied', 'Broken', 'Unknown'].includes(anticheatInfo.status)
     ) {
       if (!ignoreAnticheat) {
         confirmInstallBrokenAnticheat(path)
+        return
+      }
+    }
+
+    // Quick 261024-ho4: ask before a CrossOver install of a title rated below
+    // 4 of 5. The install modal stays open behind the confirm, so Cancel
+    // returns to it untouched.
+    if (!ignoreCrossoverRating) {
+      const risk = resolveCrossoverInstallRisk({
+        platform,
+        installsViaCrossover:
+          platformToInstall === 'Windows' && wineVersion?.type === 'crossover',
+        rating: crossoverRatings[appName]
+      })
+      if (risk.kind === 'confirm') {
+        showDialogModal({
+          showDialog: true,
+          ...crossoverRiskDialogOptions(
+            risk,
+            gameInfo?.title ?? appName,
+            tGamelib,
+            () => void handleInstall(path, true, true)
+          )
+        })
         return
       }
     }

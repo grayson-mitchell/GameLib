@@ -52,7 +52,7 @@ import {
 } from 'frontend/components/UI/Dialog'
 import { SelectField, ToggleSwitch } from 'frontend/components/UI'
 import { MenuItem } from '@mui/material'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   installSteamGame,
@@ -71,6 +71,12 @@ import {
 } from './installTarget'
 import { isBottleCapableEngine } from '../WineSelector/engineFilter'
 import { diskSpaceLabels } from '../diskSpaceLabels'
+import {
+  crossoverRiskDialogOptions,
+  resolveCrossoverInstallRisk
+} from '../crossoverInstallRisk'
+import ContextProvider from 'frontend/state/ContextProvider'
+import useGlobalState from 'frontend/state/GlobalStateV2'
 
 interface Props {
   backdropClick: () => void
@@ -168,6 +174,8 @@ export default function SteamDialog({
 }: Props) {
   const { t } = useTranslation('gamepage')
   const { t: tGamelib } = useTranslation('gamelib')
+  const { platform, showDialogModal } = useContext(ContextProvider)
+  const { crossoverRatings } = useGlobalState.keys('crossoverRatings')
 
   const [selectedPath, setSelectedPath] = useState('')
   const [diskSpace, setDiskSpace] = useState<DiskSpaceInfo | null>(null)
@@ -329,7 +337,7 @@ export default function SteamDialog({
     // rather than leaving a verdict computed from the root fallback.
   }, [gating.freeSpaceLine, selectedPath, steamLibraries])
 
-  const handleInstall = useCallback(async () => {
+  const proceedInstall = useCallback(async () => {
     // WR-13: re-entrancy guard. `handleInstall` awaits
     // `persistBottleWineVersion` before it calls `backdropClick()`, and
     // nothing disabled the button across that await --
@@ -477,6 +485,45 @@ export default function SteamDialog({
     gating,
     backdropClick,
     submitting
+  ])
+
+  // Quick 261024-ho4: a CrossOver rating below 4 of 5 asks before the install
+  // starts. The `submitting` latch is deliberately NOT set before the confirm,
+  // so Cancel leaves a usable Install button.
+  const handleInstall = useCallback(async () => {
+    if (submitting) {
+      return
+    }
+    const risk = resolveCrossoverInstallRisk({
+      platform,
+      installsViaCrossover:
+        gating.wineSection && wineVersion?.type === 'crossover',
+      rating: crossoverRatings[appName]
+    })
+    if (risk.kind === 'confirm') {
+      showDialogModal({
+        showDialog: true,
+        ...crossoverRiskDialogOptions(
+          risk,
+          gameInfo.title,
+          tGamelib,
+          () => void proceedInstall()
+        )
+      })
+      return
+    }
+    await proceedInstall()
+  }, [
+    submitting,
+    platform,
+    gating,
+    wineVersion,
+    crossoverRatings,
+    appName,
+    showDialogModal,
+    gameInfo,
+    tGamelib,
+    proceedInstall
   ])
 
   return (
