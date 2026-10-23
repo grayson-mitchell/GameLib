@@ -70,3 +70,13 @@ Both are needed for it to run.
 **Done when:** Grim Dawn (219990) launches from GameLib through its per-game bridge bottle, gets
 past SteamStub (no `steam://run` in a `--cx-log` trace), reaches its main menu, and Mac Steam
 shows it In-Game. No Windows Steam client is in the bottle and the exe is unmodified.
+
+**Update from spike 039 (2026-10-23).** A thin `steamclient64.dll` whose `CreateInterface` returns
+the game's own shim interfaces works as plumbing: the stub took the shim's `SteamClient017`. It
+still fell back to `SteamClient014` and exited 51, and the helper saw no `HELLO`. The shim's
+generated `SteamClient017` methods are local `HELPER FALLBACK`/`STUB` constants
+(`CreateSteamPipe` → 1, `GetISteam*` → only compiled versions, else the null object), so nothing
+reached the native client. Step 1 therefore shrinks to the forwarder (spike 039's ~30 lines). The
+weight moves to `meta/gen_vtables.ts`: make `SteamClient017`/`014` genuinely forward (pipe/user
+handles served helper-side), log requested `GetISteam*` versions on the real path, and add
+forwarding proxies for whatever the stub asks for.
