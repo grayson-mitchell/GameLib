@@ -40,3 +40,11 @@ Every UE4/UE5 title ships this stub-plus-Shipping layout, so this is a large cla
 
 Measurement note for 51-29/51-30: bridge-routed, plays, but not through the bridge (no shim was
 placed). That is a scan defect, not `knownBad`.
+
+## Recurrence: Abiotic Factor (427410), 2026-10-24 10:34:32
+
+Abiotic Factor shows the same layout and the same log pair: `no-steam-api`, then
+`launching ... directly (no-steam-api, no helper)`. `AbioticFactor.exe` is the stub that starts
+`AbioticFactor/Binaries/Win64/AbioticFactor-Win64-Shipping.exe`. The game ships
+`Engine/Binaries/ThirdParty/Steamworks/Steamv157/Win64/steam_api64.dll`. It played for 82 s, but
+offline: no In-Game. That is two UE titles out of 7 sampled.
