@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
-last_updated: "2026-10-23T04:30:58.816Z"
+last_updated: "2026-10-23T08:32:08.537Z"
 last_activity: 2026-10-23
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 30
-  completed_plans: 27
+  completed_plans: 28
   percent: 0
 ---
 
@@ -72,11 +72,11 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
-Plan: 9 of 30
+Plan: 10 of 30
 Status: Ready to execute
-Last activity: 2026-10-23 - Completed quick task 261023-oq7: scan-miss routes through the bridge (shim placed despite a miss); phase 51 gap closure paused before 51-28
+Last activity: 2026-10-23
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -256,6 +256,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: 51-17: install()'s prescreen guard is route.reason==='pending-scan' AND steamApi undefined (not reason alone) -- an already-screened x64 title with a shim present can still resolve to pending-scan, and re-screening it would defeat T-51-37's once-per-title mitigation
 - [Phase 51]: 51-17: prescreenBridgeDepots's targetSteamappsDir/installdir are throwaway values -- buildDepotPlan never uses targetSteamappsDir and only uses installdir as a discarded PICS-name fallback, so resolving the real installdir would defeat the point of a cheap screen
 - [Phase 51]: 51-18: classifyCensusTitle takes injectable coverage deps defaulting to the real shipped shimCoverage sets, letting the win64-no-shim structural case be unit-tested without a real empty x64 export set
+- [Phase 51]: D-51-14 anchor re-baselined by operator decision 2026-10-23: Hoard (63000) retired (51-UAT item 4, Wine-level crash); replacement The Age of Decadence (230070, x64 runtime-lookup path); evidence 51-UAT item 18
 
 ### Pending Todos
 
@@ -335,7 +336,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-23T04:30:58.812Z
+Last session: 2026-10-23T08:32:08.532Z
 Stopped at: Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)
 Resume file: None
 

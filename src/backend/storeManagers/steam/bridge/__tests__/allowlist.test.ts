@@ -208,6 +208,27 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     ).toBe(false)
   })
 
+  test('The Age of Decadence (230070) is seeded and play-verified, citing 51-UAT item 18, and is not known-bad (D-51-14 anchor)', () => {
+    const parsed = JSON.parse(
+      readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
+    )
+    const aod = parsed.seed.find((e: { appId: string }) => e.appId === '230070')
+    expect(aod.playVerified.evidence).toMatch(/51-UAT item 18/)
+    expect(aod.playVerified.date).toBe('2026-10-23')
+    expect(bridgeAllowlist.has('230070')).toBe(true)
+    expect(bridgeAllowlist.knownBadReason('230070')).toBeNull()
+  })
+
+  test('XCOM (200510) knownBad note cites 51-UAT item 17 as confirming the CEG diagnosis', () => {
+    const parsed = JSON.parse(
+      readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
+    )
+    const xcom = parsed.knownBad.find(
+      (e: { appId: string }) => e.appId === '200510'
+    )
+    expect(xcom.note).toMatch(/51-UAT item 17/)
+  })
+
   test('every seed playVerified record cites a UAT item; Avernum 6 has one, Avernum 5 does not', () => {
     const parsed = JSON.parse(
       readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')

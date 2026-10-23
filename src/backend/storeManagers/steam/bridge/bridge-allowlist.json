@@ -14,6 +14,15 @@
         "evidence": "51-UAT item 1 (fresh Mac, per-game bottle, Mac Steam In-Game, played 171s, port freed on quit); 24-UAT Gate 3 PASS 2026-07-21",
         "date": "2026-10-22"
       }
+    },
+    {
+      "appId": "230070",
+      "title": "The Age of Decadence",
+      "note": "Windows-only; ships both AoD.exe (x86) and AoD64.exe (x64). Played through the bridge on its x64 runtime-lookup path (SteamInternal_CreateInterface, like ELEX), not through bare accessors: D-51-14 replacement anchor chosen by operator decision 2026-10-23. 51-UAT item 18: per-game bottle GameLibSteamBridge-230070, steam_api64.dll placed == SHIM64 (848896 bytes), HELLO shim attached appid=230070, reached main menu and in-game, Mac Steam In-Game, 452s of play. Its required set includes SteamApps (STEAMAPPS_INTERFACE_VERSION008), SteamUserStats (011) and SteamRemoteStorage (013, stubbed).",
+      "playVerified": {
+        "evidence": "51-UAT item 18 (packaged debug bundle, per-game bottle GameLibSteamBridge-230070, x64 AoD64.exe, main menu and in-game, Mac Steam In-Game, played 452s)",
+        "date": "2026-10-23"
+      }
     }
   ],
   "knownBad": [
@@ -21,7 +30,7 @@
       "appId": "200510",
       "title": "XCOM: Enemy Unknown",
       "reason": "drm-wrapped",
-      "note": "51-UAT item 5 (2026-10-22): scan clean and the shim loads, but XComGame.exe reads PE resources STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writes XComGame.exe.<pid>.STEAMSTART, idles ~30s and exits without ever calling SteamAPI_Init -- Steam CEG waiting for a Windows Steam client a bridge bottle cannot provide. Inferred from a CrossOver --cx-log trace; confirmation via bottled Steam is todo 2026-10-22-confirm-xcom-ceg-diagnosis-via-bottled-steam.md."
+      "note": "51-UAT item 5 (2026-10-22): scan clean and the shim loads, but XComGame.exe reads PE resources STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writes XComGame.exe.<pid>.STEAMSTART, idles ~30s and exits without ever calling SteamAPI_Init -- Steam CEG waiting for a Windows Steam client a bridge bottle cannot provide. Inferred from a CrossOver --cx-log trace; CEG diagnosis CONFIRMED by 51-UAT item 17 (2026-10-23): under the bottled Windows Steam client XCOM: Enemy Within reaches its main menu, so CEG needs a Windows Steam client. The base Enemy Unknown build then crashes after its shell starts loading, a Wine-level crash CrossOver rates 3 stars; reason stays drm-wrapped because the bridge cannot satisfy CEG."
     },
     {
       "appId": "63000",

@@ -37,3 +37,7 @@ language/DLC-specific depot overriding the base depot, or the later manifest. Im
 rule in `resolveDepotPathCollisions`, then verify against the claim that actually won. Do not
 guess. Until then, the verifier should judge a collided path against the content that was
 written, not against an arbitrary claim, so the install is not reported as damaged.
+
+## Recurrence 2026-10-23 (51-28, 51-UAT item 17)
+
+Reproduced on the bottled-Steam route. After the operator chose "Use bottled Steam", GameLib's own depot download into GameLibSteam failed closed at 20:22:07 with the same 11 wrong-size files under `XEW\XComGame\...` (XComGame.upk, Engine.upk, DefaultGame.ini and others), correlating with `buildDepotPlan: UNRESOLVED cross-depot path collision ... claimed by depot(s) 200522,225341`. Bottled Steam later adopted and repaired the files by itself, which suggests the real client's winner rule is observable: compare the on-disk bytes after the Steam repair against each depot's manifest entry to see which claim wins.

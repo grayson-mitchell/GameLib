@@ -30,3 +30,7 @@ Outcomes:
   look at wine-level causes. The routing does not change.
 
 Related: `2026-10-22-detect-steam-ceg-drm-in-bridge-prescreen.md` (detect CEG automatically).
+
+## Closed
+
+2026-10-23, plan 51-28, 51-UAT item 17: CEG diagnosis confirmed. Under the bottled Windows Steam client, XCOM: Enemy Within reaches its main menu, so CEG needs a Windows Steam client and `drm-wrapped` stays. The base Enemy Unknown build crashes after its shell starts loading (Wine-level, CrossOver rates it 3 stars). The knownBad note now cites item 17.
