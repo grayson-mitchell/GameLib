@@ -26,6 +26,9 @@
  * Verified against a real zig 0.16.0 compile + Apple's bundled objdump
  * before this file was written (scratchpad proof, not guessed).
  *
+ * The compile uses the production release flags (SHIM_RELEASE_CFLAGS, -O2 with
+ * UBSan off), so the ABI is proven under the codegen that actually ships.
+ *
  * Skips (with an explicit, logged reason, never silently) off-darwin or
  * when zig is not resolvable via downloadZig -- on a cold machine with no
  * network and no cached .build-tools/zig, this suite still passes CI
@@ -40,6 +43,7 @@ import {
   createFakeHomeProfile,
   type FakeHomeProfile
 } from '../../src/backend/testUtils/fakeHomeProfile'
+import { SHIM_RELEASE_CFLAGS } from '../buildSteamBridgeShims'
 import { downloadZig } from '../downloadZig'
 import {
   generateDefFile,
@@ -225,6 +229,7 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
         '-target',
         zigTarget,
         '-shared',
+        ...SHIM_RELEASE_CFLAGS,
         '-o',
         outPath,
         cPath,
@@ -255,8 +260,15 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     }
     const disasm = await compileAndDisasm('x86_64-windows-gnu', 'x64')
     const block = extractFunctionBlock(disasm, TARGET_FUNC)
-    expect(block).toMatch(/mov[a-z]*\s+%rcx,/)
-    expect(block).toMatch(/mov[a-z]*\s+%rdx,/)
+    // At -O2 the stub never reads `self`, so %rcx is no longer copied
+    // anywhere and the old `mov %rcx,` matcher missed (quick 261023-tyf).
+    // The register roles are still asserted: sretOut (%rdx) is both
+    // returned in %rax and the store target, and %rcx (self) is NOT used
+    // as the sret pointer (the free-function shift would do exactly that).
+    expect(block).toMatch(/mov[a-z]*\s+%rdx,\s*%rax/)
+    expect(block).toMatch(/mov[a-z]*\s+\$0x0,\s*\(%rdx\)/)
+    expect(block).not.toMatch(/\(%rcx\)/)
+    expect(block).not.toMatch(/mov[a-z]*\s+%rcx,\s*%rax/)
     expect(lastReturnInstruction(block)).toMatch(/ret[a-z]*\s*$/)
   }, 180000)
 

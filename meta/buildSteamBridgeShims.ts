@@ -14,7 +14,7 @@
  *
  *   2. Cross-compiles native/steam-bridge/generated/steam_api_shim.c + .def
  *      (Plan 24-01's committed generator output) with the pinned zig
- *      toolchain (meta/downloadZig.ts) via `zig cc -target x86-windows-gnu`
+ *      toolchain, as a RELEASE build (-O2, UBSan off; SHIM_RELEASE_CFLAGS), (meta/downloadZig.ts) via `zig cc -target x86-windows-gnu`
  *      -> `public/bin/${targetArch}/darwin/steam_api.dll` -- the SINGLE
  *      SHARED BUNDLED LOCATION (BLOCKER 2), matching
  *      src/backend/constants/paths.ts's `builtBridgeShimPath` byte-for-byte.
@@ -343,8 +343,27 @@ export function buildHelperCompileArgv(arch: string = resolveBridgeArch()): {
 }
 
 /**
+ * Release flags for BOTH shim compiles (quick 261023-tyf). Without an -O flag
+ * zig defaults to Debug with UBSan, and the sanitizer rejects input that is
+ * legal for the platform: 32-bit MSVC code passes 4-byte-aligned
+ * `LARGE_INTEGER*`, and spike 033 run C aborted Hoard with `panic: member
+ * access within misaligned address`. UBSan is turned OFF, not into trap mode:
+ * trap mode would still kill the game on the same legal input (ud2 instead of
+ * a readable panic). One flag set serves dev and packaged builds, because dev
+ * builds place these same DLLs into real bottles. `-fno-sanitize=undefined`
+ * is explicit although bare -O2 also drops UBSan under zig 0.16.0, so the
+ * intent does not depend on how a future zig maps -O2. Measured sizes:
+ * x86 894464 -> 286720, x64 848896 -> 223744.
+ */
+// Exported only for meta/__tests__/buildSteamBridgeShims.test.ts and
+// meta/__tests__/shimAbiGate.test.ts (outside this gate's tsconfig.json
+// scope -- see resolveBridgeArch above).
+// ts-prune-ignore-next
+export const SHIM_RELEASE_CFLAGS = ['-O2', '-fno-sanitize=undefined'] as const
+
+/**
  * Argv-form (never a shell string, T-24-06) command for cross-compiling the
- * PE shim with the pinned zig toolchain. Exported so tests can assert the
+ * PE shim (a release build, see SHIM_RELEASE_CFLAGS) with the pinned zig toolchain. Exported so tests can assert the
  * `-target x86-windows-gnu` flag, the 24-01 generated source as input, and
  * the single shared output location (BLOCKER 2) without invoking real zig.
  */
@@ -362,6 +381,7 @@ export function buildShimCompileArgv(
       '-target',
       'x86-windows-gnu',
       '-shared',
+      ...SHIM_RELEASE_CFLAGS,
       '-o',
       shimOutputPath(arch),
       SHIM_SOURCE_PATH,
@@ -378,6 +398,7 @@ export function buildShimCompileArgv(
  * targets with no forked generator), cross-compiled a SECOND time with
  * `-target x86_64-windows-gnu` against the x64 export table 51-15 Task 1
  * generated (`steam_api64.def`), to the Win64 shim's own bundled location.
+ * Also a release build (SHIM_RELEASE_CFLAGS).
  */
 // Exported only for meta/__tests__/buildSteamBridgeShims.test.ts (outside
 // this gate's tsconfig.json scope -- see resolveBridgeArch above).
@@ -393,6 +414,7 @@ export function buildShim64CompileArgv(
       '-target',
       'x86_64-windows-gnu',
       '-shared',
+      ...SHIM_RELEASE_CFLAGS,
       '-o',
       shim64OutputPath(arch),
       SHIM_SOURCE_PATH,

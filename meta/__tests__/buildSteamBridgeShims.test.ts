@@ -12,6 +12,7 @@ import {
   pruneShimBuildByproducts,
   resolveBridgeArch,
   SHIM64_BUILD_BYPRODUCTS,
+  SHIM_RELEASE_CFLAGS,
   SHIM_BUILD_BYPRODUCTS,
   shim64ByproductPaths,
   shim64OutputPath,
@@ -135,6 +136,18 @@ describe('buildSteamBridgeShims', () => {
       )
       expect(command).toBe(join('.build-tools', 'zig', 'zig'))
     })
+
+    it('is a release build: -O2 and UBSan off, no sanitizer flags (quick 261023-tyf)', () => {
+      const { args } = buildShimCompileArgv('/path/to/zig', 'arm64')
+      expect(args).toContain('-O2')
+      expect(args).toContain('-fno-sanitize=undefined')
+      expect(args.filter((a) => a.startsWith('-fsanitize'))).toEqual([])
+      expect(args.filter((a) => /^-O/.test(a))).toHaveLength(1)
+      expect(args.indexOf('-O2')).toBeLessThan(args.indexOf('-o'))
+      expect(args.indexOf('-fno-sanitize=undefined')).toBeLessThan(
+        args.indexOf('-o')
+      )
+    })
   })
 
   describe('buildShim64CompileArgv (51-15 Task 2: second compile target -- steam_api64.dll)', () => {
@@ -166,6 +179,30 @@ describe('buildSteamBridgeShims', () => {
         'arm64'
       )
       expect(command).toBe(join('.build-tools', 'zig', 'zig'))
+    })
+
+    it('is a release build: -O2 and UBSan off, no sanitizer flags (quick 261023-tyf)', () => {
+      const { args } = buildShim64CompileArgv('/path/to/zig', 'arm64')
+      expect(args).toContain('-O2')
+      expect(args).toContain('-fno-sanitize=undefined')
+      expect(args.filter((a) => a.startsWith('-fsanitize'))).toEqual([])
+      expect(args.filter((a) => /^-O/.test(a))).toHaveLength(1)
+      expect(args.indexOf('-O2')).toBeLessThan(args.indexOf('-o'))
+      expect(args.indexOf('-fno-sanitize=undefined')).toBeLessThan(
+        args.indexOf('-o')
+      )
+    })
+  })
+
+  // Spike 033 run C: Hoard aborted with `panic: member access within
+  // misaligned address ... requires 8 byte alignment` on a legal 4-byte
+  // aligned LARGE_INTEGER* because zig defaulted to Debug + UBSan.
+  describe('SHIM_RELEASE_CFLAGS (quick 261023-tyf: release build, UBSan off)', () => {
+    it('is exactly -O2 plus an explicit UBSan-off', () => {
+      expect([...SHIM_RELEASE_CFLAGS]).toEqual([
+        '-O2',
+        '-fno-sanitize=undefined'
+      ])
     })
   })
 
