@@ -181,6 +181,111 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
     expect(existsSync(join(gameDir, BRIDGE_CONFIG_FILENAME))).toBe(false)
   })
 
+  describe('quick 261023-ue0: cfg beside every placed shim', () => {
+    const BOTTLE = 'GameLibSteamBridge-206060'
+
+    test('Unity layout: cfg in the exe dir AND the shim subdir, identical content', () => {
+      const pluginsDir = join(
+        gameDir,
+        "Vampire's Fall Origins_Data",
+        'Plugins',
+        'x86_64'
+      )
+      mkdirSync(pluginsDir, { recursive: true })
+      const exe = join(gameDir, "Vampire's Fall Origins.exe")
+
+      const result = writeBridgeConfig({
+        exePath: exe,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        shimPaths: [join(pluginsDir, 'steam_api64.dll')]
+      })
+
+      const exeCfg = join(gameDir, BRIDGE_CONFIG_FILENAME)
+      const shimCfg = join(pluginsDir, BRIDGE_CONFIG_FILENAME)
+      expect(result).toEqual({
+        status: 'written',
+        path: exeCfg,
+        extraPaths: [shimCfg]
+      })
+      const expected = `port=${PORT}\nappid=${APP_ID}\n`
+      expect(readFileSync(exeCfg, 'utf-8')).toBe(expected)
+      expect(readFileSync(shimCfg, 'utf-8')).toBe(expected)
+      expect(existsSync(`${exeCfg}.tmp`)).toBe(false)
+      expect(existsSync(`${shimCfg}.tmp`)).toBe(false)
+    })
+
+    test('a shim beside the exe writes exactly one cfg and no extraPaths key', () => {
+      const result = writeBridgeConfig({
+        exePath: gameExePath,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        shimPaths: [join(gameDir, 'steam_api.dll')]
+      })
+
+      expect(result).toEqual({
+        status: 'written',
+        path: join(gameDir, BRIDGE_CONFIG_FILENAME)
+      })
+      expect('extraPaths' in result).toBe(false)
+    })
+
+    test('two shims in the same subdir dedupe to one extra write', () => {
+      const sub = join(gameDir, 'Plugins')
+      mkdirSync(sub, { recursive: true })
+
+      const result = writeBridgeConfig({
+        exePath: gameExePath,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        shimPaths: [join(sub, 'steam_api.dll'), join(sub, 'steam_api64.dll')]
+      })
+
+      expect(result).toEqual({
+        status: 'written',
+        path: join(gameDir, BRIDGE_CONFIG_FILENAME),
+        extraPaths: [join(sub, BRIDGE_CONFIG_FILENAME)]
+      })
+    })
+
+    test('a shimPath outside the bottle rejects the call with nothing written', () => {
+      mkdirSync(join(root, 'outside'), { recursive: true })
+
+      const result = writeBridgeConfig({
+        exePath: gameExePath,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        shimPaths: [join(root, 'outside', 'steam_api64.dll')]
+      })
+
+      expect(result.status).toBe('error')
+      expect(existsSync(join(gameDir, BRIDGE_CONFIG_FILENAME))).toBe(false)
+      expect(existsSync(join(root, 'outside', BRIDGE_CONFIG_FILENAME))).toBe(
+        false
+      )
+    })
+
+    test('a write failure on an extra copy returns an error, never throws, leaves no .tmp', () => {
+      // Directory does not exist, so writeFileSync throws.
+      const missing = join(gameDir, 'does-not-exist')
+
+      const result = writeBridgeConfig({
+        exePath: gameExePath,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        shimPaths: [join(missing, 'steam_api64.dll')]
+      })
+
+      expect(result.status).toBe('error')
+      expect(existsSync(missing)).toBe(false)
+    })
+  })
+
   test('no partial .tmp file survives a rejected call', () => {
     writeBridgeConfig({
       exePath: gameExePath,

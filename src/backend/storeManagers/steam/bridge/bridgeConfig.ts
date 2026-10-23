@@ -56,10 +56,14 @@ interface WriteBridgeConfigArgs {
    * without hardcoding it into the generated source. Omitted entirely when
    * not supplied -- no empty `iface.` lines are ever written. */
   interfaceVersions?: Record<string, string>
+  /** Absolute paths of GameLib-placed shim DLLs for this appId. The shim
+   * resolves the cfg beside its own module (`load_bridge_port_once`), so a
+   * copy must sit in each of their directories (quick 261023-ue0). */
+  shimPaths?: string[]
 }
 
 type WriteBridgeConfigResult =
-  | { status: 'written'; path: string }
+  | { status: 'written'; path: string; extraPaths?: string[] }
   | { status: 'error'; error: string }
 
 /**
@@ -93,6 +97,14 @@ function isContainedWithin(
  *     chokepoint every other bridge-bottle entry point uses).
  *  4. `exePath` must resolve INSIDE that bottle's directory -- rejects a
  *     path escaping the bottle before touching the filesystem (T-51-02).
+ *  5. every `shimPaths` entry must resolve inside the bottle too
+ *     (quick 261023-ue0), validated before any write.
+ *
+ * The cfg goes beside the exe AND beside every placed shim (quick
+ * 261023-ue0: the shim reads it beside its OWN module, which for
+ * runtime-loaded Unity titles is `<X>_Data/Plugins/x86_64`). Stale-port
+ * reasoning: N copies carry no extra staleness, because every copy is
+ * rewritten on each launch with the fresh helper port.
  *
  * Never throws -- every failure mode (including an fs error during the
  * write itself) returns a typed `{ status: 'error', error }`, and the
@@ -102,7 +114,8 @@ function isContainedWithin(
 export function writeBridgeConfig(
   args: WriteBridgeConfigArgs
 ): WriteBridgeConfigResult {
-  const { exePath, bottleName, appId, port, interfaceVersions } = args
+  const { exePath, bottleName, appId, port, interfaceVersions, shimPaths } =
+    args
 
   if (!NUMERIC_APP_ID.test(appId)) {
     logWarning(
@@ -142,7 +155,25 @@ export function writeBridgeConfig(
     }
   }
 
-  const configPath = join(dirname(resolvedExePath), BRIDGE_CONFIG_FILENAME)
+  // Guard 5: every shimPath must resolve inside the bottle. Validated for ALL
+  // paths before ANY write so one escape rejects the whole call.
+  const targetDirs: string[] = [dirname(resolvedExePath)]
+  for (const shimPath of shimPaths ?? []) {
+    const resolvedShim = resolve(shimPath)
+    if (!isContainedWithin(bottleDir, resolvedShim)) {
+      logWarning(
+        `writeBridgeConfig: rejected shimPath "${shimPath}" -- resolves outside bridge bottle "${sanitizedBottleName}" (T-51-02, quick 261023-ue0)`,
+        LogPrefix.Steam
+      )
+      return {
+        status: 'error',
+        error: `Shim path is outside the bridge bottle: "${shimPath}"`
+      }
+    }
+    const shimDir = dirname(resolvedShim)
+    if (!targetDirs.includes(shimDir)) targetDirs.push(shimDir)
+  }
+
   const lines = [`port=${port}`, `appid=${appId}`]
   if (interfaceVersions) {
     for (const [family, version] of Object.entries(interfaceVersions)) {
@@ -150,26 +181,37 @@ export function writeBridgeConfig(
     }
   }
   const content = lines.join('\n') + '\n'
-  const tmpPath = `${configPath}.tmp`
 
-  try {
-    writeFileSync(tmpPath, content, 'utf-8')
-    renameSync(tmpPath, configPath)
-  } catch (error) {
+  const configPaths: string[] = []
+  for (const dir of targetDirs) {
+    const configPath = join(dir, BRIDGE_CONFIG_FILENAME)
+    const tmpPath = `${configPath}.tmp`
     try {
-      rmSync(tmpPath, { force: true })
-    } catch {
-      // best-effort cleanup only -- the real error below is what matters.
+      writeFileSync(tmpPath, content, 'utf-8')
+      renameSync(tmpPath, configPath)
+    } catch (error) {
+      try {
+        rmSync(tmpPath, { force: true })
+      } catch {
+        // best-effort cleanup only -- the real error below is what matters.
+      }
+      logError(
+        [
+          `writeBridgeConfig: failed to write config "${configPath}" for appId ${appId}`,
+          error
+        ],
+        LogPrefix.Steam
+      )
+      return {
+        status: 'error',
+        error: `Failed to write bridge config: ${String(error)}`
+      }
     }
-    logError(
-      [`writeBridgeConfig: failed to write config for appId ${appId}`, error],
-      LogPrefix.Steam
-    )
-    return {
-      status: 'error',
-      error: `Failed to write bridge config: ${String(error)}`
-    }
+    configPaths.push(configPath)
   }
 
-  return { status: 'written', path: configPath }
+  const [path, ...extraPaths] = configPaths
+  return extraPaths.length > 0
+    ? { status: 'written', path, extraPaths }
+    : { status: 'written', path }
 }
