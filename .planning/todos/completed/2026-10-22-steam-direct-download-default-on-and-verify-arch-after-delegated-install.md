@@ -42,3 +42,13 @@ giving up.
 Related noise seen in the same run: `Library: 1 owned Steam game(s) silently excluded from the
 library grid by a stale nonAvailableGames entry: 63000` (20:28:22, 20:30:54, 20:30:55) after the
 native uninstall.
+
+## Closed
+
+Closed 2026-10-24, quick 261024-exo.
+
+1. `enableSteamNativeInstall` defaults to `true` (factory default in `config.ts`, `nativeInstallSetting.ts` fallback, renderer `useSetting` fallback). A persisted `false` is respected with no migration. Caveat: first launch flushes every factory default to disk, so profiles created before this change already hold an explicit `false` and stay OFF until toggled once; only fresh profiles get the new default.
+2. Delegated polls (`steam://install` and the bottled-Steam dispatch) pass `delegatedToSteamClient` and skip the 20-tick grace window. They stop when the manifest is fully installed, after 600 ticks (~30 min) with no manifest, after 10 consecutive absent ticks once a manifest was seen, or at `MAX_TICKS`. GameLib's own depot downloads keep the old behaviour.
+3. The poll already ran `verifyMacArchGroundTruth` on the installed transition — HOARD was missed only because the poll died at 60 s. Added a focus-time catch-up in `refreshInstallState()` for native games that flip to installed with no live poll (skipped when a poll exists, so no double prompt).
+
+Deferred: the stale `nonAvailableGames` log noise; the arch check for a delegated install that finishes while GameLib is closed (needs boot-time binary scanning, constrained by the sidecar exit contract). Accepted trade-off: a cancelled Steam install dialog leaves the queue entry for up to ~30 min.

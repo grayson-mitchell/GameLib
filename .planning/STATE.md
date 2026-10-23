@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
 Plan: 11 of 30
 Status: Ready to execute
-Last activity: 2026-10-23
+Last activity: 2026-10-24 - Completed quick task 261024-exo: Steam direct download default ON + arch check after delegated install
 
 Progress: [█████████░] 93%
 
@@ -330,6 +330,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261024-eg9 | Packaged build on a fresh Mac: `tauri:dev:packaged` now runs `build:sidecar-sea`; `buildSidecarSea` detects a shared-libnode base (Homebrew) and falls back to the SHA-256-verified official node; postject errors carry stdout; `lzmaNativeBinding` R6/S11 fixed test-side (Node 22's lazy rimraf captured a `readdirSync` spy). | 2026-10-24 | 4ff4b2719, c93c35648, e18994e2a | Done. jest 140/140 on the four suites, codecheck clean, planning-gates 12/12. Full `tauri:dev:packaged` not run end to end. | [261024-eg9-fix-packaged-build-on-fresh-mac-chain-se](./quick/261024-eg9-fix-packaged-build-on-fresh-mac-chain-se/) |
 | fast | Add/Remove shortcuts hidden for Steam games in GameSubMenu (stubs only logged, so the item notified a false "Shortcuts were created"); todo filed for the real feature. | 2026-10-24 | 08a964f8f | | — |
 | fast | Prescreen backslash todo annotated: fix already landed in `2ba070588` (51-22), wider `steam/` sweep found nothing else; todo stays pending, closed by 51-30 item 19. | 2026-10-24 | ee974f8df | | — |
+| 261024-exo | Steam direct download (`enableSteamNativeInstall`) defaults ON for fresh profiles (persisted `false` respected — existing profiles keep their saved value); delegated `steam://install` / bottled-Steam polls drop the 60 s grace window (stop on installed, 600 ticks with no manifest, 10 absent ticks after one was seen, or `MAX_TICKS`), so `verifyMacArchGroundTruth` / i386 recovery now fires after a Steam-delegated install; focus `refreshInstallState()` catches native installs with no live poll. Deferred: stale `nonAvailableGames` noise, arch check for installs finishing while GameLib is closed. | 2026-10-24 | 934ae58b8, ff50f6747, 27837977c | unit-tested (jest 1838/1838, codecheck clean); live gate pending | [261024-exo-default-steam-direct-download-on-verify](./quick/261024-exo-default-steam-direct-download-on-verify/) |
 
 ## Deferred Items
 
