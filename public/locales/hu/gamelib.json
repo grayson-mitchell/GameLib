@@ -169,6 +169,15 @@
         "refresh-rating": "Értékelés frissítése"
     },
     "installFlows": {
+        "crossoverRating": {
+            "cancel": "Cancel",
+            "installAnyway": "Install anyway",
+            "knownBadMessage": "CodeWeavers rates {{title}} {{rating}} of 5 for CrossOver on macOS, which means it is known not to run well. It may install fine and then fail to start. Install it anyway?",
+            "knownBadTitle": "This game is known not to run well under CrossOver",
+            "mayHaveProblemsMessage": "CodeWeavers rates {{title}} {{rating}} of 5 for CrossOver on macOS, so it may have problems. Install it anyway?",
+            "mayHaveProblemsTitle": "This game may have problems under CrossOver",
+            "unratedNotice": "No CrossOver rating found for this game. CodeWeavers has no compatibility report for it, so there is no early warning either way."
+        },
         "diskSpaceFreeOfTotal": "{{free}} szabad a {{total}}-ból",
         "importConfirmLabel": "Ennek a telepítésnek a használata",
         "importDoorLabel": "Meglévő telepítés megkeresése…",

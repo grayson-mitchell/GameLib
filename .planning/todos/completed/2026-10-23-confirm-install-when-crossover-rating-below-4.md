@@ -42,3 +42,22 @@ Decisions needed before coding (hence `ready: human`):
    macOS (Epic/GOG/Amazon through CrossOver)?
 4. Should a later "don't ask again for this game" persist, and should the census/known-bad list
    feed the same dialog (e.g. a `does-not-run` known-bad title shows its reason too)?
+
+## Closed 2026-10-24: confirm before installing a title rated below 4 of 5
+
+Done in quick task 261024-ho4.
+
+- Ratings 1-3 open a confirm dialog that states the rating ("rated N of 5"). Ratings <= 2 use the
+  stronger "known not to work" wording; a 3 uses the milder "may have problems" wording.
+  Ratings 4-5 install with no prompt.
+- A `null` rating (looked up, no CodeWeavers record) shows a passive "no CrossOver rating found"
+  notice in WineSelector and no confirm. An absent key shows nothing.
+- Covers all four stores through the Steam, Download (Epic/GOG/Amazon) and ThirdParty install
+  dialogs, for Windows titles installed via CrossOver on macOS. The Install button is never
+  disabled; Cancel leaves the install modal open and starts nothing.
+- No "don't ask again" persistence, and known-bad list reasons are not fed into the dialog.
+- Shared logic lives in `src/frontend/screens/Library/components/InstallModal/crossoverInstallRisk.ts`.
+  The WineSelector comment that forbade gating or delaying the install was rewritten to record this
+  deliberate reversal (the `disabled` prohibition still holds).
+- Live verification on the Mac is still owed: ELEX 411300 and Hoard 63000 should show the confirm,
+  Cancel should leave the modal open, and Install anyway should proceed as before.
