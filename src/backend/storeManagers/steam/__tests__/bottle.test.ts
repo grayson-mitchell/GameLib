@@ -30,7 +30,10 @@ import { checkWineBeforeLaunch, downloadFile, spawnAsync } from 'backend/utils'
 import { runWineCommand } from 'backend/launcher'
 import { steamBottleConfigStore } from '../electronStores'
 import { library } from '../state'
-import { startBottleProcessMonitor } from '../bottleProcessMonitor'
+import {
+  startBottleProcessMonitor,
+  stopBottleProcessMonitor
+} from '../bottleProcessMonitor'
 import {
   getBottleDir,
   getBottleSteamappsDir,
@@ -157,6 +160,7 @@ const mockedRunWineCommand = runWineCommand as jest.Mock
 const mockedAppHide = app.hide as jest.Mock
 const mockedLogWarning = logWarning as jest.Mock
 const mockedStartBottleProcessMonitor = jest.mocked(startBottleProcessMonitor)
+const mockedStopBottleProcessMonitor = jest.mocked(stopBottleProcessMonitor)
 
 const defaultWine: WineInstallation = {
   bin: '/usr/bin/wine',
@@ -1290,6 +1294,36 @@ describe('bottle.ts', () => {
             installPath: seededInstallPath
           })
         )
+      })
+
+      test('launch starts the monitor BEFORE runWineCommand (261024-gvu)', async () => {
+        mockedExistsSync.mockReturnValue(true)
+        mockedGetNodefault.mockReturnValue(undefined)
+        library.set(GOOD_APP_ID, {
+          install: { install_path: seededInstallPath }
+        } as never)
+
+        await tellBottledSteamToLaunch(GOOD_APP_ID)
+
+        const startOrder =
+          mockedStartBottleProcessMonitor.mock.invocationCallOrder[0]
+        const wineOrder = mockedRunWineCommand.mock.invocationCallOrder[0]
+        expect(startOrder).toBeLessThan(wineOrder)
+        expect(mockedStopBottleProcessMonitor).not.toHaveBeenCalled()
+      })
+
+      test('launch whose runWineCommand rejects stops the monitor and returns error (261024-gvu)', async () => {
+        mockedExistsSync.mockReturnValue(true)
+        mockedGetNodefault.mockReturnValue(undefined)
+        library.set(GOOD_APP_ID, {
+          install: { install_path: seededInstallPath }
+        } as never)
+        mockedRunWineCommand.mockRejectedValue(new Error('wine down'))
+
+        const result = await tellBottledSteamToLaunch(GOOD_APP_ID)
+
+        expect(result.status).toBe('error')
+        expect(mockedStopBottleProcessMonitor).toHaveBeenCalledWith(GOOD_APP_ID)
       })
 
       test('install and uninstall do NOT start a bottle process monitor (LD-1)', async () => {

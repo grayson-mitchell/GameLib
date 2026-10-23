@@ -21,7 +21,9 @@
  * resolves correctly once the game actually starts, however long that takes.
  *
  * Exports: `startBottleProcessMonitor` (returns a `BottleProcessMonitorHandle`
- * or null), `stopBottleProcessMonitor`, `__stopAllBottleProcessMonitors` and
+ * or null), `stopBottleProcessMonitor`, `getBottleProcessMonitorPhase`
+ * (quick/261024-gvu: 'starting' | 'running' | null, the single-flight guard's
+ * probe), `__stopAllBottleProcessMonitors` and
  * `__getActiveMonitorKindForTests`. Production never calls the test hooks —
  * they exist so tests can guarantee `jest.getTimerCount()` returns to 0
  * between cases and observe the default `kind`.
@@ -92,6 +94,8 @@ interface MonitorEntry {
   matchedAt: number
   /** Guards onStopped to fire at most once per monitor. */
   stoppedFired: boolean
+  /** Guards the single terminal 'done' status (quick/261024-gvu). */
+  terminalSent: boolean
   /** Carried on the entry so a test can observe the default without the
    * poll loop needing to branch on it (see StartBottleProcessMonitorArgs's
    * own `kind` doc). */
@@ -207,6 +211,22 @@ function trackedSleep(entry: MonitorEntry, ms: number): Promise<void> {
     }, ms)
     entry.timers.add(handle)
     handle.unref?.()
+  })
+}
+
+/**
+ * quick/261024-gvu: send the one terminal `done` status for a monitor, at most
+ * once. The monitor owns the backend `launching` hold (see
+ * startBottleProcessMonitor), so every exit path that is not a supersede must
+ * clear it through here.
+ */
+function sendTerminalDoneOnce(appId: string, entry: MonitorEntry): void {
+  if (entry.terminalSent) return
+  entry.terminalSent = true
+  sendFrontendMessage('gameStatusUpdate', {
+    appName: appId,
+    runner: 'steam',
+    status: 'done'
   })
 }
 
@@ -330,13 +350,7 @@ async function runPollLoop(
           `bottleProcessMonitor [${appId}]: giving up after ${MAX_CONSECUTIVE_SPAWN_FAILURES} consecutive ps failures`,
           LogPrefix.Steam
         )
-        if (entry.everMatched) {
-          sendFrontendMessage('gameStatusUpdate', {
-            appName: appId,
-            runner: 'steam',
-            status: 'done'
-          })
-        }
+        sendTerminalDoneOnce(appId, entry)
         // Review WR-05: the give-up path must also stop the helper.
         fireStoppedOnce(appId, entry)
         clearEntry(appId, entry)
@@ -353,11 +367,7 @@ async function runPollLoop(
         `bottleProcessMonitor [${appId}]: matched process(es) gone after ${elapsedSeconds}s of play — game stopped`,
         LogPrefix.Steam
       )
-      sendFrontendMessage('gameStatusUpdate', {
-        appName: appId,
-        runner: 'steam',
-        status: 'done'
-      })
+      sendTerminalDoneOnce(appId, entry)
       // Phase 51 Plan 01 (D-51-01): fires exactly once, here, on the ONLY
       // branch that observes the game's own process(es) genuinely gone --
       // never on the `stopBottleProcessMonitor()`-cancels-first path below,
@@ -457,7 +467,7 @@ export function startBottleProcessMonitor(
   }
   const lowerPrefix = prefix.toLowerCase()
 
-  stopBottleProcessMonitor(appId)
+  cancelMonitor(appId)
 
   const entry: MonitorEntry = {
     cancelled: false,
@@ -466,9 +476,22 @@ export function startBottleProcessMonitor(
     everMatched: false,
     matchedAt: 0,
     stoppedFired: false,
+    terminalSent: false,
     kind
   }
   activeMonitors.set(appId, entry)
+
+  // quick/261024-gvu: Steam launches bypass launcher.ts launchEventCallback
+  // (steamFlowRegistration handleLaunch / protocol.ts call dispatchSteamLaunch
+  // directly), so nothing else ever emits `launching` for them; the frontend's
+  // local playClicked dropped as soon as the launch IPC resolved on hand-off,
+  // flickering Play until `playing`. The monitor holds `launching` from here
+  // (before the launch IPC resolves) until started / gave up / stopped.
+  sendFrontendMessage('gameStatusUpdate', {
+    appName: appId,
+    runner: 'steam',
+    status: 'launching'
+  })
 
   void (async () => {
     try {
@@ -478,6 +501,7 @@ export function startBottleProcessMonitor(
         [`bottleProcessMonitor [${appId}]: poll loop failed`, error],
         LogPrefix.Steam
       )
+      sendTerminalDoneOnce(appId, entry)
       clearEntry(appId, entry)
     }
   })()
@@ -503,6 +527,7 @@ export function startBottleProcessMonitor(
             `bottleProcessMonitor [${appId}]: launcher exited before any game process matched — stopping`,
             LogPrefix.Steam
           )
+          sendTerminalDoneOnce(appId, entry)
           fireStoppedOnce(appId, entry)
           clearEntry(appId, entry)
         } catch (error) {
@@ -520,13 +545,33 @@ export function startBottleProcessMonitor(
 export function stopBottleProcessMonitor(appId: string): void {
   const entry = activeMonitors.get(appId)
   if (!entry) return
+  sendTerminalDoneOnce(appId, entry)
   clearEntry(appId, entry)
 }
 
-/** Test-only teardown hook: cancel every registered monitor. */
+/** Silent cancel (supersede / test teardown): no terminal status emitted. */
+function cancelMonitor(appId: string): void {
+  const entry = activeMonitors.get(appId)
+  if (!entry) return
+  clearEntry(appId, entry)
+}
+
+/**
+ * quick/261024-gvu: 'starting' while a monitor is live and no game process has
+ * matched yet, 'running' once one has, null when no live monitor exists.
+ */
+export function getBottleProcessMonitorPhase(
+  appId: string
+): 'starting' | 'running' | null {
+  const entry = activeMonitors.get(appId)
+  if (!entry || entry.cancelled) return null
+  return entry.everMatched ? 'running' : 'starting'
+}
+
+/** Test-only teardown hook: cancel every registered monitor (silently). */
 export function __stopAllBottleProcessMonitors(): void {
   for (const appId of Array.from(activeMonitors.keys())) {
-    stopBottleProcessMonitor(appId)
+    cancelMonitor(appId)
   }
 }
 

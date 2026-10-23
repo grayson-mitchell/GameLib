@@ -26,6 +26,7 @@ import { raiseWineGameWindow } from 'backend/utils/wineWindowRaise'
 import {
   startBottleProcessMonitor,
   stopBottleProcessMonitor,
+  getBottleProcessMonitorPhase,
   __stopAllBottleProcessMonitors,
   __getActiveMonitorKindForTests
 } from '../bottleProcessMonitor'
@@ -155,6 +156,11 @@ const installPath = join(
 const matchedPsLine =
   '  4242 C:\\Program Files (x86)\\Steam\\steamapps\\common\\Fallout 2\\fallout2.exe -windowed'
 
+const statusesFor = (appName: string) =>
+  mockedSendFrontendMessage.mock.calls
+    .filter((c) => c[0] === 'gameStatusUpdate' && c[1].appName === appName)
+    .map((c) => c[1].status)
+
 const flushMicrotasks = async (times = 10) => {
   for (let i = 0; i < times; i++) await Promise.resolve()
 }
@@ -198,7 +204,7 @@ describe('bottleProcessMonitor.ts', () => {
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
 
-    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(statusesFor('38410')).toEqual(['launching', 'playing'])
     expect(mockedSendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
       appName: '38410',
       runner: 'steam',
@@ -314,7 +320,7 @@ describe('bottleProcessMonitor.ts', () => {
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
 
-    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(statusesFor('38410')).toEqual(['launching', 'playing'])
     expect(mockedSendFrontendMessage).toHaveBeenCalledWith('gameStatusUpdate', {
       appName: '38410',
       runner: 'steam',
@@ -353,7 +359,7 @@ describe('bottleProcessMonitor.ts', () => {
     await jest.advanceTimersByTimeAsync(1500 * 3)
     await flushMicrotasks()
 
-    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+    expect(statusesFor('12345')).toEqual(['launching'])
 
     __stopAllBottleProcessMonitors()
     jest.useRealTimers()
@@ -375,16 +381,16 @@ describe('bottleProcessMonitor.ts', () => {
       await jest.advanceTimersByTimeAsync(1500)
       await flushMicrotasks()
     }
-    expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
+    expect(statusesFor('38410')).toEqual(['launching'])
 
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
-    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(statusesFor('38410')).toEqual(['launching', 'playing'])
 
     // sixth, still-matching tick: no re-emission.
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
-    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(statusesFor('38410')).toEqual(['launching', 'playing'])
 
     __stopAllBottleProcessMonitors()
     jest.useRealTimers()
@@ -402,7 +408,7 @@ describe('bottleProcessMonitor.ts', () => {
     startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
     await jest.advanceTimersByTimeAsync(1500)
     await flushMicrotasks()
-    expect(mockedSendFrontendMessage).toHaveBeenCalledTimes(1)
+    expect(statusesFor('38410')).toEqual(['launching', 'playing'])
 
     mockedSendFrontendMessage.mockClear()
     mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
@@ -423,7 +429,9 @@ describe('bottleProcessMonitor.ts', () => {
     // resolves empty), so it never emits playing; the cancelled first
     // monitor's pending timer was cleared, so it cannot emit a leaked done.
     expect(playingCalls.length).toBe(0)
-    expect(doneCalls.length).toBeLessThanOrEqual(1)
+    // quick/261024-gvu: supersede is silent — only the fresh 'launching'.
+    expect(doneCalls.length).toBe(0)
+    expect(statusesFor('38410')).toEqual(['launching'])
 
     __stopAllBottleProcessMonitors()
     jest.useRealTimers()
@@ -642,6 +650,7 @@ describe('bottleProcessMonitor.ts', () => {
       handle?.launcherExited()
       await flushMicrotasks()
       expect(onStopped).toHaveBeenCalledTimes(1)
+      expect(statusesFor('38410')).toEqual(['launching', 'done'])
       expect(
         mockedLogInfo.mock.calls.some((c) =>
           JSON.stringify(c).includes(
@@ -727,6 +736,8 @@ describe('bottleProcessMonitor.ts', () => {
         await flushMicrotasks()
       }
       expect(onStopped).toHaveBeenCalledTimes(1)
+      // quick/261024-gvu: give-up with no match now clears Launching.
+      expect(statusesFor('38410')).toEqual(['launching', 'done'])
       expect(jest.getTimerCount()).toBe(0)
       jest.useRealTimers()
     })
@@ -764,6 +775,123 @@ describe('bottleProcessMonitor.ts', () => {
   })
 
   // Phase 51 Plan 08 (D-51-16, folded todo): waiting-state emission.
+  describe('launching hold (261024-gvu)', () => {
+    test('cause=none past the grace window never gives up: no done, phase starting, one waiting message', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+
+      // 20s grace + 15s + 15s re-checks, all with an empty ps.
+      await jest.advanceTimersByTimeAsync(55000)
+      await flushMicrotasks()
+
+      expect(statusesFor('38410')).toEqual(['launching'])
+      expect(getBottleProcessMonitorPhase('38410')).toBe('starting')
+      const noneLogs = mockedLogInfo.mock.calls.filter((c) =>
+        JSON.stringify(c).includes('[bottle-waiting] appId=38410 cause=none')
+      )
+      expect(noneLogs.length).toBe(1)
+      const waiting = mockedSendFrontendMessage.mock.calls.filter(
+        (c) => c[0] === 'steamBottleLaunchWaiting'
+      )
+      expect(waiting.length).toBe(1)
+      expect(waiting[0][1]).toEqual({ appName: '38410', detectedCause: null })
+
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test('phase is null before start, running after the first match, null after gone with exactly one done', async () => {
+      expect(getBottleProcessMonitorPhase('38410')).toBeNull()
+      mockedSpawnAsync
+        .mockResolvedValueOnce({ code: 0, stdout: matchedPsLine, stderr: '' })
+        .mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      expect(getBottleProcessMonitorPhase('38410')).toBe('starting')
+
+      await jest.advanceTimersByTimeAsync(1500)
+      await flushMicrotasks()
+      expect(getBottleProcessMonitorPhase('38410')).toBe('running')
+
+      await jest.advanceTimersByTimeAsync(1500 * 3)
+      await flushMicrotasks()
+      expect(statusesFor('38410')).toEqual(['launching', 'playing', 'done'])
+      expect(getBottleProcessMonitorPhase('38410')).toBeNull()
+      jest.useRealTimers()
+    })
+
+    test('launching is sent synchronously for both kinds', () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({
+        appId: '1',
+        installPath,
+        bottleDir,
+        kind: 'bridge'
+      })
+      expect(statusesFor('1')).toEqual(['launching'])
+      startBottleProcessMonitor({ appId: '2', installPath, bottleDir })
+      expect(statusesFor('2')).toEqual(['launching'])
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+
+    test.each(['starting', 'running'] as const)(
+      'external stop while %s sends exactly one done; a second stop sends nothing',
+      async (phase) => {
+        mockedSpawnAsync.mockResolvedValue({
+          code: 0,
+          stdout: phase === 'running' ? matchedPsLine : '',
+          stderr: ''
+        })
+        jest.useFakeTimers()
+        startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+        if (phase === 'running') {
+          await jest.advanceTimersByTimeAsync(1500)
+          await flushMicrotasks()
+        }
+        expect(getBottleProcessMonitorPhase('38410')).toBe(phase)
+
+        stopBottleProcessMonitor('38410')
+        stopBottleProcessMonitor('38410')
+        const dones = statusesFor('38410').filter((st) => st === 'done')
+        expect(dones.length).toBe(1)
+        expect(getBottleProcessMonitorPhase('38410')).toBeNull()
+        expect(jest.getTimerCount()).toBe(0)
+        jest.useRealTimers()
+      }
+    )
+
+    test('__stopAllBottleProcessMonitors is silent and leaves no timers', () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      __stopAllBottleProcessMonitors()
+      expect(statusesFor('38410')).toEqual(['launching'])
+      expect(jest.getTimerCount()).toBe(0)
+      jest.useRealTimers()
+    })
+
+    test('superseded first entry fires no onStopped and no done', async () => {
+      mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      jest.useFakeTimers()
+      const firstStopped = jest.fn()
+      startBottleProcessMonitor({
+        appId: '38410',
+        installPath,
+        bottleDir,
+        onStopped: firstStopped
+      })
+      startBottleProcessMonitor({ appId: '38410', installPath, bottleDir })
+      await jest.advanceTimersByTimeAsync(3000)
+      expect(firstStopped).not.toHaveBeenCalled()
+      expect(statusesFor('38410')).toEqual(['launching', 'launching'])
+      __stopAllBottleProcessMonitors()
+      jest.useRealTimers()
+    })
+  })
+
   describe('waiting state (D-51-16)', () => {
     const advanceByGraceWindow = async () => {
       // 20000ms of elapsed-no-match time, in 1500ms poll ticks.
@@ -1116,7 +1244,7 @@ describe('bottleProcessMonitor.ts', () => {
       const statuses = mockedSendFrontendMessage.mock.calls.map(
         (c) => c[1].status
       )
-      expect(statuses).toEqual(['playing', 'done'])
+      expect(statuses).toEqual(['launching', 'playing', 'done'])
       jest.useRealTimers()
     })
   })

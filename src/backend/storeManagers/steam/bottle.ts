@@ -1084,25 +1084,25 @@ async function dispatchToBottledSteam(
           LogPrefix.Steam
         )
       } else {
-        void (async () => {
-          try {
-            const { startBottleProcessMonitor } =
-              await import('./bottleProcessMonitor')
-            startBottleProcessMonitor({
-              appId,
-              installPath,
-              bottleDir: getBottleDir(bottleName)
-            })
-          } catch (error) {
-            logWarning(
-              [
-                `tellBottledSteamToLaunch: failed to start bottle process monitor for appId "${appId}"`,
-                error
-              ],
-              LogPrefix.Steam
-            )
-          }
-        })()
+        // quick/261024-gvu: awaited so the monitor's `launching` push is sent
+        // before runWineCommand and therefore before the launch IPC resolves.
+        try {
+          const { startBottleProcessMonitor } =
+            await import('./bottleProcessMonitor')
+          startBottleProcessMonitor({
+            appId,
+            installPath,
+            bottleDir: getBottleDir(bottleName)
+          })
+        } catch (error) {
+          logWarning(
+            [
+              `tellBottledSteamToLaunch: failed to start bottle process monitor for appId "${appId}"`,
+              error
+            ],
+            LogPrefix.Steam
+          )
+        }
       }
     }
     await runWineCommand({
@@ -1118,6 +1118,16 @@ async function dispatchToBottledSteam(
       [`tellBottledSteamTo${verb}: runWineCommand failed`, error],
       LogPrefix.Steam
     )
+    if (verb === 'launch') {
+      // quick/261024-gvu: a failed dispatch must not leave Launching held.
+      try {
+        const { stopBottleProcessMonitor } =
+          await import('./bottleProcessMonitor')
+        stopBottleProcessMonitor(appId)
+      } catch {
+        // never throw from the error path
+      }
+    }
     return {
       status: 'error',
       error: `Failed to dispatch ${verb} to bottled Steam: ${String(error)}`
