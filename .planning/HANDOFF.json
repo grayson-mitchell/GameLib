@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-10-23T06:27:04.754Z",
+  "phase": "51",
+  "phase_name": "widen-the-native-steam-bridge-more-interface-proxies-and-sca",
+  "phase_dir": ".planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca",
+  "plan": 28,
+  "task": 2,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    { "id": 1, "name": "Operator decides the D-51-14 anchor and the XCOM disposition", "status": "done", "commit": null, "progress": "Answered in conversation; not yet written to SUMMARY: named-title 230070 (The Age of Decadence); XCOM run yes; CEG detection stays deferred yes" }
+  ],
+  "remaining_tasks": [
+    { "id": 2, "name": "Operator runs the gate items the decision calls for (UAT 17 XCOM via bottled Steam, UAT 18 Age of Decadence via bridge)", "status": "not_started" },
+    { "id": 3, "name": "Record the decision and results", "status": "not_started" }
+  ],
+  "blockers": [],
+  "human_actions_pending": [
+    { "action": "Install The Age of Decadence (230070) and XCOM via the rebuilt packaged GameLib.app, then run UAT items 17 and 18", "context": "51-28 Task 2 live gate", "blocking": true }
+  ],
+  "decisions": [
+    { "decision": "D-51-14 anchor = named-title 230070 The Age of Decadence (operator: 'ok lets do age of decadence'); confirm x86 + bare-accessor imports via pnpm bridge-census before gating; fallback Legends of Eisenwald 246760", "rationale": "Hoard crashes outside the bridge; ELEX hangs at load (UAT 15 issue)", "phase": "51" },
+    { "decision": "Run XCOM bottled-Steam confirmation now: yes; keep CEG prescreen detection deferred: yes", "rationale": "Operator answers to 51-28 Task 1", "phase": "51" },
+    { "decision": "Bottled Steam is a narrow fallback to eliminate: only drm-wrapped, user-forced-bottle, failed-this-session, win64-no-shim route there (quick 261023-og0, 261023-oq7)", "rationale": "User direction 2026-10-23", "phase": "51" }
+  ],
+  "uncommitted_files": [".planning/spikes/030-hoard-macos-opengl/ (untracked, not from this session; leave alone)"],
+  "next_action": "/gsd-execute-phase 51 --gaps-only; pre-supply 51-28 Task 1 answers; rebuild packaged bundle before Task 2",
+  "context_notes": "See .planning/phases/51-widen-the-native-steam-bridge-more-interface-proxies-and-sca/.continue-here.md"
+}
