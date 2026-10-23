@@ -47,3 +47,16 @@ bridge" must require `HELLO` **and** no Steam-init failure in the game's own log
 
 Likely phase-sized rather than a quick task. Unity + Steamworks.NET is a large share of
 Windows-only Steam titles, so this may be the biggest single lever on D-51-15's "most".
+
+## Recurrence: Rogue Waters (1691190) hangs on the loading screen (2026-10-24)
+
+The game is not always tolerant. Rogue Waters attaches (`HELLO shim attached`, 10:19:34). Its
+`Player.log` then shows the same `EntryPointNotFoundException: SteamAPI_ISteamClient_GetISteamUser`
+from `SteamAPI.Init`. It also shows a second one, `SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck`,
+thrown from `RewiredInputAdapter.OnEnable` while Zenject builds the project context. The game
+then sticks on its loading page. This happened twice, including after an operator restart of
+GameLib. Mac Steam shows In-Game, which comes from the helper as noted above.
+
+So for some titles the flat-API gap does not just mean playing offline: it **blocks play**. The
+sample now has three Unity titles hitting it (1167950, 1284190, 1691190), and Rogue Waters is the
+first that cannot be played. Both missing symbols are on the minimum list for a first slice.
