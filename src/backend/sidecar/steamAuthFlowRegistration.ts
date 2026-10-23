@@ -66,6 +66,9 @@
  *   - `steamRemoveAllCopies` -> `removeAllSteamInstallCopies(appName)`,
  *     quick-260821-le0 Task 3 — sweeps every recorded install root for a
  *     Steam title in one action, same shared-seam pattern as the pair above.
+ *   - `steamFinishBottledInstall` -> `startBottledSteamToFinishInstall(args[0])`
+ *     (`bottledHandoff.ts`), quick 261024-h5y — the explicit "Start Steam to
+ *     finish" click for a bottle-route install parked at StateFlags 1026.
  *
  * Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04,
  * `ipcMain.handle`, `main.ts:958-961`):
@@ -144,6 +147,7 @@ import {
   handleSetSteamBridgeUserRoute
 } from '../storeManagers/steam/installFormIpc'
 import { removeAllSteamInstallCopies } from '../storeManagers/steam/removeAllCopies'
+import { startBottledSteamToFinishInstall } from '../storeManagers/steam/bottledHandoff'
 
 /**
  * Registers the QR-login trio, the credential/SteamGuard/TOTP login trio,
@@ -348,6 +352,15 @@ export function registerSteamAuthFlows(): void {
     'steamRemoveAllCopies',
     async (_event: unknown, ...args: unknown[]) => {
       return removeAllSteamInstallCopies(args[0])
+    }
+  )
+
+  // quick 261024-h5y: user-clicked "Start Steam to finish" for a bottle-route
+  // 1026 handoff. The callee validates args[0] and refuses outside that state.
+  ipcMain.handle(
+    'steamFinishBottledInstall',
+    async (_event: unknown, ...args: unknown[]) => {
+      return startBottledSteamToFinishInstall(args[0])
     }
   )
 

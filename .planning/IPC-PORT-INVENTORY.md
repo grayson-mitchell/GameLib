@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 222 |
-| Ported to sidecar | 67 |
+| Unique channels | 223 |
+| Ported to sidecar | 68 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -574,6 +574,19 @@ with no inventory step, after the "THIRD channel ... via a quick task" note in t
 both numbers moved together by +2 and `Unported` (159) is unchanged.
 
 `getSteamBridgeRoute`, `setSteamBridgeUserRoute`
+
+## Quick 261024-h5y — bottled-route 1026 finish (1 channel) — **PORTED**
+
+Added 2026-10-24 by quick task `261024-h5y`. The channel is BRAND NEW, invoke-kind
+(`makeHandlerInvoker`, `src/preload/api/steam.ts`), and registered only in the sidecar, in
+`steamAuthFlowRegistration.ts` (body: `startBottledSteamToFinishInstall`, `bottledHandoff.ts`).
+There is no Electron leg, so `Ported to sidecar` rises along with `Unique channels`, as in the
+section above.
+
+**Unique channels raised 222 → 223, Ported to sidecar raised 67 → 68 (quick 261024-h5y, 2026-10-24):**
+both numbers moved together by +1 and `Unported` (159) is unchanged.
+
+`steamFinishBottledInstall`
 
 ## Not an IPC channel, but blocks Phase 35
 

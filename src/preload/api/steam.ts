@@ -28,6 +28,9 @@ export const setSteamBridgeUserRoute = makeHandlerInvoker('setSteamBridgeUserRou
 // quick-260821-le0 (Task 3): sweeps every recorded install root for a Steam
 // title in one action — registered on BOTH runtimes.
 export const steamRemoveAllCopies = makeHandlerInvoker('steamRemoveAllCopies')
+// quick 261024-h5y: user-clicked "Start Steam to finish" for a bottle-route
+// 1026 handoff -- sidecar-only, backend refuses outside that state.
+export const steamFinishBottledInstall = makeHandlerInvoker('steamFinishBottledInstall')
 // One-way push (17-05 emits, 17-06 subscribes) — no handler, listener only.
 export const handleSteamBottleSetupRequired = frontendListenerSlot('steamBottleSetupRequired')
 // Phase 51 Plan 13 (D-51-08/11): one-way push -- games.ts's install() emits,

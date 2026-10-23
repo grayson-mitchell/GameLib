@@ -355,6 +355,11 @@ interface AsyncIPCFunctions {
     refused: number
     error?: string
   }>
+  // quick 261024-h5y: dispatches steam://install into the bottle for a
+  // bottle-route install parked at StateFlags 1026. Backend-guarded.
+  steamFinishBottledInstall: (
+    appId: string
+  ) => Promise<{ status: 'done' | 'error'; error?: string }>
   // Phase 34.13 (34.13-07), D-14: persists the install form's chosen wine
   // engine into steamBottleConfigStore via bottle.ts's own
   // persistBottleWineVersion() primitive, after validating the untrusted
