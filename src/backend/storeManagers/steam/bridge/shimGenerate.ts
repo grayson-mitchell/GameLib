@@ -145,7 +145,7 @@ type PlaceShimResultBase =
   | { status: 'error'; error: string }
 
 /** Quick 261024-br4: Steam CEG DRM found in the game exe. */
-export type SteamExeDrmSignal = { kind: 'ceg'; markers: string[] }
+type SteamExeDrmSignal = { kind: 'ceg'; markers: string[] }
 
 /** `drm`: an object means CEG was detected; `null` means the exe parsed as
  * a PE and is not CEG; absent means not checked (an 'error' result) or the

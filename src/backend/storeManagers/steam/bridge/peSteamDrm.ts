@@ -38,7 +38,7 @@ export const CEG_RESOURCE_NAMES = [
   'STEAM_MINSTANCE'
 ] as const
 
-export type PeSteamDrmResult = {
+type PeSteamDrmResult = {
   /** false when the bytes are not a well-formed PE (treat as not CEG) */
   parsed: boolean
   /** CEG resource names found, as read, de-duplicated, in file order */
@@ -51,7 +51,7 @@ export type PeSteamDrmResult = {
  * Ranged read callback. Returns null, or fewer than `length` bytes, when the
  * range runs past EOF. Any short read is treated as a bounds failure.
  */
-export type PeReader = (offset: number, length: number) => Uint8Array | null
+type PeReader = (offset: number, length: number) => Uint8Array | null
 
 const unparsed = (): PeSteamDrmResult => ({
   parsed: false,
