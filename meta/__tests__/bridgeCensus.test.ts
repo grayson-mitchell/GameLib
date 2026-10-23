@@ -389,3 +389,86 @@ describe('summarizeCensus', () => {
     expect(summarizeCensus(onlyNoBinary).covered).toBe(0)
   })
 })
+
+describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
+  const coveredExe = {
+    arch: 'x86' as const,
+    symbols: ['SteamUser'],
+    dllVersions: ['SteamUser023'],
+    exeVersions: []
+  }
+
+  it('CEG markers with no bundled reason classify known-bad "drm-wrapped" and are not routed', () => {
+    const row = classifyCensusTitle({
+      appid: '200510',
+      name: 'XCOM: Enemy Unknown',
+      installdir: 'XCom-Enemy-Unknown',
+      knownBadReason: null,
+      steamDrm: { cegMarkers: ['STEAM_SPLIT_GUID'], hasBindSection: false },
+      exe: coveredExe
+    })
+
+    expect(row.class).toBe('known-bad')
+    expect(row.detail).toBe('drm-wrapped')
+    expect(summarizeCensus([row]).routed).toBe(0)
+  })
+
+  it('a detected CEG beats a bundled does-not-run reason', () => {
+    const row = classifyCensusTitle({
+      appid: '63000',
+      name: 'Hoard',
+      installdir: 'Hoard',
+      knownBadReason: 'does-not-run',
+      steamDrm: { cegMarkers: ['STEAM_GUIDD'], hasBindSection: false },
+      exe: coveredExe
+    })
+
+    expect(row.class).toBe('known-bad')
+    expect(row.detail).toBe('drm-wrapped')
+  })
+
+  it('a .bind section keeps a bridge row bridge and adds the informational suffix', () => {
+    const row = classifyCensusTitle({
+      appid: '206060',
+      name: 'Avernum 6',
+      installdir: 'Avernum 6',
+      knownBadReason: null,
+      steamDrm: { cegMarkers: [], hasBindSection: true },
+      exe: coveredExe
+    })
+
+    expect(row.class).toBe('bridge')
+    expect(row.detail).toBe('SteamStub .bind section (informational)')
+    expect(summarizeCensus([row]).routed).toBe(1)
+  })
+
+  it('a .bind section appends to an existing detail', () => {
+    const row = classifyCensusTitle({
+      appid: '1',
+      name: 'Unknown Version',
+      installdir: 'Unknown Version',
+      knownBadReason: null,
+      steamDrm: { cegMarkers: [], hasBindSection: true },
+      exe: { ...coveredExe, dllVersions: [] }
+    })
+
+    expect(row.class).toBe('unknown-version')
+    expect(row.detail).toBe(
+      'SteamUser@unknown-version; SteamStub .bind section (informational)'
+    )
+  })
+
+  it('a known-bad row never gains the .bind suffix', () => {
+    const row = classifyCensusTitle({
+      appid: '63000',
+      name: 'Hoard',
+      installdir: 'Hoard',
+      knownBadReason: 'does-not-run',
+      steamDrm: { cegMarkers: [], hasBindSection: true },
+      exe: coveredExe
+    })
+
+    expect(row.class).toBe('known-bad')
+    expect(row.detail).toBe('does-not-run')
+  })
+})

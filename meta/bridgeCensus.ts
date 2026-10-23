@@ -47,8 +47,10 @@
  *
  * Zero backend imports by design, same discipline `importParse.ts`/
  * `interfaceVersions.ts`/`shimCoverage.ts` already established (D-51-15's
- * own doc comment on `importParse.ts`): only `node:*` builtins, the three
- * pure bridge modules (by relative path, not a `backend/...` alias), and
+ * own doc comment on `importParse.ts`): only `node:*` builtins, the four
+ * pure bridge modules (`importParse.ts`, `interfaceVersions.ts`,
+ * `shimCoverage.ts`, and -- quick 261024-br4 -- the Steam CEG / `.bind` PE
+ * scanner `peSteamDrm.ts`; by relative path, not a `backend/...` alias), and
  * `@node-steam/vdf` (a plain npm dependency, not a backend module). This
  * keeps `pnpm bridge-census` (`node meta/runTs.cjs --bundle --platform=node
  * --target=node21 meta/bridgeCensus.ts`) bundleable standalone.
@@ -60,7 +62,15 @@
  * `pnpm` runs package scripts with the repo root as cwd.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  statSync
+} from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -81,6 +91,7 @@ import {
   evaluateShimCoverage,
   SHIM64_EXPORTED_SYMBOLS
 } from '../src/backend/storeManagers/steam/bridge/shimCoverage'
+import { detectSteamDrmInPe } from '../src/backend/storeManagers/steam/bridge/peSteamDrm'
 
 // ---------------------------------------------------------------------------
 // Pure classifier
@@ -122,6 +133,9 @@ export interface CensusTitleInput {
    * launch exe's import table has no steam_api entry -- the exe loads it at
    * runtime. Same signal the live path records as `<dll>@runtime-loaded`. */
   runtimeLoadedDll?: 'steam_api.dll' | 'steam_api64.dll' | null
+  /** Quick 261024-br4: the chosen exe's Steam DRM scan (`peSteamDrm.ts`).
+   * `null`/absent when not scanned or the PE did not parse (not CEG). */
+  steamDrm?: { cegMarkers: string[]; hasBindSection: boolean } | null
   /** `null` when no scannable PE exe (with or without a steam_api import)
    * was found anywhere under the title's installdir at all. */
   exe: {
@@ -155,6 +169,11 @@ export const DEFAULT_COVERAGE_DEPS: CensusCoverageDeps = {
  * silently diverge from what a real install/launch would decide.
  *
  * Precedence (each branch is mutually exclusive with the ones below it):
+ *  0. `steamDrm.cegMarkers` non-empty -> 'known-bad' with detail exactly
+ *     'drm-wrapped' (quick 261024-br4). Checked ahead of a bundled
+ *     knownBadReason: a detected CEG is the stronger fact, so a title
+ *     bundled as e.g. 'does-not-run' still counts as a DRM miss -- the same
+ *     order the live resolver uses (`verdict.drm === 'ceg'` wins).
  *  1. `knownBadReason` present -> 'known-bad' (checked first: a known-bad
  *     title is classified regardless of what its exe looks like. Only a
  *     'drm-wrapped' title is never attempted on the bridge; the live
@@ -177,10 +196,28 @@ export const DEFAULT_COVERAGE_DEPS: CensusCoverageDeps = {
  *  6. Any symbol/version `evaluateShimCoverage` reports missing ->
  *     'missing-symbols', carrying the list verbatim.
  *  7. Otherwise -> 'bridge'.
+ *
+ * After classification, a SteamStub `.bind` section (`steamDrm.hasBindSection`)
+ * appends an informational suffix to `detail` on every non-known-bad row. It
+ * never changes the class, so it never changes routing (SteamStub is in scope
+ * for the bridge; bottled Steam is a narrow fallback), and it adds no
+ * `CensusRow` key (T-51-39).
  */
 export function classifyCensusTitle(
   input: CensusTitleInput,
   deps: CensusCoverageDeps = DEFAULT_COVERAGE_DEPS
+): CensusRow {
+  const row = classifyCensusTitleCore(input, deps)
+  if (input.steamDrm?.hasBindSection && row.class !== 'known-bad') {
+    const note = 'SteamStub .bind section (informational)'
+    return { ...row, detail: row.detail ? `${row.detail}; ${note}` : note }
+  }
+  return row
+}
+
+function classifyCensusTitleCore(
+  input: CensusTitleInput,
+  deps: CensusCoverageDeps
 ): CensusRow {
   const base = {
     appid: input.appid,
@@ -193,6 +230,15 @@ export function classifyCensusTitle(
       input.playVerified === true &&
       (row.class === 'bridge' || row.class === 'no-steam-api')
   })
+
+  if (input.steamDrm && input.steamDrm.cegMarkers.length > 0) {
+    return withVerified({
+      ...base,
+      arch: input.exe?.arch ?? 'none',
+      class: 'known-bad',
+      detail: 'drm-wrapped'
+    })
+  }
 
   if (input.knownBadReason) {
     return withVerified({
@@ -648,6 +694,7 @@ async function classifyInstalledTitle(
     })
   }
 
+  const steamDrm = scanExeSteamDrm(chosen.path)
   const { arch, symbols } = chosen.table
   let dllVersions: string[] = []
   let exeVersions: string[] = []
@@ -695,8 +742,40 @@ async function classifyInstalledTitle(
     knownBadReason,
     playVerified,
     runtimeLoadedDll,
+    steamDrm,
     exe: { arch, symbols, dllVersions, exeVersions }
   })
+}
+
+/** Quick 261024-br4: ranged fd reads (never slurps the exe) into the pure
+ * `peSteamDrm.ts` scanner. A failed parse or an fs error reads as null --
+ * not CEG. Read-only. */
+function scanExeSteamDrm(
+  exePath: string
+): { cegMarkers: string[]; hasBindSection: boolean } | null {
+  let fd: number | null = null
+  try {
+    fd = openSync(exePath, 'r')
+    const handle = fd
+    const result = detectSteamDrmInPe((offset, length) => {
+      const buf = Buffer.alloc(length)
+      const n = readSync(handle, buf, 0, length, offset)
+      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
+    })
+    return result.parsed
+      ? { cegMarkers: result.cegMarkers, hasBindSection: result.hasBindSection }
+      : null
+  } catch {
+    return null
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd)
+      } catch {
+        // already closed / never opened -- nothing to release
+      }
+    }
+  }
 }
 
 /** Enumerates every bridge-routed bottle's `appmanifest_*.acf`, de-duped by
