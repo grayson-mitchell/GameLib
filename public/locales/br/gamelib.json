@@ -356,9 +356,13 @@
                     "otherSession": "O vont en-dro emañ ar c'hoari-mañ war un urzhiataer all, hag e c'houlenn Steam hag-eñ e tlefed e serriñ eno.",
                     "selfUpdate": "Steam a hizivaat e-unan. Pouezit war C'hoari en-dro goude ma vo adloc'het."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "N'eo ket bet loc'het ar c'hoari c'hoazh gant arval Steam Windows.",
                 "likelyCauses": "Abegoù muiañ-liverek:",
                 "mostLikely": "Ar re muiañ-liverek:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "O c'hortoz Steam…"
             }
         },

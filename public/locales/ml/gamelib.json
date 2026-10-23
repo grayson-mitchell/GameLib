@@ -335,9 +335,13 @@
                     "otherSession": "ഈ ഗെയിം മറ്റൊരു കമ്പ്യൂട്ടറിൽ പ്രവർത്തിക്കുന്നു, അവിടെ അത് അടയ്ക്കണോ എന്ന് Steam ചോദിക്കുന്നു.",
                     "selfUpdate": "Steam സ്വയം അപ്ഡേറ്റ് ചെയ്യുന്നു. പുനരാരംഭിച്ച ശേഷം വീണ്ടും പ്ലേ അമർത്തുക."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam ക്ലയന്റ് ഇതുവരെ ഗെയിം ആരംഭിച്ചിട്ടില്ല.",
                 "likelyCauses": "സാധ്യമായ കാരണങ്ങൾ:",
                 "mostLikely": "ഏറ്റവും സാധ്യത:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam കാത്തിരിക്കുന്നു…"
             }
         },

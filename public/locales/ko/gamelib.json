@@ -335,9 +335,13 @@
                     "otherSession": "이 게임은 다른 컴퓨터에서 실행 중이며, Steam이 그곳에서 닫아야 하는지 묻고 있습니다.",
                     "selfUpdate": "Steam이 자체 업데이트 중입니다. 재시작된 후 다시 플레이를 누르세요."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam 클라이언트가 아직 게임을 시작하지 않음.",
                 "likelyCauses": "가능한 원인:",
                 "mostLikely": "가장 가능성 높음:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam 대기 중…"
             }
         },

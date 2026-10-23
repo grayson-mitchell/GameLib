@@ -342,9 +342,13 @@
                     "otherSession": "Acest joc rulează pe alt computer, iar Steam întreabă dacă ar trebui închis acolo.",
                     "selfUpdate": "Steam se actualizează singur. Apasă din nou pe Joacă după ce repornește."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Clientul Steam pentru Windows nu a pornit încă jocul.",
                 "likelyCauses": "Cauze probabile:",
                 "mostLikely": "Cel mai probabil:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Se așteaptă Steam…"
             }
         },

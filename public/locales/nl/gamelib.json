@@ -335,9 +335,13 @@
                     "otherSession": "Dit spel draait op een andere computer, en Steam vraagt of het daar gesloten moet worden.",
                     "selfUpdate": "Steam werkt zichzelf bij. Druk opnieuw op Spelen zodra het opnieuw is opgestart."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "De Windows Steam-client is het spel nog niet gestart.",
                 "likelyCauses": "Waarschijnlijke oorzaken:",
                 "mostLikely": "Meest waarschijnlijk:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Wachten op Steam…"
             }
         },

@@ -356,9 +356,13 @@
                     "otherSession": "Tá an cluiche seo ag rith ar ríomhaire eile, agus fiafraíonn Steam ar cheart é a dhúnadh ansin.",
                     "selfUpdate": "Tá Steam á nuashonrú féin. Brúigh Seinn arís nuair a bheidh sé atosaithe."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Níl an cliant Steam Windows tar éis an cluiche a thosú fós.",
                 "likelyCauses": "Cúiseanna dóchúla:",
                 "mostLikely": "Is dóichí:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Ag fanacht le Steam…"
             }
         },

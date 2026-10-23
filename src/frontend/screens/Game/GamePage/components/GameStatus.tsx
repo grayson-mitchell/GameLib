@@ -206,36 +206,61 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       )}
       {waitingEntry && (
         <div className="bottleLaunchWaiting">
-          <p style={{ fontStyle: 'italic' }}>
-            {tGamelib(
-              'gamelib:steam.bottle.waiting.title',
-              'Waiting for Steam…'
-            )}
-          </p>
-          <p>
-            {tGamelib(
-              'gamelib:steam.bottle.waiting.intro',
-              'The Windows Steam client has not started the game yet.'
-            )}
-          </p>
-          {waitingEntry.detectedCause && (
-            <p>
-              <strong>
+          {waitingEntry.detectedCause ? (
+            <>
+              <p style={{ fontStyle: 'italic' }}>
                 {tGamelib(
-                  'gamelib:steam.bottle.waiting.mostLikely',
-                  'Most likely:'
+                  'gamelib:steam.bottle.waiting.title',
+                  'Waiting for Steam…'
                 )}
-              </strong>{' '}
-              {waitingCauseText(waitingEntry.detectedCause)}
-            </p>
+              </p>
+              <p>
+                {tGamelib(
+                  'gamelib:steam.bottle.waiting.intro',
+                  'The Windows Steam client has not started the game yet.'
+                )}
+              </p>
+              <p>
+                <strong>
+                  {tGamelib(
+                    'gamelib:steam.bottle.waiting.mostLikely',
+                    'Most likely:'
+                  )}
+                </strong>{' '}
+                {waitingCauseText(waitingEntry.detectedCause)}
+              </p>
+            </>
+          ) : (
+            // quick/261024-gvu: cause=none past the grace window is NOT a
+            // failure -- the launch is held (no deadline, LD-4) and Steam is
+            // usually just installing prerequisites on a first run.
+            <>
+              <p style={{ fontStyle: 'italic' }}>
+                {tGamelib(
+                  'gamelib:steam.bottle.waiting.startingTitle',
+                  'Steam is still starting the game…'
+                )}
+              </p>
+              <p>
+                {tGamelib(
+                  'gamelib:steam.bottle.waiting.startingIntro',
+                  "A first launch can take several minutes while Steam installs the game's prerequisites."
+                )}
+              </p>
+            </>
           )}
           {otherWaitingCauses.length > 0 && (
             <div>
               <p>
-                {tGamelib(
-                  'gamelib:steam.bottle.waiting.likelyCauses',
-                  'Likely causes:'
-                )}
+                {waitingEntry.detectedCause
+                  ? tGamelib(
+                      'gamelib:steam.bottle.waiting.likelyCauses',
+                      'Likely causes:'
+                    )
+                  : tGamelib(
+                      'gamelib:steam.bottle.waiting.ifNotStarting',
+                      'If it still does not start, check:'
+                    )}
               </p>
               <ul>
                 {otherWaitingCauses.map((cause) => (
@@ -244,6 +269,19 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
               </ul>
             </div>
           )}
+          {/* quick/261024-gvu: escape hatch -- Launching is held with no
+              deadline, so the user must be able to end the wait. kill ->
+              SteamGame.stop() -> stopBottleProcessMonitor(). */}
+          <button
+            type="button"
+            className="button"
+            onClick={() => void window.api.kill(gameInfo.app_name, 'steam')}
+          >
+            {tGamelib(
+              'gamelib:steam.bottle.waiting.stopWaiting',
+              'Stop waiting'
+            )}
+          </button>
         </div>
       )}
       <p

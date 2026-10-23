@@ -335,9 +335,13 @@
                     "otherSession": "Dette spil kører på en anden computer, og Steam spørger, om det skal lukkes der.",
                     "selfUpdate": "Steam opdaterer sig selv. Tryk på Afspil igen, når det er genstartet."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam-klienten har endnu ikke startet spillet.",
                 "likelyCauses": "Sandsynlige årsager:",
                 "mostLikely": "Mest sandsynligt:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Venter på Steam…"
             }
         },

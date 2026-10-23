@@ -335,9 +335,13 @@
                     "otherSession": "Bu o'yin boshqa kompyuterda ishlamoqda, va Steam uni u yerda yopish kerakmi deb so'ramoqda.",
                     "selfUpdate": "Steam o'zini yangilamoqda. Qayta ishga tushgandan keyin yana Play tugmasini bosing."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam klienti hali o'yinni boshlamagan.",
                 "likelyCauses": "Mumkin bo'lgan sabablar:",
                 "mostLikely": "Eng ehtimolli:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam kutilmoqda…"
             }
         },

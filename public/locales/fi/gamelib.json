@@ -335,9 +335,13 @@
                     "otherSession": "Tämä peli on käynnissä toisella tietokoneella, ja Steam kysyy, pitäisikö se sulkea siellä.",
                     "selfUpdate": "Steam päivittää itseään. Paina Pelaa uudelleen, kun se on käynnistynyt uudelleen."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windowsin Steam-asiakasohjelma ei ole vielä käynnistänyt peliä.",
                 "likelyCauses": "Todennäköiset syyt:",
                 "mostLikely": "Todennäköisimmin:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Odotetaan Steamia…"
             }
         },

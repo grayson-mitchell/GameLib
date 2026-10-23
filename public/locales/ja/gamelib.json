@@ -335,9 +335,13 @@
                     "otherSession": "このゲームは別のコンピューターで実行されており、Steamはそこで閉じるかどうかを尋ねています。",
                     "selfUpdate": "Steamは自己更新中です。再起動したら、もう一度プレイを押してください。"
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows版Steamクライアントはまだゲームを開始していない。",
                 "likelyCauses": "考えられる原因:",
                 "mostLikely": "最も可能性が高い:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steamを待っています…"
             }
         },

@@ -335,9 +335,13 @@
                     "otherSession": "เกมนี้กำลังทำงานบนคอมพิวเตอร์เครื่องอื่น และ Steam กำลังถามว่าควรปิดมันที่นั่นหรือไม่",
                     "selfUpdate": "Steam กำลังอัปเดตตัวเอง กดเล่นอีกครั้งเมื่อรีสตาร์ทเสร็จแล้ว"
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "ไคลเอนต์ Steam ของ Windows ยังไม่ได้เริ่มเกม",
                 "likelyCauses": "สาเหตุที่เป็นไปได้:",
                 "mostLikely": "เป็นไปได้มากที่สุด:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "กำลังรอ Steam…"
             }
         },

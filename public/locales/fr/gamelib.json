@@ -266,9 +266,13 @@
                     "otherSession": "Ce jeu fonctionne sur un autre ordinateur, et Steam demande s'il faut le fermer là-bas.",
                     "selfUpdate": "Steam se met à jour lui-même. Appuyez à nouveau sur Jouer une fois qu'il a redémarré."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Le client Steam Windows n'a pas encore démarré le jeu.",
                 "likelyCauses": "Causes probables :",
                 "mostLikely": "Le plus probable :",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "En attente de Steam…"
             }
         },

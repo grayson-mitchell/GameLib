@@ -335,9 +335,13 @@
                     "otherSession": "Bu oyun başka bir bilgisayarda çalışıyor ve Steam orada kapatılıp kapatılmayacağını soruyor.",
                     "selfUpdate": "Steam kendini güncelliyor. Yeniden başladıktan sonra tekrar Oyna'ya basın."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam istemcisi oyunu henüz başlatmadı.",
                 "likelyCauses": "Olası nedenler:",
                 "mostLikely": "En olası:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam bekleniyor…"
             }
         },

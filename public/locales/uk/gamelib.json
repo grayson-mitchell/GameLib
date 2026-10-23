@@ -349,9 +349,13 @@
                     "otherSession": "Ця гра запущена на іншому комп'ютері, і Steam запитує, чи слід закрити її там.",
                     "selfUpdate": "Steam оновлюється сам. Натисніть «Грати» ще раз після перезапуску."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Клієнт Steam для Windows ще не запустив гру.",
                 "likelyCauses": "Імовірні причини:",
                 "mostLikely": "Найімовірніше:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Очікування Steam…"
             }
         },

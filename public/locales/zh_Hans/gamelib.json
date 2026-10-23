@@ -335,9 +335,13 @@
                     "otherSession": "此游戏正在另一台电脑上运行，Steam 正在询问是否应在那里关闭它。",
                     "selfUpdate": "Steam 正在自我更新。重启后请再次按下游玩。"
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows 版 Steam 客户端尚未启动游戏。",
                 "likelyCauses": "可能的原因：",
                 "mostLikely": "最有可能：",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "正在等待 Steam…"
             }
         },

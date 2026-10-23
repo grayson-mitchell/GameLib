@@ -342,9 +342,13 @@
                     "otherSession": "Aquest joc s'està executant en un altre ordinador, i Steam pregunta si s'ha de tancar allà.",
                     "selfUpdate": "Steam s'està actualitzant. Torneu a prémer Reprodueix un cop s'hagi reiniciat."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "El client de Steam de Windows encara no ha iniciat el joc.",
                 "likelyCauses": "Causes probables:",
                 "mostLikely": "Més probable:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Esperant Steam…"
             }
         },

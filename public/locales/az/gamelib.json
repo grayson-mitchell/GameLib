@@ -335,9 +335,13 @@
                     "otherSession": "Bu oyun başqa kompüterdə işləyir və Steam onu orada bağlamaq istəyib-istəmədiyinizi soruşur.",
                     "selfUpdate": "Steam özünü yeniləyir. Yenidən başladıqdan sonra Oyna düyməsini yenidən basın."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam klienti hələ oyunu başlatmayıb.",
                 "likelyCauses": "Ehtimal olunan səbəblər:",
                 "mostLikely": "Ən çox ehtimal olunan:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam gözlənilir…"
             }
         },

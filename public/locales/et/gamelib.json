@@ -417,9 +417,13 @@
                     "otherSession": "See mäng töötab teises arvutis ja Steam küsib, kas see tuleks seal sulgeda.",
                     "selfUpdate": "Steam uuendab iseennast. Vajuta Mängi uuesti pärast taaskäivitumist."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windowsi Steami klient pole veel mängu käivitanud.",
                 "likelyCauses": "Tõenäolised põhjused:",
                 "mostLikely": "Kõige tõenäolisem:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Ootab Steami…"
             }
         }

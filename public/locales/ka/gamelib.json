@@ -335,9 +335,13 @@
                     "otherSession": "ეს თამაში მუშაობს სხვა კომპიუტერზე, და Steam კითხულობს, უნდა დაიხუროს თუ არა იქ.",
                     "selfUpdate": "Steam თავად განახლდება. დააჭირეთ თამაშს ხელახლა გადატვირთვის შემდეგ."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows-ის Steam კლიენტმა ჯერ არ დაიწყო თამაში.",
                 "likelyCauses": "სავარაუდო მიზეზები:",
                 "mostLikely": "ყველაზე სავარაუდო:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam-ის მოლოდინში…"
             }
         },

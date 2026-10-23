@@ -335,9 +335,13 @@
                     "otherSession": "Trò chơi này đang chạy trên một máy tính khác, và Steam đang hỏi có nên đóng nó ở đó không.",
                     "selfUpdate": "Steam đang tự cập nhật. Nhấn Chơi lại sau khi khởi động lại."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Client Steam Windows chưa khởi động trò chơi.",
                 "likelyCauses": "Các nguyên nhân có thể:",
                 "mostLikely": "Có khả năng nhất:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Đang chờ Steam…"
             }
         },

@@ -335,9 +335,13 @@
                     "otherSession": "Joko hau beste ordenagailu batean exekutatzen ari da, eta Steam-ek han itxi behar den galdetzen du.",
                     "selfUpdate": "Steam bere burua eguneratzen ari da. Sakatu Jolastu berriro berrabiarazi ondoren."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows-eko Steam bezeroak oraindik ez du jokoa abiarazi.",
                 "likelyCauses": "Arrazoi probableak:",
                 "mostLikely": "Probableena:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam itxaroten…"
             }
         },

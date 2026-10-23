@@ -335,9 +335,13 @@
                     "otherSession": "Det här spelet körs på en annan dator, och Steam frågar om det ska stängas där.",
                     "selfUpdate": "Steam uppdaterar sig självt. Tryck på Spela igen när det har startat om."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam-klienten har inte startat spelet än.",
                 "likelyCauses": "Troliga orsaker:",
                 "mostLikely": "Mest troligt:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Väntar på Steam…"
             }
         },

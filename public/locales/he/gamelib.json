@@ -342,9 +342,13 @@
                     "otherSession": "המשחק הזה פועל במחשב אחר, ו-Steam שואל אם לסגור אותו שם.",
                     "selfUpdate": "Steam מעדכן את עצמו. לחץ שוב על שחק לאחר שהוא יופעל מחדש."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "לקוח Steam של Windows עדיין לא הפעיל את המשחק.",
                 "likelyCauses": "סיבות סבירות:",
                 "mostLikely": "הסביר ביותר:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "ממתין ל-Steam…"
             }
         },

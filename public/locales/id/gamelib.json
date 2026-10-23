@@ -335,9 +335,13 @@
                     "otherSession": "Game ini berjalan di komputer lain, dan Steam bertanya apakah harus menutupnya di sana.",
                     "selfUpdate": "Steam sedang memperbarui dirinya sendiri. Tekan Main lagi setelah dimulai ulang."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Klien Steam Windows belum memulai game.",
                 "likelyCauses": "Kemungkinan penyebab:",
                 "mostLikely": "Paling mungkin:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Menunggu Steam…"
             }
         },

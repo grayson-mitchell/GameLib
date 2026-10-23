@@ -342,9 +342,13 @@
                     "otherSession": "Questo gioco è in esecuzione su un altro computer, e Steam chiede se chiuderlo lì.",
                     "selfUpdate": "Steam si sta aggiornando da solo. Premi di nuovo Gioca una volta riavviato."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Il client Steam di Windows non ha ancora avviato il gioco.",
                 "likelyCauses": "Cause probabili:",
                 "mostLikely": "Più probabile:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "In attesa di Steam…"
             }
         },

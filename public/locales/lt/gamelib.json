@@ -349,9 +349,13 @@
                     "otherSession": "Šis žaidimas veikia kitame kompiuteryje, ir Steam klausia, ar jį ten reikėtų uždaryti.",
                     "selfUpdate": "Steam atsinaujina pats. Paspauskite Žaisti dar kartą, kai jis bus paleistas iš naujo."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam klientas dar nepaleido žaidimo.",
                 "likelyCauses": "Tikėtinos priežastys:",
                 "mostLikely": "Labiausiai tikėtina:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Laukiama Steam…"
             }
         },

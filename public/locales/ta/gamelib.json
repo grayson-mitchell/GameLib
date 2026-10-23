@@ -335,9 +335,13 @@
                     "otherSession": "இந்த விளையாட்டு மற்றொரு கணினியில் இயங்குகிறது, மேலும் அதை அங்கே மூட வேண்டுமா என Steam கேட்கிறது.",
                     "selfUpdate": "Steam தானாகவே புதுப்பிக்கிறது. மறுதொடக்கத்திற்குப் பிறகு மீண்டும் Play-ஐ அழுத்தவும்."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam கிளையண்ட் இன்னும் விளையாட்டைத் தொடங்கவில்லை.",
                 "likelyCauses": "சாத்தியமான காரணங்கள்:",
                 "mostLikely": "மிகவும் சாத்தியமானது:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Steam-க்காக காத்திருக்கிறது…"
             }
         },

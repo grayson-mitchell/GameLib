@@ -342,9 +342,13 @@
                     "otherSession": "Ova igra radi na drugom računalu, a Steam pita treba li je ondje zatvoriti.",
                     "selfUpdate": "Steam se sam ažurira. Pritisnite Igraj ponovno nakon što se ponovno pokrene."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Windows Steam klijent još nije pokrenuo igru.",
                 "likelyCauses": "Vjerojatni uzroci:",
                 "mostLikely": "Najvjerojatnije:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Čekanje na Steam…"
             }
         },

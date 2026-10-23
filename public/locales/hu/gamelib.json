@@ -335,9 +335,13 @@
                     "otherSession": "Ez a játék egy másik számítógépen fut, és a Steam megkérdezi, hogy ott be kell-e zárni.",
                     "selfUpdate": "A Steam frissíti önmagát. Nyomja meg újra a Játékot az újraindulás után."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "A Windows Steam kliens még nem indította el a játékot.",
                 "likelyCauses": "Valószínű okok:",
                 "mostLikely": "Legvalószínűbb:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Várakozás a Steamra…"
             }
         },

@@ -349,9 +349,13 @@
                     "otherSession": "Эта игра запущена на другом компьютере, и Steam спрашивает, нужно ли закрыть её там.",
                     "selfUpdate": "Steam обновляется сам. Нажмите «Играть» ещё раз после перезапуска."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Клиент Steam для Windows ещё не запустил игру.",
                 "likelyCauses": "Вероятные причины:",
                 "mostLikely": "Наиболее вероятно:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Ожидание Steam…"
             }
         },

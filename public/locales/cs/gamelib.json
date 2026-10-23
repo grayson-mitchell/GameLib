@@ -349,9 +349,13 @@
                     "otherSession": "Tato hra běží na jiném počítači a Steam se ptá, zda ji tam má zavřít.",
                     "selfUpdate": "Steam se sám aktualizuje. Po restartování znovu stiskněte Hrát."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Klient Steam pro Windows ještě hru nespustil.",
                 "likelyCauses": "Pravděpodobné příčiny:",
                 "mostLikely": "Nejpravděpodobnější:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Čekání na Steam…"
             }
         },

@@ -335,9 +335,13 @@
                     "otherSession": "Αυτό το παιχνίδι εκτελείται σε άλλον υπολογιστή, και το Steam ρωτά αν πρέπει να κλείσει εκεί.",
                     "selfUpdate": "Το Steam ενημερώνεται μόνο του. Πατήστε ξανά Αναπαραγωγή μόλις επανεκκινηθεί."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Ο πελάτης Steam των Windows δεν έχει ξεκινήσει ακόμη το παιχνίδι.",
                 "likelyCauses": "Πιθανές αιτίες:",
                 "mostLikely": "Πιο πιθανό:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Αναμονή για το Steam…"
             }
         },

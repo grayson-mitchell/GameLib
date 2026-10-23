@@ -363,9 +363,13 @@
                     "otherSession": "هذه اللعبة تعمل على جهاز كمبيوتر آخر، ويسأل Steam عما إذا كان يجب إغلاقها هناك.",
                     "selfUpdate": "يقوم Steam بتحديث نفسه. اضغط تشغيل مرة أخرى بعد إعادة التشغيل."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "لم يبدأ عميل Steam الخاص بـ Windows تشغيل اللعبة بعد.",
                 "likelyCauses": "الأسباب المحتملة:",
                 "mostLikely": "الأرجح:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "في انتظار Steam…"
             }
         },

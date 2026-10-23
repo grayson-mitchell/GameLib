@@ -335,9 +335,13 @@
                     "otherSession": "این بازی روی رایانه دیگری در حال اجراست، و Steam می‌پرسد که آیا باید آنجا بسته شود.",
                     "selfUpdate": "Steam در حال به‌روزرسانی خودش است. پس از راه‌اندازی مجدد دوباره روی Play بزنید."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "کلاینت Steam Windows هنوز بازی را شروع نکرده است.",
                 "likelyCauses": "دلایل محتمل:",
                 "mostLikely": "محتمل‌ترین:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "در انتظار Steam…"
             }
         },

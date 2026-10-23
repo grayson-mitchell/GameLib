@@ -371,9 +371,13 @@
                     "otherSession": "This game is running on another computer, and Steam is asking whether to close it there.",
                     "selfUpdate": "Steam is updating itself. Press Play again once it has restarted."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "The Windows Steam client has not started the game yet.",
                 "likelyCauses": "Likely causes:",
                 "mostLikely": "Most likely:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Waiting for Steam…"
             }
         },

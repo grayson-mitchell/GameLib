@@ -335,9 +335,13 @@
                     "otherSession": "Тази игра работи на друг компютър и Steam пита дали да я затвори там.",
                     "selfUpdate": "Steam се самообновява. Натиснете Play отново, след като се рестартира."
                 },
+                "ifNotStarting": "If it still does not start, check:",
                 "intro": "Клиентът на Steam за Windows все още не е стартирал играта.",
                 "likelyCauses": "Вероятни причини:",
                 "mostLikely": "Най-вероятно:",
+                "startingIntro": "A first launch can take several minutes while Steam installs the game's prerequisites.",
+                "startingTitle": "Steam is still starting the game…",
+                "stopWaiting": "Stop waiting",
                 "title": "Изчакване на Steam…"
             }
         },

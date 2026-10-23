@@ -22,3 +22,11 @@ Fix: keep the launching state until the monitor reports started, or until it giv
 the bottled route's 20 s wait
 (`2026-10-23-bottled-launch-gives-up-after-20s-while-steam-is-still-starting-the-game.md`) uses
 the same state hand-off, and fix both together.
+
+## Closed 2026-10-24: monitor-owned launching state removes the Play flicker
+
+Same root cause as the 20s-give-up todo: Steam launches bypass `launchEventCallback`, so `launching` was only the frontend `playClicked`, which dropped when the launch IPC resolved on hand-off (bridge: `fireBridgeWineLaunch` returns without awaiting wine; bottled: `runWineCommand({wait:false})`), leaving Play showing until `playing`.
+
+Changed (quick 261024-gvu): `startBottleProcessMonitor` sends `launching` before the launch IPC resolves (bottle.ts now awaits the monitor start before `runWineCommand`) and the monitor holds it until the first match (`playing`) or a terminal `done`. A bridge Launching -> Playing UI pass is not a bridge "verified" claim (strict criterion).
+
+Live verification on the Mac (Manor Lords 1363080 bridge; XCOM 200510 bottled) is still owed.
