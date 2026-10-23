@@ -325,6 +325,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261023-ue0 | `gamelib_bridge.cfg` written beside every placed shim DLL (Unity `_Data/Plugins/x86_64/` layout), not only beside the exe; `placeShimForGame` reports all runtime shim paths on `already-placed`/`placed-miss`; every copy rewritten each launch. Live HELLO check on 1167950 pending. | 2026-10-23 | ae050a4db | | [261023-ue0-write-gamelib-bridge-cfg-beside-every-pl](./quick/261023-ue0-write-gamelib-bridge-cfg-beside-every-pl/) |
 | 261023-vkv | Packaged macOS notifications delivered via `UNUserNotificationCenter` (startup `.alert\|.sound` auth + `willPresent` delegate; plugin kept for `tauri:dev`/non-bundle); delivery failures logged via `logWarning`, startup auth to `gamelib-shell.log`. Live banner verified on an Apple-Development-signed bundle; ad-hoc bundles are refused (`UNErrorDomain` 1). | 2026-10-24 | 687ee4234 | live-verified (team-signed bundle) | [261023-vkv-deliver-macos-notifications-via-unuserno](./quick/261023-vkv-deliver-macos-notifications-via-unuserno/) |
 | fast | Add/Remove shortcuts hidden for Steam games in GameSubMenu (stubs only logged, so the item notified a false "Shortcuts were created"); todo filed for the real feature. | 2026-10-24 | 08a964f8f | | — |
+| fast | Prescreen backslash todo annotated: fix already landed in `2ba070588` (51-22), wider `steam/` sweep found nothing else; todo stays pending, closed by 51-30 item 19. | 2026-10-24 | ee974f8df | | — |
 
 ## Deferred Items
 
