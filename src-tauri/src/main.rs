@@ -55,6 +55,14 @@ use tauri_plugin_shell::{process::Command as ShellCommand, ShellExt};
 // open/set_bounds/hide/show/close/deselect surface lifecycle) makes an inline block impractical.
 #[cfg(target_os = "macos")]
 mod macos_epic_embed;
+// Quick task 261023-vkv: packaged macOS builds deliver notifications through
+// `UNUserNotificationCenter` -- see that module's doc comment for the mechanism.
+#[cfg(target_os = "macos")]
+mod macos_notifications;
+// Its cfg-free half (backend selection, authorization-status -> error-string contract), kept out
+// of the macOS-only module so `cargo test` covers it on Linux/Windows too.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod notification_backend;
 // Phase 50 review fixes: the Epic surface's cfg-free selection/visibility state machine and
 // nav-state flag merge -- deliberately NOT macOS-gated so `cargo test` covers it on Linux. Only
 // `macos_epic_embed` calls it, hence `dead_code` is expected everywhere else.
@@ -7833,27 +7841,36 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 Value::Null
             })
         }
-        // Real OS notification (Phase 33 Plan 04, D-05) via `tauri-plugin-notification`. Backs
-        // `electronStub.ts`'s `Notification.show()`. Mirrors `dialog_message`'s args-parse idiom
-        // -- read an optional `title`/`body` from args[0], build the notification, show it. No
-        // icon/nativeImage plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
-        // `show()`'s internal work (`notify_rust`) is dispatched onto `tauri::async_runtime::spawn`
-        // by the plugin itself, so this call returns promptly -- safe to run on the same spawned
-        // worker thread as the other rustInvoke arms.
+        // Real OS notification (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s
+        // `Notification.show()`. Mirrors `dialog_message`'s args-parse idiom -- read an optional
+        // `title`/`body` from args[0]. No icon/nativeImage plumbing.
+        //
+        // Quick task 261023-vkv: on a packaged macOS bundle the notification goes through
+        // `macos_notifications::deliver` (`UNUserNotificationCenter`), and its `notification:*`
+        // Err strings reach the sidecar as a rejection (logged via `logWarning`). That path
+        // waits at most two `NOTIFICATION_COMPLETION_TIMEOUT`s on this worker thread. Dev and
+        // non-bundled runs, and Windows/Linux, use `tauri-plugin-notification` below, whose
+        // `show()` dispatches its work onto `tauri::async_runtime::spawn` and returns promptly.
         "notification_show" => {
-            let mut builder = app.notification().builder();
-            if let Some(title) = args
+            let title = args
                 .first()
                 .and_then(|v| v.get("title"))
-                .and_then(|v| v.as_str())
-            {
-                builder = builder.title(title);
-            }
-            if let Some(body) = args
+                .and_then(|v| v.as_str());
+            let body = args
                 .first()
                 .and_then(|v| v.get("body"))
-                .and_then(|v| v.as_str())
+                .and_then(|v| v.as_str());
+            #[cfg(target_os = "macos")]
+            if macos_notifications::backend()
+                == notification_backend::NotificationBackend::UserNotifications
             {
+                return macos_notifications::deliver(title, body).map(|()| Value::Null);
+            }
+            let mut builder = app.notification().builder();
+            if let Some(title) = title {
+                builder = builder.title(title);
+            }
+            if let Some(body) = body {
                 builder = builder.body(body);
             }
             builder.show().map_err(|e| e.to_string())?;
@@ -12580,6 +12597,10 @@ fn main() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_deep_link::init())
         .setup(move |app| {
+            // Quick task 261023-vkv: delegate + one-time authorization request for packaged
+            // macOS builds (no-op elsewhere); see `macos_notifications`' module doc. Non-blocking.
+            #[cfg(target_os = "macos")]
+            macos_notifications::init_at_startup();
             // A spawn failure used to propagate through this `?`. Tauri turns a setup error into
             // a panic (`app.rs:1425`), and that panic unwinds out of `did_finish_launching` — an
             // `extern "C"` ObjC callback — so it became `panic_cannot_unwind` -> `SIGABRT`. The

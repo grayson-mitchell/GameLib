@@ -247,6 +247,27 @@ objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "WKWebsiteDataStore",
     "objc2-app-kit",
 ] }
+# Quick task 261023-vkv (todo 2026-10-17, fixes the 261017-cwf defect): packaged macOS builds
+# deliver notifications through `UNUserNotificationCenter` (`src/macos_notifications.rs`)
+# instead of `tauri-plugin-notification`, whose notify-rust -> mac-notification-sys path rides
+# the deprecated `NSUserNotificationCenter` and neither prompts nor registers the app on this
+# macOS. ALREADY resolved at 0.3.2 in Cargo.lock (pulled by objc2-ui-kit) and already in
+# `EXPECTED_LOCKFILE_CRATE_NAMES` (`cargoFeatures.test.ts`), so no new crate enters the tree;
+# macOS-only. `default-features = false`: only the types this module names are requested
+# (`objc2-core-location` deliberately left out).
+objc2-user-notifications = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "bitflags",
+    "block2",
+    "UNUserNotificationCenter",
+    "UNNotificationRequest",
+    "UNNotificationContent",
+    "UNNotificationSound",
+    "UNNotificationTrigger",
+    "UNNotificationSettings",
+    "UNNotification",
+    "UNError",
+] }
 
 # Quick task 260907-juv (Layer B): the sidecar's process-group reap on quit
 # (`SidecarState::shutdown_child()` in `src/main.rs`) needs `libc::kill(-pgid, sig)` to signal
