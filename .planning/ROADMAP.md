@@ -351,3 +351,44 @@ Plans:
 - [ ] 52-10-PLAN.md — Desk gate, scratch-clone harness, live-gate contract + reachability review, deferred note (authors, does not run)
 - [ ] 52-11-PLAN.md — Discovery rounds in a scratch clone (cap 3), pid decision checkpoint
 - [ ] 52-12-PLAN.md — Done-when: GameLib launch of Grim Dawn, cx-log trace, bottle hygiene; close both todos on pass
+
+### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
+
+**Goal:** Engine-wrapper titles that use the native Steam bridge get Steam initialised *inside the
+game*, not just a shim attached. The bar is phase 51's strict criterion: `HELLO` plus a clean
+game-side Steam init (Unity `Player.log` or equivalent). No game log means unverified, and Mac
+Steam In-Game never counts. Today the 51-29 sample is 12 of 12 bridge-routed and 0 verified
+(N=18, K=0, M=19 in the 51-30 census).
+
+Two defect classes, ranked by sample reach:
+1. **Modern-SDK `SteamInternal_*` entry points**, reached through four engines: Hell Clock 1782460
+   (Unity/Steamworks.NET `InitEx`), Mining Mechs 1603180 (GameMaker `Steamworks_x64.dll`),
+   Overlooting 3410180 (GodotSteam), and Ranch Simulator 1119730 (UE Shipping exe).
+   **Phase 52 plan 52-07 already adds the five x64 exports** for Grim Dawn. This phase depends on
+   it, takes those five as given, and does not duplicate them. What's left here: x86 parity,
+   re-testing these four titles, and whatever each one hits after `SteamInternal_SteamAPI_Init`
+   returns OK.
+2. **The Steamworks flat C API** (`SteamAPI_ISteamClient_*`, `SteamAPI_ISteamUser_*`,
+   `SteamAPI_ISteamUtils_*`, …) used by Unity + Steamworks.NET: Vampire's Fall 1167950, The
+   Planet Crafter 1284190, and Rogue Waters 1691190, which **does not run**: it hangs at loading on
+   `IsSteamRunningOnSteamDeck`. Generate the exports from the same interface tables as the vtable
+   proxies, choose the SDK generation(s) from the owned Unity library, and make the scan read the
+   managed assemblies' DllImport entry points so the census verdict is honest for this class.
+
+Done when the census Evidence column reads `verified` for a majority of the Steamworks-using
+titles in a re-run sample containing these seven.
+
+Source todos:
+- `2026-10-23-x64-shim-lacks-modern-sdk-steaminternal-exports-and-scan-misses-dll-importers.md`
+- `2026-10-23-bridge-shim-lacks-steamworks-flat-api-for-unity-steamworks-net-games.md`
+
+Out of scope, tracked separately: the Unreal bootstrap-exe scan miss
+(`2026-10-24-bridge-scan-reads-unreal-bootstrap-exe-and-misses-the-shipping-binary.md`), the
+SteamStub forwarder (Phase 52), and bottle Windows runtime components
+(`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
+**Requirements**: TBD
+**Depends on:** Phase 52
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 53 to break down)
