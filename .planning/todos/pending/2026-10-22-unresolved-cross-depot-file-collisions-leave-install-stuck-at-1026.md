@@ -5,10 +5,11 @@ source: phase 51-19 live gate item 5 (XCOM, 200510), fresh Mac, packaged debug b
 area: steam-depot-download
 files:
   - src/backend/storeManagers/steam/depot/pathCollisions.ts
-  - src/backend/storeManagers/steam/depot/
-severity: major
+  - src/backend/storeManagers/steam/depot/appinfoOrder.ts
+  - src/backend/storeManagers/steam/depot/reconcile.ts
+severity: medium
 platform: any
-ready: code
+ready: live-gate
 ---
 
 Installing XCOM: Enemy Unknown (200510, 9 depots, 9723 files) through GameLib's own depot
@@ -41,3 +42,17 @@ written, not against an arbitrary claim, so the install is not reported as damag
 ## Recurrence 2026-10-23 (51-28, 51-UAT item 17)
 
 Reproduced on the bottled-Steam route. After the operator chose "Use bottled Steam", GameLib's own depot download into GameLibSteam failed closed at 20:22:07 with the same 11 wrong-size files under `XEW\XComGame\...` (XComGame.upk, Engine.upk, DefaultGame.ini and others), correlating with `buildDepotPlan: UNRESOLVED cross-depot path collision ... claimed by depot(s) 200522,225341`. Bottled Steam later adopted and repaired the files by itself, which suggests the real client's winner rule is observable: compare the on-disk bytes after the Steam repair against each depot's manifest entry to see which claim wins.
+
+## Fix landed 2026-10-24 (debug/cross-depot-collision-1026), live gate outstanding
+
+The 1026 symptom is fixed in code; the rule is implemented but unproven in general. Debug session: `.planning/debug/cross-depot-collision-1026.md`.
+
+- **Winner rule:** the depot later in the owning app's raw PICS appinfo `depots` order wins, and the loser's entry is dropped from the plan (`resolveDepotPathCollisions`, logged `RESOLVED cross-depot file collision ... winner depot <id>`). steam-user sorts depot keys numerically when it parses appinfo, so `depot/appinfoOrder.ts` reads the order from the raw VDF text by briefly wrapping steam-user's private `_send` around the two `getProductInfo` calls in `depot.ts`. A resolved path is verified strictly against the winner.
+- **Fallback:** when the order is unknown (no `_send`, no raw buffer, depot id missing from the text) or the claimants belong to different owning apps, the collision stays UNRESOLVED. `verifyStructuralIntegrity` (`depot/reconcile.ts`) then passes the path if the bytes on disk match any claim by size and whole-file sha1, so the install is not failed closed to 1026.
+- **Evidence:** the bottle's `appinfo.vdf` lists 225341 before 200522, and the 11 files bottled Steam repaired on 2026-10-23 have exactly 200522's sizes. That matches the rule.
+- **Not proven:** XCOM's single pair cannot tell "later in appinfo order" from "lowest depot id" or "later manifest gid"; 200522 satisfies all three. A second title with a cross-depot real-file collision where those rules disagree would settle it.
+
+**Remaining before this can close:**
+
+1. Live gate: a fresh GameLib-direct XCOM 200510 install logs `RESOLVED cross-depot file collision ... winner depot 200522` for the 11 `XEW/` paths and finishes at StateFlags=4. This also confirms that the PICS text response orders depots the same way as the local binary `appinfo.vdf` (unverified; the capture has only run against fakes).
+2. Rule confirmation from a second collided title (see Not proven above).
