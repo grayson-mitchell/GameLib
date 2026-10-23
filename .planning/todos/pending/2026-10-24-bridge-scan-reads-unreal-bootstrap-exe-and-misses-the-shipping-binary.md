@@ -48,3 +48,18 @@ Abiotic Factor shows the same layout and the same log pair: `no-steam-api`, then
 `AbioticFactor/Binaries/Win64/AbioticFactor-Win64-Shipping.exe`. The game ships
 `Engine/Binaries/ThirdParty/Steamworks/Steamv157/Win64/steam_api64.dll`. It played for 82 s, but
 offline: no In-Game. That is two UE titles out of 7 sampled.
+
+## Recurrence: Ranch Simulator (1119730) does not run, 2026-10-24 10:42 and 10:43
+
+This is the same stub/Shipping layout: `no-steam-api`, then `launching ... directly (no-steam-api, no helper)`.
+This time the game **exits after 2-3 s** on both launches.
+`Ranch_Simulator-Win64-Shipping.exe` imports `steam_api64.dll` (`Steamv161`), including
+`SteamAPI_RestartAppIfNecessary` and `SteamInternal_SteamAPI_Init`, and there is no
+`steam_appid.txt`. The likely path is that Valve's real DLL finds no Steam, `RestartAppIfNecessary`
+returns true, and the game quits to "relaunch through Steam". That is the standard 2-second exit.
+The shim's `SteamAPI_RestartAppIfNecessary` returns 0, so placing it would get past this. The
+game would then hit `SteamInternal_SteamAPI_Init`, the modern-SDK todo.
+
+So the same scan miss gives "plays offline" for Manor Lords and Abiotic Factor but "won't
+launch" here, depending on whether the game calls `RestartAppIfNecessary`. Three UE titles of 10
+sampled.
