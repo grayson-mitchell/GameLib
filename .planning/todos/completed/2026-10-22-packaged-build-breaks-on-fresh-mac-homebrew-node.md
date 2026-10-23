@@ -48,3 +48,11 @@ Also noted: the debug bundle's shell spawns the sidecar in dev mode
 (`/opt/homebrew/bin/node <repo>/build/main/sidecar.js`), not the bundled SEA binary. So a "packaged
 debug build" exercises the repo's `build/main/sidecar.js`; `pnpm build:sidecar` plus a restart is
 enough to pick up a sidecar fix.
+
+## Closed
+
+Closed 2026-10-24, quick 261024-eg9.
+
+1. `tauri:dev:packaged` now chains `pnpm build:sidecar-sea` (which runs `build:sidecar` first) before `tauri build --debug`, so a fresh checkout produces `src-tauri/binaries/gamelib-sidecar-<triple>`. The "wrapper exits 0 regardless" claim was measured: `pnpm exec tauri build --debug` with the sidecar missing exits 1 here, and nothing in-repo swallows it (plain `&&` chain, `.npmrc` is only `node-linker=hoisted`). The 0 seen in 51-19 came from the operator's wrapper (a pipe without pipefail), not the repo.
+2. `meta/buildSidecarSea.ts` classifies `process.execPath` (`otool -L` / `ldd` for a `libnode.` library, size floor 20 MB as fallback). A shared-libnode base now uses the SHA-256-verified official nodejs.org build of `process.version` (`obtainOfficialNodeBinary`, renamed from `obtainCrossNodeBinary`); self-contained bases copy execPath as before. postject failures now include stdout. `pnpm build:sidecar-sea` verified under Homebrew node 22.23.4 (arm64 gate passed, ~140 MB binary); `lzmaNativeSeaRealBuild.test.ts` 3/3 pass.
+3. R6/S11 root cause is a test-harness defect, not product: on Node 22.23.4 `fs.rmSync` is JS and lazily loads `internal/fs/rimraf`, which captures `fs.readdirSync` at load. R6's `jest.spyOn(nodeFs, 'readdirSync')` was active at the process's first real `rmSync`, so rimraf kept the spy wrapper, which returns undefined after `restoreAllMocks()`; later recursive `rmSync` then threw `forEach called on null or undefined` (R6 finally, S11 sweep and afterEach). Probed outside jest to confirm. Fixed by warming rimraf at module scope in `lzmaNativeBinding.test.ts` before any spy; 40/40 pass. The shipped sidecar installs no such spies, so production is unaffected.

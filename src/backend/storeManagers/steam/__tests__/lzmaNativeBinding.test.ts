@@ -13,6 +13,7 @@
 
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   rmSync,
@@ -41,6 +42,23 @@ type LzmaNativeBindingResolver = {
   }
   LZMA_NATIVE_STALE_SWEEP_MAX_DIRS: number
   LZMA_NATIVE_STALE_SWEEP_RECORD_KEY: string
+}
+
+// Warm Node's lazily loaded rimraf BEFORE any test spies on fs.readdirSync.
+// On Node v22.23.4 (Homebrew) fs.rmSync is JS: the first call lazy-loads
+// internal/fs/rimraf, which destructures `readdirSync` from `fs` at load
+// time and keeps that reference forever. If that first load happens while a
+// jest spy on nodeFs.readdirSync is installed (R6, line ~533), rimraf keeps
+// the spy wrapper, which returns undefined after jest.restoreAllMocks(), and
+// every later recursive rmSync throws "Array.prototype.forEach called on
+// null or undefined" (R6's finally, S11's sweep and afterEach). Probed
+// outside jest: spying readdirSync -> undefined before the first rmSync
+// breaks every rmSync after restore. A nested dir is removed so the
+// directory-walking path is the one loaded.
+{
+  const warmRoot = mkdtempSync(join(tmpdir(), 'gamelib-rimraf-warm-'))
+  mkdirSync(join(warmRoot, 'a', 'b'), { recursive: true })
+  rmSync(warmRoot, { recursive: true, force: true })
 }
 
 // The REAL host platform, captured before any test pins process.platform.
