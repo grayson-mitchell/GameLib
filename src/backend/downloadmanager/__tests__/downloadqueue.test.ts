@@ -640,3 +640,48 @@ describe('downloadqueue.ts — debug/steam-cancel-abort-thread-a: cancelled Stea
     )
   })
 })
+
+describe('downloadqueue.ts — quick 261024-cjq: deferred-to-setup installs are not "Finished"', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+    gameGetGameInfoMock.mockReturnValue({ title: 'Some Game' })
+    resolveGameTitleMock.mockImplementation(
+      (libraryManagerMap, runner, appName, fallback) => {
+        const { title } = libraryManagerMap[runner]
+          .getGame(appName)
+          .getGameInfo()
+        return title || fallback?.title || appName
+      }
+    )
+  })
+
+  async function runOne(installResult: Record<string, unknown>) {
+    __store.queue = [makeQueueElement('555')]
+    __store.finished = []
+    const { installQueueElement } = await import('../utils')
+    ;(installQueueElement as jest.Mock).mockResolvedValue(installResult)
+    const { initQueue } = await import('../downloadqueue')
+    const { logInfo } = await import('backend/logger')
+    await initQueue(false)
+    const lines = (logInfo as jest.Mock).mock.calls.map((c) =>
+      Array.isArray(c[0]) ? c[0].join(' ') : String(c[0])
+    )
+    return lines
+  }
+
+  it('logs "deferred", no "Finished", records nothing as finished, and still dequeues', async () => {
+    const lines = await runOne({ status: 'done', deferredToSetup: true })
+    expect(lines.some((l) => l.includes('Finished'))).toBe(false)
+    expect(lines.some((l) => l.includes('deferred'))).toBe(true)
+    expect(__store.finished).toEqual([])
+    expect(__store.queue).toEqual([])
+  })
+
+  it('a plain done install still logs "Finished Installation of" and is recorded', async () => {
+    const lines = await runOne({ status: 'done' })
+    expect(lines).toContain('Finished Installation of 555')
+    expect((__store.finished as unknown[]).length).toBe(1)
+  })
+})

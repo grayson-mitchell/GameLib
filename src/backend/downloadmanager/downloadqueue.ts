@@ -155,16 +155,23 @@ async function initQueue(isStartup = false) {
     queueState = 'running'
     sendFrontendMessage('changedDMQueueInformation', queuedElements, queueState)
 
-    const { status } =
+    const { status, deferredToSetup } =
       element.type === 'install'
         ? await installQueueElement(element.params)
-        : await updateQueueElement(element.params)
+        : {
+            ...(await updateQueueElement(element.params)),
+            deferredToSetup: false
+          }
     element.endTime = Date.now()
 
-    processNotification(element, status)
+    processNotification(element, status, deferredToSetup)
 
     if (!isPaused()) {
-      addToFinished(element, status)
+      // quick 261024-cjq: a setup-deferred install installed nothing, so it is
+      // not recorded as finished.
+      if (!deferredToSetup) {
+        addToFinished(element, status)
+      }
       removeFromQueue(element.params.appName)
       element = getFirstQueueElement()
     } else {
@@ -381,7 +388,11 @@ function stopCurrentDownload() {
 }
 
 // notify the user based on the status of the element and the status of the queue
-function processNotification(element: DMQueueElement, status: DMStatus) {
+function processNotification(
+  element: DMQueueElement,
+  status: DMStatus,
+  deferredToSetup = false
+) {
   const action = element.type === 'install' ? 'Installation' : 'Update'
   if (
     element.params.runner === 'gog' &&
@@ -442,6 +453,18 @@ function processNotification(element: DMQueueElement, status: DMStatus) {
       })
     }
 
+    if (deferredToSetup) {
+      logInfo(
+        [
+          action,
+          'of',
+          element.params.appName,
+          'deferred to setup — nothing was installed'
+        ],
+        LogPrefix.DownloadManager
+      )
+      return
+    }
     logInfo(
       ['Finished', action, 'of', element.params.appName],
       LogPrefix.DownloadManager

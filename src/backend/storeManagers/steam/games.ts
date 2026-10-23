@@ -70,7 +70,9 @@ import {
   provisionBridgeBottle,
   bridgeBottleNameFor,
   removePerGameBridgeBottle,
-  findBridgeInstallBottle
+  findBridgeInstallBottle,
+  isCrossoverInstalled,
+  CROSSOVER_MISSING
 } from './bottle'
 import { isSteamNativeInstallEnabled } from './nativeInstallSetting'
 import { noteSteamAuthTrigger } from './authTrigger'
@@ -1127,6 +1129,20 @@ export default class SteamGame implements Game {
     const routeThroughBottle = forceWindowsViaBottle || this.isBottleEligible()
 
     if (routeThroughBottle) {
+      // quick 261024-cjq (todo no-crossover-notice): a missing CrossOver is a
+      // PRECONDITION failure, not a bridge failure. It must NOT call
+      // markBridgeFailedThisSession: that flips resolveBridgeRoute to
+      // 'failed-this-session' and silently reroutes the next Install to
+      // bottled Steam, which needs the same CrossOver. Bottled Steam is a
+      // narrow fallback and is never the answer to a missing engine.
+      if (isMac && !(await isCrossoverInstalled())) {
+        logWarning(
+          `SteamGame: CrossOver is not installed — install of appId ${this.appId} stopped (precondition, not a bridge failure)`,
+          LogPrefix.Steam
+        )
+        return this.crossoverRequiredError()
+      }
+
       // quick-260821-le0: remove a leftover unrunnable native i386 install
       // BEFORE anything else in this branch runs — HOARD proved a demoted
       // title can be bridge-eligible AND hold a native orphan at the same
@@ -1466,11 +1482,22 @@ export default class SteamGame implements Game {
    * low-risk choice this phase — not forked here.
    *
    * Any terminal failure (provisioning, depot download, unresolved launch
-   * exe, or shim placement) marks this appId bridge-failed-this-session
+   * exe, or shim placement) EXCEPT a missing CrossOver (a precondition, not a
+   * bridge failure — quick 261024-cjq) marks this appId bridge-failed-this-session
    * (finding #3, markBridgeFailedThisSession above) so a later D-05
    * fallback re-invocation of install() reaches the existing bottled path
    * instead of looping back into the same failing bridge (T-24-17).
    */
+  private crossoverRequiredError(): InstallResult {
+    return {
+      status: 'error',
+      error: i18next.t(
+        'gamelib:steam.install.crossoverRequired',
+        'CrossOver is required to install Windows games on macOS. Install it from codeweavers.com, then try again.'
+      )
+    }
+  }
+
   private async installBridgeGame(args: InstallArgs): Promise<InstallResult> {
     // quick/261016-u1w (D-A): new installs ALWAYS target this game's OWN
     // per-game bridge bottle directly — never via resolveBridgeBottleName
@@ -1497,6 +1524,15 @@ export default class SteamGame implements Game {
       const provisionResult = await provisionBridgeBottle({
         bottleName: bridgeBottleName
       })
+      if (provisionResult.errorCode === CROSSOVER_MISSING) {
+        // Race with the install() gate: CrossOver vanished in between. Still a
+        // precondition failure — never marks the bridge failed.
+        logWarning(
+          `SteamGame: CrossOver missing while provisioning the bridge bottle for appId ${this.appId}`,
+          LogPrefix.Steam
+        )
+        return this.crossoverRequiredError()
+      }
       if (provisionResult.status !== 'done') {
         logWarning(
           `SteamGame: bridge bottle provisioning failed for appId ${this.appId}: ${provisionResult.error}`,

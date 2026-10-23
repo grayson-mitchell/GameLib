@@ -256,8 +256,14 @@ jest.mock('../bottle', () => {
   // already drives isBridgeBottleReady for its own purposes also drives
   // findBridgeInstallBottle's real-shaped reimplementation for free.
   const isBridgeBottleReady = jest.fn()
+  // quick 261024-cjq: plain function over a jest.fn() (survives resetMocks).
+  // After reset crossoverInstalled() is undefined, which reads as installed.
+  const crossoverInstalled = jest.fn()
 
   return {
+    __crossoverInstalled: crossoverInstalled,
+    isCrossoverInstalled: async () => crossoverInstalled() !== false,
+    CROSSOVER_MISSING: 'crossover-missing',
     isBottleReady: jest.fn(),
     tellBottledSteamToInstall: jest.fn(),
     tellBottledSteamToLaunch: jest.fn(),
@@ -4853,6 +4859,87 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
       }
     )
     expect(result).toEqual({ status: 'done', deferredToSetup: true })
+  })
+
+  describe('quick 261024-cjq: missing CrossOver is a precondition, not a bridge failure', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const crossoverInstalled = (): jest.Mock =>
+      jest.requireMock('../bottle').__crossoverInstalled
+
+    it('CrossOver absent: install() errors with a CrossOver message, reaches no provisioner or setup dialog, and does not mark the bridge failed', async () => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+      crossoverInstalled().mockReturnValue(false)
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result.status).toBe('error')
+      // i18next is mocked to echo the key in this file
+      expect(result.error).toContain('crossoverRequired')
+      expect(provisionBridgeBottle).not.toHaveBeenCalled()
+      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBottleSetupRequired',
+        expect.anything()
+      )
+
+      // CrossOver gets installed: the next press still routes to the bridge.
+      crossoverInstalled().mockReturnValue(true)
+      ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'done'
+      })
+      await game.install({} as any)
+      expect(provisionBridgeBottle).toHaveBeenCalledTimes(1)
+      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    })
+
+    it('race: provisionBridgeBottle reports crossover-missing -> error, no setup dialog, next install still tries the bridge', async () => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(false)
+      ;(provisionBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'error',
+        errorCode: 'crossover-missing',
+        error: 'CrossOver is required...'
+      })
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result.status).toBe('error')
+      // i18next is mocked to echo the key in this file
+      expect(result.error).toContain('crossoverRequired')
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+
+      await game.install({} as any)
+      expect(provisionBridgeBottle).toHaveBeenCalledTimes(2)
+      expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
+    })
+
+    it('CrossOver absent on a bottle-routed, non-bridge-eligible title: same error, no bottled-Steam setup dialog', async () => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(isBottleReady as jest.Mock).mockReturnValue(false)
+      crossoverInstalled().mockReturnValue(false)
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(result.status).toBe('error')
+      // i18next is mocked to echo the key in this file
+      expect(result.error).toContain('crossoverRequired')
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBottleSetupRequired',
+        expect.anything()
+      )
+    })
   })
 
   it('Plan 13 (D-51-08): isBridgeEligible() is false when knownBadReason is non-null, and once noticeAcknowledgedFor matches the reason install() goes straight to the bottled branch with NO notice', async () => {

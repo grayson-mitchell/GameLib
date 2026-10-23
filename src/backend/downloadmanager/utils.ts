@@ -118,6 +118,7 @@ function resolveQueueElementTitle(
 async function installQueueElement(params: InstallParams): Promise<{
   status: DMStatus
   error?: string | undefined
+  deferredToSetup?: boolean
 }> {
   const {
     appName,
@@ -267,7 +268,7 @@ async function installQueueElement(params: InstallParams): Promise<{
       errorMessage(error ?? '')
     }
 
-    return { status: resultStatus }
+    return { status: resultStatus, deferredToSetup }
   } catch (error) {
     // 260817-dib: distinguish a genuine STALL trip (no observed progress
     // for the whole window) from an inner CM timeout (a stale-but-present
