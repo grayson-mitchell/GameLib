@@ -130,12 +130,22 @@ result: issue — 2026-10-23, HEAD c8729c36a packaged debug bundle. Operator: "1
 expected: With bottled Steam signed out (Steam > Sign out in the GameLibSteam client), Play on Avernum 4 shows "Waiting for Steam…" within roughly 20s naming the sign-in cause; `[bottle-waiting] appId=206020 cause=login` is logged within 35s of Play; after signing in the game starts and the waiting state clears. If bottled Steam has an update pending, `cause=self-update` is logged during its `Downloading update` phase; otherwise that half is fixture-proven only (51-24).
 result: blocked — 2026-10-23, HEAD c8729c36a packaged debug bundle. Precondition not reached, not a classifier failure. Operator: "did not see message saying waiting for steam, also after quite game game page still says 'launching'". Bottled Steam's steamui_login.txt shows both launches (17:22:59-17:23:11 and 17:24:39-17:24:51) going WaitingForNetwork, WaitingForServerResponse, WaitingForLibraryReady, Success with no WaitingForCredentials: Steam auto-signed-in with remembered credentials despite the sign-out, so `[bottle-waiting] appId=206020 cause=none` (line 171) is correct. The login half of 51-24 stays unproven live; to exercise cause=login the sign-out must also clear remembered credentials (untick remember me or remove the account). The self-update half was not exercised (no update pending). NEW ISSUE found during this item: after quitting Avernum 4 the game page stays on "Launching". The backend saw the stop both times (`matched process(es) gone after 65s of play — game stopped` line 200; `gone after 34s` line 218, each followed by refreshLibrary origin=game-status), but `SteamGame.stop: ... no-op` plus "Aborting not possible. Could not find a matching abort controller for 206020" (lines 196-199) and `raiseFrontmostBottledProcess [launch]: no matching process within ~18s` (lines 169, 212) precede it. Filed as todo 2026-10-23-game-page-stuck-on-launching-after-bottled-steam-game-exits.md.
 
+### 17. XCOM: Enemy Unknown (200510) through bottled Steam (confirms the CEG diagnosis)
+
+expected: The install dialog's known-bad notice names "drm-wrapped" and offers "Use bottled Steam"; choosing it installs through the shared GameLibSteam bottle and Play reaches XCOM's main menu under the bottled Windows Steam client (CEG needs a Windows Steam client). Operator reports main menu yes/no.
+result: pending
+
+### 18. The Age of Decadence (230070) through the bridge (D-51-14 replacement anchor)
+
+expected: `pnpm bridge-census` (or the install dialog's scan verdict) first shows 230070 as x86 and requiring SteamApps, SteamUserStats and SteamRemoteStorage; if it shows no-steam-api or x64, the fallback is Legends of Eisenwald (246760). With the default route the game installs, Play launches it from `GameLibSteamBridge-230070`, `HELLO shim attached appid=230070` is logged, it reaches a playable state, and Mac Steam shows In-Game. Operator reports playable yes/no and the install dialog's route line.
+result: pending
+
 ## Summary
 
-total: 16
+total: 18
 passed: 7
 issues: 6
-pending: 0
+pending: 2
 skipped: 2
 blocked: 1
 
