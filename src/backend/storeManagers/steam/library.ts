@@ -1936,6 +1936,17 @@ const activePolls = new Map<
      *  (seenDownloading). Reset on every 'downloading' tick; reaching
      *  MANIFEST_GONE_TICKS on a delegated poll means Steam-side cancel. */
     absentTicksSinceSeen: number
+    /** quick 261024-h5y: true while a bottle-source isNativeHandoff poll
+     *  sits at StateFlags exactly 1026 (GameLib wrote the manifest, bottled
+     *  Steam has not adopted it). Recomputed every tick; gates the
+     *  steamFinishBottledInstall IPC so it can never drive bottled Steam for
+     *  any other game or route. */
+    awaitingBottledSteam: boolean
+    /** quick 261024-h5y: true once the user's "Start Steam to finish" click
+     *  dispatched steam://install into the bottle. Switches the status
+     *  context to 'steam-finishing-in-bottled-steam'. Reset when the poll
+     *  leaves the bottle-1026 state. */
+    bottledSteamDispatched: boolean
   }
 >()
 
@@ -2527,6 +2538,19 @@ export async function pollInstallOnce(
       result.stateFlags === GAMELIB_HANDOFF_STATE_FLAGS &&
       poll?.isNativeHandoff === true
 
+    // quick 261024-h5y: the bottle route has no user-visible Steam to
+    // restart, so the passive "Restart Steam" hint is a dead end there.
+    // On a bottle-source handoff at 1026 GameLib exposes an explicit
+    // "Start Steam to finish" action (steamFinishBottledInstall ->
+    // tellBottledSteamToInstall). It is only ever driven by that user
+    // click; polling itself still never drives Steam. The awaiting flag
+    // clears on any non-1026 tick (e.g. after bottled Steam adopts).
+    const isBottledHandoff = isWaitingForSteamRestart && source === 'bottle'
+    if (poll) {
+      poll.awaitingBottledSteam = isBottledHandoff
+      if (!isBottledHandoff) poll.bottledSteamDispatched = false
+    }
+
     // T-AOG (quick/260719-aog, Task 2): a genuinely in-flight download
     // (BytesToDownload > 0 and not yet complete) whose BytesDownloaded hasn't
     // advanced since the PREVIOUS tick is "stalled". STALLED_TICKS_THRESHOLD
@@ -2557,11 +2581,17 @@ export async function pollInstallOnce(
       appName: appId,
       runner: 'steam',
       status: 'installing',
-      ...(isWaitingForSteamRestart
-        ? { context: 'steam-waiting-for-restart' }
-        : isPaused
-          ? { context: 'steam-paused' }
-          : {})
+      ...(isBottledHandoff
+        ? {
+            context: poll?.bottledSteamDispatched
+              ? 'steam-finishing-in-bottled-steam'
+              : 'steam-waiting-for-bottled-steam'
+          }
+        : isWaitingForSteamRestart
+          ? { context: 'steam-waiting-for-restart' }
+          : isPaused
+            ? { context: 'steam-paused' }
+            : {})
     })
 
     if (isWaitingForSteamRestart && poll && !poll.notifiedWaiting) {
@@ -2569,11 +2599,17 @@ export async function pollInstallOnce(
       const game = library.get(appId)
       notify({
         title: game?.title ?? '',
-        body: i18next.t(
-          'steam.waitingForSteam.notify',
-          'Restart Steam to finish installing {{game}}',
-          { game: game?.title ?? '' }
-        )
+        body: isBottledHandoff
+          ? i18next.t(
+              'gamelib:steam.bottle.finishInstall.notify',
+              'Downloaded {{game}}. Open it in GameLib and choose Start Steam to finish.',
+              { game: game?.title ?? '' }
+            )
+          : i18next.t(
+              'steam.waitingForSteam.notify',
+              'Restart Steam to finish installing {{game}}',
+              { game: game?.title ?? '' }
+            )
       })
     }
 
@@ -2880,7 +2916,9 @@ export function startInstallPolling(
     skippedDepots,
     notifiedDepotSkipped: false,
     delegatedToSteamClient,
-    absentTicksSinceSeen: 0
+    absentTicksSinceSeen: 0,
+    awaitingBottledSteam: false,
+    bottledSteamDispatched: false
   }
 
   const timer = setInterval(async () => {
@@ -3007,6 +3045,31 @@ export function startInstallPolling(
 
   entry.timer = timer
   activePolls.set(appId, entry)
+}
+
+/**
+ * quick 261024-h5y: true while appId has an active bottle-source handoff poll
+ * parked at StateFlags 1026. The sole authorization for steamFinishBottledInstall.
+ */
+export function isAwaitingBottledSteamAdoption(appId: string): boolean {
+  return activePolls.get(appId)?.awaitingBottledSteam === true
+}
+
+/**
+ * quick 261024-h5y: records that bottled Steam was told to install appId and
+ * immediately pushes the 'finishing' status so the UI does not wait out the
+ * next poll tick. No-op when no poll is active.
+ */
+export function markBottledSteamDispatched(appId: string): void {
+  const poll = activePolls.get(appId)
+  if (!poll) return
+  poll.bottledSteamDispatched = true
+  sendFrontendMessage('gameStatusUpdate', {
+    appName: appId,
+    runner: 'steam',
+    status: 'installing',
+    context: 'steam-finishing-in-bottled-steam'
+  })
 }
 
 /**
