@@ -1730,7 +1730,7 @@ describe('shimGenerate', () => {
       'SteamInternal_FindOrCreateUserInterface',
       'SteamInternal_ContextInit',
       'SteamInternal_CreateInterface',
-      'SteamAPI_ManualDispatch_Init'
+      'SteamAPI_ISteamUGC_CreateItem'
     ]
     const COVERED = [
       'SteamAPI_RestartAppIfNecessary',
@@ -1802,7 +1802,7 @@ describe('shimGenerate', () => {
         expect(result.verdict.status).toBe('miss')
         expect(result.verdict.arch).toBe('x64')
         expect(result.verdict.missingSymbols).toContain(
-          'SteamAPI_ManualDispatch_Init'
+          'SteamAPI_ISteamUGC_CreateItem'
         )
         expect(result.verdict.missingSymbols).toContain('SteamFriends016')
         expect(result.verdict.missingSymbols).not.toContain('SteamUser019')
@@ -1811,7 +1811,7 @@ describe('shimGenerate', () => {
       expect(existsSync(dll + BACKUP)).toBe(false)
       const warned = warnings()
       expect(warned).toHaveLength(1)
-      expect(warned[0]).toContain('SteamAPI_ManualDispatch_Init')
+      expect(warned[0]).toContain('SteamAPI_ISteamUGC_CreateItem')
       expect(warned[0]).toContain('SteamFriends016')
     })
 
