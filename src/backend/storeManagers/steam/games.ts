@@ -3054,6 +3054,7 @@ export default class SteamGame implements Game {
       const { runWineCommand } = await import('backend/launcher')
       const { startBottleProcessMonitor } =
         await import('./bottleProcessMonitor')
+      const { applySteamBridgeKnownFixes } = await import('./bridgeKnownFixes')
 
       // Phase 51 Plan 01 Task 2 (D-51-01): the helper's lifetime is tied to
       // THIS game's own process lifetime, never to the whole app session —
@@ -3071,6 +3072,27 @@ export default class SteamGame implements Game {
         exePath,
         bridgeBottleSettings.wineCrossoverBottle
       )
+
+      // quick 261024-tny: the known-fixes hook for the bridge path. It runs
+      // BEFORE the monitor because the monitor's start sends 'launching',
+      // which supersedes the 'winetricks'/'redist' statuses the applier sends,
+      // while the monitor must still start before the wine child is awaited
+      // (Plan 51-23). It runs on every launch (D2: verbs re-run, no ledger).
+      // The applier never rejects by contract; the .catch is belt-and-braces so
+      // a fix problem can never reach the outer catch, whose
+      // reportLaunchFailure would mark the bridge failed for the session.
+      const launchSettings = await applySteamBridgeKnownFixes(
+        this.appId,
+        bridgeBottleSettings,
+        installRoot
+      ).catch((error: unknown) => {
+        logWarning(
+          `SteamGame: known-fixes application failed for appId ${this.appId}: ${String(error)}`,
+          LogPrefix.Steam
+        )
+        return bridgeBottleSettings
+      })
+
       let handle: ReturnType<typeof startBottleProcessMonitor> = null
       if (installRoot) {
         handle = startBottleProcessMonitor({
@@ -3089,7 +3111,7 @@ export default class SteamGame implements Game {
 
       const winePromise = runWineCommand({
         commandParts: [exePath],
-        gameSettings: bridgeBottleSettings,
+        gameSettings: launchSettings,
         wait: false,
         protonVerb: 'run',
         startFolder: dirname(exePath),

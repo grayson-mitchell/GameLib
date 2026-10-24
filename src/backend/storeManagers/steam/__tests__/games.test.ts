@@ -79,6 +79,7 @@ import {
   stopBottleProcessMonitor
 } from '../bottleProcessMonitor'
 import { runWineCommand } from 'backend/launcher'
+import { applySteamBridgeKnownFixes } from '../bridgeKnownFixes'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
 // 260821-rb5: only needed by this task's case-C self-heal test (2) —
@@ -371,6 +372,13 @@ jest.mock('../bottleProcessMonitor', () => ({
   // undefined (falsy = no live monitor) unless a test sets them.
   getBottleProcessMonitorPhase: jest.fn(),
   stopBottleProcessMonitor: jest.fn()
+}))
+
+// ── bridgeKnownFixes.ts mock (quick 261024-tny) — applySteamBridgeKnownFixes,
+// lazily imported by fireBridgeWineLaunch. resetMocks wipes implementations
+// before EACH test, so a file-scope beforeEach below re-applies a passthrough.
+jest.mock('../bridgeKnownFixes', () => ({
+  applySteamBridgeKnownFixes: jest.fn()
 }))
 
 // ── backend/launcher.ts mock — runWineCommand, dynamically imported by
@@ -1654,6 +1662,16 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
   })
 })
 
+// quick 261024-tny: file-scope passthrough for the known-fixes applier, so every
+// describe that reaches fireBridgeWineLaunch keeps its pre-existing behaviour
+// (the applier returns the bridge settings untouched). Describe-level
+// beforeEach hooks run after this one and may override it.
+beforeEach(() => {
+  ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
+    async (_id: string, settings: unknown) => settings
+  )
+})
+
 // ── Phase 24 Plan 08 (R4/R6/R7, finding #3): allowlist-based bridge launch
 // routing — ensureBridgeHelperReady() readiness gate + resolveBridgeLaunchExe()
 // exe resolution + direct runWineCommand (never tellBottledSteamToLaunch).
@@ -1780,6 +1798,75 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
     monitorArgs.onStopped()
     expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
+  })
+
+  it('quick 261024-tny: the known-fixes applier runs with (appId, bridge settings, install root) before the monitor and the wine launch', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(applySteamBridgeKnownFixes).toHaveBeenCalledWith(
+      APP_ID,
+      { wineCrossoverBottle: 'GameLibSteamBridge' },
+      `${BRIDGE_STEAMAPPS_DIR}/common/Avernum 4`
+    )
+    const applierOrder = (applySteamBridgeKnownFixes as jest.Mock).mock
+      .invocationCallOrder[0]
+    expect(applierOrder).toBeLessThan(
+      (startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder[0]
+    )
+    expect(applierOrder).toBeLessThan(
+      (runWineCommand as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
+  it('quick 261024-tny: the settings the applier returns (fix env) are what runWineCommand receives; the monitor bottleDir is unchanged', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    const withEnv = {
+      wineCrossoverBottle: 'GameLibSteamBridge',
+      enviromentOptions: [{ key: 'DXVK_ASYNC', value: '1' }]
+    }
+    ;(applySteamBridgeKnownFixes as jest.Mock).mockResolvedValue(withEnv)
+
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect((runWineCommand as jest.Mock).mock.calls[0][0].gameSettings).toBe(
+      withEnv
+    )
+    expect(
+      (startBottleProcessMonitor as jest.Mock).mock.calls[0][0].bottleDir
+    ).toBe('/mock/bridge/bottle')
+  })
+
+  it('quick 261024-tny: a rejecting applier never fails the launch -- original settings reach runWineCommand, warning logged, no steamBridgeSetupRequired', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(applySteamBridgeKnownFixes as jest.Mock).mockRejectedValue(
+      new Error('fix boom')
+    )
+
+    const game = new SteamGame(APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(true)
+    expect(runWineCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        gameSettings: { wineCrossoverBottle: 'GameLibSteamBridge' }
+      })
+    )
+    const { logWarning } = jest.requireMock('backend/logger')
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('fix boom'),
+      'Steam'
+    )
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      expect.anything()
+    )
   })
 
   it('placeShimForGame rejects (shim-not-built) — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired with reason shim-refresh-failed, ensureBridgeHelperReady never reached', async () => {
