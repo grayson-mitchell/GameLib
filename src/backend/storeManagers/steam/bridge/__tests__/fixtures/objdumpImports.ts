@@ -389,3 +389,66 @@ export const ELEX_EXE_VERSION_STRINGS = [
   'SteamUser019',
   'SteamUtils008'
 ]
+
+// Phase 52 Plan 05: Grim Dawn-shaped fixtures (names only, no real binary content).
+export const GRIM_DAWN_EXE_IMPORTS = `
+Grim Dawn.exe:	file format coff-x86-64
+
+The Import Tables:
+
+    DLL Name: KERNEL32.dll
+    Hint/Ord  Name
+         100  GetModuleHandleA
+
+    DLL Name: Engine.dll
+    Hint/Ord  Name
+         100  EngineInit
+
+    DLL Name: Game.dll
+    Hint/Ord  Name
+         100  GameInit
+`
+
+export const GRIM_DAWN_ENGINE_DLL_IMPORTS = `
+Engine.dll:	file format coff-x86-64
+
+The Import Tables:
+
+    DLL Name: KERNEL32.dll
+    Hint/Ord  Name
+         100  GetModuleHandleA
+
+    DLL Name: steam_api64.dll
+    Hint/Ord  Name
+         100  SteamAPI_RunCallbacks
+         101  SteamInternal_SteamAPI_Init
+         102  SteamInternal_ContextInit
+         103  SteamInternal_FindOrCreateUserInterface
+         104  SteamInternal_FindOrCreateGameServerInterface
+         105  SteamInternal_GameServer_Init_V2
+         106  SteamAPI_Shutdown
+`
+
+export const GRIM_DAWN_GAME_DLL_IMPORTS = `
+Game.dll:	file format coff-x86-64
+
+The Import Tables:
+
+    DLL Name: KERNEL32.dll
+    Hint/Ord  Name
+         100  GetModuleHandleA
+
+    DLL Name: Engine.dll
+    Hint/Ord  Name
+         100  EngineInit
+`
+
+export const X86_STEAM_API_DLL_IMPORTS = `
+Other.dll:	file format pe-i386
+
+The Import Tables:
+
+    DLL Name: steam_api.dll
+    Hint/Ord  Name
+         100  SteamAPI_Init
+`

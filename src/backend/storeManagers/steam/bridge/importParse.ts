@@ -129,6 +129,25 @@ export function parseSteamApiImportTable(
 }
 
 /**
+ * Phase 52 Plan 05: every `DLL Name:` heading in the output, in file order,
+ * deduped case-insensitively (first spelling kept). Feeds the bounded
+ * static-import closure in `importScan.ts`.
+ */
+export function parseImportedDllNames(objdumpOutput: string): string[] {
+  const seen = new Set<string>()
+  const names: string[] = []
+  for (const line of objdumpOutput.split('\n')) {
+    const m = line.match(/DLL Name:\s*(\S+)\s*$/i)
+    if (!m) continue
+    const key = m[1].toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    names.push(m[1])
+  }
+  return names
+}
+
+/**
  * CR-04 (Phase 51 Plan 22): scan-miss marker for a title whose launch exe
  * imports nothing from steam_api but whose install tree ships the DLL, i.e.
  * it loads it at runtime. Same `@`-form as `<Family>@unknown-version`, so
