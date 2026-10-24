@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamGameServerStats001",
+  "family": "SteamGameServerStats",
+  "ordinal": 35,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamGameServerStats_v001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamGameServerStats.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "RequestUserStats",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "GetUserStat_2",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        },
+        {
+          "name": "pData",
+          "type": "float*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "GetUserStat",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        },
+        {
+          "name": "pData",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "GetUserAchievement",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        },
+        {
+          "name": "pbAchieved",
+          "type": "bool*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "SetUserStat_2",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        },
+        {
+          "name": "fData",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "SetUserStat",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        },
+        {
+          "name": "nData",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "UpdateUserAvgRateStat",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        },
+        {
+          "name": "flCountThisSession",
+          "type": "float"
+        },
+        {
+          "name": "dSessionLength",
+          "type": "double"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "SetUserAchievement",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "ClearUserAchievement",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "StoreUserStats",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        }
+      ]
+    }
+  ]
+}

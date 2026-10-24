@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamUser021",
+  "family": "SteamUser",
+  "ordinal": 27,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamUser_v021",
+  "helperInterface": "SteamAPI_SteamUser_v023",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamUser.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetHSteamUser",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_GetHSteamUser"
+    },
+    {
+      "slot": 1,
+      "name": "BLoggedOn",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_BLoggedOn"
+    },
+    {
+      "slot": 2,
+      "name": "GetSteamID",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 4,
+      "params": [],
+      "structSize": 8,
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_GetSteamID"
+    },
+    {
+      "slot": 3,
+      "name": "InitiateGameConnection_DEPRECATED",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "pAuthBlob",
+          "type": "void*"
+        },
+        {
+          "name": "cbMaxAuthBlob",
+          "type": "int32"
+        },
+        {
+          "name": "steamIDGameServer",
+          "type": "CSteamID"
+        },
+        {
+          "name": "unIPServer",
+          "type": "uint32"
+        },
+        {
+          "name": "usPortServer",
+          "type": "uint32"
+        },
+        {
+          "name": "bSecure",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "TerminateGameConnection_DEPRECATED",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unIPServer",
+          "type": "uint32"
+        },
+        {
+          "name": "usPortServer",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "TrackAppUsageEvent",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "gameID",
+          "type": "CGameID"
+        },
+        {
+          "name": "eAppUsageEvent",
+          "type": "int32"
+        },
+        {
+          "name": "pchExtraInfo",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "GetUserDataFolder",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchBuffer",
+          "type": "char*"
+        },
+        {
+          "name": "cubBuffer",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "StartVoiceRecording",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 8,
+      "name": "StopVoiceRecording",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 9,
+      "name": "GetAvailableVoice",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pcbCompressed",
+          "type": "uint32*"
+        },
+        {
+          "name": "pcbUncompressed_Deprecated",
+          "type": "uint32*"
+        },
+        {
+          "name": "nUncompressedVoiceDesiredSampleRate_Deprecated",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GetVoice",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 36,
+      "params": [
+        {
+          "name": "bWantCompressed",
+          "type": "bool"
+        },
+        {
+          "name": "pDestBuffer",
+          "type": "void*"
+        },
+        {
+          "name": "cbDestBufferSize",
+          "type": "uint32"
+        },
+        {
+          "name": "nBytesWritten",
+          "type": "uint32*"
+        },
+        {
+          "name": "bWantUncompressed_Deprecated",
+          "type": "bool"
+        },
+        {
+          "name": "pUncompressedDestBuffer_Deprecated",
+          "type": "void*"
+        },
+        {
+          "name": "cbUncompressedDestBufferSize_Deprecated",
+          "type": "uint32"
+        },
+        {
+          "name": "nUncompressBytesWritten_Deprecated",
+          "type": "uint32*"
+        },
+        {
+          "name": "nUncompressedVoiceDesiredSampleRate_Deprecated",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "DecompressVoice",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "pCompressed",
+          "type": "const void*"
+        },
+        {
+          "name": "cbCompressed",
+          "type": "uint32"
+        },
+        {
+          "name": "pDestBuffer",
+          "type": "void*"
+        },
+        {
+          "name": "cbDestBufferSize",
+          "type": "uint32"
+        },
+        {
+          "name": "nBytesWritten",
+          "type": "uint32*"
+        },
+        {
+          "name": "nDesiredSampleRate",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetVoiceOptimalSampleRate",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 13,
+      "name": "GetAuthSessionTicket",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pTicket",
+          "type": "void*"
+        },
+        {
+          "name": "cbMaxTicket",
+          "type": "int32"
+        },
+        {
+          "name": "pcbTicket",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "BeginAuthSession",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pAuthTicket",
+          "type": "const void*"
+        },
+        {
+          "name": "cbAuthTicket",
+          "type": "int32"
+        },
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "EndAuthSession",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "CancelAuthTicket",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hAuthTicket",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "UserHasLicenseForApp",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        },
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "BIsBehindNAT",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 19,
+      "name": "AdvertiseGame",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDGameServer",
+          "type": "CSteamID"
+        },
+        {
+          "name": "unIPServer",
+          "type": "uint32"
+        },
+        {
+          "name": "usPortServer",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "RequestEncryptedAppTicket",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pDataToInclude",
+          "type": "void*"
+        },
+        {
+          "name": "cbDataToInclude",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "GetEncryptedAppTicket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pTicket",
+          "type": "void*"
+        },
+        {
+          "name": "cbMaxTicket",
+          "type": "int32"
+        },
+        {
+          "name": "pcbTicket",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetGameBadgeLevel",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nSeries",
+          "type": "int32"
+        },
+        {
+          "name": "bFoil",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "GetPlayerSteamLevel",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 24,
+      "name": "RequestStoreAuthURL",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchRedirectURL",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "BIsPhoneVerified",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 26,
+      "name": "BIsTwoFactorEnabled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 27,
+      "name": "BIsPhoneIdentifying",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 28,
+      "name": "BIsPhoneRequiringVerification",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 29,
+      "name": "GetMarketEligibility",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 30,
+      "name": "GetDurationControl",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 31,
+      "name": "BSetDurationControlOnlineState",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eNewState",
+          "type": "uint32"
+        }
+      ]
+    }
+  ]
+}

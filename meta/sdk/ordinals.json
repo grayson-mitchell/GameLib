@@ -22,5 +22,16 @@
   "STEAMREMOTESTORAGE_INTERFACE_VERSION013": 21,
   "SteamClient014": 22,
   "SteamNetworking006": 23,
-  "STEAMREMOTESTORAGE_INTERFACE_VERSION016": 24
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION016": 24,
+  "SteamClient020": 25,
+  "SteamClient021": 26,
+  "SteamUser021": 27,
+  "SteamFriends017": 28,
+  "SteamUtils010": 29,
+  "STEAMUSERSTATS_INTERFACE_VERSION012": 30,
+  "STEAMUSERSTATS_INTERFACE_VERSION013": 31,
+  "SteamInput006": 32,
+  "SteamGameServer014": 33,
+  "SteamGameServer015": 34,
+  "SteamGameServerStats001": 35
 }

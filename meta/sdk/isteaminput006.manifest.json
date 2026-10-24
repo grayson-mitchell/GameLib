@@ -1,0 +1,809 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamInput006",
+  "family": "SteamInput",
+  "ordinal": 32,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamInput_v006",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamInput.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "Init",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bExplicitlyCallRunFrame",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "Shutdown",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 2,
+      "name": "SetInputActionManifestFilePath",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchInputActionManifestAbsolutePath",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "RunFrame",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bReservedValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "BWaitForData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "bWaitForever",
+          "type": "bool"
+        },
+        {
+          "name": "unTimeout",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "BNewDataAvailable",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 6,
+      "name": "GetConnectedControllers",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "handlesOut",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "EnableDeviceCallbacks",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 8,
+      "name": "EnableActionEventCallbacks",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pCallback",
+          "type": "void*"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "GetActionSetHandle",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszActionSetName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "ActivateActionSet",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetCurrentActionSet",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "ActivateActionSetLayer",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetLayerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "DeactivateActionSetLayer",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetLayerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "DeactivateAllActionSetLayers",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetActiveActionSetLayers",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "handlesOut",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "GetDigitalActionHandle",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszActionName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetDigitalActionData",
+      "returns": "InputDigitalActionData_t*",
+      "returnKind": "pointer",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "_ret",
+          "type": "InputDigitalActionData_t*"
+        },
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "digitalActionHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetDigitalActionOrigins",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "digitalActionHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "originsOut",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "GetStringForDigitalActionName",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eActionHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "GetAnalogActionHandle",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszActionName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "GetAnalogActionData",
+      "returns": "InputAnalogActionData_t*",
+      "returnKind": "pointer",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "_ret",
+          "type": "InputAnalogActionData_t*"
+        },
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "analogActionHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetAnalogActionOrigins",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "analogActionHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "originsOut",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "GetGlyphPNGForActionOrigin",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg2",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "GetGlyphSVGForActionOrigin",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        },
+        {
+          "name": "_unknownArg1",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "GetGlyphForActionOrigin_Legacy",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "GetStringForActionOrigin",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eOrigin",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "GetStringForAnalogActionName",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eActionHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "StopAnalogActionMomentum",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eAction",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "GetMotionData",
+      "returns": "InputMotionData_t*",
+      "returnKind": "pointer",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "_ret",
+          "type": "InputMotionData_t*"
+        },
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "TriggerVibration",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "usLeftSpeed",
+          "type": "uint32"
+        },
+        {
+          "name": "usRightSpeed",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "TriggerVibrationExtended",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "usLeftSpeed",
+          "type": "uint32"
+        },
+        {
+          "name": "usRightSpeed",
+          "type": "uint32"
+        },
+        {
+          "name": "usLeftTriggerSpeed",
+          "type": "uint32"
+        },
+        {
+          "name": "usRightTriggerSpeed",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "TriggerSimpleHapticEvent",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eHapticLocation",
+          "type": "uint32"
+        },
+        {
+          "name": "nIntensity",
+          "type": "bool"
+        },
+        {
+          "name": "nGainDB",
+          "type": "char"
+        },
+        {
+          "name": "nOtherIntensity",
+          "type": "bool"
+        },
+        {
+          "name": "nOtherGainDB",
+          "type": "char"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "SetLEDColor",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "nColorR",
+          "type": "bool"
+        },
+        {
+          "name": "nColorG",
+          "type": "bool"
+        },
+        {
+          "name": "nColorB",
+          "type": "bool"
+        },
+        {
+          "name": "nFlags",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "Legacy_TriggerHapticPulse",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eTargetPad",
+          "type": "uint32"
+        },
+        {
+          "name": "usDurationMicroSec",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "Legacy_TriggerRepeatedHapticPulse",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eTargetPad",
+          "type": "uint32"
+        },
+        {
+          "name": "usDurationMicroSec",
+          "type": "uint32"
+        },
+        {
+          "name": "usOffMicroSec",
+          "type": "uint32"
+        },
+        {
+          "name": "unRepeat",
+          "type": "uint32"
+        },
+        {
+          "name": "nFlags",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "ShowBindingPanel",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "GetInputTypeForHandle",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 38,
+      "name": "GetControllerForGamepadIndex",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nIndex",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 39,
+      "name": "GetGamepadIndexForController",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "ulinputHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 40,
+      "name": "GetStringForXboxOrigin",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eOrigin",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 41,
+      "name": "GetGlyphForXboxOrigin",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 42,
+      "name": "GetActionOriginFromXboxOrigin",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eOrigin",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 43,
+      "name": "TranslateActionOrigin",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eDestinationInputType",
+          "type": "uint32"
+        },
+        {
+          "name": "eSourceOrigin",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 44,
+      "name": "GetDeviceBindingRevision",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pMajor",
+          "type": "int32*"
+        },
+        {
+          "name": "pMinor",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 45,
+      "name": "GetRemotePlaySessionID",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 46,
+      "name": "GetSessionInputConfigurationSettings",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 47,
+      "name": "SetDualSenseTriggerEffect",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "inputHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pParam",
+          "type": "const ScePadTriggerEffectParam*"
+        }
+      ]
+    }
+  ]
+}

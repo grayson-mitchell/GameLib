@@ -6,8 +6,8 @@
   },
   "SteamFriends018": {
     "family": "SteamFriends",
-    "arches": ["x86"],
-    "titles": []
+    "arches": ["x86", "x64"],
+    "titles": ["3410180"]
   },
   "SteamUser016": {
     "family": "SteamUser",
@@ -118,5 +118,91 @@
     "family": "SteamRemoteStorage",
     "arches": ["x64"],
     "titles": ["219990"]
+  },
+  "SteamClient020": {
+    "family": "SteamClient",
+    "arches": ["x64"],
+    "titles": ["1167950", "1284190", "648800", "1691190"]
+  },
+  "SteamClient021": {
+    "family": "SteamClient",
+    "arches": ["x64"],
+    "titles": ["1782460", "1603180"]
+  },
+  "SteamUser021": {
+    "family": "SteamUser",
+    "arches": ["x64"],
+    "titles": ["1691190"]
+  },
+  "SteamFriends017": {
+    "family": "SteamFriends",
+    "arches": ["x64"],
+    "titles": [
+      "1167950",
+      "1284190",
+      "648800",
+      "1691190",
+      "1782460",
+      "1603180",
+      "1363080",
+      "427410",
+      "1119730"
+    ]
+  },
+  "SteamUtils010": {
+    "family": "SteamUtils",
+    "arches": ["x64"],
+    "titles": [
+      "1167950",
+      "1284190",
+      "648800",
+      "1691190",
+      "1782460",
+      "1603180",
+      "3410180",
+      "1363080",
+      "427410",
+      "1119730",
+      "648410"
+    ]
+  },
+  "STEAMUSERSTATS_INTERFACE_VERSION012": {
+    "family": "SteamUserStats",
+    "arches": ["x64"],
+    "titles": [
+      "1167950",
+      "1284190",
+      "648800",
+      "1691190",
+      "1782460",
+      "1363080",
+      "427410",
+      "648410"
+    ]
+  },
+  "STEAMUSERSTATS_INTERFACE_VERSION013": {
+    "family": "SteamUserStats",
+    "arches": ["x64"],
+    "titles": ["1603180", "3410180", "1119730"]
+  },
+  "SteamInput006": {
+    "family": "SteamInput",
+    "arches": ["x64"],
+    "titles": ["1363080", "427410", "1119730"]
+  },
+  "SteamGameServer014": {
+    "family": "SteamGameServer",
+    "arches": ["x64"],
+    "titles": ["1691190"]
+  },
+  "SteamGameServer015": {
+    "family": "SteamGameServer",
+    "arches": ["x64"],
+    "titles": ["1363080", "427410", "1119730"]
+  },
+  "SteamGameServerStats001": {
+    "family": "SteamGameServerStats",
+    "arches": ["x64"],
+    "titles": ["1363080", "427410", "1119730"]
   }
 }
