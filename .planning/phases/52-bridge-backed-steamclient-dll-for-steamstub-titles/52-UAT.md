@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-diagnosis: items 14-15 scored by 52-19; next 52-22 decision
+decision: item 16 scored by 52-22 (option-other, no code change); next a gaps planning round on the forwarder-bytes check
 
 ## Tests
 
@@ -233,6 +233,10 @@ result: pass — session /tmp/gamelib-gate-52d-20261024T053624Z, `ROUND=diag1 MO
 expected: Friends is recorded before and after the idle control and arms c, b, a and d, and the attribution names only an arm that flipped while the control held.
 result: pass — session /tmp/gamelib-gate-52d-20261024T053624Z, T_bridge = Age of Decadence (230070). 0a signed in, 0b (3 min idle) signed in, arm c (helper alone) signed in to signed in, arm b (steam-user logon alone, no Play) signed in to SIGNED OUT in F1 (loggedOn 05:52:03Z, flip seen ~05:52:35Z) and again in the pre-committed repeat F2 (loggedOn 05:55:45Z, flip ~05:56:05Z, no Play). Arm a not exercised (no bridge toggle, no non-bridge title installed). Arm d (F3, bridge Play, helper and shim hashes equal the trace snapshots) held ONLINE through INIT, HELLO and 63 s of play once Friends was restored by a Mac Steam restart; it was offline after the F3 logon before the restart. Mac Steam logs show no displacement or remote logoff (only the two operator restarts). Attribution: the GameLib steam-user logon, not the helper, shim or bridge Play. classification: outside-phase-52. Deviation: F2 became the arm b repeat, so arm d ran in F3. Pending todo 2026-10-24-friends-sign-out-steam-user-logon.md. See 52-19-DIAGNOSIS.md `## Gap 6`.
 
+### 16. Gap 5 fix decision (52-22)
+expected: the operator chooses one boundary-reviewed option built from 52-19 evidence, or no change.
+result: pass — operator chose option-other (marked Recommended); operator's words verbatim: "option-other (Recommended)" (a multiple-choice selection, no free-text words). It rested on the 52-19-DIAGNOSIS.md `## Gap 5: candidate inputs` row `content of the file at the forwarder path` (cxlog:7170-7181 and 6810-6820): direct that the stub reads all 186368 bytes of the forwarder immediately before the MessageBox, indirect on what it checks in them (never inspected or disassembled); no listed code option targets that input. Boundary review (six lines): who answers n/a (no change); stand-in risk none; HKLM untouched; exe not modified; no Windows Steam client in the bottle; hygiene unchanged. Options not chosen: option-flat (export-surface row indirect; `Steam_ReleaseThreadLocalMemory` was looked up with module handle 0, so it searched Grim Dawn.exe and a forwarder export would not answer it), option-path (module-path row: path read at 6830 and 7170-7174, no evidence it is rejected; a Steam-root location breaks item-11 "no steamclient*.dll in the Steam root"), option-none; option-pid was withheld (no OpenProcess/NtOpenProcess or image-name query in the trace, so no evidence the window depends on pid). Hygiene delta for 52-23 item 19: no hygiene delta. Next step: another planning round (`/gsd-plan-phase 52 --gaps`) to establish what the stub checks in the forwarder bytes. — not implemented by decision
+
 ## Structural Reachability Review
 
 Applied by 52-10 against all seven tests of `live-gate-contract-authoring.md`.
@@ -281,8 +285,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 15
-passed: 6
+total: 16
+passed: 7
 issues: 6
 pending: 1
 skipped: 2

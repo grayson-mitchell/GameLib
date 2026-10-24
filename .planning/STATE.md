@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: verifying
 stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
-last_updated: "2026-10-24T06:04:54.264Z"
+last_updated: "2026-10-24T06:07:45.241Z"
 last_activity: 2026-10-24
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 54
-  completed_plans: 51
+  completed_plans: 52
   percent: 33
 ---
 
@@ -76,7 +76,7 @@ Plan: 18 of 18 executed (52-UAT diagnosed; gap closure needed)
 Status: Phase complete — ready for verification
 Last activity: 2026-10-24
 
-Progress: [█████████░] 94%
+Progress: [██████████] 96%
 
 History: the 2026-09-24 → 2026-10-16 "Previous activity" narrative that stood here until the close lives verbatim in STATE-HISTORY.md § Current Position narrative archive, 2026-09-24 → 2026-10-16; the pre-2026-09-24 narrative in § Current Position archive.
 
@@ -189,6 +189,7 @@ History: the v0.1 velocity summary, the v0.1 By-Phase table, the v0.1 detail log
 | Phase 51 P17 | ~18min | 2 tasks | 4 files |
 | Phase 51 P18 | ~30min | 2 tasks | 4 files |
 | Phase 52 P16 | 15min | 3 tasks | 5 files |
+| Phase 52 P22 | 5m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -261,6 +262,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: 51-18: classifyCensusTitle takes injectable coverage deps defaulting to the real shipped shimCoverage sets, letting the win64-no-shim structural case be unit-tested without a real empty x64 export set
 - [Phase 51]: D-51-14 anchor re-baselined by operator decision 2026-10-23: Hoard (63000) retired (51-UAT item 4, Wine-level crash); replacement The Age of Decadence (230070, x64 runtime-lookup path); evidence 51-UAT item 18
 - [Phase 51]: "most" verdict 2026-10-24: unmet-follow-up on K=0 of M=19 verified running (N=18 routed), 51-UAT item 20
+- [Phase 52]: 52-22: operator chose option-other for Gap 5 (no code change); next /gsd-plan-phase 52 --gaps
 
 ### Pending Todos
 
@@ -361,7 +363,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-24T05:35:40.474Z
+Last session: 2026-10-24T06:07:41.114Z
 Stopped at: Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)
 Resume file: None
 

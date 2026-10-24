@@ -22,6 +22,12 @@
    them. Revisit when: a FWD line shows `native=present` for a version outside
    `SHIM64_SERVED_INTERFACE_VERSIONS` (protocol (a)).
 
+7. **Gap 5 (SteamStub Application Load Error 3) not closed by 52-22; operator chose option-other (52-UAT item 16).**
+   No code option targets the one direct input (the stub reads all 186368 bytes of the forwarder before the
+   MessageBox, 52-19 cxlog:7170-7181). No change was made. Next step: another planning round
+   (`/gsd-plan-phase 52 --gaps`) to establish what the stub checks in the forwarder bytes. 52-23 item 19
+   hygiene delta: none.
+
 ## Deferred from the 52 code review (recorded by 52-16)
 
 Reason for all entries: orchestrator decision 4 -- hardening, not goal-blocking.
