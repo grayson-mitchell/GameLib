@@ -1432,18 +1432,23 @@ async function placeShimForGameInner(
   })
   const refreshGaps: string[] = []
   if (delayMissing.length > 0 || unservable.length > 0) {
-    const withheld = withholdIfRestorable({
-      appId,
-      bottleDir,
-      shimTargets: targetIsGameLibShim ? [shimPath] : [],
-      arch,
-      required,
-      stubbedInterfaces: coverage.stubbedInterfaces,
-      allMissing: coverage.missingSymbols,
-      delayMissing: [...new Set(delayMissing)],
-      unservable,
-      scannedAt
-    })
+    // WR-11: withhold only when a target exists; with no file there is no
+    // game steam_api to fall back to, so the gaps join refreshGaps and the
+    // shim is placed (placed-miss).
+    const withheld = targetExists
+      ? withholdIfRestorable({
+          appId,
+          bottleDir,
+          shimTargets: targetIsGameLibShim ? [shimPath] : [],
+          arch,
+          required,
+          stubbedInterfaces: coverage.stubbedInterfaces,
+          allMissing: coverage.missingSymbols,
+          delayMissing: [...new Set(delayMissing)],
+          unservable,
+          scannedAt
+        })
+      : null
     if (withheld) return withheld
     refreshGaps.push(...delayMissing, ...unservable)
   }
