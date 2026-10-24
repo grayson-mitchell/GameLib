@@ -320,9 +320,21 @@ methods are local `HELPER FALLBACK`/`STUB` constants, so nothing reached the nat
 that answers on its own, no DRM reconstruction. CEG titles (spikes 035–037) stay out of scope and
 keep the `drm-wrapped` → bottled-Steam route.
 
-**Done when:** Grim Dawn (219990) launches from GameLib through its per-game bridge bottle, gets
-past SteamStub (no `steam://run` in a `--cx-log` trace), reaches its main menu, and Mac Steam
-shows it In-Game.
+Amended 2026-10-24 (52-UAT item 29):
+
+**Done when (amended 2026-10-24, gap round 4, class O1):**
+For a SteamStub title in its per-game bridge bottle (Grim Dawn,
+219990, is the reference), GameLib's forwarder steamclient64.dll
+loads and reaches the native bridge (HELLO observed). When the
+stub's file/forwarder check then rejects the launch (Application
+Load Error 3), GameLib shows an honest notice that the SteamStub
+launch check cannot be satisfied through the bridge, instead of
+failing silently or falling back to `steam://run`.
+
+Grim Dawn reaching its main menu through the bridge is no longer
+part of this phase. It is deferred to a separate, operator-owned
+decision (static RE of the stub, outside the locked boundary).
+The locked boundary is unchanged.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
@@ -378,7 +390,7 @@ Plans:
 - [x] 52-29-PLAN.md — 52-REVIEW gap-closure-3 hardening: WR-01 .rc existence guard, WR-02 argv-order test pin, IN-01 doc comment (forwarder bytes untouched)
 - [x] 52-30-PLAN.md — Gap 5 round-4 trace-first: pre-register the discriminating experiment + commit; harness SCORE/PID_ARM switches; arm A (no pid) relay trace, dialog text recaptured vs 52-25 R1, T1-T8 (UAT item 27)
 - [x] 52-31-PLAN.md — Arm B (clone-only pid -> live process) under the committed rule; two-arm score table; classify into pre-registered O1-O4 with its recommendation; no fix (UAT item 28)
-- [ ] 52-32-PLAN.md — Operator decision over the class-bounded options (close-out + done-when amendment, pid-writer-next-round, or static RE); finalize UAT/deferred-items/todo; leave gaps_found (UAT item 29)
+- [ ] 52-32-PLAN.md — Operator decision over the class-bounded options (close-out + done-when amendment, pid-writer-next-round, or static RE); finalize UAT/deferred-items/todo; leave gaps_found (UAT item 29) Operator chose option-closeout (O1); done-when amended.
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
 

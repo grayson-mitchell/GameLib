@@ -141,3 +141,9 @@ Stays pending: items 23 and 24 failed.
 - Item 26 (skipped): change limited to the forwarder (steamstub path only).
 Next step: `/gsd-plan-phase 52 --gaps`.
 
+## Round 4 evidence (52-29..52-32), 2026-10-24
+- 52-29: review hardening WR-01 (.rc existence guard), WR-02 (argv-order test pin), IN-01 (doc comment); forwarder bytes untouched.
+- Item 27 (pass), arm A, no pid: dialog `Application load error 3:0000065432` recaptured, same as 52-25 R1; two `pid` reads absent; W 1 M 1 L alive 91s S 0 H 1 R 2 P 2 K 0.
+- Item 28 (pass), arm B, clone-only pid to a live process: W 0, everything else unchanged, same dialog after the same whole-file forwarder read. Classified O1: the file/forwarder check is the blocker; a product pid writer is not indicated.
+- Item 29 (pass): operator chose option-closeout and approved the amended ROADMAP done-when. Grim Dawn main menu is deferred to a separate operator-owned static-RE decision.
+- Remaining: implement the honest SteamStub notice (not done in this plan). Next step: `/gsd-verify-phase 52`.
