@@ -599,6 +599,11 @@ export async function getSteamInstallSize(
 // is told again next session if it still fails. The log line fires every time.
 const steamStubNoticeShownThisSession = new Set<string>()
 
+// Separate gate for the forwarded-path notice, so an earlier unforwarded notice
+// for the same title cannot hide it. Session-scoped for the same reason as
+// decision 3 above.
+const steamStubForwardedNoticeShownThisSession = new Set<string>()
+
 export default class SteamGame implements Game {
   private readonly appId: string
 
@@ -2747,6 +2752,54 @@ export default class SteamGame implements Game {
     })
   }
 
+  /**
+   * Phase 52 amended done-when (52-UAT item 29): when a SteamStub title's
+   * forwarder is placed and reaches the bridge, say plainly that the stub's
+   * launch check cannot be satisfied through the native Steam bridge, instead
+   * of failing silently.
+   *
+   * The trigger is deterministic (drmWrapper=steamstub AND forwarder placed).
+   * There is no rejection heuristic: the "Steam Error" MessageBox is visible
+   * only in a harness cx-log, the helper is silent after the FWD lines, and
+   * the process stayed alive 90-91 s with the dialog up in 52-30 arms A/B, so
+   * process lifetime cannot tell rejection from success.
+   *
+   * The notice is predictive and pre-emptive: it fires before the stub runs,
+   * on known state, and is not a detected rejection. It never blocks or
+   * reroutes the launch (no bottled Steam; locked boundary).
+   *
+   * It rests on one measured title (Grim Dawn 219990, 52-UAT items 24 and
+   * 27-29); generalising to every SteamStub title is an inference from the
+   * forwarder file being identical across titles, not a measurement. The
+   * image-name caveat is not ruled out: 52-30's pid anchor was a non-Steam
+   * image (notepad.exe) and neither arm showed an image-name query, so the
+   * evidence cannot exclude a stub branch that rejects for another reason.
+   *
+   * Re-scope this notice if any SteamStub title is ever observed reaching its
+   * menu through the bridge, and revisit it if the separate static-RE
+   * decision ever makes the stub accept the forwarder.
+   */
+  private maybeNotifySteamStubForwarded(): void {
+    logInfo(
+      `[bridge-notice] appId=${this.appId} reason=steamstub-forwarded:launch-check-unsatisfiable`,
+      LogPrefix.Steam
+    )
+    if (steamStubForwardedNoticeShownThisSession.has(this.appId)) {
+      return
+    }
+    steamStubForwardedNoticeShownThisSession.add(this.appId)
+    notify({
+      title: i18next.t(
+        'gamelib:steam.bridge.steamstub.forwardedTitle',
+        'Steam DRM check not supported'
+      ),
+      body: i18next.t(
+        'gamelib:steam.bridge.steamstub.forwardedBody',
+        "This game uses Steam's DRM wrapper. GameLib connected it to your Mac Steam client, but the wrapper's launch check cannot be satisfied through the native Steam bridge, so the game will probably show a Steam error and not start."
+      )
+    })
+  }
+
   private async launchBridgeGame(): Promise<boolean> {
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
@@ -3029,6 +3082,7 @@ export default class SteamGame implements Game {
           `[bridge-steamstub] appId=${this.appId} forwarder placed at ${forwarder.winPath}`,
           LogPrefix.Steam
         )
+        this.maybeNotifySteamStubForwarded()
       } else if (forwarder.status === 'unavailable') {
         this.maybeNotifySteamStubUnforwarded(forwarder.reason)
       } else {
