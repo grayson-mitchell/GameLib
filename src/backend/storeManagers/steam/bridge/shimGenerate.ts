@@ -91,6 +91,11 @@ import {
   sanitizeBottleName
 } from '../bottle'
 import { scanSteamApiImports } from './importScan'
+import {
+  hasSteamStubSection,
+  parsePeSectionNames,
+  PE_SECTION_SCAN_BYTES
+} from './peSections'
 import { runtimeLoadedSteamApiMarker } from './importParse'
 import { detectSteamDrmInPe, readPeMachineArch } from './peSteamDrm'
 import {
@@ -153,12 +158,15 @@ type PlaceShimResultBase =
       // quick 261023-ue0: runtime-loaded branch only -- EVERY live shim path.
       shimPaths?: string[]
       verdict?: SteamBridgeScanVerdict
+      // Phase 52 Plan 08: launch exe carries a SteamStub .bind section.
+      drmWrapper?: 'steamstub'
     }
   | {
       // quick 261023-oq7: the shim was placed despite a coverage miss.
       status: 'placed-miss'
       shimPaths: string[]
       verdict: SteamBridgeScanVerdict
+      drmWrapper?: 'steamstub'
     }
   | { status: 'no-steam-api'; verdict: SteamBridgeScanVerdict }
   | {
@@ -635,7 +643,77 @@ export async function placeShimForGame(
   const result = await placeShimForGameInner(appId, gameExePath, opts)
   if (result.status === 'error') return result
   const drm = detectExeSteamDrm(appId, resolve(gameExePath))
-  return drm === undefined ? result : { ...result, drm }
+  const flagged = withDrmWrapper(appId, gameExePath, result)
+  return drm === undefined ? flagged : { ...flagged, drm }
+}
+
+/**
+ * Phase 52 Plan 08 (ROADMAP Scope 4): true SteamStub detection from the PE
+ * section table. Reads at most PE_SECTION_SCAN_BYTES, closes the fd in
+ * finally, never throws. Callers invoke it only after the exe passed the
+ * bottle-containment check.
+ */
+export function detectDrmWrapper(exePath: string): 'steamstub' | undefined {
+  let fd: number | null = null
+  try {
+    fd = openSync(exePath, 'r')
+    const buf = Buffer.alloc(PE_SECTION_SCAN_BYTES)
+    const n = readSync(fd, buf, 0, PE_SECTION_SCAN_BYTES, 0)
+    return hasSteamStubSection(parsePeSectionNames(buf.subarray(0, n)))
+      ? 'steamstub'
+      : undefined
+  } catch (error) {
+    logWarning(
+      `detectDrmWrapper: could not read "${exePath}" (${String(error)})`,
+      LogPrefix.Steam
+    )
+    return undefined
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd)
+      } catch {
+        // nothing left to release
+      }
+    }
+  }
+}
+
+/**
+ * Stamps drmWrapper:'steamstub' on the result and its verdict for the
+ * statuses that carry a shim outcome. The key is absent (not undefined)
+ * when nothing was detected. Runs only on non-error results, i.e. after the
+ * exe-containment check passed.
+ */
+function withDrmWrapper(
+  appId: string,
+  gameExePath: string,
+  result: PlaceShimResultBase
+): PlaceShimResultBase {
+  if (
+    result.status !== 'placed' &&
+    result.status !== 'already-placed' &&
+    result.status !== 'placed-miss' &&
+    result.status !== 'no-steam-api'
+  ) {
+    return result
+  }
+  if (detectDrmWrapper(resolve(gameExePath)) !== 'steamstub') return result
+  logInfo(
+    `placeShimForGame: appId ${appId} launch exe carries a SteamStub .bind section (drmWrapper=steamstub)`,
+    LogPrefix.Steam
+  )
+  const verdict = result.verdict
+    ? { ...result.verdict, drmWrapper: 'steamstub' as const }
+    : undefined
+  if (result.status === 'no-steam-api') {
+    return { ...result, verdict: verdict as SteamBridgeScanVerdict }
+  }
+  return {
+    ...result,
+    ...(verdict ? { verdict } : {}),
+    drmWrapper: 'steamstub'
+  } as PlaceShimResultBase
 }
 
 /**

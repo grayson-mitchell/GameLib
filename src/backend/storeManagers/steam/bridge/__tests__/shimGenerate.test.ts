@@ -49,7 +49,11 @@ import { join, resolve } from 'node:path'
 // to shimCoverage.ts / shimCoverage.test.ts -- this file no longer imports
 // it, since every remaining test here exercises placeShimForGame's own
 // behavior (via readDefExports() below), not the constant itself.
-import { isGameLibShimBytes, placeShimForGame } from '../shimGenerate'
+import {
+  detectDrmWrapper,
+  isGameLibShimBytes,
+  placeShimForGame
+} from '../shimGenerate'
 import { scanSteamApiImports } from '../importScan'
 import { getBottleDir, resolveBridgeBottleName } from '../../bottle'
 
@@ -1950,6 +1954,87 @@ describe('shimGenerate', () => {
         'game-original-bytes'
       )
       expect(existsSync(shim64DestPath() + BACKUP)).toBe(false)
+    })
+  })
+
+  describe('Phase 52 Plan 08: SteamStub .bind detection', () => {
+    function makePe(sectionName: string): Buffer {
+      const buf = Buffer.alloc(1024)
+      buf.writeUInt16LE(0x5a4d, 0)
+      buf.writeUInt32LE(0x80, 0x3c)
+      buf.writeUInt32LE(0x00004550, 0x80)
+      buf.writeUInt16LE(1, 0x80 + 6)
+      buf.writeUInt16LE(0xe0, 0x80 + 20)
+      buf.write(sectionName, 0x80 + 24 + 0xe0, 'latin1')
+      return buf
+    }
+    const scanOk = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols: ['SteamAPI_Init']
+      })
+
+    it('detectDrmWrapper flags .bind, ignores others and unreadable files', () => {
+      writeFileSync(gameExePath, makePe('.bind'))
+      expect(detectDrmWrapper(gameExePath)).toBe('steamstub')
+      writeFileSync(gameExePath, makePe('.text'))
+      expect(detectDrmWrapper(gameExePath)).toBeUndefined()
+      expect(detectDrmWrapper(join(root, 'missing.exe'))).toBeUndefined()
+    })
+
+    it('flags result and verdict for a .bind exe, then already-placed', async () => {
+      writeFileSync(gameExePath, makePe('.bind'))
+      scanOk()
+      const first = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+      expect(first.status).toBe('placed')
+      expect('drmWrapper' in first && first.drmWrapper).toBe('steamstub')
+      expect('verdict' in first && first.verdict?.drmWrapper).toBe('steamstub')
+      const second = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+      expect(second.status).toBe('already-placed')
+      expect('drmWrapper' in second && second.drmWrapper).toBe('steamstub')
+    })
+
+    it('flags a no-steam-api verdict', async () => {
+      writeFileSync(gameExePath, makePe('.bind'))
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols: []
+      })
+      const res = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+      if (res.status === 'no-steam-api') {
+        expect(res.verdict.drmWrapper).toBe('steamstub')
+      }
+    })
+
+    it('adds no drmWrapper key for a non-.bind exe', async () => {
+      writeFileSync(gameExePath, makePe('.text'))
+      scanOk()
+      const res = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+      expect('drmWrapper' in res).toBe(false)
+      expect(
+        'verdict' in res && res.verdict && 'drmWrapper' in res.verdict
+      ).toBeFalsy()
+    })
+
+    it('never opens an exe outside the bottle', async () => {
+      const outside = join(root, 'outside.exe')
+      writeFileSync(outside, makePe('.bind'))
+      scanOk()
+      const res = await placeShimForGame('1234', outside, {
+        shimSourcePath: realShimSourcePath
+      })
+      expect(res.status).toBe('error')
+      expect('drmWrapper' in res).toBe(false)
     })
   })
 })
