@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 11/12 plans executed
+**Plans:** 12/12 plans complete
 
 Plans:
 
@@ -350,7 +350,7 @@ Plans:
 **Wave 6-8** *(live, sequential)*
 - [x] 52-10-PLAN.md — Desk gate, scratch-clone harness, live-gate contract + reachability review, deferred note (authors, does not run)
 - [x] 52-11-PLAN.md — Discovery rounds in a scratch clone (cap 3), pid decision checkpoint
-- [ ] 52-12-PLAN.md — Done-when: GameLib launch of Grim Dawn, cx-log trace, bottle hygiene; close both todos on pass
+- [x] 52-12-PLAN.md — Done-when: GameLib launch of Grim Dawn, cx-log trace, bottle hygiene; close both todos on pass
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
 
