@@ -70,6 +70,19 @@ census reads. Per-game bottles `GameLibSteamBridge-<appid>` exist for: 1119730, 
 648800. Helper log lines in gamelib.log: `bridge helper [<appid>]: [<ts>] HELLO  shim attached
 appid=<appid>`, `... CALL   <Interface>.<Method>`, `... NOVER  flat lookup ver=<v> served=no`.
 
+Recorded at launch (53-09 Task 1, 2026-10-25):
+
+- HEAD 4f7c79cdec575f9cda165ee584592a5840a44842 (committed 2026-10-25 10:03:22 +1300).
+- `steam_api64.dll` size 402944 (as expected).
+- Sidecar binary `GameLib.app/Contents/MacOS/gamelib-sidecar` mtime 2026-10-25 10:04:40, newer than HEAD.
+- `pnpm build-steam-bridge` ok. `pnpm tauri:dev:packaged` built the app bundle then exited 1 only on the
+  updater-artifact signing step (no `TAURI_SIGNING_PRIVATE_KEY`); `gamelib-shell` and GameLib.app were produced.
+- No `gamelib-shell` or `steam-bridge-helper` running beforehand. Launched `target/debug/gamelib-shell` detached
+  (pid 19000), log `/private/tmp/claude-501/gamelib-53-09.log`.
+- `~/Library/Logs/GameLib` at launch: gamelib-shell.log, gamelib.log, gamelib.log.51-29-batch0-215927,
+  gamelib.log.old, gamelib.log.pre-51-27-20261023-073351, gamelib.log.pre-51-28-20261023-194304,
+  gamelib.log.pre-51-29-20261023-214423, runners/.
+
 Carried findings to check while running:
 
 - 53-07: Ranch Simulator 1119730, Manor Lords 1363080 and Abiotic Factor 427410 read `unknown-version`
