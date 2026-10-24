@@ -20,16 +20,22 @@
  * closing census tool reuses it unchanged); we do NOT shell out to `grep`
  * (24-RESEARCH.md Don't-Hand-Roll table).
  *
+ * Phase 52 Plan 05: the scan also follows a bounded static-import closure
+ * (same directory as the exe only, depth <= 2, <= 32 DLLs) so a title whose
+ * exe loads steam_api through an importing DLL (Grim Dawn: Engine.dll) reports
+ * that arch and those symbols.
+ *
  * Quick 261024-j4l: `objdump --private-headers` does NOT list the PE Delay
  * Import Directory, so a delay-only importer (Manor Lords' Shipping exe) used
  * to scan as "imports nothing". The scan now also reads the delay table with
  * the zero-spawn ranged reader in `peSteamDrm.ts` and merges it in.
  */
 
-import { closeSync, openSync, readSync } from 'fs'
+import { closeSync, existsSync, openSync, readSync } from 'fs'
+import { dirname, isAbsolute, join, relative, resolve } from 'path'
 import { spawnAsync } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { parseSteamApiImportTable } from './importParse'
+import { parseImportedDllNames, parseSteamApiImportTable } from './importParse'
 import { readPeSteamApiDelayImports } from './peSteamDrm'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
@@ -41,6 +47,88 @@ const OBJDUMP_BIN = '/usr/bin/objdump'
 
 const CONFLICTING_HEADINGS_ERROR =
   'conflicting steam_api.dll and steam_api64.dll import headings'
+
+const CLOSURE_MAX_DEPTH = 2
+const CLOSURE_MAX_DLLS = 32
+const SYSTEM_DLLS = new Set([
+  'kernel32.dll',
+  'user32.dll',
+  'ntdll.dll',
+  'msvcrt.dll',
+  'advapi32.dll',
+  'gdi32.dll',
+  'shell32.dll',
+  'ole32.dll',
+  'oleaut32.dll',
+  'ws2_32.dll',
+  'winmm.dll'
+])
+
+function isFollowableName(name: string): boolean {
+  if (/[\\/]/.test(name) || name.includes('..')) return false
+  const lower = name.toLowerCase()
+  if (SYSTEM_DLLS.has(lower) || /^(api|ext)-ms-/i.test(lower)) return false
+  return true
+}
+
+function isContainedWithin(root: string, candidate: string): boolean {
+  const rel = relative(root, candidate)
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+}
+
+type ClosureBlock = ReturnType<typeof parseSteamApiImportTable>
+
+/** Breadth-first walk of same-directory DLL imports; returns steam_api blocks found. */
+async function scanImportClosure(
+  appId: string,
+  exePath: string,
+  exeStdout: string
+): Promise<{ blocks: { name: string; parsed: ClosureBlock }[] }> {
+  const dir = dirname(exePath)
+  const root = resolve(dir)
+  const blocks: { name: string; parsed: ClosureBlock }[] = []
+  const visited = new Set<string>()
+  let examined = 0
+  let frontier = parseImportedDllNames(exeStdout)
+  for (let depth = 1; depth <= CLOSURE_MAX_DEPTH && frontier.length; depth++) {
+    const next: string[] = []
+    for (const name of frontier) {
+      const key = name.toLowerCase()
+      if (visited.has(key) || !isFollowableName(name)) continue
+      if (/^steam_api(64)?\.dll$/i.test(name)) continue
+      const full = join(dir, name)
+      if (!isContainedWithin(root, resolve(full)) || !existsSync(full)) continue
+      if (examined >= CLOSURE_MAX_DLLS) return { blocks }
+      visited.add(key)
+      examined++
+      try {
+        const r = await spawnAsync(OBJDUMP_BIN, ['--private-headers', full])
+        if (r.code !== 0) {
+          logWarning(
+            `scanSteamApiImports: objdump exited with code ${r.code} for followed DLL "${full}" (appId ${appId}); skipping`,
+            LogPrefix.Steam
+          )
+          continue
+        }
+        const parsed = parseSteamApiImportTable(r.stdout)
+        if (parsed.arch !== 'none' || parsed.conflict) {
+          blocks.push({ name, parsed })
+        }
+        next.push(...parseImportedDllNames(r.stdout))
+      } catch (error) {
+        logWarning(
+          [
+            `scanSteamApiImports: objdump failed for followed DLL "${full}" (appId ${appId}); skipping`,
+            error
+          ],
+          LogPrefix.Steam
+        )
+      }
+    }
+    frontier = next
+  }
+  return { blocks }
+}
 
 // Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
 // file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
@@ -147,7 +235,32 @@ export async function scanSteamApiImports(
     }
   }
 
-  const parsed = parseSteamApiImportTable(result.stdout)
+  const exeParsed = parseSteamApiImportTable(result.stdout)
+  let parsed: ClosureBlock = exeParsed
+  const closure = await scanImportClosure(appId, exePath, result.stdout)
+  const contributing: string[] = []
+  for (const { name, parsed: b } of closure.blocks) {
+    if (b.conflict || (parsed.arch !== 'none' && b.arch !== parsed.arch)) {
+      logWarning(
+        `scanSteamApiImports: ${CONFLICTING_HEADINGS_ERROR} (via ${name}) for appId ${appId} ("${exePath}")`,
+        LogPrefix.Steam
+      )
+      return { status: 'error', error: CONFLICTING_HEADINGS_ERROR }
+    }
+    parsed = {
+      dll: parsed.dll ?? b.dll,
+      arch: parsed.arch === 'none' ? b.arch : parsed.arch,
+      symbols: [...new Set([...parsed.symbols, ...b.symbols])],
+      conflict: parsed.conflict
+    }
+    contributing.push(name)
+  }
+  if (contributing.length > 0) {
+    logInfo(
+      `scanSteamApiImports: appId ${appId} steam_api imported via ${contributing.join(', ')} (Phase 52 closure)`,
+      LogPrefix.Steam
+    )
+  }
   if (parsed.conflict) {
     logWarning(
       `scanSteamApiImports: ${CONFLICTING_HEADINGS_ERROR} for appId ${appId} ("${exePath}")`,

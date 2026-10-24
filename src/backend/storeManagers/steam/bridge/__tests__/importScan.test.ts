@@ -13,14 +13,18 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { spawnAsync } from 'backend/utils'
 import { parseSteamApiImports, scanSteamApiImports } from '../importScan'
-import { parseSteamApiImportTable } from '../importParse'
+import { parseImportedDllNames, parseSteamApiImportTable } from '../importParse'
 import {
   AVERNUM_4_OBJDUMP_OUTPUT,
   AVERNUM_6_OBJDUMP_OUTPUT,
   CONFLICTING_DLL_HEADINGS_OBJDUMP_OUTPUT,
   DATA_EXPORT_ROW_OBJDUMP_OUTPUT,
   ELEX_X64_OBJDUMP_OUTPUT,
+  GRIM_DAWN_ENGINE_DLL_IMPORTS,
+  GRIM_DAWN_EXE_IMPORTS,
+  GRIM_DAWN_GAME_DLL_IMPORTS,
   HOARD_REUBEN_REAL_OBJDUMP_OUTPUT,
+  X86_STEAM_API_DLL_IMPORTS,
   HOARD_SPIKE_RECONSTRUCTED_OBJDUMP_OUTPUT,
   NO_STEAM_API_OBJDUMP_OUTPUT,
   XCOM_EU_OBJDUMP_OUTPUT
@@ -369,6 +373,155 @@ describe('importScan', () => {
         join(dir, 'does-not-exist.exe')
       )
       expect(result).not.toHaveProperty('delaySymbols')
+    })
+  })
+
+  describe('parseImportedDllNames (Phase 52 Plan 05)', () => {
+    it('returns DLL names in file order', () => {
+      expect(parseImportedDllNames(GRIM_DAWN_EXE_IMPORTS)).toEqual([
+        'KERNEL32.dll',
+        'Engine.dll',
+        'Game.dll'
+      ])
+    })
+
+    it('dedupes case-insensitively keeping the first spelling', () => {
+      const out = 'DLL Name: Foo.dll\nDLL Name: FOO.DLL\nDLL Name: bar.dll\n'
+      expect(parseImportedDllNames(out)).toEqual(['Foo.dll', 'bar.dll'])
+    })
+
+    it('returns [] when there are no DLL Name lines', () => {
+      expect(parseImportedDllNames('nothing here')).toEqual([])
+    })
+  })
+
+  describe('static-import closure (Phase 52 Plan 05)', () => {
+    let dir: string
+    const mk = (...names: string[]) =>
+      names.forEach((n) => writeFileSync(join(dir, n), ''))
+    const answer = (map: Record<string, string>) =>
+      mockedSpawnAsync.mockImplementation(
+        async (_bin: string, args: string[]) => {
+          const target = args[1]
+          const key = Object.keys(map).find((k) => target === join(dir, k))
+          return key
+            ? { code: 0, stdout: map[key], stderr: '' }
+            : { code: 1, stdout: '', stderr: 'nope' }
+        }
+      )
+    const spawnedTargets = () =>
+      mockedSpawnAsync.mock.calls.map((c) => c[1][1] as string)
+
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), 'closure-'))
+    })
+    afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+    it('reports Engine.dll steam_api64 symbols for an exe that lacks the heading', async () => {
+      mk('Grim Dawn.exe', 'Engine.dll', 'Game.dll')
+      answer({
+        'Grim Dawn.exe': GRIM_DAWN_EXE_IMPORTS,
+        'Engine.dll': GRIM_DAWN_ENGINE_DLL_IMPORTS,
+        'Game.dll': GRIM_DAWN_GAME_DLL_IMPORTS
+      })
+      const r = await scanSteamApiImports('219990', join(dir, 'Grim Dawn.exe'))
+      expect(r).toMatchObject({
+        status: 'ok',
+        arch: 'x64',
+        dll: 'steam_api64.dll'
+      })
+      if (r.status === 'ok') expect(r.symbols).toHaveLength(7)
+    })
+
+    it('unions symbols with the exe own block, exe first, no duplicates', async () => {
+      mk('Grim Dawn.exe', 'Engine.dll')
+      answer({
+        'Grim Dawn.exe': ELEX_X64_OBJDUMP_OUTPUT.replace(
+          'dbghelp.dll',
+          'Engine.dll'
+        ),
+        'Engine.dll': GRIM_DAWN_ENGINE_DLL_IMPORTS
+      })
+      const r = await scanSteamApiImports('1', join(dir, 'Grim Dawn.exe'))
+      expect(r.status).toBe('ok')
+      if (r.status === 'ok') {
+        expect(r.symbols[0]).toBe('SteamAPI_GetHSteamUser')
+        expect(new Set(r.symbols).size).toBe(r.symbols.length)
+        expect(r.symbols).toContain('SteamInternal_ContextInit')
+      }
+    })
+
+    it('follows depth 2 (exe -> Game.dll -> Engine.dll) but not depth 3', async () => {
+      mk('a.exe', 'Game.dll', 'Engine.dll')
+      answer({
+        'a.exe': GRIM_DAWN_EXE_IMPORTS.replace('Engine.dll', 'Zzz.dll'),
+        'Game.dll': GRIM_DAWN_GAME_DLL_IMPORTS,
+        'Engine.dll': GRIM_DAWN_ENGINE_DLL_IMPORTS
+      })
+      const r = await scanSteamApiImports('1', join(dir, 'a.exe'))
+      expect(r).toMatchObject({ status: 'ok', arch: 'x64' })
+
+      mockedSpawnAsync.mockReset()
+      // depth 3: a.exe -> Game.dll -> Mid.dll -> Engine.dll
+      mk('Mid.dll')
+      answer({
+        'a.exe': GRIM_DAWN_EXE_IMPORTS.replace('Engine.dll', 'Zzz.dll'),
+        'Game.dll': GRIM_DAWN_GAME_DLL_IMPORTS.replace('Engine.dll', 'Mid.dll'),
+        'Mid.dll': GRIM_DAWN_GAME_DLL_IMPORTS,
+        'Engine.dll': GRIM_DAWN_ENGINE_DLL_IMPORTS
+      })
+      const r3 = await scanSteamApiImports('1', join(dir, 'a.exe'))
+      expect(r3).toMatchObject({ status: 'ok', arch: 'none' })
+    })
+
+    it('never spawns objdump for path-like, missing, or system names', async () => {
+      mk('a.exe')
+      const exe = `
+    DLL Name: ..\\evil.dll
+    DLL Name: sub/evil.dll
+    DLL Name: Missing.dll
+    DLL Name: USER32.dll
+    DLL Name: ntdll.dll
+    DLL Name: msvcrt.dll
+    DLL Name: api-ms-win-core-foo-l1-1-0.dll
+    DLL Name: ext-ms-win-bar.dll
+`
+      answer({ 'a.exe': exe })
+      mockedSpawnAsync.mockClear()
+      await scanSteamApiImports('1', join(dir, 'a.exe'))
+      expect(spawnedTargets()).toEqual([join(dir, 'a.exe')])
+    })
+
+    it('fails closed when two importers disagree on arch', async () => {
+      mk('a.exe', 'Engine.dll', 'Other.dll')
+      answer({
+        'a.exe': GRIM_DAWN_EXE_IMPORTS.replace('Game.dll', 'Other.dll'),
+        'Engine.dll': GRIM_DAWN_ENGINE_DLL_IMPORTS,
+        'Other.dll': X86_STEAM_API_DLL_IMPORTS
+      })
+      const r = await scanSteamApiImports('1', join(dir, 'a.exe'))
+      expect(r).toEqual({
+        status: 'error',
+        error: 'conflicting steam_api.dll and steam_api64.dll import headings'
+      })
+    })
+
+    it('skips a followed DLL whose objdump fails, still returning ok', async () => {
+      mk('a.exe', 'Engine.dll')
+      answer({ 'a.exe': GRIM_DAWN_EXE_IMPORTS })
+      const r = await scanSteamApiImports('1', join(dir, 'a.exe'))
+      expect(r).toMatchObject({ status: 'ok', arch: 'none' })
+    })
+
+    it('examines at most 32 candidate DLLs', async () => {
+      mk('a.exe')
+      const names = Array.from({ length: 40 }, (_, i) => `d${i}.dll`)
+      mk(...names)
+      const exe = names.map((n) => `    DLL Name: ${n}\n`).join('')
+      answer({ 'a.exe': exe })
+      mockedSpawnAsync.mockClear()
+      await scanSteamApiImports('1', join(dir, 'a.exe'))
+      expect(mockedSpawnAsync).toHaveBeenCalledTimes(1 + 32)
     })
   })
 })
