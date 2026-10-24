@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-complete: re-gate items 9-13 scored by 52-17/52-18
+diagnosis: items 14-15 scored by 52-19; next 52-22 decision
 
 ## Tests
 
@@ -229,6 +229,10 @@ result: pass — operator chose option-c (investigate first, no pid writer yet),
 expected: the clone holds the product-written state (x64/steam_api64.dll and x64/steamclient64.dll `cmp` identical to the product's, clone SteamClientDll64 equal to the product's); the window between the SteamClient014 CreateInterface and the MSGBOX is captured with relay lines (GetProcAddress, GetModuleFileName, OpenProcess, CreateFileW, ReadFile and their kernelbase/ntdll counterparts); Q1-Q6 are each answered observed-or-not-observed with cxlog line refs; the genuine Win64, forwarder and native Mac export tables are recorded side by side. No fix is chosen.
 result: pass — session /tmp/gamelib-gate-52d-20261024T053624Z, `ROUND=diag1 MODE=trace WATCH=45`, one round (fallback diag2 not needed). DRY_RUN printout first: RelayInclude `reg add` targets `CX_BOTTLE=GameLibGate52GD` only, no cp of steam_api64.dll or steamclient64.dll, no `Software\Valve` write. Clone state asserted after the run: both DLLs `cmp` identical to the product's, clone user.reg SteamClientDll64 count 1 and the ActiveProcess key equal to the product's. Product bottle re-read after `wineserver -k`, before and after: exe sha256 d3915e2599317b6670cc088ba958afb2b2f4fa8141cfd1d777ee02f9ea1fc4c4, shim 251392 B sha256 41b74555...b8051be, forwarder 186368 B sha256 d84cb744...aac849, ActiveProcess lines (SteamClientDll64, Universe=Public, no pid) all unchanged. Relay worked: 852 `Call` lines in a 11964-line cxlog; first MSGBOX at cxlog:7186. The window, from the SteamClient014 recvs (cxlog:7166-7167) to MSGBOX: the stub resolves CreateInterface on the forwarder (7168), looks up `Steam_ReleaseThreadLocalMemory` with module handle 0 (searched in Grim Dawn.exe, not found, 7163-7165), calls GetModuleFileNameW on the forwarder (7170), opens it with CreateFileW (7174) and reads all 186368 bytes with ReadFile (7178), then resolves user32 MessageBoxA (7184). The same stub code read the whole Grim Dawn.exe earlier (6810-6820). No OpenProcess/NtOpenProcess call (the one `OpenProcess` relay match is an import-name GetProcAddress at 6651), no image-name queries, no registry read in the window. Export tables in 52-19-DIAGNOSIS.md `## Gap 5: export tables`: genuine 41 names, forwarder 1 (CreateInterface), native Mac 33; spike 038 exports64.txt equals the genuine table. Full answers and candidate inputs: 52-19-DIAGNOSIS.md. Bridge-verified: NOT verified (the IsSteamRunning warning at cxlog:6840 and Load Error 3 persist). Closing inventory: see terminal.log in the session dir.
 
+### 15. Gap 6 attribution — Friends state across the arms (non-ELEX)
+expected: Friends is recorded before and after the idle control and arms c, b, a and d, and the attribution names only an arm that flipped while the control held.
+result: pass — session /tmp/gamelib-gate-52d-20261024T053624Z, T_bridge = Age of Decadence (230070). 0a signed in, 0b (3 min idle) signed in, arm c (helper alone) signed in to signed in, arm b (steam-user logon alone, no Play) signed in to SIGNED OUT in F1 (loggedOn 05:52:03Z, flip seen ~05:52:35Z) and again in the pre-committed repeat F2 (loggedOn 05:55:45Z, flip ~05:56:05Z, no Play). Arm a not exercised (no bridge toggle, no non-bridge title installed). Arm d (F3, bridge Play, helper and shim hashes equal the trace snapshots) held ONLINE through INIT, HELLO and 63 s of play once Friends was restored by a Mac Steam restart; it was offline after the F3 logon before the restart. Mac Steam logs show no displacement or remote logoff (only the two operator restarts). Attribution: the GameLib steam-user logon, not the helper, shim or bridge Play. classification: outside-phase-52. Deviation: F2 became the arm b repeat, so arm d ran in F3. Pending todo 2026-10-24-friends-sign-out-steam-user-logon.md. See 52-19-DIAGNOSIS.md `## Gap 6`.
+
 ## Structural Reachability Review
 
 Applied by 52-10 against all seven tests of `live-gate-contract-authoring.md`.
@@ -277,8 +281,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 13
-passed: 4
+total: 15
+passed: 6
 issues: 6
 pending: 1
 skipped: 2
