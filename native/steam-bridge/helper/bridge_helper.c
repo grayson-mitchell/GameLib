@@ -143,6 +143,8 @@
 // Phase 52 (52-02): ask the native client whether it accepts an interface
 // version (backs the shim's GameLibBridge_CreateInterface export).
 #define CONTROL_SLOT_CREATE_INTERFACE 3
+// D-53-07 (53-04): the shim reports a flat-API version it could not serve.
+#define CONTROL_SLOT_REPORT_VERSION 4
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -516,6 +518,31 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
                present ? "present" : "NULL");
       logts("FWD", msg);
       send_response(fd, requestId, STATUS_OK, (const uint8_t *)&present, 4);
+      return;
+    }
+    if (slot == CONTROL_SLOT_REPORT_VERSION) {
+      // D-53-07: answerable pre-init. T-53-22: bounds-check (0 < len <= 128,
+      // 4 + len <= argLen) before the copy into the fixed buffer. T-53-23:
+      // sanitized before logging. Bounded by the shim's 16-report cap (T-53-25).
+      if (argBlob == NULL || argLen < 4) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint32_t vlen;
+      memcpy(&vlen, argBlob, 4);
+      if (vlen == 0 || vlen > 128 || (uint64_t)4 + vlen > argLen) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      char ver[129];
+      memcpy(ver, argBlob + 4, vlen);
+      ver[vlen] = '\0';
+      char vsafe[132];
+      sanitize_ver(ver, vsafe, sizeof vsafe);
+      char vmsg[192];
+      snprintf(vmsg, sizeof vmsg, "flat lookup ver=%s served=no", vsafe);
+      logts("NOVER", vmsg);
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
     send_response(fd, requestId, STATUS_ERR, NULL, 0); // unknown control slot

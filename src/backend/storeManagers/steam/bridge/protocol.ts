@@ -104,7 +104,10 @@ export const CONTROL_SLOT = {
   // Phase 52 (52-02): shim export GameLibBridge_CreateInterface asks the
   // native client whether it accepts an interface version; the reply is a
   // 4-byte present flag.
-  createInterface: 3
+  createInterface: 3,
+  // D-53-07 (53-04 shim side, 53-06 helper side): the shim reports a flat
+  // API version it could not serve; the helper logs `NOVER`.
+  reportVersion: 4
 } as const
 
 // Not exported (this and DecodedRequest, DecodedResponse below): verified to have no

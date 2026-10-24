@@ -169,6 +169,27 @@ describe('protocol -- interface ordinals + CONTROL reservation (review finding #
   })
 })
 
+describe('protocol -- CONTROL_SLOT.reportVersion (53-06, D-53-07)', () => {
+  it('is 4 and equals the shim and helper #define values', () => {
+    expect(CONTROL_SLOT.reportVersion).toBe(4)
+    const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+    const shim = readFileSync(
+      join(root, 'native/steam-bridge/generated/steam_api_shim.c'),
+      'utf-8'
+    )
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const shimValue = /#define BRIDGE_CONTROL_SLOT_REPORT_VERSION (\d+)/.exec(
+      shim
+    )
+    const helperValue = /#define CONTROL_SLOT_REPORT_VERSION (\d+)/.exec(helper)
+    expect(Number(shimValue![1])).toBe(CONTROL_SLOT.reportVersion)
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.reportVersion)
+  })
+})
+
 describe('protocol -- CONTROL HEALTH/WHOAMI round-trip (review finding #7)', () => {
   it('encodeControl(HEALTH) produces a request frame on CONTROL_ORDINAL/health slot', () => {
     const frame = encodeControl(1, 'health')

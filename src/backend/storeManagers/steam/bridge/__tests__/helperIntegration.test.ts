@@ -502,5 +502,125 @@ describeDarwinOnly(
         child.kill()
       }
     }, 15000)
+
+    // 53-06 (D-53-07, T-53-22/23): CONTROL REPORT_VERSION logs a NOVER line
+    // naming the unserved flat version, rejects malformed lengths silently,
+    // sanitises control characters, answers pre-init and never logs CALL.
+    test('REPORT_VERSION logs NOVER, rejects malformed frames without logging, sanitises, never logs CALL', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'report-version-'))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: profile.childEnv()
+        }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+
+      const verFrame = (
+        requestId: number,
+        bytes: Buffer,
+        declared?: number
+      ) => {
+        const len = Buffer.alloc(4)
+        len.writeUInt32LE(declared ?? bytes.length, 0)
+        return encodeRequest(
+          requestId,
+          CONTROL_ORDINAL,
+          CONTROL_SLOT.reportVersion,
+          Buffer.concat([len, bytes])
+        )
+      }
+
+      try {
+        const port = await new Promise<number>((resolvePromise, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+            5000
+          )
+          const poll = setInterval(() => {
+            const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+            if (m) {
+              clearInterval(poll)
+              clearTimeout(timeout)
+              resolvePromise(Number(m[1]))
+            }
+          }, 25)
+        })
+
+        const socket = new Socket()
+        await new Promise<void>((res, rej) => {
+          socket.once('error', rej)
+          socket.connect(port, '127.0.0.1', () => res())
+        })
+        try {
+          const ok = await sendFrameOnSocket(
+            socket,
+            verFrame(1, Buffer.from('SteamUser024', 'ascii'))
+          )
+          expect(ok.status).toBe(STATUS_OK)
+
+          const before = stderr.length
+          expect(
+            (await sendFrameOnSocket(socket, verFrame(2, Buffer.alloc(0))))
+              .status
+          ).toBe(STATUS_ERR)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                verFrame(3, Buffer.alloc(129, 0x41))
+              )
+            ).status
+          ).toBe(STATUS_ERR)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                verFrame(4, Buffer.from('abc', 'ascii'), 50)
+              )
+            ).status
+          ).toBe(STATUS_ERR)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                encodeRequest(
+                  5,
+                  CONTROL_ORDINAL,
+                  CONTROL_SLOT.reportVersion,
+                  Buffer.from([1, 2])
+                )
+              )
+            ).status
+          ).toBe(STATUS_ERR)
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr.slice(before)).not.toMatch(/NOVER/)
+
+          const dirty = await sendFrameOnSocket(
+            socket,
+            verFrame(6, Buffer.from('Bad\nFAKE\x01Line', 'latin1'))
+          )
+          expect(dirty.status).toBe(STATUS_OK)
+        } finally {
+          socket.destroy()
+        }
+
+        await new Promise((r) => setTimeout(r, 100))
+        expect(stderr).toMatch(/NOVER  flat lookup ver=SteamUser024 served=no/)
+        expect(stderr).toMatch(
+          /NOVER  flat lookup ver=Bad\?FAKE\?Line served=no/
+        )
+        expect(stderr).not.toMatch(/Bad\n/)
+        expect(stderr).not.toMatch(/CALL/)
+      } finally {
+        child.kill()
+      }
+    }, 15000)
   }
 )
