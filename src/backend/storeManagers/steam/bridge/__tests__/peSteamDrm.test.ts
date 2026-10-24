@@ -23,6 +23,12 @@ type PeFixture = {
   } | null
   resourceSizeZero?: boolean
   resourceRvaOutside?: boolean
+  /**
+   * 53-15 (Overlooting 3410180): a section listed BEFORE .rsrc whose
+   * SizeOfRawData (an embedded Godot pack) spans past .rsrc's RVA while its
+   * VirtualSize is 8.
+   */
+  pckOverlay?: boolean
 }
 
 const PE_OFFSET = 0x80
@@ -84,9 +90,22 @@ function buildPe(f: PeFixture = {}): Uint8Array {
   const magic = f.magic ?? 0x10b
   const optSize = magic === 0x20b ? 240 : 224
   const rsrc = f.resources ? buildResourceSection(f.resources) : null
-  const sections: { name: string; va: number; raw: Uint8Array }[] = [
-    { name: '.text', va: 0x1000, raw: new Uint8Array(0x10) }
-  ]
+  const sections: {
+    name: string
+    va: number
+    raw: Uint8Array
+    vsize?: number
+    rawSize?: number
+  }[] = [{ name: '.text', va: 0x1000, raw: new Uint8Array(0x10) }]
+  if (f.pckOverlay) {
+    sections.push({
+      name: 'pck',
+      va: 0x1800,
+      raw: new Uint8Array(0x10),
+      vsize: 8,
+      rawSize: 0x3000
+    })
+  }
   if (rsrc) sections.push({ name: '.rsrc', va: RSRC_VA, raw: rsrc })
   for (const [i, name] of (f.extraSections ?? []).entries()) {
     sections.push({ name, va: 0x8000 + i * 0x1000, raw: new Uint8Array(0x10) })
@@ -116,9 +135,9 @@ function buildPe(f: PeFixture = {}): Uint8Array {
   sections.forEach((s, i) => {
     const base = opt + optSize + i * 40
     for (let k = 0; k < s.name.length; k++) buf[base + k] = s.name.charCodeAt(k)
-    dv.setUint32(base + 8, s.raw.length, true)
+    dv.setUint32(base + 8, s.vsize ?? s.raw.length, true)
     dv.setUint32(base + 12, s.va, true)
-    dv.setUint32(base + 16, s.raw.length, true)
+    dv.setUint32(base + 16, s.rawSize ?? s.raw.length, true)
     dv.setUint32(base + 20, raw, true)
     buf.set(s.raw, raw)
     raw += s.raw.length + 0x10
@@ -170,6 +189,18 @@ describe('detectSteamDrmInPe (quick 261024-br4)', () => {
     expect(detectSteamDrmInPeBytes(pe)).toEqual({
       parsed: true,
       cegMarkers: [],
+      hasBindSection: false
+    })
+  })
+
+  test('Overlooting 3410180: a pck section with a huge raw size and VirtualSize 8 does not shadow .rsrc', () => {
+    const pe = buildPe({
+      pckOverlay: true,
+      resources: { rcdataNames: ['STEAM_GUIDD'] }
+    })
+    expect(detectSteamDrmInPeBytes(pe)).toEqual({
+      parsed: true,
+      cegMarkers: ['STEAM_GUIDD'],
       hasBindSection: false
     })
   })

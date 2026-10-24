@@ -148,10 +148,12 @@ export function detectSteamDrmInPe(read: PeReader): PeSteamDrmResult {
       const sizeOfRawData = u32(read, base + 16)
       const rawPtr = u32(read, base + 20)
       if (name === '.bind') hasBindSection = true
+      // 53-15: VirtualSize is the in-memory extent; SizeOfRawData can far
+      // exceed it (Godot's embedded `pck`) and must not shadow later sections.
       sections.push({
         name,
         va,
-        span: Math.max(virtualSize, sizeOfRawData),
+        span: virtualSize > 0 ? virtualSize : sizeOfRawData,
         rawPtr
       })
     }
@@ -310,7 +312,7 @@ export function readPeSteamApiDelayImports(
       sections.push({
         name: '',
         va,
-        span: Math.max(virtualSize, sizeOfRawData),
+        span: virtualSize > 0 ? virtualSize : sizeOfRawData,
         rawPtr
       })
     }

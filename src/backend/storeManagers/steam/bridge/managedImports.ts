@@ -113,7 +113,11 @@ function readPeLayout(read: PeReader): PeLayout {
     const va = u32(read, base + 12)
     const sizeOfRawData = u32(read, base + 16)
     const rawPtr = u32(read, base + 20)
-    sections.push({ va, span: Math.max(virtualSize, sizeOfRawData), rawPtr })
+    sections.push({
+      va,
+      span: virtualSize > 0 ? virtualSize : sizeOfRawData,
+      rawPtr
+    })
   }
   return { peOffset, magic, dirsOffset, numberOfRvaAndSizes, sections }
 }
