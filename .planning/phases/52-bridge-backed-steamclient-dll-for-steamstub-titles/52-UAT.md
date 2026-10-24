@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-items 1-5 done by 52-11; items 6-8 pending (52-12)
+item 6 in progress (52-12): packaged GameLib launched, awaiting operator play; items 7-8 pending
 
 ## Tests
 
