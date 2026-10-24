@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 30/32 plans executed
+**Plans:** 31/32 plans executed
 
 Plans:
 
@@ -377,7 +377,7 @@ Plans:
 **Gap closure 4** *(from 52-VERIFICATION.md re-verification 3, 5/7; operator chose "Discriminating trace"; waves: 29+30 parallel, then 31, then 32 decision)*
 - [x] 52-29-PLAN.md — 52-REVIEW gap-closure-3 hardening: WR-01 .rc existence guard, WR-02 argv-order test pin, IN-01 doc comment (forwarder bytes untouched)
 - [x] 52-30-PLAN.md — Gap 5 round-4 trace-first: pre-register the discriminating experiment + commit; harness SCORE/PID_ARM switches; arm A (no pid) relay trace, dialog text recaptured vs 52-25 R1, T1-T8 (UAT item 27)
-- [ ] 52-31-PLAN.md — Arm B (clone-only pid -> live process) under the committed rule; two-arm score table; classify into pre-registered O1-O4 with its recommendation; no fix (UAT item 28)
+- [x] 52-31-PLAN.md — Arm B (clone-only pid -> live process) under the committed rule; two-arm score table; classify into pre-registered O1-O4 with its recommendation; no fix (UAT item 28)
 - [ ] 52-32-PLAN.md — Operator decision over the class-bounded options (close-out + done-when amendment, pid-writer-next-round, or static RE); finalize UAT/deferred-items/todo; leave gaps_found (UAT item 29)
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
