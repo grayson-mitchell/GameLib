@@ -70,6 +70,14 @@ Out of scope, unchanged: SteamStub forwarder / Grim Dawn main menu (Phase 52, de
   forwarded to the helper's real Steam answer, or given a local constant only where Steam's real
   value is a constant on this platform (e.g. `ISteamUtils::IsSteamRunningOnSteamDeck` → false on a
   Mac, the Rogue Waters case). Same evidence-driven loop as scan-miss widening (D-51-05 amendment).
+  **Amended 2026-10-25 (plan-phase, user decision):** the Steamworks.NET lifecycle names ship up
+  front as x64 safe no-op exports rather than waiting for live evidence: the
+  `SteamAPI_ManualDispatch_*` family (`GetNextCallback` and `GetAPICallResult` answer false),
+  `SteamAPI_ReleaseCurrentThreadMemory`, `SteamAPI_SetBreakpadAppID`, and the other lifecycle
+  names research Open Question 4 / L309 lists that the owned Unity census imports. Being exported,
+  they are covered: none of them makes a title `missing-symbols`. This resolves research Open
+  Question 4 against its "only if live logs show a fault" recommendation. The measured-then-fixed
+  rule above still governs interface-method stubs.
 - **D-53-07:** **An unknown interface version requested through a flat accessor or flat
   `GetISteamX(..., version)` returns NULL and logs the version.** Steamworks.NET's context init
   checks `IntPtr.Zero`, so `SteamAPI.Init` returns false and the game plays offline with an honest
