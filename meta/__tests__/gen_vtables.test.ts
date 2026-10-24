@@ -10,6 +10,10 @@ import {
   generateDefFile,
   generateDispatchHeader,
   generateShimC,
+  generateShimExportsTs,
+  emitFlatExports,
+  flatMethodName,
+  LIFECYCLE_NOOP_EXPORTS,
   isSretReturn,
   isStringReturn,
   is64BitRegisterReturn,
@@ -2104,5 +2108,300 @@ describe('gen_vtables', () => {
       expect(s![1]).toBe(d![1])
       expect(s![1]).toBe(computeWireTableHash(all))
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Phase 53 (53-04): the generated flat C API
+// ---------------------------------------------------------------------------
+
+type FlatMethod = InterfaceManifestV2['methods'][number]
+
+function flatMethod(
+  slot: number,
+  name: string,
+  returns: string,
+  returnKind: FlatMethod['returnKind'],
+  params: Array<[string, string]> = [],
+  extra: Partial<FlatMethod> = {}
+): FlatMethod {
+  return {
+    slot,
+    name,
+    returns,
+    returnKind,
+    stackBytes: 0,
+    params: params.map(([type, pname]) => ({ type, name: pname })),
+    ...extra
+  }
+}
+
+function flatFixture(
+  iface: string,
+  ordinal: number,
+  methods: FlatMethod[],
+  family = 'Fx'
+): InterfaceManifestV2 {
+  return {
+    schemaVersion: 2,
+    interface: iface,
+    family,
+    ordinal,
+    arches: ['x64'],
+    mode: 'stub',
+    complete: true,
+    source: { kind: 'synthetic', ref: 'test', file: 'test' },
+    methods
+  }
+}
+
+function functionBody(c: string, signaturePrefix: string): string {
+  const start = c.indexOf(signaturePrefix)
+  expect(start).toBeGreaterThanOrEqual(0)
+  const end = c.indexOf('\n}\n', start)
+  return c.slice(start, end + 3)
+}
+
+describe('Phase 53 flat API', () => {
+  const real = loadAllManifests()
+
+  it("dispatches every version of a two-version family from self, with each version's own slot and return type", () => {
+    const m = [
+      flatFixture('Fx001', 901, [
+        flatMethod(0, 'A', 'int32', 'int32'),
+        flatMethod(1, 'B', 'int32', 'int32'),
+        flatMethod(2, 'C', 'int32', 'int32'),
+        flatMethod(3, 'Foo', 'int32', 'int32')
+      ]),
+      flatFixture('Fx002', 902, [
+        flatMethod(0, 'A', 'int32', 'int32'),
+        flatMethod(1, 'B', 'int32', 'int32'),
+        flatMethod(2, 'C', 'int32', 'int32'),
+        flatMethod(3, 'D', 'int32', 'int32'),
+        flatMethod(4, 'E', 'int32', 'int32'),
+        flatMethod(5, 'Foo', 'int32', 'int32')
+      ])
+    ]
+    const c = generateShimC(m)
+    const body = functionBody(c, 'int32_t SteamAPI_IFx_Foo(')
+    expect(body).toContain('self == (void *)&g_fx001_instance')
+    expect(body).toContain('self == (void *)&g_fx002_instance')
+    expect(body).toContain('vt[3]')
+    expect(body).toContain('vt[5]')
+    expect(body).toContain('int32_t (*)(void *)')
+  })
+
+  it('an sret method passes a zeroed local as the hidden out pointer and returns it in RAX', () => {
+    const c = generateShimC(real)
+    expect(c).toContain('uint64_t SteamAPI_ISteamUser_GetSteamID(void *self)')
+    const body = functionBody(
+      c,
+      'uint64_t SteamAPI_ISteamUser_GetSteamID(void *self)'
+    )
+    expect(body).toContain('uint64_t out = 0;')
+    expect(body).toContain('(void * (*)(void *, void *))')
+    expect(body).toContain('(self, &out)')
+    expect(body).toContain('return out;')
+    expect(body).not.toContain('(uint64_t (*)(void *))')
+  })
+
+  it('a position whose type differs between versions is widened; each case keeps its own signature and casts', () => {
+    const m = [
+      flatFixture('Fx001', 901, [
+        flatMethod(0, 'Foo', 'int32', 'int32', [['int32', 'a']]),
+        flatMethod(1, 'Flag', 'int32', 'int32', [['bool', 'b']])
+      ]),
+      flatFixture('Fx002', 902, [
+        flatMethod(0, 'Foo', 'int32', 'int32', [
+          ['int32', 'a'],
+          ['void*', 'b']
+        ]),
+        flatMethod(1, 'Flag', 'int32', 'int32', [['uint32', 'b']])
+      ])
+    ]
+    const c = generateShimC(m)
+    const foo = functionBody(c, 'int32_t SteamAPI_IFx_Foo(')
+    expect(foo).toMatch(
+      /SteamAPI_IFx_Foo\(void \*self, int32_t a1, void \* a2\)/
+    )
+    expect(foo).toContain('(int32_t (*)(void *, int32_t))vt[0]')
+    expect(foo).toContain('(int32_t (*)(void *, int32_t, void *))vt[0]')
+    const flag = functionBody(c, 'int32_t SteamAPI_IFx_Flag(')
+    expect(flag).toContain('SteamAPI_IFx_Flag(void *self, uint64_t a1)')
+    expect(flag).toContain('(bool)(uint8_t)a1')
+    expect(flag).toContain('(uint32_t)(uint32_t)a1')
+  })
+
+  it('refuses an XMM/GPR mix at one position unless that version is listed; a listed version is left undispatched', () => {
+    const m = [
+      flatFixture('Fx001', 901, [
+        flatMethod(0, 'Foo', 'int32', 'int32', [['float', 'a']])
+      ]),
+      flatFixture('Fx002', 902, [
+        flatMethod(0, 'Foo', 'int32', 'int32', [['int32', 'a']])
+      ])
+    ]
+    expect(() => generateShimC(m)).toThrow(/Fx\.Foo\.Fx00[12]/)
+    const c = generateShimC(m, { unrepresentable: ['Fx.Foo.Fx001'] })
+    expect(c).toContain('not dispatched: Fx.Foo.Fx001')
+    const body = functionBody(c, 'int32_t SteamAPI_IFx_Foo(')
+    expect(body).toContain('g_fx002_instance')
+    expect(body).not.toContain('g_fx001_instance')
+  })
+
+  it('every lifecycle no-op is x64-only, and ManualDispatch answers false without touching the bridge', () => {
+    const c = generateShimC(real)
+    const x64Start = c.indexOf('Steamworks.NET lifecycle no-ops')
+    const guardOpen = c.indexOf('#if defined(__x86_64__)', x64Start)
+    expect(guardOpen).toBeGreaterThan(x64Start)
+    const guardEnd = c.indexOf('#endif', guardOpen)
+    const block = c.slice(guardOpen, guardEnd)
+    const x64Def = generateDefFile(real, 'x64')
+    const x86Def = generateDefFile(real, 'x86')
+    for (const name of LIFECYCLE_NOOP_EXPORTS) {
+      expect(block).toMatch(new RegExp(`[ *]${name}\\(`))
+      expect(x64Def.split('\n')).toContain(name)
+      expect(x86Def.split('\n')).not.toContain(name)
+    }
+    for (const name of [
+      'SteamAPI_ManualDispatch_GetNextCallback',
+      'SteamAPI_ManualDispatch_GetAPICallResult'
+    ]) {
+      expect(block).toContain(`int ${name}(void) { return 0; }`)
+    }
+    expect(block).not.toContain('bridge_transact')
+  })
+
+  it('a float parameter keeps its real type in the signature and the call cast', () => {
+    const m = [
+      flatFixture('Fx001', 901, [
+        flatMethod(0, 'Set', 'bool', 'int32', [
+          ['const char*', 'n'],
+          ['float', 'f']
+        ])
+      ])
+    ]
+    const body = functionBody(generateShimC(m), 'bool SteamAPI_IFx_Set(')
+    expect(body).toContain('float a2')
+    expect(body).toContain('(int (*)(void *, const char *, float))')
+    expect(body).toContain('(float)a2')
+    expect(body).not.toMatch(/uint32_t dummy/)
+  })
+
+  it('names overload pairs from the numeric parameter type', () => {
+    const methods = [
+      flatMethod(0, 'GetStat', 'bool', 'int32', [['int32*', 'p']]),
+      flatMethod(1, 'GetStat_2', 'bool', 'int32', [['float*', 'p']]),
+      flatMethod(2, 'GetBig', 'bool', 'int32', [['int64_t*', 'p']]),
+      flatMethod(3, 'GetBig_2', 'bool', 'int32', [['double*', 'p']]),
+      flatMethod(4, 'SetStat', 'bool', 'int32', [['int32', 'p']]),
+      flatMethod(5, 'SetStat_2', 'bool', 'int32', [['float', 'p']])
+    ]
+    const names = methods.map((x) => flatMethodName('Fx', x, methods))
+    expect(names).toEqual([
+      'GetStatInt32',
+      'GetStatFloat',
+      'GetBigInt64',
+      'GetBigDouble',
+      'SetStatInt32',
+      'SetStatFloat'
+    ])
+  })
+
+  it('refuses a class return wider than 8 bytes, accepts 8', () => {
+    const wide = [
+      flatFixture('Fx001', 901, [
+        flatMethod(0, 'Big', 'Big_t', 'class', [], { structSize: 16 })
+      ])
+    ]
+    expect(() => generateShimC(wide)).toThrow(/Big/)
+    const ok = [
+      flatFixture('Fx001', 901, [
+        flatMethod(0, 'Id', 'CSteamID', 'class', [], { structSize: 8 })
+      ])
+    ]
+    expect(() => generateShimC(ok)).not.toThrow()
+  })
+
+  it('flat ISteamClient_GetISteamUser answers NULL for an unknown version and reports it', () => {
+    const c = generateShimC(real)
+    const body = functionBody(c, 'void * SteamAPI_ISteamClient_GetISteamUser(')
+    expect(body).toContain('resolve_iface_by_exact_version')
+    expect(body).toContain('flat_report_unknown_version')
+    expect(body).toContain('return NULL')
+    expect(body).not.toContain('g_x64_null_object_instance')
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_REPORT_VERSION 4')
+    expect(c).toContain('BRIDGE_CONTROL_SLOT_REPORT_VERSION, req')
+  })
+
+  it("an unknown or NULL self returns the return type's zero", () => {
+    const m = [
+      flatFixture('Fx001', 901, [
+        flatMethod(0, 'N', 'int32', 'int32'),
+        flatMethod(1, 'P', 'void*', 'pointer'),
+        flatMethod(2, 'V', 'void', 'void')
+      ])
+    ]
+    const c = generateShimC(m)
+    expect(functionBody(c, 'int32_t SteamAPI_IFx_N(')).toMatch(/return 0;\n}/)
+    expect(functionBody(c, 'void * SteamAPI_IFx_P(')).toMatch(/return 0;\n}/)
+    expect(functionBody(c, 'void SteamAPI_IFx_V(')).toMatch(/return;\n}/)
+  })
+
+  it('flat bodies are x64-only: the x86 .def carries none, the x64 .def carries each name once', () => {
+    const c = generateShimC(real)
+    const flatStart = c.indexOf('Steamworks flat C API (53-04')
+    expect(c.slice(flatStart, flatStart + 200)).toContain('Win64 only')
+    expect(
+      c.slice(c.indexOf('#if', flatStart), c.indexOf('#if', flatStart) + 30)
+    ).toContain('#if defined(__x86_64__)')
+    const x86 = generateDefFile(real, 'x86').split('\n')
+    expect(x86.filter((n) => n.startsWith('SteamAPI_ISteam'))).toEqual([])
+    const x64 = generateDefFile(real, 'x64').split('\n')
+    const { names } = emitFlatExports(real)
+    expect(names.length).toBeGreaterThan(400)
+    for (const n of names) {
+      expect(x64.filter((l) => l === n)).toHaveLength(1)
+    }
+  })
+
+  it('IsSteamRunningOnSteamDeck is exported and answers false through the SteamUtils010 stub', () => {
+    const c = generateShimC(real)
+    expect(generateDefFile(real, 'x64').split('\n')).toContain(
+      'SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck'
+    )
+    const body = functionBody(
+      c,
+      'bool SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck('
+    )
+    expect(body).toContain('g_steamutils010_instance')
+  })
+
+  it('generateShimExportsTs lists the sorted x64 .def names in a prettier-stable shape', () => {
+    const ts = generateShimExportsTs(real)
+    expect(ts).toContain('GENERATED FILE')
+    expect(ts).toContain(
+      'export const SHIM64_GENERATED_EXPORTS: readonly string[] = ['
+    )
+    const listed = [...ts.matchAll(/^ {2}'([^']+)',?$/gm)].map((x) => x[1])
+    const defNames = generateDefFile(real, 'x64')
+      .split('\n')
+      .slice(2)
+      .filter(Boolean)
+    expect(listed).toEqual([...defNames].sort())
+    expect(ts).not.toMatch(/^[^/\n].*;\s*$/m)
+    expect(ts.endsWith(']\n')).toBe(true)
+  })
+
+  it('the existing null-object pins are untouched', () => {
+    const c = generateShimC(real)
+    expect(c).toMatch(
+      /#if defined\(__x86_64__\)\nvoid \*SteamInternal_CreateInterface/
+    )
+    expect(c).toContain('return (void *)&g_x64_null_object_instance;')
+  })
+
+  it('the flat client lookup and every manifest helperFlat agree on the derived name', () => {
+    expect(() => emitFlatExports(real)).not.toThrow()
   })
 })

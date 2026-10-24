@@ -604,6 +604,129 @@ const GAMESERVER_FLAT_STUB_BODIES: Record<
   SteamGameServerUtils: 'void *SteamGameServerUtils(void) { return NULL; }'
 }
 
+// Phase 53 (53-04, D-53-06 as amended 2026-10-25 by user decision): the
+// non-interface names Steamworks.NET P/Invokes from steam_api64.dll
+// (the measured fixture steamworksNetFlatNames.json) that no other export
+// list carries. They ship up front as x64-ONLY safe no-ops rather than after
+// a live `missing-symbols` fault. Prototypes are GameLib-authored from the
+// public Steamworks.NET NativeMethods.cs DllImport declarations (never Valve
+// header text, D-09). Win64 is caller-cleans, so a body may declare fewer
+// parameters than the real function takes.
+//
+// Return codes: V void, B bool (false), I int32 (0), U uint32 (0),
+// Q uint64 (0), P pointer (NULL), S const char* (static empty string).
+// A spec may carry a parameter list when the body writes through it
+// (`T` = a `char *buf, size_t cap` pair after `self`; `L` = an `int *cbLen`
+// out-length). ManualDispatch_GetNextCallback / _GetAPICallResult answer
+// false, so no callback is ever delivered through them -- the same outcome as
+// the existing no-op SteamAPI_RunCallbacks.
+const LIFECYCLE_NOOP_SPECS: Readonly<Record<string, string>> = {
+  SteamAPI_GetSteamInstallPath: 'S',
+  SteamAPI_ManualDispatch_FreeLastCallback: 'V',
+  SteamAPI_ManualDispatch_GetAPICallResult: 'B',
+  SteamAPI_ManualDispatch_GetNextCallback: 'B',
+  SteamAPI_ManualDispatch_Init: 'V',
+  SteamAPI_ManualDispatch_RunFrame: 'V',
+  SteamAPI_ReleaseCurrentThreadMemory: 'V',
+  SteamAPI_SetBreakpadAppID: 'V',
+  SteamAPI_SetMiniDumpComment: 'V',
+  SteamAPI_SetTryCatchCallbacks: 'V',
+  SteamAPI_SteamNetworkingIPAddr_Clear: 'V',
+  SteamAPI_SteamNetworkingIPAddr_GetFakeIPType: 'I',
+  SteamAPI_SteamNetworkingIPAddr_GetIPv4: 'U',
+  SteamAPI_SteamNetworkingIPAddr_IsEqualTo: 'B',
+  SteamAPI_SteamNetworkingIPAddr_IsFakeIP: 'B',
+  SteamAPI_SteamNetworkingIPAddr_IsIPv4: 'B',
+  SteamAPI_SteamNetworkingIPAddr_IsIPv6AllZeros: 'B',
+  SteamAPI_SteamNetworkingIPAddr_IsLocalHost: 'B',
+  SteamAPI_SteamNetworkingIPAddr_ParseString: 'B',
+  SteamAPI_SteamNetworkingIPAddr_SetIPv4: 'V',
+  SteamAPI_SteamNetworkingIPAddr_SetIPv6: 'V',
+  SteamAPI_SteamNetworkingIPAddr_SetIPv6LocalHost: 'V',
+  SteamAPI_SteamNetworkingIPAddr_ToString: 'T',
+  SteamAPI_SteamNetworkingIdentity_Clear: 'V',
+  SteamAPI_SteamNetworkingIdentity_GetFakeIPType: 'I',
+  SteamAPI_SteamNetworkingIdentity_GetGenericBytes: 'L',
+  SteamAPI_SteamNetworkingIdentity_GetGenericString: 'S',
+  SteamAPI_SteamNetworkingIdentity_GetIPAddr: 'P',
+  SteamAPI_SteamNetworkingIdentity_GetIPv4: 'U',
+  SteamAPI_SteamNetworkingIdentity_GetPSNID: 'Q',
+  SteamAPI_SteamNetworkingIdentity_GetStadiaID: 'Q',
+  SteamAPI_SteamNetworkingIdentity_GetSteamID: 'Q',
+  SteamAPI_SteamNetworkingIdentity_GetSteamID64: 'Q',
+  SteamAPI_SteamNetworkingIdentity_GetXboxPairwiseID: 'S',
+  SteamAPI_SteamNetworkingIdentity_IsEqualTo: 'B',
+  SteamAPI_SteamNetworkingIdentity_IsFakeIP: 'B',
+  SteamAPI_SteamNetworkingIdentity_IsInvalid: 'B',
+  SteamAPI_SteamNetworkingIdentity_IsLocalHost: 'B',
+  SteamAPI_SteamNetworkingIdentity_ParseString: 'B',
+  SteamAPI_SteamNetworkingIdentity_SetGenericBytes: 'B',
+  SteamAPI_SteamNetworkingIdentity_SetGenericString: 'B',
+  SteamAPI_SteamNetworkingIdentity_SetIPAddr: 'V',
+  SteamAPI_SteamNetworkingIdentity_SetIPv4Addr: 'V',
+  SteamAPI_SteamNetworkingIdentity_SetLocalHost: 'V',
+  SteamAPI_SteamNetworkingIdentity_SetPSNID: 'V',
+  SteamAPI_SteamNetworkingIdentity_SetStadiaID: 'V',
+  SteamAPI_SteamNetworkingIdentity_SetSteamID: 'V',
+  SteamAPI_SteamNetworkingIdentity_SetSteamID64: 'V',
+  SteamAPI_SteamNetworkingIdentity_SetXboxPairwiseID: 'B',
+  SteamAPI_SteamNetworkingIdentity_ToString: 'T',
+  SteamAPI_SteamNetworkingMessage_t_Release: 'V',
+  SteamAPI_UseBreakpadCrashHandler: 'V',
+  SteamAPI_WriteMiniDump: 'V',
+  SteamGameServerClient: 'P',
+  SteamGameServer_ReleaseCurrentThreadMemory: 'V'
+}
+
+export const LIFECYCLE_NOOP_EXPORTS: readonly string[] =
+  Object.keys(LIFECYCLE_NOOP_SPECS).sort()
+
+function lifecycleNoopBody(name: string, spec: string): string {
+  switch (spec) {
+    case 'V':
+      return `void ${name}(void) { }`
+    case 'B':
+      return `int ${name}(void) { return 0; }`
+    case 'I':
+      return `int ${name}(void) { return 0; }`
+    case 'U':
+      return `uint32_t ${name}(void) { return 0; }`
+    case 'Q':
+      return `uint64_t ${name}(void) { return 0; }`
+    case 'P':
+      return `void *${name}(void) { return NULL; }`
+    case 'S':
+      return `const char *${name}(void) { return g_gamelib_empty_string; }`
+    case 'T':
+      // (self, char *buf, size_t cbBuf[, bool]) -- NUL-terminate the buffer.
+      return (
+        `void ${name}(void *self, char *buf, size_t cbBuf) {\n` +
+        `  (void)self;\n` +
+        `  if (buf != NULL && cbBuf > 0) buf[0] = 0;\n` +
+        `}`
+      )
+    case 'L':
+      // (self, int *cbLen) -> const uint8_t * : no bytes, zero length.
+      return (
+        `void *${name}(void *self, int *cbLen) {\n` +
+        `  (void)self;\n` +
+        `  if (cbLen != NULL) *cbLen = 0;\n` +
+        `  return NULL;\n` +
+        `}`
+      )
+    default:
+      throw new Error(`unknown lifecycle no-op spec '${spec}' for ${name}`)
+  }
+}
+
+export const LIFECYCLE_NOOP_EXPORT_BODIES: Readonly<Record<string, string>> =
+  Object.fromEntries(
+    LIFECYCLE_NOOP_EXPORTS.map((name) => [
+      name,
+      lifecycleNoopBody(name, LIFECYCLE_NOOP_SPECS[name])
+    ])
+  )
+
 const FLAT_EXPORT_BODIES: Record<
   (typeof FLAT_EXPORTS_SUPERSET)[number],
   string
@@ -1410,10 +1533,450 @@ function emitFlatAccessor(manifest: InterfaceManifest): string {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 53 (53-04): the Steamworks flat C API (x64 only), generated from the
+// SAME manifests as the vtable proxies
+// ---------------------------------------------------------------------------
+//
+// A flat export `SteamAPI_I<Family>_<Method>(self, args...)` identifies which
+// served interface version `self` is (by comparing it with the static
+// `g_<iface>_instance` addresses), then calls THAT proxy's own vtable slot
+// with that version's own manifest C parameter types (D-53-05). Flat and
+// vtable behaviour are therefore identical: wire-forwarded where wire-policy
+// says so, the slot stub otherwise. There is no flat-only stub table.
+//
+// ABI: on Win64 a flat cdecl function and an MSVC member function both take
+// `self` in RCX, so a typed call through the slot is exact for a non-class
+// return. MSVC returns EVERY class type through a hidden pointer (RDX) even at
+// 8 bytes (isSretReturn), while the flat function returns the 8-byte value in
+// RAX: an sret method's flat body passes a zeroed local as the hidden pointer
+// and returns it.
+
+/** Explicit flat-name overrides keyed `Family.ManifestName`, for any case the
+ * overload derivation in flatMethodName cannot reach. Each entry must say which
+ * fixture name it serves. Empty: the derivation covers every measured name. */
+export const FLAT_NAME_OVERRIDES: Readonly<Record<string, string>> = {}
+
+/** `Family.FlatName.Version` triples the generator cannot represent in C: a
+ * parameter/return position where one version uses an XMM register (float or
+ * double) and another a GPR, or float vs double. A listed version is not
+ * dispatched by its flat export. Every entry needs a comment with the reason,
+ * and is a deviation in the plan SUMMARY. Starts empty (measured 2026-10-25). */
+export const FLAT_UNREPRESENTABLE_CASES: readonly string[] = []
+
+const OVERLOAD_SUFFIX_BY_TYPE: Readonly<Record<string, string>> = {
+  int32: 'Int32',
+  'int32*': 'Int32',
+  float: 'Float',
+  'float*': 'Float',
+  int64: 'Int64',
+  'int64_t*': 'Int64',
+  'int64*': 'Int64',
+  double: 'Double',
+  'double*': 'Double'
+}
+
+/**
+ * The Steamworks flat method name for a manifest method. `Foo_2` siblings of
+ * `Foo` are the C++ overload pair; the flat API disambiguates them by the
+ * numeric type of the first int32/float/int64/double parameter (GetStatInt32,
+ * SetStatFloat, GetGlobalStatHistoryDouble, ...). A `DEPRECATED_` prefix is
+ * dropped so every version of a method shares one flat name.
+ */
+export function flatMethodName(
+  family: string,
+  method: MethodSignature,
+  siblings: readonly MethodSignature[]
+): string {
+  const override = FLAT_NAME_OVERRIDES[`${family}.${method.name}`]
+  if (override !== undefined) return override
+  let base = method.name.replace(/^DEPRECATED_/, '')
+  const suffixed = base.match(/^(.*)_(\d+)$/)
+  let overloaded = false
+  if (suffixed && siblings.some((s) => s.name === suffixed[1])) {
+    base = suffixed[1]
+    overloaded = true
+  } else if (siblings.some((s) => s.name === `${method.name}_2`)) {
+    overloaded = true
+  }
+  if (!overloaded) return base
+  for (const p of method.params) {
+    const suffix = OVERLOAD_SUFFIX_BY_TYPE[p.type]
+    if (suffix !== undefined) return `${base}${suffix}`
+  }
+  throw new Error(
+    `flat export: ${family}.${method.name} is an overload but has no int32/float/int64/double parameter to name it; add FLAT_NAME_OVERRIDES['${family}.${method.name}']`
+  )
+}
+
+type FlatRegClass = 'gpr' | 'float' | 'double'
+
+interface FlatArgType {
+  /** C spelling used in the export prototype, the slot cast and the arg cast. */
+  c: string
+  cls: FlatRegClass
+  /** Unsigned integer of the type's own width when it is narrower than 8
+   * bytes (Win64 leaves the upper register bits undefined), else null. */
+  narrow: string | null
+}
+
+function flatArgType(type: string): FlatArgType {
+  switch (type) {
+    case 'bool':
+      return { c: 'bool', cls: 'gpr', narrow: 'uint8_t' }
+    case 'char':
+      return { c: 'char', cls: 'gpr', narrow: 'uint8_t' }
+    case 'uint16':
+    case 'uint16_t':
+      return { c: 'uint16_t', cls: 'gpr', narrow: 'uint16_t' }
+    case 'int32':
+      return { c: 'int32_t', cls: 'gpr', narrow: 'uint32_t' }
+    case 'uint32':
+    case 'HSteamUser':
+    case 'HSteamPipe':
+      return { c: 'uint32_t', cls: 'gpr', narrow: 'uint32_t' }
+    case 'int64':
+      return { c: 'int64_t', cls: 'gpr', narrow: null }
+    case 'uint64':
+    case 'CSteamID':
+    case 'CGameID':
+      return { c: 'uint64_t', cls: 'gpr', narrow: null }
+    case 'float':
+      return { c: 'float', cls: 'float', narrow: null }
+    case 'double':
+      return { c: 'double', cls: 'double', narrow: null }
+    default:
+      if (type.endsWith('*')) {
+        return { c: cType(type), cls: 'gpr', narrow: null }
+      }
+      // A by-value struct (SteamIPAddress_t, ...): Win64 passes it in one GPR
+      // either as the value (1/2/4/8 bytes) or as a pointer to a copy.
+      return { c: 'uint64_t', cls: 'gpr', narrow: null }
+  }
+}
+
+interface FlatRetType {
+  /** C spelling of the flat export's value; 'void' for none. */
+  c: string
+  cls: FlatRegClass | 'void'
+  /** C spelling the slot is cast to return (differs from `c` for bool). */
+  slotC: string
+}
+
+function flatRetType(method: MethodSignature): FlatRetType {
+  switch (method.returnKind) {
+    case 'void':
+      return { c: 'void', cls: 'void', slotC: 'void' }
+    case 'class':
+      return { c: 'uint64_t', cls: 'gpr', slotC: 'void *' }
+    case 'pointer':
+      return { c: 'void *', cls: 'gpr', slotC: 'void *' }
+    case 'string':
+      return { c: 'const char *', cls: 'gpr', slotC: 'const char *' }
+    case 'float':
+      return { c: 'float', cls: 'float', slotC: 'float' }
+    case 'double':
+      return { c: 'double', cls: 'double', slotC: 'double' }
+    case 'int64': {
+      const c = method.returns === 'uint64' ? 'uint64_t' : 'int64_t'
+      return { c, cls: 'gpr', slotC: c }
+    }
+    case 'int32': {
+      if (method.returns === 'bool') {
+        return { c: 'bool', cls: 'gpr', slotC: 'int' }
+      }
+      const c = method.returns === 'uint32' ? 'uint32_t' : 'int32_t'
+      return { c, cls: 'gpr', slotC: c }
+    }
+  }
+}
+
+interface FlatCase {
+  manifest: InterfaceManifestV2
+  method: MethodSignature
+  triple: string
+}
+
+/** Prototype shape of one flat name after reconciling its versions. */
+function reconcileFlatPrototype(
+  family: string,
+  flatName: string,
+  cases: readonly FlatCase[]
+): { params: string[]; ret: string; problems: string[] } {
+  const problems: string[] = []
+  const params: string[] = []
+  const arity = Math.max(...cases.map((c) => c.method.params.length))
+  for (let i = 0; i < arity; i++) {
+    const types = cases
+      .filter((c) => i < c.method.params.length)
+      .map((c) => flatArgType(c.method.params[i].type))
+    const distinct = [...new Set(types.map((t) => t.c))]
+    if (distinct.length === 1) {
+      params.push(distinct[0])
+    } else if (types.every((t) => t.cls === 'gpr')) {
+      params.push('uint64_t')
+    } else {
+      problems.push(
+        `${family}.${flatName} parameter ${i + 1} mixes ${distinct.join(' / ')} (XMM and GPR registers)`
+      )
+      params.push('uint64_t')
+    }
+  }
+  const rets = cases
+    .map((c) => flatRetType(c.method))
+    .filter((r) => r.cls !== 'void')
+  const distinctRets = [...new Set(rets.map((r) => r.c))]
+  let ret: string
+  if (distinctRets.length === 0) {
+    ret = 'void'
+  } else if (distinctRets.length === 1) {
+    ret = distinctRets[0]
+  } else if (rets.every((r) => r.cls === 'gpr')) {
+    ret = 'uint64_t'
+  } else {
+    problems.push(
+      `${family}.${flatName} return mixes ${distinctRets.join(' / ')} (XMM and GPR registers)`
+    )
+    ret = 'uint64_t'
+  }
+  return { params, ret, problems }
+}
+
+function argExpr(
+  protoType: string,
+  method: MethodSignature,
+  i: number
+): string {
+  const t = flatArgType(method.params[i].type)
+  const a = `a${i + 1}`
+  if (protoType === 'uint64_t' && t.c !== 'uint64_t' && t.narrow !== null) {
+    return `(${t.c})(${t.narrow})${a}`
+  }
+  return `(${t.c})${a}`
+}
+
+function emitFlatCase(
+  fc: FlatCase,
+  protoParams: readonly string[],
+  protoRet: string
+): string {
+  const { manifest, method } = fc
+  const instance = `g_${manifest.interface.toLowerCase()}_instance`
+  const ret = flatRetType(method)
+  const sret = isSretReturn(method)
+  const sigTypes = method.params.map((p) => flatArgType(p.type).c)
+  const args = method.params.map((_, i) => argExpr(protoParams[i], method, i))
+  const sigParams = ['void *', ...(sret ? ['void *'] : []), ...sigTypes].join(
+    ', '
+  )
+  const callArgs = ['self', ...(sret ? ['&out'] : []), ...args].join(', ')
+  const slotCall = `((${sret ? 'void *' : ret.slotC} (*)(${sigParams}))vt[${method.slot}])(${callArgs})`
+  const head = `  if (self == (void *)&${instance}) {\n    vfn *vt = *(vfn **)self;\n`
+  if (sret) {
+    return (
+      head +
+      `    uint64_t out = 0;\n` +
+      `    ${slotCall};\n` +
+      `    return ${protoRet === 'uint64_t' ? 'out' : `(${protoRet})out`};\n` +
+      `  }\n`
+    )
+  }
+  if (ret.cls === 'void') {
+    return (
+      head +
+      `    ${slotCall};\n` +
+      `    return${protoRet === 'void' ? '' : ' 0'};\n` +
+      `  }\n`
+    )
+  }
+  return head + `    return (${protoRet})${slotCall};\n  }\n`
+}
+
+/** Flat ISteamClient::GetISteamXxx(hUser, hPipe, pszVersion): D-53-07 -- an
+ * exact-version lookup that answers NULL (never the null object) for a version
+ * the shim does not serve, and reports it to the helper (CONTROL slot 4). */
+function emitFlatClientLookup(
+  funcSig: string,
+  cases: readonly FlatCase[]
+): string {
+  const idx = new Set(
+    cases.map((c) => c.method.params.findIndex((p) => p.type === 'const char*'))
+  )
+  if (idx.size !== 1) {
+    throw new Error(
+      `flat export: ${cases[0].triple} client lookup version parameter moves between versions`
+    )
+  }
+  const versionIdx = [...idx][0]
+  const versionArg = `a${versionIdx + 1}`
+  const ignored = cases[0].method.params
+    .map((_, i) => i)
+    .filter((i) => i !== versionIdx)
+    .map((i) => `  (void)a${i + 1};\n`)
+    .join('')
+  const known = [...new Set(cases.map((c) => c.manifest.interface))]
+    .map((v) => `self == (void *)&g_${v.toLowerCase()}_instance`)
+    .join(' ||\n      ')
+  return (
+    `${funcSig} {\n` +
+    ignored +
+    `  if (${known}) {\n` +
+    `    void *p = resolve_iface_by_exact_version(${versionArg});\n` +
+    `    if (p != NULL) return p;\n` +
+    `    flat_report_unknown_version(${versionArg});\n` +
+    `    return NULL;\n` +
+    `  }\n` +
+    `  return NULL;\n` +
+    `}\n`
+  )
+}
+
+function isFlatClientLookup(cases: readonly FlatCase[]): boolean {
+  return cases.every((c) =>
+    isSteamClientVersionLookupMethod(c.manifest, c.method)
+  )
+}
+
+/**
+ * Emits the x64 flat export bodies (without the surrounding `#if`) and the
+ * ordered list of exported names. `unrepresentable` defaults to
+ * FLAT_UNREPRESENTABLE_CASES.
+ */
+export function emitFlatExports(
+  manifests: InterfaceManifest[],
+  unrepresentable: readonly string[] = FLAT_UNREPRESENTABLE_CASES
+): { c: string; names: string[] } {
+  const x64 = [...manifests]
+    .filter((m) => m.arches.includes('x64'))
+    .sort((a, b) => a.ordinal - b.ordinal)
+  const groups = new Map<
+    string,
+    { family: string; flatName: string; cases: FlatCase[] }
+  >()
+  for (const m of x64) {
+    const sorted = [...m.methods].sort((a, b) => a.slot - b.slot)
+    sorted.forEach((method, i) => {
+      if (method.slot !== i) {
+        throw new Error(
+          `flat export: ${m.interface} slots are not contiguous at ${method.name} (slot ${method.slot}, index ${i})`
+        )
+      }
+    })
+    const seen = new Set<string>()
+    for (const method of sorted) {
+      if (method.returnKind === 'class' && (method.structSize ?? 0) > 8) {
+        throw new Error(
+          `flat export: ${m.interface}.${method.name} returns a ${method.structSize}-byte class; the flat function can only return up to 8 bytes in RAX`
+        )
+      }
+      const flatName = flatMethodName(m.family, method, sorted)
+      if (seen.has(flatName)) {
+        throw new Error(
+          `flat export: ${m.interface} derives the flat name ${flatName} twice`
+        )
+      }
+      seen.add(flatName)
+      const full = `SteamAPI_I${m.family}_${flatName}`
+      if (method.helperFlat !== undefined && method.helperFlat !== full) {
+        throw new Error(
+          `flat export: ${m.interface}.${method.name} derives ${full} but its helperFlat is ${method.helperFlat}`
+        )
+      }
+      const key = `${m.family}\0${flatName}`
+      let g = groups.get(key)
+      if (!g) {
+        g = { family: m.family, flatName, cases: [] }
+        groups.set(key, g)
+      }
+      g.cases.push({
+        manifest: m,
+        method,
+        triple: `${m.family}.${flatName}.${m.interface}`
+      })
+    }
+  }
+
+  const ordered = [...groups.values()].sort((a, b) =>
+    `SteamAPI_I${a.family}_${a.flatName}` <
+    `SteamAPI_I${b.family}_${b.flatName}`
+      ? -1
+      : 1
+  )
+  const names: string[] = []
+  const bodies: string[] = []
+  for (const g of ordered) {
+    const exportName = `SteamAPI_I${g.family}_${g.flatName}`
+    let cases = g.cases
+    let proto = reconcileFlatPrototype(g.family, g.flatName, cases)
+    let excludedNote = ''
+    if (proto.problems.length > 0) {
+      const kept = cases.filter((c) => !unrepresentable.includes(c.triple))
+      const dropped = cases.filter((c) => unrepresentable.includes(c.triple))
+      if (kept.length > 0 && dropped.length > 0) {
+        const again = reconcileFlatPrototype(g.family, g.flatName, kept)
+        if (again.problems.length === 0) {
+          cases = kept
+          proto = again
+          excludedNote = dropped
+            .map(
+              (c) =>
+                `/* not dispatched: ${c.triple} (unrepresentable register class) */\n`
+            )
+            .join('')
+        }
+      }
+      if (proto.problems.length > 0) {
+        throw new Error(
+          `flat export ${exportName} cannot be represented in C: ${proto.problems.join('; ')}. ` +
+            `Versions: ${cases.map((c) => c.triple).join(', ')}. ` +
+            `List the version(s) to leave undispatched in FLAT_UNREPRESENTABLE_CASES.`
+        )
+      }
+    }
+    names.push(exportName)
+    const sigParams = [
+      'void *self',
+      ...proto.params.map((t, i) => `${t} a${i + 1}`)
+    ]
+    const funcSig = `${proto.ret} ${exportName}(${sigParams.join(', ')})`
+    if (g.family === STEAM_CLIENT_FAMILY && isFlatClientLookup(cases)) {
+      bodies.push(excludedNote + emitFlatClientLookup(funcSig, cases))
+      continue
+    }
+    const zero = proto.ret === 'void' ? '  return;\n' : '  return 0;\n'
+    bodies.push(
+      excludedNote +
+        `${funcSig} {\n` +
+        cases.map((c) => emitFlatCase(c, proto.params, proto.ret)).join('') +
+        zero +
+        `}\n`
+    )
+  }
+  return { c: bodies.join('\n'), names }
+}
+
+/** Every name the x64 steam_api64.def exports, sorted: the committed source of
+ * truth for shimCoverage's SHIM64_EXPORTED_SYMBOLS (RESEARCH Pitfall 5). */
+export function generateShimExportsTs(manifests: InterfaceManifest[]): string {
+  const names = [...x64DefExportNames(manifests)].sort()
+  return (
+    `// GENERATED FILE -- DO NOT EDIT BY HAND.\n` +
+    `// Produced by meta/gen_vtables.ts (\`pnpm gen-vtables\`): the exact export table of\n` +
+    `// native/steam-bridge/generated/steam_api64.def, sorted. It must not be edited;\n` +
+    `// regenerate it instead.\n\n` +
+    `export const SHIM64_GENERATED_EXPORTS: readonly string[] = [\n` +
+    names.map((n) => `  '${n}'`).join(',\n') +
+    `\n]\n`
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Top-level emission
 // ---------------------------------------------------------------------------
 
-export function generateShimC(manifests: InterfaceManifest[]): string {
+export function generateShimC(
+  manifests: InterfaceManifest[],
+  options: { unrepresentable?: readonly string[] } = {}
+): string {
   const sortedManifests = [...manifests].sort((a, b) => a.ordinal - b.ordinal)
 
   const header = `/**
@@ -1443,6 +2006,7 @@ export function generateShimC(manifests: InterfaceManifest[]): string {
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1467,6 +2031,10 @@ export function generateShimC(manifests: InterfaceManifest[]): string {
 // CONTROL_SLOT_CREATE_INTERFACE. Asks the native client whether it accepts an
 // interface version (reply: 4-byte LE int32 present).
 #define BRIDGE_CONTROL_SLOT_CREATE_INTERFACE 3
+// Phase 53 (53-04, D-53-07): the flat ISteamClient_GetISteam* lookup tells the
+// helper which unserved interface version a game asked for (the helper handler
+// lands in 53-06; an unhandled slot is a harmless error response).
+#define BRIDGE_CONTROL_SLOT_REPORT_VERSION 4
 
 // CR-01: byte capacity of each string-returning stub's shim-owned static
 // return buffer -- emitted directly from the generator's
@@ -1790,6 +2358,38 @@ static void *resolve_iface_by_exact_version(const char *version);
       (name) => MODERN_LOOKUP_FLAT_EXPORT_BODIES[name]
     ).join('\n') +
     `\n#endif\n`
+  // Phase 53 (53-04): the generated flat C API plus the lifecycle no-ops --
+  // x64 only, in their own guard blocks so the x86 shim is untouched.
+  const flatApi = emitFlatExports(
+    sortedManifests,
+    options.unrepresentable ?? FLAT_UNREPRESENTABLE_CASES
+  )
+  const flatApiBlock =
+    `#if defined(__x86_64__)\n` +
+    `static int g_flat_version_reports = 0;\n` +
+    `// D-53-07: a flat ISteamClient_GetISteam* lookup of a version this shim does\n` +
+    `// not serve answers NULL and tells the helper which version it was. The\n` +
+    `// string is bounded, the result ignored, and at most 16 reports are sent per\n` +
+    `// process (T-53-14, T-53-15).\n` +
+    `static void flat_report_unknown_version(const char *v) {\n` +
+    `  uint8_t req[4 + ${FWD_VERSION_LOG_MAX_BYTES}];\n` +
+    `  uint8_t retbuf[1]; uint32_t retlen = 0;\n` +
+    `  uint32_t n = 0;\n` +
+    `  if (v == NULL || g_flat_version_reports >= 16) return;\n` +
+    `  g_flat_version_reports++;\n` +
+    `  while (n < ${FWD_VERSION_LOG_MAX_BYTES} && v[n] != 0) n++;\n` +
+    `  req[0] = (uint8_t)(n & 0xff); req[1] = 0; req[2] = 0; req[3] = 0;\n` +
+    `  memcpy(req + 4, v, n);\n` +
+    `  (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_VERSION, req, 4 + n, retbuf, sizeof(retbuf), &retlen);\n` +
+    `}\n\n` +
+    `${flatApi.c}\n#endif\n`
+  const lifecycleBlock =
+    `#if defined(__x86_64__)\n` +
+    `static const char g_gamelib_empty_string[] = "";\n` +
+    LIFECYCLE_NOOP_EXPORTS.map(
+      (name) => LIFECYCLE_NOOP_EXPORT_BODIES[name]
+    ).join('\n') +
+    `\n#endif\n`
   const gameServerStubs = GAMESERVER_FLAT_STUBS.map(
     (name) => GAMESERVER_FLAT_STUB_BODIES[name]
   ).join('\n')
@@ -1810,6 +2410,10 @@ static void *resolve_iface_by_exact_version(const char *version);
     `${flatExports}\n\n` +
     `// === Modern-SDK lookup family (51-15, Win64 only -- D-51-13) ===\n\n` +
     `${modernLookupExports}\n\n` +
+    `// === Steamworks flat C API (53-04, Win64 only -- D-53-01, generated from the manifests) ===\n\n` +
+    `${flatApiBlock}\n` +
+    `// === Steamworks.NET lifecycle no-ops (53-04, Win64 only -- D-53-06 as amended) ===\n\n` +
+    `${lifecycleBlock}\n` +
     `// === SteamGameServer* flat stubs (51-14 Task 2, Pitfall 2 -- cdecl, caller-cleans, honest unavailable answers) ===\n\n` +
     `${gameServerStubs}\n\n` +
     `// === Per-interface flat accessors ===\n\n` +
@@ -2571,6 +3175,19 @@ export function generateDefFile(
   manifests: InterfaceManifest[],
   arch: ArchToken = 'x86'
 ): string {
+  const libraryName = arch === 'x64' ? 'steam_api64' : 'steam_api'
+  const lines = [
+    `LIBRARY ${libraryName}`,
+    'EXPORTS',
+    ...defExportNames(manifests, arch)
+  ]
+  return lines.join('\n') + '\n'
+}
+
+function defExportNames(
+  manifests: InterfaceManifest[],
+  arch: ArchToken
+): string[] {
   const archManifests = manifests.filter((m) => m.arches.includes(arch))
   const sortedManifests = [...archManifests].sort(
     (a, b) => a.ordinal - b.ordinal
@@ -2580,20 +3197,33 @@ export function generateDefFile(
     .filter((f) => !hasGameServerFlatStub(bareAccessorName(f)))
     .sort()
   const bareAccessorExports = families.map((f) => bareAccessorName(f))
-  const libraryName = arch === 'x64' ? 'steam_api64' : 'steam_api'
   // 51-15: the modern-SDK lookup family is Win64-only -- see
-  // MODERN_LOOKUP_FLAT_EXPORTS' doc comment.
-  const modernLookupExports = arch === 'x64' ? MODERN_LOOKUP_FLAT_EXPORTS : []
-  const lines = [
-    `LIBRARY ${libraryName}`,
-    'EXPORTS',
+  // MODERN_LOOKUP_FLAT_EXPORTS' doc comment. Phase 53: so are the generated
+  // flat C API and the Steamworks.NET lifecycle no-ops.
+  const x64Only: string[] =
+    arch === 'x64'
+      ? [
+          ...MODERN_LOOKUP_FLAT_EXPORTS,
+          ...emitFlatExports(manifests).names,
+          ...LIFECYCLE_NOOP_EXPORTS
+        ]
+      : []
+  return [
     ...FLAT_EXPORTS_SUPERSET,
     ...GAMESERVER_FLAT_STUBS,
-    ...modernLookupExports,
+    ...x64Only,
     ...accessorExports,
     ...bareAccessorExports
   ]
-  return lines.join('\n') + '\n'
+}
+
+function x64DefExportNames(manifests: InterfaceManifest[]): string[] {
+  const names = defExportNames(manifests, 'x64')
+  const dup = names.find((n, i) => names.indexOf(n) !== i)
+  if (dup !== undefined) {
+    throw new Error(`steam_api64 export '${dup}' is emitted twice`)
+  }
+  return names
 }
 
 // ---------------------------------------------------------------------------
@@ -2602,6 +3232,14 @@ export function generateDefFile(
 
 const SDK_DIR = join('meta', 'sdk')
 const OUT_DIR = join('native', 'steam-bridge', 'generated')
+const SHIM_EXPORTS_TS_PATH = join(
+  'src',
+  'backend',
+  'storeManagers',
+  'steam',
+  'bridge',
+  'shimExports.generated.ts'
+)
 
 /**
  * Loads every `*.manifest.json` in `meta/sdk`, sorted by ordinal -- 51-06:
@@ -2641,12 +3279,15 @@ export function main(): void {
   writeFileSync(join(OUT_DIR, 'steam_api.def'), defFile)
   writeFileSync(join(OUT_DIR, 'steam_api64.def'), defFile64)
   writeFileSync(join(OUT_DIR, 'bridge_dispatch.h'), dispatchHeader)
+  writeFileSync(SHIM_EXPORTS_TS_PATH, generateShimExportsTs(manifests))
 
   const totalSlots = manifests.reduce((sum, m) => sum + m.methods.length, 0)
+  const x64Exports = x64DefExportNames(manifests).length
   console.log(
     `Generated steam_api shim: ${manifests.length} interfaces, ` +
       `${totalSlots} vtable slots, ` +
-      `${FLAT_EXPORTS_SUPERSET.length + manifests.length} flat exports.`
+      `${FLAT_EXPORTS_SUPERSET.length + manifests.length} flat exports, ` +
+      `${x64Exports} steam_api64 exports.`
   )
 }
 
