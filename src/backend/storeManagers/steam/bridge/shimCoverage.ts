@@ -181,6 +181,7 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_SteamNetworking_v005',
   // 51-15: ELEX's (411300) own measured Win64-only interface set.
   'SteamAPI_SteamClient_v017',
+  'SteamAPI_SteamClient_v014',
   'SteamAPI_SteamUser_v019',
   'SteamAPI_SteamFriends_v015',
   'SteamAPI_SteamUtils_v008',
@@ -280,8 +281,11 @@ export const SHIM_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
 // (BIsSubscribed, BIsSubscribedApp(411300), GetSteamID, GetAppID 411300
 // and GetPersonaName all matched; BLoggedOn returned false through the
 // Mac accessor, accepted by the operator as the existing x86 behaviour).
-// SteamClient017 stays 'stub': it is the factory object, not a
-// per-family accessor, and no helper accessor exists for it. The other
+// Phase 52: SteamClient017 and SteamClient014 are 'wire' -- the shim
+// forwards every non-callback ISteamClient method to the native client
+// through the helper (SteamClient() + flat SteamAPI_ISteamClient_*), so the
+// SteamStub check is answered by the genuine signed-in client. Only the
+// callback-pointer setters and SetLocalIPBinding stay local stubs. The other
 // x64-only families stay 'stub' -- never measured, never invented.
 export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   string,
@@ -291,7 +295,8 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
     'STEAMUSERSTATS_INTERFACE_VERSION011',
     { family: 'SteamUserStats', mode: 'wire' }
   ],
-  ['SteamClient017', { family: 'SteamClient', mode: 'stub' }],
+  ['SteamClient017', { family: 'SteamClient', mode: 'wire' }],
+  ['SteamClient014', { family: 'SteamClient', mode: 'wire' }],
   ['SteamUser019', { family: 'SteamUser', mode: 'wire' }],
   ['SteamFriends015', { family: 'SteamFriends', mode: 'wire' }],
   ['SteamUtils008', { family: 'SteamUtils', mode: 'wire' }],

@@ -201,15 +201,20 @@ describe('SHIM64_SERVED_INTERFACE_VERSIONS / SHIM_X64_NULL_OBJECT_FALLBACK (51-1
     }
   })
 
-  // SteamClient017 is the factory object (no helper accessor); remote
-  // storage 013 was never probed -- both stay stub.
-  test('SteamClient017 and the x64 RemoteStorage013 stay stub', () => {
-    for (const version of [
-      'SteamClient017',
-      'STEAMREMOTESTORAGE_INTERFACE_VERSION013'
-    ]) {
-      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('stub')
+  // Phase 52: SteamClient017/014 forward to the native client (wire);
+  // remote storage 013 was never probed and stays stub.
+  test('SteamClient017 and SteamClient014 are wire on x64', () => {
+    for (const version of ['SteamClient017', 'SteamClient014']) {
+      expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(version)?.mode).toBe('wire')
     }
+  })
+
+  test('the x64 RemoteStorage013 stays stub', () => {
+    expect(
+      SHIM64_SERVED_INTERFACE_VERSIONS.get(
+        'STEAMREMOTESTORAGE_INTERFACE_VERSION013'
+      )?.mode
+    ).toBe('stub')
   })
 
   test('the three shared stub manifests (51-14, widened to x64 this plan) stay stub on x64', () => {
@@ -572,8 +577,8 @@ describe('evaluateShimCoverage (51-15 Task 3 acceptance check -- ELEX, 411300, W
     ]) {
       expect(result.stubbedInterfaces).not.toContain(family)
     }
-    // SteamClient is still the stubbed factory.
-    expect(result.stubbedInterfaces).toContain('SteamClient')
+    // Phase 52: SteamClient is forwarded to the native client now.
+    expect(result.stubbedInterfaces).not.toContain('SteamClient')
   })
 })
 
