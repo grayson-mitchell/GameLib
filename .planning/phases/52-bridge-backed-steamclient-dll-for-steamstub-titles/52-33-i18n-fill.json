@@ -1,0 +1,198 @@
+{
+  "en": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM check not supported",
+    "steam.bridge.steamstub.forwardedBody": "This game uses Steam's DRM wrapper. GameLib connected it to your Mac Steam client, but the wrapper's launch check cannot be satisfied through the native Steam bridge, so the game will probably show a Steam error and not start."
+  },
+  "ar": {
+    "steam.bridge.steamstub.forwardedTitle": "فحص DRM في Steam غير مدعوم",
+    "steam.bridge.steamstub.forwardedBody": "تستخدم هذه اللعبة غلاف DRM الخاص بـ Steam. ربطها GameLib بعميل Steam على جهاز Mac، لكن فحص التشغيل في الغلاف لا يمكن استيفاؤه عبر جسر Steam الأصلي، لذا من المرجح أن تُظهر اللعبة خطأ من Steam ولا تبدأ."
+  },
+  "az": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM yoxlaması dəstəklənmir",
+    "steam.bridge.steamstub.forwardedBody": "Bu oyun Steam-in DRM qabığından istifadə edir. GameLib onu Mac-dakı Steam müştərinizə qoşdu, lakin qabığın işə salma yoxlaması doğma Steam körpüsü vasitəsilə ödənilə bilməz, ona görə də oyun çox güman ki, Steam xətası göstərəcək və başlamayacaq."
+  },
+  "be": {
+    "steam.bridge.steamstub.forwardedTitle": "Праверка Steam DRM не падтрымліваецца",
+    "steam.bridge.steamstub.forwardedBody": "Гэта гульня выкарыстоўвае абалонку DRM ад Steam. GameLib падключыў яе да кліента Steam на вашым Mac, але праверка запуску абалонкі не можа быць выканана праз натыўны мост Steam, таму гульня, верагодна, пакажа памылку Steam і не запусціцца."
+  },
+  "bg": {
+    "steam.bridge.steamstub.forwardedTitle": "Проверката на Steam DRM не се поддържа",
+    "steam.bridge.steamstub.forwardedBody": "Тази игра използва DRM обвивката на Steam. GameLib я свърза с клиента на Steam на вашия Mac, но проверката при стартиране на обвивката не може да бъде удовлетворена чрез вградения мост на Steam, така че играта вероятно ще покаже грешка на Steam и няма да стартира."
+  },
+  "br": {
+    "steam.bridge.steamstub.forwardedTitle": "Gwiriañ DRM Steam n'eo ket skoret",
+    "steam.bridge.steamstub.forwardedBody": "Ar c'hoari-mañ a implij gwisk DRM Steam. GameLib he deus he c'hevreet ouzh ho pellgomzer Steam war Mac, met ne c'haller ket sevel gwiriañ loc'hañ ar gwisk dre bont Steam nativel, setu e tiskouezo ar c'hoari moarvat ur fazi Steam ha ne loc'ho ket."
+  },
+  "bs": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM provjera nije podržana",
+    "steam.bridge.steamstub.forwardedBody": "Ova igra koristi Steamov DRM omotač. GameLib ju je povezao s vašim Steam klijentom na Macu, ali provjera pokretanja omotača ne može biti zadovoljena putem izvornog Steam mosta, pa će igra vjerovatno prikazati Steam grešku i neće se pokrenuti."
+  },
+  "ca": {
+    "steam.bridge.steamstub.forwardedTitle": "La comprovació DRM de Steam no és compatible",
+    "steam.bridge.steamstub.forwardedBody": "Aquest joc utilitza l'embolcall DRM de Steam. GameLib l'ha connectat amb el client de Steam del teu Mac, però la comprovació d'inici de l'embolcall no es pot satisfer mitjançant el pont natiu de Steam, així que el joc probablement mostrarà un error de Steam i no s'iniciarà."
+  },
+  "cs": {
+    "steam.bridge.steamstub.forwardedTitle": "Kontrola Steam DRM není podporována",
+    "steam.bridge.steamstub.forwardedBody": "Tato hra používá obal DRM služby Steam. GameLib ji propojil s klientem Steam na vašem Macu, ale kontrolu spuštění obalu nelze splnit prostřednictvím nativního mostu Steam, takže hra pravděpodobně zobrazí chybu Steam a nespustí se."
+  },
+  "da": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM-kontrollen understøttes ikke",
+    "steam.bridge.steamstub.forwardedBody": "Dette spil bruger Steams DRM-wrapper. GameLib har forbundet det til din Steam-klient på Mac, men wrapperens startkontrol kan ikke opfyldes via den native Steam-bro, så spillet viser sandsynligvis en Steam-fejl og starter ikke."
+  },
+  "de": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam-DRM-Prüfung wird nicht unterstützt",
+    "steam.bridge.steamstub.forwardedBody": "Dieses Spiel verwendet den DRM-Wrapper von Steam. GameLib hat es mit Ihrem Steam-Client auf dem Mac verbunden, aber die Startprüfung des Wrappers lässt sich über die native Steam-Bridge nicht erfüllen, daher zeigt das Spiel wahrscheinlich einen Steam-Fehler an und startet nicht."
+  },
+  "el": {
+    "steam.bridge.steamstub.forwardedTitle": "Ο έλεγχος DRM του Steam δεν υποστηρίζεται",
+    "steam.bridge.steamstub.forwardedBody": "Αυτό το παιχνίδι χρησιμοποιεί το περιτύλιγμα DRM του Steam. Το GameLib το συνέδεσε με τον πελάτη Steam στο Mac σας, αλλά ο έλεγχος εκκίνησης του περιτυλίγματος δεν μπορεί να ικανοποιηθεί μέσω της εγγενούς γέφυρας Steam, οπότε το παιχνίδι πιθανότατα θα εμφανίσει σφάλμα του Steam και δεν θα ξεκινήσει."
+  },
+  "es": {
+    "steam.bridge.steamstub.forwardedTitle": "La comprobación DRM de Steam no es compatible",
+    "steam.bridge.steamstub.forwardedBody": "Este juego usa el envoltorio DRM de Steam. GameLib lo conectó con tu cliente de Steam en el Mac, pero la comprobación de inicio del envoltorio no se puede satisfacer a través del puente nativo de Steam, así que el juego probablemente mostrará un error de Steam y no se iniciará."
+  },
+  "et": {
+    "steam.bridge.steamstub.forwardedTitle": "Steami DRM-kontrolli ei toetata",
+    "steam.bridge.steamstub.forwardedBody": "See mäng kasutab Steami DRM-ümbrist. GameLib ühendas selle teie Maci Steami kliendiga, kuid ümbrise käivituskontrolli ei saa natiivse Steami silla kaudu täita, mistõttu mäng tõenäoliselt näitab Steami viga ega käivitu."
+  },
+  "eu": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM egiaztapena ez da bateragarria",
+    "steam.bridge.steamstub.forwardedBody": "Joko honek Steamen DRM bilgarria erabiltzen du. GameLib-ek zure Mac-eko Steam bezeroarekin lotu du, baina bilgarriaren abiarazte-egiaztapena ezin da bete Steam zubi natiboaren bidez, beraz, jokoak seguruenik Steam errore bat erakutsiko du eta ez da abiaraziko."
+  },
+  "fa": {
+    "steam.bridge.steamstub.forwardedTitle": "بررسی DRM Steam پشتیبانی نمی‌شود",
+    "steam.bridge.steamstub.forwardedBody": "این بازی از پوشش DRM استیم استفاده می‌کند. GameLib آن را به کلاینت Steam روی Mac شما متصل کرد، اما بررسی اجرای این پوشش از طریق پل بومی Steam برآورده نمی‌شود، بنابراین بازی احتمالاً خطای Steam نشان می‌دهد و اجرا نمی‌شود."
+  },
+  "fi": {
+    "steam.bridge.steamstub.forwardedTitle": "Steamin DRM-tarkistusta ei tueta",
+    "steam.bridge.steamstub.forwardedBody": "Tämä peli käyttää Steamin DRM-kääreen. GameLib yhdisti sen Macin Steam-asiakasohjelmaan, mutta kääreen käynnistystarkistusta ei voi täyttää natiivin Steam-sillan kautta, joten peli todennäköisesti näyttää Steam-virheen eikä käynnisty."
+  },
+  "fr": {
+    "steam.bridge.steamstub.forwardedTitle": "La vérification DRM de Steam n’est pas prise en charge",
+    "steam.bridge.steamstub.forwardedBody": "Ce jeu utilise l'enveloppe DRM de Steam. GameLib l'a relié à votre client Steam sur Mac, mais la vérification de lancement de l'enveloppe ne peut pas être satisfaite via le pont Steam natif ; le jeu affichera donc probablement une erreur Steam et ne se lancera pas."
+  },
+  "ga": {
+    "steam.bridge.steamstub.forwardedTitle": "Ní thacaítear le seiceáil DRM Steam",
+    "steam.bridge.steamstub.forwardedBody": "Úsáideann an cluiche seo dlúthchlúdach DRM Steam. Nasc GameLib é le do chliant Steam ar Mac, ach ní féidir seiceáil seolta an chlúdaigh a shásamh tríd an droichead dúchasach Steam, mar sin is dócha go dtaispeánfaidh an cluiche earráid Steam agus nach dtosóidh sé."
+  },
+  "gl": {
+    "steam.bridge.steamstub.forwardedTitle": "A comprobación DRM de Steam non é compatible",
+    "steam.bridge.steamstub.forwardedBody": "Este xogo usa o envoltorio DRM de Steam. GameLib conectouno co teu cliente de Steam no Mac, pero a comprobación de inicio do envoltorio non se pode satisfacer a través da ponte nativa de Steam, así que o xogo probablemente mostrará un erro de Steam e non se iniciará."
+  },
+  "he": {
+    "steam.bridge.steamstub.forwardedTitle": "בדיקת ה-DRM של Steam אינה נתמכת",
+    "steam.bridge.steamstub.forwardedBody": "המשחק הזה משתמש במעטפת ה-DRM של Steam. GameLib חיבר אותו ללקוח Steam ב-Mac שלך, אך בדיקת ההפעלה של המעטפת אינה יכולה להתקיים דרך גשר Steam המקורי, ולכן סביר שהמשחק יציג שגיאת Steam ולא יופעל."
+  },
+  "hr": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM provjera nije podržana",
+    "steam.bridge.steamstub.forwardedBody": "Ova igra koristi Steamov DRM omotač. GameLib ju je povezao s vašim Steam klijentom na Macu, ali provjera pokretanja omotača ne može se zadovoljiti putem izvornog Steam mosta pa će igra vjerojatno prikazati Steam grešku i neće se pokrenuti."
+  },
+  "hu": {
+    "steam.bridge.steamstub.forwardedTitle": "A Steam DRM-ellenőrzés nem támogatott",
+    "steam.bridge.steamstub.forwardedBody": "Ez a játék a Steam DRM-burkolóját használja. A GameLib összekapcsolta a Mac gépen futó Steam-klienssel, de a burkoló indítási ellenőrzése nem teljesíthető a natív Steam-hídon keresztül, ezért a játék valószínűleg Steam-hibát jelez, és nem indul el."
+  },
+  "id": {
+    "steam.bridge.steamstub.forwardedTitle": "Pemeriksaan DRM Steam tidak didukung",
+    "steam.bridge.steamstub.forwardedBody": "Game ini menggunakan pembungkus DRM Steam. GameLib telah menghubungkannya ke klien Steam di Mac Anda, tetapi pemeriksaan peluncuran pembungkus tidak dapat dipenuhi melalui jembatan Steam native, sehingga game kemungkinan akan menampilkan kesalahan Steam dan tidak dapat dimulai."
+  },
+  "it": {
+    "steam.bridge.steamstub.forwardedTitle": "Il controllo DRM di Steam non è supportato",
+    "steam.bridge.steamstub.forwardedBody": "Questo gioco usa il wrapper DRM di Steam. GameLib lo ha collegato al client Steam sul tuo Mac, ma il controllo di avvio del wrapper non può essere soddisfatto tramite il bridge Steam nativo, quindi il gioco probabilmente mostrerà un errore di Steam e non si avvierà."
+  },
+  "ja": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam の DRM チェックには対応していません",
+    "steam.bridge.steamstub.forwardedBody": "このゲームは Steam の DRM ラッパーを使用しています。GameLib はこれをお使いの Mac の Steam クライアントに接続しましたが、ラッパーの起動チェックはネイティブの Steam ブリッジ経由では満たせないため、ゲームは Steam のエラーを表示して起動しない可能性が高いです。"
+  },
+  "ka": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam-ის DRM შემოწმება მხარდაჭერილი არ არის",
+    "steam.bridge.steamstub.forwardedBody": "ეს თამაში იყენებს Steam-ის DRM შესაფუთს. GameLib-მა დააკავშირა ის თქვენს Mac-ზე არსებულ Steam კლიენტთან, მაგრამ შესაფუთის გაშვების შემოწმება ნატიური Steam ხიდის გავლით ვერ დაკმაყოფილდება, ამიტომ თამაში სავარაუდოდ აჩვენებს Steam-ის შეცდომას და არ გაეშვება."
+  },
+  "ko": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM 확인은 지원되지 않습니다",
+    "steam.bridge.steamstub.forwardedBody": "이 게임은 Steam의 DRM 래퍼를 사용합니다. GameLib이 이를 Mac의 Steam 클라이언트에 연결했지만, 래퍼의 실행 확인은 네이티브 Steam 브리지로는 충족할 수 없으므로 게임이 Steam 오류를 표시하고 시작되지 않을 가능성이 높습니다."
+  },
+  "lt": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM patikra nepalaikoma",
+    "steam.bridge.steamstub.forwardedBody": "Šis žaidimas naudoja Steam DRM apvalkalą. GameLib prijungė jį prie jūsų Mac kompiuterio Steam kliento, bet apvalkalo paleidimo patikros neįmanoma patenkinti per vietinį Steam tiltą, todėl žaidimas greičiausiai parodys Steam klaidą ir nepasileis."
+  },
+  "ml": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM പരിശോധന പിന്തുണയ്ക്കുന്നില്ല",
+    "steam.bridge.steamstub.forwardedBody": "ഈ ഗെയിം Steam-ന്റെ DRM റാപ്പർ ഉപയോഗിക്കുന്നു. GameLib ഇതിനെ നിങ്ങളുടെ Mac-ലെ Steam ക്ലയന്റുമായി ബന്ധിപ്പിച്ചു, പക്ഷേ റാപ്പറിന്റെ ലോഞ്ച് പരിശോധന നേറ്റീവ് Steam ബ്രിഡ്ജ് വഴി തൃപ്തിപ്പെടുത്താൻ കഴിയില്ല, അതിനാൽ ഗെയിം Steam പിശക് കാണിക്കുകയും ആരംഭിക്കാതിരിക്കുകയും ചെയ്യാൻ സാധ്യതയുണ്ട്."
+  },
+  "nb_NO": {
+    "steam.bridge.steamstub.forwardedTitle": "Steams DRM-sjekk støttes ikke",
+    "steam.bridge.steamstub.forwardedBody": "Dette spillet bruker Steams DRM-wrapper. GameLib koblet det til Steam-klienten din på Mac, men wrapperens oppstartssjekk kan ikke oppfylles via den native Steam-broen, så spillet viser sannsynligvis en Steam-feil og starter ikke."
+  },
+  "nl": {
+    "steam.bridge.steamstub.forwardedTitle": "De Steam-DRM-controle wordt niet ondersteund",
+    "steam.bridge.steamstub.forwardedBody": "Deze game gebruikt de DRM-wrapper van Steam. GameLib heeft deze gekoppeld aan je Steam-client op de Mac, maar de startcontrole van de wrapper kan niet worden voldaan via de native Steam-bridge, dus de game toont waarschijnlijk een Steam-fout en start niet."
+  },
+  "pl": {
+    "steam.bridge.steamstub.forwardedTitle": "Sprawdzanie DRM Steam nie jest obsługiwane",
+    "steam.bridge.steamstub.forwardedBody": "Ta gra używa nakładki DRM Steam. GameLib połączył ją z klientem Steam na Macu, ale kontroli uruchamiania nakładki nie można spełnić przez natywny most Steam, więc gra prawdopodobnie wyświetli błąd Steam i się nie uruchomi."
+  },
+  "pt": {
+    "steam.bridge.steamstub.forwardedTitle": "A verificação DRM do Steam não é suportada",
+    "steam.bridge.steamstub.forwardedBody": "Este jogo usa o invólucro DRM do Steam. O GameLib ligou-o ao seu cliente Steam no Mac, mas a verificação de arranque do invólucro não pode ser satisfeita através da ponte nativa do Steam, por isso o jogo provavelmente mostrará um erro do Steam e não iniciará."
+  },
+  "pt_BR": {
+    "steam.bridge.steamstub.forwardedTitle": "A verificação de DRM do Steam não é compatível",
+    "steam.bridge.steamstub.forwardedBody": "Este jogo usa o wrapper de DRM do Steam. O GameLib o conectou ao seu cliente Steam no Mac, mas a verificação de inicialização do wrapper não pode ser satisfeita pela ponte nativa do Steam, então o jogo provavelmente vai mostrar um erro do Steam e não vai iniciar."
+  },
+  "ro": {
+    "steam.bridge.steamstub.forwardedTitle": "Verificarea DRM Steam nu este acceptată",
+    "steam.bridge.steamstub.forwardedBody": "Acest joc folosește învelișul DRM al Steam. GameLib l-a conectat la clientul Steam de pe Mac, dar verificarea de lansare a învelișului nu poate fi satisfăcută prin puntea nativă Steam, așa că jocul va afișa probabil o eroare Steam și nu va porni."
+  },
+  "ru": {
+    "steam.bridge.steamstub.forwardedTitle": "Проверка Steam DRM не поддерживается",
+    "steam.bridge.steamstub.forwardedBody": "Эта игра использует обёртку DRM от Steam. GameLib подключил её к клиенту Steam на вашем Mac, но проверка запуска обёртки не может быть выполнена через нативный мост Steam, поэтому игра, скорее всего, покажет ошибку Steam и не запустится."
+  },
+  "sk": {
+    "steam.bridge.steamstub.forwardedTitle": "Kontrola Steam DRM nie je podporovaná",
+    "steam.bridge.steamstub.forwardedBody": "Táto hra používa obal DRM služby Steam. GameLib ju prepojil s klientom Steam na vašom Macu, ale kontrolu spustenia obalu nemožno splniť prostredníctvom natívneho mosta Steam, takže hra pravdepodobne zobrazí chybu Steam a nespustí sa."
+  },
+  "sl": {
+    "steam.bridge.steamstub.forwardedTitle": "Preverjanje Steam DRM ni podprto",
+    "steam.bridge.steamstub.forwardedBody": "Ta igra uporablja Steamov ovoj DRM. GameLib ga je povezal z odjemalcem Steam na vašem Macu, vendar preverjanja zagona ovoja ni mogoče izpolniti prek izvornega mostu Steam, zato bo igra verjetno prikazala napako Steam in se ne bo zagnala."
+  },
+  "sr": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM провера није подржана",
+    "steam.bridge.steamstub.forwardedBody": "Ова игра користи Steam-ов DRM омотач. GameLib ју је повезао са вашим Steam клијентом на Mac-у, али провера покретања омотача не може бити задовољена преко изворног Steam моста, па ће игра вероватно приказати Steam грешку и неће се покренути."
+  },
+  "sv": {
+    "steam.bridge.steamstub.forwardedTitle": "Steams DRM-kontroll stöds inte",
+    "steam.bridge.steamstub.forwardedBody": "Det här spelet använder Steams DRM-omslag. GameLib anslöt det till din Steam-klient på Mac, men omslagets startkontroll kan inte uppfyllas via den inbyggda Steam-bryggan, så spelet visar sannolikt ett Steam-fel och startar inte."
+  },
+  "ta": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM சரிபார்ப்பு ஆதரிக்கப்படவில்லை",
+    "steam.bridge.steamstub.forwardedBody": "இந்த விளையாட்டு Steam-இன் DRM உறையைப் பயன்படுத்துகிறது. GameLib இதை உங்கள் Mac-இல் உள்ள Steam கிளையண்டுடன் இணைத்தது, ஆனால் உறையின் தொடக்கச் சரிபார்ப்பை நேட்டிவ் Steam பாலம் வழியாக நிறைவேற்ற முடியாது, எனவே விளையாட்டு Steam பிழையைக் காட்டி தொடங்காமல் போகக்கூடும்."
+  },
+  "th": {
+    "steam.bridge.steamstub.forwardedTitle": "ไม่รองรับการตรวจสอบ DRM ของ Steam",
+    "steam.bridge.steamstub.forwardedBody": "เกมนี้ใช้ตัวห่อ DRM ของ Steam GameLib เชื่อมต่อเกมกับไคลเอนต์ Steam บน Mac ของคุณแล้ว แต่การตรวจสอบตอนเปิดเกมของตัวห่อไม่สามารถผ่านได้ผ่านบริดจ์ Steam แบบเนทีฟ เกมจึงมีแนวโน้มที่จะแสดงข้อผิดพลาดของ Steam และไม่เริ่มต้น"
+  },
+  "tr": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM denetimi desteklenmiyor",
+    "steam.bridge.steamstub.forwardedBody": "Bu oyun Steam'in DRM sarmalayıcısını kullanıyor. GameLib onu Mac'inizdeki Steam istemcisine bağladı, ancak sarmalayıcının başlatma denetimi yerel Steam köprüsü üzerinden karşılanamıyor, bu yüzden oyun muhtemelen bir Steam hatası gösterecek ve başlamayacak."
+  },
+  "uk": {
+    "steam.bridge.steamstub.forwardedTitle": "Перевірка Steam DRM не підтримується",
+    "steam.bridge.steamstub.forwardedBody": "Ця гра використовує обгортку DRM від Steam. GameLib підключив її до клієнта Steam на вашому Mac, але перевірка запуску обгортки не може бути виконана через нативний міст Steam, тому гра, імовірно, покаже помилку Steam і не запуститься."
+  },
+  "uz": {
+    "steam.bridge.steamstub.forwardedTitle": "Steam DRM tekshiruvi qo‘llab-quvvatlanmaydi",
+    "steam.bridge.steamstub.forwardedBody": "Bu o‘yin Steam’ning DRM o‘ramidan foydalanadi. GameLib uni Mac’dagi Steam mijozingizga ulagan, ammo o‘ramning ishga tushirish tekshiruvini mahalliy Steam ko‘prigi orqali bajarib bo‘lmaydi, shuning uchun o‘yin ehtimol Steam xatosini ko‘rsatadi va ishga tushmaydi."
+  },
+  "vi": {
+    "steam.bridge.steamstub.forwardedTitle": "Kiểm tra DRM của Steam không được hỗ trợ",
+    "steam.bridge.steamstub.forwardedBody": "Trò chơi này dùng lớp bọc DRM của Steam. GameLib đã kết nối nó với ứng dụng Steam trên Mac của bạn, nhưng bước kiểm tra khi khởi chạy của lớp bọc không thể được đáp ứng qua cầu nối Steam gốc, nên trò chơi nhiều khả năng sẽ báo lỗi Steam và không khởi động."
+  },
+  "zh_Hans": {
+    "steam.bridge.steamstub.forwardedTitle": "不支持 Steam DRM 检查",
+    "steam.bridge.steamstub.forwardedBody": "此游戏使用 Steam 的 DRM 包装器。GameLib 已将其连接到你 Mac 上的 Steam 客户端，但包装器的启动检查无法通过原生 Steam 桥接满足，因此游戏很可能会显示 Steam 错误且无法启动。"
+  },
+  "zh_Hant": {
+    "steam.bridge.steamstub.forwardedTitle": "不支援 Steam DRM 檢查",
+    "steam.bridge.steamstub.forwardedBody": "此遊戲使用 Steam 的 DRM 包裝器。GameLib 已將其連接到你 Mac 上的 Steam 用戶端，但包裝器的啟動檢查無法透過原生 Steam 橋接滿足，因此遊戲很可能會顯示 Steam 錯誤且無法啟動。"
+  }
+}
