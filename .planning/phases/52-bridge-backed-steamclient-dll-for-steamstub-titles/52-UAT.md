@@ -260,6 +260,8 @@ result: pass — session /tmp/gamelib-gate-52e-20261024T065250Z, plan 52-25, evi
 expected: the operator chooses one boundary-reviewed option built from 52-25 evidence, or no change.
 result: pass — operator chose option-versioninfo. Operator verbatim: "versioninfo (GameLib) (Recommended)". Label: boundary-compliant (GameLib's own strings, no Valve identity: CompanyName "GameLib", FileDescription "GameLib steamclient forwarder"; no BOUNDARY EXCEPTION, no ROADMAP amendment). Rests on 52-25-DIAGNOSIS.md `## Check classification` row C (strength indirect) and `### Differences` item 4 (the exe has a resource directory with version strings, the forwarder has none). Excluded and not offered: genuine Valve DLL in a bottle, Grim Dawn.exe modification, bottled-Steam reroute, pid writer. option-sign blocked (no signing tool), option-flat not offered (no forwarder-base Steam_* lookup). Risk rule: if the pinned zig cannot compile .rc through zig cc, stop as `blocked; replan`, no new tool downloaded.
 files allowed: native/steam-bridge/steamclient/steamclient_fwd.rc, meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts
+implemented: commit 979c3b0e3 (decision record cad85dd11). files: native/steam-bridge/steamclient/steamclient_fwd.rc, meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts. Built (pinned zig 0.16.0 compiled the .rc through zig cc, no new tool): SHIM64 251904 B, forwarder 187392 B (was 186368), exports: CreateInterface only. Property re-measured on the built file: resource directory .rsrc present (objdump Entry 2 Resource Directory, RVA 0x33000) with VS_VERSIONINFO CompanyName "GameLib", FileDescription "GameLib steamclient forwarder", FileVersion/ProductVersion 1.0.0.0, InternalName steamclient_fwd, OriginalFilename steamclient64.dll, ProductName "GameLib"; no "Valve" string. Boundary checks: no HKLM in native/steam-bridge/steamclient/ (steamClientSetup.ts line 9 is a pre-existing comment saying HKLM must not be used); no Grim Dawn.exe in the diff; no .dll tracked in the diff (public/bin/arm64/darwin/steamclient64.dll is git-ignored); built forwarder differs from the genuine DLL (187392 B, not 26547864). Not yet shown: that the stub accepts it; that needs the packaged-build Grim Dawn run (52-27).
+hygiene delta for 52-27 (item 25): forwarder byte-identical to the new build (size 187392).
 
 ## Structural Reachability Review
 
@@ -309,8 +311,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 21
-passed: 9
+total: 22
+passed: 10
 issues: 6
 pending: 1
 skipped: 5

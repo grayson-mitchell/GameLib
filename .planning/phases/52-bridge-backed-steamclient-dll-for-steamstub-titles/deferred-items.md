@@ -27,6 +27,7 @@
    MessageBox, 52-19 cxlog:7170-7181). No change was made. Next step: another planning round
    (`/gsd-plan-phase 52 --gaps`) to establish what the stub checks in the forwarder bytes. 52-23 item 19
    hygiene delta: none.
+   52-26 (item 22): option-versioninfo, implemented (GameLib-string VS_VERSIONINFO on the forwarder; acceptance by the stub unverified until 52-27).
 
 ## Deferred from the 52 code review (recorded by 52-16)
 
