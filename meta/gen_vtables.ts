@@ -652,6 +652,11 @@ const FLAT_EXPORT_BODIES: Record<
 // null-object fallback, and a modern-SDK x86 context init also calls
 // SteamAPI_GetHSteamUser -- exporting these five on x86 would mean widening the
 // whole family to x86 (a separate decision against D-51-13).
+//
+// Phase 52 (52-07) adds GameLibBridge_CreateInterface, the SteamStub-path entry
+// the 52-03 steamclient64 forwarder resolves via GetProcAddress. The five
+// SteamInternal_* exports above already shipped in i94; they are unchanged.
+// x86 stays deferred (orchestrator decision 6).
 export const MODERN_LOOKUP_FLAT_EXPORTS = [
   'SteamInternal_CreateInterface',
   'SteamAPI_GetHSteamUser',
@@ -660,7 +665,8 @@ export const MODERN_LOOKUP_FLAT_EXPORTS = [
   'SteamInternal_ContextInit',
   'SteamInternal_FindOrCreateUserInterface',
   'SteamInternal_FindOrCreateGameServerInterface',
-  'SteamInternal_GameServer_Init_V2'
+  'SteamInternal_GameServer_Init_V2',
+  'GameLibBridge_CreateInterface'
 ] as const
 
 const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
@@ -746,6 +752,34 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     '  (void)unIP; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString; (void)pszInternalCheckInterfaceVersions;\n' +
     '  if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: game server mode is not supported");\n' +
     '  return 1;\n' +
+    '}',
+  // Phase 52 (52-07): called by the steamclient64 forwarder on the SteamStub
+  // check path. Returns the shim proxy for the EXACT version only when the
+  // native client confirmed it (CONTROL slot 3); otherwise NULL with rc=1.
+  // NEVER the x64 null object: a fake answer here would let SteamStub believe
+  // a client exists that does not.
+  GameLibBridge_CreateInterface:
+    'void *GameLibBridge_CreateInterface(const char *pszName, int *pRc) {\n' +
+    '  static int s_hello_sent = 0;\n' +
+    '  static uint8_t s_req[4 + 4096];\n' +
+    '  uint8_t retbuf[4]; uint32_t retlen = 0;\n' +
+    '  if (pRc != NULL) *pRc = 1;\n' +
+    '  if (pszName == NULL) return NULL;\n' +
+    '  size_t n = strlen(pszName);\n' +
+    '  if (n > 4096) return NULL;\n' +
+    '  if (!s_hello_sent) {\n' +
+    '    uint8_t hb[1]; uint32_t hl = 0;\n' +
+    '    if (bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, hb, sizeof(hb), &hl)) s_hello_sent = 1;\n' +
+    '  }\n' +
+    '  s_req[0] = (uint8_t)(n & 0xff); s_req[1] = (uint8_t)((n >> 8) & 0xff); s_req[2] = (uint8_t)((n >> 16) & 0xff); s_req[3] = (uint8_t)((n >> 24) & 0xff);\n' +
+    '  memcpy(s_req + 4, pszName, n);\n' +
+    '  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_CREATE_INTERFACE, s_req, (uint32_t)(4 + n), retbuf, sizeof(retbuf), &retlen)) return NULL;\n' +
+    '  if (retlen != 4) return NULL;\n' +
+    '  uint32_t present = (uint32_t)retbuf[0] | ((uint32_t)retbuf[1] << 8) | ((uint32_t)retbuf[2] << 16) | ((uint32_t)retbuf[3] << 24);\n' +
+    '  if (present == 0) return NULL;\n' +
+    '  void *p = resolve_iface_by_exact_version(pszName);\n' +
+    '  if (pRc != NULL) *pRc = p != NULL ? 0 : 1;\n' +
+    '  return p;\n' +
     '}'
 }
 
@@ -1334,6 +1368,10 @@ export function generateShimC(manifests: InterfaceManifest[]): string {
 // is a GameLib per-appId helper before any real interface call is issued.
 #define BRIDGE_CONTROL_ORDINAL 0xffff
 #define BRIDGE_CONTROL_SLOT_HELLO 2
+// Phase 52 (52-02): protocol.ts CONTROL_SLOT.createInterface == helper
+// CONTROL_SLOT_CREATE_INTERFACE. Asks the native client whether it accepts an
+// interface version (reply: 4-byte LE int32 present).
+#define BRIDGE_CONTROL_SLOT_CREATE_INTERFACE 3
 
 // CR-01: byte capacity of each string-returning stub's shim-owned static
 // return buffer -- emitted directly from the generator's

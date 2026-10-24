@@ -23,6 +23,7 @@ import {
   X64_NULL_OBJECT_SLOTS,
   type InterfaceManifestV2
 } from '../gen_vtables'
+import { CONTROL_SLOT } from '../../src/backend/storeManagers/steam/bridge/protocol'
 import { BARE_ACCESSOR_FAMILY } from '../../src/backend/storeManagers/steam/bridge/interfaceVersions'
 import {
   SHIM_SERVED_INTERFACE_VERSIONS,
@@ -1687,6 +1688,47 @@ describe('gen_vtables', () => {
       expect(b).toContain('return NULL')
       expect(b).toContain('g_gamelib_context_counter')
       expect(b).toMatch(/!=\s*g_gamelib_context_counter/)
+    })
+  })
+
+  describe('Phase 52: GameLibBridge_CreateInterface (52-07)', () => {
+    const manifests = [isteamuser, isteamfriends]
+    function cBody(): string {
+      const c = generateShimC(manifests)
+      const at = c.indexOf('void *GameLibBridge_CreateInterface(')
+      expect(at).toBeGreaterThan(-1)
+      return c.slice(at, c.indexOf('\n}\n', at) + 3)
+    }
+
+    it('Phase 52: x64 .def lists it, x86 .def does not', () => {
+      expect(generateDefFile(manifests, 'x64')).toMatch(
+        /^\s*GameLibBridge_CreateInterface\s*$/m
+      )
+      expect(generateDefFile(manifests, 'x86')).not.toContain(
+        'GameLibBridge_CreateInterface'
+      )
+    })
+
+    it('Phase 52: control slot define equals protocol.ts CONTROL_SLOT.createInterface', () => {
+      const c = generateShimC(manifests)
+      const m = c.match(/#define BRIDGE_CONTROL_SLOT_CREATE_INTERFACE (\d+)/)
+      expect(m).not.toBeNull()
+      expect(Number(m![1])).toBe(CONTROL_SLOT.createInterface)
+    })
+
+    it('Phase 52: body is native-backed and never returns the null object', () => {
+      const b = cBody()
+      expect(b).toContain('BRIDGE_CONTROL_SLOT_CREATE_INTERFACE')
+      expect(b).toContain('resolve_iface_by_exact_version')
+      expect(b).not.toContain('g_x64_null_object_instance')
+    })
+
+    it('Phase 52: lives inside the x64-only block', () => {
+      const c = generateShimC(manifests)
+      const at = c.indexOf('void *GameLibBridge_CreateInterface(')
+      const guard = c.lastIndexOf('#if defined(__x86_64__)', at)
+      expect(guard).toBeGreaterThan(-1)
+      expect(c.slice(guard, at)).not.toContain('#endif')
     })
   })
 
