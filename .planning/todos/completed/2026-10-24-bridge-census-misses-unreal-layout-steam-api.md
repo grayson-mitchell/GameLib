@@ -30,3 +30,7 @@ Fix: mirror `findUnrealLayout` in the census driver, or extract it into a pure m
 which is the better option. The census's own docblock requires that it compose the live modules so
 the two cannot diverge. Then let the Shipping exe be the importer and the ThirdParty dll be the
 runtime dll, and add a fixture. Re-run the census; the three should leave `no-steam-api`.
+
+## Resolution (2026-10-25, phase 53)
+
+Fixed in 53-07 (shared scan, Unreal layout). Live evidence, 53-UAT items 7, 8, 9 and 13: the census rows for 1119730 (`unknown-version`, unverified no HELLO), 1363080 (`unknown-version`, verified) and 427410 (`unknown-version`, init-failed) no longer read `no-steam-api`. Residual census defect found in the same run (stale `*-backup-*.log` read for 427410) is logged under 53-UAT Gaps, not this todo.

@@ -64,3 +64,7 @@ GameLib. Mac Steam shows In-Game, which comes from the helper as noted above.
 So for some titles the flat-API gap does not just mean playing offline: it **blocks play**. The
 sample now has three Unity titles hitting it (1167950, 1284190, 1691190), and Rogue Waters is the
 first that cannot be played. Both missing symbols are on the minimum list for a first slice.
+
+## Evidence (2026-10-25, phase 53 live run, 53-UAT items 1-4)
+
+Left open: items 1, 2 and 4 fail. Player.log shows `SteamAPI_Init() failed` for 1691190, 1167950 and 1782460; each logged `NOVER flat lookup ver=STEAMSCREENSHOTS_INTERFACE_VERSION003 served=no`. Planet Crafter 1284190 (same NOVER) passed. Next step: serve STEAMSCREENSHOTS_INTERFACE_VERSION003 (and SteamUtils009, SteamController006 for 1691190), then re-test.

@@ -67,3 +67,7 @@ version lists have not been read yet.
 52-13 now serves SteamUser023, SteamNetworking006 and STEAMREMOTESTORAGE_INTERFACE_VERSION016 on
 x64. In the requested-versions table above, the `SteamUser023`, `STEAMREMOTESTORAGE_INTERFACE_VERSION016`
 and `SteamNetworking006` rows are therefore no longer missing. The other rows are unchanged by 52-13.
+
+## Evidence (2026-10-25, phase 53 live run, 53-UAT items 7-9)
+
+Left open: Manor Lords 1363080 passes (HELLO, 7 CALLs, no 0x0 crash). Abiotic Factor 427410 has HELLO and 5 CALLs and a clean Saved log but hung at the loading screen (`Failed to acquire Steam auth session ticket for 0`). Ranch Simulator 1119730 never reaches HELLO: the Shipping exe exits in under 1 s with code 0x35. Closes only when items 7-9 pass.

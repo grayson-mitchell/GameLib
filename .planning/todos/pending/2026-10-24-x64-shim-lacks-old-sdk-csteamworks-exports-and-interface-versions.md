@@ -84,3 +84,7 @@ worth doing when the next old-SDK title appears. Step 2 (14 old interface versio
 justify for a single title; the Unity flat-API todo
 (`2026-10-23-bridge-shim-lacks-steamworks-flat-api-for-unity-steamworks-net-games.md`) is the
 larger lever.
+
+## Evidence (2026-10-25, phase 53 live run, 53-UAT item 11)
+
+Step 3 (AnyCPU arch, D-53-10, amended to also honour 32BITPREFERRED) shipped in 53-02/53-05. Steps 1, 2, 4, 5 remain. Live confirmation: Unclaimed World 284100 still crashes in Wine with `unimplemented function steam_api64.dll.SteamAPI_InitSafe called in 64-bit code`, backtrace ntdll+0x68870 then csteamworks64+0x17da; no HELLO. Still pending.
