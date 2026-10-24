@@ -1,6 +1,6 @@
 ---
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
-reviewed: 2026-10-24T04:49:08Z
+reviewed: 2026-10-24T06:21:38Z
 depth: standard
 files_reviewed: 38
 files_reviewed_list:
@@ -44,8 +44,8 @@ files_reviewed_list:
   - src/backend/storeManagers/steam/games.ts
 findings:
   critical: 0
-  warning: 3
-  info: 4
+  warning: 1
+  info: 6
   total: 7
 status: issues_found
 ---
@@ -103,7 +103,7 @@ Neither is shown to cause the sign-out, so no finding is raised.
 
 ## Warnings
 
-### WR-09: The CR-01 gate covers only the `GetISteam*` lookups. CreateSteamPipe, BReleaseSteamPipe, ConnectToGlobalUser, CreateLocalUser, ReleaseUser, RunFrame, GetIPCCallCount and BShutdownIfAllPipesClosed still forward to the native client for every x64 title
+### WR-09 (RESOLVED in 753f7a2cc / ad0e60406, see Re-review 2): The CR-01 gate covers only the `GetISteam*` lookups. CreateSteamPipe, BReleaseSteamPipe, ConnectToGlobalUser, CreateLocalUser, ReleaseUser, RunFrame, GetIPCCallCount and BShutdownIfAllPipesClosed still forward to the native client for every x64 title
 
 **File:** `meta/gen_vtables.ts:1115-1121` (only the lookup branch reads the flag), and the general wire emitter below it. In the generated `native/steam-bridge/generated/steam_api_shim.c`: `5366`, `5376`, `5388`, `5400`, `5418`, `5849`, `5857`, `5872` (SteamClient017) and `7998`, `8008`, `8020`, `8032`, `8050`, `8481`, `8489`, `8504` (SteamClient014).
 **Issue:** 52-14's summary says "Ordinary x64 titles … again get [the] pre-phase" behaviour. That holds for lookups only.
@@ -147,7 +147,7 @@ The failed lookup at step 3 names `Grim Dawn.exe` as the module that was searche
 - Record the export table of a genuine `steamclient64.dll` (from `objdump -p`, no binary in the repo) next to the forwarder's.
 - Until one of those is settled, do not spend more effort on post-`CreateInterface` forwarding: the trace shows it is not on the failing path.
 
-### WR-11: The single-exe withhold path still withholds when there is no `steam_api` file to fall back to
+### WR-11 (RESOLVED in 08a669c52, see Re-review 2): The single-exe withhold path still withholds when there is no `steam_api` file to fall back to
 
 **File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:1433-1449` (with `withholdIfRestorable`, `:897-909`)
 **Issue:** 52-15's rule says to withhold only when there is a game-original `steam_api` to launch with. In the single-exe branch, `shimTargets` is `targetIsGameLibShim ? [shimPath] : []`. When the exe statically imports `steam_api64.dll` but nothing exists at `shimPath` (`targetExists === false`), `shimTargets` is `[]`. `[].every(...)` is `true`, so `withhold()` runs. It logs "launching with the game's own steam_api, no helper" and returns `withheld`.
@@ -191,8 +191,80 @@ Add a test for "static import, no dll on disk, unservable version", which should
 **Issue:** The 15 s window covers `validWine`, prefix verification and a cold CrossOver bottle start, as well as `reg.exe` itself. A cold first launch can exceed it. The result is then `error`, which fires the `setup-error` notice, while the orphaned child still writes the value a few seconds later (deferred #9). So the notice and the registry state disagree for that launch.
 **Fix:** If this is observed, warm the bottle first (a cheap `wine cmd /c exit` under the same bound), or raise the bound for the first `reg add` only. Log the elapsed time on timeout so this case can be told apart from a real hang.
 
+## Re-review (gap closure 2, 2026-10-24)
+
+**Reviewed:** 2026-10-24T06:21:38Z
+**Depth:** standard
+**Scope:** the diff `9f503cbcc..HEAD` over five files (plans 52-20 and 52-21):
+
+- `meta/gen_vtables.ts`
+- `meta/__tests__/gen_vtables.test.ts`
+- `native/steam-bridge/generated/steam_api_shim.c`
+- `src/backend/storeManagers/steam/bridge/shimGenerate.ts`
+- `src/backend/storeManagers/steam/bridge/__tests__/shimGenerate.test.ts`
+
+**Checks run:**
+- Both suites pass (236 tests).
+- The committed `steam_api_shim.c` is byte-identical to `generateShimC()` run in memory over every `meta/sdk/*.manifest.json`, so the generated file has not drifted from the generator.
+- The off-path values were compared with the pre-phase stubs at `7ed535984`.
+
+### Status of WR-09 and WR-11
+
+| ID | Status | Evidence |
+| --- | --- | --- |
+| WR-09 | **Resolved** (`753f7a2cc`, `ad0e60406`) | **All eight methods gated.** The manifests mark exactly eight SteamClient017/014 methods as `wire` but not lookups: CreateSteamPipe, BReleaseSteamPipe, ConnectToGlobalUser, CreateLocalUser, ReleaseUser, RunFrame, GetIPCCallCount and BShutdownIfAllPipesClosed. Slots 7, 21 and 31-33 are `stub` and were never forwarded. All 16 functions (8 methods in each of c17 and c14) now return before `bridge_transact` when the flag is clear: `steam_api_shim.c:5369`, `5382`, `5397`, `5412`, `5433`, `5867`, `5878`, `5896` (c17) and `8025`, `8038`, `8053`, `8068`, `8089`, `8523`, `8534`, `8552` (c14).<br>**Off-path values match pre-phase.** At `7ed535984`, CreateSteamPipe and ConnectToGlobalUser returned `1`, BReleaseSteamPipe, CreateLocalUser, GetIPCCallCount and BShutdownIfAllPipesClosed returned `0`, and ReleaseUser and RunFrame were empty. The new gate returns the same.<br>**The refusal fires correctly.** `steamClientOffPathGate` (`gen_vtables.ts:1008-1045`) is called for every wire method that does not return earlier through the lookup, `helperFallback` or `stub` branches. Every pointer-returning SteamClient wire method is a version lookup and returns before the gate, so the refusal cannot fire on a current manifest. A future pointer, string, sret or out-buffer non-lookup method throws at generation time. The test covers the pointer case.<br>**`CreateLocalUser` off the path.** It returns 0 and leaves `*phSteamPipe` unwritten. The pre-phase stub did exactly the same (`dummy0` was ignored), so callers see no regression: an HSteamUser of 0 is the documented failure answer. It would only be unsafe if a caller read `*phSteamPipe` without checking the return value, and that caller was already exposed before the phase.<br>**Redundant guard.** The inner `#if defined(__x86_64__)` is redundant, because both SteamClient sections are already wrapped in `#if defined(__x86_64__)` (the manifests say `"arches": ["x64"]`). It does no harm and still protects the code if the arches are ever widened. |
+| WR-11 | **Resolved** (`08a669c52`, RED `9c8c32d25`) | `shimGenerate.ts:1438-1451` now calls `withholdIfRestorable` only when `targetExists`. With no file on disk, the gaps go into `refreshGaps`. The shim is placed, with no backup because `targetExists` is false, and the result is `placed-miss`. The cases that still withhold are unchanged:<br>- the game's original dll is present (`shimTargets` is `[]`, and the original stays in place);<br>- a GameLib shim with a valid backup (it is restored).<br>The multi-DLL path (`:1192`) cannot hit the empty-target case: `runtimeDlls` holds only files that were found on disk. Both new tests check `placed-miss`, the shim bytes written, no "game's own steam_api" warning, no "cannot withhold" warning, and no backup file. The one widened side effect is IN-10. |
+
+WR-10 and IN-05..IN-08 are not touched by this diff and stay open as written above. The IN-07 wording defect now also applies to the new no-dll `placed-miss`. On that path, the placed-miss warning says a static-import miss "is expected to fail at load", which is wrong for an unservable version or a delay-import gap. No change to IN-07 is needed: its fix covers this case.
+
+### New findings
+
+No new critical or warning findings.
+
+#### IN-09: The off-path value table is not exhaustive: an unlisted SteamClient non-lookup method silently answers `0`
+
+**File:** `meta/gen_vtables.ts:996-999, 1020-1022, 1035-1039`
+**Issue:** `STEAM_CLIENT_OFF_PATH_VALUES` lists only the two non-zero answers. Any other int-returning SteamClient non-lookup wire method falls through to `'0'` (or `'0LL'`), and any `out-value` param is left unwritten, both without a refusal.
+
+That is correct for the eight methods today. But a future manifest (say SteamClient018-020, or a `stub`-to-`wire` flip of a method whose pre-phase answer was non-zero, such as a bool "true") would get `0` off the path with no generation error.
+
+The tests do not catch that either:
+- `gen_vtables.test.ts` (the WR-09 `nonLookups === 8` loop) only iterates c17/c14;
+- the refusal test only covers a `pointer` return.
+
+The "generation-time refusal" is therefore narrower than the comment at `:1001-1007` suggests. It refuses only unrepresentable shapes, not an off-path answer that was never decided.
+**Fix:** List all eight methods in the table and throw when a method name is missing, so every off-path answer is a deliberate decision:
+```ts
+export const STEAM_CLIENT_OFF_PATH_VALUES = {
+  CreateSteamPipe: '1', ConnectToGlobalUser: '1',
+  BReleaseSteamPipe: '0', CreateLocalUser: '0', GetIPCCallCount: '0',
+  BShutdownIfAllPipesClosed: '0', ReleaseUser: '', RunFrame: ''
+}
+const entry = STEAM_CLIENT_OFF_PATH_VALUES[method.name]
+if (entry === undefined) throw new Error(`${manifest.interface}.${method.name}: no off-SteamStub-path value declared`)
+```
+Then run the WR-09 test loop over every manifest with `family === 'SteamClient'`, not only c17/c14.
+
+#### IN-10: WR-11 sends the "no file on disk" gap case into `copyFileSync`, which follows a dangling symlink
+
+**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:1370, 1438, 1469`
+**Issue:** `targetExists = existsSync(shimPath)` returns `false` for a dangling symlink at `shimPath`. Before 52-21, the gap case with a false `targetExists` withheld and wrote nothing. It now falls through to `copyFileSync(shimSourcePath, shimPath)`, which writes through the link to wherever it points, possibly outside the bottle.
+
+The gap-free case already did this. This is the WR-06 "follows symlinks" class (deferred #2), now reachable from one more path. It is not a new defect class, so it stays Info.
+**Fix:** Fold it into WR-06's fix. Decide `targetExists` with `lstatSync` (a symlink of any kind counts as present and is refused), or `unlinkSync` a symlinked `shimPath` before the copy. Record in deferred-items #2 that the gap path now reaches it too.
+
+### Re-review counts (whole file, open findings only)
+
+| Severity | Open IDs |
+| --- | --- |
+| Critical | none |
+| Warning | WR-10 |
+| Info | IN-05, IN-06, IN-07, IN-08, IN-09, IN-10 |
+
+The earlier deferred items (WR-05..WR-08, IN-01..IN-04) are tracked in deferred-items.md and are not counted again here.
+
 ---
 
-_Reviewed: 2026-10-24T04:49:08Z_
+_Reviewed: 2026-10-24T04:49:08Z; re-reviewed (gap closure 2) 2026-10-24T06:21:38Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
