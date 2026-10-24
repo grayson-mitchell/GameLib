@@ -12,6 +12,12 @@
 #   MODE=probe  copy the built shim + steamclient64.dll into the clone, write the HKCU values (REG=0 skips
 #               them: the positive control), start the helper, launch.
 #   MODE=trace  no copies, no registry writes: the clone inherits whatever GameLib itself wrote.
+#
+# Optional clone-only overrides (52-19; defaults keep the original behaviour byte for byte):
+#   DEBUGMSG=<channels>     wine --debugmsg value            (default +process,+reg,+loaddll,+seh)
+#   HELPER_BIN=<path>       helper binary to start           (default $ART/steam-bridge-helper)
+#   RELAY_INCLUDE='a;b;..'  when non-empty, writes HKCU\Software\Wine\Debug\RelayInclude in the
+#                           CLONE only (never under Software\Valve), for use with +relay in DEBUGMSG.
 set -euo pipefail
 
 : "${SESSION:?SESSION (existing session dir) required}"
@@ -21,6 +27,8 @@ case "$MODE" in probe | trace) ;; *) echo "MODE must be probe or trace" >&2; exi
 REG="${REG:-1}"
 WATCH="${WATCH:-45}"
 DRY_RUN="${DRY_RUN:-0}"
+DEBUGMSG="${DEBUGMSG:-+process,+reg,+loaddll,+seh}"
+RELAY_INCLUDE="${RELAY_INCLUDE:-}"
 
 SRC=GameLibSteamBridge-219990
 CLONE=GameLibGate52GD
@@ -33,6 +41,7 @@ CLONE_GAME="$CLONE_PFX/$REL_GAME"
 WIN_GAME='C:\Program Files (x86)\Steam\steamapps\common\Grim Dawn'
 REPO="$(cd "$(dirname "$0")/../../../.." && pwd)"
 ART="$REPO/public/bin/arm64/darwin"
+HELPER_BIN="${HELPER_BIN:-$ART/steam-bridge-helper}"
 
 # ---- guards (before anything mutates) ---------------------------------------------------------
 refuse() {
@@ -80,14 +89,20 @@ if [ "$MODE" = probe ]; then
   fi
 fi
 
+# (3b) optional relay filter, clone only
+if [ -n "$RELAY_INCLUDE" ]; then
+  [ "$CLONE" = GameLibGate52GD ] || refuse "RelayInclude target is not GameLibGate52GD: $CLONE"
+  run env CX_BOTTLE="$CLONE" "$CX/wine" reg add 'HKCU\Software\Wine\Debug' /v RelayInclude /t REG_SZ /d "$RELAY_INCLUDE" /f
+fi
+
 # (4) helper, cwd = state dir with steam_appid.txt
 run mkdir -p "$STATE"
 if [ "$DRY_RUN" = 1 ]; then
-  echo "DRY: (cd $STATE; steam-bridge-helper --appid 219990 --port 0) appended to $HELPER_LOG"
+  echo "DRY: (cd $STATE; $HELPER_BIN --appid 219990 --port 0) appended to $HELPER_LOG"
   PORT=0
 else
   printf '219990' >"$STATE/steam_appid.txt"
-  (cd "$STATE" && exec "$ART/steam-bridge-helper" --appid 219990 --port 0) >>"$HELPER_LOG" 2>&1 &
+  (cd "$STATE" && exec "$HELPER_BIN" --appid 219990 --port 0) >>"$HELPER_LOG" 2>&1 &
   HP=$!
   PORT=""
   for _ in $(seq 75); do
@@ -109,9 +124,9 @@ fi
 # (6) launch
 T0=$(date +%s)
 if [ "$DRY_RUN" = 1 ]; then
-  echo "DRY: (cd $CLONE_GAME/x64; CX_BOTTLE=$CLONE wine --cx-log $CXLOG --debugmsg +process,+reg,+loaddll,+seh 'x64\\Grim Dawn.exe') appended to $WINELOG"
+  echo "DRY: (cd $CLONE_GAME/x64; CX_BOTTLE=$CLONE wine --cx-log $CXLOG --debugmsg $DEBUGMSG 'x64\\Grim Dawn.exe') appended to $WINELOG"
 else
-  (cd "$CLONE_GAME/x64" && exec env CX_BOTTLE="$CLONE" "$CX/wine" --cx-log "$CXLOG" --debugmsg +process,+reg,+loaddll,+seh "$WIN_GAME"'\x64\Grim Dawn.exe') >>"$WINELOG" 2>&1 &
+  (cd "$CLONE_GAME/x64" && exec env CX_BOTTLE="$CLONE" "$CX/wine" --cx-log "$CXLOG" --debugmsg "$DEBUGMSG" "$WIN_GAME"'\x64\Grim Dawn.exe') >>"$WINELOG" 2>&1 &
   if [ "${INTERACTIVE:-0}" = 1 ]; then
     sleep 8
     while pgrep -fi 'grim dawn.exe' >/dev/null; do sleep 2; done
@@ -133,6 +148,14 @@ fi
     echo "helper HELLO count: $(grep -c 'HELLO' "$HELPER_LOG" 2>/dev/null || true)"
     echo "first 60 FWD lines (sink: $HELPER_LOG):"
     grep 'FWD' "$HELPER_LOG" 2>/dev/null | head -60 || true
+    echo "first MSGBOX cxlog line: $(grep -n 'MSGBOX' "$CXLOG" 2>/dev/null | head -1 | cut -d: -f1 || true)"
+    echo "relay Call lines: $(grep -c 'Call ' "$CXLOG" 2>/dev/null || true)"
+    if [ -n "$RELAY_INCLUDE" ]; then
+      IFS=';' read -ra _RN <<<"$RELAY_INCLUDE"
+      for _n in "${_RN[@]}"; do
+        echo "relay Call $_n: $(grep 'Call ' "$CXLOG" 2>/dev/null | grep -c "${_n#*.}" || true)"
+      done
+    fi
     echo "cxlog ActiveProcess lines:"
     grep 'ActiveProcess' "$CXLOG" 2>/dev/null | head -40 || true
     echo "cxlog ActiveProcess value-name pid lines: $(grep 'ActiveProcess' "$CXLOG" 2>/dev/null | grep -ciw 'pid' || true)"
