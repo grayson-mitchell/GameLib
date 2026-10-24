@@ -265,7 +265,10 @@
       "params": [
         {
           "name": "pTicket",
-          "type": "void*"
+          "type": "void*",
+          "kind": "out-buffer",
+          "sizeParam": "cbMaxTicket",
+          "lenParam": "pcbTicket"
         },
         {
           "name": "cbMaxTicket",
@@ -273,13 +276,18 @@
         },
         {
           "name": "pcbTicket",
-          "type": "uint32*"
+          "type": "uint32*",
+          "kind": "out-value",
+          "valueType": "uint32"
         },
         {
           "name": "pSteamNetworkingIdentity",
-          "type": "const SteamNetworkingIdentity_144*"
+          "type": "const SteamNetworkingIdentity_144*",
+          "kind": "null-in"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_GetAuthSessionTicket"
     },
     {
       "slot": 14,
@@ -339,7 +347,9 @@
           "name": "hAuthTicket",
           "type": "uint32"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_CancelAuthTicket"
     },
     {
       "slot": 18,

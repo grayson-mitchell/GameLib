@@ -72,7 +72,10 @@ Request blob (per method, params in manifest declaration order):
     byte length capped at WIRE_IN_STRING_MAX_BYTES.
   - kind 'out-value': nothing -- an out-value param is NEVER sent.
   - kind 'out-buffer': [u32 capacity] -- the sibling param named by
-    sizeParam, read at call time and capped at WIRE_OUT_BUFFER_MAX_BYTES.
+    sizeParam, read at call time and capped at WIRE_OUT_BUFFER_MAX_BYTES
+    (a negative sizeParam sends capacity 0).
+  - kind 'null-in' (53-14): nothing -- a const SteamNetworkingIdentity*
+    param is NEVER sent; the helper passes NULL for it.
 
 Response blob (per method):
   - the return value: 0 bytes (returnKind 'void'), 4 bytes (int32/pointer/
@@ -82,10 +85,10 @@ Response blob (per method):
   - then, for every 'out-value' param in declaration order: valueType's
     width (int32/uint32/float/bool = 4 bytes, uint64 = 8 bytes).
   - then, for every 'out-buffer' param in declaration order: [u32 len][len
-    bytes] -- len is what the helper actually has, which may exceed the
-    caller's capacity; the shim copies min(len, capacity) and NUL-
-    terminates only when the param's own type is a NUL-terminated string
-    type (e.g. 'char*').
+    bytes] -- len is what the helper actually has (when the param names a
+    lenParam, min(that out-value, capacity)); the shim copies
+    min(len, capacity) and NUL-terminates only when the param's own type
+    is a NUL-terminated string type (e.g. 'char*').
 
 */
 #define WIRE_IN_STRING_MAX_BYTES 4096
@@ -98,7 +101,7 @@ Response blob (per method):
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "d3c673d1d289"
+#define BRIDGE_SHIM_TABLE_HASH "d8896985230c"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -711,10 +714,38 @@ static uint32_t THISCALL vt_SteamUser023_GetVoiceOptimalSampleRate(void *self) {
   return 0;
 }
 
-// slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket, const SteamNetworkingIdentity_144* pSteamNetworkingIdentity) -> uint32 | __thiscall ret 16 (STUB)
-static uint32_t THISCALL vt_SteamUser023_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+// slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket, const SteamNetworkingIdentity_144* pSteamNetworkingIdentity) -> uint32 | __thiscall ret 16
+static uint32_t THISCALL vt_SteamUser023_GetAuthSessionTicket(void *self, void * pTicket, int32_t cbMaxTicket, uint32_t * pcbTicket, void * pSteamNetworkingIdentity) {
   (void)self;
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  uint32_t cap_pTicket = (cbMaxTicket < 0) ? 0u : (uint32_t)cbMaxTicket; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pTicket > WIRE_OUT_BUFFER_MAX_BYTES) cap_pTicket = WIRE_OUT_BUFFER_MAX_BYTES;
+  memcpy(argbuf + argOff, &cap_pTicket, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cbMaxTicket, 4); argOff += 4;
+  uint8_t retbuf[4108]; uint32_t retlen = 0;
+  if (!bridge_transact(1, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pcbTicket != NULL) *pcbTicket = 0;
+    return 0;
+  }
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pcbTicket != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pcbTicket = outVal;
+  }
+  respOff += 4;
+  if (retlen >= respOff + 4) {
+    uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+    uint32_t copyLen = declLen;
+    if (copyLen > WIRE_OUT_BUFFER_MAX_BYTES) copyLen = WIRE_OUT_BUFFER_MAX_BYTES;
+    if (copyLen > cap_pTicket) copyLen = cap_pTicket; // never write past the caller's own capacity (53-14, T-53-56)
+    if (pTicket != NULL && retlen >= respOff + copyLen) {
+      memcpy(pTicket, retbuf + respOff, copyLen);
+    }
+    respOff += declLen;
+  }
+  return ret;
 }
 
 // slot 14: GetAuthTicketForWebApi(const char* pchIdentity) -> uint32 | __thiscall ret 4 (STUB)
@@ -734,9 +765,14 @@ static void THISCALL vt_SteamUser023_EndAuthSession(void *self, uint32_t dummy0,
   (void)self;
 }
 
-// slot 17: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamUser023_CancelAuthTicket(void *self, uint32_t dummy0) {
+// slot 17: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4
+static void THISCALL vt_SteamUser023_CancelAuthTicket(void *self, uint32_t hAuthTicket) {
   (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hAuthTicket, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(1, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
 // slot 18: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
@@ -2454,7 +2490,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat_2(void *self,
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(7, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(7, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -2483,7 +2522,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetStat(void *self, c
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(7, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(7, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -2585,7 +2627,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievement(void *
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(7, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(7, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {
@@ -2660,7 +2705,11 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION010_GetAchievementAndUnlo
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
-  if (!bridge_transact(7, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(7, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    if (punUnlockTime != NULL) *punUnlockTime = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {
@@ -3671,7 +3720,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat_2(void *self,
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(10, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(10, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -3700,7 +3752,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetStat(void *self, c
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(10, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(10, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -3802,7 +3857,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievement(void *
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(10, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(10, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {
@@ -3877,7 +3935,11 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION011_GetAchievementAndUnlo
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
-  if (!bridge_transact(10, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(10, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    if (punUnlockTime != NULL) *punUnlockTime = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {
@@ -5418,7 +5480,10 @@ static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * 
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(16, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(16, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (phSteamPipe != NULL) *phSteamPipe = 0;
+    return 0;
+  }
   int32_t ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (phSteamPipe != NULL && retlen >= respOff + 4) {
@@ -8074,7 +8139,10 @@ static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * 
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(22, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(22, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (phSteamPipe != NULL) *phSteamPipe = 0;
+    return 0;
+  }
   int32_t ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (phSteamPipe != NULL && retlen >= respOff + 4) {
@@ -9428,7 +9496,10 @@ static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, int32_t * 
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(25, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(25, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (phSteamPipe != NULL) *phSteamPipe = 0;
+    return 0;
+  }
   int32_t ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (phSteamPipe != NULL && retlen >= respOff + 4) {
@@ -10447,7 +10518,10 @@ static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, int32_t * 
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(26, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(26, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (phSteamPipe != NULL) *phSteamPipe = 0;
+    return 0;
+  }
   int32_t ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (phSteamPipe != NULL && retlen >= respOff + 4) {
@@ -11436,10 +11510,38 @@ static uint32_t THISCALL vt_SteamUser021_GetVoiceOptimalSampleRate(void *self) {
   return 0;
 }
 
-// slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12 (STUB)
-static uint32_t THISCALL vt_SteamUser021_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+// slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12
+static uint32_t THISCALL vt_SteamUser021_GetAuthSessionTicket(void *self, void * pTicket, int32_t cbMaxTicket, uint32_t * pcbTicket) {
   (void)self;
-  return 0;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  uint32_t cap_pTicket = (cbMaxTicket < 0) ? 0u : (uint32_t)cbMaxTicket; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pTicket > WIRE_OUT_BUFFER_MAX_BYTES) cap_pTicket = WIRE_OUT_BUFFER_MAX_BYTES;
+  memcpy(argbuf + argOff, &cap_pTicket, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cbMaxTicket, 4); argOff += 4;
+  uint8_t retbuf[4108]; uint32_t retlen = 0;
+  if (!bridge_transact(27, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pcbTicket != NULL) *pcbTicket = 0;
+    return 0;
+  }
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pcbTicket != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pcbTicket = outVal;
+  }
+  respOff += 4;
+  if (retlen >= respOff + 4) {
+    uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+    uint32_t copyLen = declLen;
+    if (copyLen > WIRE_OUT_BUFFER_MAX_BYTES) copyLen = WIRE_OUT_BUFFER_MAX_BYTES;
+    if (copyLen > cap_pTicket) copyLen = cap_pTicket; // never write past the caller's own capacity (53-14, T-53-56)
+    if (pTicket != NULL && retlen >= respOff + copyLen) {
+      memcpy(pTicket, retbuf + respOff, copyLen);
+    }
+    respOff += declLen;
+  }
+  return ret;
 }
 
 // slot 14: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
@@ -11453,9 +11555,14 @@ static void THISCALL vt_SteamUser021_EndAuthSession(void *self, uint32_t dummy0,
   (void)self;
 }
 
-// slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
-static void THISCALL vt_SteamUser021_CancelAuthTicket(void *self, uint32_t dummy0) {
+// slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4
+static void THISCALL vt_SteamUser021_CancelAuthTicket(void *self, uint32_t hAuthTicket) {
   (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hAuthTicket, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(27, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
 }
 
 // slot 17: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
@@ -12518,7 +12625,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2(void *self,
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(30, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(30, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -12547,7 +12657,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat(void *self, c
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(30, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(30, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -12649,7 +12762,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement(void *
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(30, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(30, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {
@@ -12724,7 +12840,11 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlo
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
-  if (!bridge_transact(30, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(30, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    if (punUnlockTime != NULL) *punUnlockTime = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {
@@ -13100,7 +13220,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2(void *self,
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(31, 0, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(31, 0, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -13129,7 +13252,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat(void *self, c
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(31, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(31, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pData != NULL) *pData = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pData != NULL && retlen >= respOff + 4) {
@@ -13231,7 +13357,10 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement(void *
     }
   }
   uint8_t retbuf[8]; uint32_t retlen = 0;
-  if (!bridge_transact(31, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(31, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {
@@ -13306,7 +13435,11 @@ static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlo
     }
   }
   uint8_t retbuf[12]; uint32_t retlen = 0;
-  if (!bridge_transact(31, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  if (!bridge_transact(31, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pbAchieved != NULL) *pbAchieved = 0;
+    if (punUnlockTime != NULL) *punUnlockTime = 0;
+    return 0;
+  }
   int ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
   if (pbAchieved != NULL && retlen >= respOff + 4) {

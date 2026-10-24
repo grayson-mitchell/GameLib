@@ -71,10 +71,15 @@ export interface WirePolicyParamOverride {
   kind: ParamKind
   valueType?: 'int32' | 'uint32' | 'float' | 'bool' | 'uint64'
   sizeParam?: string
+  lenParam?: string
 }
 
 export interface WirePolicyMethodEntry {
   helperFlat?: string
+  /** 53-14: arity (excluding self) of the Mac Steam's native flat function.
+   * A version whose game-side signature has fewer params gets the difference
+   * as `helperTrailingNullArgs` (NULL-filled helper-side, never sent). */
+  helperNativeArgs?: number
   params?: Record<string, WirePolicyParamOverride>
   helperFallback?: number | boolean
 }
@@ -555,11 +560,16 @@ export function applyWirePolicy(
         merged.valueType = override.valueType
       if (override.sizeParam !== undefined)
         merged.sizeParam = override.sizeParam
+      if (override.lenParam !== undefined) merged.lenParam = override.lenParam
       return merged
     })
 
     const wired: MethodSignature = { ...method, mode: 'wire', params }
     if (entry.helperFlat !== undefined) wired.helperFlat = entry.helperFlat
+    if (entry.helperNativeArgs !== undefined) {
+      const missing = entry.helperNativeArgs - params.length
+      if (missing > 0) wired.helperTrailingNullArgs = missing
+    }
     if (entry.helperFallback !== undefined)
       wired.helperFallback = entry.helperFallback
     return wired

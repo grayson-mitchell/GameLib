@@ -8,6 +8,27 @@
     },
     "GetSteamID": {
       "helperFlat": "SteamAPI_ISteamUser_GetSteamID"
+    },
+    "GetAuthSessionTicket": {
+      "helperFlat": "SteamAPI_ISteamUser_GetAuthSessionTicket",
+      "helperNativeArgs": 4,
+      "params": {
+        "pTicket": {
+          "kind": "out-buffer",
+          "sizeParam": "cbMaxTicket",
+          "lenParam": "pcbTicket"
+        },
+        "pcbTicket": {
+          "kind": "out-value",
+          "valueType": "uint32"
+        },
+        "pSteamNetworkingIdentity": {
+          "kind": "null-in"
+        }
+      }
+    },
+    "CancelAuthTicket": {
+      "helperFlat": "SteamAPI_ISteamUser_CancelAuthTicket"
     }
   },
   "SteamFriends": {
