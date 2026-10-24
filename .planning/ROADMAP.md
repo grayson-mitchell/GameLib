@@ -338,7 +338,7 @@ The locked boundary is unchanged.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 32/32 plans complete
+**Plans:** 32/35 plans complete
 
 Plans:
 
@@ -391,6 +391,11 @@ Plans:
 - [x] 52-30-PLAN.md — Gap 5 round-4 trace-first: pre-register the discriminating experiment + commit; harness SCORE/PID_ARM switches; arm A (no pid) relay trace, dialog text recaptured vs 52-25 R1, T1-T8 (UAT item 27)
 - [x] 52-31-PLAN.md — Arm B (clone-only pid -> live process) under the committed rule; two-arm score table; classify into pre-registered O1-O4 with its recommendation; no fix (UAT item 28)
 - [x] 52-32-PLAN.md — Operator decision over the class-bounded options (close-out + done-when amendment, pid-writer-next-round, or static RE); finalize UAT/deferred-items/todo; leave gaps_found (UAT item 29) Operator chose option-closeout (O1); done-when amended.
+
+**Gap closure 5** *(amended done-when, 52-UAT item 29; waves: 33+34 parallel, then 35 live)*
+- [ ] 52-33-PLAN.md — Forwarded-path SteamStub notice strings (steam.bridge.steamstub.forwardedTitle/forwardedBody) in all 49 gamelib catalogs; 52-06 strings unchanged
+- [ ] 52-34-PLAN.md — Honest notice on the forwarded SteamStub path: deterministic trigger (steamstub + forwarder placed), log every launch + notify once per session, no reroute, nothing answers the stub; trigger tests
+- [ ] 52-35-PLAN.md — Live: packaged Grim Dawn launch (HELLO + notice, item 30) and cx-log trace (no steam://run, item 31); settle item 2; close out UAT, deferred-items, todos, STATE
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
 
