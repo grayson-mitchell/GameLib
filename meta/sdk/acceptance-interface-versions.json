@@ -75,6 +75,11 @@
     "arches": ["x64"],
     "titles": ["411300"]
   },
+  "SteamClient014": {
+    "family": "SteamClient",
+    "arches": ["x64"],
+    "titles": ["411300"]
+  },
   "SteamUser019": {
     "family": "SteamUser",
     "arches": ["x64"],

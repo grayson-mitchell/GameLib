@@ -1689,4 +1689,71 @@ describe('gen_vtables', () => {
       expect(b).toMatch(/!=\s*g_gamelib_context_counter/)
     })
   })
+
+  describe('Phase 52: SteamClient forwarding manifests', () => {
+    const load = (file: string): InterfaceManifestV2 =>
+      JSON.parse(readFileSync(join(SDK_DIR, file), 'utf-8'))
+    const c17 = load('isteamclient017.manifest.json')
+    const c14 = load('isteamclient014.manifest.json')
+    const localOnly = new Set([
+      'SetWarningMessageHook',
+      'DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess',
+      'DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess',
+      'Set_SteamAPI_CCheckCallbackRegisteredInProcess',
+      'SetLocalIPBinding'
+    ])
+    const strip = (n: string) => n.replace(/^DEPRECATED_/, '')
+
+    it.each([
+      ['SteamClient017', c17],
+      ['SteamClient014', c14]
+    ])('%s is a wire manifest on helperInterface SteamClient', (_n, m) => {
+      expect(m.helperInterface).toBe('SteamClient')
+      expect(m.mode).toBe('wire')
+      expect(m.arches).toEqual(['x64'])
+      expect(JSON.stringify(m)).not.toContain('helperFallback')
+    })
+
+    it.each([
+      ['SteamClient017', c17],
+      ['SteamClient014', c14]
+    ])('%s forwards every method except the local-only set', (_n, m) => {
+      for (const method of m.methods) {
+        if (localOnly.has(method.name)) {
+          expect(method.mode).toBe('stub')
+          continue
+        }
+        expect(method.mode).toBe('wire')
+        expect(method.helperFlat).toBe(
+          `SteamAPI_ISteamClient_${strip(method.name)}`
+        )
+        for (const p of method.params) {
+          if (p.name === 'pchVersion') expect(p.kind).toBe('in-string')
+        }
+      }
+      const create = m.methods.find((x) => x.name === 'CreateLocalUser')!
+      const pipe = create.params.find((p) => p.name === 'phSteamPipe')!
+      expect(pipe.kind).toBe('out-value')
+      expect(pipe.valueType).toBe('int32')
+    })
+
+    it('SteamClient014 has 29 slots equal in shape to 017 slots 0-28', () => {
+      expect(c14.methods).toHaveLength(29)
+      for (let i = 0; i < 29; i++) {
+        const a = c14.methods[i]
+        const b = c17.methods[i]
+        expect(strip(a.name)).toBe(strip(b.name))
+        expect(a.returns).toBe(b.returns)
+        expect(a.params.length).toBe(b.params.length)
+      }
+    })
+
+    it('ordinals.json carries SteamClient014 without moving existing ordinals', () => {
+      const ords = JSON.parse(
+        readFileSync(join(SDK_DIR, 'ordinals.json'), 'utf-8')
+      )
+      expect(ords.SteamClient014).toBe(22)
+      expect(ords.SteamClient017).toBe(16)
+    })
+  })
 })

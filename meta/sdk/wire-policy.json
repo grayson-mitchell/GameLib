@@ -227,10 +227,234 @@
   },
   "SteamClient": {
     "CreateSteamPipe": {
-      "helperFallback": 1
+      "helperFlat": "SteamAPI_ISteamClient_CreateSteamPipe"
+    },
+    "BReleaseSteamPipe": {
+      "helperFlat": "SteamAPI_ISteamClient_BReleaseSteamPipe"
     },
     "ConnectToGlobalUser": {
-      "helperFallback": 1
+      "helperFlat": "SteamAPI_ISteamClient_ConnectToGlobalUser"
+    },
+    "CreateLocalUser": {
+      "helperFlat": "SteamAPI_ISteamClient_CreateLocalUser",
+      "params": {
+        "phSteamPipe": {
+          "kind": "out-value",
+          "valueType": "int32"
+        }
+      }
+    },
+    "ReleaseUser": {
+      "helperFlat": "SteamAPI_ISteamClient_ReleaseUser"
+    },
+    "GetISteamUser": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamUser",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamGameServer": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamGameServer",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamFriends": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamFriends",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamUtils": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamUtils",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamMatchmaking": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamMatchmaking",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamMatchmakingServers": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamMatchmakingServers",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamGenericInterface": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamGenericInterface",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamUserStats": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamUserStats",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamGameServerStats": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamGameServerStats",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamApps": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamApps",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamNetworking": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamNetworking",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamRemoteStorage": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamRemoteStorage",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamScreenshots": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamScreenshots",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "RunFrame": {
+      "helperFlat": "SteamAPI_ISteamClient_RunFrame"
+    },
+    "GetIPCCallCount": {
+      "helperFlat": "SteamAPI_ISteamClient_GetIPCCallCount"
+    },
+    "BShutdownIfAllPipesClosed": {
+      "helperFlat": "SteamAPI_ISteamClient_BShutdownIfAllPipesClosed"
+    },
+    "GetISteamHTTP": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamHTTP",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "DEPRECATED_GetISteamUnifiedMessages": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamUnifiedMessages",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamController": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamController",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamUGC": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamUGC",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamAppList": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamAppList",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamMusic": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamMusic",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamMusicRemote": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamMusicRemote",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamHTMLSurface": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamHTMLSurface",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamInventory": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamInventory",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamVideo": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamVideo",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamParentalSettings": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamParentalSettings",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
+    },
+    "GetISteamUnifiedMessages": {
+      "helperFlat": "SteamAPI_ISteamClient_GetISteamUnifiedMessages",
+      "params": {
+        "pchVersion": {
+          "kind": "in-string"
+        }
+      }
     }
   }
 }
