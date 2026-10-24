@@ -112,6 +112,15 @@ mod tests {
     }
 
     #[test]
+    fn backend_labels_are_the_wire_values() {
+        assert_eq!(
+            backend_label(NotificationBackend::UserNotifications),
+            "user-notifications"
+        );
+        assert_eq!(backend_label(NotificationBackend::Plugin), "plugin");
+    }
+
+    #[test]
     fn deliverable_statuses_pass() {
         for raw in [2, 3, 4] {
             assert_eq!(authorization_gate(auth_status_from_raw(raw), None), Ok(()));
