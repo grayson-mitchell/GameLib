@@ -292,16 +292,25 @@ function ensureHelperSpawned(
     settlePortOnce(port)
   }
 
+  // 53-REVIEW WR-03: the logger does not split multi-line messages, so a
+  // chunk logged whole carries the appid prefix on its first line only and the
+  // census (which reads gamelib.log) would see unattributed CALL lines. Log per
+  // line. A partial line split across two chunks is logged as two prefixed
+  // fragments, which is acceptable: each fragment carries the appid.
   child.stdout?.on('data', (data: Buffer) => {
-    logInfo(
-      `bridge helper [${appId}]: ${data.toString().trim()}`,
-      LogPrefix.Steam
-    )
+    for (const line of data.toString().split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed) {
+        logInfo(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
+      }
+    }
   })
   child.stderr?.on('data', (data: Buffer) => {
-    const text = data.toString()
-    logWarning(`bridge helper [${appId}]: ${text.trim()}`, LogPrefix.Steam)
-    for (const line of text.split('\n')) {
+    for (const line of data.toString().split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed) {
+        logWarning(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
+      }
       handleStderrLine(line)
     }
   })

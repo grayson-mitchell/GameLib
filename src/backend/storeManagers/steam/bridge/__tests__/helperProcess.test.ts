@@ -26,6 +26,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { sendFrontendMessage } from 'backend/ipc'
+import { logWarning } from 'backend/logger'
 import {
   steamBridgeHelperPath,
   steamBridgeHelperStateDir
@@ -583,6 +584,56 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
   })
 
   // ── Invariant (D-51-01 assumption_delta_decision, Task 2): the singleton
+  // 53-13 WR-03 (relay side): one log call per non-empty stderr line, each
+  // with its own appid prefix and no embedded newline.
+  test('stderr chunk of 3 lines -> 3 logWarning calls, each prefixed with the appid, none multi-line', () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    ;(logWarning as jest.Mock).mockClear()
+
+    void ensureBridgeHelperReady('42')
+    child.stderr.emit(
+      'data',
+      Buffer.from(
+        '[t1] HELLO  shim attached appid=42\n[t2] CALL   SteamUser023.GetSteamID\n[t3] CALL   SteamFriends017.GetPersonaName\n'
+      )
+    )
+
+    const messages = (logWarning as jest.Mock).mock.calls
+      .map((c) => c[0] as string)
+      .filter((m) => m.startsWith('bridge helper [42]: '))
+    expect(messages).toEqual([
+      'bridge helper [42]: [t1] HELLO  shim attached appid=42',
+      'bridge helper [42]: [t2] CALL   SteamUser023.GetSteamID',
+      'bridge helper [42]: [t3] CALL   SteamFriends017.GetPersonaName'
+    ])
+    for (const m of messages) expect(m).not.toContain('\n')
+  })
+
+  test('stderr chunk with blank lines logs no empty-message call, and LISTEN parsing still sees every line', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    ;(logWarning as jest.Mock).mockClear()
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    child.stderr.emit(
+      'data',
+      Buffer.from(
+        `\n  \n[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:55001 appid=999999 mode=full\n\n`
+      )
+    )
+    const messages = (logWarning as jest.Mock).mock.calls.map(
+      (c) => c[0] as string
+    )
+    expect(
+      messages.filter((m) => m.startsWith('bridge helper ['))
+    ).toHaveLength(1)
+    for (const m of messages) expect(m.trim().endsWith(': ')).toBe(false)
+    // handleStderrLine still ran: the mismatched appid LISTEN is rejected.
+    const result = await pending
+    expect(result.status).toBe('unreachable')
+  }, 10000)
+
   // helperProcess/unregisterLongLivedChild module state is DELETED, not
   // kept beside the registry. Matched against COMMENT-STRIPPED source
   // (repo grep-hygiene rule) so a prose mention in a docblock explaining
