@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
-stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
-last_updated: "2026-10-24T03:50:59.300Z"
+stopped_at: "Completed 52-18-PLAN.md (re-gate 9/10/12 issue, 11/13 pass; 52-UAT diagnosed; next: /gsd-plan-phase 52 --gaps)"
+last_updated: "2026-10-24T04:50:00.000Z"
 last_activity: 2026-10-24
 progress:
   total_phases: 3
@@ -72,8 +72,8 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 52 (bridge-backed-steamclient-dll-for-steamstub-titles) — EXECUTING
-Plan: 6 of 18
-Status: Ready to execute
+Plan: 18 of 18 executed (52-UAT diagnosed; gap closure needed)
+Status: Re-gate finished with issues; run /gsd-plan-phase 52 --gaps (pid-value investigation + ELEX Friends sign-out)
 Last activity: 2026-10-24
 
 Progress: [██████████] 98%

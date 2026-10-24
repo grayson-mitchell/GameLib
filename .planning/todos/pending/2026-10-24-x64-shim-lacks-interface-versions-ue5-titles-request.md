@@ -61,3 +61,9 @@ only `SteamInternal_GameServer_Init_V2`.
 
 Same UE class: Abiotic Factor (427410, Steamv157) and Ranch Simulator (1119730, Steamv161). Their
 version lists have not been read yet.
+
+## Note (2026-10-24, 52-18)
+
+52-13 now serves SteamUser023, SteamNetworking006 and STEAMREMOTESTORAGE_INTERFACE_VERSION016 on
+x64. In the requested-versions table above, the `SteamUser023`, `STEAMREMOTESTORAGE_INTERFACE_VERSION016`
+and `SteamNetworking006` rows are therefore no longer missing. The other rows are unchanged by 52-13.

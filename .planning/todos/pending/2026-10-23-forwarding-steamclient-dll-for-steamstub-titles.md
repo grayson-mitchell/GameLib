@@ -106,3 +106,19 @@ STEAMREMOTESTORAGE_INTERFACE_VERSION016, named by Engine.dll) and direct-launche
 forwarder, no helper, no drmWrapper and no notice; the game exits after 2 s (operator: failing
 silently). The stale 223744-byte shim stays in the bottle. See 52-UAT.md Gaps 1-4; a gap-closure
 plan (`/gsd-plan-phase 52 --gaps`) should make the withhold decision SteamStub-aware.
+
+## Re-gate evidence (52-17/52-18, 2026-10-24)
+
+Not closed: items 9 and 10 are `issue`, so the strict rule is not met. See `52-UAT.md` in
+`.planning/phases/52-bridge-backed-steamclient-dll-for-steamstub-titles/`.
+
+- Item 9 (issue): Grim Dawn, forwarder placed, HELLO plus `FWD CreateInterface` SteamClient017/014
+  native=present, yet the operator saw Application Load Error 3 twice and no main menu. No notice shown.
+- Item 10 (issue): game Steam init logged `SteamAPI_IsSteamRunning() did not locate a running
+  instance of Steam` after two reads of the absent ActiveProcess `pid`. Not bridge-verified.
+- Item 11 (pass): bottle hygiene clean.
+- Item 12 (issue): ELEX (411300) reached its loading screen and hung (baseline), HELLO present, no
+  `[bridge-steamstub]` line, no error dialog; but the operator's Mac Steam Friends was signed in
+  before and signed out after. Cause unknown. Not bridge-verified.
+- Item 13: operator chose option-c, investigate first, no pid writer yet (what the stub does with the
+  `pid` value, plus the ELEX Friends sign-out). Next step: `/gsd-plan-phase 52 --gaps`.

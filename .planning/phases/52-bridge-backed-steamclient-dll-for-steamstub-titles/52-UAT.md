@@ -1,5 +1,5 @@
 ---
-status: testing
+status: diagnosed
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -12,7 +12,7 @@ source:
   - 52-08-SUMMARY.md
   - 52-09-SUMMARY.md
 started: 2026-10-24T01:41:00Z
-updated: 2026-10-24T02:50:00Z
+updated: 2026-10-24T04:45:00Z
 ---
 
 Authored by plan 52-10, run by 52-11 (discovery rounds, items 1-5) and 52-12 (done-when, items 6-8).
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-item 12 (re-gate 52-18; items 9-11 scored by 52-17); items 6-8 keep their 52-12 results as history
+complete: re-gate items 9-13 scored by 52-17/52-18
 
 ## Tests
 
@@ -219,11 +219,11 @@ result: pass — read-only after `wineserver -k` on GameLibSteamBridge-219990 (t
 
 ### 12. Re-gate — ELEX (411300) no-regression after CR-01
 expected: GameLib launch of ELEX through GameLibSteamBridge-411300; gamelib.log has `HELLO shim attached appid=411300` and no `[bridge-steamstub]` line for 411300; no "not subscribed" error and ELEX reaches at least its loading screen (51-UAT item 15 baseline, knownBad does-not-run); any game log checked for Steam-init failures; pass means no regression, bridge-verified recorded separately and expected to stay unverified.
-result: pending
+result: issue — all three plan pass conditions held but the operator reports a Mac Steam side effect the baseline never recorded, and it is not explained (GameLib pid 42642, debug bundle, GATE LAUNCH R2 2026-10-24T03:51:42Z; log /tmp/gamelib-gate-52r-20261024T033525Z/gamelib-relaunch-2.log, 99 lines, copied after quit). Operator, verbatim: "opened elex, steam signed me out of friends... I did check before I launched ELEX and again when writing this update.  gets to the loading screen and hangs there as expected.  quit game and gamelib". Error dialog: none reported. Furthest screen: loading screen, hangs (matches the 51-UAT item 15 baseline). In-Game: not reported (never counts). Log checks: `HELLO  shim attached appid=411300` at 17:34:02 (:81, local clock; helper stamp 04:34:02Z); `placeShimForGame: overwrote steam_api64.dll for appId 411300 ... (10 imported symbol(s) covered)` at :69; `[bridge-steamstub]` count 0 and no `drmWrapper=steamstub` (CR-01 gating held: ELEX did not take the forwarder path); helper log for 411300 has only LISTEN (`127.0.0.1:51593 appid=411300 mode=full`), `INIT   SteamAPI ready (single InitFlat call, real appid=411300)` and HELLO, so there are no FWD, CreateInterface or GetISteam* lines; `bottleProcessMonitor [411300]: matched process(es) gone after 155s of play` (:88). No game-written log files under the 411300 bottle newer than elex-marker (find: none), so no game Steam-init log exists. Friends sign-out: the log contains no line that names Friends, persona, logoff, kicked or LoggedInElsewhere. The only account-session events in the run are (a) GameLib's own steam-user `SteamUser.loggedOn: cellID=22` and `cold-connect path took 1146ms` at 17:33:59 (:65, :67), logged on from the keyring refresh token one second after the Play click (`keyring_get ok present=true ... trigger=user-play`, :60-62), and (b) the helper's `SteamAPI_Init` against the Mac `steamclient.dylib` at 17:34:00 (:72-75). The same steam-user logon happened before the Grim Dawn launches (R1 `SteamUser.loggedOn` at 16:37:31), but the operator was not asked about Friends then, so there is no comparison. CAUSE UNKNOWN: the evidence does not show which of (a), (b) or something outside GameLib signed Friends out, and it is not established that CR-01 or the bridge path is involved. Scored issue because "no worse than the baseline" cannot be shown when a visible Steam sign-out happened and the baseline recorded none. Bridge-verified: no (HELLO present, no game Steam-init log; In-Game never counts). See Gaps 5.
 
 ### 13. Re-gate — pid decision (revisits decision 1)
 expected: `skipped — no IsSteamRunning warning` if item 10 is clean; otherwise the operator's decision and its evidence.
-result: pending
+result: pass — operator chose option-c (investigate first, no pid writer yet), recorded 2026-10-24. Evidence shown: item 10 IsSteamRunning warning count 1 (round-regate.cxlog:23313), two `RegQueryValueExW L"pid"` reads (:23303, :23311) before it, item 9 Application Load Error 3 after a clean HELLO/FWD with nothing logged after the two FWD lines, main menu never observed. Investigation scope per operator: what the SteamStub check does with the ActiveProcess `pid` value, AND the ELEX Mac Steam Friends sign-out (item 12). Next step: run /gsd-plan-phase 52 --gaps. No pid writer exists in the repo.
 
 ## Structural Reachability Review
 
@@ -273,9 +273,9 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 8
-passed: 2
-issues: 3
+total: 13
+passed: 4
+issues: 6
 pending: 1
 skipped: 2
 blocked: 0
@@ -302,3 +302,15 @@ blocked: 0
   reason: "The withheld path neither restores the original steam_api64.dll nor refreshes the shim, leaving the 223744-byte shim that has no helper behind it."
   evidence: "item 8: x64/steam_api64.dll 223744 bytes after three launches; the warning `leaving the GameLib shim in place` each time."
   fix_direction: "On withhold, restore the original (or fail with guidance to verify files in Steam) rather than leaving a helper-less shim; refresh to current SHIM64 if the shim is kept."
+
+- truth: "A SteamStub title (Grim Dawn 219990) launched through the forwarder reaches its main menu with a clean Steam-init log"
+  status: failed
+  reason: "Re-gate items 9 and 10: the forwarder is placed and the helper answers HELLO plus SteamClient017/014 natively, yet Grim Dawn shows Application Load Error 3 (item 9) and its Steam init logs `SteamAPI_IsSteamRunning() did not locate a running instance of Steam` after two `pid` reads of the absent ActiveProcess value (item 10). Operator chose option-c on item 13: investigate first, no pid writer yet."
+  evidence: "52-UAT items 9, 10, 13; round-regate.cxlog:23303/:23311/:23313; helper log HELLO + two FWD lines and nothing after."
+  fix_direction: "Investigate first: what the SteamStub check does with the ActiveProcess `pid` value (existence, OpenProcess, process-name check) and why Load Error 3 follows a clean HELLO/FWD; also the ELEX Friends sign-out (Gap 5). Next step: run /gsd-plan-phase 52 --gaps. Any pid writer needs its own plan and boundary review."
+
+- truth: "Launching ELEX (411300) through the bridge leaves the user's Mac Steam session (Friends) signed in"
+  status: failed
+  reason: "Item 12: the operator checked Friends signed in before launch and signed out afterwards, with ELEX reaching only its loading screen (baseline). No log line explains it; cause unknown. Candidates present in the log but unproven: GameLib's steam-user logon on Play (17:33:59) and the helper's SteamAPI_Init against the Mac client (17:34:00). Not shown to be caused by CR-01 (no forwarder path, no FWD lines for 411300)."
+  evidence: "gamelib-relaunch-2.log:60-67, :71-75, :81; operator verbatim in item 12; /tmp/gamelib-gate-52r-20261024T033525Z/."
+  fix_direction: "Include in the item-13 investigation (run /gsd-plan-phase 52 --gaps): repeat with Friends state checked before and after (a) Play with the bridge disabled, (b) the steam-user logon alone, (c) helper alone, on a non-ELEX title, to attribute the sign-out. Do not guess a cause before that."
