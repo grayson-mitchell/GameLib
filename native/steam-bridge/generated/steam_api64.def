@@ -30,6 +30,7 @@ SteamInternal_FindOrCreateUserInterface
 SteamInternal_FindOrCreateGameServerInterface
 SteamInternal_GameServer_Init_V2
 GameLibBridge_CreateInterface
+SteamAPI_SteamUser_v023
 SteamAPI_SteamUserStats_v011
 SteamAPI_SteamMatchMaking_v009
 SteamAPI_SteamMatchMakingServers_v002
@@ -41,6 +42,8 @@ SteamAPI_SteamUtils_v008
 SteamAPI_SteamApps_v008
 SteamAPI_SteamRemoteStorage_v013
 SteamAPI_SteamClient_v014
+SteamAPI_SteamNetworking_v006
+SteamAPI_SteamRemoteStorage_v016
 SteamApps
 SteamClient
 SteamFriends

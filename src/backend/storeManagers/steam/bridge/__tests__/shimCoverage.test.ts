@@ -637,7 +637,8 @@ describe('isScanVerdictNowCovered is arch-scoped (CR-01)', () => {
     ['x86', 'SteamInternal_CreateInterface', false],
     ['x64', 'SteamInternal_CreateInterface', true],
     ['x86', 'SteamUser019', false],
-    ['x64', 'SteamUser023', false],
+    ['x64', 'SteamUser023', true],
+    ['x64', 'SteamUser021', false],
     ['x86', 'SteamUser016', true],
     ['x86', 'SteamUser@unknown-version', false]
   ]
@@ -824,5 +825,40 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
         }
       })
     ).toEqual(['SteamUtils010', 'SteamFriends017'])
+  })
+})
+
+describe('Grim Dawn (219990) x64 acceptance (52-13)', () => {
+  test('the three measured x64 versions are all servable', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: [
+          'SteamInternal_CreateInterface',
+          'SteamInternal_FindOrCreateUserInterface',
+          'SteamAPI_RunCallbacks'
+        ],
+        requiredInterfaceVersions: {
+          SteamUser: 'SteamUser023',
+          SteamNetworking: 'SteamNetworking006',
+          SteamRemoteStorage: 'STEAMREMOTESTORAGE_INTERFACE_VERSION016'
+        }
+      })
+    ).toEqual([])
+  })
+
+  test('SteamUser023 is wire, the other two are stub on x64', () => {
+    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamUser023')).toEqual({
+      family: 'SteamUser',
+      mode: 'wire'
+    })
+    expect(
+      SHIM64_SERVED_INTERFACE_VERSIONS.get('SteamNetworking006')?.mode
+    ).toBe('stub')
+    expect(
+      SHIM64_SERVED_INTERFACE_VERSIONS.get(
+        'STEAMREMOTESTORAGE_INTERFACE_VERSION016'
+      )?.mode
+    ).toBe('stub')
   })
 })

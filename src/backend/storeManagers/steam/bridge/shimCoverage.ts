@@ -175,6 +175,7 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'GameLibBridge_CreateInterface',
   // 261021-pgx (shared x86/x64): STEAMUSERSTATS_INTERFACE_VERSION011's
   // arches widened to ['x86','x64'] this plan -- served on both.
+  'SteamAPI_SteamUser_v023',
   'SteamAPI_SteamUserStats_v011',
   // The three shared stub manifests (51-14), arches widened to
   // ['x86','x64'] this plan.
@@ -184,6 +185,8 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   // 51-15: ELEX's (411300) own measured Win64-only interface set.
   'SteamAPI_SteamClient_v017',
   'SteamAPI_SteamClient_v014',
+  'SteamAPI_SteamNetworking_v006',
+  'SteamAPI_SteamRemoteStorage_v016',
   'SteamAPI_SteamUser_v019',
   'SteamAPI_SteamFriends_v015',
   'SteamAPI_SteamUtils_v008',
@@ -315,7 +318,18 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
     'SteamMatchMakingServers002',
     { family: 'SteamMatchMakingServers', mode: 'stub' }
   ],
-  ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }]
+  ['SteamNetworking005', { family: 'SteamNetworking', mode: 'stub' }],
+  // Phase 52 gap closure 52-13: Grim Dawn (219990) x64/Engine.dll names these
+  // three versions. SteamUser023 is wire: the exact native accessor
+  // SteamAPI_SteamUser_v023 backs it with the same dispatch as the x86 entry.
+  // The other two are stub (51-14 sub-decision 1: cloud disabled, P2P
+  // unavailable).
+  ['SteamUser023', { family: 'SteamUser', mode: 'wire' }],
+  ['SteamNetworking006', { family: 'SteamNetworking', mode: 'stub' }],
+  [
+    'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+    { family: 'SteamRemoteStorage', mode: 'stub' }
+  ]
 ])
 
 // 51-15: D-51-13 GO -- the Win64 shim answers an unserved required
