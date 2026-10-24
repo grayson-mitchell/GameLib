@@ -20,3 +20,10 @@ ready: human
 **GameLib today.** The forwarded path logs the trigger and shows an honest "Steam DRM check not supported" notice, as an OS notification and as an in-app dialog (52-34, 52-36; confirmed live in item 32).
 
 **Revisit trigger.** re-scope the notice if any SteamStub title is ever observed reaching its menu through the bridge.
+
+## 53-15 evidence (2026-10-25)
+
+More SteamStub titles hit the same wall through the bridge, none reaching their menu:
+
+- Raft 648800 and Grim Dawn 219990 (53-UAT item 11): census class `steamstub-forwarded:launch-check-unsatisfiable`, FWD CreateInterface only, operator "drm message shows, error message: Application load error." (Raft) and "DRM message in app, error: application failed error" (Grim Dawn).
+- Ranch Simulator 1119730 (53-15 Task 1): the Shipping exe has a `.bind` section (0x39248 bytes, last section) and exits 53 (0x35) before steam_api64.dll is ever loaded. The result is identical with the game's original `steam_api64.dll.gamelib-orig`, so the shim is not involved. Operator re-test on the current build: "other two do not [run], think they have not changed". Not rerouted to bottled Steam; the decision stays with this todo.

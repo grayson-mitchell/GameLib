@@ -49,3 +49,7 @@ line; this todo is unblocked the first time that count is above 0.
   `SteamInternal_FindOrCreateGameServerInterface`, `SteamInternal_GameServer_Init`,
   `SteamInternal_GameServer_Init_V2`, `SteamInternal_CreateInterface`)
 - the flat exports, dispatching via `__thiscall` into the proxy vtable
+
+## 53-15 evidence: Avernum 6 206060 (2026-10-25)
+
+Avernum 6 (x86) connects (HELLO y) but no game-originated wire CALL is traced (CALL 0; none in this session's gamelib.log), census `unverified (no game-originated call)`, operator "full pass". Its Steam calls therefore land on x86 stubs or non-wire paths. Verifying it needs x86 wire coverage of an identity call (SteamUser.GetSteamID or BLoggedOn) plus one more call. The strict verified criterion is not loosened for this title; In-Game never counts.

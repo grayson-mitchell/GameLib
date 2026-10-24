@@ -59,7 +59,9 @@ unparsed means "treated as not CEG"), not a size cap. Fixed in Task 3.
 Cause: Godot 4.4 calls an unchecked NULL NvAPI function pointer under CrossOver's builtin
 `nvapi64.dll` stub. Bottle runtime gap (no usable NvAPI), not the shim.
 
-Disposition: pending Task 3
+Disposition: todo — .planning/todos/pending/2026-10-25-overlooting-godot-null-call-before-shim.md
+
+Side fix (scanner bug, not the crash): `fix(53-15)` commit 0a933329a sizes PE sections by VirtualSize so `pck` no longer shadows `.rsrc`.
 
 ## 1119730 Ranch Simulator
 
@@ -83,10 +85,29 @@ Cause: SteamStub `.bind` wrapper self-terminates (launch check with no Steam cli
 bridge code runs. Phase 52 scope (the SteamStub launch-check todo), not a shim defect. Not rerouted
 to bottled Steam.
 
-Disposition: pending Task 3
+Disposition: todo — .planning/todos/pending/2026-10-24-steamstub-launch-check-static-re-decision.md (appended; Phase 52 scope, no new todo)
 
 ## 1691190 Rogue Waters
 
-Re-trace pending Task 2 (operator live re-run on the current packaged build) and Task 3 scoring.
+Re-run live on the 53-12/53-14 shim (shim 497664 bytes, operator launch 12:33). Operator verbatim: "rogue waters runs, other two do not, think they have not changed".
 
-Disposition: pending Task 3
+Evidence (Player.log, current, 500 lines; gamelib.log `bridge helper [1691190]`):
+
+```
+Steam API initialized
+Steam AppId: 1691190
+HELLO  shim attached appid=1691190
+CALL   SteamUtils010.GetAppID
+CALL   SteamUser021.GetSteamID
+CALL   STEAMAPPS_INTERFACE_VERSION008.GetCurrentGameLanguage
+CALL   STEAMAPPS_INTERFACE_VERSION008.BIsDlcInstalled
+CALL   STEAMUSERSTATS_INTERFACE_VERSION012.StoreStats
+```
+
+No `SteamAPI_Init() failed` and no NOVER line in Player.log or gamelib.log for 1691190. The earlier first fault (STEAMSCREENSHOTS_INTERFACE_VERSION003 miss, SteamUtils009, SteamController006) is gone.
+
+Discriminator: not applicable (the shim is exercised and works).
+
+Cause: fixed by the 53-12 Init-chain coverage; no residual fault. Meets the strict criterion: HELLO plus a clean game Steam-init log, with game-originated CALLs. (Census re-run is 53-16.)
+
+Disposition: fixed — 53-12 (no 53-15 code change; no todo needed)
