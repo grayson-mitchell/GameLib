@@ -45,6 +45,10 @@
 // is a GameLib per-appId helper before any real interface call is issued.
 #define BRIDGE_CONTROL_ORDINAL 0xffff
 #define BRIDGE_CONTROL_SLOT_HELLO 2
+// Phase 52 (52-02): protocol.ts CONTROL_SLOT.createInterface == helper
+// CONTROL_SLOT_CREATE_INTERFACE. Asks the native client whether it accepts an
+// interface version (reply: 4-byte LE int32 present).
+#define BRIDGE_CONTROL_SLOT_CREATE_INTERFACE 3
 
 // CR-01: byte capacity of each string-returning stub's shim-owned static
 // return buffer -- emitted directly from the generator's
@@ -8682,6 +8686,28 @@ int SteamInternal_GameServer_Init_V2(uint32_t unIP, uint16_t usGamePort, uint16_
   (void)unIP; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString; (void)pszInternalCheckInterfaceVersions;
   if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: game server mode is not supported");
   return 1;
+}
+void *GameLibBridge_CreateInterface(const char *pszName, int *pRc) {
+  static int s_hello_sent = 0;
+  static uint8_t s_req[4 + 4096];
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (pRc != NULL) *pRc = 1;
+  if (pszName == NULL) return NULL;
+  size_t n = strlen(pszName);
+  if (n > 4096) return NULL;
+  if (!s_hello_sent) {
+    uint8_t hb[1]; uint32_t hl = 0;
+    if (bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, hb, sizeof(hb), &hl)) s_hello_sent = 1;
+  }
+  s_req[0] = (uint8_t)(n & 0xff); s_req[1] = (uint8_t)((n >> 8) & 0xff); s_req[2] = (uint8_t)((n >> 16) & 0xff); s_req[3] = (uint8_t)((n >> 24) & 0xff);
+  memcpy(s_req + 4, pszName, n);
+  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_CREATE_INTERFACE, s_req, (uint32_t)(4 + n), retbuf, sizeof(retbuf), &retlen)) return NULL;
+  if (retlen != 4) return NULL;
+  uint32_t present = (uint32_t)retbuf[0] | ((uint32_t)retbuf[1] << 8) | ((uint32_t)retbuf[2] << 16) | ((uint32_t)retbuf[3] << 24);
+  if (present == 0) return NULL;
+  void *p = resolve_iface_by_exact_version(pszName);
+  if (pRc != NULL) *pRc = p != NULL ? 0 : 1;
+  return p;
 }
 #endif
 

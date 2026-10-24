@@ -171,6 +171,8 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamInternal_FindOrCreateUserInterface',
   'SteamInternal_FindOrCreateGameServerInterface',
   'SteamInternal_GameServer_Init_V2',
+  // Phase 52 (52-07): SteamStub-path entry the steamclient64 forwarder calls.
+  'GameLibBridge_CreateInterface',
   // 261021-pgx (shared x86/x64): STEAMUSERSTATS_INTERFACE_VERSION011's
   // arches widened to ['x86','x64'] this plan -- served on both.
   'SteamAPI_SteamUserStats_v011',
