@@ -338,7 +338,7 @@ The locked boundary is unchanged.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 31/32 plans executed
+**Plans:** 32/32 plans complete
 
 Plans:
 
@@ -390,7 +390,7 @@ Plans:
 - [x] 52-29-PLAN.md — 52-REVIEW gap-closure-3 hardening: WR-01 .rc existence guard, WR-02 argv-order test pin, IN-01 doc comment (forwarder bytes untouched)
 - [x] 52-30-PLAN.md — Gap 5 round-4 trace-first: pre-register the discriminating experiment + commit; harness SCORE/PID_ARM switches; arm A (no pid) relay trace, dialog text recaptured vs 52-25 R1, T1-T8 (UAT item 27)
 - [x] 52-31-PLAN.md — Arm B (clone-only pid -> live process) under the committed rule; two-arm score table; classify into pre-registered O1-O4 with its recommendation; no fix (UAT item 28)
-- [ ] 52-32-PLAN.md — Operator decision over the class-bounded options (close-out + done-when amendment, pid-writer-next-round, or static RE); finalize UAT/deferred-items/todo; leave gaps_found (UAT item 29) Operator chose option-closeout (O1); done-when amended.
+- [x] 52-32-PLAN.md — Operator decision over the class-bounded options (close-out + done-when amendment, pid-writer-next-round, or static RE); finalize UAT/deferred-items/todo; leave gaps_found (UAT item 29) Operator chose option-closeout (O1); done-when amended.
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
 
