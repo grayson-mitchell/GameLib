@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 16/18 plans executed
+**Plans:** 17/18 plans executed
 
 Plans:
 
@@ -357,7 +357,7 @@ Plans:
 - [x] 52-15-PLAN.md — drmWrapper on withheld results (fresh steamstub|none, exeArch); withhold only when restorable, else refresh the stale shim as placed-miss
 - [x] 52-14-PLAN.md — CR-01: null-object fallback for ordinary x64 GetISteam*, forwarding only after GameLibBridge_CreateInterface; generated-source pin
 - [x] 52-16-PLAN.md — Withheld SteamStub notice; WR-01 bounded wait:false reg add, WR-02 strict exit code, WR-03 PE arch, WR-04 fresh drmWrapper; defer WR-05..08
-- [ ] 52-17-PLAN.md — Packaged re-gate: Grim Dawn launch, cx-log trace with strict Steam-init check, bottle hygiene (UAT items 9-11)
+- [x] 52-17-PLAN.md — Packaged re-gate: Grim Dawn launch, cx-log trace with strict Steam-init check, bottle hygiene (UAT items 9-11)
 - [ ] 52-18-PLAN.md — ELEX no-regression check (item 12), conditional pid decision (item 13), finalize UAT and todos
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
