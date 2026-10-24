@@ -2016,6 +2016,70 @@ describe('shimGenerate', () => {
       )
       expect(existsSync(shim64DestPath() + BACKUP)).toBe(false)
     })
+
+    // WR-11: with no steam_api on disk there is nothing to fall back to.
+    const noDllExe = (versions: string) => {
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(
+        gameExePath,
+        Buffer.concat([pe, Buffer.from(` ${versions} `, 'latin1')])
+      )
+      writeFileSync(realShim64SourcePath, MARK_X64)
+    }
+    const expectNoFallbackLog = () => {
+      const warnings = allWarnings()
+      expect(warnings.some((m) => m.includes("game's own steam_api"))).toBe(
+        false
+      )
+      expect(warnings.some((m) => m.includes('cannot withhold'))).toBe(false)
+      expect(existsSync(shim64DestPath() + BACKUP)).toBe(false)
+    }
+
+    it('static import, no dll on disk, unservable version -> placed-miss, no own-steam_api warning', async () => {
+      noDllExe('SteamUser019 SteamFriends017')
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x64',
+        symbols: ['SteamAPI_Init', 'SteamInternal_CreateInterface']
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath
+      })
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toContain('SteamFriends017')
+      }
+      expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(MARK_X64)
+      expectNoFallbackLog()
+    })
+
+    it('delay-imported miss, no dll on disk -> placed-miss', async () => {
+      noDllExe('SteamUser019 SteamFriends015')
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x64',
+        symbols: [
+          'SteamAPI_Init',
+          'SteamInternal_CreateInterface',
+          'SteamAPI_Bogus'
+        ],
+        delaySymbols: ['SteamAPI_Bogus']
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath
+      })
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toContain('SteamAPI_Bogus')
+      }
+      expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(MARK_X64)
+      expectNoFallbackLog()
+    })
   })
 
   describe('Phase 52 Plan 08: SteamStub .bind detection', () => {
