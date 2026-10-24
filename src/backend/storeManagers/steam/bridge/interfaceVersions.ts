@@ -251,6 +251,83 @@ export async function readInterfaceVersionStrings(
   }
 }
 
+/**
+ * Phase 53-02: the managed-assembly variant of `parseInterfaceVersionStrings`.
+ * Steamworks.NET compiles its interface-version constants into the assembly as
+ * UTF-16LE literals, which the latin1 scan cannot see (it reads `S\0t\0e\0`).
+ * Decodes at both byte parities so an odd-aligned literal is still found.
+ */
+export function parseInterfaceVersionStringsUtf16(bytes: Buffer): string[] {
+  const found = new Set<string>()
+  for (const start of [0, 1]) {
+    const text = bytes.subarray(start).toString('utf16le')
+    for (const match of text.matchAll(VERSION_STRING_PATTERN)) {
+      found.add(match[1])
+    }
+  }
+  return Array.from(found).sort()
+}
+
+// Even, so the UTF-16 carry keeps code-unit alignment relative to the chunk.
+const MANAGED_OVERLAP_BYTES = 192
+
+/**
+ * Chunked UTF-16 scan of a managed assembly (same 1 MiB chunks and 512 MiB cap
+ * as `readInterfaceVersionStrings`). Never throws; an unreadable or oversized
+ * file reads as no versions.
+ */
+export async function readManagedInterfaceVersionStrings(
+  filePath: string,
+  opts?: { maxBytes?: number }
+): Promise<string[]> {
+  const maxBytes = opts?.maxBytes ?? DEFAULT_MAX_BYTES
+  let handle
+  try {
+    const stats = await stat(filePath)
+    if (stats.size > maxBytes) return []
+    handle = await open(filePath, 'r')
+    const fileSize = stats.size
+    const found = new Set<string>()
+    let position = 0
+    let carry = Buffer.alloc(0)
+    while (position < fileSize) {
+      const toRead = Math.min(CHUNK_SIZE, fileSize - position)
+      const chunk = Buffer.alloc(toRead)
+      const { bytesRead } = await handle.read(chunk, 0, toRead, position)
+      if (bytesRead === 0) break
+      const combined = Buffer.concat([carry, chunk.subarray(0, bytesRead)])
+      for (const v of parseInterfaceVersionStringsUtf16(combined)) found.add(v)
+      carry = combined.subarray(
+        Math.max(0, combined.length - MANAGED_OVERLAP_BYTES)
+      )
+      position += bytesRead
+    }
+    return Array.from(found).sort()
+  } catch {
+    return []
+  } finally {
+    await handle?.close()
+  }
+}
+
+/**
+ * Resolved open question 2: when a Mono title's Managed dir supplied any
+ * interface-version constants they ALONE form the request pool. The original
+ * Valve steam_api64.dll carries many versions per family and would make every
+ * family `@ambiguous`.
+ */
+export function selectInterfaceVersionPool(input: {
+  managedVersions: string[] | null
+  dllVersions: string[]
+  exeVersions: string[]
+}): { dllVersions: string[]; exeVersions: string[] } {
+  const { managedVersions, dllVersions, exeVersions } = input
+  if (managedVersions && managedVersions.length > 0) {
+    return { dllVersions: [], exeVersions: managedVersions }
+  }
+  return { dllVersions, exeVersions }
+}
+
 type RequiredInterfaceVersionsResult = {
   required: Record<string, string>
   problems: string[]

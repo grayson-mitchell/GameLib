@@ -11,6 +11,9 @@ import {
   BARE_ACCESSOR_FAMILY,
   familyOfInterfaceVersion,
   parseInterfaceVersionStrings,
+  parseInterfaceVersionStringsUtf16,
+  readManagedInterfaceVersionStrings,
+  selectInterfaceVersionPool,
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
   usesRuntimeInterfaceLookup
@@ -248,6 +251,81 @@ describe('interfaceVersions', () => {
       ).resolves.toMatchObject({
         status: 'error'
       })
+    })
+  })
+  describe('managed (UTF-16) interface versions', () => {
+    const utf16 = Buffer.from('xxSteamUser023\0SteamClient021', 'utf16le')
+
+    it('finds UTF-16 constants, including at odd alignment', () => {
+      expect(parseInterfaceVersionStringsUtf16(utf16)).toEqual([
+        'SteamClient021',
+        'SteamUser023'
+      ])
+      const shifted = Buffer.concat([Buffer.from([0x41]), utf16])
+      expect(parseInterfaceVersionStringsUtf16(shifted)).toEqual([
+        'SteamClient021',
+        'SteamUser023'
+      ])
+    })
+
+    it('the latin1 scan cannot see them (Pitfall 2)', () => {
+      expect(parseInterfaceVersionStrings(utf16)).toEqual([])
+    })
+
+    it('finds a UTF-16 version straddling a chunk boundary', async () => {
+      const root = mkdtempSync(join(tmpdir(), 'gamelib-managedver-test-'))
+      try {
+        const chunkSize = 1024 * 1024
+        const marker = Buffer.from('SteamUser023', 'utf16le')
+        const content = Buffer.concat([
+          Buffer.alloc(chunkSize - 10, 0x41),
+          marker,
+          Buffer.alloc(200, 0x42)
+        ])
+        const filePath = join(root, 'managed.bin')
+        writeFileSync(filePath, content)
+        expect(await readManagedInterfaceVersionStrings(filePath)).toEqual([
+          'SteamUser023'
+        ])
+        expect(
+          await readManagedInterfaceVersionStrings(filePath, { maxBytes: 10 })
+        ).toEqual([])
+      } finally {
+        rmSync(root, { recursive: true, force: true })
+      }
+    })
+
+    it('selectInterfaceVersionPool: managed constants alone when present', () => {
+      expect(
+        selectInterfaceVersionPool({
+          managedVersions: ['SteamClient021'],
+          dllVersions: ['SteamClient017', 'SteamClient020'],
+          exeVersions: ['x']
+        })
+      ).toEqual({ dllVersions: [], exeVersions: ['SteamClient021'] })
+      for (const managedVersions of [null, []]) {
+        expect(
+          selectInterfaceVersionPool({
+            managedVersions,
+            dllVersions: ['a'],
+            exeVersions: ['b']
+          })
+        ).toEqual({ dllVersions: ['a'], exeVersions: ['b'] })
+      }
+    })
+
+    it('Hell Clock managed constants resolve SteamClient021 unambiguously', () => {
+      const pool = selectInterfaceVersionPool({
+        managedVersions: ['SteamClient021', 'SteamUser023', 'SteamFriends017'],
+        dllVersions: ['SteamClient017', 'SteamClient020'],
+        exeVersions: []
+      })
+      const r = resolveRequiredInterfaceVersions({
+        importedSymbols: ['SteamClient'],
+        ...pool
+      })
+      expect(r.required.SteamClient).toBe('SteamClient021')
+      expect(r.problems).toEqual([])
     })
   })
 })
