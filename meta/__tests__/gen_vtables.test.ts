@@ -1875,7 +1875,7 @@ describe('gen_vtables', () => {
         'vt_SteamClient017_GetISteamUtils',
         'vt_SteamClient014_GetISteamMatchmaking'
       ]) {
-        const b = fnBody(committed, `${name}(void`)
+        const b = fnBody(committed, name)
         expect(b).toContain(FLAG)
         expect(b).toContain('(void *)&g_x64_null_object_instance')
       }
