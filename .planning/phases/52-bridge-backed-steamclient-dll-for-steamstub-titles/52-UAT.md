@@ -12,7 +12,7 @@ source:
   - 52-08-SUMMARY.md
   - 52-09-SUMMARY.md
 started: 2026-10-24T01:41:00Z
-updated: 2026-10-24T07:40:00Z
+updated: 2026-10-24T09:00:00Z
 ---
 
 Authored by plan 52-10, run by 52-11 (discovery rounds, items 1-5) and 52-12 (done-when, items 6-8).
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-diagnosis 4 complete: items 27-28 by 52-30/52-31; next 52-32 operator decision
+round 4 complete: items 27-29 by 52-30/52-31/52-32; operator chose option-closeout (amended done-when approved); next /gsd-verify-phase 52 to re-verify as amended
 
 ## Tests
 
@@ -287,6 +287,26 @@ result: pass — session /tmp/gamelib-gate-52u-20261024T080006Z, PREREG 08064e3f
 expected: arm B ran with a clone-only pid against the committed rule, both arms are scored into one table, the result is classified into exactly one pre-registered O1-O4, the product is unchanged, and the recommendation is the one that class carries (no fix implemented).
 result: pass — session /tmp/gamelib-gate-52v-20261024T080546Z; the Pre-registration section was byte-equal to PREREG 08064e3f1 before the run. `ROUND=diag5b MODE=trace SCORE=1 PID_ARM=live WATCH=90`, anchor notepad.exe Windows PID 248 written as clone-only pid 0xf8; V1/V2/V3/V4b hold, product P1-P6 equal and still no pid. Score arm A to arm B: W 1 to 0, M 1/1, D identical (`Application load error 3:0000065432`), L alive/alive, S 0/0, H 1/1, R 2/2, P 2/2, K 0/0. The stub now opens pid 0xf8 and calls GetExitCodeProcess (cxlog:6875-6880, 6900-6905) and the IsSteamRunning warning is gone, but the same dialog follows the same whole-file forwarder read (cxlog:7135). Class O1: the file/forwarder check is the blocker; recommend close-out (honest SteamStub notice plus ROADMAP done-when amendment draft, or static RE at the operator's choice) at 52-32. No fix implemented; a product pid writer is not indicated. Bridge-verified: no.
 
+### 29. Gap 5 round-4 decision (52-32)
+expected: the operator chooses one outcome bounded by the 52-31 O-class, or no change.
+result: pass — operator chose option-closeout. Operator's words (verbatim): "option-closeout (Recommended)". Matched O-class: O1 (52-30-DIAGNOSIS.md `## Discriminating result`). Two-arm scores it rested on: arm A W1 M1 L alive 91s S0 H1 R2 P2 K0; arm B W0 M1 L alive 90s S0 H1 R2 P2 K0; D identical `Application load error 3:0000065432` in both arms. Options presented (O1 set only): option-closeout (an honest "SteamStub launch check not satisfiable through the bridge" notice on the Grim Dawn/SteamStub path plus a drafted ROADMAP done-when amendment; inside the locked boundary; touches the product this round: no; next command `/gsd-verify-phase 52`), option-static-re (static reverse engineering of the stub as a SEPARATE, operator-owned decision, outside the current locked boundary and needing an operator-worded exception; not started; product this round: no; next command `/gsd-plan-phase 52 --gaps` only if chosen), option-none (no change, Gap 5 left open; inside the boundary; product this round: no; next command none). Image-name caveat shown beside the options: the anchor was a non-Steam image (`notepad.exe`) and the open used access 0x400; neither arm showed an image-name query, so a stub branch rejecting a non-Steam image cannot be ruled out by this experiment, though it did not fire.
+Excluded routes: (1) a product `ActiveProcess\pid` writer implemented this round, because it needs its own boundary review and is out of this plan by the operator's round-4 framing, and O1 does not indicate it (a pid removes only the IsSteamRunning warning, not Load Error 3); (2) a genuine Valve steamclient64.dll in a bottle, any Grim Dawn.exe edit, or any HKLM write, because the locked boundary forbids them; (3) a bottled-Steam reroute for Grim Dawn, because by operator rule known-bad is not a reroute reason, DRM is the only one and SteamStub is in bridge scope; (4) any option an O-class other than O1 would offer (option-pid-writer-next-round is O2 only; option-replan is O4 only).
+amendment-approved: operator answered "Approve as drafted" to the draft below; recorded verbatim, written to ROADMAP Phase 52 by Task 2.
+
+**Done when (amended 2026-10-24, gap round 4, class O1):**
+For a SteamStub title in its per-game bridge bottle (Grim Dawn,
+219990, is the reference), GameLib's forwarder steamclient64.dll
+loads and reaches the native bridge (HELLO observed). When the
+stub's file/forwarder check then rejects the launch (Application
+Load Error 3), GameLib shows an honest notice that the SteamStub
+launch check cannot be satisfied through the bridge, instead of
+failing silently or falling back to `steam://run`.
+
+Grim Dawn reaching its main menu through the bridge is no longer
+part of this phase. It is deferred to a separate, operator-owned
+decision (static RE of the stub, outside the locked boundary).
+The locked boundary is unchanged.
+
 ## Structural Reachability Review
 
 Applied by 52-10 against all seven tests of `live-gate-contract-authoring.md`.
@@ -335,8 +355,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 28
-passed: 13
+total: 29
+passed: 14
 issues: 8
 pending: 1
 skipped: 6
@@ -407,5 +427,5 @@ blocked: 0
 - truth: "A SteamStub title (Grim Dawn 219990) launched through the forwarder reaches its main menu with a clean Steam-init log (done-when, after the arm B discriminating experiment)"
   status: failed
   reason: "Experiment 52-30/52-31 classified O1: a live pid removes the IsSteamRunning warning (W 1 to 0) but Application Load Error 3 persists unchanged after the whole-file forwarder read. The file/forwarder check is the blocker, not the pid; a product pid writer would not close the done-when."
-  evidence: "52-30-DIAGNOSIS.md `## Discriminating result`; 52-UAT items 27-28; sessions /tmp/gamelib-gate-52u-20261024T080006Z (arm A) and /tmp/gamelib-gate-52v-20261024T080546Z (arm B); cxlog diag5a:7235 and diag5b:7135."
-  fix_direction: "O1 close-out: the 52-32 operator decision between an honest SteamStub notice with a ROADMAP done-when amendment draft, or static RE as a separate operator choice. Decide at 52-32; /gsd-plan-phase 52 --gaps only if the operator picks static RE."
+  evidence: "52-30-DIAGNOSIS.md `## Discriminating result`; 52-UAT items 27-29; sessions /tmp/gamelib-gate-52u-20261024T080006Z (arm A) and /tmp/gamelib-gate-52v-20261024T080546Z (arm B); cxlog diag5a:7235 and diag5b:7135."
+  fix_direction: "Operator chose option-closeout at 52-32 (item 29): the ROADMAP done-when is amended (Grim Dawn main menu deferred to a separate operator-owned static-RE decision; the honest SteamStub notice is the remaining deliverable). Next: /gsd-verify-phase 52 to re-verify as amended; the notice itself is not yet implemented."
