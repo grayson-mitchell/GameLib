@@ -2347,13 +2347,15 @@ describe('Phase 53 flat API', () => {
     ])
   })
 
-  it('refuses a class return wider than 8 bytes, accepts 8', () => {
+  it('a class return wider than 8 bytes is emitted via the hidden pointer (53-10), 8 stays in RAX', () => {
     const wide = [
       flatFixture('Fx001', 901, [
         flatMethod(0, 'Big', 'Big_t', 'class', [], { structSize: 16 })
       ])
     ]
-    expect(() => generateShimC(wide)).toThrow(/Big/)
+    expect(generateShimC(wide)).toContain(
+      'void * SteamAPI_IFx_Big(void *ret, void *self)'
+    )
     const ok = [
       flatFixture('Fx001', 901, [
         flatMethod(0, 'Id', 'CSteamID', 'class', [], { structSize: 8 })

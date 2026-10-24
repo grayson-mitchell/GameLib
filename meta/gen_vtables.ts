@@ -217,6 +217,26 @@ export function isSretReturn(method: MethodSignature): boolean {
   return method.returnKind === 'class'
 }
 
+/**
+ * Win64 C ABI (free functions, which the flat exports are): an aggregate of
+ * exactly 1, 2, 4 or 8 bytes is returned in RAX; any other size is returned
+ * through a caller-allocated hidden pointer passed in RCX, which shifts `self`
+ * to RDX, and the callee returns that pointer in RAX (53-REVIEW CR-01).
+ */
+export function isRaxStructSize(n: number): boolean {
+  return n === 1 || n === 2 || n === 4 || n === 8
+}
+
+/** True for a `class` return whose flat export must use the hidden-pointer
+ * form `(void *ret, void *self, ...)`. */
+export function isHiddenPointerFlatReturn(method: MethodSignature): boolean {
+  return (
+    method.returnKind === 'class' &&
+    typeof method.structSize === 'number' &&
+    !isRaxStructSize(method.structSize)
+  )
+}
+
 export function is64BitRegisterReturn(method: MethodSignature): boolean {
   return (
     !isSretReturn(method) &&
@@ -333,6 +353,12 @@ export function validateManifest(
     ) {
       errors.push(
         `${methodCtx}: returnKind 'class' requires a numeric structSize`
+      )
+    }
+
+    if (manifest.arches.includes('x64') && method.params[0]?.name === '_ret') {
+      errors.push(
+        `${methodCtx}: x64 manifest models a struct return as a leading "_ret" parameter (Proton __thiscall shape); model as returnKind 'class' with structSize instead (53-10 CR-01/WR-08)`
       )
     }
 
@@ -1550,6 +1576,13 @@ function emitFlatAccessor(manifest: InterfaceManifest): string {
 // 8 bytes (isSretReturn), while the flat function returns the 8-byte value in
 // RAX: an sret method's flat body passes a zeroed local as the hidden pointer
 // and returns it.
+//
+// 53-10 (53-REVIEW CR-01): that RAX form is only right for a 1/2/4/8-byte
+// struct. A Win64 C free function returns any other size through a
+// caller-allocated hidden pointer in RCX, so the first real argument (`self`)
+// moves to RDX and the function returns the pointer: `void *f(void *ret,
+// void *self, ...)`. isHiddenPointerFlatReturn selects that form, and the
+// vtable slot is still called as the member function `(self, ret, ...)`.
 
 /** Explicit flat-name overrides keyed `Family.ManifestName`, for any case the
  * overload derivation in flatMethodName cannot reach. Each entry must say which
@@ -1701,9 +1734,28 @@ function reconcileFlatPrototype(
   family: string,
   flatName: string,
   cases: readonly FlatCase[]
-): { params: string[]; ret: string; problems: string[] } {
+): {
+  params: string[]
+  ret: string
+  problems: string[]
+  /** Byte size of the Win64 hidden-pointer struct return, else null. */
+  hiddenSize: number | null
+} {
   const problems: string[] = []
   const params: string[] = []
+  const hiddenSizes = [
+    ...new Set(
+      cases.map((c) =>
+        isHiddenPointerFlatReturn(c.method) ? c.method.structSize! : null
+      )
+    )
+  ]
+  if (hiddenSizes.length > 1) {
+    problems.push(
+      `${family}.${flatName} mixes struct-return conventions/sizes across versions (${hiddenSizes.map((h) => (h === null ? 'RAX/scalar' : `hidden pointer ${h}B`)).join(' / ')})`
+    )
+  }
+  const hiddenSize = hiddenSizes.length === 1 ? hiddenSizes[0] : null
   const arity = Math.max(...cases.map((c) => c.method.params.length))
   for (let i = 0; i < arity; i++) {
     const types = cases
@@ -1738,7 +1790,8 @@ function reconcileFlatPrototype(
     )
     ret = 'uint64_t'
   }
-  return { params, ret, problems }
+  if (hiddenSize !== null) ret = 'void *'
+  return { params, ret, problems, hiddenSize }
 }
 
 function argExpr(
@@ -1762,6 +1815,25 @@ function emitFlatCase(
   const { manifest, method } = fc
   const instance = `g_${manifest.interface.toLowerCase()}_instance`
   const ret = flatRetType(method)
+  const hidden = isHiddenPointerFlatReturn(method)
+  if (hidden) {
+    const hiddenSig = [
+      'void *',
+      'void *',
+      ...method.params.map((p) => flatArgType(p.type).c)
+    ].join(', ')
+    const hiddenArgs = [
+      'self',
+      'ret',
+      ...method.params.map((_, i) => argExpr(protoParams[i], method, i))
+    ].join(', ')
+    return (
+      `  if (self == (void *)&${instance}) {\n    vfn *vt = *(vfn **)self;\n` +
+      `    ((void * (*)(${hiddenSig}))vt[${method.slot}])(${hiddenArgs});\n` +
+      `    return ret;\n` +
+      `  }\n`
+    )
+  }
   const sret = isSretReturn(method)
   const sigTypes = method.params.map((p) => flatArgType(p.type).c)
   const args = method.params.map((_, i) => argExpr(protoParams[i], method, i))
@@ -1863,9 +1935,9 @@ export function emitFlatExports(
     })
     const seen = new Set<string>()
     for (const method of sorted) {
-      if (method.returnKind === 'class' && (method.structSize ?? 0) > 8) {
+      if (method.returnKind === 'class' && method.structSize === undefined) {
         throw new Error(
-          `flat export: ${m.interface}.${method.name} returns a ${method.structSize}-byte class; the flat function can only return up to 8 bytes in RAX`
+          `flat export: ${m.interface}.${method.name} is a class return with no structSize (fail closed, WR-07)`
         )
       }
       const flatName = flatMethodName(m.family, method, sorted)
@@ -1934,6 +2006,7 @@ export function emitFlatExports(
     }
     names.push(exportName)
     const sigParams = [
+      ...(proto.hiddenSize !== null ? ['void *ret'] : []),
       'void *self',
       ...proto.params.map((t, i) => `${t} a${i + 1}`)
     ]
@@ -1942,7 +2015,12 @@ export function emitFlatExports(
       bodies.push(excludedNote + emitFlatClientLookup(funcSig, cases))
       continue
     }
-    const zero = proto.ret === 'void' ? '  return;\n' : '  return 0;\n'
+    const zero =
+      proto.hiddenSize !== null
+        ? `  memset(ret, 0, ${proto.hiddenSize});\n  return ret;\n`
+        : proto.ret === 'void'
+          ? '  return;\n'
+          : '  return 0;\n'
     bodies.push(
       excludedNote +
         `${funcSig} {\n` +
