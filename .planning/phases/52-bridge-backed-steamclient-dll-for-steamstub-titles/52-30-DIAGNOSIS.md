@@ -106,3 +106,73 @@ Score block from `diag5a` (game process 00ec):
 | R | 2 |
 | P | 2 |
 | K | 0 |
+
+## Arm B anchor
+
+Session `/tmp/gamelib-gate-52v-20261024T080546Z`. PREREG commit `08064e3f1`: the `## Pre-registration` section extracted with the same awk range from `git show 08064e3f1:<path>` and from the working copy is byte-equal (empty diff, 41 lines, recorded in that session's terminal.log before the run). Helper snapshot reused, hash-equal to 52-30's (`9df66e3f...f9088`). Product preflight P1-P6 equal to arm A's, no pid.
+
+Anchor: `notepad.exe`, as pre-registered (CrossOver ships it; it started inside the clone wineserver of `GameLibGate52GD` via `CX_BOTTLE=GameLibGate52GD wine notepad.exe`). Windows PID 248 (0xf8) read with `tasklist.exe /FI 'IMAGENAME eq notepad.exe'`; the harness then ran one `reg add HKCU\Software\Valve\Steam\ActiveProcess /v pid /t REG_DWORD /d 248` in the clone. V4b: after the run the clone user.reg holds `"pid"=dword:000000f8`, the product user.reg holds no pid, and the stub's own `OpenProcess` call names `000000f8`. Known confound (from the pre-registration): the anchor's image name is `notepad.exe`, not `Steam.exe`.
+
+## Trace window (diag5b)
+
+Session `/tmp/gamelib-gate-52v-20261024T080546Z`, file `round-diag5b.cxlog` (8215 lines; 690 relay Call lines, so relay was observable). Round: `MODE=trace SCORE=1 PID_ARM=live WATCH=90`, same debugmsg, relay list and helper snapshot as arm A. Game process `0178:017c`. Window: first `L"pid"` read (cxlog:6871) to the first MessageBox (cxlog:7135; the `MSGBOX` resource lookup is 7136). Game-process relay lines in it (args trimmed):
+
+- 6871 Call RegQueryValueExW(key 9c, L"pid") ; 6873 NtQueryValueKey ; 6874 Ret retval=00000000 (value present)
+- 6875 Call KERNEL32.OpenProcess(0x400, 0, 0xf8) ; 6876 NtOpenProcess ; Ret retval=0x9c (a handle: the anchor opened)
+- 6879 Call GetExitCodeProcess(0x9c) ; 6880 NtQueryInformationProcess ; Ret retval=1
+- 6881-6895 RegQueryValueExW(L"SteamClientDll") retval 2, then L"SteamClientDll64" retval 0
+- 6896 Call RegQueryValueExW(L"pid") retval 0 ; 6900 OpenProcess(0x400, 0, 0xf8) ; 6904 GetExitCodeProcess(0x9c) retval=1 (same sequence a second time)
+- 6948 loaddll: Loaded x64\steamclient64.dll (native)
+- 6959 `[S_API] SteamAPI_Init(): Loaded '...x64\steamclient64.dll' OK.` (no IsSteamRunning warning)
+- GetProcAddress(forwarder, "CreateInterface") ; GetModuleHandleW("steam_api64.dll") ; GetProcAddress("GameLibBridge_CreateInterface") ; GetModuleFileNameA(shim) ; CreateFileW and two ReadFile of x64\gamelib_bridge.cfg ; ntdll `__wine_dbg_*` lookups
+- GetProcAddress(0, "Steam_ReleaseThreadLocalMemory") retval=0
+- GetProcAddress(forwarder, "CreateInterface") ; GetModuleFileNameW(forwarder) ; CreateFileW(x64\steamclient64.dll) ; GetFileSize retval=0x2dc00 ; ReadFile(0x2dc00) retval=1
+- LoadLibraryA("user32.dll") ; GetProcAddress("MessageBoxA") ; 7135 Call user32.MessageBoxA
+
+## Answers (diag5b)
+
+**T1: dialog text and caption.** Observed at cxlog:7135: `user32.MessageBoxA(0, "Application load error 3:0000065432", "Steam Error", 0x10)`, ret=14044b8d4. Same as arm A (cxlog:7235) and 52-25 R1.
+
+**T2: the pid reads.** Observed at cxlog:6871 and 6896, both retval=00000000 (value present). Changed from arm A (retval 2). The stub acts on the value: each read is followed directly by `OpenProcess(0x400, 0, 0xf8)` and `GetExitCodeProcess`.
+
+**T3: process open/enumeration.** Changed. `OpenProcess`/`NtOpenProcess` is called twice (6875/6876 and 6900/6901) with the anchor PID 0xf8, access 0x400 (PROCESS_QUERY_INFORMATION), returning a handle; `GetExitCodeProcess` twice (6879, 6904), each retval=1. No `CreateToolhelp32Snapshot`, `Process32*` or `EnumProcesses` Call. The exit-code value itself is not in the relay line; the stub proceeds as if the process were alive, since the next lines read `SteamClientDll64` and load the DLL.
+
+**T4: image-name or module query on another process.** Not observed. Zero Call lines for `QueryFullProcessImageNameW`, `K32GetModuleFileNameExW`, `K32GetProcessImageFileNameW`, `K32GetModuleBaseNameW`, `psapi.*` and the toolhelp names (summary counts all 0), even though a pid now resolves to a live process. Same as arm A. The image-name branch was not exercised with a pid present; the access mask 0x400 would not permit `GetModuleFileNameEx` (it needs PROCESS_VM_READ), and `QueryFullProcessImageNameW` was not called either. Name-spelling caveat as in the relay-list section.
+
+**T5: GetProcAddress / handle lookups against the forwarder.** Same as arm A: `CreateInterface` looked up twice, forwarder resolves `GameLibBridge_CreateInterface`, `Steam_ReleaseThreadLocalMemory` looked up against the exe handle and not found.
+
+**T6: Steam IPC object opens.** Not observed, same as arm A (OpenMutex/OpenEvent/OpenFileMapping all 0).
+
+**T7: forwarder file access.** Same as arm A: `GetModuleFileNameW`, `CreateFileW`, one `GetFileSize` = 0x2dc00 (187392), one whole-file `ReadFile` of 0x2dc00.
+
+**T8: last five calls before the MessageBox.** Same as arm A: ReadFile of the forwarder, LoadLibraryA("user32.dll"), its Ret, GetProcAddress("MessageBoxA"), its Ret, then MessageBoxA (7135).
+
+Validity (arm B): V1 clone steam_api64.dll and steamclient64.dll cmp-identical to the product's, forwarder 187392 B. V2 clone SteamClientDll64 count 1, equal to the product's. V3 product post-run P1-P6 equal to preflight after `wineserver -k` (exe d3915e25...a1fc4c4; shim 251904 B 9b2a5f0e...59d842; forwarder 187392 B 2110a1f9...8fb065; Valve lines in system.reg 0; reg file hashes equal), product ActiveProcess still holds no pid. V4b clone `pid` = 0xf8 = anchor PID 248, the only pid-bearing difference from arm A. No game-process helper or gamelib-shell remained.
+
+## Discriminating result
+
+| metric | arm A (diag5a, no pid) | arm B (diag5b, live pid) | changed? |
+| --- | --- | --- | --- |
+| W | 1 | 0 | yes |
+| M | 1 | 1 | no |
+| D | `MessageBoxA(0, "Application load error 3:0000065432", "Steam Error", 0x10)` | identical | no |
+| L | alive=yes, 91s | alive=yes, 90s | no |
+| S | 0 | 0 | no |
+| H | 1 | 1 | no |
+| R | 2 | 2 | no |
+| P | 2 | 2 | no (value present in B, absent in A) |
+| K | 0 | 0 | no |
+
+The one metric that moved is W: the IsSteamRunning warning is gone once a pid names a live process. The pid is read in both arms; in arm B the stub opens that process and queries its exit code (cxlog:6875-6880, 6900-6905) and then loads steamclient64.dll without the warning (6959). Everything after that, including the forwarder whole-file read at 0x2dc00 and the MessageBox text, caption and flags, is unchanged from arm A (cxlog:7135 against arm A cxlog:7235).
+
+Matched class, quoted from `## Pre-registration`: "O1: W gone AND Load Error 3 persists -> the file/forwarder check is the blocker, recommend close-out." W is 1 in arm A and 0 in arm B, and the dialog `Application load error 3:0000065432` is present in both (M 1/1, D identical). That is the O1 condition.
+
+Classification: **O1**.
+
+Recommendation (the one O1 carries): the file/forwarder check is the blocker; recommend close-out (SteamStub is not closable inside the boundary). The 52-32 options are an honest SteamStub notice plus a ROADMAP done-when amendment draft, or static RE as a separate operator choice. A pid writer in the product is not indicated: it would remove only the warning, not the load error. This plan implements nothing.
+
+Recorded limitations, which do not change the class: the anchor is a non-Steam image (`notepad.exe`) and the open used access 0x400; neither arm showed an image-name query, so a stub branch that would reject a non-Steam image cannot be ruled out by this experiment but did not fire.
+
+## Boundary note
+
+Arm B's pid was a clone-only diagnostic. No product pid, HKLM write, DRM decode or bottled-Steam reroute was done or is being recommended by this plan.
