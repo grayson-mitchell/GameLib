@@ -470,7 +470,7 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 9/9 plans complete
+**Plans:** 9/16 plans complete
 
 Plans:
 **Wave 1**
@@ -496,3 +496,27 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 53-09-PLAN.md — live sample run and census majority (operator checkpoint)
+
+**Gap closure** *(from 53-VERIFICATION.md gaps_found, 6 of 18)*
+
+**Gap wave 1**
+
+- [ ] 53-10-PLAN.md — CR-01 flat struct-return ABI (hidden-pointer exports, fail-closed structSize, x64 `_ret` refusal; Input006/GameServer/Friends018 remodelled)
+- [ ] 53-11-PLAN.md — honest census: latest-run logs (no -backup-/-prev), per-launch app-log segment, CALL set + identity, NOVER and known-bad downgrades
+- [ ] 53-13-PLAN.md — helper CALL after STATUS_OK, NOVER cap, per-line stderr relay, ILONLY AnyCPU rule, managed verdict key
+
+**Gap wave 2** *(blocked on 53-10)*
+
+- [ ] 53-12-PLAN.md — serve the Steamworks.NET CSteamAPIContext.Init interface set (Screenshots003 + 15 more) plus SteamUtils009/Controller006/GameServer012
+
+**Gap wave 3** *(blocked on 53-12)*
+
+- [ ] 53-14-PLAN.md — forward GetAuthSessionTicket/CancelAuthTicket; Abiotic Factor live re-test (operator checkpoint)
+
+**Gap wave 4** *(blocked on 53-14)*
+
+- [ ] 53-15-PLAN.md — diagnose Overlooting rip=0, Ranch 0x35, Rogue Waters re-trace; fix in scope or route to todos (operator checkpoint)
+
+**Gap wave 5** *(blocked on all gap plans)*
+
+- [ ] 53-16-PLAN.md — rebuild, desk gate, full live re-run, honest census re-measure of the done-when (operator checkpoint)
