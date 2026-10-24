@@ -44,6 +44,7 @@ import {
   SHIM_SERVED_INTERFACE_VERSIONS
 } from './shimCoverage'
 
+// ts-prune-ignore-next -- imported by meta/bridgeCensus.ts, which the dead-code scan does not cover
 export type BridgeImportScan =
   | {
       status: 'ok'
@@ -78,7 +79,7 @@ export function isContainedWithin(
 
 const RUNTIME_WALK_MAX_DEPTH = 4
 
-export interface RuntimeSteamApiDll {
+interface RuntimeSteamApiDll {
   name: 'steam_api.dll' | 'steam_api64.dll'
   path: string
   /** True when the file at `path` is already a GameLib shim (quick 261023-oq7). */
@@ -247,7 +248,7 @@ export function resolveWalkRoot(
 const IMPORTER_SCAN_MAX_FILES = 512
 const PE_CANDIDATE_EXT = /\.(exe|dll)$/
 
-export interface SteamApiImporterPe {
+interface SteamApiImporterPe {
   path: string
   arch: 'x86' | 'x64'
   symbols: string[]

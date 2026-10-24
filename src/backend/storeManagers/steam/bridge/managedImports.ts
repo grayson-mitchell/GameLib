@@ -34,11 +34,11 @@
 export type PeReader = (offset: number, length: number) => Uint8Array | null
 
 /** CLR header flag: the image must run as 32-bit. */
-export const COMIMAGE_FLAGS_32BITREQUIRED = 0x2
+const COMIMAGE_FLAGS_32BITREQUIRED = 0x2
 /** CLR header flag: the image prefers 32-bit (AnyCPU "Prefer 32-bit"). */
-export const COMIMAGE_FLAGS_32BITPREFERRED = 0x20000
+const COMIMAGE_FLAGS_32BITPREFERRED = 0x20000
 
-export interface ClrHeaderInfo {
+interface ClrHeaderInfo {
   flags: number
   metadataRva: number
   metadataSize: number
@@ -193,7 +193,7 @@ export function readPeEffectiveArch(read: PeReader): 'x86' | 'x64' | null {
   }
 }
 
-export interface ManagedImportsResult {
+interface ManagedImportsResult {
   /** false when the bytes are not a well-formed PE / CLI image */
   parsed: boolean
   isManaged: boolean

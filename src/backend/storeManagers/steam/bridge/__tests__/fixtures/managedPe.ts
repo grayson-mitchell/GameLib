@@ -5,7 +5,7 @@
  * tables only) and a `#Strings` heap. No game binaries are used or checked in.
  */
 
-export type ManagedPeOptions = {
+type ManagedPeOptions = {
   machine?: number
   /** false builds a native PE (no CLR data directory) */
   clr?: boolean
