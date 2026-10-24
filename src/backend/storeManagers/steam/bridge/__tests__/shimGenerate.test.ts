@@ -34,6 +34,7 @@
 // precedent: a real source-slice test, not a runtime mock assertion).
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -1516,6 +1517,171 @@ describe('shimGenerate', () => {
         /Steam (CEG|DRM)/.test(String(msg))
       )
       expect(drmLogs).toEqual([])
+    })
+  })
+
+  describe('quick 261024-j4l: .gamelib-orig backup of game-original dlls', () => {
+    type Scan = {
+      status: 'ok'
+      arch: 'x86' | 'x64' | 'none'
+      symbols: string[]
+      delaySymbols?: string[]
+    }
+    const scanByPath = (table: Record<string, Scan>) =>
+      mockedScanSteamApiImports.mockImplementation(
+        (_appId: string, path: string) =>
+          Promise.resolve(
+            table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+          )
+      )
+    const MARK_X86 = 'GameLibSteamBridgeShim x86 build'
+    const MARK_X64 = 'GameLibSteamBridgeShim x64 build'
+    const put = (rel: string, body = 'plain-game-dll') => {
+      const full = join(gameDir, rel)
+      mkdirSync(join(full, '..'), { recursive: true })
+      writeFileSync(full, body)
+      return full
+    }
+    const x86Scan = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x86',
+        symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
+      })
+    const BACKUP = '.gamelib-orig'
+
+    it('exe-imports: a game-original target is copied to <dll>.gamelib-orig before the shim lands', async () => {
+      writeFileSync(shimDestPath(), 'game-original-bytes')
+      x86Scan()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('placed')
+      expect(readFileSync(shimDestPath(), 'utf-8')).toBe(
+        'fake-compiled-pe32-dll-bytes-x86'
+      )
+      expect(readFileSync(shimDestPath() + BACKUP, 'utf-8')).toBe(
+        'game-original-bytes'
+      )
+    })
+
+    it('exe-imports: an older GameLib shim is never backed up and an existing backup is kept', async () => {
+      writeFileSync(shimDestPath(), 'GameLibSteamBridgeShim old')
+      writeFileSync(shimDestPath() + BACKUP, 'orig')
+      x86Scan()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('placed')
+      expect(readFileSync(shimDestPath() + BACKUP, 'utf-8')).toBe('orig')
+    })
+
+    it('exe-imports: a stale backup is refreshed from a new game-original', async () => {
+      writeFileSync(shimDestPath(), 'new-original')
+      writeFileSync(shimDestPath() + BACKUP, 'old-orig')
+      x86Scan()
+
+      await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(readFileSync(shimDestPath() + BACKUP, 'utf-8')).toBe(
+        'new-original'
+      )
+    })
+
+    it('runtime-loaded: every replaced game-original dll gets a backup beside it', async () => {
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+      writeFileSync(realShimSourcePath, MARK_X86)
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      const dll64 = put(join('x64', 'steam_api64.dll'), 'orig64')
+      const dll86 = put('steam_api.dll', 'orig86')
+      const engine64 = put(join('x64', 'Engine.dll'))
+      scanByPath({
+        [engine64]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: ['SteamInternal_SteamAPI_Init']
+        }
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath,
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      expect(result.status).toBe('placed')
+      expect(readFileSync(dll64, 'utf-8')).toBe(MARK_X64)
+      expect(readFileSync(dll64 + BACKUP, 'utf-8')).toBe('orig64')
+      expect(readFileSync(dll86, 'utf-8')).toBe(MARK_X86)
+      expect(readFileSync(dll86 + BACKUP, 'utf-8')).toBe('orig86')
+    })
+
+    it('a backup path that is a directory aborts with error and leaves the target', async () => {
+      writeFileSync(shimDestPath(), 'game-original-bytes')
+      mkdirSync(shimDestPath() + BACKUP)
+      x86Scan()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('error')
+      expect(readFileSync(shimDestPath(), 'utf-8')).toBe('game-original-bytes')
+    })
+
+    it('a backup path that is a symlink aborts and nothing is written through it', async () => {
+      writeFileSync(shimDestPath(), 'game-original-bytes')
+      const outside = join(root, 'outside-backup')
+      writeFileSync(outside, 'outside')
+      symlinkSync(outside, shimDestPath() + BACKUP)
+      x86Scan()
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+
+      expect(result.status).toBe('error')
+      expect(readFileSync(shimDestPath(), 'utf-8')).toBe('game-original-bytes')
+      expect(readFileSync(outside, 'utf-8')).toBe('outside')
+      expect(lstatSync(shimDestPath() + BACKUP).isSymbolicLink()).toBe(true)
+    })
+
+    it('an existing .gamelib-orig is never a dll, a shimPath or a scan candidate', async () => {
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      const dll64 = put(join('x64', 'steam_api64.dll'), 'orig64')
+      const backup = put(join('x64', 'steam_api64.dll' + BACKUP), 'orig64')
+      const engine64 = put(join('x64', 'Engine.dll'))
+      scanByPath({
+        [engine64]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: ['SteamInternal_SteamAPI_Init']
+        }
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      expect(result.status).toBe('placed')
+      if (result.status === 'placed') {
+        expect(result.shimPaths).toEqual([dll64])
+      }
+      expect(readFileSync(backup, 'utf-8')).toBe('orig64')
+      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      expect(paths).not.toContain(backup)
     })
   })
 })

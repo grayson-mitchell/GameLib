@@ -28,6 +28,7 @@ import {
   computeExportSetVersion,
   evaluateShimCoverage,
   evaluateShimCoverageWith,
+  findUnservableInterfaceVersions,
   isScanVerdictNowCovered
 } from '../shimCoverage'
 import {
@@ -736,5 +737,87 @@ describe('x64 null-object fallback is runtime-lookup only (CR-03)', () => {
       }
     )
     expect(result.missingSymbols).toContain('SteamUser020')
+  })
+})
+
+describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
+  const RUNTIME = ['SteamInternal_FindOrCreateUserInterface']
+
+  it('x64 runtime lookup: only the version-skewed family counts', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: RUNTIME,
+        requiredInterfaceVersions: {
+          SteamFriends: 'SteamFriends017',
+          SteamUser: 'SteamUser019',
+          SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION003',
+          SteamMatchMaking: 'SteamMatchMaking009'
+        }
+      })
+    ).toEqual(['SteamFriends017'])
+  })
+
+  it('x64 without runtime lookup: an unserved bare-accessor version is NULL', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: ['SteamFriends'],
+        requiredInterfaceVersions: { SteamFriends: 'SteamFriends017' }
+      })
+    ).toEqual(['SteamFriends017'])
+  })
+
+  it('x64 runtime lookup but a bare accessor of the family: NULL, counts', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: [...RUNTIME, 'SteamHTTP'],
+        requiredInterfaceVersions: {
+          SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION003'
+        }
+      })
+    ).toEqual(['STEAMHTTP_INTERFACE_VERSION003'])
+  })
+
+  it('x86 bare SteamFriends017 counts', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x86',
+        symbols: ['SteamFriends'],
+        requiredInterfaceVersions: { SteamFriends: 'SteamFriends017' }
+      })
+    ).toEqual(['SteamFriends017'])
+  })
+
+  it('ELEX shape returns []', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: RUNTIME,
+        requiredInterfaceVersions: {
+          SteamUser: 'SteamUser019',
+          SteamFriends: 'SteamFriends015',
+          SteamUtils: 'SteamUtils008',
+          SteamApps: 'STEAMAPPS_INTERFACE_VERSION008',
+          SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION003',
+          SteamUGC: 'STEAMUGC_INTERFACE_VERSION010'
+        }
+      })
+    ).toEqual([])
+  })
+
+  it('keeps entry order and dedupes', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: ['SteamFriends', 'SteamUtils'],
+        requiredInterfaceVersions: {
+          SteamUtils: 'SteamUtils010',
+          SteamFriends: 'SteamFriends017',
+          SteamAlias: 'SteamUtils010'
+        }
+      })
+    ).toEqual(['SteamUtils010', 'SteamFriends017'])
   })
 })
