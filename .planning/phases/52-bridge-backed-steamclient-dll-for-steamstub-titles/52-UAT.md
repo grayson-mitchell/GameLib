@@ -161,34 +161,34 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-[not started]
+items 1-5 done by 52-11; items 6-8 pending (52-12)
 
 ## Tests
 
 ### 1. Round 0 — positive control (MODE=probe REG=0)
 
 expected: `SESSION=... ROUND=0 MODE=probe REG=0 WATCH=30 gate/scratch-run.sh`: round-0.helper.log has `LISTEN`; round-0.cxlog contains `steam://run/219990` (proves the trace channel shows the fallback when it happens, so item 7's zero count is meaningful); the game exits within about 5 seconds.
-result: pending
+result: pass — round 0 (REG=0, session /tmp/gamelib-gate-52-20261024T015232Z, 2026-10-24T01:52:37Z): round-0.helper.log has `LISTEN 127.0.0.1:50644 appid=219990 mode=full` and `INIT   SteamAPI ready`; round-0.cxlog `grep -c 'steam://run/219990'` = 4 (summary count `steam://run` = 4); game not alive at 31 s (exited within the watch). The trace channel shows the fallback, so item 7's zero count will be evidence. Mac Steam signed in (SteamAPI ready). Harness ordinal: GATE ROUND 0.
 
 ### 2. Discovery round 1 (MODE=probe REG=1)
 
 expected: `ROUND=1 MODE=probe REG=1`: round-1.cxlog shows the stub opening `ActiveProcess` and loading `steamclient64.dll`; round-1.helper.log shows `HELLO` and `FWD CreateInterface ver=SteamClient017 native=present`; record every FWD line, the outcome (exit code, runtime, main menu), and the change made per the protocol, or `pass` if main menu plus operator-confirmed In-Game.
-result: pending
+result: pass — pass candidate on the first forwarded run (round 1, MODE=probe REG=1, WATCH=60, 2026-10-24T01:53:13Z, no code change needed; protocol classification: none of (a)-(f) fired). Helper log: `LISTEN 127.0.0.1:50646`, `INIT SteamAPI ready`, `HELLO  shim attached appid=219990`, `FWD CreateInterface ver=SteamClient017 native=present`, `FWD CreateInterface ver=SteamClient014 native=present` (only two FWD lines; no GetISteam* forwarded). cxlog: `steam://run` count 0; ActiveProcess key opened three times; `RegQueryValueExW ... L"pid"` twice (lines 6216, 6224 of round-1.cxlog) with no value present, after which the stub read `SteamClientDll64` and `Loaded L"...\\Grim Dawn\\x64\\steamclient64.dll" ... native`. wine.log `No implementation for steam_api64.dll` count 0. Grim Dawn alive at 60 s (runtime=60s). Mac Steam process still running after the round. Main menu and Mac Steam In-Game NOT operator-observed here (headless round; the product-bottle confirmation is item 6 in 52-12). Evidence sink: /tmp/gamelib-gate-52-20261024T015232Z/round-1.{helper.log,cxlog,wine.log}, terminal.log has two `=== GATE ROUND` delimiters.
 
 ### 3. Discovery round 2
 
 expected: `ROUND=2 MODE=probe REG=1` after round 1's permitted change: same observations as item 2; `result: skipped — not needed` if an earlier round passed.
-result: pending
+result: skipped — round 1 passed
 
 ### 4. Discovery round 3
 
 expected: `ROUND=3 MODE=probe REG=1` after round 2's permitted change: same observations as item 2; `result: skipped — not needed` if an earlier round passed. Round 3 is the cap.
-result: pending
+result: skipped — round 1 passed
 
 ### 5. pid decision (decision 1)
 
 expected: `skipped — no pid read observed` unless protocol (e) fired, in which case the user's decision and its evidence are recorded.
-result: pending
+result: skipped — no pid-fallback observed (rounds 1). The stub did query ActiveProcess value `pid` twice in round 1 (absent), but no exit and no `steam://run` followed: it went on to read SteamClientDll64, loaded steamclient64.dll, forwarded CreateInterface for SteamClient017/014, and Grim Dawn was alive at 60 s. A pid writer is therefore not evidenced as needed; none was built (decision 1). 52-12 should re-check the pid reads against its own absence-of-fallback evidence.
 
 ### 6. Done-when — GameLib launch of Grim Dawn (product bottle)
 
@@ -254,10 +254,10 @@ runner action, not a contract defect.
 ## Summary
 
 total: 8
-passed: 0
+passed: 2
 issues: 0
-pending: 8
-skipped: 0
+pending: 3
+skipped: 3
 blocked: 0
 
 ## Gaps
