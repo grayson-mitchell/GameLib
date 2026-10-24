@@ -746,12 +746,13 @@ const STEAM_METADATA_PATH = join(
   homedir(),
   'Library/Application Support/gamelib/store_cache/steam_metadata.json'
 )
-// Quick 261024-f0w: the app log (+ rotated sibling); `logger/paths.ts` darwin
-// branch. Carries the helper's `HELLO  shim attached appid=<id>` lines.
-const APP_LOG_PATHS = [
-  join(homedir(), 'Library/Logs/GameLib/gamelib.log'),
-  join(homedir(), 'Library/Logs/GameLib/gamelib.log.old')
-]
+// Quick 261024-f0w: the app log directory; `logger/paths.ts` darwin branch.
+// Carries the helper's `HELLO  shim attached appid=<id>` lines. Pitfall 6:
+// gamelib.log AND its rotated gamelib.log* siblings are read, bounded.
+const APP_LOG_DIR = join(homedir(), 'Library/Logs/GameLib')
+const MAX_APP_LOGS = 12
+const MAX_APP_LOG_BYTES = 32 * 1024 * 1024
+const MAX_ENGINE_LOGS = 16
 const OBJDUMP_BIN = '/usr/bin/objdump'
 const MAX_EXE_DEPTH = 4
 
@@ -962,11 +963,131 @@ function readTexts(paths: string[]): string[] {
   return out
 }
 
+/** Reads at most the last `maxBytes` of a regular file (ranged read, never an
+ * unbounded readFileSync). Null when unreadable. */
+function readTail(path: string, maxBytes: number): string | null {
+  let fd: number | undefined
+  try {
+    const size = statSync(path).size
+    const len = Math.min(size, maxBytes)
+    const buf = Buffer.alloc(len)
+    fd = openSync(path, 'r')
+    readSync(fd, buf, 0, len, size - len)
+    return buf.toString('utf-8')
+  } catch {
+    return null
+  } finally {
+    if (fd !== undefined) closeSync(fd)
+  }
+}
+
+/** Pitfall 6 / T-53-10 / T-53-12: gamelib.log plus rotated `gamelib.log.*`
+ * siblings, regular files only (lstat; symlinks skipped), newest first, at
+ * most MAX_APP_LOGS, each tail-read to MAX_APP_LOG_BYTES. Never throws. */
+function findAppLogs(): { names: string[]; texts: string[] } {
+  const names: string[] = []
+  const texts: string[] = []
+  try {
+    const found: Array<{ name: string; mtime: number }> = []
+    for (const name of readdirSync(APP_LOG_DIR)) {
+      if (name !== 'gamelib.log' && !name.startsWith('gamelib.log.')) continue
+      try {
+        const st = lstatSync(join(APP_LOG_DIR, name))
+        if (st.isFile() && !st.isSymbolicLink()) {
+          found.push({ name, mtime: st.mtimeMs })
+        }
+      } catch {
+        // vanished -- skipped
+      }
+    }
+    found.sort((a, b) => b.mtime - a.mtime)
+    for (const f of found.slice(0, MAX_APP_LOGS)) {
+      const text = readTail(join(APP_LOG_DIR, f.name), MAX_APP_LOG_BYTES)
+      if (text !== null) {
+        names.push(f.name)
+        texts.push(text)
+      }
+    }
+  } catch {
+    // no log directory
+  }
+  return { names, texts }
+}
+
+function crossoverAppData(bottleDir: string, ...rest: string[]): string {
+  return join(bottleDir, 'drive_c', 'users', 'crossover', 'AppData', ...rest)
+}
+
+function isRegularFile(path: string): boolean {
+  try {
+    const st = lstatSync(path)
+    return st.isFile() && !st.isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
+/** D-53-13: UE `Saved/Logs/*.log` at
+ * `AppData/Local/<Project>/Saved/Logs/` (exactly that depth, <= 16 files).
+ * Never throws. */
+function findUnrealSavedLogs(bottleDir: string): string[] {
+  const out: string[] = []
+  const localDir = crossoverAppData(bottleDir, 'Local')
+  try {
+    for (const project of readdirSync(localDir, { withFileTypes: true })) {
+      if (!project.isDirectory()) continue
+      const logsDir = join(localDir, project.name, 'Saved', 'Logs')
+      let names: string[] = []
+      try {
+        names = readdirSync(logsDir)
+      } catch {
+        continue
+      }
+      for (const n of names) {
+        if (out.length >= MAX_ENGINE_LOGS) return out
+        const full = join(logsDir, n)
+        if (n.toLowerCase().endsWith('.log') && isRegularFile(full)) {
+          out.push(full)
+        }
+      }
+    }
+  } catch {
+    // no Local dir
+  }
+  return out
+}
+
+/** D-53-13: Godot user logs at
+ * `AppData/Roaming/Godot/app_userdata/<name>/logs/godot.log`. Never throws. */
+function findGodotLogs(bottleDir: string): string[] {
+  const out: string[] = []
+  const base = crossoverAppData(bottleDir, 'Roaming', 'Godot', 'app_userdata')
+  try {
+    for (const proj of readdirSync(base, { withFileTypes: true })) {
+      if (!proj.isDirectory()) continue
+      const log = join(base, proj.name, 'logs', 'godot.log')
+      if (isRegularFile(log)) out.push(log)
+      if (out.length >= MAX_ENGINE_LOGS) break
+    }
+  } catch {
+    // no Godot userdata
+  }
+  return out
+}
+
+function engineLogPaths(engine: CensusEngine, bottleDir: string): string[] {
+  if (engine === 'unity') return findUnityPlayerLogs(bottleDir)
+  if (engine === 'unreal') return findUnrealSavedLogs(bottleDir)
+  if (engine === 'godot') return findGodotLogs(bottleDir)
+  return []
+}
+
 /** Only a per-game `GameLibSteamBridge-<appId>` bottle can attribute a
  * Player.log to one title; shared bottles read 'unverified'. */
 function collectEvidence(
   entry: ManifestEntry,
-  appLogTexts: string[]
+  appLogTexts: string[],
+  engine: CensusEngine
 ): BridgeEvidence {
   if (entry.bottleName !== `GameLibSteamBridge-${entry.appid}`) {
     return { status: 'unverified', detail: 'no per-game bridge bottle' }
@@ -974,8 +1095,9 @@ function collectEvidence(
   return classifyBridgeEvidence({
     appid: entry.appid,
     appLogTexts,
+    engine,
     gameLogTexts: readTexts(
-      findUnityPlayerLogs(join(BOTTLES_DIR, entry.bottleName))
+      engineLogPaths(engine, join(BOTTLES_DIR, entry.bottleName))
     )
   })
 }
@@ -1247,12 +1369,23 @@ async function classifyInstalledTitle(
   appLogTexts: string[],
   persistedScan: PersistedScanVerdict | undefined
 ): Promise<CensusRow> {
-  const evidence = collectEvidence(entry, appLogTexts)
   const knownBadReason = knownBad.get(entry.appid) ?? null
   const playVerified = playVerifiedSet.has(entry.appid)
 
   const exePaths: string[] = []
   walkExes(entry.installPath, 0, exePaths)
+
+  let topLevel: string[] = []
+  try {
+    topLevel = readdirSync(entry.installPath)
+  } catch {
+    // unreadable install dir -- engine stays unknown
+  }
+  const engine = detectEngine([
+    ...topLevel,
+    ...exePaths.map((p) => basename(p))
+  ])
+  const evidence = collectEvidence(entry, appLogTexts, engine)
 
   const selected = chooseExe(exePaths, persistedArch)
   if (!selected) {
@@ -1378,11 +1511,15 @@ function scanExeSteamDrm(
  * at once is an operator-side artifact, not two distinct owned titles), and
  * classifies each. Read-only throughout: never writes into a bottle, never
  * prints an ACF field beyond appid/name/installdir (T-51-39). */
+let lastLogsRead: string[] = []
+
 export async function runCensus(): Promise<CensusRow[]> {
   const knownBad = loadKnownBad()
   const playVerifiedSet = loadPlayVerified()
   const metadataText = loadSteamMetadataText()
-  const appLogTexts = readTexts(APP_LOG_PATHS)
+  const appLogs = findAppLogs()
+  const appLogTexts = appLogs.texts
+  lastLogsRead = appLogs.names
   const seen = new Map<string, ManifestEntry>()
 
   for (const bottleDir of findBridgeBottles()) {
@@ -1417,6 +1554,7 @@ async function main(): Promise<void> {
     return
   }
   console.log(formatCensusMarkdown(rows))
+  console.log(`Logs read: ${lastLogsRead.join(', ') || '(none)'}`)
 }
 
 // `require.main === module` idiom doesn't survive `runTs.cjs` bundling into
