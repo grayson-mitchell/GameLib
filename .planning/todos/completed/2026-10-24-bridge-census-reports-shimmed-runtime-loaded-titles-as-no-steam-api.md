@@ -37,3 +37,13 @@ Fix:
 2. Add a classifier fixture: a shim-only install tree with a runtime-loaded verdict must not
    classify as `no-steam-api`.
 3. Re-run the census and record the corrected covered count.
+
+## Closed 2026-10-24: census no longer reports shim-placed runtime-loaded titles as no-steam-api
+
+Cause: `findRuntimeSteamApiDll` skipped every steam_api*.dll whose bytes were the GameLib shim, so a tree holding only the placed shim looked like "no steam_api ships" and classified `no-steam-api`, a class the census counts as covered. The walk now keeps shim entries with a provenance, mirroring the live `findRuntimeLoadedSteamApiDlls`.
+
+Three shim sub-cases: a valid non-shim `.gamelib-orig` backup classifies exactly as the original would; no backup but a persisted `bridge.scan` verdict classifies `missing-symbols` with the runtime-loaded marker and the persisted missing symbols; neither classifies as the new `unconfirmed` class (routed, never covered, never play-recorded). Static-import titles whose dll beside the exe is the shim read interface versions from the backup, else the persisted verdict.
+
+Corrected live measurement: symbols covered 15 of 18 before, 6 of 18 after (nine titles moved no-steam-api to missing-symbols; none landed unconfirmed).
+
+Not done here: the census still does not run the importer-PE walk, so a runtime-loaded title whose importers the shim fully covers still reads as a marker miss. Also, three titles (1119730, 1363080, 427410) keep `no-steam-api` because their steam_api64.dll sits at depth 6 under Engine/Binaries/ThirdParty/Steamworks, beyond the depth-4 walk the live path also uses; the "none ships" detail is inaccurate for them.
