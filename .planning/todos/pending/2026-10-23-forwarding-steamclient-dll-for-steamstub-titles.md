@@ -95,3 +95,14 @@ With two of eight sampled titles behind SteamStub, the forwarder matters. Until 
 "informational, no routing change" choice sends every SteamStub title to a launch that cannot
 succeed. Interim option: treat a `.bind` hit as a scan miss that also needs the forwarder, and
 surface it as "not yet supported" rather than a silent ~4 s exit.
+
+## Evidence from the Phase 52 live gate (52-12, 2026-10-24) -- NOT resolved
+
+Items 6-8 of 52-UAT.md all scored `issue`; both Phase 52 todos stay pending. The forwarding path
+works in the scratch harness (52-11 round 1: HELLO, FWD SteamClient017/014 native=present, no
+steam://run, alive at 60 s) but the product launch never reaches it: the quick 261024-j4l withhold
+guard classifies Grim Dawn as `withheld` (unservable SteamUser023, SteamNetworking006,
+STEAMREMOTESTORAGE_INTERFACE_VERSION016, named by Engine.dll) and direct-launches with no
+forwarder, no helper, no drmWrapper and no notice; the game exits after 2 s (operator: failing
+silently). The stale 223744-byte shim stays in the bottle. See 52-UAT.md Gaps 1-4; a gap-closure
+plan (`/gsd-plan-phase 52 --gaps`) should make the withhold decision SteamStub-aware.

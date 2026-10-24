@@ -1,5 +1,5 @@
 ---
-status: ready
+status: diagnosed
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -12,7 +12,7 @@ source:
   - 52-08-SUMMARY.md
   - 52-09-SUMMARY.md
 started: 2026-10-24T01:41:00Z
-updated: 2026-10-24T01:50:00Z
+updated: 2026-10-24T02:50:00Z
 ---
 
 Authored by plan 52-10, run by 52-11 (discovery rounds, items 1-5) and 52-12 (done-when, items 6-8).
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-item 6 in progress (52-12): packaged GameLib launched, awaiting operator play; items 7-8 pending
+complete: items 6-8 scored by 52-12 (issue, issue, issue); see Gaps
 
 ## Tests
 
@@ -193,17 +193,17 @@ result: pass — operator decision recorded 2026-10-24: no pid writer for now; 5
 ### 6. Done-when — GameLib launch of Grim Dawn (product bottle)
 
 expected: GameLib launch 1 (`=== GATE LAUNCH 1 ===`): Play from the packaged build; the archived gamelib-launch-1.log has `drmWrapper=steamstub`, `[bridge-steamstub] appId=219990 forwarder placed`, `bridge helper [219990]:` lines with `HELLO shim attached appid=219990` and `FWD CreateInterface ver=SteamClient017 native=present` (or 014); no `steamstub-unforwarded`; the product `x64/steam_api64.dll` size equals the current SHIM64; the game stays up past 60 s; operator confirms main menu and Mac Steam In-Game Grim Dawn; quitting clears In-Game.
-result: pending
+result: issue — GameLib launch 1 (pid 13630, packaged debug bundle; archive /tmp/gamelib-gate-52-20261024T015232Z/gamelib-launch-1.log). Operator: "grim dawn not launching, failing silently"; main menu NO, In-Game NO (not reached), In-Game cleared n/a. Three Play attempts (gamelib-launch-1.log lines 114-122, 178-186, 228-236), each: `placeShimForGame: appId 219990 withheld the shim -- importer evidence names gaps the shim cannot serve (... unservable interface versions: STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamNetworking006, SteamUser023); launching with the game's own steam_api, no helper (quick 261024-j4l)`, then `.bind section present ... (informational, no routing change)`, `launching appId 219990 via the Steam bridge bottle directly (shim withheld: ...)`, then `bottleProcessMonitor [219990]: matched process(es) gone after 2s of play` (lines 122, 186, 236). Every required log check failed: no `drmWrapper=steamstub`, no `[bridge-steamstub] ... forwarder placed`, no `bridge helper [219990]:` HELLO or FWD lines, no `steamstub-unforwarded` notice (the withheld path carries no drmWrapper), runtime 2 s not >= 60 s. Lines 115/180/229 also warn `the original steam_api64.dll is gone (no .gamelib-orig backup) -- leaving the GameLib shim in place`: the product x64/steam_api64.dll is still the stale 223744-byte shim (SHIM64 is 242688), so the "game's own steam_api" log claim is false and the game ran the stale shim with no helper. Not scorable as bridge-verified (no game Steam-init log). See Gaps 1-4.
 
 ### 7. Done-when — cx-log trace of GameLib's own setup (MODE=trace)
 
 expected: after item 6 with GameLib quit and no 219990 helper left, `ROUND=7 MODE=trace WATCH=90` on a fresh clone of the post-item-6 product bottle: round-7.cxlog `grep -c 'steam://run'` prints 0, the cxlog shows `steamclient64.dll` loaded, and the game process is still alive at 90 s (the main menu itself was operator-confirmed in item 6 on identical state).
-result: pending
+result: issue — ROUND=trace MODE=trace WATCH=90 (2026-10-24T02:44:17Z, GameLib quit, no 219990 helper, pair rule satisfied; clone-only). round-trace.cxlog `grep -c 'steam://run'` = 4 (expected 0); the game was not alive at 90 s (alive=no); helper HELLO 0, FWD 0; ActiveProcess opened three times with no `pid` value read. State inherited was GameLib's: because launch 1 took the withheld path, GameLib wrote no SteamClientDll64, no steamclient64.dll and no refreshed shim, so the trace shows the unforwarded fallback (the same signature item 1 proved the channel can see). Caveat: scratch-run.sh bypasses placeShimForGame and its withhold guard, so a pass here would not have covered the product launch path; this failure instead reflects the product's withheld state. Evidence: /tmp/gamelib-gate-52-20261024T015232Z/round-trace.cxlog, round-trace.helper.log.
 
 ### 8. Done-when — bottle hygiene
 
 expected: after `wineserver -k` of the product bottle, its `user.reg` has `SteamClientDll64` under ActiveProcess and no `pid` value; `system.reg` has no `Software\Valve` or `Wow6432Node\Valve` key; no `steam.exe` or Windows Steam client in the bottle; `x64/Grim Dawn.exe` sha256 equals the preflight value.
-result: pending
+result: issue — read-only on the product bottle after `wineserver -k` (2026-10-24): `user.reg` has no `Valve\\Steam\\ActiveProcess` key at all (count 0), so `SteamClientDll64` is absent (expected present; GameLib's SteamStub setup never ran because launch 1 was withheld); no `pid` value (fine); `grep -cE '^\[Software\\(Wow6432Node\\)?Valve' system.reg` = 0 (pass); no `steam.exe` or `steamclient*.dll` in the Steam root (pass); `x64/Grim Dawn.exe` sha256 d3915e2599317b6670cc088ba958afb2b2f4fa8141cfd1d777ee02f9ea1fc4c4 equals the preflight value (pass); x64/steam_api64.dll is still 223744 bytes, the stale shim (not SHIM64 242688), x64 holds gamelib_bridge.cfg (24 bytes) and no steamclient64.dll. Hygiene is clean but the expected SteamClientDll64 line is not met, so not a pass. Closing inventory: see 52-12-SUMMARY.md.
 
 ## Structural Reachability Review
 
@@ -255,11 +255,30 @@ runner action, not a contract defect.
 
 total: 8
 passed: 2
-issues: 0
-pending: 4
+issues: 3
+pending: 1
 skipped: 2
 blocked: 0
 
 ## Gaps
 
-[none yet]
+- truth: "A SteamStub title (Grim Dawn 219990) launched from GameLib goes through the forwarding steamclient64.dll path and reaches its main menu"
+  status: failed
+  reason: "The quick 261024-j4l withhold guard preempts SteamStub forwarding. 219990 is classified `withheld` because Engine.dll names SteamUser023, SteamNetworking006 and STEAMREMOTESTORAGE_INTERFACE_VERSION016 as unservable, so it takes the direct bottle launch: no forwarder, no helper, guaranteed 2 s exit. The classification predates 52-01's native SteamClient017/014 forwarding, under which those versions may be servable."
+  evidence: "gamelib-launch-1.log lines 116/117, 180-182, 230-233 (withheld + direct launch), 122/186/236 (gone after 2s); the three versions are named by x64/Engine.dll (also compat/Engine.dll and root Engine.dll); items 6-8. 52-11 scratch round 1 never exercised the guard (the harness placed the shim itself)."
+  fix_direction: "Make the withhold decision SteamStub-aware: when `.bind` is present, route to the bridge-steamstub forwarder path (52-08/52-09) instead of withholding, or re-derive the unservable set under native forwarding."
+- truth: "A withheld SteamStub title fails loudly with a user-visible notice"
+  status: failed
+  reason: "The withheld path carries no drmWrapper, so neither the forwarder placement nor the `steamstub-unforwarded` notice runs; the user sees a silent failure after 2 s."
+  evidence: "No `drmWrapper=steamstub`, `forwarder placed` or `steamstub-unforwarded` anywhere in gamelib-launch-1.log; operator: failing silently (flagged as a gap at 52-08/52-09)."
+  fix_direction: "Detect `.bind` independently of the shim verdict and carry drmWrapper=steamstub (or emit the unforwarded notice) on the withheld branch."
+- truth: "The launch log accurately states which steam_api the game runs"
+  status: failed
+  reason: "The withheld message says `launching with the game's own steam_api, no helper`, but when the original dll is gone (no .gamelib-orig backup) the stale GameLib shim remains in place, so the claim is false."
+  evidence: "gamelib-launch-1.log lines 115/116, 180/179, 229/230; product x64/steam_api64.dll is 223744 bytes (stale shim, SHIM64 242688), item 8."
+  fix_direction: "Log the real state (shim present, no original) or refuse to launch and advise Steam file verification."
+- truth: "The stale shim in the product bottle is refreshed or removed when the shim is withheld"
+  status: failed
+  reason: "The withheld path neither restores the original steam_api64.dll nor refreshes the shim, leaving the 223744-byte shim that has no helper behind it."
+  evidence: "item 8: x64/steam_api64.dll 223744 bytes after three launches; the warning `leaving the GameLib shim in place` each time."
+  fix_direction: "On withhold, restore the original (or fail with guidance to verify files in Steam) rather than leaving a helper-less shim; refresh to current SHIM64 if the shim is kept."
