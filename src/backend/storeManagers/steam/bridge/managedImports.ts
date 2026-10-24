@@ -314,7 +314,7 @@ function parseManaged(
   const heapSizes = header.getUint8(6)
   const validLo = header.getUint32(8, true)
   const validHi = header.getUint32(12, true)
-  const rows: number[] = new Array(64).fill(0)
+  const rows = new Array<number>(64).fill(0)
   let rowsCursor = tildeOff + 24
   for (let t = 0; t < 64; t++) {
     const bit = t < 32 ? (validLo >>> t) & 1 : (validHi >>> (t - 32)) & 1
