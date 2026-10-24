@@ -147,3 +147,7 @@ Next step: `/gsd-plan-phase 52 --gaps`.
 - Item 28 (pass), arm B, clone-only pid to a live process: W 0, everything else unchanged, same dialog after the same whole-file forwarder read. Classified O1: the file/forwarder check is the blocker; a product pid writer is not indicated.
 - Item 29 (pass): operator chose option-closeout and approved the amended ROADMAP done-when. Grim Dawn main menu is deferred to a separate operator-owned static-RE decision.
 - Remaining: implement the honest SteamStub notice (not done in this plan). Next step: `/gsd-verify-phase 52`.
+
+## Round 5 evidence (2026-10-24)
+
+Amended done-when scored by 52-UAT items 30-31 (plan 52-35). Item 31 passed: steam://run 0, steamclient64.dll Loaded, helper HELLO 1. Item 30: forwarder placed, HELLO and FWD SteamClient017/014 native=present, `[bridge-notice] ... steamstub-forwarded:launch-check-unsatisfiable` logged, but the operator saw no notification, so the honest-notice conjunct is not met. Probable cause: the raw `gamelib-shell` binary was launched, selecting the Plugin notification backend rather than UserNotifications (bundled .app only). Todo stays pending; never claimed bridge-verified. Next: /gsd-plan-phase 52 --gaps.
