@@ -2786,7 +2786,7 @@ export default class SteamGame implements Game {
     }
 
     // Remaining statuses: 'placed' | 'placed-miss' | 'already-placed' |
-    // 'no-steam-api'. Amended 2026-10-23 (quick 261023-oq7): a coverage miss
+    // 'no-steam-api' | 'withheld' (quick 261024-j4l: launched direct above). Amended 2026-10-23 (quick 261023-oq7): a coverage miss
     // no longer aborts the launch -- the shim was placed anyway and the
     // title runs through the bridge. A static-import miss will most likely
     // fail at load with a Windows entry-point error INSIDE the wine
@@ -2831,9 +2831,14 @@ export default class SteamGame implements Game {
     // interpose on -- skip ensureBridgeHelperReady/writeBridgeConfig
     // entirely and launch directly (mirrors there being no helper to spawn
     // for a no-steam-api install in the first place).
-    if (shimResult.status === 'no-steam-api') {
+    if (
+      shimResult.status === 'no-steam-api' ||
+      shimResult.status === 'withheld'
+    ) {
       logInfo(
-        `SteamGame: launching appId ${this.appId} via the Steam bridge bottle directly (no-steam-api, no helper)`,
+        shimResult.status === 'withheld'
+          ? `SteamGame: launching appId ${this.appId} via the Steam bridge bottle directly (shim withheld: coverage gaps ${shimResult.verdict.missingSymbols.join(', ')}, no helper)`
+          : `SteamGame: launching appId ${this.appId} via the Steam bridge bottle directly (no-steam-api, no helper)`,
         LogPrefix.Steam
       )
       return this.fireBridgeWineLaunch(exePath, bridgeBottleSettings)

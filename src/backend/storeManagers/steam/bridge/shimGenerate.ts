@@ -32,6 +32,14 @@
  * A `<dll>@runtime-loaded` marker (51-22, CR-04) is a miss without that
  * load-time failure, and such titles may play.
  *
+ * Amended 2026-10-24 (quick 261024-j4l, Manor Lords 1363080): static-import
+ * misses and marker-only misses are still placed anyway, but a delay-imported
+ * missing symbol or an unservable interface version WITH importer evidence is
+ * withheld: the shim is not placed (a GameLib shim already on disk is
+ * restored from `<dll>.gamelib-orig`) and the result is 'withheld' carrying
+ * the persisted miss verdict. Every overwrite of a game-original dll keeps a
+ * `.gamelib-orig` backup.
+ *
  * BLOCKER 2: the compiled x86 `.dll` is read from `builtBridgeShimPath`
  * (`backend/constants/paths.ts`, 24-01) -- the SAME shared location 24-07
  * (packaging) writes to. This module never invents a second/divergent
@@ -63,7 +71,14 @@ import {
 } from 'node:fs'
 import { lstat, readdir, readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve
+} from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import {
   builtBridgeShim64Path,
@@ -89,7 +104,11 @@ import {
 // literal and served-interface-version coverage dimension live. See
 // shimCoverage.ts's own docblock for the 24-CR-02 provenance and the
 // CR-02 review-pass obligation on any SDK bump.
-import { evaluateShimCoverage, SHIM_EXPORT_SET_VERSION } from './shimCoverage'
+import {
+  evaluateShimCoverage,
+  findUnservableInterfaceVersions,
+  SHIM_EXPORT_SET_VERSION
+} from './shimCoverage'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
 // importScan.ts -- reuse the SAME regex value/name, do not redefine a
@@ -142,6 +161,16 @@ type PlaceShimResultBase =
       verdict: SteamBridgeScanVerdict
     }
   | { status: 'no-steam-api'; verdict: SteamBridgeScanVerdict }
+  | {
+      // quick 261024-j4l: importer evidence names gaps the shim cannot serve
+      // (delay-imported missing symbols / unservable interface versions), so
+      // the shim was NOT placed (or was withdrawn). The caller launches with
+      // the game's own steam_api and no helper. `restored`: the dlls put back
+      // from `.gamelib-orig`.
+      status: 'withheld'
+      verdict: SteamBridgeScanVerdict
+      restored: string[]
+    }
   | { status: 'shim-not-built'; arch: 'x86' | 'x64' }
   | { status: 'error'; error: string }
 
@@ -392,6 +421,8 @@ interface SteamApiImporterPe {
   path: string
   arch: 'x86' | 'x64'
   symbols: string[]
+  /** quick 261024-j4l: the subset read from the PE delay import table. */
+  delaySymbols: string[]
 }
 
 /**
@@ -426,7 +457,12 @@ async function findSteamApiImporterPes(
     }
     const result = await scanSteamApiImports(appId, p)
     if (result.status === 'ok' && result.arch !== 'none') {
-      found.push({ path: p, arch: result.arch, symbols: result.symbols })
+      found.push({
+        path: p,
+        arch: result.arch,
+        symbols: result.symbols,
+        delaySymbols: result.delaySymbols ?? []
+      })
     }
   }
   const walk = async (dir: string, depth: number): Promise<void> => {
@@ -466,7 +502,12 @@ async function findSteamApiImporterPes(
       scanned++
       const result = await scanSteamApiImports(appId, full)
       if (result.status === 'ok' && result.arch !== 'none') {
-        found.push({ path: full, arch: result.arch, symbols: result.symbols })
+        found.push({
+          path: full,
+          arch: result.arch,
+          symbols: result.symbols,
+          delaySymbols: result.delaySymbols ?? []
+        })
       }
     }
   }
@@ -657,6 +698,109 @@ function detectExeSteamDrm(
 }
 
 /**
+ * quick 261024-j4l (T-j4l-04): puts a game-original dll back from its
+ * `.gamelib-orig` backup. Both paths must sit inside the bottle, the backup
+ * must be a regular non-symlink file and must not carry shim bytes. The
+ * backup is kept. Never throws.
+ */
+function restoreOriginalIfBackedUp(
+  bottleDir: string,
+  target: string,
+  appId: string
+): 'restored' | 'no-backup' | 'refused' {
+  const backup = target + ORIGINAL_BACKUP_SUFFIX
+  try {
+    if (
+      !isContainedWithin(bottleDir, resolve(target)) ||
+      !isContainedWithin(bottleDir, resolve(backup))
+    ) {
+      return 'refused'
+    }
+    let backupStat
+    try {
+      backupStat = lstatSync(backup)
+    } catch {
+      backupStat = null
+    }
+    if (!backupStat || backupStat.isSymbolicLink() || !backupStat.isFile()) {
+      logWarning(
+        `placeShimForGame: appId ${appId}: the original ${basename(target)} is gone (no ${ORIGINAL_BACKUP_SUFFIX} backup) -- leaving the GameLib shim in place; restore it with Steam file verification`,
+        LogPrefix.Steam
+      )
+      return 'no-backup'
+    }
+    if (isGameLibShimBytes(readFileSync(backup))) {
+      logWarning(
+        `placeShimForGame: appId ${appId}: "${backup}" carries shim bytes (tampered?) -- not restoring it`,
+        LogPrefix.Steam
+      )
+      return 'refused'
+    }
+    copyFileSync(backup, target)
+    logInfo(
+      `placeShimForGame: appId ${appId} restored the game-original ${basename(target)} from ${ORIGINAL_BACKUP_SUFFIX}`,
+      LogPrefix.Steam
+    )
+    return 'restored'
+  } catch (error) {
+    logWarning(
+      [
+        `placeShimForGame: appId ${appId}: could not restore "${target}" from its backup`,
+        error
+      ],
+      LogPrefix.Steam
+    )
+    return 'refused'
+  }
+}
+
+/**
+ * quick 261024-j4l: the withhold result. Restores every GameLib-shim target
+ * in scope, logs ONE warning naming the gaps, and returns the persisted
+ * 'miss' verdict.
+ */
+function withhold(input: {
+  appId: string
+  bottleDir: string
+  shimTargets: string[]
+  arch: 'x86' | 'x64'
+  required: Record<string, string>
+  stubbedInterfaces: string[]
+  allMissing: string[]
+  delayMissing: string[]
+  unservable: string[]
+  scannedAt: string
+}): PlaceShimResultBase {
+  const restored: string[] = []
+  for (const target of input.shimTargets) {
+    const resolved = resolve(target)
+    if (
+      restoreOriginalIfBackedUp(input.bottleDir, resolved, input.appId) ===
+      'restored'
+    ) {
+      restored.push(resolved)
+    }
+  }
+  logWarning(
+    `placeShimForGame: appId ${input.appId} withheld the shim -- importer evidence names gaps the shim cannot serve (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}); launching with the game's own steam_api, no helper (quick 261024-j4l)`,
+    LogPrefix.Steam
+  )
+  return {
+    status: 'withheld',
+    restored,
+    verdict: {
+      status: 'miss',
+      arch: input.arch,
+      missingSymbols: [...new Set([...input.allMissing, ...input.unservable])],
+      interfaceVersions: input.required,
+      stubbedInterfaces: input.stubbedInterfaces,
+      shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
+      scannedAt: input.scannedAt
+    }
+  }
+}
+
+/**
  * quick 261024-i94: the launch exe's arch from its COFF header, via ranged fd
  * reads (never a slurp). null on any error or a non-PE -- never throws.
  */
@@ -834,6 +978,8 @@ async function placeShimForGameInner(
         unreal?.shippingExes ?? []
       )
       const combinedMissing: string[] = []
+      const delayMissingAll: string[] = []
+      const unservableAll: string[] = []
       let primaryEval: {
         required: Record<string, string>
         stubbedInterfaces: string[]
@@ -875,12 +1021,42 @@ async function placeShimForGameInner(
           versionProblems: problems
         })
         combinedMissing.push(...coverage.missingSymbols)
+        // quick 261024-j4l: guard inputs, importer evidence only (this block
+        // is past the forName.length === 0 marker-only `continue`).
+        const delaySet = new Set(forName.flatMap((i) => i.delaySymbols))
+        delayMissingAll.push(
+          ...coverage.missingSymbols.filter((m) => delaySet.has(m))
+        )
+        unservableAll.push(
+          ...findUnservableInterfaceVersions({
+            arch: nameArch,
+            symbols: merged,
+            requiredInterfaceVersions: required
+          })
+        )
         if (name === primaryName) {
           primaryEval = {
             required,
             stubbedInterfaces: coverage.stubbedInterfaces
           }
         }
+      }
+
+      if (delayMissingAll.length > 0 || unservableAll.length > 0) {
+        return withhold({
+          appId,
+          bottleDir,
+          shimTargets: runtimeDlls
+            .filter((d) => d.isGameLibShim)
+            .map((d) => d.path),
+          arch: primaryName === 'steam_api64.dll' ? 'x64' : 'x86',
+          required: primaryEval?.required ?? {},
+          stubbedInterfaces: primaryEval?.stubbedInterfaces ?? [],
+          allMissing: combinedMissing,
+          delayMissing: [...new Set(delayMissingAll)],
+          unservable: [...new Set(unservableAll)],
+          scannedAt
+        })
       }
 
       for (const dll of toCopy) {
@@ -1088,6 +1264,34 @@ async function placeShimForGameInner(
     requiredInterfaceVersions: required,
     versionProblems: problems
   })
+
+  // quick 261024-j4l: importer evidence naming a delay-imported miss or an
+  // unservable interface version withholds the shim (before any backup or
+  // overwrite); a GameLib shim already on disk is restored from its backup.
+  const delaySet = new Set([
+    ...(importResult.delaySymbols ?? []),
+    ...importers.flatMap((i) => i.delaySymbols)
+  ])
+  const delayMissing = coverage.missingSymbols.filter((m) => delaySet.has(m))
+  const unservable = findUnservableInterfaceVersions({
+    arch,
+    symbols,
+    requiredInterfaceVersions: required
+  })
+  if (delayMissing.length > 0 || unservable.length > 0) {
+    return withhold({
+      appId,
+      bottleDir,
+      shimTargets: targetIsGameLibShim ? [shimPath] : [],
+      arch,
+      required,
+      stubbedInterfaces: coverage.stubbedInterfaces,
+      allMissing: coverage.missingSymbols,
+      delayMissing: [...new Set(delayMissing)],
+      unservable,
+      scannedAt
+    })
+  }
 
   if (targetExists && !targetIsGameLibShim) {
     const backedUp = backupOriginalBeforeOverwrite(bottleDir, shimPath, appId)
