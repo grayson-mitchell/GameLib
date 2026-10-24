@@ -226,6 +226,16 @@ export const STEAMCLIENT_FWD_RC_PATH = join(
   'steamclient_fwd.rc'
 )
 
+/** Forwarder compile inputs that are absent on disk, in argv order (52-REVIEW WR-01). */
+// ts-prune-ignore-next
+export function missingSteamClient64Inputs(
+  exists: (p: string) => boolean = existsSync
+): string[] {
+  return [STEAMCLIENT_FWD_SOURCE_PATH, STEAMCLIENT_FWD_RC_PATH].filter(
+    (p) => !exists(p)
+  )
+}
+
 // ts-prune-ignore-next
 export function steamClient64OutputPath(
   arch: string = resolveBridgeArch()
@@ -234,7 +244,10 @@ export function steamClient64OutputPath(
 }
 
 /** Phase 52 (52-03): zig argv for the forwarder -- no .def (the source's
- * dllexport is the only export) and no ws2_32 (it uses kernel32 only). */
+ * dllexport is the only export) and no ws2_32 (it uses kernel32 only). The
+ * GameLib VS_VERSIONINFO .rc (52-26) is compiled by zig's built-in resource
+ * compiler. The .rc must follow the .c (the import-lib name derives from the
+ * first source). */
 // ts-prune-ignore-next
 export function buildSteamClient64CompileArgv(
   zigBinPath: string,
@@ -637,9 +650,10 @@ async function compileShim64(): Promise<void> {
 }
 
 async function compileSteamClient64(): Promise<void> {
-  if (!existsSync(STEAMCLIENT_FWD_SOURCE_PATH)) {
+  const missing = missingSteamClient64Inputs()
+  if (missing.length > 0) {
     throw new Error(
-      `Missing steamclient forwarder source (${STEAMCLIENT_FWD_SOURCE_PATH}) (52-03)`
+      `Missing steamclient forwarder input(s) (${missing.join(', ')}) (52-03, 52-26)`
     )
   }
 
