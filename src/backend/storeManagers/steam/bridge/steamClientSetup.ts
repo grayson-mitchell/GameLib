@@ -25,7 +25,7 @@ import { getBottleDir, sanitizeBottleName } from '../bottle'
 
 export const STEAMCLIENT_ACTIVE_PROCESS_KEY =
   'HKCU\\Software\\Valve\\Steam\\ActiveProcess'
-export const BRIDGE_STEAMCLIENT64_FILENAME = 'steamclient64.dll'
+const BRIDGE_STEAMCLIENT64_FILENAME = 'steamclient64.dll'
 
 const NUMERIC_APP_ID = /^\d+$/
 const SHIM64_FILENAME = 'steam_api64.dll'
@@ -34,8 +34,6 @@ type SteamClientSetupResult =
   | { status: 'placed'; forwarderPath: string; winPath: string }
   | { status: 'unavailable'; reason: 'x86-deferred' | 'forwarder-not-built' }
   | { status: 'error'; error: string }
-
-export type { SteamClientSetupResult }
 
 function isContainedWithin(root: string, candidate: string): boolean {
   const rel = relative(root, candidate)
