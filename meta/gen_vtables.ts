@@ -944,7 +944,7 @@ function isSteamClientVersionLookupMethod(
 ): boolean {
   return (
     manifest.family === STEAM_CLIENT_FAMILY &&
-    method.name.startsWith('GetISteam') &&
+    method.name.replace(/^DEPRECATED_/, '').startsWith('GetISteam') &&
     method.params.some((p) => p.type === 'const char*')
   )
 }
@@ -993,6 +993,43 @@ function emitSteamClientVersionLookupStub(
   )
 }
 
+/**
+ * Phase 52: the FORWARDED GetISteamXxx lookup. Asks the native client (over
+ * the wire, helper-side flat SteamAPI_ISteamClient_GetISteamXxx on
+ * SteamClient()) whether it serves `pchVersion`; the helper answers a 4-byte
+ * presence int (never the native pointer -- it is meaningless in the Wine
+ * process). The shim hands back its existing proxy for that EXACT version
+ * only when native answered non-NULL, otherwise NULL. It never fabricates an
+ * answer locally: no x64 null object on this path (T-52-02).
+ */
+function emitSteamClientForwardedLookup(
+  manifest: InterfaceManifest,
+  method: MethodSignature,
+  header: string,
+  funcName: string
+): string {
+  const versionParam = method.params.find((p) => p.type === 'const char*')!
+  const realParams = method.params
+    .map((p) => `${cType(p.type)} ${p.name}`)
+    .join(', ')
+  const signatureParams = realParams
+    ? `void *self, ${realParams}`
+    : 'void *self'
+  const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
+  return (
+    header +
+    `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
+    `  (void)self;\n` +
+    `${argBufDecl}\n` +
+    `  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;\n` +
+    `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;\n` +
+    `  memcpy(&present, retbuf, 4);\n` +
+    `  if (present == 0) return NULL;\n` +
+    `  return resolve_iface_by_exact_version(${versionParam.name});\n` +
+    `}\n`
+  )
+}
+
 function emitVtableStub(
   manifest: InterfaceManifest,
   method: MethodSignature
@@ -1029,6 +1066,11 @@ function emitVtableStub(
   // helperFallback/stub/wire) because an ISteamClient GetISteamXxx
   // accessor is never any of those; it always resolves by version string.
   if (isSteamClientVersionLookupMethod(manifest, method)) {
+    // Phase 52: a wire-mode lookup forwards to the native client; a
+    // stub-mode one keeps the old local lookup (unchanged for stub manifests).
+    if (methodMode === 'wire') {
+      return emitSteamClientForwardedLookup(manifest, method, header, funcName)
+    }
     return emitSteamClientVersionLookupStub(method, header, funcName)
   }
 
@@ -1766,6 +1808,26 @@ function dispatchCType(type: string): string {
   return cType(type)
 }
 
+/** Phase 52: a SteamClient GetISteamXxx lookup whose pointer return is
+ * encoded on the wire as a 4-byte presence int (never the pointer). */
+function isSteamClientPresenceReturn(
+  manifest: InterfaceManifest,
+  method: MethodSignature
+): boolean {
+  return (
+    method.returnKind === 'pointer' &&
+    isSteamClientVersionLookupMethod(manifest, method)
+  )
+}
+
+/** Helper-side C type of a method's native return: `void *` for the
+ * presence-encoded pointer, else the shared `cType`. */
+function dispatchReturnCType(method: MethodSignature): string {
+  return method.returnKind === 'pointer'
+    ? 'void *'
+    : dispatchCType(method.returns)
+}
+
 /** Byte width `bridge_dispatch()` encodes a method's base return value as,
  * on the wire response -- mirrors the shim's own `is64BitRegisterReturn` /
  * `isSretReturn` byte-width reasoning, but for the helper-side ABI (no sret
@@ -1776,7 +1838,20 @@ function dispatchCType(type: string): string {
  * helper-side -- `'pointer'`/`'float'` have no current production use and
  * are refused at generation time (see `assertDispatchable` below) rather
  * than silently mis-encoded. */
-function dispatchReturnWidth(method: MethodSignature): number | null {
+function dispatchReturnWidth(
+  method: MethodSignature,
+  manifest?: InterfaceManifest
+): number | null {
+  // Phase 52: an ISteamClient GetISteamXxx lookup returns a native pointer
+  // that means nothing in the Wine process -- the wire carries a 4-byte
+  // presence int instead. Every other pointer return stays refused.
+  if (
+    method.returnKind === 'pointer' &&
+    manifest !== undefined &&
+    isSteamClientPresenceReturn(manifest, method)
+  ) {
+    return 4
+  }
   switch (method.returnKind) {
     case 'void':
       return 0
@@ -1829,7 +1904,10 @@ function assertDispatchable(
       `generateDispatchHeader: ${manifest.interface} has a dispatch-eligible wire method (${method.name}) but no manifest-level helperInterface -- every manifest with at least one dispatch-eligible wire method must declare the Mac dylib accessor it resolves through (51-10)`
     )
   }
-  if (method.returnKind !== 'string' && dispatchReturnWidth(method) === null) {
+  if (
+    method.returnKind !== 'string' &&
+    dispatchReturnWidth(method, manifest) === null
+  ) {
     throw new Error(
       `generateDispatchHeader: ${ctx} has returnKind "${method.returnKind}"${
         method.returnKind === 'class'
@@ -1859,6 +1937,21 @@ function assertDispatchable(
   }
 }
 
+/** Phase 52 (T-52-03): ISteamClient lookups for app-scoped families are
+ * refused in --identity-only mode, exactly like the direct family gate. */
+const STEAM_CLIENT_APP_SCOPED_LOOKUPS: ReadonlySet<string> = new Set([
+  'GetISteamUserStats',
+  'GetISteamRemoteStorage',
+  'GetISteamGameServerStats'
+])
+
+/** Max bytes of a game-supplied version string a FWD log line carries. */
+const FWD_VERSION_LOG_MAX_BYTES = 128
+
+function fwdLogLine(fwdName: string, tail: string): string {
+  return `      logts("FWD", "${fwdName} " ${tail});`
+}
+
 /**
  * Emits ONE dispatch-table case: the identity-only app-scoped-family gate
  * (T-51-25), the SteamUtils.GetAppID identity-only special case (D-51-04),
@@ -1876,17 +1969,27 @@ function emitDispatchCase(
   const slot = method.slot
   const selfVar = dispatchSelfVarName(manifest)
   const flatVar = dispatchFlatVarName(manifest, method)
-  const returnType = dispatchCType(method.returns)
+  const returnType = dispatchReturnCType(method)
   const isIdentityGatedFamily =
     manifest.family === 'SteamUserStats' ||
     manifest.family === 'SteamRemoteStorage'
   const isAppIdReport =
     manifest.family === 'SteamUtils' && method.name === 'GetAppID'
 
+  const isForwardedClient = manifest.family === STEAM_CLIENT_FAMILY
+  const fwdName = `${manifest.interface}.${method.name}`
+  const presenceReturn = isSteamClientPresenceReturn(manifest, method)
+
   const lines: string[] = []
   lines.push(
     `    case (((uint32_t)${ordinal}) << 16 | ${slot}u): { // ${manifest.interface}.${method.name}`
   )
+
+  if (isForwardedClient && STEAM_CLIENT_APP_SCOPED_LOOKUPS.has(method.name)) {
+    lines.push(
+      `      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too`
+    )
+  }
 
   if (isIdentityGatedFamily) {
     lines.push(
@@ -1903,9 +2006,15 @@ function emitDispatchCase(
     lines.push(`      }`)
   }
 
-  lines.push(
-    `      if (${flatVar} == NULL || ${selfVar} == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called`
-  )
+  if (isForwardedClient) {
+    lines.push(
+      `      if (${flatVar} == NULL || ${selfVar} == NULL) { logts("FWD", "${fwdName} unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called`
+    )
+  } else {
+    lines.push(
+      `      if (${flatVar} == NULL || ${selfVar} == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called`
+    )
+  }
 
   // --- request decode (value / in-string only -- assertDispatchable above
   // refuses out-value/out-buffer) ---
@@ -1968,8 +2077,22 @@ function emitDispatchCase(
 
   // --- call + response encode ---
   const callExpr = `${flatVar}(${callArgs.join(', ')})`
-  if (method.returnKind === 'void') {
-    lines.push(`      ${callExpr};`, `      *respLen = 0; return 0;`)
+  if (presenceReturn) {
+    const versionParam = method.params.find((p) => p.type === 'const char*')!
+    lines.push(
+      `      void *result = ${callExpr};`,
+      `      int32_t present = (result != NULL) ? 1 : 0;`,
+      `      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_${versionParam.name}, fwdv, sizeof(fwdv));`,
+      `        snprintf(fwdmsg, sizeof(fwdmsg), "${fwdName} ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }`,
+      `      if (respCap < 4) { *respLen = 0; return 1; }`,
+      `      memcpy(resp, &present, 4);`,
+      `      *respLen = 4;`,
+      `      return 0;`
+    )
+  } else if (method.returnKind === 'void') {
+    lines.push(`      ${callExpr};`)
+    if (isForwardedClient) lines.push(fwdLogLine(fwdName, '"called"'))
+    lines.push(`      *respLen = 0; return 0;`)
   } else if (method.returnKind === 'string') {
     lines.push(
       `      const char *result = ${callExpr};`,
@@ -1983,13 +2106,19 @@ function emitDispatchCase(
       `      return 0;`
     )
   } else {
-    const width = dispatchReturnWidth(method)
+    const width = dispatchReturnWidth(method, manifest)
+    const fwdIntLog = isForwardedClient
+      ? [
+          `      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "${fwdName} -> %d", (int)__ret); logts("FWD", fwdmsg); }`
+        ]
+      : []
     const outValueParams = method.params.filter(
       (p) => (p.kind ?? 'value') === 'out-value'
     )
     if (outValueParams.length === 0) {
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
+        ...fwdIntLog,
         `      if (respCap < ${width}) { *respLen = 0; return 1; }`,
         `      memcpy(resp, &__ret, ${width});`,
         `      *respLen = ${width};`,
@@ -2007,6 +2136,7 @@ function emitDispatchCase(
       const totalWidth = extraWidths.reduce((sum, w) => sum + w, width!)
       lines.push(
         `      ${returnType} __ret = ${callExpr};`,
+        ...fwdIntLog,
         `      if (respCap < ${totalWidth}) { *respLen = 0; return 1; }`,
         `      memcpy(resp, &__ret, ${width});`
       )
@@ -2083,7 +2213,7 @@ export function generateDispatchHeader(
           const slotDefine = `#define BD_SLOT_${m.interface}_${method.name} ${method.slot}`
           return (
             `${slotDefine}\n` +
-            `typedef ${dispatchCType(method.returns)} (*${typedefName})(${paramList});\n` +
+            `typedef ${dispatchReturnCType(method)} (*${typedefName})(${paramList});\n` +
             `static ${typedefName} ${dispatchFlatVarName(m, method)};\n`
           )
         })
@@ -2134,7 +2264,23 @@ export function generateDispatchHeader(
     `#define GAMELIB_BRIDGE_DISPATCH_H\n\n` +
     `#include <dlfcn.h>\n` +
     `#include <stdint.h>\n` +
+    `#include <stdio.h>\n` +
     `#include <string.h>\n\n` +
+    `// Phase 52: bridge_helper.c defines logts() after #including this header.\n` +
+    `static void logts(const char *cat, const char *msg);\n\n` +
+    `// Phase 52 (T-52-04): game-controlled strings reach the FWD log only\n` +
+    `// through this sanitizer -- length-bounded, non-printables become '?'.\n` +
+    `#define BD_FWD_VERSION_CAP ${FWD_VERSION_LOG_MAX_BYTES + 1}\n` +
+    `static void bd_fwd_sanitize(const char *in, char *out, size_t cap) {\n` +
+    `  size_t i = 0;\n` +
+    `  if (cap == 0) return;\n` +
+    `  if (in == NULL) { snprintf(out, cap, "(null)"); return; }\n` +
+    `  for (; in[i] != '\\0' && i < ${FWD_VERSION_LOG_MAX_BYTES} && i + 1 < cap; i++) {\n` +
+    `    unsigned char c = (unsigned char)in[i];\n` +
+    `    out[i] = (c >= 0x20 && c <= 0x7e) ? (char)c : '?';\n` +
+    `  }\n` +
+    `  out[i] = '\\0';\n` +
+    `}\n\n` +
     `/*\n${WIRE_LAYOUT_DOC}*/\n` +
     `#define BD_WIRE_IN_STRING_MAX_BYTES ${WIRE_IN_STRING_MAX_BYTES}\n\n` +
     `// Digest of the SAME sorted (interface, ordinal, slot, layout) wire-method\n` +

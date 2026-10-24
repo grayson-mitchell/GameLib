@@ -1743,7 +1743,7 @@ describe('gen_vtables', () => {
         const a = c14.methods[i]
         const b = c17.methods[i]
         expect(strip(a.name)).toBe(strip(b.name))
-        expect(a.returns).toBe(b.returns)
+        expect(a.returnKind).toBe(b.returnKind)
         expect(a.params.length).toBe(b.params.length)
       }
     })
@@ -1754,6 +1754,144 @@ describe('gen_vtables', () => {
       )
       expect(ords.SteamClient014).toBe(22)
       expect(ords.SteamClient017).toBe(16)
+    })
+  })
+
+  describe('Phase 52: SteamClient forwarded lookups and FWD dispatch', () => {
+    const load = (file: string): InterfaceManifestV2 =>
+      JSON.parse(readFileSync(join(SDK_DIR, file), 'utf-8'))
+    const c17 = load('isteamclient017.manifest.json')
+    const c14 = load('isteamclient014.manifest.json')
+    const shim = generateShimC([c17, c14])
+    const dispatch = generateDispatchHeader([c17, c14])
+
+    const fnBody = (src: string, name: string): string => {
+      const start = src.indexOf(`${name}(`)
+      expect(start).toBeGreaterThan(-1)
+      return src.slice(start, src.indexOf('\n}\n', start))
+    }
+    const caseBody = (name: string): string => {
+      const start = dispatch.indexOf(`// ${name}\n`)
+      expect(start).toBeGreaterThan(-1)
+      return dispatch.slice(start, dispatch.indexOf('\n    }', start))
+    }
+
+    it.each(['SteamClient017', 'SteamClient014'])(
+      '%s GetISteamUser forwards over bridge_transact and never returns the x64 null object',
+      (iface) => {
+        const b = fnBody(shim, `vt_${iface}_GetISteamUser`)
+        expect(b).toContain('bridge_transact(')
+        expect(b).toContain('resolve_iface_by_exact_version(pchVersion)')
+        expect(b).toContain('if (present == 0) return NULL;')
+        expect(b).not.toContain('g_x64_null_object_instance')
+      }
+    )
+
+    it('every wire GetISteam* lookup in 017 and 014 avoids the null object', () => {
+      for (const m of [c17, c14]) {
+        for (const method of m.methods) {
+          if (method.mode !== 'wire') continue
+          if (!/GetISteam/.test(method.name)) continue
+          const b = fnBody(shim, `vt_${m.interface}_${method.name}`)
+          expect(b).toContain('bridge_transact(')
+          expect(b).not.toContain('g_x64_null_object_instance')
+        }
+      }
+    })
+
+    it('a stub-mode SteamClient GetISteam* keeps the old local lookup', () => {
+      const stubbed: InterfaceManifestV2 = JSON.parse(JSON.stringify(c17))
+      stubbed.interface = 'SteamClient017'
+      const m = stubbed.methods.find((x) => x.name === 'GetISteamUser')!
+      m.mode = 'stub'
+      delete m.helperFlat
+      const out = generateShimC([stubbed])
+      const b = fnBody(out, 'vt_SteamClient017_GetISteamUser')
+      expect(b).toContain('g_x64_null_object_instance')
+      expect(b).not.toContain('bridge_transact(')
+    })
+
+    it('encodes a pointer return as a 4-byte presence int', () => {
+      const b = caseBody('SteamClient017.GetISteamUser')
+      expect(b).toContain('int32_t present = (result != NULL) ? 1 : 0;')
+      expect(b).toContain('memcpy(resp, &present, 4);')
+      expect(b).toContain('*respLen = 4;')
+      expect(b).toContain('native=%s')
+    })
+
+    it('still refuses a pointer return outside the SteamClient lookup family', () => {
+      const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(isteamuser))
+      const m = bad.methods.find((x) => x.name === 'GetHSteamUser')!
+      m.returnKind = 'pointer'
+      m.returns = 'void*'
+      expect(() => generateDispatchHeader([bad])).toThrow(/unsupported/)
+
+      const bad2: InterfaceManifestV2 = JSON.parse(JSON.stringify(c17))
+      const m2 = bad2.methods.find((x) => x.name === 'GetIPCCallCount')!
+      m2.returnKind = 'pointer'
+      m2.returns = 'void*'
+      expect(() => generateDispatchHeader([bad2])).toThrow(/unsupported/)
+    })
+
+    it('every SteamClient dispatch case logs a FWD line, including the unresolved branch', () => {
+      expect(dispatch).toContain(
+        'logts("FWD", "SteamClient017.GetISteamUser unresolved")'
+      )
+      expect(dispatch).toContain(
+        'logts("FWD", "SteamClient017.CreateSteamPipe unresolved")'
+      )
+      expect(caseBody('SteamClient017.CreateSteamPipe')).toContain(
+        'logts("FWD"'
+      )
+      expect(caseBody('SteamClient017.ReleaseUser')).toContain('logts("FWD"')
+      expect(caseBody('SteamClient017.GetISteamUser')).toContain('logts("FWD"')
+      expect((dispatch.match(/FWD/g) ?? []).length).toBeGreaterThanOrEqual(30)
+    })
+
+    it('forward-declares logts and bounds/sanitises logged version strings', () => {
+      expect(dispatch).toContain(
+        'static void logts(const char *cat, const char *msg);'
+      )
+      expect(dispatch).toContain('static void bd_fwd_sanitize(')
+      expect(dispatch).toContain('i < 128')
+      expect(dispatch).toContain("(c >= 0x20 && c <= 0x7e) ? (char)c : '?'")
+      expect(dispatch).toContain('"(null)"')
+    })
+
+    it('logs no CSteamID or 64-bit values on the SteamClient path', () => {
+      for (const m of [c17, c14]) {
+        for (const method of m.methods) {
+          expect(['uint64', 'int64', 'class']).not.toContain(method.returnKind)
+        }
+      }
+    })
+
+    it.each([
+      'GetISteamUserStats',
+      'GetISteamRemoteStorage',
+      'GetISteamGameServerStats'
+    ])('identity-only refuses forwarded %s (T-52-03)', (name) => {
+      const b = caseBody(`SteamClient017.${name}`)
+      expect(b.split('\n')[1]).toContain(
+        'if (g_bd_identity_only) { *respLen = 0; return 1; }'
+      )
+      expect(b).toContain('T-52-03')
+    })
+
+    it('does not gate the non-app-scoped lookups', () => {
+      expect(caseBody('SteamClient017.GetISteamUser')).not.toContain(
+        'g_bd_identity_only'
+      )
+    })
+
+    it('shim and dispatch table hashes agree for the real manifest set', () => {
+      const all = loadAllManifests()
+      const s = generateShimC(all).match(/BRIDGE_SHIM_TABLE_HASH "([0-9a-f]+)"/)
+      const d = generateDispatchHeader(all).match(
+        /BRIDGE_DISPATCH_TABLE_HASH "([0-9a-f]+)"/
+      )
+      expect(s![1]).toBe(d![1])
+      expect(s![1]).toBe(computeWireTableHash(all))
     })
   })
 })
