@@ -643,15 +643,25 @@ export const Winetricks = {
     // promise. Every other `runWithArgs` call site (list-all) passes
     // nothing -- the parameter is optional and a no-op when omitted.
     onDone?: (failed: boolean) => void,
-    onLine?: (line: WinetricksLogLine) => void
+    onLine?: (line: WinetricksLogLine) => void,
+    // quick 261024-tny: explicit settings that bypass the per-runner library
+    // lookup. The Steam bridge applier passes the per-app bridge bottle's
+    // settings because SteamGame.getSettings() is not the bottle the game
+    // runs in.
+    gameSettingsOverride?: GameSettings
   ) => {
-    // Imported lazily to break a circular dependency (tools/index.ts <->
-    // storeManagers/index.ts) — see the load-bearing comment in
-    // storeManagers/gog/user.ts.
-    const { libraryManagerMap } = await import('../storeManagers')
-    const gameSettings = await libraryManagerMap[runner]
-      .getGame(appName)
-      .getSettings()
+    let gameSettings: GameSettings
+    if (gameSettingsOverride) {
+      gameSettings = gameSettingsOverride
+    } else {
+      // Imported lazily to break a circular dependency (tools/index.ts <->
+      // storeManagers/index.ts) — see the load-bearing comment in
+      // storeManagers/gog/user.ts.
+      const { libraryManagerMap } = await import('../storeManagers')
+      gameSettings = await libraryManagerMap[runner]
+        .getGame(appName)
+        .getSettings()
+    }
 
     const { wineVersion } = gameSettings
 
@@ -1055,7 +1065,9 @@ export const Winetricks = {
     runner: Runner,
     appName: string,
     component: string,
-    onLine?: (line: WinetricksLogLine) => void
+    onLine?: (line: WinetricksLogLine) => void,
+    // quick 261024-tny: see runWithArgs' gameSettingsOverride.
+    gameSettings?: GameSettings
   ): Promise<WinetricksInstallOutcome> => {
     // Single-flight: two `winetricks -q` processes racing on one Wine prefix
     // is never wanted, and the first to finish would clear
@@ -1088,7 +1100,8 @@ export const Winetricks = {
         (failed) => {
           outcome = failed ? 'failed' : 'installed'
         },
-        onLine
+        onLine,
+        gameSettings
       )
     } finally {
       installingComponent = ''
