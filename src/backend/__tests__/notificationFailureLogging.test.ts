@@ -131,15 +131,24 @@ describe('notification failure logging', () => {
     expect(show).toHaveBeenCalledWith(expect.anything(), undefined)
   })
 
-  it('a throwing show listener does not escape', async () => {
+  // 52-REVIEW WR-02: without the per-listener guard the throw would land in show()'s chained
+  // .catch and be misreported as a failed (undelivered) notification, so assert both halves.
+  it('a throwing show listener is caught by its own guard, not reported as a failure', async () => {
     const { Notification } = loadNotify()
     mockRequestRustInvoke.mockResolvedValue('plugin')
     const n = new Notification({})
+    const failed = jest.fn()
     n.on('show', () => {
       throw new Error('boom')
     })
+    n.on('failed', failed)
     n.show()
     await flush()
+    expect(console.warn).toHaveBeenCalledWith(
+      "[electronStub] Notification 'show' listener threw:",
+      'boom'
+    )
+    expect(failed).not.toHaveBeenCalled()
   })
 
   it('a bare user-notifications label (older shell) logs "accepted by UserNotifications" without settings', async () => {
