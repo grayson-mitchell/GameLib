@@ -215,6 +215,17 @@ export const STEAMCLIENT_FWD_SOURCE_PATH = join(
   'steamclient_fwd.c'
 )
 
+/** 52-26 (item 22): GameLib's own VS_VERSIONINFO for the forwarder (the genuine
+ * client and the game exe both carry a resource directory; the forwarder had
+ * none). Strings are GameLib's -- no Valve identity, no answer. */
+// ts-prune-ignore-next
+export const STEAMCLIENT_FWD_RC_PATH = join(
+  'native',
+  'steam-bridge',
+  'steamclient',
+  'steamclient_fwd.rc'
+)
+
 // ts-prune-ignore-next
 export function steamClient64OutputPath(
   arch: string = resolveBridgeArch()
@@ -239,7 +250,8 @@ export function buildSteamClient64CompileArgv(
       ...SHIM_RELEASE_CFLAGS,
       '-o',
       steamClient64OutputPath(arch),
-      STEAMCLIENT_FWD_SOURCE_PATH
+      STEAMCLIENT_FWD_SOURCE_PATH,
+      STEAMCLIENT_FWD_RC_PATH
     ]
   }
 }

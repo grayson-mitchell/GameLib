@@ -13,6 +13,7 @@ import {
   pruneShimBuildByproducts,
   pruneSteamClient64BuildByproducts,
   STEAMCLIENT64_BUILD_BYPRODUCTS,
+  STEAMCLIENT_FWD_RC_PATH,
   STEAMCLIENT_FWD_SOURCE_PATH,
   steamClient64ByproductPaths,
   steamClient64OutputPath,
@@ -556,6 +557,9 @@ describe('buildSteamBridgeShims', () => {
         steamClient64OutputPath('arm64')
       )
       expect(args).toContain(STEAMCLIENT_FWD_SOURCE_PATH)
+      // 52-26 (item 22): the version resource, compiled with the forwarder.
+      expect(args).toContain(STEAMCLIENT_FWD_RC_PATH)
+      expect(STEAMCLIENT_FWD_RC_PATH.endsWith('steamclient_fwd.rc')).toBe(true)
       expect(args).not.toContain('-lws2_32')
       expect(args.some((a) => a.endsWith('.def'))).toBe(false)
     })
