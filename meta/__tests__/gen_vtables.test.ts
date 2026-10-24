@@ -15,6 +15,8 @@ import {
   flatMethodName,
   LIFECYCLE_NOOP_EXPORTS,
   isSretReturn,
+  isRaxStructSize,
+  isHiddenPointerFlatReturn,
   isStringReturn,
   is64BitRegisterReturn,
   paramWidth,
@@ -2440,5 +2442,94 @@ describe('Phase 53 flat API', () => {
 
   it('the flat client lookup and every manifest helperFlat agree on the derived name', () => {
     expect(() => emitFlatExports(real)).not.toThrow()
+  })
+})
+
+describe('CR-01 / WR-01 / WR-07 / WR-08: struct returns on the x64 flat path (53-10)', () => {
+  const real = loadAllManifests()
+  const classMethod = (name: string, size: number | undefined, slot = 0) =>
+    flatMethod(slot, name, 'Big_t', 'class', [['int32', 'n']], {
+      structSize: size
+    })
+
+  it('53-10 CR-01 hidden pointer: a 16-byte class return takes the Win64 hidden-pointer form', () => {
+    const c = generateShimC([
+      flatFixture('Fx001', 901, [classMethod('Get', 16)])
+    ])
+    const body = functionBody(
+      c,
+      'void * SteamAPI_IFx_Get(void *ret, void *self'
+    )
+    expect(body).toContain('self == (void *)&g_fx001_instance')
+    expect(body).toContain('(self, ret, (int32_t)a1)')
+    expect(body).toContain('return ret;')
+    expect(body).toContain('memset(ret, 0, 16);')
+    expect(body).not.toContain('uint64_t out')
+  })
+
+  it('53-10 CR-01 RAX path: 2-byte and 8-byte class returns keep the uint64_t out form with self first', () => {
+    for (const size of [1, 2, 4, 8]) {
+      const c = generateShimC([
+        flatFixture('Fx001', 901, [classMethod('Get', size)])
+      ])
+      const body = functionBody(c, 'uint64_t SteamAPI_IFx_Get(void *self')
+      expect(body).toContain('uint64_t out = 0;')
+      expect(body).toContain('return out;')
+    }
+  })
+
+  it('53-10 CR-01 odd size: 3, 5, 6, 7 and 20 take the hidden-pointer form', () => {
+    for (const size of [3, 5, 6, 7, 20, 40]) {
+      expect(isRaxStructSize(size)).toBe(false)
+      const c = generateShimC([
+        flatFixture('Fx001', 901, [classMethod('Get', size)])
+      ])
+      expect(c).toContain('void * SteamAPI_IFx_Get(void *ret, void *self')
+      expect(c).toContain(`memset(ret, 0, ${size});`)
+    }
+    for (const size of [1, 2, 4, 8]) expect(isRaxStructSize(size)).toBe(true)
+    expect(isHiddenPointerFlatReturn(classMethod('Get', 16))).toBe(true)
+    expect(isHiddenPointerFlatReturn(classMethod('Get', 8))).toBe(false)
+  })
+
+  it('53-10 WR-07: an unsized class return fails closed from emitFlatExports', () => {
+    const m = flatFixture('Fx001', 901, [classMethod('Get', undefined)])
+    expect(() => emitFlatExports([m])).toThrow(/Fx001.*Get.*fail closed/)
+  })
+
+  it('53-10 WR-08: validateManifest refuses an x64 manifest whose method leads with `_ret`; x86-only still validates', () => {
+    const withRet = (arches: Array<'x86' | 'x64'>) => {
+      const m = flatFixture('Fx001', 901, [
+        flatMethod(0, 'Get', 'Big_t', 'pointer', [['Big_t*', '_ret']])
+      ])
+      return { ...m, arches }
+    }
+    const errs = validateManifest(withRet(['x64']))
+    expect(errs.join('\n')).toMatch(
+      /Fx001.*Get.*_ret.*returnKind 'class' with structSize/
+    )
+    expect(
+      validateManifest(withRet(['x86'])).filter((e) => e.includes('_ret'))
+    ).toEqual([])
+  })
+
+  it('53-10: no x64 committed manifest models a struct return as a leading `_ret` param', () => {
+    const offenders: string[] = []
+    for (const m of real) {
+      if (!m.arches.includes('x64')) continue
+      for (const x of m.methods) {
+        if (x.params[0]?.name === '_ret')
+          offenders.push(`${m.interface}.${x.name}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('53-10 reconcile mix: versions mixing a RAX-sized and a hidden-pointer struct return throw', () => {
+    const m = [
+      flatFixture('Fx001', 901, [classMethod('Get', 8)]),
+      flatFixture('Fx002', 902, [classMethod('Get', 16)])
+    ]
+    expect(() => emitFlatExports(m)).toThrow(/Fx.*Get/)
   })
 })
