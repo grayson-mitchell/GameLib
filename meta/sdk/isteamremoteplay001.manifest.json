@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMREMOTEPLAY_INTERFACE_VERSION001",
+  "family": "SteamRemotePlay",
+  "ordinal": 43,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamRemotePlay_v001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamRemotePlay.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetSessionCount",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "GetSessionID",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "iSessionIndex",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "GetSessionSteamID",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unSessionID",
+          "type": "uint32"
+        }
+      ],
+      "structSize": 8
+    },
+    {
+      "slot": 3,
+      "name": "GetSessionClientName",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unSessionID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "GetSessionClientFormFactor",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unSessionID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "BGetSessionClientResolution",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unSessionID",
+          "type": "uint32"
+        },
+        {
+          "name": "pnResolutionX",
+          "type": "int32*"
+        },
+        {
+          "name": "pnResolutionY",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "BSendRemotePlayTogetherInvite",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDFriend",
+          "type": "CSteamID"
+        }
+      ]
+    }
+  ]
+}

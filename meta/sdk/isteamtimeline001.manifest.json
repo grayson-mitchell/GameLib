@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMTIMELINE_INTERFACE_V001",
+  "family": "SteamTimeline",
+  "ordinal": 47,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_STEAMTIMELINE_INTERFACE_V001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamTimeline.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "SetTimelineStateDescription",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchDescription",
+          "type": "const char*"
+        },
+        {
+          "name": "flTimeDelta",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "ClearTimelineStateDescription",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "flTimeDelta",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "AddTimelineEvent",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "pchIcon",
+          "type": "const char*"
+        },
+        {
+          "name": "pchTitle",
+          "type": "const char*"
+        },
+        {
+          "name": "pchDescription",
+          "type": "const char*"
+        },
+        {
+          "name": "unPriority",
+          "type": "uint32"
+        },
+        {
+          "name": "flStartOffsetSeconds",
+          "type": "float"
+        },
+        {
+          "name": "flDurationSeconds",
+          "type": "float"
+        },
+        {
+          "name": "ePossibleClip",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "SetTimelineGameMode",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eMode",
+          "type": "uint32"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamMatchGameSearch001",
+  "family": "SteamGameSearch",
+  "ordinal": 37,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamMatchGameSearch_v001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamGameSearch.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "AddGameSearchParams",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchKeyToFind",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValuesToFind",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "SearchForGameWithLobby",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDLobby",
+          "type": "CSteamID"
+        },
+        {
+          "name": "nPlayerMin",
+          "type": "int32"
+        },
+        {
+          "name": "nPlayerMax",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "SearchForGameSolo",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nPlayerMin",
+          "type": "int32"
+        },
+        {
+          "name": "nPlayerMax",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "AcceptGame",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 4,
+      "name": "DeclineGame",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 5,
+      "name": "RetrieveConnectionDetails",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDHost",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchConnectionDetails",
+          "type": "char*"
+        },
+        {
+          "name": "cubConnectionDetails",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "EndGameSearch",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 7,
+      "name": "SetGameHostParams",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "SetConnectionDetails",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchConnectionDetails",
+          "type": "const char*"
+        },
+        {
+          "name": "cubConnectionDetails",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "RequestPlayersForGame",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nPlayerMin",
+          "type": "int32"
+        },
+        {
+          "name": "nPlayerMax",
+          "type": "int32"
+        },
+        {
+          "name": "nMaxTeamSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "HostConfirmGameStart",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "ullUniqueGameID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "CancelRequestPlayersForGame",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 12,
+      "name": "SubmitPlayerResult",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "ullUniqueGameID",
+          "type": "uint64"
+        },
+        {
+          "name": "steamIDPlayer",
+          "type": "CSteamID"
+        },
+        {
+          "name": "EPlayerResult",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "EndGame",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "ullUniqueGameID",
+          "type": "uint64"
+        }
+      ]
+    }
+  ]
+}

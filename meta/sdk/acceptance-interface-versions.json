@@ -204,5 +204,110 @@
     "family": "SteamGameServerStats",
     "arches": ["x64"],
     "titles": ["1363080", "427410", "1119730"]
+  },
+  "STEAMSCREENSHOTS_INTERFACE_VERSION003": {
+    "family": "SteamScreenshots",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "SteamMatchGameSearch001": {
+    "family": "SteamGameSearch",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "STEAMHTTP_INTERFACE_VERSION003": {
+    "family": "SteamHTTP",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "STEAMUGC_INTERFACE_VERSION016": {
+    "family": "SteamUGC",
+    "arches": ["x64"],
+    "titles": ["1691190"]
+  },
+  "STEAMUGC_INTERFACE_VERSION017": {
+    "family": "SteamUGC",
+    "arches": ["x64"],
+    "titles": ["1167950", "1284190"]
+  },
+  "STEAMUGC_INTERFACE_VERSION020": {
+    "family": "SteamUGC",
+    "arches": ["x64"],
+    "titles": ["1782460"]
+  },
+  "STEAMAPPLIST_INTERFACE_VERSION001": {
+    "family": "SteamAppList",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1284190"]
+  },
+  "STEAMMUSIC_INTERFACE_VERSION001": {
+    "family": "SteamMusic",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "STEAMMUSICREMOTE_INTERFACE_VERSION001": {
+    "family": "SteamMusicRemote",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "STEAMHTMLSURFACE_INTERFACE_VERSION_005": {
+    "family": "SteamHTMLSurface",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "STEAMINVENTORY_INTERFACE_V003": {
+    "family": "SteamInventory",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "STEAMVIDEO_INTERFACE_V002": {
+    "family": "SteamVideo",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1284190"]
+  },
+  "STEAMVIDEO_INTERFACE_V007": {
+    "family": "SteamVideo",
+    "arches": ["x64"],
+    "titles": ["1782460"]
+  },
+  "STEAMPARENTALSETTINGS_INTERFACE_VERSION001": {
+    "family": "SteamParentalSettings",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "SteamParties002": {
+    "family": "SteamParties",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1782460", "1284190"]
+  },
+  "STEAMREMOTEPLAY_INTERFACE_VERSION001": {
+    "family": "SteamRemotePlay",
+    "arches": ["x64"],
+    "titles": ["1691190", "1167950", "1284190"]
+  },
+  "STEAMREMOTEPLAY_INTERFACE_VERSION002": {
+    "family": "SteamRemotePlay",
+    "arches": ["x64"],
+    "titles": ["1782460"]
+  },
+  "STEAMTIMELINE_INTERFACE_V001": {
+    "family": "SteamTimeline",
+    "arches": ["x64"],
+    "titles": ["1782460"]
+  },
+  "SteamUtils009": {
+    "family": "SteamUtils",
+    "arches": ["x64"],
+    "titles": ["1691190"]
+  },
+  "SteamController006": {
+    "family": "SteamController",
+    "arches": ["x64"],
+    "titles": ["1691190"]
+  },
+  "SteamGameServer012": {
+    "family": "SteamGameServer",
+    "arches": ["x64"],
+    "titles": ["411300"]
   }
 }

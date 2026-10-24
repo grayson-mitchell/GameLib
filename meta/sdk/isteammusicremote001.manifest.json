@@ -1,0 +1,407 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMMUSICREMOTE_INTERFACE_VERSION001",
+  "family": "SteamMusicRemote",
+  "ordinal": 40,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamMusicRemote_v001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamMusicRemote.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "RegisterSteamMusicRemote",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "DeregisterSteamMusicRemote",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 2,
+      "name": "BIsCurrentMusicRemote",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 3,
+      "name": "BActivationSuccess",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "SetDisplayName",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchDisplayName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "SetPNGIcon_64x64",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pvBuffer",
+          "type": "void*"
+        },
+        {
+          "name": "cbBufferLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "EnablePlayPrevious",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "EnablePlayNext",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "EnableShuffled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "EnableLooped",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "EnableQueue",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "EnablePlaylists",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "UpdatePlaybackStatus",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nStatus",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "UpdateShuffled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "UpdateLooped",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "UpdateVolume",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "flValue",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "CurrentEntryWillChange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 17,
+      "name": "CurrentEntryIsAvailable",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bAvailable",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "UpdateCurrentEntryText",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchText",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "UpdateCurrentEntryElapsedSeconds",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nValue",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "UpdateCurrentEntryCoverArt",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pvBuffer",
+          "type": "void*"
+        },
+        {
+          "name": "cbBufferLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "CurrentEntryDidChange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 22,
+      "name": "QueueWillChange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 23,
+      "name": "ResetQueueEntries",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 24,
+      "name": "SetQueueEntry",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nID",
+          "type": "int32"
+        },
+        {
+          "name": "nPosition",
+          "type": "int32"
+        },
+        {
+          "name": "pchEntryText",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "SetCurrentQueueEntry",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nID",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "QueueDidChange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 27,
+      "name": "PlaylistWillChange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 28,
+      "name": "ResetPlaylistEntries",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 29,
+      "name": "SetPlaylistEntry",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nID",
+          "type": "int32"
+        },
+        {
+          "name": "nPosition",
+          "type": "int32"
+        },
+        {
+          "name": "pchEntryText",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "SetCurrentPlaylistEntry",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nID",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "PlaylistDidChange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMMUSIC_INTERFACE_VERSION001",
+  "family": "SteamMusic",
+  "ordinal": 39,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamMusic_v001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamMusic.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "BIsEnabled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "BIsPlaying",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 2,
+      "name": "GetPlaybackStatus",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 3,
+      "name": "Play",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 4,
+      "name": "Pause",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 5,
+      "name": "PlayPrevious",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 6,
+      "name": "PlayNext",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 7,
+      "name": "SetVolume",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "flVolume",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetVolume",
+      "returns": "float",
+      "returnKind": "float",
+      "stackBytes": 0,
+      "params": []
+    }
+  ]
+}

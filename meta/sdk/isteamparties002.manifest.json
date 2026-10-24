@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamParties002",
+  "family": "SteamParties",
+  "ordinal": 42,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamParties_v002",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamParties.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetNumActiveBeacons",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "GetBeaconByIndex",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unIndex",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "GetBeaconDetails",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "ulBeaconID",
+          "type": "uint64"
+        },
+        {
+          "name": "pSteamIDBeaconOwner",
+          "type": "CSteamID*"
+        },
+        {
+          "name": "pLocation",
+          "type": "w_SteamPartyBeaconLocation_t*"
+        },
+        {
+          "name": "pchMetadata",
+          "type": "char*"
+        },
+        {
+          "name": "cchMetadata",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "JoinParty",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "ulBeaconID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "GetNumAvailableBeaconLocations",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "puNumLocations",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "GetAvailableBeaconLocations",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pLocationList",
+          "type": "w_SteamPartyBeaconLocation_t*"
+        },
+        {
+          "name": "uMaxNumLocations",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "CreateBeacon",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "unOpenSlots",
+          "type": "uint32"
+        },
+        {
+          "name": "pBeaconLocation",
+          "type": "w_SteamPartyBeaconLocation_t*"
+        },
+        {
+          "name": "pchConnectString",
+          "type": "const char*"
+        },
+        {
+          "name": "pchMetadata",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "OnReservationCompleted",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "ulBeacon",
+          "type": "uint64"
+        },
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "CancelReservation",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "ulBeacon",
+          "type": "uint64"
+        },
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "ChangeNumOpenSlots",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "ulBeacon",
+          "type": "uint64"
+        },
+        {
+          "name": "unOpenSlots",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "DestroyBeacon",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "ulBeacon",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetBeaconLocationData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "BeaconLocation",
+          "type": "w_SteamPartyBeaconLocation_t"
+        },
+        {
+          "name": "eData",
+          "type": "uint32"
+        },
+        {
+          "name": "pchDataStringOut",
+          "type": "char*"
+        },
+        {
+          "name": "cchDataStringOut",
+          "type": "int32"
+        }
+      ]
+    }
+  ]
+}

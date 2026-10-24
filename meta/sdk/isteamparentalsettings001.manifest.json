@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMPARENTALSETTINGS_INTERFACE_VERSION001",
+  "family": "SteamParentalSettings",
+  "ordinal": 41,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamParentalSettings_v001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamParentalSettings.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "BIsParentalLockEnabled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "BIsParentalLockLocked",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 2,
+      "name": "BIsAppBlocked",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "BIsAppInBlockList",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "BIsFeatureBlocked",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eFeature",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "BIsFeatureInBlockList",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eFeature",
+          "type": "uint32"
+        }
+      ]
+    }
+  ]
+}

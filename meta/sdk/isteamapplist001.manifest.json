@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMAPPLIST_INTERFACE_VERSION001",
+  "family": "SteamAppList",
+  "ordinal": 38,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamAppList_v001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamAppList.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetNumInstalledApps",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "GetInstalledApps",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pvecAppID",
+          "type": "uint32*"
+        },
+        {
+          "name": "unMaxAppIDs",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "GetAppName",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "pchName",
+          "type": "char*"
+        },
+        {
+          "name": "cchNameMax",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "GetAppInstallDir",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "pchDirectory",
+          "type": "char*"
+        },
+        {
+          "name": "cchNameMax",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "GetAppBuildId",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    }
+  ]
+}
