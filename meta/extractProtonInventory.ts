@@ -169,7 +169,25 @@ interface ReturnClassification {
 
 const SRET_STRUCT_SIZE: Readonly<Record<string, number>> = {
   CSteamID: 8,
-  CGameID: 8
+  CGameID: 8,
+  // Measured Win64 sizes (53-10-SUMMARY), pinned Proton
+  // 2c620c0fd7c2c424f6bd91898602bdc4d4260468 lsteamclient/:
+  // unixlib_generated.cpp:7041 C_ASSERT( sizeof(InputDigitalActionData_t) >= 2 )
+  InputDigitalActionData_t: 2,
+  // unixlib_generated.cpp:7031 asserts >= 13 (last field bActive@12); the
+  // 4-byte-aligned struct pads to 16.
+  InputAnalogActionData_t: 16,
+  // unixlib_generated.cpp:7085 C_ASSERT( sizeof(InputMotionData_t) >= 40 )
+  InputMotionData_t: 40,
+  // SteamController006 (53-12 pre-scan): unixlib_generated.cpp:6501
+  // C_ASSERT( sizeof(ControllerDigitalActionData_t) >= 2 ), bState@0 bActive@1.
+  ControllerDigitalActionData_t: 2,
+  // unixlib_generated.cpp:6491 asserts >= 13 (bActive@12); 4-byte-aligned -> 16.
+  ControllerAnalogActionData_t: 16,
+  // unixlib_generated.cpp:6507 C_ASSERT( sizeof(ControllerMotionData_t) >= 40 )
+  ControllerMotionData_t: 40,
+  // steamclient_structs.h:54 typedef struct { uint8_t _[20]; } SteamIPAddress_t;
+  SteamIPAddress_t: 20
 }
 
 /** Classifies a raw Proton return-type token (e.g. `"CSteamID *"`,
@@ -442,6 +460,22 @@ export function parseProtonThunks(
     }
     const { returnKind, returns, sret, structBaseType } =
       classifyProtonReturn(returnType)
+
+    // 53-12: a pointer-shaped return whose first real param is the synthetic
+    // `_ret` is a by-value struct return of a type missing from
+    // SRET_STRUCT_SIZE. Emitting `pointer` + `_ret` (the pre-53-10 shape)
+    // would be wrong on x64, so refuse instead.
+    if (
+      !sret &&
+      returnKind === 'pointer' &&
+      /(^|[\s*])_ret$/.test(params[1]?.trim() ?? '')
+    ) {
+      throw new Error(
+        `parseProtonThunks: ${family} ${version} ${methodName} returns ` +
+          `unrecognized struct type "${returnType.replace(/\*$/, '').trim()}" ` +
+          `-- add its measured Win64 size to SRET_STRUCT_SIZE`
+      )
+    }
 
     // Strip the synthetic leading `this` (always `struct w_steam_iface
     // *_this`) and, when this is the sret convention, the synthetic

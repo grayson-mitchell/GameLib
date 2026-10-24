@@ -89,9 +89,32 @@ describe('interfaceVersions', () => {
       ['STEAMUSERSTATS_INTERFACE_VERSION010', 'SteamUserStats'],
       ['STEAMREMOTESTORAGE_INTERFACE_VERSION005', 'SteamRemoteStorage'],
       ['SteamMatchMaking009', 'SteamMatchMaking'],
+      // 53-12: Steamworks.NET Init version-string forms.
+      ['STEAMHTMLSURFACE_INTERFACE_VERSION_005', 'SteamHTMLSurface'],
+      ['STEAMINVENTORY_INTERFACE_V003', 'SteamInventory'],
+      ['STEAMVIDEO_INTERFACE_V002', 'SteamVideo'],
+      ['STEAMPARENTALSETTINGS_INTERFACE_VERSION001', 'SteamParentalSettings'],
+      ['STEAMREMOTEPLAY_INTERFACE_VERSION002', 'SteamRemotePlay'],
+      ['SteamMatchGameSearch001', 'SteamGameSearch'],
+      ['SteamParties002', 'SteamParties'],
+      ['STEAMTIMELINE_INTERFACE_V001', 'SteamTimeline'],
       ['Bogus', null]
     ])('familyOfInterfaceVersion(%s) === %s', (version, expected) => {
       expect(familyOfInterfaceVersion(version)).toBe(expected)
+    })
+  })
+
+  describe('53-12 version-string scan forms', () => {
+    it('finds _VERSION_005 and _V003 macro forms', () => {
+      const text =
+        'x STEAMHTMLSURFACE_INTERFACE_VERSION_005 y STEAMINVENTORY_INTERFACE_V003 z SteamParties002'
+      expect(parseInterfaceVersionStrings(Buffer.from(text, 'latin1'))).toEqual(
+        [
+          'STEAMHTMLSURFACE_INTERFACE_VERSION_005',
+          'STEAMINVENTORY_INTERFACE_V003',
+          'SteamParties002'
+        ]
+      )
     })
   })
 

@@ -257,3 +257,61 @@ describe('resolveOrdinal (append-only)', () => {
     }
   })
 })
+
+describe('53-12: struct-pointer returns never emit pointer + synthetic _ret', () => {
+  const thunk = (ret: string, params: string): string =>
+    [
+      'DEFINE_THISCALL_WRAPPER(winIAbiFamily_AbiFamily003_GetThing, 12)',
+      `${ret} __thiscall winIAbiFamily_AbiFamily003_GetThing(struct w_steam_iface *_this${params})`,
+      '{',
+      '}',
+      '__ASM_BLOCK_BEGIN(winIAbiFamily_AbiFamily003_vtables)',
+      '    __ASM_VTABLE(winIAbiFamily_AbiFamily003,',
+      '        VTABLE_ADD_FUNC(winIAbiFamily_AbiFamily003_GetThing)',
+      '    );',
+      '__ASM_BLOCK_END'
+    ].join('\n')
+
+  it('a measured struct pointer return is class + structSize with `_ret` stripped', () => {
+    const [m] = parseProtonThunks(
+      thunk(
+        'InputAnalogActionData_t *',
+        ', InputAnalogActionData_t *_ret, uint64_t h'
+      ),
+      'AbiFamily',
+      'AbiFamily003'
+    )
+    expect(m.returnKind).toBe('class')
+    expect(m.structSize).toBe(16)
+    expect(m.params).toEqual([{ name: 'h', type: 'uint64' }])
+  })
+
+  it('classifyProtonReturn maps InputAnalogActionData_t * to class/sret', () => {
+    expect(classifyProtonReturn('InputAnalogActionData_t *')).toEqual({
+      returnKind: 'class',
+      returns: 'InputAnalogActionData_t',
+      sret: true,
+      structBaseType: 'InputAnalogActionData_t'
+    })
+  })
+
+  it('an unknown struct pointer return with a leading `_ret` param throws', () => {
+    expect(() =>
+      parseProtonThunks(
+        thunk('MysteryStruct_t *', ', MysteryStruct_t *_ret, uint64_t h'),
+        'AbiFamily',
+        'AbiFamily003'
+      )
+    ).toThrow(/unrecognized struct type "MysteryStruct_t"/)
+  })
+
+  it('a genuine void * return keeps its params and stays pointer (51-14 regression)', () => {
+    const [m] = parseProtonThunks(
+      thunk('void *', ', uint32_t a, uint32_t b'),
+      'AbiFamily',
+      'AbiFamily003'
+    )
+    expect(m.returnKind).toBe('pointer')
+    expect(m.params).toHaveLength(2)
+  })
+})

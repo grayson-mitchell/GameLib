@@ -1138,3 +1138,37 @@ describe('Phase 53 sampled titles: no half-served family (Pitfall 4)', () => {
     ).toEqual(['SteamFriends099'])
   })
 })
+
+// 53-12: Steamworks.NET's CSteamAPIContext.Init fetches every interface in a
+// fixed order and returns false on the first zero pointer, so NOVER only ever
+// names the FIRST unserved version. This pins the whole measured Init set.
+const NET_CONTEXT_FIXTURE: {
+  titles: Record<
+    string,
+    { name: string; measured: string[]; initRequested: string[] }
+  >
+} = JSON.parse(
+  readFileSync(
+    join(__dirname, 'fixtures', 'steamworksNetContextVersions.json'),
+    'utf-8'
+  )
+)
+
+describe('53-12: Steamworks.NET CSteamAPIContext.Init is fully served on x64', () => {
+  it('pins four titles that all request STEAMSCREENSHOTS_INTERFACE_VERSION003', () => {
+    const titles = Object.entries(NET_CONTEXT_FIXTURE.titles)
+    expect(titles).toHaveLength(4)
+    for (const [, t] of titles) {
+      expect(t.initRequested).toContain('STEAMSCREENSHOTS_INTERFACE_VERSION003')
+    }
+  })
+
+  for (const [appid, title] of Object.entries(NET_CONTEXT_FIXTURE.titles)) {
+    it(`${appid} ${title.name}: every Init-requested version is served`, () => {
+      const unserved = title.initRequested.filter(
+        (v) => !SHIM64_SERVED_INTERFACE_VERSIONS.has(v)
+      )
+      expect(unserved).toEqual([])
+    })
+  }
+})

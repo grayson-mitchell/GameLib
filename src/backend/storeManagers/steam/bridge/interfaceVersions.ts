@@ -25,7 +25,7 @@ import { open, stat } from 'node:fs/promises'
 // megabytes of non-ASCII binary noise that happens to start with
 // "Steam"/"STEAM" looking for a digit that never comes.
 const VERSION_STRING_PATTERN =
-  /(Steam[A-Za-z]{2,40}0\d{2}|STEAM[A-Z]{2,40}_INTERFACE_VERSION0\d{2})/g
+  /(Steam[A-Za-z]{2,40}0\d{2}|STEAM[A-Z]{2,40}_INTERFACE_(?:VERSION_?|V)0\d{2})/g
 
 // `STEAM<NAME>_INTERFACE_VERSION0NN` macro-style version strings, keyed by
 // the macro name (everything between `STEAM` and `_INTERFACE_VERSION`), to
@@ -44,7 +44,11 @@ const MACRO_FAMILY: Readonly<Record<string, string>> = {
   STEAMUNIFIEDMESSAGES: 'SteamUnifiedMessages',
   STEAMHTMLSURFACE: 'SteamHTMLSurface',
   STEAMINVENTORY: 'SteamInventory',
-  STEAMVIDEO: 'SteamVideo'
+  STEAMVIDEO: 'SteamVideo',
+  // Phase 53 (53-12): Steamworks.NET Init families.
+  STEAMPARENTALSETTINGS: 'SteamParentalSettings',
+  STEAMREMOTEPLAY: 'SteamRemotePlay',
+  STEAMTIMELINE: 'SteamTimeline'
 }
 
 // `Steam<Family>0NN` CamelCase version strings (e.g. `SteamUser016`). Only
@@ -64,8 +68,18 @@ const CAMEL_CASE_FAMILIES: ReadonlySet<string> = new Set([
   'SteamGameServerStats',
   'SteamContentServer',
   'SteamParentalSettings',
-  'SteamAppList'
+  'SteamAppList',
+  // Phase 53 (53-12): `SteamMatchGameSearch001` (family SteamGameSearch, see
+  // CAMEL_FAMILY_ALIAS) and `SteamParties002`.
+  'SteamMatchGameSearch',
+  'SteamParties'
 ])
+
+// CamelCase version-string prefix -> family name, where the two spellings
+// differ (the Matchmaking precedent: accessor casing vs version casing).
+const CAMEL_FAMILY_ALIAS: Readonly<Record<string, string>> = {
+  SteamMatchGameSearch: 'SteamGameSearch'
+}
 
 // Bare accessor export name (as seen in the import table, importParse.ts) ->
 // the family name used by the version-string parsers above. Casing
@@ -112,7 +126,7 @@ const RUNTIME_LOOKUP_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamClient'
 ])
 
-const MACRO_VERSION_PATTERN = /^([A-Z]+)_INTERFACE_VERSION\d{3}$/
+const MACRO_VERSION_PATTERN = /^([A-Z]+)_INTERFACE_(?:VERSION_?|V)\d{3}$/
 const CAMEL_VERSION_PATTERN = /^([A-Za-z]+)\d{3}$/
 
 const DEFAULT_MAX_BYTES = 512 * 1024 * 1024 // 512 MiB (T-51-07)
@@ -147,7 +161,7 @@ export function familyOfInterfaceVersion(version: string): string | null {
 
   const camelMatch = version.match(CAMEL_VERSION_PATTERN)
   if (camelMatch && CAMEL_CASE_FAMILIES.has(camelMatch[1])) {
-    return camelMatch[1]
+    return CAMEL_FAMILY_ALIAS[camelMatch[1]] ?? camelMatch[1]
   }
 
   return null
