@@ -1027,7 +1027,7 @@ describe('shimGenerate', () => {
 
       expect(result.status).toBe('placed')
       if (result.status === 'placed') {
-        expect(result.verdict.status).toBe('clean')
+        expect(result.verdict?.status).toBe('clean')
       }
     })
 

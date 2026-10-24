@@ -219,6 +219,93 @@ async function findRuntimeLoadedSteamApiDlls(
 }
 
 /**
+ * quick 261024-i94: the bottle-contained root both placement branches walk.
+ * Containment is T-oq7-03 / T-24-06; the fallback is the exe's own folder.
+ */
+function resolveWalkRoot(
+  bottleDir: string,
+  resolvedExePath: string,
+  gameInstallRoot: string | undefined
+): string {
+  return gameInstallRoot &&
+    isContainedWithin(bottleDir, resolve(gameInstallRoot))
+    ? resolve(gameInstallRoot)
+    : dirname(resolvedExePath)
+}
+
+// Bounds objdump spawns on Unity/UE trees that ship hundreds of DLLs
+// (T-i94-02). Hitting it logs one warning and stops the scan.
+const IMPORTER_SCAN_MAX_FILES = 512
+const PE_CANDIDATE_EXT = /\.(exe|dll)$/
+
+interface SteamApiImporterPe {
+  path: string
+  arch: 'x86' | 'x64'
+  symbols: string[]
+}
+
+/**
+ * quick 261024-i94: bounded walk of the install tree for PEs OTHER than the
+ * launch exe that import steam_api(64).dll (e.g. Grim Dawn's x64/Engine.dll).
+ * Same walk shape as findRuntimeLoadedSteamApiDlls: async fs, depth-limited,
+ * symlinks skipped (entry + lstat re-check). Candidates are .exe/.dll files
+ * only; steam_api*.dll themselves and `excludePath` are never scanned. Scans
+ * run sequentially; a scan error skips that file (T-i94-01..03).
+ */
+async function findSteamApiImporterPes(
+  appId: string,
+  root: string,
+  excludePath: string
+): Promise<SteamApiImporterPe[]> {
+  const found: SteamApiImporterPe[] = []
+  const exclude = resolve(excludePath)
+  let scanned = 0
+  let capped = false
+  const walk = async (dir: string, depth: number): Promise<void> => {
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (capped) return
+      if (entry.isSymbolicLink()) continue
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (depth < RUNTIME_WALK_MAX_DEPTH) await walk(full, depth + 1)
+        continue
+      }
+      if (!entry.isFile()) continue
+      const lower = entry.name.toLowerCase()
+      if (!PE_CANDIDATE_EXT.test(lower)) continue
+      if (lower === 'steam_api.dll' || lower === 'steam_api64.dll') continue
+      if (resolve(full) === exclude) continue
+      try {
+        if ((await lstat(full)).isSymbolicLink()) continue
+      } catch {
+        continue
+      }
+      if (scanned >= IMPORTER_SCAN_MAX_FILES) {
+        capped = true
+        logWarning(
+          `placeShimForGame: importer-PE scan hit the ${IMPORTER_SCAN_MAX_FILES}-file cap for appId ${appId} -- remaining files not scanned`,
+          LogPrefix.Steam
+        )
+        return
+      }
+      scanned++
+      const result = await scanSteamApiImports(appId, full)
+      if (result.status === 'ok' && result.arch !== 'none') {
+        found.push({ path: full, arch: result.arch, symbols: result.symbols })
+      }
+    }
+  }
+  await walk(root, 0)
+  return found
+}
+
+/**
  * True iff the file at `pathA` is byte-identical to the file at `pathB`
  * (size compare first, then sha256 digest compare only on a size match).
  * D-UAT-24-04: replaces a pure `existsSync` existence guard, which let the
@@ -460,11 +547,11 @@ async function placeShimForGameInner(
   const scannedAt = new Date().toISOString()
 
   if (importResult.arch === 'none') {
-    const walkRoot =
-      opts?.gameInstallRoot &&
-      isContainedWithin(bottleDir, resolve(opts.gameInstallRoot))
-        ? resolve(opts.gameInstallRoot)
-        : dirname(resolvedExePath)
+    const walkRoot = resolveWalkRoot(
+      bottleDir,
+      resolvedExePath,
+      opts?.gameInstallRoot
+    )
     const runtimeDlls = await findRuntimeLoadedSteamApiDlls(walkRoot)
     if (runtimeDlls.length > 0) {
       const names = (['steam_api.dll', 'steam_api64.dll'] as const).filter(
@@ -620,7 +707,29 @@ async function placeShimForGameInner(
     return { status: 'already-placed', shimPath }
   }
 
-  const symbols = importResult.symbols
+  // quick 261024-i94: other same-arch PEs in the install tree (Grim Dawn's
+  // Engine.dll) import steam_api too -- merge their imports into the required
+  // set. Runs only here, after the already-placed no-op above.
+  const importerRoot = resolveWalkRoot(
+    bottleDir,
+    resolvedExePath,
+    opts?.gameInstallRoot
+  )
+  const importers = (
+    await findSteamApiImporterPes(appId, importerRoot, resolvedExePath)
+  ).filter((i) => i.arch === importResult.arch)
+  const symbols = [
+    ...new Set([
+      ...importResult.symbols,
+      ...importers.flatMap((i) => i.symbols)
+    ])
+  ]
+  if (importers.length > 0) {
+    logInfo(
+      `placeShimForGame: appId ${appId} merged steam_api imports from ${importers.map((i) => relative(importerRoot, i.path)).join(', ')}`,
+      LogPrefix.Steam
+    )
+  }
   const targetExists = existsSync(shimPath)
   let targetIsGameLibShim = false
   if (targetExists) {
@@ -648,7 +757,14 @@ async function placeShimForGameInner(
       : []
 
   const exeVersions = usesRuntimeInterfaceLookup(symbols)
-    ? await readVersionsOrEmpty(resolvedExePath, appId)
+    ? [
+        ...(await readVersionsOrEmpty(resolvedExePath, appId)),
+        ...(
+          await Promise.all(
+            importers.map((i) => readVersionsOrEmpty(i.path, appId))
+          )
+        ).flat()
+      ]
     : []
 
   const { required, problems } = resolveRequiredInterfaceVersions({
