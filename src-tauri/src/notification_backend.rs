@@ -34,6 +34,16 @@ pub fn select_notification_backend(
     }
 }
 
+/// The wire value the `notification_show` arm resolves (mirrored by
+/// `RustNotificationBackendLabel` in `src/common/types/sidecarTransport.ts`), so the sidecar
+/// can log which backend took a notification.
+pub fn backend_label(backend: NotificationBackend) -> &'static str {
+    match backend {
+        NotificationBackend::Plugin => "plugin",
+        NotificationBackend::UserNotifications => "user-notifications",
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthStatus {
     NotDetermined,

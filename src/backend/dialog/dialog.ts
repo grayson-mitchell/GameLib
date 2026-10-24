@@ -110,6 +110,16 @@ function notify({ body, title }: NotifyType) {
         LogPrefix.Backend
       )
     })
+    notify.on('show', (_event: unknown, backend?: string) => {
+      // Title and a fixed backend label only, never the body (REQ-30-07/D-09).
+      const result =
+        backend === 'user-notifications'
+          ? 'accepted by UserNotifications'
+          : backend === 'plugin'
+            ? 'handed to tauri-plugin-notification (delivery not confirmable)'
+            : 'handed off (delivery not confirmable)'
+      logInfo(`notify(): "${title}" ${result}`, LogPrefix.Backend)
+    })
     notify.show()
   } else {
     // REQ-30-07/D-09: a logged no-op, not a silent one -- names the title and the reason,

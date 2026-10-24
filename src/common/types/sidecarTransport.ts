@@ -186,10 +186,15 @@ export const RUST_DIALOG_SAVE = 'dialog_save' as const
 /**
  * Rust-side channel name: show a real OS notification via `tauri-plugin-notification`
  * (Phase 33 Plan 04, D-05). Backs `electronStub.ts`'s `Notification.show()`. Takes a single
- * `{ title?, body? }` object arg; resolves `Value::Null` on success. No icon/nativeImage
- * plumbing (33-RESEARCH confirmed the plugin's icon param is optional).
+ * `{ title?, body? }` object arg; resolves the backend label
+ * (`'user-notifications' | 'plugin'`, see `RustNotificationBackendLabel`) on success; an older
+ * shell resolves null. No icon/nativeImage plumbing (33-RESEARCH confirmed the plugin's icon
+ * param is optional).
  */
 export const RUST_NOTIFICATION_SHOW = 'notification_show' as const
+
+/** Mirrors `notification_backend::backend_label` in the Rust shell. */
+export type RustNotificationBackendLabel = 'user-notifications' | 'plugin'
 
 /**
  * Prefix of the `notification_show` rejection when macOS notification authorization is denied.

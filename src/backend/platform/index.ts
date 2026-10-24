@@ -614,7 +614,8 @@ export class Notification {
 
   private readonly listeners = new Map<string, NotificationListener[]>()
 
-  // Only 'failed' is ever emitted; other events (e.g. 'click') are accepted and ignored.
+  // Only 'show' (Electron's own event of that name) and 'failed' are ever emitted; other
+  // events (e.g. 'click') are accepted and ignored.
   on(event?: string, listener?: NotificationListener): this {
     if (event && listener) {
       const list = this.listeners.get(event) ?? []
@@ -627,25 +628,41 @@ export class Notification {
   show(): void {
     requestRustInvoke(RUST_NOTIFICATION_SHOW, [
       { title: this.options.title, body: this.options.body }
-    ]).catch((error) => {
-      const message = error instanceof Error ? error.message : String(error)
-      console.warn(
-        `[electronStub] Notification.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
-        message
-      )
-      for (const listener of this.listeners.get('failed') ?? []) {
-        try {
-          listener({ sender: this }, message)
-        } catch (listenerError) {
-          console.warn(
-            "[electronStub] Notification 'failed' listener threw:",
-            listenerError instanceof Error
-              ? listenerError.message
-              : String(listenerError)
-          )
+    ])
+      .then((result) => {
+        const backend = typeof result === 'string' ? result : undefined
+        for (const listener of this.listeners.get('show') ?? []) {
+          try {
+            listener({ sender: this }, backend)
+          } catch (listenerError) {
+            console.warn(
+              "[electronStub] Notification 'show' listener threw:",
+              listenerError instanceof Error
+                ? listenerError.message
+                : String(listenerError)
+            )
+          }
         }
-      }
-    })
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error)
+        console.warn(
+          `[electronStub] Notification.show(): ${RUST_NOTIFICATION_SHOW} failed:`,
+          message
+        )
+        for (const listener of this.listeners.get('failed') ?? []) {
+          try {
+            listener({ sender: this }, message)
+          } catch (listenerError) {
+            console.warn(
+              "[electronStub] Notification 'failed' listener threw:",
+              listenerError instanceof Error
+                ? listenerError.message
+                : String(listenerError)
+            )
+          }
+        }
+      })
   }
 
   close(): void {}

@@ -7864,7 +7864,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             if macos_notifications::backend()
                 == notification_backend::NotificationBackend::UserNotifications
             {
-                return macos_notifications::deliver(title, body).map(|()| Value::Null);
+                return macos_notifications::deliver(title, body).map(|()| {
+                    Value::String(
+                        notification_backend::backend_label(
+                            notification_backend::NotificationBackend::UserNotifications,
+                        )
+                        .to_string(),
+                    )
+                });
             }
             let mut builder = app.notification().builder();
             if let Some(title) = title {
@@ -7874,7 +7881,14 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 builder = builder.body(body);
             }
             builder.show().map_err(|e| e.to_string())?;
-            Ok(Value::Null)
+            // Resolve the backend label, not null: it makes delivery observable, and the
+            // plugin's Ok does not mean delivered (52-UAT item 30).
+            Ok(Value::String(
+                notification_backend::backend_label(
+                    notification_backend::NotificationBackend::Plugin,
+                )
+                .to_string(),
+            ))
         }
         // Reveal a path in the OS file manager (Phase 33 Plan 04, D-05) via
         // `tauri-plugin-opener`'s `reveal_item_in_dir` (already installed for `open_external`).
