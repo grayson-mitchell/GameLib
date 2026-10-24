@@ -2,7 +2,7 @@
 phase: 53
 slug: steam-bridge-coverage-modern-sdk-exports-flat-api
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-10-25
 ---
@@ -39,21 +39,26 @@ created: 2026-10-25
 
 Filled in by the planner per task. Behaviour → command map:
 
-| Behavior | Test Type | Automated Command | File Exists | Status |
-|----------|-----------|-------------------|-------------|--------|
-| Flat exports generated from manifests, idempotent | unit + diff | `npx jest meta/__tests__/gen_vtables.test.ts`; `pnpm gen-vtables && git diff --exit-code native/` | ✅ (add cases) | ⬜ pending |
-| Flat switch picks right slot per version; NULL + logged version on unknown flat `GetISteamX`/accessor (D-53-07) | generator text pins | same | ✅ (add) | ⬜ pending |
-| x64 shim compiles; `.def` names in PE export table | compile gate | `npx jest meta/__tests__/shimAbiGate.test.ts`; `pnpm build-steam-bridge` + `objdump -p` | ✅ | ⬜ pending |
-| Export list pinned both directions vs `.def` | unit | `npx jest src/backend/storeManagers/steam/bridge/__tests__/shimCoverage.test.ts` | ✅ (update) | ⬜ pending |
-| New manifests valid (slot counts, ordinals, served map) | unit | gen_vtables + shimCoverage jest | ✅ (add) | ⬜ pending |
-| Managed ImplMap reader incl. hostile inputs, UTF-16 versions, CLR flags | unit, synthetic assembly | `npx jest src/backend/storeManagers/steam/bridge/__tests__/managedImports.test.ts` | ❌ W0 | ⬜ pending |
-| Unserved-family imports counted, not required (D-53-04 amended) | unit | managedImports + shimCoverage jest | ❌ W0 | ⬜ pending |
-| AnyCPU→x64 unless `32BITREQUIRED` or `32BITPREFERRED` (D-53-10 amended) | unit | `npx jest src/backend/storeManagers/steam/bridge/__tests__/peSteamDrm.test.ts` | ✅ (add) | ⬜ pending |
-| Shared scan module used by shimGenerate and census (D-53-12) | unit + import boundary | bridgeCensus + shimGenerate jest | ✅ (add) | ⬜ pending |
-| j4l guard / version-skew regression table for sample titles | unit | shimCoverage jest | ✅ (add) | ⬜ pending |
-| Per-engine evidence + bridge trace classification (D-53-13) | unit, fixture logs | bridgeCensus jest | ✅ (add) | ⬜ pending |
-| Helper once-per-method `CALL` trace, no SteamID | compile + integration (darwin) | `pnpm build-steam-bridge`; `npx jest src/backend/storeManagers/steam/bridge/__tests__/helperIntegration.test.ts` | ✅ | ⬜ pending |
-| Census Steamworks-using denominator + majority line | unit | bridgeCensus jest | ✅ (add) | ⬜ pending |
+| Task ID | Behavior | Test Type | Automated Command | File Exists | Status |
+|---------|----------|-----------|-------------------|-------------|--------|
+| 53-01-T1 | New x64 manifests extracted per version, Friends018 widened, UE version lists measured (D-53-03, D-53-11) | data check | node manifest check in 53-01 T1 verify; `npx prettier --check` over the 14 JSON paths | ✅ | ⬜ pending |
+| 53-01-T2 | SteamInternal_GameServer_Init x64 export; served map; no half-served family per sampled title (Pitfall 4); IsSteamRunningOnSteamDeck stub = 0 (D-53-06) | unit + diff + compile | `npx jest meta/__tests__/gen_vtables.test.ts meta/__tests__/shimAbiGate.test.ts src/backend/storeManagers/steam/bridge/__tests__/shimCoverage.test.ts`; `pnpm gen-vtables && git diff --exit-code native/steam-bridge/generated`; `pnpm build-steam-bridge` + objdump | ✅ (add) | ⬜ pending |
+| 53-02-T1 | CLR header + AnyCPU rule incl. 32BITPREFERRED (D-53-10 amended) | unit, synthetic PE | `npx jest src/backend/storeManagers/steam/bridge/__tests__/managedImports.test.ts` | ❌ W0 (created here) | ⬜ pending |
+| 53-02-T2 | ImplMap/ModuleRef decode, hostile inputs never throw (D-53-04) | unit, synthetic assembly | same | ❌ W0 (created here) | ⬜ pending |
+| 53-02-T3 | UTF-16 versions, managed-first pool (OQ2); measured flat-name fixture (D-53-02) | unit + real-assembly smoke | `npx jest .../interfaceVersions.test.ts .../managedImports.test.ts`; fixture node check | ✅ (add) / ❌ W0 fixture | ⬜ pending |
+| 53-03-T1 | Per-engine evidence + CALL rule (D-53-13); Steamworks-using denominator + majority (D-53-14) | unit, fixture logs | `npx jest meta/__tests__/bridgeCensus.test.ts` | ✅ (add) | ⬜ pending |
+| 53-03-T2 | Engine log finders; gamelib.log* siblings bounded (Pitfall 6) | live read-only | `pnpm bridge-census` grep for majority and `Logs read:` lines | ✅ | ⬜ pending |
+| 53-04-T1 | Flat emitter: per-version slot switch, typed params, overload aliases, sret guard, NULL-on-miss GetISteamX (D-53-01/05/07), null object kept (D-53-08) | generator text pins | `npx jest meta/__tests__/gen_vtables.test.ts` | ✅ (add) | ⬜ pending |
+| 53-04-T2 | Generated export list both directions vs .def; every served-family census name exported; PE export table | unit + compile | `npx jest meta/__tests__/shimAbiGate.test.ts src/backend/storeManagers/steam/bridge`; `pnpm build-steam-bridge` + objdump | ✅ (update) | ⬜ pending |
+| 53-05-T1 | Walks lifted into bridgeScan.ts, zero backend imports (D-53-12) | unit + import boundary | `npx jest .../shimGenerate.test.ts .../bridgeScan.test.ts`; `pnpm codecheck` | ❌ W0 bridgeScan.test.ts (created here) | ⬜ pending |
+| 53-05-T2 | Managed scan, amended required/counted partition, IL2CPP flag (D-53-04) | unit, tmp tree | `npx jest .../bridgeScan.test.ts` | ✅ (add) | ⬜ pending |
+| 53-05-T3 | shimGenerate consumes managed scan + effective arch (D-53-10); j4l lift for 1363080/427410/1119730 (D-53-11) | unit | `npx jest src/backend/storeManagers/steam/bridge` | ✅ (add) | ⬜ pending |
+| 53-06-T1 | Helper once-per-method CALL trace, no args (D-53-13); wire hash unchanged | generator pins + compile | `npx jest meta/__tests__/gen_vtables.test.ts`; `pnpm build-steam-bridge` | ✅ (add) | ⬜ pending |
+| 53-06-T2 | CONTROL slot 4 REPORT_VERSION logs NOVER, bounded (D-53-07) | integration (darwin) | `npx jest .../protocol.test.ts .../helperIntegration.test.ts` | ✅ (add) | ⬜ pending |
+| 53-07-T1 | Census uses bridgeScan for every scan question (D-53-12); UE rows off no-steam-api | unit + source boundary | `npx jest meta/__tests__/bridgeCensus.test.ts` | ✅ (add) | ⬜ pending |
+| 53-07-T2 | x86 modern/flat count (D-53-09); deferral todo | unit + live census | `pnpm bridge-census` grep; `pnpm planning-gates` | ✅ | ⬜ pending |
+| 53-08-T1/T2 | Desk gate; UAT contract shape | gate + grep | `pnpm gen-vtables`/`build-steam-bridge`/objdump; UAT item-count greps | ✅ | ⬜ pending |
+| 53-09-T1..T3 | Live sample, census majority (done-when) | live UAT | `pnpm bridge-census` majority line | live gate | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

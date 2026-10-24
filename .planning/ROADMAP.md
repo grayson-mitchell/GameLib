@@ -435,9 +435,17 @@ Out of scope, tracked separately: the Unreal bootstrap-exe scan miss
 (`2026-10-24-bridge-scan-reads-unreal-bootstrap-exe-and-misses-the-shipping-binary.md`), the
 SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
-**Requirements**: TBD
+**Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 0 plans
+**Plans:** 9 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 53 to break down)
+- [ ] 53-01-PLAN.md — new x64 interface manifests (Client020/021, User021, Friends017/018, Utils010, UserStats012/013, Input006, GameServer014/015, GameServerStats001) + SteamInternal_GameServer_Init
+- [ ] 53-02-PLAN.md — pure ECMA-335 ImplMap reader, AnyCPU CLR-flag rule, UTF-16 version constants, measured flat-name fixture
+- [ ] 53-03-PLAN.md — census per-engine evidence + game-originated CALL rule, Steamworks-using majority line, rotated logs
+- [ ] 53-04-PLAN.md — generated flat Steamworks API exports (x64), NULL-on-unknown flat lookups, generated export list
+- [ ] 53-05-PLAN.md — shared bridgeScan.ts module, Mono managed scan, effective arch, j4l lift for UE titles
+- [ ] 53-06-PLAN.md — helper CALL trace and CONTROL slot 4 REPORT_VERSION (NOVER)
+- [ ] 53-07-PLAN.md — census on the shared scan, x86 measurement and deferral
+- [ ] 53-08-PLAN.md — desk gate and 53-UAT live re-run contract
+- [ ] 53-09-PLAN.md — live sample run and census majority (operator checkpoint)
