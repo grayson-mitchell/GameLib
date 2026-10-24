@@ -173,7 +173,7 @@ result: pass — round 0 (REG=0, session /tmp/gamelib-gate-52-20261024T015232Z, 
 ### 2. Discovery round 1 (MODE=probe REG=1)
 
 expected: `ROUND=1 MODE=probe REG=1`: round-1.cxlog shows the stub opening `ActiveProcess` and loading `steamclient64.dll`; round-1.helper.log shows `HELLO` and `FWD CreateInterface ver=SteamClient017 native=present`; record every FWD line, the outcome (exit code, runtime, main menu), and the change made per the protocol, or `pass` if main menu plus operator-confirmed In-Game.
-result: pass — pass candidate on the first forwarded run (round 1, MODE=probe REG=1, WATCH=60, 2026-10-24T01:53:13Z, no code change needed; protocol classification: none of (a)-(f) fired). Helper log: `LISTEN 127.0.0.1:50646`, `INIT SteamAPI ready`, `HELLO  shim attached appid=219990`, `FWD CreateInterface ver=SteamClient017 native=present`, `FWD CreateInterface ver=SteamClient014 native=present` (only two FWD lines; no GetISteam* forwarded). cxlog: `steam://run` count 0; ActiveProcess key opened three times; `RegQueryValueExW ... L"pid"` twice (lines 6216, 6224 of round-1.cxlog) with no value present, after which the stub read `SteamClientDll64` and `Loaded L"...\\Grim Dawn\\x64\\steamclient64.dll" ... native`. wine.log `No implementation for steam_api64.dll` count 0. Grim Dawn alive at 60 s (runtime=60s). Mac Steam process still running after the round. Main menu and Mac Steam In-Game NOT operator-observed here (headless round; the product-bottle confirmation is item 6 in 52-12). Evidence sink: /tmp/gamelib-gate-52-20261024T015232Z/round-1.{helper.log,cxlog,wine.log}, terminal.log has two `=== GATE ROUND` delimiters.
+result: pending — pass candidate only (operator correction 2026-10-24: expected requires main menu, which this headless round never observed, and the game's Steam init logged `[S_API] SteamAPI_Init(): SteamAPI_IsSteamRunning() did not locate a running instance of Steam.` at round-1.cxlog:6226 before `Loaded '...\x64\steamclient64.dll' OK.` at :6392 — not a clean init log under the strict bridge-verified rule; 52-12 item 6 decides). First forwarded run (round 1, MODE=probe REG=1, WATCH=60, 2026-10-24T01:53:13Z, no code change needed; protocol classification: none of (a)-(f) fired). Helper log: `LISTEN 127.0.0.1:50646`, `INIT SteamAPI ready`, `HELLO  shim attached appid=219990`, `FWD CreateInterface ver=SteamClient017 native=present`, `FWD CreateInterface ver=SteamClient014 native=present` (only two FWD lines; no GetISteam* forwarded). cxlog: `steam://run` count 0; ActiveProcess key opened three times; `RegQueryValueExW ... L"pid"` twice (lines 6216, 6224 of round-1.cxlog) with no value present, after which the stub read `SteamClientDll64` and `Loaded L"...\\Grim Dawn\\x64\\steamclient64.dll" ... native`. wine.log `No implementation for steam_api64.dll` count 0. Grim Dawn alive at 60 s (runtime=60s). Mac Steam process still running after the round. Main menu and Mac Steam In-Game NOT operator-observed here (headless round; the product-bottle confirmation is item 6 in 52-12). Evidence sink: /tmp/gamelib-gate-52-20261024T015232Z/round-1.{helper.log,cxlog,wine.log}, terminal.log has two `=== GATE ROUND` delimiters.
 
 ### 3. Discovery round 2
 
@@ -188,7 +188,7 @@ result: skipped — round 1 passed
 ### 5. pid decision (decision 1)
 
 expected: `skipped — no pid read observed` unless protocol (e) fired, in which case the user's decision and its evidence are recorded.
-result: skipped — no pid-fallback observed (rounds 1). The stub did query ActiveProcess value `pid` twice in round 1 (absent), but no exit and no `steam://run` followed: it went on to read SteamClientDll64, loaded steamclient64.dll, forwarded CreateInterface for SteamClient017/014, and Grim Dawn was alive at 60 s. A pid writer is therefore not evidenced as needed; none was built (decision 1). 52-12 should re-check the pid reads against its own absence-of-fallback evidence.
+result: pass — operator decision recorded 2026-10-24: no pid writer for now; 52-12 decides. The skip condition did NOT hold (the stub queried ActiveProcess `pid` twice, absent, round-1.cxlog:6216 and :6224), so the decision was put to the operator. Evidence shown: after the second read the game's SteamAPI_Init logged `SteamAPI_IsSteamRunning() did not locate a running instance of Steam.` (:6226) but continued — read SteamClientDll64, loaded steamclient64.dll native (:6385), `Loaded ... steamclient64.dll OK.` (:6392); helper logged HELLO and FWD SteamClient017/014 native=present; no `steam://run`; alive at 60 s. Options a/b/c not taken. If 52-12's product-bottle launch fails to reach main menu or its Steam init fails on IsSteamRunning, a pid writer becomes a gap-closure plan (`/gsd-plan-phase 52 --gaps`). No pid writer exists in the repo.
 
 ### 6. Done-when — GameLib launch of Grim Dawn (product bottle)
 
@@ -256,8 +256,8 @@ runner action, not a contract defect.
 total: 8
 passed: 2
 issues: 0
-pending: 3
-skipped: 3
+pending: 4
+skipped: 2
 blocked: 0
 
 ## Gaps
