@@ -1,0 +1,198 @@
+{
+  "en": {
+    "steam.bridge.steamstub.title": "Steam DRM check may fail",
+    "steam.bridge.steamstub.body": "This game uses Steam's DRM wrapper. GameLib could not connect it to your Mac Steam client, so the game will probably close a few seconds after it starts."
+  },
+  "ar": {
+    "steam.bridge.steamstub.title": "قد يفشل فحص DRM في Steam",
+    "steam.bridge.steamstub.body": "تستخدم هذه اللعبة غلاف DRM الخاص بـ Steam. لم يتمكن GameLib من ربطها بعميل Steam على جهاز Mac، لذا من المرجح أن تُغلق اللعبة بعد بضع ثوانٍ من بدء تشغيلها."
+  },
+  "az": {
+    "steam.bridge.steamstub.title": "Steam DRM yoxlaması uğursuz ola bilər",
+    "steam.bridge.steamstub.body": "Bu oyun Steam-in DRM qabığından istifadə edir. GameLib onu Mac-dakı Steam müştərinizə qoşa bilmədi, ona görə də oyun başladıqdan bir neçə saniyə sonra çox güman ki, bağlanacaq."
+  },
+  "be": {
+    "steam.bridge.steamstub.title": "Праверка Steam DRM можа не ўдацца",
+    "steam.bridge.steamstub.body": "Гэта гульня выкарыстоўвае абалонку DRM ад Steam. GameLib не здолеў падключыць яе да кліента Steam на вашым Mac, таму гульня, верагодна, закрыецца праз некалькі секунд пасля запуску."
+  },
+  "bg": {
+    "steam.bridge.steamstub.title": "Проверката на Steam DRM може да се провали",
+    "steam.bridge.steamstub.body": "Тази игра използва DRM обвивката на Steam. GameLib не успя да я свърже с клиента на Steam на вашия Mac, така че играта вероятно ще се затвори няколко секунди след стартирането."
+  },
+  "br": {
+    "steam.bridge.steamstub.title": "Marteze a c'hall c'hwitañ gwiriañ DRM Steam",
+    "steam.bridge.steamstub.body": "Ar c'hoari-mañ a implij gwisk DRM Steam. N'eus ket bet gallet gant GameLib he c'hevreañ ouzh ho pellgomzer Steam war Mac, setu e vo serret ar c'hoari moarvat un nebeud eilennoù goude m'eo loc'het."
+  },
+  "bs": {
+    "steam.bridge.steamstub.title": "Steam DRM provjera može propasti",
+    "steam.bridge.steamstub.body": "Ova igra koristi Steamov DRM omotač. GameLib je nije mogao povezati s vašim Steam klijentom na Macu, pa će se igra vjerovatno zatvoriti nekoliko sekundi nakon pokretanja."
+  },
+  "ca": {
+    "steam.bridge.steamstub.title": "La comprovació DRM de Steam pot fallar",
+    "steam.bridge.steamstub.body": "Aquest joc utilitza l'embolcall DRM de Steam. GameLib no ha pogut connectar-lo amb el client de Steam del teu Mac, així que el joc probablement es tancarà uns segons després d'iniciar-se."
+  },
+  "cs": {
+    "steam.bridge.steamstub.title": "Kontrola Steam DRM může selhat",
+    "steam.bridge.steamstub.body": "Tato hra používá obal DRM služby Steam. GameLib ji nedokázal propojit s klientem Steam na vašem Macu, takže se hra pravděpodobně několik sekund po spuštění zavře."
+  },
+  "da": {
+    "steam.bridge.steamstub.title": "Steam DRM-kontrollen kan mislykkes",
+    "steam.bridge.steamstub.body": "Dette spil bruger Steams DRM-wrapper. GameLib kunne ikke forbinde det til din Steam-klient på Mac, så spillet lukker sandsynligvis nogle sekunder efter, at det er startet."
+  },
+  "de": {
+    "steam.bridge.steamstub.title": "Steam-DRM-Prüfung könnte fehlschlagen",
+    "steam.bridge.steamstub.body": "Dieses Spiel verwendet den DRM-Wrapper von Steam. GameLib konnte es nicht mit Ihrem Steam-Client auf dem Mac verbinden, daher wird sich das Spiel wahrscheinlich wenige Sekunden nach dem Start schließen."
+  },
+  "el": {
+    "steam.bridge.steamstub.title": "Ο έλεγχος DRM του Steam μπορεί να αποτύχει",
+    "steam.bridge.steamstub.body": "Αυτό το παιχνίδι χρησιμοποιεί το περιτύλιγμα DRM του Steam. Το GameLib δεν μπόρεσε να το συνδέσει με τον πελάτη Steam στο Mac σας, οπότε το παιχνίδι πιθανότατα θα κλείσει λίγα δευτερόλεπτα μετά την εκκίνηση."
+  },
+  "es": {
+    "steam.bridge.steamstub.title": "La comprobación DRM de Steam puede fallar",
+    "steam.bridge.steamstub.body": "Este juego usa el envoltorio DRM de Steam. GameLib no pudo conectarlo con tu cliente de Steam en el Mac, así que el juego probablemente se cerrará unos segundos después de iniciarse."
+  },
+  "et": {
+    "steam.bridge.steamstub.title": "Steami DRM-kontroll võib ebaõnnestuda",
+    "steam.bridge.steamstub.body": "See mäng kasutab Steami DRM-ümbrist. GameLib ei suutnud seda teie Maci Steami kliendiga ühendada, mistõttu mäng sulgub tõenäoliselt mõni sekund pärast käivitamist."
+  },
+  "eu": {
+    "steam.bridge.steamstub.title": "Steam DRM egiaztapenak huts egin dezake",
+    "steam.bridge.steamstub.body": "Joko honek Steamen DRM bilgarria erabiltzen du. GameLib-ek ezin izan du zure Mac-eko Steam bezeroarekin lotu, beraz, jokoa seguruenik abiarazi eta segundo batzuetara itxiko da."
+  },
+  "fa": {
+    "steam.bridge.steamstub.title": "بررسی DRM Steam ممکن است ناموفق باشد",
+    "steam.bridge.steamstub.body": "این بازی از پوشش DRM استیم استفاده می‌کند. GameLib نتوانست آن را به کلاینت Steam روی Mac شما متصل کند، بنابراین بازی احتمالاً چند ثانیه پس از شروع بسته خواهد شد."
+  },
+  "fi": {
+    "steam.bridge.steamstub.title": "Steamin DRM-tarkistus voi epäonnistua",
+    "steam.bridge.steamstub.body": "Tämä peli käyttää Steamin DRM-kääreen. GameLib ei voinut yhdistää sitä Macin Steam-asiakasohjelmaan, joten peli sulkeutuu todennäköisesti muutaman sekunnin kuluttua käynnistyksestä."
+  },
+  "fr": {
+    "steam.bridge.steamstub.title": "La vérification DRM de Steam risque d'échouer",
+    "steam.bridge.steamstub.body": "Ce jeu utilise l'enveloppe DRM de Steam. GameLib n'a pas pu la relier à votre client Steam sur Mac, le jeu se fermera donc probablement quelques secondes après son lancement."
+  },
+  "ga": {
+    "steam.bridge.steamstub.title": "Is féidir le seiceáil DRM Steam teipeadh",
+    "steam.bridge.steamstub.body": "Úsáideann an cluiche seo dlúthchlúdach DRM Steam. Níorbh fhéidir le GameLib é a nascadh le do chliant Steam ar Mac, mar sin is dócha go ndúnfaidh an cluiche cúpla soicind tar éis dó tosú."
+  },
+  "gl": {
+    "steam.bridge.steamstub.title": "A comprobación DRM de Steam pode fallar",
+    "steam.bridge.steamstub.body": "Este xogo usa o envoltorio DRM de Steam. GameLib non puido conectalo co teu cliente de Steam no Mac, así que o xogo probablemente pechará uns segundos despois de iniciarse."
+  },
+  "he": {
+    "steam.bridge.steamstub.title": "בדיקת ה-DRM של Steam עלולה להיכשל",
+    "steam.bridge.steamstub.body": "המשחק הזה משתמש במעטפת ה-DRM של Steam. GameLib לא הצליח לחבר אותו ללקוח Steam ב-Mac שלך, ולכן סביר שהמשחק ייסגר כמה שניות לאחר שהוא מתחיל."
+  },
+  "hr": {
+    "steam.bridge.steamstub.title": "Steam DRM provjera mogla bi propasti",
+    "steam.bridge.steamstub.body": "Ova igra koristi Steamov DRM omotač. GameLib ga nije uspio povezati s vašim Steam klijentom na Macu pa će se igra vjerojatno zatvoriti nekoliko sekundi nakon pokretanja."
+  },
+  "hu": {
+    "steam.bridge.steamstub.title": "A Steam DRM-ellenőrzés meghiúsulhat",
+    "steam.bridge.steamstub.body": "Ez a játék a Steam DRM-burkolóját használja. A GameLib nem tudta összekapcsolni a Mac gépen futó Steam-klienssel, ezért a játék valószínűleg néhány másodperccel az indítás után bezárul."
+  },
+  "id": {
+    "steam.bridge.steamstub.title": "Pemeriksaan DRM Steam mungkin gagal",
+    "steam.bridge.steamstub.body": "Game ini menggunakan pembungkus DRM Steam. GameLib tidak dapat menghubungkannya ke klien Steam di Mac Anda, sehingga game kemungkinan akan tertutup beberapa detik setelah dimulai."
+  },
+  "it": {
+    "steam.bridge.steamstub.title": "Il controllo DRM di Steam potrebbe non riuscire",
+    "steam.bridge.steamstub.body": "Questo gioco usa il wrapper DRM di Steam. GameLib non è riuscito a collegarlo al client Steam sul tuo Mac, quindi il gioco probabilmente si chiuderà pochi secondi dopo l'avvio."
+  },
+  "ja": {
+    "steam.bridge.steamstub.title": "Steam の DRM チェックに失敗する可能性があります",
+    "steam.bridge.steamstub.body": "このゲームは Steam の DRM ラッパーを使用しています。GameLib はこれをお使いの Mac の Steam クライアントに接続できなかったため、ゲームは起動の数秒後に終了する可能性が高いです。"
+  },
+  "ka": {
+    "steam.bridge.steamstub.title": "Steam-ის DRM შემოწმება შეიძლება ჩავარდეს",
+    "steam.bridge.steamstub.body": "ეს თამაში იყენებს Steam-ის DRM შესაფუთს. GameLib-მა ვერ შეძლო მისი დაკავშირება თქვენს Mac-ზე არსებულ Steam კლიენტთან, ამიტომ თამაში სავარაუდოდ დაიხურება გაშვებიდან რამდენიმე წამში."
+  },
+  "ko": {
+    "steam.bridge.steamstub.title": "Steam DRM 확인이 실패할 수 있습니다",
+    "steam.bridge.steamstub.body": "이 게임은 Steam의 DRM 래퍼를 사용합니다. GameLib이 이를 Mac의 Steam 클라이언트에 연결하지 못했으므로, 게임이 시작된 지 몇 초 후에 종료될 가능성이 높습니다."
+  },
+  "lt": {
+    "steam.bridge.steamstub.title": "Steam DRM patikra gali nepavykti",
+    "steam.bridge.steamstub.body": "Šis žaidimas naudoja Steam DRM apvalkalą. GameLib nepavyko jo prijungti prie jūsų Mac kompiuterio Steam kliento, todėl žaidimas greičiausiai užsidarys praėjus kelioms sekundėms po paleidimo."
+  },
+  "ml": {
+    "steam.bridge.steamstub.title": "Steam DRM പരിശോധന പരാജയപ്പെട്ടേക്കാം",
+    "steam.bridge.steamstub.body": "ഈ ഗെയിം Steam-ന്റെ DRM റാപ്പർ ഉപയോഗിക്കുന്നു. നിങ്ങളുടെ Mac-ലെ Steam ക്ലയന്റുമായി ഇതിനെ ബന്ധിപ്പിക്കാൻ GameLib-ന് കഴിഞ്ഞില്ല, അതിനാൽ ഗെയിം ആരംഭിച്ച് ഏതാനും സെക്കൻഡുകൾക്കുശേഷം അടഞ്ഞുപോകാൻ സാധ്യതയുണ്ട്."
+  },
+  "nb_NO": {
+    "steam.bridge.steamstub.title": "Steams DRM-sjekk kan mislykkes",
+    "steam.bridge.steamstub.body": "Dette spillet bruker Steams DRM-wrapper. GameLib kunne ikke koble det til Steam-klienten din på Mac, så spillet lukkes sannsynligvis noen sekunder etter at det er startet."
+  },
+  "nl": {
+    "steam.bridge.steamstub.title": "De Steam-DRM-controle kan mislukken",
+    "steam.bridge.steamstub.body": "Deze game gebruikt de DRM-wrapper van Steam. GameLib kon deze niet koppelen aan je Steam-client op de Mac, dus de game sluit waarschijnlijk een paar seconden na het starten."
+  },
+  "pl": {
+    "steam.bridge.steamstub.title": "Sprawdzanie DRM Steam może się nie powieść",
+    "steam.bridge.steamstub.body": "Ta gra używa nakładki DRM Steam. GameLib nie zdołał połączyć jej z klientem Steam na Macu, więc gra prawdopodobnie zamknie się kilka sekund po uruchomieniu."
+  },
+  "pt": {
+    "steam.bridge.steamstub.title": "A verificação DRM do Steam pode falhar",
+    "steam.bridge.steamstub.body": "Este jogo usa o invólucro DRM do Steam. O GameLib não conseguiu ligá-lo ao seu cliente Steam no Mac, por isso o jogo provavelmente fechará alguns segundos após iniciar."
+  },
+  "pt_BR": {
+    "steam.bridge.steamstub.title": "A verificação de DRM do Steam pode falhar",
+    "steam.bridge.steamstub.body": "Este jogo usa o wrapper de DRM do Steam. O GameLib não conseguiu conectá-lo ao seu cliente Steam no Mac, então o jogo provavelmente vai fechar alguns segundos depois de iniciar."
+  },
+  "ro": {
+    "steam.bridge.steamstub.title": "Verificarea DRM Steam poate eșua",
+    "steam.bridge.steamstub.body": "Acest joc folosește învelișul DRM al Steam. GameLib nu l-a putut conecta la clientul Steam de pe Mac, așa că jocul se va închide probabil la câteva secunde după pornire."
+  },
+  "ru": {
+    "steam.bridge.steamstub.title": "Проверка Steam DRM может не пройти",
+    "steam.bridge.steamstub.body": "Эта игра использует обёртку DRM от Steam. GameLib не смог подключить её к клиенту Steam на вашем Mac, поэтому игра, скорее всего, закроется через несколько секунд после запуска."
+  },
+  "sk": {
+    "steam.bridge.steamstub.title": "Kontrola Steam DRM môže zlyhať",
+    "steam.bridge.steamstub.body": "Táto hra používa obal DRM služby Steam. GameLib ju nedokázal prepojiť s klientom Steam na vašom Macu, takže sa hra pravdepodobne niekoľko sekúnd po spustení zatvorí."
+  },
+  "sl": {
+    "steam.bridge.steamstub.title": "Preverjanje Steam DRM lahko spodleti",
+    "steam.bridge.steamstub.body": "Ta igra uporablja Steamov ovoj DRM. GameLib ga ni mogel povezati z odjemalcem Steam na vašem Macu, zato se bo igra verjetno nekaj sekund po zagonu zaprla."
+  },
+  "sr": {
+    "steam.bridge.steamstub.title": "Steam DRM провера може да не успе",
+    "steam.bridge.steamstub.body": "Ова игра користи Steam-ов DRM омотач. GameLib га није успео повезати са вашим Steam клијентом на Mac-у, па ће се игра вероватно затворити неколико секунди након покретања."
+  },
+  "sv": {
+    "steam.bridge.steamstub.title": "Steams DRM-kontroll kan misslyckas",
+    "steam.bridge.steamstub.body": "Det här spelet använder Steams DRM-omslag. GameLib kunde inte ansluta det till din Steam-klient på Mac, så spelet stängs sannolikt några sekunder efter att det startat."
+  },
+  "ta": {
+    "steam.bridge.steamstub.title": "Steam DRM சரிபார்ப்பு தோல்வியடையலாம்",
+    "steam.bridge.steamstub.body": "இந்த விளையாட்டு Steam-இன் DRM உறையைப் பயன்படுத்துகிறது. உங்கள் Mac-இல் உள்ள Steam கிளையண்டுடன் GameLib-ஆல் இதை இணைக்க முடியவில்லை, எனவே விளையாட்டு தொடங்கிய சில விநாடிகளில் மூடப்படக்கூடும்."
+  },
+  "th": {
+    "steam.bridge.steamstub.title": "การตรวจสอบ DRM ของ Steam อาจล้มเหลว",
+    "steam.bridge.steamstub.body": "เกมนี้ใช้ตัวห่อ DRM ของ Steam GameLib ไม่สามารถเชื่อมต่อกับไคลเอนต์ Steam บน Mac ของคุณได้ เกมจึงมีแนวโน้มที่จะปิดตัวลงไม่กี่วินาทีหลังจากเริ่มต้น"
+  },
+  "tr": {
+    "steam.bridge.steamstub.title": "Steam DRM denetimi başarısız olabilir",
+    "steam.bridge.steamstub.body": "Bu oyun Steam'in DRM sarmalayıcısını kullanıyor. GameLib bunu Mac'inizdeki Steam istemcisine bağlayamadı, bu yüzden oyun muhtemelen başladıktan birkaç saniye sonra kapanacak."
+  },
+  "uk": {
+    "steam.bridge.steamstub.title": "Перевірка Steam DRM може не пройти",
+    "steam.bridge.steamstub.body": "Ця гра використовує обгортку DRM від Steam. GameLib не зміг підключити її до клієнта Steam на вашому Mac, тому гра, імовірно, закриється за кілька секунд після запуску."
+  },
+  "uz": {
+    "steam.bridge.steamstub.title": "Steam DRM tekshiruvi muvaffaqiyatsiz bo‘lishi mumkin",
+    "steam.bridge.steamstub.body": "Bu o‘yin Steam’ning DRM o‘ramidan foydalanadi. GameLib uni Mac’dagi Steam mijozingizga ulay olmadi, shuning uchun o‘yin ishga tushgandan bir necha soniya o‘tib yopilishi mumkin."
+  },
+  "vi": {
+    "steam.bridge.steamstub.title": "Kiểm tra DRM của Steam có thể thất bại",
+    "steam.bridge.steamstub.body": "Trò chơi này dùng lớp bọc DRM của Steam. GameLib không thể kết nối nó với ứng dụng Steam trên Mac của bạn, nên trò chơi nhiều khả năng sẽ đóng vài giây sau khi khởi chạy."
+  },
+  "zh_Hans": {
+    "steam.bridge.steamstub.title": "Steam DRM 检查可能失败",
+    "steam.bridge.steamstub.body": "此游戏使用 Steam 的 DRM 包装器。GameLib 无法将其连接到你 Mac 上的 Steam 客户端，因此游戏很可能在启动几秒后关闭。"
+  },
+  "zh_Hant": {
+    "steam.bridge.steamstub.title": "Steam DRM 檢查可能失敗",
+    "steam.bridge.steamstub.body": "此遊戲使用 Steam 的 DRM 包裝器。GameLib 無法將其連接到你 Mac 上的 Steam 用戶端，因此遊戲很可能在啟動幾秒後關閉。"
+  }
+}
