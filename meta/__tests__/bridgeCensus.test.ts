@@ -1430,3 +1430,124 @@ describe('53-11: honest per-launch evidence', () => {
     expect(detectEngine(['UnityPlayer.dll'])).toBe('unity')
   })
 })
+
+describe('53-11: tightened verified rule', () => {
+  const id = '3410180'
+  const hello = `bridge helper [${id}]: [t] HELLO  shim attached appid=${id}\n`
+  const call = (m: string, who = id) =>
+    `bridge helper [${who}]: [t] CALL   ${m}\n`
+  const nover = (v: string, who = id) =>
+    `bridge helper [${who}]: [t] NOVER  flat lookup ver=${v} served=no\n`
+  const run = (
+    engine: 'unity' | 'unreal' | 'godot' | 'unknown',
+    app: string,
+    game: string[] = []
+  ) =>
+    classifyBridgeEvidence({
+      appid: id,
+      engine,
+      appLogTexts: [hello + app],
+      gameLogTexts: game
+    })
+
+  it('one CALL is unverified and says what is needed', () => {
+    for (const engine of ['godot', 'unknown', 'unreal'] as const) {
+      expect(
+        run(engine, call('STEAMAPPS_INTERFACE_VERSION008.BIsSubscribedApp'), [
+          'clean'
+        ])
+      ).toEqual({
+        status: 'unverified',
+        detail: '1 game call; needs 2 incl. identity'
+      })
+    }
+  })
+
+  it('BLoggedOn + GetAppID verifies', () => {
+    expect(
+      run(
+        'godot',
+        call('SteamUser023.BLoggedOn') + call('SteamUtils010.GetAppID')
+      ).status
+    ).toBe('verified')
+  })
+
+  it('two calls without an identity call stay unverified', () => {
+    expect(
+      run(
+        'godot',
+        call('SteamUtils010.GetAppID') +
+          call('STEAMAPPS_INTERFACE_VERSION008.BIsSubscribed')
+      ).status
+    ).toBe('unverified')
+  })
+
+  it('the same CALL twice counts once', () => {
+    expect(
+      run(
+        'godot',
+        call('SteamUser023.GetSteamID') + call('SteamUser023.GetSteamID')
+      )
+    ).toEqual({
+      status: 'unverified',
+      detail: '1 game call; needs 2 incl. identity'
+    })
+  })
+
+  it('unity: NOVER makes the row init-failed', () => {
+    expect(
+      run('unity', nover('STEAMSCREENSHOTS_INTERFACE_VERSION003'), ['clean'])
+    ).toEqual({
+      status: 'init-failed',
+      detail: 'unserved STEAMSCREENSHOTS_INTERFACE_VERSION003'
+    })
+  })
+
+  it('unreal: NOVER with Client API initialized 1 stays verified, noted', () => {
+    expect(
+      run('unreal', nover('V1'), [
+        `LogOnline: STEAM: [AppId: ${id}] Client API initialized 1\n`
+      ])
+    ).toEqual({ status: 'verified', detail: 'unserved V1 (non-fatal)' })
+  })
+
+  it('godot: NOVER with qualifying calls reads unverified', () => {
+    expect(
+      run(
+        'godot',
+        nover('V2') +
+          call('SteamUser023.GetSteamID') +
+          call('SteamUtils010.GetAppID')
+      )
+    ).toEqual({ status: 'unverified', detail: 'unserved V2' })
+  })
+
+  it('unreal: a failure marker wins over NOVER', () => {
+    expect(
+      run('unreal', nover('V3'), [
+        'LogSteamShared: Warning: SteamAPI failed to initialize\n'
+      ])
+    ).toEqual({ status: 'init-failed', detail: 'UE SteamAPI init failed' })
+  })
+
+  it('a NOVER attributed to another appid has no effect', () => {
+    expect(run('unity', nover('V4', '999'), ['clean'])).toEqual({
+      status: 'verified',
+      detail: ''
+    })
+  })
+
+  it('a known-bad row is never verified', () => {
+    const row = classifyCensusTitle({
+      appid: '411300',
+      name: 'ELEX',
+      installdir: 'ELEX',
+      knownBadReason: 'does-not-run',
+      evidence: { status: 'verified', detail: 'game call X.y' },
+      exe: null
+    })
+    expect(row.class).toBe('known-bad')
+    expect(row.evidence).toBe('unverified')
+    expect(row.evidenceDetail).toBe('known-bad: does-not-run')
+  })
+})
