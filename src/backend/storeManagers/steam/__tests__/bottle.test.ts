@@ -56,6 +56,7 @@ import {
   resolveBridgeBottleName,
   listReadyBridgeBottleNames,
   removePerGameBridgeBottle,
+  stopPerGameBridgeBottle,
   findBridgeInstallBottle
 } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME, STEAM_SETUP_EXE_URL } from '../constants'
@@ -2340,6 +2341,89 @@ describe('bottle.ts', () => {
         const fnSource = source.slice(fnStart, fnEnd)
         expect(fnSource).not.toContain('SteamSetup.exe')
         expect(fnSource).not.toContain('STEAM_SETUP_EXE_URL')
+      })
+    })
+
+    describe('stopPerGameBridgeBottle', () => {
+      const perGameName = 'GameLibSteamBridge-206040'
+      const perGameDir = getBottleDir(perGameName)
+
+      beforeEach(() => {
+        mockedGetNodefault.mockReturnValue(undefined)
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () => ({ wineVersion: defaultWine }) as GameSettings
+        })
+        mockedSpawnAsync.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+      })
+
+      test('present dir: one wineserver -k scoped to the per-game WINEPREFIX; no cxbottle, no rmSync', async () => {
+        mockedExistsSync.mockImplementation(
+          (path: string) => path === perGameDir
+        )
+
+        const result = await stopPerGameBridgeBottle('206040')
+
+        expect(result).toEqual({ status: 'stopped' })
+        const wineserverCalls = mockedSpawnAsync.mock.calls.filter(([bin]) =>
+          String(bin).includes('wineserver')
+        )
+        expect(wineserverCalls).toHaveLength(1)
+        expect(wineserverCalls[0][1]).toEqual(['-k'])
+        expect(wineserverCalls[0][2]?.env?.WINEPREFIX).toBe(perGameDir)
+        expect(wineserverCalls[0][2]?.env?.CX_ROOT).toBeTruthy()
+        expect(
+          mockedSpawnAsync.mock.calls.some(([bin]) =>
+            String(bin).includes('cxbottle')
+          )
+        ).toBe(false)
+        expect(mockedRmSync).not.toHaveBeenCalled()
+      })
+
+      test('non-numeric appId is refused with no spawn', async () => {
+        mockedExistsSync.mockReturnValue(true)
+
+        const result = await stopPerGameBridgeBottle('abc')
+
+        expect(result.status).toBe('refused')
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('refuses when the stored Phase 17 bottle name equals the per-game name', async () => {
+        mockedGetNodefault.mockImplementation((key: string) =>
+          key === 'bottleName' ? `  ${perGameName}  ` : undefined
+        )
+        mockedExistsSync.mockReturnValue(true)
+
+        const result = await stopPerGameBridgeBottle('206040')
+
+        expect(result.status).toBe('refused')
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('refuses when the shared GOG/Epic bottle equals the per-game name', async () => {
+        mockedGlobalConfigGet.mockReturnValue({
+          getSettings: () =>
+            ({
+              wineVersion: defaultWine,
+              wineCrossoverBottle: perGameName
+            }) as GameSettings
+        })
+        mockedExistsSync.mockReturnValue(true)
+
+        const result = await stopPerGameBridgeBottle('206040')
+
+        expect(result.status).toBe('refused')
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+      })
+
+      test('absent dir: returns absent with no spawn', async () => {
+        mockedExistsSync.mockReturnValue(false)
+
+        const result = await stopPerGameBridgeBottle('206040')
+
+        expect(result).toEqual({ status: 'absent' })
+        expect(mockedSpawnAsync).not.toHaveBeenCalled()
+        expect(mockedRmSync).not.toHaveBeenCalled()
       })
     })
   })
