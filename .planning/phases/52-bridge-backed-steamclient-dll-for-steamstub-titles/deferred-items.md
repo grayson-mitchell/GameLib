@@ -22,13 +22,47 @@
    them. Revisit when: a FWD line shows `native=present` for a version outside
    `SHIM64_SERVED_INTERFACE_VERSIONS` (protocol (a)).
 
+## Deferred from the 52 code review (recorded by 52-16)
+
+Reason for all entries: orchestrator decision 4 -- hardening, not goal-blocking.
+
+1. **WR-05: stale HKCU `SteamClientDll64` across titles in a shared bottle; never cleaned up.**
+   `steamClientSetup.ts:180-225`, `games.ts:2958-2986`. Revisit when: a second title shares a bridge
+   bottle with a SteamStub title.
+2. **WR-06: overwrites a game-shipped `steamclient64.dll` with no backup; follows a symlink write.**
+   `steamClientSetup.ts:158-161`. Revisit when: a title ships its own `steamclient64.dll`.
+3. **WR-07: forwarded `ISteamClient` lifecycle methods act on the helper's native pipe and user with
+   the game's hard-coded 1/1 handles.** `meta/gen_vtables.ts:2003-2190`. Revisit when: a forwarded
+   title loses wire calls mid-session or ELEX/Grim Dawn logs a pipe release.
+4. **WR-08: identity-only gate bypass through `GetISteamGenericInterface` and CONTROL slot 3.**
+   `meta/gen_vtables.ts:1980-1984, 2026-2030`, `bridge_helper.c:486-518`. Revisit when: before any
+   app-scoped family goes wire in identity-only mode.
+5. **IN-01: static request buffer and hello flag in `GameLibBridge_CreateInterface`.**
+   `meta/gen_vtables.ts:761-783`. Revisit when: a SteamStub check thread and a game thread are seen
+   corrupting a CREATE_INTERFACE request.
+6. **IN-02: duplicate sanitizer and containment helpers.** `bridge_helper.c:425-432`,
+   `importScan.ts:74` vs `steamClientSetup.ts:37`. Revisit when: one copy is changed and the other
+   drifts, or the next edit to either file.
+7. **IN-03: import closure misses delay imports and is case-sensitive.** `importScan.ts:100, 110-117`.
+   Revisit when: a title on a case-sensitive volume or with a delay-importing closure DLL shows no shim.
+8. **IN-04: the forwarder takes a new LoadLibrary reference on every failed resolve.**
+   `steamclient_fwd.c:35-43`. Revisit when: a "wrong steam_api loaded" condition needs diagnosing.
+9. **WR-01 residual: orphaned reg-add child after a timeout.** After a reg add times out, the
+   `runWineCommand` child (wine reg.exe) stays an in-flight referenced handle that its API cannot
+   kill. That is sidecar exit contract half 2, which `unref()` does not cover. Revisit when: if
+   sidecar exit is slow after a timed-out reg add.
+10. **52-13 risk: x64/Engine.dll names versions the x64 shim does not serve** (SteamClient023,
+    SteamFriends018, SteamUtils011, STEAMAPPS_INTERFACE_VERSION009, STEAMUSERSTATS_INTERFACE_VERSION013,
+    SteamMatchMakingServers003). On the SteamStub-active path a forwarded GetISteam* for one of them
+    returns NULL (item 6 above, A2). Revisit when: the 52-17 re-gate shows a fault after the FWD lines.
+
 ## Behaviors that differ from the plans (carried from earlier summaries)
 
 - 52-07: `FindOrCreateGameServerInterface` falls back to the null object and `ContextInit` uses a global
   counter (quick 261024-i94 semantics), not the plan-07 behavior (NULL / constant counter).
-- 52-08/52-09: a SteamStub title whose shim verdict is `withheld` carries no `drmWrapper`, takes the
-  direct-launch branch with no forwarder and no notice. Follow-up if wanted: stamp `drmWrapper` on
-  withheld results and add a notice cause.
+- 52-08/52-09: a SteamStub title whose shim verdict is `withheld` carried no `drmWrapper` and no notice.
+  RESOLVED by 52-15 (shimGenerate stamps `drmWrapper`/`exeArch` on withheld results) and 52-16 (the
+  `steamstub-unforwarded:withheld` notice cause).
 - 52-02: the helper's CREATE_INTERFACE real-profile (native=present) path was deferred to this live gate.
 - 52-03: `steamclient64.dll` has never been loaded in a Wine bottle before this gate.
 
