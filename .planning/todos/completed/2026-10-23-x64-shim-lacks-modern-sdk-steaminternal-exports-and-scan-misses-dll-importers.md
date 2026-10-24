@@ -110,3 +110,27 @@ Re-test 1782460 and 1603180 alongside 219990 and 648410.
 
 That makes four engines (Unity, GameMaker, Godot, UE) through four different wrappers, all
 stopped by the same missing exports.
+
+## Closed 2026-10-24: x64 shim exports the five, and the scan reads every steam_api importer
+
+**Part 1, coverage.** Quick 261024-i94 adds `SteamInternal_SteamAPI_Init`, `ContextInit`,
+`FindOrCreateUserInterface`, `FindOrCreateGameServerInterface` and `GameServer_Init_V2` to the
+x64 shim through `meta/gen_vtables.ts`. `SteamAPI_Init` returns through the existing `HELLO` path,
+giving 0 on OK and 2 (no client) on failure. `FindOrCreate*` share the version lookup that
+`SteamInternal_CreateInterface` uses. `GameServer_Init_V2` returns 1, a failure. x86 is unchanged
+because it was not free: the whole modern family is Win64-only under D-51-13, so x86 has no
+`CreateInterface` or fallback object to reuse.
+
+**Part 2, detection.** `shimGenerate.ts` walks the bottle for PEs that import `steam_api*.dll`.
+The walk does not follow symlinks and stops at depth 4 or 512 files. It merges their imports into
+the required set. When the exe has no steam_api imports, the runtime-loaded branch evaluates
+importer PEs of the launch exe's arch (from the new `readPeMachineArch`) and names their
+uncovered symbols. `@runtime-loaded` stays only when no PE imports the DLL, as in Unity.
+
+**Not done here.** The Godot 322 MB "could not parse the exe as a PE" note is not a read-limit
+problem, because the reader is range-based with no size cap, so it needs the real binary.
+`meta/bridgeCensus.ts` does not learn the importer walk yet. Grim Dawn (219990) still exits at
+about 2 s, blocked on `2026-10-23-forwarding-steamclient-dll-for-steamstub-titles.md`.
+
+Live re-test is still owed on the Mac: 1782460, 1603180, 3410180 and 648410 for `HELLO` and a
+clean game Steam-init log, and 219990's persisted verdict text.
