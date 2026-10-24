@@ -10,6 +10,10 @@
  * the helper logged a HELLO for the appid AND the game's own Unity
  * Player.log shows no Steam-init failure; the allowlist's playVerified
  * record is shown separately as "Play recorded (allowlist)".
+ * Amended 2026-10-24 (quick 261024-uir): a steam_api*.dll that is the GameLib
+ * shim still means "a steam_api ships" -- the original is read from its
+ * .gamelib-orig backup, else from the persisted bridge.scan verdict, else the
+ * row is 'unconfirmed' (routed, never covered); it is never 'no-steam-api'.
  *
  * Two halves, same split as `captureShellScrollback.ts`/
  * `extractProtonInventory.ts`:
@@ -43,6 +47,8 @@
  * (a folder NAME, e.g. "Avernum 6"), never the resolved absolute install
  * path -- the absolute path is used internally to find/objdump the exe and
  * is never threaded into a `CensusRow`.
+ * Quick 261024-uir: persisted `missingSymbols` are filtered to path-free strings
+ * (no '/' or '\\', at most 128 chars) before they can reach `detail`.
  *
  * Declared real-profile arm (CLAUDE.md two-profile rule, gamelib-conventions
  * SKILL.md "Fake-HOME isolation"): this tool's entire purpose is reading
@@ -55,6 +61,9 @@
  * declared here anyway because the convention asks every real-profile arm
  * to name itself in its own docblock, not just the ones the gate happens to
  * reach.
+ * Quick 261024-uir: the driver also reads `.gamelib-orig` backups inside the
+ * operator's bottles and the persisted `steam_metadata.json` scan verdict,
+ * read-only, and still passes no `env` to any spawn.
  *
  * Zero backend imports by design, same discipline `importParse.ts`/
  * `interfaceVersions.ts`/`shimCoverage.ts` already established (D-51-15's
@@ -76,6 +85,7 @@
 import {
   closeSync,
   existsSync,
+  lstatSync,
   openSync,
   readdirSync,
   readFileSync,
@@ -864,13 +874,35 @@ function collectEvidence(
   })
 }
 
-/** Finds a non-shim steam_api(64).dll anywhere under `dir` (same depth bound
- * as walkExes). Prefers steam_api64.dll when both ship, matching the live
- * path's rule. */
+// Mirrors `shimGenerate.ts`'s `ORIGINAL_BACKUP_SUFFIX` (not imported, same
+// reason as `GAMELIB_SHIM_MARKER`): the backup of a replaced original is
+// `<dll>.gamelib-orig`.
+const ORIGINAL_BACKUP_SUFFIX = '.gamelib-orig'
+
+/** Quick 261024-uir: path of the `.gamelib-orig` backup beside `dllPath`, only
+ * when it is a regular non-symlink file whose bytes are not the shim --
+ * `restoreOriginalIfBackedUp`'s acceptance test. Never throws; read-only (the
+ * census never restores, copies or writes). */
+function readOriginalBackup(dllPath: string): string | null {
+  const backup = dllPath + ORIGINAL_BACKUP_SUFFIX
+  try {
+    const st = lstatSync(backup)
+    if (!st.isFile() || st.isSymbolicLink()) return null
+    return isGameLibShimBytes(readFileSync(backup)) ? null : backup
+  } catch {
+    return null
+  }
+}
+
+/** Collects every exact-name steam_api(64).dll under `dir` (same depth bound
+ * as walkExes) with its provenance. Quick 261024-uir: mirrors the live
+ * `findRuntimeLoadedSteamApiDlls` -- symlinks skipped, a placed GameLib shim
+ * is KEPT (it means "a steam_api ships"), recorded 'shim-backed' when a valid
+ * `.gamelib-orig` sits beside it, else 'shim-only'. */
 function findRuntimeSteamApiDll(
   dir: string,
   depth: number,
-  found: Set<'steam_api.dll' | 'steam_api64.dll'>
+  found: Array<{ name: RuntimeDllName; provenance: RuntimeDllProvenance }>
 ): void {
   if (depth > MAX_EXE_DEPTH || !existsSync(dir)) {
     return
@@ -882,6 +914,7 @@ function findRuntimeSteamApiDll(
     return
   }
   for (const entry of entries) {
+    if (entry.isSymbolicLink()) continue
     const full = join(dir, entry.name)
     if (entry.isDirectory()) {
       findRuntimeSteamApiDll(full, depth + 1, found)
@@ -890,7 +923,12 @@ function findRuntimeSteamApiDll(
       if (lower === 'steam_api.dll' || lower === 'steam_api64.dll') {
         try {
           if (!isGameLibShimBytes(readFileSync(full))) {
-            found.add(lower)
+            found.push({ name: lower, provenance: 'original' })
+          } else {
+            found.push({
+              name: lower,
+              provenance: readOriginalBackup(full) ? 'shim-backed' : 'shim-only'
+            })
           }
         } catch {
           // unreadable -- treat as absent
@@ -1100,7 +1138,8 @@ async function classifyInstalledTitle(
   knownBad: Map<string, string>,
   playVerifiedSet: Set<string>,
   persistedArch: 'x86' | 'x64' | undefined,
-  appLogTexts: string[]
+  appLogTexts: string[],
+  persistedScan: PersistedScanVerdict | undefined
 ): Promise<CensusRow> {
   const evidence = collectEvidence(entry, appLogTexts)
   const knownBadReason = knownBad.get(entry.appid) ?? null
@@ -1128,15 +1167,20 @@ async function classifyInstalledTitle(
   let dllVersions: string[] = []
   let exeVersions: string[] = []
 
-  let runtimeLoadedDll: 'steam_api.dll' | 'steam_api64.dll' | null = null
+  let runtimeLoadedDll: RuntimeDllName | null = null
+  let shimOnlyRuntimeDll: ReturnType<
+    typeof pickRuntimeSteamApiDll
+  >['shimOnlyRuntimeDll'] = null
   if (arch === 'none') {
-    const found = new Set<'steam_api.dll' | 'steam_api64.dll'>()
+    const found: Array<{
+      name: RuntimeDllName
+      provenance: RuntimeDllProvenance
+    }> = []
     findRuntimeSteamApiDll(entry.installPath, 0, found)
-    runtimeLoadedDll = found.has('steam_api64.dll')
-      ? 'steam_api64.dll'
-      : found.has('steam_api.dll')
-        ? 'steam_api.dll'
-        : null
+    ;({ runtimeLoadedDll, shimOnlyRuntimeDll } = pickRuntimeSteamApiDll(
+      found,
+      persistedScan
+    ))
   }
 
   if (arch !== 'none') {
@@ -1149,6 +1193,19 @@ async function classifyInstalledTitle(
           const versionResult = await readInterfaceVersionStrings(dllPath)
           if (versionResult.status === 'ok') {
             dllVersions = versionResult.versions
+          }
+        } else {
+          // Quick 261024-uir: the dll is the shim. Read the original from its
+          // .gamelib-orig backup, else the persisted verdict's interface
+          // versions -- the live path's persistedInterfaceVersions fallback.
+          const backup = readOriginalBackup(dllPath)
+          if (backup) {
+            const versionResult = await readInterfaceVersionStrings(backup)
+            if (versionResult.status === 'ok') {
+              dllVersions = versionResult.versions
+            }
+          } else {
+            dllVersions = Object.values(persistedScan?.interfaceVersions ?? {})
           }
         }
       } catch {
@@ -1171,6 +1228,7 @@ async function classifyInstalledTitle(
     knownBadReason,
     playVerified,
     runtimeLoadedDll,
+    shimOnlyRuntimeDll,
     steamDrm,
     archNote: archNote || undefined,
     evidence,
@@ -1238,7 +1296,8 @@ export async function runCensus(): Promise<CensusRow[]> {
         knownBad,
         playVerifiedSet,
         readPersistedScanArch(metadataText, entry.appid),
-        appLogTexts
+        appLogTexts,
+        readPersistedScanVerdict(metadataText, entry.appid)
       )
     )
   }
