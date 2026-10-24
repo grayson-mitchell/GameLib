@@ -753,9 +753,13 @@ export type CensusEngine =
  * Unreal, Godot, GameMaker. */
 export function detectEngine(entryNames: string[]): CensusEngine {
   const names = entryNames.map((n) => n.toLowerCase())
+  // IN-04: `<x>_data` is Unity's data dir only when `<x>.exe` sits beside it;
+  // a bare `save_data` folder is not evidence of an engine.
   if (
     names.includes('unityplayer.dll') ||
-    names.some((n) => n.endsWith('_data'))
+    names.some(
+      (n) => n.endsWith('_data') && names.includes(`${n.slice(0, -5)}.exe`)
+    )
   ) {
     return 'unity'
   }
@@ -781,19 +785,71 @@ const UE_INIT_FAILED = [
 const UE_INIT_OK =
   /LogOnline:\s*STEAM:\s*\[AppId:\s*\d+\]\s*Client API initialized 1/
 
+const HELPER_PREFIX = /bridge helper \[(\d+)\]:\s?/
+const LOGGER_HEADER = /^\(\d{1,2}:\d{2}:\d{2}\) \[/
+
+/** 53-11 (WR-03, census side): the helper-line payloads that belong to
+ * `appid`. A line belongs to it when it carries `bridge helper [<appid>]:`, or
+ * when it is a logger continuation line (no `(hh:mm:ss) [` header) that
+ * follows the nearest preceding prefix line for the same appid. A logger
+ * header line without a prefix ends the continuation. Pure. */
+export function attributeHelperLines(appid: string, text: string): string[] {
+  const out: string[] = []
+  let current: string | null = null
+  for (const line of text.split('\n')) {
+    const m = HELPER_PREFIX.exec(line)
+    if (m) {
+      current = m[1]
+      if (current === appid) out.push(line.slice(m.index + m[0].length))
+      continue
+    }
+    if (LOGGER_HEADER.test(line)) {
+      current = null
+      continue
+    }
+    if (current === appid && line.trim() !== '') out.push(line)
+  }
+  return out
+}
+
+/** 53-11: app-log evidence for `appid` comes from a single launch. Takes the
+ * newest file holding a HELLO for the appid and returns its text from that
+ * appid's LAST HELLO to end of file; null when no file has one. Pure. */
+export function appLogSegmentFor(
+  appid: string,
+  files: Array<{ name: string; mtimeMs: number; text: string }>
+): string | null {
+  if (!/^\d+$/.test(appid)) return null
+  const hello = new RegExp(
+    `HELLO\\s+shim attached appid=${appid}(?![0-9])`,
+    'g'
+  )
+  const sorted = [...files].sort((a, b) => b.mtimeMs - a.mtimeMs)
+  for (const f of sorted) {
+    let last = -1
+    for (const m of f.text.matchAll(hello)) last = m.index
+    if (last < 0) continue
+    // Start at the line holding the HELLO so the prefix stays attached.
+    const lineStart = f.text.lastIndexOf('\n', last) + 1
+    return f.text.slice(lineStart)
+  }
+  return null
+}
+
 /** First game-originated bridge CALL (`Interface.Method`) for `appid` that
  * follows a HELLO for the same appid in the same app-log text, or null.
  * Read only from GameLib's own app logs (T-53-09), appid bracket-anchored. */
 function findGameCall(appid: string, appLogTexts: string[]): string | null {
   const hello = new RegExp(`HELLO\\s+shim attached appid=${appid}(?![0-9])`)
-  const call = new RegExp(
-    `bridge helper \\[${appid}\\]:\\s*\\[[^\\]]*\\]\\s+CALL\\s+([A-Za-z0-9_]+\\.[A-Za-z0-9_]+)`
-  )
+  const call = /\]\s+CALL\s+([A-Za-z0-9_]+\.[A-Za-z0-9_]+)/
   for (const text of appLogTexts) {
-    const h = hello.exec(text)
-    if (!h) continue
-    const m = call.exec(text.slice(h.index + h[0].length))
-    if (m) return m[1]
+    const payloads = attributeHelperLines(appid, text)
+    const h = payloads.findIndex((l) => hello.test(l))
+    if (h < 0) continue
+    for (const l of payloads.slice(h + 1)) {
+      const m = call.exec(l)
+      if (m) return m[1]
+    }
   }
   return null
 }
@@ -1120,6 +1176,17 @@ const judgedSymbols: JudgedSymbols[] = []
  * the census has no logger). */
 let scanWarnings = 0
 
+/** IN-02: runCensus clears the per-run accumulators so a second run in the
+ * same process does not double-count. */
+export function resetCensusAccumulators(): void {
+  judgedSymbols.length = 0
+  scanWarnings = 0
+}
+
+export function censusAccumulators(): { judged: number; scanWarnings: number } {
+  return { judged: judgedSymbols.length, scanWarnings }
+}
+
 /** D-53-12: the shared scan's injected dependencies. `scanImports` is the
  * Promise-wrapped objdump driver (the census keeps its own declared
  * real-profile objdump spawn; bridgeScan.ts spawns nothing). */
@@ -1178,7 +1245,7 @@ function loadPlayVerified(): Set<string> {
  * `drive_c/users/crossover/AppData/LocalLow/<Company>/<Product>/` (exactly two
  * levels, readdir-based). Player.log only, not Player-prev.log: it is the
  * latest run. Never throws. */
-function findUnityPlayerLogs(bottleDir: string): string[] {
+export function findUnityPlayerLogs(bottleDir: string): string[] {
   const lowDir = join(
     bottleDir,
     'drive_c',
@@ -1238,9 +1305,14 @@ function readTail(path: string, maxBytes: number): string | null {
 /** Pitfall 6 / T-53-10 / T-53-12: gamelib.log plus rotated `gamelib.log.*`
  * siblings, regular files only (lstat; symlinks skipped), newest first, at
  * most MAX_APP_LOGS, each tail-read to MAX_APP_LOG_BYTES. Never throws. */
-function findAppLogs(): { names: string[]; texts: string[] } {
+function findAppLogs(): {
+  names: string[]
+  texts: string[]
+  mtimes: number[]
+} {
   const names: string[] = []
   const texts: string[] = []
+  const mtimes: number[] = []
   try {
     const found: Array<{ name: string; mtime: number }> = []
     for (const name of readdirSync(APP_LOG_DIR)) {
@@ -1260,12 +1332,13 @@ function findAppLogs(): { names: string[]; texts: string[] } {
       if (text !== null) {
         names.push(f.name)
         texts.push(text)
+        mtimes.push(f.mtime)
       }
     }
   } catch {
     // no log directory
   }
-  return { names, texts }
+  return { names, texts, mtimes }
 }
 
 function crossoverAppData(bottleDir: string, ...rest: string[]): string {
@@ -1281,9 +1354,28 @@ function isRegularFile(path: string): boolean {
   }
 }
 
-/** D-53-13: UE `Saved/Logs/*.log` at
- * `AppData/Local/<Project>/Saved/Logs/` (exactly that depth, <= 16 files).
- * Never throws. */
+/** 53-11: which `Saved/Logs` files describe the LATEST run. UE rotates the
+ * previous run to `<Project>-backup-<stamp>.log`; those are never read. Returns
+ * `<Project>.log` alone when present, else the single newest remaining `.log`.
+ * Pure. */
+export function selectLatestUnrealLogs(
+  entries: Array<{ name: string; mtimeMs: number }>,
+  project: string
+): string[] {
+  const live = entries.filter(
+    (e) => e.name.toLowerCase().endsWith('.log') && !/-backup-/i.test(e.name)
+  )
+  const main = live.find(
+    (e) => e.name.toLowerCase() === `${project.toLowerCase()}.log`
+  )
+  if (main) return [main.name]
+  if (live.length === 0) return []
+  return [live.reduce((a, b) => (b.mtimeMs > a.mtimeMs ? b : a)).name]
+}
+
+/** D-53-13: UE `Saved/Logs/<Project>.log` at
+ * `AppData/Local/<Project>/Saved/Logs/` (exactly that depth, <= 16 files),
+ * latest run only (53-11). Never throws. */
 function findUnrealSavedLogs(bottleDir: string): string[] {
   const out: string[] = []
   const localDir = crossoverAppData(bottleDir, 'Local')
@@ -1297,12 +1389,20 @@ function findUnrealSavedLogs(bottleDir: string): string[] {
       } catch {
         continue
       }
+      const entries: Array<{ name: string; mtimeMs: number }> = []
       for (const n of names) {
-        if (out.length >= MAX_ENGINE_LOGS) return out
-        const full = join(logsDir, n)
-        if (n.toLowerCase().endsWith('.log') && isRegularFile(full)) {
-          out.push(full)
+        try {
+          const st = lstatSync(join(logsDir, n))
+          if (st.isFile() && !st.isSymbolicLink()) {
+            entries.push({ name: n, mtimeMs: st.mtimeMs })
+          }
+        } catch {
+          // vanished -- skipped
         }
+      }
+      for (const n of selectLatestUnrealLogs(entries, project.name)) {
+        if (out.length >= MAX_ENGINE_LOGS) return out
+        out.push(join(logsDir, n))
       }
     }
   } catch {
@@ -1338,17 +1438,24 @@ function engineLogPaths(engine: CensusEngine, bottleDir: string): string[] {
 
 /** Only a per-game `GameLibSteamBridge-<appId>` bottle can attribute a
  * Player.log to one title; shared bottles read 'unverified'. */
+interface AppLogFile {
+  name: string
+  mtimeMs: number
+  text: string
+}
+
 function collectEvidence(
   entry: ManifestEntry,
-  appLogTexts: string[],
+  appLogFiles: AppLogFile[],
   engine: CensusEngine
 ): BridgeEvidence {
   if (entry.bottleName !== `GameLibSteamBridge-${entry.appid}`) {
     return { status: 'unverified', detail: 'no per-game bridge bottle' }
   }
+  const segment = appLogSegmentFor(entry.appid, appLogFiles)
   return classifyBridgeEvidence({
     appid: entry.appid,
-    appLogTexts,
+    appLogTexts: segment === null ? [] : [segment],
     engine,
     gameLogTexts: readTexts(
       engineLogPaths(engine, join(BOTTLES_DIR, entry.bottleName))
@@ -1576,7 +1683,7 @@ async function classifyInstalledTitle(
   knownBad: Map<string, string>,
   playVerifiedSet: Set<string>,
   persistedArch: 'x86' | 'x64' | undefined,
-  appLogTexts: string[],
+  appLogTexts: AppLogFile[],
   persistedScan: PersistedScanVerdict | undefined
 ): Promise<CensusRow> {
   const knownBadReason = knownBad.get(entry.appid) ?? null
@@ -1833,11 +1940,16 @@ function scanExeSteamDrm(
 let lastLogsRead: string[] = []
 
 export async function runCensus(): Promise<CensusRow[]> {
+  resetCensusAccumulators()
   const knownBad = loadKnownBad()
   const playVerifiedSet = loadPlayVerified()
   const metadataText = loadSteamMetadataText()
   const appLogs = findAppLogs()
-  const appLogTexts = appLogs.texts
+  const appLogTexts: AppLogFile[] = appLogs.texts.map((text, i) => ({
+    name: appLogs.names[i],
+    mtimeMs: appLogs.mtimes[i],
+    text
+  }))
   lastLogsRead = appLogs.names
   const seen = new Map<string, ManifestEntry>()
 
