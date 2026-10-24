@@ -2703,6 +2703,7 @@ export default class SteamGame implements Game {
       | 'x86-deferred'
       | 'setup-error'
       | 'no-steam-api'
+      | 'withheld'
   ): void {
     logInfo(
       `[bridge-notice] appId=${this.appId} reason=steamstub-unforwarded:${cause}`,
@@ -2835,14 +2836,33 @@ export default class SteamGame implements Game {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
     }
 
-    // Phase 52: SteamStub-wrapped launch exe. Stamped on the placed /
-    // already-placed / placed-miss result (and its verdict) by shimGenerate;
-    // an 'already-placed' no-op carries no verdict, so fall back to the
-    // persisted scan. NOT stamped on 'withheld' / 'no-steam-api' results.
+    // Phase 52: SteamStub-wrapped launch exe. shimGenerate stamps a fresh
+    // `drmWrapper` ('steamstub' | 'none') on placed, already-placed,
+    // placed-miss, withheld and no-steam-api results; it is absent only when
+    // the exe could not be read. A fresh value wins over a stale persisted
+    // flag (WR-04); with no fresh value fall back to the verdict, then the
+    // persisted scan.
+    const freshDrm =
+      'drmWrapper' in shimResult ? shimResult.drmWrapper : undefined
     const drmWrapper =
-      ('drmWrapper' in shimResult ? shimResult.drmWrapper : undefined) ??
-      shimResult.verdict?.drmWrapper ??
-      persistedScan?.drmWrapper
+      freshDrm !== undefined
+        ? freshDrm === 'steamstub'
+          ? ('steamstub' as const)
+          : undefined
+        : (shimResult.verdict?.drmWrapper ?? persistedScan?.drmWrapper)
+    if (
+      freshDrm === 'none' &&
+      !shimResult.verdict &&
+      persistedScan?.drmWrapper === 'steamstub'
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { drmWrapper: _cleared, ...scanWithoutDrm } = persistedScan
+      writeBridgeScanVerdict(this.appId, scanWithoutDrm)
+      logInfo(
+        `SteamGame: cleared stale persisted drmWrapper=steamstub for appId ${this.appId} (fresh scan says none)`,
+        LogPrefix.Steam
+      )
+    }
 
     // Quick 261024-br4: an already-installed Steam CEG title (XCOM 200510)
     // would otherwise idle ~30s and exit silently. Same dialog as install,
@@ -2878,8 +2898,10 @@ export default class SteamGame implements Game {
       shimResult.status === 'no-steam-api' ||
       shimResult.status === 'withheld'
     ) {
-      if (shimResult.status === 'no-steam-api' && drmWrapper === 'steamstub') {
-        this.maybeNotifySteamStubUnforwarded('no-steam-api')
+      if (drmWrapper === 'steamstub') {
+        this.maybeNotifySteamStubUnforwarded(
+          shimResult.status === 'withheld' ? 'withheld' : 'no-steam-api'
+        )
       }
       logInfo(
         shimResult.status === 'withheld'
@@ -2960,15 +2982,26 @@ export default class SteamGame implements Game {
     // arms the session breaker -- an unforwarded SteamStub title launches as
     // it did before, with an honest notice.
     if (drmWrapper === 'steamstub') {
-      const forwarder = await setupSteamClientForwarder({
-        appId: this.appId,
-        bottleName: bridgeBottleSettings.wineCrossoverBottle,
-        bottleSettings: bridgeBottleSettings,
-        exePath,
-        shimPaths,
-        arch:
-          shimResult.verdict?.arch ?? persistedScan?.arch ?? ('x64' as const)
-      })
+      // The exe is the authority on arch: the stub that reads SteamClientDll64
+      // or SteamClientDll lives in it (WR-03). Never guess.
+      const exeArch = 'exeArch' in shimResult ? shimResult.exeArch : undefined
+      const forwarderArch =
+        exeArch ?? shimResult.verdict?.arch ?? persistedScan?.arch
+      const forwarder: Awaited<ReturnType<typeof setupSteamClientForwarder>> =
+        forwarderArch === 'x86' || forwarderArch === 'x64'
+          ? await setupSteamClientForwarder({
+              appId: this.appId,
+              bottleName: bridgeBottleSettings.wineCrossoverBottle,
+              bottleSettings: bridgeBottleSettings,
+              exePath,
+              shimPaths,
+              arch: forwarderArch
+            })
+          : {
+              status: 'error',
+              error:
+                'forwarder arch unknown (no PE machine type, verdict or persisted scan)'
+            }
       if (forwarder.status === 'placed') {
         logInfo(
           `[bridge-steamstub] appId=${this.appId} forwarder placed at ${forwarder.winPath}`,

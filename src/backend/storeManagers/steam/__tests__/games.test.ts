@@ -2289,6 +2289,98 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       )
     })
 
+    it('withheld + drmWrapper steamstub: logs the withheld notice, notifies once, goes direct, no setup', async () => {
+      const id = freshId()
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'withheld',
+        restored: [],
+        drmWrapper: 'steamstub',
+        exeArch: 'x64',
+        verdict: { ...BASE_VERDICT, status: 'miss', missingSymbols: ['X'] }
+      })
+      const result = await new SteamGame(id).launch({} as any)
+
+      expect(noticeLogged(id, 'withheld')).toBe(true)
+      expect(notify).toHaveBeenCalledTimes(1)
+      expect(setupSteamClientForwarder).not.toHaveBeenCalled()
+      expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+      expect(runWineCommand).toHaveBeenCalled()
+      expect(result).toBe(true)
+    })
+
+    it('withheld + drmWrapper none: no steamstub notice', async () => {
+      const id = freshId()
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'withheld',
+        restored: [],
+        drmWrapper: 'none',
+        exeArch: 'x64',
+        verdict: { ...BASE_VERDICT, status: 'miss', missingSymbols: ['X'] }
+      })
+      await new SteamGame(id).launch({} as any)
+      expect(noticeLogged(id, 'withheld')).toBe(false)
+      expect(notify).not.toHaveBeenCalled()
+    })
+
+    it('exeArch x86 wins over an x64 verdict', async () => {
+      const id = freshId()
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: SHIM,
+        verdict: BASE_VERDICT,
+        drmWrapper: 'steamstub',
+        exeArch: 'x86'
+      })
+      await new SteamGame(id).launch({} as any)
+      expect(setupSteamClientForwarder).toHaveBeenCalledWith(
+        expect.objectContaining({ arch: 'x86' })
+      )
+    })
+
+    it('unknown arch: setup is skipped and the setup-error notice fires', async () => {
+      const id = freshId()
+      jest.spyOn(bridgeVerdictModule, 'readBridgeVerdict').mockReturnValue({
+        scan: { ...BASE_VERDICT, arch: undefined, drmWrapper: 'steamstub' }
+      } as never)
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: SHIM,
+        drmWrapper: 'steamstub',
+        exeArch: null
+      })
+      try {
+        await new SteamGame(id).launch({} as any)
+      } finally {
+        jest.restoreAllMocks()
+      }
+      expect(setupSteamClientForwarder).not.toHaveBeenCalled()
+      expect(noticeLogged(id, 'setup-error')).toBe(true)
+    })
+
+    it('fresh drmWrapper none overrides a stale persisted steamstub and rewrites the scan without it', async () => {
+      const id = freshId()
+      jest.spyOn(bridgeVerdictModule, 'readBridgeVerdict').mockReturnValue({
+        scan: { ...BASE_VERDICT, drmWrapper: 'steamstub' }
+      } as never)
+      const writeSpy = jest
+        .spyOn(bridgeVerdictModule, 'writeBridgeScanVerdict')
+        .mockImplementation(() => undefined as never)
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: SHIM,
+        drmWrapper: 'none',
+        exeArch: 'x64'
+      })
+      try {
+        await new SteamGame(id).launch({} as any)
+        expect(setupSteamClientForwarder).not.toHaveBeenCalled()
+        expect(writeSpy).toHaveBeenCalledTimes(1)
+        expect(writeSpy.mock.calls[0][1]).not.toHaveProperty('drmWrapper')
+      } finally {
+        jest.restoreAllMocks()
+      }
+    })
+
     it('no-steam-api with drmWrapper steamstub: notice, direct launch, setup not called', async () => {
       const id = freshId()
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
