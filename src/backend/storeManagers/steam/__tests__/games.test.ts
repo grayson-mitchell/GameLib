@@ -2329,9 +2329,12 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     }
     const callOrder: string[] = []
     const { logInfo } = jest.requireMock('backend/logger')
+    const dialogMock = jest.requireMock('backend/dialog/dialog')
+      .showDialogBoxModalAuto as jest.Mock
 
     beforeEach(() => {
       callOrder.length = 0
+      dialogMock.mockClear()
       ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
         RESOLVED_EXE_PATH
       )
@@ -2373,6 +2376,12 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
           `[bridge-notice] appId=${id} reason=steamstub-forwarded:launch-check-unsatisfiable`
       )
 
+    const dialogDispatchLogged = (id: string) =>
+      (logInfo as jest.Mock).mock.calls.some(
+        (c) =>
+          c[0] === `[bridge-notice] appId=${id} dispatched=in-app-dialog+notify`
+      )
+
     const FORWARDED_NOTICE = {
       title: 'gamelib:steam.bridge.steamstub.forwardedTitle',
       body: 'gamelib:steam.bridge.steamstub.forwardedBody'
@@ -2382,6 +2391,9 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       const id = freshId()
       ;(notify as jest.Mock).mockImplementation(() => {
         callOrder.push('notify')
+      })
+      dialogMock.mockImplementation(() => {
+        callOrder.push('dialog')
       })
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
         status: 'placed',
@@ -2400,7 +2412,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         shimPaths: [SHIM],
         arch: 'x64'
       })
-      expect(callOrder).toEqual(['cfg', 'setup', 'notify', 'wine'])
+      expect(callOrder).toEqual(['cfg', 'setup', 'notify', 'dialog', 'wine'])
       expect(
         (logInfo as jest.Mock).mock.calls.some(
           (c) =>
@@ -2412,12 +2424,20 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       expect(noticeLogged(id, 'forwarder-not-built')).toBe(false)
       expect(notify).toHaveBeenCalledTimes(1)
       expect(notify).toHaveBeenCalledWith(FORWARDED_NOTICE)
+      expect(dialogMock).toHaveBeenCalledTimes(1)
+      expect(dialogMock).toHaveBeenCalledWith({
+        title: FORWARDED_NOTICE.title,
+        message: FORWARDED_NOTICE.body,
+        type: 'MESSAGE'
+      })
+      expect(dialogDispatchLogged(id)).toBe(true)
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
         expect.anything()
       )
       expect(result).toBe(true)
       ;(notify as jest.Mock).mockReset()
+      dialogMock.mockReset()
     })
 
     it('forwarded notice: logged on every launch, notified once per session', async () => {
@@ -2434,6 +2454,8 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       await new SteamGame(id).launch({} as any)
       expect(forwardedLogged(id)).toBe(true)
       expect(notify).toHaveBeenCalledTimes(1)
+      expect(dialogMock).toHaveBeenCalledTimes(1)
+      expect(dialogDispatchLogged(id)).toBe(false)
     })
 
     it('forwarded and unforwarded notices have separate session gates', async () => {
@@ -2468,6 +2490,8 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       })
       await new SteamGame(id).launch({} as any)
       expect(forwardedLogged(id)).toBe(false)
+      expect(dialogMock).not.toHaveBeenCalled()
+      expect(dialogDispatchLogged(id)).toBe(false)
       expect(notify).not.toHaveBeenCalled()
     })
 
@@ -2518,6 +2542,8 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
       expect(noticeLogged(id, 'forwarder-not-built')).toBe(true)
       expect(forwardedLogged(id)).toBe(false)
+      expect(dialogMock).not.toHaveBeenCalled()
+      expect(dialogDispatchLogged(id)).toBe(false)
       expect(notify).toHaveBeenCalledTimes(1)
       expect(notify).toHaveBeenCalledWith(
         expect.objectContaining({
