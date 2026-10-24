@@ -899,7 +899,7 @@ static int32_t THISCALL vt_SteamFriends018_GetFriendCount(void *self, uint32_t d
   return 0;
 }
 
-// slot 3: GetFriendByIndex(CSteamID* _ret, int32 iFriend) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
+// slot 3: GetFriendByIndex(int32 iFriend, int32 iFriendFlags) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetFriendByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
   (void)self;
   memset(sretOut, 0, 8);
@@ -989,7 +989,7 @@ static int32_t THISCALL vt_SteamFriends018_GetClanCount(void *self) {
   return 0;
 }
 
-// slot 18: GetClanByIndex(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
+// slot 18: GetClanByIndex(int32 iClan) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetClanByIndex(void *self, void *sretOut, uint32_t dummy0) {
   (void)self;
   memset(sretOut, 0, 8);
@@ -1026,7 +1026,7 @@ static int32_t THISCALL vt_SteamFriends018_GetFriendCountFromSource(void *self, 
   return 0;
 }
 
-// slot 24: GetFriendFromSourceByIndex(CSteamID* _ret, CSteamID steamIDSource) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
+// slot 24: GetFriendFromSourceByIndex(CSteamID steamIDSource, int32 iFriend) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetFriendFromSourceByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
   (void)self;
   memset(sretOut, 0, 8);
@@ -1104,7 +1104,7 @@ static uint64_t THISCALL vt_SteamFriends018_RequestClanOfficerList(void *self, u
   return 0LL;
 }
 
-// slot 38: GetClanOwner(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
+// slot 38: GetClanOwner(CSteamID steamIDClan) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetClanOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
   (void)self;
   memset(sretOut, 0, 8);
@@ -1117,7 +1117,7 @@ static int32_t THISCALL vt_SteamFriends018_GetClanOfficerCount(void *self, uint3
   return 0;
 }
 
-// slot 40: GetClanOfficerByIndex(CSteamID* _ret, CSteamID steamIDClan) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
+// slot 40: GetClanOfficerByIndex(CSteamID steamIDClan, int32 iOfficer) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetClanOfficerByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
   (void)self;
   memset(sretOut, 0, 8);
@@ -1170,7 +1170,7 @@ static int32_t THISCALL vt_SteamFriends018_GetCoplayFriendCount(void *self) {
   return 0;
 }
 
-// slot 49: GetCoplayFriend(CSteamID* _ret) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
+// slot 49: GetCoplayFriend(int32 iCoplayFriend) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetCoplayFriend(void *self, void *sretOut, uint32_t dummy0) {
   (void)self;
   memset(sretOut, 0, 8);
@@ -1207,7 +1207,7 @@ static int32_t THISCALL vt_SteamFriends018_GetClanChatMemberCount(void *self, ui
   return 0;
 }
 
-// slot 55: GetChatMemberByIndex(CSteamID* _ret, CSteamID steamIDClan) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
+// slot 55: GetChatMemberByIndex(CSteamID steamIDClan, int32 iUser) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
 static void * THISCALL vt_SteamFriends018_GetChatMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
   (void)self;
   memset(sretOut, 0, 8);
@@ -13758,10 +13758,11 @@ static uint64_t THISCALL vt_SteamInput006_GetDigitalActionHandle(void *self, uin
   return 0LL;
 }
 
-// slot 17: GetDigitalActionData(InputDigitalActionData_t* _ret, uint64 inputHandle, uint64 digitalActionHandle) -> InputDigitalActionData_t* | __thiscall ret 20 (STUB)
-static void * THISCALL vt_SteamInput006_GetDigitalActionData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+// slot 17: GetDigitalActionData(uint64 inputHandle, uint64 digitalActionHandle) -> InputDigitalActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamInput006_GetDigitalActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
   (void)self;
-  return NULL;
+  memset(sretOut, 0, 2);
+  return sretOut;
 }
 
 // slot 18: GetDigitalActionOrigins(uint64 inputHandle, uint64 actionSetHandle, uint64 digitalActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
@@ -13782,10 +13783,11 @@ static uint64_t THISCALL vt_SteamInput006_GetAnalogActionHandle(void *self, uint
   return 0LL;
 }
 
-// slot 21: GetAnalogActionData(InputAnalogActionData_t* _ret, uint64 inputHandle, uint64 analogActionHandle) -> InputAnalogActionData_t* | __thiscall ret 20 (STUB)
-static void * THISCALL vt_SteamInput006_GetAnalogActionData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+// slot 21: GetAnalogActionData(uint64 inputHandle, uint64 analogActionHandle) -> InputAnalogActionData_t | __thiscall ret 20 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamInput006_GetAnalogActionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
   (void)self;
-  return NULL;
+  memset(sretOut, 0, 16);
+  return sretOut;
 }
 
 // slot 22: GetAnalogActionOrigins(uint64 inputHandle, uint64 actionSetHandle, uint64 analogActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
@@ -13826,10 +13828,11 @@ static void THISCALL vt_SteamInput006_StopAnalogActionMomentum(void *self, uint3
   (void)self;
 }
 
-// slot 29: GetMotionData(InputMotionData_t* _ret, uint64 inputHandle) -> InputMotionData_t* | __thiscall ret 12 (STUB)
-static void * THISCALL vt_SteamInput006_GetMotionData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+// slot 29: GetMotionData(uint64 inputHandle) -> InputMotionData_t | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamInput006_GetMotionData(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
   (void)self;
-  return NULL;
+  memset(sretOut, 0, 40);
+  return sretOut;
 }
 
 // slot 30: TriggerVibration(uint64 inputHandle, uint32 usLeftSpeed, uint32 usRightSpeed) -> void | __thiscall ret 16 (STUB)
@@ -14165,10 +14168,11 @@ static uint64_t THISCALL vt_SteamGameServer014_GetServerReputation(void *self) {
   return 0LL;
 }
 
-// slot 33: GetPublicIP(SteamIPAddress_t* _ret) -> SteamIPAddress_t* | __thiscall ret 4 (STUB)
-static void * THISCALL vt_SteamGameServer014_GetPublicIP(void *self, uint32_t dummy0) {
+// slot 33: GetPublicIP() -> SteamIPAddress_t | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamGameServer014_GetPublicIP(void *self, void *sretOut) {
   (void)self;
-  return NULL;
+  memset(sretOut, 0, 20);
+  return sretOut;
 }
 
 // slot 34: HandleIncomingPacket(const void* pData, int32 cbData, uint32 srcIP, uint32 srcPort) -> bool | __thiscall ret 16 (STUB)
@@ -14458,10 +14462,11 @@ static uint64_t THISCALL vt_SteamGameServer015_GetServerReputation(void *self) {
   return 0LL;
 }
 
-// slot 33: GetPublicIP(SteamIPAddress_t* _ret) -> SteamIPAddress_t* | __thiscall ret 4 (STUB)
-static void * THISCALL vt_SteamGameServer015_GetPublicIP(void *self, uint32_t dummy0) {
+// slot 33: GetPublicIP() -> SteamIPAddress_t | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamGameServer015_GetPublicIP(void *self, void *sretOut) {
   (void)self;
-  return NULL;
+  memset(sretOut, 0, 20);
+  return sretOut;
 }
 
 // slot 34: HandleIncomingPacket(const void* pData, int32 cbData, uint32 srcIP, uint32 srcPort) -> bool | __thiscall ret 16 (STUB)
@@ -16115,23 +16120,23 @@ uint64_t SteamAPI_ISteamFriends_EnumerateFollowingList(void *self, uint32_t a1) 
   return 0;
 }
 
-uint64_t SteamAPI_ISteamFriends_GetChatMemberByIndex(void *self, uint64_t a1, uint64_t a2) {
+uint64_t SteamAPI_ISteamFriends_GetChatMemberByIndex(void *self, uint64_t a1, int32_t a2) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, void *, uint64_t))vt[55])(self, &out, (void *)a1, (uint64_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[55])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, uint64_t, int32_t))vt[57])(self, &out, (uint64_t)a1, (int32_t)(uint32_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[57])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, uint64_t, int32_t))vt[57])(self, &out, (uint64_t)a1, (int32_t)(uint32_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[57])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   return 0;
@@ -16153,23 +16158,23 @@ bool SteamAPI_ISteamFriends_GetClanActivityCounts(void *self, uint64_t a1, int32
   return 0;
 }
 
-uint64_t SteamAPI_ISteamFriends_GetClanByIndex(void *self, uint64_t a1) {
+uint64_t SteamAPI_ISteamFriends_GetClanByIndex(void *self, int32_t a1) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, void *))vt[18])(self, &out, (void *)a1);
+    ((void * (*)(void *, void *, int32_t))vt[18])(self, &out, (int32_t)a1);
     return out;
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, int32_t))vt[19])(self, &out, (int32_t)(uint32_t)a1);
+    ((void * (*)(void *, void *, int32_t))vt[19])(self, &out, (int32_t)a1);
     return out;
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, int32_t))vt[19])(self, &out, (int32_t)(uint32_t)a1);
+    ((void * (*)(void *, void *, int32_t))vt[19])(self, &out, (int32_t)a1);
     return out;
   }
   return 0;
@@ -16239,23 +16244,23 @@ const char * SteamAPI_ISteamFriends_GetClanName(void *self, uint64_t a1) {
   return 0;
 }
 
-uint64_t SteamAPI_ISteamFriends_GetClanOfficerByIndex(void *self, uint64_t a1, uint64_t a2) {
+uint64_t SteamAPI_ISteamFriends_GetClanOfficerByIndex(void *self, uint64_t a1, int32_t a2) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, void *, uint64_t))vt[40])(self, &out, (void *)a1, (uint64_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[40])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, uint64_t, int32_t))vt[41])(self, &out, (uint64_t)a1, (int32_t)(uint32_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[41])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, uint64_t, int32_t))vt[41])(self, &out, (uint64_t)a1, (int32_t)(uint32_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[41])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   return 0;
@@ -16281,7 +16286,7 @@ uint64_t SteamAPI_ISteamFriends_GetClanOwner(void *self, uint64_t a1) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, void *))vt[38])(self, &out, (void *)a1);
+    ((void * (*)(void *, void *, uint64_t))vt[38])(self, &out, (uint64_t)a1);
     return out;
   }
   if (self == (void *)&g_steamfriends015_instance) {
@@ -16315,23 +16320,23 @@ const char * SteamAPI_ISteamFriends_GetClanTag(void *self, uint64_t a1) {
   return 0;
 }
 
-uint64_t SteamAPI_ISteamFriends_GetCoplayFriend(void *self, uint64_t a1) {
+uint64_t SteamAPI_ISteamFriends_GetCoplayFriend(void *self, int32_t a1) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, void *))vt[49])(self, &out, (void *)a1);
+    ((void * (*)(void *, void *, int32_t))vt[49])(self, &out, (int32_t)a1);
     return out;
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, int32_t))vt[51])(self, &out, (int32_t)(uint32_t)a1);
+    ((void * (*)(void *, void *, int32_t))vt[51])(self, &out, (int32_t)a1);
     return out;
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, int32_t))vt[51])(self, &out, (int32_t)(uint32_t)a1);
+    ((void * (*)(void *, void *, int32_t))vt[51])(self, &out, (int32_t)a1);
     return out;
   }
   return 0;
@@ -16369,23 +16374,23 @@ uint64_t SteamAPI_ISteamFriends_GetFollowerCount(void *self, uint64_t a1) {
   return 0;
 }
 
-uint64_t SteamAPI_ISteamFriends_GetFriendByIndex(void *self, uint64_t a1, int32_t a2) {
+uint64_t SteamAPI_ISteamFriends_GetFriendByIndex(void *self, int32_t a1, int32_t a2) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, void *, int32_t))vt[3])(self, &out, (void *)a1, (int32_t)a2);
+    ((void * (*)(void *, void *, int32_t, int32_t))vt[3])(self, &out, (int32_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, int32_t, int32_t))vt[4])(self, &out, (int32_t)(uint32_t)a1, (int32_t)a2);
+    ((void * (*)(void *, void *, int32_t, int32_t))vt[4])(self, &out, (int32_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, int32_t, int32_t))vt[4])(self, &out, (int32_t)(uint32_t)a1, (int32_t)a2);
+    ((void * (*)(void *, void *, int32_t, int32_t))vt[4])(self, &out, (int32_t)a1, (int32_t)a2);
     return out;
   }
   return 0;
@@ -16455,23 +16460,23 @@ int32_t SteamAPI_ISteamFriends_GetFriendCountFromSource(void *self, uint64_t a1)
   return 0;
 }
 
-uint64_t SteamAPI_ISteamFriends_GetFriendFromSourceByIndex(void *self, uint64_t a1, uint64_t a2) {
+uint64_t SteamAPI_ISteamFriends_GetFriendFromSourceByIndex(void *self, uint64_t a1, int32_t a2) {
   if (self == (void *)&g_steamfriends018_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, void *, uint64_t))vt[24])(self, &out, (void *)a1, (uint64_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[24])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends015_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, uint64_t, int32_t))vt[25])(self, &out, (uint64_t)a1, (int32_t)(uint32_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[25])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   if (self == (void *)&g_steamfriends017_instance) {
     vfn *vt = *(vfn **)self;
     uint64_t out = 0;
-    ((void * (*)(void *, void *, uint64_t, int32_t))vt[25])(self, &out, (uint64_t)a1, (int32_t)(uint32_t)a2);
+    ((void * (*)(void *, void *, uint64_t, int32_t))vt[25])(self, &out, (uint64_t)a1, (int32_t)a2);
     return out;
   }
   return 0;
@@ -17491,16 +17496,19 @@ int32_t SteamAPI_ISteamGameServer_GetNextOutgoingPacket(void *self, void * a1, i
   return 0;
 }
 
-void * SteamAPI_ISteamGameServer_GetPublicIP(void *self, void * a1) {
+void * SteamAPI_ISteamGameServer_GetPublicIP(void *ret, void *self) {
   if (self == (void *)&g_steamgameserver014_instance) {
     vfn *vt = *(vfn **)self;
-    return (void *)((void * (*)(void *, void *))vt[33])(self, (void *)a1);
+    ((void * (*)(void *, void *))vt[33])(self, ret);
+    return ret;
   }
   if (self == (void *)&g_steamgameserver015_instance) {
     vfn *vt = *(vfn **)self;
-    return (void *)((void * (*)(void *, void *))vt[33])(self, (void *)a1);
+    ((void * (*)(void *, void *))vt[33])(self, ret);
+    return ret;
   }
-  return 0;
+  memset(ret, 0, 20);
+  return ret;
 }
 
 uint64_t SteamAPI_ISteamGameServer_GetServerReputation(void *self) {
@@ -17991,12 +17999,14 @@ int32_t SteamAPI_ISteamInput_GetActiveActionSetLayers(void *self, uint64_t a1, u
   return 0;
 }
 
-void * SteamAPI_ISteamInput_GetAnalogActionData(void *self, void * a1, uint64_t a2, uint64_t a3) {
+void * SteamAPI_ISteamInput_GetAnalogActionData(void *ret, void *self, uint64_t a1, uint64_t a2) {
   if (self == (void *)&g_steaminput006_instance) {
     vfn *vt = *(vfn **)self;
-    return (void *)((void * (*)(void *, void *, uint64_t, uint64_t))vt[21])(self, (void *)a1, (uint64_t)a2, (uint64_t)a3);
+    ((void * (*)(void *, void *, uint64_t, uint64_t))vt[21])(self, ret, (uint64_t)a1, (uint64_t)a2);
+    return ret;
   }
-  return 0;
+  memset(ret, 0, 16);
+  return ret;
 }
 
 uint64_t SteamAPI_ISteamInput_GetAnalogActionHandle(void *self, const char * a1) {
@@ -18047,10 +18057,12 @@ bool SteamAPI_ISteamInput_GetDeviceBindingRevision(void *self, uint64_t a1, int3
   return 0;
 }
 
-void * SteamAPI_ISteamInput_GetDigitalActionData(void *self, void * a1, uint64_t a2, uint64_t a3) {
+uint64_t SteamAPI_ISteamInput_GetDigitalActionData(void *self, uint64_t a1, uint64_t a2) {
   if (self == (void *)&g_steaminput006_instance) {
     vfn *vt = *(vfn **)self;
-    return (void *)((void * (*)(void *, void *, uint64_t, uint64_t))vt[17])(self, (void *)a1, (uint64_t)a2, (uint64_t)a3);
+    uint64_t out = 0;
+    ((void * (*)(void *, void *, uint64_t, uint64_t))vt[17])(self, &out, (uint64_t)a1, (uint64_t)a2);
+    return out;
   }
   return 0;
 }
@@ -18123,12 +18135,14 @@ uint32_t SteamAPI_ISteamInput_GetInputTypeForHandle(void *self, uint64_t a1) {
   return 0;
 }
 
-void * SteamAPI_ISteamInput_GetMotionData(void *self, void * a1, uint64_t a2) {
+void * SteamAPI_ISteamInput_GetMotionData(void *ret, void *self, uint64_t a1) {
   if (self == (void *)&g_steaminput006_instance) {
     vfn *vt = *(vfn **)self;
-    return (void *)((void * (*)(void *, void *, uint64_t))vt[29])(self, (void *)a1, (uint64_t)a2);
+    ((void * (*)(void *, void *, uint64_t))vt[29])(self, ret, (uint64_t)a1);
+    return ret;
   }
-  return 0;
+  memset(ret, 0, 40);
+  return ret;
 }
 
 uint32_t SteamAPI_ISteamInput_GetRemotePlaySessionID(void *self, uint64_t a1) {

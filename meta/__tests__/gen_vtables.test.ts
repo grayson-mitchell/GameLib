@@ -2534,4 +2534,36 @@ describe('CR-01 / WR-01 / WR-07 / WR-08: struct returns on the x64 flat path (53
     ]
     expect(() => emitFlatExports(m)).toThrow(/Fx.*Get/)
   })
+  it('53-10: x64 vtable class return of 2 bytes is sret (MSVC member rule), flat stays RAX', () => {
+    const c = generateShimC(real)
+    const vt = functionBody(c, 'vt_SteamInput006_GetDigitalActionData(')
+    expect(vt).toMatch(/\(void \*self, void \*sretOut, /)
+    expect(vt).toContain('memset(sretOut, 0, 2);')
+    expect(vt).toContain('return sretOut;')
+    const flat = functionBody(
+      c,
+      'uint64_t SteamAPI_ISteamInput_GetDigitalActionData(void *self'
+    )
+    expect(flat).toContain('uint64_t out = 0;')
+  })
+
+  it('53-10 WR-01: x64 vtable stubs for the remodelled Input006/GameServer methods zero and return the caller buffer', () => {
+    const c = generateShimC(real)
+    for (const [name, size] of [
+      ['vt_SteamInput006_GetAnalogActionData(', 16],
+      ['vt_SteamInput006_GetMotionData(', 40],
+      ['vt_SteamGameServer014_GetPublicIP(', 20],
+      ['vt_SteamGameServer015_GetPublicIP(', 20]
+    ] as const) {
+      const vt = functionBody(c, name)
+      expect(vt).toContain(`memset(sretOut, 0, ${size});`)
+      expect(vt).toContain('return sretOut;')
+    }
+    expect(c).toContain(
+      'void * SteamAPI_ISteamInput_GetAnalogActionData(void *ret, void *self'
+    )
+    expect(c).toContain(
+      'void * SteamAPI_ISteamGameServer_GetPublicIP(void *ret, void *self'
+    )
+  })
 })

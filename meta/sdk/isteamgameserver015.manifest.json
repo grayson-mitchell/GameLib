@@ -453,15 +453,11 @@
     {
       "slot": 33,
       "name": "GetPublicIP",
-      "returns": "SteamIPAddress_t*",
-      "returnKind": "pointer",
+      "returns": "SteamIPAddress_t",
+      "returnKind": "class",
       "stackBytes": 4,
-      "params": [
-        {
-          "name": "_ret",
-          "type": "SteamIPAddress_t*"
-        }
-      ]
+      "params": [],
+      "structSize": 20
     },
     {
       "slot": 34,

@@ -55,11 +55,11 @@
       "stackBytes": 12,
       "params": [
         {
-          "name": "_ret",
-          "type": "CSteamID*"
+          "name": "iFriend",
+          "type": "int32"
         },
         {
-          "name": "iFriend",
+          "name": "iFriendFlags",
           "type": "int32"
         }
       ],
@@ -265,8 +265,8 @@
       "stackBytes": 8,
       "params": [
         {
-          "name": "_ret",
-          "type": "CSteamID*"
+          "name": "iClan",
+          "type": "int32"
         }
       ],
       "structSize": 8
@@ -360,12 +360,12 @@
       "stackBytes": 16,
       "params": [
         {
-          "name": "_ret",
-          "type": "CSteamID*"
-        },
-        {
           "name": "steamIDSource",
           "type": "CSteamID"
+        },
+        {
+          "name": "iFriend",
+          "type": "int32"
         }
       ],
       "structSize": 8
@@ -571,8 +571,8 @@
       "stackBytes": 12,
       "params": [
         {
-          "name": "_ret",
-          "type": "CSteamID*"
+          "name": "steamIDClan",
+          "type": "CSteamID"
         }
       ],
       "structSize": 8
@@ -598,12 +598,12 @@
       "stackBytes": 16,
       "params": [
         {
-          "name": "_ret",
-          "type": "CSteamID*"
-        },
-        {
           "name": "steamIDClan",
           "type": "CSteamID"
+        },
+        {
+          "name": "iOfficer",
+          "type": "int32"
         }
       ],
       "structSize": 8
@@ -726,8 +726,8 @@
       "stackBytes": 8,
       "params": [
         {
-          "name": "_ret",
-          "type": "CSteamID*"
+          "name": "iCoplayFriend",
+          "type": "int32"
         }
       ],
       "structSize": 8
@@ -805,12 +805,12 @@
       "stackBytes": 16,
       "params": [
         {
-          "name": "_ret",
-          "type": "CSteamID*"
-        },
-        {
           "name": "steamIDClan",
           "type": "CSteamID"
+        },
+        {
+          "name": "iUser",
+          "type": "int32"
         }
       ],
       "structSize": 8

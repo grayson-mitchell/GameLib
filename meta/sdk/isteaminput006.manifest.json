@@ -242,14 +242,10 @@
     {
       "slot": 17,
       "name": "GetDigitalActionData",
-      "returns": "InputDigitalActionData_t*",
-      "returnKind": "pointer",
+      "returns": "InputDigitalActionData_t",
+      "returnKind": "class",
       "stackBytes": 20,
       "params": [
-        {
-          "name": "_ret",
-          "type": "InputDigitalActionData_t*"
-        },
         {
           "name": "inputHandle",
           "type": "uint64"
@@ -258,7 +254,8 @@
           "name": "digitalActionHandle",
           "type": "uint64"
         }
-      ]
+      ],
+      "structSize": 2
     },
     {
       "slot": 18,
@@ -314,14 +311,10 @@
     {
       "slot": 21,
       "name": "GetAnalogActionData",
-      "returns": "InputAnalogActionData_t*",
-      "returnKind": "pointer",
+      "returns": "InputAnalogActionData_t",
+      "returnKind": "class",
       "stackBytes": 20,
       "params": [
-        {
-          "name": "_ret",
-          "type": "InputAnalogActionData_t*"
-        },
         {
           "name": "inputHandle",
           "type": "uint64"
@@ -330,7 +323,8 @@
           "name": "analogActionHandle",
           "type": "uint64"
         }
-      ]
+      ],
+      "structSize": 16
     },
     {
       "slot": 22,
@@ -454,19 +448,16 @@
     {
       "slot": 29,
       "name": "GetMotionData",
-      "returns": "InputMotionData_t*",
-      "returnKind": "pointer",
+      "returns": "InputMotionData_t",
+      "returnKind": "class",
       "stackBytes": 12,
       "params": [
-        {
-          "name": "_ret",
-          "type": "InputMotionData_t*"
-        },
         {
           "name": "inputHandle",
           "type": "uint64"
         }
-      ]
+      ],
+      "structSize": 40
     },
     {
       "slot": 30,
