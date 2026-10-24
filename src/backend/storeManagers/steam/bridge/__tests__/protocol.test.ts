@@ -161,6 +161,12 @@ describe('protocol -- interface ordinals + CONTROL reservation (review finding #
     expect(CONTROL_SLOT.health).toBe(0)
     expect(CONTROL_SLOT.whoami).toBe(1)
   })
+
+  it('CONTROL_SLOT.createInterface is 3 and all slots are distinct', () => {
+    expect(CONTROL_SLOT.createInterface).toBe(3)
+    const values = Object.values(CONTROL_SLOT)
+    expect(new Set(values).size).toBe(values.length)
+  })
 })
 
 describe('protocol -- CONTROL HEALTH/WHOAMI round-trip (review finding #7)', () => {

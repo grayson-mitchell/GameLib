@@ -100,7 +100,11 @@ export const CONTROL_SLOT = {
   // per connection, right after connecting, to prove it is really talking
   // to a per-appId GameLib helper (not a stale/foreign listener on the
   // port it read out of gamelib_bridge.cfg) before issuing any real call.
-  hello: 2
+  hello: 2,
+  // Phase 52 (52-02): shim export GameLibBridge_CreateInterface asks the
+  // native client whether it accepts an interface version; the reply is a
+  // 4-byte present flag.
+  createInterface: 3
 } as const
 
 // Not exported (this and DecodedRequest, DecodedResponse below): verified to have no
