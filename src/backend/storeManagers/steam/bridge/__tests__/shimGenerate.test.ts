@@ -1354,9 +1354,7 @@ describe('shimGenerate', () => {
       const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
       expect(paths.filter((p) => p === shipping)).toHaveLength(1)
       expect(paths[1]).toBe(shipping)
-      const warn = (
-        jest.requireMock('backend/logger') as { logWarning: jest.Mock }
-      ).logWarning
+      const warn = jest.requireMock('backend/logger').logWarning
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining('512-file cap'),
         'Steam'
