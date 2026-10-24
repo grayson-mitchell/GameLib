@@ -114,6 +114,23 @@ describe('interfaceVersions', () => {
     it('is false for XCOM (bare accessors only, no SteamInternal_CreateInterface/SteamClient)', () => {
       expect(usesRuntimeInterfaceLookup(XCOM_BARE_ACCESSOR_SYMBOLS)).toBe(false)
     })
+
+    it('is true for the version-string-taking FindOrCreate* exports (quick 261024-i94)', () => {
+      expect(
+        usesRuntimeInterfaceLookup(['SteamInternal_FindOrCreateUserInterface'])
+      ).toBe(true)
+      expect(
+        usesRuntimeInterfaceLookup([
+          'SteamInternal_FindOrCreateGameServerInterface'
+        ])
+      ).toBe(true)
+    })
+
+    it('is false for ContextInit alone (takes no version string)', () => {
+      expect(usesRuntimeInterfaceLookup(['SteamInternal_ContextInit'])).toBe(
+        false
+      )
+    })
   })
 
   describe('resolveRequiredInterfaceVersions', () => {

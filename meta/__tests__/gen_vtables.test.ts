@@ -1607,4 +1607,86 @@ describe('gen_vtables', () => {
       })
     })
   })
+  describe('modern-SDK SteamInternal_* exports (quick 261024-i94)', () => {
+    const FIVE = [
+      'SteamInternal_SteamAPI_Init',
+      'SteamInternal_ContextInit',
+      'SteamInternal_FindOrCreateUserInterface',
+      'SteamInternal_FindOrCreateGameServerInterface',
+      'SteamInternal_GameServer_Init_V2'
+    ]
+    const manifests = [isteamuser, isteamfriends]
+
+    function modernBlock(): string {
+      const c = generateShimC(manifests)
+      const start = c.indexOf('// === Modern-SDK lookup family')
+      expect(start).toBeGreaterThan(-1)
+      const end = c.indexOf('#endif', start)
+      return c.slice(start, end)
+    }
+
+    function body(name: string): string {
+      const block = modernBlock()
+      const at = block.search(new RegExp(`\\b${name}\\(`))
+      expect(at).toBeGreaterThan(-1)
+      const next = block.indexOf('\n}\n', at)
+      return block.slice(at, next === -1 ? undefined : next + 3)
+    }
+
+    it('x64 .def lists all five; x86 .def lists none', () => {
+      const x64 = generateDefFile(manifests, 'x64')
+      const x86 = generateDefFile(manifests, 'x86')
+      for (const n of FIVE) {
+        expect(x64).toMatch(new RegExp(`^\\s*${n}\\s*$`, 'm'))
+        expect(x86).not.toContain(n)
+      }
+      expect(generateDefFile(loadAllManifests(), 'x86')).toBe(
+        readFileSync(
+          join(
+            __dirname,
+            '..',
+            '..',
+            'native/steam-bridge/generated/steam_api.def'
+          ),
+          'utf-8'
+        )
+      )
+    })
+
+    it('defines each of the five inside the x64-only modern block', () => {
+      const block = modernBlock()
+      for (const n of FIVE) expect(block).toContain(n + '(')
+    })
+
+    it('SteamInternal_SteamAPI_Init calls SteamAPI_Init, returns 0 on ok and 2 on failure', () => {
+      const b = body('SteamInternal_SteamAPI_Init')
+      expect(b).toContain('SteamAPI_Init()')
+      expect(b).toContain('return 0;')
+      expect(b).toContain('return 2;')
+    })
+
+    it('SteamInternal_GameServer_Init_V2 returns 1 and never 0', () => {
+      const b = body('SteamInternal_GameServer_Init_V2')
+      expect(b).toContain('return 1;')
+      expect(b).not.toContain('return 0;')
+    })
+
+    it('FindOrCreate* resolve by exact version with null-object fallback', () => {
+      for (const n of [
+        'SteamInternal_FindOrCreateUserInterface',
+        'SteamInternal_FindOrCreateGameServerInterface'
+      ]) {
+        const b = body(n)
+        expect(b).toContain('resolve_iface_by_exact_version(')
+        expect(b).toContain('g_x64_null_object_instance')
+      }
+    })
+
+    it('ContextInit guards NULL and only calls pFn when the counter differs', () => {
+      const b = body('SteamInternal_ContextInit')
+      expect(b).toContain('return NULL')
+      expect(b).toContain('g_gamelib_context_counter')
+      expect(b).toMatch(/!=\s*g_gamelib_context_counter/)
+    })
+  })
 })
