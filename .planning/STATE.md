@@ -4,14 +4,14 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
-last_updated: "2026-10-23T22:03:41.430Z"
-last_activity: 2026-10-23
+last_updated: "2026-10-24T01:17:22.301Z"
+last_activity: 2026-10-24
 progress:
-  total_phases: 2
-  completed_phases: 0
+  total_phases: 3
+  completed_phases: 1
   total_plans: 42
-  completed_plans: 29
-  percent: 0
+  completed_plans: 31
+  percent: 33
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-16)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 51 — widen-the-native-steam-bridge-more-interface-proxies-and-sca
+**Current focus:** Phase 52 — bridge-backed-steamclient-dll-for-steamstub-titles
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -71,10 +71,10 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 
 ## Current Position
 
-Phase: 51 (widen-the-native-steam-bridge-more-interface-proxies-and-sca) — EXECUTING
-Plan: 12 of 30
+Phase: 52 (bridge-backed-steamclient-dll-for-steamstub-titles) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-10-24 - Completed quick task 261024-j4l: bridge scan reads delay imports and withholds the shim when it cannot serve the game's interface versions
+Last activity: 2026-10-24
 
 Progress: [███████░░░] 69%
 
@@ -360,7 +360,7 @@ The 569 per-item evidence rows written by the 2026-10-16 v0.8 close (one row per
 
 ## Session Continuity
 
-Last session: 2026-10-23T22:03:41.426Z
+Last session: 2026-10-24T01:17:22.296Z
 Stopped at: Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)
 Resume file: None
 
