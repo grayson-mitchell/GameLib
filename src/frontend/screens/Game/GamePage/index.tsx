@@ -28,6 +28,7 @@ import {
 import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
+import { releasesPlayClicked } from './playClickedLatch'
 import { CachedImage, UpdateComponent, TabPanel } from 'frontend/components/UI'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 
@@ -332,8 +333,8 @@ export default React.memo(function GamePage(): JSX.Element | null {
 
   useEffect(() => {
     // when the user clicks the Play button, we disable it so the user can't click it again
-    // once we receive the "launching" status update we can safely unset this state
-    if (status === 'launching') setPlayClicked(false)
+    // once we receive a "launching" or "playing" status update we can safely unset this state
+    if (releasesPlayClicked(status)) setPlayClicked(false)
   }, [status])
 
   function handleUpdate() {
@@ -679,15 +680,18 @@ export default React.memo(function GamePage(): JSX.Element | null {
     }
 
     setPlayClicked(true)
-    await launch({
-      appName,
-      t,
-      runner: gameInfo.runner,
-      hasUpdate,
-      showDialogModal,
-      notPlayableOffline
-    })
-    setPlayClicked(false)
+    try {
+      await launch({
+        appName,
+        t,
+        runner: gameInfo.runner,
+        hasUpdate,
+        showDialogModal,
+        notPlayableOffline
+      })
+    } finally {
+      setPlayClicked(false)
+    }
   }
 
   async function handleInstall(is_installed: boolean) {
