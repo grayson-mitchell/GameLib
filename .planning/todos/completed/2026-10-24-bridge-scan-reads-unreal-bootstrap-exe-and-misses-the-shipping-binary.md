@@ -63,3 +63,21 @@ game would then hit `SteamInternal_SteamAPI_Init`, the modern-SDK todo.
 So the same scan miss gives "plays offline" for Manor Lords and Abiotic Factor but "won't
 launch" here, depending on whether the game calls `RestartAppIfNecessary`. Three UE titles of 10
 sampled.
+
+## Closed 2026-10-24: the scan recognises the UE stub-plus-Shipping layout
+
+**Cause.** When the launch exe imports no steam_api, placement walks the install root for
+`steam_api*.dll`, but only to depth 4. UE keeps the DLL at
+`Engine/Binaries/ThirdParty/Steamworks/Steamv*/Win64/`, six levels down. The walk found nothing
+and fell through to `no-steam-api`.
+
+**Fix.** Quick 261024-ir1 adds `findUnrealLayout` to `shimGenerate.ts`. It runs only when a real
+`Engine/` directory sits beside the launch exe. The DLL walk also walks
+`Engine/Binaries/ThirdParty/Steamworks`, so the shim goes over the DLL at its real location and
+that path is reported in `shimPaths` for the cfg copy. The `*/Binaries/Win64/*-Shipping.exe`
+files (up to 8) are scanned first and outside the 512-file importer cap, so their imports always
+feed coverage. Depth 4, the 512 cap and their tests are unchanged, and so is `games.ts`.
+
+Live re-test is still owed on the Mac: 1363080, 427410 and 1119730 should log `placed` (not
+`no-steam-api`), launch with the helper, and reach `HELLO` with a clean game Steam-init log.
+Ranch Simulator should no longer exit at 2-3 s.
