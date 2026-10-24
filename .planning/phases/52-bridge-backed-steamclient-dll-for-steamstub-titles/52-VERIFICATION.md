@@ -1,12 +1,19 @@
 ---
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
-verified: 2026-10-24T05:10:00Z
+verified: 2026-10-24T08:10:00Z
 status: gaps_found
 score: 5/7 must-haves verified
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
   previous_score: 5/7
+  gap_closure_3:
+    verified: 2026-10-24T08:10:00Z
+    plans: [52-25, 52-26, 52-27, 52-28]
+    gaps_closed: []
+    gaps_remaining:
+      - "Done-when: Grim Dawn main menu with clean Steam-init log. option-versioninfo (GameLib VS_VERSIONINFO on forwarder) did not clear Application Load Error; item 23 issue, item 24 issue"
+    regressions: []
   gap_closure_2:
     verified: 2026-10-24T06:40:00Z
     plans: [52-19, 52-20, 52-21, 52-22, 52-23, 52-24]
@@ -155,4 +162,60 @@ None added. The Grim Dawn re-gate is operator-driven and blocked behind a code c
 Gap closure 2 delivered what was cheap and certain: WR-09 and WR-11 are fixed in code and tests, Gap 6 is attributed outside the phase, and the Gap 5 trace narrowed the question to what the stub inspects in the forwarder bytes. It did not deliver the phase goal. Grim Dawn still fails SteamStub with Application Load Error 3 and never reached its main menu, so the single done-when item is FAILED and the phase must not be marked complete. Next step recorded by the operator: `/gsd-plan-phase 52 --gaps`, starting with static inspection of what the stub checks in the forwarder bytes (compare against the genuine 41-export steamclient64.dll), then one boundary-reviewed change, then the strict packaged re-gate.
 
 _Re-verified: 2026-10-24 (gap closure 2)_
+_Verifier: Claude (gsd-verifier)_
+
+---
+
+# Re-verification 3: gap closure plans 52-25..52-28
+
+**Verified:** 2026-10-24T08:10:00Z
+**Status:** gaps_found (unchanged; done-when still unmet). Score 5/7 (unchanged).
+**What changed:** Gap 5 was diagnosed statically (52-25), one boundary-compliant change was made (52-26: a GameLib-owned VS_VERSIONINFO resource on the forwarder), and the packaged re-gate (52-27/28) showed it did not help. No truth changed state.
+**Requirements:** ROADMAP says `Requirements: TBD`; `.planning/REQUIREMENTS.md` does not exist. IDs found in PLAN frontmatter (grep of all `requirements:` lines): P52-DONE (14 plans), P52-SCOPE-1 (9), P52-SCOPE-2 (9), P52-SCOPE-3 (9), P52-SCOPE-4 (9), P52-SCOPE-5 (2). None is defined in any requirements document, so traceability is missing; I mapped them by name to ROADMAP Scopes 1-5 and the done-when. Gap closure 3 plans claim P52-DONE (25-28), P52-SCOPE-2 (25-27), P52-SCOPE-3 (27), P52-SCOPE-1 (28). P52-DONE is NOT satisfied. Note 52-27 and 52-28 correctly record `requirements-completed: []`; 52-25 and 52-26 list P52-DONE as completed in their SUMMARY, which overstates (they completed diagnosis/decision, not the done-when).
+
+## Truth re-scoring
+
+| # | Truth | Now | Evidence (checked by me) |
+|---|---|---|---|
+| 1 | Scope 1 forwarding | VERIFIED (no change) | Not touched by gap closure 3 (diff touches only `.rc`, `meta/buildSteamBridgeShims.ts` and its test). Runtime: HELLO and `FWD CreateInterface SteamClient017/014 native=present` in item 23 log lines 124-126. |
+| 2 | Scope 2 forwarder | VERIFIED | `steamclient_fwd.rc` exists (GameLib strings only, no Valve), wired via `STEAMCLIENT_FWD_RC_PATH` (buildSteamBridgeShims.ts:222, argv :254). Built forwarder `public/bin/arm64/darwin/steamclient64.dll` is 187392 B (matches 52-26 claim) and the packaged bundle copy is the same size. |
+| 3 | Scope 3 bottle setup | VERIFIED | Item 25 pass: HKCU only, no pid, no HKLM Valve key, no steam.exe, exe sha unchanged. |
+| 4 | Scope 4 notice | VERIFIED | No change; `drmWrapper=steamstub` logged at item 23 line 106. |
+| 5 | Scope 5 exports/scan | VERIFIED (static) | No change. |
+| 6 | Done-when: main menu, In-Game | **FAILED** | Item 23 issue: operator saw Application Load Error, game did not launch, runtime 37 s (expected >= 60). Main menu no. In-Game not reported and, per rule, would not count. |
+| 7 | Boundary | VERIFIED | Diff shows no HKLM write, no Valve identity string (`.rc` read), no genuine DLL copied, exe unmodified (item 25). |
+
+## Strict bridge-verified check (item 24)
+
+HELLO 1 and `[S_API] Loaded ... steamclient64.dll OK.` present, so not "unverified". But IsSteamRunning warning 1 (cxlog 198601.473), MSGBOX 1, not alive at 90 s, `L"pid"` read 2x, `steam://run` 0. Strict criteria require zero IsSteamRunning warnings, zero MSGBOX, alive at 90 s. **Bridge-verified: NOT achieved.** In-Game plays no part. Bottled Steam was not used as a reroute (correct).
+
+## Gap 5 status
+
+OPEN, BLOCKER. Same symptom as items 9/10/16 after four change attempts (forwarder placement, HKCU values, gating, version resource). 52-25 produced no direct evidence of what the stub checks: no OS signature, hash or mapping API runs between the forwarder read and the MessageBox; classes A-D carry only indirect or "not observable" strength. 52-26's option rested on indirect row C and was a speculative probe; it failed. Remaining untried candidates from the diagnosis stay inside or at the edge of the locked boundary (the missing `pid`, `Steam_*` flat exports forwarded to the native client, signature/genuine-file routes which are excluded). Full dialog text of the run was not captured (no +relay), so it cannot be compared with `Application load error 3:0000065432` from 52-25; this is a diagnostic hole worth closing in the next round.
+
+## Code review (52-REVIEW.md, gap closure 3)
+
+0 critical, 2 warnings, 1 info, confirmed present: WR-01 (no existence guard for the `.rc`, opaque zig failure), WR-02 (test does not pin that `.rc` follows `.c`; import-lib prune depends on order), IN-01 (stale doc comment). All are hardening, none blocks the goal. They are not recorded as fixed.
+
+## Anti-patterns
+
+grep TBD/FIXME/XXX over `steamclient_fwd.*` : none. Gap-closure-3 code diff is 3 files; no stubs.
+
+## Full-suite failures
+
+Not re-run by me this round. Orchestrator reproduced the same four files (testContainment, findDeadcode, genI18nGateScope, machineFillGamelib) at e312c72ba, before gap closure 3; they match my attribution in earlier rounds (files outside phase 52). Accepted as pre-existing, not phase 52. Suite remains red.
+
+## Item 26 and housekeeping
+
+Item 26 (ELEX) skipped by its stated condition; I checked the change set (`.rc`, build script, test) contains no shim, helper or generated-source change, so skipping is justified. The 52-UAT is `diagnosed`, 26 items; the forwarding todo stays in `pending/` (verified present). The Friends sign-out remains tracked in its separate pending todo (outside phase 52).
+
+## Human verification
+
+None added; the re-gate is operator-driven and needs a code change first.
+
+## Gaps Summary
+
+Gap closure 3 produced a rigorous negative result: a structural-property fix (version resource) does not satisfy the SteamStub check, and the strict log shows the stub still concludes no Steam is running. The phase goal is not achieved and the phase must not be marked complete. Next: `/gsd-plan-phase 52 --gaps`, with a trace-first step (+relay capturing the MessageBox text and the calls around the two `pid` reads), then ONE boundary-reviewed candidate (pid writer, or `Steam_*` flat exports answered by the native client), then a strict packaged re-gate. Consider whether continued speculative probes are worthwhile versus an operator decision on whether Grim Dawn/SteamStub is closable inside the locked boundary at all.
+
+_Re-verified: 2026-10-24 (gap closure 3)_
 _Verifier: Claude (gsd-verifier)_
