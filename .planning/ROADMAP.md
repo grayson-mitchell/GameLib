@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 22/24 plans executed
+**Plans:** 23/24 plans executed
 
 Plans:
 
@@ -365,7 +365,7 @@ Plans:
 - [x] 52-20-PLAN.md — WR-09: gate the eight non-lookup SteamClient017/014 wire methods off the SteamStub path with pre-phase values; widen WR-07 revisit
 - [x] 52-21-PLAN.md — WR-11: withhold only when a steam_api target exists; placed-miss with no own-steam_api line otherwise
 - [x] 52-22-PLAN.md — Gap 5 fix: decision checkpoint over boundary-reviewed options from 52-19 evidence, then implement the chosen one (UAT item 16)
-- [ ] 52-23-PLAN.md — Strict packaged re-gate 2: Grim Dawn launch, cx-log strict Steam-init trace, hygiene (UAT items 17-19)
+- [x] 52-23-PLAN.md — Strict packaged re-gate 2: Grim Dawn launch, cx-log strict Steam-init trace, hygiene (UAT items 17-19)
 - [ ] 52-24-PLAN.md — ELEX no-regression after WR-09 with Friends before/after (item 20), finalize UAT and todos
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API

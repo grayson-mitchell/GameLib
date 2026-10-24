@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: testing
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -12,7 +12,7 @@ source:
   - 52-08-SUMMARY.md
   - 52-09-SUMMARY.md
 started: 2026-10-24T01:41:00Z
-updated: 2026-10-24T04:45:00Z
+updated: 2026-10-24T06:10:00Z
 ---
 
 Authored by plan 52-10, run by 52-11 (discovery rounds, items 1-5) and 52-12 (done-when, items 6-8).
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-decision: item 16 scored by 52-22 (option-other, no code change); next a gaps planning round on the forwarder-bytes check
+item 20 (items 17-19 skipped by 52-23: item 16 option-other; item 20 scored by 52-24)
 
 ## Tests
 
@@ -237,6 +237,22 @@ result: pass — session /tmp/gamelib-gate-52d-20261024T053624Z, T_bridge = Age 
 expected: the operator chooses one boundary-reviewed option built from 52-19 evidence, or no change.
 result: pass — operator chose option-other (marked Recommended); operator's words verbatim: "option-other (Recommended)" (a multiple-choice selection, no free-text words). It rested on the 52-19-DIAGNOSIS.md `## Gap 5: candidate inputs` row `content of the file at the forwarder path` (cxlog:7170-7181 and 6810-6820): direct that the stub reads all 186368 bytes of the forwarder immediately before the MessageBox, indirect on what it checks in them (never inspected or disassembled); no listed code option targets that input. Boundary review (six lines): who answers n/a (no change); stand-in risk none; HKLM untouched; exe not modified; no Windows Steam client in the bottle; hygiene unchanged. Options not chosen: option-flat (export-surface row indirect; `Steam_ReleaseThreadLocalMemory` was looked up with module handle 0, so it searched Grim Dawn.exe and a forwarder export would not answer it), option-path (module-path row: path read at 6830 and 7170-7174, no evidence it is rejected; a Steam-root location breaks item-11 "no steamclient*.dll in the Steam root"), option-none; option-pid was withheld (no OpenProcess/NtOpenProcess or image-name query in the trace, so no evidence the window depends on pid). Hygiene delta for 52-23 item 19: no hygiene delta. Next step: another planning round (`/gsd-plan-phase 52 --gaps`) to establish what the stub checks in the forwarder bytes. — not implemented by decision
 
+### 17. Re-gate 2 — GameLib launch of Grim Dawn after 52-20..22
+expected: everything item 9 expected; plus, for option-flat, a `FWD Steam_<name>` helper line for each name the stub resolves; the operator sees no Application Load Error dialog, confirms the main menu and stays in it at least 60 s; In-Game is recorded but not counted. `pass` only if every log check holds AND the operator confirmed the main menu.
+result: skipped — no Gap 5 change implemented (item 16 option-other); no Grim Dawn launch made by 52-23
+
+### 18. Re-gate 2 — cx-log trace and strict Steam-init check (MODE=trace)
+expected: everything item 10 expected (clone after item 17 with the product-written state asserted by cmp; `steam://run` 0; steamclient64.dll loaded; alive at 90 s; helper HELLO count >= 1; the `[S_API]` line `SteamAPI_Init(): Loaded '...steamclient64.dll' OK.` present; zero `[S_API]` lines matching failed, error, not logged on or unable, case-insensitive; IsSteamRunning count 0); plus a `MSGBOX` count of 0 in the game process. Harness-placed state is `issue — harness-flow init evidence only`. No Steam-init line anywhere is `issue — unverified (no game Steam-init log)`.
+result: skipped — no Gap 5 change implemented (item 16 option-other); no item 17 launch to trace
+
+### 19. Re-gate 2 — bottle hygiene
+expected: item 11's text with item 16's hygiene delta applied verbatim (item 16 recorded no hygiene delta, so unchanged): user.reg has `SteamClientDll64` under ActiveProcess and no `pid`; no HKLM Valve key in system.reg; no steam.exe or steamclient*.dll in the Steam root; x64 steamclient64.dll byte-identical to the built forwarder; exe sha256 equals the preflight value (d3915e2599317b6670cc088ba958afb2b2f4fa8141cfd1d777ee02f9ea1fc4c4).
+result: skipped — no Gap 5 change implemented (item 16 option-other); no item 17 launch whose hygiene could be read
+
+### 20. Re-gate 2 — ELEX (411300) no-regression after WR-09, Friends before/after
+expected: everything item 12 expected; plus no `FWD` line for 411300 at all (WR-09: the non-lookup SteamClient methods stay local off the SteamStub path); the operator records Mac Steam Friends as signed in before Play and still signed in after quitting. A sign-out is `issue` only when 52-19's attribution is classified phase-52 or inconclusive. When it is outside-phase-52 (item 15 classified it so), item 20 is scored on ELEX no-regression alone and the Friends outcome goes to the Friends pending todo. Bridge-verified is recorded separately and expected to stay unverified.
+result: pending — scored by 52-24 (desk re-check for WR-09/WR-11 passed in 52-23, session /tmp/gamelib-gate-52s-20261024T060847Z)
+
 ## Structural Reachability Review
 
 Applied by 52-10 against all seven tests of `live-gate-contract-authoring.md`.
@@ -285,11 +301,11 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 16
+total: 20
 passed: 7
 issues: 6
-pending: 1
-skipped: 2
+pending: 2
+skipped: 5
 blocked: 0
 
 ## Gaps
