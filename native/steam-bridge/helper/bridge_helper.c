@@ -422,6 +422,8 @@ static int send_response(int fd, uint32_t requestId, uint8_t status, const uint8
 
 // T-52-09: bound to 128 chars and replace non-printable bytes so a
 // game-controlled version string cannot inject log lines.
+static uint8_t g_call_seen[BD_CALL_COUNT > 0 ? BD_CALL_COUNT : 1];
+
 static void sanitize_ver(const char *in, char *out, size_t outSize) {
   size_t i = 0;
   for (; in[i] && i < 128 && i + 1 < outSize; i++) {
@@ -532,6 +534,14 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
   // symbol, and every param-bounds check all live in bridge_dispatch
   // itself (bridge_dispatch.h), generated from the SAME manifests the
   // shim's own stubs are generated from.
+  // D-53-13: CALL trace. Game-originated by construction (only the shim sends
+  // wire requests; the helper's own init is not a request). Name only, no
+  // arguments or returns; once per method per process, bounded by BD_CALL_COUNT.
+  int ci = bd_call_index(ordinal, slot);
+  if (ci >= 0 && !g_call_seen[ci]) {
+    g_call_seen[ci] = 1;
+    logts("CALL", bd_call_name(ci));
+  }
   uint32_t respLen = 0;
   uint8_t status = bridge_dispatch(ordinal, slot, argBlob, argLen,
                                     g_dispatch_respbuf, sizeof(g_dispatch_respbuf), &respLen);

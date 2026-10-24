@@ -1100,6 +1100,43 @@ describe('gen_vtables', () => {
     })
   })
 
+  describe('call-name tables (53-06, D-53-13)', () => {
+    const all = loadAllManifests()
+    const header = generateDispatchHeader(all)
+
+    it('defines BD_CALL_COUNT, bd_call_index and bd_call_name', () => {
+      const count = /#define BD_CALL_COUNT (\d+)/.exec(header)
+      expect(count).not.toBeNull()
+      expect(Number(count![1])).toBeGreaterThan(0)
+      expect(header).toContain('static int bd_call_index(uint16_t ordinal')
+      expect(header).toContain('static const char *bd_call_name(int idx)')
+      const names = [...header.matchAll(/case \d+: return "([^"]*)";/g)].map(
+        (m) => m[1]
+      )
+      expect(names.length).toBe(Number(count![1]))
+    })
+
+    it('call names contain only [A-Za-z0-9_.]', () => {
+      const names = [...header.matchAll(/case \d+: return "([^"]*)";/g)].map(
+        (m) => m[1]
+      )
+      expect(names.length).toBeGreaterThan(0)
+      for (const n of names) expect(n).toMatch(/^[A-Za-z0-9_]+\.[A-Za-z0-9_]+$/)
+    })
+
+    it('does not change the wire-table hash', () => {
+      const committed = readFileSync(
+        join(
+          __dirname,
+          '../../native/steam-bridge/generated/bridge_dispatch.h'
+        ),
+        'utf-8'
+      )
+      const hash = /BRIDGE_DISPATCH_TABLE_HASH "([0-9a-f]+)"/.exec(committed)
+      expect(hash![1]).toBe(computeWireTableHash(all))
+    })
+  })
+
   describe('generateDispatchHeader (51-10)', () => {
     const dispatch = generateDispatchHeader([isteamuser, isteamfriends])
 

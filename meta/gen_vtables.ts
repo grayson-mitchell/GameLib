@@ -2991,6 +2991,53 @@ export function generateDispatchHeader(
     })
     .join('\n')
 
+  // 53-06 (D-53-13): dense (ordinal, slot) -> `Interface.Method` call-name
+  // table for the helper's once-per-method CALL trace. Mirrors the dispatch
+  // switch's coverage exactly; names come only from manifest identifiers.
+  const callEntries: { key: string; name: string }[] = []
+  for (const m of dispatchManifests) {
+    const wireMethods = [...m.methods]
+      .filter((method) => isWireDispatchMethod(m, method))
+      .sort((a, b) => a.slot - b.slot)
+    for (const method of wireMethods) {
+      const name = `${m.interface}.${method.name}`
+      if (!/^[A-Za-z0-9_]+\.[A-Za-z0-9_]+$/.test(name)) {
+        throw new Error(
+          `generateDispatchHeader: call name "${name}" is not a plain identifier pair (53-06, log-injection guard)`
+        )
+      }
+      callEntries.push({
+        key: `BD_ORDINAL_${m.interface}, BD_SLOT_${m.interface}_${method.name}`,
+        name
+      })
+    }
+  }
+  const callIndexCases = callEntries
+    .map(
+      (e, i) =>
+        `    case (((uint32_t)${e.key.split(', ')[0]} << 16) | (uint32_t)${e.key.split(', ')[1]}): return ${i};\n`
+    )
+    .join('')
+  const callNameCases = callEntries
+    .map((e, i) => `    case ${i}: return "${e.name}";\n`)
+    .join('')
+  const callTables =
+    `// 53-06 (D-53-13): game-originated call trace tables. Not a wire tuple,\n` +
+    `// so BRIDGE_DISPATCH_TABLE_HASH is unaffected.\n` +
+    `#define BD_CALL_COUNT ${callEntries.length}\n` +
+    `static int bd_call_index(uint16_t ordinal, uint16_t slot) {\n` +
+    `  switch (((uint32_t)ordinal << 16) | (uint32_t)slot) {\n` +
+    callIndexCases +
+    `    default: return -1;\n` +
+    `  }\n` +
+    `}\n` +
+    `static const char *bd_call_name(int idx) {\n` +
+    `  switch (idx) {\n` +
+    callNameCases +
+    `    default: return "";\n` +
+    `  }\n` +
+    `}\n\n`
+
   return (
     `/**\n` +
     ` * GENERATED FILE -- DO NOT EDIT BY HAND.\n` +
@@ -3053,6 +3100,7 @@ export function generateDispatchHeader(
     `${initBody}` +
     `  return 1;\n` +
     `}\n\n` +
+    callTables +
     `uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uint32_t argLen,\n` +
     `                         uint8_t *resp, uint32_t respCap, uint32_t *respLen) {\n` +
     `  (void)arg; (void)argLen;\n` +
