@@ -326,13 +326,13 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 1/12 plans executed
+**Plans:** 2/12 plans executed
 
 Plans:
 
 **Wave 1** *(parallel)*
 - [x] 52-01-PLAN.md — SteamClient017/014 forward to the native client: manifests + policy, forwarded GetISteam* (no null object), pointer-presence dispatch, FWD logging, identity-only gate
-- [ ] 52-04-PLAN.md — Zero-import PE section parser (.bind); drmWrapper on the persisted scan verdict
+- [x] 52-04-PLAN.md — Zero-import PE section parser (.bind); drmWrapper on the persisted scan verdict
 - [ ] 52-05-PLAN.md — Bounded static-import closure (exe -> Engine.dll) in scanSteamApiImports
 - [ ] 52-06-PLAN.md — SteamStub notice strings in all 49 gamelib catalogs
 
