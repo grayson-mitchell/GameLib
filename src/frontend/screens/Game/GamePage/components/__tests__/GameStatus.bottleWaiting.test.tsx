@@ -26,7 +26,9 @@ jest.mock('react-i18next', () => {
 })
 
 jest.mock('frontend/state/BottleLaunchWaiting', () => ({
-  ...jest.requireActual('frontend/state/BottleLaunchWaiting'),
+  ...jest.requireActual<typeof import('frontend/state/BottleLaunchWaiting')>(
+    'frontend/state/BottleLaunchWaiting'
+  ),
   useBottleLaunchWaiting: () => mockEntry
 }))
 

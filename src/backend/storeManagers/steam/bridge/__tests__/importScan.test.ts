@@ -400,15 +400,15 @@ describe('importScan', () => {
     const mk = (...names: string[]) =>
       names.forEach((n) => writeFileSync(join(dir, n), ''))
     const answer = (map: Record<string, string>) =>
-      mockedSpawnAsync.mockImplementation(
-        async (_bin: string, args: string[]) => {
-          const target = args[1]
-          const key = Object.keys(map).find((k) => target === join(dir, k))
-          return key
+      mockedSpawnAsync.mockImplementation((_bin: string, args: string[]) => {
+        const target = args[1]
+        const key = Object.keys(map).find((k) => target === join(dir, k))
+        return Promise.resolve(
+          key
             ? { code: 0, stdout: map[key], stderr: '' }
             : { code: 1, stdout: '', stderr: 'nope' }
-        }
-      )
+        )
+      })
     const spawnedTargets = () =>
       mockedSpawnAsync.mock.calls.map((c) => c[1][1] as string)
 

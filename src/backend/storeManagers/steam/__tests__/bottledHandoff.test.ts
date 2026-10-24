@@ -14,7 +14,7 @@ import {
 } from '../library'
 import { library } from '../state'
 import { notify } from '../../../dialog/dialog'
-import i18next from 'i18next'
+import { t } from 'i18next'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -32,10 +32,14 @@ jest.mock('../../../dialog/dialog', () => ({ notify: jest.fn() }))
 jest.mock('i18next', () => ({ t: jest.fn() }))
 
 beforeEach(() => {
-  ;(i18next.t as jest.Mock).mockImplementation(
+  ;(t as jest.Mock).mockImplementation(
     (_key: string, fallback = '') => fallback
   )
-  jest.mocked(library.get).mockReturnValue({ title: 'XCOM' } as any)
+  // Typed as a jest.Mock property, not the store's `get` method, so the
+  // reference is not an unbound method.
+  ;(library as unknown as { get: jest.Mock }).get.mockReturnValue({
+    title: 'XCOM'
+  })
 })
 
 describe('startBottledSteamToFinishInstall', () => {
@@ -92,7 +96,7 @@ describe('startBottledSteamToFinishInstall', () => {
     const r = await startBottledSteamToFinishInstall('200510')
     expect(r).toEqual({ status: 'error', error: 'boom' })
     expect(markBottledSteamDispatched).not.toHaveBeenCalled()
-    expect(i18next.t).toHaveBeenCalledWith(
+    expect(t).toHaveBeenCalledWith(
       'gamelib:steam.bottle.finishInstall.startFailed',
       expect.any(String),
       expect.objectContaining({ error: 'boom' })

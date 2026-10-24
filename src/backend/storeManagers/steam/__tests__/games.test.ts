@@ -1672,7 +1672,7 @@ describe('SteamGame.launch() — Phase 17 bottle routing (D-10/D-11)', () => {
 // beforeEach hooks run after this one and may override it.
 beforeEach(() => {
   ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
-    async (_id: string, settings: unknown) => settings
+    (_id: string, settings: unknown) => Promise.resolve(settings)
   )
 })
 

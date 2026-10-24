@@ -54,7 +54,7 @@ import { dialog, shell } from 'backend/platform'
 import { getSteamLibraries, getFileSize } from 'backend/utils'
 import { sendFrontendMessage } from '../../../ipc'
 import { notify } from '../../../dialog/dialog'
-import i18next from 'i18next'
+import i18next, { t as i18nextT } from 'i18next'
 import { SteamUser } from '../user'
 import { noteSteamAuthTrigger } from '../authTrigger'
 import {
@@ -128,12 +128,12 @@ jest.mock('../../../dialog/dialog', () => ({
 // This is what makes the interpolation options object provable: the fallback
 // alone can only ever show the raw {{depots}} placeholder, never the actual
 // depot id.
-jest.mock('i18next', () => ({
-  __esModule: true,
-  default: {
-    t: jest.fn((_key: string, fallback = '') => fallback)
-  }
-}))
+// The named `t` is the same jest.fn as `default.t`, so a test can reference it
+// without a default-import member access (import-x/no-named-as-default-member).
+jest.mock('i18next', () => {
+  const t = jest.fn((_key: string, fallback = '') => fallback)
+  return { __esModule: true, t, default: { t } }
+})
 
 // ── SteamUser mock — controls getClient() / isLoggedIn() return values ───────
 jest.mock('../user')
@@ -4544,16 +4544,16 @@ describe('pollInstallOnce()', () => {
       mockAcf('1026')
       startBottleHandoff()
       await pollInstallOnce('730', 'bottle')
-      expect(i18next.t).toHaveBeenCalledWith(
+      expect(i18nextT).toHaveBeenCalledWith(
         'gamelib:steam.bottle.finishInstall.notify',
         expect.any(String),
         expect.anything()
       )
       stopInstallPolling('730')
-      ;(i18next.t as jest.Mock).mockClear()
+      ;(i18nextT as jest.Mock).mockClear()
       startInstallPolling('730', { intervalMs: 60000, isNativeHandoff: true })
       await pollInstallOnce('730')
-      expect(i18next.t).toHaveBeenCalledWith(
+      expect(i18nextT).toHaveBeenCalledWith(
         'steam.waitingForSteam.notify',
         expect.any(String),
         expect.anything()
