@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 12/18 plans complete (6 gap-closure plans added 2026-10-24)
+**Plans:** 13/18 plans executed
 
 Plans:
 
@@ -353,7 +353,7 @@ Plans:
 - [x] 52-12-PLAN.md — Done-when: GameLib launch of Grim Dawn, cx-log trace, bottle hygiene; close both todos on pass
 
 **Gap closure** *(from 52-VERIFICATION.md, 3/7; waves: 13+15 parallel, then 14+16 parallel, then 17, then 18 live)*
-- [ ] 52-13-PLAN.md — Serve SteamUser023 / SteamNetworking006 / RemoteStorage016 on x64 via the inventory pipeline (Grim Dawn no longer withheld)
+- [x] 52-13-PLAN.md — Serve SteamUser023 / SteamNetworking006 / RemoteStorage016 on x64 via the inventory pipeline (Grim Dawn no longer withheld)
 - [ ] 52-15-PLAN.md — drmWrapper on withheld results (fresh steamstub|none, exeArch); withhold only when restorable, else refresh the stale shim as placed-miss
 - [ ] 52-14-PLAN.md — CR-01: null-object fallback for ordinary x64 GetISteam*, forwarding only after GameLibBridge_CreateInterface; generated-source pin
 - [ ] 52-16-PLAN.md — Withheld SteamStub notice; WR-01 bounded wait:false reg add, WR-02 strict exit code, WR-03 PE arch, WR-04 fresh drmWrapper; defer WR-05..08
