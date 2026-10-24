@@ -30,3 +30,6 @@ See `.planning/phases/52-bridge-backed-steamclient-dll-for-steamstub-titles/52-1
 Nothing fixed in 52-19. Open question for whoever picks this up: whether the steam-user session can
 be made not to claim the persona/Friends session (for example by logging on only when the library
 fetch needs it and logging off after), and why Mac Steam does not recover without a restart.
+
+## Note 2026-10-24 (52-24, item 20)
+Reproduced a fourth time on ELEX (411300) in re-gate 2: Friends signed in before GameLib launch, dropped offline after GameLib's steam-user logon, and the operator restarted Mac Steam before Play. Friends then stayed signed in through the bridge Play and after quitting ELEX. Consistent with the 52-19 attribution (outside-phase-52); item 20 scored on ELEX no-regression alone. Triage keys unchanged.

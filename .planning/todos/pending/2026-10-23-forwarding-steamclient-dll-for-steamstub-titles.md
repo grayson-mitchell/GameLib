@@ -122,3 +122,11 @@ Not closed: items 9 and 10 are `issue`, so the strict rule is not met. See `52-U
   before and signed out after. Cause unknown. Not bridge-verified.
 - Item 13: operator chose option-c, investigate first, no pid writer yet (what the stub does with the
   `pid` value, plus the ELEX Friends sign-out). Next step: `/gsd-plan-phase 52 --gaps`.
+
+## Re-gate 2 evidence (52-23/52-24), 2026-10-24
+Stays pending: items 17-19 skipped (Gap 5 not closable within the locked boundary).
+- Item 14 (pass): relay trace of the SteamStub check window; the stub reads all 186368 bytes of the forwarder before the MessageBox.
+- Item 15 (pass): Friends sign-out attributed to the steam-user logon, outside phase 52.
+- Item 16 (pass): option-other, no code change; next step `/gsd-plan-phase 52 --gaps`.
+- Items 17-19 (skipped): no Grim Dawn launch, trace or hygiene read.
+- Item 20 (pass): ELEX HELLO present, FWD 0, `[bridge-steamstub]` 0, loading screen baseline, not bridge-verified.

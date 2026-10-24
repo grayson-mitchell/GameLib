@@ -1,5 +1,5 @@
 ---
-status: testing
+status: diagnosed
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -12,7 +12,7 @@ source:
   - 52-08-SUMMARY.md
   - 52-09-SUMMARY.md
 started: 2026-10-24T01:41:00Z
-updated: 2026-10-24T06:10:00Z
+updated: 2026-10-24T06:30:00Z
 ---
 
 Authored by plan 52-10, run by 52-11 (discovery rounds, items 1-5) and 52-12 (done-when, items 6-8).
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-item 20 (items 17-19 skipped by 52-23: item 16 option-other; item 20 scored by 52-24)
+complete: re-gate 2 items 17-20 scored by 52-23/52-24
 
 ## Tests
 
@@ -251,7 +251,7 @@ result: skipped — no Gap 5 change implemented (item 16 option-other); no item 
 
 ### 20. Re-gate 2 — ELEX (411300) no-regression after WR-09, Friends before/after
 expected: everything item 12 expected; plus no `FWD` line for 411300 at all (WR-09: the non-lookup SteamClient methods stay local off the SteamStub path); the operator records Mac Steam Friends as signed in before Play and still signed in after quitting. A sign-out is `issue` only when 52-19's attribution is classified phase-52 or inconclusive. When it is outside-phase-52 (item 15 classified it so), item 20 is scored on ELEX no-regression alone and the Friends outcome goes to the Friends pending todo. Bridge-verified is recorded separately and expected to stay unverified.
-result: pending — scored by 52-24 (desk re-check for WR-09/WR-11 passed in 52-23, session /tmp/gamelib-gate-52s-20261024T060847Z)
+result: pass — ELEX (411300) no-regression after WR-09 (GATE LAUNCH S2 2026-10-24T06:11:23Z, session /tmp/gamelib-gate-52s-20261024T060847Z, log gamelib-s2.log, 91 lines, copied after quit; archived also as gamelib-regate2-2.log). Log checks: `placeShimForGame: overwrote steam_api64.dll for appId 411300` at 19:13:06 (:56 local); `launching appId 411300 via the Steam bridge` (:63); `HELLO  shim attached appid=411300` at 06:13:08Z (:83); `[bridge-steamstub]` count 0; `FWD` count 0 (WR-09 held: the helper log for 411300 has only LISTEN, INIT `SteamAPI ready (single InitFlat call, real appid=411300)` and HELLO); `bottleProcessMonitor [411300]: matched process(es) gone after 88s of play` (:90, operator quit); no game-written log files under the 411300 bottle newer than elex-marker (find: none). Bridge-notice line present, no not-subscribed or other error dialog (operator: no notice or message about ELEX not working; none in the log). Furthest screen: loading screen, as every other time (matches the 51-UAT item 15 baseline). Operator, verbatim: "reached loading screen (as every other time)"; "I quit it"; In-Game "yes" (not counted). Friends: signed in before GameLib launch (~06:11Z, "friends is signeed in") / after GameLib's steam-user logon it dropped offline ("yes as per instructions") and the operator restarted Mac Steam before Play (52-19 arm d method, so the after-state measures the bridge run, not the logon) / still signed in at step 6 (~06:14-06:15Z, "reached step 6, friends still logged in"). Friends: signed-in/signed-in-after-restart, outside phase 52 per 52-19 (item 15, classification: outside-phase-52); the logon-induced drop is routed to pending todo 2026-10-24-friends-sign-out-steam-user-logon.md and did not fail this item. Scored on ELEX no-regression alone. Bridge-verified: no (HELLO present, no game Steam-init log; In-Game never counts).
 
 ## Structural Reachability Review
 
@@ -302,9 +302,9 @@ runner action, not a contract defect.
 ## Summary
 
 total: 20
-passed: 7
+passed: 8
 issues: 6
-pending: 2
+pending: 1
 skipped: 5
 blocked: 0
 
@@ -342,3 +342,19 @@ blocked: 0
   reason: "Item 12: the operator checked Friends signed in before launch and signed out afterwards, with ELEX reaching only its loading screen (baseline). No log line explains it; cause unknown. Candidates present in the log but unproven: GameLib's steam-user logon on Play (17:33:59) and the helper's SteamAPI_Init against the Mac client (17:34:00). Not shown to be caused by CR-01 (no forwarder path, no FWD lines for 411300)."
   evidence: "gamelib-relaunch-2.log:60-67, :71-75, :81; operator verbatim in item 12; /tmp/gamelib-gate-52r-20261024T033525Z/."
   fix_direction: "Include in the item-13 investigation (run /gsd-plan-phase 52 --gaps): repeat with Friends state checked before and after (a) Play with the bridge disabled, (b) the steam-user logon alone, (c) helper alone, on a non-ELEX title, to attribute the sign-out. Do not guess a cause before that."
+
+- truth: "A SteamStub title (Grim Dawn 219990) launched from GameLib after re-gate 2 reaches its main menu with a clean Steam-init log (item 17)"
+  status: skipped
+  reason: "Gap 5 not closable within the locked boundary: item 16 chose option-other (no code change); the stub reads all 186368 bytes of the forwarder before the MessageBox and what it checks in them was never inspected, and no listed option targets that input. No Grim Dawn launch was made in re-gate 2."
+  evidence: "52-UAT items 14, 16, 17; 52-19-DIAGNOSIS.md `## Gap 5: candidate inputs`; cxlog:7170-7181 and 6810-6820."
+  fix_direction: "Gap 5 not closable within the locked boundary (item 16). Run /gsd-plan-phase 52 --gaps to establish what the SteamStub check examines in the forwarder bytes."
+- truth: "The re-gate 2 cx-log trace of Grim Dawn shows a clean strict Steam-init check and MSGBOX count 0 (item 18)"
+  status: skipped
+  reason: "Gap 5 not closable within the locked boundary (item 16): no item 17 launch exists to trace."
+  evidence: "52-UAT items 16, 18."
+  fix_direction: "Gap 5 not closable within the locked boundary (item 16); re-run after /gsd-plan-phase 52 --gaps yields a change."
+- truth: "The Grim Dawn bottle hygiene holds after the re-gate 2 launch (item 19)"
+  status: skipped
+  reason: "Gap 5 not closable within the locked boundary (item 16): no item 17 launch whose hygiene could be read; item 16 recorded no hygiene delta."
+  evidence: "52-UAT items 11, 16, 19."
+  fix_direction: "Gap 5 not closable within the locked boundary (item 16); re-read hygiene after any future Gap 5 change launches."
