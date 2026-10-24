@@ -44,6 +44,58 @@ pub fn backend_label(backend: NotificationBackend) -> &'static str {
     }
 }
 
+/// The `notification_show` wire value for a request `UNUserNotificationCenter` accepted, e.g.
+/// `user-notifications;auth=provisional;alert=disabled;style=none`. The prefix is
+/// `backend_label(UserNotifications)`; the fields come from the `UNNotificationSettings` read on
+/// the same call (52-REVIEW WR-01). Acceptance alone does not mean a banner was shown:
+/// Provisional and Ephemeral grants, or an Authorized grant whose alerts are disabled or whose
+/// alert style is None, deliver quietly to Notification Center. Focus / Do Not Disturb is not
+/// in `UNNotificationSettings`, so no field here can rule it out.
+pub fn user_notifications_label(
+    auth: AuthStatus,
+    alert_setting: isize,
+    alert_style: isize,
+) -> String {
+    format!(
+        "{};auth={};alert={};style={}",
+        backend_label(NotificationBackend::UserNotifications),
+        auth_status_name(auth),
+        notification_setting_name(alert_setting),
+        alert_style_name(alert_style)
+    )
+}
+
+fn auth_status_name(status: AuthStatus) -> String {
+    match status {
+        AuthStatus::NotDetermined => "not-determined".to_string(),
+        AuthStatus::Denied => "denied".to_string(),
+        AuthStatus::Authorized => "authorized".to_string(),
+        AuthStatus::Provisional => "provisional".to_string(),
+        AuthStatus::Ephemeral => "ephemeral".to_string(),
+        AuthStatus::Unknown(n) => format!("unknown({n})"),
+    }
+}
+
+/// `UNNotificationSetting` raw values.
+fn notification_setting_name(raw: isize) -> String {
+    match raw {
+        0 => "not-supported".to_string(),
+        1 => "disabled".to_string(),
+        2 => "enabled".to_string(),
+        n => format!("unknown({n})"),
+    }
+}
+
+/// `UNAlertStyle` raw values.
+fn alert_style_name(raw: isize) -> String {
+    match raw {
+        0 => "none".to_string(),
+        1 => "banner".to_string(),
+        2 => "alert".to_string(),
+        n => format!("unknown({n})"),
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuthStatus {
     NotDetermined,
@@ -128,6 +180,26 @@ mod tests {
             "user-notifications"
         );
         assert_eq!(backend_label(NotificationBackend::Plugin), "plugin");
+    }
+
+    #[test]
+    fn user_notifications_label_carries_auth_and_alert_settings() {
+        assert_eq!(
+            user_notifications_label(AuthStatus::Authorized, 2, 1),
+            "user-notifications;auth=authorized;alert=enabled;style=banner"
+        );
+        assert_eq!(
+            user_notifications_label(auth_status_from_raw(3), 1, 0),
+            "user-notifications;auth=provisional;alert=disabled;style=none"
+        );
+        assert_eq!(
+            user_notifications_label(AuthStatus::Ephemeral, 0, 2),
+            "user-notifications;auth=ephemeral;alert=not-supported;style=alert"
+        );
+        assert_eq!(
+            user_notifications_label(AuthStatus::Unknown(9), 5, 6),
+            "user-notifications;auth=unknown(9);alert=unknown(5);style=unknown(6)"
+        );
     }
 
     #[test]

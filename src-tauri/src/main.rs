@@ -7864,14 +7864,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             if macos_notifications::backend()
                 == notification_backend::NotificationBackend::UserNotifications
             {
-                return macos_notifications::deliver(title, body).map(|()| {
-                    Value::String(
-                        notification_backend::backend_label(
-                            notification_backend::NotificationBackend::UserNotifications,
-                        )
-                        .to_string(),
-                    )
-                });
+                // Resolves `user-notifications;auth=..;alert=..;style=..`
+                // (`notification_backend::user_notifications_label`): acceptance by UN* is not
+                // proof of a banner, so the settings that decide that travel with it (52-REVIEW
+                // WR-01).
+                return macos_notifications::deliver(title, body).map(Value::String);
             }
             let mut builder = app.notification().builder();
             if let Some(title) = title {

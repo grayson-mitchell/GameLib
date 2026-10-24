@@ -87,6 +87,46 @@ type NotifyType = {
 // notify() would flood the log; other failures are per-delivery and are logged each time.
 let loggedNotificationAuthDenied = false
 
+// 52-REVIEW WR-01: UserNotifications accepting a request is not proof a banner was shown.
+// Provisional/Ephemeral grants, and Authorized grants with alerts disabled or alert style None,
+// deliver quietly to Notification Center. The Rust shell appends the settings it read on the same
+// call (`notification_backend::user_notifications_label`), so the log can tell those cases apart.
+// Even the banner-eligible case is not confirmed: Focus / Do Not Disturb is not in those settings.
+function describeUserNotificationsSettings(fields: string[]): {
+  detail: string
+  quiet: boolean
+} {
+  const settings = new Map<string, string>()
+  for (const field of fields) {
+    const eq = field.indexOf('=')
+    if (eq > 0) settings.set(field.slice(0, eq), field.slice(eq + 1))
+  }
+  const auth = settings.get('auth')
+  const alert = settings.get('alert')
+  const style = settings.get('style')
+  if (auth === undefined || alert === undefined || style === undefined) {
+    // An older shell resolves the bare label with no settings.
+    return {
+      detail: '(presentation settings not reported; display not confirmable)',
+      quiet: false
+    }
+  }
+  const settingsText = `(auth=${auth}, alert=${alert}, style=${style})`
+  const bannerEligible =
+    auth === 'authorized' &&
+    alert === 'enabled' &&
+    (style === 'banner' || style === 'alert')
+  return bannerEligible
+    ? {
+        detail: `${settingsText} — banner-eligible; display not confirmed (Focus is not visible to this check)`,
+        quiet: false
+      }
+    : {
+        detail: `${settingsText} — macOS will not show a banner for these settings (Notification Center only, if at all)`,
+        quiet: true
+      }
+}
+
 function notify({ body, title }: NotifyType) {
   if (Notification.isSupported() && !isSteamDeckGameMode) {
     const mainWindow = getMainWindow()
@@ -112,12 +152,18 @@ function notify({ body, title }: NotifyType) {
     })
     notify.on('show', (_event: unknown, backend?: string) => {
       // Title and a fixed backend label only, never the body (REQ-30-07/D-09).
+      const [label, ...fields] = (backend ?? '').split(';')
+      if (label === 'user-notifications') {
+        const { detail, quiet } = describeUserNotificationsSettings(fields)
+        const line = `notify(): "${title}" accepted by UserNotifications ${detail}`
+        if (quiet) logWarning(line, LogPrefix.Backend)
+        else logInfo(line, LogPrefix.Backend)
+        return
+      }
       const result =
-        backend === 'user-notifications'
-          ? 'accepted by UserNotifications'
-          : backend === 'plugin'
-            ? 'handed to tauri-plugin-notification (delivery not confirmable)'
-            : 'handed off (delivery not confirmable)'
+        label === 'plugin'
+          ? 'handed to tauri-plugin-notification (delivery not confirmable)'
+          : 'handed off (delivery not confirmable)'
       logInfo(`notify(): "${title}" ${result}`, LogPrefix.Backend)
     })
     notify.show()

@@ -31,8 +31,8 @@ use objc2_user_notifications::{
 };
 
 use crate::notification_backend::{
-    auth_status_from_raw, authorization_gate, select_notification_backend, NotificationBackend,
-    NOTIFICATION_COMPLETION_TIMEOUT,
+    auth_status_from_raw, authorization_gate, select_notification_backend,
+    user_notifications_label, NotificationBackend, NOTIFICATION_COMPLETION_TIMEOUT,
 };
 
 static BACKEND: OnceLock<NotificationBackend> = OnceLock::new();
@@ -116,27 +116,34 @@ pub fn init_at_startup() {
 
 /// Delivers one notification, blocking for at most two `NOTIFICATION_COMPLETION_TIMEOUT`s.
 /// Runs on the dispatch worker thread.
-pub fn deliver(title: Option<&str>, body: Option<&str>) -> Result<(), String> {
+///
+/// On success returns the `user_notifications_label` wire value, which carries the
+/// authorization status, alert setting and alert style read in step (1). `Ok` means
+/// `addNotificationRequest` accepted the request, not that a banner was shown (52-REVIEW WR-01).
+pub fn deliver(title: Option<&str>, body: Option<&str>) -> Result<String, String> {
     if backend() != NotificationBackend::UserNotifications {
         return Err("notification:backend-unavailable".to_string());
     }
     let center = UNUserNotificationCenter::currentNotificationCenter();
 
     // (1) Live authorization check on every call, so a later toggle in System Settings is honoured.
-    let (tx, rx) = mpsc::channel::<isize>();
+    // The alert setting and style are read from the same settings object for the success label.
+    let (tx, rx) = mpsc::channel::<(isize, isize, isize)>();
     let settings_block = RcBlock::new(move |settings: NonNull<UNNotificationSettings>| {
         // SAFETY: the pointer is a valid UNNotificationSettings for the duration of the callback.
-        let raw = unsafe { settings.as_ref() }.authorizationStatus().0;
-        let _ = tx.send(raw);
+        let settings = unsafe { settings.as_ref() };
+        let _ = tx.send((
+            settings.authorizationStatus().0,
+            settings.alertSetting().0,
+            settings.alertStyle().0,
+        ));
     });
     center.getNotificationSettingsWithCompletionHandler(&settings_block);
-    let raw = rx
+    let (raw, alert_setting, alert_style) = rx
         .recv_timeout(NOTIFICATION_COMPLETION_TIMEOUT)
         .map_err(|_| "notification:settings-timeout".to_string())?;
-    authorization_gate(
-        auth_status_from_raw(raw),
-        STARTUP_AUTH_ERROR.get().map(|s| s.as_str()),
-    )?;
+    let auth = auth_status_from_raw(raw);
+    authorization_gate(auth, STARTUP_AUTH_ERROR.get().map(|s| s.as_str()))?;
 
     // (2) Content + request.
     let content = UNMutableNotificationContent::new();
@@ -172,6 +179,6 @@ pub fn deliver(title: Option<&str>, body: Option<&str>) -> Result<(), String> {
     match rx.recv_timeout(NOTIFICATION_COMPLETION_TIMEOUT) {
         Err(_) => Err("notification:delivery-timeout".to_string()),
         Ok(Some(e)) => Err(format!("notification:delivery-failed: {e}")),
-        Ok(None) => Ok(()),
+        Ok(None) => Ok(user_notifications_label(auth, alert_setting, alert_style)),
     }
 }
