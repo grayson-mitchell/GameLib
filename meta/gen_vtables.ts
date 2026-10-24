@@ -1587,14 +1587,30 @@ function emitFlatAccessor(manifest: InterfaceManifest): string {
 /** Explicit flat-name overrides keyed `Family.ManifestName`, for any case the
  * overload derivation in flatMethodName cannot reach. Each entry must say which
  * fixture name it serves. Empty: the derivation covers every measured name. */
-export const FLAT_NAME_OVERRIDES: Readonly<Record<string, string>> = {}
+export const FLAT_NAME_OVERRIDES: Readonly<Record<string, string>> = {
+  // 53-12: overload pairs whose disambiguating parameter is not a
+  // numeric int32/float/int64/double, so the type-suffix rule cannot name
+  // them. Names are the Steamworks flat API's own (steam_api_flat.h).
+  'SteamUGC.CreateQueryAllUGCRequest': 'CreateQueryAllUGCRequestPage',
+  'SteamUGC.CreateQueryAllUGCRequest_2': 'CreateQueryAllUGCRequestCursor',
+  'SteamUGC.GetQueryUGCKeyValueTag': 'GetQueryUGCKeyValueTag',
+  'SteamUGC.GetQueryUGCKeyValueTag_2': 'GetQueryFirstUGCKeyValueTag',
+  'SteamInventory.SetProperty': 'SetPropertyString',
+  'SteamInventory.SetProperty_2': 'SetPropertyBool'
+}
 
 /** `Family.FlatName.Version` triples the generator cannot represent in C: a
  * parameter/return position where one version uses an XMM register (float or
  * double) and another a GPR, or float vs double. A listed version is not
  * dispatched by its flat export. Every entry needs a comment with the reason,
  * and is a deviation in the plan SUMMARY. Starts empty (measured 2026-10-25). */
-export const FLAT_UNREPRESENTABLE_CASES: readonly string[] = []
+export const FLAT_UNREPRESENTABLE_CASES: readonly string[] = [
+  // 53-12: GameServer012's GetPublicIP returns a plain uint32 (RAX), whereas
+  // 013-015 return the 20-byte SteamIPAddress_t through a Win64 hidden
+  // pointer; one flat C prototype cannot be both. 012's vtable proxy is still
+  // served; only the shared flat export leaves 012 undispatched.
+  'SteamGameServer.GetPublicIP.SteamGameServer012'
+]
 
 const OVERLOAD_SUFFIX_BY_TYPE: Readonly<Record<string, string>> = {
   int32: 'Int32',

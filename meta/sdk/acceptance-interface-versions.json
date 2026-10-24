@@ -309,5 +309,15 @@
     "family": "SteamGameServer",
     "arches": ["x64"],
     "titles": ["411300"]
+  },
+  "SteamController008": {
+    "family": "SteamController",
+    "arches": ["x64"],
+    "titles": ["1119730"]
+  },
+  "STEAMUGC_INTERFACE_VERSION010": {
+    "family": "SteamUGC",
+    "arches": ["x64"],
+    "titles": ["411300"]
   }
 }

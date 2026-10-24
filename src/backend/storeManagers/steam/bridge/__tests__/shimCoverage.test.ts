@@ -150,27 +150,14 @@ describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-
       }
     }
     // D-53-04: these families have no manifest, so they stay unexported until
-    // a title that imports them is measured.
+    // a title that imports them is measured. 53-12 served every other family
+    // the sampled titles' Init requests (all of them were here before).
     expect(byFamily).toEqual({
-      ISteamAppList: 5,
-      ISteamGameSearch: 14,
-      ISteamHTMLSurface: 37,
-      ISteamHTTP: 25,
-      ISteamInventory: 38,
-      ISteamMusic: 9,
-      ISteamMusicRemote: 32,
       ISteamNetworkingConnectionSignaling: 2,
       ISteamNetworkingMessages: 6,
       ISteamNetworkingSignalingRecvContext: 2,
       ISteamNetworkingSockets: 47,
-      ISteamNetworkingUtils: 27,
-      ISteamParentalSettings: 6,
-      ISteamParties: 12,
-      ISteamRemotePlay: 8,
-      ISteamScreenshots: 9,
-      ISteamTimeline: 4,
-      ISteamUGC: 94,
-      ISteamVideo: 4
+      ISteamNetworkingUtils: 27
     })
   })
 
@@ -880,10 +867,11 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
         arch: 'x64',
         symbols: [...RUNTIME, 'SteamHTTP'],
         requiredInterfaceVersions: {
-          SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION003'
+          // 53-12 serves HTTP003, so the unserved 002 stands in.
+          SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION002'
         }
       })
-    ).toEqual(['STEAMHTTP_INTERFACE_VERSION003'])
+    ).toEqual(['STEAMHTTP_INTERFACE_VERSION002'])
   })
 
   it('x86 bare SteamFriends016 counts', () => {
@@ -919,12 +907,12 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
         arch: 'x64',
         symbols: ['SteamFriends', 'SteamUtils'],
         requiredInterfaceVersions: {
-          SteamUtils: 'SteamUtils009',
+          SteamUtils: 'SteamUtils006',
           SteamFriends: 'SteamFriends016',
-          SteamAlias: 'SteamUtils009'
+          SteamAlias: 'SteamUtils006'
         }
       })
-    ).toEqual(['SteamUtils009', 'SteamFriends016'])
+    ).toEqual(['SteamUtils006', 'SteamFriends016'])
   })
 })
 

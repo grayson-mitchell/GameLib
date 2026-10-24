@@ -288,7 +288,57 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   ['SteamInput006', { family: 'SteamInput', mode: 'stub' }],
   ['SteamGameServer014', { family: 'SteamGameServer', mode: 'stub' }],
   ['SteamGameServer015', { family: 'SteamGameServer', mode: 'stub' }],
-  ['SteamGameServerStats001', { family: 'SteamGameServerStats', mode: 'stub' }]
+  ['SteamGameServerStats001', { family: 'SteamGameServerStats', mode: 'stub' }],
+  // Phase 53 gap closure (53-12, D-53-06 measured / D-53-03): Steamworks.NET
+  // CSteamAPIContext.Init set + measured misses; each extracted from its own
+  // Proton VTABLE block. 'wire' only where the manifest carries a wire method.
+  [
+    'STEAMSCREENSHOTS_INTERFACE_VERSION003',
+    { family: 'SteamScreenshots', mode: 'stub' }
+  ],
+  ['SteamMatchGameSearch001', { family: 'SteamGameSearch', mode: 'stub' }],
+  ['STEAMHTTP_INTERFACE_VERSION003', { family: 'SteamHTTP', mode: 'stub' }],
+  ['STEAMUGC_INTERFACE_VERSION016', { family: 'SteamUGC', mode: 'stub' }],
+  ['STEAMUGC_INTERFACE_VERSION017', { family: 'SteamUGC', mode: 'stub' }],
+  ['STEAMUGC_INTERFACE_VERSION020', { family: 'SteamUGC', mode: 'stub' }],
+  [
+    'STEAMAPPLIST_INTERFACE_VERSION001',
+    { family: 'SteamAppList', mode: 'stub' }
+  ],
+  ['STEAMMUSIC_INTERFACE_VERSION001', { family: 'SteamMusic', mode: 'stub' }],
+  [
+    'STEAMMUSICREMOTE_INTERFACE_VERSION001',
+    { family: 'SteamMusicRemote', mode: 'stub' }
+  ],
+  [
+    'STEAMHTMLSURFACE_INTERFACE_VERSION_005',
+    { family: 'SteamHTMLSurface', mode: 'stub' }
+  ],
+  ['STEAMINVENTORY_INTERFACE_V003', { family: 'SteamInventory', mode: 'stub' }],
+  ['STEAMVIDEO_INTERFACE_V002', { family: 'SteamVideo', mode: 'stub' }],
+  ['STEAMVIDEO_INTERFACE_V007', { family: 'SteamVideo', mode: 'stub' }],
+  ['STEAMTIMELINE_INTERFACE_V001', { family: 'SteamTimeline', mode: 'stub' }],
+  [
+    'STEAMPARENTALSETTINGS_INTERFACE_VERSION001',
+    { family: 'SteamParentalSettings', mode: 'stub' }
+  ],
+  ['SteamParties002', { family: 'SteamParties', mode: 'stub' }],
+  [
+    'STEAMREMOTEPLAY_INTERFACE_VERSION001',
+    { family: 'SteamRemotePlay', mode: 'stub' }
+  ],
+  [
+    'STEAMREMOTEPLAY_INTERFACE_VERSION002',
+    { family: 'SteamRemotePlay', mode: 'stub' }
+  ],
+  ['SteamUtils009', { family: 'SteamUtils', mode: 'wire' }],
+  ['SteamController006', { family: 'SteamController', mode: 'stub' }],
+  ['SteamGameServer012', { family: 'SteamGameServer', mode: 'stub' }],
+  // Same family, other versions the sampled titles request (a half-served
+  // family would defeat the x64 null-object answer, Pitfall 4): ELEX asks
+  // STEAMUGC_INTERFACE_VERSION010, Ranch Simulator SteamController008.
+  ['SteamController008', { family: 'SteamController', mode: 'stub' }],
+  ['STEAMUGC_INTERFACE_VERSION010', { family: 'SteamUGC', mode: 'stub' }]
 ])
 
 // 51-15: D-51-13 GO -- the Win64 shim answers an unserved required

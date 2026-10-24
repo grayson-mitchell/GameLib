@@ -54,5 +54,7 @@
   "STEAMINVENTORY_INTERFACE_V003": 53,
   "SteamUtils009": 54,
   "SteamController006": 55,
-  "SteamGameServer012": 56
+  "SteamGameServer012": 56,
+  "SteamController008": 57,
+  "STEAMUGC_INTERFACE_VERSION010": 58
 }

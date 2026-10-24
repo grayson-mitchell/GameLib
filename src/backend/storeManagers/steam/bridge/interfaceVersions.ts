@@ -109,7 +109,14 @@ export const BARE_ACCESSOR_FAMILY: Readonly<Record<string, string>> = {
   SteamInventory: 'SteamInventory',
   SteamVideo: 'SteamVideo',
   // Phase 53 (53-01): SteamInput006 is a served x64 manifest family.
-  SteamInput: 'SteamInput'
+  SteamInput: 'SteamInput',
+  // Phase 53 (53-12): CR-02 family-spelling pin -- every served manifest
+  // family must be a bare-accessor key.
+  SteamGameSearch: 'SteamGameSearch',
+  SteamParentalSettings: 'SteamParentalSettings',
+  SteamParties: 'SteamParties',
+  SteamRemotePlay: 'SteamRemotePlay',
+  SteamTimeline: 'SteamTimeline'
 }
 
 // Importing either of these means the game resolves Steamworks interfaces
