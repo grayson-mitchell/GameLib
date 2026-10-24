@@ -55,6 +55,11 @@ Out of scope, unchanged: SteamStub forwarder / Grim Dawn main menu (Phase 52, de
   and merge their `steam_api*` entry points into the required set. IL2CPP titles (no Managed dir)
   keep `@runtime-loaded` with an explicit "il2cpp: not scanned" reason. No second parser for
   `global-metadata.dat` / `GameAssembly.dll` this phase.
+  **Amended 2026-10-25 (plan-phase, user decision):** only lifecycle names and names in families the
+  shim serves join the required set. Managed imports from unserved families (UGC, Input,
+  Inventory, NetworkingSockets, …; ~480 of ~880 in the owned Unity sample) are reported as a count
+  that does not change the coverage class. A literal merge would make every Unity title `miss`
+  forever. No generic zero stubs for unserved names.
 
 ### Unmarshaled methods
 - **D-53-05:** **A flat export calls the proxy object's own vtable slot.** Flat and vtable behaviour
@@ -85,6 +90,8 @@ Out of scope, unchanged: SteamStub forwarder / Grim Dawn main menu (Phase 52, de
   placement (step 3 of the old-SDK todo). This is folded because it skews the x86 count D-53-09
   relies on. The rest of that todo (12 legacy CSteamworks exports, 14 old interface versions, one
   known title) stays pending.
+  **Amended 2026-10-25 (plan-phase, user decision):** `32BITPREFERRED` (0x20000) also keeps an
+  AnyCPU exe x86. An exe is x64 only when neither `32BITREQUIRED` nor `32BITPREFERRED` is set.
 
 ### Acceptance & evidence
 - **D-53-11:** **The whole UE5 interface-versions todo is folded:** add the x64 versions still missing
