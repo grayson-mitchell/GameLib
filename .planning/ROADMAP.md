@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 8/12 plans executed
+**Plans:** 9/12 plans executed
 
 Plans:
 
@@ -345,7 +345,7 @@ Plans:
 - [x] 52-08-PLAN.md — steamClientSetup.ts (HKCU-only reg add, forwarder placement) and .bind detection in placeShimForGame
 
 **Wave 5**
-- [ ] 52-09-PLAN.md — launchBridgeGame wires SteamStub setup; honest unforwarded notice (log + one-time notify)
+- [x] 52-09-PLAN.md — launchBridgeGame wires SteamStub setup; honest unforwarded notice (log + one-time notify)
 
 **Wave 6-8** *(live, sequential)*
 - [ ] 52-10-PLAN.md — Desk gate, scratch-clone harness, live-gate contract + reachability review, deferred note (authors, does not run)
