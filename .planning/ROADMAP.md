@@ -194,6 +194,7 @@ bottle half of the question is answered; this phase is the interface half and th
    and whatever the `SteamInternal_*` / `SteamAPI_GetHSteamUser` / `SteamClient()` family modern
    SDKs route through — research must census that family against real owned titles, it is not in
    any spike. Acceptance is 24-UAT Gate 4 re-run: Hoard (63000) playable through the bridge.
+
 2. **Eligibility becomes scan-derived, not hand-curated.** The install-time coverage check already
    exists (`bridge/shimGenerate.ts:239`, `scanSteamApiImports` → rejected placement on any uncovered
    symbol); today its verdict is thrown away after one launch failure. This phase persists it per
@@ -203,6 +204,7 @@ bottle half of the question is answered; this phase is the interface half and th
    bottled-Steam fallback. The scan can only run after the exe exists, so the phase accepts
    install-first-decide-second; the spec must settle whether the depot manifest's file list
    (`steam_api.dll` vs `steam_api64.dll`) gives a cheap pre-install screen.
+
 3. **The allowlist stays bundled JSON; no remote CI index.** D-01 named the Phase 19 index as the
    upgrade path, but there is nothing to index without owning the games. The JSON becomes a seed of
    known-good titles plus a known-bad list (DRM-wrapped, 24-SPEC out-of-scope); growth is the
@@ -227,6 +229,7 @@ in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Ph
 
 Plans:
 **Wave 1**
+
 - [x] 51-01-PLAN.md — TRACER: per-game helper with real AppID, ephemeral port via gamelib_bridge.cfg, helper lifetime tied to the game; live check on Avernum 6 (D-51-01, D-51-03)
 - [x] 51-02-PLAN.md — Import scan sees bare accessors / SteamInternal / GameServer families and steam_api64.dll; interface-version capture (hazard a, D-51-13 detection)
 - [x] 51-03-PLAN.md — Contracts: route/IPC types, allowlist v2 (seed + known-bad), shimCoverage module, persisted bridge verdict (D-51-07/08/10)
@@ -234,51 +237,62 @@ Plans:
 - [x] 51-05-PLAN.md — Remove-all-copies deletes the emptied per-game bridge bottle; close LD-5 todo (D-51-12)
 
 **Wave 2** *(blocked on Wave 1 completion)*
+
 - [x] 51-06-PLAN.md — Generator v2: multi-version manifests, MSVC class-return fix, stackBytes stubs, cfg-selected bare accessors, wire param kinds
 - [x] 51-07-PLAN.md — Pure route resolver (seed ∪ verdict ∖ known-bad ∖ forced-bottle) + verdict-returning, version-capturing, arch-aware placement
 - [x] 51-08-PLAN.md — "Waiting for Steam…" for blocked bottled launches from measured log signals; close todo (D-51-16)
 
 **Wave 3** *(blocked on Wave 2 completion)*
+
 - [x] 51-09-PLAN.md — games.ts routing on the verdict; scan-miss deletes bottle + D-05 with missing symbols; location-based launch/uninstall (D-51-05, D-51-07)
 - [x] 51-10-PLAN.md — Generated helper dispatch table; identity-only helper mode
 
 **Wave 4** *(blocked on Wave 3 completion)*
+
 - [x] 51-11-PLAN.md — Proton-inventory extractor; ISteamUtils/Apps/UserStats + old User/Friends versions for XCOM and Hoard (Hoard versions measured)
 - [x] 51-12-PLAN.md — 480 identity fallback + one-time limited-features notice (D-51-04, D-51-02)
 
 **Wave 5** *(blocked on Wave 4 completion)*
+
 - [x] 51-13-PLAN.md — Known-bad / scan-miss route-notice dialog with "Try the bridge anyway"; route IPC (D-51-08, D-51-11, D-51-10)
 - [x] 51-14-PLAN.md — RemoteStorage (cloud-disabled), Matchmaking/Networking (unavailable) stubs + SteamGameServer stubs
 
 **Wave 6** *(blocked on Wave 5 completion)*
+
 - [x] 51-15-PLAN.md — Win64 shim (steam_api64.dll), modern-SDK lookup family, ELEX set, disassembly ABI gate (D-51-13)
 - [x] 51-16-PLAN.md — Route line + force-bottled toggle in the install dialog; route row on the game page (D-51-09, D-51-10, D-51-02)
 - [x] 51-17-PLAN.md — Pre-install depot-manifest screen (D-51-06)
 
 **Wave 7** *(blocked on Wave 6 completion)*
+
 - [x] 51-18-PLAN.md — Census tool + 51-UAT.md (D-51-15, D-51-14)
 
 **Wave 8** *(blocked on Wave 7 completion)*
+
 - [x] 51-19-PLAN.md — Live gates (Hoard Gate 4 re-run, XCOM, ELEX, Avernum 5/6), census re-run, seed/known-bad growth
 
 **Gap closure — Wave 1**
+
 - [x] 51-20-PLAN.md — CR-01 arch-scoped isScanVerdictNowCovered; CR-03 x64 null-object fallback only for runtime-lookup families
 - [x] 51-21-PLAN.md — CR-02 matchmaking family spelling: cfgFamilyName in the generator, regenerate, cross-source pin test
 - [x] 51-22-PLAN.md — Prescreen backslash basename fix; CR-04 runtime-loaded steam_api is a miss, never downgrade the prescreen
 - [x] 51-24-PLAN.md — Waiting for Steam names sign-in (steamui_login.txt) and the self-update download phase (D-51-16)
 
 **Gap closure — Wave 2** *(blocked on gap Wave 1)*
+
 - [x] 51-23-PLAN.md — Bridge process monitor starts before the wine child is awaited; launcher-exit and give-up paths stop the helper (D-51-01)
 - [x] 51-25-PLAN.md — Hoard to knownBad on evidence; playVerified seed field; census reports routed vs verified running
 - [x] 51-26-PLAN.md — Live accessor probe, then wire Win64 SteamUser019/Friends015/Utils008/Apps008 (D-51-13)
 
 **Gap closure — Wave 3-6** *(live, sequential)*
+
 - [x] 51-27-PLAN.md — Packaged re-gates: helper teardown, ELEX through the wired Win64 shim, Waiting-for-Steam sign-in cause
 - [x] 51-28-PLAN.md — Operator decision re-baselining the D-51-14 anchor; XCOM bottled-Steam confirmation
 - [x] 51-29-PLAN.md — Rule-drawn representative sample of owned Windows-only titles, installed and played
 - [ ] 51-30-PLAN.md — Closing census on the sample (routed vs verified running), seed/known-bad growth, operator "most" verdict
 
 **Cross-cutting constraints:**
+
 - Spec-less probe fallback skipped: phase has no requirement IDs to probe (visible skip)
 
 ### Phase 52: Bridge-backed steamclient.dll for SteamStub titles
@@ -298,21 +312,26 @@ stub still exited (code 51) with no `HELLO` at the helper. The shim's generated 
 methods are local `HELPER FALLBACK`/`STUB` constants, so nothing reached the native client.
 
 **Scope:**
+
 1. `meta/gen_vtables.ts`: `SteamClient017` and `014` genuinely forward to the helper's native
    `ISteamClient` (pipe/user handles served helper-side, not constants). `GetISteam*` logs the
    versions requested on the real path, and hands out forwarding proxies for the versions the stub needs.
+
 2. The forwarder `steamclient.dll` / `steamclient64.dll` (zig-built, as spike 039), resolving
    through the game's own shim module so the helper keeps one connection.
    *Planning note:* x64 `steamclient64.dll` only; the x86 `steamclient.dll` is deferred (decision 6,
    `deferred-items.md`).
+
 3. Bottle setup at launch: write `ActiveProcess\SteamClientDll`/`SteamClientDll64`/`Universe`/`pid`
    and place the DLLs. Never create `HKLM\Software\Valve\Steam` (spike 036: its presence diverts the
    game into `steam.exe -applaunch`).
    *Planning note:* only `SteamClientDll64` and `Universe` are written. The x86 `SteamClientDll` value is
    deferred (decision 6), and `pid` is not written on the first live run (decision 1); it is added only
    if the user decides so at 52-11's checkpoint.
+
 4. `.bind` detection at install/scan time, so a SteamStub title is known before launch and gets an
    honest notice rather than "game stopped after 2s of play".
+
 5. The five missing modern-SDK `SteamInternal_*` exports and DLL-importer scan gap Grim Dawn hits
    next (`2026-10-23-x64-shim-lacks-modern-sdk-steaminternal-exports-and-scan-misses-dll-importers.md`).
 
@@ -343,28 +362,34 @@ The locked boundary is unchanged.
 Plans:
 
 **Wave 1** *(parallel)*
+
 - [x] 52-01-PLAN.md — SteamClient017/014 forward to the native client: manifests + policy, forwarded GetISteam* (no null object), pointer-presence dispatch, FWD logging, identity-only gate
 - [x] 52-04-PLAN.md — Zero-import PE section parser (.bind); drmWrapper on the persisted scan verdict
 - [x] 52-05-PLAN.md — Bounded static-import closure (exe -> Engine.dll) in scanSteamApiImports
 - [x] 52-06-PLAN.md — SteamStub notice strings in all 49 gamelib catalogs
 
 **Wave 2-3** *(serial after 52-01: shared generated sources and helper build)*
+
 - [x] 52-02-PLAN.md — Helper CONTROL slot 3 CREATE_INTERFACE asks SteamInternal_CreateInterface; protocol constant; integration tests
 - [x] 52-03-PLAN.md — zig-built steamclient64.dll forwarder (CreateInterface only, resolves the loaded shim); build + prune + path constant
 
 **Wave 4**
+
 - [x] 52-07-PLAN.md — x64 shim exports GameLibBridge_CreateInterface + five SteamInternal_*; regen + pins
 - [x] 52-08-PLAN.md — steamClientSetup.ts (HKCU-only reg add, forwarder placement) and .bind detection in placeShimForGame
 
 **Wave 5**
+
 - [x] 52-09-PLAN.md — launchBridgeGame wires SteamStub setup; honest unforwarded notice (log + one-time notify)
 
 **Wave 6-8** *(live, sequential)*
+
 - [x] 52-10-PLAN.md — Desk gate, scratch-clone harness, live-gate contract + reachability review, deferred note (authors, does not run)
 - [x] 52-11-PLAN.md — Discovery rounds in a scratch clone (cap 3), pid decision checkpoint
 - [x] 52-12-PLAN.md — Done-when: GameLib launch of Grim Dawn, cx-log trace, bottle hygiene; close both todos on pass
 
 **Gap closure** *(from 52-VERIFICATION.md, 3/7; waves: 13+15 parallel, then 14+16 parallel, then 17, then 18 live)*
+
 - [x] 52-13-PLAN.md — Serve SteamUser023 / SteamNetworking006 / RemoteStorage016 on x64 via the inventory pipeline (Grim Dawn no longer withheld)
 - [x] 52-15-PLAN.md — drmWrapper on withheld results (fresh steamstub|none, exeArch); withhold only when restorable, else refresh the stale shim as placed-miss
 - [x] 52-14-PLAN.md — CR-01: null-object fallback for ordinary x64 GetISteam*, forwarding only after GameLibBridge_CreateInterface; generated-source pin
@@ -373,6 +398,7 @@ Plans:
 - [x] 52-18-PLAN.md — ELEX no-regression check (item 12), conditional pid decision (item 13), finalize UAT and todos
 
 **Gap closure 2** *(from 52-VERIFICATION.md re-verification, 5/7; waves: 19+20+21 parallel, then 22, then 23 live, then 24 live)*
+
 - [x] 52-19-PLAN.md — Gap 5 diagnosis: relay trace of the SteamStub check window + export tables (no fix chosen); Gap 6 Friends attribution arms (UAT items 14-15)
 - [x] 52-20-PLAN.md — WR-09: gate the eight non-lookup SteamClient017/014 wire methods off the SteamStub path with pre-phase values; widen WR-07 revisit
 - [x] 52-21-PLAN.md — WR-11: withhold only when a steam_api target exists; placed-miss with no own-steam_api line otherwise
@@ -381,23 +407,27 @@ Plans:
 - [x] 52-24-PLAN.md — ELEX no-regression after WR-09 with Friends before/after (item 20), finalize UAT and todos
 
 **Gap closure 3** *(from 52-VERIFICATION.md re-verification 2, 5/7; sequential: 25, then 26, then 27 live, then 28 live)*
+
 - [x] 52-25-PLAN.md — Gap 5 diagnosis 3: static G/F/E file comparison (signature, CheckSum, version resource, exports), re-measured export tables, public-source claims, relay diag3 for trust/hash APIs and the full Load Error text; check classification, no fix (UAT item 21)
 - [x] 52-26-PLAN.md — Decision checkpoint over boundary-reviewed options from the 52-25 classification, then implement exactly one (or record not closable within the boundary) (item 22)
 - [x] 52-27-PLAN.md — Strict packaged re-gate 3: Grim Dawn launch, cx-log strict Steam-init trace, hygiene (items 23-25)
 - [x] 52-28-PLAN.md — Conditional ELEX no-regression (item 26), finalize UAT, deferred-items and todos
 
 **Gap closure 4** *(from 52-VERIFICATION.md re-verification 3, 5/7; operator chose "Discriminating trace"; waves: 29+30 parallel, then 31, then 32 decision)*
+
 - [x] 52-29-PLAN.md — 52-REVIEW gap-closure-3 hardening: WR-01 .rc existence guard, WR-02 argv-order test pin, IN-01 doc comment (forwarder bytes untouched)
 - [x] 52-30-PLAN.md — Gap 5 round-4 trace-first: pre-register the discriminating experiment + commit; harness SCORE/PID_ARM switches; arm A (no pid) relay trace, dialog text recaptured vs 52-25 R1, T1-T8 (UAT item 27)
 - [x] 52-31-PLAN.md — Arm B (clone-only pid -> live process) under the committed rule; two-arm score table; classify into pre-registered O1-O4 with its recommendation; no fix (UAT item 28)
 - [x] 52-32-PLAN.md — Operator decision over the class-bounded options (close-out + done-when amendment, pid-writer-next-round, or static RE); finalize UAT/deferred-items/todo; leave gaps_found (UAT item 29) Operator chose option-closeout (O1); done-when amended.
 
 **Gap closure 5** *(amended done-when, 52-UAT item 29; waves: 33+34 parallel, then 35 live)*
+
 - [x] 52-33-PLAN.md — Forwarded-path SteamStub notice strings (steam.bridge.steamstub.forwardedTitle/forwardedBody) in all 49 gamelib catalogs; 52-06 strings unchanged
 - [x] 52-34-PLAN.md — Honest notice on the forwarded SteamStub path: deterministic trigger (steamstub + forwarder placed), log every launch + notify once per session, no reroute, nothing answers the stub; trigger tests
 - [x] 52-35-PLAN.md — Live: packaged Grim Dawn launch (HELLO + notice, item 30) and cx-log trace (no steam://run, item 31); settle item 2; close out UAT, deferred-items, todos, STATE
 
 **Gap closure 6** *(52-UAT item 30: notice triggered but not seen; waves: 36, then 37 live)*
+
 - [x] 52-36-PLAN.md — Forwarded SteamStub notice also shown as an in-app GameLib dialog (guaranteed channel, dialog.ts policy rule 1); every OS notification logs its delivery result (backend label through notification_show and the shim 'show' event)
 - [x] 52-37-PLAN.md — Live: GameLib.app (UserNotifications backend) launch of Grim Dawn, in-app notice seen + delivery result logged (item 32); item 31 carried; close out UAT, deferred-items, todos, STATE
 
@@ -410,6 +440,7 @@ Steam In-Game never counts. Today the 51-29 sample is 12 of 12 bridge-routed and
 (N=18, K=0, M=19 in the 51-30 census).
 
 Two defect classes, ranked by sample reach:
+
 1. **Modern-SDK `SteamInternal_*` entry points**, reached through four engines: Hell Clock 1782460
    (Unity/Steamworks.NET `InitEx`), Mining Mechs 1603180 (GameMaker `Steamworks_x64.dll`),
    Overlooting 3410180 (GodotSteam), and Ranch Simulator 1119730 (UE Shipping exe).
@@ -417,6 +448,7 @@ Two defect classes, ranked by sample reach:
    it, takes those five as given, and does not duplicate them. What's left here: x86 parity,
    re-testing these four titles, and whatever each one hits after `SteamInternal_SteamAPI_Init`
    returns OK.
+
 2. **The Steamworks flat C API** (`SteamAPI_ISteamClient_*`, `SteamAPI_ISteamUser_*`,
    `SteamAPI_ISteamUtils_*`, …) used by Unity + Steamworks.NET: Vampire's Fall 1167950, The
    Planet Crafter 1284190, and Rogue Waters 1691190, which **does not run**: it hangs at loading on
@@ -428,6 +460,7 @@ Done when the census Evidence column reads `verified` for a majority of the Stea
 titles in a re-run sample containing these seven.
 
 Source todos:
+
 - `2026-10-23-x64-shim-lacks-modern-sdk-steaminternal-exports-and-scan-misses-dll-importers.md`
 - `2026-10-23-bridge-shim-lacks-steamworks-flat-api-for-unity-steamworks-net-games.md`
 
@@ -440,12 +473,26 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 **Plans:** 9 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 53-01-PLAN.md — new x64 interface manifests (Client020/021, User021, Friends017/018, Utils010, UserStats012/013, Input006, GameServer014/015, GameServerStats001) + SteamInternal_GameServer_Init
 - [ ] 53-02-PLAN.md — pure ECMA-335 ImplMap reader, AnyCPU CLR-flag rule, UTF-16 version constants, measured flat-name fixture
 - [ ] 53-03-PLAN.md — census per-engine evidence + game-originated CALL rule, Steamworks-using majority line, rotated logs
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 53-04-PLAN.md — generated flat Steamworks API exports (x64), NULL-on-unknown flat lookups, generated export list
 - [ ] 53-05-PLAN.md — shared bridgeScan.ts module, Mono managed scan, effective arch, j4l lift for UE titles
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 53-06-PLAN.md — helper CALL trace and CONTROL slot 4 REPORT_VERSION (NOVER)
 - [ ] 53-07-PLAN.md — census on the shared scan, x86 measurement and deferral
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 53-08-PLAN.md — desk gate and 53-UAT live re-run contract
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 53-09-PLAN.md — live sample run and census majority (operator checkpoint)
