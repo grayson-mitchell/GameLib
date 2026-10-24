@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-complete: re-gate 3 items 23-26 scored by 52-27/52-28
+diagnosis 4 arm A: item 27 by 52-30; arm B next in 52-31
 
 ## Tests
 
@@ -279,6 +279,10 @@ result: pass — after `wineserver -k` of the product bottle, read-only (2026-10
 expected: run only if 52-26 changed the shim, helper or generated sources (`git diff --name-only` of 52-26's commits touches meta/gen_vtables.ts, native/steam-bridge/generated or native/steam-bridge/helper). Otherwise `skipped — change limited to the forwarder, which is placed only on the drmWrapper=steamstub path`. When run: everything item 20 expected (HELLO shim attached appid=411300, `[bridge-steamstub]` 0, FWD 0, loading-screen baseline, no error dialog), Friends scored per item 20's outside-phase-52 rule, bridge-verified recorded separately.
 result: skipped — change limited to the forwarder, which is placed only on the drmWrapper=steamstub path. Condition computed from 52-26's commits (979c3b0e3, decision cad85dd11, opened 0c30ae234) via `git show --name-only`: only native/steam-bridge/steamclient/steamclient_fwd.rc, meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts (plus this UAT file); none under meta/gen_vtables.ts, native/steam-bridge/generated/ or native/steam-bridge/helper/. No ELEX run, no operator input. Bridge-verified: no (ELEX never bridge-verified).
 
+### 27. Gap 5 diagnosis 4 arm A — dialog text recaptured + pid-window trace (no pid)
+expected: the experiment is pre-registered and committed before the run (PREREG hash in terminal.log above the first round), the clone holds the product-written state (V1 cmp-identical shim and 187392 B forwarder, V2 SteamClientDll64 equal), the product is unchanged (V3 P1-P6 equal before and after), T1-T8 are answered observed-or-not-observed with cxlog line numbers, T1 is compared verbatim with 52-25 R1, and no fix is chosen.
+result: pass — session /tmp/gamelib-gate-52u-20261024T080006Z, PREREG 08064e3f1 committed before the round, `ROUND=diag5a MODE=trace SCORE=1 WATCH=90` with the 88-name relay list (918 relay Call lines, so relay was observable). V1/V2/V3 hold; no pid in the clone or the product. T1: `MessageBoxA(0, "Application load error 3:0000065432", "Steam Error", 0x10)` at cxlog:7235, same as 52-25 R1. T2: two `L"pid"` reads at 6871 and 6883, both retval 2 (absent), nothing acts on a pid. T3/T4/T6: not observed (the stub resolves OpenProcess and GetExitCodeProcess by GetProcAddress at 6692/6694 but never calls them). T7: one whole-file ReadFile of 0x2dc00. T8: ReadFile, LoadLibraryA user32, GetProcAddress MessageBoxA, dialog. Arm A score: W 1, M 1, L alive 91s, S 0, H 1, R 2, P 2, K 0. No fix chosen; arm B is 52-31.
+
 ## Structural Reachability Review
 
 Applied by 52-10 against all seven tests of `live-gate-contract-authoring.md`.
@@ -327,8 +331,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 26
-passed: 11
+total: 27
+passed: 12
 issues: 8
 pending: 1
 skipped: 6
