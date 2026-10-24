@@ -470,7 +470,7 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 12/16 plans executed
+**Plans:** 13/16 plans executed
 
 Plans:
 **Wave 1**
@@ -507,7 +507,7 @@ Plans:
 
 **Gap wave 2** *(blocked on 53-10)*
 
-- [ ] 53-12-PLAN.md — serve the Steamworks.NET CSteamAPIContext.Init interface set (Screenshots003 + 15 more) plus SteamUtils009/Controller006/GameServer012
+- [x] 53-12-PLAN.md — serve the Steamworks.NET CSteamAPIContext.Init interface set (Screenshots003 + 15 more) plus SteamUtils009/Controller006/GameServer012
 
 **Gap wave 3** *(blocked on 53-12)*
 
