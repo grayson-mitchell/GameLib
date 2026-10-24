@@ -1621,7 +1621,7 @@ describe('gen_vtables', () => {
       const c = generateShimC(manifests)
       const start = c.indexOf('// === Modern-SDK lookup family')
       expect(start).toBeGreaterThan(-1)
-      const end = c.indexOf('#endif', start)
+      const end = c.indexOf('// === SteamGameServer*', start)
       return c.slice(start, end)
     }
 

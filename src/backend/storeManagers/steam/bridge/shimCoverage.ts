@@ -131,8 +131,8 @@ export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
 
 // 51-15: D-51-13 GO -- the Win64 shim ships. Mirrors
 // native/steam-bridge/generated/steam_api64.def's EXPORTS list exactly
-// (44 symbols: the 10-symbol flat superset + 11 GameServer flat stubs +
-// the 3-symbol modern-SDK lookup family, Win64-only -- never present in
+// (49 symbols: the 10-symbol flat superset + 11 GameServer flat stubs +
+// the 8-symbol modern-SDK lookup family, Win64-only -- never present in
 // the x86 steam_api.def -- + 10 versioned accessors + 10 bare accessors,
 // same CR-02 pin discipline as SHIM_EXPORTED_SYMBOLS above: an SDK
 // bump/export change in the generator must update this list in the same
@@ -165,6 +165,12 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamInternal_CreateInterface',
   'SteamAPI_GetHSteamUser',
   'SteamAPI_GetHSteamPipe',
+  // quick 261024-i94: the SDK 1.58+ init family, still Win64-only.
+  'SteamInternal_SteamAPI_Init',
+  'SteamInternal_ContextInit',
+  'SteamInternal_FindOrCreateUserInterface',
+  'SteamInternal_FindOrCreateGameServerInterface',
+  'SteamInternal_GameServer_Init_V2',
   // 261021-pgx (shared x86/x64): STEAMUSERSTATS_INTERFACE_VERSION011's
   // arches widened to ['x86','x64'] this plan -- served on both.
   'SteamAPI_SteamUserStats_v011',

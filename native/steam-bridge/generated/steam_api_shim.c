@@ -7660,6 +7660,9 @@ void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)p
 // === Modern-SDK lookup family (51-15, Win64 only -- D-51-13) ===
 
 #if defined(__x86_64__)
+static uintptr_t g_gamelib_context_counter = 1;
+#endif
+#if defined(__x86_64__)
 void *SteamInternal_CreateInterface(const char *pszVersion) {
   void *resolved = resolve_iface_by_exact_version(pszVersion);
   if (resolved != NULL) return resolved;
@@ -7667,6 +7670,43 @@ void *SteamInternal_CreateInterface(const char *pszVersion) {
 }
 int SteamAPI_GetHSteamUser(void) { return 1; }
 int SteamAPI_GetHSteamPipe(void) { return 1; }
+int SteamInternal_SteamAPI_Init(const char *pszInternalCheckInterfaceVersions, char *pOutErrMsg) {
+  (void)pszInternalCheckInterfaceVersions;
+  if (SteamAPI_Init()) {
+    g_gamelib_context_counter++;
+    if (pOutErrMsg != NULL) pOutErrMsg[0] = 0;
+    return 0;
+  }
+  if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: helper HELLO failed");
+  return 2;
+}
+void *SteamInternal_ContextInit(void *pContextInitData) {
+  struct gamelib_ctx_init { void (*pFn)(void *pCtx); uintptr_t counter; } *d = (struct gamelib_ctx_init *)pContextInitData;
+  if (d == NULL) return NULL;
+  void *ctx = (void *)(d + 1);
+  if (d->counter != g_gamelib_context_counter) {
+    d->counter = g_gamelib_context_counter;
+    if (d->pFn != NULL) d->pFn(ctx);
+  }
+  return ctx;
+}
+void *SteamInternal_FindOrCreateUserInterface(int hSteamUser, const char *pszVersion) {
+  (void)hSteamUser;
+  void *resolved = resolve_iface_by_exact_version(pszVersion);
+  if (resolved != NULL) return resolved;
+  return (void *)&g_x64_null_object_instance;
+}
+void *SteamInternal_FindOrCreateGameServerInterface(int hSteamUser, const char *pszVersion) {
+  (void)hSteamUser;
+  void *resolved = resolve_iface_by_exact_version(pszVersion);
+  if (resolved != NULL) return resolved;
+  return (void *)&g_x64_null_object_instance;
+}
+int SteamInternal_GameServer_Init_V2(uint32_t unIP, uint16_t usGamePort, uint16_t usQueryPort, int eServerMode, const char *pchVersionString, const char *pszInternalCheckInterfaceVersions, char *pOutErrMsg) {
+  (void)unIP; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString; (void)pszInternalCheckInterfaceVersions;
+  if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: game server mode is not supported");
+  return 1;
+}
 #endif
 
 

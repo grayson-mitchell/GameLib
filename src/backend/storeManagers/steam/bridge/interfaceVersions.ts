@@ -103,6 +103,10 @@ export const BARE_ACCESSOR_FAMILY: Readonly<Record<string, string>> = {
 // candidate.
 const RUNTIME_LOOKUP_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamInternal_CreateInterface',
+  // quick 261024-i94: take a version string exactly like CreateInterface.
+  // (SteamInternal_ContextInit takes none, so it is deliberately absent.)
+  'SteamInternal_FindOrCreateUserInterface',
+  'SteamInternal_FindOrCreateGameServerInterface',
   'SteamClient'
 ])
 

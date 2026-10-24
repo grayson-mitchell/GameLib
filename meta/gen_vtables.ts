@@ -644,10 +644,23 @@ const FLAT_EXPORT_BODIES: Record<
 // branch) and only compiled under `#if defined(__x86_64__)` in the shim C
 // (generateShimC), never polluting the legacy x86 shim's export surface
 // (SHIM_EXPORTED_SYMBOLS' CR-02 pin stays untouched by this plan).
+//
+// quick 261024-i94 added the SDK 1.58+ init family (SteamInternal_SteamAPI_Init,
+// _ContextInit, _FindOrCreateUserInterface, _FindOrCreateGameServerInterface,
+// _GameServer_Init_V2). They stay x64-only: x86 has no
+// SteamInternal_CreateInterface, no SteamAPI_GetHSteamUser/GetHSteamPipe and no
+// null-object fallback, and a modern-SDK x86 context init also calls
+// SteamAPI_GetHSteamUser -- exporting these five on x86 would mean widening the
+// whole family to x86 (a separate decision against D-51-13).
 export const MODERN_LOOKUP_FLAT_EXPORTS = [
   'SteamInternal_CreateInterface',
   'SteamAPI_GetHSteamUser',
-  'SteamAPI_GetHSteamPipe'
+  'SteamAPI_GetHSteamPipe',
+  'SteamInternal_SteamAPI_Init',
+  'SteamInternal_ContextInit',
+  'SteamInternal_FindOrCreateUserInterface',
+  'SteamInternal_FindOrCreateGameServerInterface',
+  'SteamInternal_GameServer_Init_V2'
 ] as const
 
 const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
@@ -673,7 +686,67 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
   // report, so both always answer the single constant handle 1 (never 0,
   // which every real Steamworks game treats as "invalid handle").
   SteamAPI_GetHSteamUser: 'int SteamAPI_GetHSteamUser(void) { return 1; }',
-  SteamAPI_GetHSteamPipe: 'int SteamAPI_GetHSteamPipe(void) { return 1; }'
+  SteamAPI_GetHSteamPipe: 'int SteamAPI_GetHSteamPipe(void) { return 1; }',
+  // quick 261024-i94. SDK: int SteamInternal_SteamAPI_Init(const char
+  // *pszInternalCheckInterfaceVersions, SteamErrMsg *pOutErrMsg) returning
+  // ESteamAPIInitResult (0 = k_ESteamAPIInitResult_OK, 2 = NoSteamClient).
+  // SteamErrMsg is char[1024]. Reuses SteamAPI_Init's HELLO + marker keepalive.
+  SteamInternal_SteamAPI_Init:
+    'int SteamInternal_SteamAPI_Init(const char *pszInternalCheckInterfaceVersions, char *pOutErrMsg) {\n' +
+    '  (void)pszInternalCheckInterfaceVersions;\n' +
+    '  if (SteamAPI_Init()) {\n' +
+    '    g_gamelib_context_counter++;\n' +
+    '    if (pOutErrMsg != NULL) pOutErrMsg[0] = 0;\n' +
+    '    return 0;\n' +
+    '  }\n' +
+    '  if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: helper HELLO failed");\n' +
+    '  return 2;\n' +
+    '}',
+  // SDK callback-and-counter protocol: void *SteamInternal_ContextInit(void
+  // *pContextInitData), data = { void (*pFn)(void *pCtx); uintptr_t counter;
+  // <context> }. The context lives right after the counter. pFn re-populates it
+  // whenever the global counter moved. Starts at 1 so a pre-init call (game
+  // static init) populates the context.
+  SteamInternal_ContextInit:
+    'void *SteamInternal_ContextInit(void *pContextInitData) {\n' +
+    '  struct gamelib_ctx_init { void (*pFn)(void *pCtx); uintptr_t counter; } *d = (struct gamelib_ctx_init *)pContextInitData;\n' +
+    '  if (d == NULL) return NULL;\n' +
+    '  void *ctx = (void *)(d + 1);\n' +
+    '  if (d->counter != g_gamelib_context_counter) {\n' +
+    '    d->counter = g_gamelib_context_counter;\n' +
+    '    if (d->pFn != NULL) d->pFn(ctx);\n' +
+    '  }\n' +
+    '  return ctx;\n' +
+    '}',
+  // SDK: void *SteamInternal_FindOrCreateUserInterface(HSteamUser, const char
+  // *pszVersion). Same lookup as SteamInternal_CreateInterface.
+  SteamInternal_FindOrCreateUserInterface:
+    'void *SteamInternal_FindOrCreateUserInterface(int hSteamUser, const char *pszVersion) {\n' +
+    '  (void)hSteamUser;\n' +
+    '  void *resolved = resolve_iface_by_exact_version(pszVersion);\n' +
+    '  if (resolved != NULL) return resolved;\n' +
+    '  return (void *)&g_x64_null_object_instance;\n' +
+    '}',
+  // SDK: void *SteamInternal_FindOrCreateGameServerInterface(HSteamUser, const
+  // char *pszVersion). Same lookup as SteamInternal_CreateInterface.
+  SteamInternal_FindOrCreateGameServerInterface:
+    'void *SteamInternal_FindOrCreateGameServerInterface(int hSteamUser, const char *pszVersion) {\n' +
+    '  (void)hSteamUser;\n' +
+    '  void *resolved = resolve_iface_by_exact_version(pszVersion);\n' +
+    '  if (resolved != NULL) return resolved;\n' +
+    '  return (void *)&g_x64_null_object_instance;\n' +
+    '}',
+  // SDK: ESteamAPIInitResult SteamInternal_GameServer_Init_V2(uint32 unIP,
+  // uint16 usGamePort, uint16 usQueryPort, EServerMode, const char
+  // *pchVersionString, const char *pszInternalCheckInterfaceVersions,
+  // SteamErrMsg *pOutErrMsg). Game-server mode is unsupported: always fail with
+  // 1 (k_ESteamAPIInitResult_FailedGeneric) -- 0 would mean OK here.
+  SteamInternal_GameServer_Init_V2:
+    'int SteamInternal_GameServer_Init_V2(uint32_t unIP, uint16_t usGamePort, uint16_t usQueryPort, int eServerMode, const char *pchVersionString, const char *pszInternalCheckInterfaceVersions, char *pOutErrMsg) {\n' +
+    '  (void)unIP; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString; (void)pszInternalCheckInterfaceVersions;\n' +
+    '  if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: game server mode is not supported");\n' +
+    '  return 1;\n' +
+    '}'
 }
 
 // ---------------------------------------------------------------------------
@@ -1530,6 +1603,9 @@ static void *resolve_iface_by_exact_version(const char *version);
   ).join('\n')
   // 51-15: Win64-only (see MODERN_LOOKUP_FLAT_EXPORTS' doc comment).
   const modernLookupExports =
+    // Own guard block (not folded into the one below) so the existing 51-15
+    // pin "#if defined(__x86_64__)\nvoid *SteamInternal_CreateInterface" holds.
+    `#if defined(__x86_64__)\nstatic uintptr_t g_gamelib_context_counter = 1;\n#endif\n` +
     `#if defined(__x86_64__)\n` +
     MODERN_LOOKUP_FLAT_EXPORTS.map(
       (name) => MODERN_LOOKUP_FLAT_EXPORT_BODIES[name]
