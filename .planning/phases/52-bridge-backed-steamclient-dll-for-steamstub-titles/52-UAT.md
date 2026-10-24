@@ -258,7 +258,8 @@ result: pass — session /tmp/gamelib-gate-52e-20261024T065250Z, plan 52-25, evi
 
 ### 22. Gap 5 fix decision 3 (52-26)
 expected: the operator chooses one boundary-reviewed option built from 52-25 evidence, or no change.
-result: pending — options presented from 52-25-DIAGNOSIS.md `## Check classification` row C (option-checksum, option-versioninfo), plus option-other and option-none; option-sign blocked (osslsigncode and signtool not on PATH; row A strength none), option-flat not offered (no forwarder-base Steam_* lookup observed). Awaiting operator choice.
+result: pass — operator chose option-versioninfo. Operator verbatim: "versioninfo (GameLib) (Recommended)". Label: boundary-compliant (GameLib's own strings, no Valve identity: CompanyName "GameLib", FileDescription "GameLib steamclient forwarder"; no BOUNDARY EXCEPTION, no ROADMAP amendment). Rests on 52-25-DIAGNOSIS.md `## Check classification` row C (strength indirect) and `### Differences` item 4 (the exe has a resource directory with version strings, the forwarder has none). Excluded and not offered: genuine Valve DLL in a bottle, Grim Dawn.exe modification, bottled-Steam reroute, pid writer. option-sign blocked (no signing tool), option-flat not offered (no forwarder-base Steam_* lookup). Risk rule: if the pinned zig cannot compile .rc through zig cc, stop as `blocked; replan`, no new tool downloaded.
+files allowed: native/steam-bridge/steamclient/steamclient_fwd.rc, meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts
 
 ## Structural Reachability Review
 
