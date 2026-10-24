@@ -2779,12 +2779,17 @@ export default class SteamGame implements Game {
    * menu through the bridge, and revisit it if the separate static-RE
    * decision ever makes the stub accept the forwarder.
    *
-   * The notice is also shown as an in-app dialog (52-UAT item 30): the
-   * operator never saw the OS notification on a raw-binary run, and notify()
-   * is fire-and-forget, so an OS banner alone cannot prove the notice was
-   * shown. dialog.ts policy rule 1 ("any nag or warning") puts warnings
-   * in-app. The dialog is one-way and non-blocking, so the launch order is
-   * unchanged.
+   * The notice is also sent as an in-app dialog (52-UAT item 30): the
+   * operator never saw the OS notification on a raw-binary run, and dialog.ts
+   * policy rule 1 ("any nag or warning") puts warnings in-app. The dialog is
+   * one-way and non-blocking, so the launch order is unchanged.
+   *
+   * Neither channel is confirmable (52-REVIEW WR-03). The dispatch log records
+   * only whether the 'showDialog' frame was handed to the transport
+   * (`dialog-frame-sent=`), never that it was displayed: there is no renderer
+   * acknowledgement, a launch before DialogHandler subscribes drops the frame
+   * unseen, and the renderer holds one dialog at a time, so a later
+   * showDialog replaces this one. `display=unconfirmed` says so in the line.
    */
   private maybeNotifySteamStubForwarded(): void {
     logInfo(
@@ -2804,9 +2809,13 @@ export default class SteamGame implements Game {
       "This game uses Steam's DRM wrapper. GameLib connected it to your Mac Steam client, but the wrapper's launch check cannot be satisfied through the native Steam bridge, so the game will probably show a Steam error and not start."
     )
     notify({ title, body })
-    showDialogBoxModalAuto({ title, message: body, type: 'MESSAGE' })
+    const dialogFrameSent = showDialogBoxModalAuto({
+      title,
+      message: body,
+      type: 'MESSAGE'
+    })
     logInfo(
-      `[bridge-notice] appId=${this.appId} dispatched=in-app-dialog+notify`,
+      `[bridge-notice] appId=${this.appId} dispatched=in-app-dialog+notify dialog-frame-sent=${dialogFrameSent} display=unconfirmed`,
       LogPrefix.Steam
     )
   }

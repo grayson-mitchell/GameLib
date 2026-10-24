@@ -30,13 +30,19 @@ import { RUST_NOTIFICATION_AUTH_DENIED_PREFIX } from 'common/types/sidecarTransp
 // to its second button index. Any "don't show again" affordance sitting at
 // that index fires on Escape, silently persisting a suppression the user
 // never chose. The in-app path has no such coupling.
+//
+// Returns whether the in-app 'showDialog' frame was handed to the transport (52-REVIEW WR-03):
+// false when sendFrontendMessage reports no live window (nothing is shown) or throws (the native
+// fallback below runs instead). true is NOT proof of display: in the sidecar the stub window never
+// reports destroyed, so the frame is forwarded with no acknowledgement that DialogHandler was
+// subscribed, and the renderer holds one dialog at a time, so a later showDialog can replace it.
 function showDialogBoxModalAuto(props: {
   event?: IpcMainInvokeEvent
   title: string
   message: string
   type: DialogType
   buttons?: Array<ButtonOptions>
-}) {
+}): boolean {
   if (props.event) {
     props.event.sender.send(
       'showDialog',
@@ -45,9 +51,10 @@ function showDialogBoxModalAuto(props: {
       props.type,
       props.buttons
     )
+    return true
   } else {
     try {
-      sendFrontendMessage(
+      return sendFrontendMessage(
         'showDialog',
         props.title,
         props.message,
@@ -74,6 +81,7 @@ function showDialogBoxModalAuto(props: {
           })
           break
       }
+      return false
     }
   }
 }

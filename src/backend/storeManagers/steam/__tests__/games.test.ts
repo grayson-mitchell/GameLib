@@ -2376,11 +2376,20 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
           `[bridge-notice] appId=${id} reason=steamstub-forwarded:launch-check-unsatisfiable`
       )
 
+    // 52-REVIEW WR-03: the stable `dispatched=in-app-dialog+notify` token is
+    // followed by the real send result and an explicit `display=unconfirmed`.
+    const dialogDispatchLine = (id: string): string | undefined =>
+      (logInfo as jest.Mock).mock.calls
+        .map((c) => c[0])
+        .find(
+          (line) =>
+            typeof line === 'string' &&
+            line.startsWith(
+              `[bridge-notice] appId=${id} dispatched=in-app-dialog+notify`
+            )
+        )
     const dialogDispatchLogged = (id: string) =>
-      (logInfo as jest.Mock).mock.calls.some(
-        (c) =>
-          c[0] === `[bridge-notice] appId=${id} dispatched=in-app-dialog+notify`
-      )
+      dialogDispatchLine(id) !== undefined
 
     const FORWARDED_NOTICE = {
       title: 'gamelib:steam.bridge.steamstub.forwardedTitle',
@@ -2394,6 +2403,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       })
       dialogMock.mockImplementation(() => {
         callOrder.push('dialog')
+        return true
       })
       ;(placeShimForGame as jest.Mock).mockResolvedValue({
         status: 'placed',
@@ -2430,13 +2440,34 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
         message: FORWARDED_NOTICE.body,
         type: 'MESSAGE'
       })
-      expect(dialogDispatchLogged(id)).toBe(true)
+      expect(dialogDispatchLine(id)).toBe(
+        `[bridge-notice] appId=${id} dispatched=in-app-dialog+notify dialog-frame-sent=true display=unconfirmed`
+      )
       expect(sendFrontendMessage).not.toHaveBeenCalledWith(
         'steamBridgeSetupRequired',
         expect.anything()
       )
       expect(result).toBe(true)
       ;(notify as jest.Mock).mockReset()
+      dialogMock.mockReset()
+    })
+
+    it('forwarded notice: an unsent dialog frame is logged as dialog-frame-sent=false', async () => {
+      const id = freshId()
+      dialogMock.mockReturnValue(false)
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: SHIM,
+        verdict: BASE_VERDICT,
+        drmWrapper: 'steamstub'
+      })
+      const result = await new SteamGame(id).launch({} as any)
+
+      expect(dialogMock).toHaveBeenCalledTimes(1)
+      expect(dialogDispatchLine(id)).toBe(
+        `[bridge-notice] appId=${id} dispatched=in-app-dialog+notify dialog-frame-sent=false display=unconfirmed`
+      )
+      expect(result).toBe(true)
       dialogMock.mockReset()
     })
 
