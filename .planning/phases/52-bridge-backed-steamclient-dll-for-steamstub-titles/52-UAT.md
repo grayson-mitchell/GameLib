@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -162,7 +162,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-round 6 (52-37) in progress: item 32 pending (GameLib.app launch of Grim Dawn); items 30 issue, 31 pass carried
+round 6 complete: amended done-when passed (items 31-32); next /gsd-verify-phase 52
 
 ## Tests
 
@@ -318,7 +318,7 @@ result: pass — session /tmp/gamelib-gate-52w-20261024T093736Z, `ROUND=amended 
 
 ### 32. Amended done-when, round 6 — GameLib.app launch of Grim Dawn: honest SteamStub notice shown in-app (after 52-36)
 expected: GameLib launched as GameLib.app, built after the 52-36 commits; gamelib-shell.log has a `notification authorization:` line for that pid; in the archived gamelib.log, present: `drmWrapper=steamstub`; `[bridge-steamstub] appId=219990 forwarder placed`; `bridge helper [219990]:` with `HELLO shim attached appid=219990`; `FWD CreateInterface ver=SteamClient017 native=present`; `[bridge-notice] appId=219990 reason=steamstub-forwarded:launch-check-unsatisfiable`; `[bridge-notice] appId=219990 dispatched=in-app-dialog+notify`; and exactly one delivery result for "Steam DRM check not supported", either `accepted by UserNotifications` or `was not delivered`. Absent (count 0): `steamstub-unforwarded`; `withheld the shim` for 219990; `notify(): skipped "Steam DRM check not supported"`; `"Steam DRM check not supported" handed to tauri-plugin-notification` (a hit means the plugin backend was in use: `issue — launch-mode`). The operator sees GameLib's in-app "Steam DRM check not supported" dialog. The operator's answer on the macOS banner is recorded verbatim, not a pass condition. `pass` needs every log check and the operator-seen in-app dialog. A main menu reached is `issue — notice false for this run`. The `steam://run` conjunct is carried from item 31 on the 52-36 git-log gate (no bridge, forwarder, shim, helper or bottle-setup file changed; the only games.ts hunks are the import line and `maybeNotifySteamStubForwarded` with its docblock). The result states `bridge-verified: not claimed`; In-Game is not an input.
-result: pending
+result: pass — session /tmp/gamelib-gate-52x-20261024T182235Z, GameLib.app pid 48423 (bundle `src-tauri/target/debug/bundle/macos/GameLib.app`, built after the 52-36 commits; bundled sidecar holds `accepted by UserNotifications` x2 and `dispatched=in-app-dialog+notify` x2, bundled shell holds `user-notifications` x3; no raw `target/debug/gamelib-shell` running), archive /tmp/gamelib-gate-52x-20261024T182235Z/gamelib-amended-2.log (131 lines, copied while GameLib was still running) and gamelib-shell-run.log. Launch-mode: gamelib-shell-run.log has `1792866296 pid=48423 notification authorization: granted=false error=Some("The operation couldn’t be completed. (UNErrorDomain error 1.)")`, so the UserNotifications backend was in use but OS notification permission was not granted. Present (archive line numbers): line 69 `drmWrapper=steamstub`; line 83 `[bridge-steamstub] appId=219990 forwarder placed at C:\Program Files (x86)\Steam\steamapps\common\Grim Dawn\x64\steamclient64.dll`; line 90 `bridge helper [219990]: ... HELLO  shim attached appid=219990`; lines 91-92 `FWD CreateInterface ver=SteamClient017 native=present` and `ver=SteamClient014 native=present`; line 85 `[bridge-notice] appId=219990 reason=steamstub-forwarded:launch-check-unsatisfiable`; line 84 `[bridge-notice] appId=219990 dispatched=in-app-dialog+notify`; line 88 the single delivery result `notify(): "Steam DRM check not supported" was not delivered (notification:authorization-not-determined: The operation couldn’t be completed. (UNErrorDomain error 1.))`. Absent (count 0): `steamstub-unforwarded`, `withheld the shim`, `notify(): skipped`, `handed to tauri-plugin-notification`, `delivery not confirmable`, `accepted by UserNotifications` (the delivery result was the `was not delivered` arm, which expected allows). `steam://run` in the gamelib.log: 0. bottleProcessMonitor: line 89 game started pid 48726, line 94 `gone after 36s of play — game stopped`. The operator pressed Play a second time (second launch at lines 109-130: drmWrapper, forwarder placed, notice trigger line 124, HELLO and 2 FWD lines, game started pid 49024 at line 127); the second launch logged the trigger but no second dispatch or delivery line (once-per-session gate), so the delivery result count is exactly 1. Operator, verbatim: "yes dialog appears, did not see a notification, error: application load error 3:0000065432". Mapped, not embellished: in-app dialog: yes (the operator said "dialog appears"; the title was not restated); macOS banner: no, and not a pass condition; notification permission: operator follow-up, verbatim, "no main menu, notifications ARE enabled" (GameLib notifications enabled in System Settings, yet no banner was seen). This contrasts with the log: the startup line for pid 48423 reads granted=false (UNErrorDomain error 1) and the delivery result at the moment of Play (line 88) is `was not delivered (notification:authorization-not-determined ...)`, so as far as the app could tell the OS had not authorized it, whatever the Settings pane shows; the discrepancy is unresolved and the banner is not a pass condition; game dialog: yes, "application load error 3:0000065432" (caption not stated); main menu: no (operator follow-up: "no main menu"; consistent with the 36 s runtime and the load error); anything odd: none reported. Answer to (a) of the item-30 fix direction: banner seen from GameLib.app: no, and the app-side logs say the OS had not authorized it (granted=false, authorization-not-determined) although the operator says notifications are enabled; (b) is answered: the in-app dialog was seen and the delivery result is logged, so the notice conjunct is met through the in-app channel. The `steam://run` conjunct is carried from item 31 (pass, 52-35) on the 52-36 git-log gate: 52-36 commits touch only the eight planned files (no bridge, forwarder, shim, helper or bottle-setup file), and the only games.ts hunks are the import line and `maybeNotifySteamStubForwarded` with its docblock. After the run the executor sent SIGTERM to GameLib pid 48423 (the operator had not quit it); the helper exited with it and `wineserver -k` found no server. bridge-verified: not claimed.
 
 ## Structural Reachability Review
 
@@ -368,8 +368,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 31
-passed: 15
+total: 32
+passed: 16
 issues: 9
 pending: 0
 skipped: 7
@@ -444,7 +444,7 @@ blocked: 0
   fix_direction: "Operator chose option-closeout at 52-32 (item 29): the ROADMAP done-when is amended (Grim Dawn main menu deferred to a separate operator-owned static-RE decision; the honest SteamStub notice is the remaining deliverable). Next: /gsd-verify-phase 52 to re-verify as amended; the notice itself is not yet implemented."
 
 - truth: "On the SteamStub-forwarded path GameLib shows the operator an honest 'Steam DRM check not supported' notice (amended done-when, item 30)"
-  status: failed
+  status: resolved
   reason: "The trigger fires ([bridge-notice] ... steamstub-forwarded:launch-check-unsatisfiable, gamelib-amended-1.log line 79) and notify() logged no skip or failure, but the operator saw no notification. Probable cause (unproven): the gate launched the raw debug binary, which selects the Plugin notification backend (deprecated NSUserNotificationCenter, silently drops on macOS 26) instead of UserNotifications, which only a bundled GameLib.app uses; gamelib-shell.log has no `notification authorization:` line for pid 38247."
   evidence: "52-UAT item 30; /tmp/gamelib-gate-52w-20261024T093736Z/gamelib-amended-1.log lines 65-87; src-tauri/src/notification_backend.rs select_notification_backend; src-tauri/src/macos_notifications.rs header; ~/Library/Logs/GameLib/gamelib-shell.log."
-  fix_direction: "/gsd-plan-phase 52 --gaps: (a) re-run item 30 from the bundled GameLib.app (open src-tauri/target/debug/bundle/macos/GameLib.app, notifications authorized) to confirm the notice is seen; (b) if it is still not seen, make delivery observable (in-app dialog or a logged delivery result) rather than a fire-and-forget notify()."
+  fix_direction: "resolved by 52-36 (in-app notice + delivery result) and 52-37 item 32 (GameLib.app); original direction: /gsd-plan-phase 52 --gaps: (a) re-run item 30 from the bundled GameLib.app (open src-tauri/target/debug/bundle/macos/GameLib.app, notifications authorized) to confirm the notice is seen; (b) if it is still not seen, make delivery observable (in-app dialog or a logged delivery result) rather than a fire-and-forget notify()."

@@ -151,3 +151,7 @@ Next step: `/gsd-plan-phase 52 --gaps`.
 ## Round 5 evidence (2026-10-24)
 
 Amended done-when scored by 52-UAT items 30-31 (plan 52-35). Item 31 passed: steam://run 0, steamclient64.dll Loaded, helper HELLO 1. Item 30: forwarder placed, HELLO and FWD SteamClient017/014 native=present, `[bridge-notice] ... steamstub-forwarded:launch-check-unsatisfiable` logged, but the operator saw no notification, so the honest-notice conjunct is not met. Probable cause: the raw `gamelib-shell` binary was launched, selecting the Plugin notification backend rather than UserNotifications (bundled .app only). Todo stays pending; never claimed bridge-verified. Next: /gsd-plan-phase 52 --gaps.
+
+## Resolution (2026-10-24)
+
+Closed under the amended Phase 52 done-when (52-UAT items 31-32). GameLib places the forwarder, the helper reaches HELLO with `FWD CreateInterface` SteamClient017/014 native=present, no `steam://run` appears in a cx-log trace (item 31), and GameLib shows the operator an honest "Steam DRM check not supported" notice in-app (item 32, GameLib.app). The SteamStub stub still rejects the forwarder (Application load error 3), so Grim Dawn does not reach its main menu. That goal moved to the static-RE decision todo `2026-10-24-steamstub-launch-check-static-re-decision.md`. Bridge-verified was never claimed.

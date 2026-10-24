@@ -338,7 +338,7 @@ The locked boundary is unchanged.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 36/37 plans executed
+**Plans:** 37/37 plans executed
 
 Plans:
 
@@ -399,7 +399,7 @@ Plans:
 
 **Gap closure 6** *(52-UAT item 30: notice triggered but not seen; waves: 36, then 37 live)*
 - [x] 52-36-PLAN.md — Forwarded SteamStub notice also shown as an in-app GameLib dialog (guaranteed channel, dialog.ts policy rule 1); every OS notification logs its delivery result (backend label through notification_show and the shim 'show' event)
-- [ ] 52-37-PLAN.md — Live: GameLib.app (UserNotifications backend) launch of Grim Dawn, in-app notice seen + delivery result logged (item 32); item 31 carried; close out UAT, deferred-items, todos, STATE
+- [x] 52-37-PLAN.md — Live: GameLib.app (UserNotifications backend) launch of Grim Dawn, in-app notice seen + delivery result logged (item 32); item 31 carried; close out UAT, deferred-items, todos, STATE
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
 
