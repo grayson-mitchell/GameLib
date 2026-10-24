@@ -57,6 +57,7 @@ import {
 } from '../shimGenerate'
 import { scanSteamApiImports } from '../importScan'
 import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
+import * as bridgeScan from '../bridgeScan'
 import { buildManagedPe } from './fixtures/managedPe'
 import { getBottleDir, resolveBridgeBottleName } from '../../bottle'
 
@@ -2326,6 +2327,45 @@ describe('shimGenerate', () => {
         })
       }
       expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+    })
+
+    it('53-13 WR-05: managed entry only under the non-primary dll -> assemblies and unservedFamilyImports come from that same key', async () => {
+      // Real fs cannot reach this state (both arches see the same Managed
+      // dir), so the per-arch scan is stubbed: x64 (primary, since steam_api64.dll is considered) finds nothing,
+      // x86 finds one mono assembly with one unserved-family import.
+      gameExePath = join(gameDir, 'Game.exe')
+      // unparseable launch exe -> unknown arch -> every shipped dll is considered
+      writeFileSync(gameExePath, 'not-a-pe')
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      put('steam_api.dll')
+      put('steam_api64.dll')
+      nothingImported()
+      const spy = jest
+        .spyOn(bridgeScan, 'scanManagedSteamApi')
+        .mockImplementation(async (_exe, _bottle, arch) =>
+          arch === 'x86'
+            ? {
+                kind: 'mono',
+                assemblies: 3,
+                unparsed: 0,
+                symbols: ['SteamAPI_ISteamNoSuchFamily_DoThing'],
+                versionStrings: []
+              }
+            : { kind: 'none' }
+        )
+      try {
+        const result = await placeShimForGame('1234', gameExePath, opts())
+
+        expect(result.status).not.toBe('error')
+        const verdict = 'verdict' in result ? result.verdict : undefined
+        expect(verdict?.managedScan).toEqual({
+          kind: 'mono',
+          assemblies: 3,
+          unservedFamilyImports: 1
+        })
+      } finally {
+        spy.mockRestore()
+      }
     })
 
     it('resolves SteamClient from the managed constants alone (no @ambiguous)', async () => {

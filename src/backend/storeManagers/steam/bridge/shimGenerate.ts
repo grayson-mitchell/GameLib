@@ -998,14 +998,21 @@ async function placeShimForGameInner(
         }
       }
 
+      // 53-13 WR-05: one dll key feeds both assemblies and unservedFamilyImports.
+      const managedKey = managedByName.has(primaryName)
+        ? primaryName
+        : [...managedByName.keys()][0]
       const managedChosen =
-        managedByName.get(primaryName) ?? [...managedByName.values()][0]
+        managedKey !== undefined ? managedByName.get(managedKey) : undefined
       const managedScan: SteamBridgeScanVerdict['managedScan'] =
         managedChosen?.kind === 'mono'
           ? {
               kind: 'mono',
               assemblies: managedChosen.assemblies,
-              unservedFamilyImports: unservedManaged.get(primaryName) ?? 0
+              unservedFamilyImports:
+                managedKey !== undefined
+                  ? (unservedManaged.get(managedKey) ?? 0)
+                  : 0
             }
           : managedChosen?.kind === 'il2cpp'
             ? { kind: 'il2cpp', reason: managedChosen.reason }

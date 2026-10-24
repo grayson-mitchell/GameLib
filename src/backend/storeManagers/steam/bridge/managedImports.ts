@@ -10,10 +10,11 @@
  * tables, ModuleRef (0x1A) and ImplMap (0x1C). No managed code is executed
  * and nothing is loaded.
  *
- * It also hosts `effectiveLaunchArch` (D-53-10, amended): an I386 PE with a
- * CLR header is AnyCPU and runs as x64 on a 64-bit host unless
- * COMIMAGE_FLAGS_32BITREQUIRED (0x2) or COMIMAGE_FLAGS_32BITPREFERRED
- * (0x20000) is set.
+ * It also hosts `effectiveLaunchArch` (D-53-10, amended; 53-13 WR-02): an I386
+ * PE with an IL-only CLR header (COMIMAGE_FLAGS_ILONLY, 0x1) is AnyCPU and runs
+ * as x64 on a 64-bit host unless COMIMAGE_FLAGS_32BITREQUIRED (0x2) or
+ * COMIMAGE_FLAGS_32BITPREFERRED (0x20000) is set. Without ILONLY it is
+ * mixed-mode C++/CLI, which loads as a 32-bit process.
  *
  * Zero imports by design (D-51-15): meta/bridgeCensus.ts bundles this module
  * standalone, so the helpers below (PeReader, BoundsError, readExact, u16,
@@ -33,6 +34,8 @@
  */
 export type PeReader = (offset: number, length: number) => Uint8Array | null
 
+/** CLR header flag: pure IL, no native code (AnyCPU is only possible then). */
+const COMIMAGE_FLAGS_ILONLY = 0x1
 /** CLR header flag: the image must run as 32-bit. */
 const COMIMAGE_FLAGS_32BITREQUIRED = 0x2
 /** CLR header flag: the image prefers 32-bit (AnyCPU "Prefer 32-bit"). */
@@ -160,8 +163,9 @@ export function readPeClrHeader(read: PeReader): ClrHeaderInfo | null {
 
 /**
  * D-53-10 (amended): the arch a PE actually launches as. An I386 machine with
- * a CLR header is AnyCPU, which runs as x64 on a 64-bit host unless the CLR
- * flags demand or prefer 32-bit. Every other input keeps its machine arch.
+ * an IL-only CLR header is AnyCPU, which runs as x64 on a 64-bit host unless the
+ * CLR flags demand or prefer 32-bit; an I386 image without ILONLY is mixed-mode
+ * C++/CLI and stays x86 (53-13 WR-02). Every other input keeps its machine arch.
  */
 export function effectiveLaunchArch(
   machine: 'x86' | 'x64' | null,
@@ -169,7 +173,9 @@ export function effectiveLaunchArch(
 ): 'x86' | 'x64' | null {
   if (machine === 'x86' && clrFlags !== null) {
     const bit32 = COMIMAGE_FLAGS_32BITREQUIRED | COMIMAGE_FLAGS_32BITPREFERRED
-    if ((clrFlags & bit32) === 0) return 'x64'
+    if ((clrFlags & COMIMAGE_FLAGS_ILONLY) !== 0 && (clrFlags & bit32) === 0) {
+      return 'x64'
+    }
   }
   return machine
 }

@@ -34,10 +34,20 @@ describe('D-53-10 effectiveLaunchArch', () => {
     expect(effectiveLaunchArch(null, 0x1)).toBe(null)
   })
 
+  it('keeps mixed-mode (no ILONLY) x86 and reads IL-only AnyCPU as x64', () => {
+    expect(effectiveLaunchArch('x86', 0x0)).toBe('x86')
+    expect(effectiveLaunchArch('x86', 0x1)).toBe('x64')
+    expect(effectiveLaunchArch('x86', 0x1 | 0x2)).toBe('x86')
+    expect(effectiveLaunchArch('x86', 0x1 | 0x20000)).toBe('x86')
+    expect(effectiveLaunchArch('x64', 0x0)).toBe('x64')
+    expect(effectiveLaunchArch('x86', null)).toBe('x86')
+  })
+
   it('composes machine and CLR flags over real PE bytes', () => {
     const arch = (o: Parameters<typeof buildManagedPe>[0]) =>
       readPeEffectiveArch(bufferReader(buildManagedPe(o)))
     expect(arch({ machine: 0x14c, clrFlags: 0x1 })).toBe('x64')
+    expect(arch({ machine: 0x14c, clrFlags: 0x0 })).toBe('x86')
     expect(arch({ machine: 0x14c, clrFlags: 0x3 })).toBe('x86')
     expect(arch({ machine: 0x14c, clrFlags: 0x20001 })).toBe('x86')
     expect(arch({ machine: 0x14c, clr: false })).toBe('x86')
