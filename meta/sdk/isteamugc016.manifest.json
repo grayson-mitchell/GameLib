@@ -1,0 +1,1611 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMUGC_INTERFACE_VERSION016",
+  "family": "SteamUGC",
+  "ordinal": 49,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamUGC_v016",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamUGC.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "CreateQueryUserUGCRequest",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "unAccountID",
+          "type": "uint32"
+        },
+        {
+          "name": "eListType",
+          "type": "uint32"
+        },
+        {
+          "name": "eMatchingUGCType",
+          "type": "uint32"
+        },
+        {
+          "name": "eSortOrder",
+          "type": "uint32"
+        },
+        {
+          "name": "nCreatorAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "nConsumerAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "unPage",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "CreateQueryAllUGCRequest_2",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "eQueryType",
+          "type": "uint32"
+        },
+        {
+          "name": "eMatchingeMatchingUGCTypeFileType",
+          "type": "uint32"
+        },
+        {
+          "name": "nCreatorAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "nConsumerAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "pchCursor",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "CreateQueryAllUGCRequest",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "eQueryType",
+          "type": "uint32"
+        },
+        {
+          "name": "eMatchingeMatchingUGCTypeFileType",
+          "type": "uint32"
+        },
+        {
+          "name": "nCreatorAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "nConsumerAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "unPage",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "CreateQueryUGCDetailsRequest",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pvecPublishedFileID",
+          "type": "uint64*"
+        },
+        {
+          "name": "unNumPublishedFileIDs",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "SendQueryUGCRequest",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "GetQueryUGCResult",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "pDetails",
+          "type": "w_SteamUGCDetails_t_128x*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "GetQueryUGCNumTags",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "GetQueryUGCTag",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "indexTag",
+          "type": "uint32"
+        },
+        {
+          "name": "pchValue",
+          "type": "char*"
+        },
+        {
+          "name": "cchValueSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "GetQueryUGCTagDisplayName",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "indexTag",
+          "type": "uint32"
+        },
+        {
+          "name": "pchValue",
+          "type": "char*"
+        },
+        {
+          "name": "cchValueSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "GetQueryUGCPreviewURL",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "pchURL",
+          "type": "char*"
+        },
+        {
+          "name": "cchURLSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GetQueryUGCMetadata",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "pchMetadata",
+          "type": "char*"
+        },
+        {
+          "name": "cchMetadatasize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetQueryUGCChildren",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "pvecPublishedFileID",
+          "type": "uint64*"
+        },
+        {
+          "name": "cMaxEntries",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetQueryUGCStatistic",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "eStatType",
+          "type": "uint32"
+        },
+        {
+          "name": "pStatValue",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "GetQueryUGCNumAdditionalPreviews",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "GetQueryUGCAdditionalPreview",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 36,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "previewIndex",
+          "type": "uint32"
+        },
+        {
+          "name": "pchURLOrVideoID",
+          "type": "char*"
+        },
+        {
+          "name": "cchURLSize",
+          "type": "uint32"
+        },
+        {
+          "name": "pchOriginalFileName",
+          "type": "char*"
+        },
+        {
+          "name": "cchOriginalFileNameSize",
+          "type": "uint32"
+        },
+        {
+          "name": "pPreviewType",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetQueryUGCNumKeyValueTags",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "GetQueryUGCKeyValueTag_2",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "char*"
+        },
+        {
+          "name": "cchValueSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetQueryUGCKeyValueTag",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 32,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "keyValueTagIndex",
+          "type": "uint32"
+        },
+        {
+          "name": "pchKey",
+          "type": "char*"
+        },
+        {
+          "name": "cchKeySize",
+          "type": "uint32"
+        },
+        {
+          "name": "pchValue",
+          "type": "char*"
+        },
+        {
+          "name": "cchValueSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "ReleaseQueryUGCRequest",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "AddRequiredTag",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pTagName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "AddRequiredTagGroup",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pTagGroups",
+          "type": "const w_SteamParamStringArray_t*"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "AddExcludedTag",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pTagName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "SetReturnOnlyIDs",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bReturnOnlyIDs",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "SetReturnKeyValueTags",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bReturnKeyValueTags",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "SetReturnLongDescription",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bReturnLongDescription",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "SetReturnMetadata",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bReturnMetadata",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "SetReturnChildren",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bReturnChildren",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "SetReturnAdditionalPreviews",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bReturnAdditionalPreviews",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "SetReturnTotalOnly",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bReturnTotalOnly",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "SetReturnPlaytimeStats",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "unDays",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "SetLanguage",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchLanguage",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "SetAllowCachedResponse",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "unMaxAgeSeconds",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "SetCloudFileNameFilter",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pMatchCloudFileName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "SetMatchAnyTag",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bMatchAnyTag",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "SetSearchText",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pSearchText",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "SetRankedByTrendDays",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "unDays",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "SetTimeCreatedDateRange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "rtStart",
+          "type": "uint32"
+        },
+        {
+          "name": "rtEnd",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "SetTimeUpdatedDateRange",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "rtStart",
+          "type": "uint32"
+        },
+        {
+          "name": "rtEnd",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 38,
+      "name": "AddRequiredKeyValueTag",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 39,
+      "name": "RequestUGCDetails",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "unMaxAgeSeconds",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 40,
+      "name": "CreateItem",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nConsumerAppId",
+          "type": "uint32"
+        },
+        {
+          "name": "eFileType",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 41,
+      "name": "StartItemUpdate",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nConsumerAppId",
+          "type": "uint32"
+        },
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 42,
+      "name": "SetItemTitle",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchTitle",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 43,
+      "name": "SetItemDescription",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchDescription",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 44,
+      "name": "SetItemUpdateLanguage",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchLanguage",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 45,
+      "name": "SetItemMetadata",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchMetaData",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 46,
+      "name": "SetItemVisibility",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "eVisibility",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 47,
+      "name": "SetItemTags",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pTags",
+          "type": "const w_SteamParamStringArray_t*"
+        }
+      ]
+    },
+    {
+      "slot": 48,
+      "name": "SetItemContent",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pszContentFolder",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 49,
+      "name": "SetItemPreview",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pszPreviewFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 50,
+      "name": "SetAllowLegacyUpload",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "bAllowLegacyUpload",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 51,
+      "name": "RemoveAllItemKeyValueTags",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 52,
+      "name": "RemoveItemKeyValueTags",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 53,
+      "name": "AddItemKeyValueTag",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 54,
+      "name": "AddItemPreviewFile",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pszPreviewFile",
+          "type": "const char*"
+        },
+        {
+          "name": "type",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 55,
+      "name": "AddItemPreviewVideo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pszVideoID",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 56,
+      "name": "UpdateItemPreviewFile",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "pszPreviewFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 57,
+      "name": "UpdateItemPreviewVideo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        },
+        {
+          "name": "pszVideoID",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 58,
+      "name": "RemoveItemPreview",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "index",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 59,
+      "name": "SubmitItemUpdate",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchChangeNote",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 60,
+      "name": "GetItemUpdateProgress",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "punBytesProcessed",
+          "type": "uint64*"
+        },
+        {
+          "name": "punBytesTotal",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 61,
+      "name": "SetUserItemVote",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "bVoteUp",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 62,
+      "name": "GetUserItemVote",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 63,
+      "name": "AddItemToFavorites",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nAppId",
+          "type": "uint32"
+        },
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 64,
+      "name": "RemoveItemFromFavorites",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nAppId",
+          "type": "uint32"
+        },
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 65,
+      "name": "SubscribeItem",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 66,
+      "name": "UnsubscribeItem",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 67,
+      "name": "GetNumSubscribedItems",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 68,
+      "name": "GetSubscribedItems",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pvecPublishedFileID",
+          "type": "uint64*"
+        },
+        {
+          "name": "cMaxEntries",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 69,
+      "name": "GetItemState",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 70,
+      "name": "GetItemInstallInfo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "punSizeOnDisk",
+          "type": "uint64*"
+        },
+        {
+          "name": "pchFolder",
+          "type": "char*"
+        },
+        {
+          "name": "cchFolderSize",
+          "type": "uint32"
+        },
+        {
+          "name": "punTimeStamp",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 71,
+      "name": "GetItemDownloadInfo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "punBytesDownloaded",
+          "type": "uint64*"
+        },
+        {
+          "name": "punBytesTotal",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 72,
+      "name": "DownloadItem",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "bHighPriority",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 73,
+      "name": "BInitWorkshopForGameServer",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unWorkshopDepotID",
+          "type": "uint32"
+        },
+        {
+          "name": "pszFolder",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 74,
+      "name": "SuspendDownloads",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bSuspend",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 75,
+      "name": "StartPlaytimeTracking",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pvecPublishedFileID",
+          "type": "uint64*"
+        },
+        {
+          "name": "unNumPublishedFileIDs",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 76,
+      "name": "StopPlaytimeTracking",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pvecPublishedFileID",
+          "type": "uint64*"
+        },
+        {
+          "name": "unNumPublishedFileIDs",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 77,
+      "name": "StopPlaytimeTrackingForAllItems",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 78,
+      "name": "AddDependency",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "nParentPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "nChildPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 79,
+      "name": "RemoveDependency",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "nParentPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "nChildPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 80,
+      "name": "AddAppDependency",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 81,
+      "name": "RemoveAppDependency",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        },
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 82,
+      "name": "GetAppDependencies",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 83,
+      "name": "DeleteItem",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "nPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 84,
+      "name": "ShowWorkshopEULA",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 85,
+      "name": "GetWorkshopEULAStatus",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    }
+  ]
+}

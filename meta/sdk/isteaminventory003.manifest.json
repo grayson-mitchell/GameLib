@@ -1,0 +1,758 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMINVENTORY_INTERFACE_V003",
+  "family": "SteamInventory",
+  "ordinal": 53,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_STEAMINVENTORY_INTERFACE_V003",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamInventory.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetResultStatus",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "resultHandle",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "GetResultItems",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "resultHandle",
+          "type": "int32"
+        },
+        {
+          "name": "pOutItemsArray",
+          "type": "SteamItemDetails_t*"
+        },
+        {
+          "name": "punOutItemsArraySize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "GetResultItemProperty",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "resultHandle",
+          "type": "int32"
+        },
+        {
+          "name": "unItemIndex",
+          "type": "uint32"
+        },
+        {
+          "name": "pchPropertyName",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValueBuffer",
+          "type": "char*"
+        },
+        {
+          "name": "punValueBufferSizeOut",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "GetResultTimestamp",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "resultHandle",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "CheckResultSteamID",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "resultHandle",
+          "type": "int32"
+        },
+        {
+          "name": "steamIDExpected",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "DestroyResult",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "resultHandle",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "GetAllItems",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "GetItemsByID",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "pInstanceIDs",
+          "type": "const uint64_t*"
+        },
+        {
+          "name": "unCountInstanceIDs",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "SerializeResult",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "resultHandle",
+          "type": "int32"
+        },
+        {
+          "name": "pOutBuffer",
+          "type": "void*"
+        },
+        {
+          "name": "punOutBufferSize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "DeserializeResult",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pOutResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "pBuffer",
+          "type": "const void*"
+        },
+        {
+          "name": "unBufferSize",
+          "type": "uint32"
+        },
+        {
+          "name": "bRESERVED_MUST_BE_FALSE",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GenerateItems",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "pArrayItemDefs",
+          "type": "const int32_t*"
+        },
+        {
+          "name": "punArrayQuantity",
+          "type": "const uint32_t*"
+        },
+        {
+          "name": "unArrayLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GrantPromoItems",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "AddPromoItem",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "itemDef",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "AddPromoItems",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "pArrayItemDefs",
+          "type": "const int32_t*"
+        },
+        {
+          "name": "unArrayLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "ConsumeItem",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "itemConsume",
+          "type": "uint64"
+        },
+        {
+          "name": "unQuantity",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "ExchangeItems",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "pArrayGenerate",
+          "type": "const int32_t*"
+        },
+        {
+          "name": "punArrayGenerateQuantity",
+          "type": "const uint32_t*"
+        },
+        {
+          "name": "unArrayGenerateLength",
+          "type": "uint32"
+        },
+        {
+          "name": "pArrayDestroy",
+          "type": "const uint64_t*"
+        },
+        {
+          "name": "punArrayDestroyQuantity",
+          "type": "const uint32_t*"
+        },
+        {
+          "name": "unArrayDestroyLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "TransferItemQuantity",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "itemIdSource",
+          "type": "uint64"
+        },
+        {
+          "name": "unQuantity",
+          "type": "uint32"
+        },
+        {
+          "name": "itemIdDest",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "SendItemDropHeartbeat",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 18,
+      "name": "TriggerItemDrop",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "dropListDefinition",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "TradeItems",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 36,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "steamIDTradePartner",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pArrayGive",
+          "type": "const uint64_t*"
+        },
+        {
+          "name": "pArrayGiveQuantity",
+          "type": "const uint32_t*"
+        },
+        {
+          "name": "nArrayGiveLength",
+          "type": "uint32"
+        },
+        {
+          "name": "pArrayGet",
+          "type": "const uint64_t*"
+        },
+        {
+          "name": "pArrayGetQuantity",
+          "type": "const uint32_t*"
+        },
+        {
+          "name": "nArrayGetLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "LoadItemDefinitions",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 21,
+      "name": "GetItemDefinitionIDs",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pItemDefIDs",
+          "type": "int32*"
+        },
+        {
+          "name": "punItemDefIDsArraySize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetItemDefinitionProperty",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "iDefinition",
+          "type": "int32"
+        },
+        {
+          "name": "pchPropertyName",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValueBuffer",
+          "type": "char*"
+        },
+        {
+          "name": "punValueBufferSizeOut",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "RequestEligiblePromoItemDefinitionsIDs",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "GetEligiblePromoItemDefinitionIDs",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pItemDefIDs",
+          "type": "int32*"
+        },
+        {
+          "name": "punItemDefIDsArraySize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "StartPurchase",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pArrayItemDefs",
+          "type": "const int32_t*"
+        },
+        {
+          "name": "punArrayQuantity",
+          "type": "const uint32_t*"
+        },
+        {
+          "name": "unArrayLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "RequestPrices",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 27,
+      "name": "GetNumItemsWithPrices",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 28,
+      "name": "GetItemsWithPrices",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pArrayItemDefs",
+          "type": "int32*"
+        },
+        {
+          "name": "pCurrentPrices",
+          "type": "uint64*"
+        },
+        {
+          "name": "pBasePrices",
+          "type": "uint64*"
+        },
+        {
+          "name": "unArrayLength",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "GetItemPrice",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "iDefinition",
+          "type": "int32"
+        },
+        {
+          "name": "pCurrentPrice",
+          "type": "uint64*"
+        },
+        {
+          "name": "pBasePrice",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "StartUpdateProperties",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 31,
+      "name": "RemoveProperty",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "nItemID",
+          "type": "uint64"
+        },
+        {
+          "name": "pchPropertyName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "SetProperty_4",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "nItemID",
+          "type": "uint64"
+        },
+        {
+          "name": "pchPropertyName",
+          "type": "const char*"
+        },
+        {
+          "name": "flValue",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "SetProperty_3",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "nItemID",
+          "type": "uint64"
+        },
+        {
+          "name": "pchPropertyName",
+          "type": "const char*"
+        },
+        {
+          "name": "nValue",
+          "type": "int64"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "SetProperty_2",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "nItemID",
+          "type": "uint64"
+        },
+        {
+          "name": "pchPropertyName",
+          "type": "const char*"
+        },
+        {
+          "name": "bValue",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "SetProperty",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "nItemID",
+          "type": "uint64"
+        },
+        {
+          "name": "pchPropertyName",
+          "type": "const char*"
+        },
+        {
+          "name": "pchPropertyValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "SubmitUpdateProperties",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "handle",
+          "type": "uint64"
+        },
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "InspectItem",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pResultHandle",
+          "type": "int32*"
+        },
+        {
+          "name": "pchItemToken",
+          "type": "const char*"
+        }
+      ]
+    }
+  ]
+}

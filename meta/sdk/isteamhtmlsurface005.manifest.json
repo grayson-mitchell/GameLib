@@ -1,0 +1,668 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMHTMLSURFACE_INTERFACE_VERSION_005",
+  "family": "SteamHTMLSurface",
+  "ordinal": 52,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_STEAMHTMLSURFACE_INTERFACE_VERSION_005",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamHTMLSurface.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "destructor",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "Init",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 2,
+      "name": "Shutdown",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 3,
+      "name": "CreateBrowser",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchUserAgent",
+          "type": "const char*"
+        },
+        {
+          "name": "pchUserCSS",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "RemoveBrowser",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "LoadURL",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "pchURL",
+          "type": "const char*"
+        },
+        {
+          "name": "pchPostData",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "SetSize",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "unWidth",
+          "type": "uint32"
+        },
+        {
+          "name": "unHeight",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "StopLoad",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "Reload",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "GoBack",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GoForward",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "AddHeader",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "ExecuteJavascript",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "pchScript",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "MouseUp",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "eMouseButton",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "MouseDown",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "eMouseButton",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "MouseDoubleClick",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "eMouseButton",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "MouseMove",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "x",
+          "type": "int32"
+        },
+        {
+          "name": "y",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "MouseWheel",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "nDelta",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "KeyDown",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "nNativeKeyCode",
+          "type": "uint32"
+        },
+        {
+          "name": "eHTMLKeyModifiers",
+          "type": "uint32"
+        },
+        {
+          "name": "bIsSystemKey",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "KeyUp",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "nNativeKeyCode",
+          "type": "uint32"
+        },
+        {
+          "name": "eHTMLKeyModifiers",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "KeyChar",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "cUnicodeChar",
+          "type": "uint32"
+        },
+        {
+          "name": "eHTMLKeyModifiers",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "SetHorizontalScroll",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "nAbsolutePixelScroll",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "SetVerticalScroll",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "nAbsolutePixelScroll",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "SetKeyFocus",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "bHasKeyFocus",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "ViewSource",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "CopyToClipboard",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 26,
+      "name": "PasteFromClipboard",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "Find",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "pchSearchStr",
+          "type": "const char*"
+        },
+        {
+          "name": "bCurrentlyInFind",
+          "type": "bool"
+        },
+        {
+          "name": "bReverse",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "StopFind",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "GetLinkAtPosition",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "x",
+          "type": "int32"
+        },
+        {
+          "name": "y",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "SetCookie",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "pchHostname",
+          "type": "const char*"
+        },
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pchValue",
+          "type": "const char*"
+        },
+        {
+          "name": "pchPath",
+          "type": "const char*"
+        },
+        {
+          "name": "nExpires",
+          "type": "uint32"
+        },
+        {
+          "name": "bSecure",
+          "type": "bool"
+        },
+        {
+          "name": "bHTTPOnly",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "SetPageScaleFactor",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "flZoom",
+          "type": "float"
+        },
+        {
+          "name": "nPointX",
+          "type": "int32"
+        },
+        {
+          "name": "nPointY",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "SetBackgroundMode",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "bBackgroundMode",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "SetDPIScalingFactor",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "flDPIScaling",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "OpenDeveloperTools",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "AllowStartRequest",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "bAllowed",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "JSDialogResponse",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "bResult",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "FileLoadDialogResponse",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unBrowserHandle",
+          "type": "uint32"
+        },
+        {
+          "name": "pchSelectedFiles",
+          "type": "const char**"
+        }
+      ]
+    }
+  ]
+}
