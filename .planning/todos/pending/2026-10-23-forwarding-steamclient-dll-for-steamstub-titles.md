@@ -130,3 +130,14 @@ Stays pending: items 17-19 skipped (Gap 5 not closable within the locked boundar
 - Item 16 (pass): option-other, no code change; next step `/gsd-plan-phase 52 --gaps`.
 - Items 17-19 (skipped): no Grim Dawn launch, trace or hygiene read.
 - Item 20 (pass): ELEX HELLO present, FWD 0, `[bridge-steamstub]` 0, loading screen baseline, not bridge-verified.
+
+## Re-gate 3 evidence (52-25..52-28), 2026-10-24
+Stays pending: items 23 and 24 failed.
+- Item 21 (pass): static + relay diagnosis; the stub reads the whole forwarder file (52-25-DIAGNOSIS.md).
+- Item 22 (pass): option-versioninfo, GameLib VS_VERSIONINFO on the forwarder (commit 979c3b0e3).
+- Item 23 (issue): Application Load Error persists, game did not launch, runtime 37 s; HELLO and 2 FWD lines present. In-Game: no, cleared: no.
+- Item 24 (issue): `[S_API] Loaded ... OK` present but IsSteamRunning 1, MSGBOX 1, not alive at 90 s. Not bridge-verified.
+- Item 25 (pass): bottle hygiene clean.
+- Item 26 (skipped): change limited to the forwarder (steamstub path only).
+Next step: `/gsd-plan-phase 52 --gaps`.
+

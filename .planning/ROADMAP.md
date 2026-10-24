@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 27/28 plans executed
+**Plans:** 28/28 plans complete
 
 Plans:
 
@@ -372,7 +372,7 @@ Plans:
 - [x] 52-25-PLAN.md — Gap 5 diagnosis 3: static G/F/E file comparison (signature, CheckSum, version resource, exports), re-measured export tables, public-source claims, relay diag3 for trust/hash APIs and the full Load Error text; check classification, no fix (UAT item 21)
 - [x] 52-26-PLAN.md — Decision checkpoint over boundary-reviewed options from the 52-25 classification, then implement exactly one (or record not closable within the boundary) (item 22)
 - [x] 52-27-PLAN.md — Strict packaged re-gate 3: Grim Dawn launch, cx-log strict Steam-init trace, hygiene (items 23-25)
-- [ ] 52-28-PLAN.md — Conditional ELEX no-regression (item 26), finalize UAT, deferred-items and todos
+- [x] 52-28-PLAN.md — Conditional ELEX no-regression (item 26), finalize UAT, deferred-items and todos
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
 

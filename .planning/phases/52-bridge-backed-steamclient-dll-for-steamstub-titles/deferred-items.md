@@ -28,6 +28,7 @@
    (`/gsd-plan-phase 52 --gaps`) to establish what the stub checks in the forwarder bytes. 52-23 item 19
    hygiene delta: none.
    52-26 (item 22): option-versioninfo, implemented (GameLib-string VS_VERSIONINFO on the forwarder; acceptance by the stub unverified until 52-27).
+   2026-10-24 re-gate 3 (52-27/52-28): NOT resolved. Application Load Error persists after option-versioninfo (item 23 issue), IsSteamRunning 1 / MSGBOX 1 / not alive at 90 s (item 24 issue), hygiene clean (item 25 pass), ELEX item 26 skipped (forwarder-only change). Next step: `/gsd-plan-phase 52 --gaps`.
 
 ## Deferred from the 52 code review (recorded by 52-16)
 

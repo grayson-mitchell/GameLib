@@ -1,5 +1,5 @@
 ---
-status: testing
+status: diagnosed
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -12,7 +12,7 @@ source:
   - 52-08-SUMMARY.md
   - 52-09-SUMMARY.md
 started: 2026-10-24T01:41:00Z
-updated: 2026-10-24T06:30:00Z
+updated: 2026-10-24T07:40:00Z
 ---
 
 Authored by plan 52-10, run by 52-11 (discovery rounds, items 1-5) and 52-12 (done-when, items 6-8).
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-item 26: re-gate 3 ELEX no-regression (conditional); scored by 52-28
+complete: re-gate 3 items 23-26 scored by 52-27/52-28
 
 ## Tests
 
@@ -277,7 +277,7 @@ result: pass — after `wineserver -k` of the product bottle, read-only (2026-10
 
 ### 26. Re-gate 3 — ELEX (411300) no-regression after 52-26 (conditional)
 expected: run only if 52-26 changed the shim, helper or generated sources (`git diff --name-only` of 52-26's commits touches meta/gen_vtables.ts, native/steam-bridge/generated or native/steam-bridge/helper). Otherwise `skipped — change limited to the forwarder, which is placed only on the drmWrapper=steamstub path`. When run: everything item 20 expected (HELLO shim attached appid=411300, `[bridge-steamstub]` 0, FWD 0, loading-screen baseline, no error dialog), Friends scored per item 20's outside-phase-52 rule, bridge-verified recorded separately.
-result: pending
+result: skipped — change limited to the forwarder, which is placed only on the drmWrapper=steamstub path. Condition computed from 52-26's commits (979c3b0e3, decision cad85dd11, opened 0c30ae234) via `git show --name-only`: only native/steam-bridge/steamclient/steamclient_fwd.rc, meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts (plus this UAT file); none under meta/gen_vtables.ts, native/steam-bridge/generated/ or native/steam-bridge/helper/. No ELEX run, no operator input. Bridge-verified: no (ELEX never bridge-verified).
 
 ## Structural Reachability Review
 
@@ -327,11 +327,11 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 22
-passed: 10
-issues: 6
+total: 26
+passed: 11
+issues: 8
 pending: 1
-skipped: 5
+skipped: 6
 blocked: 0
 
 ## Gaps
@@ -384,3 +384,14 @@ blocked: 0
   reason: "Gap 5 not closable within the locked boundary (item 16): no item 17 launch whose hygiene could be read; item 16 recorded no hygiene delta."
   evidence: "52-UAT items 11, 16, 19."
   fix_direction: "Gap 5 not closable within the locked boundary (item 16); re-read hygiene after any future Gap 5 change launches."
+
+- truth: "A SteamStub title (Grim Dawn 219990) launched from GameLib after 52-26 reaches its main menu with In-Game shown and cleared (item 23, the done-when)"
+  status: failed
+  reason: "Application Load Error persists with the forwarder carrying a GameLib VS_VERSIONINFO resource: the forwarder was placed and loaded (HELLO, 2 FWD lines) yet the game did not launch and ran 37 s. option-versioninfo did not satisfy the stub. The dialog text was not recoverable, so it cannot be compared with 52-25 R1. In-Game: no, cleared: no."
+  evidence: "52-UAT item 23; session /tmp/gamelib-gate-52t-20261024T070522Z, gamelib-regate3-1.log lines 106-128; 52-27-SUMMARY.md."
+  fix_direction: "Compare the new dialog text with 52-25 R1 (capture the text next time), then run /gsd-plan-phase 52 --gaps. Mac Steam presence for the bridge run is a separate done-when gap once the game launches."
+- truth: "The re-gate 3 cx-log trace of Grim Dawn shows a clean strict Steam-init check, MSGBOX 0, alive at 90 s (item 24)"
+  status: failed
+  reason: "A game Steam-init log exists and the Loaded line is present (not unverified), but IsSteamRunning 1 (`did not locate a running instance of Steam`), MSGBOX 1, and the game process was not alive at 90 s. Bridge-verified is NOT achieved."
+  evidence: "52-UAT item 24; session /tmp/gamelib-gate-52t-20261024T070522Z (ROUND=regate3 MODE=trace WATCH=90)."
+  fix_direction: "Run /gsd-plan-phase 52 --gaps with the remaining init evidence (IsSteamRunning still reports no Steam instance; ActiveProcess pid is absent)."
