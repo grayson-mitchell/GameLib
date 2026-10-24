@@ -470,7 +470,7 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 13/16 plans executed
+**Plans:** 14/16 plans executed
 
 Plans:
 **Wave 1**
@@ -511,7 +511,7 @@ Plans:
 
 **Gap wave 3** *(blocked on 53-12)*
 
-- [ ] 53-14-PLAN.md — forward GetAuthSessionTicket/CancelAuthTicket; Abiotic Factor live re-test (operator checkpoint)
+- [x] 53-14-PLAN.md — forward GetAuthSessionTicket/CancelAuthTicket; Abiotic Factor live re-test (operator checkpoint)
 
 **Gap wave 4** *(blocked on 53-14)*
 
