@@ -1,144 +1,121 @@
 ---
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
-verified: 2026-10-24T03:30:00Z
+verified: 2026-10-24T05:10:00Z
 status: gaps_found
-score: 3/7 must-haves verified
+score: 5/7 must-haves verified
 overrides_applied: 0
-re_verification: null
+re_verification:
+  previous_status: gaps_found
+  previous_score: 3/7
+  gaps_closed:
+    - "Withheld Grim Dawn launch (j4l guard preempting the forwarder): closed by 52-13 (x64 serves SteamUser023/SteamNetworking006/RemoteStorage016) and 52-15"
+    - "Honest SteamStub notice on the withheld path (drmWrapper stamped on withheld): closed by 52-15/52-16"
+    - "CR-01 null-object regression for ordinary x64 GetISteam* lookups: closed by 52-14, live-checked on ELEX (no FWD, no steamstub path)"
+    - "Withheld-state honesty (false 'game's own steam_api' log, stale shim): closed for the restorable case by 52-15; residual WR-11"
+    - "WR-01/02/03/04: closed by 52-16"
+  gaps_remaining:
+    - "Done-when: Grim Dawn reaches main menu with a clean Steam-init log (now UAT Gap 5)"
+    - "Mac Steam Friends sign-out on ELEX launch (UAT Gap 6, cause unknown)"
+    - "WR-09: non-lookup ISteamClient wire methods still forward for every x64 title"
+    - "WR-11: withhold with no steam_api file on disk logs a false line"
+  regressions: []
 gaps:
   - truth: "Done-when: Grim Dawn (219990) launches from GameLib through its per-game bridge bottle, gets past SteamStub (no steam://run), reaches its main menu, and Mac Steam shows it In-Game"
     status: failed
-    reason: "Live gate FAILED on the packaged build, three Play attempts. placeShimForGame returned status 'withheld' (quick 261024-j4l guard) every time, so no forwarder, no registry values, no helper, direct launch, ~2 s exit, no notice. Main menu and In-Game never observed. The only forwarded run (52-11 round 1) used the scratch harness, which bypasses placeShimForGame, and it never reached a main menu."
+    reason: "Re-gate items 9 and 10 on the packaged build. The product path now does everything planned (no withhold, drmWrapper=steamstub, forwarder placed, HKCU SteamClientDll64 + Universe written, HELLO, FWD CreateInterface SteamClient017/014 native=present, steam://run count 0), but Grim Dawn shows Application Load Error 3 (operator, twice) and the game's Steam init logs 'SteamAPI_IsSteamRunning() did not locate a running instance of Steam' (round-regate.cxlog:23313) after two absent 'pid' reads (:23303, :23311). Main menu never observed. Strict rule: no clean game Steam-init log means not bridge-verified. The helper log shows nothing after the two FWD lines, so the stub rejects before calling any method on the returned interface (WR-10)."
     artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/shimGenerate.ts"
-        issue: "Lines ~1123 and ~1359: the withhold guard runs before any SteamStub awareness; findUnservableInterfaceVersions uses SHIM64_SERVED_INTERFACE_VERSIONS, which has no SteamUser023, SteamNetworking006 or STEAMREMOTESTORAGE_INTERFACE_VERSION016."
-      - path: "src/backend/storeManagers/steam/games.ts"
-        issue: "Lines ~2879-2886: the 'withheld' branch launches directly with no forwarder path."
+      - path: "native/steam-bridge/steamclient/steamclient_fwd.c"
+        issue: "Exports CreateInterface only (line ~46); the stub looks up Steam_ReleaseThreadLocalMemory (not found, in Grim Dawn.exe per trace, so the need for Steam_* exports is a lead, not proven)."
+      - path: "src/backend/storeManagers/steam/bridge/steamClientSetup.ts"
+        issue: "No ActiveProcess pid value is written (decision 1). Stub reads pid twice, then logs IsSteamRunning warning. Operator chose option-c on item 13: investigate before any pid writer."
     missing:
-      - "Decide and implement ONE of: (a) serve SteamUser023, SteamNetworking006 and STEAMREMOTESTORAGE_INTERFACE_VERSION016 on x64 through the inventory pipeline (extract-proton-inventory --versions, helperInterface, arches x64, gen-vtables, coverage pins; precedent e9519488d / 8628ea5a7); or (b) make the withhold guard SteamStub-aware: when a .bind section is present, do not withhold and take the bridge-steamstub forwarder path. (a) is the boundary-consistent choice because it removes the cause; (b) risks a title that starts but loses its Steam interfaces."
-      - "Re-run the live gate items 6-8 on the packaged build against the product bottle. Strict rule: HELLO plus a clean game Steam-init log (no 'SteamAPI_IsSteamRunning() did not locate a running instance of Steam'), operator-confirmed main menu, Mac Steam In-Game. In-Game alone never counts."
-      - "Resolve the 'IsSteamRunning did not locate a running instance' warning seen at round-1.cxlog:6226. The stub queried ActiveProcess 'pid' twice (absent). Decision 1 (no pid writer) was a provisional operator call made before the warning was weighed against the strict rule; revisit it at the re-gate."
-  - truth: "A SteamStub title gets an honest notice instead of a silent exit (Scope 4)"
+      - "Diagnosis plan first: trace with +relay on GetProcAddress, GetModuleFileNameW, OpenProcess, CreateFileW/ReadFile between the second CreateInterface and the MessageBox to learn what the stub checks (pid existence, OpenProcess, process name, Steam_* exports, module path)."
+      - "Record a genuine steamclient64.dll export table next to the forwarder's."
+      - "Then ONE boundary-reviewed change (pid writer needing its own plan and boundary review, and/or Steam_* flat exports in the forwarder forwarding to the native client). Boundary: no stand-in answers."
+      - "Re-run the packaged live gate under the strict rule: HELLO plus clean game Steam-init log, operator-confirmed main menu, In-Game recorded but not counted."
+  - truth: "Launching a non-SteamStub x64 bridge title (ELEX 411300) leaves the user's Mac Steam session (Friends) signed in"
     status: failed
-    reason: "withDrmWrapper (shimGenerate.ts:688-695) returns early for status 'withheld', so drmWrapper is never stamped. games.ts logs/notifies only for drmWrapper results, so the withheld path emits no notice. Operator saw 'failing silently'. This is the exact user-visible symptom the phase exists to remove."
+    reason: "UAT item 12 / Gap 6: the operator checked Friends signed in before Play and signed out afterwards. ELEX had no FWD lines and no steamstub path, so phase-52 forwarding code did not run for it. Cause unknown; candidates are GameLib's pre-existing steam-user logOn (user.ts:663) and the helper's SteamAPI_Init against the Mac client. Not attributed to phase 52, but the 'no regression vs baseline' claim cannot be shown, and the baseline never recorded it."
     artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/shimGenerate.ts"
-        issue: "withDrmWrapper skips 'withheld'."
-      - path: "src/backend/storeManagers/steam/games.ts"
-        issue: "withheld branch has no steamstub-unforwarded notice."
+      - path: "src/backend/storeManagers/steam/user.ts"
+        issue: "logOn({refreshToken}) on Play at :663 (pre-existing, outside phase 52 scope); not proven causal."
     missing:
-      - "Detect .bind independently of shim verdict; carry drmWrapper='steamstub' on 'withheld' results (and withheld verdict), and emit the steamstub-unforwarded notice on that branch."
-  - truth: "Forwarding SteamClient017/014 does not regress ordinary x64 bridge titles (CR-01)"
-    status: failed
-    reason: "Confirmed in generated source: native/steam-bridge/generated/steam_api_shim.c vt_SteamClient017_GetISteamMatchmaking (and siblings) return NULL on a transport failure, on native 'present == 0', and on resolve_iface_by_exact_version miss. The pre-phase behaviour fell back to &g_x64_null_object_instance. Every x64 bridge title that builds a context through SteamClient()->GetISteam* (ELEX 411300 was measured working on the null-object path) can now see NULL. No test or live run exercises ELEX or any non-SteamStub x64 title after the flip."
+      - "Attribution experiment per UAT Gap 6: repeat with Friends state checked before and after (a) Play with bridge disabled, (b) steam-user logon alone, (c) helper alone, on a non-ELEX title. Do not guess a cause first."
+  - truth: "Forwarding SteamClient017/014 does not regress ordinary x64 bridge titles (non-lookup ISteamClient methods)"
+    status: partial
+    reason: "CR-01 is fixed for the GetISteam* lookups (gated on g_bridge_steamstub_path_active, generated steam_api_shim.c:5432 ff.). Review WR-09: CreateSteamPipe, BReleaseSteamPipe, ConnectToGlobalUser, CreateLocalUser, ReleaseUser, RunFrame, GetIPCCallCount, BShutdownIfAllPipesClosed still bridge_transact to the helper's live native ISteamClient for every x64 title (pre-phase they were local stubs). A title calling ReleaseUser/BReleaseSteamPipe with the shim's 1/1 handles can kill the helper's session. Unobserved so far (ELEX logged no FWD)."
     artifacts:
       - path: "meta/gen_vtables.ts"
-        issue: "emitSteamClientForwardedLookup (~1039-1065) has no null-object fallback for the non-SteamStub caller."
-      - path: "src/backend/storeManagers/steam/bridge/shimCoverage.ts"
-        issue: "Lines 300-301 flip SteamClient017/014 to 'wire' for all x64 titles."
+        issue: "Only the lookup branch reads the steamstub flag (~1115-1121); wire emitter for SteamClient-family non-lookups ungated."
     missing:
-      - "Restore the null-object fallback for ordinary GetISteam* lookups (forward only on the GameLibBridge_CreateInterface / SteamStub path, or return the local/null object when native is absent or the exact version is not served), regenerate, add a generated-source pin test for the fallback, then re-run an ELEX (411300) bridge-verified check."
-  - truth: "The launch log and bottle state accurately reflect a withheld launch"
-    status: failed
-    reason: "Withheld message claims 'launching with the game's own steam_api', but with no .gamelib-orig backup the stale 223744-byte GameLib shim stays in place (SHIM64 is 242688), a helper-less shim. UAT Gaps 3 and 4."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/shimGenerate.ts"
-        issue: "withhold() (~845-885): restoreOriginalIfBackedUp is a no-op when no backup exists, and the warning text is unconditional."
-    missing:
-      - "Log the true state when no original exists, and either refuse to launch with guidance to verify files in Steam or refresh the shim."
-  - truth: "Setup reports success only when the registry values were actually written (WR-02/03/04, goal-relevant)"
+      - "Gate the eight non-lookup SteamClient wire methods (c17 and c14) on g_bridge_steamstub_path_active returning the pre-phase stub value; regenerate; extend the assertGated test to every c17/c14 wire method; widen deferred-items 52-16 #3 revisit condition to any x64 bridge title."
+  - truth: "The launch log accurately reflects withheld state when no game steam_api exists (WR-11)"
     status: partial
-    reason: "Review warnings that make the forwarder path report 'placed' (and so suppress the notice) when forwarding cannot work, or that leave stale state. Not reached in the live gate because the withhold guard fired first, so they are unexercised."
+    reason: "shimGenerate.ts:1433-1449: with a static import and no dll on disk, shimTargets is [] so [].every() is true and withhold() logs 'launching with the game's own steam_api' then launches an exe that fails on a missing DLL. Same false-log class as old UAT Gap 3, now narrowed to the no-file case."
     artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/steamClientSetup.ts"
-        issue: "WR-02 (:197): res.code === undefined (wine never spawned, 'Invalid wine') counts as success; fix is res.code !== 0 -> error."
-      - path: "src/backend/storeManagers/steam/games.ts"
-        issue: "WR-03 (:2969): arch falls back to 'x64' when verdict and persisted scan are absent, so an x86 .bind title is 'placed' and the x86-deferred notice never fires; read the PE machine type instead."
       - path: "src/backend/storeManagers/steam/bridge/shimGenerate.ts"
-        issue: "WR-04 (:701, games.ts:2842): fresh 'no .bind' result cannot clear a persisted drmWrapper on the already-placed path; report an explicit fresh value."
+        issue: "withholdIfRestorable called when targetExists is false."
     missing:
-      - "Fix WR-02, WR-03, WR-04 with tests. WR-01 (wait:true blocking on wineserver --wait with no timeout, twice per launch) can hang Play and should be fixed in the same plan; WR-05..08 are hardening and can be deferred."
+      - "Take the refresh/placed-miss path when targetExists is false; add the test 'static import, no dll on disk, unservable version -> placed-miss, no own-steam_api warning'."
 deferred: []
 human_verification: []
 ---
 
-# Phase 52: Bridge-backed steamclient.dll for SteamStub titles Verification Report
+# Phase 52: Bridge-backed steamclient.dll for SteamStub titles Verification Report (re-verification)
 
-**Phase Goal:** Steam games wrapped with SteamStub run through the native Steam bridge in their own per-game bottle. The stub's launch check is answered by the genuine signed-in Mac Steam client, with no Windows Steam client in the bottle and the exe unmodified. Done-when: Grim Dawn (219990) launches from GameLib, gets past SteamStub (no `steam://run`), reaches its main menu, Mac Steam shows it In-Game.
+**Phase Goal:** Steam games wrapped with SteamStub run through the native Steam bridge in their own per-game bottle; the stub's launch check is answered by the genuine signed-in Mac Steam client, no Windows Steam client in the bottle, exe unmodified. Done-when: Grim Dawn (219990) launches from GameLib, gets past SteamStub (no `steam://run`), reaches main menu, Mac Steam shows In-Game.
 **Verified:** 2026-10-24
 **Status:** gaps_found
-**Re-verification:** No, initial verification
-**Requirements:** none declared for this phase; `.planning/REQUIREMENTS.md` does not exist (ROADMAP says `Requirements: TBD`). Requirements coverage is not applicable; ROADMAP Scopes 1-5 and done-when were used as the contract.
+**Re-verification:** Yes, after gap closure plans 52-13..52-18
+**Requirements:** none declared; `.planning/REQUIREMENTS.md` does not exist and ROADMAP says `Requirements: TBD`. The P52-SCOPE-* / P52-DONE IDs in plans were accounted for against ROADMAP Scopes 1-5 and done-when, which were used as the contract.
 
-## Goal Achievement
+## Observable Truths (re-scored)
 
-### Observable Truths
+| # | Truth | Prior | Now | Evidence |
+|---|---|---|---|---|
+| 1 | Scope 1: SteamClient017/014 forward to native ISteamClient; GetISteam* forwarded | VERIFIED + CR-01 risk | VERIFIED for the SteamStub path; PARTIAL as to side effects | Re-gate item 9: `FWD CreateInterface SteamClient017/014 native=present` through the product path. Lookups gated (steam_api_shim.c:606 flag, :5432 ff.). WR-09 leaves non-lookup methods ungated for every x64 title. |
+| 2 | Scope 2: zig-built steamclient64.dll forwarder resolving via the game's shim | VERIFIED (scratch only) | VERIFIED | Item 9/11: product x64/steamclient64.dll 186368 B == built forwarder (`cmp` identical), loaded by the game (cxlog:23472), HELLO via product flow. |
+| 3 | Scope 3: bottle setup writes HKCU ActiveProcess values, places DLLs, never HKLM | FAILED | VERIFIED (product flow) | Item 11 pass: user.reg ActiveProcess has SteamClientDll64 and Universe, 0 pid, system.reg Valve keys 0, no steam.exe, exe sha256 unchanged. Item 9 log: reg add lines at :113/:116. |
+| 4 | Scope 4: .bind detection gives an honest notice | FAILED | VERIFIED (static/log) with one open edge | drmWrapper=steamstub logged at :105/:141 on the product path; withheld path now stamped (shimGenerate.ts:704-710, games.ts:2897-2905). Operator saw no notice on the placed path, expected (notice fires only when forwarding is unavailable). Edge: WR-11 false log line when no steam_api file exists. |
+| 5 | Scope 5: five modern-SDK SteamInternal_* exports + importer scan gap | VERIFIED (static) | VERIFIED (static) | Exports in steam_api64.def; closure scan in importScan.ts; 52-13 now serves SteamUser023/SteamNetworking006/RemoteStorage016 on x64 (shimCoverage.ts:323-330) and Grim Dawn is no longer withheld (item 9: withhold count 0). Runtime effect on the game unproven. |
+| 6 | Done-when: Grim Dawn launches, passes SteamStub, reaches main menu, In-Game | FAILED | FAILED | Items 9, 10: Application Load Error 3, IsSteamRunning warning, no game Steam-init log, main menu not observed. steam://run count is now 0 (progress), but the stub is not satisfied. |
+| 7 | Boundary: every answer from the native client, no stand-in, no HKLM, CEG out of scope | VERIFIED (static) | VERIFIED | Forwarded lookups return NULL or proxies, never fabricated; setup is HKCU-only; item 11 hygiene pass; ELEX did not take the steamstub path. |
 
-| # | Truth (ROADMAP) | Status | Evidence |
-|---|---|---|---|
-| 1 | Scope 1: SteamClient017/014 forward to native ISteamClient (wire, helper-served handles, GetISteam* forwarded) | VERIFIED (mechanism) / REGRESSION RISK | `shimCoverage.ts:300-301` wire; generated `vt_SteamClient017_GetISteam*` call `bridge_transact` and return the native-present result. Round 1 helper log: `FWD CreateInterface SteamClient017/014 native=present`. But see CR-01 gap: NULL instead of null object for all x64 titles. |
-| 2 | Scope 2: zig-built `steamclient64.dll` forwarder resolving through the game's shim | VERIFIED | `native/steam-bridge/steamclient/steamclient_fwd.c` exists; built `public/bin/arm64/darwin/steamclient64.dll` 186368 bytes (CreateInterface only per 52-10 objdump). Round 1: steamclient64.dll loaded in Wine, HELLO received. Verified only in the scratch harness, never through GameLib. |
-| 3 | Scope 3: bottle setup at launch (HKCU `ActiveProcess` values, DLL placement, never HKLM) | FAILED (live) | `steamClientSetup.ts` exists, HKCU-only, x64-only by decision 6. Never ran in the product flow: `user.reg` has 0 `ActiveProcess` entries after three launches (UAT item 8). `pid` not written (decision 1). Hygiene sub-checks that did pass: no Valve key in `system.reg`, no steam.exe, exe sha256 unchanged. |
-| 4 | Scope 4: `.bind` detection gives an honest notice | FAILED | Detection exists (`detectDrmWrapper`, `peSections.ts`, 49 catalogs). On the withheld path it is not applied (`withDrmWrapper` skips `withheld`), so the user got a silent 2 s exit (UAT Gaps 2). |
-| 5 | Scope 5: five modern-SDK `SteamInternal_*` exports + importer scan gap | VERIFIED (static) | `steam_api64.def` exports `SteamInternal_CreateInterface/SteamAPI_Init/ContextInit/FindOrCreateUserInterface/FindOrCreateGameServerInterface/GameServer_Init_V2`; bounded exe->Engine.dll closure in `importScan.ts` is what surfaced the three unservable versions at the gate. Runtime effect on Grim Dawn unproven. |
-| 6 | Done-when: Grim Dawn launches from GameLib, passes SteamStub, reaches main menu, In-Game | FAILED | UAT items 6, 7, 8 all `issue`; `/tmp/gamelib-gate-52-20261024T015232Z/gamelib-launch-1.log` lines 114-122, 178-186, 228-236: withheld, direct launch, gone after 2 s. Item 7 trace: `steam://run` count 4 (expected 0), alive=no, HELLO 0. |
-| 7 | Boundary: every answer comes from the native client; no stand-in; no HKLM | VERIFIED (static) | Forwarded lookups return NULL, never fabricate; setup is HKCU-only. Caveat: WR-07/WR-08 describe gaps in handle and identity-only enforcement; nothing was observed leaking. |
+**Score:** 5/7 (truths 6 fails; truth 1 verified on its stated scope but carries WR-09; counted verified because the ROADMAP statement is satisfied, WR-09 is carried as a gap).
 
-**Score:** 3/7 (truths 1, 2, 5/7 hold only at the mechanism level; truths 3, 4, 6 fail; truth 1 carries CR-01)
+## Prior gaps: closed or not
 
-### Orchestrator question: is the j4l guard's classification wrong?
-
-No. Checked in the codebase: `SteamUser023` appears in the generated shim only inside `#if defined(__i386__)` blocks (`steam_api_shim.c:614-617` and the `g_iface_table` row at 8484-8486), and `meta/sdk/acceptance-interface-versions.json` lists it as `"arches": ["x86"]`. `SHIM64_SERVED_INTERFACE_VERSIONS` (shimCoverage.ts:292-316) does not contain SteamUser023, SteamNetworking006 (only 005), or STEAMREMOTESTORAGE 016 (only 013). The x64 shim serves SteamUser019 for the SteamUser family, so the null-object eligibility exception does not apply either. The guard is correctly classifying a real x64 gap. The defect is the interaction: 52-01 widened what is forwardable for SteamClient only; it did not widen the interface table, and the guard sits ahead of the SteamStub path. Whether Grim Dawn actually runs with those versions unserved is untested, because scratch round 1 placed the shim itself and never reached a main menu.
-
-### Required Artifacts
-
-| Artifact | Status | Details |
+| Prior gap | Status | Evidence |
 |---|---|---|
-| `meta/gen_vtables.ts` forwarded ISteamClient + `GameLibBridge_CreateInterface` | EXISTS, WIRED, REGRESSION (CR-01) | generated output matches (`pnpm gen-vtables` no diff per 52-10) |
-| `native/steam-bridge/steamclient/steamclient_fwd.c` + built `steamclient64.dll` | VERIFIED | present, 186368 bytes |
-| `steamClientSetup.ts` | EXISTS, WIRED, UNEXERCISED | reachable only after a non-withheld verdict; WR-01/02/03/05/06 open |
-| `.bind` parser, `drmWrapper` persistence | EXISTS, PARTIAL | not applied to `withheld` |
-| 49 notice catalogs | EXISTS | notice never shown in the gate |
-| Helper CONTROL slot 3 | VERIFIED (round 1: native=present) | via scratch harness only |
+| 1. Done-when Grim Dawn reaches main menu | NOT CLOSED, changed form | The withhold cause is gone (52-13/52-15); the failure is now a SteamStub rejection after a clean HELLO/FWD (new Gap 5). |
+| 2. SteamStub honest notice on withheld | CLOSED | Withheld results stamped; `steamstub-unforwarded:withheld` cause (52-15/52-16). |
+| 3. CR-01 x64 null-object regression | CLOSED for lookups; PARTIAL overall | 52-14 gate; ELEX shows no steamstub path. WR-09 open for non-lookups. |
+| 4. Withheld log/bottle state honesty | CLOSED for the restorable case; residual WR-11 | 52-15 withholds only when restorable, else refreshes; item 9 shows shim replaced 223744 to 251392 B. |
+| 5. WR-01/02/03/04 | CLOSED | steamClientSetup.ts bounded wait:false and `res.code !== 0`; games.ts exe-arch resolution; fresh drmWrapper wins (review table, tests present). WR-05..08 remain deferred hardening, not goal-blocking. |
+| New: UAT Gap 5 (Load Error 3 / IsSteamRunning) | OPEN | see gaps |
+| New: UAT Gap 6 (ELEX Friends sign-out) | OPEN | see gaps |
 
-### Key Link Verification
+## Anti-patterns and debt markers
 
-| From | To | Status | Details |
-|---|---|---|---|
-| GameLib Play -> placeShimForGame -> forwarder setup | | NOT_WIRED for Grim Dawn | withheld branch short-circuits before setup |
-| stub -> steamclient64.dll -> shim -> helper -> native client | | WIRED in scratch only | HELLO + FWD native=present, alive 60 s |
-| games.ts withheld branch -> notice | | NOT_WIRED | no drmWrapper, no notice |
+Debt-marker grep (TBD/FIXME/XXX) over steamClientSetup.ts, steamclient_fwd.c, peSections.ts: none. A full scan of all 38 reviewed files was not run. Review WR-09/WR-11 are the only code-level defects; no critical findings.
 
-### Behavioral Spot-Checks / Probes
+## Full-suite failures: attributable to phase 52?
 
-Step 7b: SKIPPED for new runs (no server to start; the decisive evidence is the live gate logs above). Step 7c: no `probe-*.sh` declared by any PLAN; none run. Orchestrator reports `pnpm test:ci` 6 failures in 4 suites identical at pre-phase base 7ed535984 (not phase 52) and `pnpm codecheck` clean; I did not re-run them.
+I re-ran findDeadcode and testContainment (both fail as reported). None is attributable to phase 52:
+- `testContainment`: unclassified `steamNativeInstallDefault.test.ts`, added by quick 261024-exo (not a phase 52 file).
+- `findDeadcode`: new findings are `bridge/__tests__/fixtures/delayImportPe.ts` (DelayImportDll, DelayImportPeOptions), introduced by quick-261024-j4l (`git log`: e40acf7c7/ce577e1df), and `crossoverInstallRisk.ts` (not phase 52). Confirmed: delayImportPe.ts is j4l, not phase 52.
+- `machineFillGamelib` plural order and `genI18nGateScope` stale `i18nForkTouchedFiles.json` (names resolveBootLanguage.ts, SteamBridgeRouteNotice.tsx): listed in deferred-items as pre-existing at the pre-phase base; I did not re-run those two suites and did not find a phase-52 file among the ones named. Caveat: phase 52 added 49 catalog edits, so a `genI18nGateScope` drift is theoretically touchable; the named stale entries are not phase 52 files. Treated as not phase 52, medium confidence for that one.
+They still leave the repo suite red and should be fixed by their owners; they do not change this phase's status.
 
-### Anti-Patterns
+## Human verification
 
-| File | Pattern | Severity |
-|---|---|---|
-| shimGenerate.ts withhold() | Unconditional "launching with the game's own steam_api" when the stale shim stays | Blocker (false log, UAT Gap 3) |
-| steamClientSetup.ts:197 | `res.code !== undefined` accepts a never-spawned wine | Warning (WR-02) |
-| games.ts:2969 | `?? 'x64'` guess | Warning (WR-03) |
-| debt markers (TBD/FIXME/XXX) | not scanned across all 153 changed files | Not assessed |
-
-### Human Verification Required
-
-None added: the failures are already established by operator-run evidence. After gap closure, the re-gate (items 6-8) is itself a human step: operator must confirm main menu and Mac Steam In-Game on the packaged build, and a clean Steam-init log must be read from the game's own log.
+None added. The remaining failures are operator-established from the live gate. The re-gate after closing Gap 5 is itself operator-driven (main menu, clean game log).
 
 ## Gaps Summary
 
-The mechanism the phase set out to build exists and was shown to work in isolation: a scratch bottle with the shim, the forwarder and the HKCU value reaches HELLO, forwards SteamClient017/014 to the native client, loads steamclient64.dll and stays alive 60 s. The goal as stated, a game launched from GameLib that passes SteamStub and reaches its main menu, is not achieved. The shipped product flow never reaches the forwarder for Grim Dawn because the j4l withhold guard correctly sees that the x64 shim does not serve three interface versions Engine.dll names, and withholds before SteamStub handling runs. That produces the exact silent 2 s exit the phase was filed to remove, with no notice.
+The mechanism is now fully wired in the product flow and no longer short-circuited: Grim Dawn is not withheld, the forwarder and HKCU values are written by GameLib, the helper answers HELLO and forwards SteamClient017/014 to the genuine client, hygiene holds and `steam://run` is gone. The goal is still not achieved: the SteamStub check rejects (Application Load Error 3) before using anything it was handed, and the strict Steam-init log is not clean. The open question is what the stub requires beyond `CreateInterface` (the unwritten `pid`, the missing `Steam_*` exports, or module identity). That needs trace-first diagnosis, then one boundary-reviewed change. Two further items need plans: the unattributed ELEX Friends sign-out, and WR-09 which widens a regression risk to every x64 title. WR-11 is a small honest-logging fix.
 
-Even the scratch pass is not a verified pass under the strict bridge rule: no main menu was observed and the game's Steam init logged an IsSteamRunning warning.
-
-Separately, the `stub` to `wire` flip of SteamClient017/014 (CR-01) was applied to every x64 bridge title, and the generated code now returns NULL where it used to return the null object. That is a probable regression for non-SteamStub titles (ELEX) and nothing in the phase tests or gates it.
-
-Suggested closure plan order for `/gsd-plan-phase 52 --gaps`:
-1. Close the guard/forwarder interaction (serve the three x64 versions, or make the guard SteamStub-aware), and carry `drmWrapper` plus a notice on `withheld`.
-2. Fix CR-01 with a pin test and an ELEX check.
-3. Fix withheld-state honesty (stale shim, false log line) and WR-02/03/04, plus WR-01 timeout.
-4. Re-run the packaged live gate with the strict rule, revisiting the pid decision if the IsSteamRunning warning persists.
+Suggested order for `/gsd-plan-phase 52 --gaps`: (1) diagnosis plan for Gap 5 and the ELEX attribution experiment (both read-only investigation, can share a live session), (2) WR-09 gating plus WR-11 (code, parallel with 1), (3) the boundary-reviewed fix chosen by (1), (4) strict packaged re-gate.
 
 ---
 
