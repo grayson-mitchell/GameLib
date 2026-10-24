@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: testing
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-diagnosis 3: item 21 scored by 52-25; next 52-26 decision
+item 23: re-gate 3 Grim Dawn launch (52-27); 52-28 scores item 26
 
 ## Tests
 
@@ -262,6 +262,22 @@ result: pass — operator chose option-versioninfo. Operator verbatim: "versioni
 files allowed: native/steam-bridge/steamclient/steamclient_fwd.rc, meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts
 implemented: commit 979c3b0e3 (decision record cad85dd11). files: native/steam-bridge/steamclient/steamclient_fwd.rc, meta/buildSteamBridgeShims.ts, meta/__tests__/buildSteamBridgeShims.test.ts. Built (pinned zig 0.16.0 compiled the .rc through zig cc, no new tool): SHIM64 251904 B, forwarder 187392 B (was 186368), exports: CreateInterface only. Property re-measured on the built file: resource directory .rsrc present (objdump Entry 2 Resource Directory, RVA 0x33000) with VS_VERSIONINFO CompanyName "GameLib", FileDescription "GameLib steamclient forwarder", FileVersion/ProductVersion 1.0.0.0, InternalName steamclient_fwd, OriginalFilename steamclient64.dll, ProductName "GameLib"; no "Valve" string. Boundary checks: no HKLM in native/steam-bridge/steamclient/ (steamClientSetup.ts line 9 is a pre-existing comment saying HKLM must not be used); no Grim Dawn.exe in the diff; no .dll tracked in the diff (public/bin/arm64/darwin/steamclient64.dll is git-ignored); built forwarder differs from the genuine DLL (187392 B, not 26547864). Not yet shown: that the stub accepts it; that needs the packaged-build Grim Dawn run (52-27).
 hygiene delta for 52-27 (item 25): forwarder byte-identical to the new build (size 187392).
+
+### 23. Re-gate 3 — GameLib launch of Grim Dawn after 52-26
+expected: everything item 9 expected (no `withheld the shim` line for 219990; `drmWrapper=steamstub`; `[bridge-steamstub] appId=219990 forwarder placed`; `bridge helper [219990]:` with `HELLO shim attached appid=219990` and `FWD CreateInterface ver=SteamClient017 native=present` (or 014); no `steamstub-unforwarded`; product x64/steam_api64.dll size equals SHIM64 251904; runtime >= 60 s); plus the product x64/steamclient64.dll `cmp`-identical to the new build (187392 B) and carrying item 22's property (resource directory with GameLib VS_VERSIONINFO, no "Valve" string), re-measured; the operator sees no Application Load Error dialog, confirms the main menu and stays in it at least 60 s; Mac Steam shows Grim Dawn In-Game during the run and In-Game clears after quit (the done-when's In-Game conjunct, recorded as `In-Game: yes|no, cleared: yes|no`; it is not an input to bridge-verified, which item 24 alone scores). `pass` only if every log check holds AND the operator confirmed the main menu AND In-Game was observed AND it cleared after quit.
+result: pending
+
+### 24. Re-gate 3 — cx-log trace and strict Steam-init check (MODE=trace)
+expected: everything item 18 expected (clone after item 23 with the product-written state asserted by cmp; `steam://run` 0; steamclient64.dll loaded; alive at 90 s; helper HELLO count >= 1; the `[S_API]` line `SteamAPI_Init(): Loaded '...steamclient64.dll' OK.` present; zero `[S_API]` lines matching failed, error, not logged on or unable, case-insensitive; IsSteamRunning count 0); plus a `MSGBOX` count of 0 in the game process. Harness-placed state is `issue — harness-flow init evidence only`. No Steam-init line anywhere is `issue — unverified (no game Steam-init log)`.
+result: pending
+
+### 25. Re-gate 3 — bottle hygiene
+expected: item 11's text with item 22's hygiene delta applied (forwarder byte-identical to the new build, size 187392): after `wineserver -k` of the product bottle, `user.reg` has `SteamClientDll64` under ActiveProcess and no `pid` value; `system.reg` has no `Software\Valve` or `Wow6432Node\Valve` key; no `steam.exe` or `steamclient*.dll` in the Steam root; x64/steamclient64.dll `cmp` identical to the new build and not `cmp`-equal to the genuine DLL; `x64/Grim Dawn.exe` sha256 equals the preflight value.
+result: pending
+
+### 26. Re-gate 3 — ELEX (411300) no-regression after 52-26 (conditional)
+expected: run only if 52-26 changed the shim, helper or generated sources (`git diff --name-only` of 52-26's commits touches meta/gen_vtables.ts, native/steam-bridge/generated or native/steam-bridge/helper). Otherwise `skipped — change limited to the forwarder, which is placed only on the drmWrapper=steamstub path`. When run: everything item 20 expected (HELLO shim attached appid=411300, `[bridge-steamstub]` 0, FWD 0, loading-screen baseline, no error dialog), Friends scored per item 20's outside-phase-52 rule, bridge-verified recorded separately.
+result: pending
 
 ## Structural Reachability Review
 
