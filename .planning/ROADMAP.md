@@ -470,7 +470,7 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 11/16 plans executed
+**Plans:** 12/16 plans executed
 
 Plans:
 **Wave 1**
@@ -503,7 +503,7 @@ Plans:
 
 - [x] 53-10-PLAN.md — CR-01 flat struct-return ABI (hidden-pointer exports, fail-closed structSize, x64 `_ret` refusal; Input006/GameServer/Friends018 remodelled)
 - [x] 53-11-PLAN.md — honest census: latest-run logs (no -backup-/-prev), per-launch app-log segment, CALL set + identity, NOVER and known-bad downgrades
-- [ ] 53-13-PLAN.md — helper CALL after STATUS_OK, NOVER cap, per-line stderr relay, ILONLY AnyCPU rule, managed verdict key
+- [x] 53-13-PLAN.md — helper CALL after STATUS_OK, NOVER cap, per-line stderr relay, ILONLY AnyCPU rule, managed verdict key
 
 **Gap wave 2** *(blocked on 53-10)*
 
