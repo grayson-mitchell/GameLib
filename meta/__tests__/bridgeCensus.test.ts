@@ -16,9 +16,13 @@
  * because the real one is non-empty since 51-15's D-51-13 GO.
  */
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import {
   classifyBridgeEvidence,
   classifyCensusTitle,
+  countX86ModernOrFlat,
   detectEngine,
   formatCensusMarkdown,
   pickRuntimeSteamApiDll,
@@ -1167,5 +1171,120 @@ describe('D-53-14: Steamworks-using denominator', () => {
       summarizeCensus([mk('bridge', 'verified'), mk('bridge', 'unverified')])
         .majority
     ).toBe(false)
+  })
+})
+
+// Phase 53 (53-07, D-53-12): the census answers every scan question through
+// bridgeScan.ts; managed, importer and AnyCPU evidence flow into rows.
+describe('D-53-12 census shares the install scan', () => {
+  const flatFixture: { names: string[] } = JSON.parse(
+    readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        'src/backend/storeManagers/steam/bridge/__tests__/fixtures/steamworksNetFlatNames.json'
+      ),
+      'utf-8'
+    )
+  )
+  const base = {
+    appid: '1691190',
+    name: 'Rogue Waters',
+    installdir: 'RogueWaters',
+    knownBadReason: null
+  }
+  const noStatic = {
+    arch: 'none' as const,
+    symbols: [],
+    dllVersions: [],
+    exeVersions: []
+  }
+
+  it('judges a Mono row on lifecycle plus served-family names and counts the unserved families (D-53-04)', () => {
+    const row = classifyCensusTitle({
+      ...base,
+      runtimeLoadedDll: 'steam_api64.dll',
+      managed: {
+        kind: 'mono',
+        symbols: flatFixture.names,
+        versionStrings: ['SteamClient020', 'SteamUser021'],
+        assemblies: 3
+      },
+      exe: noStatic
+    })
+    // The Rogue Waters shape: every served-family and lifecycle name resolves.
+    expect(row.class).toBe('bridge')
+    expect(row.arch).toBe('x64')
+    expect(row.detail).toMatch(/^\+\d+ unserved-family imports \(lazy\)$/)
+    expect(row.detail).not.toMatch(/ISteamUGC|ISteamHTTP|ISteamInventory/)
+  })
+
+  it('carries the il2cpp reason in the detail', () => {
+    const row = classifyCensusTitle({
+      ...base,
+      runtimeLoadedDll: 'steam_api64.dll',
+      managed: { kind: 'il2cpp', reason: 'il2cpp: not scanned' },
+      exe: noStatic
+    })
+    expect(row.class).toBe('missing-symbols')
+    expect(row.detail).toContain('il2cpp: not scanned')
+    expect(row.detail).toContain('steam_api64.dll@runtime-loaded')
+  })
+
+  it('classifies a UE stub plus Shipping layout from importer evidence, never no-steam-api', () => {
+    const row = classifyCensusTitle({
+      appid: '1363080',
+      name: 'Manor Lords',
+      installdir: 'Manor Lords',
+      knownBadReason: null,
+      runtimeLoadedDll: 'steam_api64.dll',
+      launchArch: 'x64',
+      importerEvidence: {
+        symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown'],
+        dllVersions: ['SteamUser021', 'SteamClient020'],
+        exeVersions: []
+      },
+      exe: noStatic
+    })
+    expect(row.class).not.toBe('no-steam-api')
+    expect(['bridge', 'missing-symbols', 'unknown-version']).toContain(
+      row.class
+    )
+    expect(row.arch).toBe('x64')
+  })
+
+  it('reports an AnyCPU launch exe as x64 on a runtime-loaded row (D-53-10)', () => {
+    const row = classifyCensusTitle({
+      appid: '284100',
+      name: 'Unclaimed World',
+      installdir: 'Unclaimed World',
+      knownBadReason: null,
+      runtimeLoadedDll: 'steam_api64.dll',
+      launchArch: 'x64',
+      exe: noStatic
+    })
+    expect(row.arch).toBe('x64')
+  })
+
+  it('counts x86 titles that need the modern or flat names (D-53-09)', () => {
+    expect(
+      countX86ModernOrFlat([
+        { appid: '1', arch: 'x86', symbols: ['SteamAPI_Init'] },
+        { appid: '2', arch: 'x86', symbols: ['SteamInternal_ContextInit'] },
+        { appid: '3', arch: 'x64', symbols: ['SteamInternal_ContextInit'] },
+        { appid: '4', arch: 'x86', symbols: ['SteamAPI_ISteamUser_GetSteamID'] }
+      ])
+    ).toEqual({ count: 2, appids: ['2', '4'] })
+    expect(countX86ModernOrFlat([])).toEqual({ count: 0, appids: [] })
+  })
+
+  it('keeps no parallel scan copy: imports bridgeScan, defines no walkUnreal*/findRuntimeSteamApiDll/arch reader', () => {
+    const src = readFileSync(join(__dirname, '..', 'bridgeCensus.ts'), 'utf-8')
+    expect(src).toMatch(/storeManagers\/steam\/bridge\/bridgeScan/)
+    expect(src).not.toMatch(/function\s+walkUnreal/)
+    expect(src).not.toMatch(/function\s+findRuntimeSteamApiDll/)
+    expect(src).not.toMatch(/function\s+readPe(Machine|Effective)?Arch/)
+    expect(src).not.toMatch(/^import .*'backend\//m)
   })
 })

@@ -61,6 +61,10 @@
  * declared here anyway because the convention asks every real-profile arm
  * to name itself in its own docblock, not just the ones the gate happens to
  * reach.
+ * Phase 53 (D-53-12): the two spawns are reached through the Promise-wrapped
+ * `scanDeps.scanImports` handed to the shared `bridgeScan.ts` (the census owns
+ * no scan walk of its own); the declared arm is unchanged and still passes no
+ * `env`.
  * Quick 261024-uir: the driver also reads `.gamelib-orig` backups inside the
  * operator's bottles and the persisted `steam_metadata.json` scan verdict,
  * read-only, and still passes no `env` to any spawn.
@@ -106,13 +110,29 @@ import {
 import {
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
+  selectInterfaceVersionPool,
   usesRuntimeInterfaceLookup
 } from '../src/backend/storeManagers/steam/bridge/interfaceVersions'
 import {
   evaluateShimCoverage,
   SHIM64_EXPORTED_SYMBOLS
 } from '../src/backend/storeManagers/steam/bridge/shimCoverage'
-import { detectSteamDrmInPe } from '../src/backend/storeManagers/steam/bridge/peSteamDrm'
+import {
+  detectSteamDrmInPe,
+  readPeSteamApiDelayImports
+} from '../src/backend/storeManagers/steam/bridge/peSteamDrm'
+import {
+  findRuntimeLoadedSteamApiDlls,
+  findSteamApiImporterPes,
+  findUnrealLayout,
+  partitionManagedImports,
+  readFileEffectiveArch,
+  resolveWalkRoot,
+  scanManagedSteamApi,
+  servedFamiliesFor,
+  type BridgeImportScan,
+  type BridgeScanDeps
+} from '../src/backend/storeManagers/steam/bridge/bridgeScan'
 
 // ---------------------------------------------------------------------------
 // Pure classifier
@@ -170,6 +190,24 @@ export interface PersistedScanVerdict {
   interfaceVersions: Record<string, string>
 }
 
+/** Structural twin of bridgeScan's `ManagedScanResult` (`unparsed` optional
+ * so fixtures stay small). */
+export type CensusManaged =
+  | {
+      kind: 'mono'
+      assemblies: number
+      unparsed?: number
+      symbols: string[]
+      versionStrings: string[]
+    }
+  | { kind: 'il2cpp'; reason: 'il2cpp: not scanned' }
+  | { kind: 'none' }
+
+const RUNTIME_DLL_ARCH: Record<RuntimeDllName, 'x86' | 'x64'> = {
+  'steam_api.dll': 'x86',
+  'steam_api64.dll': 'x64'
+}
+
 export interface CensusTitleInput {
   appid: string
   name: string
@@ -201,6 +239,21 @@ export interface CensusTitleInput {
   /** Quick 261024-f0w: the live-log evidence verdict; absent reads as
    * 'unverified' / 'evidence not collected'. */
   evidence?: BridgeEvidence
+  /** D-53-10: the arch the chosen exe launches as (AnyCPU without
+   * 32BITREQUIRED/32BITPREFERRED is x64). Reported on rows whose exe imports
+   * no steam_api statically, instead of 'none'. */
+  launchArch?: 'x86' | 'x64' | null
+  /** D-53-04: the Mono / IL2CPP managed scan of the chosen exe's `_Data`
+   * dir (the shared `scanManagedSteamApi`). Absent reads as 'none'. */
+  managed?: CensusManaged | null
+  /** D-53-12: importer PEs (UE Shipping exe, Grim Dawn-style engine dlls)
+   * that import the runtime-loaded dll's arch, merged by the driver. Used
+   * when the launch exe itself imports no steam_api (arch 'none'). */
+  importerEvidence?: {
+    symbols: string[]
+    dllVersions: string[]
+    exeVersions: string[]
+  } | null
   /** `null` when no scannable PE exe (with or without a steam_api import)
    * was found anywhere under the title's installdir at all. */
   exe: {
@@ -283,11 +336,50 @@ export function classifyCensusTitle(
     const note = input.archNote
     row = { ...row, detail: row.detail ? `${row.detail}; ${note}` : note }
   }
+  row = withManagedNote(input, row)
   if (input.steamDrm?.hasBindSection && row.class !== 'known-bad') {
     const note = 'SteamStub .bind section (informational)'
     return { ...row, detail: row.detail ? `${row.detail}; ${note}` : note }
   }
   return row
+}
+
+/** The arch the title's managed names are served against: the row's own arch,
+ * else the runtime-loaded dll's. */
+function managedArchFor(
+  input: CensusTitleInput,
+  rowArch: CensusRow['arch']
+): 'x86' | 'x64' | null {
+  if (rowArch !== 'none') return rowArch
+  return input.runtimeLoadedDll
+    ? RUNTIME_DLL_ARCH[input.runtimeLoadedDll]
+    : null
+}
+
+/** D-53-04: a Mono row's detail appends the lazy unserved-family count; an
+ * IL2CPP row says it was not scanned. Fixed strings and counts only. */
+function withManagedNote(input: CensusTitleInput, row: CensusRow): CensusRow {
+  const managed = input.managed
+  if (!managed || row.class === 'known-bad' || row.class === 'no-binary') {
+    return row
+  }
+  let note = ''
+  if (managed.kind === 'il2cpp') {
+    note = managed.reason
+  } else if (managed.kind === 'mono') {
+    const arch = managedArchFor(input, row.arch)
+    if (arch) {
+      const { unservedFamilyCount } = partitionManagedImports(
+        managed.symbols,
+        servedFamiliesFor(arch)
+      )
+      if (unservedFamilyCount > 0) {
+        note = `+${unservedFamilyCount} unserved-family imports (lazy)`
+      }
+    }
+  }
+  if (!note) return row
+  return { ...row, detail: row.detail ? `${row.detail}; ${note}` : note }
 }
 
 function classifyCensusTitleCore(
@@ -339,14 +431,39 @@ function classifyCensusTitleCore(
 
   const { arch, symbols, dllVersions, exeVersions } = input.exe
 
+  const launchArch = input.launchArch ?? 'none'
   if (arch === 'none') {
     if (input.runtimeLoadedDll) {
-      return withFlags({
-        ...base,
-        arch: 'none',
-        class: 'missing-symbols',
-        detail: runtimeLoadedSteamApiMarker(input.runtimeLoadedDll)
-      })
+      // D-53-12: the same evidence rule as shimGenerate -- importer PEs or
+      // managed required names make the title evaluable; neither leaves the
+      // runtime-loaded marker.
+      const rtArch = RUNTIME_DLL_ARCH[input.runtimeLoadedDll]
+      const managedReq =
+        input.managed?.kind === 'mono'
+          ? partitionManagedImports(
+              input.managed.symbols,
+              servedFamiliesFor(rtArch)
+            ).required
+          : []
+      const importer = input.importerEvidence ?? null
+      if (importer === null && managedReq.length === 0) {
+        return withFlags({
+          ...base,
+          arch: launchArch,
+          class: 'missing-symbols',
+          detail: runtimeLoadedSteamApiMarker(input.runtimeLoadedDll)
+        })
+      }
+      return evaluate(
+        withFlags,
+        base,
+        deps,
+        rtArch,
+        [...new Set([...(importer?.symbols ?? []), ...managedReq])],
+        importer?.dllVersions ?? [],
+        importer?.exeVersions ?? [],
+        input.managed?.kind === 'mono' ? input.managed.versionStrings : null
+      )
     }
     if (input.shimOnlyRuntimeDll) {
       const { dll, persistedScan } = input.shimOnlyRuntimeDll
@@ -369,14 +486,14 @@ function classifyCensusTitleCore(
             : `${base2} clean (importer coverage not re-measured by the census)`
         return withFlags({
           ...base,
-          arch: 'none',
+          arch: launchArch,
           class: 'missing-symbols',
           detail
         })
       }
       return withFlags({
         ...base,
-        arch: 'none',
+        arch: launchArch,
         class: 'unconfirmed',
         detail: `${dll} in the install tree is the GameLib shim; no .gamelib-orig backup and no persisted bridge.scan verdict -- original unconfirmed`
       })
@@ -390,6 +507,37 @@ function classifyCensusTitleCore(
     })
   }
 
+  const managedReq =
+    input.managed?.kind === 'mono'
+      ? partitionManagedImports(input.managed.symbols, servedFamiliesFor(arch))
+          .required
+      : []
+  return evaluate(
+    withFlags,
+    base,
+    deps,
+    arch,
+    [...new Set([...symbols, ...managedReq])],
+    dllVersions,
+    exeVersions,
+    input.managed?.kind === 'mono' ? input.managed.versionStrings : null
+  )
+}
+
+/** The shared tail of the classifier: structural x64 gap, interface-version
+ * resolution (managed constants alone form the pool, 53-05), then coverage. */
+function evaluate(
+  withFlags: (
+    row: Omit<CensusRow, 'playRecorded' | 'evidence' | 'evidenceDetail'>
+  ) => CensusRow,
+  base: { appid: string; name: string; installdir: string },
+  deps: CensusCoverageDeps,
+  arch: 'x86' | 'x64',
+  symbols: string[],
+  dllVersions: string[],
+  exeVersions: string[],
+  managedVersions: string[] | null
+): CensusRow {
   if (arch === 'x64' && deps.x64ExportedSymbols.size === 0) {
     return withFlags({
       ...base,
@@ -399,10 +547,15 @@ function classifyCensusTitleCore(
     })
   }
 
-  const { required, problems } = deps.resolveRequiredInterfaceVersions({
-    importedSymbols: symbols,
+  const pool = selectInterfaceVersionPool({
+    managedVersions,
     dllVersions,
     exeVersions
+  })
+  const { required, problems } = deps.resolveRequiredInterfaceVersions({
+    importedSymbols: symbols,
+    dllVersions: pool.dllVersions,
+    exeVersions: pool.exeVersions
   })
 
   if (problems.length > 0) {
@@ -431,6 +584,38 @@ function classifyCensusTitleCore(
   }
 
   return withFlags({ ...base, arch, class: 'bridge', detail: '' })
+}
+
+export interface JudgedSymbols {
+  appid: string
+  arch: 'x86' | 'x64' | 'none'
+  symbols: string[]
+}
+
+const X86_MODERN_OR_FLAT = [
+  'SteamInternal_SteamAPI_Init',
+  'SteamInternal_ContextInit',
+  'SteamInternal_FindOrCreate',
+  'SteamInternal_GameServer_Init',
+  'SteamAPI_ISteam'
+]
+
+/** D-53-09: the x86-launch titles whose judged symbols need the modern
+ * SteamInternal_* family or the flat API. Pure. */
+export function countX86ModernOrFlat(items: JudgedSymbols[]): {
+  count: number
+  appids: string[]
+} {
+  const appids = items
+    .filter(
+      (i) =>
+        i.arch === 'x86' &&
+        i.symbols.some((sym) =>
+          X86_MODERN_OR_FLAT.some((prefix) => sym.startsWith(prefix))
+        )
+    )
+    .map((i) => i.appid)
+  return { count: appids.length, appids: [...new Set(appids)].sort() }
 }
 
 /** Rows the live resolver sends to the bridge (amended 2026-10-23, quick
@@ -900,6 +1085,75 @@ function runObjdump(exePath: string): string | null {
   return result.stdout
 }
 
+/** Ranged fd reads into the pure delay-import reader (never a slurp). Null on
+ * any fs error -- "no delay evidence". */
+function readDelayImports(
+  exePath: string
+): ReturnType<typeof readPeSteamApiDelayImports> | null {
+  let fd: number | null = null
+  try {
+    fd = openSync(exePath, 'r')
+    const handle = fd
+    return readPeSteamApiDelayImports((offset, length) => {
+      const buf = Buffer.alloc(length)
+      const n = readSync(handle, buf, 0, length, offset)
+      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
+    })
+  } catch {
+    return null
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd)
+      } catch {
+        // nothing left to release
+      }
+    }
+  }
+}
+
+/** D-53-09: per-title judged symbol sets, collected by the driver for the x86
+ * modern-SDK / flat-API count (CensusRow stays path- and symbol-free). */
+const judgedSymbols: JudgedSymbols[] = []
+
+/** Count of scan-time warnings the shared scan emitted (printed in the footer;
+ * the census has no logger). */
+let scanWarnings = 0
+
+/** D-53-12: the shared scan's injected dependencies. `scanImports` is the
+ * Promise-wrapped objdump driver (the census keeps its own declared
+ * real-profile objdump spawn; bridgeScan.ts spawns nothing). */
+function scanImportsSync(exePath: string): BridgeImportScan {
+  const stdout = runObjdump(exePath)
+  if (!stdout) return { status: 'error', error: 'objdump failed' }
+  const parsed = parseSteamApiImportTable(stdout)
+  if (parsed.conflict) return { status: 'error', error: 'conflict' }
+  const delay = readDelayImports(exePath)
+  if (!delay || !delay.parsed || delay.dll === null) {
+    return { status: 'ok', arch: parsed.arch, symbols: parsed.symbols }
+  }
+  if (
+    delay.conflict ||
+    (parsed.arch !== 'none' && parsed.arch !== delay.arch)
+  ) {
+    return { status: 'error', error: 'conflict' }
+  }
+  return {
+    status: 'ok',
+    arch: parsed.arch === 'none' ? delay.arch : parsed.arch,
+    symbols: [...new Set([...parsed.symbols, ...delay.symbols])],
+    delaySymbols: delay.symbols
+  }
+}
+
+const scanDeps: BridgeScanDeps = {
+  scanImports: (exePath: string) => Promise.resolve(scanImportsSync(exePath)),
+  warn: () => {
+    scanWarnings++
+  },
+  isShimBytes: isGameLibShimBytes
+}
+
 function loadPlayVerified(): Set<string> {
   const allowlistPath = join(
     process.cwd(),
@@ -1119,50 +1373,6 @@ function readOriginalBackup(dllPath: string): string | null {
     return isGameLibShimBytes(readFileSync(backup)) ? null : backup
   } catch {
     return null
-  }
-}
-
-/** Collects every exact-name steam_api(64).dll under `dir` (same depth bound
- * as walkExes) with its provenance. Quick 261024-uir: mirrors the live
- * `findRuntimeLoadedSteamApiDlls` -- symlinks skipped, a placed GameLib shim
- * is KEPT (it means "a steam_api ships"), recorded 'shim-backed' when a valid
- * `.gamelib-orig` sits beside it, else 'shim-only'. */
-function findRuntimeSteamApiDll(
-  dir: string,
-  depth: number,
-  found: Array<{ name: RuntimeDllName; provenance: RuntimeDllProvenance }>
-): void {
-  if (depth > MAX_EXE_DEPTH || !existsSync(dir)) {
-    return
-  }
-  let entries
-  try {
-    entries = readdirSync(dir, { withFileTypes: true })
-  } catch {
-    return
-  }
-  for (const entry of entries) {
-    if (entry.isSymbolicLink()) continue
-    const full = join(dir, entry.name)
-    if (entry.isDirectory()) {
-      findRuntimeSteamApiDll(full, depth + 1, found)
-    } else if (entry.isFile()) {
-      const lower = entry.name.toLowerCase()
-      if (lower === 'steam_api.dll' || lower === 'steam_api64.dll') {
-        try {
-          if (!isGameLibShimBytes(readFileSync(full))) {
-            found.push({ name: lower, provenance: 'original' })
-          } else {
-            found.push({
-              name: lower,
-              provenance: readOriginalBackup(full) ? 'shim-backed' : 'shim-only'
-            })
-          }
-        } catch {
-          // unreadable -- treat as absent
-        }
-      }
-    }
   }
 }
 
@@ -1387,7 +1597,16 @@ async function classifyInstalledTitle(
   ])
   const evidence = collectEvidence(entry, appLogTexts, engine)
 
-  const selected = chooseExe(exePaths, persistedArch)
+  // Census-only stand-in choice (the census has no launch config): an Unreal
+  // install launches its root-level bootstrap stub, not the Shipping exe the
+  // stub starts. The layout probe is the shared bridgeScan one.
+  const bottleDirForLayout = join(BOTTLES_DIR, entry.bottleName)
+  const ueLayout = await findUnrealLayout(bottleDirForLayout, entry.installPath)
+  const rootExes = exePaths.filter((p) => dirname(p) === entry.installPath)
+  const selected = chooseExe(
+    ueLayout && rootExes.length > 0 ? rootExes : exePaths,
+    persistedArch
+  )
   if (!selected) {
     return classifyCensusTitle({
       appid: entry.appid,
@@ -1402,7 +1621,14 @@ async function classifyInstalledTitle(
 
   const { chosen, archNote } = selected
   const steamDrm = scanExeSteamDrm(chosen.path)
-  const { arch, symbols } = chosen.table
+  const bottleDir = join(BOTTLES_DIR, entry.bottleName)
+  // D-53-10: the arch the exe launches as (AnyCPU without 32BIT flags is x64).
+  const effectiveArch = readFileEffectiveArch(chosen.path)
+  const { symbols } = chosen.table
+  const arch: 'x86' | 'x64' | 'none' =
+    chosen.table.arch !== 'none' && effectiveArch
+      ? effectiveArch
+      : chosen.table.arch
   let dllVersions: string[] = []
   let exeVersions: string[] = []
 
@@ -1410,16 +1636,92 @@ async function classifyInstalledTitle(
   let shimOnlyRuntimeDll: ReturnType<
     typeof pickRuntimeSteamApiDll
   >['shimOnlyRuntimeDll'] = null
+  let managed: CensusManaged | null = null
+  let importerEvidence: CensusTitleInput['importerEvidence'] = null
   if (arch === 'none') {
-    const found: Array<{
-      name: RuntimeDllName
-      provenance: RuntimeDllProvenance
-    }> = []
-    findRuntimeSteamApiDll(entry.installPath, 0, found)
+    // D-53-12: every scan question below is answered by bridgeScan.ts, in the
+    // order shimGenerate asks them. Only the stand-in exe choice above is
+    // census-only (the census has no launch config).
+    const walkRoot = resolveWalkRoot(bottleDir, chosen.path, entry.installPath)
+    const unreal = await findUnrealLayout(bottleDir, dirname(chosen.path))
+    const runtimeDlls = await findRuntimeLoadedSteamApiDlls(
+      walkRoot,
+      unreal?.steamworksDir ? [unreal.steamworksDir] : [],
+      scanDeps
+    )
+    const names = (['steam_api.dll', 'steam_api64.dll'] as const).filter((n) =>
+      runtimeDlls.some((d) => d.name === n)
+    )
+    const launchName =
+      effectiveArch === 'x64'
+        ? 'steam_api64.dll'
+        : effectiveArch === 'x86'
+          ? 'steam_api.dll'
+          : null
+    const considered =
+      launchName !== null && names.includes(launchName) ? [launchName] : names
+    const found = runtimeDlls
+      .filter((d) => considered.includes(d.name))
+      .map((d) => ({
+        name: d.name,
+        provenance: !d.isGameLibShim
+          ? ('original' as const)
+          : readOriginalBackup(d.path)
+            ? ('shim-backed' as const)
+            : ('shim-only' as const),
+        path: d.path
+      }))
     ;({ runtimeLoadedDll, shimOnlyRuntimeDll } = pickRuntimeSteamApiDll(
       found,
       persistedScan
     ))
+    const rtName = runtimeLoadedDll ?? shimOnlyRuntimeDll?.dll ?? null
+    if (rtName) {
+      const rtArch = rtName === 'steam_api64.dll' ? 'x64' : 'x86'
+      managed = await scanManagedSteamApi(
+        chosen.path,
+        bottleDir,
+        rtArch,
+        scanDeps
+      )
+      if (runtimeLoadedDll) {
+        const importers = (
+          await findSteamApiImporterPes(
+            entry.appid,
+            walkRoot,
+            chosen.path,
+            unreal?.shippingExes ?? [],
+            scanDeps
+          )
+        ).filter((i) => i.arch === rtArch)
+        const merged = [...new Set(importers.flatMap((i) => i.symbols))]
+        if (importers.length > 0) {
+          const original = found.find(
+            (f) => f.name === rtName && f.provenance === 'original'
+          )
+          const backup = found.find(
+            (f) => f.name === rtName && f.provenance === 'shim-backed'
+          )
+          const versionSource =
+            original?.path ?? (backup ? readOriginalBackup(backup.path) : null)
+          const dllV = versionSource
+            ? await readVersionsOrEmpty(versionSource)
+            : Object.values(persistedScan?.interfaceVersions ?? {})
+          const exeV = usesRuntimeInterfaceLookup(merged)
+            ? (
+                await Promise.all(
+                  importers.map((i) => readVersionsOrEmpty(i.path))
+                )
+              ).flat()
+            : []
+          importerEvidence = {
+            symbols: merged,
+            dllVersions: dllV,
+            exeVersions: exeV
+          }
+        }
+      }
+    }
   }
 
   if (arch !== 'none') {
@@ -1429,23 +1731,15 @@ async function classifyInstalledTitle(
       try {
         const buf = readFileSync(dllPath)
         if (!isGameLibShimBytes(buf)) {
-          const versionResult = await readInterfaceVersionStrings(dllPath)
-          if (versionResult.status === 'ok') {
-            dllVersions = versionResult.versions
-          }
+          dllVersions = await readVersionsOrEmpty(dllPath)
         } else {
           // Quick 261024-uir: the dll is the shim. Read the original from its
           // .gamelib-orig backup, else the persisted verdict's interface
           // versions -- the live path's persistedInterfaceVersions fallback.
           const backup = readOriginalBackup(dllPath)
-          if (backup) {
-            const versionResult = await readInterfaceVersionStrings(backup)
-            if (versionResult.status === 'ok') {
-              dllVersions = versionResult.versions
-            }
-          } else {
-            dllVersions = Object.values(persistedScan?.interfaceVersions ?? {})
-          }
+          dllVersions = backup
+            ? await readVersionsOrEmpty(backup)
+            : Object.values(persistedScan?.interfaceVersions ?? {})
         }
       } catch {
         // unreadable original dll -- leave dllVersions empty, same as "not found"
@@ -1453,12 +1747,25 @@ async function classifyInstalledTitle(
     }
 
     if (usesRuntimeInterfaceLookup(symbols)) {
-      const exeVersionResult = await readInterfaceVersionStrings(chosen.path)
-      if (exeVersionResult.status === 'ok') {
-        exeVersions = exeVersionResult.versions
-      }
+      exeVersions = await readVersionsOrEmpty(chosen.path)
     }
   }
+
+  const judgedArch: 'x86' | 'x64' | 'none' =
+    arch !== 'none'
+      ? arch
+      : runtimeLoadedDll
+        ? RUNTIME_DLL_ARCH[runtimeLoadedDll]
+        : 'none'
+  judgedSymbols.push({
+    appid: entry.appid,
+    arch: judgedArch,
+    symbols: [
+      ...symbols,
+      ...(importerEvidence?.symbols ?? []),
+      ...(managed?.kind === 'mono' ? managed.symbols : [])
+    ]
+  })
 
   return classifyCensusTitle({
     appid: entry.appid,
@@ -1471,8 +1778,20 @@ async function classifyInstalledTitle(
     steamDrm,
     archNote: archNote || undefined,
     evidence,
+    managed,
+    importerEvidence,
+    launchArch: effectiveArch,
     exe: { arch, symbols, dllVersions, exeVersions }
   })
+}
+
+async function readVersionsOrEmpty(path: string): Promise<string[]> {
+  try {
+    const r = await readInterfaceVersionStrings(path)
+    return r.status === 'ok' ? r.versions : []
+  } catch {
+    return []
+  }
 }
 
 /** Quick 261024-br4: ranged fd reads (never slurps the exe) into the pure
@@ -1555,6 +1874,11 @@ async function main(): Promise<void> {
   }
   console.log(formatCensusMarkdown(rows))
   console.log(`Logs read: ${lastLogsRead.join(', ') || '(none)'}`)
+  const x86 = countX86ModernOrFlat(judgedSymbols)
+  console.log(
+    `x86 titles needing modern SteamInternal_* or flat API: ${x86.count} (${x86.appids.join(', ') || 'none'})`
+  )
+  console.log(`Scan warnings: ${scanWarnings}`)
 }
 
 // `require.main === module` idiom doesn't survive `runTs.cjs` bundling into
