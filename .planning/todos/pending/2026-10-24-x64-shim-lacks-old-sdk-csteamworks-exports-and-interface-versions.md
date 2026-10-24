@@ -10,7 +10,7 @@ files:
   - native/steam-bridge/generated/steam_api64.def
   - src/backend/storeManagers/steam/bridge/shimCoverage.ts
   - src/backend/storeManagers/steam/bridge/importScan.ts
-severity: major
+severity: medium
 platform: any
 ready: code
 ---
@@ -69,3 +69,18 @@ Fix:
    versions. `pnpm bridge-census` is the likely tool. This decides whether it is a quick task or a
    phase.
 5. Restore 284100's original `steam_api64.dll` / `steam_api.dll`, then live-check.
+
+## Reach, measured 2026-10-24: one installed title
+
+All 20 game folders across every CrossOver bottle's `steamapps/common` were searched. Only
+Unclaimed World ships `CSteamworks*.dll`. Only Unclaimed World has a non-`steam_api` PE that names
+`SteamAPI_InitSafe` or `SteamGameServer_InitSafe`, in `CSteamworks.dll`, `CSteamworks64.dll` and
+`Steamworks.NET.dll`. The Phase 51 owned-library census (`51-RESEARCH.md`, D-51-15, 8 titles) has
+no old-SDK title either. Owned-but-uninstalled titles cannot be counted from disk.
+
+Severity lowered from `major` to `medium` for that reason: the blast radius is one known game.
+Scope accordingly. Steps 1 and 3 (legacy exports, AnyCPU scanned as x64) are quick-task sized and
+worth doing when the next old-SDK title appears. Step 2 (14 old interface versions) is hard to
+justify for a single title; the Unity flat-API todo
+(`2026-10-23-bridge-shim-lacks-steamworks-flat-api-for-unity-steamworks-net-games.md`) is the
+larger lever.
