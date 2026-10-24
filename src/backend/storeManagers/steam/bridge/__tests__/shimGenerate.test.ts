@@ -1684,4 +1684,272 @@ describe('shimGenerate', () => {
       expect(paths).not.toContain(backup)
     })
   })
+
+  describe('quick 261024-j4l: withhold guard on delay-imported misses and unservable versions', () => {
+    type Scan = {
+      status: 'ok'
+      arch: 'x86' | 'x64' | 'none'
+      symbols: string[]
+      delaySymbols?: string[]
+    }
+    const scanByPath = (table: Record<string, Scan>) =>
+      mockedScanSteamApiImports.mockImplementation(
+        (_appId: string, path: string) =>
+          Promise.resolve(
+            table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+          )
+      )
+    const MARK_X64 = 'GameLibSteamBridgeShim x64 build'
+    const BACKUP = '.gamelib-orig'
+    const MANOR_DELAY_SYMBOLS = [
+      'SteamAPI_Init',
+      'SteamAPI_Shutdown',
+      'SteamAPI_RunCallbacks',
+      'SteamAPI_RestartAppIfNecessary',
+      'SteamAPI_RegisterCallback',
+      'SteamAPI_UnregisterCallback',
+      'SteamAPI_RegisterCallResult',
+      'SteamAPI_UnregisterCallResult',
+      'SteamAPI_GetHSteamUser',
+      'SteamAPI_GetHSteamPipe',
+      'SteamInternal_FindOrCreateUserInterface',
+      'SteamInternal_ContextInit',
+      'SteamInternal_CreateInterface',
+      'SteamInternal_GameServer_Init'
+    ]
+    const COVERED = [
+      'SteamAPI_RestartAppIfNecessary',
+      'SteamInternal_SteamAPI_Init',
+      'SteamInternal_FindOrCreateUserInterface'
+    ]
+    const put = (rel: string, body = 'plain-game-dll') => {
+      const full = join(gameDir, rel)
+      mkdirSync(join(full, '..'), { recursive: true })
+      writeFileSync(full, body)
+      return full
+    }
+    const opts = () => ({
+      shimSourcePath: realShimSourcePath,
+      shim64SourcePath: realShim64SourcePath,
+      gameInstallRoot: gameDir
+    })
+    // The ir1 UE layout: x64 stub exe + Shipping exe + Engine Steamworks dll.
+    const ueTree = (exeBody: string, dllBody = 'plain-game-dll') => {
+      gameExePath = join(gameDir, 'ManorLords.exe')
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      const shipping = put(
+        join(
+          'ManorLords',
+          'Binaries',
+          'Win64',
+          'ManorLords-Win64-Shipping.exe'
+        ),
+        exeBody
+      )
+      const dllRel = join(
+        'Engine',
+        'Binaries',
+        'ThirdParty',
+        'Steamworks',
+        'Steamv157',
+        'Win64',
+        'steam_api64.dll'
+      )
+      const dll = put(dllRel, dllBody)
+      return { shipping, dll }
+    }
+    const warnings = () =>
+      (jest.requireMock('backend/logger').logWarning as jest.Mock).mock.calls
+        .map((c) => (Array.isArray(c[0]) ? String(c[0][0]) : String(c[0])))
+        .filter((m) => m.includes('withheld'))
+
+    it('Manor Lords shape: withheld, dll untouched, no backup, verdict names the gaps', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends017 SteamUtils008'
+      )
+      scanByPath({
+        [shipping]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: MANOR_DELAY_SYMBOLS,
+          delaySymbols: MANOR_DELAY_SYMBOLS
+        }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') {
+        expect(result.restored).toEqual([])
+        expect(result.verdict.status).toBe('miss')
+        expect(result.verdict.arch).toBe('x64')
+        expect(result.verdict.missingSymbols).toContain(
+          'SteamInternal_GameServer_Init'
+        )
+        expect(result.verdict.missingSymbols).toContain('SteamFriends017')
+        expect(result.verdict.missingSymbols).not.toContain('SteamUser019')
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
+      expect(existsSync(dll + BACKUP)).toBe(false)
+      const warned = warnings()
+      expect(warned).toHaveLength(1)
+      expect(warned[0]).toContain('SteamInternal_GameServer_Init')
+      expect(warned[0]).toContain('SteamFriends017')
+    })
+
+    it('a delay-only gap with every version served is withheld', async () => {
+      const { shipping, dll } = ueTree('SteamUser019 SteamFriends015')
+      scanByPath({
+        [shipping]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: [...COVERED, 'SteamAPI_Bogus'],
+          delaySymbols: ['SteamAPI_Bogus']
+        }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
+    })
+
+    it('a skew-only gap (static, all symbols covered) is withheld', async () => {
+      const { shipping, dll } = ueTree('SteamUser019 SteamFriends017')
+      scanByPath({
+        [shipping]: { status: 'ok', arch: 'x64', symbols: COVERED }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') {
+        expect(result.verdict.missingSymbols).toEqual(['SteamFriends017'])
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
+    })
+
+    it('ELEX shape (served families + null-object-only families) is still placed', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends015 SteamUtils008 STEAMHTTP_INTERFACE_VERSION003 STEAMUGC_INTERFACE_VERSION010'
+      )
+      scanByPath({
+        [shipping]: { status: 'ok', arch: 'x64', symbols: COVERED }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('placed')
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+    })
+
+    it('restores the original from .gamelib-orig when the guard trips over an older shim', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends015',
+        'GameLibSteamBridgeShim old'
+      )
+      writeFileSync(dll + BACKUP, 'orig-bytes')
+      scanByPath({
+        [shipping]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: [...COVERED, 'SteamAPI_Bogus'],
+          delaySymbols: ['SteamAPI_Bogus']
+        }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') {
+        expect(result.restored).toEqual([resolve(dll)])
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe('orig-bytes')
+      expect(readFileSync(dll + BACKUP, 'utf-8')).toBe('orig-bytes')
+    })
+
+    it('without a backup the shim stays in place and one warning says the original is gone', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends015',
+        'GameLibSteamBridgeShim old'
+      )
+      scanByPath({
+        [shipping]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: [...COVERED, 'SteamAPI_Bogus'],
+          delaySymbols: ['SteamAPI_Bogus']
+        }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') expect(result.restored).toEqual([])
+      expect(readFileSync(dll, 'utf-8')).toBe('GameLibSteamBridgeShim old')
+      const gone = (
+        jest.requireMock('backend/logger').logWarning as jest.Mock
+      ).mock.calls.filter((c) => {
+        const m = String(Array.isArray(c[0]) ? c[0][0] : c[0])
+        return m.includes('gamelib-orig') && m.includes('original')
+      })
+      expect(gone.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('a tampered backup that carries the shim marker is not restored', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends015',
+        'GameLibSteamBridgeShim old'
+      )
+      writeFileSync(dll + BACKUP, 'GameLibSteamBridgeShim tampered')
+      scanByPath({
+        [shipping]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: [...COVERED, 'SteamAPI_Bogus'],
+          delaySymbols: ['SteamAPI_Bogus']
+        }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('withheld')
+      if (result.status === 'withheld') expect(result.restored).toEqual([])
+      expect(readFileSync(dll, 'utf-8')).toBe('GameLibSteamBridgeShim old')
+      const warn = jest.requireMock('backend/logger').logWarning as jest.Mock
+      expect(
+        warn.mock.calls.some(
+          (c) =>
+            String(c[0]).includes('tamper') ||
+            String(c[0]).includes('shim bytes')
+        )
+      ).toBe(true)
+    })
+
+    it('exe-imports branch: a delay-imported miss withholds and leaves the game-original target', async () => {
+      writeFileSync(shim64DestPath(), 'game-original-bytes')
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x64',
+        symbols: ['SteamAPI_Init', 'SteamAPI_Bogus'],
+        delaySymbols: ['SteamAPI_Bogus']
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath
+      })
+
+      expect(result.status).toBe('withheld')
+      expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(
+        'game-original-bytes'
+      )
+      expect(existsSync(shim64DestPath() + BACKUP)).toBe(false)
+    })
+  })
 })

@@ -2147,6 +2147,43 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     expect(persistCall).toBeDefined()
   })
 
+  it("quick 261024-j4l: placeShimForGame's 'withheld' status at launch goes direct (no helper, no config) and persists the miss verdict", async () => {
+    const WITHHELD_APP_ID = '555560'
+    library.set(WITHHELD_APP_ID, makeEntry({ title: 'Withheld Shim' }))
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'withheld',
+      restored: [],
+      verdict: {
+        status: 'miss',
+        arch: 'x64',
+        missingSymbols: ['SteamInternal_GameServer_Init', 'SteamFriends017'],
+        interfaceVersions: { SteamFriends: 'SteamFriends017' },
+        stubbedInterfaces: [],
+        shimExportSetVersion: 'v1',
+        scannedAt: '2026-01-01T00:00:00.000Z'
+      }
+    })
+
+    const game = new SteamGame(WITHHELD_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+    expect(writeBridgeConfig).not.toHaveBeenCalled()
+    expect(runWineCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commandParts: [RESOLVED_EXE_PATH],
+        wait: false
+      })
+    )
+    expect(result).toBe(true)
+    const persistCall = (steamMetadataStore.set as jest.Mock).mock.calls.find(
+      ([id, value]) =>
+        id === WITHHELD_APP_ID && value?.bridge?.scan?.status === 'miss'
+    )
+    expect(persistCall).toBeDefined()
+  })
+
   it("D-51-09 (Task 2): placeShimForGame's 'placed' status at launch persists the clean verdict via writeBridgeScanVerdict (steamMetadataStore.set observed) and still reaches runWineCommand through the normal helper/config path", async () => {
     const PLACED_APP_ID = '555559'
     library.set(PLACED_APP_ID, makeEntry({ title: 'Freshly Re-placed Shim' }))
