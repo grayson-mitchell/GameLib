@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
-stopped_at: Phase 52 gap closure 5 executed (52-33..35); amended done-when NOT passed (52-UAT item 30 issue - notice not observed - and item 31 pass); next /gsd-plan-phase 52 --gaps
-last_updated: "2026-10-24T09:55:00.000Z"
-last_activity: 2026-10-24
+stopped_at: Phase 52 gap closure 5 planned (52-33..35, 2 waves; amended done-when, option-closeout) — next /gsd-execute-phase 52 --gaps-only
+last_updated: "2026-10-24T10:07:32.288Z"
+last_activity: 2026-10-24 -- Phase 52 planning complete
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 65
-  completed_plans: 64
+  total_plans: 67
+  completed_plans: 65
   percent: 33
 ---
 
@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 52 (bridge-backed-steamclient-dll-for-steamstub-titles) — EXECUTING
 Plan: 3 of 35
 Status: Ready to execute
-Last activity: 2026-10-24
+Last activity: 2026-10-24 -- Phase 52 planning complete
 
 Progress: [██████████] 98%
 
