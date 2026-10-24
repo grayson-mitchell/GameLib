@@ -1,4 +1,11 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -9,6 +16,7 @@ import {
   buildSteamClient64CompileArgv,
   helperOutputPath,
   machoArchFlag,
+  missingSteamClient64Inputs,
   pruneShim64BuildByproducts,
   pruneShimBuildByproducts,
   pruneSteamClient64BuildByproducts,
@@ -559,9 +567,35 @@ describe('buildSteamBridgeShims', () => {
       expect(args).toContain(STEAMCLIENT_FWD_SOURCE_PATH)
       // 52-26 (item 22): the version resource, compiled with the forwarder.
       expect(args).toContain(STEAMCLIENT_FWD_RC_PATH)
-      expect(STEAMCLIENT_FWD_RC_PATH.endsWith('steamclient_fwd.rc')).toBe(true)
+      // 52-REVIEW WR-02: the .rc is its own input and follows the .c (the
+      // import-lib name derives from the first source).
+      expect(args.slice(-2)).toEqual([
+        STEAMCLIENT_FWD_SOURCE_PATH,
+        STEAMCLIENT_FWD_RC_PATH
+      ])
+      expect(args.indexOf(STEAMCLIENT_FWD_SOURCE_PATH)).toBeLessThan(
+        args.indexOf(STEAMCLIENT_FWD_RC_PATH)
+      )
+      expect(existsSync(STEAMCLIENT_FWD_RC_PATH)).toBe(true)
       expect(args).not.toContain('-lws2_32')
       expect(args.some((a) => a.endsWith('.def'))).toBe(false)
+    })
+
+    describe('missingSteamClient64Inputs (52-REVIEW WR-01)', () => {
+      it('returns [] when every input exists', () => {
+        expect(missingSteamClient64Inputs(() => true)).toEqual([])
+      })
+      it('names a missing .rc', () => {
+        expect(
+          missingSteamClient64Inputs((p) => p !== STEAMCLIENT_FWD_RC_PATH)
+        ).toEqual([STEAMCLIENT_FWD_RC_PATH])
+      })
+      it('names every missing input in order', () => {
+        expect(missingSteamClient64Inputs(() => false)).toEqual([
+          STEAMCLIENT_FWD_SOURCE_PATH,
+          STEAMCLIENT_FWD_RC_PATH
+        ])
+      })
     })
 
     it('byproducts never name a keeper and prune removes them fail-loud', () => {
