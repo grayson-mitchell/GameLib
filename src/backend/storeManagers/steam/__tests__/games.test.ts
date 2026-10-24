@@ -72,6 +72,7 @@ import {
   stopBridgeHelper
 } from '../bridge/helperProcess'
 import { writeBridgeConfig } from '../bridge/bridgeConfig'
+import { setupSteamClientForwarder } from '../bridge/steamClientSetup'
 import {
   startBottleProcessMonitor,
   getBottleProcessMonitorPhase,
@@ -352,6 +353,12 @@ jest.mock('../bridge/helperProcess', () => ({
 jest.mock('../bridge/bridgeConfig', () => ({
   writeBridgeConfig: jest.fn(),
   BRIDGE_CONFIG_FILENAME: 'gamelib_bridge.cfg'
+}))
+
+// ── bridge/steamClientSetup.ts mock (Phase 52 Plan 09) — SteamStub forwarder
+// + HKCU registry setup, called from launchBridgeGame().
+jest.mock('../bridge/steamClientSetup', () => ({
+  setupSteamClientForwarder: jest.fn()
 }))
 
 // ── bottleProcessMonitor.ts mock (Phase 51 Plan 01 Task 2) —
@@ -2105,6 +2112,197 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       expect(writeBridgeConfig).toHaveBeenCalledWith(
         expect.objectContaining({ shimPaths: [RESOLVED_EXE_PATH] })
       )
+    })
+  })
+
+  describe('Phase 52: SteamStub forwarder setup', () => {
+    const SHIM = RESOLVED_EXE_PATH
+    const BASE_VERDICT = {
+      status: 'clean' as const,
+      arch: 'x64' as const,
+      missingSymbols: [],
+      interfaceVersions: {},
+      stubbedInterfaces: [],
+      shimExportSetVersion: 'v1',
+      scannedAt: '2026-01-01T00:00:00.000Z'
+    }
+    let idCounter = 0
+    // The notice gate is session-scoped, so each test gets its own appId.
+    const freshId = () => {
+      const id = String(770000 + ++idCounter)
+      library.set(id, makeEntry({ title: `SteamStub ${id}` }))
+      return id
+    }
+    const callOrder: string[] = []
+    const { logInfo } = jest.requireMock('backend/logger')
+
+    beforeEach(() => {
+      callOrder.length = 0
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+      ;(isBottleReady as jest.Mock).mockReturnValue(true)
+      ;(notify as jest.Mock).mockClear()
+      ;(logInfo as jest.Mock).mockClear()
+      ;(sendFrontendMessage as jest.Mock).mockClear()
+      ;(setupSteamClientForwarder as jest.Mock)
+        .mockReset()
+        .mockImplementation(() => {
+          callOrder.push('setup')
+          return Promise.resolve({
+            status: 'placed',
+            forwarderPath: '/x/steamclient64.dll',
+            winPath: 'C:\\x\\steamclient64.dll'
+          })
+        })
+      ;(writeBridgeConfig as jest.Mock).mockImplementation(() => {
+        callOrder.push('cfg')
+        return { status: 'written', path: '/mock/cfg' }
+      })
+      ;(runWineCommand as jest.Mock).mockImplementation(() => {
+        callOrder.push('wine')
+        return Promise.resolve({ stdout: '', stderr: '' })
+      })
+    })
+
+    const noticeLogged = (id: string, cause: string) =>
+      (logInfo as jest.Mock).mock.calls.some(
+        (c) =>
+          c[0] ===
+          `[bridge-notice] appId=${id} reason=steamstub-unforwarded:${cause}`
+      )
+
+    it('places the forwarder after writeBridgeConfig and before wine, with the shimPaths handed to the cfg', async () => {
+      const id = freshId()
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: SHIM,
+        verdict: BASE_VERDICT,
+        drmWrapper: 'steamstub'
+      })
+      const result = await new SteamGame(id).launch({} as any)
+
+      expect(setupSteamClientForwarder).toHaveBeenCalledTimes(1)
+      expect(setupSteamClientForwarder).toHaveBeenCalledWith({
+        appId: id,
+        bottleName: 'GameLibSteamBridge',
+        bottleSettings: { wineCrossoverBottle: 'GameLibSteamBridge' },
+        exePath: RESOLVED_EXE_PATH,
+        shimPaths: [SHIM],
+        arch: 'x64'
+      })
+      expect(callOrder).toEqual(['cfg', 'setup', 'wine'])
+      expect(
+        (logInfo as jest.Mock).mock.calls.some(
+          (c) =>
+            typeof c[0] === 'string' &&
+            c[0].includes(`[bridge-steamstub] appId=${id} forwarder placed`)
+        )
+      ).toBe(true)
+      expect(notify).not.toHaveBeenCalled()
+      expect(result).toBe(true)
+    })
+
+    it('uses the persisted scan drmWrapper and arch on an already-placed launch', async () => {
+      const id = freshId()
+      jest.spyOn(bridgeVerdictModule, 'readBridgeVerdict').mockReturnValue({
+        scan: { ...BASE_VERDICT, arch: 'x86', drmWrapper: 'steamstub' }
+      } as never)
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'already-placed',
+        shimPath: SHIM
+      })
+      try {
+        await new SteamGame(id).launch({} as any)
+      } finally {
+        jest.restoreAllMocks()
+      }
+      expect(setupSteamClientForwarder).toHaveBeenCalledWith(
+        expect.objectContaining({ appId: id, arch: 'x86' })
+      )
+    })
+
+    it('never calls setup for a title without drmWrapper steamstub', async () => {
+      const id = freshId()
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: SHIM,
+        verdict: BASE_VERDICT
+      })
+      await new SteamGame(id).launch({} as any)
+      expect(setupSteamClientForwarder).not.toHaveBeenCalled()
+      expect(callOrder).toEqual(['cfg', 'wine'])
+    })
+
+    it('forwarder-not-built: logs the notice, notifies once, still launches', async () => {
+      const id = freshId()
+      ;(setupSteamClientForwarder as jest.Mock).mockResolvedValue({
+        status: 'unavailable',
+        reason: 'forwarder-not-built'
+      })
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: SHIM,
+        verdict: BASE_VERDICT,
+        drmWrapper: 'steamstub'
+      })
+      const result = await new SteamGame(id).launch({} as any)
+
+      expect(noticeLogged(id, 'forwarder-not-built')).toBe(true)
+      expect(notify).toHaveBeenCalledTimes(1)
+      expect(notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'gamelib:steam.bridge.steamstub.title',
+          body: 'gamelib:steam.bridge.steamstub.body'
+        })
+      )
+      expect(runWineCommand).toHaveBeenCalled()
+      expect(result).toBe(true)
+
+      // Second launch, same session: logged again, not notified again.
+      ;(logInfo as jest.Mock).mockClear()
+      await new SteamGame(id).launch({} as any)
+      expect(noticeLogged(id, 'forwarder-not-built')).toBe(true)
+      expect(notify).toHaveBeenCalledTimes(1)
+    })
+
+    it('setup error: reason setup-error, launch proceeds, no breaker and no setup-required message', async () => {
+      const id = freshId()
+      ;(setupSteamClientForwarder as jest.Mock).mockResolvedValue({
+        status: 'error',
+        error: 'boom'
+      })
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'placed',
+        shimPath: SHIM,
+        verdict: BASE_VERDICT,
+        drmWrapper: 'steamstub'
+      })
+      const result = await new SteamGame(id).launch({} as any)
+
+      expect(noticeLogged(id, 'setup-error')).toBe(true)
+      expect(runWineCommand).toHaveBeenCalled()
+      expect(result).toBe(true)
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBridgeSetupRequired',
+        expect.anything()
+      )
+    })
+
+    it('no-steam-api with drmWrapper steamstub: notice, direct launch, setup not called', async () => {
+      const id = freshId()
+      ;(placeShimForGame as jest.Mock).mockResolvedValue({
+        status: 'no-steam-api',
+        verdict: { ...BASE_VERDICT, drmWrapper: 'steamstub' }
+      })
+      const result = await new SteamGame(id).launch({} as any)
+
+      expect(noticeLogged(id, 'no-steam-api')).toBe(true)
+      expect(notify).toHaveBeenCalledTimes(1)
+      expect(setupSteamClientForwarder).not.toHaveBeenCalled()
+      expect(ensureBridgeHelperReady).not.toHaveBeenCalled()
+      expect(runWineCommand).toHaveBeenCalled()
+      expect(result).toBe(true)
     })
   })
 

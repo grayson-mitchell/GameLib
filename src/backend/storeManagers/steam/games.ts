@@ -99,6 +99,7 @@ import {
   stopBridgeHelper
 } from './bridge/helperProcess'
 import { writeBridgeConfig } from './bridge/bridgeConfig'
+import { setupSteamClientForwarder } from './bridge/steamClientSetup'
 // Phase 51 Plan 09 (D-51-07/09): the pure routing resolver + the persisted
 // verdict read/clear family + the current-shim coverage check. games.ts is
 // the sole assembler of resolveBridgeRoute's input and the sole writer of
@@ -569,6 +570,12 @@ export async function getSteamInstallSize(
 
   return '?? MB'
 }
+
+// Phase 52 (orchestrator decision 3): one notify() per title per GameLib
+// session when SteamStub forwarding is unavailable. Session-scoped rather than
+// a persisted flag so a user who fixes the cause (e.g. rebuilds the forwarder)
+// is told again next session if it still fails. The log line fires every time.
+const steamStubNoticeShownThisSession = new Set<string>()
 
 export default class SteamGame implements Game {
   private readonly appId: string
@@ -2690,6 +2697,33 @@ export default class SteamGame implements Game {
     markBridgeLimitedNoticeShown(this.appId)
   }
 
+  private maybeNotifySteamStubUnforwarded(
+    cause:
+      | 'forwarder-not-built'
+      | 'x86-deferred'
+      | 'setup-error'
+      | 'no-steam-api'
+  ): void {
+    logInfo(
+      `[bridge-notice] appId=${this.appId} reason=steamstub-unforwarded:${cause}`,
+      LogPrefix.Steam
+    )
+    if (steamStubNoticeShownThisSession.has(this.appId)) {
+      return
+    }
+    steamStubNoticeShownThisSession.add(this.appId)
+    notify({
+      title: i18next.t(
+        'gamelib:steam.bridge.steamstub.title',
+        'Steam DRM check may fail'
+      ),
+      body: i18next.t(
+        'gamelib:steam.bridge.steamstub.body',
+        "This game uses Steam's DRM wrapper. GameLib could not connect it to your Mac Steam client, so the game will probably close a few seconds after it starts."
+      )
+    })
+  }
+
   private async launchBridgeGame(): Promise<boolean> {
     const exePath = await resolveBridgeLaunchExe(this.appId)
     if (!exePath) {
@@ -2801,6 +2835,15 @@ export default class SteamGame implements Game {
       writeBridgeScanVerdict(this.appId, shimResult.verdict)
     }
 
+    // Phase 52: SteamStub-wrapped launch exe. Stamped on the placed /
+    // already-placed / placed-miss result (and its verdict) by shimGenerate;
+    // an 'already-placed' no-op carries no verdict, so fall back to the
+    // persisted scan. NOT stamped on 'withheld' / 'no-steam-api' results.
+    const drmWrapper =
+      ('drmWrapper' in shimResult ? shimResult.drmWrapper : undefined) ??
+      shimResult.verdict?.drmWrapper ??
+      persistedScan?.drmWrapper
+
     // Quick 261024-br4: an already-installed Steam CEG title (XCOM 200510)
     // would otherwise idle ~30s and exit silently. Same dialog as install,
     // but the bottle is NOT removed -- launch never deletes (mirrors the
@@ -2835,6 +2878,9 @@ export default class SteamGame implements Game {
       shimResult.status === 'no-steam-api' ||
       shimResult.status === 'withheld'
     ) {
+      if (shimResult.status === 'no-steam-api' && drmWrapper === 'steamstub') {
+        this.maybeNotifySteamStubUnforwarded('no-steam-api')
+      }
       logInfo(
         shimResult.status === 'withheld'
           ? `SteamGame: launching appId ${this.appId} via the Steam bridge bottle directly (shim withheld: coverage gaps ${shimResult.verdict.missingSymbols.join(', ')}, no helper)`
@@ -2907,6 +2953,36 @@ export default class SteamGame implements Game {
         fallbackAvailable: true
       })
       return false
+    }
+
+    // Phase 52 (Scopes 3/4): after the helper is ready and the cfg is
+    // written, before wine launches the exe. Never aborts the launch and never
+    // arms the session breaker -- an unforwarded SteamStub title launches as
+    // it did before, with an honest notice.
+    if (drmWrapper === 'steamstub') {
+      const forwarder = await setupSteamClientForwarder({
+        appId: this.appId,
+        bottleName: bridgeBottleSettings.wineCrossoverBottle,
+        bottleSettings: bridgeBottleSettings,
+        exePath,
+        shimPaths,
+        arch:
+          shimResult.verdict?.arch ?? persistedScan?.arch ?? ('x64' as const)
+      })
+      if (forwarder.status === 'placed') {
+        logInfo(
+          `[bridge-steamstub] appId=${this.appId} forwarder placed at ${forwarder.winPath}`,
+          LogPrefix.Steam
+        )
+      } else if (forwarder.status === 'unavailable') {
+        this.maybeNotifySteamStubUnforwarded(forwarder.reason)
+      } else {
+        logWarning(
+          `SteamGame: SteamStub forwarder setup failed for appId ${this.appId}: ${forwarder.error}`,
+          LogPrefix.Steam
+        )
+        this.maybeNotifySteamStubUnforwarded('setup-error')
+      }
     }
 
     logInfo(
