@@ -422,6 +422,8 @@
             },
             "steamstub": {
                 "body": "Ova igra koristi Steamov DRM omotač. GameLib ga nije uspio povezati s vašim Steam klijentom na Macu pa će se igra vjerojatno zatvoriti nekoliko sekundi nakon pokretanja.",
+                "forwardedBody": "Ova igra koristi Steamov DRM omotač. GameLib ju je povezao s vašim Steam klijentom na Macu, ali provjera pokretanja omotača ne može se zadovoljiti putem izvornog Steam mosta pa će igra vjerojatno prikazati Steam grešku i neće se pokrenuti.",
+                "forwardedTitle": "Steam DRM provjera nije podržana",
                 "title": "Steam DRM provjera mogla bi propasti"
             }
         },

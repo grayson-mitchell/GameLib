@@ -337,6 +337,8 @@
             },
             "steamstub": {
                 "body": "Ce jeu utilise l'enveloppe DRM de Steam. GameLib n'a pas pu la relier à votre client Steam sur Mac, le jeu se fermera donc probablement quelques secondes après son lancement.",
+                "forwardedBody": "Ce jeu utilise l'enveloppe DRM de Steam. GameLib l'a relié à votre client Steam sur Mac, mais la vérification de lancement de l'enveloppe ne peut pas être satisfaite via le pont Steam natif ; le jeu affichera donc probablement une erreur Steam et ne se lancera pas.",
+                "forwardedTitle": "La vérification DRM de Steam n’est pas prise en charge",
                 "title": "La vérification DRM de Steam risque d'échouer"
             }
         },

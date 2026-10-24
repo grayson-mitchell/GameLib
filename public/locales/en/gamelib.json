@@ -455,6 +455,8 @@
             },
             "steamstub": {
                 "body": "This game uses Steam's DRM wrapper. GameLib could not connect it to your Mac Steam client, so the game will probably close a few seconds after it starts.",
+                "forwardedBody": "This game uses Steam's DRM wrapper. GameLib connected it to your Mac Steam client, but the wrapper's launch check cannot be satisfied through the native Steam bridge, so the game will probably show a Steam error and not start.",
+                "forwardedTitle": "Steam DRM check not supported",
                 "title": "Steam DRM check may fail"
             }
         },

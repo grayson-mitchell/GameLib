@@ -415,6 +415,8 @@
             },
             "steamstub": {
                 "body": "此游戏使用 Steam 的 DRM 包装器。GameLib 无法将其连接到你 Mac 上的 Steam 客户端，因此游戏很可能在启动几秒后关闭。",
+                "forwardedBody": "此游戏使用 Steam 的 DRM 包装器。GameLib 已将其连接到你 Mac 上的 Steam 客户端，但包装器的启动检查无法通过原生 Steam 桥接满足，因此游戏很可能会显示 Steam 错误且无法启动。",
+                "forwardedTitle": "不支持 Steam DRM 检查",
                 "title": "Steam DRM 检查可能失败"
             }
         },

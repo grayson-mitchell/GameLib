@@ -429,6 +429,8 @@
             },
             "steamstub": {
                 "body": "Ta gra używa nakładki DRM Steam. GameLib nie zdołał połączyć jej z klientem Steam na Macu, więc gra prawdopodobnie zamknie się kilka sekund po uruchomieniu.",
+                "forwardedBody": "Ta gra używa nakładki DRM Steam. GameLib połączył ją z klientem Steam na Macu, ale kontroli uruchamiania nakładki nie można spełnić przez natywny most Steam, więc gra prawdopodobnie wyświetli błąd Steam i się nie uruchomi.",
+                "forwardedTitle": "Sprawdzanie DRM Steam nie jest obsługiwane",
                 "title": "Sprawdzanie DRM Steam może się nie powieść"
             }
         },

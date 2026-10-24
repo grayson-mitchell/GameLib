@@ -422,6 +422,8 @@
             },
             "steamstub": {
                 "body": "Aquest joc utilitza l'embolcall DRM de Steam. GameLib no ha pogut connectar-lo amb el client de Steam del teu Mac, així que el joc probablement es tancarà uns segons després d'iniciar-se.",
+                "forwardedBody": "Aquest joc utilitza l'embolcall DRM de Steam. GameLib l'ha connectat amb el client de Steam del teu Mac, però la comprovació d'inici de l'embolcall no es pot satisfer mitjançant el pont natiu de Steam, així que el joc probablement mostrarà un error de Steam i no s'iniciarà.",
+                "forwardedTitle": "La comprovació DRM de Steam no és compatible",
                 "title": "La comprovació DRM de Steam pot fallar"
             }
         },

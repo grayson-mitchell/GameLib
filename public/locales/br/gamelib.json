@@ -436,6 +436,8 @@
             },
             "steamstub": {
                 "body": "Ar c'hoari-mañ a implij gwisk DRM Steam. N'eus ket bet gallet gant GameLib he c'hevreañ ouzh ho pellgomzer Steam war Mac, setu e vo serret ar c'hoari moarvat un nebeud eilennoù goude m'eo loc'het.",
+                "forwardedBody": "Ar c'hoari-mañ a implij gwisk DRM Steam. GameLib he deus he c'hevreet ouzh ho pellgomzer Steam war Mac, met ne c'haller ket sevel gwiriañ loc'hañ ar gwisk dre bont Steam nativel, setu e tiskouezo ar c'hoari moarvat ur fazi Steam ha ne loc'ho ket.",
+                "forwardedTitle": "Gwiriañ DRM Steam n'eo ket skoret",
                 "title": "Marteze a c'hall c'hwitañ gwiriañ DRM Steam"
             }
         },

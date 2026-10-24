@@ -415,6 +415,8 @@
             },
             "steamstub": {
                 "body": "Det här spelet använder Steams DRM-omslag. GameLib kunde inte ansluta det till din Steam-klient på Mac, så spelet stängs sannolikt några sekunder efter att det startat.",
+                "forwardedBody": "Det här spelet använder Steams DRM-omslag. GameLib anslöt det till din Steam-klient på Mac, men omslagets startkontroll kan inte uppfyllas via den inbyggda Steam-bryggan, så spelet visar sannolikt ett Steam-fel och startar inte.",
+                "forwardedTitle": "Steams DRM-kontroll stöds inte",
                 "title": "Steams DRM-kontroll kan misslyckas"
             }
         },

@@ -436,6 +436,8 @@
             },
             "steamstub": {
                 "body": "Úsáideann an cluiche seo dlúthchlúdach DRM Steam. Níorbh fhéidir le GameLib é a nascadh le do chliant Steam ar Mac, mar sin is dócha go ndúnfaidh an cluiche cúpla soicind tar éis dó tosú.",
+                "forwardedBody": "Úsáideann an cluiche seo dlúthchlúdach DRM Steam. Nasc GameLib é le do chliant Steam ar Mac, ach ní féidir seiceáil seolta an chlúdaigh a shásamh tríd an droichead dúchasach Steam, mar sin is dócha go dtaispeánfaidh an cluiche earráid Steam agus nach dtosóidh sé.",
+                "forwardedTitle": "Ní thacaítear le seiceáil DRM Steam",
                 "title": "Is féidir le seiceáil DRM Steam teipeadh"
             }
         },

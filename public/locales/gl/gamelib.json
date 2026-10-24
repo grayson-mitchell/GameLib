@@ -415,6 +415,8 @@
             },
             "steamstub": {
                 "body": "Este xogo usa o envoltorio DRM de Steam. GameLib non puido conectalo co teu cliente de Steam no Mac, así que o xogo probablemente pechará uns segundos despois de iniciarse.",
+                "forwardedBody": "Este xogo usa o envoltorio DRM de Steam. GameLib conectouno co teu cliente de Steam no Mac, pero a comprobación de inicio do envoltorio non se pode satisfacer a través da ponte nativa de Steam, así que o xogo probablemente mostrará un erro de Steam e non se iniciará.",
+                "forwardedTitle": "A comprobación DRM de Steam non é compatible",
                 "title": "A comprobación DRM de Steam pode fallar"
             }
         },

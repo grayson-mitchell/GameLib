@@ -440,6 +440,8 @@
     "winetricksBrowse.taskGroup.runtimes",
     "winetricksBrowse.taskGroup.wineSettings",
     "steam.bridge.steamstub.title",
-    "steam.bridge.steamstub.body"
+    "steam.bridge.steamstub.body",
+    "steam.bridge.steamstub.forwardedTitle",
+    "steam.bridge.steamstub.forwardedBody"
   ]
 }

@@ -385,6 +385,8 @@
             },
             "steamstub": {
                 "body": "See mäng kasutab Steami DRM-ümbrist. GameLib ei suutnud seda teie Maci Steami kliendiga ühendada, mistõttu mäng sulgub tõenäoliselt mõni sekund pärast käivitamist.",
+                "forwardedBody": "See mäng kasutab Steami DRM-ümbrist. GameLib ühendas selle teie Maci Steami kliendiga, kuid ümbrise käivituskontrolli ei saa natiivse Steami silla kaudu täita, mistõttu mäng tõenäoliselt näitab Steami viga ega käivitu.",
+                "forwardedTitle": "Steami DRM-kontrolli ei toetata",
                 "title": "Steami DRM-kontroll võib ebaõnnestuda"
             }
         },

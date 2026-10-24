@@ -429,6 +429,8 @@
             },
             "steamstub": {
                 "body": "Táto hra používa obal DRM služby Steam. GameLib ju nedokázal prepojiť s klientom Steam na vašom Macu, takže sa hra pravdepodobne niekoľko sekúnd po spustení zatvorí.",
+                "forwardedBody": "Táto hra používa obal DRM služby Steam. GameLib ju prepojil s klientom Steam na vašom Macu, ale kontrolu spustenia obalu nemožno splniť prostredníctvom natívneho mosta Steam, takže hra pravdepodobne zobrazí chybu Steam a nespustí sa.",
+                "forwardedTitle": "Kontrola Steam DRM nie je podporovaná",
                 "title": "Kontrola Steam DRM môže zlyhať"
             }
         },

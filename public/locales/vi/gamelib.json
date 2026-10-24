@@ -415,6 +415,8 @@
             },
             "steamstub": {
                 "body": "Trò chơi này dùng lớp bọc DRM của Steam. GameLib không thể kết nối nó với ứng dụng Steam trên Mac của bạn, nên trò chơi nhiều khả năng sẽ đóng vài giây sau khi khởi chạy.",
+                "forwardedBody": "Trò chơi này dùng lớp bọc DRM của Steam. GameLib đã kết nối nó với ứng dụng Steam trên Mac của bạn, nhưng bước kiểm tra khi khởi chạy của lớp bọc không thể được đáp ứng qua cầu nối Steam gốc, nên trò chơi nhiều khả năng sẽ báo lỗi Steam và không khởi động.",
+                "forwardedTitle": "Kiểm tra DRM của Steam không được hỗ trợ",
                 "title": "Kiểm tra DRM của Steam có thể thất bại"
             }
         },

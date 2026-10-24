@@ -422,6 +422,8 @@
             },
             "steamstub": {
                 "body": "Este jogo usa o invólucro DRM do Steam. O GameLib não conseguiu ligá-lo ao seu cliente Steam no Mac, por isso o jogo provavelmente fechará alguns segundos após iniciar.",
+                "forwardedBody": "Este jogo usa o invólucro DRM do Steam. O GameLib ligou-o ao seu cliente Steam no Mac, mas a verificação de arranque do invólucro não pode ser satisfeita através da ponte nativa do Steam, por isso o jogo provavelmente mostrará um erro do Steam e não iniciará.",
+                "forwardedTitle": "A verificação DRM do Steam não é suportada",
                 "title": "A verificação DRM do Steam pode falhar"
             }
         },
