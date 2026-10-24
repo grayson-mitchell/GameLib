@@ -979,7 +979,9 @@ describe('D-53-13: engine-aware bridge evidence', () => {
       classifyBridgeEvidence({
         appid: id,
         engine: 'godot',
-        appLogTexts: [hello(id) + call(id)],
+        appLogTexts: [
+          hello(id) + call(id) + call(id, 'SteamUtils010.GetAppID')
+        ],
         gameLogTexts: []
       })
     ).toEqual({
@@ -1111,7 +1113,9 @@ describe('D-53-13: engine-aware bridge evidence', () => {
       classifyBridgeEvidence({
         appid: id,
         engine: 'unreal',
-        appLogTexts: [hello(id) + call(id)],
+        appLogTexts: [
+          hello(id) + call(id) + call(id, 'SteamUtils010.GetAppID')
+        ],
         gameLogTexts: ['LogInit: ok\n']
       }).status
     ).toBe('verified')

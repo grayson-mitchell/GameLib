@@ -398,8 +398,16 @@ function classifyCensusTitleCore(
     playRecorded:
       input.playVerified === true &&
       (row.class === 'bridge' || row.class === 'no-steam-api'),
-    evidence: input.evidence?.status ?? 'unverified',
-    evidenceDetail: input.evidence?.detail ?? 'evidence not collected'
+    ...(row.class === 'known-bad' && input.evidence?.status === 'verified'
+      ? {
+          // 53-11: a known-bad row is never verified.
+          evidence: 'unverified' as const,
+          evidenceDetail: `known-bad: ${row.detail}`
+        }
+      : {
+          evidence: input.evidence?.status ?? 'unverified',
+          evidenceDetail: input.evidence?.detail ?? 'evidence not collected'
+        })
   })
 
   if (input.steamDrm && input.steamDrm.cegMarkers.length > 0) {
@@ -836,18 +844,36 @@ export function appLogSegmentFor(
   return null
 }
 
-/** First game-originated bridge CALL (`Interface.Method`) for `appid` that
- * follows a HELLO for the same appid in the same app-log text, or null.
- * Read only from GameLib's own app logs (T-53-09), appid bracket-anchored. */
-function findGameCall(appid: string, appLogTexts: string[]): string | null {
+/** Identity calls: a game that really initialised Steam asks who it is. */
+const IDENTITY_CALL =
+  /^SteamUser\d+\.(GetSteamID|BLoggedOn)$|^SteamFriends\d+\.GetPersonaName$/
+
+/** DISTINCT game-originated bridge CALLs (`Interface.Method`) for `appid` that
+ * follow a HELLO for the same appid in the same app-log text. Read only from
+ * GameLib's own app logs (T-53-09), appid bracket-anchored. */
+function findGameCalls(appid: string, appLogTexts: string[]): string[] {
   const hello = new RegExp(`HELLO\\s+shim attached appid=${appid}(?![0-9])`)
   const call = /\]\s+CALL\s+([A-Za-z0-9_]+\.[A-Za-z0-9_]+)/
+  const found = new Set<string>()
   for (const text of appLogTexts) {
     const payloads = attributeHelperLines(appid, text)
     const h = payloads.findIndex((l) => hello.test(l))
     if (h < 0) continue
     for (const l of payloads.slice(h + 1)) {
       const m = call.exec(l)
+      if (m) found.add(m[1])
+    }
+  }
+  return [...found]
+}
+
+/** First `NOVER` flat-lookup version attributed to `appid` (the sanitised
+ * version token only, T-53-46), or null. */
+function findNover(appid: string, appLogTexts: string[]): string | null {
+  for (const text of appLogTexts) {
+    for (const l of attributeHelperLines(appid, text)) {
+      if (!/\bNOVER\b/.test(l)) continue
+      const m = /ver=([A-Za-z0-9_]+)/.exec(l)
       if (m) return m[1]
     }
   }
@@ -855,17 +881,20 @@ function findGameCall(appid: string, appLogTexts: string[]): string | null {
 }
 
 /**
- * Quick 261024-f0w + D-53-13: pure live-evidence check, per engine.
- * Order: no HELLO -> unverified. Unity (the default, exactly as f0w locked
- * it): no game log -> unverified; failure marker -> init-failed; else
- * verified (HELLO + clean Player.log; a CALL line is neither required nor
- * sufficient). Unreal: Saved-log failure markers win (init-failed), then
- * `Client API initialized 1` or a game-originated CALL -> verified.
- * Godot / GameMaker / unknown log nothing about Steam init, so a
- * game-originated bridge CALL after HELLO is the evidence. Helper-originated
- * lines (HELLO, FWD) never count, and Mac Steam In-Game status is
- * deliberately NOT an input: it comes from the helper's own SteamAPI_Init,
- * not from the game.
+ * Quick 261024-f0w + D-53-13 + 53-11 (VERIFICATION gap 4): pure live-evidence
+ * check, per engine. Order: no HELLO -> unverified. Unity (the default): no
+ * game log -> unverified; a NOVER line for the appid in the launch segment ->
+ * init-failed (a flat lookup answered NULL is exactly a Steamworks.NET
+ * CSteamAPIContext.Init failure); failure marker -> init-failed; else
+ * verified (HELLO + clean Player.log). Unreal: Saved-log failure markers win
+ * (init-failed), then `Client API initialized 1` -> verified (a NOVER is
+ * noted, non-fatal), else CALL evidence. Godot / GameMaker / unknown log
+ * nothing about Steam init, so CALL evidence is used: at least 2 distinct
+ * game-originated CALL methods, one an identity call
+ * (SteamUser*.GetSteamID/BLoggedOn, SteamFriends*.GetPersonaName); one CALL
+ * (ELEX 411300) is unverified, and CALL-only evidence plus a NOVER reads
+ * unverified. Helper-originated lines (HELLO, FWD) never count, and Mac Steam
+ * In-Game status is deliberately NOT an input.
  */
 export function classifyBridgeEvidence(input: {
   appid: string
@@ -883,11 +912,25 @@ export function classifyBridgeEvidence(input: {
     return { status: 'unverified', detail: 'no HELLO' }
   }
   const engine = input.engine ?? 'unity'
+  const nover = findNover(input.appid, input.appLogTexts)
+  const callVerdict = (): BridgeEvidence => {
+    const calls = findGameCalls(input.appid, input.appLogTexts)
+    if (calls.length === 0) {
+      return { status: 'unverified', detail: 'no game-originated call' }
+    }
+    if (calls.length >= 2 && calls.some((c) => IDENTITY_CALL.test(c))) {
+      return nover === null
+        ? { status: 'verified', detail: `game call ${calls[0]}` }
+        : { status: 'unverified', detail: `unserved ${nover}` }
+    }
+    const n = calls.length
+    return {
+      status: 'unverified',
+      detail: `${n} game call${n === 1 ? '' : 's'}; needs 2 incl. identity`
+    }
+  }
   if (engine === 'godot' || engine === 'gamemaker' || engine === 'unknown') {
-    const call = findGameCall(input.appid, input.appLogTexts)
-    return call
-      ? { status: 'verified', detail: `game call ${call}` }
-      : { status: 'unverified', detail: 'no game-originated call' }
+    return callVerdict()
   }
   if (engine === 'unreal') {
     if (
@@ -896,17 +939,25 @@ export function classifyBridgeEvidence(input: {
       return { status: 'init-failed', detail: 'UE SteamAPI init failed' }
     }
     if (input.gameLogTexts.some((t) => UE_INIT_OK.test(t))) {
-      return { status: 'verified', detail: '' }
+      return {
+        status: 'verified',
+        detail: nover === null ? '' : `unserved ${nover} (non-fatal)`
+      }
     }
-    const call = findGameCall(input.appid, input.appLogTexts)
-    if (call) return { status: 'verified', detail: `game call ${call}` }
-    return {
-      status: 'unverified',
-      detail:
-        input.gameLogTexts.length === 0
-          ? 'no game log found'
-          : 'no game-originated call'
+    const v = callVerdict()
+    if (v.status === 'unverified' && v.detail === 'no game-originated call') {
+      return {
+        status: 'unverified',
+        detail:
+          input.gameLogTexts.length === 0
+            ? 'no game log found'
+            : 'no game-originated call'
+      }
     }
+    return v
+  }
+  if (nover !== null && engine === 'unity') {
+    return { status: 'init-failed', detail: `unserved ${nover}` }
   }
   if (input.gameLogTexts.length === 0) {
     return { status: 'unverified', detail: 'no game log found' }
