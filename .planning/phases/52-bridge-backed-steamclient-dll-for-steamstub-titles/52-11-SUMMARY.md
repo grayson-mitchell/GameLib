@@ -44,3 +44,10 @@ Main menu and Mac Steam In-Game were not observed (headless scratch round; In-Ga
 
 ## Self-Check: PASSED
 52-UAT.md updated (commit 9f1fece63); session captures present.
+
+## Orchestrator correction (2026-10-24)
+
+- **Item 5:** the pid skip condition did not hold (two `pid` reads in round 1), so the decision went to the operator. Decision: no pid writer for now; 52-12 decides. Recorded in 52-UAT.md item 5.
+- **Item 2:** downgraded from `pass` to `pending`. It is a pass candidate only. Its expected line requires main menu, which a headless round never observed, and the game's Steam init logged `SteamAPI_IsSteamRunning() did not locate a running instance of Steam` (round-1.cxlog:6226) before loading the forwarder OK.
+- UAT counts are now 2 passed (items 1 and 5), 4 pending, 2 skipped.
+- Commit 5102e7618.
