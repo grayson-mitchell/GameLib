@@ -12,7 +12,9 @@ export async function getInfoFromGamesDB(
   logInfo(`Getting GamesDB data for ${title}`, LogPrefix.ExtraGameInfo)
 
   const storeName = storeMap[runner]
-  if (!storeName) {
+  // A Steam title's own appId already is its Steam ID; this also keeps
+  // storeMap.steam = 'steam' (quick 261024-tny) from adding a GOG gamesdb call.
+  if (!storeName || runner === 'steam') {
     return { steamID: '' }
   }
   const gamesdb: { data?: GamesDBData } = await libraryManagerMap['gog']

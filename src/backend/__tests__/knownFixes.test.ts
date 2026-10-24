@@ -93,6 +93,21 @@ describe('readKnownFixes', () => {
     expect(readKnownFixes('shared-app', 'legendary')).toEqual(legendaryFixture)
   })
 
+  it('quick 261024-tny reads <id>-steam.json for runner steam, never <id>-undefined.json', () => {
+    const steamFixture = { winetricks: ['vcrun2019'] }
+    writeFileSync(
+      join(fixesPath, 'steamapp-1-steam.json'),
+      JSON.stringify(steamFixture)
+    )
+    writeFileSync(
+      join(fixesPath, 'steamapp-2-undefined.json'),
+      JSON.stringify({ winetricks: ['stale'] })
+    )
+
+    expect(readKnownFixes('steamapp-1', 'steam')).toEqual(steamFixture)
+    expect(readKnownFixes('steamapp-2', 'steam')).toBeNull()
+  })
+
   // WR-06 (34.2-REVIEW.md round 1): `appName` reaches this function as a free
   // string from the renderer via the `getKnownFixes` channel, and `join`
   // NORMALISES `..` segments rather than rejecting them -- so a traversing

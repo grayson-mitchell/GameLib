@@ -120,6 +120,7 @@ import {
   hasAbortController
 } from 'backend/utils/aborthandler/aborthandler'
 import { backendEvents } from 'backend/backend_events'
+import { downloadFile } from '../../utils'
 import type { InstallParams, GameStatus, GameInfo } from 'common/types'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -987,5 +988,53 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
     callAbortController('some-other-caller-genuinely-unregistered-id')
 
     expect(loggedAbortControllerMiss()).toBe(true)
+  })
+})
+
+describe('installQueueElement — quick 261024-tny D1: Steam never pulls Heroic known-fixes', () => {
+  beforeEach(() => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    stopMock.mockResolvedValue(undefined)
+    installMock.mockResolvedValue({ status: 'done' })
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+    ;(libraryManagerMap.gog.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+    ;(isOnline as jest.Mock).mockReturnValue(true)
+    ;(existsSync as jest.Mock).mockReturnValue(true)
+  })
+
+  it('a Steam install never calls downloadFile with a known-fixes URL', async () => {
+    await installQueueElement(makeParams())
+
+    expect(downloadFile).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('known-fixes')
+      })
+    )
+  })
+
+  it('anti-vacuity: a GOG install DOES fetch from the known-fixes feed', async () => {
+    await installQueueElement(
+      makeParams({
+        appName: '1207658930',
+        runner: 'gog',
+        gameInfo: { app_name: '1207658930', runner: 'gog' } as never
+      })
+    )
+
+    expect(downloadFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining(
+          'Heroic-Games-Launcher/known-fixes/main/gog/1207658930'
+        )
+      })
+    )
   })
 })

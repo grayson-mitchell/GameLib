@@ -72,6 +72,11 @@ export const removePrefix = async (appName: string, runner: Runner) => {
 }
 
 const removeFixFile = (appName: string, runner: Runner) => {
+  // quick 261024-tny: before storeMap.steam was set, the steam path resolved
+  // `<appId>-undefined.json`, so a Steam uninstall never deleted a fixes file.
+  // Steam fixes are hand-placed or GameLib-sourced and never re-downloaded at
+  // install (D1), so deleting them would destroy the only copy.
+  if (runner === 'steam') return
   const fixFilePath = join(fixesPath, `${appName}-${storeMap[runner]}.json`)
   if (existsSync(fixFilePath)) {
     rmSync(fixFilePath)

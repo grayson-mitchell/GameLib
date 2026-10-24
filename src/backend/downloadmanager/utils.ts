@@ -504,6 +504,12 @@ async function updateQueueElement(params: InstallParams): Promise<{
 }
 
 async function downloadFixesFor(appName: string, runner: Runner) {
+  // D1 (quick 261024-tny): Steam fixes come only from bundled or local GameLib
+  // sources and never from Heroic's feed (decision 6 of
+  // .planning/notes/per-game-compat-fixes-architecture.md). GameLib's own
+  // fixes repo is tracked in the pending todo
+  // 2026-10-24-gamelib-own-known-fixes-repo-for-steam-and-complex-fixes.md.
+  if (runner === 'steam') return
   const url = `https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/${storeMap[runner]}/${appName}-${storeMap[runner]}.json`
   const dest = pathModule.join(fixesPath, `${appName}-${storeMap[runner]}.json`)
   if (!existsSync(fixesPath)) {

@@ -6,5 +6,5 @@ export const storeMap: { [key in Runner]: string | undefined } = {
   nile: 'amazon',
   sideload: undefined,
   zoom: 'zoom',
-  steam: undefined
+  steam: 'steam'
 }

@@ -26,6 +26,17 @@ describe('getInfoFromGamesDB', () => {
     expect(result).toStrictEqual({ steamID: '' })
   })
 
+  test('skips steam without a network call', async () => {
+    const getSpy = jest.spyOn(axiosClient, 'get').mockResolvedValue({
+      data: testData
+    })
+    getSpy.mockClear()
+
+    const result = await getInfoFromGamesDB('X', '220', 'steam')
+    expect(result).toStrictEqual({ steamID: '' })
+    expect(getSpy).not.toHaveBeenCalled()
+  })
+
   test('catches axios throws', async () => {
     jest.spyOn(axiosClient, 'get').mockRejectedValueOnce({
       response: {
