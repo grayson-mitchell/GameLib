@@ -16,11 +16,24 @@
  * because the real one is non-empty since 51-15's D-51-13 GO.
  */
 
-import { readFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
+  appLogSegmentFor,
+  attributeHelperLines,
+  censusAccumulators,
   classifyBridgeEvidence,
+  findUnityPlayerLogs,
+  resetCensusAccumulators,
+  selectLatestUnrealLogs,
   classifyCensusTitle,
   countX86ModernOrFlat,
   detectEngine,
@@ -1286,5 +1299,134 @@ describe('D-53-12 census shares the install scan', () => {
     expect(src).not.toMatch(/function\s+findRuntimeSteamApiDll/)
     expect(src).not.toMatch(/function\s+readPe(Machine|Effective)?Arch/)
     expect(src).not.toMatch(/^import .*'backend\//m)
+  })
+})
+
+describe('53-11: honest per-launch evidence', () => {
+  const hello = (id: string) =>
+    `bridge helper [${id}]: [2026-10-24T18:29:26Z] HELLO  shim attached appid=${id}\n`
+  const call = (id: string, m = 'SteamUser023.GetSteamID') =>
+    `bridge helper [${id}]: [2026-10-24T18:29:27Z] CALL   ${m}\n`
+  const id = '3410180'
+
+  it('UE: backup logs are dropped and <Project>.log wins', () => {
+    const sel = selectLatestUnrealLogs(
+      [
+        { name: 'AbioticFactor-backup-2026.10.23-21.35.54.log', mtimeMs: 9 },
+        { name: 'AbioticFactor.log', mtimeMs: 1 },
+        { name: 'Other.log', mtimeMs: 5 }
+      ],
+      'AbioticFactor'
+    )
+    expect(sel).toEqual(['AbioticFactor.log'])
+  })
+
+  it('UE: without <Project>.log only the newest non-backup .log is kept', () => {
+    const sel = selectLatestUnrealLogs(
+      [
+        { name: 'a.log', mtimeMs: 1 },
+        { name: 'b.log', mtimeMs: 7 },
+        { name: 'x-backup-1.log', mtimeMs: 99 },
+        { name: 'notes.txt', mtimeMs: 100 }
+      ],
+      'Proj'
+    )
+    expect(sel).toEqual(['b.log'])
+  })
+
+  it('UE: a stale backup failure no longer fails a clean current log', () => {
+    const sel = selectLatestUnrealLogs(
+      [
+        { name: 'AbioticFactor-backup-1.log', mtimeMs: 9 },
+        { name: 'AbioticFactor.log', mtimeMs: 1 }
+      ],
+      'AbioticFactor'
+    )
+    expect(sel).not.toContain('AbioticFactor-backup-1.log')
+  })
+
+  it('Unity: Player.log is read, Player-prev.log is not', () => {
+    const bottle = mkdtempSync(join(tmpdir(), 'census-5311-'))
+    try {
+      const dir = join(
+        bottle,
+        'drive_c/users/crossover/AppData/LocalLow/Co/Prod'
+      )
+      mkdirSync(dir, { recursive: true })
+      writeFileSync(join(dir, 'Player.log'), 'clean')
+      writeFileSync(join(dir, 'Player-prev.log'), 'SteamAPI_Init() failed.')
+      const found = findUnityPlayerLogs(bottle)
+      expect(found).toHaveLength(1)
+      expect(found[0].endsWith('Player.log')).toBe(true)
+    } finally {
+      rmSync(bottle, { recursive: true, force: true })
+    }
+  })
+
+  it('segment: the newest file with a HELLO wins, an older session never pairs', () => {
+    const older = {
+      name: 'gamelib.log.1',
+      mtimeMs: 1,
+      text:
+        hello(id) +
+        call(id) +
+        call(id, 'SteamFriends017.GetPersonaName') +
+        call(id, 'SteamUtils010.GetAppID')
+    }
+    const newer = { name: 'gamelib.log', mtimeMs: 2, text: hello(id) }
+    const seg = appLogSegmentFor(id, [older, newer])
+    expect(seg).toBe(newer.text)
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'godot',
+        appLogTexts: seg === null ? [] : [seg],
+        gameLogTexts: []
+      })
+    ).toEqual({ status: 'unverified', detail: 'no game-originated call' })
+  })
+
+  it('segment: starts at the LAST HELLO within one file', () => {
+    const text = hello(id) + call(id) + call(id, 'A.b') + hello(id)
+    const seg = appLogSegmentFor(id, [
+      { name: 'gamelib.log', mtimeMs: 1, text }
+    ])
+    expect(seg).toBe(hello(id).trimEnd() + '\n'.slice(0, 0) + '\n')
+    expect(seg).not.toContain('CALL')
+  })
+
+  it('segment: null when no file holds a HELLO for the appid', () => {
+    expect(
+      appLogSegmentFor(id, [{ name: 'g', mtimeMs: 1, text: hello('999') }])
+    ).toBeNull()
+  })
+
+  it('attributeHelperLines: continuation lines go to the nearest prefix', () => {
+    const text =
+      `(10:15:27) [WARNING]: [Steam]:           bridge helper [${id}]: [ts] HELLO  shim attached appid=${id}\n` +
+      '[ts] CALL   SteamUser023.GetSteamID\n' +
+      '[ts] CALL   SteamFriends017.GetPersonaName\n'
+    const lines = attributeHelperLines(id, text)
+    expect(lines.filter((l) => /CALL/.test(l))).toHaveLength(2)
+  })
+
+  it('attributeHelperLines: bare lines after another appid prefix are not attributed', () => {
+    const text =
+      `(10:15:27) [WARNING]: [Steam]:           bridge helper [${id}]: [ts] HELLO  shim attached appid=${id}\n` +
+      '(10:15:28) [WARNING]: [Steam]:           bridge helper [999]: [ts] HELLO  shim attached appid=999\n' +
+      '[ts] CALL   SteamUser023.GetSteamID\n'
+    const lines = attributeHelperLines(id, text)
+    expect(lines.filter((l) => /CALL/.test(l))).toHaveLength(0)
+  })
+
+  it('IN-02: the census accumulators reset between runs', () => {
+    resetCensusAccumulators()
+    expect(censusAccumulators()).toEqual({ judged: 0, scanWarnings: 0 })
+  })
+
+  it('IN-04: *_data selects unity only with a matching exe or UnityPlayer.dll', () => {
+    expect(detectEngine(['save_data', 'game.exe'])).not.toBe('unity')
+    expect(detectEngine(['Game_Data', 'Game.exe'])).toBe('unity')
+    expect(detectEngine(['UnityPlayer.dll'])).toBe('unity')
   })
 })
