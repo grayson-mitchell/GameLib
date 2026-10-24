@@ -33,6 +33,7 @@
 // BLOCKER 2 test, to grep shimGenerate.ts's own source text (24-04
 // precedent: a real source-slice test, not a runtime mock assertion).
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -1885,11 +1886,13 @@ describe('shimGenerate', () => {
       expect(readFileSync(dll + BACKUP, 'utf-8')).toBe('orig-bytes')
     })
 
-    it('without a backup the shim stays in place and one warning says the original is gone', async () => {
-      const { shipping, dll } = ueTree(
-        'SteamUser019 SteamFriends015',
-        'GameLibSteamBridgeShim old'
+    const allWarnings = () =>
+      (
+        jest.requireMock('backend/logger').logWarning as jest.Mock
+      ).mock.calls.map((c) =>
+        Array.isArray(c[0]) ? String(c[0][0]) : String(c[0])
       )
+    const bogusScan = (shipping: string) =>
       scanByPath({
         [shipping]: {
           status: 'ok',
@@ -1899,48 +1902,96 @@ describe('shimGenerate', () => {
         }
       })
 
+    it('a game-original dll in place is withheld with the truthful own-steam_api warning', async () => {
+      const { shipping, dll } = ueTree('SteamUser019 SteamFriends015')
+      bogusScan(shipping)
+
       const result = await placeShimForGame('1363080', gameExePath, opts())
 
       expect(result.status).toBe('withheld')
-      if (result.status === 'withheld') expect(result.restored).toEqual([])
-      expect(readFileSync(dll, 'utf-8')).toBe('GameLibSteamBridgeShim old')
-      const gone = (
-        jest.requireMock('backend/logger').logWarning as jest.Mock
-      ).mock.calls.filter((c) => {
-        const m = String(Array.isArray(c[0]) ? c[0][0] : c[0])
-        return m.includes('gamelib-orig') && m.includes('original')
-      })
-      expect(gone.length).toBeGreaterThanOrEqual(1)
+      expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
+      expect(
+        allWarnings().filter((m) => m.includes("game's own steam_api"))
+      ).toHaveLength(1)
     })
 
-    it('a tampered backup that carries the shim marker is not restored', async () => {
+    it('without a backup the stale shim is refreshed, placed-miss, and no own-steam_api line is logged', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends015',
+        'GameLibSteamBridgeShim old'
+      )
+      bogusScan(shipping)
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toContain('SteamAPI_Bogus')
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+      const warned = allWarnings()
+      expect(warned.some((m) => m.includes("game's own steam_api"))).toBe(false)
+      const cannot = warned.filter((m) => m.includes('cannot withhold'))
+      expect(cannot).toHaveLength(1)
+      expect(cannot[0]).toContain('Verify')
+    })
+
+    it('a tampered backup that carries the shim marker is not restored; the shim is refreshed', async () => {
       const { shipping, dll } = ueTree(
         'SteamUser019 SteamFriends015',
         'GameLibSteamBridgeShim old'
       )
       writeFileSync(dll + BACKUP, 'GameLibSteamBridgeShim tampered')
-      scanByPath({
-        [shipping]: {
-          status: 'ok',
-          arch: 'x64',
-          symbols: [...COVERED, 'SteamAPI_Bogus'],
-          delaySymbols: ['SteamAPI_Bogus']
-        }
-      })
+      bogusScan(shipping)
 
       const result = await placeShimForGame('1363080', gameExePath, opts())
 
-      expect(result.status).toBe('withheld')
-      if (result.status === 'withheld') expect(result.restored).toEqual([])
-      expect(readFileSync(dll, 'utf-8')).toBe('GameLibSteamBridgeShim old')
-      const warn = jest.requireMock('backend/logger').logWarning as jest.Mock
+      expect(result.status).toBe('placed-miss')
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+      expect(readFileSync(dll + BACKUP, 'utf-8')).toBe(
+        'GameLibSteamBridgeShim tampered'
+      )
       expect(
-        warn.mock.calls.some(
-          (c) =>
-            String(c[0]).includes('tamper') ||
-            String(c[0]).includes('shim bytes')
-        )
-      ).toBe(true)
+        allWarnings().some((m) => m.includes("game's own steam_api"))
+      ).toBe(false)
+    })
+
+    it('runtime-loaded, two shim targets with one backup: nothing is restored, both are refreshed', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends015',
+        'GameLibSteamBridgeShim old'
+      )
+      writeFileSync(dll + BACKUP, 'orig-bytes')
+      const second = put(
+        join('Plugins', 'x86_64', 'steam_api64.dll'),
+        'GameLibSteamBridgeShim old'
+      )
+      bogusScan(shipping)
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+      expect(readFileSync(second, 'utf-8')).toBe(MARK_X64)
+      expect(readFileSync(dll + BACKUP, 'utf-8')).toBe('orig-bytes')
+    })
+
+    it('a restore that fails mid-withhold is an error, with no own-steam_api line', async () => {
+      const { shipping, dll } = ueTree(
+        'SteamUser019 SteamFriends015',
+        'GameLibSteamBridgeShim old'
+      )
+      writeFileSync(dll + BACKUP, 'orig-bytes')
+      chmodSync(dll, 0o444)
+      bogusScan(shipping)
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      chmodSync(dll, 0o644)
+      expect(result.status).toBe('error')
+      expect(
+        allWarnings().some((m) => m.includes("game's own steam_api"))
+      ).toBe(false)
     })
 
     it('exe-imports branch: a delay-imported miss withholds and leaves the game-original target', async () => {

@@ -814,10 +814,6 @@ function restoreOriginalIfBackedUp(
       backupStat = null
     }
     if (!backupStat || backupStat.isSymbolicLink() || !backupStat.isFile()) {
-      logWarning(
-        `placeShimForGame: appId ${appId}: the original ${basename(target)} is gone (no ${ORIGINAL_BACKUP_SUFFIX} backup) -- leaving the GameLib shim in place; restore it with Steam file verification`,
-        LogPrefix.Steam
-      )
       return 'no-backup'
     }
     if (isGameLibShimBytes(readFileSync(backup))) {
@@ -846,11 +842,39 @@ function restoreOriginalIfBackedUp(
 }
 
 /**
- * quick 261024-j4l: the withhold result. Restores every GameLib-shim target
- * in scope, logs ONE warning naming the gaps, and returns the persisted
- * 'miss' verdict.
+ * Phase 52 Plan 15: read-only twin of `restoreOriginalIfBackedUp`. Runs the
+ * same containment / lstat / not-shim-bytes checks but never copies and never
+ * logs, so the withhold guard can decide BEFORE touching the disk whether
+ * every GameLib shim in scope can really be put back (T-52-55).
  */
-function withhold(input: {
+function probeOriginalBackup(
+  bottleDir: string,
+  target: string
+): 'restorable' | 'no-backup' | 'refused' {
+  const backup = target + ORIGINAL_BACKUP_SUFFIX
+  try {
+    if (
+      !isContainedWithin(bottleDir, resolve(target)) ||
+      !isContainedWithin(bottleDir, resolve(backup))
+    ) {
+      return 'refused'
+    }
+    let backupStat
+    try {
+      backupStat = lstatSync(backup)
+    } catch {
+      backupStat = null
+    }
+    if (!backupStat || backupStat.isSymbolicLink() || !backupStat.isFile()) {
+      return 'no-backup'
+    }
+    return isGameLibShimBytes(readFileSync(backup)) ? 'refused' : 'restorable'
+  } catch {
+    return 'refused'
+  }
+}
+
+type WithholdInput = {
   appId: string
   bottleDir: string
   shimTargets: string[]
@@ -861,19 +885,51 @@ function withhold(input: {
   delayMissing: string[]
   unservable: string[]
   scannedAt: string
-}): PlaceShimResultBase {
+}
+
+/**
+ * Phase 52 Plan 15: withhold only when every GameLib shim in scope can be
+ * restored from a valid backup. Otherwise there is no game-original
+ * steam_api to fall back to, so return null: the caller refreshes the shim
+ * and reports placed-miss (a helper-less stale shim is the worse outcome).
+ */
+function withholdIfRestorable(
+  input: WithholdInput
+): PlaceShimResultBase | null {
+  const probes = input.shimTargets.map((t) =>
+    probeOriginalBackup(input.bottleDir, resolve(t))
+  )
+  if (probes.every((p) => p === 'restorable')) return withhold(input)
+  logWarning(
+    `placeShimForGame: appId ${input.appId} cannot withhold the shim -- the original steam_api is gone (no ${ORIGINAL_BACKUP_SUFFIX} backup, or the backup was refused), so the game has no steam_api of its own; refreshing the GameLib shim to the current build and launching through the bridge despite the gaps (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}). Use Steam's "Verify integrity of game files" to restore the original`,
+    LogPrefix.Steam
+  )
+  return null
+}
+
+/**
+ * quick 261024-j4l: the withhold result. Restores every GameLib-shim target
+ * in scope (all probed restorable by the caller), logs ONE warning naming
+ * the gaps, and returns the persisted 'miss' verdict. A restore that still
+ * fails is an error, never a withheld result.
+ */
+function withhold(input: WithholdInput): PlaceShimResultBase {
   const restored: string[] = []
   for (const target of input.shimTargets) {
     const resolved = resolve(target)
     if (
-      restoreOriginalIfBackedUp(input.bottleDir, resolved, input.appId) ===
+      restoreOriginalIfBackedUp(input.bottleDir, resolved, input.appId) !==
       'restored'
     ) {
-      restored.push(resolved)
+      return {
+        status: 'error',
+        error: `Failed to restore the original ${basename(resolved)} from ${ORIGINAL_BACKUP_SUFFIX}`
+      }
     }
+    restored.push(resolved)
   }
   logWarning(
-    `placeShimForGame: appId ${input.appId} withheld the shim -- importer evidence names gaps the shim cannot serve (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}); launching with the game's own steam_api, no helper (quick 261024-j4l)`,
+    `placeShimForGame: appId ${input.appId} withheld the shim -- importer evidence names gaps the shim cannot serve (delay-imported missing: ${input.delayMissing.join(', ') || 'none'}; unservable interface versions: ${input.unservable.join(', ') || 'none'}); launching with the game's own steam_api, no helper${restored.length > 0 ? ` (restored: ${restored.map((r) => basename(r)).join(', ')})` : ''} (quick 261024-j4l)`,
     LogPrefix.Steam
   )
   return {
@@ -1134,7 +1190,7 @@ async function placeShimForGameInner(
       }
 
       if (delayMissingAll.length > 0 || unservableAll.length > 0) {
-        return withhold({
+        const withheld = withholdIfRestorable({
           appId,
           bottleDir,
           shimTargets: runtimeDlls
@@ -1148,6 +1204,11 @@ async function placeShimForGameInner(
           unservable: [...new Set(unservableAll)],
           scannedAt
         })
+        if (withheld) return withheld
+        // Refresh path: name every gap in the placed-miss verdict.
+        for (const gap of [...delayMissingAll, ...unservableAll]) {
+          if (!combinedMissing.includes(gap)) combinedMissing.push(gap)
+        }
       }
 
       for (const dll of toCopy) {
@@ -1369,8 +1430,9 @@ async function placeShimForGameInner(
     symbols,
     requiredInterfaceVersions: required
   })
+  const refreshGaps: string[] = []
   if (delayMissing.length > 0 || unservable.length > 0) {
-    return withhold({
+    const withheld = withholdIfRestorable({
       appId,
       bottleDir,
       shimTargets: targetIsGameLibShim ? [shimPath] : [],
@@ -1382,7 +1444,12 @@ async function placeShimForGameInner(
       unservable,
       scannedAt
     })
+    if (withheld) return withheld
+    refreshGaps.push(...delayMissing, ...unservable)
   }
+  const placedMissing = [
+    ...new Set([...coverage.missingSymbols, ...refreshGaps])
+  ]
 
   if (targetExists && !targetIsGameLibShim) {
     const backedUp = backupOriginalBeforeOverwrite(bottleDir, shimPath, appId)
@@ -1404,9 +1471,9 @@ async function placeShimForGameInner(
     return { status: 'error', error: `Failed to place shim: ${String(error)}` }
   }
 
-  if (coverage.missingSymbols.length > 0) {
+  if (placedMissing.length > 0) {
     logWarning(
-      `placeShimForGame: shim coverage miss for appId ${appId}: ${coverage.missingSymbols.join(', ')} -- placing anyway (quick 261023-oq7). A static-import miss is expected to fail at load with a Windows entry-point error`,
+      `placeShimForGame: shim coverage miss for appId ${appId}: ${placedMissing.join(', ')} -- placing anyway (quick 261023-oq7). A static-import miss is expected to fail at load with a Windows entry-point error`,
       LogPrefix.Steam
     )
     return {
@@ -1415,7 +1482,7 @@ async function placeShimForGameInner(
       verdict: {
         status: 'miss',
         arch,
-        missingSymbols: coverage.missingSymbols,
+        missingSymbols: placedMissing,
         interfaceVersions: required,
         stubbedInterfaces: coverage.stubbedInterfaces,
         shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
