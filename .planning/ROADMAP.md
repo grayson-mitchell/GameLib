@@ -470,13 +470,13 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 1/9 plans executed
+**Plans:** 2/9 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 53-01-PLAN.md — new x64 interface manifests (Client020/021, User021, Friends017/018, Utils010, UserStats012/013, Input006, GameServer014/015, GameServerStats001) + SteamInternal_GameServer_Init
-- [ ] 53-02-PLAN.md — pure ECMA-335 ImplMap reader, AnyCPU CLR-flag rule, UTF-16 version constants, measured flat-name fixture
+- [x] 53-02-PLAN.md — pure ECMA-335 ImplMap reader, AnyCPU CLR-flag rule, UTF-16 version constants, measured flat-name fixture
 - [ ] 53-03-PLAN.md — census per-engine evidence + game-originated CALL rule, Steamworks-using majority line, rotated logs
 
 **Wave 2** *(blocked on Wave 1 completion)*
