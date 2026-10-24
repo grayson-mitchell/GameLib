@@ -72,10 +72,13 @@ describe('winetricksInstallPathInvariant (Phase 45 Plan 02, D-11 promote: winetr
     expect(sources.length).toBeGreaterThanOrEqual(MIN_FILES_SCANNED)
   })
 
-  it('Invariant 1: Winetricks.install( appears only in backend/tools/winetricksQueue.ts and backend/launcher.ts', () => {
+  it('Invariant 1: Winetricks.install( appears only in backend/tools/winetricksQueue.ts, backend/launcher.ts and the Steam bridge applier', () => {
     const expectedCallers = new Set([
       'backend/tools/winetricksQueue.ts',
-      'backend/launcher.ts'
+      'backend/launcher.ts',
+      // quick 261024-tny: backend-only caller (the Steam bridge launch applier);
+      // not reachable from the renderer, so the invariant's intent holds.
+      'backend/storeManagers/steam/bridgeKnownFixes.ts'
     ])
     const actualCallers = new Set(
       sources

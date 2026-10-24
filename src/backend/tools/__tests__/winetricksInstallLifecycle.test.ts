@@ -194,6 +194,41 @@ describe('Winetricks.install single-flight (double-click todo)', () => {
   })
 })
 
+describe('Winetricks.install with explicit settings (quick 261024-tny)', () => {
+  it('spawns against the explicit settings without a library lookup, and stays single-flight', async () => {
+    const explicit = {
+      wineCrossoverBottle: 'GameLibSteamBridge-480',
+      winePrefix: '/bottles/GameLibSteamBridge-480',
+      wineVersion: { type: 'crossover', bin: '/cx/wine' }
+    } as never
+
+    // The storeManagers mock has no 'steam' key: a library lookup would throw.
+    const first = Winetricks.install(
+      'steam',
+      '480',
+      'vcrun2019',
+      undefined,
+      explicit
+    )
+    await spawned(1)
+    expect(mockGetWineFromProton).toHaveBeenCalledWith(explicit)
+
+    const second = await Winetricks.install(
+      'steam',
+      '480',
+      'd3dx9',
+      undefined,
+      explicit
+    )
+    expect(second).toBe('refused')
+    expect(children).toHaveLength(1)
+
+    children[0].emit('exit', 0)
+    children[0].emit('close', 0)
+    await expect(first).resolves.toBe('installed')
+  })
+})
+
 describe('non-install runs do not borrow the installing verb (list todo)', () => {
   // The sibling "GUI run" case (`Winetricks.run('gog', 'game')`, proving progress/Done events
   // mid-install carried `installingComponent ''`) is deleted here — Phase 45 D-17 removed
