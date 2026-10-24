@@ -18,6 +18,14 @@
 #   HELPER_BIN=<path>       helper binary to start           (default $ART/steam-bridge-helper)
 #   RELAY_INCLUDE='a;b;..'  when non-empty, writes HKCU\Software\Wine\Debug\RelayInclude in the
 #                           CLONE only (never under Software\Valve), for use with +relay in DEBUGMSG.
+#
+# Optional diagnostic switches (52-30; both default off, and with both unset the DRY_RUN printout is
+# unchanged apart from the timestamped delimiter line):
+#   SCORE=1        additive `--- round <r> score ---` block, identical code for every arm, computed over
+#                  the GAME process lines of the cxlog only (metrics W M D L S H R P K).
+#   PID_ARM=live   MODE=trace + clone only: start one anchor process (notepad.exe) inside the clone's
+#                  wineserver and write HKCU\Software\Valve\Steam\ActiveProcess\pid (REG_DWORD) = its
+#                  Windows PID in the CLONE. Diagnostic instrumentation, never a product stand-in.
 set -euo pipefail
 
 : "${SESSION:?SESSION (existing session dir) required}"
@@ -29,6 +37,8 @@ WATCH="${WATCH:-45}"
 DRY_RUN="${DRY_RUN:-0}"
 DEBUGMSG="${DEBUGMSG:-+process,+reg,+loaddll,+seh}"
 RELAY_INCLUDE="${RELAY_INCLUDE:-}"
+SCORE="${SCORE:-0}"
+PID_ARM="${PID_ARM:-}"
 
 SRC=GameLibSteamBridge-219990
 CLONE=GameLibGate52GD
@@ -53,6 +63,12 @@ case "$CLONE_PFX" in */GameLibGate52GD) ;; *) refuse "clone path does not end in
 if pgrep -f 'target/debug/gamelib-shell' >/dev/null 2>&1; then refuse "a gamelib-shell instance is running (single-instance rule)"; fi
 if pgrep -fl 'steam-bridge-helper --appid 219990' >/dev/null 2>&1; then refuse "a 219990 steam-bridge-helper is already running"; fi
 
+if [ -n "$PID_ARM" ]; then
+  [ "$PID_ARM" = live ] || refuse "PID_ARM must be 'live' or unset: $PID_ARM"
+  [ "$MODE" = trace ] || refuse "PID_ARM requires MODE=trace"
+  [ "$CLONE" = GameLibGate52GD ] || refuse "PID_ARM target is not GameLibGate52GD: $CLONE"
+fi
+
 run() {
   if [ "$DRY_RUN" = 1 ]; then printf 'DRY:'; printf ' %q' "$@"; printf '\n'; else "$@"; fi
 }
@@ -67,8 +83,10 @@ STATE="$SESSION/helper-state-$ROUND"
 echo "=== GATE ROUND ${ROUND} MODE=${MODE} — $(date -u +%Y-%m-%dT%H:%M:%SZ) ===" | tee -a "$LOG"
 
 HP=""
+AP=""
 cleanup() {
   [ -n "$HP" ] && kill "$HP" 2>/dev/null || true
+  [ -n "$AP" ] && kill "$AP" 2>/dev/null || true
   if [ "$DRY_RUN" != 1 ]; then WINEPREFIX="$CLONE_PFX" "$CX/wineserver" -k 2>/dev/null || true; fi
 }
 trap cleanup EXIT
@@ -121,6 +139,27 @@ else
   printf 'port=%s\nappid=219990\n' "$PORT" >"$CLONE_GAME/gamelib_bridge.cfg"
 fi
 
+# (5b) PID_ARM=live: clone-only anchor process + HKCU ActiveProcess pid naming it
+if [ "$PID_ARM" = live ]; then
+  AKEY='HKCU\Software\Valve\Steam\ActiveProcess'
+  if [ "$DRY_RUN" = 1 ]; then
+    echo "DRY: (CX_BOTTLE=$CLONE wine notepad.exe) anchor started inside the clone wineserver; PID read with wine tasklist.exe"
+    echo "DRY: env CX_BOTTLE=$CLONE wine reg add $AKEY /v pid /t REG_DWORD /d <anchor Windows PID> /f"
+  else
+    env CX_BOTTLE="$CLONE" "$CX/wine" notepad.exe >>"$SESSION/round-$ROUND.anchor.log" 2>&1 &
+    AP=$!
+    ANCHOR_PID=""
+    for _ in $(seq 50); do
+      ANCHOR_PID=$(env CX_BOTTLE="$CLONE" "$CX/wine" tasklist.exe /FI 'IMAGENAME eq notepad.exe' /FO CSV /NH 2>/dev/null | tr -d '\r' | awk -F'","' '/notepad/{gsub(/"/,"",$2); print $2; exit}' || true)
+      [ -n "$ANCHOR_PID" ] && break
+      sleep 0.5
+    done
+    [ -n "$ANCHOR_PID" ] || { echo "anchor notepad.exe never appeared" | tee -a "$LOG"; exit 1; }
+    echo "PID_ARM anchor=notepad.exe windows_pid=$ANCHOR_PID (clone $CLONE only)" | tee -a "$LOG"
+    env CX_BOTTLE="$CLONE" "$CX/wine" reg add "$AKEY" /v pid /t REG_DWORD /d "$ANCHOR_PID" /f 2>&1 | tee -a "$LOG"
+  fi
+fi
+
 # (6) launch
 T0=$(date +%s)
 if [ "$DRY_RUN" = 1 ]; then
@@ -163,3 +202,26 @@ fi
     grep 'No implementation for steam_api64.dll' "$WINELOG" 2>/dev/null | head -20 || true
   fi
 } | tee -a "$LOG"
+
+# (8) SCORE=1: identical scoring block for every arm, GAME process only (by tid:pid prefix)
+if [ "$SCORE" = 1 ] && [ "$DRY_RUN" != 1 ]; then
+  {
+    echo "--- round $ROUND score ---"
+    GP=$(grep -E ':(Call user32\.MessageBox|warn:seh:dispatch_exception "\[S_API\])' "$CXLOG" 2>/dev/null | head -1 | awk -F: '{print $2}' || true)
+    echo "game pid prefix: ${GP:-none}"
+    if [ -n "$GP" ]; then
+      GL() { awk -F: -v p="$GP" '$2==p' "$CXLOG"; }
+    else
+      GL() { :; }
+    fi
+    echo "W IsSteamRunning-warning count: $(GL | grep -c 'IsSteamRunning() did not locate' || true)"
+    echo "M MessageBox call count: $(GL | grep -cE 'Call user32\.MessageBox' || true)"
+    echo "D first dialog: $(GL | grep -E 'Call user32\.MessageBox' | head -1 | sed -E 's/^[^C]*Call //' || true)"
+    echo "L alive=$(pgrep -fi 'grim dawn.exe' >/dev/null && echo yes || echo no) runtime=$(( $(date +%s) - T0 ))s"
+    echo "S S_API failure-ish count: $(GL | grep '\[S_API\]' | grep -ciE 'failed|error|not logged on|unable' || true)"
+    echo "H helper HELLO count: $(grep -c 'HELLO' "$HELPER_LOG" 2>/dev/null || true)"
+    echo "R helper FWD count: $(grep -c 'FWD' "$HELPER_LOG" 2>/dev/null || true)"
+    echo "P ActiveProcess pid-value read count: $(GL | grep -c 'NtQueryValueKey (0x[0-9a-f]*,L"pid"' || true)"
+    echo "K steam://run count: $(GL | grep -c 'steam://run' || true)"
+  } | tee -a "$LOG"
+fi
