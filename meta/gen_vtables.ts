@@ -987,6 +987,64 @@ function isSteamClientVersionLookupMethod(
 }
 
 /**
+ * WR-09 (52-20): the value each ISteamClient non-lookup wire method answers
+ * LOCALLY for an ordinary x64 title (one not on the SteamStub path). These
+ * are the pre-phase answers at 7ed535984 -- CreateSteamPipe and
+ * ConnectToGlobalUser were `helperFallback: 1` there. Every other
+ * non-lookup method answers '0' (int32 return) or nothing (void).
+ */
+export const STEAM_CLIENT_OFF_PATH_VALUES: Readonly<Record<string, string>> = {
+  CreateSteamPipe: '1',
+  ConnectToGlobalUser: '1'
+}
+
+/**
+ * The `g_bridge_steamstub_path_active` gate for a SteamClient-family
+ * non-lookup wire method (WR-09): off the SteamStub path it returns its
+ * pre-phase local value ahead of bridge_transact, so an ordinary title can
+ * never reach the helper's live native ISteamClient. Returns '' for every
+ * other method. Throws for a shape with no safe off-path value.
+ */
+function steamClientOffPathGate(
+  manifest: InterfaceManifest,
+  method: MethodSignature
+): string {
+  const methodMode = method.mode ?? manifest.mode
+  if (
+    manifest.family !== STEAM_CLIENT_FAMILY ||
+    methodMode !== 'wire' ||
+    isSteamClientVersionLookupMethod(manifest, method)
+  ) {
+    return ''
+  }
+  // out-value params (CreateLocalUser's phSteamPipe) are left untouched
+  // off-path, exactly as the pre-phase stub did; out-buffer has no such
+  // precedent and needs a deliberate answer.
+  const hasOut = method.params.some((p) => p.kind === 'out-buffer')
+  if (
+    isSretReturn(method) ||
+    isStringReturn(method) ||
+    method.returnKind === 'pointer' ||
+    hasOut
+  ) {
+    throw new Error(
+      `SteamClient wire method ${manifest.interface}.${method.name} has no off-SteamStub-path value: ` +
+        `sret, string, pointer returns and out-buffer params need a deliberate local answer`
+    )
+  }
+  let value = ''
+  if (method.returnKind !== 'void') {
+    const entry = STEAM_CLIENT_OFF_PATH_VALUES[method.name]
+    value = ` ${entry ?? (method.returnKind === 'int64' ? '0LL' : '0')}`
+  }
+  return (
+    `#if defined(__x86_64__)\n` +
+    `  if (!g_bridge_steamstub_path_active) { return${value}; }\n` +
+    `#endif\n`
+  )
+}
+
+/**
  * Emits a GetISteamXxx version-lookup stub: looks up `pchVersion` in
  * `g_iface_table` via `resolve_iface_by_exact_version` (defined once,
  * where `g_iface_table` is complete -- see `emitIfaceTableAndBareAccessors`
@@ -1156,6 +1214,7 @@ function emitVtableStub(
   }
 
   const { decl: argBufDecl, lenExpr: argLenExpr } = packArgsBlock(method)
+  const offPathGate = steamClientOffPathGate(manifest, method)
 
   if (stringReturn) {
     // CR-01: a register-return const char* cannot marshal a remote
@@ -1216,6 +1275,7 @@ function emitVtableStub(
       header +
       `static void THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
+      offPathGate +
       `${argBufDecl}\n` +
       `  uint8_t retbuf[1]; uint32_t retlen = 0;\n` +
       `  bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen);\n` +
@@ -1237,6 +1297,7 @@ function emitVtableStub(
       header +
       `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
       `  (void)self;\n` +
+      offPathGate +
       `${argBufDecl}\n` +
       `  uint8_t retbuf[${retWidth}]; uint32_t retlen = 0;\n` +
       `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${retWidth}) return 0;\n` +
@@ -1287,6 +1348,7 @@ function emitVtableStub(
     header +
     `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
     `  (void)self;\n` +
+    offPathGate +
     `${argBufDecl}\n` +
     `  uint8_t retbuf[${retBufSize}]; uint32_t retlen = 0;\n` +
     `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < ${retWidth}) return 0;\n` +

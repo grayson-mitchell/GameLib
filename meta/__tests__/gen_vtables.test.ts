@@ -1856,6 +1856,83 @@ describe('gen_vtables', () => {
       expect(seen).toBeGreaterThan(0)
     })
 
+    // WR-09 (52-20): pre-phase local answers at 7ed535984.
+    const OFF_PATH_EXPECTED: Record<string, string> = {
+      CreateSteamPipe: ' 1',
+      ConnectToGlobalUser: ' 1',
+      BReleaseSteamPipe: ' 0',
+      CreateLocalUser: ' 0',
+      GetIPCCallCount: ' 0',
+      BShutdownIfAllPipesClosed: ' 0',
+      ReleaseUser: '',
+      RunFrame: ''
+    }
+    const assertOffPathGated = (b: string, ret: string): void => {
+      const flagAt = b.indexOf(FLAG)
+      const txAt = b.indexOf('bridge_transact(')
+      expect(flagAt).toBeGreaterThan(-1)
+      expect(txAt).toBeGreaterThan(flagAt)
+      expect(b.slice(0, flagAt)).toContain('#if defined(__x86_64__)')
+      const local = b.slice(flagAt, txAt)
+      expect(local).toContain(`{ return${ret}; }`)
+      expect(local).not.toContain('bridge_transact(')
+    }
+
+    it('WR-09: every wire method of 017 and 014 is gated ahead of bridge_transact', () => {
+      for (const m of [c17, c14]) {
+        let nonLookups = 0
+        for (const method of m.methods) {
+          if (method.mode !== 'wire') continue
+          const b = fnBody(shim, `vt_${m.interface}_${method.name}`)
+          if (/GetISteam/.test(method.name)) {
+            assertGated(b)
+            continue
+          }
+          expect(OFF_PATH_EXPECTED).toHaveProperty(method.name)
+          assertOffPathGated(b, OFF_PATH_EXPECTED[method.name])
+          nonLookups++
+        }
+        expect(nonLookups).toBe(8)
+      }
+    })
+
+    it('WR-09: a non-SteamClient wire method has no SteamStub flag', () => {
+      const out = generateShimC([isteamuser])
+      expect(out).not.toContain('if (!g_bridge_steamstub_path_active)')
+    })
+
+    it('WR-09: generation refuses a SteamClient non-lookup wire method with no off-path value', () => {
+      const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(c17))
+      const m = bad.methods.find((x) => x.name === 'CreateSteamPipe')!
+      m.returnKind = 'pointer'
+      expect(() => generateShimC([bad])).toThrow(
+        /SteamClient017\.CreateSteamPipe/
+      )
+    })
+
+    it('WR-09: committed steam_api_shim.c gates all 16 non-lookup functions', () => {
+      const committed = readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          'native',
+          'steam-bridge',
+          'generated',
+          'steam_api_shim.c'
+        ),
+        'utf-8'
+      )
+      let seen = 0
+      for (const iface of ['SteamClient017', 'SteamClient014']) {
+        for (const [name, ret] of Object.entries(OFF_PATH_EXPECTED)) {
+          assertOffPathGated(fnBody(committed, `vt_${iface}_${name}`), ret)
+          seen++
+        }
+      }
+      expect(seen).toBe(16)
+    })
+
     it('CR-01: committed steam_api_shim.c keeps the null-object fallback for ordinary titles', () => {
       const committed = readFileSync(
         join(
