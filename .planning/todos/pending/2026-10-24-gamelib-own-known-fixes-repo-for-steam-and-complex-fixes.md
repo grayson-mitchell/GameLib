@@ -6,6 +6,7 @@ area: steam-launch
 files:
   - src/backend/downloadmanager/utils.ts
   - src/backend/knownFixes.ts
+  - src/backend/utils/uninstaller.ts
 severity: minor
 platform: any
 ready: human
@@ -25,3 +26,9 @@ Ready is `human` because the operator must create the repo and decide its trust 
 
 Done-when: the repo exists with a documented layout, `downloadFixesFor` (or a GameLib-specific
 fetcher) pulls Steam profiles from it, and its trust rule is enforced in code.
+
+When the fetcher lands, also revisit `removeFixFile` in `src/backend/utils/uninstaller.ts`. It
+skips `steam` today only because a Steam fixes file has no other copy. Once profiles are
+re-downloaded at install, deleting the downloaded copy on uninstall is safe again, as for the other
+stores. Hand-placed debugging profiles should then live in `fixes/local/` (decision 6), which
+uninstall never touches.
