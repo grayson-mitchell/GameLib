@@ -38,6 +38,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -965,6 +966,140 @@ describe('shimGenerate', () => {
       expect(result.shimPath).toBe(shimDestPath())
       expect(result.verdict?.missingSymbols).toEqual([])
     }
+  })
+
+  describe('quick 261024-i94: steam_api importer PEs in the install tree', () => {
+    type Scan = {
+      status: 'ok'
+      arch: 'x86' | 'x64' | 'none'
+      symbols: string[]
+    }
+    const scanByPath = (table: Record<string, Scan>) =>
+      mockedScanSteamApiImports.mockImplementation(
+        async (_appId: string, path: string) =>
+          table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+      )
+    const exeScan: Scan = {
+      status: 'ok',
+      arch: 'x64',
+      symbols: ['SteamAPI_Init', 'SteamAPI_Shutdown']
+    }
+    const mkImporter = (rel: string) => {
+      const full = join(gameDir, rel)
+      mkdirSync(join(full, '..'), { recursive: true })
+      writeFileSync(full, 'importer-pe')
+      return full
+    }
+
+    it('names an uncovered symbol imported by a same-arch importer PE (placed-miss)', async () => {
+      const plugin = mkImporter(join('bin', 'Plugin.dll'))
+      scanByPath({
+        [gameExePath]: exeScan,
+        [plugin]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: ['SteamAPI_Init', 'SteamAPI_Bogus_v001']
+        }
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toContain('SteamAPI_Bogus_v001')
+      }
+    })
+
+    it('stays clean when every importer symbol is covered', async () => {
+      const plugin = mkImporter(join('bin', 'Plugin.dll'))
+      scanByPath({
+        [gameExePath]: exeScan,
+        [plugin]: { status: 'ok', arch: 'x64', symbols: ['SteamAPI_Init'] }
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      expect(result.status).toBe('placed')
+      if (result.status === 'placed') {
+        expect(result.verdict.status).toBe('clean')
+      }
+    })
+
+    it('ignores an other-arch importer PE', async () => {
+      const plugin = mkImporter(join('bin', 'Old.dll'))
+      scanByPath({
+        [gameExePath]: exeScan,
+        [plugin]: {
+          status: 'ok',
+          arch: 'x86',
+          symbols: ['SteamAPI_Bogus_v001']
+        }
+      })
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      expect(result.status).toBe('placed')
+    })
+
+    it('only scans .exe/.dll candidates, never the exe itself, steam_api*.dll or symlinks', async () => {
+      const plugin = mkImporter(join('bin', 'Plugin.DLL'))
+      mkImporter(join('bin', 'readme.txt'))
+      mkImporter(join('bin', 'steam_api64.dll'))
+      mkImporter('steam_api.dll')
+      symlinkSync(plugin, join(gameDir, 'bin', 'Link.dll'))
+      scanByPath({ [gameExePath]: exeScan })
+
+      await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      const scanned = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      expect(scanned.filter((p) => p === gameExePath)).toHaveLength(1)
+      expect(scanned).toContain(plugin)
+      expect(scanned).not.toContain(join(gameDir, 'bin', 'readme.txt'))
+      expect(scanned).not.toContain(join(gameDir, 'bin', 'steam_api64.dll'))
+      expect(scanned).not.toContain(join(gameDir, 'steam_api.dll'))
+      expect(scanned).not.toContain(join(gameDir, 'bin', 'Link.dll'))
+    })
+
+    it('skips an importer whose scan errors and keeps placing', async () => {
+      const plugin = mkImporter(join('bin', 'Plugin.dll'))
+      mockedScanSteamApiImports.mockImplementation(
+        async (_appId: string, path: string) =>
+          path === plugin ? { status: 'error', error: 'objdump boom' } : exeScan
+      )
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      expect(result.status).toBe('placed')
+    })
+
+    it('never walks on the byte-identical already-placed path (exactly one scan)', async () => {
+      mkImporter(join('bin', 'Plugin.dll'))
+      writeFileSync(shim64DestPath(), 'fake-compiled-pe32-dll-bytes-x64')
+      mockedScanSteamApiImports.mockResolvedValue(exeScan)
+
+      const result = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath,
+        gameInstallRoot: gameDir
+      })
+
+      expect(result.status).toBe('already-placed')
+      expect(mockedScanSteamApiImports).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('quick 261024-br4: Steam CEG detection on the game exe', () => {
