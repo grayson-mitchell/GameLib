@@ -381,3 +381,36 @@ describe('scan.drmWrapper round trip (Phase 52 Pitfall 2)', () => {
     expect(mockedLogWarning).toHaveBeenCalled()
   })
 })
+
+describe('scan.managedScan round trip (Phase 53 D-53-04)', () => {
+  it('reads back a mono managedScan intact', () => {
+    const managedScan = {
+      kind: 'mono' as const,
+      assemblies: 3,
+      unservedFamilyImports: 7
+    }
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ managedScan }))
+    expect(readBridgeVerdict(APP_ID)?.scan?.managedScan).toEqual(managedScan)
+  })
+
+  it('reads back an il2cpp managedScan intact', () => {
+    const managedScan = {
+      kind: 'il2cpp' as const,
+      reason: 'il2cpp: not scanned' as const
+    }
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ managedScan }))
+    expect(readBridgeVerdict(APP_ID)?.scan?.managedScan).toEqual(managedScan)
+  })
+
+  it('rejects an unknown il2cpp reason (whole verdict undefined)', () => {
+    mockedStore.set(APP_ID, {
+      bridge: {
+        scan: {
+          ...makeScanVerdict(),
+          managedScan: { kind: 'il2cpp', reason: 'other' }
+        }
+      }
+    })
+    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+  })
+})

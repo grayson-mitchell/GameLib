@@ -56,6 +56,8 @@ import {
   placeShimForGame
 } from '../shimGenerate'
 import { scanSteamApiImports } from '../importScan'
+import { SHIM64_EXPORTED_SYMBOLS } from '../shimCoverage'
+import { buildManagedPe } from './fixtures/managedPe'
 import { getBottleDir, resolveBridgeBottleName } from '../../bottle'
 
 jest.mock('backend/logger', () => ({
@@ -2210,5 +2212,255 @@ describe('shimGenerate', () => {
       expect(res.status).toBe('error')
       expect('drmWrapper' in res).toBe(false)
     })
+  })
+
+  describe('D-53-04 managed: Mono assemblies and AnyCPU placement', () => {
+    const MARK_X64 = 'GameLibSteamBridgeShim x64 build'
+    const put = (rel: string, body: Buffer | string = 'plain-game-dll') => {
+      const full = join(gameDir, rel)
+      mkdirSync(join(full, '..'), { recursive: true })
+      writeFileSync(full, body)
+      return full
+    }
+    const opts = () => ({
+      shimSourcePath: realShimSourcePath,
+      shim64SourcePath: realShim64SourcePath,
+      gameInstallRoot: gameDir
+    })
+    const nothingImported = () =>
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'none',
+        symbols: []
+      })
+    const utf16 = (s: string) => Buffer.from(s, 'utf16le')
+    const monoTree = (names: string[], constants: string) => {
+      gameExePath = join(gameDir, 'Game.exe')
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      put(
+        'Game_Data/Managed/Steamworks.NET.dll',
+        Buffer.concat([
+          buildManagedPe({
+            moduleRefs: ['steam_api64'],
+            implMaps: names.map((name) => ({ name, module: 1 }))
+          }),
+          utf16(constants)
+        ])
+      )
+      return put('Game_Data/Plugins/x86_64/steam_api64.dll')
+    }
+
+    it('an AnyCPU launch exe places steam_api64.dll and persists x64', async () => {
+      gameExePath = join(gameDir, 'Any.exe')
+      writeFileSync(
+        gameExePath,
+        buildManagedPe({ machine: 0x14c, clrFlags: 0x1 })
+      )
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      const dll = put('steam_api64.dll')
+      nothingImported()
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.arch).toBe('x64')
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+      expect('exeArch' in result && result.exeArch).toBe('x64')
+    })
+
+    it('32BITREQUIRED keeps the launch exe x86', async () => {
+      gameExePath = join(gameDir, 'Any.exe')
+      writeFileSync(
+        gameExePath,
+        buildManagedPe({ machine: 0x14c, clrFlags: 0x20001 })
+      )
+      const dll = put('steam_api.dll')
+      put('steam_api64.dll')
+      nothingImported()
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.arch).toBe('x86')
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe(
+        'fake-compiled-pe32-dll-bytes-x86'
+      )
+    })
+
+    it('managed names reach coverage; unserved families are counted, never named; placed anyway', async () => {
+      const names = [
+        'SteamAPI_Init',
+        'SteamAPI_ISteamUser_GetSteamID',
+        'SteamAPI_ISteamUser_Bogus',
+        'SteamAPI_ISteamUGC_CreateQueryAllUGCRequestPage'
+      ]
+      const dll = monoTree(names, 'SteamUser023')
+      nothingImported()
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      const expectedMissing = [
+        'SteamAPI_Init',
+        'SteamAPI_ISteamUser_GetSteamID',
+        'SteamAPI_ISteamUser_Bogus'
+      ].filter((n) => !SHIM64_EXPORTED_SYMBOLS.has(n))
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toContain(
+          'SteamAPI_ISteamUser_Bogus'
+        )
+        expect(result.verdict.missingSymbols.sort()).toEqual(
+          expectedMissing.sort()
+        )
+        expect(result.verdict.managedScan).toEqual({
+          kind: 'mono',
+          assemblies: 1,
+          unservedFamilyImports: 1
+        })
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+    })
+
+    it('resolves SteamClient from the managed constants alone (no @ambiguous)', async () => {
+      const dll = monoTree(['SteamClient'], 'SteamClient021')
+      writeFileSync(
+        dll,
+        'SteamClient017 SteamClient018 SteamClient020 SteamClient021'
+      )
+      nothingImported()
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).not.toBe('error')
+      const verdict = 'verdict' in result ? result.verdict : undefined
+      expect(verdict?.interfaceVersions.SteamClient).toBe('SteamClient021')
+      expect(verdict?.missingSymbols.join(' ')).not.toContain('@ambiguous')
+    })
+
+    it('an IL2CPP title keeps the runtime-loaded marker and records the reason', async () => {
+      gameExePath = join(gameDir, 'Game.exe')
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      put('GameAssembly.dll')
+      put('Game_Data/Plugins/x86_64/steam_api64.dll')
+      nothingImported()
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.managedScan).toEqual({
+          kind: 'il2cpp',
+          reason: 'il2cpp: not scanned'
+        })
+        expect(result.verdict.missingSymbols).toEqual([
+          'steam_api64.dll@runtime-loaded'
+        ])
+      }
+    })
+  })
+
+  describe('D-53-11 j4l lift: the three UE titles place once their versions are served', () => {
+    const MARK_X64 = 'GameLibSteamBridgeShim x64 build'
+    const COVERED = [
+      'SteamAPI_RestartAppIfNecessary',
+      'SteamInternal_SteamAPI_Init',
+      'SteamInternal_FindOrCreateUserInterface',
+      'SteamInternal_GameServer_Init'
+    ]
+    const BASE_VERSIONS = [
+      'STEAMAPPS_INTERFACE_VERSION008',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+      'STEAMUSERSTATS_INTERFACE_VERSION012',
+      'SteamFriends017',
+      'SteamGameServer015',
+      'SteamGameServerStats001',
+      'SteamInput006',
+      'SteamMatchMaking009',
+      'SteamMatchMakingServers002',
+      'SteamNetworking006',
+      'SteamUser023',
+      'SteamUtils010'
+    ]
+    const RANCH_VERSIONS = [
+      ...BASE_VERSIONS.filter(
+        (v) => v !== 'STEAMUSERSTATS_INTERFACE_VERSION012'
+      ),
+      'STEAMUSERSTATS_INTERFACE_VERSION013',
+      'STEAMHTTP_INTERFACE_VERSION003',
+      'STEAMMUSICREMOTE_INTERFACE_VERSION001',
+      'STEAMMUSIC_INTERFACE_VERSION001',
+      'STEAMSCREENSHOTS_INTERFACE_VERSION003',
+      'STEAMUGC_INTERFACE_VERSION020',
+      'SteamController008',
+      'SteamNetworkingMessages002',
+      'SteamNetworkingSockets012',
+      'SteamNetworkingUtils004'
+    ]
+
+    it.each([
+      { appId: '1363080', project: 'ManorLords', versions: BASE_VERSIONS },
+      { appId: '427410', project: 'AbioticFactor', versions: BASE_VERSIONS },
+      { appId: '1119730', project: 'Ranch_Simulator', versions: RANCH_VERSIONS }
+    ])(
+      '$project ($appId) is placed clean, not withheld',
+      async ({ appId, project, versions }) => {
+        gameExePath = join(gameDir, `${project}.exe`)
+        const stub = buildMinimalPe([])
+        stub.writeUInt16LE(0x8664, 0x80 + 4)
+        writeFileSync(gameExePath, stub)
+        writeFileSync(realShim64SourcePath, MARK_X64)
+        const shipping = join(
+          gameDir,
+          project,
+          'Binaries',
+          'Win64',
+          `${project}-Win64-Shipping.exe`
+        )
+        mkdirSync(join(shipping, '..'), { recursive: true })
+        writeFileSync(shipping, versions.join(' '))
+        const dll = join(
+          gameDir,
+          'Engine/Binaries/ThirdParty/Steamworks/Steamv157/Win64/steam_api64.dll'
+        )
+        mkdirSync(join(dll, '..'), { recursive: true })
+        writeFileSync(dll, 'plain-game-dll')
+        mockedScanSteamApiImports.mockImplementation(
+          (_a: string, path: string) =>
+            Promise.resolve(
+              path === shipping
+                ? {
+                    status: 'ok',
+                    arch: 'x64',
+                    symbols: COVERED,
+                    delaySymbols: ['SteamInternal_GameServer_Init']
+                  }
+                : { status: 'ok', arch: 'none', symbols: [] }
+            )
+        )
+
+        const result = await placeShimForGame(appId, gameExePath, {
+          shimSourcePath: realShimSourcePath,
+          shim64SourcePath: realShim64SourcePath,
+          gameInstallRoot: gameDir
+        })
+
+        expect(result.status).toBe('placed')
+        if (result.status === 'placed') {
+          expect(result.verdict?.status).toBe('clean')
+          expect(result.verdict?.missingSymbols).toEqual([])
+        }
+        expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+      }
+    )
   })
 })

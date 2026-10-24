@@ -39,7 +39,22 @@ const bridgeScanVerdictSchema = z.object({
   scannedAt: z.string(),
   // Phase 52 Pitfall 2: the non-strict object strips unknown keys on read, so
   // without this a persisted SteamStub detection would be silently forgotten.
-  drmWrapper: z.enum(['steamstub']).optional()
+  drmWrapper: z.enum(['steamstub']).optional(),
+  // Same Pitfall-2 reasoning as drmWrapper: undeclared keys are stripped on
+  // read, so the Phase 53 managed-scan note would be silently forgotten.
+  managedScan: z
+    .discriminatedUnion('kind', [
+      z.object({
+        kind: z.literal('mono'),
+        assemblies: z.number().int().nonnegative(),
+        unservedFamilyImports: z.number().int().nonnegative()
+      }),
+      z.object({
+        kind: z.literal('il2cpp'),
+        reason: z.literal('il2cpp: not scanned')
+      })
+    ])
+    .optional()
 })
 
 const bridgeVerdictSchema = z.object({

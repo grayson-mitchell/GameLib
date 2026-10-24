@@ -215,6 +215,14 @@ export interface SteamBridgeScanVerdict {
   /** Phase 52: set by placeShimForGame when the launch exe carries a `.bind`
    * section; gates SteamStub forwarder setup. Absent means none detected. */
   drmWrapper?: 'steamstub'
+  /** Phase 53 (D-53-04): what the Mono managed scan found. `mono` counts the
+   * managed assemblies read and the steam_api imports of families the shim
+   * does not serve (a count only; it never changes `status`). `il2cpp` marks a
+   * title whose managed code was not scanned. Absent when there was no
+   * managed evidence. */
+  managedScan?:
+    | { kind: 'mono'; assemblies: number; unservedFamilyImports: number }
+    | { kind: 'il2cpp'; reason: 'il2cpp: not scanned' }
 }
 
 /** Phase 51 Plan 03 (D-51-07/D-51-10): the full persisted bridge verdict for

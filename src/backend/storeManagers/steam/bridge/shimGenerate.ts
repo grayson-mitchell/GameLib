@@ -835,6 +835,7 @@ async function placeShimForGameInner(
       const combinedMissing: string[] = []
       const delayMissingAll: string[] = []
       const unservableAll: string[] = []
+      const unservedManaged = new Map<string, number>()
       let primaryEval: {
         required: Record<string, string>
         stubbedInterfaces: string[]
@@ -843,14 +844,41 @@ async function placeShimForGameInner(
         considered.includes('steam_api64.dll')
           ? 'steam_api64.dll'
           : 'steam_api.dll'
+      // D-53-04 (amended): Mono assemblies' steam_api DllImports. P/Invoke
+      // binds lazily, so these names are placed-anyway evidence (D-51-05):
+      // they join `merged` for the coverage verdict but are never added to
+      // `delayMissingAll` (that is importer-PE delay evidence only).
+      const managedByName = new Map<string, ManagedScanResult>()
       for (const name of considered) {
         const nameArch = name === 'steam_api64.dll' ? 'x64' : 'x86'
         const forName = importers.filter((i) => i.arch === nameArch)
-        if (forName.length === 0) {
+        const managed = await scanManagedSteamApi(
+          resolvedExePath,
+          bottleDir,
+          nameArch,
+          scanDeps(appId)
+        )
+        const managedPart =
+          managed.kind === 'mono'
+            ? partitionManagedImports(
+                managed.symbols,
+                servedFamiliesFor(nameArch)
+              )
+            : { required: [], unservedFamilyCount: 0 }
+        if (managed.kind !== 'none') managedByName.set(name, managed)
+        if (managed.kind === 'mono') {
+          unservedManaged.set(name, managedPart.unservedFamilyCount)
+        }
+        if (forName.length === 0 && managedPart.required.length === 0) {
           combinedMissing.push(runtimeLoadedSteamApiMarker(name))
           continue
         }
-        const merged = [...new Set(forName.flatMap((i) => i.symbols))]
+        const merged = [
+          ...new Set([
+            ...forName.flatMap((i) => i.symbols),
+            ...managedPart.required
+          ])
+        ]
         const original = runtimeDlls.find(
           (d) => d.name === name && !d.isGameLibShim
         )
@@ -864,10 +892,18 @@ async function placeShimForGameInner(
               )
             ).flat()
           : []
-        const { required, problems } = resolveRequiredInterfaceVersions({
-          importedSymbols: merged,
+        // Resolved open question 2: a Managed dir's UTF-16 constants alone
+        // form the pool (the Valve dll carries many versions per family).
+        const pool = selectInterfaceVersionPool({
+          managedVersions:
+            managed.kind === 'mono' ? managed.versionStrings : null,
           dllVersions,
           exeVersions
+        })
+        const { required, problems } = resolveRequiredInterfaceVersions({
+          importedSymbols: merged,
+          dllVersions: pool.dllVersions,
+          exeVersions: pool.exeVersions
         })
         const coverage = evaluateShimCoverage({
           arch: nameArch,
@@ -962,7 +998,20 @@ async function placeShimForGameInner(
         }
       }
 
+      const managedChosen =
+        managedByName.get(primaryName) ?? [...managedByName.values()][0]
+      const managedScan: SteamBridgeScanVerdict['managedScan'] =
+        managedChosen?.kind === 'mono'
+          ? {
+              kind: 'mono',
+              assemblies: managedChosen.assemblies,
+              unservedFamilyImports: unservedManaged.get(primaryName) ?? 0
+            }
+          : managedChosen?.kind === 'il2cpp'
+            ? { kind: 'il2cpp', reason: managedChosen.reason }
+            : undefined
       const verdictBase = {
+        ...(managedScan ? { managedScan } : {}),
         arch:
           primaryName === 'steam_api64.dll'
             ? ('x64' as const)
