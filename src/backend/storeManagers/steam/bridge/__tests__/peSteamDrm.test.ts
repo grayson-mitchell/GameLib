@@ -3,7 +3,11 @@
  * built in memory by the small builder below (a few KB each); no binaries
  * are checked in.
  */
-import { CEG_RESOURCE_NAMES, detectSteamDrmInPeBytes } from '../peSteamDrm'
+import {
+  CEG_RESOURCE_NAMES,
+  detectSteamDrmInPeBytes,
+  readPeMachineArch
+} from '../peSteamDrm'
 
 type PeFixture = {
   magic?: number
@@ -241,5 +245,42 @@ describe('detectSteamDrmInPe (quick 261024-br4)', () => {
       'STEAM_GUIDD',
       'STEAM_MINSTANCE'
     ])
+  })
+})
+
+describe('readPeMachineArch (quick 261024-i94)', () => {
+  const read = (bytes: Uint8Array) => (offset: number, length: number) =>
+    offset + length > bytes.length
+      ? null
+      : bytes.subarray(offset, offset + length)
+
+  test('maps the COFF Machine field to the arch', () => {
+    expect(readPeMachineArch(read(buildPe({ magic: 0x20b })))).toBe('x64')
+    expect(readPeMachineArch(read(buildPe({ magic: 0x10b })))).toBe('x86')
+  })
+
+  test('returns null for non-MZ, bad PE signature, unknown machine, truncation', () => {
+    const notMz = buildPe()
+    notMz[0] = 0x00
+    expect(readPeMachineArch(read(notMz))).toBeNull()
+
+    const badSig = buildPe()
+    badSig[PE_OFFSET] = 0x00
+    expect(readPeMachineArch(read(badSig))).toBeNull()
+
+    const unknown = buildPe()
+    new DataView(unknown.buffer).setUint16(PE_OFFSET + 4, 0x01c4, true)
+    expect(readPeMachineArch(read(unknown))).toBeNull()
+
+    expect(readPeMachineArch(read(buildPe().subarray(0, 0x40)))).toBeNull()
+    expect(readPeMachineArch(read(new Uint8Array(0)))).toBeNull()
+  })
+
+  test('never throws when the reader throws', () => {
+    expect(
+      readPeMachineArch(() => {
+        throw new Error('boom')
+      })
+    ).toBeNull()
   })
 })

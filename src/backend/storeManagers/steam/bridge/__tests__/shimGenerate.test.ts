@@ -1102,6 +1102,115 @@ describe('shimGenerate', () => {
     })
   })
 
+  describe('quick 261024-i94: runtime-loaded branch names importer symbols', () => {
+    type Scan = {
+      status: 'ok'
+      arch: 'x86' | 'x64' | 'none'
+      symbols: string[]
+    }
+    const scanByPath = (table: Record<string, Scan>) =>
+      mockedScanSteamApiImports.mockImplementation(
+        async (_appId: string, path: string) =>
+          table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+      )
+    const writeX64Exe = () => {
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+    }
+    const put = (rel: string, body = 'plain-game-dll') => {
+      const full = join(gameDir, rel)
+      mkdirSync(join(full, '..'), { recursive: true })
+      writeFileSync(full, body)
+      return full
+    }
+    const MARK_X86 = 'GameLibSteamBridgeShim x86 build'
+    const MARK_X64 = 'GameLibSteamBridgeShim x64 build'
+    const grimDawnTree = (engineSymbols: string[]) => {
+      writeX64Exe()
+      writeFileSync(realShimSourcePath, MARK_X86)
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      const dll64 = put(join('x64', 'steam_api64.dll'))
+      const dll86 = put('steam_api.dll')
+      const engine64 = put(join('x64', 'Engine.dll'))
+      const engine86 = put('Engine.dll')
+      scanByPath({
+        [engine64]: { status: 'ok', arch: 'x64', symbols: engineSymbols },
+        [engine86]: {
+          status: 'ok',
+          arch: 'x86',
+          symbols: ['SteamInternal_SteamAPI_Init']
+        }
+      })
+      return { dll64, dll86 }
+    }
+    const opts = () => ({
+      shimSourcePath: realShimSourcePath,
+      shim64SourcePath: realShim64SourcePath,
+      gameInstallRoot: gameDir
+    })
+
+    it('Grim Dawn shape: names the x64 importer uncovered symbol only, still replaces both dlls', async () => {
+      const { dll64, dll86 } = grimDawnTree([
+        'SteamInternal_SteamAPI_Init',
+        'SteamInternal_Bogus'
+      ])
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.arch).toBe('x64')
+        expect(result.verdict.missingSymbols).toEqual(['SteamInternal_Bogus'])
+      }
+      expect(readFileSync(dll64, 'utf-8')).toBe(MARK_X64)
+      expect(readFileSync(dll86, 'utf-8')).toBe(MARK_X86)
+    })
+
+    it('covered importer -> clean placed verdict listing both shim paths', async () => {
+      const { dll64, dll86 } = grimDawnTree(['SteamInternal_SteamAPI_Init'])
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('placed')
+      if (result.status === 'placed') {
+        expect(result.verdict?.status).toBe('clean')
+        expect(result.verdict?.arch).toBe('x64')
+        expect(result.shimPaths).toEqual(expect.arrayContaining([dll64, dll86]))
+        expect(result.shimPaths).toHaveLength(2)
+      }
+    })
+
+    it('Unity shape: shipped steam_api64.dll with no importer keeps the marker', async () => {
+      writeX64Exe()
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      put(join('Plugins', 'steam_api64.dll'))
+      scanByPath({})
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toEqual([
+          'steam_api64.dll@runtime-loaded'
+        ])
+      }
+    })
+
+    it('already-current shims run no importer walk (one scan only)', async () => {
+      writeX64Exe()
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      put(join('x64', 'steam_api64.dll'), MARK_X64)
+      put(join('x64', 'Engine.dll'))
+      scanByPath({})
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('already-placed')
+      expect(mockedScanSteamApiImports).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('quick 261024-br4: Steam CEG detection on the game exe', () => {
     const okImports = () =>
       mockedScanSteamApiImports.mockResolvedValue({
