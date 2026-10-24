@@ -14,6 +14,8 @@ One launcher that manages your entire game library across Epic, GOG, Amazon, and
 
 **The v0.8 close was an override closeout, not a verified one.** 26 of 45 phases were not both complete and verified; 429 open planning artifacts were acknowledged (not resolved) and 140 evidence-table rows in five archived ledgers stay open in `audit-open`. The full disclosure is in `STATE.md › Deferred Items`.
 
+**Phase 52 (bridge-backed steamclient.dll for SteamStub titles) complete 2026-10-25 against an amended done-when.** The forwarder reaches the native bridge (HELLO), and GameLib shows an honest in-app notice when the stub rejects the launch, with no `steam://run` fallback. Verification passed 7/7. The original goal, Grim Dawn reaching its main menu, was not met; it is deferred to the static-RE decision todo. Bridge-verified is not claimed.
+
 **Earlier milestones:** v0.1 Steam Platform (shipped 2026-06-29, archived), v0.2 Polish, v0.3 Humble Bundle, v0.4 Compatibility Data, v0.5 macOS Compat Runtime, v0.6 Store Search (all recorded shipped in `MILESTONES.md`, never archived — their phase directories 5–26 stay under `.planning/phases/`), and v0.7 Steam Native Install (never formally closed — Phase 23 gaps G-23-01/G-23-02 open).
 
 ## Next Milestone Goals
@@ -140,4 +142,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-16 after the v0.8 Tauri Shell milestone (override closeout). Previous footer, 2026-10-09: after Phase 49 (Cross-store signed-out / offline mode) COMPLETE: 12/12 plans, macOS live gate run once (10/11 pass, item 5 deferred), verification passed 9/9, code review 0 critical / 4 warning, 46 threats closed, Nyquist validated.*
+*Last updated: 2026-10-25 after Phase 52 (bridge-backed steamclient.dll for SteamStub titles), complete against the amended done-when. Previous footer, 2026-10-16: after the v0.8 Tauri Shell milestone (override closeout). Earlier footer, 2026-10-09: after Phase 49 (Cross-store signed-out / offline mode) COMPLETE: 12/12 plans, macOS live gate run once (10/11 pass, item 5 deferred), verification passed 9/9, code review 0 critical / 4 warning, 46 threats closed, Nyquist validated.*
