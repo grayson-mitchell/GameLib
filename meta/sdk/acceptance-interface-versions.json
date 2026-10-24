@@ -1,5 +1,9 @@
 {
-  "SteamUser023": { "family": "SteamUser", "arches": ["x86"], "titles": [] },
+  "SteamUser023": {
+    "family": "SteamUser",
+    "arches": ["x86", "x64"],
+    "titles": ["219990"]
+  },
   "SteamFriends018": {
     "family": "SteamFriends",
     "arches": ["x86"],
@@ -104,5 +108,15 @@
     "family": "SteamRemoteStorage",
     "arches": ["x64"],
     "titles": ["411300"]
+  },
+  "SteamNetworking006": {
+    "family": "SteamNetworking",
+    "arches": ["x64"],
+    "titles": ["219990"]
+  },
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION016": {
+    "family": "SteamRemoteStorage",
+    "arches": ["x64"],
+    "titles": ["219990"]
   }
 }

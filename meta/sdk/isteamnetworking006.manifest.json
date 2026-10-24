@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamNetworking006",
+  "family": "SteamNetworking",
+  "ordinal": 23,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamNetworking_v006",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamNetworking.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "SendP2PPacket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "steamIDRemote",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pubData",
+          "type": "const void*"
+        },
+        {
+          "name": "cubData",
+          "type": "uint32"
+        },
+        {
+          "name": "eP2PSendType",
+          "type": "uint32"
+        },
+        {
+          "name": "nChannel",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "IsP2PPacketAvailable",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pcubMsgSize",
+          "type": "uint32*"
+        },
+        {
+          "name": "nChannel",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "ReadP2PPacket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "pubDest",
+          "type": "void*"
+        },
+        {
+          "name": "cubDest",
+          "type": "uint32"
+        },
+        {
+          "name": "pcubMsgSize",
+          "type": "uint32*"
+        },
+        {
+          "name": "psteamIDRemote",
+          "type": "CSteamID*"
+        },
+        {
+          "name": "nChannel",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "AcceptP2PSessionWithUser",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDRemote",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "CloseP2PSessionWithUser",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDRemote",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "CloseP2PChannelWithUser",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDRemote",
+          "type": "CSteamID"
+        },
+        {
+          "name": "nChannel",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "GetP2PSessionState",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamIDRemote",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pConnectionState",
+          "type": "P2PSessionState_t*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "AllowP2PPacketRelay",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bAllow",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "CreateListenSocket",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 32,
+      "params": [
+        {
+          "name": "nVirtualP2PPort",
+          "type": "int32"
+        },
+        {
+          "name": "nIP",
+          "type": "SteamIPAddress_t"
+        },
+        {
+          "name": "nPort",
+          "type": "uint32"
+        },
+        {
+          "name": "bAllowUseOfPacketRelay",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "CreateP2PConnectionSocket",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "steamIDTarget",
+          "type": "CSteamID"
+        },
+        {
+          "name": "nVirtualPort",
+          "type": "int32"
+        },
+        {
+          "name": "nTimeoutSec",
+          "type": "int32"
+        },
+        {
+          "name": "bAllowUseOfPacketRelay",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "CreateConnectionSocket",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "nIP",
+          "type": "SteamIPAddress_t"
+        },
+        {
+          "name": "nPort",
+          "type": "uint32"
+        },
+        {
+          "name": "nTimeoutSec",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "DestroySocket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "bNotifyRemoteEnd",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "DestroyListenSocket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "bNotifyRemoteEnd",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "SendDataOnSocket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "pubData",
+          "type": "void*"
+        },
+        {
+          "name": "cubData",
+          "type": "uint32"
+        },
+        {
+          "name": "bReliable",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "IsDataAvailableOnSocket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "pcubMsgSize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "RetrieveDataFromSocket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "pubDest",
+          "type": "void*"
+        },
+        {
+          "name": "cubDest",
+          "type": "uint32"
+        },
+        {
+          "name": "pcubMsgSize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "IsDataAvailable",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hListenSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "pcubMsgSize",
+          "type": "uint32*"
+        },
+        {
+          "name": "phSocket",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "RetrieveData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "hListenSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "pubDest",
+          "type": "void*"
+        },
+        {
+          "name": "cubDest",
+          "type": "uint32"
+        },
+        {
+          "name": "pcubMsgSize",
+          "type": "uint32*"
+        },
+        {
+          "name": "phSocket",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetSocketInfo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "pSteamIDRemote",
+          "type": "CSteamID*"
+        },
+        {
+          "name": "peSocketStatus",
+          "type": "int32*"
+        },
+        {
+          "name": "punIPRemote",
+          "type": "SteamIPAddress_t*"
+        },
+        {
+          "name": "punPortRemote",
+          "type": "uint16_t*"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "GetListenSocketInfo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hListenSocket",
+          "type": "uint32"
+        },
+        {
+          "name": "pnIP",
+          "type": "SteamIPAddress_t*"
+        },
+        {
+          "name": "pnPort",
+          "type": "uint16_t*"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "GetSocketConnectionType",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "GetMaxPacketSize",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hSocket",
+          "type": "uint32"
+        }
+      ]
+    }
+  ]
+}
