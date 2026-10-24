@@ -282,6 +282,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [2026-10-11] [webview/store-embed] 'Re-probe spike 024 with the Chrome UA spoof OFF — all five Epic-store runs stamped a Ch… — [todo file](.planning/todos/pending/2026-10-11-re-probe-spike-024-epic-store-embed-with-the-chrome-ua-spoof.md)
 - [2026-10-11] [steam] "win32 SEA native LZMA never engages: the win32-x64 addon imports liblzma.dll, which the SEA does not emb… — [todo file](.planning/todos/pending/2026-10-11-win32-sea-native-lzma-falls-back-liblzma-dll-not-embedded.md)
 - [2026-10-11] [ui] Winetricks settings window not resizable by dragging on macOS, yet captures show three distinct widths — [todo file](.planning/todos/pending/2026-10-11-winetricks-settings-window-not-resizable-by-drag-on-macos.md)
+- [2026-10-25] [notifications] "Notification authorization fails (granted=false, UNErrorDomain error 1) on the bundled GameLib.app althou… — [todo file](.planning/todos/pending/2026-10-25-notification-authorization-fails-on-bundled-app-despite-settings-enabled.md)
 
 ### Blockers/Concerns
 
