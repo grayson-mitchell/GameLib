@@ -26,7 +26,9 @@ const IMAGE_BASE_32 = 0x400000
 const IMAGE_BASE_64 = 0x140000000
 
 export function buildDelayImportPe(opts: DelayImportPeOptions): Buffer {
-  const { plus, dlls, vaForm = false } = opts
+  const { plus, dlls } = opts
+  // the VA form only exists for PE32; PE32+ descriptors are always RVAs
+  const vaForm = (opts.vaForm ?? false) && !plus
   const buf = Buffer.alloc(SECTION_RAW + SECTION_SIZE)
   buf.write('MZ', 0, 'latin1')
   buf.writeUInt32LE(PE_OFFSET, 0x3c)

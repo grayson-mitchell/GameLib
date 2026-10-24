@@ -18,6 +18,11 @@
  * (todo 2026-10-23 "forwarding steamclient dll for SteamStub titles"), and
  * bottled Steam is a narrow fallback, so `.bind` never changes routing.
  *
+ * It also hosts `readPeSteamApiDelayImports` (quick 261024-j4l), which reads
+ * the PE Delay Import Directory (data directory 13) for steam_api(64).dll:
+ * `objdump --private-headers` does not list delay imports, and Manor Lords'
+ * Shipping exe imports steam_api64.dll only that way.
+ *
  * It also hosts `readPeMachineArch`, a tiny COFF header read (quick
  * 261024-i94) that tells the placer which arch the launch exe is.
  *
@@ -228,6 +233,173 @@ export function readPeMachineArch(read: PeReader): 'x86' | 'x64' | null {
     return null
   } catch {
     return null
+  }
+}
+
+const MAX_DELAY_DESCRIPTORS = 256
+const MAX_DELAY_THUNKS = 4096
+const MAX_NAME_BYTES = 256
+
+type PeDelayImportResult = {
+  /** false when the bytes are not a well-formed PE (treat as no evidence) */
+  parsed: boolean
+  dll: 'steam_api.dll' | 'steam_api64.dll' | null
+  arch: 'x86' | 'x64' | 'none'
+  /** by-name imports as written; ordinals as `#<n>`; de-duplicated, INT order */
+  symbols: string[]
+  /** both steam_api.dll and steam_api64.dll are delay-imported */
+  conflict: boolean
+}
+
+const noDelayImports = (parsed: boolean): PeDelayImportResult => ({
+  parsed,
+  dll: null,
+  arch: 'none',
+  symbols: [],
+  conflict: false
+})
+
+/**
+ * quick 261024-j4l: the steam_api(64).dll entries of the PE Delay Import
+ * Directory. Only descriptors naming a steam_api dll have their INT walked.
+ * Untrusted input (T-j4l-01): descriptors capped at 256, thunks at 4096,
+ * names at 256 bytes, sections at 96; every read is bounds-checked (a short
+ * read means unparsed) and the body never throws. Zero imports, like the rest
+ * of this module.
+ */
+export function readPeSteamApiDelayImports(
+  read: PeReader
+): PeDelayImportResult {
+  try {
+    const mz = readExact(read, 0, 2)
+    if (mz.getUint8(0) !== 0x4d || mz.getUint8(1) !== 0x5a) {
+      return noDelayImports(false)
+    }
+    const peOffset = u32(read, 0x3c)
+    if (u32(read, peOffset) !== 0x00004550) return noDelayImports(false)
+    const numberOfSections = u16(read, peOffset + 6)
+    const sizeOfOptionalHeader = u16(read, peOffset + 20)
+    const opt = peOffset + 24
+
+    const magic = u16(read, opt)
+    const plus = magic === 0x20b
+    if (!plus && magic !== 0x10b) return noDelayImports(false)
+    const dirsOffset = opt + (plus ? 112 : 96)
+    const numberOfRvaAndSizes = u32(read, opt + (plus ? 108 : 92))
+    if (numberOfRvaAndSizes < 14) return noDelayImports(true)
+    const delayRva = u32(read, dirsOffset + 13 * 8)
+    if (delayRva === 0) return noDelayImports(true)
+
+    let imageBase = 0
+    if (plus) {
+      imageBase = u32(read, opt + 24) + u32(read, opt + 28) * 0x100000000
+    } else {
+      imageBase = u32(read, opt + 28)
+    }
+    if (!Number.isSafeInteger(imageBase)) return noDelayImports(false)
+
+    const sectionTable = opt + sizeOfOptionalHeader
+    const sectionCount = Math.min(numberOfSections, MAX_SECTIONS)
+    const sections: Section[] = []
+    for (let i = 0; i < sectionCount; i++) {
+      const base = sectionTable + i * 40
+      const virtualSize = u32(read, base + 8)
+      const va = u32(read, base + 12)
+      const sizeOfRawData = u32(read, base + 16)
+      const rawPtr = u32(read, base + 20)
+      sections.push({
+        name: '',
+        va,
+        span: Math.max(virtualSize, sizeOfRawData),
+        rawPtr
+      })
+    }
+    const toOffset = (rva: number): number => {
+      const sec = sections.find((s) => s.va <= rva && rva < s.va + s.span)
+      if (!sec) throw new BoundsError('rva outside every section')
+      return sec.rawPtr + (rva - sec.va)
+    }
+
+    const readAsciiz = (offset: number): string => {
+      let out = ''
+      for (let i = 0; i < MAX_NAME_BYTES; i++) {
+        const c = readExact(read, offset + i, 1).getUint8(0)
+        if (c === 0) return out
+        out += String.fromCharCode(c)
+      }
+      throw new BoundsError('name too long')
+    }
+
+    const table = toOffset(delayRva)
+    const symbols: string[] = []
+    const seen = new Set<string>()
+    let hasX86 = false
+    let hasX64 = false
+    let terminated = false
+    for (let i = 0; i < MAX_DELAY_DESCRIPTORS; i++) {
+      const d = table + i * 32
+      const attributes = u32(read, d)
+      const nameField = u32(read, d + 4)
+      if (nameField === 0) {
+        terminated = true
+        break
+      }
+      // Attributes bit 0 clear: the address fields are VAs, not RVAs.
+      const fix = (v: number) => ((attributes & 1) === 0 ? v - imageBase : v)
+      const name = readAsciiz(toOffset(fix(nameField))).toLowerCase()
+      if (name !== 'steam_api.dll' && name !== 'steam_api64.dll') continue
+      if (name === 'steam_api.dll') hasX86 = true
+      else hasX64 = true
+
+      let entry = toOffset(fix(u32(read, d + 16)))
+      const width = plus ? 8 : 4
+      let intTerminated = false
+      for (let k = 0; k < MAX_DELAY_THUNKS; k++) {
+        const low = u32(read, entry)
+        const high = plus ? u32(read, entry + 4) : 0
+        entry += width
+        if (low === 0 && high === 0) {
+          intTerminated = true
+          break
+        }
+        const isOrdinal = plus
+          ? (high & 0x80000000) !== 0
+          : (low & 0x80000000) !== 0
+        let sym: string
+        if (isOrdinal) {
+          sym = `#${low & 0xffff}`
+        } else {
+          let hintName = low
+          if (plus) {
+            hintName = high * 0x100000000 + low
+          } else if ((attributes & 1) === 0 && low >= imageBase) {
+            hintName = low - imageBase
+          }
+          if (plus && (attributes & 1) === 0) hintName -= imageBase
+          if (!Number.isSafeInteger(hintName) || hintName < 0) {
+            throw new BoundsError('bad hint/name rva')
+          }
+          sym = readAsciiz(toOffset(hintName) + 2)
+        }
+        if (!seen.has(sym)) {
+          seen.add(sym)
+          symbols.push(sym)
+        }
+      }
+      if (!intTerminated) return noDelayImports(false)
+    }
+    if (!terminated) return noDelayImports(false)
+
+    if (!hasX86 && !hasX64) return noDelayImports(true)
+    return {
+      parsed: true,
+      dll: hasX64 && !hasX86 ? 'steam_api64.dll' : 'steam_api.dll',
+      arch: hasX64 && !hasX86 ? 'x64' : 'x86',
+      symbols,
+      conflict: hasX86 && hasX64
+    }
+  } catch {
+    return noDelayImports(false)
   }
 }
 

@@ -19,11 +19,18 @@
  * delegated to the pure, dependency-free `importParse.ts` (D-51-15: the
  * closing census tool reuses it unchanged); we do NOT shell out to `grep`
  * (24-RESEARCH.md Don't-Hand-Roll table).
+ *
+ * Quick 261024-j4l: `objdump --private-headers` does NOT list the PE Delay
+ * Import Directory, so a delay-only importer (Manor Lords' Shipping exe) used
+ * to scan as "imports nothing". The scan now also reads the delay table with
+ * the zero-spawn ranged reader in `peSteamDrm.ts` and merges it in.
  */
 
+import { closeSync, openSync, readSync } from 'fs'
 import { spawnAsync } from 'backend/utils'
-import { logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { parseSteamApiImportTable } from './importParse'
+import { readPeSteamApiDelayImports } from './peSteamDrm'
 
 // Pattern repeated verbatim across bottle.ts:836, clientSetup.ts:40,
 // allowlist.ts:33 -- reuse the SAME regex value/name, do not redefine a
@@ -44,6 +51,9 @@ type ImportScanResult =
       arch: 'x86' | 'x64' | 'none'
       dll: string | null
       symbols: string[]
+      /** quick 261024-j4l: the subset read from the delay import table.
+       *  ABSENT (not []) when the PE has no steam_api delay imports. */
+      delaySymbols?: string[]
     }
   | { status: 'error'; error: string }
 
@@ -57,6 +67,37 @@ type ImportScanResult =
  */
 export function parseSteamApiImports(objdumpOutput: string): string[] {
   return parseSteamApiImportTable(objdumpOutput).symbols
+}
+
+/**
+ * quick 261024-j4l: ranged fd reads into the pure delay-import reader (never
+ * slurps the exe; the fd is always closed). Any open/read error returns null,
+ * silently: objdump already succeeded or the path is a test stub, and "no
+ * delay evidence" is the safe reading.
+ */
+function readDelayImports(
+  exePath: string
+): ReturnType<typeof readPeSteamApiDelayImports> | null {
+  let fd: number | null = null
+  try {
+    fd = openSync(exePath, 'r')
+    const handle = fd
+    return readPeSteamApiDelayImports((offset, length) => {
+      const buf = Buffer.alloc(length)
+      const n = readSync(handle, buf, 0, length, offset)
+      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
+    })
+  } catch {
+    return null
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd)
+      } catch {
+        // best effort
+      }
+    }
+  }
 }
 
 /**
@@ -115,10 +156,38 @@ export async function scanSteamApiImports(
     return { status: 'error', error: CONFLICTING_HEADINGS_ERROR }
   }
 
+  const delay = readDelayImports(exePath)
+  if (!delay || !delay.parsed || delay.dll === null) {
+    return {
+      status: 'ok',
+      arch: parsed.arch,
+      dll: parsed.dll,
+      symbols: parsed.symbols
+    }
+  }
+
+  if (
+    delay.conflict ||
+    (parsed.arch !== 'none' && parsed.arch !== delay.arch)
+  ) {
+    logWarning(
+      `scanSteamApiImports: ${CONFLICTING_HEADINGS_ERROR} (import table vs delay import table) for appId ${appId} ("${exePath}")`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: CONFLICTING_HEADINGS_ERROR }
+  }
+
+  const arch = parsed.arch === 'none' ? delay.arch : parsed.arch
+  const dll = parsed.dll ?? delay.dll
+  logInfo(
+    `scanSteamApiImports: appId ${appId} delay-imports ${delay.symbols.length} symbol(s) from ${delay.dll} ("${exePath}")`,
+    LogPrefix.Steam
+  )
   return {
     status: 'ok',
-    arch: parsed.arch,
-    dll: parsed.dll,
-    symbols: parsed.symbols
+    arch,
+    dll,
+    symbols: [...new Set([...parsed.symbols, ...delay.symbols])],
+    delaySymbols: delay.symbols
   }
 }
