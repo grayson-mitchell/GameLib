@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 6/12 plans executed
+**Plans:** 7/12 plans executed
 
 Plans:
 
@@ -341,7 +341,7 @@ Plans:
 - [x] 52-03-PLAN.md — zig-built steamclient64.dll forwarder (CreateInterface only, resolves the loaded shim); build + prune + path constant
 
 **Wave 4**
-- [ ] 52-07-PLAN.md — x64 shim exports GameLibBridge_CreateInterface + five SteamInternal_*; regen + pins
+- [x] 52-07-PLAN.md — x64 shim exports GameLibBridge_CreateInterface + five SteamInternal_*; regen + pins
 - [ ] 52-08-PLAN.md — steamClientSetup.ts (HKCU-only reg add, forwarder placement) and .bind detection in placeShimForGame
 
 **Wave 5**

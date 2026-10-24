@@ -4,13 +4,13 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: "Completed 51-19-PLAN.md (live gates: 6 pass / 5 issue / 2 skipped; D-51-14 Hoard anchor unmet)"
-last_updated: "2026-10-24T01:26:11.582Z"
+last_updated: "2026-10-24T01:28:25.467Z"
 last_activity: 2026-10-24
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 42
-  completed_plans: 36
+  completed_plans: 37
   percent: 33
 ---
 
@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 52 (bridge-backed-steamclient-dll-for-steamstub-titles) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Ready to execute
 Last activity: 2026-10-24
 
