@@ -42,7 +42,7 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 // Phase 51 Plan 03: SHIM_EXPORTED_SYMBOLS (and its 24-CR-02 pin test) moved
 // to shimCoverage.ts / shimCoverage.test.ts -- this file no longer imports
@@ -1215,6 +1215,231 @@ describe('shimGenerate', () => {
       const result = await placeShimForGame('1234', gameExePath, opts())
 
       expect(result.status).toBe('already-placed')
+      expect(mockedScanSteamApiImports).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('quick 261024-ir1: Unreal stub plus Shipping layout', () => {
+    type Scan = {
+      status: 'ok'
+      arch: 'x86' | 'x64' | 'none'
+      symbols: string[]
+    }
+    const scanByPath = (table: Record<string, Scan>) =>
+      mockedScanSteamApiImports.mockImplementation(
+        (_appId: string, path: string) =>
+          Promise.resolve(
+            table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+          )
+      )
+    const writeX64Stub = () => {
+      const pe = buildMinimalPe([])
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+    }
+    const put = (rel: string, body = 'plain-game-dll') => {
+      const full = join(gameDir, rel)
+      mkdirSync(join(full, '..'), { recursive: true })
+      writeFileSync(full, body)
+      return full
+    }
+    const MARK_X64 = 'GameLibSteamBridgeShim x64 build'
+    const COVERED = [
+      'SteamAPI_RestartAppIfNecessary',
+      'SteamInternal_SteamAPI_Init'
+    ]
+    const opts = () => ({
+      shimSourcePath: realShimSourcePath,
+      shim64SourcePath: realShim64SourcePath,
+      gameInstallRoot: gameDir
+    })
+    const ueTree = (project: string, sdk: string, steamworksDll = true) => {
+      gameExePath = join(gameDir, `${project}.exe`)
+      writeX64Stub()
+      writeFileSync(realShim64SourcePath, MARK_X64)
+      const shipping = put(
+        join(project, 'Binaries', 'Win64', `${project}-Win64-Shipping.exe`),
+        'shipping-exe'
+      )
+      const dll = join(
+        gameDir,
+        'Engine',
+        'Binaries',
+        'ThirdParty',
+        'Steamworks',
+        sdk,
+        'Win64',
+        'steam_api64.dll'
+      )
+      if (steamworksDll) {
+        put(
+          join(
+            'Engine',
+            'Binaries',
+            'ThirdParty',
+            'Steamworks',
+            sdk,
+            'Win64',
+            'steam_api64.dll'
+          )
+        )
+      } else {
+        mkdirSync(join(gameDir, 'Engine'), { recursive: true })
+      }
+      return { shipping, dll }
+    }
+
+    it.each([
+      { appId: '1363080', project: 'ManorLords', sdk: 'Steamv157' },
+      { appId: '427410', project: 'AbioticFactor', sdk: 'Steamv157' },
+      { appId: '1119730', project: 'Ranch_Simulator', sdk: 'Steamv161' }
+    ])(
+      'field case $project: shim placed over the Engine Steamworks dll, coverage from the Shipping exe',
+      async ({ appId, project, sdk }) => {
+        const { shipping, dll } = ueTree(project, sdk)
+        scanByPath({
+          [shipping]: { status: 'ok', arch: 'x64', symbols: COVERED }
+        })
+
+        const result = await placeShimForGame(appId, gameExePath, opts())
+
+        expect(result.status).toBe('placed')
+        if (result.status === 'placed') {
+          expect(result.verdict?.status).toBe('clean')
+          expect(result.verdict?.arch).toBe('x64')
+          expect(result.verdict?.missingSymbols).toEqual([])
+          expect(result.shimPaths).toEqual([resolve(dll)])
+        }
+        expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+        expect(mockedScanSteamApiImports).toHaveBeenCalledWith(appId, shipping)
+      }
+    )
+
+    it('an uncovered Shipping symbol is named, not the runtime-loaded marker', async () => {
+      const { shipping, dll } = ueTree('ManorLords', 'Steamv157')
+      scanByPath({
+        [shipping]: {
+          status: 'ok',
+          arch: 'x64',
+          symbols: [...COVERED, 'SteamInternal_Bogus']
+        }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toEqual(['SteamInternal_Bogus'])
+      }
+      expect(readFileSync(dll, 'utf-8')).toBe(MARK_X64)
+    })
+
+    it('the Shipping exe is scanned once, ahead of the cap-bounded importer walk', async () => {
+      const { shipping } = ueTree('ManorLords', 'Steamv157')
+      for (let n = 0; n < 600; n++) {
+        put(
+          join('Engine', 'Binaries', 'ThirdParty', 'Filler', `Filler${n}.dll`)
+        )
+      }
+      scanByPath({
+        [shipping]: { status: 'ok', arch: 'x64', symbols: COVERED }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('placed')
+      if (result.status === 'placed') {
+        expect(result.verdict?.status).toBe('clean')
+      }
+      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      expect(paths.filter((p) => p === shipping)).toHaveLength(1)
+      expect(paths[1]).toBe(shipping)
+      const warn = (
+        jest.requireMock('backend/logger') as { logWarning: jest.Mock }
+      ).logWarning
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('512-file cap'),
+        'Steam'
+      )
+    })
+
+    it('a symlinked Steamworks dir is never followed', async () => {
+      ueTree('ManorLords', 'Steamv157', false)
+      const outside = join(root, 'outside')
+      const outsideDll = join(outside, 'Steamv157', 'Win64', 'steam_api64.dll')
+      mkdirSync(join(outside, 'Steamv157', 'Win64'), { recursive: true })
+      writeFileSync(outsideDll, 'outside-dll')
+      mkdirSync(join(gameDir, 'Engine', 'Binaries', 'ThirdParty'), {
+        recursive: true
+      })
+      symlinkSync(
+        outside,
+        join(gameDir, 'Engine', 'Binaries', 'ThirdParty', 'Steamworks')
+      )
+      scanByPath({})
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('no-steam-api')
+      expect(readFileSync(outsideDll, 'utf-8')).toBe('outside-dll')
+    })
+
+    it('a symlinked Shipping exe is never scanned', async () => {
+      const { shipping } = ueTree('ManorLords', 'Steamv157')
+      rmSync(shipping)
+      const target = join(root, 'outside-shipping.exe')
+      writeFileSync(target, 'outside-exe')
+      symlinkSync(target, shipping)
+      scanByPath({
+        [shipping]: { status: 'ok', arch: 'x64', symbols: COVERED },
+        [target]: { status: 'ok', arch: 'x64', symbols: COVERED }
+      })
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('placed-miss')
+      if (result.status === 'placed-miss') {
+        expect(result.verdict.missingSymbols).toEqual([
+          'steam_api64.dll@runtime-loaded'
+        ])
+      }
+      const paths = mockedScanSteamApiImports.mock.calls.map((c) => c[1])
+      expect(paths).not.toContain(shipping)
+      expect(paths).not.toContain(target)
+    })
+
+    it('the Steamworks subtree walk is bounded', async () => {
+      ueTree('ManorLords', 'Steamv157', false)
+      put(
+        join(
+          'Engine',
+          'Binaries',
+          'ThirdParty',
+          'Steamworks',
+          'a',
+          'b',
+          'c',
+          'd',
+          'e',
+          'steam_api64.dll'
+        )
+      )
+      scanByPath({})
+
+      const result = await placeShimForGame('1363080', gameExePath, opts())
+
+      expect(result.status).toBe('no-steam-api')
+    })
+
+    it('no Engine dir: no Unreal probing at all', async () => {
+      gameExePath = join(gameDir, 'Foo.exe')
+      writeX64Stub()
+      put(join('Foo', 'Binaries', 'Win64', 'Foo-Win64-Shipping.exe'), 'x')
+      scanByPath({})
+
+      const result = await placeShimForGame('1234', gameExePath, opts())
+
+      expect(result.status).toBe('no-steam-api')
       expect(mockedScanSteamApiImports).toHaveBeenCalledTimes(1)
     })
   })
