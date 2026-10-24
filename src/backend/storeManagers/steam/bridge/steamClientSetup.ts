@@ -27,6 +27,7 @@ export const STEAMCLIENT_ACTIVE_PROCESS_KEY =
   'HKCU\\Software\\Valve\\Steam\\ActiveProcess'
 const BRIDGE_STEAMCLIENT64_FILENAME = 'steamclient64.dll'
 
+export const REG_ADD_TIMEOUT_MS = 15_000
 const NUMERIC_APP_ID = /^\d+$/
 const SHIM64_FILENAME = 'steam_api64.dll'
 
@@ -187,21 +188,44 @@ export async function setupSteamClientForwarder(opts: {
 
   for (const commandParts of commands) {
     const valueName = commandParts[4]
+    // The timer is unref'd (sidecar exit contract, half 1) and cleared once the
+    // race settles. A timed-out child cannot be killed through runWineCommand's
+    // API; it is recorded as a deferred in-flight-handle item.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<'timeout'>((resolveTimeout) => {
+      timer = setTimeout(() => resolveTimeout('timeout'), REG_ADD_TIMEOUT_MS)
+      timer.unref?.()
+    })
     try {
-      const res = await runWineCommand({
-        gameSettings: opts.bottleSettings,
-        commandParts,
-        wait: true,
-        protonVerb: 'run'
-      })
-      if (res.code !== undefined && res.code !== 0) {
+      const res = await Promise.race([
+        runWineCommand({
+          gameSettings: opts.bottleSettings,
+          commandParts,
+          // reg.exe's own exit code proves the write; `wineserver --wait`
+          // blocks until the bottle's wineserver exits, which can be never.
+          wait: false,
+          protonVerb: 'run'
+        }),
+        timeout
+      ])
+      if (res === 'timeout') {
         logWarning(
-          `setupSteamClientForwarder: reg add ${valueName} exited ${res.code} for appId ${appId}`,
+          `setupSteamClientForwarder: reg add ${valueName} timed out for appId ${appId}`,
           LogPrefix.Steam
         )
         return {
           status: 'error',
-          error: `reg add ${valueName} failed with code ${res.code}`
+          error: `reg add ${valueName} timed out after ${REG_ADD_TIMEOUT_MS} ms`
+        }
+      }
+      if (res.code !== 0) {
+        logWarning(
+          `setupSteamClientForwarder: reg add ${valueName} exited ${String(res.code)} for appId ${appId}`,
+          LogPrefix.Steam
+        )
+        return {
+          status: 'error',
+          error: `reg add ${valueName} failed (code=${String(res.code)}, stderr=${String(res.stderr ?? '').slice(0, 200)})`
         }
       }
     } catch (error) {
@@ -213,6 +237,8 @@ export async function setupSteamClientForwarder(opts: {
         status: 'error',
         error: `reg add ${valueName} failed: ${String(error)}`
       }
+    } finally {
+      if (timer) clearTimeout(timer)
     }
   }
 

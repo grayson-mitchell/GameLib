@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   buildSteamClientRegistryCommands,
+  REG_ADD_TIMEOUT_MS,
   setupSteamClientForwarder,
   STEAMCLIENT_ACTIVE_PROCESS_KEY,
   toBottleWindowsPath
@@ -169,7 +170,7 @@ describe('setupSteamClientForwarder', () => {
       commandParts: buildSteamClientRegistryCommands({
         dll64WinPath: 'C:\\G\\x64\\steamclient64.dll'
       })[0],
-      wait: true,
+      wait: false,
       protonVerb: 'run'
     })
   })
@@ -244,6 +245,54 @@ describe('setupSteamClientForwarder', () => {
     const res = await run()
     expect(res.status).toBe('error')
     expect(res.status === 'error' && res.error).toContain('Universe')
+  })
+
+  it('treats a missing exit code (Invalid wine) as an error', async () => {
+    mockedRun.mockResolvedValueOnce({
+      stdout: '',
+      stderr: 'Invalid wine'
+    } as never)
+    const res = await run()
+    expect(res.status).toBe('error')
+    expect(res.status === 'error' && res.error).toContain('SteamClientDll64')
+    expect(res.status === 'error' && res.error).toContain('code=undefined')
+  })
+
+  it('treats a null exit code as an error', async () => {
+    mockedRun.mockResolvedValueOnce({
+      stdout: '',
+      stderr: '',
+      code: null
+    } as never)
+    expect((await run()).status).toBe('error')
+  })
+
+  it('bounds a hung reg add and leaves no timer behind', async () => {
+    jest.useFakeTimers()
+    try {
+      mockedRun.mockReturnValueOnce(new Promise(() => undefined) as never)
+      const pending = run()
+      await jest.advanceTimersByTimeAsync(REG_ADD_TIMEOUT_MS)
+      const res = await pending
+      expect(res.status).toBe('error')
+      expect(res.status === 'error' && res.error).toContain(
+        'timed out after 15000 ms'
+      )
+      expect(jest.getTimerCount()).toBe(0)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('leaves no pending timer after a normal settle', async () => {
+    jest.useFakeTimers()
+    try {
+      const res = await run()
+      expect(res.status).toBe('placed')
+      expect(jest.getTimerCount()).toBe(0)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('rejects a non-numeric appId before any fs or wine call', async () => {
