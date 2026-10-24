@@ -578,6 +578,11 @@ export const GAMESERVER_FLAT_STUBS = [
   'SteamGameServerUtils'
 ] as const
 
+/** True when `name` is already one of the fixed GAMESERVER flat stubs. */
+export function hasGameServerFlatStub(name: string): boolean {
+  return (GAMESERVER_FLAT_STUBS as readonly string[]).includes(name)
+}
+
 const GAMESERVER_FLAT_STUB_BODIES: Record<
   (typeof GAMESERVER_FLAT_STUBS)[number],
   string
@@ -666,6 +671,7 @@ export const MODERN_LOOKUP_FLAT_EXPORTS = [
   'SteamInternal_FindOrCreateUserInterface',
   'SteamInternal_FindOrCreateGameServerInterface',
   'SteamInternal_GameServer_Init_V2',
+  'SteamInternal_GameServer_Init',
   'GameLibBridge_CreateInterface'
 ] as const
 
@@ -752,6 +758,20 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     '  (void)unIP; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString; (void)pszInternalCheckInterfaceVersions;\n' +
     '  if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: game server mode is not supported");\n' +
     '  return 1;\n' +
+    '}',
+  // Phase 53 (53-01, D-53-11): the pre-V2 SDK 1.50-1.57 game-server init
+  // that UE titles (Manor Lords 1363080) delay-import. SDK shape: bool
+  // SteamInternal_GameServer_Init(uint32 unIP, uint16 usLegacySteamPort,
+  // uint16 usGamePort, uint16 usQueryPort, EServerMode, const char
+  // *pchVersionString). Game-server mode is unsupported: it fails the same
+  // way _V2 does, in ITS return type -- bool false (0) here, where _V2's
+  // ESteamAPIInitResult failure is 1. The pre-V2 signature has no error-message
+  // out-param, so nothing is written, and bridge_transact is never called.
+  // Every argument is ignored (Win64 is caller-cleans, so arity is harmless).
+  SteamInternal_GameServer_Init:
+    'int SteamInternal_GameServer_Init(uint32_t unIP, uint16_t usLegacySteamPort, uint16_t usGamePort, uint16_t usQueryPort, int eServerMode, const char *pchVersionString) {\n' +
+    '  (void)unIP; (void)usLegacySteamPort; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString;\n' +
+    '  return 0;\n' +
     '}',
   // Phase 52 (52-07): called by the steamclient64 forwarder on the SteamStub
   // check path. Returns the shim proxy for the EXACT version only when the
@@ -2481,7 +2501,13 @@ function emitIfaceTableAndBareAccessors(
     })
     .join('')
 
-  const families = [...new Set(manifests.map((m) => m.family))].sort()
+  // Phase 53: a family whose bare accessor name is already a GAMESERVER flat
+  // stub (SteamGameServer, SteamGameServerStats) keeps that stub -- emitting
+  // a second definition would not compile and the stub's NULL answer is the
+  // pre-existing behavior (the game-server surface is unsupported).
+  const families = [...new Set(manifests.map((m) => m.family))]
+    .filter((f) => !hasGameServerFlatStub(bareAccessorName(f)))
+    .sort()
   const bareAccessors = families
     .map(
       (family) =>
@@ -2550,7 +2576,9 @@ export function generateDefFile(
     (a, b) => a.ordinal - b.ordinal
   )
   const accessorExports = sortedManifests.map((m) => flatAccessorName(m))
-  const families = [...new Set(sortedManifests.map((m) => m.family))].sort()
+  const families = [...new Set(sortedManifests.map((m) => m.family))]
+    .filter((f) => !hasGameServerFlatStub(bareAccessorName(f)))
+    .sort()
   const bareAccessorExports = families.map((f) => bareAccessorName(f))
   const libraryName = arch === 'x64' ? 'steam_api64' : 'steam_api'
   // 51-15: the modern-SDK lookup family is Win64-only -- see

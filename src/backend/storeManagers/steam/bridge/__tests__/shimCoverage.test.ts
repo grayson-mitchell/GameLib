@@ -17,7 +17,10 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { parseSteamApiImports } from '../importScan'
-import { resolveRequiredInterfaceVersions } from '../interfaceVersions'
+import {
+  familyOfInterfaceVersion,
+  resolveRequiredInterfaceVersions
+} from '../interfaceVersions'
 import {
   SHIM_EXPORTED_SYMBOLS,
   SHIM64_EXPORTED_SYMBOLS,
@@ -638,7 +641,7 @@ describe('isScanVerdictNowCovered is arch-scoped (CR-01)', () => {
     ['x64', 'SteamInternal_CreateInterface', true],
     ['x86', 'SteamUser019', false],
     ['x64', 'SteamUser023', true],
-    ['x64', 'SteamUser021', false],
+    ['x64', 'SteamUser020', false],
     ['x86', 'SteamUser016', true],
     ['x86', 'SteamUser@unknown-version', false]
   ]
@@ -755,13 +758,13 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
         arch: 'x64',
         symbols: RUNTIME,
         requiredInterfaceVersions: {
-          SteamFriends: 'SteamFriends017',
+          SteamFriends: 'SteamFriends016',
           SteamUser: 'SteamUser019',
           SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION003',
           SteamMatchMaking: 'SteamMatchMaking009'
         }
       })
-    ).toEqual(['SteamFriends017'])
+    ).toEqual(['SteamFriends016'])
   })
 
   it('x64 without runtime lookup: an unserved bare-accessor version is NULL', () => {
@@ -769,9 +772,9 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
       findUnservableInterfaceVersions({
         arch: 'x64',
         symbols: ['SteamFriends'],
-        requiredInterfaceVersions: { SteamFriends: 'SteamFriends017' }
+        requiredInterfaceVersions: { SteamFriends: 'SteamFriends016' }
       })
-    ).toEqual(['SteamFriends017'])
+    ).toEqual(['SteamFriends016'])
   })
 
   it('x64 runtime lookup but a bare accessor of the family: NULL, counts', () => {
@@ -786,14 +789,14 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
     ).toEqual(['STEAMHTTP_INTERFACE_VERSION003'])
   })
 
-  it('x86 bare SteamFriends017 counts', () => {
+  it('x86 bare SteamFriends016 counts', () => {
     expect(
       findUnservableInterfaceVersions({
         arch: 'x86',
         symbols: ['SteamFriends'],
-        requiredInterfaceVersions: { SteamFriends: 'SteamFriends017' }
+        requiredInterfaceVersions: { SteamFriends: 'SteamFriends016' }
       })
-    ).toEqual(['SteamFriends017'])
+    ).toEqual(['SteamFriends016'])
   })
 
   it('ELEX shape returns []', () => {
@@ -819,12 +822,12 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
         arch: 'x64',
         symbols: ['SteamFriends', 'SteamUtils'],
         requiredInterfaceVersions: {
-          SteamUtils: 'SteamUtils010',
-          SteamFriends: 'SteamFriends017',
-          SteamAlias: 'SteamUtils010'
+          SteamUtils: 'SteamUtils009',
+          SteamFriends: 'SteamFriends016',
+          SteamAlias: 'SteamUtils009'
         }
       })
-    ).toEqual(['SteamUtils010', 'SteamFriends017'])
+    ).toEqual(['SteamUtils009', 'SteamFriends016'])
   })
 })
 
@@ -860,5 +863,181 @@ describe('Grim Dawn (219990) x64 acceptance (52-13)', () => {
         'STEAMREMOTESTORAGE_INTERFACE_VERSION016'
       )?.mode
     ).toBe('stub')
+  })
+})
+
+describe('Phase 53 sampled titles: no half-served family (Pitfall 4)', () => {
+  const IMPORTS = [
+    'SteamInternal_CreateInterface',
+    'SteamInternal_FindOrCreateUserInterface',
+    'SteamAPI_RunCallbacks'
+  ]
+  const COMMON = [
+    'STEAMAPPS_INTERFACE_VERSION008',
+    'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+    'SteamNetworking006',
+    'SteamMatchMaking009',
+    'SteamMatchMakingServers002'
+  ]
+  // Unity / mixed titles (RESEARCH Pattern 4 measured table).
+  const SAMPLES: Record<string, string[]> = {
+    '1167950': ['SteamClient020', 'SteamUser023', 'SteamFriends017'],
+    '1284190': ['SteamClient020', 'SteamUser023', 'SteamFriends017'],
+    '648800': ['SteamClient020', 'SteamUser023', 'SteamFriends017'],
+    '1691190': [
+      'SteamClient020',
+      'SteamUser021',
+      'SteamFriends017',
+      'SteamGameServer014'
+    ],
+    '1782460': ['SteamClient021', 'SteamUser023', 'SteamFriends017'],
+    '1603180': ['SteamClient021', 'SteamUser023', 'SteamFriends017'],
+    '3410180': ['SteamUser023', 'SteamFriends018']
+  }
+  const UTILS_STATS: Record<string, string[]> = {
+    '1167950': ['SteamUtils010', 'STEAMUSERSTATS_INTERFACE_VERSION012'],
+    '1284190': ['SteamUtils010', 'STEAMUSERSTATS_INTERFACE_VERSION012'],
+    '648800': ['SteamUtils010', 'STEAMUSERSTATS_INTERFACE_VERSION012'],
+    '1691190': ['SteamUtils010', 'STEAMUSERSTATS_INTERFACE_VERSION012'],
+    '1782460': ['SteamUtils010', 'STEAMUSERSTATS_INTERFACE_VERSION012'],
+    '1603180': ['SteamUtils010', 'STEAMUSERSTATS_INTERFACE_VERSION013'],
+    '3410180': ['SteamUtils010', 'STEAMUSERSTATS_INTERFACE_VERSION013']
+  }
+  // Measured 2026-10-25 from the installed Shipping exes (53-01 Task 1 Step A).
+  const UE_MEASURED: Record<string, string[]> = {
+    '1363080': [
+      'STEAMAPPS_INTERFACE_VERSION008',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+      'STEAMUSERSTATS_INTERFACE_VERSION012',
+      'SteamFriends017',
+      'SteamGameServer015',
+      'SteamGameServerStats001',
+      'SteamInput006',
+      'SteamMatchMaking009',
+      'SteamMatchMakingServers002',
+      'SteamNetworking006',
+      'SteamUser023',
+      'SteamUtils010'
+    ],
+    '427410': [
+      'STEAMAPPS_INTERFACE_VERSION008',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+      'STEAMUSERSTATS_INTERFACE_VERSION012',
+      'SteamFriends017',
+      'SteamGameServer015',
+      'SteamGameServerStats001',
+      'SteamInput006',
+      'SteamMatchMaking009',
+      'SteamMatchMakingServers002',
+      'SteamNetworking006',
+      'SteamUser023',
+      'SteamUtils010'
+    ],
+    '1119730': [
+      'STEAMAPPS_INTERFACE_VERSION008',
+      'STEAMHTTP_INTERFACE_VERSION003',
+      'STEAMMUSICREMOTE_INTERFACE_VERSION001',
+      'STEAMMUSIC_INTERFACE_VERSION001',
+      'STEAMPARENTALSETTINGS_INTERFACE_VERSION001',
+      'STEAMREMOTEPLAY_INTERFACE_VERSION002',
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
+      'STEAMSCREENSHOTS_INTERFACE_VERSION003',
+      'STEAMUGC_INTERFACE_VERSION020',
+      'STEAMUSERSTATS_INTERFACE_VERSION013',
+      'SteamController008',
+      'SteamFriends017',
+      'SteamGameServer015',
+      'SteamGameServerStats001',
+      'SteamInput006',
+      'SteamMatchGameSearch001',
+      'SteamMatchMaking009',
+      'SteamMatchMakingServers002',
+      'SteamNetworking006',
+      'SteamNetworkingMessages002',
+      'SteamNetworkingSockets012',
+      'SteamNetworkingUtils004',
+      'SteamParties002',
+      'SteamUser023',
+      'SteamUtils010'
+    ],
+    '648410': [
+      'STEAMUSERSTATS_INTERFACE_VERSION012',
+      'SteamUser023',
+      'SteamUtils010'
+    ]
+  }
+
+  function required(versions: string[]): Record<string, string> {
+    const out: Record<string, string> = {}
+    for (const v of versions) {
+      const family = familyOfInterfaceVersion(v)
+      if (family !== null) out[family] = v
+    }
+    return out
+  }
+
+  test.each(Object.keys(SAMPLES))(
+    'Unity/mixed title %s: nothing unservable',
+    (appId) => {
+      expect(
+        findUnservableInterfaceVersions({
+          arch: 'x64',
+          symbols: IMPORTS,
+          requiredInterfaceVersions: required([
+            ...SAMPLES[appId],
+            ...UTILS_STATS[appId],
+            ...COMMON
+          ])
+        })
+      ).toEqual([])
+    }
+  )
+
+  test.each(Object.keys(UE_MEASURED))(
+    'UE title %s (measured list): nothing unservable',
+    (appId) => {
+      expect(
+        findUnservableInterfaceVersions({
+          arch: 'x64',
+          symbols: IMPORTS,
+          requiredInterfaceVersions: required(UE_MEASURED[appId])
+        })
+      ).toEqual([])
+    }
+  )
+
+  test('every new version is served and its accessor is exported', () => {
+    for (const v of [
+      'SteamClient020',
+      'SteamClient021',
+      'SteamUser021',
+      'SteamFriends017',
+      'SteamFriends018',
+      'SteamUtils010',
+      'STEAMUSERSTATS_INTERFACE_VERSION012',
+      'STEAMUSERSTATS_INTERFACE_VERSION013',
+      'SteamInput006',
+      'SteamGameServer014',
+      'SteamGameServer015',
+      'SteamGameServerStats001'
+    ]) {
+      expect(SHIM64_SERVED_INTERFACE_VERSIONS.has(v)).toBe(true)
+    }
+    expect(SHIM64_EXPORTED_SYMBOLS.has('SteamInternal_GameServer_Init')).toBe(
+      true
+    )
+    expect(SHIM_EXPORTED_SYMBOLS.has('SteamInternal_GameServer_Init')).toBe(
+      false
+    )
+  })
+
+  test('a half-served family is still reported (skew guard works)', () => {
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: IMPORTS,
+        requiredInterfaceVersions: { SteamFriends: 'SteamFriends099' }
+      })
+    ).toEqual(['SteamFriends099'])
   })
 })

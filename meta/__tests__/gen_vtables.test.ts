@@ -3,6 +3,7 @@ import { join } from 'path'
 
 import {
   bareAccessorName,
+  hasGameServerFlatStub,
   cfgFamilyName,
   computeRetN,
   computeWireTableHash,
@@ -657,6 +658,9 @@ describe('gen_vtables', () => {
       const out: string[] = []
       for (const m of manifests) {
         const bare = bareAccessorName(m.family)
+        // Phase 53: SteamGameServer / SteamGameServerStats keep their fixed
+        // GAMESERVER flat stubs as the bare export (no iface cfg lookup).
+        if (hasGameServerFlatStub(bare)) continue
         if (!(bare in BARE_ACCESSOR_FAMILY)) {
           out.push(
             `${m.interface}: bare export ${bare} not in BARE_ACCESSOR_FAMILY`
@@ -1670,6 +1674,44 @@ describe('gen_vtables', () => {
       const b = body('SteamInternal_GameServer_Init_V2')
       expect(b).toContain('return 1;')
       expect(b).not.toContain('return 0;')
+    })
+
+    it('Phase 53 (D-53-11): pre-V2 SteamInternal_GameServer_Init is x64-only, returns bool false and never reaches the helper', () => {
+      const all = loadAllManifests()
+      expect(generateDefFile(all, 'x64')).toMatch(
+        /^\s*SteamInternal_GameServer_Init\s*$/m
+      )
+      expect(generateDefFile(all, 'x86')).not.toContain(
+        'SteamInternal_GameServer_Init'
+      )
+      const b = body('SteamInternal_GameServer_Init')
+      expect(b).toContain('return 0;')
+      expect(b).not.toContain('return 1;')
+      expect(b).not.toContain('bridge_transact')
+      expect(b).not.toContain('snprintf')
+    })
+
+    it('Phase 53 (D-53-03): the new versions get their own instances inside the x64 guard', () => {
+      const c = generateShimC(loadAllManifests())
+      for (const inst of [
+        'g_steamclient020_instance',
+        'g_steamclient021_instance',
+        'g_steamutils010_instance',
+        'g_steaminput006_instance',
+        'g_steamgameserverstats001_instance'
+      ]) {
+        expect(c).toContain(inst)
+      }
+    })
+
+    it('Phase 53 (D-53-06): SteamUtils010 IsSteamRunningOnSteamDeck is a local stub answering 0', () => {
+      const c = generateShimC(loadAllManifests())
+      const m = c.match(
+        /vt_SteamUtils010_IsSteamRunningOnSteamDeck\(void \*self\) \{[^}]*\}/
+      )
+      expect(m).not.toBeNull()
+      expect(m![0]).toContain('return 0;')
+      expect(m![0]).not.toContain('bridge_transact')
     })
 
     it('FindOrCreate* resolve by exact version with null-object fallback', () => {

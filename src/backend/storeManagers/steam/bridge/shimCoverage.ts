@@ -171,6 +171,9 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamInternal_FindOrCreateUserInterface',
   'SteamInternal_FindOrCreateGameServerInterface',
   'SteamInternal_GameServer_Init_V2',
+  // Phase 53 (53-01, D-53-11): the pre-V2 game-server init UE titles
+  // delay-import; fails with bool false, never calls the helper.
+  'SteamInternal_GameServer_Init',
   // Phase 52 (52-07): SteamStub-path entry the steamclient64 forwarder calls.
   'GameLibBridge_CreateInterface',
   // 261021-pgx (shared x86/x64): STEAMUSERSTATS_INTERFACE_VERSION011's
@@ -192,6 +195,22 @@ export const SHIM64_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_SteamUtils_v008',
   'SteamAPI_SteamApps_v008',
   'SteamAPI_SteamRemoteStorage_v013',
+  // Phase 53 (53-01, D-53-03 / D-53-11): the versioned accessors of the
+  // modern-SDK interface versions the sampled UE / Unity titles request
+  // (SteamFriends018 widened to x64) and the SteamInput bare accessor.
+  'SteamAPI_SteamFriends_v018',
+  'SteamAPI_SteamClient_v020',
+  'SteamAPI_SteamClient_v021',
+  'SteamAPI_SteamUser_v021',
+  'SteamAPI_SteamFriends_v017',
+  'SteamAPI_SteamUtils_v010',
+  'SteamAPI_SteamUserStats_v012',
+  'SteamAPI_SteamUserStats_v013',
+  'SteamAPI_SteamInput_v006',
+  'SteamAPI_SteamGameServer_v014',
+  'SteamAPI_SteamGameServer_v015',
+  'SteamAPI_SteamGameServerStats_v001',
+  'SteamInput',
   // 51-06 Task 2 bare legacy accessors -- one per distinct family with an
   // x64 manifest (10: the shared trio's three plus ELEX's six plus
   // SteamUserStats, same resolution mechanism as the x86 bare accessors).
@@ -329,7 +348,28 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   [
     'STEAMREMOTESTORAGE_INTERFACE_VERSION016',
     { family: 'SteamRemoteStorage', mode: 'stub' }
-  ]
+  ],
+  // Phase 53 (53-01, D-53-03 / D-53-11): each version below is extracted from
+  // its own Proton VTABLE block (never aliased from a neighbour version).
+  // 'wire' where the manifest carries any wire method, else 'stub'.
+  ['SteamClient020', { family: 'SteamClient', mode: 'wire' }],
+  ['SteamClient021', { family: 'SteamClient', mode: 'wire' }],
+  ['SteamUser021', { family: 'SteamUser', mode: 'wire' }],
+  ['SteamFriends017', { family: 'SteamFriends', mode: 'wire' }],
+  ['SteamFriends018', { family: 'SteamFriends', mode: 'wire' }],
+  ['SteamUtils010', { family: 'SteamUtils', mode: 'wire' }],
+  [
+    'STEAMUSERSTATS_INTERFACE_VERSION012',
+    { family: 'SteamUserStats', mode: 'wire' }
+  ],
+  [
+    'STEAMUSERSTATS_INTERFACE_VERSION013',
+    { family: 'SteamUserStats', mode: 'wire' }
+  ],
+  ['SteamInput006', { family: 'SteamInput', mode: 'stub' }],
+  ['SteamGameServer014', { family: 'SteamGameServer', mode: 'stub' }],
+  ['SteamGameServer015', { family: 'SteamGameServer', mode: 'stub' }],
+  ['SteamGameServerStats001', { family: 'SteamGameServerStats', mode: 'stub' }]
 ])
 
 // 51-15: D-51-13 GO -- the Win64 shim answers an unserved required

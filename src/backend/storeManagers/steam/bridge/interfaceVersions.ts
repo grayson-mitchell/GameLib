@@ -93,7 +93,9 @@ export const BARE_ACCESSOR_FAMILY: Readonly<Record<string, string>> = {
   SteamMusicRemote: 'SteamMusicRemote',
   SteamHTMLSurface: 'SteamHTMLSurface',
   SteamInventory: 'SteamInventory',
-  SteamVideo: 'SteamVideo'
+  SteamVideo: 'SteamVideo',
+  // Phase 53 (53-01): SteamInput006 is a served x64 manifest family.
+  SteamInput: 'SteamInput'
 }
 
 // Importing either of these means the game resolves Steamworks interfaces

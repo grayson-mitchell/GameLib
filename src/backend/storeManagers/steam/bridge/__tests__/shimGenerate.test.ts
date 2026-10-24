@@ -1730,7 +1730,7 @@ describe('shimGenerate', () => {
       'SteamInternal_FindOrCreateUserInterface',
       'SteamInternal_ContextInit',
       'SteamInternal_CreateInterface',
-      'SteamInternal_GameServer_Init'
+      'SteamAPI_ManualDispatch_Init'
     ]
     const COVERED = [
       'SteamAPI_RestartAppIfNecessary',
@@ -1783,7 +1783,7 @@ describe('shimGenerate', () => {
 
     it('Manor Lords shape: withheld, dll untouched, no backup, verdict names the gaps', async () => {
       const { shipping, dll } = ueTree(
-        'SteamUser019 SteamFriends017 SteamUtils008'
+        'SteamUser019 SteamFriends016 SteamUtils008'
       )
       scanByPath({
         [shipping]: {
@@ -1802,17 +1802,17 @@ describe('shimGenerate', () => {
         expect(result.verdict.status).toBe('miss')
         expect(result.verdict.arch).toBe('x64')
         expect(result.verdict.missingSymbols).toContain(
-          'SteamInternal_GameServer_Init'
+          'SteamAPI_ManualDispatch_Init'
         )
-        expect(result.verdict.missingSymbols).toContain('SteamFriends017')
+        expect(result.verdict.missingSymbols).toContain('SteamFriends016')
         expect(result.verdict.missingSymbols).not.toContain('SteamUser019')
       }
       expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
       expect(existsSync(dll + BACKUP)).toBe(false)
       const warned = warnings()
       expect(warned).toHaveLength(1)
-      expect(warned[0]).toContain('SteamInternal_GameServer_Init')
-      expect(warned[0]).toContain('SteamFriends017')
+      expect(warned[0]).toContain('SteamAPI_ManualDispatch_Init')
+      expect(warned[0]).toContain('SteamFriends016')
     })
 
     it('a delay-only gap with every version served is withheld', async () => {
@@ -1833,7 +1833,7 @@ describe('shimGenerate', () => {
     })
 
     it('a skew-only gap (static, all symbols covered) is withheld', async () => {
-      const { shipping, dll } = ueTree('SteamUser019 SteamFriends017')
+      const { shipping, dll } = ueTree('SteamUser019 SteamFriends016')
       scanByPath({
         [shipping]: { status: 'ok', arch: 'x64', symbols: COVERED }
       })
@@ -1842,7 +1842,7 @@ describe('shimGenerate', () => {
 
       expect(result.status).toBe('withheld')
       if (result.status === 'withheld') {
-        expect(result.verdict.missingSymbols).toEqual(['SteamFriends017'])
+        expect(result.verdict.missingSymbols).toEqual(['SteamFriends016'])
       }
       expect(readFileSync(dll, 'utf-8')).toBe('plain-game-dll')
     })
@@ -2037,7 +2037,7 @@ describe('shimGenerate', () => {
     }
 
     it('static import, no dll on disk, unservable version -> placed-miss, no own-steam_api warning', async () => {
-      noDllExe('SteamUser019 SteamFriends017')
+      noDllExe('SteamUser019 SteamFriends016')
       mockedScanSteamApiImports.mockResolvedValue({
         status: 'ok',
         arch: 'x64',
@@ -2050,7 +2050,7 @@ describe('shimGenerate', () => {
 
       expect(result.status).toBe('placed-miss')
       if (result.status === 'placed-miss') {
-        expect(result.verdict.missingSymbols).toContain('SteamFriends017')
+        expect(result.verdict.missingSymbols).toContain('SteamFriends016')
       }
       expect(readFileSync(shim64DestPath(), 'utf-8')).toBe(MARK_X64)
       expectNoFallbackLog()

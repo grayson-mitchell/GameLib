@@ -5,7 +5,7 @@
  * native/steam-bridge/generated/steam_api_shim.c marshals the shim side
  * of. #include'd from native/steam-bridge/helper/bridge_helper.c.
  *
- * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014.
+ * Interfaces covered: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, SteamClient014, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013.
  */
 #ifndef GAMELIB_BRIDGE_DISPATCH_H
 #define GAMELIB_BRIDGE_DISPATCH_H
@@ -63,7 +63,7 @@ Response blob (per method):
 // tuples BRIDGE_SHIM_TABLE_HASH (steam_api_shim.c) embeds -- a drift
 // between the two means the shim and this dispatch table disagree about
 // what is on the wire.
-#define BRIDGE_DISPATCH_TABLE_HASH "0089d4fc5bf9"
+#define BRIDGE_DISPATCH_TABLE_HASH "4e3c190aafca"
 
 // Response scratch -- bridge_dispatch() never writes past respCap, which
 // the caller (bridge_helper.c) sizes to this constant.
@@ -119,6 +119,27 @@ static void *g_bd_self_steamapps_interface_version008;
 #define BD_ORDINAL_SteamClient014 22
 static BDAccessorFn_t g_bd_accessor_steamclient014;
 static void *g_bd_self_steamclient014;
+#define BD_ORDINAL_SteamClient020 25
+static BDAccessorFn_t g_bd_accessor_steamclient020;
+static void *g_bd_self_steamclient020;
+#define BD_ORDINAL_SteamClient021 26
+static BDAccessorFn_t g_bd_accessor_steamclient021;
+static void *g_bd_self_steamclient021;
+#define BD_ORDINAL_SteamUser021 27
+static BDAccessorFn_t g_bd_accessor_steamuser021;
+static void *g_bd_self_steamuser021;
+#define BD_ORDINAL_SteamFriends017 28
+static BDAccessorFn_t g_bd_accessor_steamfriends017;
+static void *g_bd_self_steamfriends017;
+#define BD_ORDINAL_SteamUtils010 29
+static BDAccessorFn_t g_bd_accessor_steamutils010;
+static void *g_bd_self_steamutils010;
+#define BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION012 30
+static BDAccessorFn_t g_bd_accessor_steamuserstats_interface_version012;
+static void *g_bd_self_steamuserstats_interface_version012;
+#define BD_ORDINAL_STEAMUSERSTATS_INTERFACE_VERSION013 31
+static BDAccessorFn_t g_bd_accessor_steamuserstats_interface_version013;
+static void *g_bd_self_steamuserstats_interface_version013;
 
 #define BD_SLOT_SteamUser023_GetHSteamUser 0
 typedef int32_t (*BDFlatFn_SteamUser023_GetHSteamUser_t)(void *);
@@ -600,6 +621,330 @@ static BDFlatFn_SteamClient014_GetISteamAppList_t g_bd_flat_SteamClient014_GetIS
 #define BD_SLOT_SteamClient014_GetISteamMusic 28
 typedef void * (*BDFlatFn_SteamClient014_GetISteamMusic_t)(void *, int32_t, int32_t, const char *);
 static BDFlatFn_SteamClient014_GetISteamMusic_t g_bd_flat_SteamClient014_GetISteamMusic;
+#define BD_SLOT_SteamClient020_CreateSteamPipe 0
+typedef int32_t (*BDFlatFn_SteamClient020_CreateSteamPipe_t)(void *);
+static BDFlatFn_SteamClient020_CreateSteamPipe_t g_bd_flat_SteamClient020_CreateSteamPipe;
+#define BD_SLOT_SteamClient020_BReleaseSteamPipe 1
+typedef int (*BDFlatFn_SteamClient020_BReleaseSteamPipe_t)(void *, int32_t);
+static BDFlatFn_SteamClient020_BReleaseSteamPipe_t g_bd_flat_SteamClient020_BReleaseSteamPipe;
+#define BD_SLOT_SteamClient020_ConnectToGlobalUser 2
+typedef int32_t (*BDFlatFn_SteamClient020_ConnectToGlobalUser_t)(void *, int32_t);
+static BDFlatFn_SteamClient020_ConnectToGlobalUser_t g_bd_flat_SteamClient020_ConnectToGlobalUser;
+#define BD_SLOT_SteamClient020_CreateLocalUser 3
+typedef int32_t (*BDFlatFn_SteamClient020_CreateLocalUser_t)(void *, int32_t *, uint32_t);
+static BDFlatFn_SteamClient020_CreateLocalUser_t g_bd_flat_SteamClient020_CreateLocalUser;
+#define BD_SLOT_SteamClient020_ReleaseUser 4
+typedef void (*BDFlatFn_SteamClient020_ReleaseUser_t)(void *, int32_t, int32_t);
+static BDFlatFn_SteamClient020_ReleaseUser_t g_bd_flat_SteamClient020_ReleaseUser;
+#define BD_SLOT_SteamClient020_GetISteamUser 5
+typedef void * (*BDFlatFn_SteamClient020_GetISteamUser_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamUser_t g_bd_flat_SteamClient020_GetISteamUser;
+#define BD_SLOT_SteamClient020_GetISteamGameServer 6
+typedef void * (*BDFlatFn_SteamClient020_GetISteamGameServer_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamGameServer_t g_bd_flat_SteamClient020_GetISteamGameServer;
+#define BD_SLOT_SteamClient020_GetISteamFriends 8
+typedef void * (*BDFlatFn_SteamClient020_GetISteamFriends_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamFriends_t g_bd_flat_SteamClient020_GetISteamFriends;
+#define BD_SLOT_SteamClient020_GetISteamUtils 9
+typedef void * (*BDFlatFn_SteamClient020_GetISteamUtils_t)(void *, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamUtils_t g_bd_flat_SteamClient020_GetISteamUtils;
+#define BD_SLOT_SteamClient020_GetISteamMatchmaking 10
+typedef void * (*BDFlatFn_SteamClient020_GetISteamMatchmaking_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamMatchmaking_t g_bd_flat_SteamClient020_GetISteamMatchmaking;
+#define BD_SLOT_SteamClient020_GetISteamMatchmakingServers 11
+typedef void * (*BDFlatFn_SteamClient020_GetISteamMatchmakingServers_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamMatchmakingServers_t g_bd_flat_SteamClient020_GetISteamMatchmakingServers;
+#define BD_SLOT_SteamClient020_GetISteamGenericInterface 12
+typedef void * (*BDFlatFn_SteamClient020_GetISteamGenericInterface_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamGenericInterface_t g_bd_flat_SteamClient020_GetISteamGenericInterface;
+#define BD_SLOT_SteamClient020_GetISteamUserStats 13
+typedef void * (*BDFlatFn_SteamClient020_GetISteamUserStats_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamUserStats_t g_bd_flat_SteamClient020_GetISteamUserStats;
+#define BD_SLOT_SteamClient020_GetISteamGameServerStats 14
+typedef void * (*BDFlatFn_SteamClient020_GetISteamGameServerStats_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamGameServerStats_t g_bd_flat_SteamClient020_GetISteamGameServerStats;
+#define BD_SLOT_SteamClient020_GetISteamApps 15
+typedef void * (*BDFlatFn_SteamClient020_GetISteamApps_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamApps_t g_bd_flat_SteamClient020_GetISteamApps;
+#define BD_SLOT_SteamClient020_GetISteamNetworking 16
+typedef void * (*BDFlatFn_SteamClient020_GetISteamNetworking_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamNetworking_t g_bd_flat_SteamClient020_GetISteamNetworking;
+#define BD_SLOT_SteamClient020_GetISteamRemoteStorage 17
+typedef void * (*BDFlatFn_SteamClient020_GetISteamRemoteStorage_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamRemoteStorage_t g_bd_flat_SteamClient020_GetISteamRemoteStorage;
+#define BD_SLOT_SteamClient020_GetISteamScreenshots 18
+typedef void * (*BDFlatFn_SteamClient020_GetISteamScreenshots_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamScreenshots_t g_bd_flat_SteamClient020_GetISteamScreenshots;
+#define BD_SLOT_SteamClient020_RunFrame 20
+typedef void (*BDFlatFn_SteamClient020_RunFrame_t)(void *);
+static BDFlatFn_SteamClient020_RunFrame_t g_bd_flat_SteamClient020_RunFrame;
+#define BD_SLOT_SteamClient020_GetIPCCallCount 21
+typedef uint32_t (*BDFlatFn_SteamClient020_GetIPCCallCount_t)(void *);
+static BDFlatFn_SteamClient020_GetIPCCallCount_t g_bd_flat_SteamClient020_GetIPCCallCount;
+#define BD_SLOT_SteamClient020_BShutdownIfAllPipesClosed 23
+typedef int (*BDFlatFn_SteamClient020_BShutdownIfAllPipesClosed_t)(void *);
+static BDFlatFn_SteamClient020_BShutdownIfAllPipesClosed_t g_bd_flat_SteamClient020_BShutdownIfAllPipesClosed;
+#define BD_SLOT_SteamClient020_GetISteamHTTP 24
+typedef void * (*BDFlatFn_SteamClient020_GetISteamHTTP_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamHTTP_t g_bd_flat_SteamClient020_GetISteamHTTP;
+#define BD_SLOT_SteamClient020_DEPRECATED_GetISteamUnifiedMessages 25
+typedef void * (*BDFlatFn_SteamClient020_DEPRECATED_GetISteamUnifiedMessages_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_DEPRECATED_GetISteamUnifiedMessages_t g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages;
+#define BD_SLOT_SteamClient020_GetISteamController 26
+typedef void * (*BDFlatFn_SteamClient020_GetISteamController_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamController_t g_bd_flat_SteamClient020_GetISteamController;
+#define BD_SLOT_SteamClient020_GetISteamUGC 27
+typedef void * (*BDFlatFn_SteamClient020_GetISteamUGC_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamUGC_t g_bd_flat_SteamClient020_GetISteamUGC;
+#define BD_SLOT_SteamClient020_GetISteamAppList 28
+typedef void * (*BDFlatFn_SteamClient020_GetISteamAppList_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamAppList_t g_bd_flat_SteamClient020_GetISteamAppList;
+#define BD_SLOT_SteamClient020_GetISteamMusic 29
+typedef void * (*BDFlatFn_SteamClient020_GetISteamMusic_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamMusic_t g_bd_flat_SteamClient020_GetISteamMusic;
+#define BD_SLOT_SteamClient020_GetISteamMusicRemote 30
+typedef void * (*BDFlatFn_SteamClient020_GetISteamMusicRemote_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamMusicRemote_t g_bd_flat_SteamClient020_GetISteamMusicRemote;
+#define BD_SLOT_SteamClient020_GetISteamHTMLSurface 31
+typedef void * (*BDFlatFn_SteamClient020_GetISteamHTMLSurface_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamHTMLSurface_t g_bd_flat_SteamClient020_GetISteamHTMLSurface;
+#define BD_SLOT_SteamClient020_GetISteamInventory 35
+typedef void * (*BDFlatFn_SteamClient020_GetISteamInventory_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamInventory_t g_bd_flat_SteamClient020_GetISteamInventory;
+#define BD_SLOT_SteamClient020_GetISteamVideo 36
+typedef void * (*BDFlatFn_SteamClient020_GetISteamVideo_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamVideo_t g_bd_flat_SteamClient020_GetISteamVideo;
+#define BD_SLOT_SteamClient020_GetISteamParentalSettings 37
+typedef void * (*BDFlatFn_SteamClient020_GetISteamParentalSettings_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient020_GetISteamParentalSettings_t g_bd_flat_SteamClient020_GetISteamParentalSettings;
+#define BD_SLOT_SteamClient021_CreateSteamPipe 0
+typedef int32_t (*BDFlatFn_SteamClient021_CreateSteamPipe_t)(void *);
+static BDFlatFn_SteamClient021_CreateSteamPipe_t g_bd_flat_SteamClient021_CreateSteamPipe;
+#define BD_SLOT_SteamClient021_BReleaseSteamPipe 1
+typedef int (*BDFlatFn_SteamClient021_BReleaseSteamPipe_t)(void *, int32_t);
+static BDFlatFn_SteamClient021_BReleaseSteamPipe_t g_bd_flat_SteamClient021_BReleaseSteamPipe;
+#define BD_SLOT_SteamClient021_ConnectToGlobalUser 2
+typedef int32_t (*BDFlatFn_SteamClient021_ConnectToGlobalUser_t)(void *, int32_t);
+static BDFlatFn_SteamClient021_ConnectToGlobalUser_t g_bd_flat_SteamClient021_ConnectToGlobalUser;
+#define BD_SLOT_SteamClient021_CreateLocalUser 3
+typedef int32_t (*BDFlatFn_SteamClient021_CreateLocalUser_t)(void *, int32_t *, uint32_t);
+static BDFlatFn_SteamClient021_CreateLocalUser_t g_bd_flat_SteamClient021_CreateLocalUser;
+#define BD_SLOT_SteamClient021_ReleaseUser 4
+typedef void (*BDFlatFn_SteamClient021_ReleaseUser_t)(void *, int32_t, int32_t);
+static BDFlatFn_SteamClient021_ReleaseUser_t g_bd_flat_SteamClient021_ReleaseUser;
+#define BD_SLOT_SteamClient021_GetISteamUser 5
+typedef void * (*BDFlatFn_SteamClient021_GetISteamUser_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamUser_t g_bd_flat_SteamClient021_GetISteamUser;
+#define BD_SLOT_SteamClient021_GetISteamGameServer 6
+typedef void * (*BDFlatFn_SteamClient021_GetISteamGameServer_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamGameServer_t g_bd_flat_SteamClient021_GetISteamGameServer;
+#define BD_SLOT_SteamClient021_GetISteamFriends 8
+typedef void * (*BDFlatFn_SteamClient021_GetISteamFriends_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamFriends_t g_bd_flat_SteamClient021_GetISteamFriends;
+#define BD_SLOT_SteamClient021_GetISteamUtils 9
+typedef void * (*BDFlatFn_SteamClient021_GetISteamUtils_t)(void *, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamUtils_t g_bd_flat_SteamClient021_GetISteamUtils;
+#define BD_SLOT_SteamClient021_GetISteamMatchmaking 10
+typedef void * (*BDFlatFn_SteamClient021_GetISteamMatchmaking_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamMatchmaking_t g_bd_flat_SteamClient021_GetISteamMatchmaking;
+#define BD_SLOT_SteamClient021_GetISteamMatchmakingServers 11
+typedef void * (*BDFlatFn_SteamClient021_GetISteamMatchmakingServers_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamMatchmakingServers_t g_bd_flat_SteamClient021_GetISteamMatchmakingServers;
+#define BD_SLOT_SteamClient021_GetISteamGenericInterface 12
+typedef void * (*BDFlatFn_SteamClient021_GetISteamGenericInterface_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamGenericInterface_t g_bd_flat_SteamClient021_GetISteamGenericInterface;
+#define BD_SLOT_SteamClient021_GetISteamUserStats 13
+typedef void * (*BDFlatFn_SteamClient021_GetISteamUserStats_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamUserStats_t g_bd_flat_SteamClient021_GetISteamUserStats;
+#define BD_SLOT_SteamClient021_GetISteamGameServerStats 14
+typedef void * (*BDFlatFn_SteamClient021_GetISteamGameServerStats_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamGameServerStats_t g_bd_flat_SteamClient021_GetISteamGameServerStats;
+#define BD_SLOT_SteamClient021_GetISteamApps 15
+typedef void * (*BDFlatFn_SteamClient021_GetISteamApps_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamApps_t g_bd_flat_SteamClient021_GetISteamApps;
+#define BD_SLOT_SteamClient021_GetISteamNetworking 16
+typedef void * (*BDFlatFn_SteamClient021_GetISteamNetworking_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamNetworking_t g_bd_flat_SteamClient021_GetISteamNetworking;
+#define BD_SLOT_SteamClient021_GetISteamRemoteStorage 17
+typedef void * (*BDFlatFn_SteamClient021_GetISteamRemoteStorage_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamRemoteStorage_t g_bd_flat_SteamClient021_GetISteamRemoteStorage;
+#define BD_SLOT_SteamClient021_GetISteamScreenshots 18
+typedef void * (*BDFlatFn_SteamClient021_GetISteamScreenshots_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamScreenshots_t g_bd_flat_SteamClient021_GetISteamScreenshots;
+#define BD_SLOT_SteamClient021_RunFrame 20
+typedef void (*BDFlatFn_SteamClient021_RunFrame_t)(void *);
+static BDFlatFn_SteamClient021_RunFrame_t g_bd_flat_SteamClient021_RunFrame;
+#define BD_SLOT_SteamClient021_GetIPCCallCount 21
+typedef uint32_t (*BDFlatFn_SteamClient021_GetIPCCallCount_t)(void *);
+static BDFlatFn_SteamClient021_GetIPCCallCount_t g_bd_flat_SteamClient021_GetIPCCallCount;
+#define BD_SLOT_SteamClient021_BShutdownIfAllPipesClosed 23
+typedef int (*BDFlatFn_SteamClient021_BShutdownIfAllPipesClosed_t)(void *);
+static BDFlatFn_SteamClient021_BShutdownIfAllPipesClosed_t g_bd_flat_SteamClient021_BShutdownIfAllPipesClosed;
+#define BD_SLOT_SteamClient021_GetISteamHTTP 24
+typedef void * (*BDFlatFn_SteamClient021_GetISteamHTTP_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamHTTP_t g_bd_flat_SteamClient021_GetISteamHTTP;
+#define BD_SLOT_SteamClient021_GetISteamController 25
+typedef void * (*BDFlatFn_SteamClient021_GetISteamController_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamController_t g_bd_flat_SteamClient021_GetISteamController;
+#define BD_SLOT_SteamClient021_GetISteamUGC 26
+typedef void * (*BDFlatFn_SteamClient021_GetISteamUGC_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamUGC_t g_bd_flat_SteamClient021_GetISteamUGC;
+#define BD_SLOT_SteamClient021_GetISteamMusic 27
+typedef void * (*BDFlatFn_SteamClient021_GetISteamMusic_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamMusic_t g_bd_flat_SteamClient021_GetISteamMusic;
+#define BD_SLOT_SteamClient021_GetISteamMusicRemote 28
+typedef void * (*BDFlatFn_SteamClient021_GetISteamMusicRemote_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamMusicRemote_t g_bd_flat_SteamClient021_GetISteamMusicRemote;
+#define BD_SLOT_SteamClient021_GetISteamHTMLSurface 29
+typedef void * (*BDFlatFn_SteamClient021_GetISteamHTMLSurface_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamHTMLSurface_t g_bd_flat_SteamClient021_GetISteamHTMLSurface;
+#define BD_SLOT_SteamClient021_GetISteamInventory 33
+typedef void * (*BDFlatFn_SteamClient021_GetISteamInventory_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamInventory_t g_bd_flat_SteamClient021_GetISteamInventory;
+#define BD_SLOT_SteamClient021_GetISteamVideo 34
+typedef void * (*BDFlatFn_SteamClient021_GetISteamVideo_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamVideo_t g_bd_flat_SteamClient021_GetISteamVideo;
+#define BD_SLOT_SteamClient021_GetISteamParentalSettings 35
+typedef void * (*BDFlatFn_SteamClient021_GetISteamParentalSettings_t)(void *, int32_t, int32_t, const char *);
+static BDFlatFn_SteamClient021_GetISteamParentalSettings_t g_bd_flat_SteamClient021_GetISteamParentalSettings;
+#define BD_SLOT_SteamUser021_GetHSteamUser 0
+typedef int32_t (*BDFlatFn_SteamUser021_GetHSteamUser_t)(void *);
+static BDFlatFn_SteamUser021_GetHSteamUser_t g_bd_flat_SteamUser021_GetHSteamUser;
+#define BD_SLOT_SteamUser021_BLoggedOn 1
+typedef int (*BDFlatFn_SteamUser021_BLoggedOn_t)(void *);
+static BDFlatFn_SteamUser021_BLoggedOn_t g_bd_flat_SteamUser021_BLoggedOn;
+#define BD_SLOT_SteamUser021_GetSteamID 2
+typedef uint64_t (*BDFlatFn_SteamUser021_GetSteamID_t)(void *);
+static BDFlatFn_SteamUser021_GetSteamID_t g_bd_flat_SteamUser021_GetSteamID;
+#define BD_SLOT_SteamFriends017_GetPersonaName 0
+typedef const char * (*BDFlatFn_SteamFriends017_GetPersonaName_t)(void *);
+static BDFlatFn_SteamFriends017_GetPersonaName_t g_bd_flat_SteamFriends017_GetPersonaName;
+#define BD_SLOT_SteamFriends017_GetPersonaState 2
+typedef uint32_t (*BDFlatFn_SteamFriends017_GetPersonaState_t)(void *);
+static BDFlatFn_SteamFriends017_GetPersonaState_t g_bd_flat_SteamFriends017_GetPersonaState;
+#define BD_SLOT_SteamUtils010_GetSecondsSinceAppActive 0
+typedef uint32_t (*BDFlatFn_SteamUtils010_GetSecondsSinceAppActive_t)(void *);
+static BDFlatFn_SteamUtils010_GetSecondsSinceAppActive_t g_bd_flat_SteamUtils010_GetSecondsSinceAppActive;
+#define BD_SLOT_SteamUtils010_GetSecondsSinceComputerActive 1
+typedef uint32_t (*BDFlatFn_SteamUtils010_GetSecondsSinceComputerActive_t)(void *);
+static BDFlatFn_SteamUtils010_GetSecondsSinceComputerActive_t g_bd_flat_SteamUtils010_GetSecondsSinceComputerActive;
+#define BD_SLOT_SteamUtils010_GetConnectedUniverse 2
+typedef uint32_t (*BDFlatFn_SteamUtils010_GetConnectedUniverse_t)(void *);
+static BDFlatFn_SteamUtils010_GetConnectedUniverse_t g_bd_flat_SteamUtils010_GetConnectedUniverse;
+#define BD_SLOT_SteamUtils010_GetServerRealTime 3
+typedef uint32_t (*BDFlatFn_SteamUtils010_GetServerRealTime_t)(void *);
+static BDFlatFn_SteamUtils010_GetServerRealTime_t g_bd_flat_SteamUtils010_GetServerRealTime;
+#define BD_SLOT_SteamUtils010_GetIPCountry 4
+typedef const char * (*BDFlatFn_SteamUtils010_GetIPCountry_t)(void *);
+static BDFlatFn_SteamUtils010_GetIPCountry_t g_bd_flat_SteamUtils010_GetIPCountry;
+#define BD_SLOT_SteamUtils010_GetCurrentBatteryPower 8
+typedef uint32_t (*BDFlatFn_SteamUtils010_GetCurrentBatteryPower_t)(void *);
+static BDFlatFn_SteamUtils010_GetCurrentBatteryPower_t g_bd_flat_SteamUtils010_GetCurrentBatteryPower;
+#define BD_SLOT_SteamUtils010_GetAppID 9
+typedef uint32_t (*BDFlatFn_SteamUtils010_GetAppID_t)(void *);
+static BDFlatFn_SteamUtils010_GetAppID_t g_bd_flat_SteamUtils010_GetAppID;
+#define BD_SLOT_SteamUtils010_IsOverlayEnabled 17
+typedef int (*BDFlatFn_SteamUtils010_IsOverlayEnabled_t)(void *);
+static BDFlatFn_SteamUtils010_IsOverlayEnabled_t g_bd_flat_SteamUtils010_IsOverlayEnabled;
+#define BD_SLOT_SteamUtils010_GetSteamUILanguage 23
+typedef const char * (*BDFlatFn_SteamUtils010_GetSteamUILanguage_t)(void *);
+static BDFlatFn_SteamUtils010_GetSteamUILanguage_t g_bd_flat_SteamUtils010_GetSteamUILanguage;
+#define BD_SLOT_SteamUtils010_IsSteamRunningInVR 24
+typedef int (*BDFlatFn_SteamUtils010_IsSteamRunningInVR_t)(void *);
+static BDFlatFn_SteamUtils010_IsSteamRunningInVR_t g_bd_flat_SteamUtils010_IsSteamRunningInVR;
+#define BD_SLOT_SteamUtils010_IsSteamInBigPictureMode 26
+typedef int (*BDFlatFn_SteamUtils010_IsSteamInBigPictureMode_t)(void *);
+static BDFlatFn_SteamUtils010_IsSteamInBigPictureMode_t g_bd_flat_SteamUtils010_IsSteamInBigPictureMode;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2 1
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_t)(void *, const char *, float *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat 2
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_t)(void *, const char *, int32_t *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2 3
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_t)(void *, const char *, uint32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat 4
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_t)(void *, const char *, int32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat 5
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_t)(void *, const char *, uint32_t, double);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement 6
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_t)(void *, const char *, int *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement 7
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement_t)(void *, const char *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement 8
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement_t)(void *, const char *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime 9
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime_t)(void *, const char *, int *, uint32_t *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats 10
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats_t)(void *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute 12
+typedef const char * (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_t)(void *, const char *, const char *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress 13
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress_t)(void *, const char *, uint32_t, uint32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements 14
+typedef uint32_t (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements_t)(void *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName 15
+typedef const char * (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_t)(void *, uint32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats 21
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats_t)(void *, int);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2 0
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_t)(void *, const char *, float *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat 1
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_t)(void *, const char *, int32_t *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2 2
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_t)(void *, const char *, uint32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat 3
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_t)(void *, const char *, int32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat 4
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_t)(void *, const char *, uint32_t, double);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement 5
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_t)(void *, const char *, int *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement 6
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement_t)(void *, const char *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement 7
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement_t)(void *, const char *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime 8
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime_t)(void *, const char *, int *, uint32_t *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats 9
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats_t)(void *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute 11
+typedef const char * (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_t)(void *, const char *, const char *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress 12
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress_t)(void *, const char *, uint32_t, uint32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements 13
+typedef uint32_t (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements_t)(void *);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName 14
+typedef const char * (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_t)(void *, uint32_t);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName;
+#define BD_SLOT_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats 20
+typedef int (*BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats_t)(void *, int);
+static BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats_t g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats;
 
 // D-51-04: identity-only mode -- set once by bridge_helper.c's argv
 // parsing (--identity-only/--report-appid), read by every dispatch case
@@ -810,6 +1155,128 @@ int bridge_dispatch_init(void *dylibHandle) {
   g_bd_flat_SteamClient014_GetISteamUGC = (BDFlatFn_SteamClient014_GetISteamUGC_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUGC");
   g_bd_flat_SteamClient014_GetISteamAppList = (BDFlatFn_SteamClient014_GetISteamAppList_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamAppList");
   g_bd_flat_SteamClient014_GetISteamMusic = (BDFlatFn_SteamClient014_GetISteamMusic_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMusic");
+  g_bd_accessor_steamclient020 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamClient");
+  g_bd_self_steamclient020 = g_bd_accessor_steamclient020 ? g_bd_accessor_steamclient020() : NULL;
+  g_bd_flat_SteamClient020_CreateSteamPipe = (BDFlatFn_SteamClient020_CreateSteamPipe_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_CreateSteamPipe");
+  g_bd_flat_SteamClient020_BReleaseSteamPipe = (BDFlatFn_SteamClient020_BReleaseSteamPipe_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_BReleaseSteamPipe");
+  g_bd_flat_SteamClient020_ConnectToGlobalUser = (BDFlatFn_SteamClient020_ConnectToGlobalUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_ConnectToGlobalUser");
+  g_bd_flat_SteamClient020_CreateLocalUser = (BDFlatFn_SteamClient020_CreateLocalUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_CreateLocalUser");
+  g_bd_flat_SteamClient020_ReleaseUser = (BDFlatFn_SteamClient020_ReleaseUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_ReleaseUser");
+  g_bd_flat_SteamClient020_GetISteamUser = (BDFlatFn_SteamClient020_GetISteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUser");
+  g_bd_flat_SteamClient020_GetISteamGameServer = (BDFlatFn_SteamClient020_GetISteamGameServer_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamGameServer");
+  g_bd_flat_SteamClient020_GetISteamFriends = (BDFlatFn_SteamClient020_GetISteamFriends_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamFriends");
+  g_bd_flat_SteamClient020_GetISteamUtils = (BDFlatFn_SteamClient020_GetISteamUtils_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUtils");
+  g_bd_flat_SteamClient020_GetISteamMatchmaking = (BDFlatFn_SteamClient020_GetISteamMatchmaking_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMatchmaking");
+  g_bd_flat_SteamClient020_GetISteamMatchmakingServers = (BDFlatFn_SteamClient020_GetISteamMatchmakingServers_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMatchmakingServers");
+  g_bd_flat_SteamClient020_GetISteamGenericInterface = (BDFlatFn_SteamClient020_GetISteamGenericInterface_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamGenericInterface");
+  g_bd_flat_SteamClient020_GetISteamUserStats = (BDFlatFn_SteamClient020_GetISteamUserStats_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUserStats");
+  g_bd_flat_SteamClient020_GetISteamGameServerStats = (BDFlatFn_SteamClient020_GetISteamGameServerStats_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamGameServerStats");
+  g_bd_flat_SteamClient020_GetISteamApps = (BDFlatFn_SteamClient020_GetISteamApps_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamApps");
+  g_bd_flat_SteamClient020_GetISteamNetworking = (BDFlatFn_SteamClient020_GetISteamNetworking_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamNetworking");
+  g_bd_flat_SteamClient020_GetISteamRemoteStorage = (BDFlatFn_SteamClient020_GetISteamRemoteStorage_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamRemoteStorage");
+  g_bd_flat_SteamClient020_GetISteamScreenshots = (BDFlatFn_SteamClient020_GetISteamScreenshots_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamScreenshots");
+  g_bd_flat_SteamClient020_RunFrame = (BDFlatFn_SteamClient020_RunFrame_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_RunFrame");
+  g_bd_flat_SteamClient020_GetIPCCallCount = (BDFlatFn_SteamClient020_GetIPCCallCount_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetIPCCallCount");
+  g_bd_flat_SteamClient020_BShutdownIfAllPipesClosed = (BDFlatFn_SteamClient020_BShutdownIfAllPipesClosed_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_BShutdownIfAllPipesClosed");
+  g_bd_flat_SteamClient020_GetISteamHTTP = (BDFlatFn_SteamClient020_GetISteamHTTP_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamHTTP");
+  g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages = (BDFlatFn_SteamClient020_DEPRECATED_GetISteamUnifiedMessages_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUnifiedMessages");
+  g_bd_flat_SteamClient020_GetISteamController = (BDFlatFn_SteamClient020_GetISteamController_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamController");
+  g_bd_flat_SteamClient020_GetISteamUGC = (BDFlatFn_SteamClient020_GetISteamUGC_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUGC");
+  g_bd_flat_SteamClient020_GetISteamAppList = (BDFlatFn_SteamClient020_GetISteamAppList_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamAppList");
+  g_bd_flat_SteamClient020_GetISteamMusic = (BDFlatFn_SteamClient020_GetISteamMusic_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMusic");
+  g_bd_flat_SteamClient020_GetISteamMusicRemote = (BDFlatFn_SteamClient020_GetISteamMusicRemote_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMusicRemote");
+  g_bd_flat_SteamClient020_GetISteamHTMLSurface = (BDFlatFn_SteamClient020_GetISteamHTMLSurface_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamHTMLSurface");
+  g_bd_flat_SteamClient020_GetISteamInventory = (BDFlatFn_SteamClient020_GetISteamInventory_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamInventory");
+  g_bd_flat_SteamClient020_GetISteamVideo = (BDFlatFn_SteamClient020_GetISteamVideo_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamVideo");
+  g_bd_flat_SteamClient020_GetISteamParentalSettings = (BDFlatFn_SteamClient020_GetISteamParentalSettings_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamParentalSettings");
+  g_bd_accessor_steamclient021 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamClient");
+  g_bd_self_steamclient021 = g_bd_accessor_steamclient021 ? g_bd_accessor_steamclient021() : NULL;
+  g_bd_flat_SteamClient021_CreateSteamPipe = (BDFlatFn_SteamClient021_CreateSteamPipe_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_CreateSteamPipe");
+  g_bd_flat_SteamClient021_BReleaseSteamPipe = (BDFlatFn_SteamClient021_BReleaseSteamPipe_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_BReleaseSteamPipe");
+  g_bd_flat_SteamClient021_ConnectToGlobalUser = (BDFlatFn_SteamClient021_ConnectToGlobalUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_ConnectToGlobalUser");
+  g_bd_flat_SteamClient021_CreateLocalUser = (BDFlatFn_SteamClient021_CreateLocalUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_CreateLocalUser");
+  g_bd_flat_SteamClient021_ReleaseUser = (BDFlatFn_SteamClient021_ReleaseUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_ReleaseUser");
+  g_bd_flat_SteamClient021_GetISteamUser = (BDFlatFn_SteamClient021_GetISteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUser");
+  g_bd_flat_SteamClient021_GetISteamGameServer = (BDFlatFn_SteamClient021_GetISteamGameServer_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamGameServer");
+  g_bd_flat_SteamClient021_GetISteamFriends = (BDFlatFn_SteamClient021_GetISteamFriends_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamFriends");
+  g_bd_flat_SteamClient021_GetISteamUtils = (BDFlatFn_SteamClient021_GetISteamUtils_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUtils");
+  g_bd_flat_SteamClient021_GetISteamMatchmaking = (BDFlatFn_SteamClient021_GetISteamMatchmaking_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMatchmaking");
+  g_bd_flat_SteamClient021_GetISteamMatchmakingServers = (BDFlatFn_SteamClient021_GetISteamMatchmakingServers_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMatchmakingServers");
+  g_bd_flat_SteamClient021_GetISteamGenericInterface = (BDFlatFn_SteamClient021_GetISteamGenericInterface_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamGenericInterface");
+  g_bd_flat_SteamClient021_GetISteamUserStats = (BDFlatFn_SteamClient021_GetISteamUserStats_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUserStats");
+  g_bd_flat_SteamClient021_GetISteamGameServerStats = (BDFlatFn_SteamClient021_GetISteamGameServerStats_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamGameServerStats");
+  g_bd_flat_SteamClient021_GetISteamApps = (BDFlatFn_SteamClient021_GetISteamApps_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamApps");
+  g_bd_flat_SteamClient021_GetISteamNetworking = (BDFlatFn_SteamClient021_GetISteamNetworking_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamNetworking");
+  g_bd_flat_SteamClient021_GetISteamRemoteStorage = (BDFlatFn_SteamClient021_GetISteamRemoteStorage_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamRemoteStorage");
+  g_bd_flat_SteamClient021_GetISteamScreenshots = (BDFlatFn_SteamClient021_GetISteamScreenshots_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamScreenshots");
+  g_bd_flat_SteamClient021_RunFrame = (BDFlatFn_SteamClient021_RunFrame_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_RunFrame");
+  g_bd_flat_SteamClient021_GetIPCCallCount = (BDFlatFn_SteamClient021_GetIPCCallCount_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetIPCCallCount");
+  g_bd_flat_SteamClient021_BShutdownIfAllPipesClosed = (BDFlatFn_SteamClient021_BShutdownIfAllPipesClosed_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_BShutdownIfAllPipesClosed");
+  g_bd_flat_SteamClient021_GetISteamHTTP = (BDFlatFn_SteamClient021_GetISteamHTTP_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamHTTP");
+  g_bd_flat_SteamClient021_GetISteamController = (BDFlatFn_SteamClient021_GetISteamController_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamController");
+  g_bd_flat_SteamClient021_GetISteamUGC = (BDFlatFn_SteamClient021_GetISteamUGC_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamUGC");
+  g_bd_flat_SteamClient021_GetISteamMusic = (BDFlatFn_SteamClient021_GetISteamMusic_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMusic");
+  g_bd_flat_SteamClient021_GetISteamMusicRemote = (BDFlatFn_SteamClient021_GetISteamMusicRemote_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamMusicRemote");
+  g_bd_flat_SteamClient021_GetISteamHTMLSurface = (BDFlatFn_SteamClient021_GetISteamHTMLSurface_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamHTMLSurface");
+  g_bd_flat_SteamClient021_GetISteamInventory = (BDFlatFn_SteamClient021_GetISteamInventory_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamInventory");
+  g_bd_flat_SteamClient021_GetISteamVideo = (BDFlatFn_SteamClient021_GetISteamVideo_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamVideo");
+  g_bd_flat_SteamClient021_GetISteamParentalSettings = (BDFlatFn_SteamClient021_GetISteamParentalSettings_t)dlsym(dylibHandle, "SteamAPI_ISteamClient_GetISteamParentalSettings");
+  g_bd_accessor_steamuser021 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUser_v023");
+  g_bd_self_steamuser021 = g_bd_accessor_steamuser021 ? g_bd_accessor_steamuser021() : NULL;
+  g_bd_flat_SteamUser021_GetHSteamUser = (BDFlatFn_SteamUser021_GetHSteamUser_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetHSteamUser");
+  g_bd_flat_SteamUser021_BLoggedOn = (BDFlatFn_SteamUser021_BLoggedOn_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_BLoggedOn");
+  g_bd_flat_SteamUser021_GetSteamID = (BDFlatFn_SteamUser021_GetSteamID_t)dlsym(dylibHandle, "SteamAPI_ISteamUser_GetSteamID");
+  g_bd_accessor_steamfriends017 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamFriends_v018");
+  g_bd_self_steamfriends017 = g_bd_accessor_steamfriends017 ? g_bd_accessor_steamfriends017() : NULL;
+  g_bd_flat_SteamFriends017_GetPersonaName = (BDFlatFn_SteamFriends017_GetPersonaName_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaName");
+  g_bd_flat_SteamFriends017_GetPersonaState = (BDFlatFn_SteamFriends017_GetPersonaState_t)dlsym(dylibHandle, "SteamAPI_ISteamFriends_GetPersonaState");
+  g_bd_accessor_steamutils010 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUtils_v011");
+  g_bd_self_steamutils010 = g_bd_accessor_steamutils010 ? g_bd_accessor_steamutils010() : NULL;
+  g_bd_flat_SteamUtils010_GetSecondsSinceAppActive = (BDFlatFn_SteamUtils010_GetSecondsSinceAppActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceAppActive");
+  g_bd_flat_SteamUtils010_GetSecondsSinceComputerActive = (BDFlatFn_SteamUtils010_GetSecondsSinceComputerActive_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSecondsSinceComputerActive");
+  g_bd_flat_SteamUtils010_GetConnectedUniverse = (BDFlatFn_SteamUtils010_GetConnectedUniverse_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetConnectedUniverse");
+  g_bd_flat_SteamUtils010_GetServerRealTime = (BDFlatFn_SteamUtils010_GetServerRealTime_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetServerRealTime");
+  g_bd_flat_SteamUtils010_GetIPCountry = (BDFlatFn_SteamUtils010_GetIPCountry_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetIPCountry");
+  g_bd_flat_SteamUtils010_GetCurrentBatteryPower = (BDFlatFn_SteamUtils010_GetCurrentBatteryPower_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetCurrentBatteryPower");
+  g_bd_flat_SteamUtils010_GetAppID = (BDFlatFn_SteamUtils010_GetAppID_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetAppID");
+  g_bd_flat_SteamUtils010_IsOverlayEnabled = (BDFlatFn_SteamUtils010_IsOverlayEnabled_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsOverlayEnabled");
+  g_bd_flat_SteamUtils010_GetSteamUILanguage = (BDFlatFn_SteamUtils010_GetSteamUILanguage_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_GetSteamUILanguage");
+  g_bd_flat_SteamUtils010_IsSteamRunningInVR = (BDFlatFn_SteamUtils010_IsSteamRunningInVR_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamRunningInVR");
+  g_bd_flat_SteamUtils010_IsSteamInBigPictureMode = (BDFlatFn_SteamUtils010_IsSteamInBigPictureMode_t)dlsym(dylibHandle, "SteamAPI_ISteamUtils_IsSteamInBigPictureMode");
+  g_bd_accessor_steamuserstats_interface_version012 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUserStats_v013");
+  g_bd_self_steamuserstats_interface_version012 = g_bd_accessor_steamuserstats_interface_version012 ? g_bd_accessor_steamuserstats_interface_version012() : NULL;
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatFloat");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatInt32");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_SetStatFloat");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_SetStatInt32");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_UpdateAvgRateStat");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievement");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_SetAchievement");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ClearAchievement");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementAndUnlockTime");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_StoreStats");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementDisplayAttribute");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_IndicateAchievementProgress");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetNumAchievements");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementName");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ResetAllStats");
+  g_bd_accessor_steamuserstats_interface_version013 = (BDAccessorFn_t)dlsym(dylibHandle, "SteamAPI_SteamUserStats_v013");
+  g_bd_self_steamuserstats_interface_version013 = g_bd_accessor_steamuserstats_interface_version013 ? g_bd_accessor_steamuserstats_interface_version013() : NULL;
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatFloat");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetStatInt32");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2 = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_SetStatFloat");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_SetStatInt32");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_UpdateAvgRateStat");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievement");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_SetAchievement");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ClearAchievement");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementAndUnlockTime");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_StoreStats");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementDisplayAttribute");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_IndicateAchievementProgress");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetNumAchievements");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_GetAchievementName");
+  g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats = (BDFlatFn_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats_t)dlsym(dylibHandle, "SteamAPI_ISteamUserStats_ResetAllStats");
   return 1;
 }
 
@@ -3471,6 +3938,2247 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
         snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient014.GetISteamMusic ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
       if (respCap < 4) { *respLen = 0; return 1; }
       memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 0u): { // SteamClient020.CreateSteamPipe
+      if (g_bd_flat_SteamClient020_CreateSteamPipe == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.CreateSteamPipe unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_SteamClient020_CreateSteamPipe(g_bd_self_steamclient020);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.CreateSteamPipe -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 1u): { // SteamClient020.BReleaseSteamPipe
+      if (g_bd_flat_SteamClient020_BReleaseSteamPipe == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.BReleaseSteamPipe unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      int __ret = g_bd_flat_SteamClient020_BReleaseSteamPipe(g_bd_self_steamclient020, arg_hSteamPipe);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.BReleaseSteamPipe -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 2u): { // SteamClient020.ConnectToGlobalUser
+      if (g_bd_flat_SteamClient020_ConnectToGlobalUser == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.ConnectToGlobalUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      int32_t __ret = g_bd_flat_SteamClient020_ConnectToGlobalUser(g_bd_self_steamclient020, arg_hSteamPipe);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.ConnectToGlobalUser -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 3u): { // SteamClient020.CreateLocalUser
+      if (g_bd_flat_SteamClient020_CreateLocalUser == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.CreateLocalUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t arg_phSteamPipe = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_eAccountType; memcpy(&arg_eAccountType, arg + 0u, 4);
+      int32_t __ret = g_bd_flat_SteamClient020_CreateLocalUser(g_bd_self_steamclient020, &arg_phSteamPipe, arg_eAccountType);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.CreateLocalUser -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_phSteamPipe, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 4u): { // SteamClient020.ReleaseUser
+      if (g_bd_flat_SteamClient020_ReleaseUser == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.ReleaseUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hUser; memcpy(&arg_hUser, arg + (0u + 4), 4);
+      g_bd_flat_SteamClient020_ReleaseUser(g_bd_self_steamclient020, arg_hSteamPipe, arg_hUser);
+      logts("FWD", "SteamClient020.ReleaseUser " "called");
+      *respLen = 0; return 0;
+    }
+    case (((uint32_t)25) << 16 | 5u): { // SteamClient020.GetISteamUser
+      if (g_bd_flat_SteamClient020_GetISteamUser == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamUser_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamUser_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamUser_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamUser_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamUser(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamUser ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 6u): { // SteamClient020.GetISteamGameServer
+      if (g_bd_flat_SteamClient020_GetISteamGameServer == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamGameServer unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamGameServer_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamGameServer_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamGameServer_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamGameServer_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamGameServer(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamGameServer ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 8u): { // SteamClient020.GetISteamFriends
+      if (g_bd_flat_SteamClient020_GetISteamFriends == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamFriends unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamFriends_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamFriends_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamFriends_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamFriends_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamFriends(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamFriends ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 9u): { // SteamClient020.GetISteamUtils
+      if (g_bd_flat_SteamClient020_GetISteamUtils == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamUtils unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      static char g_bd_flat_SteamClient020_GetISteamUtils_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + (0u + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < (0u + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamUtils_pchVersion_buf, arg + (0u + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamUtils_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamUtils_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamUtils(g_bd_self_steamclient020, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamUtils ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 10u): { // SteamClient020.GetISteamMatchmaking
+      if (g_bd_flat_SteamClient020_GetISteamMatchmaking == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamMatchmaking unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamMatchmaking_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamMatchmaking_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamMatchmaking_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamMatchmaking_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamMatchmaking(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamMatchmaking ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 11u): { // SteamClient020.GetISteamMatchmakingServers
+      if (g_bd_flat_SteamClient020_GetISteamMatchmakingServers == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamMatchmakingServers unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamMatchmakingServers_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamMatchmakingServers_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamMatchmakingServers_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamMatchmakingServers_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamMatchmakingServers(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamMatchmakingServers ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 12u): { // SteamClient020.GetISteamGenericInterface
+      if (g_bd_flat_SteamClient020_GetISteamGenericInterface == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamGenericInterface unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamGenericInterface_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamGenericInterface_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamGenericInterface_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamGenericInterface_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamGenericInterface(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamGenericInterface ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 13u): { // SteamClient020.GetISteamUserStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too
+      if (g_bd_flat_SteamClient020_GetISteamUserStats == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamUserStats unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamUserStats_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamUserStats_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamUserStats_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamUserStats_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamUserStats(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamUserStats ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 14u): { // SteamClient020.GetISteamGameServerStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too
+      if (g_bd_flat_SteamClient020_GetISteamGameServerStats == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamGameServerStats unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamGameServerStats_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamGameServerStats_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamGameServerStats_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamGameServerStats_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamGameServerStats(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamGameServerStats ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 15u): { // SteamClient020.GetISteamApps
+      if (g_bd_flat_SteamClient020_GetISteamApps == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamApps unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamApps_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamApps_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamApps_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamApps_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamApps(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamApps ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 16u): { // SteamClient020.GetISteamNetworking
+      if (g_bd_flat_SteamClient020_GetISteamNetworking == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamNetworking unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamNetworking_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamNetworking_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamNetworking_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamNetworking_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamNetworking(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamNetworking ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 17u): { // SteamClient020.GetISteamRemoteStorage
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too
+      if (g_bd_flat_SteamClient020_GetISteamRemoteStorage == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamRemoteStorage unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamRemoteStorage_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamRemoteStorage_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamRemoteStorage_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamRemoteStorage_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamRemoteStorage(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamRemoteStorage ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 18u): { // SteamClient020.GetISteamScreenshots
+      if (g_bd_flat_SteamClient020_GetISteamScreenshots == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamScreenshots unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamScreenshots_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamScreenshots_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamScreenshots_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamScreenshots_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamScreenshots(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamScreenshots ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 20u): { // SteamClient020.RunFrame
+      if (g_bd_flat_SteamClient020_RunFrame == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.RunFrame unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      g_bd_flat_SteamClient020_RunFrame(g_bd_self_steamclient020);
+      logts("FWD", "SteamClient020.RunFrame " "called");
+      *respLen = 0; return 0;
+    }
+    case (((uint32_t)25) << 16 | 21u): { // SteamClient020.GetIPCCallCount
+      if (g_bd_flat_SteamClient020_GetIPCCallCount == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetIPCCallCount unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamClient020_GetIPCCallCount(g_bd_self_steamclient020);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetIPCCallCount -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 23u): { // SteamClient020.BShutdownIfAllPipesClosed
+      if (g_bd_flat_SteamClient020_BShutdownIfAllPipesClosed == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.BShutdownIfAllPipesClosed unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamClient020_BShutdownIfAllPipesClosed(g_bd_self_steamclient020);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.BShutdownIfAllPipesClosed -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 24u): { // SteamClient020.GetISteamHTTP
+      if (g_bd_flat_SteamClient020_GetISteamHTTP == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamHTTP unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamHTTP_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamHTTP_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamHTTP_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamHTTP_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamHTTP(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamHTTP ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 25u): { // SteamClient020.DEPRECATED_GetISteamUnifiedMessages
+      if (g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.DEPRECATED_GetISteamUnifiedMessages unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_DEPRECATED_GetISteamUnifiedMessages(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.DEPRECATED_GetISteamUnifiedMessages ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 26u): { // SteamClient020.GetISteamController
+      if (g_bd_flat_SteamClient020_GetISteamController == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamController unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamController_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamController_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamController_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamController_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamController(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamController ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 27u): { // SteamClient020.GetISteamUGC
+      if (g_bd_flat_SteamClient020_GetISteamUGC == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamUGC unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamUGC_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamUGC_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamUGC_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamUGC_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamUGC(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamUGC ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 28u): { // SteamClient020.GetISteamAppList
+      if (g_bd_flat_SteamClient020_GetISteamAppList == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamAppList unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamAppList_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamAppList_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamAppList_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamAppList_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamAppList(g_bd_self_steamclient020, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamAppList ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 29u): { // SteamClient020.GetISteamMusic
+      if (g_bd_flat_SteamClient020_GetISteamMusic == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamMusic unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamMusic_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamMusic_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamMusic_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamMusic_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamMusic(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamMusic ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 30u): { // SteamClient020.GetISteamMusicRemote
+      if (g_bd_flat_SteamClient020_GetISteamMusicRemote == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamMusicRemote unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamMusicRemote_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamMusicRemote_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamMusicRemote_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamMusicRemote_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamMusicRemote(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamMusicRemote ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 31u): { // SteamClient020.GetISteamHTMLSurface
+      if (g_bd_flat_SteamClient020_GetISteamHTMLSurface == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamHTMLSurface unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamHTMLSurface_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamHTMLSurface_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamHTMLSurface_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamHTMLSurface_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamHTMLSurface(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamHTMLSurface ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 35u): { // SteamClient020.GetISteamInventory
+      if (g_bd_flat_SteamClient020_GetISteamInventory == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamInventory unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamInventory_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamInventory_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamInventory_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamInventory_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamInventory(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamInventory ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 36u): { // SteamClient020.GetISteamVideo
+      if (g_bd_flat_SteamClient020_GetISteamVideo == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamVideo unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamVideo_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamVideo_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamVideo_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamVideo_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamVideo(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamVideo ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)25) << 16 | 37u): { // SteamClient020.GetISteamParentalSettings
+      if (g_bd_flat_SteamClient020_GetISteamParentalSettings == NULL || g_bd_self_steamclient020 == NULL) { logts("FWD", "SteamClient020.GetISteamParentalSettings unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient020_GetISteamParentalSettings_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient020_GetISteamParentalSettings_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient020_GetISteamParentalSettings_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient020_GetISteamParentalSettings_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient020_GetISteamParentalSettings(g_bd_self_steamclient020, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient020.GetISteamParentalSettings ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 0u): { // SteamClient021.CreateSteamPipe
+      if (g_bd_flat_SteamClient021_CreateSteamPipe == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.CreateSteamPipe unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_SteamClient021_CreateSteamPipe(g_bd_self_steamclient021);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.CreateSteamPipe -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 1u): { // SteamClient021.BReleaseSteamPipe
+      if (g_bd_flat_SteamClient021_BReleaseSteamPipe == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.BReleaseSteamPipe unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      int __ret = g_bd_flat_SteamClient021_BReleaseSteamPipe(g_bd_self_steamclient021, arg_hSteamPipe);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.BReleaseSteamPipe -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 2u): { // SteamClient021.ConnectToGlobalUser
+      if (g_bd_flat_SteamClient021_ConnectToGlobalUser == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.ConnectToGlobalUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      int32_t __ret = g_bd_flat_SteamClient021_ConnectToGlobalUser(g_bd_self_steamclient021, arg_hSteamPipe);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.ConnectToGlobalUser -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 3u): { // SteamClient021.CreateLocalUser
+      if (g_bd_flat_SteamClient021_CreateLocalUser == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.CreateLocalUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t arg_phSteamPipe = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_eAccountType; memcpy(&arg_eAccountType, arg + 0u, 4);
+      int32_t __ret = g_bd_flat_SteamClient021_CreateLocalUser(g_bd_self_steamclient021, &arg_phSteamPipe, arg_eAccountType);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.CreateLocalUser -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_phSteamPipe, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 4u): { // SteamClient021.ReleaseUser
+      if (g_bd_flat_SteamClient021_ReleaseUser == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.ReleaseUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hUser; memcpy(&arg_hUser, arg + (0u + 4), 4);
+      g_bd_flat_SteamClient021_ReleaseUser(g_bd_self_steamclient021, arg_hSteamPipe, arg_hUser);
+      logts("FWD", "SteamClient021.ReleaseUser " "called");
+      *respLen = 0; return 0;
+    }
+    case (((uint32_t)26) << 16 | 5u): { // SteamClient021.GetISteamUser
+      if (g_bd_flat_SteamClient021_GetISteamUser == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamUser unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamUser_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamUser_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamUser_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamUser_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamUser(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamUser ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 6u): { // SteamClient021.GetISteamGameServer
+      if (g_bd_flat_SteamClient021_GetISteamGameServer == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamGameServer unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamGameServer_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamGameServer_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamGameServer_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamGameServer_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamGameServer(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamGameServer ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 8u): { // SteamClient021.GetISteamFriends
+      if (g_bd_flat_SteamClient021_GetISteamFriends == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamFriends unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamFriends_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamFriends_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamFriends_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamFriends_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamFriends(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamFriends ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 9u): { // SteamClient021.GetISteamUtils
+      if (g_bd_flat_SteamClient021_GetISteamUtils == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamUtils unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + 0u, 4);
+      static char g_bd_flat_SteamClient021_GetISteamUtils_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + (0u + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < (0u + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamUtils_pchVersion_buf, arg + (0u + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamUtils_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamUtils_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamUtils(g_bd_self_steamclient021, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamUtils ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 10u): { // SteamClient021.GetISteamMatchmaking
+      if (g_bd_flat_SteamClient021_GetISteamMatchmaking == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamMatchmaking unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamMatchmaking_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamMatchmaking_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamMatchmaking_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamMatchmaking_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamMatchmaking(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamMatchmaking ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 11u): { // SteamClient021.GetISteamMatchmakingServers
+      if (g_bd_flat_SteamClient021_GetISteamMatchmakingServers == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamMatchmakingServers unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamMatchmakingServers_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamMatchmakingServers_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamMatchmakingServers_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamMatchmakingServers_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamMatchmakingServers(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamMatchmakingServers ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 12u): { // SteamClient021.GetISteamGenericInterface
+      if (g_bd_flat_SteamClient021_GetISteamGenericInterface == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamGenericInterface unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamGenericInterface_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamGenericInterface_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamGenericInterface_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamGenericInterface_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamGenericInterface(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamGenericInterface ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 13u): { // SteamClient021.GetISteamUserStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too
+      if (g_bd_flat_SteamClient021_GetISteamUserStats == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamUserStats unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamUserStats_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamUserStats_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamUserStats_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamUserStats_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamUserStats(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamUserStats ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 14u): { // SteamClient021.GetISteamGameServerStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too
+      if (g_bd_flat_SteamClient021_GetISteamGameServerStats == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamGameServerStats unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamGameServerStats_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamGameServerStats_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamGameServerStats_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamGameServerStats_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamGameServerStats(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamGameServerStats ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 15u): { // SteamClient021.GetISteamApps
+      if (g_bd_flat_SteamClient021_GetISteamApps == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamApps unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamApps_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamApps_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamApps_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamApps_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamApps(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamApps ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 16u): { // SteamClient021.GetISteamNetworking
+      if (g_bd_flat_SteamClient021_GetISteamNetworking == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamNetworking unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamNetworking_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamNetworking_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamNetworking_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamNetworking_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamNetworking(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamNetworking ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 17u): { // SteamClient021.GetISteamRemoteStorage
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-52-03: app-scoped family refused via ISteamClient too
+      if (g_bd_flat_SteamClient021_GetISteamRemoteStorage == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamRemoteStorage unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamRemoteStorage_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamRemoteStorage_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamRemoteStorage_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamRemoteStorage_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamRemoteStorage(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamRemoteStorage ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 18u): { // SteamClient021.GetISteamScreenshots
+      if (g_bd_flat_SteamClient021_GetISteamScreenshots == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamScreenshots unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamScreenshots_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamScreenshots_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamScreenshots_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamScreenshots_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamScreenshots(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamScreenshots ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 20u): { // SteamClient021.RunFrame
+      if (g_bd_flat_SteamClient021_RunFrame == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.RunFrame unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      g_bd_flat_SteamClient021_RunFrame(g_bd_self_steamclient021);
+      logts("FWD", "SteamClient021.RunFrame " "called");
+      *respLen = 0; return 0;
+    }
+    case (((uint32_t)26) << 16 | 21u): { // SteamClient021.GetIPCCallCount
+      if (g_bd_flat_SteamClient021_GetIPCCallCount == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetIPCCallCount unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamClient021_GetIPCCallCount(g_bd_self_steamclient021);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetIPCCallCount -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 23u): { // SteamClient021.BShutdownIfAllPipesClosed
+      if (g_bd_flat_SteamClient021_BShutdownIfAllPipesClosed == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.BShutdownIfAllPipesClosed unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamClient021_BShutdownIfAllPipesClosed(g_bd_self_steamclient021);
+      { char fwdmsg[256]; snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.BShutdownIfAllPipesClosed -> %d", (int)__ret); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 24u): { // SteamClient021.GetISteamHTTP
+      if (g_bd_flat_SteamClient021_GetISteamHTTP == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamHTTP unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamHTTP_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamHTTP_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamHTTP_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamHTTP_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamHTTP(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamHTTP ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 25u): { // SteamClient021.GetISteamController
+      if (g_bd_flat_SteamClient021_GetISteamController == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamController unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamController_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamController_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamController_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamController_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamController(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamController ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 26u): { // SteamClient021.GetISteamUGC
+      if (g_bd_flat_SteamClient021_GetISteamUGC == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamUGC unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamUser; memcpy(&arg_hSteamUser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamUGC_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamUGC_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamUGC_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamUGC_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamUGC(g_bd_self_steamclient021, arg_hSteamUser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamUGC ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 27u): { // SteamClient021.GetISteamMusic
+      if (g_bd_flat_SteamClient021_GetISteamMusic == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamMusic unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamMusic_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamMusic_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamMusic_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamMusic_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamMusic(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamMusic ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 28u): { // SteamClient021.GetISteamMusicRemote
+      if (g_bd_flat_SteamClient021_GetISteamMusicRemote == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamMusicRemote unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamMusicRemote_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamMusicRemote_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamMusicRemote_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamMusicRemote_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamMusicRemote(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamMusicRemote ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 29u): { // SteamClient021.GetISteamHTMLSurface
+      if (g_bd_flat_SteamClient021_GetISteamHTMLSurface == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamHTMLSurface unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamHTMLSurface_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamHTMLSurface_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamHTMLSurface_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamHTMLSurface_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamHTMLSurface(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamHTMLSurface ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 33u): { // SteamClient021.GetISteamInventory
+      if (g_bd_flat_SteamClient021_GetISteamInventory == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamInventory unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamInventory_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamInventory_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamInventory_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamInventory_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamInventory(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamInventory ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 34u): { // SteamClient021.GetISteamVideo
+      if (g_bd_flat_SteamClient021_GetISteamVideo == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamVideo unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamVideo_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamVideo_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamVideo_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamVideo_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamVideo(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamVideo ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)26) << 16 | 35u): { // SteamClient021.GetISteamParentalSettings
+      if (g_bd_flat_SteamClient021_GetISteamParentalSettings == NULL || g_bd_self_steamclient021 == NULL) { logts("FWD", "SteamClient021.GetISteamParentalSettings unresolved"); *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamuser; memcpy(&arg_hSteamuser, arg + 0u, 4);
+      if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_hSteamPipe; memcpy(&arg_hSteamPipe, arg + (0u + 4), 4);
+      static char g_bd_flat_SteamClient021_GetISteamParentalSettings_pchVersion_buf[4096 + 1];
+      const char *arg_pchVersion = NULL;
+      uint32_t arg_pchVersion_len = 0;
+      if (argLen < ((0u + 4) + 4) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchVersion_len, arg + ((0u + 4) + 4), 4);
+      if (arg_pchVersion_len != 0xFFFFFFFFu) {
+        if (arg_pchVersion_len > 4096 || argLen < ((0u + 4) + 4) + 4 + arg_pchVersion_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_SteamClient021_GetISteamParentalSettings_pchVersion_buf, arg + ((0u + 4) + 4) + 4, arg_pchVersion_len);
+        g_bd_flat_SteamClient021_GetISteamParentalSettings_pchVersion_buf[arg_pchVersion_len] = '\0';
+        arg_pchVersion = g_bd_flat_SteamClient021_GetISteamParentalSettings_pchVersion_buf;
+      } else {
+        arg_pchVersion_len = 0;
+      }
+      void *result = g_bd_flat_SteamClient021_GetISteamParentalSettings(g_bd_self_steamclient021, arg_hSteamuser, arg_hSteamPipe, arg_pchVersion);
+      int32_t present = (result != NULL) ? 1 : 0;
+      { char fwdv[BD_FWD_VERSION_CAP]; char fwdmsg[256]; bd_fwd_sanitize(arg_pchVersion, fwdv, sizeof(fwdv));
+        snprintf(fwdmsg, sizeof(fwdmsg), "SteamClient021.GetISteamParentalSettings ver=%s native=%s", fwdv, present ? "present" : "NULL"); logts("FWD", fwdmsg); }
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &present, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)27) << 16 | 0u): { // SteamUser021.GetHSteamUser
+      if (g_bd_flat_SteamUser021_GetHSteamUser == NULL || g_bd_self_steamuser021 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int32_t __ret = g_bd_flat_SteamUser021_GetHSteamUser(g_bd_self_steamuser021);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)27) << 16 | 1u): { // SteamUser021.BLoggedOn
+      if (g_bd_flat_SteamUser021_BLoggedOn == NULL || g_bd_self_steamuser021 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUser021_BLoggedOn(g_bd_self_steamuser021);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)27) << 16 | 2u): { // SteamUser021.GetSteamID
+      if (g_bd_flat_SteamUser021_GetSteamID == NULL || g_bd_self_steamuser021 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint64_t __ret = g_bd_flat_SteamUser021_GetSteamID(g_bd_self_steamuser021);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 8);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)28) << 16 | 0u): { // SteamFriends017.GetPersonaName
+      if (g_bd_flat_SteamFriends017_GetPersonaName == NULL || g_bd_self_steamfriends017 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_SteamFriends017_GetPersonaName(g_bd_self_steamfriends017);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)28) << 16 | 2u): { // SteamFriends017.GetPersonaState
+      if (g_bd_flat_SteamFriends017_GetPersonaState == NULL || g_bd_self_steamfriends017 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamFriends017_GetPersonaState(g_bd_self_steamfriends017);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 0u): { // SteamUtils010.GetSecondsSinceAppActive
+      if (g_bd_flat_SteamUtils010_GetSecondsSinceAppActive == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils010_GetSecondsSinceAppActive(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 1u): { // SteamUtils010.GetSecondsSinceComputerActive
+      if (g_bd_flat_SteamUtils010_GetSecondsSinceComputerActive == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils010_GetSecondsSinceComputerActive(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 2u): { // SteamUtils010.GetConnectedUniverse
+      if (g_bd_flat_SteamUtils010_GetConnectedUniverse == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils010_GetConnectedUniverse(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 3u): { // SteamUtils010.GetServerRealTime
+      if (g_bd_flat_SteamUtils010_GetServerRealTime == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils010_GetServerRealTime(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 4u): { // SteamUtils010.GetIPCountry
+      if (g_bd_flat_SteamUtils010_GetIPCountry == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_SteamUtils010_GetIPCountry(g_bd_self_steamutils010);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 8u): { // SteamUtils010.GetCurrentBatteryPower
+      if (g_bd_flat_SteamUtils010_GetCurrentBatteryPower == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils010_GetCurrentBatteryPower(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 9u): { // SteamUtils010.GetAppID
+      if (g_bd_identity_only) { // D-51-04: identity-only reports the launching game's real AppID, never 480
+        uint32_t v = g_bd_report_appid;
+        if (respCap < 4) { *respLen = 0; return 1; }
+        memcpy(resp, &v, 4); *respLen = 4; return 0;
+      }
+      if (g_bd_flat_SteamUtils010_GetAppID == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_SteamUtils010_GetAppID(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 17u): { // SteamUtils010.IsOverlayEnabled
+      if (g_bd_flat_SteamUtils010_IsOverlayEnabled == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUtils010_IsOverlayEnabled(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 23u): { // SteamUtils010.GetSteamUILanguage
+      if (g_bd_flat_SteamUtils010_GetSteamUILanguage == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      const char *result = g_bd_flat_SteamUtils010_GetSteamUILanguage(g_bd_self_steamutils010);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 24u): { // SteamUtils010.IsSteamRunningInVR
+      if (g_bd_flat_SteamUtils010_IsSteamRunningInVR == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUtils010_IsSteamRunningInVR(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)29) << 16 | 26u): { // SteamUtils010.IsSteamInBigPictureMode
+      if (g_bd_flat_SteamUtils010_IsSteamInBigPictureMode == NULL || g_bd_self_steamutils010 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_SteamUtils010_IsSteamInBigPictureMode(g_bd_self_steamutils010);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 1u): { // STEAMUSERSTATS_INTERFACE_VERSION012.GetStat_2
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2 == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      float arg_pData = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2(g_bd_self_steamuserstats_interface_version012, arg_pchName, &arg_pData);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pData, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 2u): { // STEAMUSERSTATS_INTERFACE_VERSION012.GetStat
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int32_t arg_pData = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat(g_bd_self_steamuserstats_interface_version012, arg_pchName, &arg_pData);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pData, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 3u): { // STEAMUSERSTATS_INTERFACE_VERSION012.SetStat_2
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2 == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2(g_bd_self_steamuserstats_interface_version012, arg_pchName, arg_fData);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 4u): { // STEAMUSERSTATS_INTERFACE_VERSION012.SetStat
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nData; memcpy(&arg_nData, arg + (0u + 4 + arg_pchName_len), 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat(g_bd_self_steamuserstats_interface_version012, arg_pchName, arg_nData);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 5u): { // STEAMUSERSTATS_INTERFACE_VERSION012.UpdateAvgRateStat
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
+      if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      double arg_dSessionLength; memcpy(&arg_dSessionLength, arg + ((0u + 4 + arg_pchName_len) + 4), 8);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat(g_bd_self_steamuserstats_interface_version012, arg_pchName, arg_flCountThisSession, arg_dSessionLength);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 6u): { // STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievement
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int arg_pbAchieved = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement(g_bd_self_steamuserstats_interface_version012, arg_pchName, &arg_pbAchieved);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pbAchieved, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 7u): { // STEAMUSERSTATS_INTERFACE_VERSION012.SetAchievement
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement(g_bd_self_steamuserstats_interface_version012, arg_pchName);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 8u): { // STEAMUSERSTATS_INTERFACE_VERSION012.ClearAchievement
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement(g_bd_self_steamuserstats_interface_version012, arg_pchName);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 9u): { // STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementAndUnlockTime
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int arg_pbAchieved = 0;
+      uint32_t arg_punUnlockTime = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime(g_bd_self_steamuserstats_interface_version012, arg_pchName, &arg_pbAchieved, &arg_punUnlockTime);
+      if (respCap < 12) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pbAchieved, 4);
+      memcpy(resp + 8, &arg_punUnlockTime, 4);
+      *respLen = 12;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 10u): { // STEAMUSERSTATS_INTERFACE_VERSION012.StoreStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats(g_bd_self_steamuserstats_interface_version012);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 12u): { // STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementDisplayAttribute
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchKey_buf[4096 + 1];
+      const char *arg_pchKey = NULL;
+      uint32_t arg_pchKey_len = 0;
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchKey_len, arg + (0u + 4 + arg_pchName_len), 4);
+      if (arg_pchKey_len != 0xFFFFFFFFu) {
+        if (arg_pchKey_len > 4096 || argLen < (0u + 4 + arg_pchName_len) + 4 + arg_pchKey_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchKey_buf, arg + (0u + 4 + arg_pchName_len) + 4, arg_pchKey_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchKey_buf[arg_pchKey_len] = '\0';
+        arg_pchKey = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_pchKey_buf;
+      } else {
+        arg_pchKey_len = 0;
+      }
+      const char *result = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute(g_bd_self_steamuserstats_interface_version012, arg_pchName, arg_pchKey);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 13u): { // STEAMUSERSTATS_INTERFACE_VERSION012.IndicateAchievementProgress
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_nCurProgress; memcpy(&arg_nCurProgress, arg + (0u + 4 + arg_pchName_len), 4);
+      if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_nMaxProgress; memcpy(&arg_nMaxProgress, arg + ((0u + 4 + arg_pchName_len) + 4), 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress(g_bd_self_steamuserstats_interface_version012, arg_pchName, arg_nCurProgress, arg_nMaxProgress);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 14u): { // STEAMUSERSTATS_INTERFACE_VERSION012.GetNumAchievements
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements(g_bd_self_steamuserstats_interface_version012);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 15u): { // STEAMUSERSTATS_INTERFACE_VERSION012.GetAchievementName
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_iAchievement; memcpy(&arg_iAchievement, arg + 0u, 4);
+      const char *result = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName(g_bd_self_steamuserstats_interface_version012, arg_iAchievement);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)30) << 16 | 21u): { // STEAMUSERSTATS_INTERFACE_VERSION012.ResetAllStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats == NULL || g_bd_self_steamuserstats_interface_version012 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bAchievementsToo; memcpy(&arg_bAchievementsToo, arg + 0u, 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats(g_bd_self_steamuserstats_interface_version012, arg_bAchievementsToo);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 0u): { // STEAMUSERSTATS_INTERFACE_VERSION013.GetStat_2
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2 == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      float arg_pData = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2(g_bd_self_steamuserstats_interface_version013, arg_pchName, &arg_pData);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pData, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 1u): { // STEAMUSERSTATS_INTERFACE_VERSION013.GetStat
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int32_t arg_pData = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat(g_bd_self_steamuserstats_interface_version013, arg_pchName, &arg_pData);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pData, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 2u): { // STEAMUSERSTATS_INTERFACE_VERSION013.SetStat_2
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2 == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_fData; memcpy(&arg_fData, arg + (0u + 4 + arg_pchName_len), 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2(g_bd_self_steamuserstats_interface_version013, arg_pchName, arg_fData);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 3u): { // STEAMUSERSTATS_INTERFACE_VERSION013.SetStat
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int32_t arg_nData; memcpy(&arg_nData, arg + (0u + 4 + arg_pchName_len), 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat(g_bd_self_steamuserstats_interface_version013, arg_pchName, arg_nData);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 4u): { // STEAMUSERSTATS_INTERFACE_VERSION013.UpdateAvgRateStat
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_flCountThisSession; memcpy(&arg_flCountThisSession, arg + (0u + 4 + arg_pchName_len), 4);
+      if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 8) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      double arg_dSessionLength; memcpy(&arg_dSessionLength, arg + ((0u + 4 + arg_pchName_len) + 4), 8);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat(g_bd_self_steamuserstats_interface_version013, arg_pchName, arg_flCountThisSession, arg_dSessionLength);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 5u): { // STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievement
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int arg_pbAchieved = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement(g_bd_self_steamuserstats_interface_version013, arg_pchName, &arg_pbAchieved);
+      if (respCap < 8) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pbAchieved, 4);
+      *respLen = 8;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 6u): { // STEAMUSERSTATS_INTERFACE_VERSION013.SetAchievement
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement(g_bd_self_steamuserstats_interface_version013, arg_pchName);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 7u): { // STEAMUSERSTATS_INTERFACE_VERSION013.ClearAchievement
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement(g_bd_self_steamuserstats_interface_version013, arg_pchName);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 8u): { // STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementAndUnlockTime
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      int arg_pbAchieved = 0;
+      uint32_t arg_punUnlockTime = 0;
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime(g_bd_self_steamuserstats_interface_version013, arg_pchName, &arg_pbAchieved, &arg_punUnlockTime);
+      if (respCap < 12) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      memcpy(resp + 4, &arg_pbAchieved, 4);
+      memcpy(resp + 8, &arg_punUnlockTime, 4);
+      *respLen = 12;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 9u): { // STEAMUSERSTATS_INTERFACE_VERSION013.StoreStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats(g_bd_self_steamuserstats_interface_version013);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 11u): { // STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementDisplayAttribute
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchKey_buf[4096 + 1];
+      const char *arg_pchKey = NULL;
+      uint32_t arg_pchKey_len = 0;
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchKey_len, arg + (0u + 4 + arg_pchName_len), 4);
+      if (arg_pchKey_len != 0xFFFFFFFFu) {
+        if (arg_pchKey_len > 4096 || argLen < (0u + 4 + arg_pchName_len) + 4 + arg_pchKey_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchKey_buf, arg + (0u + 4 + arg_pchName_len) + 4, arg_pchKey_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchKey_buf[arg_pchKey_len] = '\0';
+        arg_pchKey = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_pchKey_buf;
+      } else {
+        arg_pchKey_len = 0;
+      }
+      const char *result = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute(g_bd_self_steamuserstats_interface_version013, arg_pchName, arg_pchKey);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 12u): { // STEAMUSERSTATS_INTERFACE_VERSION013.IndicateAchievementProgress
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      static char g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress_pchName_buf[4096 + 1];
+      const char *arg_pchName = NULL;
+      uint32_t arg_pchName_len = 0;
+      if (argLen < 0u + 4) { *respLen = 0; return 1; }
+      memcpy(&arg_pchName_len, arg + 0u, 4);
+      if (arg_pchName_len != 0xFFFFFFFFu) {
+        if (arg_pchName_len > 4096 || argLen < 0u + 4 + arg_pchName_len) { *respLen = 0; return 1; } // in-string length past argLen -- T-51-24
+        memcpy(g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress_pchName_buf, arg + 0u + 4, arg_pchName_len);
+        g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress_pchName_buf[arg_pchName_len] = '\0';
+        arg_pchName = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress_pchName_buf;
+      } else {
+        arg_pchName_len = 0;
+      }
+      if (argLen < (0u + 4 + arg_pchName_len) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_nCurProgress; memcpy(&arg_nCurProgress, arg + (0u + 4 + arg_pchName_len), 4);
+      if (argLen < ((0u + 4 + arg_pchName_len) + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_nMaxProgress; memcpy(&arg_nMaxProgress, arg + ((0u + 4 + arg_pchName_len) + 4), 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress(g_bd_self_steamuserstats_interface_version013, arg_pchName, arg_nCurProgress, arg_nMaxProgress);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 13u): { // STEAMUSERSTATS_INTERFACE_VERSION013.GetNumAchievements
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      uint32_t __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements(g_bd_self_steamuserstats_interface_version013);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
+      *respLen = 4;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 14u): { // STEAMUSERSTATS_INTERFACE_VERSION013.GetAchievementName
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      uint32_t arg_iAchievement; memcpy(&arg_iAchievement, arg + 0u, 4);
+      const char *result = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName(g_bd_self_steamuserstats_interface_version013, arg_iAchievement);
+      if (result == NULL) { *respLen = 0; return 1; }
+      uint32_t strLen = (uint32_t)strlen(result);
+      if (strLen > 255) strLen = 255;
+      if (respCap < 4 + strLen) { *respLen = 0; return 1; }
+      memcpy(resp, &strLen, 4);
+      memcpy(resp + 4, result, strLen);
+      *respLen = 4 + strLen;
+      return 0;
+    }
+    case (((uint32_t)31) << 16 | 20u): { // STEAMUSERSTATS_INTERFACE_VERSION013.ResetAllStats
+      if (g_bd_identity_only) { *respLen = 0; return 1; } // T-51-25: SteamUserStats is app-scoped -- refused in identity-only mode
+      if (g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats == NULL || g_bd_self_steamuserstats_interface_version013 == NULL) { *respLen = 0; return 1; } // T-51-23: unresolved symbol, never called
+      if (argLen < 0u + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
+      int arg_bAchievementsToo; memcpy(&arg_bAchievementsToo, arg + 0u, 4);
+      int __ret = g_bd_flat_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats(g_bd_self_steamuserstats_interface_version013, arg_bAchievementsToo);
+      if (respCap < 4) { *respLen = 0; return 1; }
+      memcpy(resp, &__ret, 4);
       *respLen = 4;
       return 0;
     }

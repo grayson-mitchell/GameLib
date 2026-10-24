@@ -8,7 +8,7 @@
  * Implements:
  *   - The flat SteamAPI_* exports (acceptance-set superset, R3 finding #9).
  *   - Per-interface __thiscall C++ vtables (spike 006's proven ABI mechanism)
- *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016.
+ *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamInput006, SteamGameServer014, SteamGameServer015, SteamGameServerStats001.
  *
  * ABI ground truth (24-RESEARCH.md Pattern 2): MSVC __thiscall -- `this` in
  * ECX, callee cleans the stack; ret N = summed non-`this` param widths (+4 for
@@ -93,7 +93,7 @@ Response blob (per method):
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "0089d4fc5bf9"
+#define BRIDGE_SHIM_TABLE_HASH "4e3c190aafca"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -861,7 +861,6 @@ static vfn g_steamuser023_vtbl[33] = {
 struct FakeSteamUser023 { vfn *vptr; };
 static struct FakeSteamUser023 g_steamuser023_instance = { g_steamuser023_vtbl };
 
-#if defined(__i386__)
 // === SteamFriends018 (ordinal 2, family SteamFriends) ===
 
 // slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
@@ -1422,7 +1421,6 @@ static vfn g_steamfriends018_vtbl[78] = {
 };
 struct FakeSteamFriends018 { vfn *vptr; };
 static struct FakeSteamFriends018 g_steamfriends018_instance = { g_steamfriends018_vtbl };
-#endif
 
 #if defined(__i386__)
 // === SteamUser016 (ordinal 3, family SteamUser) ===
@@ -9369,14 +9367,5291 @@ struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION016 { vfn *vptr; };
 static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION016 g_steamremotestorage_interface_version016_instance = { g_steamremotestorage_interface_version016_vtbl };
 #endif
 
+#if defined(__x86_64__)
+// === SteamClient020 (ordinal 25, family SteamClient) ===
+
+// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
+static int32_t THISCALL vt_SteamClient020_CreateSteamPipe(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(25, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
+static int THISCALL vt_SteamClient020_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(25, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
+static int32_t THISCALL vt_SteamClient020_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(25, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamClient020_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(25, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (phSteamPipe != NULL && retlen >= respOff + 4) {
+    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *phSteamPipe = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
+static void THISCALL vt_SteamClient020_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(25, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+}
+
+// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 7: SetLocalIPBinding(const SteamIPAddress_t* unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamClient020_SetLocalIPBinding(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
+static void * THISCALL vt_SteamClient020_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4104];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 18, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 19: GetISteamGameSearch(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameSearch*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient020_GetISteamGameSearch(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 20: RunFrame() -> void | __thiscall ret 0
+static void THISCALL vt_SteamClient020_RunFrame(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(25, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
+}
+
+// slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamClient020_GetIPCCallCount(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(25, 21, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient020_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamClient020_BShutdownIfAllPipesClosed(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(25, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 24, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 25: DEPRECATED_GetISteamUnifiedMessages(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_DEPRECATED_GetISteamUnifiedMessages(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 25, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 26: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 26, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 27: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 27, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 28: GetISteamAppList(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamAppList*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamAppList(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 28, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 29: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 29, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 30: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 30, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 31: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 31, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 32: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient020_DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 33: DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient020_DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 34: Set_SteamAPI_CCheckCallbackRegisteredInProcess(void* func) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient020_Set_SteamAPI_CCheckCallbackRegisteredInProcess(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 35: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 35, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 36: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 36, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 37: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient020_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(25, 37, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 38: GetISteamInput(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInput*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient020_GetISteamInput(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 39: GetISteamParties(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParties*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient020_GetISteamParties(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 40: GetISteamRemotePlay(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemotePlay*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient020_GetISteamRemotePlay(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 41: DestroyAllInterfaces() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamClient020_DestroyAllInterfaces(void *self) {
+  (void)self;
+}
+
+static vfn g_steamclient020_vtbl[42] = {
+  (vfn)vt_SteamClient020_CreateSteamPipe, // slot 0
+  (vfn)vt_SteamClient020_BReleaseSteamPipe, // slot 1
+  (vfn)vt_SteamClient020_ConnectToGlobalUser, // slot 2
+  (vfn)vt_SteamClient020_CreateLocalUser, // slot 3
+  (vfn)vt_SteamClient020_ReleaseUser, // slot 4
+  (vfn)vt_SteamClient020_GetISteamUser, // slot 5
+  (vfn)vt_SteamClient020_GetISteamGameServer, // slot 6
+  (vfn)vt_SteamClient020_SetLocalIPBinding, // slot 7
+  (vfn)vt_SteamClient020_GetISteamFriends, // slot 8
+  (vfn)vt_SteamClient020_GetISteamUtils, // slot 9
+  (vfn)vt_SteamClient020_GetISteamMatchmaking, // slot 10
+  (vfn)vt_SteamClient020_GetISteamMatchmakingServers, // slot 11
+  (vfn)vt_SteamClient020_GetISteamGenericInterface, // slot 12
+  (vfn)vt_SteamClient020_GetISteamUserStats, // slot 13
+  (vfn)vt_SteamClient020_GetISteamGameServerStats, // slot 14
+  (vfn)vt_SteamClient020_GetISteamApps, // slot 15
+  (vfn)vt_SteamClient020_GetISteamNetworking, // slot 16
+  (vfn)vt_SteamClient020_GetISteamRemoteStorage, // slot 17
+  (vfn)vt_SteamClient020_GetISteamScreenshots, // slot 18
+  (vfn)vt_SteamClient020_GetISteamGameSearch, // slot 19
+  (vfn)vt_SteamClient020_RunFrame, // slot 20
+  (vfn)vt_SteamClient020_GetIPCCallCount, // slot 21
+  (vfn)vt_SteamClient020_SetWarningMessageHook, // slot 22
+  (vfn)vt_SteamClient020_BShutdownIfAllPipesClosed, // slot 23
+  (vfn)vt_SteamClient020_GetISteamHTTP, // slot 24
+  (vfn)vt_SteamClient020_DEPRECATED_GetISteamUnifiedMessages, // slot 25
+  (vfn)vt_SteamClient020_GetISteamController, // slot 26
+  (vfn)vt_SteamClient020_GetISteamUGC, // slot 27
+  (vfn)vt_SteamClient020_GetISteamAppList, // slot 28
+  (vfn)vt_SteamClient020_GetISteamMusic, // slot 29
+  (vfn)vt_SteamClient020_GetISteamMusicRemote, // slot 30
+  (vfn)vt_SteamClient020_GetISteamHTMLSurface, // slot 31
+  (vfn)vt_SteamClient020_DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess, // slot 32
+  (vfn)vt_SteamClient020_DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess, // slot 33
+  (vfn)vt_SteamClient020_Set_SteamAPI_CCheckCallbackRegisteredInProcess, // slot 34
+  (vfn)vt_SteamClient020_GetISteamInventory, // slot 35
+  (vfn)vt_SteamClient020_GetISteamVideo, // slot 36
+  (vfn)vt_SteamClient020_GetISteamParentalSettings, // slot 37
+  (vfn)vt_SteamClient020_GetISteamInput, // slot 38
+  (vfn)vt_SteamClient020_GetISteamParties, // slot 39
+  (vfn)vt_SteamClient020_GetISteamRemotePlay, // slot 40
+  (vfn)vt_SteamClient020_DestroyAllInterfaces, // slot 41
+};
+struct FakeSteamClient020 { vfn *vptr; };
+static struct FakeSteamClient020 g_steamclient020_instance = { g_steamclient020_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamClient021 (ordinal 26, family SteamClient) ===
+
+// slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
+static int32_t THISCALL vt_SteamClient021_CreateSteamPipe(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(26, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
+static int THISCALL vt_SteamClient021_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(26, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
+static int32_t THISCALL vt_SteamClient021_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(26, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
+static int32_t THISCALL vt_SteamClient021_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(26, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (phSteamPipe != NULL && retlen >= respOff + 4) {
+    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *phSteamPipe = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
+static void THISCALL vt_SteamClient021_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hUser, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(26, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+}
+
+// slot 5: GetISteamUser(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUser*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamUser(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 6: GetISteamGameServer(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServer*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamGameServer(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 7: SetLocalIPBinding(const SteamIPAddress_t* unIP, uint32 usPort) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamClient021_SetLocalIPBinding(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 8: GetISteamFriends(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamFriends*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamFriends(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 9: GetISteamUtils(int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUtils*/* | __thiscall ret 8
+static void * THISCALL vt_SteamClient021_GetISteamUtils(void *self, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4104];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 10: GetISteamMatchmaking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmaking*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamMatchmaking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 10, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 11: GetISteamMatchmakingServers(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMatchmakingServers*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamMatchmakingServers(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 12: GetISteamGenericInterface(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamGenericInterface(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 13: GetISteamUserStats(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUserStats*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamUserStats(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 14: GetISteamGameServerStats(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameServerStats*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamGameServerStats(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 15: GetISteamApps(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamApps*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamApps(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 16: GetISteamNetworking(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamNetworking*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamNetworking(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 17: GetISteamRemoteStorage(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemoteStorage*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamRemoteStorage(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 17, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 18: GetISteamScreenshots(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamScreenshots*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamScreenshots(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 18, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 19: GetISteamGameSearch(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamGameSearch*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient021_GetISteamGameSearch(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamuser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 20: RunFrame() -> void | __thiscall ret 0
+static void THISCALL vt_SteamClient021_RunFrame(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(26, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
+}
+
+// slot 21: GetIPCCallCount() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamClient021_GetIPCCallCount(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(26, 21, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 22: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient021_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 23: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamClient021_BShutdownIfAllPipesClosed(void *self) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(26, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 24: GetISteamHTTP(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTTP*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamHTTP(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 24, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 25: GetISteamController(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamController*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamController(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 25, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 26: GetISteamUGC(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamUGC*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamUGC(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamUser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 26, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 27: GetISteamMusic(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusic*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamMusic(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 27, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 28: GetISteamMusicRemote(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamMusicRemote*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamMusicRemote(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 28, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 29: GetISteamHTMLSurface(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamHTMLSurface*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamHTMLSurface(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 29, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 30: DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient021_DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 31: DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void* _a) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient021_DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 32: Set_SteamAPI_CCheckCallbackRegisteredInProcess(void* func) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamClient021_Set_SteamAPI_CCheckCallbackRegisteredInProcess(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 33: GetISteamInventory(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInventory*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamInventory(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 33, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 34: GetISteamVideo(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamVideo*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamVideo(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 34, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 35: GetISteamParentalSettings(int32 hSteamuser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParentalSettings*/* | __thiscall ret 12
+static void * THISCALL vt_SteamClient021_GetISteamParentalSettings(void *self, int32_t hSteamuser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) {
+    void *local = resolve_iface_by_exact_version(pchVersion);
+    return local != NULL ? local : (void *)&g_x64_null_object_instance;
+  }
+#endif
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hSteamuser, 4); argOff += 4;
+  memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
+  {
+    uint32_t strLen;
+    if (pchVersion == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchVersion);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchVersion, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;
+  if (!bridge_transact(26, 35, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;
+  memcpy(&present, retbuf, 4);
+  if (present == 0) return NULL;
+  return resolve_iface_by_exact_version(pchVersion);
+}
+
+// slot 36: GetISteamInput(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamInput*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient021_GetISteamInput(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 37: GetISteamParties(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamParties*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient021_GetISteamParties(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 38: GetISteamRemotePlay(int32 hSteamUser, int32 hSteamPipe, const char* pchVersion) -> void /*ISteamRemotePlay*/* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamClient021_GetISteamRemotePlay(void *self, int32_t hSteamUser, int32_t hSteamPipe, const char * pchVersion) {
+  (void)self;
+  (void)hSteamUser;
+  (void)hSteamPipe;
+  void *resolved = resolve_iface_by_exact_version(pchVersion);
+  if (resolved != NULL) return resolved;
+#if defined(__x86_64__)
+  return (void *)&g_x64_null_object_instance;
+#else
+  return NULL;
+#endif
+}
+
+// slot 39: DestroyAllInterfaces() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamClient021_DestroyAllInterfaces(void *self) {
+  (void)self;
+}
+
+static vfn g_steamclient021_vtbl[40] = {
+  (vfn)vt_SteamClient021_CreateSteamPipe, // slot 0
+  (vfn)vt_SteamClient021_BReleaseSteamPipe, // slot 1
+  (vfn)vt_SteamClient021_ConnectToGlobalUser, // slot 2
+  (vfn)vt_SteamClient021_CreateLocalUser, // slot 3
+  (vfn)vt_SteamClient021_ReleaseUser, // slot 4
+  (vfn)vt_SteamClient021_GetISteamUser, // slot 5
+  (vfn)vt_SteamClient021_GetISteamGameServer, // slot 6
+  (vfn)vt_SteamClient021_SetLocalIPBinding, // slot 7
+  (vfn)vt_SteamClient021_GetISteamFriends, // slot 8
+  (vfn)vt_SteamClient021_GetISteamUtils, // slot 9
+  (vfn)vt_SteamClient021_GetISteamMatchmaking, // slot 10
+  (vfn)vt_SteamClient021_GetISteamMatchmakingServers, // slot 11
+  (vfn)vt_SteamClient021_GetISteamGenericInterface, // slot 12
+  (vfn)vt_SteamClient021_GetISteamUserStats, // slot 13
+  (vfn)vt_SteamClient021_GetISteamGameServerStats, // slot 14
+  (vfn)vt_SteamClient021_GetISteamApps, // slot 15
+  (vfn)vt_SteamClient021_GetISteamNetworking, // slot 16
+  (vfn)vt_SteamClient021_GetISteamRemoteStorage, // slot 17
+  (vfn)vt_SteamClient021_GetISteamScreenshots, // slot 18
+  (vfn)vt_SteamClient021_GetISteamGameSearch, // slot 19
+  (vfn)vt_SteamClient021_RunFrame, // slot 20
+  (vfn)vt_SteamClient021_GetIPCCallCount, // slot 21
+  (vfn)vt_SteamClient021_SetWarningMessageHook, // slot 22
+  (vfn)vt_SteamClient021_BShutdownIfAllPipesClosed, // slot 23
+  (vfn)vt_SteamClient021_GetISteamHTTP, // slot 24
+  (vfn)vt_SteamClient021_GetISteamController, // slot 25
+  (vfn)vt_SteamClient021_GetISteamUGC, // slot 26
+  (vfn)vt_SteamClient021_GetISteamMusic, // slot 27
+  (vfn)vt_SteamClient021_GetISteamMusicRemote, // slot 28
+  (vfn)vt_SteamClient021_GetISteamHTMLSurface, // slot 29
+  (vfn)vt_SteamClient021_DEPRECATED_Set_SteamAPI_CPostAPIResultInProcess, // slot 30
+  (vfn)vt_SteamClient021_DEPRECATED_Remove_SteamAPI_CPostAPIResultInProcess, // slot 31
+  (vfn)vt_SteamClient021_Set_SteamAPI_CCheckCallbackRegisteredInProcess, // slot 32
+  (vfn)vt_SteamClient021_GetISteamInventory, // slot 33
+  (vfn)vt_SteamClient021_GetISteamVideo, // slot 34
+  (vfn)vt_SteamClient021_GetISteamParentalSettings, // slot 35
+  (vfn)vt_SteamClient021_GetISteamInput, // slot 36
+  (vfn)vt_SteamClient021_GetISteamParties, // slot 37
+  (vfn)vt_SteamClient021_GetISteamRemotePlay, // slot 38
+  (vfn)vt_SteamClient021_DestroyAllInterfaces, // slot 39
+};
+struct FakeSteamClient021 { vfn *vptr; };
+static struct FakeSteamClient021 g_steamclient021_instance = { g_steamclient021_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamUser021 (ordinal 27, family SteamUser) ===
+
+// slot 0: GetHSteamUser() -> int32 | __thiscall ret 0
+static int32_t THISCALL vt_SteamUser021_GetHSteamUser(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(27, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 1: BLoggedOn() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamUser021_BLoggedOn(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(27, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 2: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer)
+static void * THISCALL vt_SteamUser021_GetSteamID(void *self, void *sretOut) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(27, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
+  return sretOut;
+}
+
+// slot 3: InitiateGameConnection_DEPRECATED(void* pAuthBlob, int32 cbMaxAuthBlob, CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer, bool bSecure) -> int32 | __thiscall ret 28 (STUB)
+static int32_t THISCALL vt_SteamUser021_InitiateGameConnection_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: TerminateGameConnection_DEPRECATED(uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamUser021_TerminateGameConnection_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 5: TrackAppUsageEvent(CGameID gameID, int32 eAppUsageEvent, const char* pchExtraInfo) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamUser021_TrackAppUsageEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamUser021_GetUserDataFolder(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: StartVoiceRecording() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamUser021_StartVoiceRecording(void *self) {
+  (void)self;
+}
+
+// slot 8: StopVoiceRecording() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamUser021_StopVoiceRecording(void *self) {
+  (void)self;
+}
+
+// slot 9: GetAvailableVoice(uint32* pcbCompressed, uint32* pcbUncompressed_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamUser021_GetAvailableVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: GetVoice(bool bWantCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, bool bWantUncompressed_Deprecated, void* pUncompressedDestBuffer_Deprecated, uint32 cbUncompressedDestBufferSize_Deprecated, uint32* nUncompressBytesWritten_Deprecated, uint32 nUncompressedVoiceDesiredSampleRate_Deprecated) -> uint32 | __thiscall ret 36 (STUB)
+static uint32_t THISCALL vt_SteamUser021_GetVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: DecompressVoice(const void* pCompressed, uint32 cbCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, uint32 nDesiredSampleRate) -> uint32 | __thiscall ret 24 (STUB)
+static uint32_t THISCALL vt_SteamUser021_DecompressVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamUser021_GetVoiceOptimalSampleRate(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamUser021_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamUser021_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamUser021_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamUser021_CancelAuthTicket(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 17: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamUser021_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: BIsBehindNAT() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUser021_BIsBehindNAT(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: AdvertiseGame(CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamUser021_AdvertiseGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 20: RequestEncryptedAppTicket(void* pDataToInclude, int32 cbDataToInclude) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamUser021_RequestEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 21: GetEncryptedAppTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUser021_GetEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: GetGameBadgeLevel(int32 nSeries, bool bFoil) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamUser021_GetGameBadgeLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetPlayerSteamLevel() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamUser021_GetPlayerSteamLevel(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 24: RequestStoreAuthURL(const char* pchRedirectURL) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamUser021_RequestStoreAuthURL(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 25: BIsPhoneVerified() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUser021_BIsPhoneVerified(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: BIsTwoFactorEnabled() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUser021_BIsTwoFactorEnabled(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: BIsPhoneIdentifying() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUser021_BIsPhoneIdentifying(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 28: BIsPhoneRequiringVerification() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUser021_BIsPhoneRequiringVerification(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 29: GetMarketEligibility() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_SteamUser021_GetMarketEligibility(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 30: GetDurationControl() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_SteamUser021_GetDurationControl(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 31: BSetDurationControlOnlineState(uint32 eNewState) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamUser021_BSetDurationControlOnlineState(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamuser021_vtbl[32] = {
+  (vfn)vt_SteamUser021_GetHSteamUser, // slot 0
+  (vfn)vt_SteamUser021_BLoggedOn, // slot 1
+  (vfn)vt_SteamUser021_GetSteamID, // slot 2
+  (vfn)vt_SteamUser021_InitiateGameConnection_DEPRECATED, // slot 3
+  (vfn)vt_SteamUser021_TerminateGameConnection_DEPRECATED, // slot 4
+  (vfn)vt_SteamUser021_TrackAppUsageEvent, // slot 5
+  (vfn)vt_SteamUser021_GetUserDataFolder, // slot 6
+  (vfn)vt_SteamUser021_StartVoiceRecording, // slot 7
+  (vfn)vt_SteamUser021_StopVoiceRecording, // slot 8
+  (vfn)vt_SteamUser021_GetAvailableVoice, // slot 9
+  (vfn)vt_SteamUser021_GetVoice, // slot 10
+  (vfn)vt_SteamUser021_DecompressVoice, // slot 11
+  (vfn)vt_SteamUser021_GetVoiceOptimalSampleRate, // slot 12
+  (vfn)vt_SteamUser021_GetAuthSessionTicket, // slot 13
+  (vfn)vt_SteamUser021_BeginAuthSession, // slot 14
+  (vfn)vt_SteamUser021_EndAuthSession, // slot 15
+  (vfn)vt_SteamUser021_CancelAuthTicket, // slot 16
+  (vfn)vt_SteamUser021_UserHasLicenseForApp, // slot 17
+  (vfn)vt_SteamUser021_BIsBehindNAT, // slot 18
+  (vfn)vt_SteamUser021_AdvertiseGame, // slot 19
+  (vfn)vt_SteamUser021_RequestEncryptedAppTicket, // slot 20
+  (vfn)vt_SteamUser021_GetEncryptedAppTicket, // slot 21
+  (vfn)vt_SteamUser021_GetGameBadgeLevel, // slot 22
+  (vfn)vt_SteamUser021_GetPlayerSteamLevel, // slot 23
+  (vfn)vt_SteamUser021_RequestStoreAuthURL, // slot 24
+  (vfn)vt_SteamUser021_BIsPhoneVerified, // slot 25
+  (vfn)vt_SteamUser021_BIsTwoFactorEnabled, // slot 26
+  (vfn)vt_SteamUser021_BIsPhoneIdentifying, // slot 27
+  (vfn)vt_SteamUser021_BIsPhoneRequiringVerification, // slot 28
+  (vfn)vt_SteamUser021_GetMarketEligibility, // slot 29
+  (vfn)vt_SteamUser021_GetDurationControl, // slot 30
+  (vfn)vt_SteamUser021_BSetDurationControlOnlineState, // slot 31
+};
+struct FakeSteamUser021 { vfn *vptr; };
+static struct FakeSteamUser021 g_steamuser021_instance = { g_steamuser021_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamFriends017 (ordinal 28, family SteamFriends) ===
+
+// slot 0: GetPersonaName() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamFriends017_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamFriends017_GetPersonaName(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(28, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamFriends017_GetPersonaName_buf[0] = '\0';
+    return vt_SteamFriends017_GetPersonaName_buf;
+  }
+  memcpy(vt_SteamFriends017_GetPersonaName_buf, retbuf, retlen);
+  vt_SteamFriends017_GetPersonaName_buf[retlen] = '\0';
+  return vt_SteamFriends017_GetPersonaName_buf;
+}
+
+// slot 1: SetPersonaName(const char* pchPersonaName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_SetPersonaName(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 2: GetPersonaState() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamFriends017_GetPersonaState(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(28, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 3: GetFriendCount(int32 iFriendFlags) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendCount(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: GetFriendByIndex(int32 iFriend, int32 iFriendFlags) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamFriends017_GetFriendByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 5: GetFriendRelationship(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamFriends017_GetFriendRelationship(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: GetFriendPersonaState(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamFriends017_GetFriendPersonaState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: GetFriendPersonaName(CSteamID steamIDFriend) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetFriendPersonaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 8: GetFriendGamePlayed(CSteamID steamIDFriend, FriendGameInfo_t* pFriendGameInfo) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamFriends017_GetFriendGamePlayed(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: GetFriendPersonaNameHistory(CSteamID steamIDFriend, int32 iPersonaName) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetFriendPersonaNameHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return "";
+}
+
+// slot 10: GetFriendSteamLevel(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendSteamLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: GetPlayerNickname(CSteamID steamIDPlayer) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetPlayerNickname(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 12: GetFriendsGroupCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendsGroupCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetFriendsGroupIDByIndex(int32 iFG) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamFriends017_GetFriendsGroupIDByIndex(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: GetFriendsGroupName(uint32 friendsGroupID) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetFriendsGroupName(void *self, uint32_t dummy0) {
+  (void)self;
+  return "";
+}
+
+// slot 15: GetFriendsGroupMembersCount(uint32 friendsGroupID) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendsGroupMembersCount(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: GetFriendsGroupMembersList(uint32 friendsGroupID, CSteamID* pOutSteamIDMembers, int32 nMembersCount) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamFriends017_GetFriendsGroupMembersList(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 17: HasFriend(CSteamID steamIDFriend, int32 iFriendFlags) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamFriends017_HasFriend(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: GetClanCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetClanCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: GetClanByIndex(int32 iClan) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamFriends017_GetClanByIndex(void *self, void *sretOut, uint32_t dummy0) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 20: GetClanName(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetClanName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 21: GetClanTag(CSteamID steamIDClan) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetClanTag(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 22: GetClanActivityCounts(CSteamID steamIDClan, int32* pnOnline, int32* pnInGame, int32* pnChatting) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamFriends017_GetClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: DownloadClanActivityCounts(CSteamID* psteamIDClans, int32 cClansToRequest) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_DownloadClanActivityCounts(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 24: GetFriendCountFromSource(CSteamID steamIDSource) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendCountFromSource(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 25: GetFriendFromSourceByIndex(CSteamID steamIDSource, int32 iFriend) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamFriends017_GetFriendFromSourceByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 26: IsUserInSource(CSteamID steamIDUser, CSteamID steamIDSource) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamFriends017_IsUserInSource(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: SetInGameVoiceSpeaking(CSteamID steamIDUser, bool bSpeaking) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamFriends017_SetInGameVoiceSpeaking(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 28: ActivateGameOverlay(const char* pchDialog) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamFriends017_ActivateGameOverlay(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 29: ActivateGameOverlayToUser(const char* pchDialog, CSteamID steamID) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamFriends017_ActivateGameOverlayToUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 30: ActivateGameOverlayToWebPage(const char* pchURL, uint32 eMode) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamFriends017_ActivateGameOverlayToWebPage(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 31: ActivateGameOverlayToStore(uint32 nAppID, uint32 eFlag) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamFriends017_ActivateGameOverlayToStore(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 32: SetPlayedWith(CSteamID steamIDUserPlayedWith) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamFriends017_SetPlayedWith(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 33: ActivateGameOverlayInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamFriends017_ActivateGameOverlayInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 34: GetSmallFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetSmallFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: GetMediumFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetMediumFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 36: GetLargeFriendAvatar(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetLargeFriendAvatar(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 37: RequestUserInformation(CSteamID steamIDUser, bool bRequireNameOnly) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamFriends017_RequestUserInformation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 38: RequestClanOfficerList(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_RequestClanOfficerList(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 39: GetClanOwner(CSteamID steamIDClan) -> CSteamID | __thiscall ret 12 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamFriends017_GetClanOwner(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 40: GetClanOfficerCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetClanOfficerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 41: GetClanOfficerByIndex(CSteamID steamIDClan, int32 iOfficer) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamFriends017_GetClanOfficerByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 42: GetUserRestrictions() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamFriends017_GetUserRestrictions(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 43: SetRichPresence(const char* pchKey, const char* pchValue) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamFriends017_SetRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 44: ClearRichPresence() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamFriends017_ClearRichPresence(void *self) {
+  (void)self;
+}
+
+// slot 45: GetFriendRichPresence(CSteamID steamIDFriend, const char* pchKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return "";
+}
+
+// slot 46: GetFriendRichPresenceKeyCount(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendRichPresenceKeyCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 47: GetFriendRichPresenceKeyByIndex(CSteamID steamIDFriend, int32 iKey) -> const char* | __thiscall ret 12 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetFriendRichPresenceKeyByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return "";
+}
+
+// slot 48: RequestFriendRichPresence(CSteamID steamIDFriend) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamFriends017_RequestFriendRichPresence(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 49: InviteUserToGame(CSteamID steamIDFriend, const char* pchConnectString) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamFriends017_InviteUserToGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 50: GetCoplayFriendCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetCoplayFriendCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 51: GetCoplayFriend(int32 iCoplayFriend) -> CSteamID | __thiscall ret 8 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamFriends017_GetCoplayFriend(void *self, void *sretOut, uint32_t dummy0) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 52: GetFriendCoplayTime(CSteamID steamIDFriend) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendCoplayTime(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 53: GetFriendCoplayGame(CSteamID steamIDFriend) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamFriends017_GetFriendCoplayGame(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 54: JoinClanChatRoom(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_JoinClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 55: LeaveClanChatRoom(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamFriends017_LeaveClanChatRoom(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 56: GetClanChatMemberCount(CSteamID steamIDClan) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetClanChatMemberCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 57: GetChatMemberByIndex(CSteamID steamIDClan, int32 iUser) -> CSteamID | __thiscall ret 16 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamFriends017_GetChatMemberByIndex(void *self, void *sretOut, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 58: SendClanChatMessage(CSteamID steamIDClanChat, const char* pchText) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamFriends017_SendClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 59: GetClanChatMessage(CSteamID steamIDClanChat, int32 iMessage, void* prgchText, int32 cchTextMax, uint32* peChatEntryType, CSteamID* psteamidChatter) -> int32 | __thiscall ret 28 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetClanChatMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 60: IsClanChatAdmin(CSteamID steamIDClanChat, CSteamID steamIDUser) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamFriends017_IsClanChatAdmin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 61: IsClanChatWindowOpenInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamFriends017_IsClanChatWindowOpenInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 62: OpenClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamFriends017_OpenClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 63: CloseClanChatWindowInSteam(CSteamID steamIDClanChat) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamFriends017_CloseClanChatWindowInSteam(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 64: SetListenForFriendsMessages(bool bInterceptEnabled) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamFriends017_SetListenForFriendsMessages(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 65: ReplyToFriendMessage(CSteamID steamIDFriend, const char* pchMsgToSend) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamFriends017_ReplyToFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 66: GetFriendMessage(CSteamID steamIDFriend, int32 iMessageID, void* pvData, int32 cubData, uint32* peChatEntryType) -> int32 | __thiscall ret 24 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetFriendMessage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 67: GetFollowerCount(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_GetFollowerCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 68: IsFollowing(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_IsFollowing(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 69: EnumerateFollowingList(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_EnumerateFollowingList(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 70: IsClanPublic(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamFriends017_IsClanPublic(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 71: IsClanOfficialGameGroup(CSteamID steamIDClan) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamFriends017_IsClanOfficialGameGroup(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 72: GetNumChatsWithUnreadPriorityMessages() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamFriends017_GetNumChatsWithUnreadPriorityMessages(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 73: ActivateGameOverlayRemotePlayTogetherInviteDialog(CSteamID steamIDLobby) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamFriends017_ActivateGameOverlayRemotePlayTogetherInviteDialog(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 74: RegisterProtocolInOverlayBrowser(const char* pchProtocol) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamFriends017_RegisterProtocolInOverlayBrowser(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 75: ActivateGameOverlayInviteDialogConnectString(const char* pchConnectString) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamFriends017_ActivateGameOverlayInviteDialogConnectString(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 76: RequestEquippedProfileItems(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamFriends017_RequestEquippedProfileItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 77: BHasEquippedProfileItem(CSteamID steamID, uint32 itemType) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamFriends017_BHasEquippedProfileItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 78: GetProfileItemPropertyString(CSteamID steamID, uint32 itemType, uint32 prop) -> const char* | __thiscall ret 16 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamFriends017_GetProfileItemPropertyString(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return "";
+}
+
+// slot 79: GetProfileItemPropertyUint(CSteamID steamID, uint32 itemType, uint32 prop) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamFriends017_GetProfileItemPropertyUint(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamfriends017_vtbl[80] = {
+  (vfn)vt_SteamFriends017_GetPersonaName, // slot 0
+  (vfn)vt_SteamFriends017_SetPersonaName, // slot 1
+  (vfn)vt_SteamFriends017_GetPersonaState, // slot 2
+  (vfn)vt_SteamFriends017_GetFriendCount, // slot 3
+  (vfn)vt_SteamFriends017_GetFriendByIndex, // slot 4
+  (vfn)vt_SteamFriends017_GetFriendRelationship, // slot 5
+  (vfn)vt_SteamFriends017_GetFriendPersonaState, // slot 6
+  (vfn)vt_SteamFriends017_GetFriendPersonaName, // slot 7
+  (vfn)vt_SteamFriends017_GetFriendGamePlayed, // slot 8
+  (vfn)vt_SteamFriends017_GetFriendPersonaNameHistory, // slot 9
+  (vfn)vt_SteamFriends017_GetFriendSteamLevel, // slot 10
+  (vfn)vt_SteamFriends017_GetPlayerNickname, // slot 11
+  (vfn)vt_SteamFriends017_GetFriendsGroupCount, // slot 12
+  (vfn)vt_SteamFriends017_GetFriendsGroupIDByIndex, // slot 13
+  (vfn)vt_SteamFriends017_GetFriendsGroupName, // slot 14
+  (vfn)vt_SteamFriends017_GetFriendsGroupMembersCount, // slot 15
+  (vfn)vt_SteamFriends017_GetFriendsGroupMembersList, // slot 16
+  (vfn)vt_SteamFriends017_HasFriend, // slot 17
+  (vfn)vt_SteamFriends017_GetClanCount, // slot 18
+  (vfn)vt_SteamFriends017_GetClanByIndex, // slot 19
+  (vfn)vt_SteamFriends017_GetClanName, // slot 20
+  (vfn)vt_SteamFriends017_GetClanTag, // slot 21
+  (vfn)vt_SteamFriends017_GetClanActivityCounts, // slot 22
+  (vfn)vt_SteamFriends017_DownloadClanActivityCounts, // slot 23
+  (vfn)vt_SteamFriends017_GetFriendCountFromSource, // slot 24
+  (vfn)vt_SteamFriends017_GetFriendFromSourceByIndex, // slot 25
+  (vfn)vt_SteamFriends017_IsUserInSource, // slot 26
+  (vfn)vt_SteamFriends017_SetInGameVoiceSpeaking, // slot 27
+  (vfn)vt_SteamFriends017_ActivateGameOverlay, // slot 28
+  (vfn)vt_SteamFriends017_ActivateGameOverlayToUser, // slot 29
+  (vfn)vt_SteamFriends017_ActivateGameOverlayToWebPage, // slot 30
+  (vfn)vt_SteamFriends017_ActivateGameOverlayToStore, // slot 31
+  (vfn)vt_SteamFriends017_SetPlayedWith, // slot 32
+  (vfn)vt_SteamFriends017_ActivateGameOverlayInviteDialog, // slot 33
+  (vfn)vt_SteamFriends017_GetSmallFriendAvatar, // slot 34
+  (vfn)vt_SteamFriends017_GetMediumFriendAvatar, // slot 35
+  (vfn)vt_SteamFriends017_GetLargeFriendAvatar, // slot 36
+  (vfn)vt_SteamFriends017_RequestUserInformation, // slot 37
+  (vfn)vt_SteamFriends017_RequestClanOfficerList, // slot 38
+  (vfn)vt_SteamFriends017_GetClanOwner, // slot 39
+  (vfn)vt_SteamFriends017_GetClanOfficerCount, // slot 40
+  (vfn)vt_SteamFriends017_GetClanOfficerByIndex, // slot 41
+  (vfn)vt_SteamFriends017_GetUserRestrictions, // slot 42
+  (vfn)vt_SteamFriends017_SetRichPresence, // slot 43
+  (vfn)vt_SteamFriends017_ClearRichPresence, // slot 44
+  (vfn)vt_SteamFriends017_GetFriendRichPresence, // slot 45
+  (vfn)vt_SteamFriends017_GetFriendRichPresenceKeyCount, // slot 46
+  (vfn)vt_SteamFriends017_GetFriendRichPresenceKeyByIndex, // slot 47
+  (vfn)vt_SteamFriends017_RequestFriendRichPresence, // slot 48
+  (vfn)vt_SteamFriends017_InviteUserToGame, // slot 49
+  (vfn)vt_SteamFriends017_GetCoplayFriendCount, // slot 50
+  (vfn)vt_SteamFriends017_GetCoplayFriend, // slot 51
+  (vfn)vt_SteamFriends017_GetFriendCoplayTime, // slot 52
+  (vfn)vt_SteamFriends017_GetFriendCoplayGame, // slot 53
+  (vfn)vt_SteamFriends017_JoinClanChatRoom, // slot 54
+  (vfn)vt_SteamFriends017_LeaveClanChatRoom, // slot 55
+  (vfn)vt_SteamFriends017_GetClanChatMemberCount, // slot 56
+  (vfn)vt_SteamFriends017_GetChatMemberByIndex, // slot 57
+  (vfn)vt_SteamFriends017_SendClanChatMessage, // slot 58
+  (vfn)vt_SteamFriends017_GetClanChatMessage, // slot 59
+  (vfn)vt_SteamFriends017_IsClanChatAdmin, // slot 60
+  (vfn)vt_SteamFriends017_IsClanChatWindowOpenInSteam, // slot 61
+  (vfn)vt_SteamFriends017_OpenClanChatWindowInSteam, // slot 62
+  (vfn)vt_SteamFriends017_CloseClanChatWindowInSteam, // slot 63
+  (vfn)vt_SteamFriends017_SetListenForFriendsMessages, // slot 64
+  (vfn)vt_SteamFriends017_ReplyToFriendMessage, // slot 65
+  (vfn)vt_SteamFriends017_GetFriendMessage, // slot 66
+  (vfn)vt_SteamFriends017_GetFollowerCount, // slot 67
+  (vfn)vt_SteamFriends017_IsFollowing, // slot 68
+  (vfn)vt_SteamFriends017_EnumerateFollowingList, // slot 69
+  (vfn)vt_SteamFriends017_IsClanPublic, // slot 70
+  (vfn)vt_SteamFriends017_IsClanOfficialGameGroup, // slot 71
+  (vfn)vt_SteamFriends017_GetNumChatsWithUnreadPriorityMessages, // slot 72
+  (vfn)vt_SteamFriends017_ActivateGameOverlayRemotePlayTogetherInviteDialog, // slot 73
+  (vfn)vt_SteamFriends017_RegisterProtocolInOverlayBrowser, // slot 74
+  (vfn)vt_SteamFriends017_ActivateGameOverlayInviteDialogConnectString, // slot 75
+  (vfn)vt_SteamFriends017_RequestEquippedProfileItems, // slot 76
+  (vfn)vt_SteamFriends017_BHasEquippedProfileItem, // slot 77
+  (vfn)vt_SteamFriends017_GetProfileItemPropertyString, // slot 78
+  (vfn)vt_SteamFriends017_GetProfileItemPropertyUint, // slot 79
+};
+struct FakeSteamFriends017 { vfn *vptr; };
+static struct FakeSteamFriends017 g_steamfriends017_instance = { g_steamfriends017_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamUtils010 (ordinal 29, family SteamUtils) ===
+
+// slot 0: GetSecondsSinceAppActive() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils010_GetSecondsSinceAppActive(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 1: GetSecondsSinceComputerActive() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils010_GetSecondsSinceComputerActive(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 2: GetConnectedUniverse() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils010_GetConnectedUniverse(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 3: GetServerRealTime() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils010_GetServerRealTime(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 3, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 4: GetIPCountry() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamUtils010_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamUtils010_GetIPCountry(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamUtils010_GetIPCountry_buf[0] = '\0';
+    return vt_SteamUtils010_GetIPCountry_buf;
+  }
+  memcpy(vt_SteamUtils010_GetIPCountry_buf, retbuf, retlen);
+  vt_SteamUtils010_GetIPCountry_buf[retlen] = '\0';
+  return vt_SteamUtils010_GetIPCountry_buf;
+}
+
+// slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUtils010_GetImageSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: GetImageRGBA(int32 iImage, uint8_t* pubDest, int32 nDestBufferSize) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUtils010_GetImageRGBA(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: GetCSERIPPort(uint32* unIP, uint16_t* usPort) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamUtils010_GetCSERIPPort(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: GetCurrentBatteryPower() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils010_GetCurrentBatteryPower(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 8, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 9: GetAppID() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils010_GetAppID(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 9, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamUtils010_SetOverlayNotificationPosition(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 11: IsAPICallCompleted(uint64 hSteamAPICall, bool* pbFailed) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUtils010_IsAPICallCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetAPICallFailureReason(uint64 hSteamAPICall) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamUtils010_GetAPICallFailureReason(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetAPICallResult(uint64 hSteamAPICall, void* pCallback, int32 cubCallback, int32 iCallbackExpected, bool* pbFailed) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_SteamUtils010_GetAPICallResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: RunFrame() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamUtils010_RunFrame(void *self) {
+  (void)self;
+}
+
+// slot 15: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamUtils010_GetIPCCallCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamUtils010_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamUtils010_IsOverlayEnabled(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 17, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUtils010_BOverlayNeedsPresent(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: CheckFileSignature(const char* szFileName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamUtils010_CheckFileSignature(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 20: ShowGamepadTextInput(uint32 eInputMode, uint32 eLineInputMode, const char* pchDescription, uint32 unCharMax, const char* pchExistingText) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamUtils010_ShowGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: GetEnteredGamepadTextLength() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamUtils010_GetEnteredGamepadTextLength(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamUtils010_GetEnteredGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetSteamUILanguage() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamUtils010_GetSteamUILanguage_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamUtils010_GetSteamUILanguage(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamUtils010_GetSteamUILanguage_buf[0] = '\0';
+    return vt_SteamUtils010_GetSteamUILanguage_buf;
+  }
+  memcpy(vt_SteamUtils010_GetSteamUILanguage_buf, retbuf, retlen);
+  vt_SteamUtils010_GetSteamUILanguage_buf[retlen] = '\0';
+  return vt_SteamUtils010_GetSteamUILanguage_buf;
+}
+
+// slot 24: IsSteamRunningInVR() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamUtils010_IsSteamRunningInVR(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 24, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 25: SetOverlayNotificationInset(int32 nHorizontalInset, int32 nVerticalInset) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamUtils010_SetOverlayNotificationInset(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 26: IsSteamInBigPictureMode() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamUtils010_IsSteamInBigPictureMode(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(29, 26, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 27: StartVRDashboard() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamUtils010_StartVRDashboard(void *self) {
+  (void)self;
+}
+
+// slot 28: IsVRHeadsetStreamingEnabled() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUtils010_IsVRHeadsetStreamingEnabled(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 29: SetVRHeadsetStreamingEnabled(bool bEnabled) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamUtils010_SetVRHeadsetStreamingEnabled(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 30: IsSteamChinaLauncher() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUtils010_IsSteamChinaLauncher(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 31: InitFilterText(uint32 unFilterOptions) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamUtils010_InitFilterText(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 32: FilterText(uint32 eContext, CSteamID sourceSteamID, const char* pchInputMessage, char* pchOutFilteredText, uint32 nByteSizeOutFilteredText) -> int32 | __thiscall ret 24 (STUB)
+static int32_t THISCALL vt_SteamUtils010_FilterText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 33: GetIPv6ConnectivityState(uint32 eProtocol) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_SteamUtils010_GetIPv6ConnectivityState(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 34: IsSteamRunningOnSteamDeck() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUtils010_IsSteamRunningOnSteamDeck(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: ShowFloatingGamepadTextInput(uint32 eKeyboardMode, int32 nTextFieldXPosition, int32 nTextFieldYPosition, int32 nTextFieldWidth, int32 nTextFieldHeight) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamUtils010_ShowFloatingGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 36: SetGameLauncherMode(bool bLauncherMode) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamUtils010_SetGameLauncherMode(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 37: DismissFloatingGamepadTextInput() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUtils010_DismissFloatingGamepadTextInput(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 38: DismissGamepadTextInput() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUtils010_DismissGamepadTextInput(void *self) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamutils010_vtbl[39] = {
+  (vfn)vt_SteamUtils010_GetSecondsSinceAppActive, // slot 0
+  (vfn)vt_SteamUtils010_GetSecondsSinceComputerActive, // slot 1
+  (vfn)vt_SteamUtils010_GetConnectedUniverse, // slot 2
+  (vfn)vt_SteamUtils010_GetServerRealTime, // slot 3
+  (vfn)vt_SteamUtils010_GetIPCountry, // slot 4
+  (vfn)vt_SteamUtils010_GetImageSize, // slot 5
+  (vfn)vt_SteamUtils010_GetImageRGBA, // slot 6
+  (vfn)vt_SteamUtils010_GetCSERIPPort, // slot 7
+  (vfn)vt_SteamUtils010_GetCurrentBatteryPower, // slot 8
+  (vfn)vt_SteamUtils010_GetAppID, // slot 9
+  (vfn)vt_SteamUtils010_SetOverlayNotificationPosition, // slot 10
+  (vfn)vt_SteamUtils010_IsAPICallCompleted, // slot 11
+  (vfn)vt_SteamUtils010_GetAPICallFailureReason, // slot 12
+  (vfn)vt_SteamUtils010_GetAPICallResult, // slot 13
+  (vfn)vt_SteamUtils010_RunFrame, // slot 14
+  (vfn)vt_SteamUtils010_GetIPCCallCount, // slot 15
+  (vfn)vt_SteamUtils010_SetWarningMessageHook, // slot 16
+  (vfn)vt_SteamUtils010_IsOverlayEnabled, // slot 17
+  (vfn)vt_SteamUtils010_BOverlayNeedsPresent, // slot 18
+  (vfn)vt_SteamUtils010_CheckFileSignature, // slot 19
+  (vfn)vt_SteamUtils010_ShowGamepadTextInput, // slot 20
+  (vfn)vt_SteamUtils010_GetEnteredGamepadTextLength, // slot 21
+  (vfn)vt_SteamUtils010_GetEnteredGamepadTextInput, // slot 22
+  (vfn)vt_SteamUtils010_GetSteamUILanguage, // slot 23
+  (vfn)vt_SteamUtils010_IsSteamRunningInVR, // slot 24
+  (vfn)vt_SteamUtils010_SetOverlayNotificationInset, // slot 25
+  (vfn)vt_SteamUtils010_IsSteamInBigPictureMode, // slot 26
+  (vfn)vt_SteamUtils010_StartVRDashboard, // slot 27
+  (vfn)vt_SteamUtils010_IsVRHeadsetStreamingEnabled, // slot 28
+  (vfn)vt_SteamUtils010_SetVRHeadsetStreamingEnabled, // slot 29
+  (vfn)vt_SteamUtils010_IsSteamChinaLauncher, // slot 30
+  (vfn)vt_SteamUtils010_InitFilterText, // slot 31
+  (vfn)vt_SteamUtils010_FilterText, // slot 32
+  (vfn)vt_SteamUtils010_GetIPv6ConnectivityState, // slot 33
+  (vfn)vt_SteamUtils010_IsSteamRunningOnSteamDeck, // slot 34
+  (vfn)vt_SteamUtils010_ShowFloatingGamepadTextInput, // slot 35
+  (vfn)vt_SteamUtils010_SetGameLauncherMode, // slot 36
+  (vfn)vt_SteamUtils010_DismissFloatingGamepadTextInput, // slot 37
+  (vfn)vt_SteamUtils010_DismissGamepadTextInput, // slot 38
+};
+struct FakeSteamUtils010 { vfn *vptr; };
+static struct FakeSteamUtils010 g_steamutils010_instance = { g_steamutils010_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMUSERSTATS_INTERFACE_VERSION012 (ordinal 30, family SteamUserStats) ===
+
+// slot 0: RequestCurrentStats() -> bool | __thiscall ret 0 (HELPER FALLBACK)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestCurrentStats(void *self) {
+  (void)self;
+  return 1;
+}
+
+// slot 1: GetStat_2(const char* pchName, float* pData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2(void *self, const char * pchName, float * pData) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pData != NULL && retlen >= respOff + 4) {
+    float outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pData = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 2: GetStat(const char* pchName, int32* pData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat(void *self, const char * pchName, int32_t * pData) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pData != NULL && retlen >= respOff + 4) {
+    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pData = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 3: SetStat_2(const char* pchName, float fData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2(void *self, const char * pchName, uint32_t fData) {
+  (void)self;
+  uint8_t argbuf[4104];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &fData, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 4: SetStat(const char* pchName, int32 nData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat(void *self, const char * pchName, int32_t nData) {
+  (void)self;
+  uint8_t argbuf[4104];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &nData, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 5: UpdateAvgRateStat(const char* pchName, float flCountThisSession, double dSessionLength) -> bool | __thiscall ret 16
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat(void *self, const char * pchName, uint32_t flCountThisSession, double dSessionLength) {
+  (void)self;
+  uint8_t argbuf[4112];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &flCountThisSession, 4); argOff += 4;
+  memcpy(argbuf + argOff, &dSessionLength, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 6: GetAchievement(const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement(void *self, const char * pchName, int * pbAchieved) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pbAchieved != NULL && retlen >= respOff + 4) {
+    int outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pbAchieved = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 7: SetAchievement(const char* pchName) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement(void *self, const char * pchName) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 8: ClearAchievement(const char* pchName) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement(void *self, const char * pchName) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 9: GetAchievementAndUnlockTime(const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 12
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime(void *self, const char * pchName, int * pbAchieved, uint32_t * punUnlockTime) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[12]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 9, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pbAchieved != NULL && retlen >= respOff + 4) {
+    int outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pbAchieved = outVal;
+  }
+  respOff += 4;
+  if (punUnlockTime != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *punUnlockTime = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 10: StoreStats() -> bool | __thiscall ret 0
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 10, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 11: GetAchievementIcon(const char* pchName) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementIcon(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetAchievementDisplayAttribute(const char* pchName, const char* pchKey) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute(void *self, const char * pchName, const char * pchKey) {
+  (void)self;
+  uint8_t argbuf[8200];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  {
+    uint32_t strLen;
+    if (pchKey == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKey);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[0] = '\0';
+    return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf;
+  }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf, retbuf, retlen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf[retlen] = '\0';
+  return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute_buf;
+}
+
+// slot 13: IndicateAchievementProgress(const char* pchName, uint32 nCurProgress, uint32 nMaxProgress) -> bool | __thiscall ret 12
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress(void *self, const char * pchName, uint32_t nCurProgress, uint32_t nMaxProgress) {
+  (void)self;
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &nCurProgress, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nMaxProgress, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 14: GetNumAchievements() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 14, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 15: GetAchievementName(uint32 iAchievement) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName(void *self, uint32_t iAchievement) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &iAchievement, 4); argOff += 4;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 15, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[0] = '\0';
+    return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf;
+  }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf, retbuf, retlen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf[retlen] = '\0';
+  return vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName_buf;
+}
+
+// slot 16: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 17: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: GetUserAchievementAndUnlockTime(CSteamID steamIDUser, const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserAchievementAndUnlockTime(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: ResetAllStats(bool bAchievementsToo) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats(void *self, int bAchievementsToo) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &bAchievementsToo, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(30, 21, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 22: FindOrCreateLeaderboard(const char* pchLeaderboardName, uint32 eLeaderboardSortMethod, uint32 eLeaderboardDisplayType) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_FindOrCreateLeaderboard(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 23: FindLeaderboard(const char* pchLeaderboardName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_FindLeaderboard(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 24: GetLeaderboardName(uint64 hSteamLeaderboard) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 25: GetLeaderboardEntryCount(uint64 hSteamLeaderboard) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardEntryCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: GetLeaderboardSortMethod(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardSortMethod(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: GetLeaderboardDisplayType(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardDisplayType(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 28: DownloadLeaderboardEntries(uint64 hSteamLeaderboard, uint32 eLeaderboardDataRequest, int32 nRangeStart, int32 nRangeEnd) -> uint64 | __thiscall ret 20 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_DownloadLeaderboardEntries(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 29: DownloadLeaderboardEntriesForUsers(uint64 hSteamLeaderboard, CSteamID* prgUsers, int32 cUsers) -> uint64 | __thiscall ret 16 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_DownloadLeaderboardEntriesForUsers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 30: GetDownloadedLeaderboardEntry(uint64 hSteamLeaderboardEntries, int32 index, w_LeaderboardEntry_t_123* pLeaderboardEntry, int32* pDetails, int32 cDetailsMax) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetDownloadedLeaderboardEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 31: UploadLeaderboardScore(uint64 hSteamLeaderboard, uint32 eLeaderboardUploadScoreMethod, int32 nScore, const int32_t* pScoreDetails, int32 cScoreDetailsCount) -> uint64 | __thiscall ret 24 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_UploadLeaderboardScore(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 32: AttachLeaderboardUGC(uint64 hSteamLeaderboard, uint64 hUGC) -> uint64 | __thiscall ret 16 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_AttachLeaderboardUGC(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 33: GetNumberOfCurrentPlayers() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumberOfCurrentPlayers(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 34: RequestGlobalAchievementPercentages() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestGlobalAchievementPercentages(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 35: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 36: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNextMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 37: GetAchievementAchievedPercent(const char* pchName, float* pflPercent) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAchievedPercent(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 38: RequestGlobalStats(int32 nHistoryDays) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestGlobalStats(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 39: GetGlobalStat_2(const char* pchStatName, double* pData) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStat_2(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 40: GetGlobalStat(const char* pchStatName, int64_t* pData) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStat(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 41: GetGlobalStatHistory_2(const char* pchStatName, double* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStatHistory_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 42: GetGlobalStatHistory(const char* pchStatName, int64_t* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStatHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 43: GetAchievementProgressLimits_2(const char* pchName, float* pfMinProgress, float* pfMaxProgress) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementProgressLimits_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 44: GetAchievementProgressLimits(const char* pchName, int32* pnMinProgress, int32* pnMaxProgress) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementProgressLimits(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamuserstats_interface_version012_vtbl[45] = {
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestCurrentStats, // slot 0
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat_2, // slot 1
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetStat, // slot 2
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat_2, // slot 3
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetStat, // slot 4
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_UpdateAvgRateStat, // slot 5
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievement, // slot 6
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_SetAchievement, // slot 7
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_ClearAchievement, // slot 8
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAndUnlockTime, // slot 9
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_StoreStats, // slot 10
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementIcon, // slot 11
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementDisplayAttribute, // slot 12
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_IndicateAchievementProgress, // slot 13
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumAchievements, // slot 14
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementName, // slot 15
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestUserStats, // slot 16
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserStat_2, // slot 17
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserStat, // slot 18
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserAchievement, // slot 19
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetUserAchievementAndUnlockTime, // slot 20
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_ResetAllStats, // slot 21
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_FindOrCreateLeaderboard, // slot 22
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_FindLeaderboard, // slot 23
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardName, // slot 24
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardEntryCount, // slot 25
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardSortMethod, // slot 26
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetLeaderboardDisplayType, // slot 27
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_DownloadLeaderboardEntries, // slot 28
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_DownloadLeaderboardEntriesForUsers, // slot 29
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetDownloadedLeaderboardEntry, // slot 30
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_UploadLeaderboardScore, // slot 31
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_AttachLeaderboardUGC, // slot 32
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNumberOfCurrentPlayers, // slot 33
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestGlobalAchievementPercentages, // slot 34
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetMostAchievedAchievementInfo, // slot 35
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetNextMostAchievedAchievementInfo, // slot 36
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementAchievedPercent, // slot 37
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_RequestGlobalStats, // slot 38
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStat_2, // slot 39
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStat, // slot 40
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStatHistory_2, // slot 41
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetGlobalStatHistory, // slot 42
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementProgressLimits_2, // slot 43
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION012_GetAchievementProgressLimits, // slot 44
+};
+struct FakeSTEAMUSERSTATS_INTERFACE_VERSION012 { vfn *vptr; };
+static struct FakeSTEAMUSERSTATS_INTERFACE_VERSION012 g_steamuserstats_interface_version012_instance = { g_steamuserstats_interface_version012_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMUSERSTATS_INTERFACE_VERSION013 (ordinal 31, family SteamUserStats) ===
+
+// slot 0: GetStat_2(const char* pchName, float* pData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2(void *self, const char * pchName, float * pData) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 0, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pData != NULL && retlen >= respOff + 4) {
+    float outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pData = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 1: GetStat(const char* pchName, int32* pData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat(void *self, const char * pchName, int32_t * pData) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 1, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pData != NULL && retlen >= respOff + 4) {
+    int32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pData = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 2: SetStat_2(const char* pchName, float fData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2(void *self, const char * pchName, uint32_t fData) {
+  (void)self;
+  uint8_t argbuf[4104];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &fData, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 2, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 3: SetStat(const char* pchName, int32 nData) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat(void *self, const char * pchName, int32_t nData) {
+  (void)self;
+  uint8_t argbuf[4104];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &nData, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 3, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 4: UpdateAvgRateStat(const char* pchName, float flCountThisSession, double dSessionLength) -> bool | __thiscall ret 16
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat(void *self, const char * pchName, uint32_t flCountThisSession, double dSessionLength) {
+  (void)self;
+  uint8_t argbuf[4112];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &flCountThisSession, 4); argOff += 4;
+  memcpy(argbuf + argOff, &dSessionLength, 8); argOff += 8;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 4, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 5: GetAchievement(const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 8
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement(void *self, const char * pchName, int * pbAchieved) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 5, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pbAchieved != NULL && retlen >= respOff + 4) {
+    int outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pbAchieved = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 6: SetAchievement(const char* pchName) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement(void *self, const char * pchName) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 7: ClearAchievement(const char* pchName) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement(void *self, const char * pchName) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 8: GetAchievementAndUnlockTime(const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 12
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime(void *self, const char * pchName, int * pbAchieved, uint32_t * punUnlockTime) {
+  (void)self;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[12]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  if (pbAchieved != NULL && retlen >= respOff + 4) {
+    int outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *pbAchieved = outVal;
+  }
+  respOff += 4;
+  if (punUnlockTime != NULL && retlen >= respOff + 4) {
+    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
+    *punUnlockTime = outVal;
+  }
+  respOff += 4;
+  return ret;
+}
+
+// slot 9: StoreStats() -> bool | __thiscall ret 0
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 9, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 10: GetAchievementIcon(const char* pchName) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementIcon(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: GetAchievementDisplayAttribute(const char* pchName, const char* pchKey) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute(void *self, const char * pchName, const char * pchKey) {
+  (void)self;
+  uint8_t argbuf[8200];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  {
+    uint32_t strLen;
+    if (pchKey == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchKey);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchKey, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 11, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[0] = '\0';
+    return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf;
+  }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf, retbuf, retlen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf[retlen] = '\0';
+  return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute_buf;
+}
+
+// slot 12: IndicateAchievementProgress(const char* pchName, uint32 nCurProgress, uint32 nMaxProgress) -> bool | __thiscall ret 12
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress(void *self, const char * pchName, uint32_t nCurProgress, uint32_t nMaxProgress) {
+  (void)self;
+  uint8_t argbuf[4108];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchName == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchName);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchName, strLen); argOff += strLen;
+    }
+  }
+  memcpy(argbuf + argOff, &nCurProgress, 4); argOff += 4;
+  memcpy(argbuf + argOff, &nMaxProgress, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 12, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 13: GetNumAchievements() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 13, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 14: GetAchievementName(uint32 iAchievement) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName(void *self, uint32_t iAchievement) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &iAchievement, 4); argOff += 4;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[0] = '\0';
+    return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf;
+  }
+  memcpy(vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf, retbuf, retlen);
+  vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf[retlen] = '\0';
+  return vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName_buf;
+}
+
+// slot 15: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 16: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 17: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: GetUserAchievementAndUnlockTime(CSteamID steamIDUser, const char* pchName, bool* pbAchieved, uint32* punUnlockTime) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserAchievementAndUnlockTime(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: ResetAllStats(bool bAchievementsToo) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats(void *self, int bAchievementsToo) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &bAchievementsToo, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(31, 20, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 21: FindOrCreateLeaderboard(const char* pchLeaderboardName, uint32 eLeaderboardSortMethod, uint32 eLeaderboardDisplayType) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_FindOrCreateLeaderboard(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 22: FindLeaderboard(const char* pchLeaderboardName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_FindLeaderboard(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 23: GetLeaderboardName(uint64 hSteamLeaderboard) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 24: GetLeaderboardEntryCount(uint64 hSteamLeaderboard) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardEntryCount(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 25: GetLeaderboardSortMethod(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardSortMethod(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: GetLeaderboardDisplayType(uint64 hSteamLeaderboard) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardDisplayType(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: DownloadLeaderboardEntries(uint64 hSteamLeaderboard, uint32 eLeaderboardDataRequest, int32 nRangeStart, int32 nRangeEnd) -> uint64 | __thiscall ret 20 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_DownloadLeaderboardEntries(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 28: DownloadLeaderboardEntriesForUsers(uint64 hSteamLeaderboard, CSteamID* prgUsers, int32 cUsers) -> uint64 | __thiscall ret 16 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_DownloadLeaderboardEntriesForUsers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 29: GetDownloadedLeaderboardEntry(uint64 hSteamLeaderboardEntries, int32 index, w_LeaderboardEntry_t_123* pLeaderboardEntry, int32* pDetails, int32 cDetailsMax) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetDownloadedLeaderboardEntry(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 30: UploadLeaderboardScore(uint64 hSteamLeaderboard, uint32 eLeaderboardUploadScoreMethod, int32 nScore, const int32_t* pScoreDetails, int32 cScoreDetailsCount) -> uint64 | __thiscall ret 24 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_UploadLeaderboardScore(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 31: AttachLeaderboardUGC(uint64 hSteamLeaderboard, uint64 hUGC) -> uint64 | __thiscall ret 16 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_AttachLeaderboardUGC(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 32: GetNumberOfCurrentPlayers() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumberOfCurrentPlayers(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 33: RequestGlobalAchievementPercentages() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestGlobalAchievementPercentages(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 34: GetMostAchievedAchievementInfo(char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 16 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: GetNextMostAchievedAchievementInfo(int32 iIteratorPrevious, char* pchName, uint32 unNameBufLen, float* pflPercent, bool* pbAchieved) -> int32 | __thiscall ret 20 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNextMostAchievedAchievementInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 36: GetAchievementAchievedPercent(const char* pchName, float* pflPercent) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAchievedPercent(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 37: RequestGlobalStats(int32 nHistoryDays) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestGlobalStats(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 38: GetGlobalStat_2(const char* pchStatName, double* pData) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStat_2(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 39: GetGlobalStat(const char* pchStatName, int64_t* pData) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStat(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 40: GetGlobalStatHistory_2(const char* pchStatName, double* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStatHistory_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 41: GetGlobalStatHistory(const char* pchStatName, int64_t* pData, uint32 cubData) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStatHistory(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 42: GetAchievementProgressLimits_2(const char* pchName, float* pfMinProgress, float* pfMaxProgress) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementProgressLimits_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 43: GetAchievementProgressLimits(const char* pchName, int32* pnMinProgress, int32* pnMaxProgress) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementProgressLimits(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamuserstats_interface_version013_vtbl[44] = {
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat_2, // slot 0
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetStat, // slot 1
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat_2, // slot 2
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetStat, // slot 3
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_UpdateAvgRateStat, // slot 4
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievement, // slot 5
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_SetAchievement, // slot 6
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_ClearAchievement, // slot 7
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAndUnlockTime, // slot 8
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_StoreStats, // slot 9
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementIcon, // slot 10
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementDisplayAttribute, // slot 11
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_IndicateAchievementProgress, // slot 12
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumAchievements, // slot 13
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementName, // slot 14
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestUserStats, // slot 15
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserStat_2, // slot 16
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserStat, // slot 17
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserAchievement, // slot 18
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetUserAchievementAndUnlockTime, // slot 19
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_ResetAllStats, // slot 20
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_FindOrCreateLeaderboard, // slot 21
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_FindLeaderboard, // slot 22
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardName, // slot 23
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardEntryCount, // slot 24
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardSortMethod, // slot 25
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetLeaderboardDisplayType, // slot 26
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_DownloadLeaderboardEntries, // slot 27
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_DownloadLeaderboardEntriesForUsers, // slot 28
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetDownloadedLeaderboardEntry, // slot 29
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_UploadLeaderboardScore, // slot 30
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_AttachLeaderboardUGC, // slot 31
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNumberOfCurrentPlayers, // slot 32
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestGlobalAchievementPercentages, // slot 33
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetMostAchievedAchievementInfo, // slot 34
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetNextMostAchievedAchievementInfo, // slot 35
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementAchievedPercent, // slot 36
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_RequestGlobalStats, // slot 37
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStat_2, // slot 38
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStat, // slot 39
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStatHistory_2, // slot 40
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetGlobalStatHistory, // slot 41
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementProgressLimits_2, // slot 42
+  (vfn)vt_STEAMUSERSTATS_INTERFACE_VERSION013_GetAchievementProgressLimits, // slot 43
+};
+struct FakeSTEAMUSERSTATS_INTERFACE_VERSION013 { vfn *vptr; };
+static struct FakeSTEAMUSERSTATS_INTERFACE_VERSION013 g_steamuserstats_interface_version013_instance = { g_steamuserstats_interface_version013_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamInput006 (ordinal 32, family SteamInput) ===
+
+// slot 0: Init(bool bExplicitlyCallRunFrame) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamInput006_Init(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: Shutdown() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamInput006_Shutdown(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: SetInputActionManifestFilePath(const char* pchInputActionManifestAbsolutePath) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_SteamInput006_SetInputActionManifestFilePath(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: RunFrame(bool bReservedValue) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamInput006_RunFrame(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 4: BWaitForData(bool bWaitForever, uint32 unTimeout) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamInput006_BWaitForData(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 5: BNewDataAvailable() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamInput006_BNewDataAvailable(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: GetConnectedControllers(uint64* handlesOut) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_SteamInput006_GetConnectedControllers(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: EnableDeviceCallbacks() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamInput006_EnableDeviceCallbacks(void *self) {
+  (void)self;
+}
+
+// slot 8: EnableActionEventCallbacks(void* pCallback) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamInput006_EnableActionEventCallbacks(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 9: GetActionSetHandle(const char* pszActionSetName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamInput006_GetActionSetHandle(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 10: ActivateActionSet(uint64 inputHandle, uint64 actionSetHandle) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamInput006_ActivateActionSet(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 11: GetCurrentActionSet(uint64 inputHandle) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamInput006_GetCurrentActionSet(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 12: ActivateActionSetLayer(uint64 inputHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamInput006_ActivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 13: DeactivateActionSetLayer(uint64 inputHandle, uint64 actionSetLayerHandle) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamInput006_DeactivateActionSetLayer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 14: DeactivateAllActionSetLayers(uint64 inputHandle) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamInput006_DeactivateAllActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 15: GetActiveActionSetLayers(uint64 inputHandle, uint64* handlesOut) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_SteamInput006_GetActiveActionSetLayers(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: GetDigitalActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamInput006_GetDigitalActionHandle(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 17: GetDigitalActionData(InputDigitalActionData_t* _ret, uint64 inputHandle, uint64 digitalActionHandle) -> InputDigitalActionData_t* | __thiscall ret 20 (STUB)
+static void * THISCALL vt_SteamInput006_GetDigitalActionData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return NULL;
+}
+
+// slot 18: GetDigitalActionOrigins(uint64 inputHandle, uint64 actionSetHandle, uint64 digitalActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
+static int32_t THISCALL vt_SteamInput006_GetDigitalActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: GetStringForDigitalActionName(uint64 eActionHandle) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamInput006_GetStringForDigitalActionName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 20: GetAnalogActionHandle(const char* pszActionName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamInput006_GetAnalogActionHandle(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 21: GetAnalogActionData(InputAnalogActionData_t* _ret, uint64 inputHandle, uint64 analogActionHandle) -> InputAnalogActionData_t* | __thiscall ret 20 (STUB)
+static void * THISCALL vt_SteamInput006_GetAnalogActionData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return NULL;
+}
+
+// slot 22: GetAnalogActionOrigins(uint64 inputHandle, uint64 actionSetHandle, uint64 analogActionHandle, uint32* originsOut) -> int32 | __thiscall ret 28 (STUB)
+static int32_t THISCALL vt_SteamInput006_GetAnalogActionOrigins(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetGlyphPNGForActionOrigin(uint32 _unknownArg0, uint32 _unknownArg1, uint32 _unknownArg2) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamInput006_GetGlyphPNGForActionOrigin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 24: GetGlyphSVGForActionOrigin(uint32 _unknownArg0, uint32 _unknownArg1) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamInput006_GetGlyphSVGForActionOrigin(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 25: GetGlyphForActionOrigin_Legacy(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamInput006_GetGlyphForActionOrigin_Legacy(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 26: GetStringForActionOrigin(uint32 eOrigin) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamInput006_GetStringForActionOrigin(void *self, uint32_t dummy0) {
+  (void)self;
+  return "";
+}
+
+// slot 27: GetStringForAnalogActionName(uint64 eActionHandle) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamInput006_GetStringForAnalogActionName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 28: StopAnalogActionMomentum(uint64 inputHandle, uint64 eAction) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamInput006_StopAnalogActionMomentum(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 29: GetMotionData(InputMotionData_t* _ret, uint64 inputHandle) -> InputMotionData_t* | __thiscall ret 12 (STUB)
+static void * THISCALL vt_SteamInput006_GetMotionData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return NULL;
+}
+
+// slot 30: TriggerVibration(uint64 inputHandle, uint32 usLeftSpeed, uint32 usRightSpeed) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamInput006_TriggerVibration(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 31: TriggerVibrationExtended(uint64 inputHandle, uint32 usLeftSpeed, uint32 usRightSpeed, uint32 usLeftTriggerSpeed, uint32 usRightTriggerSpeed) -> void | __thiscall ret 24 (STUB)
+static void THISCALL vt_SteamInput006_TriggerVibrationExtended(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+}
+
+// slot 32: TriggerSimpleHapticEvent(uint64 inputHandle, uint32 eHapticLocation, bool nIntensity, char nGainDB, bool nOtherIntensity, char nOtherGainDB) -> void | __thiscall ret 28 (STUB)
+static void THISCALL vt_SteamInput006_TriggerSimpleHapticEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+}
+
+// slot 33: SetLEDColor(uint64 inputHandle, bool nColorR, bool nColorG, bool nColorB, uint32 nFlags) -> void | __thiscall ret 24 (STUB)
+static void THISCALL vt_SteamInput006_SetLEDColor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+}
+
+// slot 34: Legacy_TriggerHapticPulse(uint64 inputHandle, uint32 eTargetPad, uint32 usDurationMicroSec) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamInput006_Legacy_TriggerHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 35: Legacy_TriggerRepeatedHapticPulse(uint64 inputHandle, uint32 eTargetPad, uint32 usDurationMicroSec, uint32 usOffMicroSec, uint32 unRepeat, uint32 nFlags) -> void | __thiscall ret 28 (STUB)
+static void THISCALL vt_SteamInput006_Legacy_TriggerRepeatedHapticPulse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+}
+
+// slot 36: ShowBindingPanel(uint64 inputHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamInput006_ShowBindingPanel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 37: GetInputTypeForHandle(uint64 inputHandle) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamInput006_GetInputTypeForHandle(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 38: GetControllerForGamepadIndex(int32 nIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamInput006_GetControllerForGamepadIndex(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 39: GetGamepadIndexForController(uint64 ulinputHandle) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamInput006_GetGamepadIndexForController(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 40: GetStringForXboxOrigin(uint32 eOrigin) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_SteamInput006_GetStringForXboxOrigin(void *self, uint32_t dummy0) {
+  (void)self;
+  return "";
+}
+
+// slot 41: GetGlyphForXboxOrigin(uint32 _unknownArg0) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamInput006_GetGlyphForXboxOrigin(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 42: GetActionOriginFromXboxOrigin(uint64 inputHandle, uint32 eOrigin) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamInput006_GetActionOriginFromXboxOrigin(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 43: TranslateActionOrigin(uint32 eDestinationInputType, uint32 eSourceOrigin) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamInput006_TranslateActionOrigin(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 44: GetDeviceBindingRevision(uint64 inputHandle, int32* pMajor, int32* pMinor) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamInput006_GetDeviceBindingRevision(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 45: GetRemotePlaySessionID(uint64 inputHandle) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamInput006_GetRemotePlaySessionID(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 46: GetSessionInputConfigurationSettings() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamInput006_GetSessionInputConfigurationSettings(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 47: SetDualSenseTriggerEffect(uint64 inputHandle, const ScePadTriggerEffectParam* pParam) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_SteamInput006_SetDualSenseTriggerEffect(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+static vfn g_steaminput006_vtbl[48] = {
+  (vfn)vt_SteamInput006_Init, // slot 0
+  (vfn)vt_SteamInput006_Shutdown, // slot 1
+  (vfn)vt_SteamInput006_SetInputActionManifestFilePath, // slot 2
+  (vfn)vt_SteamInput006_RunFrame, // slot 3
+  (vfn)vt_SteamInput006_BWaitForData, // slot 4
+  (vfn)vt_SteamInput006_BNewDataAvailable, // slot 5
+  (vfn)vt_SteamInput006_GetConnectedControllers, // slot 6
+  (vfn)vt_SteamInput006_EnableDeviceCallbacks, // slot 7
+  (vfn)vt_SteamInput006_EnableActionEventCallbacks, // slot 8
+  (vfn)vt_SteamInput006_GetActionSetHandle, // slot 9
+  (vfn)vt_SteamInput006_ActivateActionSet, // slot 10
+  (vfn)vt_SteamInput006_GetCurrentActionSet, // slot 11
+  (vfn)vt_SteamInput006_ActivateActionSetLayer, // slot 12
+  (vfn)vt_SteamInput006_DeactivateActionSetLayer, // slot 13
+  (vfn)vt_SteamInput006_DeactivateAllActionSetLayers, // slot 14
+  (vfn)vt_SteamInput006_GetActiveActionSetLayers, // slot 15
+  (vfn)vt_SteamInput006_GetDigitalActionHandle, // slot 16
+  (vfn)vt_SteamInput006_GetDigitalActionData, // slot 17
+  (vfn)vt_SteamInput006_GetDigitalActionOrigins, // slot 18
+  (vfn)vt_SteamInput006_GetStringForDigitalActionName, // slot 19
+  (vfn)vt_SteamInput006_GetAnalogActionHandle, // slot 20
+  (vfn)vt_SteamInput006_GetAnalogActionData, // slot 21
+  (vfn)vt_SteamInput006_GetAnalogActionOrigins, // slot 22
+  (vfn)vt_SteamInput006_GetGlyphPNGForActionOrigin, // slot 23
+  (vfn)vt_SteamInput006_GetGlyphSVGForActionOrigin, // slot 24
+  (vfn)vt_SteamInput006_GetGlyphForActionOrigin_Legacy, // slot 25
+  (vfn)vt_SteamInput006_GetStringForActionOrigin, // slot 26
+  (vfn)vt_SteamInput006_GetStringForAnalogActionName, // slot 27
+  (vfn)vt_SteamInput006_StopAnalogActionMomentum, // slot 28
+  (vfn)vt_SteamInput006_GetMotionData, // slot 29
+  (vfn)vt_SteamInput006_TriggerVibration, // slot 30
+  (vfn)vt_SteamInput006_TriggerVibrationExtended, // slot 31
+  (vfn)vt_SteamInput006_TriggerSimpleHapticEvent, // slot 32
+  (vfn)vt_SteamInput006_SetLEDColor, // slot 33
+  (vfn)vt_SteamInput006_Legacy_TriggerHapticPulse, // slot 34
+  (vfn)vt_SteamInput006_Legacy_TriggerRepeatedHapticPulse, // slot 35
+  (vfn)vt_SteamInput006_ShowBindingPanel, // slot 36
+  (vfn)vt_SteamInput006_GetInputTypeForHandle, // slot 37
+  (vfn)vt_SteamInput006_GetControllerForGamepadIndex, // slot 38
+  (vfn)vt_SteamInput006_GetGamepadIndexForController, // slot 39
+  (vfn)vt_SteamInput006_GetStringForXboxOrigin, // slot 40
+  (vfn)vt_SteamInput006_GetGlyphForXboxOrigin, // slot 41
+  (vfn)vt_SteamInput006_GetActionOriginFromXboxOrigin, // slot 42
+  (vfn)vt_SteamInput006_TranslateActionOrigin, // slot 43
+  (vfn)vt_SteamInput006_GetDeviceBindingRevision, // slot 44
+  (vfn)vt_SteamInput006_GetRemotePlaySessionID, // slot 45
+  (vfn)vt_SteamInput006_GetSessionInputConfigurationSettings, // slot 46
+  (vfn)vt_SteamInput006_SetDualSenseTriggerEffect, // slot 47
+};
+struct FakeSteamInput006 { vfn *vptr; };
+static struct FakeSteamInput006 g_steaminput006_instance = { g_steaminput006_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamGameServer014 (ordinal 33, family SteamGameServer) ===
+
+// slot 0: InitGameServer(uint32 unIP, uint32 usGamePort, uint32 usQueryPort, uint32 unFlags, uint32 nGameAppId, const char* pchVersionString) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_SteamGameServer014_InitGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: SetProduct(const char* pszProduct) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetProduct(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 2: SetGameDescription(const char* pszGameDescription) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetGameDescription(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 3: SetModDir(const char* pszModDir) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetModDir(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 4: SetDedicatedServer(bool bDedicated) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetDedicatedServer(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 5: LogOn(const char* pszToken) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_LogOn(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 6: LogOnAnonymous() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer014_LogOnAnonymous(void *self) {
+  (void)self;
+}
+
+// slot 7: LogOff() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer014_LogOff(void *self) {
+  (void)self;
+}
+
+// slot 8: BLoggedOn() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamGameServer014_BLoggedOn(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: BSecure() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamGameServer014_BSecure(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamGameServer014_GetSteamID(void *self, void *sretOut) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 11: WasRestartRequested() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamGameServer014_WasRestartRequested(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: SetMaxPlayerCount(int32 cPlayersMax) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetMaxPlayerCount(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 13: SetBotPlayerCount(int32 cBotplayers) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetBotPlayerCount(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 14: SetServerName(const char* pszServerName) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetServerName(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 15: SetMapName(const char* pszMapName) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetMapName(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 16: SetPasswordProtected(bool bPasswordProtected) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetPasswordProtected(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 17: SetSpectatorPort(uint32 unSpectatorPort) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetSpectatorPort(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 18: SetSpectatorServerName(const char* pszSpectatorServerName) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetSpectatorServerName(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 19: ClearAllKeyValues() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer014_ClearAllKeyValues(void *self) {
+  (void)self;
+}
+
+// slot 20: SetKeyValue(const char* pKey, const char* pValue) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamGameServer014_SetKeyValue(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 21: SetGameTags(const char* pchGameTags) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetGameTags(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 22: SetGameData(const char* pchGameData) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetGameData(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 23: SetRegion(const char* pszRegion) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetRegion(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 24: SetAdvertiseServerActive(bool bActive) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetAdvertiseServerActive(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 25: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamGameServer014_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamGameServer014_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamGameServer014_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 28: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_CancelAuthTicket(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 29: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamGameServer014_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 30: RequestUserGroupStatus(CSteamID steamIDUser, CSteamID steamIDGroup) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer014_RequestUserGroupStatus(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 31: GetGameplayStats() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer014_GetGameplayStats(void *self) {
+  (void)self;
+}
+
+// slot 32: GetServerReputation() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_SteamGameServer014_GetServerReputation(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 33: GetPublicIP(SteamIPAddress_t* _ret) -> SteamIPAddress_t* | __thiscall ret 4 (STUB)
+static void * THISCALL vt_SteamGameServer014_GetPublicIP(void *self, uint32_t dummy0) {
+  (void)self;
+  return NULL;
+}
+
+// slot 34: HandleIncomingPacket(const void* pData, int32 cbData, uint32 srcIP, uint32 srcPort) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer014_HandleIncomingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: GetNextOutgoingPacket(void* pOut, int32 cbMaxOut, uint32* pNetAdr, uint16_t* pPort) -> int32 | __thiscall ret 16 (STUB)
+static int32_t THISCALL vt_SteamGameServer014_GetNextOutgoingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 36: AssociateWithClan(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamGameServer014_AssociateWithClan(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 37: ComputeNewPlayerCompatibility(CSteamID steamIDNewPlayer) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamGameServer014_ComputeNewPlayerCompatibility(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 38: SendUserConnectAndAuthenticate_DEPRECATED(uint32 unIPClient, const void* pvAuthBlob, uint32 cubAuthBlobSize, CSteamID* pSteamIDUser) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer014_SendUserConnectAndAuthenticate_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 39: CreateUnauthenticatedUserConnection() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamGameServer014_CreateUnauthenticatedUserConnection(void *self, void *sretOut) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 40: SendUserDisconnect_DEPRECATED(CSteamID steamIDUser) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamGameServer014_SendUserDisconnect_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 41: BUpdateUserData(CSteamID steamIDUser, const char* pchPlayerName, uint32 uScore) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer014_BUpdateUserData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 42: SetMasterServerHeartbeatInterval_DEPRECATED(int32 iHeartbeatInterval) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer014_SetMasterServerHeartbeatInterval_DEPRECATED(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 43: ForceMasterServerHeartbeat_DEPRECATED() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer014_ForceMasterServerHeartbeat_DEPRECATED(void *self) {
+  (void)self;
+}
+
+static vfn g_steamgameserver014_vtbl[44] = {
+  (vfn)vt_SteamGameServer014_InitGameServer, // slot 0
+  (vfn)vt_SteamGameServer014_SetProduct, // slot 1
+  (vfn)vt_SteamGameServer014_SetGameDescription, // slot 2
+  (vfn)vt_SteamGameServer014_SetModDir, // slot 3
+  (vfn)vt_SteamGameServer014_SetDedicatedServer, // slot 4
+  (vfn)vt_SteamGameServer014_LogOn, // slot 5
+  (vfn)vt_SteamGameServer014_LogOnAnonymous, // slot 6
+  (vfn)vt_SteamGameServer014_LogOff, // slot 7
+  (vfn)vt_SteamGameServer014_BLoggedOn, // slot 8
+  (vfn)vt_SteamGameServer014_BSecure, // slot 9
+  (vfn)vt_SteamGameServer014_GetSteamID, // slot 10
+  (vfn)vt_SteamGameServer014_WasRestartRequested, // slot 11
+  (vfn)vt_SteamGameServer014_SetMaxPlayerCount, // slot 12
+  (vfn)vt_SteamGameServer014_SetBotPlayerCount, // slot 13
+  (vfn)vt_SteamGameServer014_SetServerName, // slot 14
+  (vfn)vt_SteamGameServer014_SetMapName, // slot 15
+  (vfn)vt_SteamGameServer014_SetPasswordProtected, // slot 16
+  (vfn)vt_SteamGameServer014_SetSpectatorPort, // slot 17
+  (vfn)vt_SteamGameServer014_SetSpectatorServerName, // slot 18
+  (vfn)vt_SteamGameServer014_ClearAllKeyValues, // slot 19
+  (vfn)vt_SteamGameServer014_SetKeyValue, // slot 20
+  (vfn)vt_SteamGameServer014_SetGameTags, // slot 21
+  (vfn)vt_SteamGameServer014_SetGameData, // slot 22
+  (vfn)vt_SteamGameServer014_SetRegion, // slot 23
+  (vfn)vt_SteamGameServer014_SetAdvertiseServerActive, // slot 24
+  (vfn)vt_SteamGameServer014_GetAuthSessionTicket, // slot 25
+  (vfn)vt_SteamGameServer014_BeginAuthSession, // slot 26
+  (vfn)vt_SteamGameServer014_EndAuthSession, // slot 27
+  (vfn)vt_SteamGameServer014_CancelAuthTicket, // slot 28
+  (vfn)vt_SteamGameServer014_UserHasLicenseForApp, // slot 29
+  (vfn)vt_SteamGameServer014_RequestUserGroupStatus, // slot 30
+  (vfn)vt_SteamGameServer014_GetGameplayStats, // slot 31
+  (vfn)vt_SteamGameServer014_GetServerReputation, // slot 32
+  (vfn)vt_SteamGameServer014_GetPublicIP, // slot 33
+  (vfn)vt_SteamGameServer014_HandleIncomingPacket, // slot 34
+  (vfn)vt_SteamGameServer014_GetNextOutgoingPacket, // slot 35
+  (vfn)vt_SteamGameServer014_AssociateWithClan, // slot 36
+  (vfn)vt_SteamGameServer014_ComputeNewPlayerCompatibility, // slot 37
+  (vfn)vt_SteamGameServer014_SendUserConnectAndAuthenticate_DEPRECATED, // slot 38
+  (vfn)vt_SteamGameServer014_CreateUnauthenticatedUserConnection, // slot 39
+  (vfn)vt_SteamGameServer014_SendUserDisconnect_DEPRECATED, // slot 40
+  (vfn)vt_SteamGameServer014_BUpdateUserData, // slot 41
+  (vfn)vt_SteamGameServer014_SetMasterServerHeartbeatInterval_DEPRECATED, // slot 42
+  (vfn)vt_SteamGameServer014_ForceMasterServerHeartbeat_DEPRECATED, // slot 43
+};
+struct FakeSteamGameServer014 { vfn *vptr; };
+static struct FakeSteamGameServer014 g_steamgameserver014_instance = { g_steamgameserver014_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamGameServer015 (ordinal 34, family SteamGameServer) ===
+
+// slot 0: InitGameServer(uint32 unIP, uint32 usGamePort, uint32 usQueryPort, uint32 unFlags, uint32 nGameAppId, const char* pchVersionString) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_SteamGameServer015_InitGameServer(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: SetProduct(const char* pszProduct) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetProduct(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 2: SetGameDescription(const char* pszGameDescription) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetGameDescription(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 3: SetModDir(const char* pszModDir) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetModDir(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 4: SetDedicatedServer(bool bDedicated) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetDedicatedServer(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 5: LogOn(const char* pszToken) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_LogOn(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 6: LogOnAnonymous() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer015_LogOnAnonymous(void *self) {
+  (void)self;
+}
+
+// slot 7: LogOff() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer015_LogOff(void *self) {
+  (void)self;
+}
+
+// slot 8: BLoggedOn() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamGameServer015_BLoggedOn(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: BSecure() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamGameServer015_BSecure(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamGameServer015_GetSteamID(void *self, void *sretOut) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 11: WasRestartRequested() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamGameServer015_WasRestartRequested(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: SetMaxPlayerCount(int32 cPlayersMax) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetMaxPlayerCount(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 13: SetBotPlayerCount(int32 cBotplayers) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetBotPlayerCount(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 14: SetServerName(const char* pszServerName) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetServerName(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 15: SetMapName(const char* pszMapName) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetMapName(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 16: SetPasswordProtected(bool bPasswordProtected) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetPasswordProtected(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 17: SetSpectatorPort(uint32 unSpectatorPort) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetSpectatorPort(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 18: SetSpectatorServerName(const char* pszSpectatorServerName) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetSpectatorServerName(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 19: ClearAllKeyValues() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer015_ClearAllKeyValues(void *self) {
+  (void)self;
+}
+
+// slot 20: SetKeyValue(const char* pKey, const char* pValue) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamGameServer015_SetKeyValue(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 21: SetGameTags(const char* pchGameTags) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetGameTags(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 22: SetGameData(const char* pchGameData) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetGameData(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 23: SetRegion(const char* pszRegion) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetRegion(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 24: SetAdvertiseServerActive(bool bActive) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetAdvertiseServerActive(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 25: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket, const SteamNetworkingIdentity_144* pSnid) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamGameServer015_GetAuthSessionTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamGameServer015_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamGameServer015_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 28: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_CancelAuthTicket(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 29: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamGameServer015_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 30: RequestUserGroupStatus(CSteamID steamIDUser, CSteamID steamIDGroup) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer015_RequestUserGroupStatus(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 31: GetGameplayStats() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer015_GetGameplayStats(void *self) {
+  (void)self;
+}
+
+// slot 32: GetServerReputation() -> uint64 | __thiscall ret 0 (STUB)
+static uint64_t THISCALL vt_SteamGameServer015_GetServerReputation(void *self) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 33: GetPublicIP(SteamIPAddress_t* _ret) -> SteamIPAddress_t* | __thiscall ret 4 (STUB)
+static void * THISCALL vt_SteamGameServer015_GetPublicIP(void *self, uint32_t dummy0) {
+  (void)self;
+  return NULL;
+}
+
+// slot 34: HandleIncomingPacket(const void* pData, int32 cbData, uint32 srcIP, uint32 srcPort) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer015_HandleIncomingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: GetNextOutgoingPacket(void* pOut, int32 cbMaxOut, uint32* pNetAdr, uint16_t* pPort) -> int32 | __thiscall ret 16 (STUB)
+static int32_t THISCALL vt_SteamGameServer015_GetNextOutgoingPacket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 36: AssociateWithClan(CSteamID steamIDClan) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamGameServer015_AssociateWithClan(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 37: ComputeNewPlayerCompatibility(CSteamID steamIDNewPlayer) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamGameServer015_ComputeNewPlayerCompatibility(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 38: SendUserConnectAndAuthenticate_DEPRECATED(uint32 unIPClient, const void* pvAuthBlob, uint32 cubAuthBlobSize, CSteamID* pSteamIDUser) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer015_SendUserConnectAndAuthenticate_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 39: CreateUnauthenticatedUserConnection() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer) (STUB)
+static void * THISCALL vt_SteamGameServer015_CreateUnauthenticatedUserConnection(void *self, void *sretOut) {
+  (void)self;
+  memset(sretOut, 0, 8);
+  return sretOut;
+}
+
+// slot 40: SendUserDisconnect_DEPRECATED(CSteamID steamIDUser) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamGameServer015_SendUserDisconnect_DEPRECATED(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 41: BUpdateUserData(CSteamID steamIDUser, const char* pchPlayerName, uint32 uScore) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServer015_BUpdateUserData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 42: SetMasterServerHeartbeatInterval_DEPRECATED(int32 iHeartbeatInterval) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamGameServer015_SetMasterServerHeartbeatInterval_DEPRECATED(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 43: ForceMasterServerHeartbeat_DEPRECATED() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamGameServer015_ForceMasterServerHeartbeat_DEPRECATED(void *self) {
+  (void)self;
+}
+
+static vfn g_steamgameserver015_vtbl[44] = {
+  (vfn)vt_SteamGameServer015_InitGameServer, // slot 0
+  (vfn)vt_SteamGameServer015_SetProduct, // slot 1
+  (vfn)vt_SteamGameServer015_SetGameDescription, // slot 2
+  (vfn)vt_SteamGameServer015_SetModDir, // slot 3
+  (vfn)vt_SteamGameServer015_SetDedicatedServer, // slot 4
+  (vfn)vt_SteamGameServer015_LogOn, // slot 5
+  (vfn)vt_SteamGameServer015_LogOnAnonymous, // slot 6
+  (vfn)vt_SteamGameServer015_LogOff, // slot 7
+  (vfn)vt_SteamGameServer015_BLoggedOn, // slot 8
+  (vfn)vt_SteamGameServer015_BSecure, // slot 9
+  (vfn)vt_SteamGameServer015_GetSteamID, // slot 10
+  (vfn)vt_SteamGameServer015_WasRestartRequested, // slot 11
+  (vfn)vt_SteamGameServer015_SetMaxPlayerCount, // slot 12
+  (vfn)vt_SteamGameServer015_SetBotPlayerCount, // slot 13
+  (vfn)vt_SteamGameServer015_SetServerName, // slot 14
+  (vfn)vt_SteamGameServer015_SetMapName, // slot 15
+  (vfn)vt_SteamGameServer015_SetPasswordProtected, // slot 16
+  (vfn)vt_SteamGameServer015_SetSpectatorPort, // slot 17
+  (vfn)vt_SteamGameServer015_SetSpectatorServerName, // slot 18
+  (vfn)vt_SteamGameServer015_ClearAllKeyValues, // slot 19
+  (vfn)vt_SteamGameServer015_SetKeyValue, // slot 20
+  (vfn)vt_SteamGameServer015_SetGameTags, // slot 21
+  (vfn)vt_SteamGameServer015_SetGameData, // slot 22
+  (vfn)vt_SteamGameServer015_SetRegion, // slot 23
+  (vfn)vt_SteamGameServer015_SetAdvertiseServerActive, // slot 24
+  (vfn)vt_SteamGameServer015_GetAuthSessionTicket, // slot 25
+  (vfn)vt_SteamGameServer015_BeginAuthSession, // slot 26
+  (vfn)vt_SteamGameServer015_EndAuthSession, // slot 27
+  (vfn)vt_SteamGameServer015_CancelAuthTicket, // slot 28
+  (vfn)vt_SteamGameServer015_UserHasLicenseForApp, // slot 29
+  (vfn)vt_SteamGameServer015_RequestUserGroupStatus, // slot 30
+  (vfn)vt_SteamGameServer015_GetGameplayStats, // slot 31
+  (vfn)vt_SteamGameServer015_GetServerReputation, // slot 32
+  (vfn)vt_SteamGameServer015_GetPublicIP, // slot 33
+  (vfn)vt_SteamGameServer015_HandleIncomingPacket, // slot 34
+  (vfn)vt_SteamGameServer015_GetNextOutgoingPacket, // slot 35
+  (vfn)vt_SteamGameServer015_AssociateWithClan, // slot 36
+  (vfn)vt_SteamGameServer015_ComputeNewPlayerCompatibility, // slot 37
+  (vfn)vt_SteamGameServer015_SendUserConnectAndAuthenticate_DEPRECATED, // slot 38
+  (vfn)vt_SteamGameServer015_CreateUnauthenticatedUserConnection, // slot 39
+  (vfn)vt_SteamGameServer015_SendUserDisconnect_DEPRECATED, // slot 40
+  (vfn)vt_SteamGameServer015_BUpdateUserData, // slot 41
+  (vfn)vt_SteamGameServer015_SetMasterServerHeartbeatInterval_DEPRECATED, // slot 42
+  (vfn)vt_SteamGameServer015_ForceMasterServerHeartbeat_DEPRECATED, // slot 43
+};
+struct FakeSteamGameServer015 { vfn *vptr; };
+static struct FakeSteamGameServer015 g_steamgameserver015_instance = { g_steamgameserver015_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamGameServerStats001 (ordinal 35, family SteamGameServerStats) ===
+
+// slot 0: RequestUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamGameServerStats001_RequestUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 1: GetUserStat_2(CSteamID steamIDUser, const char* pchName, float* pData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServerStats001_GetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: GetUserStat(CSteamID steamIDUser, const char* pchName, int32* pData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServerStats001_GetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: GetUserAchievement(CSteamID steamIDUser, const char* pchName, bool* pbAchieved) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServerStats001_GetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: SetUserStat_2(CSteamID steamIDUser, const char* pchName, float fData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServerStats001_SetUserStat_2(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 5: SetUserStat(CSteamID steamIDUser, const char* pchName, int32 nData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_SteamGameServerStats001_SetUserStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: UpdateUserAvgRateStat(CSteamID steamIDUser, const char* pchName, float flCountThisSession, double dSessionLength) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_SteamGameServerStats001_UpdateUserAvgRateStat(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: SetUserAchievement(CSteamID steamIDUser, const char* pchName) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamGameServerStats001_SetUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: ClearUserAchievement(CSteamID steamIDUser, const char* pchName) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamGameServerStats001_ClearUserAchievement(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: StoreUserStats(CSteamID steamIDUser) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamGameServerStats001_StoreUserStats(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+static vfn g_steamgameserverstats001_vtbl[10] = {
+  (vfn)vt_SteamGameServerStats001_RequestUserStats, // slot 0
+  (vfn)vt_SteamGameServerStats001_GetUserStat_2, // slot 1
+  (vfn)vt_SteamGameServerStats001_GetUserStat, // slot 2
+  (vfn)vt_SteamGameServerStats001_GetUserAchievement, // slot 3
+  (vfn)vt_SteamGameServerStats001_SetUserStat_2, // slot 4
+  (vfn)vt_SteamGameServerStats001_SetUserStat, // slot 5
+  (vfn)vt_SteamGameServerStats001_UpdateUserAvgRateStat, // slot 6
+  (vfn)vt_SteamGameServerStats001_SetUserAchievement, // slot 7
+  (vfn)vt_SteamGameServerStats001_ClearUserAchievement, // slot 8
+  (vfn)vt_SteamGameServerStats001_StoreUserStats, // slot 9
+};
+struct FakeSteamGameServerStats001 { vfn *vptr; };
+static struct FakeSteamGameServerStats001 g_steamgameserverstats001_instance = { g_steamgameserverstats001_vtbl };
+#endif
+
 // === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===
 
 typedef struct { const char *version; const char *family; void *instance; } GIfaceTableEntry;
 static const GIfaceTableEntry g_iface_table[] = {
   { "SteamUser023", "SteamUser", &g_steamuser023_instance },
-#if defined(__i386__)
   { "SteamFriends018", "SteamFriends", &g_steamfriends018_instance },
-#endif
 #if defined(__i386__)
   { "SteamUser016", "SteamUser", &g_steamuser016_instance },
 #endif
@@ -9435,6 +14710,39 @@ static const GIfaceTableEntry g_iface_table[] = {
 #if defined(__x86_64__)
   { "STEAMREMOTESTORAGE_INTERFACE_VERSION016", "SteamRemoteStorage", &g_steamremotestorage_interface_version016_instance },
 #endif
+#if defined(__x86_64__)
+  { "SteamClient020", "SteamClient", &g_steamclient020_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamClient021", "SteamClient", &g_steamclient021_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamUser021", "SteamUser", &g_steamuser021_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamFriends017", "SteamFriends", &g_steamfriends017_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamUtils010", "SteamUtils", &g_steamutils010_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMUSERSTATS_INTERFACE_VERSION012", "SteamUserStats", &g_steamuserstats_interface_version012_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMUSERSTATS_INTERFACE_VERSION013", "SteamUserStats", &g_steamuserstats_interface_version013_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamInput006", "SteamInput", &g_steaminput006_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamGameServer014", "SteamGameServer", &g_steamgameserver014_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamGameServer015", "SteamGameServer", &g_steamgameserver015_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamGameServerStats001", "SteamGameServerStats", &g_steamgameserverstats001_instance },
+#endif
 };
 #define G_IFACE_TABLE_LEN (sizeof(g_iface_table) / sizeof(g_iface_table[0]))
 
@@ -9478,6 +14786,10 @@ void *SteamClient(void) {
 
 void *SteamFriends(void) {
   return resolve_bare_iface("SteamFriends");
+}
+
+void *SteamInput(void) {
+  return resolve_bare_iface("SteamInput");
 }
 
 void *SteamMatchmaking(void) {
@@ -9583,6 +14895,10 @@ int SteamInternal_GameServer_Init_V2(uint32_t unIP, uint16_t usGamePort, uint16_
   if (pOutErrMsg != NULL) snprintf(pOutErrMsg, 1024, "GameLib bridge: game server mode is not supported");
   return 1;
 }
+int SteamInternal_GameServer_Init(uint32_t unIP, uint16_t usLegacySteamPort, uint16_t usGamePort, uint16_t usQueryPort, int eServerMode, const char *pchVersionString) {
+  (void)unIP; (void)usLegacySteamPort; (void)usGamePort; (void)usQueryPort; (void)eServerMode; (void)pchVersionString;
+  return 0;
+}
 void *GameLibBridge_CreateInterface(const char *pszName, int *pRc) {
   static int s_hello_sent = 0;
   static uint8_t s_req[4 + 4096];
@@ -9628,9 +14944,7 @@ void *SteamGameServerUtils(void) { return NULL; }
 // === Per-interface flat accessors ===
 
 void *SteamAPI_SteamUser_v023(void) { return &g_steamuser023_instance; }
-#if defined(__i386__)
 void *SteamAPI_SteamFriends_v018(void) { return &g_steamfriends018_instance; }
-#endif
 #if defined(__i386__)
 void *SteamAPI_SteamUser_v016(void) { return &g_steamuser016_instance; }
 #endif
@@ -9688,4 +15002,37 @@ void *SteamAPI_SteamNetworking_v006(void) { return &g_steamnetworking006_instanc
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_SteamRemoteStorage_v016(void) { return &g_steamremotestorage_interface_version016_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamClient_v020(void) { return &g_steamclient020_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamClient_v021(void) { return &g_steamclient021_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamUser_v021(void) { return &g_steamuser021_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamFriends_v017(void) { return &g_steamfriends017_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamUtils_v010(void) { return &g_steamutils010_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamUserStats_v012(void) { return &g_steamuserstats_interface_version012_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamUserStats_v013(void) { return &g_steamuserstats_interface_version013_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamInput_v006(void) { return &g_steaminput006_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamGameServer_v014(void) { return &g_steamgameserver014_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamGameServer_v015(void) { return &g_steamgameserver015_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamGameServerStats_v001(void) { return &g_steamgameserverstats001_instance; }
 #endif
