@@ -419,6 +419,10 @@
             "setup": {
                 "missingSymbols": "A ponte não cobre: {{symbols}}",
                 "redownloadNote": "O recuo transfere novamente o jogo para o cliente do Steam do Windows em bottle."
+            },
+            "steamstub": {
+                "body": "Este jogo usa o invólucro DRM do Steam. O GameLib não conseguiu ligá-lo ao seu cliente Steam no Mac, por isso o jogo provavelmente fechará alguns segundos após iniciar.",
+                "title": "A verificação DRM do Steam pode falhar"
             }
         },
         "download": {

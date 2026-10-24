@@ -419,6 +419,10 @@
             "setup": {
                 "missingSymbols": "הגשר אינו מכסה: {{symbols}}",
                 "redownloadNote": "החזרה מורידה את המשחק שוב ללקוח Steam של Windows ב-bottle."
+            },
+            "steamstub": {
+                "body": "המשחק הזה משתמש במעטפת ה-DRM של Steam. GameLib לא הצליח לחבר אותו ללקוח Steam ב-Mac שלך, ולכן סביר שהמשחק ייסגר כמה שניות לאחר שהוא מתחיל.",
+                "title": "בדיקת ה-DRM של Steam עלולה להיכשל"
             }
         },
         "download": {

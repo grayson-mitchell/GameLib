@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "Köprü kapsamıyor: {{symbols}}",
                 "redownloadNote": "Geri dönüş, oyunu tekrar bottle içindeki Windows Steam istemcisine indirir."
+            },
+            "steamstub": {
+                "body": "Bu oyun Steam'in DRM sarmalayıcısını kullanıyor. GameLib bunu Mac'inizdeki Steam istemcisine bağlayamadı, bu yüzden oyun muhtemelen başladıktan birkaç saniye sonra kapanacak.",
+                "title": "Steam DRM denetimi başarısız olabilir"
             }
         },
         "download": {

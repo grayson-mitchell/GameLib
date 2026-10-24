@@ -440,6 +440,10 @@
             "setup": {
                 "missingSymbols": "الجسر لا يغطي: {{symbols}}",
                 "redownloadNote": "التراجع يعيد تنزيل اللعبة مرة أخرى داخل عميل Steam المعبأ الخاص بـ Windows."
+            },
+            "steamstub": {
+                "body": "تستخدم هذه اللعبة غلاف DRM الخاص بـ Steam. لم يتمكن GameLib من ربطها بعميل Steam على جهاز Mac، لذا من المرجح أن تُغلق اللعبة بعد بضع ثوانٍ من بدء تشغيلها.",
+                "title": "قد يفشل فحص DRM في Steam"
             }
         },
         "download": {

@@ -419,6 +419,10 @@
             "setup": {
                 "missingSymbols": "Podul nu acoperă: {{symbols}}",
                 "redownloadNote": "Revenirea redescarcă jocul în clientul Steam pentru Windows în bottle."
+            },
+            "steamstub": {
+                "body": "Acest joc folosește învelișul DRM al Steam. GameLib nu l-a putut conecta la clientul Steam de pe Mac, așa că jocul se va închide probabil la câteva secunde după pornire.",
+                "title": "Verificarea DRM Steam poate eșua"
             }
         },
         "download": {

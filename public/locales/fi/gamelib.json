@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "Silta ei kata: {{symbols}}",
                 "redownloadNote": "Palautuminen lataa pelin uudelleen pullotettuun Windowsin Steam-asiakasohjelmaan."
+            },
+            "steamstub": {
+                "body": "Tämä peli käyttää Steamin DRM-kääreen. GameLib ei voinut yhdistää sitä Macin Steam-asiakasohjelmaan, joten peli sulkeutuu todennäköisesti muutaman sekunnin kuluttua käynnistyksestä.",
+                "title": "Steamin DRM-tarkistus voi epäonnistua"
             }
         },
         "download": {

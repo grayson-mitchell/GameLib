@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "پل پوشش نمی‌دهد: {{symbols}}",
                 "redownloadNote": "بازگشت دوباره بازی را در کلاینت Steam Windows در bottle دانلود می‌کند."
+            },
+            "steamstub": {
+                "body": "این بازی از پوشش DRM استیم استفاده می‌کند. GameLib نتوانست آن را به کلاینت Steam روی Mac شما متصل کند، بنابراین بازی احتمالاً چند ثانیه پس از شروع بسته خواهد شد.",
+                "title": "بررسی DRM Steam ممکن است ناموفق باشد"
             }
         },
         "download": {

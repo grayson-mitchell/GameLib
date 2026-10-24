@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "A híd nem fedi le: {{symbols}}",
                 "redownloadNote": "A visszaesés újra letölti a játékot a bottle-os Windows Steam kliensbe."
+            },
+            "steamstub": {
+                "body": "Ez a játék a Steam DRM-burkolóját használja. A GameLib nem tudta összekapcsolni a Mac gépen futó Steam-klienssel, ezért a játék valószínűleg néhány másodperccel az indítás után bezárul.",
+                "title": "A Steam DRM-ellenőrzés meghiúsulhat"
             }
         },
         "download": {

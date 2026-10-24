@@ -426,6 +426,10 @@
             "setup": {
                 "missingSymbols": "Most ne pokriva: {{symbols}}",
                 "redownloadNote": "Vrnitev ponovno prenese igro v Windows odjemalec Steam v bottle."
+            },
+            "steamstub": {
+                "body": "Ta igra uporablja Steamov ovoj DRM. GameLib ga ni mogel povezati z odjemalcem Steam na vašem Macu, zato se bo igra verjetno nekaj sekund po zagonu zaprla.",
+                "title": "Preverjanje Steam DRM lahko spodleti"
             }
         },
         "download": {

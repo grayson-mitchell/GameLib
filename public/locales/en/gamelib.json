@@ -452,6 +452,10 @@
                 "drmCeg": "This game uses Steam CEG copy protection, which only the Windows Steam client can satisfy. The native Steam bridge cannot run it.",
                 "missingSymbols": "The bridge does not cover: {{symbols}}",
                 "redownloadNote": "Falling back downloads the game again into the bottled Windows Steam client."
+            },
+            "steamstub": {
+                "body": "This game uses Steam's DRM wrapper. GameLib could not connect it to your Mac Steam client, so the game will probably close a few seconds after it starts.",
+                "title": "Steam DRM check may fail"
             }
         },
         "download": {

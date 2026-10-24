@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "De brug dekt niet: {{symbols}}",
                 "redownloadNote": "De terugval downloadt het spel opnieuw naar de Windows Steam-client in bottle."
+            },
+            "steamstub": {
+                "body": "Deze game gebruikt de DRM-wrapper van Steam. GameLib kon deze niet koppelen aan je Steam-client op de Mac, dus de game sluit waarschijnlijk een paar seconden na het starten.",
+                "title": "De Steam-DRM-controle kan mislukken"
             }
         },
         "download": {

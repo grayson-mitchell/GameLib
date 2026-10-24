@@ -382,6 +382,10 @@
             "setup": {
                 "missingSymbols": "Sild ei kata: {{symbols}}",
                 "redownloadNote": "Tagasilangemine laadib mängu uuesti alla Windowsi Steami kliendisse pudelis."
+            },
+            "steamstub": {
+                "body": "See mäng kasutab Steami DRM-ümbrist. GameLib ei suutnud seda teie Maci Steami kliendiga ühendada, mistõttu mäng sulgub tõenäoliselt mõni sekund pärast käivitamist.",
+                "title": "Steami DRM-kontroll võib ebaõnnestuda"
             }
         },
         "download": {

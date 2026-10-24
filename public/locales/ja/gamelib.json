@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "ブリッジはカバーしていない: {{symbols}}",
                 "redownloadNote": "フォールバックするとゲームがボトル化されたWindows版Steamクライアントに再度ダウンロードされる。"
+            },
+            "steamstub": {
+                "body": "このゲームは Steam の DRM ラッパーを使用しています。GameLib はこれをお使いの Mac の Steam クライアントに接続できなかったため、ゲームは起動の数秒後に終了する可能性が高いです。",
+                "title": "Steam の DRM チェックに失敗する可能性があります"
             }
         },
         "download": {

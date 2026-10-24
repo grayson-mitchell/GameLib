@@ -433,6 +433,10 @@
             "setup": {
                 "missingSymbols": "Ar pont ne sikour ket: {{symbols}}",
                 "redownloadNote": "An distro a bellgarg ar c'hoari en-dro en arval Steam Windows e voutailh."
+            },
+            "steamstub": {
+                "body": "Ar c'hoari-mañ a implij gwisk DRM Steam. N'eus ket bet gallet gant GameLib he c'hevreañ ouzh ho pellgomzer Steam war Mac, setu e vo serret ar c'hoari moarvat un nebeud eilennoù goude m'eo loc'het.",
+                "title": "Marteze a c'hall c'hwitañ gwiriañ DRM Steam"
             }
         },
         "download": {

@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "브리지가 커버하지 않음: {{symbols}}",
                 "redownloadNote": "폴백하면 게임이 bottle 안의 Windows Steam 클라이언트로 다시 다운로드됨."
+            },
+            "steamstub": {
+                "body": "이 게임은 Steam의 DRM 래퍼를 사용합니다. GameLib이 이를 Mac의 Steam 클라이언트에 연결하지 못했으므로, 게임이 시작된 지 몇 초 후에 종료될 가능성이 높습니다.",
+                "title": "Steam DRM 확인이 실패할 수 있습니다"
             }
         },
         "download": {

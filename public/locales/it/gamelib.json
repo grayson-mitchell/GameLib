@@ -419,6 +419,10 @@
             "setup": {
                 "missingSymbols": "Il bridge non copre: {{symbols}}",
                 "redownloadNote": "Il fallback riscarica il gioco nel client Steam di Windows in bottle."
+            },
+            "steamstub": {
+                "body": "Questo gioco usa il wrapper DRM di Steam. GameLib non è riuscito a collegarlo al client Steam sul tuo Mac, quindi il gioco probabilmente si chiuderà pochi secondi dopo l'avvio.",
+                "title": "Il controllo DRM di Steam potrebbe non riuscire"
             }
         },
         "download": {

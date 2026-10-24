@@ -426,6 +426,8 @@
     "winetricksBrowse.taskGroup.fonts",
     "winetricksBrowse.taskGroup.media",
     "winetricksBrowse.taskGroup.runtimes",
-    "winetricksBrowse.taskGroup.wineSettings"
+    "winetricksBrowse.taskGroup.wineSettings",
+    "steam.bridge.steamstub.title",
+    "steam.bridge.steamstub.body"
   ]
 }

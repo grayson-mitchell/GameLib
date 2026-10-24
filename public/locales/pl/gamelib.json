@@ -426,6 +426,10 @@
             "setup": {
                 "missingSymbols": "Most nie obejmuje: {{symbols}}",
                 "redownloadNote": "Powrót ponownie pobiera grę do klienta Steam dla systemu Windows w bottle."
+            },
+            "steamstub": {
+                "body": "Ta gra używa nakładki DRM Steam. GameLib nie zdołał połączyć jej z klientem Steam na Macu, więc gra prawdopodobnie zamknie się kilka sekund po uruchomieniu.",
+                "title": "Sprawdzanie DRM Steam może się nie powieść"
             }
         },
         "download": {

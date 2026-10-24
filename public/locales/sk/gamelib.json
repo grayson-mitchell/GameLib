@@ -426,6 +426,10 @@
             "setup": {
                 "missingSymbols": "Most nepokrýva: {{symbols}}",
                 "redownloadNote": "Návrat znova stiahne hru do klienta Steam pre Windows v bottle."
+            },
+            "steamstub": {
+                "body": "Táto hra používa obal DRM služby Steam. GameLib ju nedokázal prepojiť s klientom Steam na vašom Macu, takže sa hra pravdepodobne niekoľko sekúnd po spustení zatvorí.",
+                "title": "Kontrola Steam DRM môže zlyhať"
             }
         },
         "download": {

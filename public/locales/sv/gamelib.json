@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "Bryggan täcker inte: {{symbols}}",
                 "redownloadNote": "Återgången laddar ner spelet igen till Windows Steam-klienten på bottle."
+            },
+            "steamstub": {
+                "body": "Det här spelet använder Steams DRM-omslag. GameLib kunde inte ansluta det till din Steam-klient på Mac, så spelet stängs sannolikt några sekunder efter att det startat.",
+                "title": "Steams DRM-kontroll kan misslyckas"
             }
         },
         "download": {

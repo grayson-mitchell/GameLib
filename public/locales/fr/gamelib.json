@@ -334,6 +334,10 @@
             "setup": {
                 "missingSymbols": "Le pont ne couvre pas : {{symbols}}",
                 "redownloadNote": "Le repli retélécharge le jeu dans le client Steam Windows en bouteille."
+            },
+            "steamstub": {
+                "body": "Ce jeu utilise l'enveloppe DRM de Steam. GameLib n'a pas pu la relier à votre client Steam sur Mac, le jeu se fermera donc probablement quelques secondes après son lancement.",
+                "title": "La vérification DRM de Steam risque d'échouer"
             }
         },
         "install": {

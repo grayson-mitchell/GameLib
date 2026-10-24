@@ -419,6 +419,10 @@
             "setup": {
                 "missingSymbols": "Most ne pokriva: {{symbols}}",
                 "redownloadNote": "Povratak ponovno preuzima igru u Windows Steam klijent u bottleu."
+            },
+            "steamstub": {
+                "body": "Ova igra koristi Steamov DRM omotač. GameLib ga nije uspio povezati s vašim Steam klijentom na Macu pa će se igra vjerojatno zatvoriti nekoliko sekundi nakon pokretanja.",
+                "title": "Steam DRM provjera mogla bi propasti"
             }
         },
         "download": {

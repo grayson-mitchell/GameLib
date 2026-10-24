@@ -426,6 +426,10 @@
             "setup": {
                 "missingSymbols": "Tiltas nepadengia: {{symbols}}",
                 "redownloadNote": "Grįžimas iš naujo atsisiunčia žaidimą į Windows Steam klientą bottle."
+            },
+            "steamstub": {
+                "body": "Šis žaidimas naudoja Steam DRM apvalkalą. GameLib nepavyko jo prijungti prie jūsų Mac kompiuterio Steam kliento, todėl žaidimas greičiausiai užsidarys praėjus kelioms sekundėms po paleidimo.",
+                "title": "Steam DRM patikra gali nepavykti"
             }
         },
         "download": {

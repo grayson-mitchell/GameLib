@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "Cầu nối không bao phủ: {{symbols}}",
                 "redownloadNote": "Việc quay lại sẽ tải lại trò chơi vào client Steam Windows trong bottle."
+            },
+            "steamstub": {
+                "body": "Trò chơi này dùng lớp bọc DRM của Steam. GameLib không thể kết nối nó với ứng dụng Steam trên Mac của bạn, nên trò chơi nhiều khả năng sẽ đóng vài giây sau khi khởi chạy.",
+                "title": "Kiểm tra DRM của Steam có thể thất bại"
             }
         },
         "download": {

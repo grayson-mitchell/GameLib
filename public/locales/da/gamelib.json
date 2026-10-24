@@ -412,6 +412,10 @@
             "setup": {
                 "missingSymbols": "Broen dækker ikke: {{symbols}}",
                 "redownloadNote": "Tilbagefald downloader spillet igen til Windows Steam-klienten i bottle."
+            },
+            "steamstub": {
+                "body": "Dette spil bruger Steams DRM-wrapper. GameLib kunne ikke forbinde det til din Steam-klient på Mac, så spillet lukker sandsynligvis nogle sekunder efter, at det er startet.",
+                "title": "Steam DRM-kontrollen kan mislykkes"
             }
         },
         "download": {
