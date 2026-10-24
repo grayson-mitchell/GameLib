@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: testing
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -21,6 +21,7 @@ The plan that authored this contract did not run any item of it.
 Done-when being gated (ROADMAP): Grim Dawn (219990) launches from GameLib through its per-game
 bridge bottle, gets past SteamStub (no `steam://run` in a `--cx-log` trace), reaches its main menu,
 and Mac Steam shows it In-Game, with no Windows Steam client in the bottle and the exe unmodified.
+Amended 2026-10-24 (item 29): the done-when is now forwarder reaches HELLO + honest SteamStub notice + no steam://run; items 30-31 gate it.
 
 ## Desk gate
 
@@ -161,7 +162,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-round 4 complete: items 27-29 by 52-30/52-31/52-32; operator chose option-closeout (amended done-when approved); next /gsd-verify-phase 52 to re-verify as amended
+item 30 (round 5, plan 52-35): packaged GameLib launch of Grim Dawn awaiting the operator; item 31 follows
 
 ## Tests
 
@@ -306,6 +307,14 @@ Grim Dawn reaching its main menu through the bridge is no longer
 part of this phase. It is deferred to a separate, operator-owned
 decision (static RE of the stub, outside the locked boundary).
 The locked boundary is unchanged.
+
+### 30. Amended done-when — GameLib launch of Grim Dawn: forwarder reaches HELLO, honest SteamStub notice
+expected: in the archived gamelib.log, present: `drmWrapper=steamstub`; `[bridge-steamstub] appId=219990 forwarder placed`; `bridge helper [219990]:` with `HELLO shim attached appid=219990`; `FWD CreateInterface ver=SteamClient017 native=present`; `[bridge-notice] appId=219990 reason=steamstub-forwarded:launch-check-unsatisfiable`. Absent (count 0): `steamstub-unforwarded`; `withheld the shim` for 219990; `notify(): skipped "Steam DRM check not supported"`; `notify(): "Steam DRM check not supported" was not delivered`. The operator sees GameLib's "Steam DRM check not supported" notice and reports the game's dialog text verbatim. `pass` needs every log check and the operator-observed notice. If the game instead reaches its main menu, the result is `issue — notice false for this run`. The result states `bridge-verified: not claimed`. In-Game is not an input.
+result: pending
+
+### 31. Amended done-when — cx-log trace of GameLib's setup (MODE=trace): no steam://run
+expected: harness MODE=trace on a fresh clone after item 30. The clone's shim and forwarder are `cmp`-equal to the product's, and its SteamClientDll64 equals the product user.reg (else `issue — harness-flow`). `grep -c 'steam://run'` = 0; the steamclient64.dll `Loaded` line is present; helper HELLO count >= 1. Also recorded, but not pass conditions: MSGBOX count, the dialog text, IsSteamRunning count, every `[S_API]` line, alive at 90 s. The result states `bridge-verified: not claimed`.
+result: pending
 
 ## Structural Reachability Review
 
