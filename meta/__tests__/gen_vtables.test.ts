@@ -1856,6 +1856,31 @@ describe('gen_vtables', () => {
       expect(seen).toBeGreaterThan(0)
     })
 
+    it('CR-01: committed steam_api_shim.c keeps the null-object fallback for ordinary titles', () => {
+      const committed = readFileSync(
+        join(
+          __dirname,
+          '..',
+          '..',
+          'native',
+          'steam-bridge',
+          'generated',
+          'steam_api_shim.c'
+        ),
+        'utf-8'
+      )
+      for (const name of [
+        'vt_SteamClient017_GetISteamMatchmaking',
+        'vt_SteamClient017_GetISteamUser',
+        'vt_SteamClient017_GetISteamUtils',
+        'vt_SteamClient014_GetISteamMatchmaking'
+      ]) {
+        const b = fnBody(committed, `${name}(void`)
+        expect(b).toContain(FLAG)
+        expect(b).toContain('(void *)&g_x64_null_object_instance')
+      }
+    })
+
     it('CR-01: GameLibBridge_CreateInterface sets the flag after the NULL check and never returns the null object', () => {
       const b = fnBody(shim, 'void *GameLibBridge_CreateInterface')
       const nullAt = b.indexOf('if (pszName == NULL) return NULL;')
