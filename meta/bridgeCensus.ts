@@ -116,6 +116,7 @@ export type CensusClass =
   | 'unknown-version'
   | 'known-bad'
   | 'no-binary'
+  | 'unconfirmed'
 
 /** T-51-39: the ONLY fields a row may ever carry -- never a path, never an
  * account field. */
@@ -142,6 +143,23 @@ export interface BridgeEvidence {
   detail: string
 }
 
+/** Quick 261024-uir: where a steam_api*.dll found in the install tree came
+ * from. 'original' = a non-shim file on disk; 'shim-backed' = the GameLib
+ * shim with a valid non-shim `.gamelib-orig` beside it; 'shim-only' = the shim
+ * with no usable backup. */
+export type RuntimeDllProvenance = 'original' | 'shim-backed' | 'shim-only'
+
+export type RuntimeDllName = 'steam_api.dll' | 'steam_api64.dll'
+
+/** Quick 261024-uir: the persisted `<appId>.bridge.scan` verdict, mirroring
+ * `bridgeScanVerdictSchema` without importing it (zero-backend-import). */
+export interface PersistedScanVerdict {
+  status: 'clean' | 'miss'
+  arch: 'x86' | 'x64'
+  missingSymbols: string[]
+  interfaceVersions: Record<string, string>
+}
+
 export interface CensusTitleInput {
   appid: string
   name: string
@@ -151,10 +169,18 @@ export interface CensusTitleInput {
   knownBadReason?: string | null
   /** The seed entry carries a `playVerified` record (live evidence). */
   playVerified?: boolean
-  /** A steam_api*.dll ships (non-shim) in the install tree although the
-   * launch exe's import table has no steam_api entry -- the exe loads it at
-   * runtime. Same signal the live path records as `<dll>@runtime-loaded`. */
+  /** A steam_api*.dll ships in the install tree although the launch exe's
+   * import table has no steam_api entry -- the exe loads it at runtime. Set
+   * for a non-shim file OR a shim whose `.gamelib-orig` backup is the game's
+   * original. Same signal the live path records as `<dll>@runtime-loaded`. */
   runtimeLoadedDll?: 'steam_api.dll' | 'steam_api64.dll' | null
+  /** Quick 261024-uir: the install tree's only steam_api*.dll is the GameLib
+   * shim with no `.gamelib-orig` backup. `persistedScan` is the persisted
+   * bridge.scan verdict when one exists, else null. Never 'no-steam-api'. */
+  shimOnlyRuntimeDll?: {
+    dll: 'steam_api.dll' | 'steam_api64.dll'
+    persistedScan: PersistedScanVerdict | null
+  } | null
   /** Quick 261024-br4: the chosen exe's Steam DRM scan (`peSteamDrm.ts`).
    * `null`/absent when not scanned or the PE did not parse (not CEG). */
   steamDrm?: { cegMarkers: string[]; hasBindSection: boolean } | null
@@ -213,8 +239,14 @@ export const DEFAULT_COVERAGE_DEPS: CensusCoverageDeps = {
  *     `steam_api(64)?.dll`): when a steam_api*.dll ships in the install tree
  *     (`runtimeLoadedDll`) -> 'missing-symbols' with the live path's
  *     `<dll>@runtime-loaded` marker (the exe loads it at runtime, so the
- *     import table proves nothing); otherwise -> 'no-steam-api', routed but
- *     labelled so it is never mistaken for a coverage proof.
+ *     import table proves nothing). Quick 261024-uir: a placed GameLib shim
+ *     still means "a steam_api ships" -- with a `.gamelib-orig` backup the row
+ *     is the original's (`runtimeLoadedDll`); with no backup but a persisted
+ *     bridge.scan verdict (`shimOnlyRuntimeDll.persistedScan`) -> 'missing-
+ *     symbols' carrying the marker and the persisted symbols; with neither ->
+ *     'unconfirmed' (routed, never covered, never play-recorded). Only a tree
+ *     with no steam_api*.dll at all -> 'no-steam-api', routed but labelled so
+ *     it is never mistaken for a coverage proof.
  *  4. `arch === 'x64'` and the x64 export set is structurally empty ->
  *     'win64-no-shim', without ever calling into coverage resolution --
  *     there is nothing to evaluate against.
@@ -306,6 +338,39 @@ function classifyCensusTitleCore(
         detail: runtimeLoadedSteamApiMarker(input.runtimeLoadedDll)
       })
     }
+    if (input.shimOnlyRuntimeDll) {
+      const { dll, persistedScan } = input.shimOnlyRuntimeDll
+      if (persistedScan) {
+        const marker = runtimeLoadedSteamApiMarker(dll)
+        const base2 = `${marker}; shim placed over the original, no .gamelib-orig backup -- persisted bridge.scan`
+        // A clean verdict still reads missing-symbols: the census never
+        // evaluates importer PEs, so the unshimmed original classifies the
+        // same way (marker miss). Keeps output independent of launch history.
+        const detail =
+          persistedScan.status === 'miss'
+            ? (() => {
+                const list = persistedScan.missingSymbols.filter(
+                  (m) => m !== marker
+                )
+                return list.length > 0
+                  ? `${base2} miss: ${list.join(', ')}`
+                  : `${base2} miss`
+              })()
+            : `${base2} clean (importer coverage not re-measured by the census)`
+        return withFlags({
+          ...base,
+          arch: 'none',
+          class: 'missing-symbols',
+          detail
+        })
+      }
+      return withFlags({
+        ...base,
+        arch: 'none',
+        class: 'unconfirmed',
+        detail: `${dll} in the install tree is the GameLib shim; no .gamelib-orig backup and no persisted bridge.scan verdict -- original unconfirmed`
+      })
+    }
     return withFlags({
       ...base,
       arch: 'none',
@@ -360,7 +425,9 @@ function classifyCensusTitleCore(
 
 /** Rows the live resolver sends to the bridge (amended 2026-10-23, quick
  * 261023-oq7): every class except win64-no-shim, no-binary (counted
- * conservatively as not routed) and known-bad 'drm-wrapped'. */
+ * conservatively as not routed) and known-bad 'drm-wrapped'. Quick
+ * 261024-uir: 'unconfirmed' IS routed -- a placed shim is the live path's own
+ * evidence of bridge routing -- but is never covered. */
 function isRoutedToBridge(row: CensusRow): boolean {
   if (row.class === 'win64-no-shim' || row.class === 'no-binary') return false
   if (row.class === 'known-bad' && row.detail === 'drm-wrapped') return false
@@ -372,7 +439,8 @@ function isRoutedToBridge(row: CensusRow): boolean {
  * which now includes scan-miss and non-DRM known-bad titles that are placed
  * and launched anyway. covered = class 'bridge' or 'no-steam-api': the shim
  * fully covers the title's symbols (static scan), the D-51-15 coverage
- * verdict. verified = rows whose evidence is 'verified' (HELLO + clean game
+ * verdict ('unconfirmed', quick 261024-uir, is routed but never covered).
+ * verified = rows whose evidence is 'verified' (HELLO + clean game
  * log). playRecorded = the allowlist's playVerified record, kept apart. A
  * 'no-binary' row never counts as routed or covered, but it DOES count
  * toward `total`.
@@ -424,6 +492,43 @@ export function summarizeCensus(rows: CensusRow[]): {
     playRecorded,
     total: rows.length,
     byClass
+  }
+}
+
+/**
+ * Quick 261024-uir: picks the runtime-loaded steam_api dll from the walk's
+ * per-dll provenance, mirroring the live `findRuntimeLoadedSteamApiDlls`
+ * (steam_api64.dll preferred when both ship). 'original' / 'shim-backed' set
+ * `runtimeLoadedDll` (the backup IS the original); 'shim-only' sets
+ * `shimOnlyRuntimeDll` carrying the persisted verdict (or null).
+ */
+export function pickRuntimeSteamApiDll(
+  found: Array<{ name: RuntimeDllName; provenance: RuntimeDllProvenance }>,
+  persistedScan: PersistedScanVerdict | undefined
+): {
+  runtimeLoadedDll: RuntimeDllName | null
+  shimOnlyRuntimeDll: {
+    dll: RuntimeDllName
+    persistedScan: PersistedScanVerdict | null
+  } | null
+} {
+  const name: RuntimeDllName | null = found.some(
+    (f) => f.name === 'steam_api64.dll'
+  )
+    ? 'steam_api64.dll'
+    : found.length > 0
+      ? 'steam_api.dll'
+      : null
+  if (!name) return { runtimeLoadedDll: null, shimOnlyRuntimeDll: null }
+  const provenances = found
+    .filter((f) => f.name === name)
+    .map((f) => f.provenance)
+  if (provenances.includes('original') || provenances.includes('shim-backed')) {
+    return { runtimeLoadedDll: name, shimOnlyRuntimeDll: null }
+  }
+  return {
+    runtimeLoadedDll: null,
+    shimOnlyRuntimeDll: { dll: name, persistedScan: persistedScan ?? null }
   }
 }
 
@@ -839,6 +944,52 @@ export function readPersistedScanArch(
       | undefined
     const arch = entry?.bridge?.scan?.arch
     return arch === 'x86' || arch === 'x64' ? arch : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Quick 261024-uir: reads the whole `<appId>.bridge.scan` verdict out of the
+ * persisted `steam_metadata.json` text. Same totality discipline as
+ * `readPersistedScanArch` (untrusted disk content); missingSymbols entries are
+ * dropped unless they are path-free strings of at most 128 chars (T-51-39),
+ * and interfaceVersions keeps only string values.
+ */
+export function readPersistedScanVerdict(
+  metadataJsonText: string | null,
+  appId: string
+): PersistedScanVerdict | undefined {
+  if (!metadataJsonText) return undefined
+  try {
+    const parsed = JSON.parse(metadataJsonText) as unknown
+    if (!parsed || typeof parsed !== 'object') return undefined
+    const entry = (parsed as Record<string, unknown>)[appId] as
+      | { bridge?: { scan?: Record<string, unknown> | null } }
+      | null
+      | undefined
+    const scan = entry?.bridge?.scan
+    if (!scan || typeof scan !== 'object') return undefined
+    const { status, arch } = scan
+    if (status !== 'clean' && status !== 'miss') return undefined
+    if (arch !== 'x86' && arch !== 'x64') return undefined
+    const missingSymbols = Array.isArray(scan.missingSymbols)
+      ? scan.missingSymbols.filter(
+          (m): m is string =>
+            typeof m === 'string' &&
+            m.length <= 128 &&
+            !m.includes('/') &&
+            !m.includes('\\')
+        )
+      : []
+    const interfaceVersions: Record<string, string> = {}
+    const iv = scan.interfaceVersions
+    if (iv && typeof iv === 'object' && !Array.isArray(iv)) {
+      for (const [k, v] of Object.entries(iv)) {
+        if (typeof v === 'string') interfaceVersions[k] = v
+      }
+    }
+    return { status, arch, missingSymbols, interfaceVersions }
   } catch {
     return undefined
   }

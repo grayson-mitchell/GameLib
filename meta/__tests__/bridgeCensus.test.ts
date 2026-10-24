@@ -20,7 +20,9 @@ import {
   classifyBridgeEvidence,
   classifyCensusTitle,
   formatCensusMarkdown,
+  pickRuntimeSteamApiDll,
   readPersistedScanArch,
+  readPersistedScanVerdict,
   selectCensusExe,
   summarizeCensus,
   type CensusRow
@@ -745,5 +747,202 @@ describe('quick 261024-f0w: classifyBridgeEvidence', () => {
     expect(s.initFailed).toBe(1)
     expect(s.unverified).toBe(1)
     expect(s.playRecorded).toBe(2)
+  })
+})
+
+describe('quick 261024-uir: shim-placed runtime-loaded steam_api', () => {
+  const noImportExe = {
+    arch: 'none' as const,
+    symbols: [],
+    dllVersions: [],
+    exeVersions: []
+  }
+  const classify = (
+    found: Parameters<typeof pickRuntimeSteamApiDll>[0],
+    scan: Parameters<typeof pickRuntimeSteamApiDll>[1],
+    playVerified = false
+  ): CensusRow =>
+    classifyCensusTitle({
+      appid: '284100',
+      name: 'Title',
+      installdir: 'Title',
+      playVerified,
+      ...pickRuntimeSteamApiDll(found, scan),
+      exe: noImportExe
+    })
+  const missVerdict = {
+    status: 'miss' as const,
+    arch: 'x64' as const,
+    missingSymbols: [
+      'SteamAPI_RestartAppIfNecessary',
+      'steam_api64.dll@runtime-loaded'
+    ],
+    interfaceVersions: {}
+  }
+
+  it('no dll at all stays no-steam-api and covered', () => {
+    expect(pickRuntimeSteamApiDll([], undefined)).toEqual({
+      runtimeLoadedDll: null,
+      shimOnlyRuntimeDll: null
+    })
+    const row = classify([], undefined)
+    expect(row.class).toBe('no-steam-api')
+    expect(row.detail).toBe(
+      'launch exe imports no steam_api and none ships in the install tree'
+    )
+    expect(summarizeCensus([row]).covered).toBe(1)
+  })
+
+  it('shim with backup classifies exactly as the original', () => {
+    const picked = pickRuntimeSteamApiDll(
+      [{ name: 'steam_api64.dll', provenance: 'shim-backed' }],
+      undefined
+    )
+    expect(picked).toEqual({
+      runtimeLoadedDll: 'steam_api64.dll',
+      shimOnlyRuntimeDll: null
+    })
+    const backed = classify(
+      [{ name: 'steam_api64.dll', provenance: 'shim-backed' }],
+      undefined
+    )
+    expect(backed).toEqual(
+      classify([{ name: 'steam_api64.dll', provenance: 'original' }], undefined)
+    )
+    expect(backed.class).toBe('missing-symbols')
+    expect(backed.detail).toBe('steam_api64.dll@runtime-loaded')
+  })
+
+  it('shim-only plus persisted miss verdict is missing-symbols with the persisted symbols', () => {
+    const row = classify(
+      [{ name: 'steam_api64.dll', provenance: 'shim-only' }],
+      missVerdict
+    )
+    expect(row.class).toBe('missing-symbols')
+    expect(row.detail.startsWith('steam_api64.dll@runtime-loaded')).toBe(true)
+    expect(row.detail).toContain('SteamAPI_RestartAppIfNecessary')
+    expect(row.detail.split('SteamAPI_RestartAppIfNecessary')).toHaveLength(2)
+    expect(row.detail.split('@runtime-loaded')).toHaveLength(2)
+    const s = summarizeCensus([row])
+    expect(s.covered).toBe(0)
+    expect(s.routed).toBe(1)
+  })
+
+  it('shim-only plus persisted clean verdict is missing-symbols, not covered', () => {
+    const row = classify(
+      [{ name: 'steam_api64.dll', provenance: 'shim-only' }],
+      { ...missVerdict, status: 'clean', missingSymbols: [] }
+    )
+    expect(row.class).toBe('missing-symbols')
+    expect(row.detail.startsWith('steam_api64.dll@runtime-loaded')).toBe(true)
+    expect(row.detail).toContain('persisted bridge.scan clean')
+    expect(summarizeCensus([row]).covered).toBe(0)
+  })
+
+  it('shim-only with no verdict is unconfirmed: routed, not covered, never play-recorded', () => {
+    const row = classify(
+      [{ name: 'steam_api64.dll', provenance: 'shim-only' }],
+      undefined,
+      true
+    )
+    expect(row.class).toBe('unconfirmed')
+    expect(row.arch).toBe('none')
+    expect(row.playRecorded).toBe(false)
+    expect(row.detail).toContain('steam_api64.dll')
+    expect(row.detail).not.toMatch(/[/\\]/)
+    const s = summarizeCensus([row])
+    expect(s.covered).toBe(0)
+    expect(s.routed).toBe(1)
+  })
+
+  it('picker precedence: original > shim-backed > shim-only; 64 beats 32', () => {
+    expect(
+      pickRuntimeSteamApiDll(
+        [
+          { name: 'steam_api64.dll', provenance: 'shim-only' },
+          { name: 'steam_api64.dll', provenance: 'original' }
+        ],
+        undefined
+      ).runtimeLoadedDll
+    ).toBe('steam_api64.dll')
+    expect(
+      pickRuntimeSteamApiDll(
+        [
+          { name: 'steam_api64.dll', provenance: 'shim-only' },
+          { name: 'steam_api64.dll', provenance: 'shim-backed' }
+        ],
+        undefined
+      ).runtimeLoadedDll
+    ).toBe('steam_api64.dll')
+    const picked = pickRuntimeSteamApiDll(
+      [
+        { name: 'steam_api.dll', provenance: 'original' },
+        { name: 'steam_api64.dll', provenance: 'shim-only' }
+      ],
+      undefined
+    )
+    expect(picked.runtimeLoadedDll).toBeNull()
+    expect(picked.shimOnlyRuntimeDll).toEqual({
+      dll: 'steam_api64.dll',
+      persistedScan: null
+    })
+  })
+
+  it('readPersistedScanVerdict is total and sanitises', () => {
+    const wrap = (scan: unknown): string =>
+      JSON.stringify({ '1': { bridge: { scan } } })
+    expect(readPersistedScanVerdict(null, '1')).toBeUndefined()
+    expect(readPersistedScanVerdict('{not json', '1')).toBeUndefined()
+    expect(readPersistedScanVerdict('null', '1')).toBeUndefined()
+    expect(readPersistedScanVerdict('{}', '1')).toBeUndefined()
+    expect(readPersistedScanVerdict(wrap({ arch: 'x64' }), '1')).toBeUndefined()
+    expect(
+      readPersistedScanVerdict(wrap({ status: 'weird', arch: 'x64' }), '1')
+    ).toBeUndefined()
+    expect(
+      readPersistedScanVerdict(wrap({ status: 'miss', arch: 'arm' }), '1')
+    ).toBeUndefined()
+    const v = readPersistedScanVerdict(
+      wrap({
+        status: 'miss',
+        arch: 'x86',
+        missingSymbols: ['A', 5, 'a/b', 'c\\d', 'x'.repeat(129), 'B'],
+        interfaceVersions: { SteamUser: 'SteamUser023', Bad: 7 }
+      }),
+      '1'
+    )
+    expect(v).toEqual({
+      status: 'miss',
+      arch: 'x86',
+      missingSymbols: ['A', 'B'],
+      interfaceVersions: { SteamUser: 'SteamUser023' }
+    })
+    expect(
+      readPersistedScanVerdict(
+        wrap({
+          status: 'clean',
+          arch: 'x64',
+          missingSymbols: 'nope',
+          interfaceVersions: 'nope'
+        }),
+        '1'
+      )
+    ).toEqual({
+      status: 'clean',
+      arch: 'x64',
+      missingSymbols: [],
+      interfaceVersions: {}
+    })
+  })
+
+  it('formatCensusMarkdown shows unconfirmed=1, routed not covered', () => {
+    const row = classify(
+      [{ name: 'steam_api.dll', provenance: 'shim-only' }],
+      undefined
+    )
+    const md = formatCensusMarkdown([row])
+    expect(md).toContain('unconfirmed=1')
+    expect(md).toContain('1 of 1 routed')
+    expect(md).toContain('0 of 1 symbols covered')
   })
 })
