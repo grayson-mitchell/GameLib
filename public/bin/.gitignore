@@ -33,3 +33,8 @@
 # file, not -o, so the x64 build's .lib is the SAME name as the x86 one).
 **/steam_api64.dll
 **/steam_api64.pdb
+
+# 52-03: the zig-built steamclient64.dll forwarder, emitted by the same
+# buildSteamBridgeShims.ts compile gate -- never committed, same rationale as
+# the shim rules above. Its .pdb/.lib byproducts are pruned by the build.
+**/steamclient64.dll
