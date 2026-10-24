@@ -5365,6 +5365,9 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION010 g_steamremotestorage_i
 // slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
 static int32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(16, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
@@ -5375,6 +5378,9 @@ static int32_t THISCALL vt_SteamClient017_CreateSteamPipe(void *self) {
 // slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
 static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -5387,6 +5393,9 @@ static int THISCALL vt_SteamClient017_BReleaseSteamPipe(void *self, int32_t hSte
 // slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
 static int32_t THISCALL vt_SteamClient017_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -5399,6 +5408,9 @@ static int32_t THISCALL vt_SteamClient017_ConnectToGlobalUser(void *self, int32_
 // slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
 static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
@@ -5417,6 +5429,9 @@ static int32_t THISCALL vt_SteamClient017_CreateLocalUser(void *self, int32_t * 
 // slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
 static void THISCALL vt_SteamClient017_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -5848,6 +5863,9 @@ static void * THISCALL vt_SteamClient017_GetISteamScreenshots(void *self, int32_
 // slot 19: RunFrame() -> void | __thiscall ret 0
 static void THISCALL vt_SteamClient017_RunFrame(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(16, 19, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
@@ -5856,6 +5874,9 @@ static void THISCALL vt_SteamClient017_RunFrame(void *self) {
 // slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamClient017_GetIPCCallCount(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(16, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
@@ -5871,6 +5892,9 @@ static void THISCALL vt_SteamClient017_SetWarningMessageHook(void *self, uint32_
 // slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamClient017_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(16, 22, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
@@ -7997,6 +8021,9 @@ static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION013 g_steamremotestorage_i
 // slot 0: CreateSteamPipe() -> int32 | __thiscall ret 0
 static int32_t THISCALL vt_SteamClient014_CreateSteamPipe(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(22, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
@@ -8007,6 +8034,9 @@ static int32_t THISCALL vt_SteamClient014_CreateSteamPipe(void *self) {
 // slot 1: BReleaseSteamPipe(int32 hSteamPipe) -> bool | __thiscall ret 4
 static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, int32_t hSteamPipe) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -8019,6 +8049,9 @@ static int THISCALL vt_SteamClient014_BReleaseSteamPipe(void *self, int32_t hSte
 // slot 2: ConnectToGlobalUser(int32 hSteamPipe) -> int32 | __thiscall ret 4
 static int32_t THISCALL vt_SteamClient014_ConnectToGlobalUser(void *self, int32_t hSteamPipe) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 1; }
+#endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -8031,6 +8064,9 @@ static int32_t THISCALL vt_SteamClient014_ConnectToGlobalUser(void *self, int32_
 // slot 3: CreateLocalUser(int32* phSteamPipe, uint32 eAccountType) -> int32 | __thiscall ret 8
 static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * phSteamPipe, uint32_t eAccountType) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   uint8_t argbuf[4];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &eAccountType, 4); argOff += 4;
@@ -8049,6 +8085,9 @@ static int32_t THISCALL vt_SteamClient014_CreateLocalUser(void *self, int32_t * 
 // slot 4: ReleaseUser(int32 hSteamPipe, int32 hUser) -> void | __thiscall ret 8
 static void THISCALL vt_SteamClient014_ReleaseUser(void *self, int32_t hSteamPipe, int32_t hUser) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
   uint8_t argbuf[8];
   uint32_t argOff = 0;
   memcpy(argbuf + argOff, &hSteamPipe, 4); argOff += 4;
@@ -8480,6 +8519,9 @@ static void * THISCALL vt_SteamClient014_GetISteamScreenshots(void *self, int32_
 // slot 19: RunFrame() -> void | __thiscall ret 0
 static void THISCALL vt_SteamClient014_RunFrame(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[1]; uint32_t retlen = 0;
   bridge_transact(22, 19, argbuf, 0, retbuf, sizeof(retbuf), &retlen);
@@ -8488,6 +8530,9 @@ static void THISCALL vt_SteamClient014_RunFrame(void *self) {
 // slot 20: GetIPCCallCount() -> uint32 | __thiscall ret 0
 static uint32_t THISCALL vt_SteamClient014_GetIPCCallCount(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(22, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
@@ -8503,6 +8548,9 @@ static void THISCALL vt_SteamClient014_SetWarningMessageHook(void *self, uint32_
 // slot 22: BShutdownIfAllPipesClosed() -> bool | __thiscall ret 0
 static int THISCALL vt_SteamClient014_BShutdownIfAllPipesClosed(void *self) {
   (void)self;
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }
+#endif
   const uint8_t *argbuf = NULL;
   uint8_t retbuf[4]; uint32_t retlen = 0;
   if (!bridge_transact(22, 22, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;

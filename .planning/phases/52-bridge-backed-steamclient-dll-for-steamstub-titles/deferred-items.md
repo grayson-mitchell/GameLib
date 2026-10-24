@@ -32,8 +32,12 @@ Reason for all entries: orchestrator decision 4 -- hardening, not goal-blocking.
 2. **WR-06: overwrites a game-shipped `steamclient64.dll` with no backup; follows a symlink write.**
    `steamClientSetup.ts:158-161`. Revisit when: a title ships its own `steamclient64.dll`.
 3. **WR-07: forwarded `ISteamClient` lifecycle methods act on the helper's native pipe and user with
-   the game's hard-coded 1/1 handles.** `meta/gen_vtables.ts:2003-2190`. Revisit when: a forwarded
-   title loses wire calls mid-session or ELEX/Grim Dawn logs a pipe release.
+   the game's hard-coded 1/1 handles (scope widened by 52-20, WR-09).** `meta/gen_vtables.ts:2003-2190`. Revisit when: any x64
+   bridge title, not only a forwarded one, loses wire calls mid-session, or any helper log shows a
+   FWD line for ReleaseUser, BReleaseSteamPipe or BShutdownIfAllPipesClosed. Since 52-20, off the
+   SteamStub path these eight SteamClient017/014 methods answer their pre-phase local values
+   (WR-09), so the residual exposure is SteamStub-path titles; the condition stays wide because the
+   population was misjudged once.
 4. **WR-08: identity-only gate bypass through `GetISteamGenericInterface` and CONTROL slot 3.**
    `meta/gen_vtables.ts:1980-1984, 2026-2030`, `bridge_helper.c:486-518`. Revisit when: before any
    app-scoped family goes wire in identity-only mode.
