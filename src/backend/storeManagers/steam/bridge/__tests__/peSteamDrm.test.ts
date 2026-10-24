@@ -6,8 +6,10 @@
 import {
   CEG_RESOURCE_NAMES,
   detectSteamDrmInPeBytes,
-  readPeMachineArch
+  readPeMachineArch,
+  readPeSteamApiDelayImports
 } from '../peSteamDrm'
+import { buildDelayImportPe } from './fixtures/delayImportPe'
 
 type PeFixture = {
   magic?: number
@@ -282,5 +284,154 @@ describe('readPeMachineArch (quick 261024-i94)', () => {
         throw new Error('boom')
       })
     ).toBeNull()
+  })
+})
+
+describe('readPeSteamApiDelayImports (quick 261024-j4l)', () => {
+  const readOf = (b: Uint8Array) => (offset: number, length: number) =>
+    offset + length > b.length ? null : b.subarray(offset, offset + length)
+
+  it('reads a PE32+ delay import of steam_api64.dll, skipping other dlls', () => {
+    const pe = buildDelayImportPe({
+      plus: true,
+      dlls: [
+        { name: 'KERNEL32.dll', imports: ['Sleep'] },
+        {
+          name: 'steam_api64.dll',
+          imports: ['SteamAPI_Init', 'SteamInternal_GameServer_Init']
+        }
+      ]
+    })
+    expect(readPeSteamApiDelayImports(readOf(pe))).toEqual({
+      parsed: true,
+      dll: 'steam_api64.dll',
+      arch: 'x64',
+      symbols: ['SteamAPI_Init', 'SteamInternal_GameServer_Init'],
+      conflict: false
+    })
+  })
+
+  it('reads PE32 steam_api.dll as x86 and an ordinal as #N', () => {
+    const pe = buildDelayImportPe({
+      plus: false,
+      dlls: [{ name: 'STEAM_API.DLL', imports: ['SteamAPI_Init', 7] }]
+    })
+    expect(readPeSteamApiDelayImports(readOf(pe))).toEqual({
+      parsed: true,
+      dll: 'steam_api.dll',
+      arch: 'x86',
+      symbols: ['SteamAPI_Init', '#7'],
+      conflict: false
+    })
+  })
+
+  it('reads a PE32+ ordinal', () => {
+    const pe = buildDelayImportPe({
+      plus: true,
+      dlls: [{ name: 'steam_api64.dll', imports: [12, 'SteamAPI_Init'] }]
+    })
+    expect(readPeSteamApiDelayImports(readOf(pe)).symbols).toEqual([
+      '#12',
+      'SteamAPI_Init'
+    ])
+  })
+
+  it.each([false, true])(
+    'parses the VA form the same as the RVA form (plus=%s)',
+    (plus) => {
+      const dlls = [
+        {
+          name: plus ? 'steam_api64.dll' : 'steam_api.dll',
+          imports: ['A', 'B']
+        }
+      ]
+      const rva = readPeSteamApiDelayImports(
+        readOf(buildDelayImportPe({ plus, dlls }))
+      )
+      const va = readPeSteamApiDelayImports(
+        readOf(buildDelayImportPe({ plus, dlls, vaForm: true }))
+      )
+      expect(va).toEqual(rva)
+      expect(va.symbols).toEqual(['A', 'B'])
+    }
+  )
+
+  it('reports no delay imports when data directory 13 is empty', () => {
+    const pe = buildDelayImportPe({ plus: true, dlls: [] })
+    pe.writeUInt32LE(0, 0x80 + 24 + 112 + 13 * 8)
+    expect(readPeSteamApiDelayImports(readOf(pe))).toEqual({
+      parsed: true,
+      dll: null,
+      arch: 'none',
+      symbols: [],
+      conflict: false
+    })
+  })
+
+  it('reports no delay imports when NumberOfRvaAndSizes < 14', () => {
+    const pe = buildDelayImportPe({
+      plus: false,
+      dlls: [{ name: 'steam_api.dll', imports: ['A'] }]
+    })
+    pe.writeUInt32LE(5, 0x80 + 24 + 92)
+    const r = readPeSteamApiDelayImports(readOf(pe))
+    expect(r.parsed).toBe(true)
+    expect(r.dll).toBeNull()
+    expect(r.symbols).toEqual([])
+  })
+
+  it('flags steam_api.dll plus steam_api64.dll as a conflict', () => {
+    const pe = buildDelayImportPe({
+      plus: true,
+      dlls: [
+        { name: 'steam_api.dll', imports: ['A'] },
+        { name: 'steam_api64.dll', imports: ['B'] }
+      ]
+    })
+    expect(readPeSteamApiDelayImports(readOf(pe)).conflict).toBe(true)
+  })
+
+  it('never throws and returns parsed:false on malformed input', () => {
+    const good = buildDelayImportPe({
+      plus: true,
+      dlls: [{ name: 'steam_api64.dll', imports: ['SteamAPI_Init'] }]
+    })
+    // truncated
+    expect(
+      readPeSteamApiDelayImports(readOf(good.subarray(0, 0x90))).parsed
+    ).toBe(false)
+    // non-MZ
+    expect(
+      readPeSteamApiDelayImports(readOf(Buffer.from('not a pe at all'))).parsed
+    ).toBe(false)
+    // descriptor RVA outside every section
+    const outside = Buffer.from(good)
+    outside.writeUInt32LE(0x90000, 0x80 + 24 + 112 + 13 * 8)
+    expect(readPeSteamApiDelayImports(readOf(outside)).parsed).toBe(false)
+    // name over 256 bytes with no NUL
+    const longName = Buffer.from(good)
+    longName.fill(0x41, 0x400 + 64, 0x400 + 64 + 400)
+    expect(readPeSteamApiDelayImports(readOf(longName)).parsed).toBe(false)
+  })
+
+  it('treats more than the descriptor cap with no terminator as unparsed', () => {
+    const pe = buildDelayImportPe({ plus: true, dlls: [] })
+    // 300 descriptors each naming kernel32, never terminated
+    const nameAt = 0x400 + 0x6000
+    pe.write('kernel32.dll\0', nameAt, 'latin1')
+    for (let i = 0; i < 300; i++) {
+      pe.writeUInt32LE(0x1000 + 0x6000, 0x400 + i * 32 + 4)
+    }
+    pe.writeUInt32LE(0x1000, 0x80 + 24 + 112 + 13 * 8)
+    expect(readPeSteamApiDelayImports(readOf(pe)).parsed).toBe(false)
+  })
+
+  it('treats more than the thunk cap with no terminator as unparsed', () => {
+    const imports = Array.from({ length: 5000 }, () => 1)
+    const pe = buildDelayImportPe({
+      plus: false,
+      dlls: [{ name: 'steam_api.dll', imports }]
+    })
+    expect(readPeSteamApiDelayImports(readOf(pe)).parsed).toBe(false)
   })
 })

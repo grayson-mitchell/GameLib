@@ -8,6 +8,9 @@
  * means implementations must be re-established in each test.
  */
 
+import { mkdtempSync, rmSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
 import { spawnAsync } from 'backend/utils'
 import { parseSteamApiImports, scanSteamApiImports } from '../importScan'
 import { parseSteamApiImportTable } from '../importParse'
@@ -22,6 +25,7 @@ import {
   NO_STEAM_API_OBJDUMP_OUTPUT,
   XCOM_EU_OBJDUMP_OUTPUT
 } from './fixtures/objdumpImports'
+import { buildDelayImportPe } from './fixtures/delayImportPe'
 
 jest.mock('backend/utils', () => ({
   spawnAsync: jest.fn()
@@ -29,6 +33,7 @@ jest.mock('backend/utils', () => ({
 
 jest.mock('backend/logger', () => ({
   logWarning: jest.fn(),
+  logInfo: jest.fn(),
   LogPrefix: { Steam: 'Steam' }
 }))
 
@@ -269,6 +274,101 @@ describe('importScan', () => {
         status: 'error',
         error: 'Failed to run objdump: Error: spawn ENOENT'
       })
+    })
+  })
+
+  describe('delay imports (quick 261024-j4l)', () => {
+    let dir: string
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), 'gamelib-delayscan-'))
+    })
+    afterEach(() => {
+      rmSync(dir, { recursive: true, force: true })
+    })
+
+    const exeWith = (
+      dlls: { name: string; imports: (string | number)[] }[],
+      plus = true
+    ) => {
+      const path = join(dir, 'Game-Shipping.exe')
+      writeFileSync(path, buildDelayImportPe({ plus, dlls }))
+      return path
+    }
+
+    it('reports a delay-only steam_api64 importer when objdump lists no heading', async () => {
+      const exe = exeWith([
+        {
+          name: 'steam_api64.dll',
+          imports: ['SteamAPI_Init', 'SteamInternal_GameServer_Init']
+        }
+      ])
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: NO_STEAM_API_OBJDUMP_OUTPUT,
+        stderr: ''
+      })
+      await expect(scanSteamApiImports('1234', exe)).resolves.toEqual({
+        status: 'ok',
+        arch: 'x64',
+        dll: 'steam_api64.dll',
+        symbols: ['SteamAPI_Init', 'SteamInternal_GameServer_Init'],
+        delaySymbols: ['SteamAPI_Init', 'SteamInternal_GameServer_Init']
+      })
+    })
+
+    it('dedupes objdump + delay symbols with objdump order first', async () => {
+      const exe = exeWith([
+        {
+          name: 'steam_api64.dll',
+          imports: ['SteamAPI_Init', 'SteamAPI_RunCallbacks']
+        }
+      ])
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: ELEX_X64_OBJDUMP_OUTPUT,
+        stderr: ''
+      })
+      const base = parseSteamApiImportTable(ELEX_X64_OBJDUMP_OUTPUT)
+      const result = await scanSteamApiImports('1234', exe)
+      expect(result).toEqual({
+        status: 'ok',
+        arch: 'x64',
+        dll: 'steam_api64.dll',
+        symbols: [
+          ...new Set([
+            ...base.symbols,
+            'SteamAPI_Init',
+            'SteamAPI_RunCallbacks'
+          ])
+        ],
+        delaySymbols: ['SteamAPI_Init', 'SteamAPI_RunCallbacks']
+      })
+    })
+
+    it('errors when objdump and the delay table disagree on the arch', async () => {
+      const exe = exeWith([{ name: 'steam_api64.dll', imports: ['A'] }])
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: AVERNUM_4_OBJDUMP_OUTPUT,
+        stderr: ''
+      })
+      await expect(scanSteamApiImports('1234', exe)).resolves.toEqual({
+        status: 'error',
+        error: 'conflicting steam_api.dll and steam_api64.dll import headings'
+      })
+    })
+
+    it('leaves the result without a delaySymbols key when the file is absent', async () => {
+      mockedSpawnAsync.mockResolvedValue({
+        code: 0,
+        stdout: AVERNUM_4_OBJDUMP_OUTPUT,
+        stderr: ''
+      })
+      const result = await scanSteamApiImports(
+        '1234',
+        join(dir, 'does-not-exist.exe')
+      )
+      expect(result).not.toHaveProperty('delaySymbols')
     })
   })
 })
