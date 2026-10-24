@@ -470,7 +470,7 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 14/16 plans executed
+**Plans:** 15/16 plans executed
 
 Plans:
 **Wave 1**
@@ -515,7 +515,7 @@ Plans:
 
 **Gap wave 4** *(blocked on 53-14)*
 
-- [ ] 53-15-PLAN.md — diagnose Overlooting rip=0, Ranch 0x35, Rogue Waters re-trace; fix in scope or route to todos (operator checkpoint)
+- [x] 53-15-PLAN.md — diagnose Overlooting rip=0, Ranch 0x35, Rogue Waters re-trace; fix in scope or route to todos (operator checkpoint)
 
 **Gap wave 5** *(blocked on all gap plans)*
 
