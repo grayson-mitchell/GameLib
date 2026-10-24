@@ -162,7 +162,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-round 5 (52-35) scored: item 30 issue (notice not observed; log conjuncts held), item 31 pass; next /gsd-plan-phase 52 --gaps
+round 6 (52-37) in progress: item 32 pending (GameLib.app launch of Grim Dawn); items 30 issue, 31 pass carried
 
 ## Tests
 
@@ -315,6 +315,10 @@ result: issue — notice conjunct not met (operator did not see it); every log c
 ### 31. Amended done-when — cx-log trace of GameLib's setup (MODE=trace): no steam://run
 expected: harness MODE=trace on a fresh clone after item 30. The clone's shim and forwarder are `cmp`-equal to the product's, and its SteamClientDll64 equals the product user.reg (else `issue — harness-flow`). `grep -c 'steam://run'` = 0; the steamclient64.dll `Loaded` line is present; helper HELLO count >= 1. Also recorded, but not pass conditions: MSGBOX count, the dialog text, IsSteamRunning count, every `[S_API]` line, alive at 90 s. The result states `bridge-verified: not claimed`.
 result: pass — session /tmp/gamelib-gate-52w-20261024T093736Z, `ROUND=amended MODE=trace WATCH=90 SCORE=1 HELPER_BIN=<session snapshot>` with PID_ARM, RELAY_INCLUDE, DEBUGMSG unset; DRY_RUN first showed a clone `cp -cR` only, no shim or forwarder cp, no Valve `reg add`. Clone assertions held: shim and forwarder `cmp`-equal to the product's, clone SteamClientDll64 equals the product user.reg. /tmp/gamelib-gate-52w-20261024T093736Z/round-amended.cxlog: `steam://run` count 0; steamclient64.dll Loaded line present (line 23478, native); helper HELLO count 1 (round-amended.helper.log) with FWD SteamClient017 and SteamClient014 native=present. Recorded, not pass conditions: `[S_API]` lines are line 23317 `SteamAPI_Init(): SteamAPI_IsSteamRunning() did not locate a running instance of Steam.` and line 23485 `SteamAPI_Init(): Loaded '...\x64\steamclient64.dll' OK.` (IsSteamRunning count 1, no failure-ish line beyond that); MSGBOX resource lookup at line 23623 (count 1; no relay so the dialog text is not captured here); alive at 90 s: yes (the dialog was still up). bridge-verified: not claimed (the stub rejects at Load Error 3; MSGBOX is the rejection).
+
+### 32. Amended done-when, round 6 — GameLib.app launch of Grim Dawn: honest SteamStub notice shown in-app (after 52-36)
+expected: GameLib launched as GameLib.app, built after the 52-36 commits; gamelib-shell.log has a `notification authorization:` line for that pid; in the archived gamelib.log, present: `drmWrapper=steamstub`; `[bridge-steamstub] appId=219990 forwarder placed`; `bridge helper [219990]:` with `HELLO shim attached appid=219990`; `FWD CreateInterface ver=SteamClient017 native=present`; `[bridge-notice] appId=219990 reason=steamstub-forwarded:launch-check-unsatisfiable`; `[bridge-notice] appId=219990 dispatched=in-app-dialog+notify`; and exactly one delivery result for "Steam DRM check not supported", either `accepted by UserNotifications` or `was not delivered`. Absent (count 0): `steamstub-unforwarded`; `withheld the shim` for 219990; `notify(): skipped "Steam DRM check not supported"`; `"Steam DRM check not supported" handed to tauri-plugin-notification` (a hit means the plugin backend was in use: `issue — launch-mode`). The operator sees GameLib's in-app "Steam DRM check not supported" dialog. The operator's answer on the macOS banner is recorded verbatim, not a pass condition. `pass` needs every log check and the operator-seen in-app dialog. A main menu reached is `issue — notice false for this run`. The `steam://run` conjunct is carried from item 31 on the 52-36 git-log gate (no bridge, forwarder, shim, helper or bottle-setup file changed; the only games.ts hunks are the import line and `maybeNotifySteamStubForwarded` with its docblock). The result states `bridge-verified: not claimed`; In-Game is not an input.
+result: pending
 
 ## Structural Reachability Review
 
