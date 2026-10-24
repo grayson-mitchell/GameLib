@@ -69,16 +69,8 @@ import {
   readSync,
   statSync
 } from 'node:fs'
-import { lstat, readdir, readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
-import {
-  basename,
-  dirname,
-  isAbsolute,
-  join,
-  relative,
-  resolve
-} from 'node:path'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import {
   builtBridgeShim64Path,
@@ -97,12 +89,26 @@ import {
   PE_SECTION_SCAN_BYTES
 } from './peSections'
 import { runtimeLoadedSteamApiMarker } from './importParse'
-import { detectSteamDrmInPe, readPeMachineArch } from './peSteamDrm'
+import { detectSteamDrmInPe } from './peSteamDrm'
 import {
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
+  selectInterfaceVersionPool,
   usesRuntimeInterfaceLookup
 } from './interfaceVersions'
+import {
+  findRuntimeLoadedSteamApiDlls as findRuntimeDlls,
+  findSteamApiImporterPes as findImporterPes,
+  findUnrealLayout,
+  isContainedWithin,
+  partitionManagedImports,
+  readFileEffectiveArch,
+  resolveWalkRoot,
+  scanManagedSteamApi,
+  servedFamiliesFor,
+  type BridgeScanDeps,
+  type ManagedScanResult
+} from './bridgeScan'
 // Phase 51 Plan 03 (ROADMAP sub-decision 2 / D-51-07): SHIM_EXPORTED_SYMBOLS
 // (and now, Phase 51 Plan 07, the whole coverage verdict) lives in
 // shimCoverage.ts -- that module is the SOLE place the shim's export-set
@@ -201,22 +207,6 @@ type PlaceShimResult = PlaceShimResultBase & {
   drm?: SteamExeDrmSignal | null
 }
 
-/**
- * True iff `candidateAbsPath` resolves to a location strictly inside
- * `rootAbsPath` (steam-two-install-paths-acf-location / MAC32 lesson:
- * `path.join`/string-prefix checks are NOT containment -- use
- * `path.resolve` + `path.relative` and reject `..`/absolute results).
- */
-function isContainedWithin(
-  rootAbsPath: string,
-  candidateAbsPath: string
-): boolean {
-  const rel = relative(rootAbsPath, candidateAbsPath)
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
-}
-
-const RUNTIME_WALK_MAX_DEPTH = 4
-
 // quick 261024-j4l: the game-original steam_api(64) dll is copied here before
 // the shim overwrites it, so the guard can restore it. Both walks exclude the
 // backup by construction (exact-name dll match; .exe/.dll-only importer walk).
@@ -264,272 +254,6 @@ function backupOriginalBeforeOverwrite(
     )
     return { ok: false, error: String(error) }
   }
-}
-
-interface RuntimeSteamApiDll {
-  name: 'steam_api.dll' | 'steam_api64.dll'
-  path: string
-  /** True when the file at `path` is already a GameLib shim (quick 261023-oq7). */
-  isGameLibShim: boolean
-}
-
-/**
- * CR-04 / T-51-45: bounded walk of the game's install tree for
- * steam_api(64).dll files -- the game's own AND, since quick 261023-oq7
- * (the shim is placed over a runtime-loaded dll), GameLib shims, flagged
- * `isGameLibShim`. Async fs only, depth-limited, never follows symlinks.
- */
-async function findRuntimeLoadedSteamApiDlls(
-  root: string,
-  extraRoots: string[] = []
-): Promise<RuntimeSteamApiDll[]> {
-  const found: RuntimeSteamApiDll[] = []
-  const walk = async (dir: string, depth: number): Promise<void> => {
-    let entries
-    try {
-      entries = await readdir(dir, { withFileTypes: true })
-    } catch {
-      return
-    }
-    for (const entry of entries) {
-      if (entry.isSymbolicLink()) continue
-      const full = join(dir, entry.name)
-      if (entry.isDirectory()) {
-        if (depth < RUNTIME_WALK_MAX_DEPTH) await walk(full, depth + 1)
-        continue
-      }
-      if (!entry.isFile()) continue
-      const lower = entry.name.toLowerCase()
-      // Exact names only: `<dll>.gamelib-orig` backups never match (j4l).
-      if (lower !== 'steam_api.dll' && lower !== 'steam_api64.dll') continue
-      let isShim: boolean
-      try {
-        if ((await lstat(full)).isSymbolicLink()) continue
-        isShim = isGameLibShimBytes(await readFile(full))
-      } catch {
-        continue
-      }
-      found.push({ name: lower, path: full, isGameLibShim: isShim })
-    }
-  }
-  await walk(root, 0)
-  // quick 261024-ir1: extra roots (the Unreal Steamworks dir) get the same
-  // bounded walk; dedupe by resolved path since they overlap the main walk.
-  for (const extra of extraRoots) await walk(extra, 0)
-  const seenPaths = new Set<string>()
-  return found.filter((d) => {
-    const key = resolve(d.path)
-    if (seenPaths.has(key)) return false
-    seenPaths.add(key)
-    return true
-  })
-}
-
-/**
- * quick 261024-ir1: Unreal Engine 4/5 layout probe. UE games launch a
- * bootstrap stub `<P>.exe` that imports nothing from steam_api; the real
- * importer is `<P>/Binaries/Win64/<P>-Win64-Shipping.exe` and the dll lives
- * at `Engine/Binaries/ThirdParty/Steamworks/Steamv*\/Win64/` -- 6 directories
- * below the install root, past RUNTIME_WALK_MAX_DEPTH (field cases: Manor
- * Lords 1363080, Abiotic Factor 427410, Ranch Simulator 1119730). Returns
- * null unless a real `Engine/` dir sits beside the stub. Async fs only,
- * lstat-checked at every segment, contained in the bottle (T-ir1-01..03).
- */
-const UE_SHIPPING_EXE = /-shipping\.exe$/
-const UE_SHIPPING_MAX = 8
-
-async function isRealDir(path: string): Promise<boolean> {
-  try {
-    const st = await lstat(path)
-    return st.isDirectory() && !st.isSymbolicLink()
-  } catch {
-    return false
-  }
-}
-
-async function findUnrealLayout(
-  bottleDir: string,
-  ueRoot: string
-): Promise<{ steamworksDir: string | null; shippingExes: string[] } | null> {
-  if (!(await isRealDir(join(ueRoot, 'Engine')))) return null
-
-  let steamworksDir: string | null = join(
-    ueRoot,
-    'Engine',
-    'Binaries',
-    'ThirdParty',
-    'Steamworks'
-  )
-  for (const seg of [
-    join(ueRoot, 'Engine', 'Binaries'),
-    join(ueRoot, 'Engine', 'Binaries', 'ThirdParty'),
-    steamworksDir
-  ]) {
-    if (!(await isRealDir(seg))) {
-      steamworksDir = null
-      break
-    }
-  }
-  if (
-    steamworksDir !== null &&
-    !isContainedWithin(bottleDir, resolve(steamworksDir))
-  ) {
-    steamworksDir = null
-  }
-
-  const shippingExes: string[] = []
-  let top
-  try {
-    top = await readdir(ueRoot, { withFileTypes: true })
-  } catch {
-    return { steamworksDir, shippingExes }
-  }
-  for (const entry of top) {
-    if (entry.isSymbolicLink() || !entry.isDirectory()) continue
-    if (entry.name.toLowerCase() === 'engine') continue
-    const win64 = join(ueRoot, entry.name, 'Binaries', 'Win64')
-    if (!(await isRealDir(join(ueRoot, entry.name)))) continue
-    if (!(await isRealDir(join(ueRoot, entry.name, 'Binaries')))) continue
-    if (!(await isRealDir(win64))) continue
-    let files
-    try {
-      files = await readdir(win64, { withFileTypes: true })
-    } catch {
-      continue
-    }
-    for (const f of files) {
-      if (f.isSymbolicLink() || !f.isFile()) continue
-      if (!UE_SHIPPING_EXE.test(f.name.toLowerCase())) continue
-      const full = join(win64, f.name)
-      try {
-        if ((await lstat(full)).isSymbolicLink()) continue
-      } catch {
-        continue
-      }
-      if (!isContainedWithin(bottleDir, resolve(full))) continue
-      shippingExes.push(full)
-    }
-  }
-  shippingExes.sort()
-  return { steamworksDir, shippingExes: shippingExes.slice(0, UE_SHIPPING_MAX) }
-}
-
-/**
- * quick 261024-i94: the bottle-contained root both placement branches walk.
- * Containment is T-oq7-03 / T-24-06; the fallback is the exe's own folder.
- */
-function resolveWalkRoot(
-  bottleDir: string,
-  resolvedExePath: string,
-  gameInstallRoot: string | undefined
-): string {
-  return gameInstallRoot &&
-    isContainedWithin(bottleDir, resolve(gameInstallRoot))
-    ? resolve(gameInstallRoot)
-    : dirname(resolvedExePath)
-}
-
-// Bounds objdump spawns on Unity/UE trees that ship hundreds of DLLs
-// (T-i94-02). Hitting it logs one warning and stops the scan.
-const IMPORTER_SCAN_MAX_FILES = 512
-const PE_CANDIDATE_EXT = /\.(exe|dll)$/
-
-interface SteamApiImporterPe {
-  path: string
-  arch: 'x86' | 'x64'
-  symbols: string[]
-  /** quick 261024-j4l: the subset read from the PE delay import table. */
-  delaySymbols: string[]
-}
-
-/**
- * quick 261024-i94: bounded walk of the install tree for PEs OTHER than the
- * launch exe that import steam_api(64).dll (e.g. Grim Dawn's x64/Engine.dll).
- * Same walk shape as findRuntimeLoadedSteamApiDlls: async fs, depth-limited,
- * symlinks skipped (entry + lstat re-check). Candidates are .exe/.dll files
- * only; steam_api*.dll themselves and `excludePath` are never scanned. Scans
- * run sequentially; a scan error skips that file (T-i94-01..03).
- */
-async function findSteamApiImporterPes(
-  appId: string,
-  root: string,
-  excludePath: string,
-  priorityPaths: string[] = []
-): Promise<SteamApiImporterPe[]> {
-  const found: SteamApiImporterPe[] = []
-  const exclude = resolve(excludePath)
-  let scanned = 0
-  let capped = false
-  // quick 261024-ir1: priority paths (Unreal Shipping exes) are scanned first,
-  // outside the file cap, and never again by the walk.
-  const seen = new Set<string>()
-  for (const p of priorityPaths) {
-    const key = resolve(p)
-    seen.add(key)
-    if (key === exclude) continue
-    try {
-      if ((await lstat(p)).isSymbolicLink()) continue
-    } catch {
-      continue
-    }
-    const result = await scanSteamApiImports(appId, p)
-    if (result.status === 'ok' && result.arch !== 'none') {
-      found.push({
-        path: p,
-        arch: result.arch,
-        symbols: result.symbols,
-        delaySymbols: result.delaySymbols ?? []
-      })
-    }
-  }
-  const walk = async (dir: string, depth: number): Promise<void> => {
-    let entries
-    try {
-      entries = await readdir(dir, { withFileTypes: true })
-    } catch {
-      return
-    }
-    for (const entry of entries) {
-      if (capped) return
-      if (entry.isSymbolicLink()) continue
-      const full = join(dir, entry.name)
-      if (entry.isDirectory()) {
-        if (depth < RUNTIME_WALK_MAX_DEPTH) await walk(full, depth + 1)
-        continue
-      }
-      if (!entry.isFile()) continue
-      const lower = entry.name.toLowerCase()
-      // `.exe`/`.dll` only: a `.gamelib-orig` backup is never a candidate (j4l).
-      if (!PE_CANDIDATE_EXT.test(lower)) continue
-      if (lower === 'steam_api.dll' || lower === 'steam_api64.dll') continue
-      if (resolve(full) === exclude || seen.has(resolve(full))) continue
-      try {
-        if ((await lstat(full)).isSymbolicLink()) continue
-      } catch {
-        continue
-      }
-      if (scanned >= IMPORTER_SCAN_MAX_FILES) {
-        capped = true
-        logWarning(
-          `placeShimForGame: importer-PE scan hit the ${IMPORTER_SCAN_MAX_FILES}-file cap for appId ${appId} -- remaining files not scanned`,
-          LogPrefix.Steam
-        )
-        return
-      }
-      scanned++
-      const result = await scanSteamApiImports(appId, full)
-      if (result.status === 'ok' && result.arch !== 'none') {
-        found.push({
-          path: full,
-          arch: result.arch,
-          symbols: result.symbols,
-          delaySymbols: result.delaySymbols ?? []
-        })
-      }
-    }
-  }
-  await walk(root, 0)
-  return found
 }
 
 /**
@@ -712,7 +436,7 @@ function withDrmWrapper(
   }
   const resolvedExe = resolve(gameExePath)
   const wrapper = detectDrmWrapper(resolvedExe)
-  const exeArch = readExeMachineArch(resolvedExe)
+  const exeArch = readFileEffectiveArch(resolvedExe)
   const stamp = { exeArch, ...(wrapper ? { drmWrapper: wrapper } : {}) }
   if (wrapper !== 'steamstub') return { ...result, ...stamp }
   logInfo(
@@ -947,30 +671,12 @@ function withhold(input: WithholdInput): PlaceShimResultBase {
   }
 }
 
-/**
- * quick 261024-i94: the launch exe's arch from its COFF header, via ranged fd
- * reads (never a slurp). null on any error or a non-PE -- never throws.
- */
-function readExeMachineArch(exePath: string): 'x86' | 'x64' | null {
-  let fd: number | null = null
-  try {
-    fd = openSync(exePath, 'r')
-    const handle = fd
-    return readPeMachineArch((offset, length) => {
-      const buf = Buffer.alloc(length)
-      const n = readSync(handle, buf, 0, length, offset)
-      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
-    })
-  } catch {
-    return null
-  } finally {
-    if (fd !== null) {
-      try {
-        closeSync(fd)
-      } catch {
-        // nothing left to release
-      }
-    }
+/** D-53-12: the shared scan module's injected dependencies. */
+function scanDeps(appId: string): BridgeScanDeps {
+  return {
+    scanImports: (p) => scanSteamApiImports(appId, p),
+    warn: (m) => logWarning(m, LogPrefix.Steam),
+    isShimBytes: isGameLibShimBytes
   }
 }
 
@@ -1040,9 +746,10 @@ async function placeShimForGameInner(
       opts?.gameInstallRoot
     )
     const unreal = await findUnrealLayout(bottleDir, dirname(resolvedExePath))
-    const runtimeDlls = await findRuntimeLoadedSteamApiDlls(
+    const runtimeDlls = await findRuntimeDlls(
       walkRoot,
-      unreal?.steamworksDir ? [unreal.steamworksDir] : []
+      unreal?.steamworksDir ? [unreal.steamworksDir] : [],
+      scanDeps(appId)
     )
     if (runtimeDlls.length > 0) {
       const names = (['steam_api.dll', 'steam_api64.dll'] as const).filter(
@@ -1100,7 +807,7 @@ async function placeShimForGameInner(
       // original dlls' version strings must be read before they are
       // overwritten). Importers of the other arch than the launch exe never
       // load, so they are ignored; an unknown launch arch evaluates all.
-      const launchArch = readExeMachineArch(resolvedExePath)
+      const launchArch = readFileEffectiveArch(resolvedExePath)
       const launchName: 'steam_api.dll' | 'steam_api64.dll' | null =
         launchArch === 'x64'
           ? 'steam_api64.dll'
@@ -1118,11 +825,12 @@ async function placeShimForGameInner(
           LogPrefix.Steam
         )
       }
-      const importers = await findSteamApiImporterPes(
+      const importers = await findImporterPes(
         appId,
         walkRoot,
         resolvedExePath,
-        unreal?.shippingExes ?? []
+        unreal?.shippingExes ?? [],
+        scanDeps(appId)
       )
       const combinedMissing: string[] = []
       const delayMissingAll: string[] = []
@@ -1353,7 +1061,13 @@ async function placeShimForGameInner(
     opts?.gameInstallRoot
   )
   const importers = (
-    await findSteamApiImporterPes(appId, importerRoot, resolvedExePath)
+    await findImporterPes(
+      appId,
+      importerRoot,
+      resolvedExePath,
+      [],
+      scanDeps(appId)
+    )
   ).filter((i) => i.arch === importResult.arch)
   const symbols = [
     ...new Set([

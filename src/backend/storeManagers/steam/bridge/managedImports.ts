@@ -177,8 +177,13 @@ export function effectiveLaunchArch(
 /** `effectiveLaunchArch` over a PE read in place. Never throws. */
 export function readPeEffectiveArch(read: PeReader): 'x86' | 'x64' | null {
   try {
-    const layout = readPeLayout(read)
-    const machine = u16(read, layout.peOffset + 4)
+    // Machine type first, from the COFF header alone: a PE too sparse for the
+    // full optional-header layout (no CLR to find) still has an honest arch.
+    const mz = readExact(read, 0, 2)
+    if (mz.getUint8(0) !== 0x4d || mz.getUint8(1) !== 0x5a) return null
+    const peOffset = u32(read, 0x3c)
+    if (u32(read, peOffset) !== 0x00004550) return null
+    const machine = u16(read, peOffset + 4)
     const arch = machine === 0x14c ? 'x86' : machine === 0x8664 ? 'x64' : null
     if (arch !== 'x86') return arch
     const clr = readPeClrHeader(read)
