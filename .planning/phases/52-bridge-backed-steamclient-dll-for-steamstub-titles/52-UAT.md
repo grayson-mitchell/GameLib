@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-diagnosis 4 arm A: item 27 by 52-30; arm B next in 52-31
+diagnosis 4 complete: items 27-28 by 52-30/52-31; next 52-32 operator decision
 
 ## Tests
 
@@ -283,6 +283,10 @@ result: skipped — change limited to the forwarder, which is placed only on the
 expected: the experiment is pre-registered and committed before the run (PREREG hash in terminal.log above the first round), the clone holds the product-written state (V1 cmp-identical shim and 187392 B forwarder, V2 SteamClientDll64 equal), the product is unchanged (V3 P1-P6 equal before and after), T1-T8 are answered observed-or-not-observed with cxlog line numbers, T1 is compared verbatim with 52-25 R1, and no fix is chosen.
 result: pass — session /tmp/gamelib-gate-52u-20261024T080006Z, PREREG 08064e3f1 committed before the round, `ROUND=diag5a MODE=trace SCORE=1 WATCH=90` with the 88-name relay list (918 relay Call lines, so relay was observable). V1/V2/V3 hold; no pid in the clone or the product. T1: `MessageBoxA(0, "Application load error 3:0000065432", "Steam Error", 0x10)` at cxlog:7235, same as 52-25 R1. T2: two `L"pid"` reads at 6871 and 6883, both retval 2 (absent), nothing acts on a pid. T3/T4/T6: not observed (the stub resolves OpenProcess and GetExitCodeProcess by GetProcAddress at 6692/6694 but never calls them). T7: one whole-file ReadFile of 0x2dc00. T8: ReadFile, LoadLibraryA user32, GetProcAddress MessageBoxA, dialog. Arm A score: W 1, M 1, L alive 91s, S 0, H 1, R 2, P 2, K 0. No fix chosen; arm B is 52-31.
 
+### 28. Gap 5 discriminating experiment arm B + classification (diag5b)
+expected: arm B ran with a clone-only pid against the committed rule, both arms are scored into one table, the result is classified into exactly one pre-registered O1-O4, the product is unchanged, and the recommendation is the one that class carries (no fix implemented).
+result: pass — session /tmp/gamelib-gate-52v-20261024T080546Z; the Pre-registration section was byte-equal to PREREG 08064e3f1 before the run. `ROUND=diag5b MODE=trace SCORE=1 PID_ARM=live WATCH=90`, anchor notepad.exe Windows PID 248 written as clone-only pid 0xf8; V1/V2/V3/V4b hold, product P1-P6 equal and still no pid. Score arm A to arm B: W 1 to 0, M 1/1, D identical (`Application load error 3:0000065432`), L alive/alive, S 0/0, H 1/1, R 2/2, P 2/2, K 0/0. The stub now opens pid 0xf8 and calls GetExitCodeProcess (cxlog:6875-6880, 6900-6905) and the IsSteamRunning warning is gone, but the same dialog follows the same whole-file forwarder read (cxlog:7135). Class O1: the file/forwarder check is the blocker; recommend close-out (honest SteamStub notice plus ROADMAP done-when amendment draft, or static RE at the operator's choice) at 52-32. No fix implemented; a product pid writer is not indicated. Bridge-verified: no.
+
 ## Structural Reachability Review
 
 Applied by 52-10 against all seven tests of `live-gate-contract-authoring.md`.
@@ -331,8 +335,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 27
-passed: 12
+total: 28
+passed: 13
 issues: 8
 pending: 1
 skipped: 6
@@ -399,3 +403,9 @@ blocked: 0
   reason: "A game Steam-init log exists and the Loaded line is present (not unverified), but IsSteamRunning 1 (`did not locate a running instance of Steam`), MSGBOX 1, and the game process was not alive at 90 s. Bridge-verified is NOT achieved."
   evidence: "52-UAT item 24; session /tmp/gamelib-gate-52t-20261024T070522Z (ROUND=regate3 MODE=trace WATCH=90)."
   fix_direction: "Run /gsd-plan-phase 52 --gaps with the remaining init evidence (IsSteamRunning still reports no Steam instance; ActiveProcess pid is absent)."
+
+- truth: "A SteamStub title (Grim Dawn 219990) launched through the forwarder reaches its main menu with a clean Steam-init log (done-when, after the arm B discriminating experiment)"
+  status: failed
+  reason: "Experiment 52-30/52-31 classified O1: a live pid removes the IsSteamRunning warning (W 1 to 0) but Application Load Error 3 persists unchanged after the whole-file forwarder read. The file/forwarder check is the blocker, not the pid; a product pid writer would not close the done-when."
+  evidence: "52-30-DIAGNOSIS.md `## Discriminating result`; 52-UAT items 27-28; sessions /tmp/gamelib-gate-52u-20261024T080006Z (arm A) and /tmp/gamelib-gate-52v-20261024T080546Z (arm B); cxlog diag5a:7235 and diag5b:7135."
+  fix_direction: "O1 close-out: the 52-32 operator decision between an honest SteamStub notice with a ROADMAP done-when amendment draft, or static RE as a separate operator choice. Decide at 52-32; /gsd-plan-phase 52 --gaps only if the operator picks static RE."
