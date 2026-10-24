@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: testing
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
 source:
   - 52-01-SUMMARY.md
@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-complete: items 6-8 scored by 52-12 (issue, issue, issue); see Gaps
+item 9 (re-gate 52-17); items 6-8 keep their 52-12 results as history
 
 ## Tests
 
@@ -204,6 +204,26 @@ result: issue — ROUND=trace MODE=trace WATCH=90 (2026-10-24T02:44:17Z, GameLib
 
 expected: after `wineserver -k` of the product bottle, its `user.reg` has `SteamClientDll64` under ActiveProcess and no `pid` value; `system.reg` has no `Software\Valve` or `Wow6432Node\Valve` key; no `steam.exe` or Windows Steam client in the bottle; `x64/Grim Dawn.exe` sha256 equals the preflight value.
 result: issue — read-only on the product bottle after `wineserver -k` (2026-10-24): `user.reg` has no `Valve\\Steam\\ActiveProcess` key at all (count 0), so `SteamClientDll64` is absent (expected present; GameLib's SteamStub setup never ran because launch 1 was withheld); no `pid` value (fine); `grep -cE '^\[Software\\(Wow6432Node\\)?Valve' system.reg` = 0 (pass); no `steam.exe` or `steamclient*.dll` in the Steam root (pass); `x64/Grim Dawn.exe` sha256 d3915e2599317b6670cc088ba958afb2b2f4fa8141cfd1d777ee02f9ea1fc4c4 equals the preflight value (pass); x64/steam_api64.dll is still 223744 bytes, the stale shim (not SHIM64 242688), x64 holds gamelib_bridge.cfg (24 bytes) and no steamclient64.dll. Hygiene is clean but the expected SteamClientDll64 line is not met, so not a pass. Closing inventory: see 52-12-SUMMARY.md.
+
+### 9. Re-gate — GameLib launch of Grim Dawn after 52-13..16
+expected: no `withheld the shim` line for 219990; `drmWrapper=steamstub`; `[bridge-steamstub] appId=219990 forwarder placed`; `bridge helper [219990]:` with `HELLO shim attached appid=219990` and `FWD CreateInterface ver=SteamClient017 native=present` (or 014); no `steamstub-unforwarded`; product x64/steam_api64.dll size equals the new SHIM64; runtime >= 60 s; operator confirms main menu; In-Game recorded but not counted.
+result: pending
+
+### 10. Re-gate — cx-log trace and strict Steam-init check (MODE=trace)
+expected: clone taken AFTER item 9 (GameLib quit, no 219990 helper), `ROUND=regate MODE=trace WATCH=90`; clone holds product-written state (x64/steam_api64.dll size equals SHIM64 and is byte-identical to the product copy; x64/steamclient64.dll byte-identical to the product's; clone user.reg SteamClientDll64 under ActiveProcess equals the product's); cxlog `grep -c 'steam://run'` is 0, steamclient64.dll loaded, game alive at 90 s, at least one `[S_API]` line and no `SteamAPI_IsSteamRunning() did not locate a running instance of Steam`. Harness-placed state is `issue — harness-flow init evidence only`; no game Steam-init log is `issue — unverified (no game Steam-init log)`.
+result: pending
+
+### 11. Re-gate — bottle hygiene
+expected: after `wineserver -k` on the product bottle, user.reg has `SteamClientDll64` under ActiveProcess and no `pid`; no HKLM Valve key in system.reg; no steam.exe or steamclient*.dll in the Steam root; x64 steamclient64.dll byte-identical to the built forwarder; exe sha256 equals the preflight value.
+result: pending
+
+### 12. Re-gate — ELEX (411300) no-regression after CR-01
+expected: GameLib launch of ELEX through GameLibSteamBridge-411300; gamelib.log has `HELLO shim attached appid=411300` and no `[bridge-steamstub]` line for 411300; no "not subscribed" error and ELEX reaches at least its loading screen (51-UAT item 15 baseline, knownBad does-not-run); any game log checked for Steam-init failures; pass means no regression, bridge-verified recorded separately and expected to stay unverified.
+result: pending
+
+### 13. Re-gate — pid decision (revisits decision 1)
+expected: `skipped — no IsSteamRunning warning` if item 10 is clean; otherwise the operator's decision and its evidence.
+result: pending
 
 ## Structural Reachability Review
 
