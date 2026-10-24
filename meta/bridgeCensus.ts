@@ -463,6 +463,9 @@ export function summarizeCensus(rows: CensusRow[]): {
   unverified: number
   playRecorded: number
   total: number
+  steamworksUsing: number
+  verifiedSteamworksUsing: number
+  majority: boolean
   byClass: Record<string, number>
 } {
   const byClass: Record<string, number> = {}
@@ -472,9 +475,17 @@ export function summarizeCensus(rows: CensusRow[]): {
   let initFailed = 0
   let unverified = 0
   let playRecorded = 0
+  let steamworksUsing = 0
+  let verifiedSteamworksUsing = 0
 
   for (const row of rows) {
     byClass[row.class] = (byClass[row.class] ?? 0) + 1
+    // D-53-14: the majority denominator. known-bad and win64-no-shim rows
+    // DO use Steamworks, so they stay in; no-steam-api / no-binary do not.
+    if (row.class !== 'no-steam-api' && row.class !== 'no-binary') {
+      steamworksUsing++
+      if (row.evidence === 'verified') verifiedSteamworksUsing++
+    }
     if (isRoutedToBridge(row)) {
       routed++
     }
@@ -501,6 +512,9 @@ export function summarizeCensus(rows: CensusRow[]): {
     unverified,
     playRecorded,
     total: rows.length,
+    steamworksUsing,
+    verifiedSteamworksUsing,
+    majority: verifiedSteamworksUsing * 2 > steamworksUsing,
     byClass
   }
 }
@@ -542,16 +556,81 @@ export function pickRuntimeSteamApiDll(
   }
 }
 
+export type CensusEngine =
+  | 'unity'
+  | 'unreal'
+  | 'godot'
+  | 'gamemaker'
+  | 'unknown'
+
+/** D-53-13: engine guess from top-level install entry names (and exe
+ * basenames). Pure. Unity wins first (UnityPlayer.dll / *_Data), then
+ * Unreal, Godot, GameMaker. */
+export function detectEngine(entryNames: string[]): CensusEngine {
+  const names = entryNames.map((n) => n.toLowerCase())
+  if (
+    names.includes('unityplayer.dll') ||
+    names.some((n) => n.endsWith('_data'))
+  ) {
+    return 'unity'
+  }
+  if (
+    names.includes('engine') ||
+    names.some((n) => n.endsWith('-win64-shipping.exe'))
+  ) {
+    return 'unreal'
+  }
+  if (
+    names.some((n) => n.endsWith('.pck') || /^libgodotsteam.*\.dll$/.test(n))
+  ) {
+    return 'godot'
+  }
+  if (names.includes('data.win')) return 'gamemaker'
+  return 'unknown'
+}
+
+const UE_INIT_FAILED = [
+  /LogSteamShared:\s*Warning:\s*SteamAPI failed to initialize/,
+  /LogOnline:\s*Warning:\s*STEAM:\s*Steam API failed to initialize/
+]
+const UE_INIT_OK =
+  /LogOnline:\s*STEAM:\s*\[AppId:\s*\d+\]\s*Client API initialized 1/
+
+/** First game-originated bridge CALL (`Interface.Method`) for `appid` that
+ * follows a HELLO for the same appid in the same app-log text, or null.
+ * Read only from GameLib's own app logs (T-53-09), appid bracket-anchored. */
+function findGameCall(appid: string, appLogTexts: string[]): string | null {
+  const hello = new RegExp(`HELLO\\s+shim attached appid=${appid}(?![0-9])`)
+  const call = new RegExp(
+    `bridge helper \\[${appid}\\]:\\s*\\[[^\\]]*\\]\\s+CALL\\s+([A-Za-z0-9_]+\\.[A-Za-z0-9_]+)`
+  )
+  for (const text of appLogTexts) {
+    const h = hello.exec(text)
+    if (!h) continue
+    const m = call.exec(text.slice(h.index + h[0].length))
+    if (m) return m[1]
+  }
+  return null
+}
+
 /**
- * Quick 261024-f0w: pure live-evidence check. Order: no HELLO -> unverified;
- * no game log -> unverified; failure marker -> init-failed; else verified.
- * Mac Steam In-Game status is deliberately NOT an input: it comes from the
- * helper's own SteamAPI_Init, not from the game.
+ * Quick 261024-f0w + D-53-13: pure live-evidence check, per engine.
+ * Order: no HELLO -> unverified. Unity (the default, exactly as f0w locked
+ * it): no game log -> unverified; failure marker -> init-failed; else
+ * verified (HELLO + clean Player.log; a CALL line is neither required nor
+ * sufficient). Unreal: Saved-log failure markers win (init-failed), then
+ * `Client API initialized 1` or a game-originated CALL -> verified.
+ * Godot / GameMaker / unknown log nothing about Steam init, so a
+ * game-originated bridge CALL after HELLO is the evidence. Helper-originated
+ * lines (HELLO, FWD) never count, and Mac Steam In-Game status is
+ * deliberately NOT an input: it comes from the helper's own SteamAPI_Init,
+ * not from the game.
  */
 export function classifyBridgeEvidence(input: {
   appid: string
   appLogTexts: string[]
   gameLogTexts: string[]
+  engine?: CensusEngine
 }): BridgeEvidence {
   if (!/^\d+$/.test(input.appid)) {
     return { status: 'unverified', detail: 'no HELLO' }
@@ -561,6 +640,32 @@ export function classifyBridgeEvidence(input: {
   )
   if (!input.appLogTexts.some((t) => hello.test(t))) {
     return { status: 'unverified', detail: 'no HELLO' }
+  }
+  const engine = input.engine ?? 'unity'
+  if (engine === 'godot' || engine === 'gamemaker' || engine === 'unknown') {
+    const call = findGameCall(input.appid, input.appLogTexts)
+    return call
+      ? { status: 'verified', detail: `game call ${call}` }
+      : { status: 'unverified', detail: 'no game-originated call' }
+  }
+  if (engine === 'unreal') {
+    if (
+      input.gameLogTexts.some((t) => UE_INIT_FAILED.some((re) => re.test(t)))
+    ) {
+      return { status: 'init-failed', detail: 'UE SteamAPI init failed' }
+    }
+    if (input.gameLogTexts.some((t) => UE_INIT_OK.test(t))) {
+      return { status: 'verified', detail: '' }
+    }
+    const call = findGameCall(input.appid, input.appLogTexts)
+    if (call) return { status: 'verified', detail: `game call ${call}` }
+    return {
+      status: 'unverified',
+      detail:
+        input.gameLogTexts.length === 0
+          ? 'no game log found'
+          : 'no game-originated call'
+    }
   }
   if (input.gameLogTexts.length === 0) {
     return { status: 'unverified', detail: 'no game log found' }
@@ -615,7 +720,8 @@ export function formatCensusMarkdown(rows: CensusRow[]): string {
     header,
     body,
     '',
-    `${summary.routed} of ${summary.total} routed to the bridge; ${summary.verified} of ${summary.total} verified running through the bridge (HELLO + clean game log; ${summary.initFailed} init-failed, ${summary.unverified} unverified); ${summary.playRecorded} of ${summary.total} play recorded in the allowlist; ${summary.covered} of ${summary.total} symbols covered by the shim (static scan) (${byClassSummary})`
+    `${summary.routed} of ${summary.total} routed to the bridge; ${summary.verified} of ${summary.total} verified running through the bridge (HELLO + clean game log; ${summary.initFailed} init-failed, ${summary.unverified} unverified); ${summary.playRecorded} of ${summary.total} play recorded in the allowlist; ${summary.covered} of ${summary.total} symbols covered by the shim (static scan) (${byClassSummary})`,
+    `${summary.verifiedSteamworksUsing} of ${summary.steamworksUsing} Steamworks-using rows verified (majority: ${summary.majority ? 'yes' : 'no'})`
   ].join('\n')
 }
 

@@ -19,6 +19,7 @@
 import {
   classifyBridgeEvidence,
   classifyCensusTitle,
+  detectEngine,
   formatCensusMarkdown,
   pickRuntimeSteamApiDll,
   readPersistedScanArch,
@@ -944,5 +945,227 @@ describe('quick 261024-uir: shim-placed runtime-loaded steam_api', () => {
     expect(md).toContain('unconfirmed=1')
     expect(md).toContain('1 of 1 routed')
     expect(md).toContain('0 of 1 symbols covered')
+  })
+})
+
+describe('D-53-13: engine-aware bridge evidence', () => {
+  const hello = (id: string) =>
+    `bridge helper [${id}]: [2026-10-24T18:29:26Z] HELLO  shim attached appid=${id}\n`
+  const call = (id: string, m = 'SteamUser023.GetSteamID') =>
+    `bridge helper [${id}]: [2026-10-24T18:29:27Z] CALL   ${m}\n`
+  const fwd = (id: string) =>
+    `bridge helper [${id}]: [2026-10-24T18:29:27Z] FWD    FWD CreateInterface ver=x\n`
+  const id = '3410180'
+
+  it('godot: HELLO then a game call is verified with the call named', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'godot',
+        appLogTexts: [hello(id) + call(id)],
+        gameLogTexts: []
+      })
+    ).toEqual({
+      status: 'verified',
+      detail: 'game call SteamUser023.GetSteamID'
+    })
+  })
+
+  it('a CALL before HELLO does not count', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'godot',
+        appLogTexts: [call(id) + hello(id)],
+        gameLogTexts: []
+      })
+    ).toEqual({ status: 'unverified', detail: 'no game-originated call' })
+  })
+
+  it.each(['34101800', '341018'])(
+    'a CALL for appid %s does not count for %s',
+    (other) => {
+      expect(
+        classifyBridgeEvidence({
+          appid: id,
+          engine: 'godot',
+          appLogTexts: [hello(id) + call(other)],
+          gameLogTexts: []
+        })
+      ).toEqual({ status: 'unverified', detail: 'no game-originated call' })
+    }
+  )
+
+  it.each(['godot', 'gamemaker', 'unknown'] as const)(
+    '%s with HELLO and only FWD lines is unverified',
+    (engine) => {
+      expect(
+        classifyBridgeEvidence({
+          appid: id,
+          engine,
+          appLogTexts: [hello(id) + fwd(id)],
+          gameLogTexts: []
+        })
+      ).toEqual({ status: 'unverified', detail: 'no game-originated call' })
+    }
+  )
+
+  it('no HELLO is unverified for every engine', () => {
+    for (const engine of ['unity', 'unreal', 'godot', 'gamemaker'] as const) {
+      expect(
+        classifyBridgeEvidence({
+          appid: id,
+          engine,
+          appLogTexts: [call(id)],
+          gameLogTexts: ['clean']
+        })
+      ).toEqual({ status: 'unverified', detail: 'no HELLO' })
+    }
+  })
+
+  it('unity: HELLO + clean Player.log is verified with or without a CALL', () => {
+    for (const extra of ['', call(id)]) {
+      expect(
+        classifyBridgeEvidence({
+          appid: id,
+          engine: 'unity',
+          appLogTexts: [hello(id) + extra],
+          gameLogTexts: ['Initialize engine\n']
+        })
+      ).toEqual({ status: 'verified', detail: '' })
+    }
+  })
+
+  it('unity: a CALL does not substitute for a missing Player.log', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'unity',
+        appLogTexts: [hello(id) + call(id)],
+        gameLogTexts: []
+      })
+    ).toEqual({ status: 'unverified', detail: 'no game log found' })
+  })
+
+  it('unity: EntryPointNotFoundException is init-failed with the symbol', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'unity',
+        appLogTexts: [hello(id)],
+        gameLogTexts: [
+          'EntryPointNotFoundException: SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck\n'
+        ]
+      })
+    ).toEqual({
+      status: 'init-failed',
+      detail: 'SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck'
+    })
+  })
+
+  it('unreal: a failure marker is init-failed even with a CALL', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'unreal',
+        appLogTexts: [hello(id) + call(id)],
+        gameLogTexts: [
+          'LogSteamShared: Warning: SteamAPI failed to initialize\n'
+        ]
+      })
+    ).toEqual({ status: 'init-failed', detail: 'UE SteamAPI init failed' })
+  })
+
+  it('unreal: the Client API marker verifies', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'unreal',
+        appLogTexts: [hello(id)],
+        gameLogTexts: [
+          `LogOnline: STEAM: [AppId: ${id}] Client API initialized 1\n`
+        ]
+      })
+    ).toEqual({ status: 'verified', detail: '' })
+  })
+
+  it('unreal: a clean log plus a CALL verifies; without either it does not', () => {
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'unreal',
+        appLogTexts: [hello(id) + call(id)],
+        gameLogTexts: ['LogInit: ok\n']
+      }).status
+    ).toBe('verified')
+    expect(
+      classifyBridgeEvidence({
+        appid: id,
+        engine: 'unreal',
+        appLogTexts: [hello(id)],
+        gameLogTexts: ['LogInit: ok\n']
+      }).status
+    ).toBe('unverified')
+  })
+
+  it('detectEngine recognises each engine', () => {
+    expect(detectEngine(['Game.exe', 'Game_Data', 'UnityPlayer.dll'])).toBe(
+      'unity'
+    )
+    expect(detectEngine(['Engine', 'Proj', 'Proj.exe'])).toBe('unreal')
+    expect(detectEngine(['Proj-Win64-Shipping.exe'])).toBe('unreal')
+    expect(detectEngine(['Game.exe', 'Game.pck'])).toBe('godot')
+    expect(detectEngine(['libgodotsteam.windows.dll'])).toBe('godot')
+    expect(detectEngine(['data.win', 'Game.exe'])).toBe('gamemaker')
+    expect(detectEngine(['a.exe'])).toBe('unknown')
+  })
+})
+
+describe('D-53-14: Steamworks-using denominator', () => {
+  const mk = (
+    cls: CensusRow['class'],
+    evidence: CensusRow['evidence']
+  ): CensusRow => ({
+    appid: '1',
+    name: 'n',
+    installdir: 'n',
+    arch: 'x86',
+    class: cls,
+    detail: '',
+    playRecorded: false,
+    evidence,
+    evidenceDetail: ''
+  })
+
+  it('keeps known-bad and win64-no-shim in, drops no-steam-api and no-binary', () => {
+    const s = summarizeCensus([
+      mk('bridge', 'verified'),
+      mk('known-bad', 'unverified'),
+      mk('win64-no-shim', 'unverified'),
+      mk('no-steam-api', 'verified'),
+      mk('no-binary', 'unverified')
+    ])
+    expect(s.steamworksUsing).toBe(3)
+    expect(s.verifiedSteamworksUsing).toBe(1)
+    expect(s.majority).toBe(false)
+  })
+
+  it('reports a majority and prints the line', () => {
+    const rows = [
+      mk('bridge', 'verified'),
+      mk('bridge', 'verified'),
+      mk('known-bad', 'unverified')
+    ]
+    expect(summarizeCensus(rows).majority).toBe(true)
+    expect(formatCensusMarkdown(rows)).toContain(
+      '2 of 3 Steamworks-using rows verified (majority: yes)'
+    )
+  })
+
+  it('exactly half is not a majority', () => {
+    expect(
+      summarizeCensus([mk('bridge', 'verified'), mk('bridge', 'unverified')])
+        .majority
+    ).toBe(false)
   })
 })
