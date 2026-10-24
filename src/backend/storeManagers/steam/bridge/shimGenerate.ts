@@ -184,7 +184,8 @@ interface RuntimeSteamApiDll {
  * `isGameLibShim`. Async fs only, depth-limited, never follows symlinks.
  */
 async function findRuntimeLoadedSteamApiDlls(
-  root: string
+  root: string,
+  extraRoots: string[] = []
 ): Promise<RuntimeSteamApiDll[]> {
   const found: RuntimeSteamApiDll[] = []
   const walk = async (dir: string, depth: number): Promise<void> => {
@@ -215,7 +216,105 @@ async function findRuntimeLoadedSteamApiDlls(
     }
   }
   await walk(root, 0)
-  return found
+  // quick 261024-ir1: extra roots (the Unreal Steamworks dir) get the same
+  // bounded walk; dedupe by resolved path since they overlap the main walk.
+  for (const extra of extraRoots) await walk(extra, 0)
+  const seenPaths = new Set<string>()
+  return found.filter((d) => {
+    const key = resolve(d.path)
+    if (seenPaths.has(key)) return false
+    seenPaths.add(key)
+    return true
+  })
+}
+
+/**
+ * quick 261024-ir1: Unreal Engine 4/5 layout probe. UE games launch a
+ * bootstrap stub `<P>.exe` that imports nothing from steam_api; the real
+ * importer is `<P>/Binaries/Win64/<P>-Win64-Shipping.exe` and the dll lives
+ * at `Engine/Binaries/ThirdParty/Steamworks/Steamv*\/Win64/` -- 6 directories
+ * below the install root, past RUNTIME_WALK_MAX_DEPTH (field cases: Manor
+ * Lords 1363080, Abiotic Factor 427410, Ranch Simulator 1119730). Returns
+ * null unless a real `Engine/` dir sits beside the stub. Async fs only,
+ * lstat-checked at every segment, contained in the bottle (T-ir1-01..03).
+ */
+const UE_SHIPPING_EXE = /-shipping\.exe$/
+const UE_SHIPPING_MAX = 8
+
+async function isRealDir(path: string): Promise<boolean> {
+  try {
+    const st = await lstat(path)
+    return st.isDirectory() && !st.isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
+async function findUnrealLayout(
+  bottleDir: string,
+  ueRoot: string
+): Promise<{ steamworksDir: string | null; shippingExes: string[] } | null> {
+  if (!(await isRealDir(join(ueRoot, 'Engine')))) return null
+
+  let steamworksDir: string | null = join(
+    ueRoot,
+    'Engine',
+    'Binaries',
+    'ThirdParty',
+    'Steamworks'
+  )
+  for (const seg of [
+    join(ueRoot, 'Engine', 'Binaries'),
+    join(ueRoot, 'Engine', 'Binaries', 'ThirdParty'),
+    steamworksDir
+  ]) {
+    if (!(await isRealDir(seg))) {
+      steamworksDir = null
+      break
+    }
+  }
+  if (
+    steamworksDir !== null &&
+    !isContainedWithin(bottleDir, resolve(steamworksDir))
+  ) {
+    steamworksDir = null
+  }
+
+  const shippingExes: string[] = []
+  let top
+  try {
+    top = await readdir(ueRoot, { withFileTypes: true })
+  } catch {
+    return { steamworksDir, shippingExes }
+  }
+  for (const entry of top) {
+    if (entry.isSymbolicLink() || !entry.isDirectory()) continue
+    if (entry.name.toLowerCase() === 'engine') continue
+    const win64 = join(ueRoot, entry.name, 'Binaries', 'Win64')
+    if (!(await isRealDir(join(ueRoot, entry.name)))) continue
+    if (!(await isRealDir(join(ueRoot, entry.name, 'Binaries')))) continue
+    if (!(await isRealDir(win64))) continue
+    let files
+    try {
+      files = await readdir(win64, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const f of files) {
+      if (f.isSymbolicLink() || !f.isFile()) continue
+      if (!UE_SHIPPING_EXE.test(f.name.toLowerCase())) continue
+      const full = join(win64, f.name)
+      try {
+        if ((await lstat(full)).isSymbolicLink()) continue
+      } catch {
+        continue
+      }
+      if (!isContainedWithin(bottleDir, resolve(full))) continue
+      shippingExes.push(full)
+    }
+  }
+  shippingExes.sort()
+  return { steamworksDir, shippingExes: shippingExes.slice(0, UE_SHIPPING_MAX) }
 }
 
 /**
@@ -255,12 +354,30 @@ interface SteamApiImporterPe {
 async function findSteamApiImporterPes(
   appId: string,
   root: string,
-  excludePath: string
+  excludePath: string,
+  priorityPaths: string[] = []
 ): Promise<SteamApiImporterPe[]> {
   const found: SteamApiImporterPe[] = []
   const exclude = resolve(excludePath)
   let scanned = 0
   let capped = false
+  // quick 261024-ir1: priority paths (Unreal Shipping exes) are scanned first,
+  // outside the file cap, and never again by the walk.
+  const seen = new Set<string>()
+  for (const p of priorityPaths) {
+    const key = resolve(p)
+    seen.add(key)
+    if (key === exclude) continue
+    try {
+      if ((await lstat(p)).isSymbolicLink()) continue
+    } catch {
+      continue
+    }
+    const result = await scanSteamApiImports(appId, p)
+    if (result.status === 'ok' && result.arch !== 'none') {
+      found.push({ path: p, arch: result.arch, symbols: result.symbols })
+    }
+  }
   const walk = async (dir: string, depth: number): Promise<void> => {
     let entries
     try {
@@ -280,7 +397,7 @@ async function findSteamApiImporterPes(
       const lower = entry.name.toLowerCase()
       if (!PE_CANDIDATE_EXT.test(lower)) continue
       if (lower === 'steam_api.dll' || lower === 'steam_api64.dll') continue
-      if (resolve(full) === exclude) continue
+      if (resolve(full) === exclude || seen.has(resolve(full))) continue
       try {
         if ((await lstat(full)).isSymbolicLink()) continue
       } catch {
@@ -579,7 +696,11 @@ async function placeShimForGameInner(
       resolvedExePath,
       opts?.gameInstallRoot
     )
-    const runtimeDlls = await findRuntimeLoadedSteamApiDlls(walkRoot)
+    const unreal = await findUnrealLayout(bottleDir, dirname(resolvedExePath))
+    const runtimeDlls = await findRuntimeLoadedSteamApiDlls(
+      walkRoot,
+      unreal?.steamworksDir ? [unreal.steamworksDir] : []
+    )
     if (runtimeDlls.length > 0) {
       const names = (['steam_api.dll', 'steam_api64.dll'] as const).filter(
         (n) => runtimeDlls.some((d) => d.name === n)
@@ -645,10 +766,20 @@ async function placeShimForGameInner(
             : null
       const considered: Array<'steam_api.dll' | 'steam_api64.dll'> =
         launchName !== null && names.includes(launchName) ? [launchName] : names
+      if (unreal) {
+        logInfo(
+          `placeShimForGame: Unreal layout for appId ${appId}; Shipping exe(s): ${
+            unreal.shippingExes.map((p) => relative(walkRoot, p)).join(', ') ||
+            'none'
+          }`,
+          LogPrefix.Steam
+        )
+      }
       const importers = await findSteamApiImporterPes(
         appId,
         walkRoot,
-        resolvedExePath
+        resolvedExePath,
+        unreal?.shippingExes ?? []
       )
       const combinedMissing: string[] = []
       let primaryEval: {
