@@ -1,14 +1,37 @@
 ---
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
-reviewed: 2026-10-24T02:53:42Z
+reviewed: 2026-10-24T04:49:08Z
 depth: standard
-files_reviewed: 15
+files_reviewed: 38
 files_reviewed_list:
-  - meta/gen_vtables.ts
+  - meta/__tests__/buildSteamBridgeShims.test.ts
+  - meta/__tests__/gen_vtables.test.ts
   - meta/buildSteamBridgeShims.ts
+  - meta/gen_vtables.ts
+  - meta/sdk/acceptance-interface-versions.json
+  - meta/sdk/isteamclient014.manifest.json
+  - meta/sdk/isteamclient017.manifest.json
+  - meta/sdk/isteamnetworking006.manifest.json
+  - meta/sdk/isteamremotestorage016.manifest.json
+  - meta/sdk/isteamuser.manifest.json
+  - meta/sdk/ordinals.json
+  - meta/sdk/wire-policy.json
+  - native/steam-bridge/generated/bridge_dispatch.h
+  - native/steam-bridge/generated/steam_api64.def
+  - native/steam-bridge/generated/steam_api_shim.c
   - native/steam-bridge/helper/bridge_helper.c
   - native/steam-bridge/steamclient/steamclient_fwd.c
   - src/backend/constants/paths.ts
+  - src/backend/storeManagers/steam/__tests__/games.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/bridgeVerdict.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/fixtures/objdumpImports.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/helperIntegration.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/importScan.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/peSections.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/protocol.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/shimCoverage.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/shimGenerate.test.ts
+  - src/backend/storeManagers/steam/bridge/__tests__/steamClientSetup.test.ts
   - src/backend/storeManagers/steam/bridge/bridgeVerdict.ts
   - src/backend/storeManagers/steam/bridge/importParse.ts
   - src/backend/storeManagers/steam/bridge/importScan.ts
@@ -20,153 +43,156 @@ files_reviewed_list:
   - src/backend/storeManagers/steam/electronStores.ts
   - src/backend/storeManagers/steam/games.ts
 findings:
-  critical: 1
-  warning: 8
+  critical: 0
+  warning: 3
   info: 4
-  total: 13
+  total: 7
 status: issues_found
 ---
 
-# Phase 52: Code Review Report
+# Phase 52: Code Review Report (re-review after gap closure 52-13..52-18)
 
-**Reviewed:** 2026-10-24T02:53:42Z
-**Depth:** standard (diff `7ed535984..HEAD`, plus spot-checks of the generated `steam_api_shim.c` / `bridge_dispatch.h`)
-**Files Reviewed:** 15
+**Reviewed:** 2026-10-24T04:49:08Z
+**Depth:** standard. The gap-closure diff `21d2ab34b..HEAD` was read in full. The 38 scoped files were read in context. `steam_api_shim.c` was spot-checked only: the CR-01 gating, the new x64 exports and the iface table.
+**Files Reviewed:** 38
 **Status:** issues_found
 
 ## Summary
 
-Phase 52 adds four things: a CONTROL slot 3 (`CREATE_INTERFACE`) in the helper, the shim export `GameLibBridge_CreateInterface`, an x64 `steamclient64.dll` forwarder plus its HKCU registration, and SteamStub `.bind` detection that drives forwarder setup at launch. It also moves `SteamClient017`/`SteamClient014` from `stub` to `wire`, and adds a bounded static-import closure to the import scan.
+The gap-closure plans fixed the critical finding and the four warnings that were not deferred, and they fixed them correctly:
 
-The native frame handling is sound. The helper's slot-3 handler checks `len` against both 4096 and `argLen` before it copies anything. The forwarder's `MAX_PATH` concatenation has bounds. The PE section parser checks every read against the buffer length. The registry argv cannot be injected into (it is an argv array, the path is drive-anchored, and quotes, CR, LF and NUL are rejected).
+- **CR-01:** the forwarded `GetISteam*` lookups are now gated on `g_bridge_steamstub_path_active`. Ordinary x64 titles get the proxy or the null object again.
+- **WR-01 / WR-02:** the `reg add` is bounded, and exit code 0 is the only thing accepted as success.
+- **WR-03:** no title is guessed to be x64.
+- **WR-04:** a fresh `drmWrapper` now overrides the persisted one.
 
-The main defect is outside the SteamStub path. The `stub` to `wire` flip applies to every x64 bridge title. It removes the x64 null-object fallback from every `ISteamClient::GetISteamXxx` lookup, so lookups that used to return a safe object now return NULL. Other problems:
-- The forwarder setup uses `wait: true`, which adds a blocking `wineserver --wait`.
-- A wine run that never happens is accepted as a successful `reg add`.
-- The `x64` arch default and the stale `drmWrapper` fallback can both lead to a "placed" result, which suppresses the user notice, for titles where forwarding cannot work.
+The prior "withheld result carries no `drmWrapper`" gap is also closed. No new critical defect was found.
 
-The known withhold-guard gap (placeShimForGame's `withheld` result has no `drmWrapper`) is not re-reported here. Two of the warnings below (WR-03, WR-04) are other ways that the notice the phase promises ends up false or missing.
+Three new warnings:
 
-## Critical Issues
+1. **CR-01 is fixed only for lookups.** The eight non-lookup `ISteamClient` methods are still forwarded to the helper's live native client for **every** x64 title. Before the phase they were local stubs. The deferred WR-07 risk therefore applies to all x64 titles, not only SteamStub ones (WR-09).
+2. **The Grim Dawn re-gate evidence shows the SteamStub check rejecting before it calls any method on the returned interface** (WR-10). In the trace, the stub calls `CreateInterface` twice, looks up a `Steam_*` export, which fails, calls `GetModuleFileNameW` on the forwarder module, and then shows a `MessageBox`. None of the forwarded `ISteamClient` plumbing is reached. Whatever decides "Load Error 3" is a local input. The candidates GameLib controls are the forwarder's single-export surface (`CreateInterface` only) and the unwritten ActiveProcess `pid`.
+3. **The single-exe withhold path can still claim "launching with the game's own steam_api" when no `steam_api64.dll` exists at all** (WR-11).
 
-### CR-01: Flipping SteamClient017/014 to `wire` removes the x64 null-object fallback for every x64 title, not just SteamStub ones
+**ELEX Friends sign-out:** no code in scope explains it. ELEX's helper log has no FWD lines, so none of the phase-52 forwarding code (lookups or lifecycle methods) ran for 411300. The two account-session events in that run both come from code that predates this phase and is outside this review's scope:
+- the steam-user `client.logOn({ refreshToken })` on Play (`src/backend/storeManagers/steam/user.ts:663`, outside this review's file list);
+- the helper's `SteamAPI_Init` against the Mac client.
 
-**File:** `src/backend/storeManagers/steam/bridge/shimCoverage.ts:300-301`, `meta/gen_vtables.ts:1039-1065` (`emitSteamClientForwardedLookup`), `meta/gen_vtables.ts:1102-1107`
-**Issue:** Before this phase, every x64 `vt_SteamClient017_GetISteamXxx` returned `resolve_iface_by_exact_version(v)` and fell back to `&g_x64_null_object_instance` when that missed. You can see this in the base `steam_api_shim.c`, for example `vt_SteamClient017_GetISteamMatchmaking`. Now that the manifest is `wire`, the generator emits `emitSteamClientForwardedLookup`, which returns NULL in three cases:
-1. The helper transport fails. This now includes the helper running with `g_inited == 0`.
-2. The native client answers NULL. This includes `GetISteamUserStats` / `GetISteamRemoteStorage` in identity-only mode, which the new T-52-03 gate at `gen_vtables.ts:2026` refuses on purpose.
-3. Native says the interface is present but the shim does not serve that exact version. `resolve_iface_by_exact_version` only knows the shim's own table, so this covers Matchmaking, Networking, HTTP, UGC, Screenshots, Controller, Inventory and the rest.
+Neither is shown to cause the sign-out, so no finding is raised.
 
-Older-SDK titles that build a `CSteamAPIContext` through `SteamClient()->GetISteamXxx(...)` treat any NULL as a failed init. Titles that skip the NULL check dereference it and crash. ELEX (411300), the title that justified the SteamClient017 manifest in 51-15, was measured working on the null-object path. That path is now gone for it and for every other x64 title, whether or not it has SteamStub.
+## Status of prior findings (52-REVIEW at `21d2ab34b`)
 
-Two related points:
-- The forwarded lookup also passes the game's `hSteamUser`/`hSteamPipe` through to the native client. The shim hands those handles out as hard-coded `1`/`1` (`SteamAPI_GetHSteamUser`/`GetHSteamPipe`). Whether the native answer is "present" therefore depends on the helper's real handles also being 1, which nothing guarantees.
-- The "never fabricate" rule (T-52-02) was written for the SteamStub check. It has been applied to the whole population of x64 titles.
+| ID | Prior title (short) | Status now | Evidence |
+| --- | --- | --- | --- |
+| CR-01 | `wire` flip removed the x64 null-object fallback for every x64 title | **Fixed, for lookups** (52-14: `ff4a777cf`, `2221c018b`, `1937a36c3`) | `gen_vtables.ts:1064-1069` emits `if (!g_bridge_steamstub_path_active) { local ?: &g_x64_null_object_instance }` ahead of `bridge_transact`. The flag is declared under `__x86_64__` (generated `steam_api_shim.c:606`) and set only in `GameLibBridge_CreateInterface` after the NULL check (`steam_api_shim.c:9545`). Every 017/014 `GetISteam*` is gated (`steam_api_shim.c:5432` ff., `8064` ff.). Live: ELEX 52-UAT item 12 shows no `[bridge-steamstub]` and no FWD. Residual: the non-lookup methods are not gated, see **WR-09**. |
+| WR-01 | `wait: true` blocks on `wineserver --wait`, unbounded | **Fixed** (52-16 `098314e3e`) | `steamClientSetup.ts:194-242`: `wait: false`, `Promise.race` against an unref'd 15 s timer, cleared in `finally`. The orphaned reg child after a timeout is deferred (deferred-items #9). |
+| WR-02 | A wine run that never happened counted as success | **Fixed** (52-16 `098314e3e`) | `steamClientSetup.ts:221` `res.code !== 0` (covers `undefined` and `null`). Tested. |
+| WR-03 | `'x64'` arch default suppresses the x86 notice | **Fixed** (52-16 `dccb9f6a1`) | `games.ts:2987-3004`: `exeArch ?? verdict.arch ?? persisted.arch`, no literal default; unknown arch maps to `error`, which fires the `setup-error` notice. |
+| WR-04 | Persisted `drmWrapper` never clearable on `already-placed` | **Fixed** (52-15 `42aa4aa09`, 52-16 `dccb9f6a1`) | `detectDrmWrapper` returns `'none'`. `withDrmWrapper` stamps every non-error status. `games.ts:2845-2865`: fresh value wins, and a stale persisted `steamstub` is cleared when there is no verdict. The misleading comment is corrected. |
+| WR-05 | Global HKCU `SteamClientDll64` never cleaned up | **Deferred, still open** (deferred-items 52-16 #1) | Code unchanged. The revisit condition ("a second title shares a bridge bottle") is too narrow. The **same** title reaches it when it goes `withheld` after an earlier `placed` launch. The withhold path restores the original `steam_api64.dll` but leaves `steamclient64.dll` and `SteamClientDll64` in place. The forwarder's `GetProcAddress(…, "GameLibBridge_CreateInterface")` (`steamclient_fwd.c:42`) then fails against Valve's DLL, so the forwarder answers NULL. The revisit condition should cover this case. |
+| WR-06 | Overwrites a shipped `steamclient64.dll`; follows symlinks | **Deferred, still open** (#2) | `steamClientSetup.ts:159-162` unchanged. |
+| WR-07 | Forwarded `ISteamClient` lifecycle methods act on the helper's session | **Deferred, still open** (#3); **scope wider than recorded** | The 52-14 gate does not cover these methods. They are forwarded for every x64 title, not only forwarded (SteamStub) ones. See **WR-09**. |
+| WR-08 | Identity-only bypass via `GetISteamGenericInterface` / slot 3 | **Deferred, still open** (#4) | `bridge_helper.c:486-517` still has no `g_bd_identity_only` check. |
+| IN-01 | Static request buffer and hello flag | **Deferred, still open** (#5) | `gen_vtables.ts:762-763` unchanged. |
+| IN-02 | Duplicate sanitizer and containment helpers | **Deferred, still open** (#6) | Unchanged. 52-15 adds a third near-copy (`probeOriginalBackup` vs `restoreOriginalIfBackedUp`, see IN-05). |
+| IN-03 | Closure misses delay imports; case-sensitive | **Deferred, still open** (#7) | Unchanged. |
+| IN-04 | Forwarder re-LoadLibrary on every failed resolve | **Deferred, still open** (#8) | `steamclient_fwd.c:35-43` unchanged. |
+| (unnumbered) | `withheld` result carries no `drmWrapper` / notice | **Fixed** (52-15, 52-16) | `shimGenerate.ts:704-710` stamps `withheld`; `games.ts:2897-2905` fires `steamstub-unforwarded:withheld`. |
 
-**Fix:** Keep the forwarded behaviour on the SteamStub entry point and restore the null-object fallback for ordinary lookups. For example, return the proxy (or null object) whenever the shim serves or stubs the version, and forward only when the call came through `GameLibBridge_CreateInterface`:
-```c
-// emitSteamClientForwardedLookup body
-void *local = resolve_iface_by_exact_version(pchVersion);
-if (!g_steamstub_path_active) {            // set by GameLibBridge_CreateInterface
-#if defined(__x86_64__)
-  return local ? local : (void *)&g_x64_null_object_instance;
-#endif
-}
-/* SteamStub path: existing presence round-trip, NULL on refusal */
-```
-Alternatively, give the SteamStub path its own proxy instance that has forwarded lookups, and leave the `SteamClient017` instance that `SteamAPI_SteamClient_v017` / `SteamInternal_CreateInterface` return in `stub` mode. Either way, re-run the ELEX bridge-verified gate before this ships.
+## Narrative Findings (AI reviewer)
 
 ## Warnings
 
-### WR-01: `wait: true` makes each `reg add` block on `wineserver --wait`, twice per SteamStub launch, with no bound
+### WR-09: The CR-01 gate covers only the `GetISteam*` lookups. CreateSteamPipe, BReleaseSteamPipe, ConnectToGlobalUser, CreateLocalUser, ReleaseUser, RunFrame, GetIPCCallCount and BShutdownIfAllPipesClosed still forward to the native client for every x64 title
 
-**File:** `src/backend/storeManagers/steam/bridge/steamClientSetup.ts:191-196`
-**Issue:** For `wait: true`, `runWineCommand` spawns `wineserver --wait` once the child closes (`launcher.ts` close handler). The bridge runtime is CrossOver, and `resolveCrossoverWine` sets `wineserver`, so the wait really runs. `wineserver --wait` only returns when the bottle's wineserver exits. That means:
-- every SteamStub launch pays the wineserver persistence timeout twice, because there are two separate `reg add` invocations;
-- if any other process is alive in that bottle (a stuck previous instance, a launcher left behind, `explorer.exe` / `winedevice`), the launch hangs with no timeout. It happens before `fireBridgeWineLaunch`, so the Play button just spins.
+**File:** `meta/gen_vtables.ts:1115-1121` (only the lookup branch reads the flag), and the general wire emitter below it. In the generated `native/steam-bridge/generated/steam_api_shim.c`: `5366`, `5376`, `5388`, `5400`, `5418`, `5849`, `5857`, `5872` (SteamClient017) and `7998`, `8008`, `8020`, `8032`, `8050`, `8481`, `8489`, `8504` (SteamClient014).
+**Issue:** 52-14's summary says "Ordinary x64 titles … again get [the] pre-phase" behaviour. That holds for lookups only.
 
-No other call site under `steam/` uses `wait: true`.
-**Fix:** Use `wait: false` and await the `reg.exe` child's own exit code, or run a single `reg import` of a generated `.reg` file. Wrap the whole operation in a timeout (for example `Promise.race` with 15 s) that maps to `{ status: 'error' }`.
+Before the phase, at `7ed535984`, these methods were local stubs. For example, `vt_SteamClient017_BReleaseSteamPipe(void *self, uint32_t dummy0) { return 0; }` and `vt_SteamClient017_ReleaseUser(...) {}`.
 
-### WR-02: A wine run that never happened is treated as a successful registry write
+Now they call `bridge_transact(16|22, slot, …)` whatever the state of `g_bridge_steamstub_path_active`. The helper then runs them against its own live native `ISteamClient` (`bridge_dispatch.h:1842-1894`).
 
-**File:** `src/backend/storeManagers/steam/bridge/steamClientSetup.ts:197`
-**Issue:** `runWineCommand` returns `{ stdout: '', stderr: 'Invalid wine' }` with **no `code`** when `validWine` fails. `res.code !== undefined && res.code !== 0` is then false, so the loop counts the write as success. It returns `status: 'placed'` and logs `registered ... under HKCU ActiveProcess`, even though nothing was written. `games.ts` then logs `[bridge-steamstub] ... forwarder placed` and never shows the SteamStub notice. This is the same kind of false log line that the 52 UAT gaps already record.
-**Fix:**
+This affects any x64 title, SteamStub or not, that calls `SteamClient()->…` lifecycle methods. Examples are older-SDK titles that manage pipes themselves, or a shutdown path that calls `BReleaseSteamPipe(SteamAPI_GetHSteamPipe())` or `ReleaseUser(1, 1)` with the shim's hard-coded handles (1/1). Such a title now releases or shuts down the **helper's** pipe and user. Every later wire call in the session then fails, and nothing reports it.
+
+This is exactly the WR-07 risk. WR-07 was deferred with the revisit condition "a *forwarded* title loses wire calls". The population is in fact every x64 bridge title. Nothing has been observed yet: ELEX's helper log has no FWD lines, so ELEX did not call these methods.
+**Fix:** Give the non-lookup SteamClient wire methods the same leading branch as the lookups. Off the SteamStub path, they answer the pre-phase stub value:
+```c
+// emitted for SteamClient-family wire methods that are not version lookups
+#if defined(__x86_64__)
+  if (!g_bridge_steamstub_path_active) { return 0; }   /* void methods: just `return;` */
+#endif
+```
+Generate it from `emitVtableStub`'s wire branch when `manifest.family === 'SteamClient'`. Extend the `assertGated` test (`gen_vtables.test.ts:1821`) to iterate over every wire method of c17/c14, not only `/GetISteam/` ones. Also widen deferred-items 52-16 #3's revisit condition to "any x64 bridge title".
+
+### WR-10: Grim Dawn re-gate trace: the SteamStub check rejects right after `CreateInterface` without calling any method on the interface it got back. The forwarder's export surface and module identity are the in-code inputs left
+
+**File:** `native/steam-bridge/steamclient/steamclient_fwd.c:46` (the only export). Evidence: `/tmp/gamelib-gate-52r-20261024T033525Z/round-regate.cxlog` (product-written clone state, 52-UAT item 10).
+**Issue:** The trace for the game process (`00d0:00d4`) after `Loaded '...\x64\steamclient64.dll' OK.` (cxlog `:23479`) is:
+1. `LdrGetDllHandleEx "steam_api64.dll"` and `GetModuleFileNameW …steam_api64.dll` (`:23600-23602`). These are the forwarder's `resolve()` and the shim's cfg lookup.
+2. Three `MSG_WAITALL` recvs: HELLO (1) and `CreateInterface SteamClient017` (2). These match the helper's `HELLO` and first `FWD` line.
+3. `LdrGetProcedureAddress "Steam_ReleaseThreadLocalMemory" … not found` (`:23610`).
+4. Two more recvs: `CreateInterface SteamClient014`.
+5. `GetModuleFileNameW …\x64\steamclient64.dll` (`:23614`, on module `00006FFFFD210000`, the forwarder).
+6. Immediately afterwards `FindResourceExW user32 "MSGBOX"` and `explorer.exe /desktop` start. This is the Application Load Error 3 box.
+
+No `CreateSteamPipe`, `ConnectToGlobalUser` or `GetISteam*` reached the helper. Every one of those is a wire method that logs a FWD line (`bridge_dispatch.h:1843-1918`), so their absence is real, not a logging gap.
+
+So the stub's verdict does not depend on anything the shim proxy or the helper answers after `CreateInterface`. The 52-14 gating and the forwarded-lookup plumbing are never reached for this title. The inputs GameLib controls at that point are:
+- the forwarder module itself. It exports only `CreateInterface`, while a genuine `steamclient64.dll` also exports the `Steam_*` flat entry points (`Steam_ReleaseThreadLocalMemory`, `Steam_BGetCallback`, `Steam_FreeLastCallback`, `Steam_GetAPICallResult`, `Steam_IsKnownInterface`, `Steam_NotifyMissingInterface`, …). The stub queried its path right before the box. Its location in the game directory rather than a Steam install directory is another difference.
+- the ActiveProcess `pid` that GameLib does not write (decision 1, option-c).
+
+The failed lookup at step 3 names `Grim Dawn.exe` as the module that was searched, not the forwarder. So "the stub needs `Steam_*` exports from steamclient64" is **not proven** by this trace. It is a lead.
+**Fix:** This is diagnosis work, not a code change yet. For the Gap-5 investigation plan:
+- Re-run the trace round with `+relay` limited to `kernel32.GetProcAddress`, `GetModuleFileNameW`, `OpenProcess` and `ReadFile`/`CreateFileW` on the forwarder path. That shows which export names and file or path checks the stub makes between steps 4 and 6.
+- Record the export table of a genuine `steamclient64.dll` (from `objdump -p`, no binary in the repo) next to the forwarder's.
+- Until one of those is settled, do not spend more effort on post-`CreateInterface` forwarding: the trace shows it is not on the failing path.
+
+### WR-11: The single-exe withhold path still withholds when there is no `steam_api` file to fall back to
+
+**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:1433-1449` (with `withholdIfRestorable`, `:897-909`)
+**Issue:** 52-15's rule says to withhold only when there is a game-original `steam_api` to launch with. In the single-exe branch, `shimTargets` is `targetIsGameLibShim ? [shimPath] : []`. When the exe statically imports `steam_api64.dll` but nothing exists at `shimPath` (`targetExists === false`), `shimTargets` is `[]`. `[].every(...)` is `true`, so `withhold()` runs. It logs "launching with the game's own steam_api, no helper" and returns `withheld`.
+
+`games.ts:2893-2911` then launches the exe directly, and it fails at load with a missing-DLL error. The log line is false: the same false-log class that 52-UAT Gap 1-4 recorded, and that 52-15 set out to remove.
+**Fix:** Treat an absent target as "nothing to fall back to" and take the refresh path:
 ```ts
-if (res.code !== 0) {   // undefined (never spawned) and null (signalled) are both failures
-  return { status: 'error', error: `reg add ${valueName} failed (code=${String(res.code)}, stderr=${res.stderr.slice(0, 200)})` }
+if (delayMissing.length > 0 || unservable.length > 0) {
+  const withheld = targetExists
+    ? withholdIfRestorable({ ..., shimTargets: targetIsGameLibShim ? [shimPath] : [] })
+    : null
+  if (withheld) return withheld
+  refreshGaps.push(...delayMissing, ...unservable)
 }
 ```
-
-### WR-03: The `'x64'` arch default can mark an x86 SteamStub title as "placed" and suppress the honest notice
-
-**File:** `src/backend/storeManagers/steam/games.ts:2969-2970`
-**Issue:** `arch: shimResult.verdict?.arch ?? persistedScan?.arch ?? ('x64' as const)`. An `already-placed` result has no verdict. If no scan was persisted (legacy installs, or a verdict the store pruned), an x86 `.bind` title falls through to `'x64'`. Setup then writes `SteamClientDll64`, which an x86 SteamStub never reads, and returns `placed`. As a result the `x86-deferred` notice that decision 6 requires never fires. The user gets the silent few-seconds exit with no explanation.
-**Fix:** Read the arch from the exe when the verdict does not carry it. `readPeMachineArch` is already imported in `shimGenerate.ts`. If the arch is still unknown, return `unavailable`/`setup-error` instead of guessing x64:
-```ts
-const arch = shimResult.verdict?.arch ?? persistedScan?.arch ?? readPeMachineArch(exePath)
-if (arch !== 'x86' && arch !== 'x64') this.maybeNotifySteamStubUnforwarded('setup-error')
-```
-
-### WR-04: The persisted `drmWrapper` can never be cleared on the `already-placed` path
-
-**File:** `src/backend/storeManagers/steam/games.ts:2842-2845`, `src/backend/storeManagers/steam/bridge/shimGenerate.ts:701`
-**Issue:** `withDrmWrapper` re-reads the exe's section table on every launch. When it finds no `.bind`, it returns the result unchanged, with the key absent. `games.ts` then falls back with `?? persistedScan?.drmWrapper`. That `??` chain cannot tell "freshly checked: not SteamStub" apart from "not checked". If an update strips SteamStub from the exe but leaves the shim byte-identical (a common de-DRM patch), the result is `already-placed` and the stale persisted `steamstub` brings back forwarder setup and the registry write on every launch. The comment at line 2841 also says the flag is "NOT stamped on ... 'no-steam-api'", but `withDrmWrapper` does stamp the `no-steam-api` verdict (`shimGenerate.ts`, inside `withDrmWrapper`).
-**Fix:** Have `withDrmWrapper` always report the fresh detection explicitly, for example `drmWrapper: 'steamstub' | 'none'`. In `games.ts`, use the persisted value only when the fresh field is truly absent (an error or a status that skips detection). Also fix the comment.
-
-### WR-05: Global HKCU `ActiveProcess\SteamClientDll64` is never cleaned up and stays stale across titles in the shared bridge bottle
-
-**File:** `src/backend/storeManagers/steam/bridge/steamClientSetup.ts:180-225`, `src/backend/storeManagers/steam/games.ts:2958-2986`
-**Issue:** The value is written only when it is needed and never removed. `getBridgeBottleSettings` can resolve to the legacy **shared** bridge bottle. In that case, title A's registration (pointing into A's install directory) stays in force for every later launch of title B in the same bottle. This includes `withheld` launches where B's original `steam_api64.dll` is still in place and will read `ActiveProcess`. It also stays after A is uninstalled, so it points to a missing file. The same applies when setup later returns `unavailable`/`error` for A: the earlier registration still points at the earlier forwarder. The user then sees the "could not connect" notice while a forwarder is in fact still registered.
-**Fix:** On every bridge launch that does not end in `placed`, delete the value (`reg delete <key> /v SteamClientDll64 /f`, treating "not found" as OK). Alternatively, scope the write to per-game bottles only and refuse in the shared bottle.
-
-### WR-06: Forwarder overwrites a game-shipped `steamclient64.dll` with no backup
-
-**File:** `src/backend/storeManagers/steam/bridge/steamClientSetup.ts:158-161`
-**Issue:** If the target directory already contains a `steamclient64.dll` that is not byte-identical (some titles and bundled server components ship one), `copyFileSync` replaces it silently. Unlike the shim's handling of `steam_api64.dll`, no original is kept, so the change cannot be undone short of a depot verify. `copyFileSync` also follows a symlink at the destination, so the containment check, which is lexical `resolve`/`relative` only, does not stop a write through a symlinked path component or a symlink at `forwarderPath`.
-**Fix:** If the existing file is not GameLib's forwarder, rename it to `steamclient64.dll.gamelib-orig` before copying, or refuse with `status: 'error'`. `lstat` the destination and refuse symlinks. Run `realpathSync` on `targetDir` before the containment check.
-
-### WR-07: Forwarded `ISteamClient` lifecycle methods act on the helper's own native session with handles the game supplies
-
-**File:** `meta/gen_vtables.ts:2003-2190` (`emitDispatchCase`, `isForwardedClient` branch); generated `bridge_dispatch.h` cases `SteamClient017.BReleaseSteamPipe` / `ReleaseUser` / `BShutdownIfAllPipesClosed` / `CreateSteamPipe` / `ConnectToGlobalUser`
-**Issue:** With `wire` mode, the game's `BReleaseSteamPipe(h)`, `ReleaseUser(pipe, user)` and `BShutdownIfAllPipesClosed()` run against the helper's live native client with whatever handle values the game passes. The shim gives every game `hSteamPipe = 1` / `hSteamUser = 1` (`SteamAPI_GetHSteamPipe`/`GetHSteamUser`). A title that releases "its" global pipe at shutdown or on a reconnect can therefore release the **helper's** pipe or user. After that, every wire call for the rest of the session fails, and nothing notices. Pipes the game creates through `CreateSteamPipe` are also never tracked or reclaimed.
-**Fix:** In the generator, keep a helper-side set of the pipe and user handles that forwarded `CreateSteamPipe`/`ConnectToGlobalUser`/`CreateLocalUser` returned. Refuse `BReleaseSteamPipe`/`ReleaseUser` for any handle outside that set, and answer `BShutdownIfAllPipesClosed` locally with `false`.
-
-### WR-08: The identity-only app-scoped gate can be bypassed through `GetISteamGenericInterface` and CONTROL slot 3
-
-**File:** `meta/gen_vtables.ts:1980-1984, 2026-2030`; `native/steam-bridge/helper/bridge_helper.c:486-518`
-**Issue:** T-52-03 refuses `GetISteamUserStats`/`GetISteamRemoteStorage`/`GetISteamGameServerStats` in identity-only mode. But `GetISteamGenericInterface("STEAMUSERSTATS_INTERFACE_VERSION011")` and `GameLibBridge_CreateInterface` (CONTROL slot 3, which has no `g_bd_identity_only` check) still ask the native client and hand back the shim's UserStats proxy. Each family's own dispatch gate still blocks the actual method calls, so no data leaks today. However, the threat model claims that refusal "via ISteamClient too", and that claim is only partly true. There is also a second path to the native `SteamInternal_CreateInterface`, which accepts any version string the game chooses.
-**Fix:** Apply the same version-prefix check (`STEAMUSERSTATS_`, `STEAMREMOTESTORAGE_`, `SteamGameServerStats`) to `GetISteamGenericInterface` and to the slot-3 handler when `g_bd_identity_only` is set.
+Add a test for "static import, no dll on disk, unservable version", which should give `placed-miss` and no "game's own steam_api" warning.
 
 ## Info
 
-### IN-01: `GameLibBridge_CreateInterface` uses a static request buffer and a static hello flag
+### IN-05: A restore failure partway through `withhold()` leaves the disk half-restored, and the probe duplicates the restore checks
 
-**File:** `meta/gen_vtables.ts:761-783`
-**Issue:** `static uint8_t s_req[4100]` and `static int s_hello_sent` add shared mutable state for no benefit: a 4100-byte stack buffer is fine on x64. If SteamStub's check thread and a game thread call in at the same moment, the request bytes can be corrupted. The transport has no lock either, which predates this phase, but this change adds a new race window ahead of it.
-**Fix:** Use a stack buffer. If a hello flag is still needed, share it with `SteamAPI_Init`'s handshake.
+**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:850-875, 916-930`
+**Issue:** On the multi-DLL path, if the first target restores and the second's `copyFileSync` fails, `withhold()` returns `error` with no rollback. One dll is now the game original and the other is a GameLib shim. The `error` string also drops the reason, which only `restoreOriginalIfBackedUp`'s own warning carries. Separately, `probeOriginalBackup` repeats the containment, lstat and shim-bytes checks of `restoreOriginalIfBackedUp` line for line (see deferred IN-02).
+**Fix:** Have `restoreOriginalIfBackedUp` take a `{ dryRun: true }` flag instead of a twin function. On a partial failure, re-copy the shim over the already-restored targets, or name the restored files in the error.
 
-### IN-02: Duplicate sanitizer and containment helpers
+### IN-06: The restore-failure test relies on `chmod 0o444`, and it does not restore the mode in a `finally`
 
-**File:** `native/steam-bridge/helper/bridge_helper.c:425-432` vs `meta/gen_vtables.ts` (`bd_fwd_sanitize` emitted into `bridge_dispatch.h`); `importScan.ts:74` vs `steamClientSetup.ts:37`
-**Issue:** `sanitize_ver` re-implements `bd_fwd_sanitize`, which is already in scope in the helper through the included header. `isContainedWithin` is copied a second time. Copies like these drift apart.
-**Fix:** Call `bd_fwd_sanitize` from the slot-3 handler. Move `isContainedWithin` into one shared module.
+**File:** `src/backend/storeManagers/steam/bridge/__tests__/shimGenerate.test.ts:1985-1990`
+**Issue:** Under root, as in many CI containers, `copyFileSync` ignores the read-only mode. The restore then succeeds and the `expect(result.status).toBe('error')` assertion fails. Also, if `placeShimForGame` throws, the mode is never reset.
+**Fix:** Make the target a directory, or a dangling path whose parent is a file, so the copy fails for any uid. Or skip the test when `process.getuid?.() === 0`. Move the `chmodSync(dll, 0o644)` into `finally`.
 
-### IN-03: The import closure misses delay imports and is case-sensitive on case-sensitive volumes
+### IN-07: The placed-miss warning on the refresh path describes the wrong failure mode
 
-**File:** `src/backend/storeManagers/steam/bridge/importScan.ts:100, 110-117`
-**Issue:** Closure DLLs are read with `objdump --private-headers` only. A followed DLL that delay-imports `steam_api` (the Manor Lords pattern, one level down) is therefore missed. `existsSync(join(dir, name))` uses the PE's stored spelling (often `ENGINE.DLL`), so on a case-sensitive APFS or external volume the closure silently finds nothing.
-**Fix:** Also run `readDelayImports` on each followed DLL. Resolve names case-insensitively with a single `readdirSync(dir)` map.
+**File:** `src/backend/storeManagers/steam/bridge/shimGenerate.ts:1474-1477`
+**Issue:** `placedMissing` now includes unservable interface versions and delay-imported symbols from the refresh path. The warning still says "A static-import miss is expected to fail at load with a Windows entry-point error". That statement is false for both kinds of gap: a version gap falls back to the null object or NULL at runtime, and a delay-import gap fails at first call.
+**Fix:** Split the message. Keep the entry-point sentence only for static-import misses, and name refresh gaps separately (for example "unservable interface versions answered by the null object").
 
-### IN-04: The forwarder takes a new LoadLibrary reference on every failed resolve
+### IN-08: The `reg add` timeout starts before `runWineCommand`'s own prefix and boot work
 
-**File:** `native/steam-bridge/steamclient/steamclient_fwd.c:35-43`
-**Issue:** `g_fn` is cached only on success. If the loaded `steam_api64.dll` is not the shim (the export is missing), every `CreateInterface` call repeats `GetModuleHandleW`. If that misses, it calls `LoadLibraryW`, which bumps the refcount each time. This is harmless but unbounded, and it hides the "wrong steam_api loaded" condition with no trace.
-**Fix:** Cache a "resolution attempted" flag alongside `g_fn`. Optionally `OutputDebugStringA` once when the shim export is missing.
+**File:** `src/backend/storeManagers/steam/bridge/steamClientSetup.ts:194-210`
+**Issue:** The 15 s window covers `validWine`, prefix verification and a cold CrossOver bottle start, as well as `reg.exe` itself. A cold first launch can exceed it. The result is then `error`, which fires the `setup-error` notice, while the orphaned child still writes the value a few seconds later (deferred #9). So the notice and the registry state disagree for that launch.
+**Fix:** If this is observed, warm the bottle first (a cheap `wine cmd /c exit` under the same bound), or raise the bound for the first `reg add` only. Log the elapsed time on timeout so this case can be told apart from a real hang.
 
 ---
 
-_Reviewed: 2026-10-24T02:53:42Z_
+_Reviewed: 2026-10-24T04:49:08Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
