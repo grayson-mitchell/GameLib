@@ -37,3 +37,29 @@ Measurement note for 51-29/51-30: bridge-routed, does not run, cause a missing W
 component in the bottle. Not a bridge defect, and not `knownBad` (bottled Steam would hit the same
 gap unless its own redist step happens to install it). Count it as "blocked before Steam init"
 rather than as a bridge failure.
+
+## Hand test, 2026-10-24 (after quick 261024-tny): 284100 needs a registry marker, not an installer
+
+The "Missing Windows Media Player" box is the game's own check, in `UnclaimedWorld.exe`. It reads
+`HKLM\Software\Microsoft\Active Setup\Installed Components\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}`,
+Windows Media Player's Active Setup marker. No GameLib bottle carries that key. The bottle already
+has Wine's builtin `wmp.dll`, `wmvcore.dll` and the `mf*.dll` set, in both `system32` and
+`syswow64`.
+
+Adding only `IsInstalled` = `REG_DWORD 1` under that key, in both the `/reg:32` and `/reg:64`
+views, got the game past the dialog. It then reached Steam init and crashed in the shim. That crash
+is a separate bridge defect, tracked in
+`2026-10-24-x64-shim-lacks-old-sdk-csteamworks-exports-and-interface-versions.md`. Whether music
+and video actually play is not yet known, because the game dies before any media starts. The
+bottle's pre-change registry is backed up outside the repo; the marker is still in place.
+
+What this changes in the work list above:
+- Item 2 (a per-appId override list) is now a known-fixes profile, `fixes/284100-steam.json`.
+  Quick 261024-tny wired `winetricks`, `runInPrefix` and `envVariables` into the bridge launch.
+- But this fix is a registry value, which known-fixes cannot express yet. The `registry` key from
+  `.planning/notes/per-game-compat-fixes-architecture.md` (decision 3, honoured from bundled or local
+  sources only per decision 6) is the next step, ahead of item 1.
+- Item 1 (reading appinfo's redist list) still matters for games whose components are real
+  installs, but it would not have found this case: 284100 declares nothing.
+- The measurement note's "blocked before Steam init" no longer holds for 284100 with the marker in
+  place: it reaches Steam init and fails on the shim.
