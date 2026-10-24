@@ -765,6 +765,9 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
     '  uint8_t retbuf[4]; uint32_t retlen = 0;\n' +
     '  if (pRc != NULL) *pRc = 1;\n' +
     '  if (pszName == NULL) return NULL;\n' +
+    '#if defined(__x86_64__)\n' +
+    '  g_bridge_steamstub_path_active = 1;\n' +
+    '#endif\n' +
     '  size_t n = strlen(pszName);\n' +
     '  if (n > 4096) return NULL;\n' +
     '  if (!s_hello_sent) {\n' +
@@ -1034,7 +1037,11 @@ function emitSteamClientVersionLookupStub(
  * presence int (never the native pointer -- it is meaningless in the Wine
  * process). The shim hands back its existing proxy for that EXACT version
  * only when native answered non-NULL, otherwise NULL. It never fabricates an
- * answer locally: no x64 null object on this path (T-52-02).
+ * answer locally on this path (T-52-02).
+ *
+ * CR-01: that forwarded path runs only AFTER the SteamStub entry point
+ * (GameLibBridge_CreateInterface) has set g_bridge_steamstub_path_active.
+ * Ordinary x64 titles take the pre-phase local path: proxy or null object.
  */
 function emitSteamClientForwardedLookup(
   manifest: InterfaceManifest,
@@ -1054,6 +1061,12 @@ function emitSteamClientForwardedLookup(
     header +
     `static void * THISCALL ${funcName}(${signatureParams}) {\n` +
     `  (void)self;\n` +
+    `#if defined(__x86_64__)\n` +
+    `  if (!g_bridge_steamstub_path_active) {\n` +
+    `    void *local = resolve_iface_by_exact_version(${versionParam.name});\n` +
+    `    return local != NULL ? local : (void *)&g_x64_null_object_instance;\n` +
+    `  }\n` +
+    `#endif\n` +
     `${argBufDecl}\n` +
     `  uint8_t retbuf[4]; uint32_t retlen = 0; int32_t present = 0;\n` +
     `  if (!bridge_transact(${manifest.ordinal}, ${method.slot}, argbuf, ${argLenExpr}, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return NULL;\n` +
@@ -1645,6 +1658,10 @@ ${Array.from({ length: X64_NULL_OBJECT_SLOTS }, () => '  (vfn)vt_x64_null_object
 };
 struct GLibX64NullObject { vfn *vptr; };
 static struct GLibX64NullObject g_x64_null_object_instance = { g_x64_null_object_vtbl };
+// CR-01: set only by GameLibBridge_CreateInterface (the SteamStub entry point,
+// reached only via steamclient64.dll). While clear, SteamClient GetISteam*
+// lookups take the pre-phase local path (proxy or null object).
+static volatile int g_bridge_steamstub_path_active = 0;
 #endif
 
 // 51-15: forward declaration only -- the full definition (and

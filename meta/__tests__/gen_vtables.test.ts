@@ -1818,27 +1818,51 @@ describe('gen_vtables', () => {
       return dispatch.slice(start, dispatch.indexOf('\n    }', start))
     }
 
+    const FLAG = 'if (!g_bridge_steamstub_path_active)'
+    const assertGated = (b: string): void => {
+      const flagAt = b.indexOf(FLAG)
+      const txAt = b.indexOf('bridge_transact(')
+      expect(flagAt).toBeGreaterThan(-1)
+      expect(txAt).toBeGreaterThan(flagAt)
+      const local = b.slice(flagAt, txAt)
+      expect(local).not.toContain('bridge_transact(')
+      expect(local).toContain('resolve_iface_by_exact_version(pchVersion)')
+      expect(b.slice(0, flagAt)).toContain('#if defined(__x86_64__)')
+      expect(local).toContain(
+        'return local != NULL ? local : (void *)&g_x64_null_object_instance;'
+      )
+      expect(b.slice(txAt)).toContain('if (present == 0) return NULL;')
+    }
+
     it.each(['SteamClient017', 'SteamClient014'])(
-      '%s GetISteamUser forwards over bridge_transact and never returns the x64 null object',
+      'CR-01: %s GetISteamUser gates forwarding behind the SteamStub flag with a null-object fallback',
       (iface) => {
         const b = fnBody(shim, `vt_${iface}_GetISteamUser`)
-        expect(b).toContain('bridge_transact(')
+        assertGated(b)
         expect(b).toContain('resolve_iface_by_exact_version(pchVersion)')
-        expect(b).toContain('if (present == 0) return NULL;')
-        expect(b).not.toContain('g_x64_null_object_instance')
       }
     )
 
-    it('every wire GetISteam* lookup in 017 and 014 avoids the null object', () => {
+    it('CR-01: every wire GetISteam* lookup in 017 and 014 has the flag branch', () => {
+      let seen = 0
       for (const m of [c17, c14]) {
         for (const method of m.methods) {
           if (method.mode !== 'wire') continue
           if (!/GetISteam/.test(method.name)) continue
-          const b = fnBody(shim, `vt_${m.interface}_${method.name}`)
-          expect(b).toContain('bridge_transact(')
-          expect(b).not.toContain('g_x64_null_object_instance')
+          assertGated(fnBody(shim, `vt_${m.interface}_${method.name}`))
+          seen++
         }
       }
+      expect(seen).toBeGreaterThan(0)
+    })
+
+    it('CR-01: GameLibBridge_CreateInterface sets the flag after the NULL check and never returns the null object', () => {
+      const b = fnBody(shim, 'void *GameLibBridge_CreateInterface')
+      const nullAt = b.indexOf('if (pszName == NULL) return NULL;')
+      const setAt = b.indexOf('g_bridge_steamstub_path_active = 1;')
+      expect(nullAt).toBeGreaterThan(-1)
+      expect(setAt).toBeGreaterThan(nullAt)
+      expect(b).not.toContain('g_x64_null_object_instance')
     })
 
     it('a stub-mode SteamClient GetISteam* keeps the old local lookup', () => {
@@ -1850,6 +1874,7 @@ describe('gen_vtables', () => {
       const out = generateShimC([stubbed])
       const b = fnBody(out, 'vt_SteamClient017_GetISteamUser')
       expect(b).toContain('g_x64_null_object_instance')
+      expect(b).not.toContain('g_bridge_steamstub_path_active')
       expect(b).not.toContain('bridge_transact(')
     })
 
