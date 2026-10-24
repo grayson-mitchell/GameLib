@@ -6,19 +6,22 @@ score: 5/7 must-haves verified
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
-  previous_score: 3/7
-  gaps_closed:
-    - "Withheld Grim Dawn launch (j4l guard preempting the forwarder): closed by 52-13 (x64 serves SteamUser023/SteamNetworking006/RemoteStorage016) and 52-15"
-    - "Honest SteamStub notice on the withheld path (drmWrapper stamped on withheld): closed by 52-15/52-16"
-    - "CR-01 null-object regression for ordinary x64 GetISteam* lookups: closed by 52-14, live-checked on ELEX (no FWD, no steamstub path)"
-    - "Withheld-state honesty (false 'game's own steam_api' log, stale shim): closed for the restorable case by 52-15; residual WR-11"
+  previous_score: 5/7
+  gap_closure_2:
+    verified: 2026-10-24T06:40:00Z
+    plans: [52-19, 52-20, 52-21, 52-22, 52-23, 52-24]
+    gaps_closed:
+      - "WR-09: eight non-lookup SteamClient017/014 wire methods gated on g_bridge_steamstub_path_active (52-20)"
+      - "WR-11: no-dll single-exe withhold now placed-miss (52-21)"
+      - "Gap 6 attributed: outside-phase-52, GameLib steam-user logon (52-19, item 15); not a phase-52 defect"
+    gaps_remaining:
+      - "Done-when: Grim Dawn reaches main menu with clean Steam-init log (Gap 5). Diagnosed, not fixed; operator chose option-other at item 16; re-gate items 17-19 skipped"
+    regressions: []
+  gaps_closed_round1:
+    - "Withheld Grim Dawn launch (j4l guard preempting the forwarder): closed by 52-13 and 52-15"
+    - "Honest SteamStub notice on the withheld path: closed by 52-15/52-16"
+    - "CR-01 null-object regression for ordinary x64 GetISteam* lookups: closed by 52-14"
     - "WR-01/02/03/04: closed by 52-16"
-  gaps_remaining:
-    - "Done-when: Grim Dawn reaches main menu with a clean Steam-init log (now UAT Gap 5)"
-    - "Mac Steam Friends sign-out on ELEX launch (UAT Gap 6, cause unknown)"
-    - "WR-09: non-lookup ISteamClient wire methods still forward for every x64 title"
-    - "WR-11: withhold with no steam_api file on disk logs a false line"
-  regressions: []
 gaps:
   - truth: "Done-when: Grim Dawn (219990) launches from GameLib through its per-game bridge bottle, gets past SteamStub (no steam://run), reaches its main menu, and Mac Steam shows it In-Game"
     status: failed
@@ -33,30 +36,7 @@ gaps:
       - "Record a genuine steamclient64.dll export table next to the forwarder's."
       - "Then ONE boundary-reviewed change (pid writer needing its own plan and boundary review, and/or Steam_* flat exports in the forwarder forwarding to the native client). Boundary: no stand-in answers."
       - "Re-run the packaged live gate under the strict rule: HELLO plus clean game Steam-init log, operator-confirmed main menu, In-Game recorded but not counted."
-  - truth: "Launching a non-SteamStub x64 bridge title (ELEX 411300) leaves the user's Mac Steam session (Friends) signed in"
-    status: failed
-    reason: "UAT item 12 / Gap 6: the operator checked Friends signed in before Play and signed out afterwards. ELEX had no FWD lines and no steamstub path, so phase-52 forwarding code did not run for it. Cause unknown; candidates are GameLib's pre-existing steam-user logOn (user.ts:663) and the helper's SteamAPI_Init against the Mac client. Not attributed to phase 52, but the 'no regression vs baseline' claim cannot be shown, and the baseline never recorded it."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/user.ts"
-        issue: "logOn({refreshToken}) on Play at :663 (pre-existing, outside phase 52 scope); not proven causal."
-    missing:
-      - "Attribution experiment per UAT Gap 6: repeat with Friends state checked before and after (a) Play with bridge disabled, (b) steam-user logon alone, (c) helper alone, on a non-ELEX title. Do not guess a cause first."
-  - truth: "Forwarding SteamClient017/014 does not regress ordinary x64 bridge titles (non-lookup ISteamClient methods)"
-    status: partial
-    reason: "CR-01 is fixed for the GetISteam* lookups (gated on g_bridge_steamstub_path_active, generated steam_api_shim.c:5432 ff.). Review WR-09: CreateSteamPipe, BReleaseSteamPipe, ConnectToGlobalUser, CreateLocalUser, ReleaseUser, RunFrame, GetIPCCallCount, BShutdownIfAllPipesClosed still bridge_transact to the helper's live native ISteamClient for every x64 title (pre-phase they were local stubs). A title calling ReleaseUser/BReleaseSteamPipe with the shim's 1/1 handles can kill the helper's session. Unobserved so far (ELEX logged no FWD)."
-    artifacts:
-      - path: "meta/gen_vtables.ts"
-        issue: "Only the lookup branch reads the steamstub flag (~1115-1121); wire emitter for SteamClient-family non-lookups ungated."
-    missing:
-      - "Gate the eight non-lookup SteamClient wire methods (c17 and c14) on g_bridge_steamstub_path_active returning the pre-phase stub value; regenerate; extend the assertGated test to every c17/c14 wire method; widen deferred-items 52-16 #3 revisit condition to any x64 bridge title."
-  - truth: "The launch log accurately reflects withheld state when no game steam_api exists (WR-11)"
-    status: partial
-    reason: "shimGenerate.ts:1433-1449: with a static import and no dll on disk, shimTargets is [] so [].every() is true and withhold() logs 'launching with the game's own steam_api' then launches an exe that fails on a missing DLL. Same false-log class as old UAT Gap 3, now narrowed to the no-file case."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/shimGenerate.ts"
-        issue: "withholdIfRestorable called when targetExists is false."
-    missing:
-      - "Take the refresh/placed-miss path when targetExists is false; add the test 'static import, no dll on disk, unservable version -> placed-miss, no own-steam_api warning'."
+      - "Gap-closure-2 addendum: 52-19 trace shows the stub reads all 186368 forwarder bytes then shows the MessageBox, with no OpenProcess, image-name query or registry read. What it checks in those bytes is uninspected (52-19-DIAGNOSIS.md candidate inputs). Next: /gsd-plan-phase 52 --gaps."
 deferred: []
 human_verification: []
 ---
@@ -120,4 +100,59 @@ Suggested order for `/gsd-plan-phase 52 --gaps`: (1) diagnosis plan for Gap 5 an
 ---
 
 _Verified: 2026-10-24_
+_Verifier: Claude (gsd-verifier)_
+
+---
+
+# Re-verification 2: gap closure plans 52-19..52-24
+
+**Verified:** 2026-10-24T06:40:00Z
+**Status:** gaps_found (unchanged; done-when still unmet)
+**Score:** 5/7 (unchanged). The two gap-round code fixes closed review items, not a must-have truth. The sole failing truth is the done-when.
+**Requirements:** ROADMAP lists none (`Requirements: TBD`) and `.planning/REQUIREMENTS.md` does not exist. Plan IDs P52-DONE and P52-SCOPE-2/3/4 were accounted against ROADMAP Scope 1-5 and done-when. P52-DONE is not satisfied. Scope 2/3/4 evidence is unchanged from the table above.
+
+## Truth re-scoring
+
+| # | Truth | Prior | Now | Evidence (checked in code, not from SUMMARY) |
+|---|---|---|---|---|
+| 1 | Scope 1: SteamClient017/014 forward, no regression to ordinary x64 titles | VERIFIED, WR-09 open | VERIFIED | `steam_api_shim.c` diff `9f503cbcc..HEAD` adds 16 `if (!g_bridge_steamstub_path_active) { return <pre-phase value>; }` guards (c17 and c14, 8 methods each). Generated file matches generator per re-review; `gen_vtables` and `shimGenerate` suites re-run by me: 236 pass. |
+| 2 | Scope 2: forwarder | VERIFIED | VERIFIED (no change) | 52-23 recorded forwarder 186368 B, exports CreateInterface only. |
+| 3 | Scope 3: HKCU setup | VERIFIED | VERIFIED (no change) | Not re-exercised; item 19 skipped. |
+| 4 | Scope 4: honest notice | VERIFIED + WR-11 edge | VERIFIED | `shimGenerate.ts:1438-1451` calls `withholdIfRestorable` only when `targetExists`; both RED/GREEN tests present and passing. |
+| 5 | Scope 5: modern SDK exports | VERIFIED (static) | VERIFIED (static) | No change. |
+| 6 | Done-when: Grim Dawn main menu, In-Game | FAILED | **FAILED** | Items 17-19 skipped, no Grim Dawn launch in gap round 2. Last observed state (items 9, 10): Application Load Error 3, IsSteamRunning warning. Operator still reports the SteamStub check failing. Item 16 chose option-other: no code change. Gap 5 is diagnosed (52-19-DIAGNOSIS.md, item 14) but not fixed. |
+| 7 | Boundary | VERIFIED | VERIFIED | The gap-round diff touches only gen_vtables.ts, its test, steam_api_shim.c, shimGenerate.ts and its test. No fabricated answers, no HKLM, no exe change. WR-09 off-path values equal the pre-phase stubs (re-review, `7ed535984`). |
+
+## Gap status
+
+| Gap | Status | Evidence |
+|---|---|---|
+| Gap 5 (Grim Dawn SteamStub rejection) | **OPEN, BLOCKER** | Decision item 16 option-other, "not implemented by decision". 52-UAT frontmatter `diagnosed`. Items 17, 18, 19 `skipped`. deferred-items entry 7. |
+| Gap 6 (Friends sign-out) | **Attributed, outside phase 52** | Item 15: arm b (steam-user logon alone, no Play) flipped signed out twice; arm c (helper alone) and arm d (bridge Play after restore) held. Mac Steam logs show no displacement. Pending todo `2026-10-24-friends-sign-out-steam-user-logon.md` exists. Caveat: arm a (bridge disabled) not run, so "no regression vs baseline" is shown by arm d plus the logon-alone repro, not by a bridge-off control. Not blocking phase 52. |
+| WR-09 | CLOSED | See truth 1. |
+| WR-11 | CLOSED | See truth 4. IN-10 (dangling symlink now reaches copyFileSync) is Info, folded into WR-06. |
+| Item 20 (ELEX no-regression) | PASS, not bridge-verified | HELLO, FWD 0, `[bridge-steamstub]` 0, loading screen baseline. Per the strict rule it is unverified: no game Steam-init log; In-Game not counted. |
+
+## Open review findings (re-review at `6ddaf7f92`)
+
+Critical: none. Warning: WR-10 (open). Info: IN-05..IN-10. No TBD/FIXME/XXX in the added lines of the gap-round diff (grepped).
+
+## Full-suite failures: attribution (checked myself)
+
+Re-ran: 6 failing tests in 4 suites in my run (findDeadcode, genI18nGateScope, machineFillGamelib, testContainment). dxvkInstallRemove passed in isolation, so it is order- or load-dependent flake, not a gap-round regression. The gap round (`9f503cbcc..HEAD`) changed five non-planning files, none of which is a failing suite or the subject of its assertion:
+- findDeadcode: flags `bridge/__tests__/fixtures/delayImportPe.ts` (DelayImportDll, DelayImportPeOptions) and `crossoverInstallRisk.ts`. Neither file is in the gap-round diff (j4l / other quick).
+- genI18nGateScope: `i18nForkTouchedFiles.json` vs live git derivation. Not in the gap-round diff, no locale files changed.
+- machineFillGamelib: plural-category order (ar, ru). Unrelated to the diff.
+- testContainment: unclassified test file in the sidecar directory from a different quick. Unrelated.
+Attribution to phase 52 gap round 2: none. They remain a red repo suite owned elsewhere.
+
+## Human verification
+
+None added. The Grim Dawn re-gate is operator-driven and blocked behind a code change that does not exist yet.
+
+## Gaps Summary
+
+Gap closure 2 delivered what was cheap and certain: WR-09 and WR-11 are fixed in code and tests, Gap 6 is attributed outside the phase, and the Gap 5 trace narrowed the question to what the stub inspects in the forwarder bytes. It did not deliver the phase goal. Grim Dawn still fails SteamStub with Application Load Error 3 and never reached its main menu, so the single done-when item is FAILED and the phase must not be marked complete. Next step recorded by the operator: `/gsd-plan-phase 52 --gaps`, starting with static inspection of what the stub checks in the forwarder bytes (compare against the genuine 41-export steamclient64.dll), then one boundary-reviewed change, then the strict packaged re-gate.
+
+_Re-verified: 2026-10-24 (gap closure 2)_
 _Verifier: Claude (gsd-verifier)_
