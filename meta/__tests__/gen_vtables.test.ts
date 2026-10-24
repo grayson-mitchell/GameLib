@@ -848,9 +848,11 @@ describe('gen_vtables', () => {
       )
       expect(stub).not.toBeNull()
       const body = stub![0]
-      expect(body).toContain('uint32_t cap = (uint32_t)cubBuffer;')
       expect(body).toContain(
-        'if (cap > WIRE_OUT_BUFFER_MAX_BYTES) cap = WIRE_OUT_BUFFER_MAX_BYTES;'
+        'uint32_t cap_pchDir = (cubBuffer < 0) ? 0u : (uint32_t)cubBuffer;'
+      )
+      expect(body).toContain(
+        'if (cap_pchDir > WIRE_OUT_BUFFER_MAX_BYTES) cap_pchDir = WIRE_OUT_BUFFER_MAX_BYTES;'
       )
     })
 
@@ -1381,12 +1383,14 @@ describe('gen_vtables', () => {
         expect(() => generateDispatchHeader([bad])).toThrow(/out-value/)
       })
 
-      it('throws when a dispatch-eligible method declares an out-buffer param', () => {
+      it('throws when a dispatch-eligible out-buffer param names no sibling by-value sizeParam (53-14)', () => {
         const bad: InterfaceManifestV2 = {
           ...base,
           methods: [
             {
               ...base.methods[0],
+              returns: 'int32',
+              returnKind: 'int32',
               params: [
                 {
                   name: 'pchDir',
@@ -2565,5 +2569,108 @@ describe('CR-01 / WR-01 / WR-07 / WR-08: struct returns on the x64 flat path (53
     expect(c).toContain(
       'void * SteamAPI_ISteamGameServer_GetPublicIP(void *ret, void *self'
     )
+  })
+  describe('53-14: GetAuthSessionTicket forward (D-53-06)', () => {
+    const user21: InterfaceManifestV2 = JSON.parse(
+      readFileSync(join(SDK_DIR, 'isteamuser021.manifest.json'), 'utf-8')
+    )
+    const methodOf = (m: InterfaceManifestV2, name: string) =>
+      m.methods.find((x) => x.name === name)!
+    const body = (c: string, fn: string): string => {
+      const m = c.match(
+        new RegExp(`${fn}\\(void \\*self[^{]*\\) \\{[\\s\\S]*?\\n\\}`)
+      )
+      expect(m).not.toBeNull()
+      return m![0]
+    }
+    const c = generateShimC([isteamuser, user21])
+    const dispatch = generateDispatchHeader([isteamuser, user21])
+    const caseBody = (label: string): string => {
+      const start = dispatch.indexOf(`// ${label}\n`)
+      expect(start).toBeGreaterThan(-1)
+      return dispatch.slice(start, dispatch.indexOf('\n    }\n', start))
+    }
+
+    it('manifests are valid and forward both methods on both versions', () => {
+      expect(validateManifest(isteamuser)).toEqual([])
+      expect(validateManifest(user21)).toEqual([])
+      for (const m of [isteamuser, user21]) {
+        const g = methodOf(m, 'GetAuthSessionTicket')
+        expect(g.mode).toBe('wire')
+        expect(g.helperFlat).toBe('SteamAPI_ISteamUser_GetAuthSessionTicket')
+        const buf = g.params.find((p) => p.name === 'pTicket')!
+        expect(buf.kind).toBe('out-buffer')
+        expect(buf.sizeParam).toBe('cbMaxTicket')
+        expect(g.params.find((p) => p.name === 'pcbTicket')!.kind).toBe(
+          'out-value'
+        )
+        const cancel = methodOf(m, 'CancelAuthTicket')
+        expect(cancel.mode).toBe('wire')
+        expect(cancel.helperFlat).toBe('SteamAPI_ISteamUser_CancelAuthTicket')
+      }
+    })
+
+    it.each(['SteamUser023', 'SteamUser021'])(
+      '%s shim stub sends only the capped capacity + cb, never a pointer, and bounds the copy',
+      (iface) => {
+        const b = body(c, `vt_${iface}_GetAuthSessionTicket`)
+        expect(b).toContain('cap_pTicket')
+        expect(b).toContain('WIRE_OUT_BUFFER_MAX_BYTES')
+        expect(b).toContain('if (copyLen > cap_pTicket) copyLen = cap_pTicket;')
+        expect(b).toContain('(cbMaxTicket < 0) ? 0u')
+        expect(b).toContain('if (pcbTicket != NULL) *pcbTicket = 0;')
+        expect(b).not.toMatch(
+          /memcpy\(argbuf[^;]*&(pTicket|pcbTicket|pSteamNetworkingIdentity)\b/
+        )
+        expect(b).toContain('uint8_t argbuf[8];')
+      }
+    )
+
+    it('CancelAuthTicket forwards hAuthTicket as a value', () => {
+      for (const iface of ['SteamUser023', 'SteamUser021']) {
+        const b = body(c, `vt_${iface}_CancelAuthTicket`)
+        expect(b).toContain('memcpy(argbuf + argOff, &hAuthTicket, 4);')
+        expect(b).toContain('bridge_transact(')
+      }
+    })
+
+    it('helper calls the native flat function with 5 args, NULL identity last, on BOTH versions', () => {
+      expect(dispatch).toContain(
+        'typedef uint32_t (*BDFlatFn_SteamUser023_GetAuthSessionTicket_t)(void *, void *, int32_t, uint32_t *, const void *);'
+      )
+      expect(dispatch).toContain(
+        'typedef uint32_t (*BDFlatFn_SteamUser021_GetAuthSessionTicket_t)(void *, void *, int32_t, uint32_t *, const void *);'
+      )
+      for (const iface of ['SteamUser023', 'SteamUser021']) {
+        const cs = caseBody(`${iface}.GetAuthSessionTicket`)
+        expect(cs).toMatch(
+          new RegExp(
+            `g_bd_flat_${iface}_GetAuthSessionTicket\\(g_bd_self_steamuser0\\d\\d, g_bd_flat_${iface}_GetAuthSessionTicket_pTicket_buf, arg_cbMaxTicket, &arg_pcbTicket, NULL\\)`
+          )
+        )
+        // the game-side identity pointer is never decoded from the wire
+        expect(cs).not.toContain('arg_pSteamNetworkingIdentity')
+        // out-buffer: native size arg is pulled back to the clamped capacity
+        expect(cs).toContain('arg_cbMaxTicket = (int32_t)cap_pTicket')
+        // response: ret, pcbTicket, then [len][bytes] bounded by min(pcb, cap)
+        expect(cs).toContain('if ((uint32_t)arg_pcbTicket < outLen_pTicket)')
+      }
+    })
+
+    it('helperTrailingNullArgs is derived from the policy arity (021 has 3 params, native has 4)', () => {
+      expect(
+        methodOf(user21, 'GetAuthSessionTicket').helperTrailingNullArgs
+      ).toBe(1)
+      expect(
+        methodOf(isteamuser, 'GetAuthSessionTicket').helperTrailingNullArgs
+      ).toBeUndefined()
+    })
+
+    it('validateManifest rejects null-in on a non-identity pointer', () => {
+      const bad: InterfaceManifestV2 = JSON.parse(JSON.stringify(isteamuser))
+      const g = bad.methods.find((x) => x.name === 'GetAuthSessionTicket')!
+      g.params.find((p) => p.name === 'pcbTicket')!.kind = 'null-in'
+      expect(validateManifest(bad).some((e) => /null-in/.test(e))).toBe(true)
+    })
   })
 })
