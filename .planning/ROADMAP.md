@@ -338,7 +338,7 @@ The locked boundary is unchanged.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 33/35 plans executed
+**Plans:** 34/35 plans executed
 
 Plans:
 
@@ -394,7 +394,7 @@ Plans:
 
 **Gap closure 5** *(amended done-when, 52-UAT item 29; waves: 33+34 parallel, then 35 live)*
 - [x] 52-33-PLAN.md — Forwarded-path SteamStub notice strings (steam.bridge.steamstub.forwardedTitle/forwardedBody) in all 49 gamelib catalogs; 52-06 strings unchanged
-- [ ] 52-34-PLAN.md — Honest notice on the forwarded SteamStub path: deterministic trigger (steamstub + forwarder placed), log every launch + notify once per session, no reroute, nothing answers the stub; trigger tests
+- [x] 52-34-PLAN.md — Honest notice on the forwarded SteamStub path: deterministic trigger (steamstub + forwarder placed), log every launch + notify once per session, no reroute, nothing answers the stub; trigger tests
 - [ ] 52-35-PLAN.md — Live: packaged Grim Dawn launch (HELLO + notice, item 30) and cx-log trace (no steam://run, item 31); settle item 2; close out UAT, deferred-items, todos, STATE
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
