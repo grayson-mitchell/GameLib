@@ -70,6 +70,8 @@ import {
   encodeControl,
   encodeRequest,
   decodeResponse,
+  CONTROL_ORDINAL,
+  CONTROL_SLOT,
   STATUS_ERR,
   STATUS_OK
 } from '../protocol'
@@ -380,5 +382,125 @@ describeDarwinOnly(
         await expectPortEventuallyClosed(port)
       }
     }, 30000)
+
+    // Phase 52 (52-02): CONTROL CREATE_INTERFACE against a helper with no
+    // signed-in client (the fake HOME has no Steam, so g_inited stays 0).
+    // The real-profile arm -- a signed-in client answering `native=present`
+    // -- is deliberately left to the live gate (52-11), the named
+    // real-profile arm for this behavior.
+    test('CREATE_INTERFACE answers STATUS_ERR with no client, rejects malformed frames, logs FWD, and unknown slots stay refused', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'create-interface-'))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: profile.childEnv()
+        }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+
+      const nameFrame = (
+        requestId: number,
+        name: string,
+        declared?: number
+      ) => {
+        const bytes = Buffer.from(name, 'ascii')
+        const len = Buffer.alloc(4)
+        len.writeUInt32LE(declared ?? bytes.length, 0)
+        return encodeRequest(
+          requestId,
+          CONTROL_ORDINAL,
+          CONTROL_SLOT.createInterface,
+          Buffer.concat([len, bytes])
+        )
+      }
+
+      try {
+        const port = await new Promise<number>((resolvePromise, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+            5000
+          )
+          const poll = setInterval(() => {
+            const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+            if (m) {
+              clearInterval(poll)
+              clearTimeout(timeout)
+              resolvePromise(Number(m[1]))
+            }
+          }, 25)
+        })
+
+        const connect = async () => {
+          const socket = new Socket()
+          await new Promise<void>((res, rej) => {
+            socket.once('error', rej)
+            socket.connect(port, '127.0.0.1', () => res())
+          })
+          return socket
+        }
+
+        const socket = await connect()
+        try {
+          const ok = await sendFrameOnSocket(
+            socket,
+            nameFrame(1, 'SteamClient017')
+          )
+          expect(ok.status).toBe(STATUS_ERR)
+
+          // Malformed: argLen < 4, len 0, len > 4096.
+          const short = await sendFrameOnSocket(
+            socket,
+            encodeRequest(
+              2,
+              CONTROL_ORDINAL,
+              CONTROL_SLOT.createInterface,
+              Buffer.from([1, 2])
+            )
+          )
+          expect(short.status).toBe(STATUS_ERR)
+          expect(
+            (await sendFrameOnSocket(socket, nameFrame(3, ''))).status
+          ).toBe(STATUS_ERR)
+          const huge = await sendFrameOnSocket(
+            socket,
+            nameFrame(4, 'SteamClient017', 5000)
+          )
+          expect(huge.status).toBe(STATUS_ERR)
+
+          // Unknown CONTROL slot.
+          const unknownSlot = await sendFrameOnSocket(
+            socket,
+            encodeRequest(5, CONTROL_ORDINAL, 9)
+          )
+          expect(unknownSlot.status).toBe(STATUS_ERR)
+        } finally {
+          socket.destroy()
+        }
+
+        // The helper did not crash: a fresh connection still gets HEALTH.
+        const fresh = await connect()
+        try {
+          const health = await sendFrameOnSocket(
+            fresh,
+            encodeControl(6, 'health')
+          )
+          expect(health.status).toBe(STATUS_OK)
+        } finally {
+          fresh.destroy()
+        }
+
+        expect(stderr).toMatch(
+          /FWD CreateInterface ver=SteamClient017 native=no-client/
+        )
+      } finally {
+        child.kill()
+      }
+    }, 15000)
   }
 )
