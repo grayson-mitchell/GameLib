@@ -1,0 +1,623 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamGameServer012",
+  "family": "SteamGameServer",
+  "ordinal": 56,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamGameServer_v012",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamGameServer.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "InitGameServer",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "unIP",
+          "type": "uint32"
+        },
+        {
+          "name": "usGamePort",
+          "type": "uint32"
+        },
+        {
+          "name": "usQueryPort",
+          "type": "uint32"
+        },
+        {
+          "name": "unFlags",
+          "type": "uint32"
+        },
+        {
+          "name": "nGameAppId",
+          "type": "uint32"
+        },
+        {
+          "name": "pchVersionString",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "SetProduct",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszProduct",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "SetGameDescription",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszGameDescription",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "SetModDir",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszModDir",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "SetDedicatedServer",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bDedicated",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "LogOn",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszToken",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "LogOnAnonymous",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 7,
+      "name": "LogOff",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 8,
+      "name": "BLoggedOn",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 9,
+      "name": "BSecure",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 10,
+      "name": "GetSteamID",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 4,
+      "params": [],
+      "structSize": 8
+    },
+    {
+      "slot": 11,
+      "name": "WasRestartRequested",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 12,
+      "name": "SetMaxPlayerCount",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "cPlayersMax",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "SetBotPlayerCount",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "cBotplayers",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "SetServerName",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszServerName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "SetMapName",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszMapName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "SetPasswordProtected",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bPasswordProtected",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "SetSpectatorPort",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unSpectatorPort",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "SetSpectatorServerName",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszSpectatorServerName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "ClearAllKeyValues",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 20,
+      "name": "SetKeyValue",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pKey",
+          "type": "const char*"
+        },
+        {
+          "name": "pValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "SetGameTags",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchGameTags",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "SetGameData",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchGameData",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "SetRegion",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszRegion",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "SendUserConnectAndAuthenticate",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "unIPClient",
+          "type": "uint32"
+        },
+        {
+          "name": "pvAuthBlob",
+          "type": "const void*"
+        },
+        {
+          "name": "cubAuthBlobSize",
+          "type": "uint32"
+        },
+        {
+          "name": "pSteamIDUser",
+          "type": "CSteamID*"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "CreateUnauthenticatedUserConnection",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 4,
+      "params": [],
+      "structSize": 8
+    },
+    {
+      "slot": 26,
+      "name": "SendUserDisconnect",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "BUpdateUserData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "pchPlayerName",
+          "type": "const char*"
+        },
+        {
+          "name": "uScore",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "GetAuthSessionTicket",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pTicket",
+          "type": "void*"
+        },
+        {
+          "name": "cbMaxTicket",
+          "type": "int32"
+        },
+        {
+          "name": "pcbTicket",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "BeginAuthSession",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pAuthTicket",
+          "type": "const void*"
+        },
+        {
+          "name": "cbAuthTicket",
+          "type": "int32"
+        },
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "EndAuthSession",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "CancelAuthTicket",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hAuthTicket",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "UserHasLicenseForApp",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        },
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "RequestUserGroupStatus",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "steamIDUser",
+          "type": "CSteamID"
+        },
+        {
+          "name": "steamIDGroup",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "GetGameplayStats",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 35,
+      "name": "GetServerReputation",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 36,
+      "name": "GetPublicIP",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 37,
+      "name": "HandleIncomingPacket",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pData",
+          "type": "const void*"
+        },
+        {
+          "name": "cbData",
+          "type": "int32"
+        },
+        {
+          "name": "srcIP",
+          "type": "uint32"
+        },
+        {
+          "name": "srcPort",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 38,
+      "name": "GetNextOutgoingPacket",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pOut",
+          "type": "void*"
+        },
+        {
+          "name": "cbMaxOut",
+          "type": "int32"
+        },
+        {
+          "name": "pNetAdr",
+          "type": "uint32*"
+        },
+        {
+          "name": "pPort",
+          "type": "uint16_t*"
+        }
+      ]
+    },
+    {
+      "slot": 39,
+      "name": "EnableHeartbeats",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bActive",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 40,
+      "name": "SetHeartbeatInterval",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "iHeartbeatInterval",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 41,
+      "name": "ForceHeartbeat",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 42,
+      "name": "AssociateWithClan",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDClan",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 43,
+      "name": "ComputeNewPlayerCompatibility",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "steamIDNewPlayer",
+          "type": "CSteamID"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,544 @@
+{
+  "schemaVersion": 2,
+  "interface": "SteamController006",
+  "family": "SteamController",
+  "ordinal": 55,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamController_v006",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamController.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "Init",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 1,
+      "name": "Shutdown",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 2,
+      "name": "RunFrame",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 3,
+      "name": "GetConnectedControllers",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "handlesOut",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "ShowBindingPanel",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "GetActionSetHandle",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszActionSetName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "ActivateActionSet",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "GetCurrentActionSet",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "ActivateActionSetLayer",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetLayerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "DeactivateActionSetLayer",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetLayerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "DeactivateAllActionSetLayers",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetActiveActionSetLayers",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "handlesOut",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetDigitalActionHandle",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszActionName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "GetDigitalActionData",
+      "returns": "ControllerDigitalActionData_t",
+      "returnKind": "class",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "digitalActionHandle",
+          "type": "uint64"
+        }
+      ],
+      "structSize": 2
+    },
+    {
+      "slot": 14,
+      "name": "GetDigitalActionOrigins",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "digitalActionHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "originsOut",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetAnalogActionHandle",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pszActionName",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "GetAnalogActionData",
+      "returns": "ControllerAnalogActionData_t",
+      "returnKind": "class",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "analogActionHandle",
+          "type": "uint64"
+        }
+      ],
+      "structSize": 16
+    },
+    {
+      "slot": 17,
+      "name": "GetAnalogActionOrigins",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "actionSetHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "analogActionHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "originsOut",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "StopAnalogActionMomentum",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eAction",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "TriggerHapticPulse",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eTargetPad",
+          "type": "uint32"
+        },
+        {
+          "name": "usDurationMicroSec",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "TriggerRepeatedHapticPulse",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eTargetPad",
+          "type": "uint32"
+        },
+        {
+          "name": "usDurationMicroSec",
+          "type": "uint32"
+        },
+        {
+          "name": "usOffMicroSec",
+          "type": "uint32"
+        },
+        {
+          "name": "unRepeat",
+          "type": "uint32"
+        },
+        {
+          "name": "nFlags",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "TriggerVibration",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "usLeftSpeed",
+          "type": "uint32"
+        },
+        {
+          "name": "usRightSpeed",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "SetLEDColor",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "nColorR",
+          "type": "bool"
+        },
+        {
+          "name": "nColorG",
+          "type": "bool"
+        },
+        {
+          "name": "nColorB",
+          "type": "bool"
+        },
+        {
+          "name": "nFlags",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "GetGamepadIndexForController",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "ulControllerHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "GetControllerForGamepadIndex",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nIndex",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "GetMotionData",
+      "returns": "ControllerMotionData_t",
+      "returnKind": "class",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        }
+      ],
+      "structSize": 40
+    },
+    {
+      "slot": 26,
+      "name": "ShowDigitalActionOrigins",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "digitalActionHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "flScale",
+          "type": "float"
+        },
+        {
+          "name": "flXPosition",
+          "type": "float"
+        },
+        {
+          "name": "flYPosition",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "ShowAnalogActionOrigins",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 28,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "analogActionHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "flScale",
+          "type": "float"
+        },
+        {
+          "name": "flXPosition",
+          "type": "float"
+        },
+        {
+          "name": "flYPosition",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "GetStringForActionOrigin",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "eOrigin",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "GetGlyphForActionOrigin",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "_unknownArg0",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "GetInputTypeForHandle",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "controllerHandle",
+          "type": "uint64"
+        }
+      ]
+    }
+  ]
+}
