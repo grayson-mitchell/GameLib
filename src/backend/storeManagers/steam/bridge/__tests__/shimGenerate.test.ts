@@ -330,6 +330,8 @@ describe('shimGenerate', () => {
     })
     expect(second).toEqual({
       status: 'already-placed',
+      drmWrapper: 'none',
+      exeArch: null,
       shimPath: shimDestPath()
     })
     // Phase 51 Plan 07: the arch must be known before the target filename
@@ -371,6 +373,8 @@ describe('shimGenerate', () => {
     })
     expect(second).toEqual({
       status: 'already-placed',
+      drmWrapper: 'none',
+      exeArch: null,
       shimPath: shimDestPath()
     })
   })
@@ -682,6 +686,8 @@ describe('shimGenerate', () => {
 
       expect(second).toEqual({
         status: 'already-placed',
+        drmWrapper: 'none',
+        exeArch: null,
         shimPath: dll,
         shimPaths: [dll]
       })
@@ -769,6 +775,8 @@ describe('shimGenerate', () => {
 
       expect(result).toEqual({
         status: 'already-placed',
+        drmWrapper: 'none',
+        exeArch: null,
         shimPath: join(gameDir, 'steam_api.dll'),
         shimPaths: [join(gameDir, 'steam_api.dll')]
       })
@@ -913,6 +921,8 @@ describe('shimGenerate', () => {
 
     expect(result).toEqual({
       status: 'already-placed',
+      drmWrapper: 'none',
+      exeArch: null,
       shimPath: shimDestPath()
     })
   })
@@ -1979,7 +1989,7 @@ describe('shimGenerate', () => {
       writeFileSync(gameExePath, makePe('.bind'))
       expect(detectDrmWrapper(gameExePath)).toBe('steamstub')
       writeFileSync(gameExePath, makePe('.text'))
-      expect(detectDrmWrapper(gameExePath)).toBeUndefined()
+      expect(detectDrmWrapper(gameExePath)).toBe('none')
       expect(detectDrmWrapper(join(root, 'missing.exe'))).toBeUndefined()
     })
 
@@ -2014,16 +2024,65 @@ describe('shimGenerate', () => {
       }
     })
 
-    it('adds no drmWrapper key for a non-.bind exe', async () => {
+    it("reports drmWrapper 'none' (and no verdict key) for a non-.bind exe, placed and already-placed", async () => {
       writeFileSync(gameExePath, makePe('.text'))
       scanOk()
       const res = await placeShimForGame('1234', gameExePath, {
         shimSourcePath: realShimSourcePath
       })
-      expect('drmWrapper' in res).toBe(false)
+      expect(res.status).toBe('placed')
+      expect('drmWrapper' in res && res.drmWrapper).toBe('none')
       expect(
         'verdict' in res && res.verdict && 'drmWrapper' in res.verdict
       ).toBeFalsy()
+      const again = await placeShimForGame('1234', gameExePath, {
+        shimSourcePath: realShimSourcePath
+      })
+      expect(again.status).toBe('already-placed')
+      expect('drmWrapper' in again && again.drmWrapper).toBe('none')
+    })
+
+    it('omits drmWrapper when the exe cannot be read', () => {
+      expect(detectDrmWrapper(join(root, 'missing.exe'))).toBeUndefined()
+    })
+
+    it('reports exeArch from the PE machine type', async () => {
+      scanOk()
+      const archOf = async (machine: number | null) => {
+        const pe = makePe('.text')
+        if (machine !== null) pe.writeUInt16LE(machine, 0x80 + 4)
+        else pe.writeUInt16LE(0, 0)
+        writeFileSync(gameExePath, pe)
+        const res = await placeShimForGame('1234', gameExePath, {
+          shimSourcePath: realShimSourcePath
+        })
+        return 'exeArch' in res ? res.exeArch : 'absent'
+      }
+      expect(await archOf(0x8664)).toBe('x64')
+      expect(await archOf(0x14c)).toBe('x86')
+      expect(await archOf(null)).toBeNull()
+    })
+
+    it("stamps drmWrapper 'steamstub' on a withheld result and its verdict", async () => {
+      const pe = makePe('.bind')
+      pe.writeUInt16LE(0x8664, 0x80 + 4)
+      writeFileSync(gameExePath, pe)
+      writeFileSync(shim64DestPath(), 'game-original-bytes')
+      mockedScanSteamApiImports.mockResolvedValue({
+        status: 'ok',
+        arch: 'x64',
+        symbols: ['SteamAPI_Init', 'SteamAPI_Bogus'],
+        delaySymbols: ['SteamAPI_Bogus']
+      })
+      const res = await placeShimForGame('1234', gameExePath, {
+        shim64SourcePath: realShim64SourcePath
+      })
+      expect(res.status).toBe('withheld')
+      if (res.status === 'withheld') {
+        expect(res.drmWrapper).toBe('steamstub')
+        expect(res.verdict.drmWrapper).toBe('steamstub')
+        expect(res.exeArch).toBe('x64')
+      }
     })
 
     it('never opens an exe outside the bottle', async () => {
