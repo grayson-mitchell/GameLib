@@ -497,6 +497,62 @@ export function evaluateShimCoverage(
 }
 
 /**
+ * quick 261024-j4l: required interface versions the shim cannot truthfully
+ * serve. Used by shimGenerate's withhold guard (only with importer evidence).
+ *
+ * A required version counts when it is not in the arch's served map (any
+ * mode) AND either
+ *  - it would be answered NULL (x86, or x64 without runtime lookup, or the
+ *    family is reached through a bare accessor: resolve_bare_iface returns
+ *    NULL), or
+ *  - it would be answered by the x64 null object while the shim serves a
+ *    DIFFERENT version of the same family (version skew, e.g. SteamFriends017
+ *    when 015 and 018 are served): the game gets a do-nothing object where a
+ *    real one exists, and faults at the first call.
+ * It does NOT count when the version is served (even as an intentional
+ * 51-14 stub), or when it is null-object-eligible and the shim serves no
+ * version of that family at all: that is the designed D-51-13 answer ELEX
+ * relies on (SteamHTTP, SteamUGC, ...). Output is in input entry order,
+ * de-duplicated.
+ */
+export function findUnservableInterfaceVersions(input: {
+  arch: 'x86' | 'x64'
+  symbols: string[]
+  requiredInterfaceVersions: Record<string, string>
+}): string[] {
+  const served =
+    input.arch === 'x86'
+      ? SHIM_SERVED_INTERFACE_VERSIONS
+      : SHIM64_SERVED_INTERFACE_VERSIONS
+  const out: string[] = []
+  for (const [family, version] of Object.entries(
+    input.requiredInterfaceVersions
+  )) {
+    if (served.has(version)) continue
+    const reachedBare = input.symbols.some(
+      (s) => BARE_ACCESSOR_FAMILY[s] === family
+    )
+    const nullObjectEligible =
+      input.arch === 'x64' &&
+      SHIM_X64_NULL_OBJECT_FALLBACK &&
+      usesRuntimeInterfaceLookup(input.symbols) &&
+      !reachedBare
+    if (nullObjectEligible) {
+      let familyServed = false
+      for (const entry of served.values()) {
+        if (entry.family === family) {
+          familyServed = true
+          break
+        }
+      }
+      if (!familyServed) continue
+    }
+    if (!out.includes(version)) out.push(version)
+  }
+  return out
+}
+
+/**
  * D-51-07: re-runs the "is this now covered" membership test on a PERSISTED
  * scan verdict's stored `missingSymbols` list ONLY (never a full re-scan).
  * Arch-scoped (CR-01): an entry is covered iff the export set or the

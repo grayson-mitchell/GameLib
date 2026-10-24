@@ -55,6 +55,7 @@ import {
   closeSync,
   copyFileSync,
   existsSync,
+  lstatSync,
   openSync,
   readFileSync,
   readSync,
@@ -170,6 +171,55 @@ function isContainedWithin(
 
 const RUNTIME_WALK_MAX_DEPTH = 4
 
+// quick 261024-j4l: the game-original steam_api(64) dll is copied here before
+// the shim overwrites it, so the guard can restore it. Both walks exclude the
+// backup by construction (exact-name dll match; .exe/.dll-only importer walk).
+const ORIGINAL_BACKUP_SUFFIX = '.gamelib-orig'
+
+/**
+ * quick 261024-j4l (T-j4l-03): keeps the game-original dll as
+ * `<target>.gamelib-orig` before it is overwritten. Never backs up a GameLib
+ * shim, refuses a symlink / non-regular backup path, and requires the backup
+ * to sit inside the bottle. Never throws.
+ */
+function backupOriginalBeforeOverwrite(
+  bottleDir: string,
+  target: string,
+  appId: string
+): { ok: true } | { ok: false; error: string } {
+  const backup = target + ORIGINAL_BACKUP_SUFFIX
+  try {
+    if (!isContainedWithin(bottleDir, resolve(backup))) {
+      throw new Error('backup path is outside the bridge bottle')
+    }
+    if (isGameLibShimBytes(readFileSync(target))) return { ok: true }
+    let backupStat
+    try {
+      backupStat = lstatSync(backup)
+    } catch {
+      backupStat = null
+    }
+    if (backupStat && (backupStat.isSymbolicLink() || !backupStat.isFile())) {
+      throw new Error('backup path exists and is not a regular file')
+    }
+    copyFileSync(target, backup)
+    logInfo(
+      `placeShimForGame: appId ${appId} kept the game-original ${relative(dirname(target), target)} as ${ORIGINAL_BACKUP_SUFFIX} before placing the shim`,
+      LogPrefix.Steam
+    )
+    return { ok: true }
+  } catch (error) {
+    logWarning(
+      [
+        `placeShimForGame: could not back up the original "${target}" for appId ${appId} -- not overwriting it`,
+        error
+      ],
+      LogPrefix.Steam
+    )
+    return { ok: false, error: String(error) }
+  }
+}
+
 interface RuntimeSteamApiDll {
   name: 'steam_api.dll' | 'steam_api64.dll'
   path: string
@@ -204,6 +254,7 @@ async function findRuntimeLoadedSteamApiDlls(
       }
       if (!entry.isFile()) continue
       const lower = entry.name.toLowerCase()
+      // Exact names only: `<dll>.gamelib-orig` backups never match (j4l).
       if (lower !== 'steam_api.dll' && lower !== 'steam_api64.dll') continue
       let isShim: boolean
       try {
@@ -395,6 +446,7 @@ async function findSteamApiImporterPes(
       }
       if (!entry.isFile()) continue
       const lower = entry.name.toLowerCase()
+      // `.exe`/`.dll` only: a `.gamelib-orig` backup is never a candidate (j4l).
       if (!PE_CANDIDATE_EXT.test(lower)) continue
       if (lower === 'steam_api.dll' || lower === 'steam_api64.dll') continue
       if (resolve(full) === exclude || seen.has(resolve(full))) continue
@@ -844,6 +896,19 @@ async function placeShimForGameInner(
             error: `Runtime-loaded dll path is outside the bridge bottle: "${dll.path}"`
           }
         }
+        if (!dll.isGameLibShim) {
+          const backedUp = backupOriginalBeforeOverwrite(
+            bottleDir,
+            target,
+            appId
+          )
+          if (!backedUp.ok) {
+            return {
+              status: 'error',
+              error: `Failed to back up the original ${dll.name}: ${backedUp.error}`
+            }
+          }
+        }
         try {
           copyFileSync(sourceFor(dll.name), target)
         } catch (error) {
@@ -1023,6 +1088,16 @@ async function placeShimForGameInner(
     requiredInterfaceVersions: required,
     versionProblems: problems
   })
+
+  if (targetExists && !targetIsGameLibShim) {
+    const backedUp = backupOriginalBeforeOverwrite(bottleDir, shimPath, appId)
+    if (!backedUp.ok) {
+      return {
+        status: 'error',
+        error: `Failed to back up the original ${filename}: ${backedUp.error}`
+      }
+    }
+  }
 
   try {
     copyFileSync(shimSourcePath, shimPath)
