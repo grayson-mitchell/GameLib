@@ -89,6 +89,103 @@ describe('SHIM_EXPORTED_SYMBOLS (24-CR-02 pin, moved from shimGenerate.test.ts)'
   })
 })
 
+// Phase 53 (53-04): the Steamworks.NET census names the generated flat API and
+// the lifecycle no-ops must resolve in the x64 shim.
+const FLAT_NAMES_FIXTURE: { names: string[] } = JSON.parse(
+  readFileSync(
+    join(__dirname, 'fixtures', 'steamworksNetFlatNames.json'),
+    'utf-8'
+  )
+)
+const isInterfaceMethodName = (n: string): boolean =>
+  /^SteamAPI_ISteam[A-Za-z]+_/.test(n)
+const isVersionedAccessorName = (n: string): boolean =>
+  /^SteamAPI_Steam[A-Za-z]+_v\d+$/.test(n)
+const servedFlatInterfaces = (): Set<string> =>
+  new Set(
+    [...SHIM64_SERVED_INTERFACE_VERSIONS.values()].map((v) => `I${v.family}`)
+  )
+
+describe('SHIM64_EXPORTED_SYMBOLS vs the measured Steamworks.NET flat names (53-04, D-53-02)', () => {
+  test('(a) every fixture name of a served family resolves to an export', () => {
+    const served = servedFlatInterfaces()
+    const misses = FLAT_NAMES_FIXTURE.names.filter(
+      (n) =>
+        isInterfaceMethodName(n) &&
+        served.has(n.split('_')[1]) &&
+        !SHIM64_EXPORTED_SYMBOLS.has(n)
+    )
+    expect(misses).toEqual([])
+  })
+
+  test('(b) every lifecycle name is exported (D-53-06 as amended 2026-10-25); the rest are pinned and belong to unserved families', () => {
+    const lifecycle = FLAT_NAMES_FIXTURE.names.filter(
+      (n) => !isInterfaceMethodName(n) && !isVersionedAccessorName(n)
+    )
+    expect(lifecycle.length).toBeGreaterThan(0)
+    expect(lifecycle.filter((n) => !SHIM64_EXPORTED_SYMBOLS.has(n))).toEqual([])
+    for (const name of [
+      'SteamAPI_ManualDispatch_GetNextCallback',
+      'SteamAPI_ManualDispatch_GetAPICallResult',
+      'SteamAPI_SetBreakpadAppID',
+      'SteamAPI_ReleaseCurrentThreadMemory'
+    ]) {
+      expect(SHIM64_EXPORTED_SYMBOLS.has(name)).toBe(true)
+    }
+
+    // Versioned accessors the shim does not serve are the only other kind of
+    // fixture name that may be absent.
+    const served = servedFlatInterfaces()
+    const unexported = FLAT_NAMES_FIXTURE.names
+      .filter((n) => !SHIM64_EXPORTED_SYMBOLS.has(n))
+      .sort()
+    const byFamily: Record<string, number> = {}
+    for (const n of unexported) {
+      if (isInterfaceMethodName(n)) {
+        const family = n.split('_')[1]
+        expect(served.has(family)).toBe(false)
+        byFamily[family] = (byFamily[family] ?? 0) + 1
+      } else {
+        byFamily[n] = (byFamily[n] ?? 0) + 1
+      }
+    }
+    // D-53-04: these families have no manifest, so they stay unexported until
+    // a title that imports them is measured.
+    expect(byFamily).toEqual({
+      ISteamAppList: 5,
+      ISteamGameSearch: 14,
+      ISteamHTMLSurface: 37,
+      ISteamHTTP: 25,
+      ISteamInventory: 38,
+      ISteamMusic: 9,
+      ISteamMusicRemote: 32,
+      ISteamNetworkingConnectionSignaling: 2,
+      ISteamNetworkingMessages: 6,
+      ISteamNetworkingSignalingRecvContext: 2,
+      ISteamNetworkingSockets: 47,
+      ISteamNetworkingUtils: 27,
+      ISteamParentalSettings: 6,
+      ISteamParties: 12,
+      ISteamRemotePlay: 8,
+      ISteamScreenshots: 9,
+      ISteamTimeline: 4,
+      ISteamUGC: 94,
+      ISteamVideo: 4
+    })
+  })
+
+  test('(c) the two Rogue Waters misses are exported', () => {
+    expect(
+      SHIM64_EXPORTED_SYMBOLS.has('SteamAPI_ISteamClient_GetISteamUser')
+    ).toBe(true)
+    expect(
+      SHIM64_EXPORTED_SYMBOLS.has(
+        'SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck'
+      )
+    ).toBe(true)
+  })
+})
+
 // 51-15: D-51-13 GO -- same CR-02 pin discipline as SHIM_EXPORTED_SYMBOLS
 // above, against the x64 sibling .def.
 describe('SHIM64_EXPORTED_SYMBOLS (51-15 pin)', () => {

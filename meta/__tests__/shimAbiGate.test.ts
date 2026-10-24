@@ -36,7 +36,13 @@
  * this whole bridge targets.
  */
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { join } from 'node:path'
 
 import {
@@ -293,4 +299,66 @@ describe('shimAbiGate (51-15 Task 1 -- real compile + disassemble, not a synthet
     expect(lastRet).toMatch(/ret[a-z]*\s*$/)
     expect(lastRet).not.toMatch(/\$0x/)
   }, 180000)
+
+  it('x64: the real shim compiles and the PE export table carries every steam_api64.def name (53-04 flat API)', async () => {
+    if (skipReason) {
+      console.warn(`shimAbiGate SKIPPED: ${skipReason}`)
+      return
+    }
+    const sdkDir = join(__dirname, '..', 'sdk')
+    const manifests = readdirSync(sdkDir)
+      .filter((f) => f.endsWith('.manifest.json'))
+      .map(
+        (f) =>
+          JSON.parse(
+            readFileSync(join(sdkDir, f), 'utf-8')
+          ) as InterfaceManifestV2
+      )
+    const fakeHome = createFakeHomeProfile({ prefix: 'gamelib-shimabigate-' })
+    createdProfiles.push(fakeHome)
+    const buildDir = join(fakeHome.root, 'build-real')
+    mkdirSync(buildDir, { recursive: true })
+    const cPath = join(buildDir, 'shim.c')
+    const defPath = join(buildDir, 'shim.def')
+    const outPath = join(buildDir, 'shim.dll')
+    writeFileSync(cPath, generateShimC(manifests))
+    writeFileSync(defPath, generateDefFile(manifests, 'x64'))
+
+    const env = fakeHome.childEnv()
+    const compile = await spawnArgv(
+      zigBinPath,
+      [
+        'cc',
+        '-target',
+        'x86_64-windows-gnu',
+        '-shared',
+        ...SHIM_RELEASE_CFLAGS,
+        '-o',
+        outPath,
+        cPath,
+        defPath,
+        '-lws2_32'
+      ],
+      env
+    )
+    if (compile.code !== 0 || !existsSync(outPath)) {
+      throw new Error(`zig cc (real x64 shim) failed:\n${compile.stderr}`)
+    }
+    const dump = await spawnArgv('objdump', ['-p', outPath], env)
+    if (dump.code !== 0) {
+      throw new Error(`objdump -p failed (exit ${dump.code}):\n${dump.stderr}`)
+    }
+    const exported = new Set(
+      dump.stdout
+        .split('\n')
+        .map((l) => l.trim().split(/\s+/).pop() ?? '')
+        .filter(Boolean)
+    )
+    const wanted = generateDefFile(manifests, 'x64')
+      .split('\n')
+      .slice(2)
+      .filter(Boolean)
+    expect(wanted.length).toBeGreaterThan(400)
+    expect(wanted.filter((n) => !exported.has(n))).toEqual([])
+  }, 300000)
 })
