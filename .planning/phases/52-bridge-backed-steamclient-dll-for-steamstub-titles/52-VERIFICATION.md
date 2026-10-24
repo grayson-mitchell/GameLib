@@ -1,12 +1,22 @@
 ---
 phase: 52-bridge-backed-steamclient-dll-for-steamstub-titles
-verified: 2026-10-24T08:10:00Z
-status: gaps_found
-score: 5/7 must-haves verified
+verified: 2026-10-25T00:00:00Z
+status: passed
+score: 7/7 must-haves verified (against the amended done-when)
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
   previous_score: 5/7
+  gap_closure_4:
+    verified: 2026-10-25T00:00:00Z
+    plans: [52-29, 52-30, 52-31, 52-32, 52-33, 52-34, 52-35, 52-36, 52-37]
+    done_when_amended: "2026-10-24 (UAT item 29, class O1): HELLO observed + honest SteamStub notice shown + no steam://run. Grim Dawn main menu / In-Game / clean Steam-init log DEFERRED to a separate operator-owned static-RE decision."
+    gaps_closed:
+      - "Done-when (as amended): item 30 notice conjunct, closed by 52-36 (in-app dialog) and scored pass at item 32 from GameLib.app"
+    gaps_remaining: []
+    gaps_deferred:
+      - "Grim Dawn main menu through the bridge (Application Load Error 3): out of phase by the amendment; tracked in .planning/todos/pending/2026-10-24-steamstub-launch-check-static-re-decision.md"
+    regressions: []
   gap_closure_3:
     verified: 2026-10-24T08:10:00Z
     plans: [52-25, 52-26, 52-27, 52-28]
@@ -29,7 +39,8 @@ re_verification:
     - "Honest SteamStub notice on the withheld path: closed by 52-15/52-16"
     - "CR-01 null-object regression for ordinary x64 GetISteam* lookups: closed by 52-14"
     - "WR-01/02/03/04: closed by 52-16"
-gaps:
+gaps: [] # superseded by gap_closure_4; the original unamended done-when gap is retained below as history
+prior_gaps_history:
   - truth: "Done-when: Grim Dawn (219990) launches from GameLib through its per-game bridge bottle, gets past SteamStub (no steam://run), reaches its main menu, and Mac Steam shows it In-Game"
     status: failed
     reason: "Re-gate items 9 and 10 on the packaged build. The product path now does everything planned (no withhold, drmWrapper=steamstub, forwarder placed, HKCU SteamClientDll64 + Universe written, HELLO, FWD CreateInterface SteamClient017/014 native=present, steam://run count 0), but Grim Dawn shows Application Load Error 3 (operator, twice) and the game's Steam init logs 'SteamAPI_IsSteamRunning() did not locate a running instance of Steam' (round-regate.cxlog:23313) after two absent 'pid' reads (:23303, :23311). Main menu never observed. Strict rule: no clean game Steam-init log means not bridge-verified. The helper log shows nothing after the two FWD lines, so the stub rejects before calling any method on the returned interface (WR-10)."
@@ -218,4 +229,65 @@ None added; the re-gate is operator-driven and needs a code change first.
 Gap closure 3 produced a rigorous negative result: a structural-property fix (version resource) does not satisfy the SteamStub check, and the strict log shows the stub still concludes no Steam is running. The phase goal is not achieved and the phase must not be marked complete. Next: `/gsd-plan-phase 52 --gaps`, with a trace-first step (+relay capturing the MessageBox text and the calls around the two `pid` reads), then ONE boundary-reviewed candidate (pid writer, or `Steam_*` flat exports answered by the native client), then a strict packaged re-gate. Consider whether continued speculative probes are worthwhile versus an operator decision on whether Grim Dawn/SteamStub is closable inside the locked boundary at all.
 
 _Re-verified: 2026-10-24 (gap closure 3)_
+_Verifier: Claude (gsd-verifier)_
+
+
+---
+
+# Re-verification 4: gap closure plans 52-29..52-37 (amended done-when)
+
+**Verified:** 2026-10-25
+**Status:** passed (against the AMENDED done-when). Score 7/7.
+**Requirements:** `.planning/REQUIREMENTS.md` does not exist and ROADMAP says `Requirements: TBD`. P52-DONE is verified against the amended ROADMAP done-when instead.
+
+## The amendment, stated plainly
+
+The original done-when (Grim Dawn reaches its main menu, Mac Steam shows In-Game) was NOT achieved and is no longer in this phase. At 52-32 (UAT item 29, class O1) the operator approved a reduced done-when, written into ROADMAP Phase 52: for a SteamStub title in its bridge bottle, the forwarder `steamclient64.dll` loads and reaches the native bridge (HELLO observed); when the stub then rejects the launch (Application Load Error 3), GameLib shows an honest notice that the SteamStub launch check cannot be satisfied through the bridge, with no `steam://run` fallback. Main menu is deferred to a separate operator-owned static-RE decision. I verified against this wording. "Phase passed" therefore means the reduced goal, not that Grim Dawn runs.
+
+## Amended done-when conjuncts
+
+| Conjunct | Status | Evidence |
+|---|---|---|
+| Forwarder loads, HELLO at the native bridge | VERIFIED | Item 32 (GameLib.app, 52-37): `HELLO shim attached appid=219990`, 2 `FWD CreateInterface ... native=present`, forwarder placed. Same in items 30, 31. |
+| Honest notice shown to the operator | VERIFIED | Code: `maybeNotifySteamStubForwarded` (games.ts:2789) calls notify() plus `showDialogBoxModalAuto`, called from the launch path at games.ts:3096; text says the launch check cannot be satisfied and the game will probably show a Steam error. `git diff 1c295e3ea..HEAD` on games.ts shows only the import and this method changed. I re-ran games.test.ts and notificationFailureLogging.test.ts: 379 pass. Live: operator at item 32, "yes dialog appears". |
+| No `steam://run` | VERIFIED (carried) | Item 31 trace count 0; item 32 gamelib.log count 0. Not re-traced after 52-36, but the games.ts diff above shows no launch, bridge, forwarder or setup hunk changed, so carrying is sound. |
+| Withheld/unforwarded notice not misfired | VERIFIED | `steamstub-unforwarded` and `withheld the shim` counts 0 in items 30 and 32. |
+
+All seven prior truths: truths 1-5 and 7 unchanged and VERIFIED; truth 6 (done-when) is now scored against the amended wording and VERIFIED.
+
+## Strict bridge-verified
+
+NOT claimed, and not claimable. Helper HELLO exists, but the game's Steam-init log shows IsSteamRunning 1 and a MSGBOX (Load Error 3, `0000065432`); main menu never reached; In-Game not counted. The bottled-Steam reroute was not used. The phase passes only because the done-when no longer requires bridge-verified.
+
+## Evidence strength (52-REVIEW.md, 0 blockers, 3 warnings)
+
+- WR-03: `dispatched=in-app-dialog+notify` is logged unconditionally and `sendFrontendMessage` always returns true in the sidecar, so that log line is NOT proof of display. I did not rely on it: the pass rests on the operator's live observation of the dialog. A launch before DialogHandler subscribes could lose the dialog silently. Accepted warning, not a blocker.
+- WR-01: `accepted by UserNotifications` cannot tell a banner from a silent grant. Moot for the pass: item 32 logged the `was not delivered` arm, and the banner is explicitly not a pass condition.
+- WR-02: a test with no assertion (a weak test, not a goal defect).
+All three are hardening; none is recorded as fixed.
+
+## Known open items (not gaps for this phase)
+
+- Notification authorization: bundled app logged `granted=false` / `authorization-not-determined` despite settings reporting enabled; tracked in `.planning/todos/pending/2026-10-25-notification-authorization-fails-on-bundled-app-despite-settings-enabled.md`. The in-app dialog is the delivery channel that works; the OS banner is not required.
+- Main menu through the bridge: `.planning/todos/pending/2026-10-24-steamstub-launch-check-static-re-decision.md` (outside the locked boundary, operator-owned).
+- Friends sign-out (steam-user logon): attributed outside phase 52 earlier.
+- Operator pressed Play twice in item 32; the second launch logs the trigger only (once-per-session gate), as designed.
+
+## Anti-patterns
+
+TBD/FIXME/XXX in the added lines of `1c295e3ea..HEAD` over `src` and `src-tauri`: none.
+
+## Regression gate
+
+Full jest: 7 failures in 5 suites (testContainment, findDeadcode, genI18nGateScope, machineFillGamelib: identical at base 1c295e3ea; dxvkInstallRemove passes in isolation, load-dependent). Not caused by this round. cargo test 407/407. I confirmed only the two suites above myself; the rest is per the orchestrator.
+
+## Human verification
+
+None outstanding: the notice conjunct was observed by the operator live (item 32).
+
+## Gaps Summary
+
+No gaps against the amended done-when. Residual: the original ambition (Grim Dawn running through the bridge) is unmet and deferred by operator decision. Phase 52 may close on the amended goal.
+
+_Re-verified: 2026-10-25 (gap closure 4)_
 _Verifier: Claude (gsd-verifier)_

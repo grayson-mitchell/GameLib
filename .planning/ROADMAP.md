@@ -338,7 +338,7 @@ The locked boundary is unchanged.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 37/37 plans executed
+**Plans:** 37/37 plans complete
 
 Plans:
 
