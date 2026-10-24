@@ -76,7 +76,7 @@ import {
 } from '../bottle'
 import { scanSteamApiImports } from './importScan'
 import { runtimeLoadedSteamApiMarker } from './importParse'
-import { detectSteamDrmInPe } from './peSteamDrm'
+import { detectSteamDrmInPe, readPeMachineArch } from './peSteamDrm'
 import {
   readInterfaceVersionStrings,
   resolveRequiredInterfaceVersions,
@@ -487,6 +487,33 @@ function detectExeSteamDrm(
   }
 }
 
+/**
+ * quick 261024-i94: the launch exe's arch from its COFF header, via ranged fd
+ * reads (never a slurp). null on any error or a non-PE -- never throws.
+ */
+function readExeMachineArch(exePath: string): 'x86' | 'x64' | null {
+  let fd: number | null = null
+  try {
+    fd = openSync(exePath, 'r')
+    const handle = fd
+    return readPeMachineArch((offset, length) => {
+      const buf = Buffer.alloc(length)
+      const n = readSync(handle, buf, 0, length, offset)
+      return n < length ? null : new Uint8Array(buf.buffer, buf.byteOffset, n)
+    })
+  } catch {
+    return null
+  } finally {
+    if (fd !== null) {
+      try {
+        closeSync(fd)
+      } catch {
+        // nothing left to release
+      }
+    }
+  }
+}
+
 async function placeShimForGameInner(
   appId: string,
   gameExePath: string,
@@ -605,6 +632,74 @@ async function placeShimForGameInner(
         }
       }
 
+      // quick 261024-i94: evaluate per shipped dll BEFORE the copy loop (the
+      // original dlls' version strings must be read before they are
+      // overwritten). Importers of the other arch than the launch exe never
+      // load, so they are ignored; an unknown launch arch evaluates all.
+      const launchArch = readExeMachineArch(resolvedExePath)
+      const launchName: 'steam_api.dll' | 'steam_api64.dll' | null =
+        launchArch === 'x64'
+          ? 'steam_api64.dll'
+          : launchArch === 'x86'
+            ? 'steam_api.dll'
+            : null
+      const considered: Array<'steam_api.dll' | 'steam_api64.dll'> =
+        launchName !== null && names.includes(launchName) ? [launchName] : names
+      const importers = await findSteamApiImporterPes(
+        appId,
+        walkRoot,
+        resolvedExePath
+      )
+      const combinedMissing: string[] = []
+      let primaryEval: {
+        required: Record<string, string>
+        stubbedInterfaces: string[]
+      } | null = null
+      const primaryName: 'steam_api.dll' | 'steam_api64.dll' =
+        considered.includes('steam_api64.dll')
+          ? 'steam_api64.dll'
+          : 'steam_api.dll'
+      for (const name of considered) {
+        const nameArch = name === 'steam_api64.dll' ? 'x64' : 'x86'
+        const forName = importers.filter((i) => i.arch === nameArch)
+        if (forName.length === 0) {
+          combinedMissing.push(runtimeLoadedSteamApiMarker(name))
+          continue
+        }
+        const merged = [...new Set(forName.flatMap((i) => i.symbols))]
+        const original = runtimeDlls.find(
+          (d) => d.name === name && !d.isGameLibShim
+        )
+        const dllVersions = original
+          ? await readVersionsOrEmpty(original.path, appId)
+          : Object.values(opts?.persistedInterfaceVersions ?? {})
+        const exeVersions = usesRuntimeInterfaceLookup(merged)
+          ? (
+              await Promise.all(
+                forName.map((i) => readVersionsOrEmpty(i.path, appId))
+              )
+            ).flat()
+          : []
+        const { required, problems } = resolveRequiredInterfaceVersions({
+          importedSymbols: merged,
+          dllVersions,
+          exeVersions
+        })
+        const coverage = evaluateShimCoverage({
+          arch: nameArch,
+          symbols: merged,
+          requiredInterfaceVersions: required,
+          versionProblems: problems
+        })
+        combinedMissing.push(...coverage.missingSymbols)
+        if (name === primaryName) {
+          primaryEval = {
+            required,
+            stubbedInterfaces: coverage.stubbedInterfaces
+          }
+        }
+      }
+
       for (const dll of toCopy) {
         const target = resolve(dll.path)
         // T-oq7-03: every copy target must sit inside the bridge bottle.
@@ -635,8 +730,30 @@ async function placeShimForGameInner(
         }
       }
 
+      const verdictBase = {
+        arch:
+          primaryName === 'steam_api64.dll'
+            ? ('x64' as const)
+            : ('x86' as const),
+        interfaceVersions: primaryEval?.required ?? {},
+        stubbedInterfaces: primaryEval?.stubbedInterfaces ?? [],
+        shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
+        scannedAt
+      }
+      if (combinedMissing.length === 0) {
+        logInfo(
+          `placeShimForGame: appId ${appId} runtime-loaded steam_api covered by importer PE(s) ${importers.map((i) => relative(walkRoot, i.path)).join(', ')} -- shim placed (quick 261024-i94)`,
+          LogPrefix.Steam
+        )
+        return {
+          status: 'placed',
+          shimPath: allShimPaths[0],
+          shimPaths: allShimPaths,
+          verdict: { status: 'clean', missingSymbols: [], ...verdictBase }
+        }
+      }
       logWarning(
-        `placeShimForGame: appId ${appId} launch exe imports no steam_api but the install tree ships ${names.join(', ')} -- runtime-loaded, recording a miss and placing the shim anyway (quick 261023-oq7, CR-04)`,
+        `placeShimForGame: appId ${appId} launch exe imports no steam_api but the install tree ships ${names.join(', ')} -- runtime-loaded${importers.length > 0 ? ` (importer PEs: ${importers.map((i) => relative(walkRoot, i.path)).join(', ')})` : ''}, recording a miss and placing the shim anyway (quick 261023-oq7, CR-04)`,
         LogPrefix.Steam
       )
       return {
@@ -644,12 +761,8 @@ async function placeShimForGameInner(
         shimPaths: allShimPaths,
         verdict: {
           status: 'miss',
-          arch: names.includes('steam_api64.dll') ? 'x64' : 'x86',
-          missingSymbols: names.map(runtimeLoadedSteamApiMarker),
-          interfaceVersions: {},
-          stubbedInterfaces: [],
-          shimExportSetVersion: SHIM_EXPORT_SET_VERSION,
-          scannedAt
+          missingSymbols: combinedMissing,
+          ...verdictBase
         }
       }
     }

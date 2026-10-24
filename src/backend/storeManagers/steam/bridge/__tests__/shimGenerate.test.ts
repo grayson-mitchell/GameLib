@@ -976,8 +976,10 @@ describe('shimGenerate', () => {
     }
     const scanByPath = (table: Record<string, Scan>) =>
       mockedScanSteamApiImports.mockImplementation(
-        async (_appId: string, path: string) =>
-          table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+        (_appId: string, path: string) =>
+          Promise.resolve(
+            table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+          )
       )
     const exeScan: Scan = {
       status: 'ok',
@@ -1075,8 +1077,12 @@ describe('shimGenerate', () => {
     it('skips an importer whose scan errors and keeps placing', async () => {
       const plugin = mkImporter(join('bin', 'Plugin.dll'))
       mockedScanSteamApiImports.mockImplementation(
-        async (_appId: string, path: string) =>
-          path === plugin ? { status: 'error', error: 'objdump boom' } : exeScan
+        (_appId: string, path: string) =>
+          Promise.resolve(
+            path === plugin
+              ? { status: 'error', error: 'objdump boom' }
+              : exeScan
+          )
       )
 
       const result = await placeShimForGame('1234', gameExePath, {
@@ -1110,8 +1116,10 @@ describe('shimGenerate', () => {
     }
     const scanByPath = (table: Record<string, Scan>) =>
       mockedScanSteamApiImports.mockImplementation(
-        async (_appId: string, path: string) =>
-          table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+        (_appId: string, path: string) =>
+          Promise.resolve(
+            table[path] ?? { status: 'ok', arch: 'none', symbols: [] }
+          )
       )
     const writeX64Exe = () => {
       const pe = buildMinimalPe([])

@@ -18,6 +18,9 @@
  * (todo 2026-10-23 "forwarding steamclient dll for SteamStub titles"), and
  * bottled Steam is a narrow fallback, so `.bind` never changes routing.
  *
+ * It also hosts `readPeMachineArch`, a tiny COFF header read (quick
+ * 261024-i94) that tells the placer which arch the launch exe is.
+ *
  * Zero imports by design (D-51-15), the same discipline as importParse.ts:
  * meta/bridgeCensus.ts bundles this module with no backend module graph.
  * Only Uint8Array / DataView / String.fromCharCode are used.
@@ -205,6 +208,26 @@ export function detectSteamDrmInPe(read: PeReader): PeSteamDrmResult {
     return { parsed: true, cegMarkers, hasBindSection }
   } catch {
     return unparsed()
+  }
+}
+
+/**
+ * quick 261024-i94: the PE's COFF Machine field as an arch, or null when the
+ * bytes are not a well-formed PE of a known machine (x86 0x14c / x64 0x8664).
+ * Ranged reads only; never throws (T-i94-04).
+ */
+export function readPeMachineArch(read: PeReader): 'x86' | 'x64' | null {
+  try {
+    const mz = readExact(read, 0, 2)
+    if (mz.getUint8(0) !== 0x4d || mz.getUint8(1) !== 0x5a) return null
+    const peOffset = u32(read, 0x3c)
+    if (u32(read, peOffset) !== 0x00004550) return null
+    const machine = u16(read, peOffset + 4)
+    if (machine === 0x14c) return 'x86'
+    if (machine === 0x8664) return 'x64'
+    return null
+  } catch {
+    return null
   }
 }
 
