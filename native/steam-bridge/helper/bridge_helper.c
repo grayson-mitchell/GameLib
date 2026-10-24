@@ -422,9 +422,14 @@ static int send_response(int fd, uint32_t requestId, uint8_t status, const uint8
   return 1;
 }
 
+// D-53-13 / 53-13 WR-04: once-per-method CALL latch, set only on a successful dispatch.
+static uint8_t g_call_seen[BD_CALL_COUNT > 0 ? BD_CALL_COUNT : 1];
+
+// 53-13 WR-06: helper-side cap; the shim's 16-report cap (T-53-25) is not a trust boundary.
+static unsigned g_nover_logged = 0;
+
 // T-52-09: bound to 128 chars and replace non-printable bytes so a
 // game-controlled version string cannot inject log lines.
-static uint8_t g_call_seen[BD_CALL_COUNT > 0 ? BD_CALL_COUNT : 1];
 
 static void sanitize_ver(const char *in, char *out, size_t outSize) {
   size_t i = 0;
@@ -534,6 +539,11 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
         send_response(fd, requestId, STATUS_ERR, NULL, 0);
         return;
       }
+      if (g_nover_logged >= 16) {
+        send_response(fd, requestId, STATUS_OK, NULL, 0);
+        return;
+      }
+      g_nover_logged++;
       char ver[129];
       memcpy(ver, argBlob + 4, vlen);
       ver[vlen] = '\0';
@@ -561,17 +571,19 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
   // symbol, and every param-bounds check all live in bridge_dispatch
   // itself (bridge_dispatch.h), generated from the SAME manifests the
   // shim's own stubs are generated from.
-  // D-53-13: CALL trace. Game-originated by construction (only the shim sends
-  // wire requests; the helper's own init is not a request). Name only, no
-  // arguments or returns; once per method per process, bounded by BD_CALL_COUNT.
+  // D-53-13 / 53-13 WR-04: CALL trace. Post-dispatch and success-only: a call
+  // that failed bounds checks or hit an unresolved symbol is never evidence.
+  // Game-originated by construction (only the shim sends wire requests; the
+  // helper's own init is not a request). Name only, no arguments or returns;
+  // once per method per process, bounded by BD_CALL_COUNT.
   int ci = bd_call_index(ordinal, slot);
-  if (ci >= 0 && !g_call_seen[ci]) {
-    g_call_seen[ci] = 1;
-    logts("CALL", bd_call_name(ci));
-  }
   uint32_t respLen = 0;
   uint8_t status = bridge_dispatch(ordinal, slot, argBlob, argLen,
                                     g_dispatch_respbuf, sizeof(g_dispatch_respbuf), &respLen);
+  if (status == STATUS_OK && ci >= 0 && !g_call_seen[ci]) {
+    g_call_seen[ci] = 1;
+    logts("CALL", bd_call_name(ci));
+  }
   send_response(fd, requestId, status, g_dispatch_respbuf, respLen);
 }
 

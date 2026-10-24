@@ -94,6 +94,13 @@ jest.mock('backend/ipc', () => ({
 }))
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..', '..')
+const HELPER_SOURCE_PATH = join(
+  REPO_ROOT,
+  'native',
+  'steam-bridge',
+  'helper',
+  'bridge_helper.c'
+)
 
 // The old D-03/D-04 fixed shared port -- a real per-appId helper must
 // NEVER bind this port again (D-51-01).
@@ -622,5 +629,81 @@ describeDarwinOnly(
         child.kill()
       }
     }, 15000)
+
+    // 53-13 WR-06 (T-53-47): the helper caps logged NOVER lines at 16 per
+    // process whatever a peer sends; further frames still answer STATUS_OK.
+    test('REPORT_VERSION logs at most 16 NOVER lines and still answers STATUS_OK', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'nover-cap-'))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: profile.childEnv()
+        }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+      try {
+        const port = await new Promise<number>((resolvePromise, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+            5000
+          )
+          const poll = setInterval(() => {
+            const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+            if (m) {
+              clearInterval(poll)
+              clearTimeout(timeout)
+              resolvePromise(Number(m[1]))
+            }
+          }, 25)
+        })
+        const socket = new Socket()
+        await new Promise<void>((res, rej) => {
+          socket.once('error', rej)
+          socket.connect(port, '127.0.0.1', () => res())
+        })
+        try {
+          for (let i = 0; i < 20; i++) {
+            const bytes = Buffer.from(`SteamFake${i}`, 'ascii')
+            const len = Buffer.alloc(4)
+            len.writeUInt32LE(bytes.length, 0)
+            const res = await sendFrameOnSocket(
+              socket,
+              encodeRequest(
+                i + 1,
+                CONTROL_ORDINAL,
+                CONTROL_SLOT.reportVersion,
+                Buffer.concat([len, bytes])
+              )
+            )
+            expect(res.status).toBe(STATUS_OK)
+          }
+        } finally {
+          socket.destroy()
+        }
+        await new Promise((r) => setTimeout(r, 100))
+        expect(stderr.match(/NOVER {2}flat lookup ver=/g)).toHaveLength(16)
+      } finally {
+        child.kill()
+      }
+    }, 15000)
+
+    // 53-13 WR-04: source pin -- the CALL trace sits after bridge_dispatch and
+    // is guarded by STATUS_OK, so a failed call is never trace evidence.
+    test('source pin: CALL is logged after bridge_dispatch, guarded by STATUS_OK', () => {
+      const src = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      const dispatchAt = src.lastIndexOf('bridge_dispatch(')
+      const callAt = src.indexOf('logts("CALL"')
+      expect(dispatchAt).toBeGreaterThan(-1)
+      expect(callAt).toBeGreaterThan(dispatchAt)
+      expect(src).toContain('status == STATUS_OK && ci >= 0')
+    })
   }
 )
