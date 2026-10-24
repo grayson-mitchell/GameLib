@@ -212,6 +212,9 @@ export interface SteamBridgeScanVerdict {
   shimExportSetVersion: string
   /** ISO-8601 timestamp of when this scan ran. */
   scannedAt: string
+  /** Phase 52: set by placeShimForGame when the launch exe carries a `.bind`
+   * section; gates SteamStub forwarder setup. Absent means none detected. */
+  drmWrapper?: 'steamstub'
 }
 
 /** Phase 51 Plan 03 (D-51-07/D-51-10): the full persisted bridge verdict for

@@ -361,3 +361,23 @@ describe('writeBridgeDrmVerdict (quick 261024-br4)', () => {
     expect(mockedLogWarning).toHaveBeenCalled()
   })
 })
+
+describe('scan.drmWrapper round trip (Phase 52 Pitfall 2)', () => {
+  it('reads back drmWrapper steamstub intact', () => {
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ drmWrapper: 'steamstub' }))
+    expect(readBridgeVerdict(APP_ID)?.scan?.drmWrapper).toBe('steamstub')
+  })
+  it('leaves the key absent when not set', () => {
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+    const scan = readBridgeVerdict(APP_ID)?.scan
+    expect(scan).toBeDefined()
+    expect('drmWrapper' in (scan as object)).toBe(false)
+  })
+  it('rejects an unknown drmWrapper value (whole verdict undefined)', () => {
+    mockedStore.set(APP_ID, {
+      bridge: { scan: { ...makeScanVerdict(), drmWrapper: 'ceg' } }
+    })
+    expect(readBridgeVerdict(APP_ID)).toBeUndefined()
+    expect(mockedLogWarning).toHaveBeenCalled()
+  })
+})

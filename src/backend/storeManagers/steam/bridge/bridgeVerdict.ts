@@ -36,7 +36,10 @@ const bridgeScanVerdictSchema = z.object({
   interfaceVersions: z.record(z.string(), z.string()),
   stubbedInterfaces: z.array(z.string()),
   shimExportSetVersion: z.string(),
-  scannedAt: z.string()
+  scannedAt: z.string(),
+  // Phase 52 Pitfall 2: the non-strict object strips unknown keys on read, so
+  // without this a persisted SteamStub detection would be silently forgotten.
+  drmWrapper: z.enum(['steamstub']).optional()
 })
 
 const bridgeVerdictSchema = z.object({
