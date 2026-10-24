@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 17/18 plans executed
+**Plans:** 18/24 plans executed
 
 Plans:
 
@@ -359,6 +359,14 @@ Plans:
 - [x] 52-16-PLAN.md — Withheld SteamStub notice; WR-01 bounded wait:false reg add, WR-02 strict exit code, WR-03 PE arch, WR-04 fresh drmWrapper; defer WR-05..08
 - [x] 52-17-PLAN.md — Packaged re-gate: Grim Dawn launch, cx-log trace with strict Steam-init check, bottle hygiene (UAT items 9-11)
 - [x] 52-18-PLAN.md — ELEX no-regression check (item 12), conditional pid decision (item 13), finalize UAT and todos
+
+**Gap closure 2** *(from 52-VERIFICATION.md re-verification, 5/7; waves: 19+20+21 parallel, then 22, then 23 live, then 24 live)*
+- [ ] 52-19-PLAN.md — Gap 5 diagnosis: relay trace of the SteamStub check window + export tables (no fix chosen); Gap 6 Friends attribution arms (UAT items 14-15)
+- [ ] 52-20-PLAN.md — WR-09: gate the eight non-lookup SteamClient017/014 wire methods off the SteamStub path with pre-phase values; widen WR-07 revisit
+- [ ] 52-21-PLAN.md — WR-11: withhold only when a steam_api target exists; placed-miss with no own-steam_api line otherwise
+- [ ] 52-22-PLAN.md — Gap 5 fix: decision checkpoint over boundary-reviewed options from 52-19 evidence, then implement the chosen one (UAT item 16)
+- [ ] 52-23-PLAN.md — Strict packaged re-gate 2: Grim Dawn launch, cx-log strict Steam-init trace, hygiene (UAT items 17-19)
+- [ ] 52-24-PLAN.md — ELEX no-regression after WR-09 with Friends before/after (item 20), finalize UAT and todos
 
 ### Phase 53: Steam bridge coverage: modern-SDK exports, flat API
 
