@@ -161,7 +161,7 @@ Facts the runner must not trip over (from earlier plans):
 
 ## Current Test
 
-complete: re-gate 2 items 17-20 scored by 52-23/52-24
+diagnosis 3: item 21 scored by 52-25; next 52-26 decision
 
 ## Tests
 
@@ -252,6 +252,9 @@ result: skipped — no Gap 5 change implemented (item 16 option-other); no item 
 ### 20. Re-gate 2 — ELEX (411300) no-regression after WR-09, Friends before/after
 expected: everything item 12 expected; plus no `FWD` line for 411300 at all (WR-09: the non-lookup SteamClient methods stay local off the SteamStub path); the operator records Mac Steam Friends as signed in before Play and still signed in after quitting. A sign-out is `issue` only when 52-19's attribution is classified phase-52 or inconclusive. When it is outside-phase-52 (item 15 classified it so), item 20 is scored on ELEX no-regression alone and the Friends outcome goes to the Friends pending todo. Bridge-verified is recorded separately and expected to stay unverified.
 result: pass — ELEX (411300) no-regression after WR-09 (GATE LAUNCH S2 2026-10-24T06:11:23Z, session /tmp/gamelib-gate-52s-20261024T060847Z, log gamelib-s2.log, 91 lines, copied after quit; archived also as gamelib-regate2-2.log). Log checks: `placeShimForGame: overwrote steam_api64.dll for appId 411300` at 19:13:06 (:56 local); `launching appId 411300 via the Steam bridge` (:63); `HELLO  shim attached appid=411300` at 06:13:08Z (:83); `[bridge-steamstub]` count 0; `FWD` count 0 (WR-09 held: the helper log for 411300 has only LISTEN, INIT `SteamAPI ready (single InitFlat call, real appid=411300)` and HELLO); `bottleProcessMonitor [411300]: matched process(es) gone after 88s of play` (:90, operator quit); no game-written log files under the 411300 bottle newer than elex-marker (find: none). Bridge-notice line present, no not-subscribed or other error dialog (operator: no notice or message about ELEX not working; none in the log). Furthest screen: loading screen, as every other time (matches the 51-UAT item 15 baseline). Operator, verbatim: "reached loading screen (as every other time)"; "I quit it"; In-Game "yes" (not counted). Friends: signed in before GameLib launch (~06:11Z, "friends is signeed in") / after GameLib's steam-user logon it dropped offline ("yes as per instructions") and the operator restarted Mac Steam before Play (52-19 arm d method, so the after-state measures the bridge run, not the logon) / still signed in at step 6 (~06:14-06:15Z, "reached step 6, friends still logged in"). Friends: signed-in/signed-in-after-restart, outside phase 52 per 52-19 (item 15, classification: outside-phase-52); the logon-induced drop is routed to pending todo 2026-10-24-friends-sign-out-steam-user-logon.md and did not fail this item. Scored on ELEX no-regression alone. Bridge-verified: no (HELLO present, no game Steam-init log; In-Game never counts).
+### 21. Gap 5 diagnosis 3 — what the stub checks in the forwarder bytes (static + relay diag3)
+expected: the static comparison of the genuine steamclient64.dll, the forwarder and Grim Dawn.exe is recorded; the genuine and forwarder export tables are re-recorded with equality to the 52-19 table stated; the clone holds the product-written state (cmp); R1-R6 are answered observed-or-not-observed with cxlog lines; the check classification has strength and boundary columns; no fix is chosen.
+result: pass — session /tmp/gamelib-gate-52e-20261024T065250Z, plan 52-25, evidence in 52-25-DIAGNOSIS.md. Static comparison G/F/E recorded (size, CheckSum stored/recomputed, Security Directory, signer Valve Corp. via DigiCert, resource and version strings, exports, imports, sections, overlay, Rich header); the genuine export table is 41 names, identical to the 52-19 table, forwarder 1, dylib 33. Round `ROUND=diag3 MODE=trace WATCH=45` (2026-10-24T06:55:04Z), DRY_RUN first (RelayInclude only to GameLibGate52GD, no DLL cp, no Software\Valve write); 523 relay Call lines, fallback not needed; clone `x64/steam_api64.dll` and `x64/steamclient64.dll` cmp identical to the product's, SteamClientDll64 count 1 equal, product bottle unchanged after. Answers: R1 observed, `Application load error 3:0000065432` caption `Steam Error` (cxlog:6654); R2 not observed (no trust or certificate API in the game process); R3 not observed in the game process (the five advapi32 Crypt calls are CrossOver's launcher licence check in process 00e0, cxlog:2651-2743); R4 observed, one GetFileSize and one whole-file ReadFile of 0x2d800 bytes, no seek or mapping (6646-6648); R5 observed, the exe read (6308-6316) and the forwarder read (6640-6648) use the same return addresses, so the same stub routine; R6 observed (6640-6650). Classification rows A-D recorded; no row is direct evidence of what is checked, the check itself is not observable without disassembly. No fix chosen; 52-26 decides.
 
 ## Structural Reachability Review
 
@@ -301,8 +304,8 @@ runner action, not a contract defect.
 
 ## Summary
 
-total: 20
-passed: 8
+total: 21
+passed: 9
 issues: 6
 pending: 1
 skipped: 5
