@@ -15,7 +15,7 @@ import {
 import { GOGCloudSavesLocation } from 'common/types/gog'
 import { Game, InstallResult, RemoveArgs } from 'common/types/game_manager'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { notify } from 'backend/dialog/dialog'
+import { notify, showDialogBoxModalAuto } from 'backend/dialog/dialog'
 import { getFileSize } from 'backend/utils'
 import type LogWriter from 'backend/logger/log_writer'
 import { GameConfig } from 'backend/game_config'
@@ -2778,6 +2778,13 @@ export default class SteamGame implements Game {
    * Re-scope this notice if any SteamStub title is ever observed reaching its
    * menu through the bridge, and revisit it if the separate static-RE
    * decision ever makes the stub accept the forwarder.
+   *
+   * The notice is also shown as an in-app dialog (52-UAT item 30): the
+   * operator never saw the OS notification on a raw-binary run, and notify()
+   * is fire-and-forget, so an OS banner alone cannot prove the notice was
+   * shown. dialog.ts policy rule 1 ("any nag or warning") puts warnings
+   * in-app. The dialog is one-way and non-blocking, so the launch order is
+   * unchanged.
    */
   private maybeNotifySteamStubForwarded(): void {
     logInfo(
@@ -2788,16 +2795,20 @@ export default class SteamGame implements Game {
       return
     }
     steamStubForwardedNoticeShownThisSession.add(this.appId)
-    notify({
-      title: i18next.t(
-        'gamelib:steam.bridge.steamstub.forwardedTitle',
-        'Steam DRM check not supported'
-      ),
-      body: i18next.t(
-        'gamelib:steam.bridge.steamstub.forwardedBody',
-        "This game uses Steam's DRM wrapper. GameLib connected it to your Mac Steam client, but the wrapper's launch check cannot be satisfied through the native Steam bridge, so the game will probably show a Steam error and not start."
-      )
-    })
+    const title = i18next.t(
+      'gamelib:steam.bridge.steamstub.forwardedTitle',
+      'Steam DRM check not supported'
+    )
+    const body = i18next.t(
+      'gamelib:steam.bridge.steamstub.forwardedBody',
+      "This game uses Steam's DRM wrapper. GameLib connected it to your Mac Steam client, but the wrapper's launch check cannot be satisfied through the native Steam bridge, so the game will probably show a Steam error and not start."
+    )
+    notify({ title, body })
+    showDialogBoxModalAuto({ title, message: body, type: 'MESSAGE' })
+    logInfo(
+      `[bridge-notice] appId=${this.appId} dispatched=in-app-dialog+notify`,
+      LogPrefix.Steam
+    )
   }
 
   private async launchBridgeGame(): Promise<boolean> {
