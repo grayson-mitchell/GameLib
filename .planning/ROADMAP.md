@@ -326,7 +326,7 @@ shows it In-Game.
 
 **Requirements**: TBD
 **Depends on:** Phase 51 (generator, helper dispatch, per-game bridge bottles, x64 shim)
-**Plans:** 4/12 plans executed
+**Plans:** 5/12 plans executed
 
 Plans:
 
@@ -337,7 +337,7 @@ Plans:
 - [x] 52-06-PLAN.md — SteamStub notice strings in all 49 gamelib catalogs
 
 **Wave 2-3** *(serial after 52-01: shared generated sources and helper build)*
-- [ ] 52-02-PLAN.md — Helper CONTROL slot 3 CREATE_INTERFACE asks SteamInternal_CreateInterface; protocol constant; integration tests
+- [x] 52-02-PLAN.md — Helper CONTROL slot 3 CREATE_INTERFACE asks SteamInternal_CreateInterface; protocol constant; integration tests
 - [ ] 52-03-PLAN.md — zig-built steamclient64.dll forwarder (CreateInterface only, resolves the loaded shim); build + prune + path constant
 
 **Wave 4**
