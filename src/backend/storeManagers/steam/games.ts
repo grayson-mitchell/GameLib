@@ -70,6 +70,7 @@ import {
   provisionBridgeBottle,
   bridgeBottleNameFor,
   removePerGameBridgeBottle,
+  stopPerGameBridgeBottle,
   findBridgeInstallBottle,
   isCrossoverInstalled,
   CROSSOVER_MISSING
@@ -161,6 +162,27 @@ interface NativeInstallEntry {
  * can never permanently block a later re-install of that appId.
  */
 const nativeInstallsInFlight = new Map<string, NativeInstallEntry>()
+
+/**
+ * quick 261024-urq: appId -> the bridge bottle a live bridge launch was fired
+ * into. The single source `SteamGame.stop()` consults to detect the bridge
+ * route: the process monitor alone is insufficient (none starts when the
+ * install root is unresolved, and it does not carry the bottle name). The
+ * value is an object so a late settlement of an earlier launch can tell its
+ * own record from a superseding relaunch's (identity compare). Cleared when
+ * the game ends on its own, when the launch fails, and by stop().
+ */
+const bridgeLaunchBottles = new Map<string, { bottle: string }>()
+
+/**
+ * Test-only reset for bridgeLaunchBottles — mirrors
+ * `__resetBridgeFailedSessionForTests()`'s convention below. Call in a
+ * `beforeEach` so one test's recorded bridge launch cannot make a later
+ * test's stop() take the bridge branch.
+ */
+export function __resetBridgeLaunchBottlesForTests(): void {
+  bridgeLaunchBottles.clear()
+}
 
 /**
  * Phase 24 Plan 08 (R7, review finding #3 — fallback-bypass): appIds whose
@@ -3050,6 +3072,14 @@ export default class SteamGame implements Game {
       })
     }
 
+    // quick 261024-urq: this launch's own record (see bridgeLaunchBottles).
+    const launchRecord = { bottle: bridgeBottleSettings.wineCrossoverBottle }
+    const clearLaunchRecord = () => {
+      if (bridgeLaunchBottles.get(this.appId) === launchRecord) {
+        bridgeLaunchBottles.delete(this.appId)
+      }
+    }
+
     try {
       const { runWineCommand } = await import('backend/launcher')
       const { startBottleProcessMonitor } =
@@ -3100,7 +3130,10 @@ export default class SteamGame implements Game {
           installPath: installRoot,
           bottleDir: getBottleDir(bridgeBottleSettings.wineCrossoverBottle),
           kind: 'bridge',
-          onStopped: () => stopBridgeHelper(this.appId)
+          onStopped: () => {
+            clearLaunchRecord()
+            stopBridgeHelper(this.appId)
+          }
         })
       } else {
         logWarning(
@@ -3109,6 +3142,7 @@ export default class SteamGame implements Game {
         )
       }
 
+      bridgeLaunchBottles.set(this.appId, launchRecord)
       const winePromise = runWineCommand({
         commandParts: [exePath],
         gameSettings: launchSettings,
@@ -3118,8 +3152,14 @@ export default class SteamGame implements Game {
         skipPrefixCheckIKnowWhatImDoing: true
       })
       void winePromise.then(
-        () => handle?.launcherExited(),
+        () => {
+          // With a monitor, its onStopped clears the record when the game is
+          // gone; the launcher process exiting says nothing about the game.
+          if (!handle) clearLaunchRecord()
+          handle?.launcherExited()
+        },
         (error: unknown) => {
+          clearLaunchRecord()
           reportLaunchFailure(error)
           handle?.launcherExited()
         }
@@ -3127,6 +3167,7 @@ export default class SteamGame implements Game {
 
       return true
     } catch (error) {
+      clearLaunchRecord()
       reportLaunchFailure(error)
       return false
     }
@@ -3770,13 +3811,19 @@ export default class SteamGame implements Game {
   }
 
   /**
-   * D-02: real abort for an in-flight native depot download (SNI-07); a safe
-   * no-op otherwise. Steam itself still owns the process lifecycle for its
-   * games once installed/launched — GamerLib cannot observe or terminate
-   * Steam game processes — so the legacy steam:// install path and the
-   * bottle path both fall through to the unchanged no-op below. Mirrors
-   * downloadqueue.ts's own stopCurrentDownload -> callAbortController(appName)
-   * call site. Analog: gog/games.ts lines 1291-1295.
+   * Stop the game, by route:
+   * - native depot download in flight (D-02, SNI-07): abort it;
+   * - bridge launch (GameLib spawned the Wine command itself, quick
+   *   261024-urq): `wineserver -k` the game's own per-game bottle, stop the
+   *   helper, and end the monitor (terminal `done`, UI leaves Playing). A game
+   *   in the legacy shared bridge bottle gets the helper/monitor teardown but
+   *   no kill, since a bottle-wide kill would take out other games;
+   * - bottled-Steam launch (261024-gvu): end the monitor only, nothing is
+   *   killed (separate decision, left as is);
+   * - otherwise a no-op.
+   * Mirrors downloadqueue.ts's own stopCurrentDownload ->
+   * callAbortController(appName) call site. Analog: gog/games.ts lines
+   * 1291-1295.
    */
   async stop(_stopWine?: boolean): Promise<void> {
     const inFlight = nativeInstallsInFlight.get(this.appId)
@@ -3790,6 +3837,38 @@ export default class SteamGame implements Game {
       // resume) can tell this run is tearing down rather than still live.
       inFlight.aborted = true
       callAbortController(this.appId)
+      return
+    }
+
+    // quick 261024-urq: bridge route. GameLib spawned the Wine command itself,
+    // so (unlike bottled Steam) it can and must end it. Kill only the game's
+    // OWN per-game bottle: the recorded bottle must equal
+    // bridgeBottleNameFor(appId) (T-urq-02).
+    const bridgeRecord = bridgeLaunchBottles.get(this.appId)
+    if (bridgeRecord) {
+      bridgeLaunchBottles.delete(this.appId)
+      if (bridgeRecord.bottle === bridgeBottleNameFor(this.appId)) {
+        logInfo(
+          `SteamGame.stop: stopping bridge-launched appId ${this.appId} — wineserver -k in its per-game bottle ${bridgeRecord.bottle}`,
+          LogPrefix.Steam
+        )
+        const result = await stopPerGameBridgeBottle(this.appId)
+        if (result.status !== 'stopped') {
+          logWarning(
+            `SteamGame.stop: per-game bridge bottle stop for appId ${this.appId} returned ${result.status}${'error' in result ? ` (${result.error})` : ''}`,
+            LogPrefix.Steam
+          )
+        }
+      } else {
+        logWarning(
+          `SteamGame.stop: appId ${this.appId} runs in the shared bridge bottle ${bridgeRecord.bottle}; refusing the bottle-wide wineserver -k (it would kill other games) — the game process is not killed`,
+          LogPrefix.Steam
+        )
+      }
+      stopBridgeHelper(this.appId)
+      const { stopBottleProcessMonitor: endMonitor } =
+        await import('./bottleProcessMonitor')
+      endMonitor(this.appId)
       return
     }
 

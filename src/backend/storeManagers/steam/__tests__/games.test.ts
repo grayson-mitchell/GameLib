@@ -23,6 +23,7 @@ import SteamGame, {
   markBridgeFailedThisSession,
   clearBridgeFailedThisSession,
   __resetBridgeFailedSessionForTests,
+  __resetBridgeLaunchBottlesForTests,
   markForcedWindowsViaBottle,
   clearForcedWindowsViaBottle,
   __resetLoggedEmptyGameInfoMissesForTests,
@@ -51,7 +52,8 @@ import {
   isBridgeBottleReady,
   getBridgeBottleSettings,
   provisionBridgeBottle,
-  removePerGameBridgeBottle
+  removePerGameBridgeBottle,
+  stopPerGameBridgeBottle
 } from '../bottle'
 import { library, pendingFetches } from '../state'
 import { SteamUser } from '../user'
@@ -285,6 +287,8 @@ jest.mock('../bottle', () => {
     provisionBridgeBottle: jest.fn(),
     // quick/261016-u1w (D-D): per-game bridge bottle removal on uninstall.
     removePerGameBridgeBottle: jest.fn(),
+    // quick 261024-urq: Stop-button counterpart (per-game wineserver -k).
+    stopPerGameBridgeBottle: jest.fn(),
     // quick/261016-u1w (D-A): plain arrow function, NOT jest.fn() -- resetMocks
     // wipes a jest.fn()'s implementation before every test, but games.ts calls
     // this directly as a pure, deterministic builder, so the factory gives it
@@ -1684,6 +1688,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
 
   beforeEach(() => {
     __resetBridgeFailedSessionForTests()
+    __resetBridgeLaunchBottlesForTests()
     library.clear()
     pendingFetches.clear()
     library.set(APP_ID, makeEntry({ title: 'Avernum 4' }))
@@ -1748,6 +1753,108 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     envMock.isMac = false
     envMock.isWindows = false
     envMock.isLinux = true
+  })
+
+  describe('SteamGame.stop() — bridge route kills the per-game bottle (261024-urq)', () => {
+    const PER_GAME_BOTTLE = `GameLibSteamBridge-${APP_ID}`
+    const warnedNoOp = () => {
+      const { logWarning } = jest.requireMock('backend/logger')
+      return (logWarning as jest.Mock).mock.calls.some((c) =>
+        String(c[0]).includes('Steam owns process lifecycle')
+      )
+    }
+    const warnedMessages = () => {
+      const { logWarning } = jest.requireMock('backend/logger')
+      return (logWarning as jest.Mock).mock.calls.map((c) => String(c[0]))
+    }
+
+    // Drive a real bridge launch; the wine child stays pending like a live
+    // game (CrossOver's winewrapper lives as long as the game).
+    const launchBridge = async (bottle: string) => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+      ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(
+        RESOLVED_EXE_PATH
+      )
+      ;(getBridgeBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: bottle
+      })
+      ;(stopPerGameBridgeBottle as jest.Mock).mockResolvedValue({
+        status: 'stopped'
+      })
+      ;(runWineCommand as jest.Mock).mockReturnValue(new Promise(() => {}))
+      const game = new SteamGame(APP_ID)
+      expect(await game.launch({} as any)).toBe(true)
+      return game
+    }
+
+    it('per-game bottle: kills it once, then stops the helper and the monitor; no no-op warning', async () => {
+      const game = await launchBridge(PER_GAME_BOTTLE)
+      ;(stopBridgeHelper as jest.Mock).mockClear()
+
+      await game.stop()
+
+      expect(stopPerGameBridgeBottle).toHaveBeenCalledTimes(1)
+      expect(stopPerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
+      expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
+      expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
+      expect(warnedNoOp()).toBe(false)
+    })
+
+    it('monitor phase starting (still launching): the kill still happens', async () => {
+      const game = await launchBridge(PER_GAME_BOTTLE)
+      ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('starting')
+
+      await game.stop()
+
+      expect(stopPerGameBridgeBottle).toHaveBeenCalledWith(APP_ID)
+      expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
+    })
+
+    it('legacy shared bottle: no kill, helper and monitor still torn down, warning names the shared bottle', async () => {
+      const game = await launchBridge('GameLibSteamBridge')
+      ;(stopBridgeHelper as jest.Mock).mockClear()
+
+      await game.stop()
+
+      expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
+      expect(stopBridgeHelper).toHaveBeenCalledWith(APP_ID)
+      expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
+      expect(
+        warnedMessages().some((m) =>
+          m.includes('shared bridge bottle GameLibSteamBridge')
+        )
+      ).toBe(true)
+    })
+
+    it('game exited on its own (monitor onStopped) before Stop: no kill', async () => {
+      const game = await launchBridge(PER_GAME_BOTTLE)
+      const monitorArgs = (startBottleProcessMonitor as jest.Mock).mock
+        .calls[0][0]
+      monitorArgs.onStopped()
+
+      await game.stop()
+
+      expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
+    })
+
+    it('a second stop() does not kill again', async () => {
+      const game = await launchBridge(PER_GAME_BOTTLE)
+
+      await game.stop()
+      await game.stop()
+
+      expect(stopPerGameBridgeBottle).toHaveBeenCalledTimes(1)
+    })
+
+    it('bottled-Steam route (no bridge launch recorded, monitor running): monitor ended, no kill', async () => {
+      ;(getBottleProcessMonitorPhase as jest.Mock).mockReturnValue('running')
+      const game = new SteamGame(APP_ID)
+
+      await game.stop()
+
+      expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
+      expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
+    })
   })
 
   it('allowlisted launch: resolveBridgeLaunchExe -> placeShimForGame -> ensureBridgeHelperReady -> writeBridgeConfig -> runWineCommand with the RESOLVED exe path + getBridgeBottleSettings (NOT tellBottledSteamToLaunch, no <gameExePath> placeholder)', async () => {
@@ -3014,6 +3121,7 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
     const game = new SteamGame(APP_ID)
     await game.stop()
     expect(stopBottleProcessMonitor).toHaveBeenCalledWith(APP_ID)
+    expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
     expect(warnedNoOp()).toBe(false)
   })
 
@@ -3022,6 +3130,7 @@ describe('SteamGame.stop() — pending launch monitor (261024-gvu)', () => {
     const game = new SteamGame(APP_ID)
     await game.stop()
     expect(stopBottleProcessMonitor).not.toHaveBeenCalled()
+    expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
     expect(warnedNoOp()).toBe(true)
   })
 })
@@ -3074,6 +3183,9 @@ describe('SteamGame.stop() — D-02 native depot-download abort', () => {
 
     await game.stop()
     expect(callAbortController).toHaveBeenCalledWith(APP_ID)
+    expect(stopPerGameBridgeBottle).not.toHaveBeenCalled()
+    expect(stopBridgeHelper).not.toHaveBeenCalledWith(APP_ID)
+    expect(stopBottleProcessMonitor).not.toHaveBeenCalled()
 
     resolveDownload({ status: 'done' })
     await installPromise
