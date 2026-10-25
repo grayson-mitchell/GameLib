@@ -349,3 +349,116 @@ NOT MET. `9 of 18 Steamworks-using rows verified (majority: no)`; the bar is 10 
 Delta: 6 of 18 at 53-09 (live) and 5 of 18 at 53-11 (honest desk count) to 9 of 18 now. Rows gained since 53-11: 1691190, 1167950, 1284190 and 1782460 (Unity flat-API fix, 53-12: HELLO plus a clean current Player.log, no EntryPointNotFoundException), 1603180, 1363080 (UE5 and missing-version coverage), 427410 (stale backup log no longer read, and now live CALLs). Changes from the tightened criterion (downward): ELEX no longer counts (one CALL, known-bad); no row was added by relaxing anything. Changes from fixes (upward): the Unity flat-API export fix and the interface-version coverage. The criterion was not relaxed and no title was rerouted to bottled Steam.
 
 Next step: `/gsd-plan-phase 53 --gaps` again. The nearest lever is one of Avernum 6, Overlooting or Ranch Simulator; 10 of 18 needs any one of them to verify.
+
+## Gap closure re-run (53-20)
+
+Authored and desk-gated by 53-20 on HEAD `173388fe3` (2026-10-25), which carries 53-17 (CR-01 generator fix), 53-18 (anchored census) and 53-19 (Overlooting `nvapi64` per-exe override). Results are scored in 53-20 Task 3.
+
+### Desk gate (53-20)
+
+| Command | Outcome |
+|---|---|
+| `pnpm gen-vtables` then `git diff --exit-code` on generated paths | PASS, no diff ("58 interfaces, 2093 vtable slots, 68 flat exports, 1012 steam_api64 exports") |
+| `pnpm codecheck` | PASS |
+| `pnpm test:ci` | 4 suites / 6 tests failed, exactly the pre-existing suites (testContainment, findDeadcode, genI18nGateScope, machineFillGamelib); 583 suites passed. No other failure. |
+| `pnpm build-steam-bridge` | PASS (compile gates x64, x86 and steamclient64 passed) |
+| `objdump -p public/bin/arm64/darwin/steam_api64.dll`, count of `SteamAPI_ISteam` | 851 (>= 400) |
+| export `SteamAPI_ISteamGameServer_GetPublicIP` | present (grep count 1) |
+| `stat -f %z` | steam_api64.dll = 497664, steam_api.dll = 290304, steam-bridge-helper = 153424. SHIM64 for the preflight = 497664. |
+| `pnpm bridge-census` before the session (53-18 anchoring) | `9 of 18 Steamworks-using rows verified (majority: no)` |
+| `graphify update .` | run |
+
+### Preconditions (53-20)
+
+Packaged build only via `pnpm tauri:dev:packaged` (never plain tauri:dev). The `gamelib-sidecar` mtime must be newer than HEAD (tauri dev does not rebuild the sidecar); no gamelib-shell or steam-bridge-helper running at start; the whole sample in ONE session; Overlooting first. Every sampled bottle's shim size must equal 497664 (x86 bottles: 290304).
+
+Criterion, unchanged: a row is verified only with HELLO for the appid plus engine evidence (Unity: clean current Player.log with no EntryPointNotFoundException and no SteamAPI_Init failure; UE: current Saved log marker, stale backup logs ignored; Godot/GameMaker: a CALL), or at least 2 distinct game-originated CALLs including an identity call (`SteamUser*.GetSteamID|BLoggedOn` or `SteamFriends*.GetPersonaName`). A NOVER means init-failed. A known-bad title is never verified. In-Game in Mac Steam and friends presence never count. No game log and no qualifying CALLs means unverified. No title is rerouted to bottled Steam and the criterion is not relaxed.
+
+### Ceiling (53-20)
+
+The bar is 10 of 18. 53-16 verified 9 rows: 1167950, 1284190, 1363080, 1603180, 1691190, 1782460, 230070, 427410, 648410. Only Overlooting 3410180 (53-19 override) can add the tenth, so the result is 10 only if Overlooting verifies AND all nine stay verified.
+
+Not reachable in this phase: Avernum 6 206060 and Avernum 4 206020 import only `SteamAPI_Init` and `SteamAPI_Shutdown` and write no game log, so they cannot meet D-53-13 by construction. Ranch Simulator 1119730 is SteamStub `.bind` (Phase 52). Raft 648800 and Grim Dawn 219990 are SteamStub. ELEX 411300 and XCOM 200510 are known-bad. Unclaimed World 284100 needs old-SDK exports (deferred).
+
+Avernum 6 import evidence (`objdump -p` on `Avernum 6.exe` in `GameLibSteamBridge-206060`, `drive_c/Program Files (x86)/Steam/steamapps/common/Avernum 6/`), verbatim:
+
+```
+    DLL Name: steam_api.dll
+    Hint/Ord  Name
+          15  SteamAPI_Shutdown
+           5  SteamAPI_Init
+```
+
+Operator and census results go in Task 3; items below start pending.
+
+### 36. Overlooting 3410180 (Godot, nvapi64 override)
+expected: the bottle's DllOverrides shows `nvapi64` set by 53-19 (per-exe, Overlooting.exe); no `page fault on read access to 0x0` and godot.log advances past the driver lines; launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 37. Rogue Waters 1691190 (Unity)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 38. Vampire's Fall 1167950 (Unity)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 39. Planet Crafter 1284190 (Unity)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 40. Hell Clock 1782460 (Unity)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 41. Mining Mechs 1603180 (engine per census class)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 42. Ranch Simulator 1119730 (Unreal Engine, SteamStub)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 43. Manor Lords 1363080 (Unreal Engine)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 44. Abiotic Factor 427410 (Unreal Engine)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 45. Colony Ship 648410 (Unreal Engine)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 46. Raft 648800 (Unity, SteamStub DRM)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 47. Avernum 6 206060 (x86)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 48. Age of Decadence 230070 (engine per census class)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 49. ELEX 411300 (known-bad)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 50. Grim Dawn 219990 (SteamStub DRM)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 51. Unclaimed World 284100 (MonoGame, old SDK)
+expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
+result: pending
+
+### 52. Trace lines (53-20)
+expected: every distinct CALL method and every NOVER version (`flat lookup ver=<v> served=no`) from this session's gamelib.log is listed
+result: pending
+
+### 53. Census majority (53-20)
+expected: `pnpm bridge-census` run after the session prints `V of 18 Steamworks-using rows verified (majority: yes)` with V >= 10; the majority line is quoted verbatim with every non-verified row's Evidence reason
+result: pending
