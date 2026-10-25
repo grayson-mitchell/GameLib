@@ -71,3 +71,7 @@ and `SteamNetworking006` rows are therefore no longer missing. The other rows ar
 ## Evidence (2026-10-25, phase 53 live run, 53-UAT items 7-9)
 
 Left open: Manor Lords 1363080 passes (HELLO, 7 CALLs, no 0x0 crash). Abiotic Factor 427410 has HELLO and 5 CALLs and a clean Saved log but hung at the loading screen (`Failed to acquire Steam auth session ticket for 0`). Ranch Simulator 1119730 never reaches HELLO: the Shipping exe exits in under 1 s with code 0x35. Closes only when items 7-9 pass.
+
+## 53-16 evidence (2026-10-25)
+
+Manor Lords (1363080) and Abiotic Factor (427410) now verify live (53-UAT.md items 25, 26: HELLO, game-originated CALLs, no NOVER). Ranch Simulator (1119730, item 24) still never sends HELLO (game exits 3 s after launch; pre-HELLO fault, see 53-15-DIAGNOSIS.md), so this todo stays open.

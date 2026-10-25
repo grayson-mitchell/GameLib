@@ -68,3 +68,7 @@ first that cannot be played. Both missing symbols are on the minimum list for a 
 ## Evidence (2026-10-25, phase 53 live run, 53-UAT items 1-4)
 
 Left open: items 1, 2 and 4 fail. Player.log shows `SteamAPI_Init() failed` for 1691190, 1167950 and 1782460; each logged `NOVER flat lookup ver=STEAMSCREENSHOTS_INTERFACE_VERSION003 served=no`. Planet Crafter 1284190 (same NOVER) passed. Next step: serve STEAMSCREENSHOTS_INTERFACE_VERSION003 (and SteamUtils009, SteamController006 for 1691190), then re-test.
+
+## Resolution (53-16, 2026-10-25)
+
+Closed on live evidence. In the 53-16 session Rogue Waters (1691190), Vampire's Fall (1167950) and Planet Crafter (1284190) each sent HELLO, made game-originated CALLs through the flat-API-capable shim, logged no NOVER, and read `verified` in `pnpm bridge-census` (53-UAT.md items 18, 19, 20). Hell Clock (1782460, item 21) verified the same way.
