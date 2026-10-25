@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 53 (steam-bridge-coverage-modern-sdk-exports-flat-api) — EXECUTING
 Plan: 11 of 16
 Status: Ready to execute
-Last activity: 2026-10-25
+Last activity: 2026-10-25 - Completed quick task 261025-kax: D-53-15 init-only bridge verification (Avernum 6); census 10 of 18
 
 Progress: [██████████] 100%
 
@@ -357,6 +357,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261024-urq | Stop now works for bridge-launched Steam games: a bridge launch records its bottle in `games.ts`; `SteamGame.stop()` gains a bridge branch (after download-abort, before the gvu monitor branch) that runs `wineserver -k` via new guarded `stopPerGameBridgeBottle` (bottle.ts, shares `removePerGameBridgeBottle`'s guard chain) only on the game's own `GameLibSteamBridge-<appId>`, then `stopBridgeHelper` + `stopBottleProcessMonitor` so the UI leaves Playing. Legacy shared bottle: teardown + warn, no kill. Bottled-Steam unchanged. Closes the todo. | 2026-10-24 | 7ceeb0cb7, c5f145598, 772ed92e7 | unit-tested (games/bottle/fakeHomeIsolation jest 513, codecheck clean, lint:src pass, prettier clean, planning-gates 12/12; lint:tests over 648 ceiling, pre-existing, touched files' counts unchanged); live-checked (Stop on 1363080 killed the game, 22:24, after sidecar rebuild) | [261024-urq-stop-bridge-launched-steam-games-steamga](./quick/261024-urq-stop-bridge-launched-steam-games-steamga/) |
 | fast | Pre-push lint unblocked: 2 `no-regex-spaces` errors fixed in gen_vtables.test.ts and needless `async` dropped from mocks in four Steam test files; tests-scope warnings 666 -> 648 and `TESTS_CEILING` re-pinned to 648. | 2026-10-24 | 63add37d1 | | — |
 | fast | Closed Win64 core-interfaces todo (ELEX 411300) as wiring-done: 51-26 wiring live-verified in 51-UAT item 15; reaching a menu is NOT verified under the strict criterion; no 51-29 title got as far as the Win64 core interfaces; playable-level coverage carries to the 51-30 follow-up phase | 2026-10-24 | (this commit) | | — |
+| 261025-kax | D-53-15: the shim reports the game's own `SteamAPI_Init` over CONTROL slot 5 (helper logs `GINIT`), and the census verifies init-only import rows on HELLO + `GINIT ok=1 session=1`. Avernum 6 206060 live-verified; census `10 of 18 Steamworks-using rows verified (majority: yes)`. | 2026-10-25 | 93177fdd3 | live-verified | [261025-kax-avernum-6-init-only-bridge-verification-](./quick/261025-kax-avernum-6-init-only-bridge-verification-/) |
 
 ## Deferred Items
 
