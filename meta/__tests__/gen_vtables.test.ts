@@ -2675,6 +2675,72 @@ describe('CR-01 / WR-01 / WR-07 / WR-08: struct returns on the x64 flat path (53
       expect(validateManifest(bad).some((e) => /null-in/.test(e))).toBe(true)
     })
   })
+
+  describe('55-01: GetAuthTicketForWebApi forward (P55-1)', () => {
+    const methodOf = (m: InterfaceManifestV2, name: string) =>
+      m.methods.find((x) => x.name === name)!
+    const body = (c: string, fn: string): string => {
+      const m = c.match(
+        new RegExp(`${fn}\\(void \\*self[^{]*\\) \\{[\\s\\S]*?\\n\\}`)
+      )
+      expect(m).not.toBeNull()
+      return m![0]
+    }
+    const dispatch = generateDispatchHeader([isteamuser])
+    const caseBody = (label: string): string => {
+      const start = dispatch.indexOf(`// ${label}\n`)
+      expect(start).toBeGreaterThan(-1)
+      return dispatch.slice(start, dispatch.indexOf('\n    }\n', start))
+    }
+
+    it('A: manifest slot 14 is wire with an in-string pchIdentity', () => {
+      expect(validateManifest(isteamuser)).toEqual([])
+      const g = methodOf(isteamuser, 'GetAuthTicketForWebApi')
+      expect(g.mode).toBe('wire')
+      expect(g.helperFlat).toBe('SteamAPI_ISteamUser_GetAuthTicketForWebApi')
+      expect(g.params.find((p) => p.name === 'pchIdentity')!.kind).toBe(
+        'in-string'
+      )
+    })
+
+    it('B: wire-policy entry has in-string identity and no helperNativeArgs', () => {
+      const policy = JSON.parse(
+        readFileSync(join(SDK_DIR, 'wire-policy.json'), 'utf-8')
+      )
+      expect(policy.SteamUser.GetAuthTicketForWebApi).toEqual({
+        helperFlat: 'SteamAPI_ISteamUser_GetAuthTicketForWebApi',
+        params: { pchIdentity: { kind: 'in-string' } }
+      })
+    })
+
+    it('C: shim body is no longer the stub and calls bridge_transact', () => {
+      const b = body(
+        generateShimC([isteamuser]),
+        'vt_SteamUser023_GetAuthTicketForWebApi'
+      )
+      expect(b).toContain('bridge_transact(')
+    })
+
+    it('D: dispatch header calls the flat function', () => {
+      expect(dispatch).toContain(
+        'BDFlatFn_SteamUser023_GetAuthTicketForWebApi_t'
+      )
+      expect(caseBody('SteamUser023.GetAuthTicketForWebApi')).toContain(
+        'g_bd_flat_SteamUser023_GetAuthTicketForWebApi('
+      )
+    })
+
+    it('E: only the SteamUser023 manifest declares the method', () => {
+      const withIt = readdirSync(SDK_DIR)
+        .filter((f) => f.endsWith('.manifest.json'))
+        .filter((f) =>
+          readFileSync(join(SDK_DIR, f), 'utf-8').includes(
+            'GetAuthTicketForWebApi'
+          )
+        )
+      expect(withIt).toEqual(['isteamuser.manifest.json'])
+    })
+  })
 })
 
 describe('53-17 CR-01: hidden-pointer flat fallback never writes through a shim instance', () => {
