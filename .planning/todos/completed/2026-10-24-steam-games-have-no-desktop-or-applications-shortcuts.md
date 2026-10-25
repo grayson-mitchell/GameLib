@@ -43,3 +43,14 @@ Implement:
 
 Verify: unit-test the per-OS shortcut target, then confirm one live add → item flips → remove on
 this Mac. Only that last step needs the Mac.
+
+## Closed 2026-10-26 (quick 261026-c7r)
+
+- SteamGame.addShortcuts/removeShortcuts now delegate to the shared `shortcuts.ts` writer.
+- The shortcut target is `gamelib://launch?appName={appId}&runner=steam`, routed by `protocol.ts` to `dispatchSteamLaunch`, not a raw `steam://rungameid`: `SteamGame.launch()` picks the bridge/bottle/native route first, and a direct `steam://` URL would skip that and misroute bridge or bottle titles.
+- The `addSteamShortcuts` side effect (non-Steam-game registration) is now skipped for Steam games.
+- `shortcutsExistOnDisk` needed no change: it uses the same title-to-path as the writer, so the menu item flips.
+- No non-menu caller reaches the Steam path, because Steam `install()` never calls `addShortcuts`; none was added. A Steam uninstall (Steam's own dialog) does not remove the shortcut; a leftover shortcut routes to `launch()` and Steam prompts to install.
+- The `!isSteam` menu exclusion is removed.
+- Unit tests: `src/backend/shortcuts/__tests__/addShortcutsOutcome.test.ts` (per-OS target + guard), `src/backend/storeManagers/steam/__tests__/games.test.ts` (delegation).
+- Live Mac gate (add, flip, launch, remove): pending operator.
