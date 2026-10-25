@@ -470,7 +470,7 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 15/16 plans executed
+**Plans:** 16/16 plans complete
 
 Plans:
 **Wave 1**
@@ -519,4 +519,4 @@ Plans:
 
 **Gap wave 5** *(blocked on all gap plans)*
 
-- [ ] 53-16-PLAN.md — rebuild, desk gate, full live re-run, honest census re-measure of the done-when (operator checkpoint)
+- [x] 53-16-PLAN.md — rebuild, desk gate, full live re-run, honest census re-measure of the done-when (operator checkpoint)
