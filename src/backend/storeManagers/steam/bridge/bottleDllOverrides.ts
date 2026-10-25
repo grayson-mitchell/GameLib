@@ -15,6 +15,8 @@
  *
  * The write is idempotent (`/f`), so it runs on every launch with no ledger.
  * The applier never rejects: a failure logs a warning and the launch continues.
+ * Success means the wine command exited with code 0; a missing or null code
+ * (invalid wine, killed by signal) or a nonzero code is logged as a failure.
  */
 
 import type { GameSettings } from 'common/types'
@@ -66,9 +68,11 @@ export async function applyBridgeBottleDllOverrides(
           protonVerb: 'run',
           skipPrefixCheckIKnowWhatImDoing: true
         })
-        if (result?.code) {
+        // Only a strict code === 0 is success: runWineCommand resolves with no
+        // code on "Invalid wine" and code null when killed by a signal.
+        if (result?.code !== 0) {
           logWarning(
-            `Steam ${appId}: DLL override ${dll} exited with code ${result.code}`,
+            `Steam ${appId}: DLL override ${dll} did not confirm success (code=${String(result?.code)}, stderr=${(result?.stderr ?? '').slice(0, 200)})`,
             LogPrefix.Steam
           )
         }

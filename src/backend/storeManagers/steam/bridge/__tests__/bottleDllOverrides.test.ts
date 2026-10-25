@@ -103,6 +103,75 @@ describe('applyBridgeBottleDllOverrides', () => {
     expect(String(mockLogWarning.mock.calls[0][0])).toContain('3410180')
     expect(String(mockLogWarning.mock.calls[0][0])).toContain('nvapi64')
   })
+
+  it('warns once with code=undefined when the result has no code', async () => {
+    mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: 'Invalid wine' })
+
+    await expect(
+      applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    ).resolves.toBe(SETTINGS)
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    const msg = String(mockLogWarning.mock.calls[0][0])
+    expect(msg).toContain('3410180')
+    expect(msg).toContain('nvapi64')
+    expect(msg).toContain('code=undefined')
+    expect(msg).toContain('Invalid wine')
+  })
+
+  it('warns once with code=null when the process was killed', async () => {
+    mockRunWineCommand.mockResolvedValue({
+      stdout: '',
+      stderr: 'killed',
+      code: null
+    })
+
+    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    const msg = String(mockLogWarning.mock.calls[0][0])
+    expect(msg).toContain('code=null')
+    expect(msg).toContain('killed')
+  })
+
+  it('includes code and stderr for a nonzero exit', async () => {
+    mockRunWineCommand.mockResolvedValue({
+      stdout: '',
+      stderr: 'ERROR: access denied',
+      code: 1
+    })
+
+    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    const msg = String(mockLogWarning.mock.calls[0][0])
+    expect(msg).toContain('code=1')
+    expect(msg).toContain('ERROR: access denied')
+  })
+
+  it('logs no warning for code 0', async () => {
+    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    expect(mockLogWarning).not.toHaveBeenCalled()
+  })
+
+  it('warns once, without throwing, for an undefined result', async () => {
+    mockRunWineCommand.mockResolvedValue(undefined)
+
+    await expect(
+      applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    ).resolves.toBe(SETTINGS)
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it('truncates stderr to 200 characters', async () => {
+    mockRunWineCommand.mockResolvedValue({
+      stdout: '',
+      stderr: 'x'.repeat(500),
+      code: 1
+    })
+
+    await applyBridgeBottleDllOverrides('3410180', SETTINGS)
+    const msg = String(mockLogWarning.mock.calls[0][0])
+    expect(msg).toContain('x'.repeat(200))
+    expect(msg).not.toContain('x'.repeat(201))
+  })
 })
 
 describe('BRIDGE_BOTTLE_DLL_OVERRIDES table integrity', () => {
