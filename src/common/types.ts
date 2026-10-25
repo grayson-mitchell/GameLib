@@ -1118,7 +1118,7 @@ export type InstallInfo =
 
 export type KnownFixRegistryView = 32 | 64
 
-export interface KnownFixRegistryEntry {
+interface KnownFixRegistryEntry {
   key: string
   name: string
   type: 'REG_DWORD' | 'REG_SZ'

@@ -26,12 +26,12 @@ export const BOTTLE_WINDOWS_VERSION = 'Windows 10'
 
 export type SharedRedistKind = 'vcredist' | 'directx' | 'other'
 
-export interface KvNode {
+interface KvNode {
   key: string
   value: string | KvNode[]
 }
 
-export interface InstallScriptProcess {
+interface InstallScriptProcess {
   process: string
   command?: string
 }
@@ -44,7 +44,7 @@ export interface InstallScriptEntry {
   requirementOs: { is64BitWindows?: string; osType?: string } | null
 }
 
-export interface SharedRedistClassification {
+interface SharedRedistClassification {
   kind: SharedRedistKind
   /** `<Family> <Version>` from the installscript path, or null when it does not match. */
   label: string | null

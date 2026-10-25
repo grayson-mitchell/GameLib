@@ -101,10 +101,7 @@ export function readKnownFixes(
 // Keys honoured only from bundled or local sources. dllOverrides, overlays and
 // shimFeatures join this list when they land (decision 6). `steamSharedRedists`
 // (quick 261025-rkj) opts a title into non-VC++/DirectX shared redist depots.
-export const TRUSTED_ONLY_KNOWN_FIX_KEYS = [
-  'registry',
-  'steamSharedRedists'
-] as const
+const TRUSTED_ONLY_KNOWN_FIX_KEYS = ['registry', 'steamSharedRedists'] as const
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
