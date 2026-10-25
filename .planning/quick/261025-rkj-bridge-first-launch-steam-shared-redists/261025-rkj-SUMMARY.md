@@ -63,7 +63,19 @@ A bridge launch now downloads the 228980 VC++ and DirectX depots the game's appi
 
 ### 1. Bridge-launch 1363080 or 219990 on this Mac
 expected: the Play button shows `Installing Redistributables (...)` with vcredist and DirectX labels; `msvcp140.dll` exists in the bottle's `system32` and `syswow64`; HasRunKey values exist under `HKLM\Software\Wow6432Node\Valve\Steam\Apps\CommonRedist`; a second launch shows no redist step and makes no CM or wine calls for this step.
-result: pending
+result: pass — 2026-10-25, Manor Lords 1363080, operator-driven `tauri dev` (sidecar.js rebuilt 20:54, after the last fix commit). First launch 20:55:06:
+- The logged-in client fetched the key and manifest for every declared depot on the first attempt (228989, 228990, 229007, 229033). This confirms assumption A1. Each depot logged `GetCDNAuthToken ... empty response` warnings for the akamai, alibaba and fastly hosts, and every download still completed.
+- The installscripts classified as vcredist 2022 and DirectX Jun2010. 229007 (DotNet 4.8) and 229033 (PhysX 9.14.0702) were skipped by policy.
+- `cmd /c` ran both `Microsoft Visual C++ 2022 x86.cmd` and `... x64.cmd` from a path containing spaces. Both installed.
+- `DXSETUP.exe /silent` took about 31 s.
+- In `system.reg`, the key `Wow6432Node\Valve\Steam\Apps\CommonRedist\vcredist\2022` holds `"x86 14.51.36247.0"` and `"x64 14.51.36247.0"` = 1, and `...\DirectX\Jun2010` holds `"dxsetup"` = 1.
+- `system32/msvcp140.dll` and `syswow64/msvcp140.dll` are present, and `syswow64/d3dx9_43.dll` was written at 20:56.
+- The ledger settled with depotIds [228989, 228990] and skipped [229007, 229033].
+- The game started at 20:57:04 and logged HELLO and GINIT ok. The operator quit it after 51 s.
+
+Second launch 20:58:40: the log showed `shared redists already settled, nothing to do`, with no CM, reg or installer calls. The game started 2 s later, logged HELLO and GINIT ok, and the operator quit it.
+
+Not confirmed: the Play-button label during the install was not reported by the operator. The first launch took about 2 minutes before the game started. The renderer logged `[BLANKPROBE-MARK] unhandled-rejection sidecar invoke timed out: launch t=101402ms`, because `launch` is not on the shell's `LONG_RUNNING_CHANNELS` (main.rs:1551). Filed as `.planning/todos/pending/2026-10-25-bridge-launch-invoke-times-out-during-first-launch-redist-install.md`.
 
 ## Accepted risks and limits
 
