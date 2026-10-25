@@ -49,6 +49,22 @@ export function WelcomeModal({ onClose, platform }: Props) {
   }, [isMac, check])
 
   const view = appManagementView(status ?? 'not-needed')
+  // Literal keys (not view.statusKey) so the i18n extractors can see them.
+  const statusText =
+    status === 'granted'
+      ? t(
+          'welcome.appManagement.status.granted',
+          'App Management access is allowed.'
+        )
+      : status === 'denied'
+        ? t(
+            'welcome.appManagement.status.denied',
+            'App Management access is not allowed yet.'
+          )
+        : t(
+            'welcome.appManagement.status.unknown',
+            'GameLib could not tell whether App Management access is allowed.'
+          )
   const showAppManagement = isMac && status !== undefined && view.visible
 
   return (
@@ -118,7 +134,7 @@ export function WelcomeModal({ onClose, platform }: Props) {
                   className={`welcomeModal__status welcomeModal__status--${status}`}
                   role="status"
                 >
-                  {t(view.statusKey, view.statusKey)}
+                  {statusText}
                 </p>
                 {status === 'unknown' && (
                   <p>

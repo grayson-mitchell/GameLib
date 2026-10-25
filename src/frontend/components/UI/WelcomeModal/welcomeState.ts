@@ -70,7 +70,7 @@ export function appManagementView(
     default:
       return {
         visible: false,
-        statusKey: 'welcome.appManagement.status.notNeeded',
+        statusKey: '',
         showOpenSettings: false,
         showRelaunch: false
       }
