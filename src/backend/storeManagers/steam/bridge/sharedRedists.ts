@@ -72,6 +72,10 @@ const COMMON_REDIST_KEY_PREFIX =
  * Ordered KV1 tokenizer. Keeps duplicate keys, supports quoted and bare tokens and `//` line
  * comments, and decodes only `\\` and `\"` inside quoted strings.
  *
+ * A KV1 `[$COND]` conditional (e.g. `"key" "value" [$WIN32]`, or after a key before its `{`) is
+ * skipped when it follows on the same line, so it never shifts key/value pairing (IN-03). It is
+ * not evaluated: every conditional variant is kept in file order, as a duplicate key would be.
+ *
  * Hand-rolled on purpose: `@node-steam/vdf` merges duplicate sibling keys (the .NET scripts have
  * two `"4.8"` entries, the second being the real installer) and leaves `\\` undecoded (measured,
  * RESEARCH Q5.1). Throws on unbalanced braces or an unterminated string.
@@ -129,6 +133,25 @@ export function parseKv1(text: string): KvNode[] {
     return { t: 'str', v: out }
   }
 
+  /**
+   * Skip a `[...]` conditional on the current line, if one is next. After a key (`beforeBlock`)
+   * it is skipped only when a `{` follows, so a bare `[...]` value is still read as the value.
+   */
+  const skipConditional = (beforeBlock: boolean) => {
+    let p = pos
+    while (p < len && (text[p] === ' ' || text[p] === '\t')) p++
+    if (text[p] !== '[') return
+    const close = text.indexOf(']', p)
+    const nl = text.indexOf('\n', p)
+    if (close === -1 || (nl !== -1 && nl < close)) return
+    if (beforeBlock) {
+      let q = close + 1
+      while (q < len && /\s/.test(text[q])) q++
+      if (text[q] !== '{') return
+    }
+    pos = close + 1
+  }
+
   const parseBlock = (top: boolean): KvNode[] => {
     const nodes: KvNode[] = []
     for (;;) {
@@ -142,9 +165,12 @@ export function parseKv1(text: string): KvNode[] {
         return nodes
       }
       if (keyTok.t === 'open') throw new Error('unexpected {')
+      skipConditional(true)
       const valTok = next()
-      if (valTok.t === 'str') nodes.push({ key: keyTok.v, value: valTok.v })
-      else if (valTok.t === 'open')
+      if (valTok.t === 'str') {
+        nodes.push({ key: keyTok.v, value: valTok.v })
+        skipConditional(false)
+      } else if (valTok.t === 'open')
         nodes.push({ key: keyTok.v, value: parseBlock(false) })
       else throw new Error('missing value')
     }

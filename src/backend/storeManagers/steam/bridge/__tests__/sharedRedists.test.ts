@@ -76,6 +76,53 @@ describe('parseKv1', () => {
     ])
   })
 
+  it('skips [$COND] conditionals after a value or before a block (IN-03)', () => {
+    expect(
+      parseKv1(
+        '"a" "1" [$WIN32]\n"a" "2" [!$WIN32]\n"b" [$WIN64] { "c" "3" [$X||$Y] }\n"d" "4"'
+      )
+    ).toEqual([
+      { key: 'a', value: '1' },
+      { key: 'a', value: '2' },
+      { key: 'b', value: [{ key: 'c', value: '3' }] },
+      { key: 'd', value: '4' }
+    ])
+  })
+
+  it('keeps a bare [..] value, and a conditional on the next line is not swallowed', () => {
+    expect(parseKv1('"a" [x]\n"b" "1"')).toEqual([
+      { key: 'a', value: '[x]' },
+      { key: 'b', value: '1' }
+    ])
+  })
+
+  it('reads an installscript whose entries carry conditionals', () => {
+    const text = [
+      '"InstallScript"',
+      '{',
+      '  "Run Process" [$WIN32]',
+      '  {',
+      '    "x86"',
+      '    {',
+      '      "HasRunKey" "HKEY_LOCAL_MACHINE\\\\Software\\\\Valve\\\\Steam\\\\Apps\\\\CommonRedist\\\\vcredist\\\\2010" [$WIN32]',
+      '      "process 1" "%INSTALLDIR%\\\\_CommonRedist\\\\vcredist\\\\2010\\\\vcredist_x86.exe" [$WIN32]',
+      '      "command 1" "/quiet /norestart"',
+      '    }',
+      '  }',
+      '}'
+    ].join('\n')
+    const entries = parseInstallScript(text)!
+    expect(entries).toHaveLength(1)
+    expect(entries[0].processes).toEqual([
+      {
+        process:
+          '%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\vcredist_x86.exe',
+        command: '/quiet /norestart'
+      }
+    ])
+    expect(classifySharedRedist(PATHS.vc2010, entries).kind).toBe('vcredist')
+  })
+
   it('throws on unbalanced braces and unterminated strings', () => {
     expect(() => parseKv1('"a" {')).toThrow()
     expect(() => parseKv1('"a" }')).toThrow()
