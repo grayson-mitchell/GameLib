@@ -21384,6 +21384,9 @@ void * SteamAPI_ISteamController_GetAnalogActionData(void *ret, void *self, uint
     ((void * (*)(void *, void *, uint64_t, uint64_t))vt[15])(self, ret, (uint64_t)a1, (uint64_t)a2);
     return ret;
   }
+  if (ret == NULL) return NULL;
+  if (ret == (void *)&g_steamcontroller006_instance) return NULL;
+  if (ret == (void *)&g_steamcontroller008_instance) return NULL;
   memset(ret, 0, 16);
   return ret;
 }
@@ -21554,6 +21557,9 @@ void * SteamAPI_ISteamController_GetMotionData(void *ret, void *self, uint64_t a
     ((void * (*)(void *, void *, uint64_t))vt[20])(self, ret, (uint64_t)a1);
     return ret;
   }
+  if (ret == NULL) return NULL;
+  if (ret == (void *)&g_steamcontroller006_instance) return NULL;
+  if (ret == (void *)&g_steamcontroller008_instance) return NULL;
   memset(ret, 0, 40);
   return ret;
 }
@@ -23500,6 +23506,13 @@ void * SteamAPI_ISteamGameServer_GetPublicIP(void *ret, void *self) {
     ((void * (*)(void *, void *))vt[33])(self, ret);
     return ret;
   }
+  if (ret == NULL) return NULL;
+  if (ret == (void *)&g_steamgameserver012_instance) {
+    vfn *vt = *(vfn **)ret;
+    return (void *)(uintptr_t)((uint32_t (*)(void *))vt[36])(ret);
+  }
+  if (ret == (void *)&g_steamgameserver014_instance) return NULL;
+  if (ret == (void *)&g_steamgameserver015_instance) return NULL;
   memset(ret, 0, 20);
   return ret;
 }
@@ -24683,6 +24696,8 @@ void * SteamAPI_ISteamInput_GetAnalogActionData(void *ret, void *self, uint64_t 
     ((void * (*)(void *, void *, uint64_t, uint64_t))vt[21])(self, ret, (uint64_t)a1, (uint64_t)a2);
     return ret;
   }
+  if (ret == NULL) return NULL;
+  if (ret == (void *)&g_steaminput006_instance) return NULL;
   memset(ret, 0, 16);
   return ret;
 }
@@ -24819,6 +24834,8 @@ void * SteamAPI_ISteamInput_GetMotionData(void *ret, void *self, uint64_t a1) {
     ((void * (*)(void *, void *, uint64_t))vt[29])(self, ret, (uint64_t)a1);
     return ret;
   }
+  if (ret == NULL) return NULL;
+  if (ret == (void *)&g_steaminput006_instance) return NULL;
   memset(ret, 0, 40);
   return ret;
 }

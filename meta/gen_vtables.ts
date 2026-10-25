@@ -1662,7 +1662,8 @@ export const FLAT_UNREPRESENTABLE_CASES: readonly string[] = [
   // 53-12: GameServer012's GetPublicIP returns a plain uint32 (RAX), whereas
   // 013-015 return the 20-byte SteamIPAddress_t through a Win64 hidden
   // pointer; one flat C prototype cannot be both. 012's vtable proxy is still
-  // served; only the shared flat export leaves 012 undispatched.
+  // served; the shared flat export dispatches 012's RAX form from the
+  // `ret`-is-012-instance branch of the hidden-pointer fallback (53-17 CR-01).
   'SteamGameServer.GetPublicIP.SteamGameServer012'
 ]
 
@@ -1979,6 +1980,42 @@ function isFlatClientLookup(cases: readonly FlatCase[]): boolean {
 }
 
 /**
+ * 53-17 CR-01: fallback of a hidden-pointer flat export. The game may pass a
+ * shim instance (self in RCX, read here as `ret`) for a version whose return
+ * is a plain RAX scalar, so `ret` is never trusted as a caller buffer:
+ * (a) NULL guard, (b) dispatch each dropped RAX-form version, (c) refuse any
+ * other served instance, (d) only then zero the caller buffer.
+ */
+function emitHiddenFallback(
+  hiddenSize: number,
+  dropped: readonly FlatCase[],
+  served: readonly InterfaceManifest[]
+): string {
+  let out = '  if (ret == NULL) return NULL;\n'
+  const dispatched = new Set<string>()
+  for (const d of dropped) {
+    if (isHiddenPointerFlatReturn(d.method)) continue
+    if (d.method.params.length > 0) {
+      throw new Error(
+        `flat export ${d.triple}: the dropped RAX-form version takes parameters and is not representable; model it or remove it from FLAT_UNREPRESENTABLE_CASES (fail closed, 53-17)`
+      )
+    }
+    const instance = `g_${d.manifest.interface.toLowerCase()}_instance`
+    const r = flatRetType(d.method)
+    out +=
+      `  if (ret == (void *)&${instance}) {\n    vfn *vt = *(vfn **)ret;\n` +
+      `    return (void *)(uintptr_t)((${r.slotC} (*)(void *))vt[${d.method.slot}])(ret);\n` +
+      `  }\n`
+    dispatched.add(d.manifest.interface)
+  }
+  for (const m of served) {
+    if (dispatched.has(m.interface)) continue
+    out += `  if (ret == (void *)&g_${m.interface.toLowerCase()}_instance) return NULL;\n`
+  }
+  return out + `  memset(ret, 0, ${hiddenSize});\n  return ret;\n`
+}
+
+/**
  * Emits the x64 flat export bodies (without the surrounding `#if`) and the
  * ordered list of exported names. `unrepresentable` defaults to
  * FLAT_UNREPRESENTABLE_CASES.
@@ -2050,6 +2087,7 @@ export function emitFlatExports(
     let cases = g.cases
     let proto = reconcileFlatPrototype(g.family, g.flatName, cases)
     let excludedNote = ''
+    let droppedCases: FlatCase[] = []
     if (proto.problems.length > 0) {
       const kept = cases.filter((c) => !unrepresentable.includes(c.triple))
       const dropped = cases.filter((c) => unrepresentable.includes(c.triple))
@@ -2058,6 +2096,7 @@ export function emitFlatExports(
         if (again.problems.length === 0) {
           cases = kept
           proto = again
+          droppedCases = dropped
           excludedNote = dropped
             .map(
               (c) =>
@@ -2087,7 +2126,11 @@ export function emitFlatExports(
     }
     const zero =
       proto.hiddenSize !== null
-        ? `  memset(ret, 0, ${proto.hiddenSize});\n  return ret;\n`
+        ? emitHiddenFallback(
+            proto.hiddenSize,
+            droppedCases,
+            x64.filter((m) => m.family === g.family)
+          )
         : proto.ret === 'void'
           ? '  return;\n'
           : '  return 0;\n'

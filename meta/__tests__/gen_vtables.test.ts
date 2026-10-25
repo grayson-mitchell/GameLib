@@ -2674,3 +2674,76 @@ describe('CR-01 / WR-01 / WR-07 / WR-08: struct returns on the x64 flat path (53
     })
   })
 })
+
+describe('53-17 CR-01: hidden-pointer flat fallback never writes through a shim instance', () => {
+  const real = loadAllManifests()
+  const c = generateShimC(real)
+  const body = functionBody(
+    c,
+    'void * SteamAPI_ISteamGameServer_GetPublicIP(void *ret'
+  )
+
+  it('53-17 CR-01: dispatches the dropped GameServer012 RAX form before the memset', () => {
+    const at = body.indexOf(
+      'if (ret == (void *)&g_steamgameserver012_instance)'
+    )
+    expect(at).toBeGreaterThan(-1)
+    expect(body.slice(at)).toContain('(void *)(uintptr_t)')
+    expect(at).toBeLessThan(body.indexOf('memset(ret, 0, 20)'))
+  })
+
+  it('53-17 CR-01: fallback order is NULL guard, 012 dispatch, instance guards, memset', () => {
+    const iNull = body.indexOf('if (ret == NULL) return NULL;')
+    const i012 = body.indexOf(
+      'if (ret == (void *)&g_steamgameserver012_instance)'
+    )
+    const i014 = body.indexOf(
+      'if (ret == (void *)&g_steamgameserver014_instance) return NULL;'
+    )
+    const i015 = body.indexOf(
+      'if (ret == (void *)&g_steamgameserver015_instance) return NULL;'
+    )
+    const iMem = body.indexOf('memset(ret, 0, 20)')
+    expect(iNull).toBeGreaterThan(-1)
+    expect(iNull).toBeLessThan(i012)
+    expect(i012).toBeLessThan(i014)
+    expect(i014).toBeLessThan(iMem)
+    expect(i015).toBeLessThan(iMem)
+    expect(body).not.toContain(
+      'if (ret == (void *)&g_steamgameserver012_instance) return NULL;'
+    )
+  })
+
+  it('53-17 CR-01: a dropped RAX-form version that takes parameters fails closed', () => {
+    const hidden = flatMethod(0, 'Get', 'Big_t', 'class', [['int32', 'n']], {
+      structSize: 16
+    })
+    const rax = flatMethod(0, 'Get', 'Big_t', 'class', [['int32', 'n']], {
+      structSize: 8
+    })
+    const m = [
+      flatFixture('Fx001', 901, [hidden]),
+      flatFixture('Fx002', 902, [rax])
+    ]
+    expect(() => emitFlatExports(m, ['Fx.Get.Fx002'])).toThrow(
+      /Fx\.Get\.Fx002.*FLAT_UNREPRESENTABLE_CASES/
+    )
+  })
+
+  it('53-17 CR-01: a hidden-pointer export with no dropped versions still guards NULL and served instances', () => {
+    const hidden = flatMethod(0, 'Get', 'Big_t', 'class', [['int32', 'n']], {
+      structSize: 16
+    })
+    const out = functionBody(
+      generateShimC([flatFixture('Fx001', 901, [hidden])]),
+      'void * SteamAPI_IFx_Get(void *ret'
+    )
+    const iNull = out.indexOf('if (ret == NULL) return NULL;')
+    const iGuard = out.indexOf(
+      'if (ret == (void *)&g_fx001_instance) return NULL;'
+    )
+    expect(iNull).toBeGreaterThan(-1)
+    expect(iGuard).toBeGreaterThan(iNull)
+    expect(out.indexOf('memset(ret, 0, 16)')).toBeGreaterThan(iGuard)
+  })
+})
