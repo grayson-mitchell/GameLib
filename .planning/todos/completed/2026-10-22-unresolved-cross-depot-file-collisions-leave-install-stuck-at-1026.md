@@ -10,6 +10,7 @@ files:
 severity: medium
 platform: any
 ready: live-gate
+status: "RESOLVED 2026-10-25 by quick 261025-srj. Live gate passed on XCOM 200510 (item 1, quick 261025-rd0); winner rule confirmed against real Steam on Amnesia 57300 (item 2)."
 ---
 
 Installing XCOM: Enemy Unknown (200510, 9 depots, 9723 files) through GameLib's own depot
@@ -92,7 +93,42 @@ Item 1 below PASSED on a fresh GameLib-direct XCOM 200510 install.
   `2026-10-25-paused-depot-download-logs-chmod-fail-close-as-integrity-failure.md` and
   `2026-10-25-empty-cdn-auth-token-for-depot-200511-and-high-chunk-timeout-rate.md`.
 
+## Rule confirmed 2026-10-25 (Amnesia 57300)
+
+Item 2 is satisfied by a second collided title where the candidate rules disagree.
+
+- **Scan:** library-wide manifest scan, 2026-10-25 07:06-07:29. A scratchpad script reused GameLib's
+  `selectAllDepots`, `withAppInfoOrderCapture` and `decryptFilename`. Manifests only, English,
+  windows for every game plus macos for Mac-native ones. 385 games, 0 fatal; 11 games had some depot
+  fetch errors (503 / AccessDenied / Blocked / one timeout). For exact-name, same-owner, ranked
+  real-file collisions it computed each candidate rule's winner. Fourteen titles have collisions
+  where appinfo order disagrees with both lowest-id and later-gid: Darkwood, Pillars of Eternity
+  (mac), Once Human, XCOM 2, Borderlands 2, Rogue Empire, ASKA, ARK, Mass Effect, The Witcher EE,
+  Oblivion GOTY, Amnesia (mac), Book of Unwritten Tales (mac). XCOM 200510's 11 files were
+  classified ao=lowest, ao=laterGid, ao!=highestId. The scan artefacts (`results.json`, `rows.json`
+  under the session scratchpad `collision-scan/full/`) were ephemeral and were not kept.
+- **Amnesia evidence:** Amnesia: The Dark Descent (57300), macOS, `config/pre_menu.cfg`. Depot 57301
+  (base, rank 1, manifest 8176595565127463406) claims 1579 bytes, sha1 `83f8309e1372...`. Depot
+  57303 (oslist macos, rank 2, manifest 7774437381089252368) claims 1657 bytes, sha1
+  `26cd3979f9d5...`. Rule winners: appinfoOrder=57303, highestId=57303, lowestId=57301,
+  laterGid=57301. The operator installed it with native Mac Steam (`/Applications/Steam.app`), not
+  GameLib, at about 20:39 on 2026-10-25; the game was not launched before the check.
+  `appmanifest_57300.acf`: StateFlags 4, buildid 12590639, InstalledDepots lists 57301 (manifest
+  8176595565127463406) and 57303 (manifest 7774437381089252368). Both were installed together, so
+  the collision is real. On disk, `config/pre_menu.cfg` is 1657 bytes with sha1 `26cd3979f9d5...`,
+  which is depot 57303's claim.
+- **Verdict:** in XCOM, real Steam kept 200522, which is appinfo order = lowest id = later gid,
+  not highest id. In Amnesia, real Steam kept 57303, which is appinfo order = highest id, not lowest
+  id, not later gid. Only "later in the app's appinfo depot order wins", the rule GameLib
+  implements, fits both. Caveat: in Amnesia the winner is also the more platform-specific depot, so
+  Amnesia alone does not exclude "the more specific depot config wins". XCOM's two claimants had
+  equal specificity (both dlcappid 225340, no language/os) and the later one won, which is
+  consistent with appinfo order.
+- **Follow-ups filed:**
+  `2026-10-25-depot-selection-ignores-realm-steamdeck-and-optional-depot-config.md` and
+  `2026-10-25-case-only-cross-depot-path-collisions-are-not-detected.md`.
+
 **Remaining before this can close:**
 
 1. ~~Live gate: a fresh GameLib-direct XCOM 200510 install logs `RESOLVED cross-depot file collision ... winner depot 200522` for the 11 `XEW/` paths and finishes at StateFlags=4. This also confirms that the PICS text response orders depots the same way as the local binary `appinfo.vdf` (unverified; the capture has only run against fakes).~~ — **done 2026-10-25**, see Live gate passed 2026-10-25
-2. Rule confirmation from a second collided title (see Not proven above). **Still open.**
+2. ~~Rule confirmation from a second collided title (see Not proven above).~~ — **done 2026-10-25**, see Rule confirmed 2026-10-25 (Amnesia 57300)
