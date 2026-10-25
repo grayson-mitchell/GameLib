@@ -2,14 +2,15 @@ import { app, nativeImage, type ShortcutDetails } from 'backend/platform'
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   unlinkSync,
   writeFileSync
 } from 'graceful-fs'
-import { rm, unlink, writeFile } from 'fs/promises'
+import { mkdir, rm, symlink, unlink, writeFile } from 'fs/promises'
 import { IconIcns } from '@shockpkg/icon-encoder'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { GlobalConfig } from '../../config'
 import { GameInfo } from 'common/types'
@@ -26,8 +27,9 @@ import { writeWindowsShortcut } from './windowsShortcut'
  * Adds a desktop shortcut to $HOME/Desktop and to /usr/share/applications
  * so that the game can be opened from the start menu and the desktop folder.
  * Both can be disabled with addDesktopShortcuts and addStartMenuShortcuts.
- * On macOS the shortcut is a .app in ~/Applications (start menu / menu add) and, only when
- * addDesktopShortcuts is on, a second .app on ~/Desktop.
+ * On macOS one .app is written in ~/Applications (start menu / menu add, or whenever
+ * addDesktopShortcuts is on) and, when addDesktopShortcuts is on, ~/Desktop gets a symlink to that
+ * bundle, so macOS Apps lists the game once.
  * Rejects if any requested shortcut could not be written (after trying all of them).
  * @async
  * @public
@@ -56,15 +58,20 @@ async function addShortcuts(game: Game, fromMenu?: boolean) {
   // Every requested write is attempted; any that failed are reported together at the end, so
   // the caller never announces shortcuts that were not written.
   const failures: string[] = []
-  const recordWrite = async (file: string, write: () => Promise<void>) => {
+  const recordWrite = async (
+    file: string,
+    write: () => Promise<void>
+  ): Promise<boolean> => {
     try {
       await write()
       logInfo(`Shortcut saved on ${file}`, LogPrefix.Backend)
+      return true
     } catch (error) {
       logError([`Could not write shortcut ${file}`, error], LogPrefix.Backend)
       failures.push(
         `${file}: ${error instanceof Error ? error.message : String(error)}`
       )
+      return false
     }
   }
 
@@ -135,14 +142,22 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
     }
     case 'darwin': {
       // Unlike linux/win32, darwin menu add never touches ~/Desktop unless the user opted in
-      // (addDesktopShortcuts), so a Mac Desktop stays clean by default.
-      if (addStartMenuShortcuts || fromMenu) {
-        await recordWrite(menuFile, () => generateMacOsApp(gameInfo, menuFile))
+      // (addDesktopShortcuts), so a Mac Desktop stays clean by default. The Desktop item is a
+      // symlink to the single Applications bundle (261026-ctm), so the Applications bundle is
+      // written whenever the Desktop link is wanted.
+      let bundleWritten = false
+      if (addStartMenuShortcuts || fromMenu || addDesktopShortcuts) {
+        bundleWritten = await recordWrite(menuFile, () =>
+          generateMacOsApp(gameInfo, menuFile)
+        )
       }
       if (addDesktopShortcuts) {
-        await recordWrite(desktopFile, () =>
-          generateMacOsApp(gameInfo, desktopFile)
-        )
+        await recordWrite(desktopFile, async () => {
+          if (!bundleWritten) {
+            throw new Error(`not linked: ${menuFile} was not written`)
+          }
+          await linkDesktopToApplications(desktopFile, menuFile)
+        })
       }
       break
     }
@@ -191,7 +206,10 @@ async function removeShortcuts(game: Game) {
   }
 
   if (isMac) {
-    // A macOS shortcut is a .app directory; the Desktop copy exists only if the user opted in.
+    // The Applications item is a .app directory. The Desktop item (only if the user opted in) is a
+    // symlink to it, or a real bundle left by 261026-clh. `rm` is lstat-based: it removes a link
+    // itself without following it, so the Applications bundle is deleted only by its own entry,
+    // and a dangling link is removed too.
     for (const [file, message] of [
       [desktopFile, 'Desktop shortcut removed'],
       [menuFile, 'Applications shortcut removed']
@@ -253,7 +271,30 @@ function shortcutFiles(gameTitle: string) {
   return [desktopFile, menuFile]
 }
 
-// Generated once per destination rather than copied, so each write has its own failure record.
+/**
+ * Points the Desktop item at the Applications bundle with a plain symlink (no Finder alias).
+ * Clears whatever sits there first: a legacy real bundle, a stale link or a dangling one.
+ */
+async function linkDesktopToApplications(link: string, target: string) {
+  await mkdir(dirname(link), { recursive: true })
+  await rm(link, { recursive: true, force: true })
+  await symlink(target, link)
+}
+
+/**
+ * True when the path exists or is a symlink. A dangling Desktop link (261026-ctm) fails
+ * `existsSync` but is still a leftover the user must be able to Remove.
+ */
+function shortcutPathPresent(file: string): boolean {
+  if (existsSync(file)) return true
+  try {
+    return lstatSync(file).isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
+// Generated once, into ~/Applications only; the Desktop item links to it.
 async function generateMacOsApp(gameInfo: GameInfo, appShortcut: string) {
   const { app_name, runner } = gameInfo
 
@@ -376,4 +417,4 @@ async function convertPngToICNS(
   }
 }
 
-export { removeShortcuts, addShortcuts, shortcutFiles }
+export { removeShortcuts, addShortcuts, shortcutFiles, shortcutPathPresent }
