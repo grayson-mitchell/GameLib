@@ -67,3 +67,27 @@ What this changes in the work list above:
 ## 53-20 evidence (2026-10-25)
 
 Operator, 284100 in the 53-20 session: "error on startup ... serious problem" (dialog text not captured). Logs: x86 `UnclaimedWorld.exe`, helper INIT ok, both shims placed (290304 and 497664), process alive 51s, no window raised, no HELLO. The WMP Active Setup marker is present in the bottle's system.reg in both views (lines 66715, 77788), so the Windows Media Player dialog is not explained by a missing marker; the failure is unidentified. Next step: relaunch once, capture the dialog text and the Wine stderr. Note the census Arch column prints x64 for this title but the launch exe is PE32.
+
+## Status and 53-20 diagnosis (2026-10-25, quick 261025-mfz)
+
+The registry step is DONE by quick 261025-mfz. Known-fixes now has a `registry` key. It is honoured
+only from bundled sources (`public/fixes/`, packaged as `build/fixes`) or local sources
+(`fixes/local/<appId>-steam.json`), and it is stripped from the remote layer. The bundled profile
+`public/fixes/284100-steam.json` sets `IsInstalled` = `REG_DWORD 1` under the WMP Active Setup key,
+in both registry views, on every bridge launch. The applied-fix ledger and reversal (decision 5)
+are deferred. Item 2 of the work list is therefore covered by that profile.
+
+Correction to the "53-20 evidence" section above: the 53-20 "error on startup ... serious problem"
+dialog is Wine's crash dialog ("... has encountered a serious problem and needs to close"). It is
+not a WMP failure, and it is not unidentified. It is the
+`unimplemented function steam_api64.dll.SteamAPI_InitSafe` crash recorded live in 53-UAT item 11,
+tracked in `2026-10-24-x64-shim-lacks-old-sdk-csteamworks-exports-and-interface-versions.md`. The
+GameLib log at 14:21 on 2026-10-25 shows INIT ok, shims placed, process alive 51 s, and no Wine
+stderr captured.
+
+Correction to the census note: the Arch column printing x64 for this PE32 exe is correct. It is an
+AnyCPU .NET assembly, which runs as x64 (D-53-10).
+
+Still open: item 1 (reading appinfo/redist dependency data) and item 3 ("Installing Windows
+components..." on the Play button). Whether music and video play is still unknown until the shim
+crash is fixed.
