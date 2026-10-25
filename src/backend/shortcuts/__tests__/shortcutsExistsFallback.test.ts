@@ -169,18 +169,12 @@ describe('260905-mv5 Task 1: premise re-verification (plan evidence item 5)', ()
     const [desktopFile, menuFile] = shortcutFiles('')
     expect(desktopFile).toBeTruthy()
     expect(menuFile).toBeTruthy()
-    // shortcuts.ts:159-176 switches on process.platform (not the isMac mock above, which is
-    // irrelevant to this assertion): darwin collapses both entries onto one shared
-    // ~/Applications/<name>.app path, while linux returns <desktop>/<name>.desktop and
-    // ~/.local/share/applications/<name>.desktop, which must differ -- the exact pair the
-    // 2026-09-15 Linux CI log's diff printed (quick-260921-o95). Plan evidence item 5 (260905-mv5
-    // Task 1) recorded only the darwin half; both arms are real assertions, not a bypass -- the
-    // non-darwin arm would go red if shortcutFiles ever collapsed the pair on linux.
-    if (process.platform === 'darwin') {
-      expect(desktopFile).toEqual(menuFile)
-    } else {
-      expect(desktopFile).not.toEqual(menuFile)
-    }
+    // shortcutFiles switches on process.platform (not the isMac mock above, which is irrelevant
+    // here). Every platform returns a distinct pair: linux <desktop>/<name>.desktop vs
+    // ~/.local/share/applications/<name>.desktop (the pair the 2026-09-15 Linux CI log's diff
+    // printed, quick-260921-o95), and since 261026-clh darwin returns ~/Desktop/<name>.app vs
+    // ~/Applications/<name>.app.
+    expect(desktopFile).not.toEqual(menuFile)
   })
 
   it('addShortcuts({} as GameInfo) THROWS (rejects) at is_dlc, before ever reaching shortcutFiles (matches plan measurement)', async () => {
@@ -188,5 +182,38 @@ describe('260905-mv5 Task 1: premise re-verification (plan evidence item 5)', ()
     // body surfaces as a promise rejection, not a synchronous throw.
     const game = makeStubGame({} as GameInfo)
     await expect(addShortcuts(game)).rejects.toThrow()
+  })
+})
+
+describe('261026-clh: shortcutsExists on darwin', () => {
+  let originalPlatform: string
+  beforeEach(() => {
+    mockedGetGame.mockReset()
+    mockedExistsSync.mockReset()
+    originalPlatform = process.platform
+    Object.defineProperty(process, 'platform', {
+      value: 'darwin',
+      configurable: true
+    })
+  })
+  afterEach(() => {
+    Object.defineProperty(process, 'platform', {
+      value: originalPlatform,
+      configurable: true
+    })
+  })
+
+  it('resolves true when only the ~/Desktop .app exists', async () => {
+    mockedGetGame.mockReturnValue(
+      makeStubGame({ title: 'Real Game' } as GameInfo)
+    )
+    const [desktopApp, menuApp] = shortcutFiles('Real Game')
+    expect(desktopApp).not.toEqual(menuApp)
+    mockedExistsSync.mockImplementation((path: string) => path === desktopApp)
+
+    const handler = getRegisteredHandler('shortcutsExists')
+    await expect(
+      Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
+    ).resolves.toBe(true)
   })
 })

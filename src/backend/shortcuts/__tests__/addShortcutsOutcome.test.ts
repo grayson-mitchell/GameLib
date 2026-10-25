@@ -55,7 +55,8 @@ jest.mock('backend/logger', () => ({
 }))
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
-import { dirname } from 'path'
+import { homedir } from 'os'
+import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
@@ -232,10 +233,9 @@ describe('Steam game (261026-c7r)', () => {
     afterEach(() => {
       if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
       else process.env.GAMELIB_SHELL_EXE = savedShellExe
-      rmSync(shortcutFiles(steamGameInfo.title)[1], {
-        recursive: true,
-        force: true
-      })
+      for (const app of shortcutFiles(steamGameInfo.title)) {
+        rmSync(app, { recursive: true, force: true })
+      }
     })
 
     it('writes run.sh with the quoted steam URL and an iconless plist', async () => {
@@ -277,5 +277,107 @@ describe('Steam game (261026-c7r)', () => {
 
       expect(mockAddNonSteamGame).toHaveBeenCalledWith(game)
     })
+  })
+})
+
+describe('addShortcuts on darwin (261026-clh)', () => {
+  const url = 'gamelib://launch?appName=outcome-test-app&runner=legendary'
+  let savedShellExe: string | undefined
+  beforeEach(() => {
+    originalPlatform = overrideProcessPlatform('darwin')
+    savedShellExe = process.env.GAMELIB_SHELL_EXE
+    process.env.GAMELIB_SHELL_EXE = '/fake/GameLib.app/Contents/MacOS/GameLib'
+  })
+  afterEach(() => {
+    if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
+    else process.env.GAMELIB_SHELL_EXE = savedShellExe
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    rmSync(desktopApp, { recursive: true, force: true })
+    rmSync(menuApp, { recursive: true, force: true })
+  })
+
+  const runSh = (app: string) => join(app, 'Contents', 'MacOS', 'run.sh')
+
+  it('shortcutFiles returns distinct Desktop and Applications .app paths', () => {
+    const [desktopApp, menuApp] = shortcutFiles('X')
+    expect(desktopApp).toBe(join(homedir(), 'Desktop', 'X.app'))
+    expect(menuApp).toBe(join(homedir(), 'Applications', 'X.app'))
+    expect(desktopApp).not.toEqual(menuApp)
+  })
+
+  it('menu add with the Desktop toggle off writes Applications only', async () => {
+    mockSettings = {
+      ...defaultSettings,
+      addDesktopShortcuts: false,
+      addStartMenuShortcuts: false
+    }
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+
+    await addShortcuts(game, true)
+
+    expect(existsSync(runSh(menuApp))).toBe(true)
+    expect(existsSync(desktopApp)).toBe(false)
+  })
+
+  it('menu add with the Desktop toggle on writes both, with the same URL', async () => {
+    mockSettings = {
+      ...defaultSettings,
+      addDesktopShortcuts: true,
+      addStartMenuShortcuts: false
+    }
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+
+    await addShortcuts(game, true)
+
+    for (const app of [desktopApp, menuApp]) {
+      expect(readFileSync(runSh(app), 'utf8')).toContain(`'${url}'`)
+    }
+  })
+
+  it('install add with only the Desktop toggle on writes the Desktop copy only', async () => {
+    mockSettings = {
+      ...defaultSettings,
+      addDesktopShortcuts: true,
+      addStartMenuShortcuts: false
+    }
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+
+    await addShortcuts(game)
+
+    expect(existsSync(runSh(desktopApp))).toBe(true)
+    expect(existsSync(menuApp)).toBe(false)
+  })
+
+  it('install add with both toggles off writes nothing and resolves', async () => {
+    mockSettings = {
+      ...defaultSettings,
+      addDesktopShortcuts: false,
+      addStartMenuShortcuts: false
+    }
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+
+    await expect(addShortcuts(game)).resolves.toBeUndefined()
+
+    expect(existsSync(desktopApp)).toBe(false)
+    expect(existsSync(menuApp)).toBe(false)
+  })
+
+  it('a failed Desktop write rejects naming the path, and the Applications copy is still written', async () => {
+    mockSettings = {
+      ...defaultSettings,
+      addDesktopShortcuts: true,
+      addStartMenuShortcuts: false
+    }
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const desktopDir = dirname(desktopApp)
+    // ~/Desktop as a regular file makes the mkdir of <title>.app under it fail.
+    rmSync(desktopDir, { recursive: true, force: true })
+    writeFileSync(desktopDir, '')
+    try {
+      await expect(addShortcuts(game, true)).rejects.toThrow(desktopApp)
+      expect(existsSync(runSh(menuApp))).toBe(true)
+    } finally {
+      rmSync(desktopDir, { force: true })
+    }
   })
 })

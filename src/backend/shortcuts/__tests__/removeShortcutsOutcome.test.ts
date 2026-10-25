@@ -177,4 +177,33 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
 
     expect(existsSync(menuFile)).toBe(false)
   })
+
+  it('261026-clh both the Desktop and Applications .app are removed, nothing is logged', async () => {
+    const title = '261026-clh Remove Both Game'
+    const [desktopFile, menuFile] = containedPaths(title)
+    expect(desktopFile).not.toEqual(menuFile)
+    for (const app of [desktopFile, menuFile]) {
+      mkdirSync(join(app, 'Contents', 'MacOS'), { recursive: true })
+      writeFileSync(join(app, 'Contents', 'MacOS', 'run.sh'), '')
+    }
+
+    await removeShortcuts(gameFor(title))
+
+    expect(existsSync(desktopFile)).toBe(false)
+    expect(existsSync(menuFile)).toBe(false)
+    expect(mockLogError).not.toHaveBeenCalled()
+  })
+
+  it('261026-clh a Desktop-only .app is removed and nothing is logged', async () => {
+    const title = '261026-clh Remove Desktop Only Game'
+    const [desktopFile, menuFile] = containedPaths(title)
+    mkdirSync(join(desktopFile, 'Contents', 'MacOS'), { recursive: true })
+    writeFileSync(join(desktopFile, 'Contents', 'MacOS', 'run.sh'), '')
+
+    await removeShortcuts(gameFor(title))
+
+    expect(existsSync(desktopFile)).toBe(false)
+    expect(existsSync(menuFile)).toBe(false)
+    expect(mockLogError).not.toHaveBeenCalled()
+  })
 })
