@@ -170,6 +170,25 @@ export function __setBridgeHelperSpawnEnvForTests(
   bridgeHelperSpawnEnvOverride = env
 }
 
+function unrefHandle(handle: unknown): void {
+  ;(handle as { unref?: () => void } | null | undefined)?.unref?.()
+}
+
+// 51-REVIEW WR-06: once the helper handles are unref'd, a sidecar that drains
+// at stdin EOF exits while a helper may still be running. A synchronous
+// process 'exit' listener (not a handle, so it holds nothing open, and not a
+// stdin 'end' handler, which the exit contract rules out) kills every
+// remaining helper at that moment. On unix the Rust shell's process-group reap
+// is the backstop; on Windows there is no group reap, so this is the only
+// teardown on the drain path. Installed once, on the first spawn.
+let exitTeardownInstalled = false
+
+function installExitTeardownOnce(): void {
+  if (exitTeardownInstalled) return
+  exitTeardownInstalled = true
+  process.on('exit', () => shutdownAllBridgeHelpers())
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     const handle = setTimeout(resolve, ms)
@@ -253,6 +272,16 @@ function ensureHelperSpawned(
       ? { env: bridgeHelperSpawnEnvOverride }
       : {})
   })
+
+  // 51-REVIEW WR-06 (sidecar exit contract): the sidecar exits by event-loop
+  // drain at stdin EOF, so no handle may hold the loop open past it. The child
+  // handle and both piped streams are libuv handles; unref() leaves them fully
+  // working (stderr is still read, so the LISTEN line still arrives) and only
+  // drops their claim on the loop. Optional calls: test fakes may lack unref.
+  unrefHandle(child)
+  unrefHandle(child.stdout)
+  unrefHandle(child.stderr)
+  installExitTeardownOnce()
 
   let settlePortReady: (port: number | null) => void = () => {}
   let portSettled = false

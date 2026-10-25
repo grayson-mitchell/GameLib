@@ -513,6 +513,52 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(childA.kill).toHaveBeenCalledTimes(1)
   })
 
+  // 51-REVIEW WR-06 (sidecar exit contract): the child handle and both piped
+  // streams must be unref'd so a leaked helper cannot hold the sidecar's event
+  // loop open past stdin EOF, and a process 'exit' listener must tear down any
+  // helper still running when the sidecar drains.
+  test('WR-06: the spawned child and its stdout/stderr pipes are unref()d, and a process exit listener kills a still-running helper', async () => {
+    const onSpy = jest.spyOn(process, 'on')
+    const child = new FakeChildProcess()
+    const childUnref = jest.fn()
+    const stdoutUnref = jest.fn()
+    const stderrUnref = jest.fn()
+    Object.assign(child, { unref: childUnref })
+    Object.assign(child.stdout, { unref: stdoutUnref })
+    Object.assign(child.stderr, { unref: stderrUnref })
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55003, APP_ID_A)
+    const result = await pending
+
+    // unref() drops only the loop claim: the LISTEN line was still read.
+    expect(result).toEqual(expect.objectContaining({ ready: true }))
+    expect(childUnref).toHaveBeenCalledTimes(1)
+    expect(stdoutUnref).toHaveBeenCalledTimes(1)
+    expect(stderrUnref).toHaveBeenCalledTimes(1)
+
+    const exitListeners = onSpy.mock.calls
+      .filter(([event]) => event === 'exit')
+      .map(([, listener]) => listener as () => void)
+    onSpy.mockRestore()
+    // Installed at most once per module instance; this suite's first spawn
+    // may have happened in an earlier test, so read it from the live list.
+    const installed =
+      exitListeners[0] ??
+      (process
+        .listeners('exit')
+        .find((l) => String(l).includes('shutdownAllBridgeHelpers')) as
+        | (() => void)
+        | undefined)
+    expect(installed).toBeDefined()
+    installed?.()
+    expect(child.kill).toHaveBeenCalledTimes(1)
+  })
+
   test('shutdownAllBridgeHelpers() kills every registered appId', async () => {
     const childA = new FakeChildProcess()
     const childB = new FakeChildProcess()
