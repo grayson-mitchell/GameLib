@@ -462,3 +462,15 @@ result: pending
 ### 53. Census majority (53-20)
 expected: `pnpm bridge-census` run after the session prints `V of 18 Steamworks-using rows verified (majority: yes)` with V >= 10; the majority line is quoted verbatim with every non-verified row's Evidence reason
 result: pending
+
+### Recorded at launch (53-20)
+
+- HEAD `8ec93895b` (code HEAD `54e43368d`, committed 2026-10-25 13:59:14 +1300).
+- `pnpm tauri:dev:packaged` exited 1 only at updater signing (no `TAURI_SIGNING_PRIVATE_KEY`); bundle produced.
+- `gamelib-sidecar` mtime 2026-10-25 13:59:29, newer than HEAD. `steam_api64.dll` 497664, `steam_api.dll` 290304, `steam-bridge-helper` 153424.
+- No gamelib-shell or steam-bridge-helper running beforehand. Launched `target/debug/gamelib-shell` detached, pid 19982, log `/private/tmp/claude-501/-Users-graysonmitchell-Projects-GameLib/3ae886c8-e750-4cb5-9d8d-00fcb97b8ad0/scratchpad/gamelib-53-20.log`.
+- `~/Library/Logs/GameLib` at launch: gamelib-shell.log, gamelib.log (13:01), gamelib.log.51-29-batch0-215927, gamelib.log.old, gamelib.log.pre-51-27-20261023-073351, gamelib.log.pre-51-28-20261023-194304, gamelib.log.pre-51-29-20261023-214423, runners/.
+
+## Operator outcomes (53-20)
+
+Pending: the 16 operator lines are recorded here verbatim once the session is run.
