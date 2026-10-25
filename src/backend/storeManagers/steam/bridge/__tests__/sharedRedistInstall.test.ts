@@ -2,7 +2,8 @@
 /**
  * Quick 261025-rkj: installSteamBridgeSharedRedists -- the bottle runner. wine, the CM download
  * and the known-fixes reader are all mocked; the ledger is real fs under a per-test mkdtemp
- * directory in os.tmpdir() (the only path this file ever removes).
+ * directory in os.tmpdir(), and steamSupportPath points at a second per-test mkdtemp directory
+ * (these two are the only paths this file ever removes).
  */
 import {
   mkdtempSync,
@@ -45,8 +46,12 @@ jest.mock('../../depot', () => ({ downloadSharedRedistDepots: jest.fn() }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
 jest.mock('backend/knownFixes', () => ({ readKnownFixesLayered: jest.fn() }))
 jest.mock('../../bottle', () => ({ getBottleDir: jest.fn() }))
+// IN-05: a per-test mkdtemp dir, assigned in beforeEach before anything reads it.
+let mockSupportDir = ''
 jest.mock('../../constants', () => ({
-  steamSupportPath: '/tmp/gamelib-test-steam-support'
+  get steamSupportPath() {
+    return mockSupportDir
+  }
 }))
 
 const mockedRun = runWineCommand as jest.Mock
@@ -141,6 +146,7 @@ const installerCalls = () =>
 beforeEach(() => {
   jest.clearAllMocks()
   bottleDir = mkdtempSync(join(tmpdir(), 'rkj-redist-bottle-'))
+  mockSupportDir = mkdtempSync(join(tmpdir(), 'rkj-redist-support-'))
   mockedBottleDir.mockReturnValue(bottleDir)
   mockedFixes.mockReturnValue(null)
   defaultWine()
@@ -151,6 +157,8 @@ afterEach(() => {
   // Only ever remove the mkdtemp dir created above.
   if (bottleDir.startsWith(tmpdir()))
     rmSync(bottleDir, { recursive: true, force: true })
+  if (mockSupportDir.startsWith(tmpdir()))
+    rmSync(mockSupportDir, { recursive: true, force: true })
 })
 
 describe('installSteamBridgeSharedRedists', () => {
@@ -204,7 +212,10 @@ describe('installSteamBridgeSharedRedists', () => {
     })
     expect(mockedDownload).toHaveBeenCalledWith(
       APP,
-      expect.objectContaining({ optInDepotIds: [] })
+      expect.objectContaining({
+        optInDepotIds: [],
+        cacheSteamappsDir: join(mockSupportDir, 'sharedRedist', 'steamapps')
+      })
     )
   })
 
