@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 53
 Plan: 20 of 20
 Status: Milestone complete
-Last activity: 2026-10-25 - Completed quick task 261025-t7i: Unclaimed World reaches Steam via CSteamworks64 (InitSafe + SDK 1.34 versions + import-parse fix); CSteamworks shim todo closed
+Last activity: 2026-10-25 - Completed quick task 261025-vnf: two-tier known-fixes split (tier-1 allow-list reader + local/bundled .profile.json reader)
 
 Progress: [██████████] 100%
 
@@ -369,6 +369,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261025-thk | Two-tier known-fixes design recorded (docs only): tier 1 = Heroic format, remote from a GameLib repo for every store with Heroic fallback, allow-listed; tier 2 = separate `.profile.json`, local + bundled only, remote deferred. Architecture note decisions 1/6 revised; repo todo rescoped; new `ready: code` split todo. | 2026-10-25 | (this commit) | Done: planning-gates 12/12 | [261025-thk-two-tier-known-fixes-design-decision](./quick/261025-thk-two-tier-known-fixes-design-decision/) |
 | fast | tauri dev failed: `resource path ../build/fixes doesn't exist` (261025-mfz pointed the bundled-fixes resource at Vite output, which `tauri dev` never builds). Resource now ships from `../public/fixes/` to the same `build/fixes` destination. | 2026-10-25 | 65563d566 | cargo build ok, prettier clean, tauriConf 54/54 | — |
 | 261025-t7i | Unclaimed World 284100 reaches Steam through Steamworks.NET 7.0/CSteamworks64: 6 x64 legacy exports (`SteamAPI_InitSafe` reports init code 2 once; `g_pSteamClientGameServer` NULL data export), 10 SDK 1.34 interface versions from the pinned Proton inventory, `pnpm check-csteamworks64-exports`. Originals restored by hand via the Mac Steam console `download_depot`. The live check found an import-parse bug (export-table `DLL name:` read as an import), fixed in debug uw-284100-no-iface-pins. Closes the CSteamworks shim todo. Also unexported five findDeadcode regressions from mfz/rkj. | 2026-10-25 | 99eaac2f3, 5f3f3fff9, 4d26c70d1 | Live-checked 2026-10-25 22:00: HELLO, GINIT InitSafe ok, 22 iface pins, CALL SteamUtils007.GetAppID; unverified under the 53-11 rule (1 game call, no identity call; operator kept the rule). The game then exits on a Media Foundation error on its main-menu WMV (follow-up todo); x86 deferred (D-53-09) | [261025-t7i-shim-legacy-csteamworks-exports-and-old-](./quick/261025-t7i-shim-legacy-csteamworks-exports-and-old-/) |
+| 261025-vnf | Two-tier known-fixes split: `readKnownFixes` is now the layered tier-1 reader (local > bundled > remote, `TIER1_KNOWN_FIX_KEYS` allow-list at every layer); new `readKnownFixProfile` reads `.profile.json` from local + bundled only; misplaced keys dropped with a warning both ways. `filterTier1KnownFixes` exported for the repo fetcher. Steam bridge + shared redists re-sourced; `284100-steam.json` → `.profile.json`. Closes the split todo; files non-Steam tier-2 follow-up. | 2026-10-25 | b4d939ed1, 09ec9178f, 058244464 | Done: jest 2628/2628, tsc, prettier, planning-gates 12/12 | [261025-vnf-split-known-fixes-into-tier-1-remote-all](./quick/261025-vnf-split-known-fixes-into-tier-1-remote-all/) |
 
 ## Deferred Items
 
