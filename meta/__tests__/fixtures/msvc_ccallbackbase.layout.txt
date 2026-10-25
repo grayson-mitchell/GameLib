@@ -1,0 +1,536 @@
+=== triple: x86_64-pc-windows-msvc zig 0.16.0 ===
+
+*** Dumping AST Record Layout
+Type: struct P
+
+Layout: <ASTRecordLayout
+  Size:20576
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: class CCallbackBase
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [64, 96]>
+
+*** Dumping AST Record Layout
+Type: class CCallbackImpl<2572>
+
+Layout: <ASTRecordLayout
+  Size:128
+  Alignment:64
+  BaseOffsets: [0]>
+  VBaseOffsets: []>
+  FieldOffsets: []>
+
+*** Dumping AST Record Layout
+Type: class CCallback<struct Obj, struct P>
+
+Layout: <ASTRecordLayout
+  Size:256
+  Alignment:64
+  BaseOffsets: [0]>
+  VBaseOffsets: []>
+  FieldOffsets: [128, 192]>
+
+*** Dumping AST Record Layout
+Type: struct Obj
+
+Layout: <ASTRecordLayout
+  Size:8
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: []>
+
+*** Dumping IRgen Record Layout
+Record: CXXRecordDecl 0x74fd196300 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:13:1, line:38:1> line:13:7 referenced class CCallbackBase definition
+|-DefinitionData polymorphic abstract has_user_declared_ctor can_const_default_init
+| |-DefaultConstructor exists non_trivial user_provided
+| |-CopyConstructor non_trivial user_declared has_const_param implicit_has_const_param
+| |-MoveConstructor
+| |-CopyAssignment non_trivial has_const_param user_declared implicit_has_const_param
+| |-MoveAssignment
+| `-Destructor simple irrelevant trivial
+|-CXXRecordDecl 0x74fd196418 <col:1, col:7> col:7 implicit referenced class CCallbackBase
+|-AccessSpecDecl 0x74fd1964a8 <line:14:2, col:8> col:2 public
+|-CXXConstructorDecl 0x74fd196570 <line:15:3, line:18:3> line:15:3 CCallbackBase 'void ()' implicit-inline
+| `-CompoundStmt 0x74fd1d6880 <col:19, line:18:3>
+|   |-BinaryOperator 0x74fd1d6798 <line:16:5, col:24> 'uint8':'unsigned char' lvalue '='
+|   | |-MemberExpr 0x74fd1d6730 <col:5> 'uint8':'unsigned char' lvalue ->m_nCallbackFlags 0x74fd196f90
+|   | | `-CXXThisExpr 0x74fd1d6720 <col:5> 'CCallbackBase *' implicit this
+|   | `-ImplicitCastExpr 0x74fd1d6780 <col:24> 'uint8':'unsigned char' <IntegralCast>
+|   |   `-IntegerLiteral 0x74fd1d6760 <col:24> 'int' 0
+|   `-BinaryOperator 0x74fd1d6860 <line:17:5, col:19> 'int' lvalue '='
+|     |-MemberExpr 0x74fd1d6810 <col:5> 'int' lvalue ->m_iCallback 0x74fd1d6000
+|     | `-CXXThisExpr 0x74fd1d6800 <col:5> 'CCallbackBase *' implicit this
+|     `-IntegerLiteral 0x74fd1d6840 <col:19> 'int' 0
+|-CXXMethodDecl 0x74fd196700 <line:20:3, col:37> col:16 Run 'void (void *)' virtual pure
+| `-ParmVarDecl 0x74fd196638 <col:20, col:26> col:26 pvParam 'void *'
+|-CXXMethodDecl 0x74fd196a60 <line:21:3, line:22:52> line:21:16 Run 'void (void *, bool, SteamAPICall_t)' virtual pure
+| |-ParmVarDecl 0x74fd1967c8 <col:20, col:26> col:26 pvParam 'void *'
+| |-ParmVarDecl 0x74fd196840 <col:35, col:40> col:40 bIOFailure 'bool'
+| `-ParmVarDecl 0x74fd196920 <line:22:20, col:35> col:35 hSteamAPICall 'SteamAPICall_t':'unsigned long long'
+|-CXXMethodDecl 0x74fd196b88 <line:23:3, col:44> col:7 GetICallback 'int ()' implicit-inline
+| `-CompoundStmt 0x74fd1d6908 <col:22, col:44>
+|   `-ReturnStmt 0x74fd1d68f8 <col:24, col:31>
+|     `-ImplicitCastExpr 0x74fd1d68e0 <col:31> 'int' <LValueToRValue>
+|       `-MemberExpr 0x74fd1d68b0 <col:31> 'int' lvalue ->m_iCallback 0x74fd1d6000
+|         `-CXXThisExpr 0x74fd1d68a0 <col:31> 'CCallbackBase *' implicit this
+|-CXXMethodDecl 0x74fd196c58 <line:24:3, col:40> col:15 GetCallbackSizeBytes 'int ()' virtual pure
+|-AccessSpecDecl 0x74fd196d00 <line:26:2, col:11> col:2 protected
+|-EnumDecl 0x74fd196d28 <line:27:3, line:30:3> line:27:3
+| |-EnumConstantDecl 0x74fd196e30 <line:28:5, col:34> col:5 k_ECallbackFlagsRegistered 'CCallbackBase::(unnamed enum at meta/__tests__/fixtures/msvc_ccallbackbase.cpp:27:3)'
+| | `-ConstantExpr 0x74fd196e10 <col:34> 'int'
+| |   |-value: Int 1
+| |   `-IntegerLiteral 0x74fd196df0 <col:34> 'int' 1
+| `-EnumConstantDecl 0x74fd196ec8 <line:29:5, col:34> col:5 k_ECallbackFlagsGameServer 'CCallbackBase::(unnamed enum at meta/__tests__/fixtures/msvc_ccallbackbase.cpp:27:3)'
+|   `-ConstantExpr 0x74fd196ea8 <col:34> 'int'
+|     |-value: Int 2
+|     `-IntegerLiteral 0x74fd196e88 <col:34> 'int' 2
+|-FieldDecl 0x74fd196f90 <line:31:3, col:9> col:9 referenced m_nCallbackFlags 'uint8':'unsigned char'
+|-FieldDecl 0x74fd1d6000 <line:32:3, col:7> col:7 referenced m_iCallback 'int'
+|-FriendDecl 0x74fd1d60a0 <line:33:3, col:16> col:10 'class CCallbackMgr':'CCallbackMgr'
+|-AccessSpecDecl 0x74fd1d60e8 <line:35:2, col:9> col:2 private
+|-CXXConstructorDecl 0x74fd1d62c0 <line:36:3, col:38> col:3 CCallbackBase 'void (const CCallbackBase &)'
+| `-ParmVarDecl 0x74fd1d61b8 <col:17, col:37> col:38 'const CCallbackBase &'
+|-CXXMethodDecl 0x74fd1d6518 <line:37:3, col:49> col:18 operator= 'CCallbackBase &(const CCallbackBase &)'
+| `-ParmVarDecl 0x74fd1d63a0 <col:28, col:48> col:49 'const CCallbackBase &'
+`-CXXDestructorDecl 0x74fd1d65e0 <line:13:7> col:7 implicit ~CCallbackBase 'void () noexcept' inline default trivial
+
+Layout: <CGRecordLayout
+  LLVMType:%class.CCallbackBase = type { ptr, i8, i32 }
+  NonVirtualBaseLLVMType:%class.CCallbackBase = type { ptr, i8, i32 }
+  IsZeroInitializable:1
+  BitFields:[
+]>
+
+*** Dumping IRgen Record Layout
+Record: ClassTemplateSpecializationDecl 0x74fd1e4970 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:40:1, line:49:1> line:41:7 class CCallbackImpl definition implicit_instantiation
+|-DefinitionData polymorphic abstract can_const_default_init
+| |-DefaultConstructor exists non_trivial needs_implicit
+| |-CopyConstructor non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveConstructor needs_overload_resolution
+| |-CopyAssignment non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveAssignment needs_overload_resolution
+| `-Destructor non_trivial user_declared
+|-protected 'CCallbackBase'
+|-TemplateArgument integral '2572'
+|-CXXRecordDecl 0x74fd1e4ba8 <col:1, col:7> col:7 implicit class CCallbackImpl
+|-AccessSpecDecl 0x74fd1e4c38 <line:42:2, col:8> col:2 public
+|-CXXDestructorDecl 0x74fd1e4c88 <line:43:3, col:29> col:11 used ~CCallbackImpl 'void () noexcept' implicit_instantiation virtual implicit-inline instantiated_from 0x74fd1d6e98
+|-AccessSpecDecl 0x74fd1e4d88 <line:45:2, col:11> col:2 protected
+|-CXXMethodDecl 0x74fd1e4e40 <line:46:3, col:37> col:16 Run 'void (void *)' implicit_instantiation virtual pure instantiated_from 0x74fd1e1028
+| |-Overrides: [ 0x74fd196700 CCallbackBase::Run 'void (void *)' ]
+| `-ParmVarDecl 0x74fd1e4db0 <col:20, col:26> col:26 pvParam 'void *'
+|-CXXMethodDecl 0x74fd1e60a0 <line:47:3, col:73> col:16 Run 'void (void *, bool, SteamAPICall_t)' implicit_instantiation virtual implicit-inline instantiated_from 0x74fd1e12b8
+| |-Overrides: [ 0x74fd196a60 CCallbackBase::Run 'void (void *, bool, SteamAPICall_t)' ]
+| |-ParmVarDecl 0x74fd1e4f30 <col:20, col:26> col:26 pvParam 'void *'
+| |-ParmVarDecl 0x74fd1e4f98 <col:35> col:39 'bool'
+| `-ParmVarDecl 0x74fd1e6000 <col:41> col:55 'SteamAPICall_t':'unsigned long long'
+|-CXXMethodDecl 0x74fd1e6180 <line:48:3, col:57> col:15 GetCallbackSizeBytes 'int ()' implicit_instantiation virtual implicit-inline instantiated_from 0x74fd1e13b0
+| `-Overrides: [ 0x74fd196c58 CCallbackBase::GetCallbackSizeBytes 'int ()' ]
+|-CXXConstructorDecl 0x74fd1e62e8 <line:41:7> col:7 implicit CCallbackImpl 'void (const CCallbackImpl<2572> &)' inline default_delete noexcept-unevaluated 0x74fd1e62e8
+| `-ParmVarDecl 0x74fd1e6420 <col:7> col:7 'const CCallbackImpl<2572> &'
+`-CXXMethodDecl 0x74fd1e64c0 <col:7> col:7 implicit operator= 'CCallbackImpl<2572> &(const CCallbackImpl<2572> &)' inline default_delete noexcept-unevaluated 0x74fd1e64c0
+  `-ParmVarDecl 0x74fd1e65f0 <col:7> col:7 'const CCallbackImpl<2572> &'
+
+Layout: <CGRecordLayout
+  LLVMType:%class.CCallbackImpl = type { %class.CCallbackBase }
+  NonVirtualBaseLLVMType:%class.CCallbackImpl = type { %class.CCallbackBase }
+  IsZeroInitializable:1
+  BitFields:[
+]>
+
+*** Dumping IRgen Record Layout
+Record: ClassTemplateSpecializationDecl 0x74fd1e4398 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:51:1, line:61:1> line:52:7 class CCallback definition implicit_instantiation
+|-DefinitionData polymorphic has_user_declared_ctor can_const_default_init
+| |-DefaultConstructor
+| |-CopyConstructor non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveConstructor exists non_trivial needs_overload_resolution
+| |-CopyAssignment non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveAssignment exists non_trivial needs_overload_resolution
+| `-Destructor simple non_trivial needs_overload_resolution
+|-public 'CCallbackImpl<sizeof(P)>':'CCallbackImpl<2572>'
+|-TemplateArgument type 'Obj'
+| `-RecordType 0x74fd1e2c80 'Obj'
+|   `-CXXRecord 0x74fd1e2be8 'Obj'
+|-TemplateArgument type 'P'
+| `-RecordType 0x74fd1e29d0 'P'
+|   `-CXXRecord 0x74fd1e2940 'P'
+|-TemplateArgument integral 'false'
+|-CXXRecordDecl 0x74fd1e6690 <col:1, col:7> col:7 implicit class CCallback
+|-AccessSpecDecl 0x74fd1e6720 <line:53:2, col:8> col:2 public
+|-TypedefDecl 0x74fd1e6950 <line:54:3, col:32> col:21 referenced func_t 'void (Obj::*)(P *)'
+| `-MemberPointerType 0x74fd1e68e0 'void (Obj::*)(P *)'
+|   |-SubstTemplateTypeParmType 0x74fd1e6870 'Obj' sugar class depth 0 index 0 T
+|   | |-ClassTemplateSpecialization 0x74fd1e4398 'CCallback'
+|   | `-RecordType 0x74fd1e2c80 'Obj'
+|   |   `-CXXRecord 0x74fd1e2be8 'Obj'
+|   `-ParenType 0x74fd1e6840 'void (P *)' sugar
+|     `-FunctionProtoType 0x74fd1e6800 'void (P *)' cdecl
+|       |-BuiltinType 0x74fd158070 'void'
+|       `-PointerType 0x74fd1e6750 'P *'
+|         `-SubstTemplateTypeParmType 0x74fd1e4810 'P' sugar class depth 0 index 1 P
+|           |-ClassTemplateSpecialization 0x74fd1e4398 'CCallback'
+|           `-RecordType 0x74fd1e29d0 'P'
+|             `-CXXRecord 0x74fd1e2940 'P'
+|-CXXConstructorDecl 0x74fd1e6c58 <line:55:3, col:65> col:3 used CCallback 'void (Obj *, func_t)' implicit_instantiation implicit-inline instantiated_from 0x74fd1e23a0
+| |-ParmVarDecl 0x74fd1e6a20 <col:13, col:16> col:16 pObj 'Obj *'
+| `-ParmVarDecl 0x74fd1e6b00 <col:22, col:29> col:29 func 'func_t':'void (Obj::*)(P *)'
+|-AccessSpecDecl 0x74fd1e6d28 <line:57:2, col:11> col:2 protected
+|-CXXMethodDecl 0x74fd1e6de0 <line:58:3, col:70> col:16 Run 'void (void *)' implicit_instantiation virtual implicit-inline instantiated_from 0x74fd1e2530
+| |-Overrides: [ 0x74fd1e4e40 CCallbackImpl::Run 'void (void *)' ]
+| `-ParmVarDecl 0x74fd1e6d50 <col:20, col:26> col:26 pvParam 'void *'
+|-FieldDecl 0x74fd1e6ee0 <line:59:3, col:6> col:6 m_pObj 'Obj *'
+|-FieldDecl 0x74fd1e6f40 <line:60:3, col:10> col:10 m_Func 'func_t':'void (Obj::*)(P *)'
+|-CXXConstructorDecl 0x74fd1e7030 <line:52:7> col:7 implicit CCallback 'void (const CCallback<Obj, P> &)' inline default_delete noexcept-unevaluated 0x74fd1e7030
+| `-ParmVarDecl 0x74fd1e7160 <col:7> col:7 'const CCallback<Obj, P> &'
+|-CXXConstructorDecl 0x74fd1e7240 <col:7> col:7 implicit CCallback 'void (CCallback<Obj, P> &&)' inline default_delete noexcept-unevaluated 0x74fd1e7240
+| `-ParmVarDecl 0x74fd1e7370 <col:7> col:7 'CCallback<Obj, P> &&'
+|-CXXMethodDecl 0x74fd1e7420 <col:7> col:7 implicit operator= 'CCallback<Obj, P> &(const CCallback<Obj, P> &)' inline default_delete noexcept-unevaluated 0x74fd1e7420
+| `-ParmVarDecl 0x74fd1e7550 <col:7> col:7 'const CCallback<Obj, P> &'
+|-CXXMethodDecl 0x74fd1e75c0 <col:7> col:7 implicit operator= 'CCallback<Obj, P> &(CCallback<Obj, P> &&)' inline default_delete noexcept-unevaluated 0x74fd1e75c0
+| `-ParmVarDecl 0x74fd1e76f0 <col:7> col:7 'CCallback<Obj, P> &&'
+`-CXXDestructorDecl 0x74fd1e7788 <col:7> col:7 implicit used ~CCallback 'void () noexcept' inline default
+  |-Overrides: [ 0x74fd1e4c88 CCallbackImpl::~CCallbackImpl 'void () noexcept' ]
+  `-CompoundStmt 0x74fd1e8800 <col:7>
+
+Layout: <CGRecordLayout
+  LLVMType:%class.CCallback = type { %class.CCallbackImpl, ptr, ptr }
+  NonVirtualBaseLLVMType:%class.CCallback = type { %class.CCallbackImpl, ptr, ptr }
+  IsZeroInitializable:1
+  BitFields:[
+]>
+VFTable for 'CCallbackBase' (4 entries).
+   0 | CCallbackBase RTTI
+   1 | void CCallbackBase::Run(void *, bool, SteamAPICall_t) [pure]
+   2 | void CCallbackBase::Run(void *) [pure]
+   3 | int CCallbackBase::GetCallbackSizeBytes() [pure]
+
+VFTable indices for 'CCallbackBase' (3 entries).
+   0 | void CCallbackBase::Run(void *, bool, SteamAPICall_t)
+   1 | void CCallbackBase::Run(void *)
+   2 | int CCallbackBase::GetCallbackSizeBytes()
+
+VFTable for 'CCallbackBase' in 'CCallbackImpl' (5 entries).
+   0 | CCallbackImpl RTTI
+   1 | void CCallbackImpl<2572>::Run(void *, bool, SteamAPICall_t) [sizeof_P = 2572]
+   2 | void CCallbackImpl<2572>::Run(void *) [sizeof_P = 2572] [pure]
+   3 | int CCallbackImpl<2572>::GetCallbackSizeBytes() [sizeof_P = 2572]
+   4 | CCallbackImpl<2572>::~CCallbackImpl() [scalar deleting]
+
+VFTable indices for 'CCallbackImpl' (4 entries).
+   0 | void CCallbackImpl<2572>::Run(void *, bool, SteamAPICall_t) [sizeof_P = 2572]
+   1 | void CCallbackImpl<2572>::Run(void *) [sizeof_P = 2572]
+   2 | int CCallbackImpl<2572>::GetCallbackSizeBytes() [sizeof_P = 2572]
+   3 | CCallbackImpl<2572>::~CCallbackImpl() [sizeof_P = 2572] [scalar deleting]
+
+VFTable for 'CCallbackBase' in 'CCallbackImpl' in 'CCallback' (5 entries).
+   0 | CCallback RTTI
+   1 | void CCallbackImpl<2572>::Run(void *, bool, SteamAPICall_t) [sizeof_P = 2572]
+   2 | void CCallback<Obj, P>::Run(void *) [T = Obj, P = P, bGameserver = false]
+   3 | int CCallbackImpl<2572>::GetCallbackSizeBytes() [sizeof_P = 2572]
+   4 | CCallback<Obj, P>::~CCallback() [scalar deleting]
+
+VFTable indices for 'CCallback' (2 entries).
+   1 | void CCallback<Obj, P>::Run(void *) [T = Obj, P = P, bGameserver = false]
+   3 | CCallback<Obj, P>::~CCallback() [T = Obj, P = P, bGameserver = false] [scalar deleting]
+
+
+*** Dumping IRgen Record Layout
+Record: CXXRecordDecl 0x74fd1e2be8 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:67:1, line:69:1> line:67:8 referenced struct Obj definition
+|-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+| |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+| |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+| |-MoveConstructor exists simple trivial needs_implicit
+| |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+| |-MoveAssignment exists simple trivial needs_implicit
+| `-Destructor simple irrelevant trivial needs_implicit
+|-MSInheritanceAttr 0x74fd1e4710 <col:1, line:69:1> Implicit __single_inheritance BestCase
+|-CXXRecordDecl 0x74fd1e2d08 <line:67:1, col:8> col:8 implicit struct Obj
+`-CXXMethodDecl 0x74fd1e4000 <line:68:3, col:25> col:8 used OnCallback 'void (P *)' implicit-inline
+  |-ParmVarDecl 0x74fd1e2e48 <col:19, col:21> col:22 'P *'
+  `-CompoundStmt 0x74fd1e40c8 <col:24, col:25>
+
+Layout: <CGRecordLayout
+  LLVMType:%struct.Obj = type { i8 }
+  NonVirtualBaseLLVMType:%struct.Obj.base = type {}
+  IsZeroInitializable:1
+  BitFields:[
+]>
+=== triple: i686-pc-windows-msvc zig 0.16.0 ===
+
+*** Dumping AST Record Layout
+Type: struct P
+
+Layout: <ASTRecordLayout
+  Size:20576
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [0]>
+
+*** Dumping AST Record Layout
+Type: class CCallbackBase
+
+Layout: <ASTRecordLayout
+  Size:96
+  Alignment:32
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: [32, 64]>
+
+*** Dumping AST Record Layout
+Type: class CCallbackImpl<2572>
+
+Layout: <ASTRecordLayout
+  Size:96
+  Alignment:32
+  BaseOffsets: [0]>
+  VBaseOffsets: []>
+  FieldOffsets: []>
+
+*** Dumping AST Record Layout
+Type: class CCallback<struct Obj, struct P>
+
+Layout: <ASTRecordLayout
+  Size:160
+  Alignment:32
+  BaseOffsets: [0]>
+  VBaseOffsets: []>
+  FieldOffsets: [96, 128]>
+
+*** Dumping AST Record Layout
+Type: struct Obj
+
+Layout: <ASTRecordLayout
+  Size:8
+  Alignment:8
+  BaseOffsets: []>
+  VBaseOffsets: []>
+  FieldOffsets: []>
+
+*** Dumping IRgen Record Layout
+Record: CXXRecordDecl 0x794d1561e0 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:13:1, line:38:1> line:13:7 referenced class CCallbackBase definition
+|-DefinitionData polymorphic abstract has_user_declared_ctor can_const_default_init
+| |-DefaultConstructor exists non_trivial user_provided
+| |-CopyConstructor non_trivial user_declared has_const_param implicit_has_const_param
+| |-MoveConstructor
+| |-CopyAssignment non_trivial has_const_param user_declared implicit_has_const_param
+| |-MoveAssignment
+| `-Destructor simple irrelevant trivial
+|-CXXRecordDecl 0x794d1562f8 <col:1, col:7> col:7 implicit referenced class CCallbackBase
+|-AccessSpecDecl 0x794d156388 <line:14:2, col:8> col:2 public
+|-CXXConstructorDecl 0x794d156450 <line:15:3, line:18:3> line:15:3 CCallbackBase 'void () __attribute__((thiscall))' implicit-inline
+| `-CompoundStmt 0x794d158770 <col:19, line:18:3> FPEvalMethod=2
+|   |-BinaryOperator 0x794d158688 <line:16:5, col:24> 'uint8':'unsigned char' lvalue '='
+|   | |-MemberExpr 0x794d158620 <col:5> 'uint8':'unsigned char' lvalue ->m_nCallbackFlags 0x794d156e70
+|   | | `-CXXThisExpr 0x794d158610 <col:5> 'CCallbackBase *' implicit this
+|   | `-ImplicitCastExpr 0x794d158670 <col:24> 'uint8':'unsigned char' <IntegralCast>
+|   |   `-IntegerLiteral 0x794d158650 <col:24> 'int' 0
+|   `-BinaryOperator 0x794d158750 <line:17:5, col:19> 'int' lvalue '='
+|     |-MemberExpr 0x794d158700 <col:5> 'int' lvalue ->m_iCallback 0x794d156ed8
+|     | `-CXXThisExpr 0x794d1586f0 <col:5> 'CCallbackBase *' implicit this
+|     `-IntegerLiteral 0x794d158730 <col:19> 'int' 0
+|-CXXMethodDecl 0x794d1565e0 <line:20:3, col:37> col:16 Run 'void (void *) __attribute__((thiscall))' virtual pure
+| `-ParmVarDecl 0x794d156518 <col:20, col:26> col:26 pvParam 'void *'
+|-CXXMethodDecl 0x794d156940 <line:21:3, line:22:52> line:21:16 Run 'void (void *, bool, SteamAPICall_t) __attribute__((thiscall))' virtual pure
+| |-ParmVarDecl 0x794d1566a8 <col:20, col:26> col:26 pvParam 'void *'
+| |-ParmVarDecl 0x794d156720 <col:35, col:40> col:40 bIOFailure 'bool'
+| `-ParmVarDecl 0x794d156800 <line:22:20, col:35> col:35 hSteamAPICall 'SteamAPICall_t':'unsigned long long'
+|-CXXMethodDecl 0x794d156a68 <line:23:3, col:44> col:7 GetICallback 'int () __attribute__((thiscall))' implicit-inline
+| `-CompoundStmt 0x794d158800 <col:22, col:44> FPEvalMethod=2
+|   `-ReturnStmt 0x794d1587f0 <col:24, col:31>
+|     `-ImplicitCastExpr 0x794d1587d8 <col:31> 'int' <LValueToRValue>
+|       `-MemberExpr 0x794d1587a8 <col:31> 'int' lvalue ->m_iCallback 0x794d156ed8
+|         `-CXXThisExpr 0x794d158798 <col:31> 'CCallbackBase *' implicit this
+|-CXXMethodDecl 0x794d156b38 <line:24:3, col:40> col:15 GetCallbackSizeBytes 'int () __attribute__((thiscall))' virtual pure
+|-AccessSpecDecl 0x794d156be0 <line:26:2, col:11> col:2 protected
+|-EnumDecl 0x794d156c08 <line:27:3, line:30:3> line:27:3
+| |-EnumConstantDecl 0x794d156d10 <line:28:5, col:34> col:5 k_ECallbackFlagsRegistered 'CCallbackBase::(unnamed enum at meta/__tests__/fixtures/msvc_ccallbackbase.cpp:27:3)'
+| | `-ConstantExpr 0x794d156cf0 <col:34> 'int'
+| |   |-value: Int 1
+| |   `-IntegerLiteral 0x794d156cd0 <col:34> 'int' 1
+| `-EnumConstantDecl 0x794d156da8 <line:29:5, col:34> col:5 k_ECallbackFlagsGameServer 'CCallbackBase::(unnamed enum at meta/__tests__/fixtures/msvc_ccallbackbase.cpp:27:3)'
+|   `-ConstantExpr 0x794d156d88 <col:34> 'int'
+|     |-value: Int 2
+|     `-IntegerLiteral 0x794d156d68 <col:34> 'int' 2
+|-FieldDecl 0x794d156e70 <line:31:3, col:9> col:9 referenced m_nCallbackFlags 'uint8':'unsigned char'
+|-FieldDecl 0x794d156ed8 <line:32:3, col:7> col:7 referenced m_iCallback 'int'
+|-FriendDecl 0x794d156f80 <line:33:3, col:16> col:10 'class CCallbackMgr':'CCallbackMgr'
+|-AccessSpecDecl 0x794d156fc8 <line:35:2, col:9> col:2 private
+|-CXXConstructorDecl 0x794d1581b0 <line:36:3, col:38> col:3 CCallbackBase 'void (const CCallbackBase &) __attribute__((thiscall))'
+| `-ParmVarDecl 0x794d1580a8 <col:17, col:37> col:38 'const CCallbackBase &'
+|-CXXMethodDecl 0x794d158408 <line:37:3, col:49> col:18 operator= 'CCallbackBase &(const CCallbackBase &) __attribute__((thiscall))'
+| `-ParmVarDecl 0x794d158290 <col:28, col:48> col:49 'const CCallbackBase &'
+`-CXXDestructorDecl 0x794d1584d0 <line:13:7> col:7 implicit ~CCallbackBase 'void () __attribute__((thiscall)) noexcept' inline default trivial
+
+Layout: <CGRecordLayout
+  LLVMType:%class.CCallbackBase = type { ptr, i8, i32 }
+  NonVirtualBaseLLVMType:%class.CCallbackBase = type { ptr, i8, i32 }
+  IsZeroInitializable:1
+  BitFields:[
+]>
+
+*** Dumping IRgen Record Layout
+Record: ClassTemplateSpecializationDecl 0x794d165830 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:40:1, line:49:1> line:41:7 class CCallbackImpl definition implicit_instantiation
+|-DefinitionData polymorphic abstract can_const_default_init
+| |-DefaultConstructor exists non_trivial needs_implicit
+| |-CopyConstructor non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveConstructor needs_overload_resolution
+| |-CopyAssignment non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveAssignment needs_overload_resolution
+| `-Destructor non_trivial user_declared
+|-protected 'CCallbackBase'
+|-TemplateArgument integral '2572'
+|-CXXRecordDecl 0x794d165a68 <col:1, col:7> col:7 implicit class CCallbackImpl
+|-AccessSpecDecl 0x794d165af8 <line:42:2, col:8> col:2 public
+|-CXXDestructorDecl 0x794d165b48 <line:43:3, col:29> col:11 used ~CCallbackImpl 'void () __attribute__((thiscall)) noexcept' implicit_instantiation virtual implicit-inline instantiated_from 0x794d158d98
+|-AccessSpecDecl 0x794d165c48 <line:45:2, col:11> col:2 protected
+|-CXXMethodDecl 0x794d165d00 <line:46:3, col:37> col:16 Run 'void (void *) __attribute__((thiscall))' implicit_instantiation virtual pure instantiated_from 0x794d158f20
+| |-Overrides: [ 0x794d1565e0 CCallbackBase::Run 'void (void *) __attribute__((thiscall))' ]
+| `-ParmVarDecl 0x794d165c70 <col:20, col:26> col:26 pvParam 'void *'
+|-CXXMethodDecl 0x794d166000 <line:47:3, col:73> col:16 Run 'void (void *, bool, SteamAPICall_t) __attribute__((thiscall))' implicit_instantiation virtual implicit-inline instantiated_from 0x794d15b1a8
+| |-Overrides: [ 0x794d156940 CCallbackBase::Run 'void (void *, bool, SteamAPICall_t) __attribute__((thiscall))' ]
+| |-ParmVarDecl 0x794d165df0 <col:20, col:26> col:26 pvParam 'void *'
+| |-ParmVarDecl 0x794d165e58 <col:35> col:39 'bool'
+| `-ParmVarDecl 0x794d165ec0 <col:41> col:55 'SteamAPICall_t':'unsigned long long'
+|-CXXMethodDecl 0x794d1660e0 <line:48:3, col:57> col:15 GetCallbackSizeBytes 'int () __attribute__((thiscall))' implicit_instantiation virtual implicit-inline instantiated_from 0x794d15b2a0
+| `-Overrides: [ 0x794d156b38 CCallbackBase::GetCallbackSizeBytes 'int () __attribute__((thiscall))' ]
+|-CXXConstructorDecl 0x794d166248 <line:41:7> col:7 implicit CCallbackImpl 'void (const CCallbackImpl<2572> &) __attribute__((thiscall))' inline default_delete noexcept-unevaluated 0x794d166248
+| `-ParmVarDecl 0x794d166380 <col:7> col:7 'const CCallbackImpl<2572> &'
+`-CXXMethodDecl 0x794d166420 <col:7> col:7 implicit operator= 'CCallbackImpl<2572> &(const CCallbackImpl<2572> &) __attribute__((thiscall))' inline default_delete noexcept-unevaluated 0x794d166420
+  `-ParmVarDecl 0x794d166550 <col:7> col:7 'const CCallbackImpl<2572> &'
+
+Layout: <CGRecordLayout
+  LLVMType:%class.CCallbackImpl = type { %class.CCallbackBase }
+  NonVirtualBaseLLVMType:%class.CCallbackImpl = type { %class.CCallbackBase }
+  IsZeroInitializable:1
+  BitFields:[
+]>
+
+*** Dumping IRgen Record Layout
+Record: ClassTemplateSpecializationDecl 0x794d165258 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:51:1, line:61:1> line:52:7 class CCallback definition implicit_instantiation
+|-DefinitionData polymorphic has_user_declared_ctor can_const_default_init
+| |-DefaultConstructor
+| |-CopyConstructor non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveConstructor exists non_trivial needs_overload_resolution
+| |-CopyAssignment non_trivial has_const_param needs_overload_resolution implicit_has_const_param
+| |-MoveAssignment exists non_trivial needs_overload_resolution
+| `-Destructor simple non_trivial needs_overload_resolution
+|-public 'CCallbackImpl<sizeof(P)>':'CCallbackImpl<2572>'
+|-TemplateArgument type 'Obj'
+| `-RecordType 0x794d164bb0 'Obj'
+|   `-CXXRecord 0x794d164b18 'Obj'
+|-TemplateArgument type 'P'
+| `-RecordType 0x794d164900 'P'
+|   `-CXXRecord 0x794d164870 'P'
+|-TemplateArgument integral 'false'
+|-CXXRecordDecl 0x794d1665f0 <col:1, col:7> col:7 implicit class CCallback
+|-AccessSpecDecl 0x794d166680 <line:53:2, col:8> col:2 public
+|-TypedefDecl 0x794d1668b0 <line:54:3, col:32> col:21 referenced func_t 'void (Obj::*)(P *) __attribute__((thiscall))'
+| `-MemberPointerType 0x794d166840 'void (Obj::*)(P *) __attribute__((thiscall))'
+|   |-SubstTemplateTypeParmType 0x794d1667d0 'Obj' sugar class depth 0 index 0 T
+|   | |-ClassTemplateSpecialization 0x794d165258 'CCallback'
+|   | `-RecordType 0x794d164bb0 'Obj'
+|   |   `-CXXRecord 0x794d164b18 'Obj'
+|   `-ParenType 0x794d1667a0 'void (P *) __attribute__((thiscall))' sugar
+|     `-FunctionProtoType 0x794d166760 'void (P *) __attribute__((thiscall))' thiscall
+|       |-BuiltinType 0x794d0fc070 'void'
+|       `-PointerType 0x794d1666b0 'P *'
+|         `-SubstTemplateTypeParmType 0x794d1656d0 'P' sugar class depth 0 index 1 P
+|           |-ClassTemplateSpecialization 0x794d165258 'CCallback'
+|           `-RecordType 0x794d164900 'P'
+|             `-CXXRecord 0x794d164870 'P'
+|-CXXConstructorDecl 0x794d166bb8 <line:55:3, col:65> col:3 used CCallback 'void (Obj *, func_t) __attribute__((thiscall))' implicit_instantiation implicit-inline instantiated_from 0x794d1642c0
+| |-ParmVarDecl 0x794d166980 <col:13, col:16> col:16 pObj 'Obj *'
+| `-ParmVarDecl 0x794d166a60 <col:22, col:29> col:29 func 'func_t':'void (Obj::*)(P *) __attribute__((thiscall))'
+|-AccessSpecDecl 0x794d166c88 <line:57:2, col:11> col:2 protected
+|-CXXMethodDecl 0x794d166d40 <line:58:3, col:70> col:16 Run 'void (void *) __attribute__((thiscall))' implicit_instantiation virtual implicit-inline instantiated_from 0x794d164450
+| |-Overrides: [ 0x794d165d00 CCallbackImpl::Run 'void (void *) __attribute__((thiscall))' ]
+| `-ParmVarDecl 0x794d166cb0 <col:20, col:26> col:26 pvParam 'void *'
+|-FieldDecl 0x794d166e40 <line:59:3, col:6> col:6 m_pObj 'Obj *'
+|-FieldDecl 0x794d166ea0 <line:60:3, col:10> col:10 m_Func 'func_t':'void (Obj::*)(P *) __attribute__((thiscall))'
+|-CXXConstructorDecl 0x794d167000 <line:52:7> col:7 implicit CCallback 'void (const CCallback<Obj, P> &) __attribute__((thiscall))' inline default_delete noexcept-unevaluated 0x794d167000
+| `-ParmVarDecl 0x794d167130 <col:7> col:7 'const CCallback<Obj, P> &'
+|-CXXConstructorDecl 0x794d167210 <col:7> col:7 implicit CCallback 'void (CCallback<Obj, P> &&) __attribute__((thiscall))' inline default_delete noexcept-unevaluated 0x794d167210
+| `-ParmVarDecl 0x794d167340 <col:7> col:7 'CCallback<Obj, P> &&'
+|-CXXMethodDecl 0x794d1673f0 <col:7> col:7 implicit operator= 'CCallback<Obj, P> &(const CCallback<Obj, P> &) __attribute__((thiscall))' inline default_delete noexcept-unevaluated 0x794d1673f0
+| `-ParmVarDecl 0x794d167520 <col:7> col:7 'const CCallback<Obj, P> &'
+|-CXXMethodDecl 0x794d167590 <col:7> col:7 implicit operator= 'CCallback<Obj, P> &(CCallback<Obj, P> &&) __attribute__((thiscall))' inline default_delete noexcept-unevaluated 0x794d167590
+| `-ParmVarDecl 0x794d1676c0 <col:7> col:7 'CCallback<Obj, P> &&'
+`-CXXDestructorDecl 0x794d167758 <col:7> col:7 implicit used ~CCallback 'void () __attribute__((thiscall)) noexcept' inline default
+  |-Overrides: [ 0x794d165b48 CCallbackImpl::~CCallbackImpl 'void () __attribute__((thiscall)) noexcept' ]
+  `-CompoundStmt 0x794d168870 <col:7>
+
+Layout: <CGRecordLayout
+  LLVMType:%class.CCallback = type { %class.CCallbackImpl, ptr, ptr }
+  NonVirtualBaseLLVMType:%class.CCallback = type { %class.CCallbackImpl, ptr, ptr }
+  IsZeroInitializable:1
+  BitFields:[
+]>
+VFTable for 'CCallbackBase' (4 entries).
+   0 | CCallbackBase RTTI
+   1 | void CCallbackBase::Run(void *, bool, SteamAPICall_t) [pure]
+   2 | void CCallbackBase::Run(void *) [pure]
+   3 | int CCallbackBase::GetCallbackSizeBytes() [pure]
+
+VFTable indices for 'CCallbackBase' (3 entries).
+   0 | void CCallbackBase::Run(void *, bool, SteamAPICall_t)
+   1 | void CCallbackBase::Run(void *)
+   2 | int CCallbackBase::GetCallbackSizeBytes()
+
+VFTable for 'CCallbackBase' in 'CCallbackImpl' (5 entries).
+   0 | CCallbackImpl RTTI
+   1 | void CCallbackImpl<2572>::Run(void *, bool, SteamAPICall_t) [sizeof_P = 2572]
+   2 | void CCallbackImpl<2572>::Run(void *) [sizeof_P = 2572] [pure]
+   3 | int CCallbackImpl<2572>::GetCallbackSizeBytes() [sizeof_P = 2572]
+   4 | CCallbackImpl<2572>::~CCallbackImpl() [scalar deleting]
+
+VFTable indices for 'CCallbackImpl' (4 entries).
+   0 | void CCallbackImpl<2572>::Run(void *, bool, SteamAPICall_t) [sizeof_P = 2572]
+   1 | void CCallbackImpl<2572>::Run(void *) [sizeof_P = 2572]
+   2 | int CCallbackImpl<2572>::GetCallbackSizeBytes() [sizeof_P = 2572]
+   3 | CCallbackImpl<2572>::~CCallbackImpl() [sizeof_P = 2572] [scalar deleting]
+
+VFTable for 'CCallbackBase' in 'CCallbackImpl' in 'CCallback' (5 entries).
+   0 | CCallback RTTI
+   1 | void CCallbackImpl<2572>::Run(void *, bool, SteamAPICall_t) [sizeof_P = 2572]
+   2 | void CCallback<Obj, P>::Run(void *) [T = Obj, P = P, bGameserver = false]
+   3 | int CCallbackImpl<2572>::GetCallbackSizeBytes() [sizeof_P = 2572]
+   4 | CCallback<Obj, P>::~CCallback() [scalar deleting]
+
+VFTable indices for 'CCallback' (2 entries).
+   1 | void CCallback<Obj, P>::Run(void *) [T = Obj, P = P, bGameserver = false]
+   3 | CCallback<Obj, P>::~CCallback() [T = Obj, P = P, bGameserver = false] [scalar deleting]
+
+
+*** Dumping IRgen Record Layout
+Record: CXXRecordDecl 0x794d164b18 <meta/__tests__/fixtures/msvc_ccallbackbase.cpp:67:1, line:69:1> line:67:8 referenced struct Obj definition
+|-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
+| |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
+| |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
+| |-MoveConstructor exists simple trivial needs_implicit
+| |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
+| |-MoveAssignment exists simple trivial needs_implicit
+| `-Destructor simple irrelevant trivial needs_implicit
+|-MSInheritanceAttr 0x794d1655d0 <col:1, line:69:1> Implicit __single_inheritance BestCase
+|-CXXRecordDecl 0x794d164c38 <line:67:1, col:8> col:8 implicit struct Obj
+`-CXXMethodDecl 0x794d164eb0 <line:68:3, col:25> col:8 used OnCallback 'void (P *) __attribute__((thiscall))' implicit-inline
+  |-ParmVarDecl 0x794d164d78 <col:19, col:21> col:22 'P *'
+  `-CompoundStmt 0x794d164f78 <col:24, col:25> FPEvalMethod=2
+
+Layout: <CGRecordLayout
+  LLVMType:%struct.Obj = type { i8 }
+  NonVirtualBaseLLVMType:%struct.Obj.base = type {}
+  IsZeroInitializable:1
+  BitFields:[
+]>
