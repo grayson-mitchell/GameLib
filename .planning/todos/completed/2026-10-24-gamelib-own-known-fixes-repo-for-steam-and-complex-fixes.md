@@ -54,5 +54,7 @@ Done-when:
   `removeFixFile` is exported and covers Steam (and skips runners with no store dir, e.g.
   sideload); `fixes/local/`, bundled and `.profile.json` files are never touched.
 - README source of record: `.planning/quick/261026-avw-gamelib-known-fixes-repo-fetcher-downloa/known-fixes-README.md`.
-  Pushing it to `grayson-mitchell/known-fixes` is **pending - handled by the orchestrator with
-  user confirmation** (the orchestrator will amend this line once pushed).
+  Pushed to `grayson-mitchell/known-fixes` on 2026-10-26 as its first commit (`609dd3a` on
+  `main`, user-confirmed). GitHub's canonical name is `Known-Fixes`. raw.githubusercontent.com
+  resolves either case: an existing file returns 200 and a missing one 404, checked both ways. So
+  the lowercase base URL in `knownFixesFetcher.ts` is left as is.
