@@ -167,19 +167,19 @@ Session dir: `/tmp/gamelib-gate-20261025T231058Z` (UTC; 2026-10-26 12:10 local).
 
 ## Pinned literals (run 1)
 
-No line in the run 1 game log both names Connect and states a login success, so the contract's literal is NOT pinned as a pass. Candidate (Connect-named, absent from both verbose baselines, timestamp stripped):
+Item 4 literal, pinned by operator decision 2026-10-26 (rationale: a ProductUserId is only issued after a successful EOS Connect login; AccountType 1 = Steam). Timestamp stripped, identifiers redacted:
 
 `LogEOSSDK: Verbose: LogEOSConnect: FConnectClient::CacheExternalAccountInfo - ProductUserId: <id>, AccountType: 1, AccountId: <SteamID64>, DisplayName: <Redacted>`
 
-Corroborating non-Connect lines of the same login: `LogEOSSDK: LogEOSMessaging: Successfully connected to Stomp. LocalUserId=[000...121]` after a second `TokenGrant` success (EOSAuth) at 23.50.41. Pending an orchestrator decision.
+Absent from both verbose baselines. Corroborating: `LogEOSMessaging: Successfully connected to Stomp. LocalUserId=[000...121]` after a second `TokenGrant` success.
 
 ## Run 1 verdict
 
 Launch 1, delimiter `=== GATE LAUNCH 1 — 2026-10-25T23:49:50Z ===` (terminal.log line 58); single PID 58130; sidecar.js mtime 1792972074 > 55-03 feat commit 1792968813 (PC7 holds from evidence). Game had exited before copies were taken.
 
-Items: 1 pass, 2 pass, 3 pass, 4 issue (literal), 5 pass, 6 pass (operator-reported: menu reached, "pretty instant", crossplay opt-in prompt shown, no account-link prompt).
+Items: 1 pass, 2 pass, 3 pass, 4 pass (literal pinned by operator decision), 5 pass, 6 pass (operator-reported: menu reached, "pretty instant", crossplay opt-in prompt shown, no account-link prompt).
 
-Verdict: NOT PASS under the strict contract, because item 4 has no qualifying literal. Mechanism is proven: forward, CBQ 168, game receives the web-API ticket response, retry loop gone, EOS user connected to Stomp. Nearest branch is F3 (CBQ present, item 4 not scorable) but with no hang. No fallback built. Todo `2026-10-26-gate-item-4-eos-connect-login-literal-decision.md` filed; source todo left pending with a dated evidence section.
+Verdict: PASS. Item 4 initially had no qualifying literal; the operator decided on 2026-10-26 that the CacheExternalAccountInfo line is the EOS Connect login literal. Mechanism: forward, CBQ 168, ticket response received, retry loop gone, EOS user connected. No fallback built. Source todo and decision todo closed.
 
 ## Run 1 closing inventory
 

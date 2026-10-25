@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 55-steam-bridge-callback-delivery-for-the-web-api-auth-ticket
 source:
   - 55-LIVE-GATE.md
@@ -25,7 +25,7 @@ result: pass — launch 1: `grep -E 'CBQ|manual dispatch'` matched `INIT   manua
 
 ### 4. EOS Connect user login
 expected: AbioticFactor-launch-1.log contains a LogEOS line naming Connect and a login success that appears in neither VERBOSE baseline (literal pinned by 55-07 after the first run); ConnectClientAuthTask Success does not count
-result: issue — launch 1: no line names Connect AND states a login success. Connect-naming lines in the launch log: `LogEOSConnect: ConnectClientAuthTask Success` (excluded, in baseline), two `GetProductUserExternalAccountIdPrivate - TargetUserId not found in ExternalAccountInfoCache` lines (not a success), and one `FConnectClient::CacheExternalAccountInfo - ProductUserId: ..., AccountType: 1, AccountId: <SteamID64>` (23.52.02), which is absent from both verbose baselines (count 0 in each). Adjacent non-Connect evidence of a logged-in EOS user: a second `TokenGrant` HTTP success at 23.50.41:608, then `LogEOSMessaging: Successfully connected to Stomp. LocalUserId=[000...121]`. Whether CacheExternalAccountInfo (or the Stomp line) counts as the contract's login-success literal is a judgement the contract did not anticipate; recorded for the orchestrator, not waived. Candidate pinned in 55-LIVE-GATE.md.
+result: pass — launch 1: operator decision 2026-10-26 pins the literal `LogEOSSDK: Verbose: LogEOSConnect: FConnectClient::CacheExternalAccountInfo - ProductUserId: <id>, AccountType: 1, AccountId: <redacted>` (23.52.02; absent from both verbose baselines, count 0 each; a ProductUserId is only issued after a successful EOS Connect login, AccountType 1 = Steam). Corroborated by a second TokenGrant success and `Successfully connected to Stomp`.
 
 ### 5. Retry loop gone
 expected: AbioticFactor-launch-1.log has no three consecutive `LogOnlineIdentity: STEAM: Obtained steam authticket` lines with 8 to 12 s gaps
@@ -37,4 +37,4 @@ result: pass — operator-reported (not log-derived): reached the main menu; tim
 
 ## Gaps
 
-- Item 4 (issue): the contract expected a Connect-named login-success line; the game log has none. Closest Connect-named line absent from both verbose baselines is `CacheExternalAccountInfo` (see item 4). Needs an orchestrator decision on whether it, or the Stomp connected line, is the pinned literal.
+- Item 4: resolved 2026-10-26 by operator decision (see item 4).
