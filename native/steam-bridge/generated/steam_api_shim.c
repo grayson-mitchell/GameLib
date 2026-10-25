@@ -23524,7 +23524,7 @@ int32_t SteamAPI_ISteamGameServer_GetNextOutgoingPacket(void *self, void * a1, i
   return 0;
 }
 
-/* not dispatched: SteamGameServer.GetPublicIP.SteamGameServer012 (unrepresentable register class) */
+/* dispatched via ret-is-instance fallback: SteamGameServer.GetPublicIP.SteamGameServer012 (RAX form) */
 void * SteamAPI_ISteamGameServer_GetPublicIP(void *ret, void *self) {
   if (self == (void *)&g_steamgameserver014_instance) {
     vfn *vt = *(vfn **)self;

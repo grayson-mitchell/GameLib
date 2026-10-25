@@ -2013,11 +2013,26 @@ function isFlatClientLookup(cases: readonly FlatCase[]): boolean {
   )
 }
 
+/** True when emitHiddenFallback dispatches this dropped version (IN-01). */
+function isHiddenFallbackDispatched(
+  method: InterfaceManifest['methods'][number]
+): boolean {
+  return (
+    !isHiddenPointerFlatReturn(method) &&
+    method.params.length === 0 &&
+    (method.returnKind === 'int32' ||
+      method.returnKind === 'int64' ||
+      method.returnKind === 'pointer' ||
+      method.returnKind === 'string')
+  )
+}
+
 /**
  * 53-17 CR-01: fallback of a hidden-pointer flat export. The game may pass a
  * shim instance (self in RCX, read here as `ret`) for a version whose return
  * is a plain RAX scalar, so `ret` is never trusted as a caller buffer:
- * (a) NULL guard, (b) dispatch each dropped RAX-form version, (c) refuse any
+ * (a) NULL guard, (b) dispatch each dropped RAX-form version (only integer/pointer scalars;
+ * a class, float, double or void return throws at generation), (c) refuse any
  * other served instance, (d) only then zero the caller buffer.
  */
 function emitHiddenFallback(
@@ -2032,6 +2047,17 @@ function emitHiddenFallback(
     if (d.method.params.length > 0) {
       throw new Error(
         `flat export ${d.triple}: the dropped RAX-form version takes parameters and is not representable; model it or remove it from FLAT_UNREPRESENTABLE_CASES (fail closed, 53-17)`
+      )
+    }
+    const kind = d.method.returnKind
+    if (
+      kind !== 'int32' &&
+      kind !== 'int64' &&
+      kind !== 'pointer' &&
+      kind !== 'string'
+    ) {
+      throw new Error(
+        `flat export ${d.triple}: dropped RAX-form version ${d.manifest.interface}.${d.method.name} returns ${kind}; only integer/pointer scalars are dispatched from the hidden-pointer fallback (fail closed, 53-17 WR-01)`
       )
     }
     const instance = `g_${d.manifest.interface.toLowerCase()}_instance`
@@ -2132,9 +2158,10 @@ export function emitFlatExports(
           proto = again
           droppedCases = dropped
           excludedNote = dropped
-            .map(
-              (c) =>
-                `/* not dispatched: ${c.triple} (unrepresentable register class) */\n`
+            .map((c) =>
+              proto.hiddenSize !== null && isHiddenFallbackDispatched(c.method)
+                ? `/* dispatched via ret-is-instance fallback: ${c.triple} (RAX form) */\n`
+                : `/* not dispatched: ${c.triple} (unrepresentable register class) */\n`
             )
             .join('')
         }
@@ -2143,7 +2170,7 @@ export function emitFlatExports(
         throw new Error(
           `flat export ${exportName} cannot be represented in C: ${proto.problems.join('; ')}. ` +
             `Versions: ${cases.map((c) => c.triple).join(', ')}. ` +
-            `List the version(s) to leave undispatched in FLAT_UNREPRESENTABLE_CASES.`
+            `List the version(s) that need a separate calling convention in FLAT_UNREPRESENTABLE_CASES.`
         )
       }
     }

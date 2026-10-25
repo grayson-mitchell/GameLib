@@ -2731,6 +2731,56 @@ describe('53-17 CR-01: hidden-pointer flat fallback never writes through a shim 
     )
   })
 
+  describe('53-17 WR-01: zero-param dropped RAX-form version return kind', () => {
+    const hidden = (): ReturnType<typeof flatMethod> =>
+      flatMethod(0, 'Get', 'Big_t', 'class', [], { structSize: 16 })
+    const withDropped = (
+      method: ReturnType<typeof flatMethod>
+    ): ReturnType<typeof emitFlatExports> =>
+      emitFlatExports(
+        [
+          flatFixture('Fx001', 901, [hidden()]),
+          flatFixture('Fx002', 902, [method])
+        ],
+        ['Fx.Get.Fx002']
+      )
+
+    it.each([
+      ['class', flatMethod(0, 'Get', 'Big_t', 'class', [], { structSize: 8 })],
+      ['float', flatMethod(0, 'Get', 'float', 'float')],
+      ['double', flatMethod(0, 'Get', 'double', 'double')],
+      ['void', flatMethod(0, 'Get', 'void', 'void')]
+    ])('throws for a dropped %s return', (kind, method) => {
+      let message = ''
+      try {
+        withDropped(method)
+      } catch (e) {
+        message = String(e)
+      }
+      expect(message).toMatch(/Fx002/)
+      expect(message).toMatch(/Get/)
+      expect(message).toContain(kind)
+      expect(message).toContain('only integer/pointer scalars')
+    })
+
+    it('still dispatches a dropped int32 return before the memset', () => {
+      const { c } = withDropped(flatMethod(0, 'Get', 'uint32', 'int32'))
+      expect(c).toContain('if (ret == (void *)&g_fx002_instance)')
+      expect(c).toContain(
+        '(void *)(uintptr_t)((uint32_t (*)(void *))vt[0])(ret)'
+      )
+      expect(c.indexOf('g_fx002_instance')).toBeLessThan(
+        c.indexOf('memset(ret, 0, 16)')
+      )
+    })
+
+    it('still dispatches a dropped pointer return', () => {
+      const { c } = withDropped(flatMethod(0, 'Get', 'void *', 'pointer'))
+      expect(c).toContain('if (ret == (void *)&g_fx002_instance)')
+      expect(c).toMatch(/\(void \*\s*\(\*\)\(void \*\)\)vt\[0\]/)
+    })
+  })
+
   it('53-17 CR-01: a hidden-pointer export with no dropped versions still guards NULL and served instances', () => {
     const hidden = flatMethod(0, 'Get', 'Big_t', 'class', [['int32', 'n']], {
       structSize: 16
