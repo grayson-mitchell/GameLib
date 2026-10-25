@@ -79,3 +79,27 @@ Manor Lords (1363080) and Abiotic Factor (427410) now verify live (53-UAT.md ite
 ## 53-20 evidence (2026-10-25)
 
 Not closed. 1363080 and 427410 scored pass (UE init marker, identity CALLs), but 1119730 Ranch Simulator had no HELLO (process gone after 3s, SteamStub class), so the all-three condition is not met (53-UAT items 42-44). No NOVER or flat-lookup line appeared in the session.
+
+## Resolution (2026-10-26, quick 261026-dv2)
+
+Closed. The interface-version scope is done:
+
+- **Fix 1.** The x64 served set (`SHIM64_SERVED_INTERFACE_VERSIONS` in `shimCoverage.ts`) now
+  covers every row in the table above. 52-13 added SteamUser023, SteamNetworking006 and
+  RemoteStorage016. 53-01 added Friends017, Utils010, UserStats012, Input006, GameServer015 and
+  GameServerStats001. Each was taken from its own VTABLE block, never aliased from a neighbour.
+- **Fix 2.** `steam_api64.def` exports `SteamInternal_GameServer_Init`.
+- **Fix 3.** No per-appid guard is left for these three titles. Coverage gating decides placement.
+- **Fix 4.** Manor Lords 1363080 and Abiotic Factor 427410 pass live under the strict criterion
+  (53-UAT items 25/26 and 43/44: HELLO, game-originated CALLs, no NOVER, census `verified`).
+  Abiotic's load-screen hang comes after a clean bridge run. It is tracked in
+  `2026-10-25-abiotic-factor-loading-hang-after-auth-ticket.md`.
+
+The "closes only when all three pass" condition is superseded for Ranch Simulator 1119730, at the
+operator's call. The title fails before `steam_api64.dll` loads (exit 0x35, no HELLO), so the
+shim's interface versions never come into play. Its cause is SteamStub. Spike 040 decoded the
+title's `.bind` header (flags `0x06`: ownership and debugger checks on, module verification
+off). Spikes 040 and 041 found the launch check cannot be satisfied inside the bridge boundary.
+Ranch Simulator now sits under that won't-do
+(`completed/2026-10-24-steamstub-launch-check-static-re-decision.md`). The revisit trigger
+recorded there also covers it.
