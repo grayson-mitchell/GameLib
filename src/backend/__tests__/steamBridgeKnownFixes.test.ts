@@ -20,6 +20,22 @@ jest.mock('os', () => {
   }
 })
 
+// Under jest app.getAppPath() resolves to the repo root, so the real
+// bundledFixesPath is the repo's own public/fixes. Point it at a tmp dir so the
+// tests can never write to or delete the shipped profiles.
+jest.mock('../constants/paths', () => {
+  const actual = jest.requireActual('../constants/paths')
+  const path = jest.requireActual('path')
+  const os = jest.requireActual('os')
+  return {
+    ...actual,
+    bundledFixesPath: path.join(
+      os.tmpdir(),
+      `gamelib-bundled-fixes-test-${process.pid}-bridge`
+    )
+  }
+})
+
 const mockWinetricksInstall = jest.fn()
 const mockRunWineCommand = jest.fn()
 const mockSendGameStatusUpdate = jest.fn()
@@ -46,8 +62,12 @@ jest.mock('../storeManagers/steam/bottle', () => ({
 }))
 
 import type { GameSettings } from 'common/types'
-import { fixesPath } from '../constants/paths'
-import { applySteamBridgeKnownFixes } from '../storeManagers/steam/bridgeKnownFixes'
+import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
+import {
+  applySteamBridgeKnownFixes,
+  buildRegistryFixCommandParts,
+  validateRegistryFixes
+} from '../storeManagers/steam/bridgeKnownFixes'
 
 const APP_ID = '480'
 const ROOT =
@@ -67,15 +87,26 @@ function writeFixes(content: object) {
   )
 }
 
+function writeIn(dir: string, content: object) {
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, `${APP_ID}-steam.json`), JSON.stringify(content))
+}
+const writeLocal = (c: object) => writeIn(localFixesPath, c)
+const writeBundled = (c: object) => writeIn(bundledFixesPath, c)
+
 beforeEach(() => {
+  jest.clearAllMocks()
   mkdirSync(fixesPath, { recursive: true })
   rmSync(join(fixesPath, `${APP_ID}-steam.json`), { force: true })
+  rmSync(localFixesPath, { recursive: true, force: true })
+  rmSync(bundledFixesPath, { recursive: true, force: true })
   mockWinetricksInstall.mockResolvedValue('installed')
   mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '', code: 0 })
 })
 
 afterAll(() => {
   rmSync(fixesPath, { recursive: true, force: true })
+  rmSync(bundledFixesPath, { recursive: true, force: true })
   void tmpdir
 })
 
@@ -224,5 +255,238 @@ describe('applySteamBridgeKnownFixes', () => {
       )
       expect(result.enviromentOptions).toHaveLength(2)
     })
+  })
+})
+
+const WMP_KEY =
+  'HKLM\\Software\\Microsoft\\Active Setup\\Installed Components\\{22d6f312-b0f6-11d0-94ab-0080c74c7e95}'
+const WMP = {
+  key: WMP_KEY,
+  name: 'IsInstalled',
+  type: 'REG_DWORD',
+  value: 1
+}
+
+describe('buildRegistryFixCommandParts', () => {
+  const fix = {
+    key: WMP_KEY,
+    name: 'IsInstalled',
+    type: 'REG_DWORD' as const,
+    data: '1',
+    views: [32 as const, 64 as const]
+  }
+  it('builds the exact argv for view 32', () => {
+    expect(buildRegistryFixCommandParts(fix, 32)).toEqual([
+      'reg',
+      'add',
+      WMP_KEY,
+      '/v',
+      'IsInstalled',
+      '/t',
+      'REG_DWORD',
+      '/d',
+      '1',
+      '/reg:32',
+      '/f'
+    ])
+  })
+  it('ends /reg:64 /f for view 64', () => {
+    expect(buildRegistryFixCommandParts(fix, 64).slice(-2)).toEqual([
+      '/reg:64',
+      '/f'
+    ])
+  })
+})
+
+describe('registry fixes application', () => {
+  it('bundled profile without views applies 32 then 64', async () => {
+    writeBundled({ title: 't', registry: [WMP] })
+    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
+    for (const [i, view] of ['/reg:32', '/reg:64'].entries()) {
+      const arg = mockRunWineCommand.mock.calls[i][0]
+      expect(arg.commandParts).toContain(view)
+      expect(arg.gameSettings).toBe(BRIDGE)
+      expect(arg.wait).toBe(false)
+      expect(arg.protonVerb).toBe('run')
+      expect(arg.skipPrefixCheckIKnowWhatImDoing).toBe(true)
+    }
+  })
+
+  it('views [64] applies once', async () => {
+    writeBundled({ title: 't', registry: [{ ...WMP, views: [64] }] })
+    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    expect(mockRunWineCommand).toHaveBeenCalledTimes(1)
+    expect(mockRunWineCommand.mock.calls[0][0].commandParts).toContain(
+      '/reg:64'
+    )
+  })
+
+  it('ignores registry from the remote layer', async () => {
+    writeFixes({ title: 't', registry: [WMP] })
+    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    expect(mockRunWineCommand).not.toHaveBeenCalled()
+    expect(mockLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('registry')
+    )
+  })
+
+  it('local overrides bundled', async () => {
+    writeBundled({ title: 't', registry: [WMP] })
+    writeLocal({ title: 't', registry: [{ ...WMP, value: 0 }] })
+    await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    const parts = mockRunWineCommand.mock.calls[0][0].commandParts
+    expect(parts[parts.indexOf('/d') + 1]).toBe('0')
+  })
+
+  describe('failures never reject and env still applies', () => {
+    const arms: [string, () => void][] = [
+      [
+        'non-zero code',
+        () =>
+          mockRunWineCommand.mockResolvedValue({
+            stdout: '',
+            stderr: '',
+            code: 2
+          })
+      ],
+      [
+        'undefined code',
+        () => mockRunWineCommand.mockResolvedValue({ stdout: '', stderr: '' })
+      ],
+      ['rejection', () => mockRunWineCommand.mockRejectedValue(new Error('x'))]
+    ]
+    it.each(arms)('%s', async (_n, arm) => {
+      writeBundled({
+        title: 't',
+        registry: [WMP],
+        envVariables: { A: 'b' }
+      })
+      arm()
+      const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      expect(mockLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('IsInstalled'),
+        'Steam'
+      )
+      expect(result.enviromentOptions).toHaveLength(2)
+    })
+  })
+
+  it('times out a never-settling call after 15s and warns', async () => {
+    jest.useFakeTimers()
+    try {
+      writeBundled({ title: 't', registry: [{ ...WMP, views: [32] }] })
+      mockRunWineCommand.mockReturnValue(new Promise(() => undefined))
+      const p = applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      await jest.advanceTimersByTimeAsync(15_000)
+      await p
+      expect(mockLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('timed out'),
+        'Steam'
+      )
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+})
+
+describe('validateRegistryFixes', () => {
+  const ok = {
+    key: 'HKLM\\Software\\Ok',
+    name: 'V',
+    type: 'REG_SZ',
+    value: 'v'
+  }
+  const bad: [string, unknown][] = [
+    ['root HKCR', { ...ok, key: 'HKCR\\x' }],
+    ['root HKU', { ...ok, key: 'HKU\\x' }],
+    ['no root', { ...ok, key: 'Software\\x' }],
+    ['empty path after root', { ...ok, key: 'HKLM\\' }],
+    ['empty segment', { ...ok, key: 'HKLM\\A\\\\B' }],
+    ['trailing backslash', { ...ok, key: 'HKLM\\A\\' }],
+    ['quote in key', { ...ok, key: 'HKLM\\A"B' }],
+    ['CR in key', { ...ok, key: 'HKLM\\A\rB' }],
+    ['LF in name', { ...ok, name: 'a\nb' }],
+    ['NUL in name', { ...ok, name: 'a\0b' }],
+    ['quote in value', { ...ok, value: 'a"b' }],
+    ['NUL in value', { ...ok, value: 'a\0b' }],
+    ['empty name', { ...ok, name: '' }],
+    ['slash name', { ...ok, name: '/v' }],
+    ['REG_BINARY', { ...ok, type: 'REG_BINARY' }],
+    ['dword float', { key: ok.key, name: 'V', type: 'REG_DWORD', value: 1.5 }],
+    [
+      'dword negative',
+      { key: ok.key, name: 'V', type: 'REG_DWORD', value: -1 }
+    ],
+    [
+      'dword too big',
+      { key: ok.key, name: 'V', type: 'REG_DWORD', value: 0x100000000 }
+    ],
+    ['dword string', { key: ok.key, name: 'V', type: 'REG_DWORD', value: '1' }],
+    ['sz number', { ...ok, value: 1 }],
+    ['views empty', { ...ok, views: [] }],
+    ['views 16', { ...ok, views: [16] }],
+    ['views not array', { ...ok, views: 32 }],
+    ['not an object', 'str']
+  ]
+  it.each(bad)(
+    'skips %s with a warning and keeps the valid sibling',
+    (_n, entry) => {
+      const out = validateRegistryFixes(APP_ID, [entry, ok])
+      expect(out).toHaveLength(1)
+      expect(out[0].key).toBe(ok.key)
+      expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('warns on a non-array registry', () => {
+    expect(validateRegistryFixes(APP_ID, { a: 1 })).toEqual([])
+    expect(mockLogWarning).toHaveBeenCalled()
+  })
+
+  it('dedupes and orders views', () => {
+    const out = validateRegistryFixes(APP_ID, [{ ...ok, views: [64, 32, 64] }])
+    expect(out[0].views).toEqual([32, 64])
+  })
+
+  it('stringifies REG_DWORD data and defaults to both views', () => {
+    const out = validateRegistryFixes(APP_ID, [WMP])
+    expect(out).toEqual([
+      {
+        key: WMP_KEY,
+        name: 'IsInstalled',
+        type: 'REG_DWORD',
+        data: '1',
+        views: [32, 64]
+      }
+    ])
+  })
+})
+
+describe('bundled 284100 profile', () => {
+  it('validates to one entry with both views and cites the todo', () => {
+    const path = jest.requireActual('path')
+    const fs = jest.requireActual('fs')
+    const parsed = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          'public',
+          'fixes',
+          '284100-steam.json'
+        ),
+        'utf8'
+      )
+    )
+    const out = validateRegistryFixes('284100', parsed.registry)
+    expect(out).toHaveLength(1)
+    expect(out[0].views).toEqual([32, 64])
+    expect(out[0].key).toContain('22d6f312-b0f6-11d0-94ab-0080c74c7e95')
+    expect(parsed.evidence).toContain(
+      '2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need'
+    )
   })
 })

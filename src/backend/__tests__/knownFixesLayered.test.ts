@@ -21,6 +21,22 @@ jest.mock('os', () => {
   }
 })
 
+// Under jest app.getAppPath() resolves to the repo root, so the real
+// bundledFixesPath is the repo's own public/fixes. Point it at a tmp dir so the
+// tests can never write to or delete the shipped profiles.
+jest.mock('../constants/paths', () => {
+  const actual = jest.requireActual('../constants/paths')
+  const path = jest.requireActual('path')
+  const os = jest.requireActual('os')
+  return {
+    ...actual,
+    bundledFixesPath: path.join(
+      os.tmpdir(),
+      `gamelib-bundled-fixes-test-${process.pid}-layered`
+    )
+  }
+})
+
 jest.mock('../logger', () => ({
   logWarning: jest.fn()
 }))
