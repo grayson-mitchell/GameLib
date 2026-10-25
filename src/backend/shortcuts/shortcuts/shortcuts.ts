@@ -25,7 +25,9 @@ import { writeWindowsShortcut } from './windowsShortcut'
 /**
  * Adds a desktop shortcut to $HOME/Desktop and to /usr/share/applications
  * so that the game can be opened from the start menu and the desktop folder.
- * Both can be disabled with addDesktopShortcuts and addStartMenuShortcuts
+ * Both can be disabled with addDesktopShortcuts and addStartMenuShortcuts.
+ * On macOS the shortcut is a .app in ~/Applications (start menu / menu add) and, only when
+ * addDesktopShortcuts is on, a second .app on ~/Desktop.
  * Rejects if any requested shortcut could not be written (after trying all of them).
  * @async
  * @public
@@ -132,8 +134,15 @@ ${icon ? `Icon=${icon}\n` : ''}Categories=Game;
       break
     }
     case 'darwin': {
+      // Unlike linux/win32, darwin menu add never touches ~/Desktop unless the user opted in
+      // (addDesktopShortcuts), so a Mac Desktop stays clean by default.
       if (addStartMenuShortcuts || fromMenu) {
-        await generateMacOsApp(gameInfo)
+        await recordWrite(menuFile, () => generateMacOsApp(gameInfo, menuFile))
+      }
+      if (addDesktopShortcuts) {
+        await recordWrite(desktopFile, () =>
+          generateMacOsApp(gameInfo, desktopFile)
+        )
       }
       break
     }
@@ -181,7 +190,23 @@ async function removeShortcuts(game: Game) {
     }
   }
 
-  if (desktopFile && !isMac) {
+  if (isMac) {
+    // A macOS shortcut is a .app directory; the Desktop copy exists only if the user opted in.
+    for (const [file, message] of [
+      [desktopFile, 'Desktop shortcut removed'],
+      [menuFile, 'Applications shortcut removed']
+    ] as const) {
+      if (!file) continue
+      await removeFile(
+        file,
+        () => rm(file, { recursive: true, force: true }),
+        message
+      )
+    }
+    return
+  }
+
+  if (desktopFile) {
     await removeFile(
       desktopFile,
       () => unlink(desktopFile),
@@ -190,14 +215,6 @@ async function removeShortcuts(game: Game) {
   }
 
   if (menuFile) {
-    if (isMac) {
-      await removeFile(
-        menuFile,
-        () => rm(menuFile, { recursive: true, force: true }),
-        'Applications shortcut removed'
-      )
-      return
-    }
     await removeFile(
       menuFile,
       () => unlink(menuFile),
@@ -227,20 +244,21 @@ function shortcutFiles(gameTitle: string) {
     }
     case 'darwin':
       menuFile = join(userHome, 'Applications', `${gameTitle}.app`)
-      desktopFile = menuFile
+      // Not app.getPath('desktop'): the sidecar's pathShim picks its arm from the platform
+      // captured at module load, which a test override cannot change.
+      desktopFile = join(userHome, 'Desktop', `${gameTitle}.app`)
       break
   }
 
   return [desktopFile, menuFile]
 }
 
-async function generateMacOsApp(gameInfo: GameInfo) {
+// Generated once per destination rather than copied, so each write has its own failure record.
+async function generateMacOsApp(gameInfo: GameInfo, appShortcut: string) {
   const { app_name, runner } = gameInfo
 
   logInfo('Generating macOS shortcut', LogPrefix.Backend)
 
-  // shortcutFiles => [desktop, menu] on mac, we don't add desktop shortcut
-  const appShortcut = shortcutFiles(gameInfo.title)[1]
   const macOSFolder = `${appShortcut}/Contents/MacOS`
   const resourcesFolder = `${appShortcut}/Contents/Resources`
   const plistFile = `${appShortcut}/Contents/Info.plist`

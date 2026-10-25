@@ -85,11 +85,11 @@ export function getPath(name: string): string {
       return shellExe
     }
     case 'desktop':
-      // darwin never reaches this case today — shortcutFiles()'s darwin
-      // branch (shortcuts.ts:167-170) uses `~/Applications`, not Desktop.
-      // The darwin arm below exists for correctness (Electron's real
-      // app.getPath('desktop') resolves it there too), not for a live call
-      // site. Live call sites: shortcuts.ts:156 (linux) and :161 (win32).
+      // shortcutFiles()'s darwin branch (shortcuts.ts) deliberately does NOT come through
+      // here: it uses join(userHome, 'Desktop') directly, so a test that overrides
+      // process.platform gets a deterministic path. The darwin arm below equals it and exists
+      // for correctness (Electron's real app.getPath('desktop') resolves it there too).
+      // Live call sites: shortcuts.ts shortcutFiles (linux and win32).
       // win32 and linux honour the user's real folder (OneDrive redirection,
       // `user-dirs.dirs`) via `knownFolders.ts`, falling back to ~/Desktop.
       switch (platform) {
