@@ -18,7 +18,10 @@ import type { GameSettings } from 'common/types'
 import type { ChildProcess } from 'child_process'
 import {
   installSteamBridgeSharedRedists,
+  REDIST_FAILURE_BACKOFF_AFTER,
+  REDIST_FAILURE_BACKOFF_MS,
   REDIST_PROCESS_TIMEOUT_MS,
+  REDIST_TIMEOUT_BACKOFF_AFTER,
   unrefWineChild
 } from '../sharedRedistInstall'
 import { parseInstallScript, classifySharedRedist } from '../sharedRedists'
@@ -372,6 +375,161 @@ describe('installSteamBridgeSharedRedists', () => {
     expect(installerCalls()[0][2]).toContain(
       'Microsoft .NET Framework 4.5.2.cmd'
     )
+  })
+
+  describe('bounded retry (WR-04)', () => {
+    const DX_KEY =
+      'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup'
+    const failDx = () =>
+      defaultWine((p) =>
+        p[0].endsWith('DXSETUP.exe')
+          ? { code: 1, stdout: '', stderr: '' }
+          : undefined
+      )
+    const dxInstallerCalls = () =>
+      installerCalls().filter((p) => p[0].endsWith('DXSETUP.exe'))
+
+    let now: jest.SpyInstance<number, []> | undefined
+    afterEach(() => {
+      now?.mockRestore()
+      now = undefined
+    })
+
+    it('counts consecutive failures per GID, backs off after the threshold, and retries once the window passes', async () => {
+      const t0 = Date.parse('2026-10-25T00:00:00.000Z')
+      now = jest.spyOn(Date, 'now').mockReturnValue(t0)
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      failDx()
+      for (let i = 1; i <= REDIST_FAILURE_BACKOFF_AFTER; i++) {
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        expect(ledger().failures[DX_KEY]).toMatchObject({
+          gid: 'gid-228990',
+          count: i
+        })
+      }
+      expect(dxInstallerCalls()).toHaveLength(REDIST_FAILURE_BACKOFF_AFTER)
+
+      // Backed off: no reg query, no installer, a log line, still not settled or done.
+      mockedRun.mockClear()
+      mockedWarn.mockClear()
+      now.mockReturnValue(t0 + REDIST_FAILURE_BACKOFF_MS - 1)
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(mockedRun).not.toHaveBeenCalled()
+      expect(mockedWarn).toHaveBeenCalledWith(
+        expect.stringContaining('times in a row'),
+        'Steam'
+      )
+      expect(ledger().done).toEqual({})
+      expect(ledger().settled).toBeUndefined()
+
+      // Window over: one more attempt, which succeeds and clears the markers.
+      now.mockReturnValue(t0 + REDIST_FAILURE_BACKOFF_MS + 1)
+      defaultWine()
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(dxInstallerCalls()).toHaveLength(1)
+      expect(ledger().failures).toEqual({})
+      expect(ledger().done[DX_KEY]).toBe('gid-228990')
+      expect(ledger().settled).toBeDefined()
+    })
+
+    it('backs off sooner when the last failure was a timeout (reads timedOut)', async () => {
+      const at = new Date(Date.now()).toISOString()
+      writeFileSync(
+        ledgerPath(),
+        JSON.stringify({
+          version: 1,
+          done: {},
+          timedOut: { [DX_KEY]: at },
+          failures: {
+            [DX_KEY]: {
+              gid: 'gid-228990',
+              count: REDIST_TIMEOUT_BACKOFF_AFTER,
+              at
+            }
+          }
+        })
+      )
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(dxInstallerCalls()).toHaveLength(0)
+      expect(ledger().settled).toBeUndefined()
+    })
+
+    it('does not back off below the threshold, or for a count from another GID', async () => {
+      const at = new Date(Date.now()).toISOString()
+      for (const failures of [
+        { gid: 'gid-228990', count: REDIST_FAILURE_BACKOFF_AFTER - 1, at },
+        { gid: 'gid-old', count: 99, at }
+      ]) {
+        writeFileSync(
+          ledgerPath(),
+          JSON.stringify({
+            version: 1,
+            done: {},
+            timedOut: {},
+            failures: { [DX_KEY]: failures }
+          })
+        )
+        mockedRun.mockClear()
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        expect(dxInstallerCalls()).toHaveLength(1)
+      }
+    })
+
+    it('counts a throw as a failure', async () => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      mockedRun.mockRejectedValue(new Error('wine exploded'))
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(ledger().failures[DX_KEY].count).toBe(1)
+      expect(ledger().done).toEqual({})
+    })
+
+    it('records a containment rejection per GID, runs none of its processes, and settles without marking it done', async () => {
+      const unsafe: SharedRedistDepot = {
+        depotId: '229999',
+        gid: 'gid-229999',
+        kind: 'other',
+        label: 'Evil 1.0',
+        installDirHost: ROOT,
+        entries: [
+          {
+            name: 'evil',
+            hasRunKey:
+              'HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\Evil\\1.0',
+            minimumHasRunValue: 1,
+            requirementOs: null,
+            processes: [
+              {
+                process: '%INSTALLDIR%\\_CommonRedist\\Evil\\1.0\\ok.exe'
+              },
+              {
+                process:
+                  '%INSTALLDIR%\\_CommonRedist\\Evil\\1.0\\a & evil.exe & b.cmd'
+              }
+            ]
+          }
+        ]
+      }
+      mockedDownload.mockResolvedValue(ok([unsafe]))
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(installerCalls()).toEqual([])
+      const key =
+        'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\evil\\1.0|evil'
+      expect(ledger().rejected).toEqual({ [key]: 'gid-229999' })
+      expect(ledger().done).toEqual({})
+      expect(ledger().settled).toMatchObject({ rejected: [key] })
+
+      // Same GID on a re-evaluation (opt-in changed): skipped without a warning.
+      mockedFixes.mockReturnValue({ steamSharedRedists: ['229999'] })
+      mockedWarn.mockClear()
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      expect(installerCalls()).toEqual([])
+      expect(mockedWarn).not.toHaveBeenCalledWith(
+        expect.stringContaining('unsafe'),
+        'Steam'
+      )
+    })
   })
 
   describe('sidecar exit contract (WR-01)', () => {

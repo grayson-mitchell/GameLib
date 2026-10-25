@@ -22,6 +22,16 @@
  * in the bottle until it exits on its own. After a timeout no further entry runs in that launch,
  * so at most one stray installer exists per launch.
  *
+ * Bounded retry (WR-04). A failure is never recorded as done, but it is not retried blindly
+ * either. An entry the containment rules reject is a fixed property of that manifest GID, so it
+ * goes in a per-GID `rejected` bucket that is skipped (and does not block settling) until the GID
+ * changes. A non-success exit, timeout or throw bumps a per-GID consecutive-failure count; after
+ * {@link REDIST_FAILURE_BACKOFF_AFTER} failures in a row ({@link REDIST_TIMEOUT_BACKOFF_AFTER} when
+ * the last one was a timeout, read from `timedOut`) the entry is skipped, with a log line, for
+ * {@link REDIST_FAILURE_BACKOFF_MS} after its last failure, then retried once. A skipped entry
+ * still blocks settling, so the game keeps its CM round trip per launch but no longer pays a wine
+ * spawn or a 5-minute installer timeout on every launch.
+ *
  * Never rejects: a timeout, non-success exit, offline client, CM error or any throw logs a
  * warning, marks nothing done and lets the game launch. Sidecar exit contract: every timer is
  * unref'd and cleared; every wine child is unref'd together with its stdin/stdout/stderr pipes
@@ -55,17 +65,37 @@ import {
 export const REDIST_PROCESS_TIMEOUT_MS = 300_000
 const REG_TIMEOUT_MS = 15_000
 const LEDGER_FILE = 'gamelib-shared-redists.json'
+/** Consecutive failures of one entry at one GID before it is backed off (WR-04). */
+export const REDIST_FAILURE_BACKOFF_AFTER = 3
+/** The same, when the last failure was a timeout: each one cost the launch 5 minutes. */
+export const REDIST_TIMEOUT_BACKOFF_AFTER = 2
+/** How long a backed-off entry is skipped after its last failure before one more attempt. */
+export const REDIST_FAILURE_BACKOFF_MS = 72 * 60 * 60 * 1000
+
+interface FailureRecord {
+  /** Manifest GID the failures were counted against; a new GID starts from zero. */
+  gid: string
+  count: number
+  /** ISO time of the last failure. */
+  at: string
+}
 
 interface Ledger {
   version: 1
   /** ledgerKey -> manifest GID of the depot that was run. */
   done: Record<string, string>
-  /** ledgerKey -> ISO time an installer timed out (not done). */
+  /** ledgerKey -> ISO time the entry's last failure was a timeout (not done). */
   timedOut: Record<string, string>
+  /** ledgerKey -> consecutive failures at one GID (not done). */
+  failures: Record<string, FailureRecord>
+  /** ledgerKey -> GID whose entry the containment rules rejected (not done). */
+  rejected: Record<string, string>
   settled?: {
     optIn: string[]
     depotIds: string[]
     skipped: string[]
+    /** Ledger keys policy-rejected at settle time (informational). */
+    rejected?: string[]
     at: string
   }
 }
@@ -77,7 +107,28 @@ type BoundedResult =
 const inFlight = new Map<string, Promise<void>>()
 
 function emptyLedger(): Ledger {
-  return { version: 1, done: {}, timedOut: {} }
+  return { version: 1, done: {}, timedOut: {}, failures: {}, rejected: {} }
+}
+
+function isFailureRecord(v: unknown): v is FailureRecord {
+  const f = v as Partial<FailureRecord> | null
+  return (
+    typeof f === 'object' &&
+    f !== null &&
+    typeof f.gid === 'string' &&
+    typeof f.count === 'number' &&
+    Number.isInteger(f.count) &&
+    f.count > 0 &&
+    typeof f.at === 'string'
+  )
+}
+
+/** Optional ledger buckets added after the first release: absent or malformed reads as empty. */
+function readFailures(v: unknown): Record<string, FailureRecord> {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return {}
+  const out: Record<string, FailureRecord> = {}
+  for (const [k, f] of Object.entries(v)) if (isFailureRecord(f)) out[k] = f
+  return out
 }
 
 function isStringRecord(v: unknown): v is Record<string, string> {
@@ -107,7 +158,9 @@ async function readLedger(path: string, appId: string): Promise<Ledger> {
       const ledger: Ledger = {
         version: 1,
         done: parsed.done,
-        timedOut: parsed.timedOut
+        timedOut: parsed.timedOut,
+        failures: readFailures(parsed.failures),
+        rejected: isStringRecord(parsed.rejected) ? parsed.rejected : {}
       }
       const s = parsed.settled
       if (
@@ -211,6 +264,40 @@ export function installSteamBridgeSharedRedists(
   return p
 }
 
+/**
+ * When a failing entry may next be attempted (epoch ms), or null when it may run now. Reads the
+ * `failures` count for this GID and the `timedOut` marker (WR-04).
+ */
+function backoffUntil(ledger: Ledger, key: string, gid: string): number | null {
+  const f = ledger.failures[key]
+  if (!f || f.gid !== gid) return null
+  const threshold = ledger.timedOut[key]
+    ? REDIST_TIMEOUT_BACKOFF_AFTER
+    : REDIST_FAILURE_BACKOFF_AFTER
+  if (f.count < threshold) return null
+  const until = Date.parse(f.at) + REDIST_FAILURE_BACKOFF_MS
+  return Number.isFinite(until) && Date.now() < until ? until : null
+}
+
+function recordFailure(
+  ledger: Ledger,
+  key: string,
+  gid: string,
+  timedOut: boolean
+): FailureRecord {
+  const prev = ledger.failures[key]
+  const at = new Date(Date.now()).toISOString()
+  const record = {
+    gid,
+    count: prev && prev.gid === gid ? prev.count + 1 : 1,
+    at
+  }
+  ledger.failures[key] = record
+  if (timedOut) ledger.timedOut[key] = at
+  else delete ledger.timedOut[key]
+  return record
+}
+
 async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
   const bottleDir = getBottleDir(bottleSettings.wineCrossoverBottle)
   const ledgerPath = join(bottleDir, LEDGER_FILE)
@@ -268,6 +355,22 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
       if (!entryAppliesToBottle(entry)) continue
       const key = sharedRedistLedgerKey(entry.hasRunKey, entry.name)
       if (ledger.done[key]) continue
+      if (ledger.rejected[key] === depot.gid) {
+        logInfo(
+          `Steam ${appId}: ${depot.label} (${entry.name}) was rejected by the containment rules at manifest ${depot.gid}, skipping`,
+          LogPrefix.Steam
+        )
+        continue
+      }
+      const until = backoffUntil(ledger, key, depot.gid)
+      if (until !== null) {
+        logWarning(
+          `Steam ${appId}: ${depot.label} (${entry.name}) failed ${ledger.failures[key].count} times in a row at manifest ${depot.gid}, skipping until ${new Date(until).toISOString()}`,
+          LogPrefix.Steam
+        )
+        anyFailed = true
+        continue
+      }
 
       try {
         if (entry.hasRunKey) {
@@ -300,21 +403,22 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
           context: depot.label
         })
 
-        let entryOk = true
-        for (const proc of entry.processes) {
-          const parts = buildRedistProcessCommandParts(
-            proc,
-            depot.kind,
-            installDirWin
+        // Build every process first, so a rejected entry runs none of its processes.
+        const allParts = entry.processes.map((proc) =>
+          buildRedistProcessCommandParts(proc, depot.kind, installDirWin)
+        )
+        if (allParts.some((parts) => parts === null)) {
+          logWarning(
+            `Steam ${appId}: ${depot.label} (${entry.name}) has an unsafe process entry, skipping it while depot ${depot.depotId} stays at manifest ${depot.gid}`,
+            LogPrefix.Steam
           )
-          if (!parts) {
-            logWarning(
-              `Steam ${appId}: ${depot.label} (${entry.name}) has an unsafe process entry, skipping`,
-              LogPrefix.Steam
-            )
-            entryOk = false
-            break
-          }
+          ledger.rejected[key] = depot.gid
+          await writeLedger(ledgerPath, bottleDir, ledger)
+          continue
+        }
+
+        let entryOk = true
+        for (const parts of allParts as string[][]) {
           const r = await runBounded(
             runWineCommand,
             parts,
@@ -326,15 +430,17 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
               `Steam ${appId}: ${depot.label} (${entry.name}) installer timed out after ${REDIST_PROCESS_TIMEOUT_MS}ms; it may keep running in the bottle, no further redists this launch`,
               LogPrefix.Steam
             )
-            ledger.timedOut[key] = new Date().toISOString()
+            recordFailure(ledger, key, depot.gid, true)
             await writeLedger(ledgerPath, bottleDir, ledger)
             stop = true
             entryOk = false
             break
           }
           if (!isRedistSuccessExit(depot.kind, r.code)) {
+            const f = recordFailure(ledger, key, depot.gid, false)
+            await writeLedger(ledgerPath, bottleDir, ledger)
             logWarning(
-              `Steam ${appId}: ${depot.label} (${entry.name}) installer exited with code ${String(r.code)}, will retry next launch`,
+              `Steam ${appId}: ${depot.label} (${entry.name}) installer exited with code ${String(r.code)} (consecutive failure ${f.count}), will retry`,
               LogPrefix.Steam
             )
             entryOk = false
@@ -366,6 +472,8 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
         )
         ledger.done[key] = depot.gid
         delete ledger.timedOut[key]
+        delete ledger.failures[key]
+        delete ledger.rejected[key]
         await writeLedger(ledgerPath, bottleDir, ledger)
       } catch (error) {
         logWarning(
@@ -373,6 +481,12 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
           LogPrefix.Steam
         )
         anyFailed = true
+        try {
+          recordFailure(ledger, key, depot.gid, false)
+          await writeLedger(ledgerPath, bottleDir, ledger)
+        } catch {
+          // The failure count is best effort; the entry already stays not-done and unsettled.
+        }
       }
     }
   }
@@ -382,6 +496,7 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
       optIn,
       depotIds: result.depots.map((d) => d.depotId),
       skipped: result.skipped,
+      rejected: Object.keys(ledger.rejected),
       at: new Date().toISOString()
     }
     await writeLedger(ledgerPath, bottleDir, ledger)
