@@ -21,3 +21,7 @@ ready: live-gate
 **Next.** Untested mitigation: make `nvapi64` resolve to nothing or to a stub that returns a non-NULL no-op for QueryInterface in the bottle (`WINEDLLOVERRIDES=nvapi64=d` was not passed through by CrossOver's wrapper; set it via the bottle's registry DllOverrides instead). Also fold into `2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md` as a runtime component gap.
 
 **Revisit trigger.** Any bottle-runtime change (DXVK/nvapi settings, CrossOver update) or a second Godot 4.4 title with the same fault.
+
+## 53-19 evidence
+
+2026-10-25: measured in the real bottle (see `53-19-NVAPI.md`). Baseline reproduced the rip=0 fault. A per-exe registry override `HKCU\Software\Wine\AppDefaults\Overlooting.exe\DllOverrides` `nvapi64=""` clears it: nvapi64 fails to load, Godot skips its NvAPI block, and godot.log advances into GodotSteam init. The bottle was restored byte-for-byte. Shipped as a per-appId applier in `bottleDllOverrides.ts`; stays open until the 53-20 live re-run shows HELLO.
