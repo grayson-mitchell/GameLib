@@ -1608,6 +1608,37 @@ describe('bottle.ts', () => {
           'GameLibSteamBridge-206040'
         )
       })
+
+      // 51-REVIEW WR-09: a ready per-game bottle with NO manifest (a bridge
+      // reinstall whose download failed after provisioning) must not beat a
+      // legacy bottle that holds this appId -- the resolver has to agree with
+      // findBridgeInstallBottle, which launch/uninstall decide on.
+      test('WR-09: a ready but manifest-less per-game bottle loses to a legacy bottle holding this appId manifest, agreeing with findBridgeInstallBottle', () => {
+        mockedExistsSync.mockImplementation((path: string) => {
+          if (path.includes('cxbottle.conf')) return true
+          return (
+            path.includes('appmanifest_206040.acf') &&
+            !path.includes('GameLibSteamBridge-206040')
+          )
+        })
+
+        expect(findBridgeInstallBottle('206040')).toBe(
+          DEFAULT_BRIDGE_BOTTLE_NAME
+        )
+        expect(resolveBridgeBottleName('206040')).toBe(
+          DEFAULT_BRIDGE_BOTTLE_NAME
+        )
+      })
+
+      test('WR-09: a ready but manifest-less per-game bottle still resolves to itself when no legacy bottle holds this appId (fresh install target)', () => {
+        mockedExistsSync.mockImplementation((path: string) =>
+          path.includes('cxbottle.conf')
+        )
+
+        expect(resolveBridgeBottleName('206040')).toBe(
+          'GameLibSteamBridge-206040'
+        )
+      })
     })
 
     describe('isBridgeBottleReady', () => {

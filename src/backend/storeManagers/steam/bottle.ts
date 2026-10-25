@@ -1224,7 +1224,8 @@ export function bridgeBottleNameFor(appId: string): string | null {
  *
  * Resolution order:
  *  1. The per-game bottle (GameLibSteamBridge-<appId>) wins if it is
- *     already ready (provisioned) — the new, steady-state layout.
+ *     already ready (provisioned) AND holds this appId's manifest — the
+ *     new, steady-state layout (51-REVIEW WR-09 added the manifest check).
  *  2. Otherwise, the legacy shared bottle (DEFAULT_BRIDGE_BOTTLE_NAME) wins
  *     ONLY if it is ready AND it genuinely holds THIS appId's manifest
  *     (appmanifest_<appId>.acf) — i.e. this game was installed before the
@@ -1243,23 +1244,16 @@ export function resolveBridgeBottleName(appId: string): string | null {
     return null
   }
 
-  if (isBridgeBottleReady(perGameName)) {
-    return perGameName
-  }
-
-  if (
-    isBridgeBottleReady(DEFAULT_BRIDGE_BOTTLE_NAME) &&
-    existsSync(
-      join(
-        getBottleSteamappsDir(DEFAULT_BRIDGE_BOTTLE_NAME),
-        `appmanifest_${appId}.acf`
-      )
-    )
-  ) {
-    return DEFAULT_BRIDGE_BOTTLE_NAME
-  }
-
-  return perGameName
+  // 51-REVIEW WR-09: step 1 used to accept a per-game bottle that was merely
+  // ready, with no manifest. A bridge reinstall whose download failed after
+  // inline provisioning leaves exactly that, beside a legacy shared bottle
+  // that still holds this appId. findBridgeInstallBottle (launch/uninstall's
+  // decision step) then picked the legacy bottle, while every execution step
+  // re-resolving through here picked the empty per-game one: launch failed
+  // the existence gate, and uninstall/removeSteamInstallCopy targeted the
+  // wrong bottle. Steps 1-2 now ARE findBridgeInstallBottle, so the two can
+  // never disagree; step 3 (a not-yet-installed game) is unchanged.
+  return findBridgeInstallBottle(appId) ?? perGameName
 }
 
 /**
