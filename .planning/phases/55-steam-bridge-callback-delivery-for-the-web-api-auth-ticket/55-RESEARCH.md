@@ -324,15 +324,19 @@ if (slot == CONTROL_SLOT_DRAIN_CALLBACKS) {
 | A5 | MSVC (real) matches clang's MS-ABI vtable emulation for this hierarchy | Pitfall 1 | Low-Medium: three external sources agree on reverse order; live gate is the final check |
 | A6 | A 30 ms drain throttle is adequate for EOS login latency | Pitfall 5 | Low: tunable constant |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What exactly is the "EOS Connect user login" log line?**
    - Known: today's verbose run shows EOS platform boot, SDKConfig, and a client-credentials `EOSAuth TokenGrant`/`ConnectClientAuthTask Success` with **no** user login line (`abiotic-factor-loading-hang.md`, 10:25 run). The current Saved log (88 KB) has only `LogOnlineIdentity: STEAM: Obtained steam authticket` and an EOSAuth overlay warning at default verbosity.
    - Unclear: the literal text to grep.
    - Recommendation: the gate's pass condition should be defined by presence of any `LogEOS*Connect*` (login/`EOS_Connect_Login`/`ConnectLogin`) success line that is absent in the pre-fix baseline logs (`AbioticFactor-backup-2026.10.24-23.53.33.log`, `AbioticFactor.log` of 10:31), plus the interactive menu confirmed by the operator. The first live run should record the observed literal, then the UAT item pins it. Also require, as a precondition, that the `Engine.ini` is recreated (Pitfall 8).
+   - RESOLVED: resolved by procedure, literal pinned post-run. 55-06 defines item 4 of the gate contract as a `LogEOS*` Connect login-success line absent from both VERBOSE baselines (and PC6 recreates `Engine.ini`); 55-07 Task 3 records the observed literal under `## Pinned literals (run 1)` in 55-LIVE-GATE.md and into 55-UAT.md item 4's `expected:` line.
 2. **Does the helper need to call `ManualDispatch_RunFrame` on every request, or only on DRAIN?** Recommendation: only on DRAIN (Steam queues callbacks per pipe until pumped). Revisit only if a live run shows the queue overflowing for a game that never polls.
+   - RESOLVED: only on DRAIN (plus the existing WHOAMI warm-up). 55-03 Task 2 calls `ManualDispatch_RunFrame` inside the CONTROL slot 6 handler (bounded by `GL_CBQ_PUMP_MAX_MSGS 64`), never on ordinary forwarded calls and never via `SteamAPI_RunCallbacks`.
 3. **Throttle value and registry size** are planner choices (suggested 30 ms; 512 entries; helper ring of 8 x 2572 B).
+   - RESOLVED: adopted as suggested. 55-03 fixes the helper ring at 8 slots x 2572 B with drop-oldest and `GL_CBQ_DRAIN_RESP_MAX_BYTES`; 55-04 fixes the shim registry at 512 entries, a 30 ms drain throttle, 4 drains per RunCallbacks, and a 1000 ms backoff after 8 failures.
 4. **Re-run the extractor or hand-edit the manifests?** Either is acceptable; the 53-14 plan did both policy and manifest. Confirm `gen_vtables.test.ts` still passes (it pins hashes by recomputation, not literals; `grep` found no test pinning `5505719d7a6f`).
+   - RESOLVED: hand-edit. 55-01 Task 1 edits `meta/sdk/wire-policy.json` and `meta/sdk/isteamuser.manifest.json` by hand, then Task 2 regenerates with `pnpm gen-vtables` and proves idempotence with `git diff --exit-code`.
 
 ## Environment Availability
 
