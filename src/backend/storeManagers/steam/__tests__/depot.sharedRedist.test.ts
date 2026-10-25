@@ -17,6 +17,7 @@ import {
   writeFileSync
 } from 'fs'
 import { tmpdir } from 'os'
+import { createHash } from 'crypto'
 import { dirname, join, resolve } from 'path'
 
 import { downloadSharedRedistDepots, type DepotPlan } from '../depot'
@@ -101,19 +102,39 @@ const GID: Record<string, string> = {
 /** Manifest files per depot id (what content_manifest.parse returns). */
 let manifestFiles: Record<string, unknown[]>
 
+const DX_EXE = '_CommonRedist\\DirectX\\Jun2010\\DXSETUP.exe'
+/** fakeDownloader writes `size` bytes of 'x' for every non-script file. */
+const sha1Of = (text: string) => createHash('sha1').update(text).digest('hex')
+const scriptSize = (id: string) => Buffer.byteLength(fx(FIXTURE_FOR[id]))
+const FIXTURE_FOR: Record<string, string> = {
+  '228990': '228990-directx-jun2010.vdf',
+  '229004': '229004-dotnet-4.5.2.vdf'
+}
+
 function resetManifests() {
   manifestFiles = {
     '228990': [
-      { filename: DX_SCRIPT, size: 10, flags: 256, chunks: [] },
       {
-        filename: '_CommonRedist\\DirectX\\Jun2010\\DXSETUP.exe',
+        filename: DX_SCRIPT,
+        size: scriptSize('228990'),
+        flags: 256,
+        chunks: []
+      },
+      {
+        filename: DX_EXE,
         size: 90,
+        sha_content: sha1Of('x'.repeat(90)),
         flags: 0,
         chunks: []
       }
     ],
     '229004': [
-      { filename: NET_SCRIPT, size: 10, flags: 256, chunks: [] },
+      {
+        filename: NET_SCRIPT,
+        size: scriptSize('229004'),
+        flags: 256,
+        chunks: []
+      },
       {
         filename:
           '_CommonRedist\\DotNet\\4.5.2\\Microsoft .NET Framework 4.5.2.cmd',
@@ -200,7 +221,7 @@ function fakeDownloader(): jest.MockedFunction<DownloadFn> {
       const isScript = ((f.flags ?? 0) & 256) !== 0
       writeFileSync(
         target,
-        isScript ? SCRIPT_TEXT[plan.depots[0].depotId] : 'x'
+        isScript ? SCRIPT_TEXT[plan.depots[0].depotId] : 'x'.repeat(f.size)
       )
     }
     return {
@@ -762,6 +783,90 @@ describe('downloadSharedRedistDepots', () => {
           )
         )['228990']
       ).toBe('9000000000000000099')
+    })
+
+    it.each([
+      ['deleted', (p: string) => rmSync(p)],
+      ['truncated', (p: string) => writeFileSync(p, 'x'.repeat(10))],
+      [
+        'corrupted at the same size',
+        (p: string) => writeFileSync(p, 'y'.repeat(90))
+      ]
+    ])(
+      'repairs the cache when an indexed installer file is %s (WR-05)',
+      async (_what, damage) => {
+        const opts = {
+          cacheSteamappsDir: cacheDir,
+          optInDepotIds: [] as string[]
+        }
+        await downloadSharedRedistDepots(GAME, {
+          ...opts,
+          downloadFiles: fakeDownloader()
+        })
+        const exe = join(
+          cacheDir,
+          'common',
+          'Steamworks Shared',
+          ...DX_EXE.split('\\')
+        )
+        damage(exe)
+
+        const dl = fakeDownloader()
+        const onComponent = jest.fn()
+        const r = await downloadSharedRedistDepots(GAME, {
+          ...opts,
+          downloadFiles: dl,
+          onComponent
+        })
+        expect(r.depots.map((d) => d.depotId)).toEqual(['228990'])
+        // The cached script is fine, so only the full download re-runs.
+        const dx = callsFor(dl, '228990')
+        expect(dx).toHaveLength(1)
+        expect((dx[0][0] as DepotPlan).depots[0].files).toHaveLength(2)
+        expect(onComponent).toHaveBeenCalledWith('DirectX Jun2010')
+        expect(readFileSync(exe, 'utf8')).toBe('x'.repeat(90))
+        expect(
+          JSON.parse(
+            readFileSync(
+              join(cacheDir, 'gamelib-shared-redist-index.json'),
+              'utf8'
+            )
+          )['228990']
+        ).toBe(GID['228990'])
+      }
+    )
+
+    it('drops the index entry when the repair download fails, so the next run retries', async () => {
+      const opts = {
+        cacheSteamappsDir: cacheDir,
+        optInDepotIds: [] as string[]
+      }
+      await downloadSharedRedistDepots(GAME, {
+        ...opts,
+        downloadFiles: fakeDownloader()
+      })
+      rmSync(
+        join(cacheDir, 'common', 'Steamworks Shared', ...DX_EXE.split('\\'))
+      )
+      const failing = jest.fn(async () => ({
+        outcome: 'completed' as const,
+        failures: [{ file: 'x', error: 'boom' }],
+        allFilesVerifiedThisRun: false,
+        allModesApplied: false
+      })) as unknown as DownloadFn
+      const r = await downloadSharedRedistDepots(GAME, {
+        ...opts,
+        downloadFiles: failing
+      })
+      expect(r.failed).toContain('228990')
+      expect(
+        JSON.parse(
+          readFileSync(
+            join(cacheDir, 'gamelib-shared-redist-index.json'),
+            'utf8'
+          )
+        )['228990']
+      ).toBeUndefined()
     })
 
     it('re-downloads once when an indexed installscript no longer parses', async () => {

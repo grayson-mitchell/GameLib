@@ -1206,6 +1206,54 @@ function publicManifestGid(entry: unknown): string | undefined {
   return undefined
 }
 
+/**
+ * Why a GID-indexed depot's cached files cannot be trusted, or null when they can (WR-05). Every
+ * regular manifest file must exist at its manifest size (symlinks must exist), and every file an
+ * installscript process names directly must also match its manifest SHA1. Size over the whole set
+ * catches a deleted or truncated file cheaply; the hash is spent only on the installer binaries.
+ */
+async function sharedRedistCacheProblem(
+  installRoot: string,
+  files: DepotPlanFile[],
+  entries: InstallScriptEntry[]
+): Promise<string | null> {
+  const hashed = new Set<string>()
+  for (const e of entries)
+    for (const p of e.processes) {
+      const m = /^%INSTALLDIR%[\\/](.+)$/i.exec(p.process.trim())
+      if (m) hashed.add(m[1].replace(/\//g, '\\').toLowerCase())
+    }
+  for (const f of files) {
+    const flags = f.flags ?? 0
+    if (flags & DIRECTORY_FLAG) continue
+    let path: string
+    try {
+      path = resolveContainedPath(installRoot, f.filename)
+    } catch {
+      return `unsafe path ${f.filename}`
+    }
+    try {
+      if (flags & SYMLINK_FLAG) {
+        await lstat(path)
+        continue
+      }
+      const st = await stat(path)
+      if (!st.isFile() || st.size !== Number(f.size))
+        return `${f.filename} is ${st.isFile() ? `${st.size} bytes, expected ${String(f.size)}` : 'not a file'}`
+    } catch {
+      return `${f.filename} is missing`
+    }
+    if (!hashed.has(f.filename.replace(/\//g, '\\').toLowerCase())) continue
+    const expected = Buffer.isBuffer(f.sha_content)
+      ? f.sha_content.toString('hex')
+      : String(f.sha_content ?? '')
+    if (!expected) continue
+    if ((await sha1File(path)).toLowerCase() !== expected.toLowerCase())
+      return `${f.filename} does not match its manifest SHA1`
+  }
+  return null
+}
+
 async function pathExists(p: string): Promise<boolean> {
   try {
     await stat(p)
@@ -1452,6 +1500,26 @@ export async function downloadSharedRedistDepots(
             return { kind: 'skipped' }
           }
           const displayLabel = label ?? `depot ${id}`
+
+          // The index only says the depot was complete once; check the files are still there
+          // before the runner relies on them, and repair the cache when they are not (WR-05).
+          if (fromIndex) {
+            const problem = await sharedRedistCacheProblem(
+              installRoot,
+              entry.files,
+              entries
+            )
+            if (problem) {
+              logWarning(
+                `shared redists: cached depot ${id} (${displayLabel}) is incomplete (${problem}), re-downloading`,
+                LogPrefix.Steam
+              )
+              await updateSharedRedistIndex(opts.cacheSteamappsDir, (i) => {
+                delete i[id]
+              })
+              fromIndex = false
+            }
+          }
 
           if (!fromIndex) {
             opts.onComponent?.(displayLabel)
