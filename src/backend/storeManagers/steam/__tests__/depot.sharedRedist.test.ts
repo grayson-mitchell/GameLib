@@ -129,6 +129,7 @@ const GAME = '12345'
 let gameDepots: Record<string, unknown>
 let redistDepots: Record<string, unknown>
 let keyErrors: Set<string>
+let redistInstalldir: unknown
 
 function makeClient() {
   return {
@@ -139,7 +140,7 @@ function makeClient() {
           apps: {
             228980: {
               appinfo: {
-                config: { installdir: 'Steamworks Shared' },
+                config: { installdir: redistInstalldir },
                 depots: redistDepots
               }
             }
@@ -213,6 +214,7 @@ function fakeDownloader(): jest.MockedFunction<DownloadFn> {
 beforeEach(() => {
   resetManifests()
   keyErrors = new Set()
+  redistInstalldir = 'Steamworks Shared'
   gameDepots = {
     '12346': { manifests: { public: { gid: '1' } } },
     '228990': { depotfromapp: '228980', sharedinstall: '1' },
@@ -545,6 +547,45 @@ describe('downloadSharedRedistDepots', () => {
     } finally {
       SCRIPT_TEXT['229004'] = fx('229004-dotnet-4.5.2.vdf')
     }
+  })
+
+  describe('228980 installdir (WR-03)', () => {
+    it.each([
+      ['a traversal', '../../escape'],
+      ['an absolute path', '/etc'],
+      ['a separator', 'a\\b'],
+      ['a quote', 'Steam"works'],
+      ['a cmd metacharacter', 'Steam & works'],
+      ['a percent', '%TEMP%'],
+      ['blank', '   '],
+      ['a non-string', 42]
+    ])('falls back to Steamworks Shared for %s', async (_what, value) => {
+      redistInstalldir = value
+      const dl = fakeDownloader()
+      const r = await downloadSharedRedistDepots(GAME, {
+        cacheSteamappsDir: cacheDir,
+        optInDepotIds: [],
+        downloadFiles: dl
+      })
+      const root = resolve(cacheDir, 'common', 'Steamworks Shared')
+      expect(r.depots.map((d) => d.installDirHost)).toEqual([root])
+      for (const [, o] of dl.mock.calls)
+        expect((o as { installdir: string }).installdir).toBe(
+          'Steamworks Shared'
+        )
+    })
+
+    it('keeps a safe installdir from appinfo', async () => {
+      redistInstalldir = 'Redist Cache'
+      const r = await downloadSharedRedistDepots(GAME, {
+        cacheSteamappsDir: cacheDir,
+        optInDepotIds: [],
+        downloadFiles: fakeDownloader()
+      })
+      expect(r.depots[0].installDirHost).toBe(
+        resolve(cacheDir, 'common', 'Redist Cache')
+      )
+    })
   })
 
   describe('cache index', () => {

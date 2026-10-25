@@ -35,12 +35,14 @@ import {
   INSTALLSCRIPT_FLAG,
   classifySharedRedist,
   declaredSharedRedistDepotIds,
+  hasCmdMetachar,
   parseInstallScript,
   type InstallScriptEntry,
   type SharedRedistKind
 } from './bridge/sharedRedists'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
 import { SteamUser } from './user'
+import { sanitizeInstalldir } from './installLocation'
 import {
   selectAllDepots,
   dlcAppIds,
@@ -1128,6 +1130,36 @@ async function writeSharedRedistIndex(
   )
 }
 
+/**
+ * The 228980 `config.installdir` as a cache-root segment (WR-03). It is a PICS string, so it gets
+ * the same sanitizeInstalldir containment check a game installdir does, and additionally may not
+ * carry a cmd metacharacter: every installer path is built under it and a `.cmd` reaches `cmd /c`.
+ * Anything absent, blank or rejected falls back to {@link SHARED_REDIST_DEFAULT_INSTALLDIR}.
+ */
+function sharedRedistInstalldir(
+  candidate: unknown,
+  cacheSteamappsDir: string
+): string {
+  if (typeof candidate !== 'string' || !candidate.trim())
+    return SHARED_REDIST_DEFAULT_INSTALLDIR
+  try {
+    const safe = sanitizeInstalldir(
+      candidate,
+      STEAM_COMMON_REDIST_APP_ID,
+      cacheSteamappsDir
+    )
+    if (hasCmdMetachar(safe))
+      throw new Error('installdir contains a cmd metacharacter')
+    return safe
+  } catch (err) {
+    logWarning(
+      `shared redists: rejected 228980 installdir ${JSON.stringify(candidate)}, using "${SHARED_REDIST_DEFAULT_INSTALLDIR}": ${String(err)}`,
+      LogPrefix.Steam
+    )
+    return SHARED_REDIST_DEFAULT_INSTALLDIR
+  }
+}
+
 function publicManifestGid(entry: unknown): string | undefined {
   const manifests = (
     entry as { manifests?: Record<string, unknown> } | undefined
@@ -1186,10 +1218,17 @@ export async function downloadSharedRedistDepots(
     (c) => fetchAppInfo(c, Number(STEAM_COMMON_REDIST_APP_ID)),
     'sharedRedist 228980 appinfo'
   )
-  const installdir =
-    (redistInfo as { config?: { installdir?: string } }).config?.installdir ||
-    SHARED_REDIST_DEFAULT_INSTALLDIR
-  const installRoot = resolve(opts.cacheSteamappsDir, 'common', installdir)
+  const installdir = sharedRedistInstalldir(
+    (redistInfo as { config?: { installdir?: unknown } }).config?.installdir,
+    opts.cacheSteamappsDir
+  )
+  const commonRoot = resolve(opts.cacheSteamappsDir, 'common')
+  const installRoot = resolve(commonRoot, installdir)
+  const installRel = relative(commonRoot, installRoot)
+  if (!installRel || installRel.startsWith('..') || isAbsolute(installRel))
+    throw new Error(
+      `shared redist install root escapes ${commonRoot}: ${installRoot}`
+    )
   const parser = await loadContentManifestParser()
   const optIn = new Set(opts.optInDepotIds)
 
