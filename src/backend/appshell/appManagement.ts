@@ -32,7 +32,7 @@ import { logInfo, logWarning, LogPrefix } from '../logger'
 export const APP_MANAGEMENT_SETTINGS_URL =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles'
 
-export const APP_MANAGEMENT_PROBE_NAME = '.gamelib-appmgmt-probe'
+const APP_MANAGEMENT_PROBE_NAME = '.gamelib-appmgmt-probe'
 
 export function classifyProbeError(error: unknown): AppManagementStatus {
   if (
@@ -53,7 +53,7 @@ function errorCode(error: unknown): string {
   return typeof code === 'string' ? code : 'none'
 }
 
-export interface AppManagementDeps {
+interface AppManagementDeps {
   platform?: NodeJS.Platform
   resolveBinDir?: () => Promise<string | undefined>
   writeFile?: (path: string, data: string) => Promise<void>

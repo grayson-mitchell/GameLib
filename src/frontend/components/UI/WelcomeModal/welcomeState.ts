@@ -35,7 +35,7 @@ export function isFirstRun({
   return absent(welcomeSeen) && absent(lastVersion) && absent(lastChangelog)
 }
 
-export interface AppManagementView {
+interface AppManagementView {
   visible: boolean
   statusKey: string
   showOpenSettings: boolean
