@@ -1,0 +1,169 @@
+[
+  {
+    "path": "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-219990/drive_c/Program Files (x86)/Steam/steamapps/common/Grim Dawn/x64/Grim Dawn.exe",
+    "pe64": true,
+    "sections": [
+      ".text",
+      ".rdata",
+      ".data",
+      ".pdata",
+      ".gfids",
+      ".tls",
+      "_RDATA",
+      ".rsrc",
+      ".reloc",
+      ".bind"
+    ],
+    "authenticode": {
+      "offset": 0,
+      "size": 0
+    },
+    "tail": {
+      "vlv_offsets_in_last_16k": [],
+      "file_size": 4687944
+    },
+    "bind": {
+      "variant": "3.1 x64",
+      "signature": "0xC0DEC0DF",
+      "steam_appid": 219990,
+      "flags": "0x00000000",
+      "flags_set": [],
+      "checks_enabled": {
+        "module_verification": true,
+        "ownership_check": true,
+        "debugger_check": true,
+        "error_dialog": true,
+        "code_encrypted": true
+      },
+      "original_entry_point": "0x2AF00C",
+      "payload_size": 534,
+      "drmp_dll_size": 218776
+    }
+  },
+  {
+    "path": "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-648800/drive_c/Program Files (x86)/Steam/steamapps/common/Raft/Raft.exe",
+    "pe64": true,
+    "sections": [
+      ".text",
+      ".rdata",
+      ".data",
+      ".pdata",
+      "_RDATA",
+      ".rsrc",
+      ".reloc",
+      ".bind"
+    ],
+    "authenticode": {
+      "offset": 0,
+      "size": 0
+    },
+    "tail": {
+      "vlv_offsets_in_last_16k": [],
+      "file_size": 887368
+    },
+    "bind": {
+      "variant": "3.1 x64",
+      "signature": "0xC0DEC0DF",
+      "steam_appid": 648800,
+      "flags": "0x00000000",
+      "flags_set": [],
+      "checks_enabled": {
+        "module_verification": true,
+        "ownership_check": true,
+        "debugger_check": true,
+        "error_dialog": true,
+        "code_encrypted": true
+      },
+      "original_entry_point": "0x1260",
+      "payload_size": 534,
+      "drmp_dll_size": 218264
+    }
+  },
+  {
+    "path": "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge-1119730/drive_c/Program Files (x86)/Steam/steamapps/common/Ranch Simulator/Ranch_Simulator/Binaries/Win64/Ranch_Simulator-Win64-Shipping.exe",
+    "pe64": true,
+    "sections": [
+      ".text",
+      ".rdata",
+      ".data",
+      ".pdata",
+      ".msvcjmc",
+      ".rodata",
+      "_RDATA",
+      ".rsrc",
+      ".reloc",
+      ".bind"
+    ],
+    "authenticode": {
+      "offset": 0,
+      "size": 0
+    },
+    "tail": {
+      "vlv_offsets_in_last_16k": [],
+      "file_size": 161723464
+    },
+    "bind": {
+      "variant": "3.1 x64",
+      "signature": "0xC0DEC0DF",
+      "steam_appid": 1119730,
+      "flags": "0x00000006",
+      "flags_set": [
+        "NoModuleVerification",
+        "NoEncryption"
+      ],
+      "checks_enabled": {
+        "module_verification": false,
+        "ownership_check": true,
+        "debugger_check": true,
+        "error_dialog": true,
+        "code_encrypted": false
+      },
+      "original_entry_point": "0x6F36810",
+      "payload_size": 534,
+      "drmp_dll_size": 218776
+    }
+  },
+  {
+    "path": "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/steamclient64.dll",
+    "pe64": true,
+    "sections": [
+      ".text",
+      ".rdata",
+      ".data",
+      ".pdata",
+      ".fptable",
+      ".rsrc",
+      ".reloc"
+    ],
+    "authenticode": {
+      "offset": 26536448,
+      "size": 11416
+    },
+    "tail": {
+      "vlv_offsets_in_last_16k": [],
+      "file_size": 26547864
+    }
+  },
+  {
+    "path": "public/bin/arm64/darwin/steamclient64.dll",
+    "pe64": true,
+    "sections": [
+      ".text",
+      ".rdata",
+      ".buildid",
+      ".data",
+      ".pdata",
+      ".tls",
+      ".rsrc",
+      ".reloc"
+    ],
+    "authenticode": {
+      "offset": 0,
+      "size": 0
+    },
+    "tail": {
+      "vlv_offsets_in_last_16k": [],
+      "file_size": 187392
+    }
+  }
+]
