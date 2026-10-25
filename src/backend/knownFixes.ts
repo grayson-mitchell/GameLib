@@ -85,7 +85,7 @@ function readFixesFileWithin(
     // if we fail to download the json file, it can be malformed causing
     // JSON.parse to throw an exception
     logWarning(
-      `Known fixes could not be applied${layerLabel ? ` (${layerLabel} layer)` : ''}, ignoring.\n${error}`
+      `Known fixes could not be applied${layerLabel ? ` (${layerLabel} layer)` : ''}, ignoring.\n${String(error)}`
     )
     return null
   }

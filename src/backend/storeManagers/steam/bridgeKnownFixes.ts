@@ -40,7 +40,6 @@ const REGISTRY_ROOTS = [
   'HKCU\\',
   'HKEY_CURRENT_USER\\'
 ]
-// eslint-disable-next-line no-control-regex
 const FORBIDDEN_CHARS = /["\r\n\0]/
 
 export interface ValidRegistryFix {
