@@ -470,7 +470,7 @@ SteamStub forwarder (Phase 52), and bottle Windows runtime components
 (`2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
 **Requirements**: none mapped (no REQUIREMENTS.md); plans keyed to decisions D-53-01..D-53-14 in 53-CONTEXT.md
 **Depends on:** Phase 52
-**Plans:** 16/20 plans complete
+**Plans:** 17/20 plans executed
 
 Plans:
 **Wave 1**
@@ -525,7 +525,7 @@ Plans:
 
 **Gap wave 1**
 
-- [ ] 53-17-PLAN.md — CR-01 GetPublicIP hidden-pointer fallback guard (GameServer012 RAX dispatch, instance guards) + out-buffer WR-02/03/04
+- [x] 53-17-PLAN.md — CR-01 GetPublicIP hidden-pointer fallback guard (GameServer012 RAX dispatch, instance guards) + out-buffer WR-02/03/04
 - [ ] 53-18-PLAN.md — census evidence anchored to payload category (WR-01), log-rotation span (WR-06), helper line carry-over (WR-05)
 - [ ] 53-19-PLAN.md — Overlooting NvAPI: measure DLL-override arms in the bottle, ship per-appId bridge-bottle override if one clears the fault
 
