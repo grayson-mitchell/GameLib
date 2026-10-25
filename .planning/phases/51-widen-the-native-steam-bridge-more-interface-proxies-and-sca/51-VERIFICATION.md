@@ -1,12 +1,13 @@
 ---
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 verified: 2026-10-24T00:00:00Z
-status: gaps_found
-score: 6/7 must-haves verified
+amended: 2026-10-25T00:00:00Z
+status: passed
+score: 7/7 must-haves verified
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
-  previous_score: 3/7
+  previous_score: 6/7
   gaps_closed:
     - "Prescreen classifies depots by steam_api dll arch (2ba070588, 1df09a29d; live result=x64 on a subfolder DLL, item 19; todo closed)"
     - "Helper lifetime tied to game (b8a020087, b6012f368; todo 2026-10-22-bridge-process-monitor-starts-after-game-exits.md completed)"
@@ -15,18 +16,10 @@ re_verification:
     - "XCOM CEG diagnosis confirmed through bottled Steam (item 17); 200510 knownBad drm-wrapped; CEG detection landed (br4)"
     - "Census separates routed from verified running; dual-arch scan fixed (quick 261024-f0w, 1b2f315b3, 4f65448a4)"
     - "Win64 core interfaces wired (547055ad6); ELEX now fails past the handshake and is knownBad does-not-run"
-  gaps_remaining:
-    - "Most Windows-only Steam games run through the bridge (ROADMAP goal): recorded NOT met by operator decision 2026-10-24, tracked to a follow-up phase"
+    - "Most Windows-only Steam games run through the bridge (ROADMAP goal, D-51-15): CLOSED 2026-10-25 by Phase 53. 10 of 18 verified running under the strict criterion, majority (53-VERIFICATION.md status passed, done-when MET; commits 271edc1c4, 4c17d5a9a). Operator 2026-10-25: 'lets close out phase 51. we have 10 passed games'"
+  gaps_remaining: []
   regressions: []
-gaps:
-  - truth: "Most Windows-only Steam games on macOS run through the bridge; bottled Steam is the fallback for a measured residue (ROADMAP goal, D-51-15)"
-    status: failed
-    reason: "Operator decision 2026-10-24 (51-UAT items 19 and 20, 51-30-SUMMARY, STATE.md): recorded NOT met, option unmet-follow-up. Strict criterion (HELLO plus clean game-side Steam init; no game log is unverified; Mac Steam In-Game never counts). Closing census over the 19 installed titles: N=18 routed to the bridge, K=0 verified running, M=19 (1 init-failed, 18 unverified; 2 play recorded in the allowlist; 15 of 19 symbols covered by the static scan). Accepted, not re-litigated."
-    artifacts:
-      - path: "src/backend/storeManagers/steam/bridge/bridge-allowlist.json"
-        issue: "seed is Avernum 5/6 plus AoD 230070 (AoD and Avernum 6 recorded as played with shim attached but unverified); no title meets the strict criterion"
-    missing:
-      - "Follow-up phase: Steam bridge coverage (modern-SDK exports, flat API, engine-layout scan, SteamStub forwarding); see pending todos below"
+gaps: []
 deferred: []
 human_verification: []
 ---
@@ -35,10 +28,18 @@ human_verification: []
 
 **Phase Goal:** Most Windows-only Steam games on macOS run through the Phase 24 bridge in their own per-game bottle; the shared Phase 17 `GameLibSteam` bottle becomes the fallback for a measured residue instead of the default.
 **Verified:** 2026-10-24
-**Status:** gaps_found
+**Status:** passed (amended 2026-10-25; was gaps_found 2026-10-24)
 **Re-verification:** Yes, after gap-closure plans 51-20 through 51-30.
 
-**Why `gaps_found` and not `human_needed`:** the one remaining item is not a pending human check. It is a recorded, observable failure of a must-have (K=0 of M=19), accepted by the operator as unmet and tracked to a follow-up phase. No human verification items remain (UAT pending: 0). `gaps_found` is the honest status; it is the explicit acceptance, not a hidden failure. Summary: the phase ships its mechanism; the "most" goal is unmet by recorded operator decision.
+## Amendment 2026-10-25: gap closed by Phase 53
+
+The one remaining gap, "Most Windows-only Steam games on macOS run through the bridge; bottled Steam is the fallback for a measured residue (ROADMAP goal, D-51-15)", was recorded NOT met on 2026-10-24, option unmet-follow-up. Original reason text, verbatim from the removed `gaps:` entry: "Operator decision 2026-10-24 (51-UAT items 19 and 20, 51-30-SUMMARY, STATE.md): recorded NOT met, option unmet-follow-up. Strict criterion (HELLO plus clean game-side Steam init; no game log is unverified; Mac Steam In-Game never counts). Closing census over the 19 installed titles: N=18 routed to the bridge, K=0 verified running, M=19 (1 init-failed, 18 unverified; 2 play recorded in the allowlist; 15 of 19 symbols covered by the static scan). Accepted, not re-litigated."
+
+The follow-up is Phase 53 (`.planning/phases/53-steam-bridge-coverage-modern-sdk-exports-flat-api/53-VERIFICATION.md`, status passed): 10 of 18 verified running on the same strict criterion, majority yes. Two titles were deferred by user-accepted override in Phase 53: Overlooting 3410180 to a pending todo, Ranch Simulator 1119730 to SteamStub/Phase 52. The operator closed Phase 51 on 2026-10-25: "lets close out phase 51. we have 10 passed games".
+
+The 2026-10-24 re-verification had moved the score from 3/7 to 6/7; this amendment moves it to 7/7 and status from gaps_found to passed. The census numbers inside the original report below (N=18, K=0, M=19) are the 2026-10-24 measurement and are kept as history.
+
+_(Historical, 2026-10-24; superseded by the 2026-10-25 amendment.)_ **Why `gaps_found` and not `human_needed`:** the one remaining item is not a pending human check. It is a recorded, observable failure of a must-have (K=0 of M=19), accepted by the operator as unmet and tracked to a follow-up phase. No human verification items remain (UAT pending: 0). `gaps_found` is the honest status; it is the explicit acceptance, not a hidden failure. Summary: the phase ships its mechanism; the "most" goal is unmet by recorded operator decision.
 
 ## Observable Truths
 
@@ -51,9 +52,9 @@ human_verification: []
 | 5 | Win64 hazard (a): fail closed, 64-bit shim reachable, core interfaces wired | VERIFIED | 547055ad6 wires SteamUser019/Friends015/Utils008/Apps008; AoD64 attaches via the 64-bit shim. ELEX now fails past the bridge handshake (loading-screen hang), tracked as knownBad, a title defect not a wiring gap |
 | 6 | Prescreen classifies by arch before install | VERIFIED | `depot.ts:955` now `basename(file.filename.replace(/\\/g, '/'))`; live `result=x64` for Rogue Waters 1691190 subfolder DLL; todo in `completed/` |
 | 7 | Helper lifetime tied to game | VERIFIED | b8a020087 monitor starts before awaiting the wine child; todo completed. Residual quit behaviour is a separate pending todo (Stop is a no-op), not this truth |
-| G | "Most" Windows-only games run through the bridge (D-51-15, ROADMAP goal) | FAILED (accepted) | N=18, K=0, M=19 strict; operator "Unmet, follow-up phase (Recommended)" |
+| G | "Most" Windows-only games run through the bridge (D-51-15, ROADMAP goal) | VERIFIED (closed by Phase 53, 2026-10-25) | N=18, K=0, M=19 strict; operator "Unmet, follow-up phase (Recommended)"; closed: Phase 53 10 of 18 verified running, majority (53-VERIFICATION.md) |
 
-**Score:** 6/7 must-haves verified (G is the ROADMAP goal and is counted as the one failure; truths 1-7 are the plan contract).
+**Score:** 7/7 must-haves verified (amended 2026-10-25; was 6/7 with G failed-accepted on 2026-10-24).
 
 ## Closure checks requested
 
@@ -88,8 +89,9 @@ None blocking found in the spot checks. Census blind spot noted in item 20: stat
 
 ## Gaps Summary
 
-The mechanism half is delivered and verified: per-game bottles, scan-derived persisted routing, known-bad list, visible route, a strict-criterion census, and a working x64 path (AoD). All previously open defects (CR-01..04, prescreen, monitor ordering, anchor, census) are closed with commits and evidence. The outcome half, "most" games running through the bridge, is not achieved: 18 of 19 titles route to the bridge but none is verified running on the strict criterion. This is the operator's recorded decision (unmet-follow-up) and is not re-opened. Recommended next step: a follow-up phase scoped from the pending todos above, with the goal restated against the strict census.
+The mechanism half is delivered and verified: per-game bottles, scan-derived persisted routing, known-bad list, visible route, a strict-criterion census, and a working x64 path (AoD). All previously open defects (CR-01..04, prescreen, monitor ordering, anchor, census) are closed with commits and evidence. The outcome half, "most" games running through the bridge, is not achieved: 18 of 19 titles route to the bridge but none is verified running on the strict criterion. This is the operator's recorded decision (unmet-follow-up) and is not re-opened. Recommended next step: a follow-up phase scoped from the pending todos above, with the goal restated against the strict census. The "most" goal gap was closed 2026-10-25 by Phase 53 (see Amendment).
 
 ---
 _Verified: 2026-10-24_
+_Amended: 2026-10-25 (gap closed by Phase 53; operator close-out)_
 _Verifier: Claude (gsd-verifier)_
