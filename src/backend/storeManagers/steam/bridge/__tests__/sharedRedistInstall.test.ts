@@ -532,6 +532,42 @@ describe('installSteamBridgeSharedRedists', () => {
     })
   })
 
+  describe('HasRunKey mark failure (IN-01)', () => {
+    const DX_KEY =
+      'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup'
+    const regAdds = () =>
+      mockedRun.mock.calls.filter(([a]) => a.commandParts[1] === 'add')
+
+    it.each([
+      ['a non-zero exit', () => ({ code: 1, stdout: '', stderr: '' })],
+      [
+        'a throw',
+        () => {
+          throw new Error('reg exploded')
+        }
+      ]
+    ])(
+      'keeps the entry done but does not settle on %s, then retries only the mark',
+      async (_what, failAdd) => {
+        mockedDownload.mockResolvedValue(ok([dx()]))
+        defaultWine((p) => (p[1] === 'add' ? failAdd() : undefined))
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        expect(ledger().done[DX_KEY]).toBe('gid-228990')
+        expect(ledger().markPending).toEqual({ [DX_KEY]: 'gid-228990' })
+        expect(ledger().settled).toBeUndefined()
+
+        // Next launch: no installer, the mark is retried and now succeeds, then it settles.
+        mockedRun.mockClear()
+        defaultWine()
+        await installSteamBridgeSharedRedists(APP, SETTINGS)
+        expect(installerCalls()).toEqual([])
+        expect(regAdds()).toHaveLength(1)
+        expect(ledger().markPending).toEqual({})
+        expect(ledger().settled).toBeDefined()
+      }
+    )
+  })
+
   describe('cancellation (WR-06)', () => {
     it('passes the signal to the download', async () => {
       const ctl = new AbortController()

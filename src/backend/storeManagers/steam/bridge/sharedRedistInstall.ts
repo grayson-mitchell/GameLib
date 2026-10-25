@@ -90,6 +90,12 @@ interface Ledger {
   failures: Record<string, FailureRecord>
   /** ledgerKey -> GID whose entry the containment rules rejected (not done). */
   rejected: Record<string, string>
+  /**
+   * ledgerKey -> GID of a done entry whose HasRunKey mark could not be written (IN-01). The
+   * installer is not re-run; the mark is retried each launch and the ledger does not settle
+   * until it is written, so the ledger and the registry never disagree on a settled bottle.
+   */
+  markPending: Record<string, string>
   settled?: {
     optIn: string[]
     depotIds: string[]
@@ -107,7 +113,14 @@ type BoundedResult =
 const inFlight = new Map<string, Promise<void>>()
 
 function emptyLedger(): Ledger {
-  return { version: 1, done: {}, timedOut: {}, failures: {}, rejected: {} }
+  return {
+    version: 1,
+    done: {},
+    timedOut: {},
+    failures: {},
+    rejected: {},
+    markPending: {}
+  }
 }
 
 function isFailureRecord(v: unknown): v is FailureRecord {
@@ -160,7 +173,10 @@ async function readLedger(path: string, appId: string): Promise<Ledger> {
         done: parsed.done,
         timedOut: parsed.timedOut,
         failures: readFailures(parsed.failures),
-        rejected: isStringRecord(parsed.rejected) ? parsed.rejected : {}
+        rejected: isStringRecord(parsed.rejected) ? parsed.rejected : {},
+        markPending: isStringRecord(parsed.markPending)
+          ? parsed.markPending
+          : {}
       }
       const s = parsed.settled
       if (
@@ -358,6 +374,21 @@ async function run(
   let stop = false
   let anyFailed = false
 
+  /** Write Steam's HasRunKey mark; false on a timeout, non-zero exit or throw. */
+  const writeMark = async (hasRunKey: string, name: string) => {
+    try {
+      const mark = await runBounded(
+        runWineCommand,
+        buildHasRunKeyAddParts(hasRunKey, name),
+        bottleSettings,
+        REG_TIMEOUT_MS
+      )
+      return !mark.timedOut && mark.code === 0
+    } catch {
+      return false
+    }
+  }
+
   for (const depot of result.depots) {
     if (stop) break
     const installDirWin = toBottleWindowsPath(depot.installDirHost)
@@ -373,7 +404,20 @@ async function run(
       }
       if (!entryAppliesToBottle(entry)) continue
       const key = sharedRedistLedgerKey(entry.hasRunKey, entry.name)
-      if (ledger.done[key]) continue
+      if (ledger.done[key]) {
+        if (ledger.markPending[key] && entry.hasRunKey) {
+          if (await writeMark(entry.hasRunKey, entry.name)) {
+            delete ledger.markPending[key]
+            await writeLedger(ledgerPath, bottleDir, ledger)
+          } else {
+            logWarning(
+              `Steam ${appId}: still could not write the HasRunKey mark for ${depot.label} (${entry.name})`,
+              LogPrefix.Steam
+            )
+          }
+        }
+        continue
+      }
       if (ledger.rejected[key] === depot.gid) {
         logInfo(
           `Steam ${appId}: ${depot.label} (${entry.name}) was rejected by the containment rules at manifest ${depot.gid}, skipping`,
@@ -471,19 +515,19 @@ async function run(
           continue
         }
 
-        if (entry.hasRunKey) {
-          const mark = await runBounded(
-            runWineCommand,
-            buildHasRunKeyAddParts(entry.hasRunKey, entry.name),
-            bottleSettings,
-            REG_TIMEOUT_MS
+        // The installer succeeded, so the entry is done whatever happens to the mark; a failed
+        // mark is retried next launch and blocks settling (IN-01).
+        if (
+          entry.hasRunKey &&
+          !(await writeMark(entry.hasRunKey, entry.name))
+        ) {
+          logWarning(
+            `Steam ${appId}: could not write the HasRunKey mark for ${depot.label} (${entry.name}), will retry the mark next launch`,
+            LogPrefix.Steam
           )
-          if (mark.timedOut || mark.code !== 0) {
-            logWarning(
-              `Steam ${appId}: could not write the HasRunKey mark for ${depot.label} (${entry.name})`,
-              LogPrefix.Steam
-            )
-          }
+          ledger.markPending[key] = depot.gid
+        } else {
+          delete ledger.markPending[key]
         }
         logInfo(
           `Steam ${appId}: installed ${depot.label} (${entry.name}, depot ${depot.depotId})`,
@@ -510,7 +554,8 @@ async function run(
     }
   }
 
-  if (result.failed.length === 0 && !stop && !anyFailed) {
+  const marksPending = Object.keys(ledger.markPending).length > 0
+  if (result.failed.length === 0 && !stop && !anyFailed && !marksPending) {
     ledger.settled = {
       optIn,
       depotIds: result.depots.map((d) => d.depotId),
@@ -521,7 +566,7 @@ async function run(
     await writeLedger(ledgerPath, bottleDir, ledger)
   } else {
     logWarning(
-      `Steam ${appId}: shared redists not settled (failed: ${result.failed.join(',') || 'none'}), will retry next launch`,
+      `Steam ${appId}: shared redists not settled (failed: ${result.failed.join(',') || 'none'}${marksPending ? ', HasRunKey marks pending' : ''}), will retry next launch`,
       LogPrefix.Steam
     )
   }
