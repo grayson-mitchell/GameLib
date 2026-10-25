@@ -820,26 +820,60 @@ export function attributeHelperLines(appid: string, text: string): string[] {
   return out
 }
 
-/** 53-11: app-log evidence for `appid` comes from a single launch. Takes the
- * newest file holding a HELLO for the appid and returns its text from that
- * appid's LAST HELLO to end of file; null when no file has one. Pure. */
+/** 53-18 (WR-01): anchored per-appid HELLO matcher. Applied to an attributed
+ * helper payload, so a game-supplied version string inside a FWD/NOVER line
+ * (`[ts] FWD ... x] HELLO ...`) can never match: only a payload that STARTS
+ * `[<ts>] HELLO  shim attached appid=<appid>` counts. */
+function helloRegex(appid: string): RegExp {
+  return new RegExp(
+    `^\\[[^\\]]*\\]\\s+HELLO\\s+shim attached appid=${appid}(?![0-9])`
+  )
+}
+
+/** 53-18 (WR-01): true when `text` holds a genuine helper HELLO for `appid`. */
+function hasHello(appid: string, text: string): boolean {
+  if (!/^\d+$/.test(appid)) return false
+  const hello = helloRegex(appid)
+  return attributeHelperLines(appid, text).some((l) => hello.test(l))
+}
+
+/** 53-11 + 53-18: app-log evidence for `appid` comes from a single launch.
+ * Takes the newest file holding a genuine HELLO (a `bridge helper [<appid>]:`
+ * line whose payload starts with the HELLO, WR-01) and returns its text from
+ * that appid's LAST HELLO to end of file, then (WR-06) appends the full text
+ * of every newer file in ascending mtime order so evidence written after a
+ * gamelib.log rotation is still read; null when no file has a HELLO. Pure. */
 export function appLogSegmentFor(
   appid: string,
   files: Array<{ name: string; mtimeMs: number; text: string }>
 ): string | null {
   if (!/^\d+$/.test(appid)) return null
-  const hello = new RegExp(
-    `HELLO\\s+shim attached appid=${appid}(?![0-9])`,
-    'g'
-  )
+  const hello = helloRegex(appid)
   const sorted = [...files].sort((a, b) => b.mtimeMs - a.mtimeMs)
   for (const f of sorted) {
     let last = -1
-    for (const m of f.text.matchAll(hello)) last = m.index
+    let offset = 0
+    for (const line of f.text.split('\n')) {
+      const m = HELPER_PREFIX.exec(line)
+      if (
+        m &&
+        m[1] === appid &&
+        hello.test(line.slice(m.index + m[0].length))
+      ) {
+        last = offset
+      }
+      offset += line.length + 1
+    }
     if (last < 0) continue
-    // Start at the line holding the HELLO so the prefix stays attached.
-    const lineStart = f.text.lastIndexOf('\n', last) + 1
-    return f.text.slice(lineStart)
+    const newer = files
+      .filter((o) => o.mtimeMs > f.mtimeMs)
+      .sort((x, y) => x.mtimeMs - y.mtimeMs)
+    let out = f.text.slice(last)
+    for (const o of newer) {
+      if (!out.endsWith('\n')) out += '\n'
+      out += o.text
+    }
+    return out
   }
   return null
 }
@@ -852,8 +886,8 @@ const IDENTITY_CALL =
  * follow a HELLO for the same appid in the same app-log text. Read only from
  * GameLib's own app logs (T-53-09), appid bracket-anchored. */
 function findGameCalls(appid: string, appLogTexts: string[]): string[] {
-  const hello = new RegExp(`HELLO\\s+shim attached appid=${appid}(?![0-9])`)
-  const call = /\]\s+CALL\s+([A-Za-z0-9_]+\.[A-Za-z0-9_]+)/
+  const hello = helloRegex(appid)
+  const call = /^\[[^\]]*\]\s+CALL\s+([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\s*$/
   const found = new Set<string>()
   for (const text of appLogTexts) {
     const payloads = attributeHelperLines(appid, text)
@@ -872,8 +906,7 @@ function findGameCalls(appid: string, appLogTexts: string[]): string[] {
 function findNover(appid: string, appLogTexts: string[]): string | null {
   for (const text of appLogTexts) {
     for (const l of attributeHelperLines(appid, text)) {
-      if (!/\bNOVER\b/.test(l)) continue
-      const m = /ver=([A-Za-z0-9_]+)/.exec(l)
+      const m = /^\[[^\]]*\]\s+NOVER\s+flat lookup ver=([A-Za-z0-9_]+)/.exec(l)
       if (m) return m[1]
     }
   }
@@ -905,10 +938,7 @@ export function classifyBridgeEvidence(input: {
   if (!/^\d+$/.test(input.appid)) {
     return { status: 'unverified', detail: 'no HELLO' }
   }
-  const hello = new RegExp(
-    `HELLO\\s+shim attached appid=${input.appid}(?![0-9])`
-  )
-  if (!input.appLogTexts.some((t) => hello.test(t))) {
+  if (!input.appLogTexts.some((t) => hasHello(input.appid, t))) {
     return { status: 'unverified', detail: 'no HELLO' }
   }
   const engine = input.engine ?? 'unity'

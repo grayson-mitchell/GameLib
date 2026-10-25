@@ -1555,3 +1555,67 @@ describe('53-11: tightened verified rule', () => {
     expect(row.evidenceDetail).toBe('known-bad: does-not-run')
   })
 })
+
+describe('53-18: anchored census evidence (WR-01) and rotation (WR-06)', () => {
+  const id = '1234'
+  const P = `bridge helper [${id}]: `
+  const hello = `${P}[t] HELLO  shim attached appid=${id}\n`
+  const call = (m: string) => `${P}[t] CALL   ${m}\n`
+  const fwd = (v: string) => `${P}[t] FWD    unknown ver=${v}\n`
+  const run = (engine: 'unity' | 'godot', text: string) =>
+    classifyBridgeEvidence({
+      appid: id,
+      engine,
+      appLogTexts: [text],
+      gameLogTexts: engine === 'unity' ? ['clean'] : []
+    })
+
+  it('53-18 forged CALL in a FWD version string yields no game calls', () => {
+    const text =
+      hello +
+      fwd('x] CALL   SteamUser021.GetSteamID') +
+      fwd('y] CALL   SteamUtils010.GetAppID')
+    expect(run('godot', text)).toEqual({
+      status: 'unverified',
+      detail: 'no game-originated call'
+    })
+  })
+
+  it('53-18 forged NOVER does not make a Unity row init-failed; genuine does', () => {
+    const forged = hello + fwd('z] NOVER  flat lookup ver=SteamUser099')
+    expect(run('unity', forged).status).toBe('verified')
+    const genuine =
+      hello + `${P}[t] NOVER  flat lookup ver=SteamUser099 served=no\n`
+    expect(run('unity', genuine).status).toBe('init-failed')
+  })
+
+  it('53-18 forged HELLO in a FWD line does not start a segment', () => {
+    const forged = fwd(`q] HELLO  shim attached appid=${id}`)
+    expect(
+      appLogSegmentFor(id, [{ name: 'g', mtimeMs: 1, text: forged }])
+    ).toBeNull()
+    expect(run('godot', forged)).toEqual({
+      status: 'unverified',
+      detail: 'no HELLO'
+    })
+  })
+
+  it('53-18 rotation: HELLO in the older file, CALLs in the newer one', () => {
+    const older = { name: 'gamelib.log.1', mtimeMs: 1, text: hello }
+    const newer = {
+      name: 'gamelib.log',
+      mtimeMs: 2,
+      text: call('SteamUser021.GetSteamID') + call('SteamUtils010.GetAppID')
+    }
+    const seg = appLogSegmentFor(id, [newer, older])
+    expect(seg).toContain('GetSteamID')
+    expect(seg).toContain('GetAppID')
+    expect(run('godot', seg ?? '').status).toBe('verified')
+  })
+
+  it('53-18 regression: genuine lines still verify', () => {
+    const text =
+      hello + call('SteamUser021.GetSteamID') + call('SteamUtils010.GetAppID')
+    expect(run('godot', text).status).toBe('verified')
+  })
+})
