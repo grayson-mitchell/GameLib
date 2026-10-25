@@ -1,6 +1,6 @@
 {
   "title": "Unclaimed World",
-  "evidence": ".planning/todos/pending/2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md",
+  "evidence": ".planning/todos/completed/2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md",
   "notes": {
     "wmp-marker": "Sets Windows Media Player's Active Setup marker, which the game checks at startup before it will run."
   },

@@ -3219,6 +3219,8 @@ export default class SteamGame implements Game {
       const { applySteamBridgeKnownFixes } = await import('./bridgeKnownFixes')
       const { applyBridgeBottleDllOverrides } =
         await import('./bridge/bottleDllOverrides')
+      const { installSteamBridgeSharedRedists } =
+        await import('./bridge/sharedRedistInstall')
 
       // Phase 51 Plan 01 Task 2 (D-51-01): the helper's lifetime is tied to
       // THIS game's own process lifetime, never to the whole app session —
@@ -3255,6 +3257,23 @@ export default class SteamGame implements Game {
           LogPrefix.Steam
         )
         return bridgeBottleSettings
+      })
+
+      // quick 261025-rkj: Steam's first-launch "Installing ..." step for the
+      // Steamworks Common Redistributables (VC++/DirectX) the game's appinfo
+      // declares, run in this appId's own bridge bottle under the 'redist'
+      // status. After the known fixes so a trusted `registry` fix can pre-write
+      // a HasRunKey and suppress a component; before the monitor because its
+      // 'launching' supersedes 'redist'. Never rejects by contract; the .catch is
+      // belt-and-braces so nothing reaches the outer catch (markBridgeFailedThisSession).
+      await installSteamBridgeSharedRedists(
+        this.appId,
+        bridgeBottleSettings
+      ).catch((error: unknown) => {
+        logWarning(
+          `SteamGame: shared redist install failed for appId ${this.appId}: ${String(error)}`,
+          LogPrefix.Steam
+        )
       })
 
       // 53-19 (D-53-06): measured per-title DLL override in this appId's own

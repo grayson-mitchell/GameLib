@@ -9,6 +9,7 @@ files:
 severity: medium
 platform: macos
 ready: code
+status: "RESOLVED 2026-10-25 by quick 261025-rkj (items 1 and 3) after 261025-mfz (item 2). The live check is a human UAT item recorded in the 261025-rkj SUMMARY."
 ---
 
 Unclaimed World (284100) routes to the bridge. The helper reaches `INIT SteamAPI ready`, and
@@ -91,3 +92,26 @@ AnyCPU .NET assembly, which runs as x64 (D-53-10).
 Still open: item 1 (reading appinfo/redist dependency data) and item 3 ("Installing Windows
 components..." on the Play button). Whether music and video play is still unknown until the shim
 crash is fixed.
+
+## Closed (2026-10-25, quick 261025-rkj)
+
+Items 1 and 3 are done. A bridge launch now installs the VC++ and DirectX redistributables the
+game's appinfo declares (`depotfromapp: 228980`) from the Steamworks Common Redistributables app,
+by running each depot's own `installscript.vdf` in the `GameLibSteamBridge-<appId>` bottle, the way
+Steam's first-launch step does. The Play button shows the `redist` status with the component
+label, for example `Installing Redistributables (DirectX Jun2010)`. .NET, PhysX, XNA, OpenAL and
+any depot whose kind cannot be established are skipped and logged. A trusted (bundled or local)
+`steamSharedRedists` known-fixes key can opt a title into one of those, and only for depots the
+game itself declares. Item 2 was done by quick 261025-mfz.
+
+Corrections to the measurements in this todo:
+- Depot 229033 is PhysX 9.14.0702, not VC++. It is verified from its installscript path
+  (`_CommonRedist\PhysX\9.14.0702\installscript.vdf`) and is not installed automatically.
+- 284100 does declare shared depots: 228990 (DirectX Jun2010) and 229004 (.NET 4.5.2). It gets
+  DirectX automatically with this change. .NET stays on Wine Mono unless a trusted profile opts in.
+  The earlier line "284100 declares nothing" was wrong.
+
+The live check (a real 1363080 or 219990 bridge launch installing VC++/DirectX, then a second launch
+showing no redist step) is a human UAT item recorded in the 261025-rkj SUMMARY. It did not block
+closing this todo. The 284100 shim crash remains tracked in
+`2026-10-24-x64-shim-lacks-old-sdk-csteamworks-exports-and-interface-versions.md`.

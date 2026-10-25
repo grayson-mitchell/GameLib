@@ -82,6 +82,7 @@ import {
 } from '../bottleProcessMonitor'
 import { runWineCommand } from 'backend/launcher'
 import { applySteamBridgeKnownFixes } from '../bridgeKnownFixes'
+import { installSteamBridgeSharedRedists } from '../bridge/sharedRedistInstall'
 import { existsSync } from 'graceful-fs'
 import { getSteamLibraries } from 'backend/utils'
 // 260821-rb5: only needed by this task's case-C self-heal test (2) —
@@ -383,6 +384,11 @@ jest.mock('../bottleProcessMonitor', () => ({
 // before EACH test, so a file-scope beforeEach below re-applies a passthrough.
 jest.mock('../bridgeKnownFixes', () => ({
   applySteamBridgeKnownFixes: jest.fn()
+}))
+
+// quick 261025-rkj: the bridge first-launch shared redist step.
+jest.mock('../bridge/sharedRedistInstall', () => ({
+  installSteamBridgeSharedRedists: jest.fn()
 }))
 
 // ── backend/launcher.ts mock — runWineCommand, dynamically imported by
@@ -1674,6 +1680,7 @@ beforeEach(() => {
   ;(applySteamBridgeKnownFixes as jest.Mock).mockImplementation(
     (_id: string, settings: unknown) => Promise.resolve(settings)
   )
+  ;(installSteamBridgeSharedRedists as jest.Mock).mockResolvedValue(undefined)
 })
 
 // ── Phase 24 Plan 08 (R4/R6/R7, finding #3): allowlist-based bridge launch
@@ -1968,6 +1975,60 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     const { logWarning } = jest.requireMock('backend/logger')
     expect(logWarning).toHaveBeenCalledWith(
       expect.stringContaining('fix boom'),
+      'Steam'
+    )
+    expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+      'steamBridgeSetupRequired',
+      expect.anything()
+    )
+  })
+
+  it('quick 261025-rkj: the shared redist installer runs with (appId, bridge settings) after the known fixes and before the monitor and wine launch', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    const game = new SteamGame(APP_ID)
+    await game.launch({} as any)
+
+    expect(installSteamBridgeSharedRedists).toHaveBeenCalledWith(APP_ID, {
+      wineCrossoverBottle: 'GameLibSteamBridge'
+    })
+    const order = (installSteamBridgeSharedRedists as jest.Mock).mock
+      .invocationCallOrder[0]
+    expect(order).toBeGreaterThan(
+      (applySteamBridgeKnownFixes as jest.Mock).mock.invocationCallOrder[0]
+    )
+    expect(order).toBeLessThan(
+      (startBottleProcessMonitor as jest.Mock).mock.invocationCallOrder[0]
+    )
+    expect(order).toBeLessThan(
+      (runWineCommand as jest.Mock).mock.invocationCallOrder[0]
+    )
+  })
+
+  it('quick 261025-rkj: the installer runs once per bridge launch', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+
+    await new SteamGame(APP_ID).launch({} as any)
+
+    expect(installSteamBridgeSharedRedists).toHaveBeenCalledTimes(1)
+  })
+
+  it('quick 261025-rkj: a rejecting installer never fails the launch -- game still launches, warning logged, no steamBridgeSetupRequired', async () => {
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(installSteamBridgeSharedRedists as jest.Mock).mockRejectedValue(
+      new Error('redist boom')
+    )
+
+    const result = await new SteamGame(APP_ID).launch({} as any)
+
+    expect(result).toBe(true)
+    expect(runWineCommand).toHaveBeenCalled()
+    const { logWarning } = jest.requireMock('backend/logger')
+    expect(logWarning).toHaveBeenCalledWith(
+      expect.stringContaining('redist boom'),
       'Steam'
     )
     expect(sendFrontendMessage).not.toHaveBeenCalledWith(
