@@ -52,6 +52,19 @@ export interface SharedRedistClassification {
 
 const CONTROL_CHARS = /[\r\n\0]/
 const FORBIDDEN_CHARS = /["\r\n\0]/
+/**
+ * Characters cmd.exe treats specially on a `cmd /c` line: command separators and redirection
+ * (`& | < >`), the escape (`^`), grouping (`( )`), variable expansion (`%`, and `!` under delayed
+ * expansion), the echo-off prefix (`@`), and the quote. `/c` strips the outer quotes Wine adds
+ * around a path containing spaces whenever the quoted text holds one of these, so any of them in a
+ * `.cmd` path or argument turns the argv into a shell string (CR-01).
+ */
+const CMD_META = /[&|<>^()%!@"]/
+
+/** True when `s` holds a character cmd.exe would interpret on a `cmd /c` line. */
+export function hasCmdMetachar(s: string): boolean {
+  return CMD_META.test(s)
+}
 const COMMON_REDIST_KEY_PREFIX =
   'HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\'
 
@@ -242,6 +255,9 @@ export function classifySharedRedist(
       const lower = p.process.toLowerCase()
       if (!lower.startsWith(procPrefix) || hasDotDotSegment(p.process))
         return { kind: 'other', label }
+      // The `%INSTALLDIR%` prefix itself is the only `%` an auto kind may carry.
+      if (hasCmdMetachar(p.process.slice(procPrefix.length)))
+        return { kind: 'other', label }
       const okExt =
         kind === 'directx'
           ? lower.endsWith('dxsetup.exe')
@@ -313,6 +329,10 @@ const SWITCH_TOKEN_RE = /^\/[A-Za-z0-9:]+$/
  * Auto kinds (vcredist/directx) accept switch-only arguments. Kind `other` (trusted opt-in)
  * additionally accepts a bare `msiexec` and quoted arguments; any token that referenced
  * `%INSTALLDIR%` must still resolve under `<installDirWin>\_CommonRedist\`.
+ *
+ * A `.cmd` process runs through `cmd /c`, which re-parses its command line, so for `.cmd` the
+ * expanded path and every argument must be free of cmd metacharacters ({@link hasCmdMetachar}).
+ * The install dir is held to the same rule for every kind, and no process path may hold a quote.
  */
 export function buildRedistProcessCommandParts(
   proc: InstallScriptProcess,
@@ -322,7 +342,8 @@ export function buildRedistProcessCommandParts(
   const command = proc.command ?? ''
   if (CONTROL_CHARS.test(proc.process) || CONTROL_CHARS.test(command))
     return null
-  if (CONTROL_CHARS.test(installDirWin)) return null
+  if (CONTROL_CHARS.test(installDirWin) || hasCmdMetachar(installDirWin))
+    return null
   const dir = installDirWin.replace(/\\+$/, '')
   const prefix = `${dir}\\_CommonRedist\\`.toLowerCase()
   const expand = (s: string) => s.replace(/%INSTALLDIR%/gi, dir)
@@ -333,6 +354,7 @@ export function buildRedistProcessCommandParts(
   const isMsiexec = kind === 'other' && rawProc.toLowerCase() === 'msiexec'
   const procPath = isMsiexec ? 'msiexec' : expand(rawProc)
   if (!isMsiexec && !contained(procPath)) return null
+  if (procPath.includes('"')) return null
   const lowerProc = procPath.toLowerCase()
   if (!isMsiexec && !(lowerProc.endsWith('.exe') || lowerProc.endsWith('.cmd')))
     return null
@@ -351,7 +373,10 @@ export function buildRedistProcessCommandParts(
   }
 
   if (isMsiexec) return ['msiexec', ...args]
-  if (lowerProc.endsWith('.cmd')) return ['cmd', '/c', procPath, ...args]
+  if (lowerProc.endsWith('.cmd')) {
+    if (hasCmdMetachar(procPath) || args.some(hasCmdMetachar)) return null
+    return ['cmd', '/c', procPath, ...args]
+  }
   return [procPath, ...args]
 }
 

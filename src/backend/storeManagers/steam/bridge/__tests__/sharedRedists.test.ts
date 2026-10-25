@@ -406,6 +406,97 @@ describe('buildRedistProcessCommandParts', () => {
       `${DIR}\\_CommonRedist\\DotNet\\4.5.2\\Microsoft .NET Framework 4.5.2.cmd`
     ])
   })
+
+  describe('cmd /c metacharacter containment (CR-01)', () => {
+    const VC = '%INSTALLDIR%\\_CommonRedist\\vcredist\\2010\\'
+    // The reviewer's injection shapes: a separator, and a quote that closes Wine's own quoting.
+    const INJECTIONS = [
+      `${VC}a & evil.exe & b.cmd`,
+      `${VC}a" & x "b.cmd`,
+      `${VC}a & reg add HKCU\\Software\\X /f & b.cmd`
+    ]
+
+    it.each(INJECTIONS)('rejects %s for every kind', (process) => {
+      for (const kind of ['vcredist', 'directx', 'other'] as const)
+        expect(
+          buildRedistProcessCommandParts({ process }, kind, DIR)
+        ).toBeNull()
+    })
+
+    it.each(['&', '|', '<', '>', '^', '(', ')', '%', '!', '@', '"'])(
+      'rejects %s in a .cmd path, a .cmd arg and the install dir',
+      (ch) => {
+        expect(
+          buildRedistProcessCommandParts(
+            { process: `${VC}a${ch}b.cmd` },
+            'other',
+            DIR
+          )
+        ).toBeNull()
+        // A quote never survives the quote-aware split as part of an argument.
+        if (ch !== '"')
+          expect(
+            buildRedistProcessCommandParts(
+              { process: `${VC}ok.cmd`, command: `"x${ch}y"` },
+              'other',
+              DIR
+            )
+          ).toBeNull()
+        expect(
+          buildRedistProcessCommandParts(
+            { process: `${VC}vcredist_x86.exe`, command: '/q' },
+            'vcredist',
+            `Z:\\cache${ch}\\Steamworks Shared`
+          )
+        ).toBeNull()
+      }
+    )
+
+    it('rejects a %VAR% left over after %INSTALLDIR% expansion in a .cmd', () => {
+      expect(
+        buildRedistProcessCommandParts(
+          { process: `${VC}%COMSPEC%.cmd` },
+          'other',
+          DIR
+        )
+      ).toBeNull()
+    })
+
+    it('still builds the measured .cmd and .exe entries (spaces and + are not metacharacters)', () => {
+      expect(
+        buildRedistProcessCommandParts(
+          parse('vc2015')[0].processes[0],
+          'vcredist',
+          DIR
+        )
+      ).toEqual([
+        'cmd',
+        '/c',
+        `${DIR}\\_CommonRedist\\vcredist\\2015\\Microsoft Visual C++ 2015 x86.cmd`
+      ])
+    })
+
+    it('classifies an injected .cmd path as other, so it is never automatic', () => {
+      const base = parse('vc2010')
+      for (const process of INJECTIONS)
+        expect(
+          classifySharedRedist(
+            PATHS.vc2010,
+            base.map((e) => ({ ...e, processes: [{ process }] }))
+          ).kind
+        ).toBe('other')
+      // A % past the %INSTALLDIR% prefix is rejected too.
+      expect(
+        classifySharedRedist(
+          PATHS.vc2010,
+          base.map((e) => ({
+            ...e,
+            processes: [{ process: `${VC}%TEMP%.exe` }]
+          }))
+        ).kind
+      ).toBe('other')
+    })
+  })
 })
 
 describe('HasRunKey builders', () => {
