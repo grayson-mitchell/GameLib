@@ -532,6 +532,37 @@ describe('installSteamBridgeSharedRedists', () => {
     })
   })
 
+  it('runs same-named entries without a HasRunKey in two depots (IN-02)', async () => {
+    const noKey = (id: string, family: string): SharedRedistDepot => ({
+      depotId: id,
+      gid: `gid-${id}`,
+      kind: 'other',
+      label: `${family} 1.0`,
+      installDirHost: ROOT,
+      entries: [
+        {
+          name: 'install',
+          minimumHasRunValue: 1,
+          requirementOs: null,
+          processes: [
+            {
+              process: `%INSTALLDIR%\\_CommonRedist\\${family}\\1.0\\setup.exe`
+            }
+          ]
+        }
+      ]
+    })
+    mockedDownload.mockResolvedValue(
+      ok([noKey('229100', 'A'), noKey('229101', 'B')])
+    )
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(installerCalls()).toHaveLength(2)
+    expect(Object.keys(ledger().done).sort()).toEqual([
+      '|229100|install',
+      '|229101|install'
+    ])
+  })
+
   describe('HasRunKey mark failure (IN-01)', () => {
     const DX_KEY =
       'hkey_local_machine\\software\\valve\\steam\\apps\\commonredist\\directx\\jun2010|dxsetup'

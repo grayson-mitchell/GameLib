@@ -595,7 +595,31 @@ describe('declaredSharedRedistDepotIds', () => {
 
 describe('sharedRedistLedgerKey', () => {
   it('lowercases both parts', () => {
-    expect(sharedRedistLedgerKey('HKEY\\A', 'X64 1.0')).toBe('hkey\\a|x64 1.0')
-    expect(sharedRedistLedgerKey(undefined, 'N')).toBe('|n')
+    expect(sharedRedistLedgerKey('HKEY\\A', 'X64 1.0', '1')).toBe(
+      'hkey\\a|x64 1.0'
+    )
+  })
+
+  it('keys an entry without a HasRunKey by depot, so same-named entries stay distinct (IN-02)', () => {
+    expect(sharedRedistLedgerKey(undefined, 'N', '229004')).toBe('|229004|n')
+    expect(sharedRedistLedgerKey(undefined, 'N', '229004')).not.toBe(
+      sharedRedistLedgerKey(undefined, 'N', '229007')
+    )
+    // The HasRunKey shape ignores the depot: Steam's mark is (key, value), shared across depots.
+    expect(sharedRedistLedgerKey('K', 'N', '1')).toBe(
+      sharedRedistLedgerKey('K', 'N', '2')
+    )
+  })
+
+  it('cannot be forged with a | in a part', () => {
+    expect(sharedRedistLedgerKey('a|b', 'c', '1')).not.toBe(
+      sharedRedistLedgerKey('a', 'b|c', '1')
+    )
+    expect(sharedRedistLedgerKey('', '1|n', '9')).not.toBe(
+      sharedRedistLedgerKey(undefined, 'n', '1')
+    )
+    expect(sharedRedistLedgerKey('a%7Cb', 'c', '1')).not.toBe(
+      sharedRedistLedgerKey('a|b', 'c', '1')
+    )
   })
 })

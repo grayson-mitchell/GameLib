@@ -463,10 +463,22 @@ export function declaredSharedRedistDepotIds(appinfo: unknown): string[] {
   return out
 }
 
-/** Ledger key for one installscript entry. */
+const encodeKeyPart = (s: string) =>
+  s.toLowerCase().replace(/%/g, '%25').replace(/\|/g, '%7C')
+
+/**
+ * Ledger key for one installscript entry (IN-02). With a HasRunKey it is `<key>|<name>`, both
+ * lowercased, so it matches Steam's own (key, value) identity across depots. Without one it is
+ * `|<depotId>|<name>`, so two such entries with the same name in different depots stay distinct.
+ * `%` and `|` inside a part are percent-encoded, so a part can never forge a separator and the
+ * two shapes (one `|` and two) can never collide.
+ */
 export function sharedRedistLedgerKey(
   hasRunKey: string | undefined,
-  name: string
+  name: string,
+  depotId: string
 ): string {
-  return `${(hasRunKey ?? '').toLowerCase()}|${name.toLowerCase()}`
+  if (hasRunKey === undefined)
+    return `|${encodeKeyPart(depotId)}|${encodeKeyPart(name)}`
+  return `${encodeKeyPart(hasRunKey)}|${encodeKeyPart(name)}`
 }

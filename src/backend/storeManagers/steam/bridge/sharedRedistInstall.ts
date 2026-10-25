@@ -403,7 +403,11 @@ async function run(
         break
       }
       if (!entryAppliesToBottle(entry)) continue
-      const key = sharedRedistLedgerKey(entry.hasRunKey, entry.name)
+      const key = sharedRedistLedgerKey(
+        entry.hasRunKey,
+        entry.name,
+        depot.depotId
+      )
       if (ledger.done[key]) {
         if (ledger.markPending[key] && entry.hasRunKey) {
           if (await writeMark(entry.hasRunKey, entry.name)) {
