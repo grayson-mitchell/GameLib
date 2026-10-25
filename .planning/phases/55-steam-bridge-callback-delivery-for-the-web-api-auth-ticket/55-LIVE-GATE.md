@@ -151,3 +151,16 @@ Unresolved interactions at authoring time: 0.
 
 At session end the runner records in the transcript: `ls -la <session>/` and `wc -l <session>/*`, plus the count of
 structural impossibilities and unresolved interactions encountered during the run (target 0, recorded whatever it is).
+
+## Run 1 preflight
+
+Session dir: `/tmp/gamelib-gate-20261025T231058Z` (UTC; 2026-10-26 12:10 local).
+
+- PC1: `pgrep -x steam_osx` printed 48504 (Steam running).
+- PC2: `pgrep -fl steam-bridge-helper` empty.
+- PC3: `pnpm gen-vtables && pnpm build-steam-bridge` exit 0; all three compile gates passed. Sizes: steam_api64.dll 500736, steam-bridge-helper 156368 (unchanged from 55-05).
+- PC4: `pre-session-gamelib.log` (8878 bytes) and `pre-session-gamelib.log.old` (139767 bytes) archived.
+- PC5: baselines copied (10 files) to `<session>/baseline/`. `LogEOS[A-Za-z]*:.*Connect` counts: backup-2026.10.25-21.26.23 = 1; AbioticFactor.log (10:30 run) = 0; all other backups = 0. Both named verbose baselines present. Note: AbioticFactor.log has 0 Connect-matching lines (7 LogEOS lines), so item 4's absence clause is trivially satisfied against it; the 21.26.23 baseline is the discriminating one.
+- PC6: Engine.ini written to the bottle Config/Windows, `grep -c "=Verbose"` = 7.
+- PC7: deferred to the operator (Task 2).
+- PC8: `git status --short native/steam-bridge/generated` empty.
