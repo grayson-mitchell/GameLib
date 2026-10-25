@@ -4777,6 +4777,14 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     ).mock.calls.find(([id, value]) => id === APP_ID && value?.bridge?.scan)
     expect(scanPersistCall).toBeUndefined()
     expect(library.get(APP_ID)?.is_installed).not.toBe(true)
+    // 51-REVIEW WR-07: the x64 arch IS persisted, so the next session's
+    // install() routes win64-no-shim instead of re-downloading.
+    const archPersistCall = (
+      steamMetadataStore.set as jest.Mock
+    ).mock.calls.find(
+      ([id, value]) => id === APP_ID && value?.bridge?.steamApi === 'x64'
+    )
+    expect(archPersistCall).toBeDefined()
   })
 
   it("D-51-09 (Task 3): placeShimForGame's 'placed' status at install time persists the fresh verdict via writeBridgeScanVerdict before markBridgeGameInstalled flips is_installed", async () => {

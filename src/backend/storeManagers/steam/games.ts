@@ -1669,6 +1669,13 @@ export default class SteamGame implements Game {
         // ordinary route instead of re-forcing the bridge into the same
         // dead end.
         setBridgeUserRoute(this.appId, undefined)
+        // 51-REVIEW WR-07: persist the arch so the resolver's win64-no-shim
+        // row short-circuits the next install(). Without it the session-only
+        // circuit breaker is the sole memory of this dead end, and every new
+        // session re-downloads the full game into a bridge bottle only to
+        // delete it again. The row is gated on win64ShimPresent, so a later
+        // build that bundles steam_api64.dll is not held back by this.
+        setBridgeSteamApiPrescreen(this.appId, 'x64')
         stopInstallPolling(this.appId)
         const removeResult = await removePerGameBridgeBottle(this.appId)
         if (removeResult.status === 'error') {
