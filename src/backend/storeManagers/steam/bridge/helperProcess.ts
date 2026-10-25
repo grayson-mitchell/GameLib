@@ -295,24 +295,44 @@ function ensureHelperSpawned(
   // 53-REVIEW WR-03: the logger does not split multi-line messages, so a
   // chunk logged whole carries the appid prefix on its first line only and the
   // census (which reads gamelib.log) would see unattributed CALL lines. Log per
-  // line. A partial line split across two chunks is logged as two prefixed
-  // fragments, which is acceptable: each fragment carries the appid.
-  child.stdout?.on('data', (data: Buffer) => {
-    for (const line of data.toString().split('\n')) {
-      const trimmed = line.trim()
-      if (trimmed) {
-        logInfo(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
-      }
+  // line. 53-18 WR-05: lines are reassembled across chunks -- each stream keeps
+  // the trailing partial line as a plain-string carry, only complete lines are
+  // logged/parsed, and the carry is flushed once when the stream ends. No
+  // timers or handles, so the sidecar's exit-by-drain contract is unchanged.
+  const relayLines = (
+    stream: NodeJS.EventEmitter | null | undefined,
+    onLine: (line: string) => void
+  ) => {
+    let carry = ''
+    let flushed = false
+    const flush = () => {
+      if (flushed) return
+      flushed = true
+      const rest = carry
+      carry = ''
+      if (rest !== '') onLine(rest)
+    }
+    stream?.on('data', (data: Buffer) => {
+      const parts = (carry + data.toString()).split('\n')
+      carry = parts.pop() ?? ''
+      for (const line of parts) onLine(line)
+    })
+    stream?.on('end', flush)
+    // Fallback for a stream object that never emits 'end'.
+    child.on('close', flush)
+  }
+  relayLines(child.stdout, (line) => {
+    const trimmed = line.trim()
+    if (trimmed) {
+      logInfo(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
     }
   })
-  child.stderr?.on('data', (data: Buffer) => {
-    for (const line of data.toString().split('\n')) {
-      const trimmed = line.trim()
-      if (trimmed) {
-        logWarning(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
-      }
-      handleStderrLine(line)
+  relayLines(child.stderr, (line) => {
+    const trimmed = line.trim()
+    if (trimmed) {
+      logWarning(`bridge helper [${appId}]: ${trimmed}`, LogPrefix.Steam)
     }
+    handleStderrLine(line)
   })
   child.on('exit', (code, signal) => {
     logWarning(

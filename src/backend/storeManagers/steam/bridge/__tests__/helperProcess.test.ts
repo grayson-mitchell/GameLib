@@ -26,7 +26,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { sendFrontendMessage } from 'backend/ipc'
-import { logWarning } from 'backend/logger'
+import { logInfo, logWarning } from 'backend/logger'
 import {
   steamBridgeHelperPath,
   steamBridgeHelperStateDir
@@ -647,5 +647,62 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     // Positive control: the registry map itself must still be declared, so
     // this assertion is provably exercising real source, not an empty file.
     expect(stripped).toMatch(/const helpers = new Map</)
+  })
+
+  describe('53-18 WR-05 line carry-over', () => {
+    const bridgeMessages = (mock: unknown) =>
+      (mock as jest.Mock).mock.calls
+        .map((c) => c[0] as string)
+        .filter((m) => m.startsWith('bridge helper ['))
+
+    test('a stderr line split across two chunks is logged once, whole', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      ;(logWarning as jest.Mock).mockClear()
+      void ensureBridgeHelperReady('42')
+      child.stderr.emit('data', Buffer.from('[ts] CA'))
+      child.stderr.emit('data', Buffer.from('LL   SteamUser021.GetSteamID\n'))
+      expect(bridgeMessages(logWarning)).toEqual([
+        'bridge helper [42]: [ts] CALL   SteamUser021.GetSteamID'
+      ])
+    })
+
+    test('a LISTEN line split across two chunks still resolves the port', async () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      MockedSocket.mockImplementation(
+        () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+      )
+      const pending = ensureBridgeHelperReady(APP_ID_A)
+      const line = `[2026-10-17T00:00:00Z] LISTEN 127.0.0.1:55001 appid=${APP_ID_A} mode=full\n`
+      child.stderr.emit('data', Buffer.from(line.slice(0, 30)))
+      child.stderr.emit('data', Buffer.from(line.slice(30)))
+      const result = await pending
+      expect(result.ready).toBe(true)
+    })
+
+    test('a trailing partial line is flushed exactly once on stream end', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      ;(logWarning as jest.Mock).mockClear()
+      void ensureBridgeHelperReady('42')
+      child.stderr.emit('data', Buffer.from('[ts] tail'))
+      expect(bridgeMessages(logWarning)).toEqual([])
+      child.stderr.emit('end')
+      child.emit('close')
+      expect(bridgeMessages(logWarning)).toEqual([
+        'bridge helper [42]: [ts] tail'
+      ])
+    })
+
+    test('stdout gets the same carry-over via logInfo', () => {
+      const child = new FakeChildProcess()
+      mockedSpawn.mockReturnValue(child)
+      ;(logInfo as jest.Mock).mockClear()
+      void ensureBridgeHelperReady('42')
+      child.stdout.emit('data', Buffer.from('hel'))
+      child.stdout.emit('data', Buffer.from('lo\n'))
+      expect(bridgeMessages(logInfo)).toEqual(['bridge helper [42]: hello'])
+    })
   })
 })
