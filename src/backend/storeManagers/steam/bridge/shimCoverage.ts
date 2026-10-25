@@ -338,7 +338,34 @@ export const SHIM64_SERVED_INTERFACE_VERSIONS: ReadonlyMap<
   // family would defeat the x64 null-object answer, Pitfall 4): ELEX asks
   // STEAMUGC_INTERFACE_VERSION010, Ranch Simulator SteamController008.
   ['SteamController008', { family: 'SteamController', mode: 'stub' }],
-  ['STEAMUGC_INTERFACE_VERSION010', { family: 'SteamUGC', mode: 'stub' }]
+  ['STEAMUGC_INTERFACE_VERSION010', { family: 'SteamUGC', mode: 'stub' }],
+  // quick 261025-t7i (D-53-03): Unclaimed World (284100) x64 loads
+  // CSteamworks64.dll (Steamworks.NET 7.0.0 / SDK 1.34), whose context init
+  // requests these ten versions. Each is extracted from its own Proton VTABLE
+  // block. Without the rows, findUnservableInterfaceVersions counts them as
+  // half-served-family skew and the j4l guard withholds the shim once the
+  // original DLL is restored. 'wire' only where the manifest carries a wire
+  // method: User018, Utils007 and Apps007 do (Apps007 has 14, so it is wire
+  // like Apps008).
+  ['SteamUser018', { family: 'SteamUser', mode: 'wire' }],
+  ['SteamUtils007', { family: 'SteamUtils', mode: 'wire' }],
+  ['STEAMAPPS_INTERFACE_VERSION007', { family: 'SteamApps', mode: 'wire' }],
+  [
+    'STEAMREMOTESTORAGE_INTERFACE_VERSION012',
+    { family: 'SteamRemoteStorage', mode: 'stub' }
+  ],
+  ['STEAMUGC_INTERFACE_VERSION007', { family: 'SteamUGC', mode: 'stub' }],
+  ['STEAMHTTP_INTERFACE_VERSION002', { family: 'SteamHTTP', mode: 'stub' }],
+  [
+    'STEAMSCREENSHOTS_INTERFACE_VERSION002',
+    { family: 'SteamScreenshots', mode: 'stub' }
+  ],
+  [
+    'STEAMHTMLSURFACE_INTERFACE_VERSION_003',
+    { family: 'SteamHTMLSurface', mode: 'stub' }
+  ],
+  ['STEAMINVENTORY_INTERFACE_V001', { family: 'SteamInventory', mode: 'stub' }],
+  ['STEAMVIDEO_INTERFACE_V001', { family: 'SteamVideo', mode: 'stub' }]
 ])
 
 // 51-15: D-51-13 GO -- the Win64 shim answers an unserved required

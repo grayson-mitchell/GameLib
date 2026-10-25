@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMSCREENSHOTS_INTERFACE_VERSION002",
+  "family": "SteamScreenshots",
+  "ordinal": 65,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamScreenshots_v002",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamScreenshots.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "WriteScreenshot",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pubRGB",
+          "type": "void*"
+        },
+        {
+          "name": "cubRGB",
+          "type": "uint32"
+        },
+        {
+          "name": "nWidth",
+          "type": "int32"
+        },
+        {
+          "name": "nHeight",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "AddScreenshotToLibrary",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "pchFilename",
+          "type": "const char*"
+        },
+        {
+          "name": "pchThumbnailFilename",
+          "type": "const char*"
+        },
+        {
+          "name": "nWidth",
+          "type": "int32"
+        },
+        {
+          "name": "nHeight",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "TriggerScreenshot",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 3,
+      "name": "HookScreenshots",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bHook",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "SetLocation",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hScreenshot",
+          "type": "uint32"
+        },
+        {
+          "name": "pchLocation",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "TagUser",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hScreenshot",
+          "type": "uint32"
+        },
+        {
+          "name": "steamID",
+          "type": "CSteamID"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "TagPublishedFile",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hScreenshot",
+          "type": "uint32"
+        },
+        {
+          "name": "unPublishedFileID",
+          "type": "uint64"
+        }
+      ]
+    }
+  ]
+}

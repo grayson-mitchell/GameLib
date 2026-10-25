@@ -8,7 +8,7 @@
  * Implements:
  *   - The flat SteamAPI_* exports (acceptance-set superset, R3 finding #9).
  *   - Per-interface __thiscall C++ vtables (spike 006's proven ABI mechanism)
- *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamInput006, SteamGameServer014, SteamGameServer015, SteamGameServerStats001, STEAMSCREENSHOTS_INTERFACE_VERSION003, SteamMatchGameSearch001, STEAMAPPLIST_INTERFACE_VERSION001, STEAMMUSIC_INTERFACE_VERSION001, STEAMMUSICREMOTE_INTERFACE_VERSION001, STEAMPARENTALSETTINGS_INTERFACE_VERSION001, SteamParties002, STEAMREMOTEPLAY_INTERFACE_VERSION001, STEAMREMOTEPLAY_INTERFACE_VERSION002, STEAMVIDEO_INTERFACE_V002, STEAMVIDEO_INTERFACE_V007, STEAMTIMELINE_INTERFACE_V001, STEAMHTTP_INTERFACE_VERSION003, STEAMUGC_INTERFACE_VERSION016, STEAMUGC_INTERFACE_VERSION017, STEAMUGC_INTERFACE_VERSION020, STEAMHTMLSURFACE_INTERFACE_VERSION_005, STEAMINVENTORY_INTERFACE_V003, SteamUtils009, SteamController006, SteamGameServer012, SteamController008, STEAMUGC_INTERFACE_VERSION010.
+ *     for: SteamUser023, SteamFriends018, SteamUser016, SteamFriends011, SteamUtils005, STEAMAPPS_INTERFACE_VERSION004, STEAMUSERSTATS_INTERFACE_VERSION010, SteamFriends013, STEAMAPPS_INTERFACE_VERSION005, STEAMUSERSTATS_INTERFACE_VERSION011, STEAMREMOTESTORAGE_INTERFACE_VERSION005, SteamMatchMaking009, SteamMatchMakingServers002, SteamNetworking005, STEAMREMOTESTORAGE_INTERFACE_VERSION010, SteamClient017, SteamUser019, SteamFriends015, SteamUtils008, STEAMAPPS_INTERFACE_VERSION008, STEAMREMOTESTORAGE_INTERFACE_VERSION013, SteamClient014, SteamNetworking006, STEAMREMOTESTORAGE_INTERFACE_VERSION016, SteamClient020, SteamClient021, SteamUser021, SteamFriends017, SteamUtils010, STEAMUSERSTATS_INTERFACE_VERSION012, STEAMUSERSTATS_INTERFACE_VERSION013, SteamInput006, SteamGameServer014, SteamGameServer015, SteamGameServerStats001, STEAMSCREENSHOTS_INTERFACE_VERSION003, SteamMatchGameSearch001, STEAMAPPLIST_INTERFACE_VERSION001, STEAMMUSIC_INTERFACE_VERSION001, STEAMMUSICREMOTE_INTERFACE_VERSION001, STEAMPARENTALSETTINGS_INTERFACE_VERSION001, SteamParties002, STEAMREMOTEPLAY_INTERFACE_VERSION001, STEAMREMOTEPLAY_INTERFACE_VERSION002, STEAMVIDEO_INTERFACE_V002, STEAMVIDEO_INTERFACE_V007, STEAMTIMELINE_INTERFACE_V001, STEAMHTTP_INTERFACE_VERSION003, STEAMUGC_INTERFACE_VERSION016, STEAMUGC_INTERFACE_VERSION017, STEAMUGC_INTERFACE_VERSION020, STEAMHTMLSURFACE_INTERFACE_VERSION_005, STEAMINVENTORY_INTERFACE_V003, SteamUtils009, SteamController006, SteamGameServer012, SteamController008, STEAMUGC_INTERFACE_VERSION010, SteamUser018, SteamUtils007, STEAMAPPS_INTERFACE_VERSION007, STEAMREMOTESTORAGE_INTERFACE_VERSION012, STEAMUGC_INTERFACE_VERSION007, STEAMHTTP_INTERFACE_VERSION002, STEAMSCREENSHOTS_INTERFACE_VERSION002, STEAMHTMLSURFACE_INTERFACE_VERSION_003, STEAMINVENTORY_INTERFACE_V001, STEAMVIDEO_INTERFACE_V001.
  *
  * ABI ground truth (24-RESEARCH.md Pattern 2): MSVC __thiscall -- `this` in
  * ECX, callee cleans the stack; ret N = summed non-`this` param widths (+4 for
@@ -60,6 +60,7 @@
 #define BRIDGE_CONTROL_SLOT_REPORT_INIT 5
 #define GAMELIB_INIT_FN_STEAMAPI_INIT 0
 #define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1
+#define GAMELIB_INIT_FN_STEAMAPI_INITSAFE 2
 
 // CR-01: byte capacity of each string-returning stub's shim-owned static
 // return buffer -- emitted directly from the generator's
@@ -107,7 +108,7 @@ Response blob (per method):
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "d8896985230c"
+#define BRIDGE_SHIM_TABLE_HASH "5505719d7a6f"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -19883,6 +19884,2171 @@ struct FakeSTEAMUGC_INTERFACE_VERSION010 { vfn *vptr; };
 static struct FakeSTEAMUGC_INTERFACE_VERSION010 g_steamugc_interface_version010_instance = { g_steamugc_interface_version010_vtbl };
 #endif
 
+#if defined(__x86_64__)
+// === SteamUser018 (ordinal 59, family SteamUser) ===
+
+// slot 0: GetHSteamUser() -> int32 | __thiscall ret 0
+static int32_t THISCALL vt_SteamUser018_GetHSteamUser(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(59, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 1: BLoggedOn() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamUser018_BLoggedOn(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(59, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 2: GetSteamID() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer)
+static void * THISCALL vt_SteamUser018_GetSteamID(void *self, void *sretOut) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(59, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
+  return sretOut;
+}
+
+// slot 3: InitiateGameConnection(void* pAuthBlob, int32 cbMaxAuthBlob, CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer, bool bSecure) -> int32 | __thiscall ret 28 (STUB)
+static int32_t THISCALL vt_SteamUser018_InitiateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: TerminateGameConnection(uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamUser018_TerminateGameConnection(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 5: TrackAppUsageEvent(CGameID gameID, int32 eAppUsageEvent, const char* pchExtraInfo) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamUser018_TrackAppUsageEvent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 6: GetUserDataFolder(char* pchBuffer, int32 cubBuffer) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamUser018_GetUserDataFolder(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: StartVoiceRecording() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamUser018_StartVoiceRecording(void *self) {
+  (void)self;
+}
+
+// slot 8: StopVoiceRecording() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamUser018_StopVoiceRecording(void *self) {
+  (void)self;
+}
+
+// slot 9: GetAvailableVoice(uint32* pcbCompressed, uint32* pcbUncompressed, uint32 nUncompressedVoiceDesiredSampleRate) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamUser018_GetAvailableVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: GetVoice(bool bWantCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, bool bWantUncompressed, void* pUncompressedDestBuffer, uint32 cbUncompressedDestBufferSize, uint32* nUncompressBytesWritten, uint32 nUncompressedVoiceDesiredSampleRate) -> uint32 | __thiscall ret 36 (STUB)
+static uint32_t THISCALL vt_SteamUser018_GetVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: DecompressVoice(const void* pCompressed, uint32 cbCompressed, void* pDestBuffer, uint32 cbDestBufferSize, uint32* nBytesWritten, uint32 nDesiredSampleRate) -> uint32 | __thiscall ret 24 (STUB)
+static uint32_t THISCALL vt_SteamUser018_DecompressVoice(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetVoiceOptimalSampleRate() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamUser018_GetVoiceOptimalSampleRate(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetAuthSessionTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> uint32 | __thiscall ret 12
+static uint32_t THISCALL vt_SteamUser018_GetAuthSessionTicket(void *self, void * pTicket, int32_t cbMaxTicket, uint32_t * pcbTicket) {
+  (void)self;
+  uint8_t argbuf[8];
+  uint32_t argOff = 0;
+  uint32_t cap_pTicket = (cbMaxTicket < 0) ? 0u : (uint32_t)cbMaxTicket; // negative size -> capacity 0 (53-14, T-53-56)
+  if (cap_pTicket > WIRE_OUT_BUFFER_MAX_BYTES) cap_pTicket = WIRE_OUT_BUFFER_MAX_BYTES;
+  memcpy(argbuf + argOff, &cap_pTicket, 4); argOff += 4;
+  memcpy(argbuf + argOff, &cbMaxTicket, 4); argOff += 4;
+  uint8_t retbuf[4108]; uint32_t retlen = 0;
+  if (!bridge_transact(59, 13, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) {
+    if (pcbTicket != NULL) *pcbTicket = 0;
+    return 0;
+  }
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  uint32_t respOff = 4;
+  uint32_t copied_pTicket = 0;
+  uint32_t lenVal_pcbTicket = 0;
+  if (retlen >= respOff + 4) memcpy(&lenVal_pcbTicket, retbuf + respOff, 4);
+  respOff += 4;
+  if (retlen >= respOff + 4) {
+    uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
+    uint32_t copyLen = declLen;
+    if (copyLen > WIRE_OUT_BUFFER_MAX_BYTES) copyLen = WIRE_OUT_BUFFER_MAX_BYTES;
+    if (copyLen > cap_pTicket) copyLen = cap_pTicket; // never write past the caller's own capacity (53-14, T-53-56)
+    if (pTicket != NULL && retlen >= respOff + copyLen) {
+      memcpy(pTicket, retbuf + respOff, copyLen);
+      copied_pTicket = copyLen;
+    }
+    respOff += declLen;
+  }
+  if (pcbTicket != NULL) *pcbTicket = (lenVal_pcbTicket < copied_pTicket) ? lenVal_pcbTicket : copied_pTicket;
+  return ret;
+}
+
+// slot 14: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_SteamUser018_BeginAuthSession(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: EndAuthSession(CSteamID steamID) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamUser018_EndAuthSession(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 16: CancelAuthTicket(uint32 hAuthTicket) -> void | __thiscall ret 4
+static void THISCALL vt_SteamUser018_CancelAuthTicket(void *self, uint32_t hAuthTicket) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &hAuthTicket, 4); argOff += 4;
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  bridge_transact(59, 16, argbuf, argOff, retbuf, sizeof(retbuf), &retlen);
+}
+
+// slot 17: UserHasLicenseForApp(CSteamID steamID, uint32 appID) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_SteamUser018_UserHasLicenseForApp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: BIsBehindNAT() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUser018_BIsBehindNAT(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: AdvertiseGame(CSteamID steamIDGameServer, uint32 unIPServer, uint32 usPortServer) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_SteamUser018_AdvertiseGame(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 20: RequestEncryptedAppTicket(void* pDataToInclude, int32 cbDataToInclude) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_SteamUser018_RequestEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 21: GetEncryptedAppTicket(void* pTicket, int32 cbMaxTicket, uint32* pcbTicket) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUser018_GetEncryptedAppTicket(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: GetGameBadgeLevel(int32 nSeries, bool bFoil) -> int32 | __thiscall ret 8 (STUB)
+static int32_t THISCALL vt_SteamUser018_GetGameBadgeLevel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetPlayerSteamLevel() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_SteamUser018_GetPlayerSteamLevel(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 24: RequestStoreAuthURL(const char* pchRedirectURL) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamUser018_RequestStoreAuthURL(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+static vfn g_steamuser018_vtbl[25] = {
+  (vfn)vt_SteamUser018_GetHSteamUser, // slot 0
+  (vfn)vt_SteamUser018_BLoggedOn, // slot 1
+  (vfn)vt_SteamUser018_GetSteamID, // slot 2
+  (vfn)vt_SteamUser018_InitiateGameConnection, // slot 3
+  (vfn)vt_SteamUser018_TerminateGameConnection, // slot 4
+  (vfn)vt_SteamUser018_TrackAppUsageEvent, // slot 5
+  (vfn)vt_SteamUser018_GetUserDataFolder, // slot 6
+  (vfn)vt_SteamUser018_StartVoiceRecording, // slot 7
+  (vfn)vt_SteamUser018_StopVoiceRecording, // slot 8
+  (vfn)vt_SteamUser018_GetAvailableVoice, // slot 9
+  (vfn)vt_SteamUser018_GetVoice, // slot 10
+  (vfn)vt_SteamUser018_DecompressVoice, // slot 11
+  (vfn)vt_SteamUser018_GetVoiceOptimalSampleRate, // slot 12
+  (vfn)vt_SteamUser018_GetAuthSessionTicket, // slot 13
+  (vfn)vt_SteamUser018_BeginAuthSession, // slot 14
+  (vfn)vt_SteamUser018_EndAuthSession, // slot 15
+  (vfn)vt_SteamUser018_CancelAuthTicket, // slot 16
+  (vfn)vt_SteamUser018_UserHasLicenseForApp, // slot 17
+  (vfn)vt_SteamUser018_BIsBehindNAT, // slot 18
+  (vfn)vt_SteamUser018_AdvertiseGame, // slot 19
+  (vfn)vt_SteamUser018_RequestEncryptedAppTicket, // slot 20
+  (vfn)vt_SteamUser018_GetEncryptedAppTicket, // slot 21
+  (vfn)vt_SteamUser018_GetGameBadgeLevel, // slot 22
+  (vfn)vt_SteamUser018_GetPlayerSteamLevel, // slot 23
+  (vfn)vt_SteamUser018_RequestStoreAuthURL, // slot 24
+};
+struct FakeSteamUser018 { vfn *vptr; };
+static struct FakeSteamUser018 g_steamuser018_instance = { g_steamuser018_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === SteamUtils007 (ordinal 60, family SteamUtils) ===
+
+// slot 0: GetSecondsSinceAppActive() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils007_GetSecondsSinceAppActive(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 1: GetSecondsSinceComputerActive() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils007_GetSecondsSinceComputerActive(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 2: GetConnectedUniverse() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils007_GetConnectedUniverse(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 3: GetServerRealTime() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils007_GetServerRealTime(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 3, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 4: GetIPCountry() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamUtils007_GetIPCountry_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamUtils007_GetIPCountry(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamUtils007_GetIPCountry_buf[0] = '\0';
+    return vt_SteamUtils007_GetIPCountry_buf;
+  }
+  memcpy(vt_SteamUtils007_GetIPCountry_buf, retbuf, retlen);
+  vt_SteamUtils007_GetIPCountry_buf[retlen] = '\0';
+  return vt_SteamUtils007_GetIPCountry_buf;
+}
+
+// slot 5: GetImageSize(int32 iImage, uint32* pnWidth, uint32* pnHeight) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUtils007_GetImageSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: GetImageRGBA(int32 iImage, uint8_t* pubDest, int32 nDestBufferSize) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUtils007_GetImageRGBA(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: GetCSERIPPort(uint32* unIP, uint16_t* usPort) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamUtils007_GetCSERIPPort(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: GetCurrentBatteryPower() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils007_GetCurrentBatteryPower(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 8, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 9: GetAppID() -> uint32 | __thiscall ret 0
+static uint32_t THISCALL vt_SteamUtils007_GetAppID(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 9, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 10: SetOverlayNotificationPosition(uint32 eNotificationPosition) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamUtils007_SetOverlayNotificationPosition(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 11: IsAPICallCompleted(uint64 hSteamAPICall, bool* pbFailed) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_SteamUtils007_IsAPICallCompleted(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetAPICallFailureReason(uint64 hSteamAPICall) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_SteamUtils007_GetAPICallFailureReason(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetAPICallResult(uint64 hSteamAPICall, void* pCallback, int32 cubCallback, int32 iCallbackExpected, bool* pbFailed) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_SteamUtils007_GetAPICallResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: RunFrame() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_SteamUtils007_RunFrame(void *self) {
+  (void)self;
+}
+
+// slot 15: GetIPCCallCount() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamUtils007_GetIPCCallCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: SetWarningMessageHook(void* pFunction) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_SteamUtils007_SetWarningMessageHook(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 17: IsOverlayEnabled() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamUtils007_IsOverlayEnabled(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 17, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 18: BOverlayNeedsPresent() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_SteamUtils007_BOverlayNeedsPresent(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: CheckFileSignature(const char* szFileName) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_SteamUtils007_CheckFileSignature(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 20: ShowGamepadTextInput(uint32 eInputMode, uint32 eLineInputMode, const char* pchDescription, uint32 unCharMax, const char* pchExistingText) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_SteamUtils007_ShowGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: GetEnteredGamepadTextLength() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_SteamUtils007_GetEnteredGamepadTextLength(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: GetEnteredGamepadTextInput(char* pchText, uint32 cchText) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_SteamUtils007_GetEnteredGamepadTextInput(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetSteamUILanguage() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_SteamUtils007_GetSteamUILanguage_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_SteamUtils007_GetSteamUILanguage(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_SteamUtils007_GetSteamUILanguage_buf[0] = '\0';
+    return vt_SteamUtils007_GetSteamUILanguage_buf;
+  }
+  memcpy(vt_SteamUtils007_GetSteamUILanguage_buf, retbuf, retlen);
+  vt_SteamUtils007_GetSteamUILanguage_buf[retlen] = '\0';
+  return vt_SteamUtils007_GetSteamUILanguage_buf;
+}
+
+// slot 24: IsSteamRunningInVR() -> bool | __thiscall ret 0
+static int THISCALL vt_SteamUtils007_IsSteamRunningInVR(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(60, 24, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 25: SetOverlayNotificationInset(int32 nHorizontalInset, int32 nVerticalInset) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_SteamUtils007_SetOverlayNotificationInset(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+static vfn g_steamutils007_vtbl[26] = {
+  (vfn)vt_SteamUtils007_GetSecondsSinceAppActive, // slot 0
+  (vfn)vt_SteamUtils007_GetSecondsSinceComputerActive, // slot 1
+  (vfn)vt_SteamUtils007_GetConnectedUniverse, // slot 2
+  (vfn)vt_SteamUtils007_GetServerRealTime, // slot 3
+  (vfn)vt_SteamUtils007_GetIPCountry, // slot 4
+  (vfn)vt_SteamUtils007_GetImageSize, // slot 5
+  (vfn)vt_SteamUtils007_GetImageRGBA, // slot 6
+  (vfn)vt_SteamUtils007_GetCSERIPPort, // slot 7
+  (vfn)vt_SteamUtils007_GetCurrentBatteryPower, // slot 8
+  (vfn)vt_SteamUtils007_GetAppID, // slot 9
+  (vfn)vt_SteamUtils007_SetOverlayNotificationPosition, // slot 10
+  (vfn)vt_SteamUtils007_IsAPICallCompleted, // slot 11
+  (vfn)vt_SteamUtils007_GetAPICallFailureReason, // slot 12
+  (vfn)vt_SteamUtils007_GetAPICallResult, // slot 13
+  (vfn)vt_SteamUtils007_RunFrame, // slot 14
+  (vfn)vt_SteamUtils007_GetIPCCallCount, // slot 15
+  (vfn)vt_SteamUtils007_SetWarningMessageHook, // slot 16
+  (vfn)vt_SteamUtils007_IsOverlayEnabled, // slot 17
+  (vfn)vt_SteamUtils007_BOverlayNeedsPresent, // slot 18
+  (vfn)vt_SteamUtils007_CheckFileSignature, // slot 19
+  (vfn)vt_SteamUtils007_ShowGamepadTextInput, // slot 20
+  (vfn)vt_SteamUtils007_GetEnteredGamepadTextLength, // slot 21
+  (vfn)vt_SteamUtils007_GetEnteredGamepadTextInput, // slot 22
+  (vfn)vt_SteamUtils007_GetSteamUILanguage, // slot 23
+  (vfn)vt_SteamUtils007_IsSteamRunningInVR, // slot 24
+  (vfn)vt_SteamUtils007_SetOverlayNotificationInset, // slot 25
+};
+struct FakeSteamUtils007 { vfn *vptr; };
+static struct FakeSteamUtils007 g_steamutils007_instance = { g_steamutils007_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMAPPS_INTERFACE_VERSION007 (ordinal 61, family SteamApps) ===
+
+// slot 0: BIsSubscribed() -> bool | __thiscall ret 0
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribed(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 0, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 1: BIsLowViolence() -> bool | __thiscall ret 0
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsLowViolence(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 1, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 2: BIsCybercafe() -> bool | __thiscall ret 0
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsCybercafe(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 2, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 3: BIsVACBanned() -> bool | __thiscall ret 0
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsVACBanned(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 3, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 4: GetCurrentGameLanguage() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 4, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[0] = '\0';
+    return vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf;
+  }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf, retbuf, retlen);
+  vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf[retlen] = '\0';
+  return vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage_buf;
+}
+
+// slot 5: GetAvailableGameLanguages() -> const char* | __thiscall ret 0 (STRING RETURN -- shim-owned buffer, CR-01)
+static char vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[STRING_RETURN_BUF_BYTES];
+static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 5, argbuf, 0, retbuf, sizeof(retbuf), &retlen)) {
+    vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[0] = '\0';
+    return vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf;
+  }
+  memcpy(vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf, retbuf, retlen);
+  vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf[retlen] = '\0';
+  return vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages_buf;
+}
+
+// slot 6: BIsSubscribedApp(uint32 appID) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedApp(void *self, uint32_t appID) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &appID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 6, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 7: BIsDlcInstalled(uint32 appID) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsDlcInstalled(void *self, uint32_t appID) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &appID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 7, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 8: GetEarliestPurchaseUnixTime(uint32 nAppID) -> uint32 | __thiscall ret 4
+static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetEarliestPurchaseUnixTime(void *self, uint32_t nAppID) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &nAppID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 8, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 9: BIsSubscribedFromFreeWeekend() -> bool | __thiscall ret 0
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedFromFreeWeekend(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 9, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 10: GetDLCCount() -> int32 | __thiscall ret 0
+static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetDLCCount(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 10, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 11: BGetDLCDataByIndex(int32 iDLC, uint32* pAppID, bool* pbAvailable, char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BGetDLCDataByIndex(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: InstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_InstallDLC(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 13: UninstallDLC(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_UninstallDLC(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 14: RequestAppProofOfPurchaseKey(uint32 nAppID) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_RequestAppProofOfPurchaseKey(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 15: GetCurrentBetaName(char* pchName, int32 cchNameBufferSize) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentBetaName(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: MarkContentCorrupt(bool bMissingFilesOnly) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_MarkContentCorrupt(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 17: GetInstalledDepots(uint32 appID, uint32* pvecDepots, uint32 cMaxDepots) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetInstalledDepots(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: GetAppInstallDir(uint32 appID, char* pchFolder, uint32 cchFolderBufferSize) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAppInstallDir(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: BIsAppInstalled(uint32 appID) -> bool | __thiscall ret 4
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled(void *self, uint32_t appID) {
+  (void)self;
+  uint8_t argbuf[4];
+  uint32_t argOff = 0;
+  memcpy(argbuf + argOff, &appID, 4); argOff += 4;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 19, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+// slot 20: GetAppOwner() -> CSteamID | __thiscall ret 4 (SRET -- hidden return pointer)
+static void * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner(void *self, void *sretOut) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[8]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 20, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 8) {
+    memset(sretOut, 0, 8);
+    return sretOut;
+  }
+  memcpy(sretOut, retbuf, 8);
+  return sretOut;
+}
+
+// slot 21: GetLaunchQueryParam(const char* pchKey) -> const char* | __thiscall ret 4 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetLaunchQueryParam(void *self, uint32_t dummy0) {
+  (void)self;
+  return "";
+}
+
+// slot 22: GetDlcDownloadProgress(uint32 nAppID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetDlcDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetAppBuildId() -> int32 | __thiscall ret 0
+static int32_t THISCALL vt_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId(void *self) {
+  (void)self;
+  const uint8_t *argbuf = NULL;
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(61, 23, argbuf, 0, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  int32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
+}
+
+static vfn g_steamapps_interface_version007_vtbl[24] = {
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribed, // slot 0
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsLowViolence, // slot 1
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsCybercafe, // slot 2
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsVACBanned, // slot 3
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentGameLanguage, // slot 4
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetAvailableGameLanguages, // slot 5
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedApp, // slot 6
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsDlcInstalled, // slot 7
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetEarliestPurchaseUnixTime, // slot 8
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsSubscribedFromFreeWeekend, // slot 9
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetDLCCount, // slot 10
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BGetDLCDataByIndex, // slot 11
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_InstallDLC, // slot 12
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_UninstallDLC, // slot 13
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_RequestAppProofOfPurchaseKey, // slot 14
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetCurrentBetaName, // slot 15
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_MarkContentCorrupt, // slot 16
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetInstalledDepots, // slot 17
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetAppInstallDir, // slot 18
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_BIsAppInstalled, // slot 19
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetAppOwner, // slot 20
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetLaunchQueryParam, // slot 21
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetDlcDownloadProgress, // slot 22
+  (vfn)vt_STEAMAPPS_INTERFACE_VERSION007_GetAppBuildId, // slot 23
+};
+struct FakeSTEAMAPPS_INTERFACE_VERSION007 { vfn *vptr; };
+static struct FakeSTEAMAPPS_INTERFACE_VERSION007 g_steamapps_interface_version007_instance = { g_steamapps_interface_version007_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMREMOTESTORAGE_INTERFACE_VERSION012 (ordinal 62, family SteamRemoteStorage) ===
+
+// slot 0: FileWrite(const char* pchFile, const void* pvData, int32 cubData) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWrite(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: FileRead(const char* pchFile, void* pvData, int32 cubDataToRead) -> int32 | __thiscall ret 12 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: FileForget(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileForget(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: FileDelete(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileDelete(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: FileShare(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileShare(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 5: SetSyncPlatforms(const char* pchFile, uint32 eRemoteStoragePlatform) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetSyncPlatforms(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: FileWriteStreamOpen(const char* pchFile) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamOpen(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 7: FileWriteStreamWriteChunk(uint64 writeHandle, const void* pvData, int32 cubData) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamWriteChunk(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: FileWriteStreamClose(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamClose(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: FileWriteStreamCancel(uint64 writeHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamCancel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: FileExists(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileExists(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: FilePersisted(const char* pchFile) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FilePersisted(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetFileSize(const char* pchFile) -> int32 | __thiscall ret 4 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileSize(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetFileTimestamp(const char* pchFile) -> int64 | __thiscall ret 4 (STUB)
+static int64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileTimestamp(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 14: GetSyncPlatforms(const char* pchFile) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetSyncPlatforms(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: GetFileCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: GetFileNameAndSize(int32 iFile, int32* pnFileSizeInBytes) -> const char* | __thiscall ret 8 (STRING RETURN -- shim-owned buffer, CR-01) (STUB)
+static const char * THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileNameAndSize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return "";
+}
+
+// slot 17: GetQuota(int32* pnTotalBytes, int32* puAvailableBytes) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetQuota(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: IsCloudEnabledForAccount() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_IsCloudEnabledForAccount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: IsCloudEnabledForApp() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_IsCloudEnabledForApp(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: SetCloudEnabledForApp(bool bEnabled) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetCloudEnabledForApp(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 21: UGCDownload(uint64 hContent, uint32 unPriority) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCDownload(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 22: GetUGCDownloadProgress(uint64 hContent, int32* pnBytesDownloaded, int32* pnBytesExpected) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUGCDownloadProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: GetUGCDetails(uint64 hContent, uint32* pnAppID, char** ppchName, int32* pnFileSizeInBytes, CSteamID* pSteamIDOwner) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 24: UGCRead(uint64 hContent, void* pvData, int32 cubDataToRead, uint32 cOffset, uint32 eAction) -> int32 | __thiscall ret 24 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCRead(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 25: GetCachedUGCCount() -> int32 | __thiscall ret 0 (STUB)
+static int32_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetCachedUGCCount(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: GetCachedUGCHandle(int32 iCachedContent) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetCachedUGCHandle(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 27: PublishWorkshopFile(const char* pchFile, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags, uint32 eWorkshopFileType) -> uint64 | __thiscall ret 32 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_PublishWorkshopFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 28: CreatePublishedFileUpdateRequest(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_CreatePublishedFileUpdateRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 29: UpdatePublishedFileFile(uint64 updateHandle, const char* pchFile) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 30: UpdatePublishedFilePreviewFile(uint64 updateHandle, const char* pchPreviewFile) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFilePreviewFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 31: UpdatePublishedFileTitle(uint64 updateHandle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 32: UpdatePublishedFileDescription(uint64 updateHandle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 33: UpdatePublishedFileVisibility(uint64 updateHandle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 34: UpdatePublishedFileTags(uint64 updateHandle, w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: CommitPublishedFileUpdate(uint64 updateHandle) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_CommitPublishedFileUpdate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 36: GetPublishedFileDetails(uint64 unPublishedFileId, uint32 unMaxSecondsOld) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetPublishedFileDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 37: DeletePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_DeletePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 38: EnumerateUserPublishedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserPublishedFiles(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 39: SubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 40: EnumerateUserSubscribedFiles(uint32 unStartIndex) -> uint64 | __thiscall ret 4 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserSubscribedFiles(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 41: UnsubscribePublishedFile(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UnsubscribePublishedFile(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 42: UpdatePublishedFileSetChangeDescription(uint64 updateHandle, const char* pchChangeDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileSetChangeDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 43: GetPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 44: UpdateUserPublishedItemVote(uint64 unPublishedFileId, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdateUserPublishedItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 45: GetUserPublishedItemVoteDetails(uint64 unPublishedFileId) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUserPublishedItemVoteDetails(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 46: EnumerateUserSharedWorkshopFiles(CSteamID steamId, uint32 unStartIndex, w_SteamParamStringArray_t* pRequiredTags, w_SteamParamStringArray_t* pExcludedTags) -> uint64 | __thiscall ret 20 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserSharedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 47: PublishVideo(uint32 eVideoProvider, const char* pchVideoAccount, const char* pchVideoIdentifier, const char* pchPreviewFile, uint32 nConsumerAppId, const char* pchTitle, const char* pchDescription, uint32 eVisibility, w_SteamParamStringArray_t* pTags) -> uint64 | __thiscall ret 36 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_PublishVideo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 48: SetUserPublishedFileAction(uint64 unPublishedFileId, uint32 eAction) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetUserPublishedFileAction(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 49: EnumeratePublishedFilesByUserAction(uint32 eAction, uint32 unStartIndex) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumeratePublishedFilesByUserAction(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 50: EnumeratePublishedWorkshopFiles(uint32 eEnumerationType, uint32 unStartIndex, uint32 unCount, uint32 unDays, w_SteamParamStringArray_t* pTags, w_SteamParamStringArray_t* pUserTags) -> uint64 | __thiscall ret 24 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumeratePublishedWorkshopFiles(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 51: UGCDownloadToLocation(uint64 hContent, const char* pchLocation, uint32 unPriority) -> uint64 | __thiscall ret 16 (STUB)
+static uint64_t THISCALL vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCDownloadToLocation(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0LL;
+}
+
+static vfn g_steamremotestorage_interface_version012_vtbl[52] = {
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWrite, // slot 0
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileRead, // slot 1
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileForget, // slot 2
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileDelete, // slot 3
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileShare, // slot 4
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetSyncPlatforms, // slot 5
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamOpen, // slot 6
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamWriteChunk, // slot 7
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamClose, // slot 8
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileWriteStreamCancel, // slot 9
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FileExists, // slot 10
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_FilePersisted, // slot 11
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileSize, // slot 12
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileTimestamp, // slot 13
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetSyncPlatforms, // slot 14
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileCount, // slot 15
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetFileNameAndSize, // slot 16
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetQuota, // slot 17
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_IsCloudEnabledForAccount, // slot 18
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_IsCloudEnabledForApp, // slot 19
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetCloudEnabledForApp, // slot 20
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCDownload, // slot 21
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUGCDownloadProgress, // slot 22
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUGCDetails, // slot 23
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCRead, // slot 24
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetCachedUGCCount, // slot 25
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetCachedUGCHandle, // slot 26
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_PublishWorkshopFile, // slot 27
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_CreatePublishedFileUpdateRequest, // slot 28
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileFile, // slot 29
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFilePreviewFile, // slot 30
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileTitle, // slot 31
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileDescription, // slot 32
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileVisibility, // slot 33
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileTags, // slot 34
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_CommitPublishedFileUpdate, // slot 35
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetPublishedFileDetails, // slot 36
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_DeletePublishedFile, // slot 37
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserPublishedFiles, // slot 38
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SubscribePublishedFile, // slot 39
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserSubscribedFiles, // slot 40
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UnsubscribePublishedFile, // slot 41
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdatePublishedFileSetChangeDescription, // slot 42
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetPublishedItemVoteDetails, // slot 43
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UpdateUserPublishedItemVote, // slot 44
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_GetUserPublishedItemVoteDetails, // slot 45
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumerateUserSharedWorkshopFiles, // slot 46
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_PublishVideo, // slot 47
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_SetUserPublishedFileAction, // slot 48
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumeratePublishedFilesByUserAction, // slot 49
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_EnumeratePublishedWorkshopFiles, // slot 50
+  (vfn)vt_STEAMREMOTESTORAGE_INTERFACE_VERSION012_UGCDownloadToLocation, // slot 51
+};
+struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION012 { vfn *vptr; };
+static struct FakeSTEAMREMOTESTORAGE_INTERFACE_VERSION012 g_steamremotestorage_interface_version012_instance = { g_steamremotestorage_interface_version012_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMUGC_INTERFACE_VERSION007 (ordinal 63, family SteamUGC) ===
+
+// slot 0: CreateQueryUserUGCRequest(uint32 unAccountID, uint32 eListType, uint32 eMatchingUGCType, uint32 eSortOrder, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 28 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryUserUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 1: CreateQueryAllUGCRequest(uint32 eQueryType, uint32 eMatchingeMatchingUGCTypeFileType, uint32 nCreatorAppID, uint32 nConsumerAppID, uint32 unPage) -> uint64 | __thiscall ret 20 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryAllUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 2: CreateQueryUGCDetailsRequest(uint64* pvecPublishedFileID, uint32 unNumPublishedFileIDs) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryUGCDetailsRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 3: SendQueryUGCRequest(uint64 handle) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SendQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 4: GetQueryUGCResult(uint64 handle, uint32 index, w_SteamUGCDetails_t_128x* pDetails) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 5: GetQueryUGCPreviewURL(uint64 handle, uint32 index, char* pchURL, uint32 cchURLSize) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCPreviewURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: GetQueryUGCMetadata(uint64 handle, uint32 index, char* pchMetadata, uint32 cchMetadatasize) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: GetQueryUGCChildren(uint64 handle, uint32 index, uint64* pvecPublishedFileID, uint32 cMaxEntries) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: GetQueryUGCStatistic(uint64 handle, uint32 index, uint32 eStatType, uint32* pStatValue) -> bool | __thiscall ret 20 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCStatistic(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: GetQueryUGCNumAdditionalPreviews(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: GetQueryUGCAdditionalPreview(uint64 handle, uint32 index, uint32 previewIndex, char* pchURLOrVideoID, uint32 cchURLSize, bool* pbIsImage) -> bool | __thiscall ret 28 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCAdditionalPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: GetQueryUGCNumKeyValueTags(uint64 handle, uint32 index) -> uint32 | __thiscall ret 12 (STUB)
+static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetQueryUGCKeyValueTag(uint64 handle, uint32 index, uint32 keyValueTagIndex, char* pchKey, uint32 cchKeySize, char* pchValue, uint32 cchValueSize) -> bool | __thiscall ret 32 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: ReleaseQueryUGCRequest(uint64 handle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_ReleaseQueryUGCRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: AddRequiredTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddRequiredTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: AddExcludedTag(uint64 handle, const char* pTagName) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddExcludedTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: SetReturnKeyValueTags(uint64 handle, bool bReturnKeyValueTags) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 17: SetReturnLongDescription(uint64 handle, bool bReturnLongDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnLongDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: SetReturnMetadata(uint64 handle, bool bReturnMetadata) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: SetReturnChildren(uint64 handle, bool bReturnChildren) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnChildren(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: SetReturnAdditionalPreviews(uint64 handle, bool bReturnAdditionalPreviews) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnAdditionalPreviews(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: SetReturnTotalOnly(uint64 handle, bool bReturnTotalOnly) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetReturnTotalOnly(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: SetLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: SetAllowCachedResponse(uint64 handle, uint32 unMaxAgeSeconds) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetAllowCachedResponse(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 24: SetCloudFileNameFilter(uint64 handle, const char* pMatchCloudFileName) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetCloudFileNameFilter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 25: SetMatchAnyTag(uint64 handle, bool bMatchAnyTag) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetMatchAnyTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 26: SetSearchText(uint64 handle, const char* pSearchText) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetSearchText(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 27: SetRankedByTrendDays(uint64 handle, uint32 unDays) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetRankedByTrendDays(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 28: AddRequiredKeyValueTag(uint64 handle, const char* pKey, const char* pValue) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddRequiredKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 29: RequestUGCDetails(uint64 nPublishedFileID, uint32 unMaxAgeSeconds) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_RequestUGCDetails(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 30: CreateItem(uint32 nConsumerAppId, uint32 eFileType) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_CreateItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 31: StartItemUpdate(uint32 nConsumerAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_StartItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 32: SetItemTitle(uint64 handle, const char* pchTitle) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemTitle(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 33: SetItemDescription(uint64 handle, const char* pchDescription) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemDescription(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 34: SetItemUpdateLanguage(uint64 handle, const char* pchLanguage) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemUpdateLanguage(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 35: SetItemMetadata(uint64 handle, const char* pchMetaData) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemMetadata(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 36: SetItemVisibility(uint64 handle, uint32 eVisibility) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemVisibility(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 37: SetItemTags(uint64 updateHandle, const w_SteamParamStringArray_t* pTags) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 38: SetItemContent(uint64 handle, const char* pszContentFolder) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemContent(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 39: SetItemPreview(uint64 handle, const char* pszPreviewFile) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetItemPreview(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 40: RemoveItemKeyValueTags(uint64 handle, const char* pchKey) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_RemoveItemKeyValueTags(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 41: AddItemKeyValueTag(uint64 handle, const char* pchKey, const char* pchValue) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddItemKeyValueTag(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 42: SubmitItemUpdate(uint64 handle, const char* pchChangeNote) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SubmitItemUpdate(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 43: GetItemUpdateProgress(uint64 handle, uint64* punBytesProcessed, uint64* punBytesTotal) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemUpdateProgress(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 44: SetUserItemVote(uint64 nPublishedFileID, bool bVoteUp) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 45: GetUserItemVote(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetUserItemVote(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 46: AddItemToFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_AddItemToFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 47: RemoveItemFromFavorites(uint32 nAppId, uint64 nPublishedFileID) -> uint64 | __thiscall ret 12 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_RemoveItemFromFavorites(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 48: SubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 49: UnsubscribeItem(uint64 nPublishedFileID) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_UnsubscribeItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 50: GetNumSubscribedItems() -> uint32 | __thiscall ret 0 (STUB)
+static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetNumSubscribedItems(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 51: GetSubscribedItems(uint64* pvecPublishedFileID, uint32 cMaxEntries) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetSubscribedItems(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 52: GetItemState(uint64 nPublishedFileID) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemState(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 53: GetItemInstallInfo(uint64 nPublishedFileID, uint64* punSizeOnDisk, char* pchFolder, uint32 cchFolderSize, uint32* punTimeStamp) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemInstallInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 54: GetItemDownloadInfo(uint64 nPublishedFileID, uint64* punBytesDownloaded, uint64* punBytesTotal) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_GetItemDownloadInfo(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 55: DownloadItem(uint64 nPublishedFileID, bool bHighPriority) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_DownloadItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 56: BInitWorkshopForGameServer(uint32 unWorkshopDepotID, const char* pszFolder) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMUGC_INTERFACE_VERSION007_BInitWorkshopForGameServer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 57: SuspendDownloads(bool bSuspend) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMUGC_INTERFACE_VERSION007_SuspendDownloads(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+static vfn g_steamugc_interface_version007_vtbl[58] = {
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryUserUGCRequest, // slot 0
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryAllUGCRequest, // slot 1
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_CreateQueryUGCDetailsRequest, // slot 2
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SendQueryUGCRequest, // slot 3
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCResult, // slot 4
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCPreviewURL, // slot 5
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCMetadata, // slot 6
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCChildren, // slot 7
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCStatistic, // slot 8
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumAdditionalPreviews, // slot 9
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCAdditionalPreview, // slot 10
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCNumKeyValueTags, // slot 11
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetQueryUGCKeyValueTag, // slot 12
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_ReleaseQueryUGCRequest, // slot 13
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_AddRequiredTag, // slot 14
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_AddExcludedTag, // slot 15
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetReturnKeyValueTags, // slot 16
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetReturnLongDescription, // slot 17
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetReturnMetadata, // slot 18
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetReturnChildren, // slot 19
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetReturnAdditionalPreviews, // slot 20
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetReturnTotalOnly, // slot 21
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetLanguage, // slot 22
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetAllowCachedResponse, // slot 23
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetCloudFileNameFilter, // slot 24
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetMatchAnyTag, // slot 25
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetSearchText, // slot 26
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetRankedByTrendDays, // slot 27
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_AddRequiredKeyValueTag, // slot 28
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_RequestUGCDetails, // slot 29
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_CreateItem, // slot 30
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_StartItemUpdate, // slot 31
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemTitle, // slot 32
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemDescription, // slot 33
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemUpdateLanguage, // slot 34
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemMetadata, // slot 35
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemVisibility, // slot 36
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemTags, // slot 37
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemContent, // slot 38
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetItemPreview, // slot 39
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_RemoveItemKeyValueTags, // slot 40
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_AddItemKeyValueTag, // slot 41
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SubmitItemUpdate, // slot 42
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetItemUpdateProgress, // slot 43
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SetUserItemVote, // slot 44
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetUserItemVote, // slot 45
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_AddItemToFavorites, // slot 46
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_RemoveItemFromFavorites, // slot 47
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SubscribeItem, // slot 48
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_UnsubscribeItem, // slot 49
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetNumSubscribedItems, // slot 50
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetSubscribedItems, // slot 51
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetItemState, // slot 52
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetItemInstallInfo, // slot 53
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_GetItemDownloadInfo, // slot 54
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_DownloadItem, // slot 55
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_BInitWorkshopForGameServer, // slot 56
+  (vfn)vt_STEAMUGC_INTERFACE_VERSION007_SuspendDownloads, // slot 57
+};
+struct FakeSTEAMUGC_INTERFACE_VERSION007 { vfn *vptr; };
+static struct FakeSTEAMUGC_INTERFACE_VERSION007 g_steamugc_interface_version007_instance = { g_steamugc_interface_version007_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMHTTP_INTERFACE_VERSION002 (ordinal 64, family SteamHTTP) ===
+
+// slot 0: CreateHTTPRequest(uint32 eHTTPRequestMethod, const char* pchAbsoluteURL) -> uint32 | __thiscall ret 8 (STUB)
+static uint32_t THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_CreateHTTPRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: SetHTTPRequestContextValue(uint32 hRequest, uint64 ulContextValue) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestContextValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: SetHTTPRequestNetworkActivityTimeout(uint32 hRequest, uint32 unTimeoutSeconds) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestNetworkActivityTimeout(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: SetHTTPRequestHeaderValue(uint32 hRequest, const char* pchHeaderName, const char* pchHeaderValue) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestHeaderValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: SetHTTPRequestGetOrPostParameter(uint32 hRequest, const char* pchParamName, const char* pchParamValue) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestGetOrPostParameter(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 5: SendHTTPRequest(uint32 hRequest, uint64* pCallHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SendHTTPRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: SendHTTPRequestAndStreamResponse(uint32 hRequest, uint64* pCallHandle) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SendHTTPRequestAndStreamResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: DeferHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_DeferHTTPRequest(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: PrioritizeHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_PrioritizeHTTPRequest(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: GetHTTPResponseHeaderSize(uint32 hRequest, const char* pchHeaderName, uint32* unResponseHeaderSize) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseHeaderSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: GetHTTPResponseHeaderValue(uint32 hRequest, const char* pchHeaderName, uint8_t* pHeaderValueBuffer, uint32 unBufferSize) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseHeaderValue(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: GetHTTPResponseBodySize(uint32 hRequest, uint32* unBodySize) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseBodySize(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: GetHTTPResponseBodyData(uint32 hRequest, uint8_t* pBodyDataBuffer, uint32 unBufferSize) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseBodyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: GetHTTPStreamingResponseBodyData(uint32 hRequest, uint32 cOffset, uint8_t* pBodyDataBuffer, uint32 unBufferSize) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPStreamingResponseBodyData(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: ReleaseHTTPRequest(uint32 hRequest) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_ReleaseHTTPRequest(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: GetHTTPDownloadProgressPct(uint32 hRequest, float* pflPercentOut) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPDownloadProgressPct(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: SetHTTPRequestRawPostBody(uint32 hRequest, const char* pchContentType, uint8_t* pubBody, uint32 unBodyLen) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestRawPostBody(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 17: CreateCookieContainer(bool bAllowResponsesToModify) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_CreateCookieContainer(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: ReleaseCookieContainer(uint32 hCookieContainer) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_ReleaseCookieContainer(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: SetCookie(uint32 hCookieContainer, const char* pchHost, const char* pchUrl, const char* pchCookie) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetCookie(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: SetHTTPRequestCookieContainer(uint32 hRequest, uint32 hCookieContainer) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestCookieContainer(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: SetHTTPRequestUserAgentInfo(uint32 hRequest, const char* pchUserAgentInfo) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestUserAgentInfo(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: SetHTTPRequestRequiresVerifiedCertificate(uint32 hRequest, bool bRequireVerifiedCertificate) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestRequiresVerifiedCertificate(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 23: SetHTTPRequestAbsoluteTimeoutMS(uint32 hRequest, uint32 unMilliseconds) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestAbsoluteTimeoutMS(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 24: GetHTTPRequestWasTimedOut(uint32 hRequest, bool* pbWasTimedOut) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPRequestWasTimedOut(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamhttp_interface_version002_vtbl[25] = {
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_CreateHTTPRequest, // slot 0
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestContextValue, // slot 1
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestNetworkActivityTimeout, // slot 2
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestHeaderValue, // slot 3
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestGetOrPostParameter, // slot 4
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SendHTTPRequest, // slot 5
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SendHTTPRequestAndStreamResponse, // slot 6
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_DeferHTTPRequest, // slot 7
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_PrioritizeHTTPRequest, // slot 8
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseHeaderSize, // slot 9
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseHeaderValue, // slot 10
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseBodySize, // slot 11
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPResponseBodyData, // slot 12
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPStreamingResponseBodyData, // slot 13
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_ReleaseHTTPRequest, // slot 14
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPDownloadProgressPct, // slot 15
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestRawPostBody, // slot 16
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_CreateCookieContainer, // slot 17
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_ReleaseCookieContainer, // slot 18
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetCookie, // slot 19
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestCookieContainer, // slot 20
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestUserAgentInfo, // slot 21
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestRequiresVerifiedCertificate, // slot 22
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_SetHTTPRequestAbsoluteTimeoutMS, // slot 23
+  (vfn)vt_STEAMHTTP_INTERFACE_VERSION002_GetHTTPRequestWasTimedOut, // slot 24
+};
+struct FakeSTEAMHTTP_INTERFACE_VERSION002 { vfn *vptr; };
+static struct FakeSTEAMHTTP_INTERFACE_VERSION002 g_steamhttp_interface_version002_instance = { g_steamhttp_interface_version002_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMSCREENSHOTS_INTERFACE_VERSION002 (ordinal 65, family SteamScreenshots) ===
+
+// slot 0: WriteScreenshot(void* pubRGB, uint32 cubRGB, int32 nWidth, int32 nHeight) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_WriteScreenshot(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: AddScreenshotToLibrary(const char* pchFilename, const char* pchThumbnailFilename, int32 nWidth, int32 nHeight) -> uint32 | __thiscall ret 16 (STUB)
+static uint32_t THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_AddScreenshotToLibrary(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: TriggerScreenshot() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TriggerScreenshot(void *self) {
+  (void)self;
+}
+
+// slot 3: HookScreenshots(bool bHook) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_HookScreenshots(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 4: SetLocation(uint32 hScreenshot, const char* pchLocation) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_SetLocation(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 5: TagUser(uint32 hScreenshot, CSteamID steamID) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TagUser(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: TagPublishedFile(uint32 hScreenshot, uint64 unPublishedFileID) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TagPublishedFile(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamscreenshots_interface_version002_vtbl[7] = {
+  (vfn)vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_WriteScreenshot, // slot 0
+  (vfn)vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_AddScreenshotToLibrary, // slot 1
+  (vfn)vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TriggerScreenshot, // slot 2
+  (vfn)vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_HookScreenshots, // slot 3
+  (vfn)vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_SetLocation, // slot 4
+  (vfn)vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TagUser, // slot 5
+  (vfn)vt_STEAMSCREENSHOTS_INTERFACE_VERSION002_TagPublishedFile, // slot 6
+};
+struct FakeSTEAMSCREENSHOTS_INTERFACE_VERSION002 { vfn *vptr; };
+static struct FakeSTEAMSCREENSHOTS_INTERFACE_VERSION002 g_steamscreenshots_interface_version002_instance = { g_steamscreenshots_interface_version002_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMHTMLSURFACE_INTERFACE_VERSION_003 (ordinal 66, family SteamHTMLSurface) ===
+
+// slot 0: destructor() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_destructor(void *self) {
+  (void)self;
+}
+
+// slot 1: Init() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Init(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: Shutdown() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Shutdown(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: CreateBrowser(const char* pchUserAgent, const char* pchUserCSS) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_CreateBrowser(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 4: RemoveBrowser(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_RemoveBrowser(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 5: LoadURL(uint32 unBrowserHandle, const char* pchURL, const char* pchPostData) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_LoadURL(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 6: SetSize(uint32 unBrowserHandle, uint32 unWidth, uint32 unHeight) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetSize(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 7: StopLoad(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_StopLoad(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 8: Reload(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Reload(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 9: GoBack(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GoBack(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 10: GoForward(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GoForward(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 11: AddHeader(uint32 unBrowserHandle, const char* pchKey, const char* pchValue) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_AddHeader(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 12: ExecuteJavascript(uint32 unBrowserHandle, const char* pchScript) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_ExecuteJavascript(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 13: MouseUp(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseUp(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 14: MouseDown(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseDown(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 15: MouseDoubleClick(uint32 unBrowserHandle, uint32 eMouseButton) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseDoubleClick(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 16: MouseMove(uint32 unBrowserHandle, int32 x, int32 y) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseMove(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 17: MouseWheel(uint32 unBrowserHandle, int32 nDelta) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseWheel(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 18: KeyDown(uint32 unBrowserHandle, uint32 nNativeKeyCode, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyDown(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 19: KeyUp(uint32 unBrowserHandle, uint32 nNativeKeyCode, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyUp(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 20: KeyChar(uint32 unBrowserHandle, uint32 cUnicodeChar, uint32 eHTMLKeyModifiers) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyChar(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 21: SetHorizontalScroll(uint32 unBrowserHandle, uint32 nAbsolutePixelScroll) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetHorizontalScroll(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 22: SetVerticalScroll(uint32 unBrowserHandle, uint32 nAbsolutePixelScroll) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetVerticalScroll(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 23: SetKeyFocus(uint32 unBrowserHandle, bool bHasKeyFocus) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetKeyFocus(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 24: ViewSource(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_ViewSource(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 25: CopyToClipboard(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_CopyToClipboard(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 26: PasteFromClipboard(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_PasteFromClipboard(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 27: Find(uint32 unBrowserHandle, const char* pchSearchStr, bool bCurrentlyInFind, bool bReverse) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Find(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 28: StopFind(uint32 unBrowserHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_StopFind(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 29: GetLinkAtPosition(uint32 unBrowserHandle, int32 x, int32 y) -> void | __thiscall ret 12 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GetLinkAtPosition(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+}
+
+// slot 30: SetCookie(const char* pchHostname, const char* pchKey, const char* pchValue, const char* pchPath, uint32 nExpires, bool bSecure, bool bHTTPOnly) -> void | __thiscall ret 28 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetCookie(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+}
+
+// slot 31: SetPageScaleFactor(uint32 unBrowserHandle, float flZoom, int32 nPointX, int32 nPointY) -> void | __thiscall ret 16 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetPageScaleFactor(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+}
+
+// slot 32: SetBackgroundMode(uint32 unBrowserHandle, bool bBackgroundMode) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetBackgroundMode(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 33: AllowStartRequest(uint32 unBrowserHandle, bool bAllowed) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_AllowStartRequest(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 34: JSDialogResponse(uint32 unBrowserHandle, bool bResult) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_JSDialogResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+// slot 35: FileLoadDialogResponse(uint32 unBrowserHandle, const char** pchSelectedFiles) -> void | __thiscall ret 8 (STUB)
+static void THISCALL vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_FileLoadDialogResponse(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+}
+
+static vfn g_steamhtmlsurface_interface_version_003_vtbl[36] = {
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_destructor, // slot 0
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Init, // slot 1
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Shutdown, // slot 2
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_CreateBrowser, // slot 3
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_RemoveBrowser, // slot 4
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_LoadURL, // slot 5
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetSize, // slot 6
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_StopLoad, // slot 7
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Reload, // slot 8
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GoBack, // slot 9
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GoForward, // slot 10
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_AddHeader, // slot 11
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_ExecuteJavascript, // slot 12
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseUp, // slot 13
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseDown, // slot 14
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseDoubleClick, // slot 15
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseMove, // slot 16
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_MouseWheel, // slot 17
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyDown, // slot 18
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyUp, // slot 19
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_KeyChar, // slot 20
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetHorizontalScroll, // slot 21
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetVerticalScroll, // slot 22
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetKeyFocus, // slot 23
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_ViewSource, // slot 24
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_CopyToClipboard, // slot 25
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_PasteFromClipboard, // slot 26
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_Find, // slot 27
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_StopFind, // slot 28
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_GetLinkAtPosition, // slot 29
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetCookie, // slot 30
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetPageScaleFactor, // slot 31
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_SetBackgroundMode, // slot 32
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_AllowStartRequest, // slot 33
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_JSDialogResponse, // slot 34
+  (vfn)vt_STEAMHTMLSURFACE_INTERFACE_VERSION_003_FileLoadDialogResponse, // slot 35
+};
+struct FakeSTEAMHTMLSURFACE_INTERFACE_VERSION_003 { vfn *vptr; };
+static struct FakeSTEAMHTMLSURFACE_INTERFACE_VERSION_003 g_steamhtmlsurface_interface_version_003_instance = { g_steamhtmlsurface_interface_version_003_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMINVENTORY_INTERFACE_V001 (ordinal 67, family SteamInventory) ===
+
+// slot 0: GetResultStatus(int32 resultHandle) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetResultStatus(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 1: GetResultItems(int32 resultHandle, SteamItemDetails_t* pOutItemsArray, uint32* punOutItemsArraySize) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetResultItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 2: GetResultTimestamp(int32 resultHandle) -> uint32 | __thiscall ret 4 (STUB)
+static uint32_t THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetResultTimestamp(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 3: CheckResultSteamID(int32 resultHandle, CSteamID steamIDExpected) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_CheckResultSteamID(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 4: DestroyResult(int32 resultHandle) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMINVENTORY_INTERFACE_V001_DestroyResult(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 5: GetAllItems(int32* pResultHandle) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetAllItems(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 6: GetItemsByID(int32* pResultHandle, const uint64_t* pInstanceIDs, uint32 unCountInstanceIDs) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetItemsByID(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 7: SerializeResult(int32 resultHandle, void* pOutBuffer, uint32* punOutBufferSize) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_SerializeResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 8: DeserializeResult(int32* pOutResultHandle, const void* pBuffer, uint32 unBufferSize, bool bRESERVED_MUST_BE_FALSE) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_DeserializeResult(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 9: GenerateItems(int32* pResultHandle, const int32_t* pArrayItemDefs, const uint32_t* punArrayQuantity, uint32 unArrayLength) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GenerateItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 10: GrantPromoItems(int32* pResultHandle) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GrantPromoItems(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+// slot 11: AddPromoItem(int32* pResultHandle, int32 itemDef) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_AddPromoItem(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 12: AddPromoItems(int32* pResultHandle, const int32_t* pArrayItemDefs, uint32 unArrayLength) -> bool | __thiscall ret 12 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_AddPromoItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2) {
+  (void)self;
+  return 0;
+}
+
+// slot 13: ConsumeItem(int32* pResultHandle, uint64 itemConsume, uint32 unQuantity) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_ConsumeItem(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 14: ExchangeItems(int32* pResultHandle, const int32_t* pArrayGenerate, const uint32_t* punArrayGenerateQuantity, uint32 unArrayGenerateLength, const uint64_t* pArrayDestroy, const uint32_t* punArrayDestroyQuantity, uint32 unArrayDestroyLength) -> bool | __thiscall ret 28 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_ExchangeItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6) {
+  (void)self;
+  return 0;
+}
+
+// slot 15: TransferItemQuantity(int32* pResultHandle, uint64 itemIdSource, uint32 unQuantity, uint64 itemIdDest) -> bool | __thiscall ret 24 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_TransferItemQuantity(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5) {
+  (void)self;
+  return 0;
+}
+
+// slot 16: SendItemDropHeartbeat() -> void | __thiscall ret 0 (STUB)
+static void THISCALL vt_STEAMINVENTORY_INTERFACE_V001_SendItemDropHeartbeat(void *self) {
+  (void)self;
+}
+
+// slot 17: TriggerItemDrop(int32* pResultHandle, int32 dropListDefinition) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_TriggerItemDrop(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 18: TradeItems(int32* pResultHandle, CSteamID steamIDTradePartner, const uint64_t* pArrayGive, const uint32_t* pArrayGiveQuantity, uint32 nArrayGiveLength, const uint64_t* pArrayGet, const uint32_t* pArrayGetQuantity, uint32 nArrayGetLength) -> bool | __thiscall ret 36 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_TradeItems(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3, uint32_t dummy4, uint32_t dummy5, uint32_t dummy6, uint32_t dummy7, uint32_t dummy8) {
+  (void)self;
+  return 0;
+}
+
+// slot 19: LoadItemDefinitions() -> bool | __thiscall ret 0 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_LoadItemDefinitions(void *self) {
+  (void)self;
+  return 0;
+}
+
+// slot 20: GetItemDefinitionIDs(int32* pItemDefIDs, uint32* punItemDefIDsArraySize) -> bool | __thiscall ret 8 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetItemDefinitionIDs(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0;
+}
+
+// slot 21: GetItemDefinitionProperty(int32 iDefinition, const char* pchPropertyName, char* pchValueBuffer, uint32* punValueBufferSizeOut) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetItemDefinitionProperty(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+// slot 22: RequestEligiblePromoItemDefinitionsIDs(CSteamID steamID) -> uint64 | __thiscall ret 8 (STUB)
+static uint64_t THISCALL vt_STEAMINVENTORY_INTERFACE_V001_RequestEligiblePromoItemDefinitionsIDs(void *self, uint32_t dummy0, uint32_t dummy1) {
+  (void)self;
+  return 0LL;
+}
+
+// slot 23: GetEligiblePromoItemDefinitionIDs(CSteamID steamID, int32* pItemDefIDs, uint32* punItemDefIDsArraySize) -> bool | __thiscall ret 16 (STUB)
+static int THISCALL vt_STEAMINVENTORY_INTERFACE_V001_GetEligiblePromoItemDefinitionIDs(void *self, uint32_t dummy0, uint32_t dummy1, uint32_t dummy2, uint32_t dummy3) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steaminventory_interface_v001_vtbl[24] = {
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetResultStatus, // slot 0
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetResultItems, // slot 1
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetResultTimestamp, // slot 2
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_CheckResultSteamID, // slot 3
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_DestroyResult, // slot 4
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetAllItems, // slot 5
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetItemsByID, // slot 6
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_SerializeResult, // slot 7
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_DeserializeResult, // slot 8
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GenerateItems, // slot 9
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GrantPromoItems, // slot 10
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_AddPromoItem, // slot 11
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_AddPromoItems, // slot 12
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_ConsumeItem, // slot 13
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_ExchangeItems, // slot 14
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_TransferItemQuantity, // slot 15
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_SendItemDropHeartbeat, // slot 16
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_TriggerItemDrop, // slot 17
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_TradeItems, // slot 18
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_LoadItemDefinitions, // slot 19
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetItemDefinitionIDs, // slot 20
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetItemDefinitionProperty, // slot 21
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_RequestEligiblePromoItemDefinitionsIDs, // slot 22
+  (vfn)vt_STEAMINVENTORY_INTERFACE_V001_GetEligiblePromoItemDefinitionIDs, // slot 23
+};
+struct FakeSTEAMINVENTORY_INTERFACE_V001 { vfn *vptr; };
+static struct FakeSTEAMINVENTORY_INTERFACE_V001 g_steaminventory_interface_v001_instance = { g_steaminventory_interface_v001_vtbl };
+#endif
+
+#if defined(__x86_64__)
+// === STEAMVIDEO_INTERFACE_V001 (ordinal 68, family SteamVideo) ===
+
+// slot 0: GetVideoURL(uint32 unVideoAppID) -> void | __thiscall ret 4 (STUB)
+static void THISCALL vt_STEAMVIDEO_INTERFACE_V001_GetVideoURL(void *self, uint32_t dummy0) {
+  (void)self;
+}
+
+// slot 1: IsBroadcasting(int32* pnNumViewers) -> bool | __thiscall ret 4 (STUB)
+static int THISCALL vt_STEAMVIDEO_INTERFACE_V001_IsBroadcasting(void *self, uint32_t dummy0) {
+  (void)self;
+  return 0;
+}
+
+static vfn g_steamvideo_interface_v001_vtbl[2] = {
+  (vfn)vt_STEAMVIDEO_INTERFACE_V001_GetVideoURL, // slot 0
+  (vfn)vt_STEAMVIDEO_INTERFACE_V001_IsBroadcasting, // slot 1
+};
+struct FakeSTEAMVIDEO_INTERFACE_V001 { vfn *vptr; };
+static struct FakeSTEAMVIDEO_INTERFACE_V001 g_steamvideo_interface_v001_instance = { g_steamvideo_interface_v001_vtbl };
+#endif
+
 // === Legacy bare accessors (51-06 Task 2, selected per game via gamelib_bridge.cfg's iface.<Family>=<Version>) ===
 
 typedef struct { const char *version; const char *family; void *instance; } GIfaceTableEntry;
@@ -20048,6 +22214,36 @@ static const GIfaceTableEntry g_iface_table[] = {
 #endif
 #if defined(__x86_64__)
   { "STEAMUGC_INTERFACE_VERSION010", "SteamUGC", &g_steamugc_interface_version010_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamUser018", "SteamUser", &g_steamuser018_instance },
+#endif
+#if defined(__x86_64__)
+  { "SteamUtils007", "SteamUtils", &g_steamutils007_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMAPPS_INTERFACE_VERSION007", "SteamApps", &g_steamapps_interface_version007_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMREMOTESTORAGE_INTERFACE_VERSION012", "SteamRemoteStorage", &g_steamremotestorage_interface_version012_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMUGC_INTERFACE_VERSION007", "SteamUGC", &g_steamugc_interface_version007_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMHTTP_INTERFACE_VERSION002", "SteamHTTP", &g_steamhttp_interface_version002_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMSCREENSHOTS_INTERFACE_VERSION002", "SteamScreenshots", &g_steamscreenshots_interface_version002_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMHTMLSURFACE_INTERFACE_VERSION_003", "SteamHTMLSurface", &g_steamhtmlsurface_interface_version_003_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMINVENTORY_INTERFACE_V001", "SteamInventory", &g_steaminventory_interface_v001_instance },
+#endif
+#if defined(__x86_64__)
+  { "STEAMVIDEO_INTERFACE_V001", "SteamVideo", &g_steamvideo_interface_v001_instance },
 #endif
 };
 #define G_IFACE_TABLE_LEN (sizeof(g_iface_table) / sizeof(g_iface_table[0]))
@@ -20359,11 +22555,19 @@ bool SteamAPI_ISteamApps_BGetDLCDataByIndex(void *self, int32_t a1, uint32_t * a
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t, uint32_t *, int *, void *, int32_t))vt[11])(self, (int32_t)a1, (uint32_t *)a2, (int *)a3, (void *)a4, (int32_t)a5);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t, uint32_t *, int *, void *, int32_t))vt[11])(self, (int32_t)a1, (uint32_t *)a2, (int *)a3, (void *)a4, (int32_t)a5);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamApps_BIsAppInstalled(void *self, uint32_t a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[19])(self, (uint32_t)a1);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t))vt[19])(self, (uint32_t)a1);
   }
@@ -20375,11 +22579,19 @@ bool SteamAPI_ISteamApps_BIsCybercafe(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[2])(self);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[2])(self);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamApps_BIsDlcInstalled(void *self, uint32_t a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[7])(self, (uint32_t)a1);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t))vt[7])(self, (uint32_t)a1);
   }
@@ -20391,6 +22603,10 @@ bool SteamAPI_ISteamApps_BIsLowViolence(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[1])(self);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[1])(self);
+  }
   return 0;
 }
 
@@ -20399,11 +22615,19 @@ bool SteamAPI_ISteamApps_BIsSubscribed(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[0])(self);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[0])(self);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamApps_BIsSubscribedApp(void *self, uint32_t a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[6])(self, (uint32_t)a1);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t))vt[6])(self, (uint32_t)a1);
   }
@@ -20423,6 +22647,10 @@ bool SteamAPI_ISteamApps_BIsSubscribedFromFreeWeekend(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[9])(self);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[9])(self);
+  }
   return 0;
 }
 
@@ -20439,6 +22667,10 @@ bool SteamAPI_ISteamApps_BIsVACBanned(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[3])(self);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[3])(self);
+  }
   return 0;
 }
 
@@ -20447,11 +22679,19 @@ int32_t SteamAPI_ISteamApps_GetAppBuildId(void *self) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *))vt[23])(self);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *))vt[23])(self);
+  }
   return 0;
 }
 
 uint32_t SteamAPI_ISteamApps_GetAppInstallDir(void *self, uint32_t a1, void * a2, uint32_t a3) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, void *, uint32_t))vt[18])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint32_t, void *, uint32_t))vt[18])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3);
   }
@@ -20465,11 +22705,21 @@ uint64_t SteamAPI_ISteamApps_GetAppOwner(void *self) {
     ((void * (*)(void *, void *))vt[20])(self, &out);
     return out;
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    uint64_t out = 0;
+    ((void * (*)(void *, void *))vt[20])(self, &out);
+    return out;
+  }
   return 0;
 }
 
 const char * SteamAPI_ISteamApps_GetAvailableGameLanguages(void *self) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (const char *)((const char * (*)(void *))vt[5])(self);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (const char *)((const char * (*)(void *))vt[5])(self);
   }
@@ -20489,11 +22739,19 @@ bool SteamAPI_ISteamApps_GetCurrentBetaName(void *self, void * a1, int32_t a2) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, void *, int32_t))vt[15])(self, (void *)a1, (int32_t)a2);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, int32_t))vt[15])(self, (void *)a1, (int32_t)a2);
+  }
   return 0;
 }
 
 const char * SteamAPI_ISteamApps_GetCurrentGameLanguage(void *self) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (const char *)((const char * (*)(void *))vt[4])(self);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (const char *)((const char * (*)(void *))vt[4])(self);
   }
@@ -20505,6 +22763,10 @@ int32_t SteamAPI_ISteamApps_GetDLCCount(void *self) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *))vt[10])(self);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *))vt[10])(self);
+  }
   return 0;
 }
 
@@ -20513,11 +22775,19 @@ bool SteamAPI_ISteamApps_GetDlcDownloadProgress(void *self, uint32_t a1, uint64_
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint64_t *, uint64_t *))vt[22])(self, (uint32_t)a1, (uint64_t *)a2, (uint64_t *)a3);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint64_t *, uint64_t *))vt[22])(self, (uint32_t)a1, (uint64_t *)a2, (uint64_t *)a3);
+  }
   return 0;
 }
 
 uint32_t SteamAPI_ISteamApps_GetEarliestPurchaseUnixTime(void *self, uint32_t a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t))vt[8])(self, (uint32_t)a1);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint32_t))vt[8])(self, (uint32_t)a1);
   }
@@ -20537,6 +22807,10 @@ uint32_t SteamAPI_ISteamApps_GetInstalledDepots(void *self, uint32_t a1, uint32_
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint32_t, uint32_t *, uint32_t))vt[17])(self, (uint32_t)a1, (uint32_t *)a2, (uint32_t)a3);
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, uint32_t *, uint32_t))vt[17])(self, (uint32_t)a1, (uint32_t *)a2, (uint32_t)a3);
+  }
   return 0;
 }
 
@@ -20550,6 +22824,10 @@ int32_t SteamAPI_ISteamApps_GetLaunchCommandLine(void *self, void * a1, int32_t 
 
 const char * SteamAPI_ISteamApps_GetLaunchQueryParam(void *self, const char * a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (const char *)((const char * (*)(void *, const char *))vt[21])(self, (const char *)a1);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (const char *)((const char * (*)(void *, const char *))vt[21])(self, (const char *)a1);
   }
@@ -20570,11 +22848,20 @@ void SteamAPI_ISteamApps_InstallDLC(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[12])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[12])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
 bool SteamAPI_ISteamApps_MarkContentCorrupt(void *self, bool a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, bool))vt[16])(self, (bool)a1);
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, bool))vt[16])(self, (bool)a1);
   }
@@ -20592,6 +22879,11 @@ void SteamAPI_ISteamApps_RequestAllProofOfPurchaseKeys(void *self) {
 
 void SteamAPI_ISteamApps_RequestAppProofOfPurchaseKey(void *self, uint32_t a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[14])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[14])(self, (uint32_t)a1);
     return;
@@ -20617,6 +22909,11 @@ bool SteamAPI_ISteamApps_SetDlcContext(void *self, uint32_t a1) {
 
 void SteamAPI_ISteamApps_UninstallDLC(void *self, uint32_t a1) {
   if (self == (void *)&g_steamapps_interface_version008_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[13])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamapps_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[13])(self, (uint32_t)a1);
     return;
@@ -24093,6 +26390,11 @@ void SteamAPI_ISteamHTMLSurface_AddHeader(void *self, uint32_t a1, const char * 
     ((void (*)(void *, uint32_t, const char *, const char *))vt[11])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, const char *, const char *))vt[11])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
+    return;
+  }
   return;
 }
 
@@ -24102,11 +26404,21 @@ void SteamAPI_ISteamHTMLSurface_AllowStartRequest(void *self, uint32_t a1, bool 
     ((void (*)(void *, uint32_t, bool))vt[35])(self, (uint32_t)a1, (bool)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, bool))vt[33])(self, (uint32_t)a1, (bool)a2);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_CopyToClipboard(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[25])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[25])(self, (uint32_t)a1);
     return;
@@ -24119,11 +26431,20 @@ uint64_t SteamAPI_ISteamHTMLSurface_CreateBrowser(void *self, const char * a1, c
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, const char *, const char *))vt[3])(self, (const char *)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, const char *, const char *))vt[3])(self, (const char *)a1, (const char *)a2);
+  }
   return 0;
 }
 
 void SteamAPI_ISteamHTMLSurface_ExecuteJavascript(void *self, uint32_t a1, const char * a2) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, const char *))vt[12])(self, (uint32_t)a1, (const char *)a2);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, const char *))vt[12])(self, (uint32_t)a1, (const char *)a2);
     return;
@@ -24137,11 +26458,21 @@ void SteamAPI_ISteamHTMLSurface_FileLoadDialogResponse(void *self, uint32_t a1, 
     ((void (*)(void *, uint32_t, void *))vt[37])(self, (uint32_t)a1, (void *)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, void *))vt[35])(self, (uint32_t)a1, (void *)a2);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_Find(void *self, uint32_t a1, const char * a2, bool a3, bool a4) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, const char *, bool, bool))vt[27])(self, (uint32_t)a1, (const char *)a2, (bool)a3, (bool)a4);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, const char *, bool, bool))vt[27])(self, (uint32_t)a1, (const char *)a2, (bool)a3, (bool)a4);
     return;
@@ -24155,11 +26486,21 @@ void SteamAPI_ISteamHTMLSurface_GetLinkAtPosition(void *self, uint32_t a1, int32
     ((void (*)(void *, uint32_t, int32_t, int32_t))vt[29])(self, (uint32_t)a1, (int32_t)a2, (int32_t)a3);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, int32_t, int32_t))vt[29])(self, (uint32_t)a1, (int32_t)a2, (int32_t)a3);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_GoBack(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[9])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[9])(self, (uint32_t)a1);
     return;
@@ -24173,11 +26514,20 @@ void SteamAPI_ISteamHTMLSurface_GoForward(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[10])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[10])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
 bool SteamAPI_ISteamHTMLSurface_Init(void *self) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[1])(self);
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[1])(self);
   }
@@ -24190,11 +26540,21 @@ void SteamAPI_ISteamHTMLSurface_JSDialogResponse(void *self, uint32_t a1, bool a
     ((void (*)(void *, uint32_t, bool))vt[36])(self, (uint32_t)a1, (bool)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, bool))vt[34])(self, (uint32_t)a1, (bool)a2);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_KeyChar(void *self, uint32_t a1, uint32_t a2, uint32_t a3) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[20])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[20])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
     return;
@@ -24208,11 +26568,21 @@ void SteamAPI_ISteamHTMLSurface_KeyDown(void *self, uint32_t a1, uint32_t a2, ui
     ((void (*)(void *, uint32_t, uint32_t, uint32_t, bool))vt[18])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (bool)a4);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[18])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_KeyUp(void *self, uint32_t a1, uint32_t a2, uint32_t a3) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[19])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[19])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
     return;
@@ -24226,11 +26596,21 @@ void SteamAPI_ISteamHTMLSurface_LoadURL(void *self, uint32_t a1, const char * a2
     ((void (*)(void *, uint32_t, const char *, const char *))vt[5])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, const char *, const char *))vt[5])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_MouseDoubleClick(void *self, uint32_t a1, uint32_t a2) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[15])(self, (uint32_t)a1, (uint32_t)a2);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, uint32_t))vt[15])(self, (uint32_t)a1, (uint32_t)a2);
     return;
@@ -24244,11 +26624,21 @@ void SteamAPI_ISteamHTMLSurface_MouseDown(void *self, uint32_t a1, uint32_t a2) 
     ((void (*)(void *, uint32_t, uint32_t))vt[14])(self, (uint32_t)a1, (uint32_t)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[14])(self, (uint32_t)a1, (uint32_t)a2);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_MouseMove(void *self, uint32_t a1, int32_t a2, int32_t a3) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, int32_t, int32_t))vt[16])(self, (uint32_t)a1, (int32_t)a2, (int32_t)a3);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, int32_t, int32_t))vt[16])(self, (uint32_t)a1, (int32_t)a2, (int32_t)a3);
     return;
@@ -24262,11 +26652,21 @@ void SteamAPI_ISteamHTMLSurface_MouseUp(void *self, uint32_t a1, uint32_t a2) {
     ((void (*)(void *, uint32_t, uint32_t))vt[13])(self, (uint32_t)a1, (uint32_t)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[13])(self, (uint32_t)a1, (uint32_t)a2);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_MouseWheel(void *self, uint32_t a1, int32_t a2) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, int32_t))vt[17])(self, (uint32_t)a1, (int32_t)a2);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, int32_t))vt[17])(self, (uint32_t)a1, (int32_t)a2);
     return;
@@ -24289,11 +26689,21 @@ void SteamAPI_ISteamHTMLSurface_PasteFromClipboard(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[26])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[26])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_Reload(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[8])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[8])(self, (uint32_t)a1);
     return;
@@ -24307,6 +26717,11 @@ void SteamAPI_ISteamHTMLSurface_RemoveBrowser(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[4])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[4])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
@@ -24316,11 +26731,21 @@ void SteamAPI_ISteamHTMLSurface_SetBackgroundMode(void *self, uint32_t a1, bool 
     ((void (*)(void *, uint32_t, bool))vt[32])(self, (uint32_t)a1, (bool)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, bool))vt[32])(self, (uint32_t)a1, (bool)a2);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_SetCookie(void *self, const char * a1, const char * a2, const char * a3, const char * a4, uint32_t a5, bool a6, bool a7) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, const char *, const char *, const char *, const char *, uint32_t, bool, bool))vt[30])(self, (const char *)a1, (const char *)a2, (const char *)a3, (const char *)a4, (uint32_t)a5, (bool)a6, (bool)a7);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, const char *, const char *, const char *, const char *, uint32_t, bool, bool))vt[30])(self, (const char *)a1, (const char *)a2, (const char *)a3, (const char *)a4, (uint32_t)a5, (bool)a6, (bool)a7);
     return;
@@ -24343,11 +26768,21 @@ void SteamAPI_ISteamHTMLSurface_SetHorizontalScroll(void *self, uint32_t a1, uin
     ((void (*)(void *, uint32_t, uint32_t))vt[21])(self, (uint32_t)a1, (uint32_t)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[21])(self, (uint32_t)a1, (uint32_t)a2);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_SetKeyFocus(void *self, uint32_t a1, bool a2) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, bool))vt[23])(self, (uint32_t)a1, (bool)a2);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, bool))vt[23])(self, (uint32_t)a1, (bool)a2);
     return;
@@ -24361,11 +26796,21 @@ void SteamAPI_ISteamHTMLSurface_SetPageScaleFactor(void *self, uint32_t a1, floa
     ((void (*)(void *, uint32_t, float, int32_t, int32_t))vt[31])(self, (uint32_t)a1, (float)a2, (int32_t)a3, (int32_t)a4);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, float, int32_t, int32_t))vt[31])(self, (uint32_t)a1, (float)a2, (int32_t)a3, (int32_t)a4);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_SetSize(void *self, uint32_t a1, uint32_t a2, uint32_t a3) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[6])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, uint32_t, uint32_t))vt[6])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3);
     return;
@@ -24379,6 +26824,11 @@ void SteamAPI_ISteamHTMLSurface_SetVerticalScroll(void *self, uint32_t a1, uint3
     ((void (*)(void *, uint32_t, uint32_t))vt[22])(self, (uint32_t)a1, (uint32_t)a2);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[22])(self, (uint32_t)a1, (uint32_t)a2);
+    return;
+  }
   return;
 }
 
@@ -24387,11 +26837,20 @@ bool SteamAPI_ISteamHTMLSurface_Shutdown(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[2])(self);
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[2])(self);
+  }
   return 0;
 }
 
 void SteamAPI_ISteamHTMLSurface_StopFind(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[28])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[28])(self, (uint32_t)a1);
     return;
@@ -24405,11 +26864,21 @@ void SteamAPI_ISteamHTMLSurface_StopLoad(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[7])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[7])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamHTMLSurface_ViewSource(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhtmlsurface_interface_version_005_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[24])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[24])(self, (uint32_t)a1);
     return;
@@ -24423,11 +26892,20 @@ void SteamAPI_ISteamHTMLSurface_destructor(void *self) {
     ((void (*)(void *))vt[0])(self);
     return;
   }
+  if (self == (void *)&g_steamhtmlsurface_interface_version_003_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[0])(self);
+    return;
+  }
   return;
 }
 
 uint32_t SteamAPI_ISteamHTTP_CreateCookieContainer(void *self, bool a1) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, bool))vt[17])(self, (bool)a1);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, bool))vt[17])(self, (bool)a1);
   }
@@ -24439,11 +26917,19 @@ uint32_t SteamAPI_ISteamHTTP_CreateHTTPRequest(void *self, uint32_t a1, const ch
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint32_t, const char *))vt[0])(self, (uint32_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t, const char *))vt[0])(self, (uint32_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_DeferHTTPRequest(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[7])(self, (uint32_t)a1);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t))vt[7])(self, (uint32_t)a1);
   }
@@ -24455,11 +26941,19 @@ bool SteamAPI_ISteamHTTP_GetHTTPDownloadProgressPct(void *self, uint32_t a1, flo
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, float *))vt[15])(self, (uint32_t)a1, (float *)a2);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, float *))vt[15])(self, (uint32_t)a1, (float *)a2);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_GetHTTPRequestWasTimedOut(void *self, uint32_t a1, int * a2) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, int *))vt[24])(self, (uint32_t)a1, (int *)a2);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, int *))vt[24])(self, (uint32_t)a1, (int *)a2);
   }
@@ -24471,11 +26965,19 @@ bool SteamAPI_ISteamHTTP_GetHTTPResponseBodyData(void *self, uint32_t a1, void *
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, void *, uint32_t))vt[12])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, void *, uint32_t))vt[12])(self, (uint32_t)a1, (void *)a2, (uint32_t)a3);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_GetHTTPResponseBodySize(void *self, uint32_t a1, uint32_t * a2) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t *))vt[11])(self, (uint32_t)a1, (uint32_t *)a2);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint32_t *))vt[11])(self, (uint32_t)a1, (uint32_t *)a2);
   }
@@ -24487,11 +26989,19 @@ bool SteamAPI_ISteamHTTP_GetHTTPResponseHeaderSize(void *self, uint32_t a1, cons
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *, uint32_t *))vt[9])(self, (uint32_t)a1, (const char *)a2, (uint32_t *)a3);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *, uint32_t *))vt[9])(self, (uint32_t)a1, (const char *)a2, (uint32_t *)a3);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_GetHTTPResponseHeaderValue(void *self, uint32_t a1, const char * a2, void * a3, uint32_t a4) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *, void *, uint32_t))vt[10])(self, (uint32_t)a1, (const char *)a2, (void *)a3, (uint32_t)a4);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *, void *, uint32_t))vt[10])(self, (uint32_t)a1, (const char *)a2, (void *)a3, (uint32_t)a4);
   }
@@ -24503,11 +27013,19 @@ bool SteamAPI_ISteamHTTP_GetHTTPStreamingResponseBodyData(void *self, uint32_t a
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint32_t, void *, uint32_t))vt[13])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t, void *, uint32_t))vt[13])(self, (uint32_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_PrioritizeHTTPRequest(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[8])(self, (uint32_t)a1);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t))vt[8])(self, (uint32_t)a1);
   }
@@ -24519,11 +27037,19 @@ bool SteamAPI_ISteamHTTP_ReleaseCookieContainer(void *self, uint32_t a1) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t))vt[18])(self, (uint32_t)a1);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[18])(self, (uint32_t)a1);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_ReleaseHTTPRequest(void *self, uint32_t a1) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t))vt[14])(self, (uint32_t)a1);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t))vt[14])(self, (uint32_t)a1);
   }
@@ -24535,11 +27061,19 @@ bool SteamAPI_ISteamHTTP_SendHTTPRequest(void *self, uint32_t a1, uint64_t * a2)
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint64_t *))vt[5])(self, (uint32_t)a1, (uint64_t *)a2);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint64_t *))vt[5])(self, (uint32_t)a1, (uint64_t *)a2);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_SendHTTPRequestAndStreamResponse(void *self, uint32_t a1, uint64_t * a2) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint64_t *))vt[6])(self, (uint32_t)a1, (uint64_t *)a2);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint64_t *))vt[6])(self, (uint32_t)a1, (uint64_t *)a2);
   }
@@ -24551,11 +27085,19 @@ bool SteamAPI_ISteamHTTP_SetCookie(void *self, uint32_t a1, const char * a2, con
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *, const char *, const char *))vt[19])(self, (uint32_t)a1, (const char *)a2, (const char *)a3, (const char *)a4);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *, const char *, const char *))vt[19])(self, (uint32_t)a1, (const char *)a2, (const char *)a3, (const char *)a4);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_SetHTTPRequestAbsoluteTimeoutMS(void *self, uint32_t a1, uint32_t a2) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t))vt[23])(self, (uint32_t)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint32_t))vt[23])(self, (uint32_t)a1, (uint32_t)a2);
   }
@@ -24567,11 +27109,19 @@ bool SteamAPI_ISteamHTTP_SetHTTPRequestContextValue(void *self, uint32_t a1, uin
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint64_t))vt[1])(self, (uint32_t)a1, (uint64_t)a2);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint64_t))vt[1])(self, (uint32_t)a1, (uint64_t)a2);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_SetHTTPRequestCookieContainer(void *self, uint32_t a1, uint32_t a2) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t))vt[20])(self, (uint32_t)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint32_t))vt[20])(self, (uint32_t)a1, (uint32_t)a2);
   }
@@ -24583,11 +27133,19 @@ bool SteamAPI_ISteamHTTP_SetHTTPRequestGetOrPostParameter(void *self, uint32_t a
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *, const char *))vt[4])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *, const char *))vt[4])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_SetHTTPRequestHeaderValue(void *self, uint32_t a1, const char * a2, const char * a3) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *, const char *))vt[3])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *, const char *))vt[3])(self, (uint32_t)a1, (const char *)a2, (const char *)a3);
   }
@@ -24599,11 +27157,19 @@ bool SteamAPI_ISteamHTTP_SetHTTPRequestNetworkActivityTimeout(void *self, uint32
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint32_t))vt[2])(self, (uint32_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t))vt[2])(self, (uint32_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_SetHTTPRequestRawPostBody(void *self, uint32_t a1, const char * a2, void * a3, uint32_t a4) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *, void *, uint32_t))vt[16])(self, (uint32_t)a1, (const char *)a2, (void *)a3, (uint32_t)a4);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *, void *, uint32_t))vt[16])(self, (uint32_t)a1, (const char *)a2, (void *)a3, (uint32_t)a4);
   }
@@ -24615,11 +27181,19 @@ bool SteamAPI_ISteamHTTP_SetHTTPRequestRequiresVerifiedCertificate(void *self, u
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, bool))vt[22])(self, (uint32_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, bool))vt[22])(self, (uint32_t)a1, (bool)a2);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamHTTP_SetHTTPRequestUserAgentInfo(void *self, uint32_t a1, const char * a2) {
   if (self == (void *)&g_steamhttp_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *))vt[21])(self, (uint32_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamhttp_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *))vt[21])(self, (uint32_t)a1, (const char *)a2);
   }
@@ -25044,6 +27618,10 @@ bool SteamAPI_ISteamInventory_AddPromoItem(void *self, int32_t * a1, int32_t a2)
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, int32_t))vt[12])(self, (int32_t *)a1, (int32_t)a2);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, int32_t))vt[11])(self, (int32_t *)a1, (int32_t)a2);
+  }
   return 0;
 }
 
@@ -25051,6 +27629,10 @@ bool SteamAPI_ISteamInventory_AddPromoItems(void *self, int32_t * a1, void * a2,
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, void *, uint32_t))vt[13])(self, (int32_t *)a1, (void *)a2, (uint32_t)a3);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, void *, uint32_t))vt[12])(self, (int32_t *)a1, (void *)a2, (uint32_t)a3);
   }
   return 0;
 }
@@ -25060,6 +27642,10 @@ bool SteamAPI_ISteamInventory_CheckResultSteamID(void *self, int32_t a1, uint64_
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t, uint64_t))vt[4])(self, (int32_t)a1, (uint64_t)a2);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t, uint64_t))vt[3])(self, (int32_t)a1, (uint64_t)a2);
+  }
   return 0;
 }
 
@@ -25068,6 +27654,10 @@ bool SteamAPI_ISteamInventory_ConsumeItem(void *self, int32_t * a1, uint64_t a2,
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, uint64_t, uint32_t))vt[14])(self, (int32_t *)a1, (uint64_t)a2, (uint32_t)a3);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, uint64_t, uint32_t))vt[13])(self, (int32_t *)a1, (uint64_t)a2, (uint32_t)a3);
+  }
   return 0;
 }
 
@@ -25075,6 +27665,10 @@ bool SteamAPI_ISteamInventory_DeserializeResult(void *self, int32_t * a1, void *
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, void *, uint32_t, bool))vt[9])(self, (int32_t *)a1, (void *)a2, (uint32_t)a3, (bool)a4);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, void *, uint32_t, bool))vt[8])(self, (int32_t *)a1, (void *)a2, (uint32_t)a3, (bool)a4);
   }
   return 0;
 }
@@ -25085,6 +27679,11 @@ void SteamAPI_ISteamInventory_DestroyResult(void *self, int32_t a1) {
     ((void (*)(void *, int32_t))vt[5])(self, (int32_t)a1);
     return;
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, int32_t))vt[4])(self, (int32_t)a1);
+    return;
+  }
   return;
 }
 
@@ -25092,6 +27691,10 @@ bool SteamAPI_ISteamInventory_ExchangeItems(void *self, int32_t * a1, void * a2,
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, void *, void *, uint32_t, void *, void *, uint32_t))vt[15])(self, (int32_t *)a1, (void *)a2, (void *)a3, (uint32_t)a4, (void *)a5, (void *)a6, (uint32_t)a7);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, void *, void *, uint32_t, void *, void *, uint32_t))vt[14])(self, (int32_t *)a1, (void *)a2, (void *)a3, (uint32_t)a4, (void *)a5, (void *)a6, (uint32_t)a7);
   }
   return 0;
 }
@@ -25101,6 +27704,10 @@ bool SteamAPI_ISteamInventory_GenerateItems(void *self, int32_t * a1, void * a2,
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, void *, void *, uint32_t))vt[10])(self, (int32_t *)a1, (void *)a2, (void *)a3, (uint32_t)a4);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, void *, void *, uint32_t))vt[9])(self, (int32_t *)a1, (void *)a2, (void *)a3, (uint32_t)a4);
+  }
   return 0;
 }
 
@@ -25108,6 +27715,10 @@ bool SteamAPI_ISteamInventory_GetAllItems(void *self, int32_t * a1) {
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *))vt[6])(self, (int32_t *)a1);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *))vt[5])(self, (int32_t *)a1);
   }
   return 0;
 }
@@ -25117,6 +27728,10 @@ bool SteamAPI_ISteamInventory_GetEligiblePromoItemDefinitionIDs(void *self, uint
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, int32_t *, uint32_t *))vt[24])(self, (uint64_t)a1, (int32_t *)a2, (uint32_t *)a3);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, int32_t *, uint32_t *))vt[23])(self, (uint64_t)a1, (int32_t *)a2, (uint32_t *)a3);
+  }
   return 0;
 }
 
@@ -25125,6 +27740,10 @@ bool SteamAPI_ISteamInventory_GetItemDefinitionIDs(void *self, int32_t * a1, uin
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, uint32_t *))vt[21])(self, (int32_t *)a1, (uint32_t *)a2);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, uint32_t *))vt[20])(self, (int32_t *)a1, (uint32_t *)a2);
+  }
   return 0;
 }
 
@@ -25132,6 +27751,10 @@ bool SteamAPI_ISteamInventory_GetItemDefinitionProperty(void *self, int32_t a1, 
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t, const char *, void *, uint32_t *))vt[22])(self, (int32_t)a1, (const char *)a2, (void *)a3, (uint32_t *)a4);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t, const char *, void *, uint32_t *))vt[21])(self, (int32_t)a1, (const char *)a2, (void *)a3, (uint32_t *)a4);
   }
   return 0;
 }
@@ -25148,6 +27771,10 @@ bool SteamAPI_ISteamInventory_GetItemsByID(void *self, int32_t * a1, void * a2, 
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, void *, uint32_t))vt[7])(self, (int32_t *)a1, (void *)a2, (uint32_t)a3);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, void *, uint32_t))vt[6])(self, (int32_t *)a1, (void *)a2, (uint32_t)a3);
   }
   return 0;
 }
@@ -25181,11 +27808,19 @@ bool SteamAPI_ISteamInventory_GetResultItems(void *self, int32_t a1, void * a2, 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t, void *, uint32_t *))vt[1])(self, (int32_t)a1, (void *)a2, (uint32_t *)a3);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t, void *, uint32_t *))vt[1])(self, (int32_t)a1, (void *)a2, (uint32_t *)a3);
+  }
   return 0;
 }
 
 uint32_t SteamAPI_ISteamInventory_GetResultStatus(void *self, int32_t a1) {
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, int32_t))vt[0])(self, (int32_t)a1);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, int32_t))vt[0])(self, (int32_t)a1);
   }
@@ -25197,6 +27832,10 @@ uint32_t SteamAPI_ISteamInventory_GetResultTimestamp(void *self, int32_t a1) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, int32_t))vt[3])(self, (int32_t)a1);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, int32_t))vt[2])(self, (int32_t)a1);
+  }
   return 0;
 }
 
@@ -25204,6 +27843,10 @@ bool SteamAPI_ISteamInventory_GrantPromoItems(void *self, int32_t * a1) {
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *))vt[11])(self, (int32_t *)a1);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *))vt[10])(self, (int32_t *)a1);
   }
   return 0;
 }
@@ -25221,6 +27864,10 @@ bool SteamAPI_ISteamInventory_LoadItemDefinitions(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[20])(self);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[19])(self);
+  }
   return 0;
 }
 
@@ -25236,6 +27883,10 @@ uint64_t SteamAPI_ISteamInventory_RequestEligiblePromoItemDefinitionsIDs(void *s
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[23])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[22])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -25254,6 +27905,11 @@ void SteamAPI_ISteamInventory_SendItemDropHeartbeat(void *self) {
     ((void (*)(void *))vt[17])(self);
     return;
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[16])(self);
+    return;
+  }
   return;
 }
 
@@ -25261,6 +27917,10 @@ bool SteamAPI_ISteamInventory_SerializeResult(void *self, int32_t a1, void * a2,
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t, void *, uint32_t *))vt[8])(self, (int32_t)a1, (void *)a2, (uint32_t *)a3);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t, void *, uint32_t *))vt[7])(self, (int32_t)a1, (void *)a2, (uint32_t *)a3);
   }
   return 0;
 }
@@ -25326,6 +27986,10 @@ bool SteamAPI_ISteamInventory_TradeItems(void *self, int32_t * a1, uint64_t a2, 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, uint64_t, void *, void *, uint32_t, void *, void *, uint32_t))vt[19])(self, (int32_t *)a1, (uint64_t)a2, (void *)a3, (void *)a4, (uint32_t)a5, (void *)a6, (void *)a7, (uint32_t)a8);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, uint64_t, void *, void *, uint32_t, void *, void *, uint32_t))vt[18])(self, (int32_t *)a1, (uint64_t)a2, (void *)a3, (void *)a4, (uint32_t)a5, (void *)a6, (void *)a7, (uint32_t)a8);
+  }
   return 0;
 }
 
@@ -25334,6 +27998,10 @@ bool SteamAPI_ISteamInventory_TransferItemQuantity(void *self, int32_t * a1, uin
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, uint64_t, uint32_t, uint64_t))vt[16])(self, (int32_t *)a1, (uint64_t)a2, (uint32_t)a3, (uint64_t)a4);
   }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, uint64_t, uint32_t, uint64_t))vt[15])(self, (int32_t *)a1, (uint64_t)a2, (uint32_t)a3, (uint64_t)a4);
+  }
   return 0;
 }
 
@@ -25341,6 +28009,10 @@ bool SteamAPI_ISteamInventory_TriggerItemDrop(void *self, int32_t * a1, int32_t 
   if (self == (void *)&g_steaminventory_interface_v003_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *, int32_t))vt[18])(self, (int32_t *)a1, (int32_t)a2);
+  }
+  if (self == (void *)&g_steaminventory_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, int32_t))vt[17])(self, (int32_t *)a1, (int32_t)a2);
   }
   return 0;
 }
@@ -26662,6 +29334,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_CommitPublishedFileUpdate(void *self, uint
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[38])(self, (uint64_t)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[35])(self, (uint64_t)a1);
+  }
   return 0;
 }
 
@@ -26674,6 +29350,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_CreatePublishedFileUpdateRequest(void *sel
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[31])(self, (uint64_t)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[28])(self, (uint64_t)a1);
+  }
   return 0;
 }
 
@@ -26685,6 +29365,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_DeletePublishedFile(void *self, uint64_t a
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[40])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[37])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -26706,6 +29390,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_EnumeratePublishedFilesByUserAction(void *
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t))vt[52])(self, (uint32_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t))vt[49])(self, (uint32_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -26717,6 +29405,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_EnumeratePublishedWorkshopFiles(void *self
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t, void *, void *))vt[53])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4, (void *)a5, (void *)a6);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t, void *, void *))vt[50])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4, (void *)a5, (void *)a6);
   }
   return 0;
 }
@@ -26730,6 +29422,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_EnumerateUserPublishedFiles(void *self, ui
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t))vt[41])(self, (uint32_t)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t))vt[38])(self, (uint32_t)a1);
+  }
   return 0;
 }
 
@@ -26741,6 +29437,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_EnumerateUserSharedWorkshopFiles(void *sel
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t, void *, void *))vt[49])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (void *)a4);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t, void *, void *))vt[46])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (void *)a4);
   }
   return 0;
 }
@@ -26754,6 +29454,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_EnumerateUserSubscribedFiles(void *self, u
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t))vt[43])(self, (uint32_t)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t))vt[40])(self, (uint32_t)a1);
+  }
   return 0;
 }
 
@@ -26765,6 +29469,10 @@ bool SteamAPI_ISteamRemoteStorage_FileDelete(void *self, const char * a1) {
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, const char *))vt[6])(self, (const char *)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, const char *))vt[3])(self, (const char *)a1);
   }
   return 0;
 }
@@ -26778,6 +29486,10 @@ bool SteamAPI_ISteamRemoteStorage_FileExists(void *self, const char * a1) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, const char *))vt[13])(self, (const char *)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, const char *))vt[10])(self, (const char *)a1);
+  }
   return 0;
 }
 
@@ -26789,6 +29501,10 @@ bool SteamAPI_ISteamRemoteStorage_FileForget(void *self, const char * a1) {
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, const char *))vt[5])(self, (const char *)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, const char *))vt[2])(self, (const char *)a1);
   }
   return 0;
 }
@@ -26802,6 +29518,10 @@ bool SteamAPI_ISteamRemoteStorage_FilePersisted(void *self, const char * a1) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, const char *))vt[14])(self, (const char *)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, const char *))vt[11])(self, (const char *)a1);
+  }
   return 0;
 }
 
@@ -26811,6 +29531,10 @@ int32_t SteamAPI_ISteamRemoteStorage_FileRead(void *self, const char * a1, void 
     return (int32_t)((int32_t (*)(void *, const char *, void *, int32_t))vt[1])(self, (const char *)a1, (void *)a2, (int32_t)a3);
   }
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, const char *, void *, int32_t))vt[1])(self, (const char *)a1, (void *)a2, (int32_t)a3);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, const char *, void *, int32_t))vt[1])(self, (const char *)a1, (void *)a2, (int32_t)a3);
   }
@@ -26850,6 +29574,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_FileShare(void *self, const char * a1) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, const char *))vt[7])(self, (const char *)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, const char *))vt[4])(self, (const char *)a1);
+  }
   return 0;
 }
 
@@ -26859,6 +29587,10 @@ bool SteamAPI_ISteamRemoteStorage_FileWrite(void *self, const char * a1, void * 
     return (bool)((int (*)(void *, const char *, void *, int32_t))vt[0])(self, (const char *)a1, (void *)a2, (int32_t)a3);
   }
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, const char *, void *, int32_t))vt[0])(self, (const char *)a1, (void *)a2, (int32_t)a3);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, const char *, void *, int32_t))vt[0])(self, (const char *)a1, (void *)a2, (int32_t)a3);
   }
@@ -26886,6 +29618,10 @@ bool SteamAPI_ISteamRemoteStorage_FileWriteStreamCancel(void *self, uint64_t a1)
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t))vt[12])(self, (uint64_t)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t))vt[9])(self, (uint64_t)a1);
+  }
   return 0;
 }
 
@@ -26897,6 +29633,10 @@ bool SteamAPI_ISteamRemoteStorage_FileWriteStreamClose(void *self, uint64_t a1) 
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t))vt[11])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t))vt[8])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -26910,6 +29650,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_FileWriteStreamOpen(void *self, const char
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, const char *))vt[9])(self, (const char *)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, const char *))vt[6])(self, (const char *)a1);
+  }
   return 0;
 }
 
@@ -26921,6 +29665,10 @@ bool SteamAPI_ISteamRemoteStorage_FileWriteStreamWriteChunk(void *self, uint64_t
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, void *, int32_t))vt[10])(self, (uint64_t)a1, (void *)a2, (int32_t)a3);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, void *, int32_t))vt[7])(self, (uint64_t)a1, (void *)a2, (int32_t)a3);
   }
   return 0;
 }
@@ -26934,6 +29682,10 @@ int32_t SteamAPI_ISteamRemoteStorage_GetCachedUGCCount(void *self) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *))vt[28])(self);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *))vt[25])(self);
+  }
   return 0;
 }
 
@@ -26945,6 +29697,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_GetCachedUGCHandle(void *self, int32_t a1)
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, int32_t))vt[29])(self, (int32_t)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, int32_t))vt[26])(self, (int32_t)a1);
   }
   return 0;
 }
@@ -26958,6 +29714,10 @@ int32_t SteamAPI_ISteamRemoteStorage_GetFileCount(void *self) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *))vt[18])(self);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *))vt[15])(self);
+  }
   return 0;
 }
 
@@ -26969,6 +29729,10 @@ const char * SteamAPI_ISteamRemoteStorage_GetFileNameAndSize(void *self, int32_t
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (const char *)((const char * (*)(void *, int32_t, int32_t *))vt[19])(self, (int32_t)a1, (int32_t *)a2);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (const char *)((const char * (*)(void *, int32_t, int32_t *))vt[16])(self, (int32_t)a1, (int32_t *)a2);
   }
   return 0;
 }
@@ -26982,6 +29746,10 @@ int32_t SteamAPI_ISteamRemoteStorage_GetFileSize(void *self, const char * a1) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, const char *))vt[15])(self, (const char *)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, const char *))vt[12])(self, (const char *)a1);
+  }
   return 0;
 }
 
@@ -26993,6 +29761,10 @@ int64_t SteamAPI_ISteamRemoteStorage_GetFileTimestamp(void *self, const char * a
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (int64_t)((int64_t (*)(void *, const char *))vt[16])(self, (const char *)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int64_t)((int64_t (*)(void *, const char *))vt[13])(self, (const char *)a1);
   }
   return 0;
 }
@@ -27022,6 +29794,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_GetPublishedFileDetails(void *self, uint64
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[39])(self, (uint64_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[36])(self, (uint64_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -27033,6 +29809,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_GetPublishedItemVoteDetails(void *self, ui
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[46])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[43])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -27046,6 +29826,10 @@ bool SteamAPI_ISteamRemoteStorage_GetQuota(void *self, uint64_t a1, uint64_t a2)
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t *, uint64_t *))vt[20])(self, (uint64_t *)a1, (uint64_t *)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *, int32_t *))vt[17])(self, (int32_t *)a1, (int32_t *)a2);
+  }
   return 0;
 }
 
@@ -27057,6 +29841,10 @@ uint32_t SteamAPI_ISteamRemoteStorage_GetSyncPlatforms(void *self, const char * 
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, const char *))vt[17])(self, (const char *)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, const char *))vt[14])(self, (const char *)a1);
   }
   return 0;
 }
@@ -27070,6 +29858,10 @@ bool SteamAPI_ISteamRemoteStorage_GetUGCDetails(void *self, uint64_t a1, uint32_
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, void *))vt[26])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (void *)a5);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t *, void *, int32_t *, void *))vt[23])(self, (uint64_t)a1, (uint32_t *)a2, (void *)a3, (int32_t *)a4, (void *)a5);
+  }
   return 0;
 }
 
@@ -27081,6 +29873,10 @@ bool SteamAPI_ISteamRemoteStorage_GetUGCDownloadProgress(void *self, uint64_t a1
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, int32_t *, int32_t *))vt[25])(self, (uint64_t)a1, (int32_t *)a2, (int32_t *)a3);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, int32_t *, int32_t *))vt[22])(self, (uint64_t)a1, (int32_t *)a2, (int32_t *)a3);
   }
   return 0;
 }
@@ -27094,6 +29890,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_GetUserPublishedItemVoteDetails(void *self
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[48])(self, (uint64_t)a1);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[45])(self, (uint64_t)a1);
+  }
   return 0;
 }
 
@@ -27105,6 +29905,10 @@ bool SteamAPI_ISteamRemoteStorage_IsCloudEnabledForAccount(void *self) {
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[21])(self);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[18])(self);
   }
   return 0;
 }
@@ -27118,6 +29922,10 @@ bool SteamAPI_ISteamRemoteStorage_IsCloudEnabledForApp(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[22])(self);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[19])(self);
+  }
   return 0;
 }
 
@@ -27130,6 +29938,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_PublishVideo(void *self, uint32_t a1, cons
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, const char *, const char *, const char *, uint32_t, const char *, const char *, uint32_t, void *))vt[50])(self, (uint32_t)a1, (const char *)a2, (const char *)a3, (const char *)a4, (uint32_t)a5, (const char *)a6, (const char *)a7, (uint32_t)a8, (void *)a9);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, const char *, const char *, const char *, uint32_t, const char *, const char *, uint32_t, void *))vt[47])(self, (uint32_t)a1, (const char *)a2, (const char *)a3, (const char *)a4, (uint32_t)a5, (const char *)a6, (const char *)a7, (uint32_t)a8, (void *)a9);
+  }
   return 0;
 }
 
@@ -27141,6 +29953,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_PublishWorkshopFile(void *self, const char
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, const char *, const char *, uint32_t, const char *, const char *, uint32_t, void *, uint32_t))vt[30])(self, (const char *)a1, (const char *)a2, (uint32_t)a3, (const char *)a4, (const char *)a5, (uint32_t)a6, (void *)a7, (uint32_t)a8);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, const char *, const char *, uint32_t, const char *, const char *, uint32_t, void *, uint32_t))vt[27])(self, (const char *)a1, (const char *)a2, (uint32_t)a3, (const char *)a4, (const char *)a5, (uint32_t)a6, (void *)a7, (uint32_t)a8);
   }
   return 0;
 }
@@ -27156,6 +29972,11 @@ void SteamAPI_ISteamRemoteStorage_SetCloudEnabledForApp(void *self, bool a1) {
     ((void (*)(void *, bool))vt[23])(self, (bool)a1);
     return;
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, bool))vt[20])(self, (bool)a1);
+    return;
+  }
   return;
 }
 
@@ -27167,6 +29988,10 @@ bool SteamAPI_ISteamRemoteStorage_SetSyncPlatforms(void *self, const char * a1, 
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, const char *, uint32_t))vt[8])(self, (const char *)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, const char *, uint32_t))vt[5])(self, (const char *)a1, (uint32_t)a2);
   }
   return 0;
 }
@@ -27180,6 +30005,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_SetUserPublishedFileAction(void *self, uin
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[51])(self, (uint64_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[48])(self, (uint64_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -27191,6 +30020,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_SubscribePublishedFile(void *self, uint64_
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[42])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[39])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -27204,6 +30037,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_UGCDownload(void *self, uint64_t a1, uint3
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[24])(self, (uint64_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[21])(self, (uint64_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -27215,6 +30052,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_UGCDownloadToLocation(void *self, uint64_t
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, const char *, uint32_t))vt[54])(self, (uint64_t)a1, (const char *)a2, (uint32_t)a3);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, const char *, uint32_t))vt[51])(self, (uint64_t)a1, (const char *)a2, (uint32_t)a3);
   }
   return 0;
 }
@@ -27228,6 +30069,10 @@ int32_t SteamAPI_ISteamRemoteStorage_UGCRead(void *self, uint64_t a1, void * a2,
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, uint64_t, void *, int32_t, uint32_t, uint32_t))vt[27])(self, (uint64_t)a1, (void *)a2, (int32_t)a3, (uint32_t)a4, (uint32_t)a5);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, uint64_t, void *, int32_t, uint32_t, uint32_t))vt[24])(self, (uint64_t)a1, (void *)a2, (int32_t)a3, (uint32_t)a4, (uint32_t)a5);
+  }
   return 0;
 }
 
@@ -27239,6 +30084,10 @@ uint64_t SteamAPI_ISteamRemoteStorage_UnsubscribePublishedFile(void *self, uint6
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[44])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[41])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -27252,6 +30101,10 @@ bool SteamAPI_ISteamRemoteStorage_UpdatePublishedFileDescription(void *self, uin
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[35])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[32])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -27263,6 +30116,10 @@ bool SteamAPI_ISteamRemoteStorage_UpdatePublishedFileFile(void *self, uint64_t a
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[32])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[29])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -27276,6 +30133,10 @@ bool SteamAPI_ISteamRemoteStorage_UpdatePublishedFilePreviewFile(void *self, uin
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[33])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[30])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -27287,6 +30148,10 @@ bool SteamAPI_ISteamRemoteStorage_UpdatePublishedFileSetChangeDescription(void *
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[45])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[42])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -27300,6 +30165,10 @@ bool SteamAPI_ISteamRemoteStorage_UpdatePublishedFileTags(void *self, uint64_t a
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, void *))vt[37])(self, (uint64_t)a1, (void *)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, void *))vt[34])(self, (uint64_t)a1, (void *)a2);
+  }
   return 0;
 }
 
@@ -27311,6 +30180,10 @@ bool SteamAPI_ISteamRemoteStorage_UpdatePublishedFileTitle(void *self, uint64_t 
   if (self == (void *)&g_steamremotestorage_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[34])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[31])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -27324,6 +30197,10 @@ bool SteamAPI_ISteamRemoteStorage_UpdatePublishedFileVisibility(void *self, uint
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t))vt[36])(self, (uint64_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t))vt[33])(self, (uint64_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -27336,11 +30213,19 @@ uint64_t SteamAPI_ISteamRemoteStorage_UpdateUserPublishedItemVote(void *self, ui
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, bool))vt[47])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamremotestorage_interface_version012_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, bool))vt[44])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
 uint32_t SteamAPI_ISteamScreenshots_AddScreenshotToLibrary(void *self, const char * a1, const char * a2, int32_t a3, int32_t a4) {
   if (self == (void *)&g_steamscreenshots_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, const char *, const char *, int32_t, int32_t))vt[1])(self, (const char *)a1, (const char *)a2, (int32_t)a3, (int32_t)a4);
+  }
+  if (self == (void *)&g_steamscreenshots_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, const char *, const char *, int32_t, int32_t))vt[1])(self, (const char *)a1, (const char *)a2, (int32_t)a3, (int32_t)a4);
   }
@@ -27361,6 +30246,11 @@ void SteamAPI_ISteamScreenshots_HookScreenshots(void *self, bool a1) {
     ((void (*)(void *, bool))vt[3])(self, (bool)a1);
     return;
   }
+  if (self == (void *)&g_steamscreenshots_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, bool))vt[3])(self, (bool)a1);
+    return;
+  }
   return;
 }
 
@@ -27377,6 +30267,10 @@ bool SteamAPI_ISteamScreenshots_SetLocation(void *self, uint32_t a1, const char 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *))vt[4])(self, (uint32_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamscreenshots_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *))vt[4])(self, (uint32_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -27385,11 +30279,19 @@ bool SteamAPI_ISteamScreenshots_TagPublishedFile(void *self, uint32_t a1, uint64
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint64_t))vt[6])(self, (uint32_t)a1, (uint64_t)a2);
   }
+  if (self == (void *)&g_steamscreenshots_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint64_t))vt[6])(self, (uint32_t)a1, (uint64_t)a2);
+  }
   return 0;
 }
 
 bool SteamAPI_ISteamScreenshots_TagUser(void *self, uint32_t a1, uint64_t a2) {
   if (self == (void *)&g_steamscreenshots_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint64_t))vt[5])(self, (uint32_t)a1, (uint64_t)a2);
+  }
+  if (self == (void *)&g_steamscreenshots_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint64_t))vt[5])(self, (uint32_t)a1, (uint64_t)a2);
   }
@@ -27402,11 +30304,20 @@ void SteamAPI_ISteamScreenshots_TriggerScreenshot(void *self) {
     ((void (*)(void *))vt[2])(self);
     return;
   }
+  if (self == (void *)&g_steamscreenshots_interface_version002_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[2])(self);
+    return;
+  }
   return;
 }
 
 uint32_t SteamAPI_ISteamScreenshots_WriteScreenshot(void *self, void * a1, uint32_t a2, int32_t a3, int32_t a4) {
   if (self == (void *)&g_steamscreenshots_interface_version003_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, uint32_t, int32_t, int32_t))vt[0])(self, (void *)a1, (uint32_t)a2, (int32_t)a3, (int32_t)a4);
+  }
+  if (self == (void *)&g_steamscreenshots_interface_version002_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, void *, uint32_t, int32_t, int32_t))vt[0])(self, (void *)a1, (uint32_t)a2, (int32_t)a3, (int32_t)a4);
   }
@@ -27518,6 +30429,10 @@ bool SteamAPI_ISteamUGC_AddExcludedTag(void *self, uint64_t a1, const char * a2)
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[15])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[15])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -27537,6 +30452,10 @@ bool SteamAPI_ISteamUGC_AddItemKeyValueTag(void *self, uint64_t a1, const char *
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *, const char *))vt[43])(self, (uint64_t)a1, (const char *)a2, (const char *)a3);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *, const char *))vt[41])(self, (uint64_t)a1, (const char *)a2, (const char *)a3);
   }
   return 0;
 }
@@ -27598,6 +30517,10 @@ uint64_t SteamAPI_ISteamUGC_AddItemToFavorites(void *self, uint32_t a1, uint64_t
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint64_t))vt[53])(self, (uint32_t)a1, (uint64_t)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint64_t))vt[46])(self, (uint32_t)a1, (uint64_t)a2);
+  }
   return 0;
 }
 
@@ -27618,6 +30541,10 @@ bool SteamAPI_ISteamUGC_AddRequiredKeyValueTag(void *self, uint64_t a1, const ch
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *, const char *))vt[30])(self, (uint64_t)a1, (const char *)a2, (const char *)a3);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *, const char *))vt[28])(self, (uint64_t)a1, (const char *)a2, (const char *)a3);
+  }
   return 0;
 }
 
@@ -27635,6 +30562,10 @@ bool SteamAPI_ISteamUGC_AddRequiredTag(void *self, uint64_t a1, const char * a2)
     return (bool)((int (*)(void *, uint64_t, const char *))vt[22])(self, (uint64_t)a1, (const char *)a2);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[14])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[14])(self, (uint64_t)a1, (const char *)a2);
   }
@@ -27674,6 +30605,10 @@ bool SteamAPI_ISteamUGC_BInitWorkshopForGameServer(void *self, uint32_t a1, cons
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, const char *))vt[63])(self, (uint32_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, const char *))vt[56])(self, (uint32_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -27693,6 +30628,10 @@ uint64_t SteamAPI_ISteamUGC_CreateItem(void *self, uint32_t a1, uint32_t a2) {
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t))vt[32])(self, (uint32_t)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t))vt[30])(self, (uint32_t)a1, (uint32_t)a2);
   }
   return 0;
 }
@@ -27730,6 +30669,10 @@ uint64_t SteamAPI_ISteamUGC_CreateQueryAllUGCRequestPage(void *self, uint32_t a1
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t))vt[1])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4, (uint32_t)a5);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t))vt[1])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4, (uint32_t)a5);
+  }
   return 0;
 }
 
@@ -27750,6 +30693,10 @@ uint64_t SteamAPI_ISteamUGC_CreateQueryUGCDetailsRequest(void *self, uint64_t * 
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t *, uint32_t))vt[2])(self, (uint64_t *)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t *, uint32_t))vt[2])(self, (uint64_t *)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -27767,6 +30714,10 @@ uint64_t SteamAPI_ISteamUGC_CreateQueryUserUGCRequest(void *self, uint32_t a1, u
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t))vt[0])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4, (uint32_t)a5, (uint32_t)a6, (uint32_t)a7);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t))vt[0])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4, (uint32_t)a5, (uint32_t)a6, (uint32_t)a7);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t))vt[0])(self, (uint32_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t)a4, (uint32_t)a5, (uint32_t)a6, (uint32_t)a7);
   }
@@ -27810,6 +30761,10 @@ bool SteamAPI_ISteamUGC_DownloadItem(void *self, uint64_t a1, bool a2) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[62])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[55])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -27850,6 +30805,10 @@ bool SteamAPI_ISteamUGC_GetItemDownloadInfo(void *self, uint64_t a1, uint64_t * 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint64_t *, uint64_t *))vt[61])(self, (uint64_t)a1, (uint64_t *)a2, (uint64_t *)a3);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, uint64_t *))vt[54])(self, (uint64_t)a1, (uint64_t *)a2, (uint64_t *)a3);
+  }
   return 0;
 }
 
@@ -27869,6 +30828,10 @@ bool SteamAPI_ISteamUGC_GetItemInstallInfo(void *self, uint64_t a1, uint64_t * a
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, uint32_t, uint32_t *))vt[60])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint64_t *, void *, uint32_t, uint32_t *))vt[53])(self, (uint64_t)a1, (uint64_t *)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5);
   }
   return 0;
 }
@@ -27890,6 +30853,10 @@ uint32_t SteamAPI_ISteamUGC_GetItemState(void *self, uint64_t a1) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint64_t))vt[59])(self, (uint64_t)a1);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint64_t))vt[52])(self, (uint64_t)a1);
+  }
   return 0;
 }
 
@@ -27910,6 +30877,10 @@ uint32_t SteamAPI_ISteamUGC_GetItemUpdateProgress(void *self, uint64_t a1, uint6
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint64_t, uint64_t *, uint64_t *))vt[50])(self, (uint64_t)a1, (uint64_t *)a2, (uint64_t *)a3);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint64_t, uint64_t *, uint64_t *))vt[43])(self, (uint64_t)a1, (uint64_t *)a2, (uint64_t *)a3);
+  }
   return 0;
 }
 
@@ -27929,6 +30900,10 @@ uint32_t SteamAPI_ISteamUGC_GetNumSubscribedItems(void *self) {
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[57])(self);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[50])(self);
   }
   return 0;
 }
@@ -27957,7 +30932,7 @@ bool SteamAPI_ISteamUGC_GetQueryFirstUGCKeyValueTag(void *self, uint64_t a1, uin
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCAdditionalPreview(void *self, uint64_t a1, uint32_t a2, uint32_t a3, void * a4, uint32_t a5, void * a6, uint32_t a7, uint32_t * a8) {
+bool SteamAPI_ISteamUGC_GetQueryUGCAdditionalPreview(void *self, uint64_t a1, uint32_t a2, uint32_t a3, void * a4, uint32_t a5, uint64_t a6, uint32_t a7, uint32_t * a8) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t, uint32_t *))vt[14])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8);
@@ -27973,6 +30948,10 @@ bool SteamAPI_ISteamUGC_GetQueryUGCAdditionalPreview(void *self, uint64_t a1, ui
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t, uint32_t *))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, int *))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (int *)a6);
   }
   return 0;
 }
@@ -27991,6 +30970,10 @@ bool SteamAPI_ISteamUGC_GetQueryUGCChildren(void *self, uint64_t a1, uint32_t a2
     return (bool)((int (*)(void *, uint64_t, uint32_t, uint64_t *, uint32_t))vt[11])(self, (uint64_t)a1, (uint32_t)a2, (uint64_t *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint64_t *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint64_t *)a3, (uint32_t)a4);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, uint64_t *, uint32_t))vt[7])(self, (uint64_t)a1, (uint32_t)a2, (uint64_t *)a3, (uint32_t)a4);
   }
@@ -28026,6 +31009,10 @@ bool SteamAPI_ISteamUGC_GetQueryUGCKeyValueTag(void *self, uint64_t a1, uint32_t
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t))vt[12])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, void *, uint32_t, void *, uint32_t))vt[12])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (void *)a4, (uint32_t)a5, (void *)a6, (uint32_t)a7);
+  }
   return 0;
 }
 
@@ -28043,6 +31030,10 @@ bool SteamAPI_ISteamUGC_GetQueryUGCMetadata(void *self, uint64_t a1, uint32_t a2
     return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[10])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[6])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[6])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
   }
@@ -28066,6 +31057,10 @@ uint32_t SteamAPI_ISteamUGC_GetQueryUGCNumAdditionalPreviews(void *self, uint64_
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[9])(self, (uint64_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -28083,6 +31078,10 @@ uint32_t SteamAPI_ISteamUGC_GetQueryUGCNumKeyValueTags(void *self, uint64_t a1, 
     return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[15])(self, (uint64_t)a1, (uint32_t)a2);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[11])(self, (uint64_t)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[11])(self, (uint64_t)a1, (uint32_t)a2);
   }
@@ -28122,6 +31121,10 @@ bool SteamAPI_ISteamUGC_GetQueryUGCPreviewURL(void *self, uint64_t a1, uint32_t 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[5])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t, void *, uint32_t))vt[5])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4);
+  }
   return 0;
 }
 
@@ -28142,10 +31145,14 @@ bool SteamAPI_ISteamUGC_GetQueryUGCResult(void *self, uint64_t a1, uint32_t a2, 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, void *))vt[4])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t, void *))vt[4])(self, (uint64_t)a1, (uint32_t)a2, (void *)a3);
+  }
   return 0;
 }
 
-bool SteamAPI_ISteamUGC_GetQueryUGCStatistic(void *self, uint64_t a1, uint32_t a2, uint32_t a3, uint64_t * a4) {
+bool SteamAPI_ISteamUGC_GetQueryUGCStatistic(void *self, uint64_t a1, uint32_t a2, uint32_t a3, uint64_t a4) {
   if (self == (void *)&g_steamugc_interface_version016_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, uint64_t *))vt[12])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (uint64_t *)a4);
@@ -28161,6 +31168,10 @@ bool SteamAPI_ISteamUGC_GetQueryUGCStatistic(void *self, uint64_t a1, uint32_t a
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, uint64_t *))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (uint64_t *)a4);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t, uint32_t, uint32_t *))vt[8])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3, (uint32_t *)a4);
   }
   return 0;
 }
@@ -28214,6 +31225,10 @@ uint32_t SteamAPI_ISteamUGC_GetSubscribedItems(void *self, uint64_t * a1, uint32
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint64_t *, uint32_t))vt[58])(self, (uint64_t *)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint64_t *, uint32_t))vt[51])(self, (uint64_t *)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -28250,6 +31265,10 @@ uint64_t SteamAPI_ISteamUGC_GetUserItemVote(void *self, uint64_t a1) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[52])(self, (uint64_t)a1);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[45])(self, (uint64_t)a1);
+  }
   return 0;
 }
 
@@ -28283,6 +31302,10 @@ bool SteamAPI_ISteamUGC_ReleaseQueryUGCRequest(void *self, uint64_t a1) {
     return (bool)((int (*)(void *, uint64_t))vt[21])(self, (uint64_t)a1);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t))vt[13])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t))vt[13])(self, (uint64_t)a1);
   }
@@ -28374,6 +31397,10 @@ uint64_t SteamAPI_ISteamUGC_RemoveItemFromFavorites(void *self, uint32_t a1, uin
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint64_t))vt[54])(self, (uint32_t)a1, (uint64_t)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint64_t))vt[47])(self, (uint32_t)a1, (uint64_t)a2);
+  }
   return 0;
 }
 
@@ -28393,6 +31420,10 @@ bool SteamAPI_ISteamUGC_RemoveItemKeyValueTags(void *self, uint64_t a1, const ch
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[42])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[40])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -28434,6 +31465,10 @@ uint64_t SteamAPI_ISteamUGC_RequestUGCDetails(void *self, uint64_t a1, uint32_t 
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[31])(self, (uint64_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, uint32_t))vt[29])(self, (uint64_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -28451,6 +31486,10 @@ uint64_t SteamAPI_ISteamUGC_SendQueryUGCRequest(void *self, uint64_t a1) {
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[4])(self, (uint64_t)a1);
   }
   if (self == (void *)&g_steamugc_interface_version010_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[3])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[3])(self, (uint64_t)a1);
   }
@@ -28481,6 +31520,10 @@ bool SteamAPI_ISteamUGC_SetAllowCachedResponse(void *self, uint64_t a1, uint32_t
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t))vt[25])(self, (uint64_t)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t))vt[23])(self, (uint64_t)a1, (uint32_t)a2);
   }
   return 0;
 }
@@ -28518,6 +31561,10 @@ bool SteamAPI_ISteamUGC_SetCloudFileNameFilter(void *self, uint64_t a1, const ch
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[26])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[24])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -28537,6 +31584,10 @@ bool SteamAPI_ISteamUGC_SetItemContent(void *self, uint64_t a1, const char * a2)
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[40])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[38])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -28558,6 +31609,10 @@ bool SteamAPI_ISteamUGC_SetItemDescription(void *self, uint64_t a1, const char *
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[35])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[33])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -28577,6 +31632,10 @@ bool SteamAPI_ISteamUGC_SetItemMetadata(void *self, uint64_t a1, const char * a2
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[37])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[35])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -28598,6 +31657,10 @@ bool SteamAPI_ISteamUGC_SetItemPreview(void *self, uint64_t a1, const char * a2)
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[41])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[39])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -28617,6 +31680,10 @@ bool SteamAPI_ISteamUGC_SetItemTags(void *self, uint64_t a1, void * a2, bool a3)
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, void *))vt[39])(self, (uint64_t)a1, (void *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, void *))vt[37])(self, (uint64_t)a1, (void *)a2);
   }
   return 0;
 }
@@ -28638,6 +31705,10 @@ bool SteamAPI_ISteamUGC_SetItemTitle(void *self, uint64_t a1, const char * a2) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[34])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[32])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -28657,6 +31728,10 @@ bool SteamAPI_ISteamUGC_SetItemUpdateLanguage(void *self, uint64_t a1, const cha
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[36])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[34])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -28678,6 +31753,10 @@ bool SteamAPI_ISteamUGC_SetItemVisibility(void *self, uint64_t a1, uint32_t a2) 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t))vt[38])(self, (uint64_t)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t))vt[36])(self, (uint64_t)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -28697,6 +31776,10 @@ bool SteamAPI_ISteamUGC_SetLanguage(void *self, uint64_t a1, const char * a2) {
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[24])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[22])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -28718,6 +31801,10 @@ bool SteamAPI_ISteamUGC_SetMatchAnyTag(void *self, uint64_t a1, bool a2) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[27])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[25])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -28737,6 +31824,10 @@ bool SteamAPI_ISteamUGC_SetRankedByTrendDays(void *self, uint64_t a1, uint32_t a
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, uint32_t))vt[29])(self, (uint64_t)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, uint32_t))vt[27])(self, (uint64_t)a1, (uint32_t)a2);
   }
   return 0;
 }
@@ -28766,6 +31857,10 @@ bool SteamAPI_ISteamUGC_SetReturnAdditionalPreviews(void *self, uint64_t a1, boo
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[21])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[20])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -28785,6 +31880,10 @@ bool SteamAPI_ISteamUGC_SetReturnChildren(void *self, uint64_t a1, bool a2) {
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[20])(self, (uint64_t)a1, (bool)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[19])(self, (uint64_t)a1, (bool)a2);
   }
   return 0;
 }
@@ -28806,6 +31905,10 @@ bool SteamAPI_ISteamUGC_SetReturnKeyValueTags(void *self, uint64_t a1, bool a2) 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[17])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[16])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -28826,6 +31929,10 @@ bool SteamAPI_ISteamUGC_SetReturnLongDescription(void *self, uint64_t a1, bool a
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[18])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[17])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -28845,6 +31952,10 @@ bool SteamAPI_ISteamUGC_SetReturnMetadata(void *self, uint64_t a1, bool a2) {
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[19])(self, (uint64_t)a1, (bool)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[18])(self, (uint64_t)a1, (bool)a2);
   }
   return 0;
 }
@@ -28906,6 +32017,10 @@ bool SteamAPI_ISteamUGC_SetReturnTotalOnly(void *self, uint64_t a1, bool a2) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, bool))vt[22])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, bool))vt[21])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -28925,6 +32040,10 @@ bool SteamAPI_ISteamUGC_SetSearchText(void *self, uint64_t a1, const char * a2) 
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, const char *))vt[28])(self, (uint64_t)a1, (const char *)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, const char *))vt[26])(self, (uint64_t)a1, (const char *)a2);
   }
   return 0;
 }
@@ -28978,6 +32097,10 @@ uint64_t SteamAPI_ISteamUGC_SetUserItemVote(void *self, uint64_t a1, bool a2) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, bool))vt[51])(self, (uint64_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, bool))vt[44])(self, (uint64_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -29013,6 +32136,10 @@ uint64_t SteamAPI_ISteamUGC_StartItemUpdate(void *self, uint32_t a1, uint64_t a2
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint32_t, uint64_t))vt[33])(self, (uint32_t)a1, (uint64_t)a2);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint32_t, uint64_t))vt[31])(self, (uint32_t)a1, (uint64_t)a2);
   }
   return 0;
 }
@@ -29094,6 +32221,10 @@ uint64_t SteamAPI_ISteamUGC_SubmitItemUpdate(void *self, uint64_t a1, const char
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t, const char *))vt[49])(self, (uint64_t)a1, (const char *)a2);
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t, const char *))vt[42])(self, (uint64_t)a1, (const char *)a2);
+  }
   return 0;
 }
 
@@ -29113,6 +32244,10 @@ uint64_t SteamAPI_ISteamUGC_SubscribeItem(void *self, uint64_t a1) {
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[55])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[48])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -29138,6 +32273,11 @@ void SteamAPI_ISteamUGC_SuspendDownloads(void *self, bool a1) {
     ((void (*)(void *, bool))vt[64])(self, (bool)a1);
     return;
   }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, bool))vt[57])(self, (bool)a1);
+    return;
+  }
   return;
 }
 
@@ -29157,6 +32297,10 @@ uint64_t SteamAPI_ISteamUGC_UnsubscribeItem(void *self, uint64_t a1) {
   if (self == (void *)&g_steamugc_interface_version010_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[56])(self, (uint64_t)a1);
+  }
+  if (self == (void *)&g_steamugc_interface_version007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, uint64_t))vt[49])(self, (uint64_t)a1);
   }
   return 0;
 }
@@ -29925,6 +33069,11 @@ void SteamAPI_ISteamUser_AdvertiseGame(void *self, uint64_t a1, uint32_t a2, uin
     ((void (*)(void *, uint64_t, uint32_t, uint32_t))vt[19])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3);
     return;
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint64_t, uint32_t, uint32_t))vt[19])(self, (uint64_t)a1, (uint32_t)a2, (uint32_t)a3);
+    return;
+  }
   return;
 }
 
@@ -29938,6 +33087,10 @@ bool SteamAPI_ISteamUser_BIsBehindNAT(void *self) {
     return (bool)((int (*)(void *))vt[18])(self);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[18])(self);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[18])(self);
   }
@@ -30021,6 +33174,10 @@ bool SteamAPI_ISteamUser_BLoggedOn(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[1])(self);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[1])(self);
+  }
   return 0;
 }
 
@@ -30049,6 +33206,10 @@ uint32_t SteamAPI_ISteamUser_BeginAuthSession(void *self, void * a1, int32_t a2,
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, void *, int32_t, uint64_t))vt[14])(self, (void *)a1, (int32_t)a2, (uint64_t)a3);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, int32_t, uint64_t))vt[14])(self, (void *)a1, (int32_t)a2, (uint64_t)a3);
+  }
   return 0;
 }
 
@@ -30068,6 +33229,11 @@ void SteamAPI_ISteamUser_CancelAuthTicket(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[16])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[16])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
@@ -30081,6 +33247,10 @@ uint32_t SteamAPI_ISteamUser_DecompressVoice(void *self, void * a1, uint32_t a2,
     return (uint32_t)((uint32_t (*)(void *, void *, uint32_t, void *, uint32_t, uint32_t *, uint32_t))vt[11])(self, (void *)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5, (uint32_t)a6);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, uint32_t, void *, uint32_t, uint32_t *, uint32_t))vt[11])(self, (void *)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5, (uint32_t)a6);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, void *, uint32_t, void *, uint32_t, uint32_t *, uint32_t))vt[11])(self, (void *)a1, (uint32_t)a2, (void *)a3, (uint32_t)a4, (uint32_t *)a5, (uint32_t)a6);
   }
@@ -30103,6 +33273,11 @@ void SteamAPI_ISteamUser_EndAuthSession(void *self, uint64_t a1) {
     ((void (*)(void *, uint64_t))vt[15])(self, (uint64_t)a1);
     return;
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint64_t))vt[15])(self, (uint64_t)a1);
+    return;
+  }
   return;
 }
 
@@ -30116,6 +33291,10 @@ uint32_t SteamAPI_ISteamUser_GetAuthSessionTicket(void *self, void * a1, int32_t
     return (uint32_t)((uint32_t (*)(void *, void *, int32_t, uint32_t *))vt[13])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, void *, int32_t, uint32_t *))vt[13])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, void *, int32_t, uint32_t *))vt[13])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3);
   }
@@ -30140,6 +33319,10 @@ uint32_t SteamAPI_ISteamUser_GetAvailableVoice(void *self, uint32_t * a1, uint32
     return (uint32_t)((uint32_t (*)(void *, uint32_t *, uint32_t *, uint32_t))vt[9])(self, (uint32_t *)a1, (uint32_t *)a2, (uint32_t)a3);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint32_t *, uint32_t *, uint32_t))vt[9])(self, (uint32_t *)a1, (uint32_t *)a2, (uint32_t)a3);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint32_t *, uint32_t *, uint32_t))vt[9])(self, (uint32_t *)a1, (uint32_t *)a2, (uint32_t)a3);
   }
@@ -30171,6 +33354,10 @@ bool SteamAPI_ISteamUser_GetEncryptedAppTicket(void *self, void * a1, int32_t a2
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, void *, int32_t, uint32_t *))vt[21])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, int32_t, uint32_t *))vt[21])(self, (void *)a1, (int32_t)a2, (uint32_t *)a3);
+  }
   return 0;
 }
 
@@ -30187,6 +33374,10 @@ int32_t SteamAPI_ISteamUser_GetGameBadgeLevel(void *self, int32_t a1, bool a2) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, int32_t, bool))vt[22])(self, (int32_t)a1, (bool)a2);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, int32_t, bool))vt[22])(self, (int32_t)a1, (bool)a2);
+  }
   return 0;
 }
 
@@ -30200,6 +33391,10 @@ int32_t SteamAPI_ISteamUser_GetHSteamUser(void *self) {
     return (int32_t)((int32_t (*)(void *))vt[0])(self);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *))vt[0])(self);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *))vt[0])(self);
   }
@@ -30231,6 +33426,10 @@ int32_t SteamAPI_ISteamUser_GetPlayerSteamLevel(void *self) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *))vt[23])(self);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *))vt[23])(self);
+  }
   return 0;
 }
 
@@ -30253,6 +33452,12 @@ uint64_t SteamAPI_ISteamUser_GetSteamID(void *self) {
     ((void * (*)(void *, void *))vt[2])(self, &out);
     return out;
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    uint64_t out = 0;
+    ((void * (*)(void *, void *))vt[2])(self, &out);
+    return out;
+  }
   return 0;
 }
 
@@ -30266,6 +33471,10 @@ bool SteamAPI_ISteamUser_GetUserDataFolder(void *self, void * a1, int32_t a2) {
     return (bool)((int (*)(void *, void *, int32_t))vt[6])(self, (void *)a1, (int32_t)a2);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, int32_t))vt[6])(self, (void *)a1, (int32_t)a2);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, void *, int32_t))vt[6])(self, (void *)a1, (int32_t)a2);
   }
@@ -30285,6 +33494,10 @@ uint32_t SteamAPI_ISteamUser_GetVoice(void *self, bool a1, void * a2, uint32_t a
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, bool, void *, uint32_t, uint32_t *, bool, void *, uint32_t, uint32_t *, uint32_t))vt[10])(self, (bool)a1, (void *)a2, (uint32_t)a3, (uint32_t *)a4, (bool)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8, (uint32_t)a9);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, bool, void *, uint32_t, uint32_t *, bool, void *, uint32_t, uint32_t *, uint32_t))vt[10])(self, (bool)a1, (void *)a2, (uint32_t)a3, (uint32_t *)a4, (bool)a5, (void *)a6, (uint32_t)a7, (uint32_t *)a8, (uint32_t)a9);
+  }
   return 0;
 }
 
@@ -30301,11 +33514,19 @@ uint32_t SteamAPI_ISteamUser_GetVoiceOptimalSampleRate(void *self) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[12])(self);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[12])(self);
+  }
   return 0;
 }
 
 int32_t SteamAPI_ISteamUser_InitiateGameConnection(void *self, void * a1, int32_t a2, uint64_t a3, uint32_t a4, uint32_t a5, bool a6) {
   if (self == (void *)&g_steamuser019_instance) {
+    vfn *vt = *(vfn **)self;
+    return (int32_t)((int32_t (*)(void *, void *, int32_t, uint64_t, uint32_t, uint32_t, bool))vt[3])(self, (void *)a1, (int32_t)a2, (uint64_t)a3, (uint32_t)a4, (uint32_t)a5, (bool)a6);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (int32_t)((int32_t (*)(void *, void *, int32_t, uint64_t, uint32_t, uint32_t, bool))vt[3])(self, (void *)a1, (int32_t)a2, (uint64_t)a3, (uint32_t)a4, (uint32_t)a5, (bool)a6);
   }
@@ -30337,6 +33558,10 @@ uint64_t SteamAPI_ISteamUser_RequestEncryptedAppTicket(void *self, void * a1, in
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, void *, int32_t))vt[20])(self, (void *)a1, (int32_t)a2);
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, void *, int32_t))vt[20])(self, (void *)a1, (int32_t)a2);
+  }
   return 0;
 }
 
@@ -30350,6 +33575,10 @@ uint64_t SteamAPI_ISteamUser_RequestStoreAuthURL(void *self, const char * a1) {
     return (uint64_t)((uint64_t (*)(void *, const char *))vt[24])(self, (const char *)a1);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, const char *))vt[24])(self, (const char *)a1);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, const char *))vt[24])(self, (const char *)a1);
   }
@@ -30368,6 +33597,11 @@ void SteamAPI_ISteamUser_StartVoiceRecording(void *self) {
     return;
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[7])(self);
+    return;
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *))vt[7])(self);
     return;
@@ -30391,11 +33625,21 @@ void SteamAPI_ISteamUser_StopVoiceRecording(void *self) {
     ((void (*)(void *))vt[8])(self);
     return;
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[8])(self);
+    return;
+  }
   return;
 }
 
 void SteamAPI_ISteamUser_TerminateGameConnection(void *self, uint32_t a1, uint32_t a2) {
   if (self == (void *)&g_steamuser019_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t, uint32_t))vt[4])(self, (uint32_t)a1, (uint32_t)a2);
+    return;
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t, uint32_t))vt[4])(self, (uint32_t)a1, (uint32_t)a2);
     return;
@@ -30433,6 +33677,11 @@ void SteamAPI_ISteamUser_TrackAppUsageEvent(void *self, uint64_t a1, int32_t a2,
     ((void (*)(void *, uint64_t, int32_t, const char *))vt[5])(self, (uint64_t)a1, (int32_t)a2, (const char *)a3);
     return;
   }
+  if (self == (void *)&g_steamuser018_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint64_t, int32_t, const char *))vt[5])(self, (uint64_t)a1, (int32_t)a2, (const char *)a3);
+    return;
+  }
   return;
 }
 
@@ -30446,6 +33695,10 @@ uint32_t SteamAPI_ISteamUser_UserHasLicenseForApp(void *self, uint64_t a1, uint3
     return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2);
   }
   if (self == (void *)&g_steamuser021_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2);
+  }
+  if (self == (void *)&g_steamuser018_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint64_t, uint32_t))vt[17])(self, (uint64_t)a1, (uint32_t)a2);
   }
@@ -30465,6 +33718,10 @@ bool SteamAPI_ISteamUtils_BOverlayNeedsPresent(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[18])(self);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[18])(self);
+  }
   return 0;
 }
 
@@ -30478,6 +33735,10 @@ uint64_t SteamAPI_ISteamUtils_CheckFileSignature(void *self, const char * a1) {
     return (uint64_t)((uint64_t (*)(void *, const char *))vt[19])(self, (const char *)a1);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint64_t)((uint64_t (*)(void *, const char *))vt[19])(self, (const char *)a1);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint64_t)((uint64_t (*)(void *, const char *))vt[19])(self, (const char *)a1);
   }
@@ -30525,6 +33786,10 @@ uint32_t SteamAPI_ISteamUtils_GetAPICallFailureReason(void *self, uint64_t a1) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *, uint64_t))vt[12])(self, (uint64_t)a1);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *, uint64_t))vt[12])(self, (uint64_t)a1);
+  }
   return 0;
 }
 
@@ -30538,6 +33803,10 @@ bool SteamAPI_ISteamUtils_GetAPICallResult(void *self, uint64_t a1, void * a2, i
     return (bool)((int (*)(void *, uint64_t, void *, int32_t, int32_t, int *))vt[13])(self, (uint64_t)a1, (void *)a2, (int32_t)a3, (int32_t)a4, (int *)a5);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, void *, int32_t, int32_t, int *))vt[13])(self, (uint64_t)a1, (void *)a2, (int32_t)a3, (int32_t)a4, (int *)a5);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, void *, int32_t, int32_t, int *))vt[13])(self, (uint64_t)a1, (void *)a2, (int32_t)a3, (int32_t)a4, (int *)a5);
   }
@@ -30557,6 +33826,10 @@ uint32_t SteamAPI_ISteamUtils_GetAppID(void *self) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[9])(self);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[9])(self);
+  }
   return 0;
 }
 
@@ -30570,6 +33843,10 @@ bool SteamAPI_ISteamUtils_GetCSERIPPort(void *self, uint32_t * a1, void * a2) {
     return (bool)((int (*)(void *, uint32_t *, void *))vt[7])(self, (uint32_t *)a1, (void *)a2);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t *, void *))vt[7])(self, (uint32_t *)a1, (void *)a2);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t *, void *))vt[7])(self, (uint32_t *)a1, (void *)a2);
   }
@@ -30589,6 +33866,10 @@ uint32_t SteamAPI_ISteamUtils_GetConnectedUniverse(void *self) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[2])(self);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[2])(self);
+  }
   return 0;
 }
 
@@ -30602,6 +33883,10 @@ uint32_t SteamAPI_ISteamUtils_GetCurrentBatteryPower(void *self) {
     return (uint32_t)((uint32_t (*)(void *))vt[8])(self);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[8])(self);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[8])(self);
   }
@@ -30621,6 +33906,10 @@ bool SteamAPI_ISteamUtils_GetEnteredGamepadTextInput(void *self, void * a1, uint
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, void *, uint32_t))vt[22])(self, (void *)a1, (uint32_t)a2);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, void *, uint32_t))vt[22])(self, (void *)a1, (uint32_t)a2);
+  }
   return 0;
 }
 
@@ -30634,6 +33923,10 @@ uint32_t SteamAPI_ISteamUtils_GetEnteredGamepadTextLength(void *self) {
     return (uint32_t)((uint32_t (*)(void *))vt[21])(self);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[21])(self);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[21])(self);
   }
@@ -30653,6 +33946,10 @@ uint32_t SteamAPI_ISteamUtils_GetIPCCallCount(void *self) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[15])(self);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[15])(self);
+  }
   return 0;
 }
 
@@ -30666,6 +33963,10 @@ const char * SteamAPI_ISteamUtils_GetIPCountry(void *self) {
     return (const char *)((const char * (*)(void *))vt[4])(self);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (const char *)((const char * (*)(void *))vt[4])(self);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (const char *)((const char * (*)(void *))vt[4])(self);
   }
@@ -30697,6 +33998,10 @@ bool SteamAPI_ISteamUtils_GetImageRGBA(void *self, int32_t a1, void * a2, int32_
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t, void *, int32_t))vt[6])(self, (int32_t)a1, (void *)a2, (int32_t)a3);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t, void *, int32_t))vt[6])(self, (int32_t)a1, (void *)a2, (int32_t)a3);
+  }
   return 0;
 }
 
@@ -30710,6 +34015,10 @@ bool SteamAPI_ISteamUtils_GetImageSize(void *self, int32_t a1, uint32_t * a2, ui
     return (bool)((int (*)(void *, int32_t, uint32_t *, uint32_t *))vt[5])(self, (int32_t)a1, (uint32_t *)a2, (uint32_t *)a3);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t, uint32_t *, uint32_t *))vt[5])(self, (int32_t)a1, (uint32_t *)a2, (uint32_t *)a3);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t, uint32_t *, uint32_t *))vt[5])(self, (int32_t)a1, (uint32_t *)a2, (uint32_t *)a3);
   }
@@ -30729,6 +34038,10 @@ uint32_t SteamAPI_ISteamUtils_GetSecondsSinceAppActive(void *self) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[0])(self);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[0])(self);
+  }
   return 0;
 }
 
@@ -30742,6 +34055,10 @@ uint32_t SteamAPI_ISteamUtils_GetSecondsSinceComputerActive(void *self) {
     return (uint32_t)((uint32_t (*)(void *))vt[1])(self);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[1])(self);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[1])(self);
   }
@@ -30761,6 +34078,10 @@ uint32_t SteamAPI_ISteamUtils_GetServerRealTime(void *self) {
     vfn *vt = *(vfn **)self;
     return (uint32_t)((uint32_t (*)(void *))vt[3])(self);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (uint32_t)((uint32_t (*)(void *))vt[3])(self);
+  }
   return 0;
 }
 
@@ -30774,6 +34095,10 @@ const char * SteamAPI_ISteamUtils_GetSteamUILanguage(void *self) {
     return (const char *)((const char * (*)(void *))vt[23])(self);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (const char *)((const char * (*)(void *))vt[23])(self);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (const char *)((const char * (*)(void *))vt[23])(self);
   }
@@ -30805,6 +34130,10 @@ bool SteamAPI_ISteamUtils_IsAPICallCompleted(void *self, uint64_t a1, int * a2) 
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint64_t, int *))vt[11])(self, (uint64_t)a1, (int *)a2);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint64_t, int *))vt[11])(self, (uint64_t)a1, (int *)a2);
+  }
   return 0;
 }
 
@@ -30818,6 +34147,10 @@ bool SteamAPI_ISteamUtils_IsOverlayEnabled(void *self) {
     return (bool)((int (*)(void *))vt[17])(self);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[17])(self);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[17])(self);
   }
@@ -30865,6 +34198,10 @@ bool SteamAPI_ISteamUtils_IsSteamRunningInVR(void *self) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *))vt[24])(self);
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *))vt[24])(self);
+  }
   return 0;
 }
 
@@ -30904,6 +34241,11 @@ void SteamAPI_ISteamUtils_RunFrame(void *self) {
     ((void (*)(void *))vt[14])(self);
     return;
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *))vt[14])(self);
+    return;
+  }
   return;
 }
 
@@ -30932,6 +34274,11 @@ void SteamAPI_ISteamUtils_SetOverlayNotificationInset(void *self, int32_t a1, in
     ((void (*)(void *, int32_t, int32_t))vt[25])(self, (int32_t)a1, (int32_t)a2);
     return;
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, int32_t, int32_t))vt[25])(self, (int32_t)a1, (int32_t)a2);
+    return;
+  }
   return;
 }
 
@@ -30947,6 +34294,11 @@ void SteamAPI_ISteamUtils_SetOverlayNotificationPosition(void *self, uint32_t a1
     return;
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[10])(self, (uint32_t)a1);
+    return;
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     ((void (*)(void *, uint32_t))vt[10])(self, (uint32_t)a1);
     return;
@@ -30984,6 +34336,11 @@ void SteamAPI_ISteamUtils_SetWarningMessageHook(void *self, void * a1) {
     ((void (*)(void *, void *))vt[16])(self, (void *)a1);
     return;
   }
+  if (self == (void *)&g_steamutils007_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, void *))vt[16])(self, (void *)a1);
+    return;
+  }
   return;
 }
 
@@ -31005,6 +34362,10 @@ bool SteamAPI_ISteamUtils_ShowGamepadTextInput(void *self, uint32_t a1, uint32_t
     return (bool)((int (*)(void *, uint32_t, uint32_t, const char *, uint32_t, const char *))vt[20])(self, (uint32_t)a1, (uint32_t)a2, (const char *)a3, (uint32_t)a4, (const char *)a5);
   }
   if (self == (void *)&g_steamutils009_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, uint32_t, uint32_t, const char *, uint32_t, const char *))vt[20])(self, (uint32_t)a1, (uint32_t)a2, (const char *)a3, (uint32_t)a4, (const char *)a5);
+  }
+  if (self == (void *)&g_steamutils007_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, uint32_t, uint32_t, const char *, uint32_t, const char *))vt[20])(self, (uint32_t)a1, (uint32_t)a2, (const char *)a3, (uint32_t)a4, (const char *)a5);
   }
@@ -31067,6 +34428,11 @@ void SteamAPI_ISteamVideo_GetVideoURL(void *self, uint32_t a1) {
     ((void (*)(void *, uint32_t))vt[0])(self, (uint32_t)a1);
     return;
   }
+  if (self == (void *)&g_steamvideo_interface_v001_instance) {
+    vfn *vt = *(vfn **)self;
+    ((void (*)(void *, uint32_t))vt[0])(self, (uint32_t)a1);
+    return;
+  }
   return;
 }
 
@@ -31076,6 +34442,10 @@ bool SteamAPI_ISteamVideo_IsBroadcasting(void *self, int32_t * a1) {
     return (bool)((int (*)(void *, int32_t *))vt[1])(self, (int32_t *)a1);
   }
   if (self == (void *)&g_steamvideo_interface_v007_instance) {
+    vfn *vt = *(vfn **)self;
+    return (bool)((int (*)(void *, int32_t *))vt[1])(self, (int32_t *)a1);
+  }
+  if (self == (void *)&g_steamvideo_interface_v001_instance) {
     vfn *vt = *(vfn **)self;
     return (bool)((int (*)(void *, int32_t *))vt[1])(self, (int32_t *)a1);
   }
@@ -31153,6 +34523,20 @@ void SteamAPI_UseBreakpadCrashHandler(void) { }
 void SteamAPI_WriteMiniDump(void) { }
 void *SteamGameServerClient(void) { return NULL; }
 void SteamGameServer_ReleaseCurrentThreadMemory(void) { }
+#endif
+#if defined(__x86_64__)
+int SteamAPI_InitSafe(void) {
+  const char *volatile gamelib_marker_keepalive = g_gamelib_shim_marker;
+  (void)gamelib_marker_keepalive;
+  int ok = gamelib_bridge_hello();
+  if (ok) gamelib_report_init(GAMELIB_INIT_FN_STEAMAPI_INITSAFE, 1);
+  return ok;
+}
+int SteamGameServer_InitSafe(void) { return 0; }
+int Steam_GetHSteamUserCurrent(void) { return 1; }
+void Steam_RegisterInterfaceFuncs(void) { }
+void Steam_RunCallbacks(void) { }
+void *g_pSteamClientGameServer = NULL;
 #endif
 
 // === SteamGameServer* flat stubs (51-14 Task 2, Pitfall 2 -- cdecl, caller-cleans, honest unavailable answers) ===
@@ -31332,4 +34716,34 @@ void *SteamAPI_SteamController_v008(void) { return &g_steamcontroller008_instanc
 #endif
 #if defined(__x86_64__)
 void *SteamAPI_SteamUGC_v010(void) { return &g_steamugc_interface_version010_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamUser_v018(void) { return &g_steamuser018_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamUtils_v007(void) { return &g_steamutils007_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamApps_v007(void) { return &g_steamapps_interface_version007_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamRemoteStorage_v012(void) { return &g_steamremotestorage_interface_version012_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamUGC_v007(void) { return &g_steamugc_interface_version007_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamHTTP_v002(void) { return &g_steamhttp_interface_version002_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_SteamScreenshots_v002(void) { return &g_steamscreenshots_interface_version002_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_STEAMHTMLSURFACE_INTERFACE_VERSION_003(void) { return &g_steamhtmlsurface_interface_version_003_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_STEAMINVENTORY_INTERFACE_V001(void) { return &g_steaminventory_interface_v001_instance; }
+#endif
+#if defined(__x86_64__)
+void *SteamAPI_STEAMVIDEO_INTERFACE_V001(void) { return &g_steamvideo_interface_v001_instance; }
 #endif

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMVIDEO_INTERFACE_V001",
+  "family": "SteamVideo",
+  "ordinal": 68,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_STEAMVIDEO_INTERFACE_V001",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamVideo.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "GetVideoURL",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unVideoAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "IsBroadcasting",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pnNumViewers",
+          "type": "int32*"
+        }
+      ]
+    }
+  ]
+}

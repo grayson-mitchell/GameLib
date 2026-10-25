@@ -1,0 +1,897 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMREMOTESTORAGE_INTERFACE_VERSION012",
+  "family": "SteamRemoteStorage",
+  "ordinal": 62,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamRemoteStorage_v012",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamRemoteStorage.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "FileWrite",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        },
+        {
+          "name": "pvData",
+          "type": "const void*"
+        },
+        {
+          "name": "cubData",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "FileRead",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        },
+        {
+          "name": "pvData",
+          "type": "void*"
+        },
+        {
+          "name": "cubDataToRead",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "FileForget",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "FileDelete",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "FileShare",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "SetSyncPlatforms",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        },
+        {
+          "name": "eRemoteStoragePlatform",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "FileWriteStreamOpen",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "FileWriteStreamWriteChunk",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "writeHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pvData",
+          "type": "const void*"
+        },
+        {
+          "name": "cubData",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "FileWriteStreamClose",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "writeHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "FileWriteStreamCancel",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "writeHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "FileExists",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "FilePersisted",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetFileSize",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "GetFileTimestamp",
+      "returns": "int64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "GetSyncPlatforms",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetFileCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 16,
+      "name": "GetFileNameAndSize",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "iFile",
+          "type": "int32"
+        },
+        {
+          "name": "pnFileSizeInBytes",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetQuota",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pnTotalBytes",
+          "type": "int32*"
+        },
+        {
+          "name": "puAvailableBytes",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "IsCloudEnabledForAccount",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 19,
+      "name": "IsCloudEnabledForApp",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 20,
+      "name": "SetCloudEnabledForApp",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bEnabled",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "UGCDownload",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hContent",
+          "type": "uint64"
+        },
+        {
+          "name": "unPriority",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetUGCDownloadProgress",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hContent",
+          "type": "uint64"
+        },
+        {
+          "name": "pnBytesDownloaded",
+          "type": "int32*"
+        },
+        {
+          "name": "pnBytesExpected",
+          "type": "int32*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "GetUGCDetails",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "hContent",
+          "type": "uint64"
+        },
+        {
+          "name": "pnAppID",
+          "type": "uint32*"
+        },
+        {
+          "name": "ppchName",
+          "type": "char**"
+        },
+        {
+          "name": "pnFileSizeInBytes",
+          "type": "int32*"
+        },
+        {
+          "name": "pSteamIDOwner",
+          "type": "CSteamID*"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "UGCRead",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "hContent",
+          "type": "uint64"
+        },
+        {
+          "name": "pvData",
+          "type": "void*"
+        },
+        {
+          "name": "cubDataToRead",
+          "type": "int32"
+        },
+        {
+          "name": "cOffset",
+          "type": "uint32"
+        },
+        {
+          "name": "eAction",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 25,
+      "name": "GetCachedUGCCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": []
+    },
+    {
+      "slot": 26,
+      "name": "GetCachedUGCHandle",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "iCachedContent",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 27,
+      "name": "PublishWorkshopFile",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 32,
+      "params": [
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        },
+        {
+          "name": "pchPreviewFile",
+          "type": "const char*"
+        },
+        {
+          "name": "nConsumerAppId",
+          "type": "uint32"
+        },
+        {
+          "name": "pchTitle",
+          "type": "const char*"
+        },
+        {
+          "name": "pchDescription",
+          "type": "const char*"
+        },
+        {
+          "name": "eVisibility",
+          "type": "uint32"
+        },
+        {
+          "name": "pTags",
+          "type": "w_SteamParamStringArray_t*"
+        },
+        {
+          "name": "eWorkshopFileType",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 28,
+      "name": "CreatePublishedFileUpdateRequest",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 29,
+      "name": "UpdatePublishedFileFile",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 30,
+      "name": "UpdatePublishedFilePreviewFile",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchPreviewFile",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 31,
+      "name": "UpdatePublishedFileTitle",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchTitle",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 32,
+      "name": "UpdatePublishedFileDescription",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchDescription",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 33,
+      "name": "UpdatePublishedFileVisibility",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "eVisibility",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 34,
+      "name": "UpdatePublishedFileTags",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pTags",
+          "type": "w_SteamParamStringArray_t*"
+        }
+      ]
+    },
+    {
+      "slot": 35,
+      "name": "CommitPublishedFileUpdate",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 36,
+      "name": "GetPublishedFileDetails",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        },
+        {
+          "name": "unMaxSecondsOld",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 37,
+      "name": "DeletePublishedFile",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 38,
+      "name": "EnumerateUserPublishedFiles",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unStartIndex",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 39,
+      "name": "SubscribePublishedFile",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 40,
+      "name": "EnumerateUserSubscribedFiles",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "unStartIndex",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 41,
+      "name": "UnsubscribePublishedFile",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 42,
+      "name": "UpdatePublishedFileSetChangeDescription",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "updateHandle",
+          "type": "uint64"
+        },
+        {
+          "name": "pchChangeDescription",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 43,
+      "name": "GetPublishedItemVoteDetails",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 44,
+      "name": "UpdateUserPublishedItemVote",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        },
+        {
+          "name": "bVoteUp",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 45,
+      "name": "GetUserPublishedItemVoteDetails",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 46,
+      "name": "EnumerateUserSharedWorkshopFiles",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "steamId",
+          "type": "CSteamID"
+        },
+        {
+          "name": "unStartIndex",
+          "type": "uint32"
+        },
+        {
+          "name": "pRequiredTags",
+          "type": "w_SteamParamStringArray_t*"
+        },
+        {
+          "name": "pExcludedTags",
+          "type": "w_SteamParamStringArray_t*"
+        }
+      ]
+    },
+    {
+      "slot": 47,
+      "name": "PublishVideo",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 36,
+      "params": [
+        {
+          "name": "eVideoProvider",
+          "type": "uint32"
+        },
+        {
+          "name": "pchVideoAccount",
+          "type": "const char*"
+        },
+        {
+          "name": "pchVideoIdentifier",
+          "type": "const char*"
+        },
+        {
+          "name": "pchPreviewFile",
+          "type": "const char*"
+        },
+        {
+          "name": "nConsumerAppId",
+          "type": "uint32"
+        },
+        {
+          "name": "pchTitle",
+          "type": "const char*"
+        },
+        {
+          "name": "pchDescription",
+          "type": "const char*"
+        },
+        {
+          "name": "eVisibility",
+          "type": "uint32"
+        },
+        {
+          "name": "pTags",
+          "type": "w_SteamParamStringArray_t*"
+        }
+      ]
+    },
+    {
+      "slot": 48,
+      "name": "SetUserPublishedFileAction",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "unPublishedFileId",
+          "type": "uint64"
+        },
+        {
+          "name": "eAction",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 49,
+      "name": "EnumeratePublishedFilesByUserAction",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eAction",
+          "type": "uint32"
+        },
+        {
+          "name": "unStartIndex",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 50,
+      "name": "EnumeratePublishedWorkshopFiles",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 24,
+      "params": [
+        {
+          "name": "eEnumerationType",
+          "type": "uint32"
+        },
+        {
+          "name": "unStartIndex",
+          "type": "uint32"
+        },
+        {
+          "name": "unCount",
+          "type": "uint32"
+        },
+        {
+          "name": "unDays",
+          "type": "uint32"
+        },
+        {
+          "name": "pTags",
+          "type": "w_SteamParamStringArray_t*"
+        },
+        {
+          "name": "pUserTags",
+          "type": "w_SteamParamStringArray_t*"
+        }
+      ]
+    },
+    {
+      "slot": 51,
+      "name": "UGCDownloadToLocation",
+      "returns": "uint64",
+      "returnKind": "int64",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hContent",
+          "type": "uint64"
+        },
+        {
+          "name": "pchLocation",
+          "type": "const char*"
+        },
+        {
+          "name": "unPriority",
+          "type": "uint32"
+        }
+      ]
+    }
+  ]
+}

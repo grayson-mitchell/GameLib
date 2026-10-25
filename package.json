@@ -65,6 +65,7 @@
     "build-crossover-index": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts",
     "gen-i18n-gate-scope": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/genI18nGateScope.ts",
     "gen-i18n-scope:rewrite": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/genI18nGateScope.ts --rewrite-scope",
+    "check-csteamworks64-exports": "node meta/checkCsteamworks64Exports.cjs",
     "gen-vtables": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/gen_vtables.ts",
     "extract-proton-inventory": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/extractProtonInventory.ts",
     "bridge-census": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/bridgeCensus.ts",

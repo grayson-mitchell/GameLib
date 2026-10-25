@@ -14,6 +14,7 @@ import {
   emitFlatExports,
   flatMethodName,
   LIFECYCLE_NOOP_EXPORTS,
+  LEGACY_CSTEAMWORKS_X64_EXPORTS,
   isSretReturn,
   isRaxStructSize,
   isHiddenPointerFlatReturn,
@@ -2915,5 +2916,71 @@ describe('quick 261025-kax (D-53-15): game init is reported over CONTROL slot 5'
     expect(c).toContain(
       'int SteamAPI_InitFlat(char *pErrMsg) { (void)pErrMsg; return 0; }'
     )
+  })
+})
+
+describe('quick 261025-t7i: x64-only legacy CSteamworks64 exports', () => {
+  const manifests = loadAllManifests()
+  const c = generateShimC(manifests)
+  const SIX = [
+    'SteamAPI_InitSafe',
+    'SteamGameServer_InitSafe',
+    'Steam_RunCallbacks',
+    'Steam_RegisterInterfaceFuncs',
+    'Steam_GetHSteamUserCurrent',
+    'g_pSteamClientGameServer'
+  ]
+  const fnBody = (name: string): string => {
+    const start = c.indexOf(`\n${name}(`)
+    const from = c.lastIndexOf('\n', start - 1)
+    const end = c.indexOf('\n}\n', start)
+    return c.slice(from, end)
+  }
+  const exportNames = (def: string): string[] =>
+    def
+      .split('\n')
+      .slice(def.split('\n').indexOf('EXPORTS') + 1)
+      .map((l) => l.trim())
+      .filter(Boolean)
+
+  it('lists exactly the six names', () => {
+    expect([...LEGACY_CSTEAMWORKS_X64_EXPORTS].sort()).toEqual([...SIX].sort())
+  })
+
+  it('the x64 .def exports all six, the x86 .def none', () => {
+    const x64 = exportNames(generateDefFile(manifests, 'x64'))
+    const x86 = exportNames(generateDefFile(manifests, 'x86'))
+    for (const n of SIX) {
+      expect(x64).toContain(n)
+      expect(x86).not.toContain(n)
+    }
+  })
+
+  it('the generated TS export set names them', () => {
+    const ts = generateShimExportsTs(manifests)
+    for (const n of SIX) expect(ts).toContain(`'${n}'`)
+  })
+
+  it('SteamAPI_InitSafe says hello and reports init code 2 once, never calling SteamAPI_Init', () => {
+    expect(c).toContain('#define GAMELIB_INIT_FN_STEAMAPI_INITSAFE 2')
+    const b = fnBody('int SteamAPI_InitSafe')
+    expect(b).toContain('gamelib_bridge_hello()')
+    expect(b).toContain('gamelib_report_init(GAMELIB_INIT_FN_STEAMAPI_INITSAFE')
+    expect(b).not.toContain('SteamAPI_Init(')
+    expect(b.match(/gamelib_report_init\(/g)).toHaveLength(1)
+  })
+
+  it('the other five answer as designed, all inside the x64 guard', () => {
+    expect(c).toContain('int SteamGameServer_InitSafe(void) { return 0; }')
+    expect(c).toContain('int Steam_GetHSteamUserCurrent(void) { return 1; }')
+    expect(c).toContain('void Steam_RunCallbacks(void) { }')
+    expect(c).toContain('void Steam_RegisterInterfaceFuncs(void) { }')
+    const data = c.indexOf('void *g_pSteamClientGameServer = NULL;')
+    expect(data).toBeGreaterThan(-1)
+    const pre = c.slice(0, data)
+    const depth =
+      (pre.match(/^#if/gm) ?? []).length - (pre.match(/^#endif/gm) ?? []).length
+    expect(depth).toBeGreaterThan(0)
+    expect(pre.slice(pre.lastIndexOf('#if'))).toContain('__x86_64__')
   })
 })

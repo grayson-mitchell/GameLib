@@ -1,0 +1,353 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMAPPS_INTERFACE_VERSION007",
+  "family": "SteamApps",
+  "ordinal": 61,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamApps_v007",
+  "helperInterface": "SteamAPI_SteamApps_v009",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamApps.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "BIsSubscribed",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribed"
+    },
+    {
+      "slot": 1,
+      "name": "BIsLowViolence",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsLowViolence"
+    },
+    {
+      "slot": 2,
+      "name": "BIsCybercafe",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsCybercafe"
+    },
+    {
+      "slot": 3,
+      "name": "BIsVACBanned",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsVACBanned"
+    },
+    {
+      "slot": 4,
+      "name": "GetCurrentGameLanguage",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetCurrentGameLanguage"
+    },
+    {
+      "slot": 5,
+      "name": "GetAvailableGameLanguages",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetAvailableGameLanguages"
+    },
+    {
+      "slot": 6,
+      "name": "BIsSubscribedApp",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribedApp"
+    },
+    {
+      "slot": 7,
+      "name": "BIsDlcInstalled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsDlcInstalled"
+    },
+    {
+      "slot": 8,
+      "name": "GetEarliestPurchaseUnixTime",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetEarliestPurchaseUnixTime"
+    },
+    {
+      "slot": 9,
+      "name": "BIsSubscribedFromFreeWeekend",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsSubscribedFromFreeWeekend"
+    },
+    {
+      "slot": 10,
+      "name": "GetDLCCount",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetDLCCount"
+    },
+    {
+      "slot": 11,
+      "name": "BGetDLCDataByIndex",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 20,
+      "params": [
+        {
+          "name": "iDLC",
+          "type": "int32"
+        },
+        {
+          "name": "pAppID",
+          "type": "uint32*"
+        },
+        {
+          "name": "pbAvailable",
+          "type": "bool*"
+        },
+        {
+          "name": "pchName",
+          "type": "char*"
+        },
+        {
+          "name": "cchNameBufferSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "InstallDLC",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "UninstallDLC",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "RequestAppProofOfPurchaseKey",
+      "returns": "void",
+      "returnKind": "void",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetCurrentBetaName",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "pchName",
+          "type": "char*"
+        },
+        {
+          "name": "cchNameBufferSize",
+          "type": "int32"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "MarkContentCorrupt",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bMissingFilesOnly",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "GetInstalledDepots",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        },
+        {
+          "name": "pvecDepots",
+          "type": "uint32*"
+        },
+        {
+          "name": "cMaxDepots",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "GetAppInstallDir",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        },
+        {
+          "name": "pchFolder",
+          "type": "char*"
+        },
+        {
+          "name": "cchFolderBufferSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "BIsAppInstalled",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "appID",
+          "type": "uint32"
+        }
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_BIsAppInstalled"
+    },
+    {
+      "slot": 20,
+      "name": "GetAppOwner",
+      "returns": "CSteamID",
+      "returnKind": "class",
+      "stackBytes": 4,
+      "params": [],
+      "structSize": 8,
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetAppOwner"
+    },
+    {
+      "slot": 21,
+      "name": "GetLaunchQueryParam",
+      "returns": "const char*",
+      "returnKind": "string",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "pchKey",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "GetDlcDownloadProgress",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "nAppID",
+          "type": "uint32"
+        },
+        {
+          "name": "punBytesDownloaded",
+          "type": "uint64*"
+        },
+        {
+          "name": "punBytesTotal",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "GetAppBuildId",
+      "returns": "int32",
+      "returnKind": "int32",
+      "stackBytes": 0,
+      "params": [],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamApps_GetAppBuildId"
+    }
+  ]
+}

@@ -753,6 +753,43 @@ const LIFECYCLE_NOOP_SPECS: Readonly<Record<string, string>> = {
 export const LIFECYCLE_NOOP_EXPORTS: readonly string[] =
   Object.keys(LIFECYCLE_NOOP_SPECS).sort()
 
+// quick 261025-t7i: Unclaimed World (284100) loads CSteamworks64.dll
+// (Steamworks.NET 7.0.0 / Steamworks SDK 1.34), which imports six names from
+// steam_api64.dll that no other list carried. Measured with objdump -p: of
+// its 29 imports, exactly these were missing, and Wine crashed on
+// `unimplemented function steam_api64.dll.SteamAPI_InitSafe` before HELLO.
+// x64-ONLY: the x86 wrapper (CSteamworks.dll) would additionally need
+// SteamClient, GetHSteamUser/Pipe, VR_* and an x86 SteamClient015 object, and
+// no installed title launches x86, so x86 stays deferred (D-53-09).
+//
+// SteamAPI_InitSafe shares SteamAPI_Init's hello helper but reports init
+// code 2 exactly once; it never calls SteamAPI_Init() (that would report
+// twice). Win64 is caller-cleans, so the `(void)` lists are arity-safe.
+// g_pSteamClientGameServer is a data export: CSteamworks reads it only after
+// a successful SteamGameServer_InitSafe, which always answers 0.
+export const LEGACY_CSTEAMWORKS_X64_EXPORT_BODIES: Readonly<
+  Record<string, string>
+> = {
+  SteamAPI_InitSafe:
+    'int SteamAPI_InitSafe(void) {\n' +
+    '  const char *volatile gamelib_marker_keepalive = g_gamelib_shim_marker;\n' +
+    '  (void)gamelib_marker_keepalive;\n' +
+    '  int ok = gamelib_bridge_hello();\n' +
+    '  if (ok) gamelib_report_init(GAMELIB_INIT_FN_STEAMAPI_INITSAFE, 1);\n' +
+    '  return ok;\n' +
+    '}',
+  SteamGameServer_InitSafe: 'int SteamGameServer_InitSafe(void) { return 0; }',
+  Steam_RunCallbacks: 'void Steam_RunCallbacks(void) { }',
+  Steam_RegisterInterfaceFuncs: 'void Steam_RegisterInterfaceFuncs(void) { }',
+  Steam_GetHSteamUserCurrent:
+    'int Steam_GetHSteamUserCurrent(void) { return 1; }',
+  g_pSteamClientGameServer: 'void *g_pSteamClientGameServer = NULL;'
+}
+
+export const LEGACY_CSTEAMWORKS_X64_EXPORTS: readonly string[] = Object.keys(
+  LEGACY_CSTEAMWORKS_X64_EXPORT_BODIES
+).sort()
+
 function lifecycleNoopBody(name: string, spec: string): string {
   switch (spec) {
     case 'V':
@@ -2304,6 +2341,7 @@ export function generateShimC(
 #define BRIDGE_CONTROL_SLOT_REPORT_INIT 5
 #define GAMELIB_INIT_FN_STEAMAPI_INIT 0
 #define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1
+#define GAMELIB_INIT_FN_STEAMAPI_INITSAFE 2
 
 // CR-01: byte capacity of each string-returning stub's shim-owned static
 // return buffer -- emitted directly from the generator's
@@ -2678,6 +2716,12 @@ static void *resolve_iface_by_exact_version(const char *version);
     `static const char g_gamelib_empty_string[] = "";\n` +
     LIFECYCLE_NOOP_EXPORTS.map(
       (name) => LIFECYCLE_NOOP_EXPORT_BODIES[name]
+    ).join('\n') +
+    `\n#endif\n` +
+    // quick 261025-t7i: x64-only legacy CSteamworks64 exports.
+    `#if defined(__x86_64__)\n` +
+    LEGACY_CSTEAMWORKS_X64_EXPORTS.map(
+      (name) => LEGACY_CSTEAMWORKS_X64_EXPORT_BODIES[name]
     ).join('\n') +
     `\n#endif\n`
   const gameServerStubs = GAMESERVER_FLAT_STUBS.map(
@@ -3640,7 +3684,8 @@ function defExportNames(
       ? [
           ...MODERN_LOOKUP_FLAT_EXPORTS,
           ...emitFlatExports(manifests).names,
-          ...LIFECYCLE_NOOP_EXPORTS
+          ...LIFECYCLE_NOOP_EXPORTS,
+          ...LEGACY_CSTEAMWORKS_X64_EXPORTS
         ]
       : []
   return [

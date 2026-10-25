@@ -1,0 +1,470 @@
+{
+  "schemaVersion": 2,
+  "interface": "STEAMHTTP_INTERFACE_VERSION002",
+  "family": "SteamHTTP",
+  "ordinal": 64,
+  "arches": ["x64"],
+  "mode": "stub",
+  "complete": true,
+  "flatAccessor": "SteamAPI_SteamHTTP_v002",
+  "source": {
+    "kind": "proton-lsteamclient",
+    "ref": "2c620c0fd7c2c424f6bd91898602bdc4d4260468",
+    "file": "lsteamclient/winISteamHTTP.c"
+  },
+  "methods": [
+    {
+      "slot": 0,
+      "name": "CreateHTTPRequest",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "eHTTPRequestMethod",
+          "type": "uint32"
+        },
+        {
+          "name": "pchAbsoluteURL",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 1,
+      "name": "SetHTTPRequestContextValue",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "ulContextValue",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+      "slot": 2,
+      "name": "SetHTTPRequestNetworkActivityTimeout",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "unTimeoutSeconds",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 3,
+      "name": "SetHTTPRequestHeaderValue",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pchHeaderName",
+          "type": "const char*"
+        },
+        {
+          "name": "pchHeaderValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 4,
+      "name": "SetHTTPRequestGetOrPostParameter",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pchParamName",
+          "type": "const char*"
+        },
+        {
+          "name": "pchParamValue",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 5,
+      "name": "SendHTTPRequest",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pCallHandle",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 6,
+      "name": "SendHTTPRequestAndStreamResponse",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pCallHandle",
+          "type": "uint64*"
+        }
+      ]
+    },
+    {
+      "slot": 7,
+      "name": "DeferHTTPRequest",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 8,
+      "name": "PrioritizeHTTPRequest",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 9,
+      "name": "GetHTTPResponseHeaderSize",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pchHeaderName",
+          "type": "const char*"
+        },
+        {
+          "name": "unResponseHeaderSize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 10,
+      "name": "GetHTTPResponseHeaderValue",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pchHeaderName",
+          "type": "const char*"
+        },
+        {
+          "name": "pHeaderValueBuffer",
+          "type": "uint8_t*"
+        },
+        {
+          "name": "unBufferSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 11,
+      "name": "GetHTTPResponseBodySize",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "unBodySize",
+          "type": "uint32*"
+        }
+      ]
+    },
+    {
+      "slot": 12,
+      "name": "GetHTTPResponseBodyData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 12,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pBodyDataBuffer",
+          "type": "uint8_t*"
+        },
+        {
+          "name": "unBufferSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 13,
+      "name": "GetHTTPStreamingResponseBodyData",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "cOffset",
+          "type": "uint32"
+        },
+        {
+          "name": "pBodyDataBuffer",
+          "type": "uint8_t*"
+        },
+        {
+          "name": "unBufferSize",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 14,
+      "name": "ReleaseHTTPRequest",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 15,
+      "name": "GetHTTPDownloadProgressPct",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pflPercentOut",
+          "type": "float*"
+        }
+      ]
+    },
+    {
+      "slot": 16,
+      "name": "SetHTTPRequestRawPostBody",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pchContentType",
+          "type": "const char*"
+        },
+        {
+          "name": "pubBody",
+          "type": "uint8_t*"
+        },
+        {
+          "name": "unBodyLen",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 17,
+      "name": "CreateCookieContainer",
+      "returns": "uint32",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "bAllowResponsesToModify",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 18,
+      "name": "ReleaseCookieContainer",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 4,
+      "params": [
+        {
+          "name": "hCookieContainer",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 19,
+      "name": "SetCookie",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 16,
+      "params": [
+        {
+          "name": "hCookieContainer",
+          "type": "uint32"
+        },
+        {
+          "name": "pchHost",
+          "type": "const char*"
+        },
+        {
+          "name": "pchUrl",
+          "type": "const char*"
+        },
+        {
+          "name": "pchCookie",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 20,
+      "name": "SetHTTPRequestCookieContainer",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "hCookieContainer",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 21,
+      "name": "SetHTTPRequestUserAgentInfo",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pchUserAgentInfo",
+          "type": "const char*"
+        }
+      ]
+    },
+    {
+      "slot": 22,
+      "name": "SetHTTPRequestRequiresVerifiedCertificate",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "bRequireVerifiedCertificate",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "slot": 23,
+      "name": "SetHTTPRequestAbsoluteTimeoutMS",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "unMilliseconds",
+          "type": "uint32"
+        }
+      ]
+    },
+    {
+      "slot": 24,
+      "name": "GetHTTPRequestWasTimedOut",
+      "returns": "bool",
+      "returnKind": "int32",
+      "stackBytes": 8,
+      "params": [
+        {
+          "name": "hRequest",
+          "type": "uint32"
+        },
+        {
+          "name": "pbWasTimedOut",
+          "type": "bool*"
+        }
+      ]
+    }
+  ]
+}

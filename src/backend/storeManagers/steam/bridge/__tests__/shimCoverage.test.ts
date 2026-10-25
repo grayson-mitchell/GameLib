@@ -867,11 +867,12 @@ describe('findUnservableInterfaceVersions (quick 261024-j4l)', () => {
         arch: 'x64',
         symbols: [...RUNTIME, 'SteamHTTP'],
         requiredInterfaceVersions: {
-          // 53-12 serves HTTP003, so the unserved 002 stands in.
-          SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION002'
+          // 53-12 serves HTTP003 and t7i serves 002, so the unserved 001
+          // stands in.
+          SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION001'
         }
       })
-    ).toEqual(['STEAMHTTP_INTERFACE_VERSION002'])
+    ).toEqual(['STEAMHTTP_INTERFACE_VERSION001'])
   })
 
   it('x86 bare SteamFriends016 counts', () => {
@@ -1159,4 +1160,120 @@ describe('53-12: Steamworks.NET CSteamAPIContext.Init is fully served on x64', (
       expect(unserved).toEqual([])
     })
   }
+})
+
+describe('quick 261025-t7i: SDK 1.34 versions for CSteamworks64 (Unclaimed World 284100)', () => {
+  // [version, family, mode, slot count measured from the extractor output]
+  const NEW: Array<[string, string, 'wire' | 'stub', number]> = [
+    ['SteamUser018', 'SteamUser', 'wire', 25],
+    ['SteamUtils007', 'SteamUtils', 'wire', 26],
+    ['STEAMAPPS_INTERFACE_VERSION007', 'SteamApps', 'wire', 24],
+    [
+      'STEAMREMOTESTORAGE_INTERFACE_VERSION012',
+      'SteamRemoteStorage',
+      'stub',
+      52
+    ],
+    ['STEAMUGC_INTERFACE_VERSION007', 'SteamUGC', 'stub', 58],
+    ['STEAMHTTP_INTERFACE_VERSION002', 'SteamHTTP', 'stub', 25],
+    ['STEAMSCREENSHOTS_INTERFACE_VERSION002', 'SteamScreenshots', 'stub', 7],
+    ['STEAMHTMLSURFACE_INTERFACE_VERSION_003', 'SteamHTMLSurface', 'stub', 36],
+    ['STEAMINVENTORY_INTERFACE_V001', 'SteamInventory', 'stub', 24],
+    ['STEAMVIDEO_INTERFACE_V001', 'SteamVideo', 'stub', 2]
+  ]
+  const manifestOf = (
+    version: string
+  ): {
+    interface: string
+    methods: Array<{ slot: number; name: string; mode: string }>
+  } => {
+    for (const file of readdirSync(SDK_MANIFEST_DIR)) {
+      if (!file.endsWith('.manifest.json')) continue
+      const m = JSON.parse(readFileSync(join(SDK_MANIFEST_DIR, file), 'utf-8'))
+      if (m.interface === version) return m
+    }
+    throw new Error(`no manifest for ${version}`)
+  }
+
+  test.each(NEW)('%s is served %s with %i slots', (v, family, mode, slots) => {
+    expect(SHIM64_SERVED_INTERFACE_VERSIONS.get(v)).toEqual({ family, mode })
+    expect(manifestOf(v).methods).toHaveLength(slots)
+  })
+
+  test('the wired slots are pinned to the extracted manifests', () => {
+    const slotOf = (v: string, name: string) => {
+      const m = manifestOf(v).methods.find((x) => x.name === name)
+      return m ? { slot: m.slot, mode: m.mode } : undefined
+    }
+    expect(slotOf('SteamUser018', 'BLoggedOn')).toEqual({
+      slot: 1,
+      mode: 'wire'
+    })
+    expect(slotOf('SteamUser018', 'GetSteamID')).toEqual({
+      slot: 2,
+      mode: 'wire'
+    })
+    expect(slotOf('SteamUtils007', 'GetAppID')).toEqual({
+      slot: 9,
+      mode: 'wire'
+    })
+  })
+
+  test('CSteamworks64 import set + its 22-version map leaves nothing unservable', () => {
+    const symbols = [
+      'SteamClient',
+      'SteamAPI_InitSafe',
+      'SteamAPI_Shutdown',
+      'SteamAPI_RunCallbacks',
+      'Steam_RunCallbacks',
+      'SteamGameServer_InitSafe',
+      'g_pSteamClientGameServer'
+    ]
+    const required: Record<string, string> = {
+      SteamClient: 'SteamClient017',
+      SteamUser: 'SteamUser018',
+      SteamUtils: 'SteamUtils007',
+      SteamApps: 'STEAMAPPS_INTERFACE_VERSION007',
+      SteamRemoteStorage: 'STEAMREMOTESTORAGE_INTERFACE_VERSION012',
+      SteamUGC: 'STEAMUGC_INTERFACE_VERSION007',
+      SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION002',
+      SteamScreenshots: 'STEAMSCREENSHOTS_INTERFACE_VERSION002',
+      SteamHTMLSurface: 'STEAMHTMLSURFACE_INTERFACE_VERSION_003',
+      SteamInventory: 'STEAMINVENTORY_INTERFACE_V001',
+      SteamVideo: 'STEAMVIDEO_INTERFACE_V001',
+      SteamFriends: 'SteamFriends015',
+      SteamUserStats: 'STEAMUSERSTATS_INTERFACE_VERSION011',
+      SteamMatchMaking: 'SteamMatchMaking009',
+      SteamMatchMakingServers: 'SteamMatchMakingServers002',
+      SteamNetworking: 'SteamNetworking005',
+      SteamAppList: 'STEAMAPPLIST_INTERFACE_VERSION001',
+      SteamMusic: 'STEAMMUSIC_INTERFACE_VERSION001',
+      SteamMusicRemote: 'STEAMMUSICREMOTE_INTERFACE_VERSION001',
+      SteamGameServer: 'SteamGameServer012',
+      SteamGameServerStats: 'SteamGameServerStats001',
+      // family unserved, so the x64 null object answers it
+      SteamUnifiedMessages: 'STEAMUNIFIEDMESSAGES_INTERFACE_VERSION001'
+    }
+    expect(Object.keys(required)).toHaveLength(22)
+    expect(
+      findUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: [...symbols, 'SteamInternal_FindOrCreateUserInterface'],
+        requiredInterfaceVersions: required
+      })
+    ).toEqual([])
+  })
+
+  test('the six legacy exports are in the x64 export set', () => {
+    for (const n of [
+      'SteamAPI_InitSafe',
+      'SteamGameServer_InitSafe',
+      'Steam_RunCallbacks',
+      'Steam_RegisterInterfaceFuncs',
+      'Steam_GetHSteamUserCurrent',
+      'g_pSteamClientGameServer'
+    ]) {
+      expect(SHIM64_EXPORTED_SYMBOLS).toContain(n)
+    }
+  })
 })

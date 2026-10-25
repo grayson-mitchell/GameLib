@@ -319,5 +319,55 @@
     "family": "SteamUGC",
     "arches": ["x64"],
     "titles": ["411300"]
+  },
+  "SteamUser018": {
+    "family": "SteamUser",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "SteamUtils007": {
+    "family": "SteamUtils",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMAPPS_INTERFACE_VERSION007": {
+    "family": "SteamApps",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMREMOTESTORAGE_INTERFACE_VERSION012": {
+    "family": "SteamRemoteStorage",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMUGC_INTERFACE_VERSION007": {
+    "family": "SteamUGC",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMHTTP_INTERFACE_VERSION002": {
+    "family": "SteamHTTP",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMSCREENSHOTS_INTERFACE_VERSION002": {
+    "family": "SteamScreenshots",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMHTMLSURFACE_INTERFACE_VERSION_003": {
+    "family": "SteamHTMLSurface",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMINVENTORY_INTERFACE_V001": {
+    "family": "SteamInventory",
+    "arches": ["x64"],
+    "titles": ["284100"]
+  },
+  "STEAMVIDEO_INTERFACE_V001": {
+    "family": "SteamVideo",
+    "arches": ["x64"],
+    "titles": ["284100"]
   }
 }
