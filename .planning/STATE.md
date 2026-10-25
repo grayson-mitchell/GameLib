@@ -265,6 +265,7 @@ Phase 48 and Phase 49 decisions (51 entries, both phases closed with v0.8 on 202
 - [Phase 51]: 51-18: classifyCensusTitle takes injectable coverage deps defaulting to the real shipped shimCoverage sets, letting the win64-no-shim structural case be unit-tested without a real empty x64 export set
 - [Phase 51]: D-51-14 anchor re-baselined by operator decision 2026-10-23: Hoard (63000) retired (51-UAT item 4, Wine-level crash); replacement The Age of Decadence (230070, x64 runtime-lookup path); evidence 51-UAT item 18
 - [Phase 51]: "most" verdict 2026-10-24: unmet-follow-up on K=0 of M=19 verified running (N=18 routed), 51-UAT item 20
+- [Phase 51]: closed 2026-10-25 by operator ("lets close out phase 51. we have 10 passed games"): D-51-15 "most" gap closed by Phase 53 (10 of 18 verified running, majority, 53-VERIFICATION passed); 51-VERIFICATION amended in place to passed 7/7, 51-UAT complete, ROADMAP 30/30
 - [Phase 52]: 52-22: operator chose option-other for Gap 5 (no code change); next /gsd-plan-phase 52 --gaps
 - [Phase 53]: 53-04: flat bool params use stdbool bool narrowed via uint8_t; sret flat bodies pass a zeroed uint64_t out; 55 lifecycle no-ops ship x64-only
 - [Phase 53]: 53-11: NOVER hard-fails Unity only; placement coverage-miss lines are not a downgrade input

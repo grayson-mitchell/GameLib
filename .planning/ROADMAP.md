@@ -225,7 +225,8 @@ sub-decisions above are locked, the two hazards are open questions for research)
 `native/steam-bridge/helper/bridge_helper.c`, the wire frame both share, and the `bridge/` routing
 in `games.ts`) and quick task `261016-u1w` (per-game bridge bottles). **Not** Phase 50, which
 `phase.add` wrote by positional guess — the Epic subview shares no files with this.
-**Plans:** 29/30 plans executed
+**Plans:** 30/30 plans complete
+**Status:** Complete 2026-10-25. The D-51-15 "most" goal, recorded unmet by 51-30 (N=18, K=0, M=19), was closed by Phase 53 (10 of 18 verified running, majority); 51-VERIFICATION.md amended in place to passed 7/7.
 
 Plans:
 **Wave 1**
@@ -289,7 +290,7 @@ Plans:
 - [x] 51-27-PLAN.md — Packaged re-gates: helper teardown, ELEX through the wired Win64 shim, Waiting-for-Steam sign-in cause
 - [x] 51-28-PLAN.md — Operator decision re-baselining the D-51-14 anchor; XCOM bottled-Steam confirmation
 - [x] 51-29-PLAN.md — Rule-drawn representative sample of owned Windows-only titles, installed and played
-- [ ] 51-30-PLAN.md — Closing census on the sample (routed vs verified running), seed/known-bad growth, operator "most" verdict
+- [x] 51-30-PLAN.md — Closing census on the sample (routed vs verified running), seed/known-bad growth, operator "most" verdict
 
 **Cross-cutting constraints:**
 

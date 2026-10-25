@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: complete
 phase: 51-widen-the-native-steam-bridge-more-interface-proxies-and-sca
 source:
   - 51-01-SUMMARY.md
@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-22T09:45:00Z
+updated: 2026-10-25T02:15:49Z
 ---
 
 ## Preconditions
