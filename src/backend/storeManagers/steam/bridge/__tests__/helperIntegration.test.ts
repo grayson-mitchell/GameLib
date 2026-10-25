@@ -815,6 +815,114 @@ describeDarwinOnly(
       }
     }, 15000)
 
+    // Phase 55 (55-03, P55-5): CONTROL DRAIN (slot 6) answers OK count 0 with
+    // no Steam, rejects args, and fabricates nothing.
+    test('DRAIN answers OK count 0 when not inited, rejects args, and fabricates nothing (P55-5)', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'drain-'))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: profile.childEnv()
+        }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+      try {
+        const port = await new Promise<number>((resolvePromise, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+            5000
+          )
+          const poll = setInterval(() => {
+            const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+            if (m) {
+              clearInterval(poll)
+              clearTimeout(timeout)
+              resolvePromise(Number(m[1]))
+            }
+          }, 25)
+        })
+        const socket = new Socket()
+        await new Promise<void>((res, rej) => {
+          socket.once('error', rej)
+          socket.connect(port, '127.0.0.1', () => res())
+        })
+        try {
+          for (const id of [1, 2]) {
+            const res = await sendFrameOnSocket(
+              socket,
+              encodeRequest(id, CONTROL_ORDINAL, CONTROL_SLOT.drainCallbacks)
+            )
+            expect(res.status).toBe(STATUS_OK)
+            expect(Buffer.from(res.retBlob).equals(Buffer.alloc(4))).toBe(true)
+          }
+          const withArgs = await sendFrameOnSocket(
+            socket,
+            encodeRequest(
+              3,
+              CONTROL_ORDINAL,
+              CONTROL_SLOT.drainCallbacks,
+              Buffer.from([1])
+            )
+          )
+          expect(withArgs.status).toBe(STATUS_ERR)
+          const health = await sendFrameOnSocket(
+            socket,
+            encodeRequest(4, CONTROL_ORDINAL, CONTROL_SLOT.health)
+          )
+          expect(health.status).toBe(STATUS_OK)
+          const slot7 = await sendFrameOnSocket(
+            socket,
+            encodeRequest(5, CONTROL_ORDINAL, 7)
+          )
+          expect(slot7.status).toBe(STATUS_ERR)
+        } finally {
+          socket.destroy()
+        }
+        await new Promise((r) => setTimeout(r, 100))
+        expect(stderr).not.toMatch(/CBQ/)
+      } finally {
+        child.kill()
+      }
+    }, 15000)
+
+    test('DRAIN source pins: slot 6, no sleep in handler, integer-only CBQ log (P55-5)', () => {
+      const raw = readFileSync(HELPER_SOURCE_PATH, 'utf8')
+      const src = raw
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(raw).toContain('#define CONTROL_SLOT_DRAIN_CALLBACKS 6')
+      expect(raw).toContain('#include "gamelib_cbqueue.h"')
+      const start = src.indexOf('slot == CONTROL_SLOT_DRAIN_CALLBACKS')
+      const end = src.indexOf('// unknown control slot')
+      expect(start).toBeGreaterThan(-1)
+      expect(end).toBeGreaterThan(start)
+      const handler = src.slice(start, end)
+      expect(handler).not.toContain('usleep')
+      expect(handler).not.toContain('RunCB(')
+      const cbqCalls = [...src.matchAll(/logts\("CBQ",[^;]*;/g)]
+      expect(cbqCalls.length).toBeGreaterThan(0)
+      for (const call of cbqCalls) {
+        const fmt = /"[^"]*"/g
+        const strings = [...call[0].matchAll(fmt)].slice(1).map((m) => m[0])
+        for (const f of strings) {
+          expect(f).not.toMatch(/%s|%x|%02x|%p/)
+        }
+      }
+      expect(src).not.toContain('m_rgubTicket')
+      const pumpAt = src.indexOf('static void pump_callbacks')
+      const pumpBody = src.slice(pumpAt, src.indexOf('\n}\n', pumpAt))
+      const runAt = pumpBody.indexOf('RunCB()')
+      expect(runAt).toBeGreaterThan(-1)
+      expect(pumpBody.slice(0, runAt)).toMatch(/g_manual_dispatch/)
+      expect(pumpBody.slice(0, runAt)).toMatch(/else/)
+    })
+
     // 53-13 WR-04: source pin -- the CALL trace sits after bridge_dispatch and
     // is guarded by STATUS_OK, so a failed call is never trace evidence.
     test('source pin: CALL is logged after bridge_dispatch, guarded by STATUS_OK', () => {
