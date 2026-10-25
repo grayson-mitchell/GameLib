@@ -558,6 +558,35 @@
             "hostLabel": "Je bekijkt momenteel {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Opnieuw controleren",
+            "openSettings": "Systeeminstellingen openen",
+            "reason": "CrossOver wijzigt bestanden in app-bundels wanneer het een game-bottle voorbereidt, en macOS vraagt hiervoor om de toestemming “App Management”. Zonder die toestemming blijft de installatie van Windows-games halverwege hangen met een macOS-melding.",
+            "relaunch": "GameLib opnieuw starten",
+            "relaunchNote": "De toestemming gaat in nadat GameLib opnieuw is gestart.",
+            "status": {
+                "checking": "Controleren…",
+                "denied": "Toegang via “App Management” is nog niet toegestaan.",
+                "granted": "Toegang via “App Management” is toegestaan.",
+                "unknown": "GameLib kon niet vaststellen of toegang via “App Management” is toegestaan."
+            },
+            "title": "“App Management” toestaan",
+            "unknownHelp": "Open Systeeminstellingen > Privacy en beveiliging > “App Management” en controleer of GameLib is ingeschakeld."
+        },
+        "crossover": {
+            "body": "Windows-games draaien op macOS via CrossOver, betaalde software van CodeWeavers. Als je Windows-games speelt, steun CodeWeavers dan door CrossOver te kopen.",
+            "buy": "CrossOver downloaden",
+            "missing": "CrossOver is niet gevonden op deze Mac. Installeer het via codeweavers.com voordat je Windows-games installeert.",
+            "title": "Windows-games op macOS"
+        },
+        "getStarted": "Aan de slag",
+        "stores": {
+            "body": "Open Accounts beheren en log in bij de winkels die je gebruikt (Epic Games, GOG, Amazon Games en Steam) zodat je bibliotheken hier verschijnen.",
+            "title": "Log in bij je winkels"
+        },
+        "title": "Welkom bij GameLib"
+    },
     "winetricks": {
         "unavailable": "Winetricks-componentbeheer is niet beschikbaar in deze build",
         "unavailableDetail": "Ondersteuning voor Winetricks is uitgesteld naar een toekomstige release (D-03, fase 34.6) en kan in deze build niet worden weergegeven of geïnstalleerd."

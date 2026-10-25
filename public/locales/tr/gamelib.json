@@ -558,6 +558,35 @@
             "hostLabel": "Şu anda görüntülenen: {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Tekrar kontrol et",
+            "openSettings": "Sistem Ayarları'nı aç",
+            "reason": "CrossOver bir oyun şişesi hazırlarken uygulama paketlerinin içindeki dosyaları değiştirir ve macOS bunun için “App Management” iznini ister. Bu izin olmadan Windows oyunlarının kurulumu bir macOS bildirimiyle yarıda kalır.",
+            "relaunch": "GameLib'i yeniden başlat",
+            "relaunchNote": "İzin, GameLib yeniden başlatıldıktan sonra geçerli olur.",
+            "status": {
+                "checking": "Kontrol ediliyor…",
+                "denied": "“App Management” erişimine henüz izin verilmedi.",
+                "granted": "“App Management” erişimine izin verildi.",
+                "unknown": "GameLib, “App Management” erişimine izin verilip verilmediğini belirleyemedi."
+            },
+            "title": "“App Management” iznini verin",
+            "unknownHelp": "Sistem Ayarları > Gizlilik ve Güvenlik > “App Management” bölümünü açın ve GameLib'in açık olduğundan emin olun."
+        },
+        "crossover": {
+            "body": "Windows oyunları macOS'ta, CodeWeavers'ın ücretli yazılımı olan CrossOver aracılığıyla çalışır. Windows oyunları oynuyorsanız lütfen CrossOver'ı satın alarak CodeWeavers'a destek olun.",
+            "buy": "CrossOver'ı edinin",
+            "missing": "CrossOver bu Mac'te bulunamadı. Windows oyunlarını yüklemeden önce codeweavers.com adresinden yükleyin.",
+            "title": "macOS'ta Windows oyunları"
+        },
+        "getStarted": "Başla",
+        "stores": {
+            "body": "Hesapları Yönet bölümünü açın ve kullandığınız mağazalara (Epic Games, GOG, Amazon Games ve Steam) giriş yapın; kütüphaneleriniz burada görünsün.",
+            "title": "Mağazalarınıza giriş yapın"
+        },
+        "title": "GameLib'e hoş geldiniz"
+    },
     "winetricks": {
         "unavailable": "Winetricks bileşen yönetimi bu sürümde kullanılamıyor",
         "unavailableDetail": "Winetricks desteği ileriki bir sürüme ertelenmiştir (D-03, Aşama 34.6) ve bu sürümden listelenip yüklenemez."

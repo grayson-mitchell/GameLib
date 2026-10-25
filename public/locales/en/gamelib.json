@@ -613,6 +613,35 @@
             }
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Check again",
+            "openSettings": "Open System Settings",
+            "reason": "CrossOver changes files inside app bundles when it sets up a game bottle, and macOS asks for the \"App Management\" permission for that. Without it, Windows game installs stall partway through with a macOS notification.",
+            "relaunch": "Relaunch GameLib",
+            "relaunchNote": "The permission takes effect after GameLib relaunches.",
+            "status": {
+                "checking": "Checking…",
+                "denied": "App Management access is not allowed yet.",
+                "granted": "App Management access is allowed.",
+                "unknown": "GameLib could not tell whether App Management access is allowed."
+            },
+            "title": "Allow App Management",
+            "unknownHelp": "Open System Settings > Privacy & Security > App Management and make sure GameLib is switched on."
+        },
+        "crossover": {
+            "body": "Windows games run on macOS through CrossOver, paid software made by CodeWeavers. If you play Windows games, please support CodeWeavers by buying CrossOver.",
+            "buy": "Get CrossOver",
+            "missing": "CrossOver was not found on this Mac. Install it from codeweavers.com before installing Windows games.",
+            "title": "Windows games on macOS"
+        },
+        "getStarted": "Get started",
+        "stores": {
+            "body": "Open Manage Accounts and log into the stores you use (Epic Games, GOG, Amazon Games and Steam) so your libraries appear here.",
+            "title": "Log into your stores"
+        },
+        "title": "Welcome to GameLib"
+    },
     "wineExplanation": {
         "wine-crossover": "Wine-Crossover is based on the Crossover OpenSource Wine project and is recommended for DX11 or older games.",
         "wine-staging-macos": "Wine-Staging-macOS is based on the mainline Wine project and is recommended for DX11 or older games, especially when paired with the DXMT tool."

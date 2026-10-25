@@ -558,6 +558,35 @@
             "hostLabel": "현재 {{host}} 보는 중"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "다시 확인",
+            "openSettings": "시스템 설정 열기",
+            "reason": "CrossOver는 게임 보틀을 준비할 때 앱 번들 안의 파일을 변경하며, macOS는 이를 위해 “App Management” 권한을 요청합니다. 권한이 없으면 Windows 게임 설치가 도중에 멈추고 macOS 알림이 표시됩니다.",
+            "relaunch": "GameLib 다시 시작",
+            "relaunchNote": "권한은 GameLib를 다시 시작한 후에 적용됩니다.",
+            "status": {
+                "checking": "확인 중…",
+                "denied": "“App Management” 접근이 아직 허용되지 않았습니다.",
+                "granted": "“App Management” 접근이 허용되어 있습니다.",
+                "unknown": "GameLib가 “App Management” 접근이 허용되어 있는지 확인하지 못했습니다."
+            },
+            "title": "“App Management” 허용",
+            "unknownHelp": "시스템 설정 > 개인정보 보호 및 보안 > “App Management”를 열고 GameLib가 켜져 있는지 확인하세요."
+        },
+        "crossover": {
+            "body": "Windows 게임은 CodeWeavers의 유료 소프트웨어인 CrossOver를 통해 macOS에서 실행됩니다. Windows 게임을 즐긴다면 CrossOver를 구매해 CodeWeavers를 응원해 주세요.",
+            "buy": "CrossOver 받기",
+            "missing": "이 Mac에서 CrossOver를 찾을 수 없습니다. Windows 게임을 설치하기 전에 codeweavers.com에서 설치하세요.",
+            "title": "macOS에서 Windows 게임 실행"
+        },
+        "getStarted": "시작하기",
+        "stores": {
+            "body": "계정 관리를 열고 사용하는 스토어(Epic Games, GOG, Amazon Games, Steam)에 로그인하면 라이브러리가 여기에 표시됩니다.",
+            "title": "스토어에 로그인하세요"
+        },
+        "title": "GameLib에 오신 것을 환영합니다"
+    },
     "winetricks": {
         "unavailable": "이 빌드에서는 Winetricks 구성 요소 관리를 사용할 수 없습니다",
         "unavailableDetail": "Winetricks 지원은 향후 릴리스(D-03, 34.6단계)로 연기되었으며, 이 빌드에서는 나열하거나 설치할 수 없습니다."

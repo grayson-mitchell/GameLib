@@ -430,6 +430,25 @@
     "steam.bridge.steamstub.title",
     "steam.bridge.steamstub.body",
     "steam.bridge.steamstub.forwardedTitle",
-    "steam.bridge.steamstub.forwardedBody"
+    "steam.bridge.steamstub.forwardedBody",
+    "welcome.appManagement.checkAgain",
+    "welcome.appManagement.openSettings",
+    "welcome.appManagement.reason",
+    "welcome.appManagement.relaunch",
+    "welcome.appManagement.relaunchNote",
+    "welcome.appManagement.status.checking",
+    "welcome.appManagement.status.denied",
+    "welcome.appManagement.status.granted",
+    "welcome.appManagement.status.unknown",
+    "welcome.appManagement.title",
+    "welcome.appManagement.unknownHelp",
+    "welcome.crossover.body",
+    "welcome.crossover.buy",
+    "welcome.crossover.missing",
+    "welcome.crossover.title",
+    "welcome.getStarted",
+    "welcome.stores.body",
+    "welcome.stores.title",
+    "welcome.title"
   ]
 }

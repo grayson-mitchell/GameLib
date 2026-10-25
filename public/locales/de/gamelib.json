@@ -558,6 +558,35 @@
             "hostLabel": "Momentan angezeigt: {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Erneut prüfen",
+            "openSettings": "Systemeinstellungen öffnen",
+            "reason": "CrossOver ändert beim Einrichten einer Spiele-Bottle Dateien in App-Bundles, und macOS verlangt dafür die Berechtigung „App Management“. Ohne sie bleibt die Installation von Windows-Spielen mittendrin hängen, begleitet von einer macOS-Benachrichtigung.",
+            "relaunch": "GameLib neu starten",
+            "relaunchNote": "Die Berechtigung wird wirksam, nachdem GameLib neu gestartet wurde.",
+            "status": {
+                "checking": "Wird geprüft…",
+                "denied": "Der Zugriff über „App Management“ ist noch nicht erlaubt.",
+                "granted": "Der Zugriff über „App Management“ ist erlaubt.",
+                "unknown": "GameLib konnte nicht feststellen, ob der Zugriff über „App Management“ erlaubt ist."
+            },
+            "title": "„App Management“ erlauben",
+            "unknownHelp": "Öffne Systemeinstellungen > Datenschutz & Sicherheit > „App Management“ und stelle sicher, dass GameLib eingeschaltet ist."
+        },
+        "crossover": {
+            "body": "Windows-Spiele laufen auf macOS über CrossOver, eine kostenpflichtige Software von CodeWeavers. Wenn du Windows-Spiele spielst, unterstütze bitte CodeWeavers und kaufe CrossOver.",
+            "buy": "CrossOver holen",
+            "missing": "CrossOver wurde auf diesem Mac nicht gefunden. Installiere es von codeweavers.com, bevor du Windows-Spiele installierst.",
+            "title": "Windows-Spiele auf macOS"
+        },
+        "getStarted": "Los geht's",
+        "stores": {
+            "body": "Öffne „Konten verwalten“ und melde dich bei den Stores an, die du nutzt (Epic Games, GOG, Amazon Games und Steam), damit deine Bibliotheken hier erscheinen.",
+            "title": "Melde dich bei deinen Stores an"
+        },
+        "title": "Willkommen bei GameLib"
+    },
     "winetricks": {
         "unavailable": "Die Verwaltung von Winetricks-Komponenten ist in diesem Build nicht verfügbar",
         "unavailableDetail": "Die Unterstützung für Winetricks ist auf eine zukünftige Version verschoben (D-03, Phase 34.6) und kann in diesem Build nicht aufgelistet oder installiert werden."

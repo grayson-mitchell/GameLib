@@ -558,6 +558,35 @@
             "hostLabel": "Une honetan ikusten: {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Egiaztatu berriro",
+            "openSettings": "Ireki Sistemaren ezarpenak",
+            "reason": "CrossOver-ek aplikazio-paketeen barruko fitxategiak aldatzen ditu jokoaren botila prestatzean, eta macOS-ek “App Management” baimena eskatzen du horretarako. Hori gabe, Windows jokoen instalazioa erdian gelditzen da, macOS jakinarazpen batekin.",
+            "relaunch": "Berrabiarazi GameLib",
+            "relaunchNote": "Baimena GameLib berrabiarazi ondoren aplikatzen da.",
+            "status": {
+                "checking": "Egiaztatzen…",
+                "denied": "“App Management” sarbidea ez dago oraindik baimenduta.",
+                "granted": "“App Management” sarbidea baimenduta dago.",
+                "unknown": "GameLib ez da gai izan “App Management” sarbidea baimenduta dagoen zehazteko."
+            },
+            "title": "Baimendu “App Management”",
+            "unknownHelp": "Ireki Sistemaren ezarpenak > Pribatutasuna eta segurtasuna > “App Management” eta ziurtatu GameLib aktibatuta dagoela."
+        },
+        "crossover": {
+            "body": "Windows jokoak macOS-en exekutatzen dira CrossOver bidez, CodeWeavers-en ordainpeko softwarea. Windows jokoetan jolasten baduzu, lagundu CodeWeavers-i CrossOver erosiz.",
+            "buy": "Eskuratu CrossOver",
+            "missing": "Ez da CrossOver aurkitu Mac honetan. Instalatu codeweavers.com helbidetik Windows jokoak instalatu aurretik.",
+            "title": "Windows jokoak macOS-en"
+        },
+        "getStarted": "Hasi",
+        "stores": {
+            "body": "Ireki Kudeatu kontuak eta hasi saioa erabiltzen dituzun dendetan (Epic Games, GOG, Amazon Games eta Steam), zure liburutegiak hemen ager daitezen.",
+            "title": "Hasi saioa zure dendetan"
+        },
+        "title": "Ongi etorri GameLib-era"
+    },
     "winetricks": {
         "unavailable": "Winetricks osagaien kudeaketa ez dago erabilgarri bertsio honetan",
         "unavailableDetail": "Winetricks euskarria etorkizuneko bertsio baterako utzi da (D-03, 34.6 fasea) eta ezin da bertsio honetatik zerrendatu edo instalatu."

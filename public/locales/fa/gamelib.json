@@ -558,6 +558,35 @@
             "hostLabel": "در حال مشاهده {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "بررسی دوباره",
+            "openSettings": "باز کردن تنظیمات سامانه",
+            "reason": "CrossOver هنگام آماده‌سازی بطری بازی فایل‌هایی را درون بسته‌های برنامه تغییر می‌دهد و macOS برای این کار مجوز «App Management» را می‌خواهد. بدون آن، نصب بازی‌های Windows در میانه کار متوقف می‌شود و اعلانی از macOS نمایش داده می‌شود.",
+            "relaunch": "راه‌اندازی مجدد GameLib",
+            "relaunchNote": "این مجوز پس از راه‌اندازی مجدد GameLib اعمال می‌شود.",
+            "status": {
+                "checking": "در حال بررسی…",
+                "denied": "دسترسی «App Management» هنوز مجاز نیست.",
+                "granted": "دسترسی «App Management» مجاز است.",
+                "unknown": "GameLib نتوانست تشخیص دهد که دسترسی «App Management» مجاز است یا نه."
+            },
+            "title": "اجازه دادن به «App Management»",
+            "unknownHelp": "تنظیمات سامانه > حریم خصوصی و امنیت > «App Management» را باز کنید و مطمئن شوید GameLib روشن است."
+        },
+        "crossover": {
+            "body": "بازی‌های Windows در macOS از طریق CrossOver اجرا می‌شوند؛ نرم‌افزاری پولی از CodeWeavers. اگر بازی‌های Windows بازی می‌کنید، لطفاً با خرید CrossOver از CodeWeavers حمایت کنید.",
+            "buy": "دریافت CrossOver",
+            "missing": "CrossOver روی این Mac پیدا نشد. پیش از نصب بازی‌های Windows آن را از codeweavers.com نصب کنید.",
+            "title": "بازی‌های Windows در macOS"
+        },
+        "getStarted": "شروع",
+        "stores": {
+            "body": "«مدیریت حساب‌ها» را باز کنید و وارد فروشگاه‌هایی که استفاده می‌کنید (Epic Games، GOG، Amazon Games و Steam) شوید تا کتابخانه‌هایتان در اینجا نمایش داده شود.",
+            "title": "وارد فروشگاه‌های خود شوید"
+        },
+        "title": "به GameLib خوش آمدید"
+    },
     "winetricks": {
         "unavailable": "مدیریت اجزای Winetricks در این نسخه در دسترس نیست",
         "unavailableDetail": "پشتیبانی از Winetricks به نسخه‌ای در آینده (D-03, Phase 34.6) موکول شده و از این نسخه قابل فهرست‌کردن یا نصب نیست."

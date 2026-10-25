@@ -565,6 +565,35 @@
             "hostLabel": "Vizualizezi în prezent {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Verifică din nou",
+            "openSettings": "Deschide Setări de sistem",
+            "reason": "CrossOver modifică fișiere din pachetele de aplicații când pregătește o sticlă de joc, iar macOS cere permisiunea „App Management” pentru asta. Fără ea, instalarea jocurilor Windows se oprește pe la jumătate, cu o notificare macOS.",
+            "relaunch": "Repornește GameLib",
+            "relaunchNote": "Permisiunea intră în vigoare după repornirea GameLib.",
+            "status": {
+                "checking": "Se verifică…",
+                "denied": "Accesul „App Management” nu este încă permis.",
+                "granted": "Accesul „App Management” este permis.",
+                "unknown": "GameLib nu a putut stabili dacă accesul „App Management” este permis."
+            },
+            "title": "Permite „App Management”",
+            "unknownHelp": "Deschide Setări de sistem > Confidențialitate și securitate > „App Management” și verifică dacă GameLib este activat."
+        },
+        "crossover": {
+            "body": "Jocurile Windows rulează pe macOS prin CrossOver, un software plătit de la CodeWeavers. Dacă joci jocuri Windows, te rugăm să sprijini CodeWeavers cumpărând CrossOver.",
+            "buy": "Obține CrossOver",
+            "missing": "CrossOver nu a fost găsit pe acest Mac. Instalează-l de pe codeweavers.com înainte de a instala jocuri Windows.",
+            "title": "Jocuri Windows pe macOS"
+        },
+        "getStarted": "Începe",
+        "stores": {
+            "body": "Deschide Gestionează conturile și conectează-te la magazinele pe care le folosești (Epic Games, GOG, Amazon Games și Steam) ca bibliotecile tale să apară aici.",
+            "title": "Conectează-te la magazinele tale"
+        },
+        "title": "Bun venit în GameLib"
+    },
     "winetricks": {
         "unavailable": "Gestionarea componentelor Winetricks nu este disponibilă în această versiune",
         "unavailableDetail": "Suportul pentru Winetricks este amânat pentru o versiune viitoare (D-03, Faza 34.6) și nu poate fi listat sau instalat din această versiune."

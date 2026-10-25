@@ -33,3 +33,12 @@ Work:
    (`2026-10-22-first-run-welcome-screen-instead-of-changelog.md`) beside the CrossOver step.
    GameLib must be relaunched after the grant, so say so.
 3. Strings go in the `gamelib` namespace with all locales filled.
+
+## Closed 2026-10-26 (quick 261026-b9r)
+
+Shipped:
+- `src/backend/appshell/appManagement.ts`: create-and-unlink probe inside the detected CrossOver bundle's `Contents/` (EPERM -> denied, other errors -> unknown, no CrossOver or non-macOS -> not-needed, success -> granted), exposed as the `getAppManagementStatus` channel, plus `openAppManagementSettings` (opens only the fixed Privacy_AppBundles URL) and `relaunchApp`.
+- `src-tauri/src/main.rs`: an exact-URL allowance for the Privacy_AppBundles deep link; the `x-apple.systempreferences` scheme is NOT added to the scheme list.
+- The App Management step in the first-run WelcomeModal: reason in plain words, live status, Open System Settings, Check again, re-check on focus/visibility, and a Relaunch GameLib button after a grant. All strings in the `gamelib` namespace, 49 locales.
+
+Not done (follow-up): a pre-install gate before `cxbottle --create` is out of scope (CONTEXT Placement). A user who dismisses the welcome without granting can still meet the mid-install macOS prompt.

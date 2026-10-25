@@ -572,6 +572,35 @@
             "hostLabel": "Сейчас просматривается {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Проверить снова",
+            "openSettings": "Открыть Системные настройки",
+            "reason": "При подготовке игрового контейнера CrossOver изменяет файлы внутри пакетов приложений, и для этого macOS запрашивает разрешение «App Management». Без него установка игр для Windows останавливается на полпути с уведомлением macOS.",
+            "relaunch": "Перезапустить GameLib",
+            "relaunchNote": "Разрешение вступит в силу после перезапуска GameLib.",
+            "status": {
+                "checking": "Проверка…",
+                "denied": "Доступ «App Management» ещё не разрешён.",
+                "granted": "Доступ «App Management» разрешён.",
+                "unknown": "GameLib не смог определить, разрешён ли доступ «App Management»."
+            },
+            "title": "Разрешить «App Management»",
+            "unknownHelp": "Откройте Системные настройки > Конфиденциальность и безопасность > «App Management» и убедитесь, что GameLib включён."
+        },
+        "crossover": {
+            "body": "Игры для Windows работают на macOS через CrossOver — платное ПО от CodeWeavers. Если вы играете в игры для Windows, поддержите CodeWeavers и купите CrossOver.",
+            "buy": "Получить CrossOver",
+            "missing": "CrossOver не найден на этом Mac. Установите его с сайта codeweavers.com, прежде чем устанавливать игры для Windows.",
+            "title": "Игры для Windows на macOS"
+        },
+        "getStarted": "Начать",
+        "stores": {
+            "body": "Откройте «Управление аккаунтами» и войдите в магазины, которыми вы пользуетесь (Epic Games, GOG, Amazon Games и Steam), чтобы ваши библиотеки появились здесь.",
+            "title": "Войдите в свои магазины"
+        },
+        "title": "Добро пожаловать в GameLib"
+    },
     "winetricks": {
         "unavailable": "Управление компонентами Winetricks недоступно в этой сборке",
         "unavailableDetail": "Поддержка Winetricks отложена до будущего релиза (D-03, этап 34.6) и не может быть отображена или установлена из этой сборки."

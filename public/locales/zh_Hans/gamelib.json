@@ -558,6 +558,35 @@
             "hostLabel": "当前正在查看 {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "重新检查",
+            "openSettings": "打开系统设置",
+            "reason": "CrossOver 在准备游戏容器时会修改应用包内的文件,macOS 因此会请求“App Management”权限。没有该权限,Windows 游戏的安装会在中途停滞,并弹出 macOS 通知。",
+            "relaunch": "重新启动 GameLib",
+            "relaunchNote": "该权限在 GameLib 重新启动后生效。",
+            "status": {
+                "checking": "正在检查…",
+                "denied": "尚未允许“App Management”访问。",
+                "granted": "已允许“App Management”访问。",
+                "unknown": "GameLib 无法确定是否已允许“App Management”访问。"
+            },
+            "title": "允许“App Management”",
+            "unknownHelp": "打开 系统设置 > 隐私与安全性 > “App Management”,并确认 GameLib 已开启。"
+        },
+        "crossover": {
+            "body": "Windows 游戏通过 CrossOver 在 macOS 上运行,CrossOver 是 CodeWeavers 出品的付费软件。如果你玩 Windows 游戏,请购买 CrossOver 以支持 CodeWeavers。",
+            "buy": "获取 CrossOver",
+            "missing": "在这台 Mac 上未找到 CrossOver。请在安装 Windows 游戏之前,从 codeweavers.com 安装它。",
+            "title": "在 macOS 上运行 Windows 游戏"
+        },
+        "getStarted": "开始使用",
+        "stores": {
+            "body": "打开“管理账户”,登录你使用的商店(Epic Games、GOG、Amazon Games 和 Steam),你的游戏库就会显示在这里。",
+            "title": "登录你的商店"
+        },
+        "title": "欢迎使用 GameLib"
+    },
     "winetricks": {
         "unavailable": "此版本不支持 Winetricks 组件管理",
         "unavailableDetail": "Winetricks 支持已推迟至未来版本（D-03，第 34.6 阶段），此版本无法列出或安装。"

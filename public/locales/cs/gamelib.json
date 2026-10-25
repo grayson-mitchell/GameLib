@@ -572,6 +572,35 @@
             "hostLabel": "Aktuálně zobrazujete {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Zkontrolovat znovu",
+            "openSettings": "Otevřít Nastavení systému",
+            "reason": "CrossOver při přípravě herní lahve mění soubory uvnitř balíčků aplikací a macOS k tomu vyžaduje oprávnění „App Management“. Bez něj se instalace her pro Windows zastaví v půlce s oznámením macOS.",
+            "relaunch": "Restartovat GameLib",
+            "relaunchNote": "Oprávnění se projeví po restartu GameLib.",
+            "status": {
+                "checking": "Kontroluje se…",
+                "denied": "Přístup „App Management“ zatím není povolen.",
+                "granted": "Přístup „App Management“ je povolen.",
+                "unknown": "GameLib nemohl zjistit, zda je přístup „App Management“ povolen."
+            },
+            "title": "Povolit „App Management“",
+            "unknownHelp": "Otevřete Nastavení systému > Soukromí a zabezpečení > „App Management“ a ověřte, že je GameLib zapnutý."
+        },
+        "crossover": {
+            "body": "Hry pro Windows běží na macOS prostřednictvím CrossOver, placeného softwaru od CodeWeavers. Pokud hrajete hry pro Windows, podpořte prosím CodeWeavers zakoupením CrossOver.",
+            "buy": "Získat CrossOver",
+            "missing": "CrossOver nebyl na tomto Mac nalezen. Před instalací her pro Windows ho nainstalujte z codeweavers.com.",
+            "title": "Hry pro Windows na macOS"
+        },
+        "getStarted": "Začít",
+        "stores": {
+            "body": "Otevřete Správa účtů a přihlaste se do obchodů, které používáte (Epic Games, GOG, Amazon Games a Steam), aby se zde zobrazily vaše knihovny.",
+            "title": "Přihlaste se do svých obchodů"
+        },
+        "title": "Vítejte v GameLib"
+    },
     "winetricks": {
         "unavailable": "Správa komponent Winetricks není v tomto sestavení k dispozici",
         "unavailableDetail": "Podpora Winetricks je odložena na budoucí vydání (D-03, fáze 34.6) a v tomto sestavení ji nelze zobrazit ani nainstalovat."

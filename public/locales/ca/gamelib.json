@@ -565,6 +565,35 @@
             "hostLabel": "Visualitzant actualment {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Torna a comprovar",
+            "openSettings": "Obre Configuració del Sistema",
+            "reason": "CrossOver modifica fitxers dins dels paquets d'aplicacions quan prepara una ampolla de joc, i macOS demana el permís «App Management» per a això. Sense aquest permís, la instal·lació de jocs de Windows s'atura a mig camí amb una notificació de macOS.",
+            "relaunch": "Reinicia GameLib",
+            "relaunchNote": "El permís s'aplica quan GameLib es reinicia.",
+            "status": {
+                "checking": "S'està comprovant…",
+                "denied": "L'accés a «App Management» encara no està permès.",
+                "granted": "L'accés a «App Management» està permès.",
+                "unknown": "GameLib no ha pogut determinar si l'accés a «App Management» està permès."
+            },
+            "title": "Permet «App Management»",
+            "unknownHelp": "Obre Configuració del Sistema > Privadesa i seguretat > «App Management» i comprova que GameLib estigui activat."
+        },
+        "crossover": {
+            "body": "Els jocs de Windows funcionen a macOS mitjançant CrossOver, un programari de pagament de CodeWeavers. Si jugues a jocs de Windows, dona suport a CodeWeavers comprant CrossOver.",
+            "buy": "Obtén CrossOver",
+            "missing": "No s'ha trobat CrossOver en aquest Mac. Instal·la'l des de codeweavers.com abans d'instal·lar jocs de Windows.",
+            "title": "Jocs de Windows a macOS"
+        },
+        "getStarted": "Comença",
+        "stores": {
+            "body": "Obre Gestiona els comptes i inicia la sessió a les botigues que utilitzes (Epic Games, GOG, Amazon Games i Steam) perquè les teves biblioteques apareguin aquí.",
+            "title": "Inicia la sessió a les teves botigues"
+        },
+        "title": "Us donem la benvinguda a GameLib"
+    },
     "winetricks": {
         "unavailable": "La gestió de components de Winetricks no està disponible en aquesta versió",
         "unavailableDetail": "El suport de Winetricks s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot llistar ni instal·lar des d'aquesta versió."

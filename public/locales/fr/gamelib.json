@@ -565,6 +565,35 @@
             "hostLabel": "Affichage actuel de {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Vérifier à nouveau",
+            "openSettings": "Ouvrir Réglages Système",
+            "reason": "CrossOver modifie des fichiers dans des paquets d'apps lorsqu'il prépare une bouteille de jeu, et macOS demande pour cela l'autorisation « App Management ». Sans elle, l'installation des jeux Windows s'interrompt en cours de route avec une notification macOS.",
+            "relaunch": "Relancer GameLib",
+            "relaunchNote": "L'autorisation prend effet après le redémarrage de GameLib.",
+            "status": {
+                "checking": "Vérification en cours…",
+                "denied": "L'accès « App Management » n'est pas encore autorisé.",
+                "granted": "L'accès « App Management » est autorisé.",
+                "unknown": "GameLib n'a pas pu déterminer si l'accès « App Management » est autorisé."
+            },
+            "title": "Autoriser « App Management »",
+            "unknownHelp": "Ouvrez Réglages Système > Confidentialité et sécurité > « App Management » et vérifiez que GameLib est activé."
+        },
+        "crossover": {
+            "body": "Les jeux Windows fonctionnent sur macOS grâce à CrossOver, un logiciel payant de CodeWeavers. Si vous jouez à des jeux Windows, merci de soutenir CodeWeavers en achetant CrossOver.",
+            "buy": "Obtenir CrossOver",
+            "missing": "CrossOver est introuvable sur ce Mac. Installez-le depuis codeweavers.com avant d'installer des jeux Windows.",
+            "title": "Jeux Windows sur macOS"
+        },
+        "getStarted": "Commencer",
+        "stores": {
+            "body": "Ouvrez Gérer les comptes et connectez-vous aux boutiques que vous utilisez (Epic Games, GOG, Amazon Games et Steam) pour que vos bibliothèques apparaissent ici.",
+            "title": "Connectez-vous à vos boutiques"
+        },
+        "title": "Bienvenue dans GameLib"
+    },
     "winetricks": {
         "unavailable": "La gestion des composants Winetricks n'est pas disponible sur cette version",
         "unavailableDetail": "La prise en charge de Winetricks est reportée à une version future (D-03, Phase 34.6) et ne peut pas être listée ou installée depuis cette version."

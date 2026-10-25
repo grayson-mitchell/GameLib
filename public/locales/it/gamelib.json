@@ -565,6 +565,35 @@
             "hostLabel": "Visualizzazione attuale: {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Controlla di nuovo",
+            "openSettings": "Apri Impostazioni di Sistema",
+            "reason": "CrossOver modifica file all'interno dei pacchetti delle app quando prepara una bottiglia di gioco, e macOS richiede per questo l'autorizzazione «App Management». Senza di essa, l'installazione dei giochi Windows si blocca a metà con una notifica di macOS.",
+            "relaunch": "Riavvia GameLib",
+            "relaunchNote": "L'autorizzazione ha effetto dopo il riavvio di GameLib.",
+            "status": {
+                "checking": "Controllo in corso…",
+                "denied": "L'accesso a «App Management» non è ancora consentito.",
+                "granted": "L'accesso a «App Management» è consentito.",
+                "unknown": "GameLib non è riuscito a stabilire se l'accesso a «App Management» è consentito."
+            },
+            "title": "Consenti «App Management»",
+            "unknownHelp": "Apri Impostazioni di Sistema > Privacy e sicurezza > «App Management» e verifica che GameLib sia attivo."
+        },
+        "crossover": {
+            "body": "I giochi Windows funzionano su macOS tramite CrossOver, un software a pagamento di CodeWeavers. Se giochi a giochi Windows, sostieni CodeWeavers acquistando CrossOver.",
+            "buy": "Ottieni CrossOver",
+            "missing": "CrossOver non è stato trovato su questo Mac. Installalo da codeweavers.com prima di installare giochi Windows.",
+            "title": "Giochi Windows su macOS"
+        },
+        "getStarted": "Inizia",
+        "stores": {
+            "body": "Apri Gestisci account e accedi agli store che usi (Epic Games, GOG, Amazon Games e Steam) in modo che le tue librerie compaiano qui.",
+            "title": "Accedi ai tuoi store"
+        },
+        "title": "Benvenuto in GameLib"
+    },
     "winetricks": {
         "unavailable": "La gestione dei componenti Winetricks non è disponibile in questa build",
         "unavailableDetail": "Il supporto di Winetricks è rimandato a una versione futura (D-03, Fase 34.6) e non può essere elencato o installato da questa build."

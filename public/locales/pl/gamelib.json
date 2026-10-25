@@ -572,6 +572,35 @@
             "hostLabel": "Obecnie przeglądasz {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Sprawdź ponownie",
+            "openSettings": "Otwórz Ustawienia systemowe",
+            "reason": "CrossOver zmienia pliki wewnątrz pakietów aplikacji podczas przygotowywania butelki gry, a macOS wymaga do tego uprawnienia „App Management”. Bez niego instalacja gier Windows zatrzymuje się w połowie z powiadomieniem macOS.",
+            "relaunch": "Uruchom GameLib ponownie",
+            "relaunchNote": "Uprawnienie zaczyna działać po ponownym uruchomieniu GameLib.",
+            "status": {
+                "checking": "Sprawdzanie…",
+                "denied": "Dostęp „App Management” nie jest jeszcze dozwolony.",
+                "granted": "Dostęp „App Management” jest dozwolony.",
+                "unknown": "GameLib nie mógł ustalić, czy dostęp „App Management” jest dozwolony."
+            },
+            "title": "Zezwól na „App Management”",
+            "unknownHelp": "Otwórz Ustawienia systemowe > Prywatność i ochrona > „App Management” i upewnij się, że GameLib jest włączony."
+        },
+        "crossover": {
+            "body": "Gry Windows działają na macOS dzięki CrossOver, płatnemu oprogramowaniu firmy CodeWeavers. Jeśli grasz w gry Windows, wesprzyj CodeWeavers, kupując CrossOver.",
+            "buy": "Zdobądź CrossOver",
+            "missing": "Nie znaleziono CrossOver na tym Mac. Zainstaluj go ze strony codeweavers.com, zanim zainstalujesz gry Windows.",
+            "title": "Gry Windows na macOS"
+        },
+        "getStarted": "Rozpocznij",
+        "stores": {
+            "body": "Otwórz Zarządzaj kontami i zaloguj się do sklepów, z których korzystasz (Epic Games, GOG, Amazon Games i Steam), aby Twoje biblioteki pojawiły się tutaj.",
+            "title": "Zaloguj się do swoich sklepów"
+        },
+        "title": "Witaj w GameLib"
+    },
     "winetricks": {
         "unavailable": "Zarządzanie komponentami Winetricks jest niedostępne w tym buildzie",
         "unavailableDetail": "Obsługa Winetricks została odłożona do przyszłej wersji (D-03, Faza 34.6) i nie może być wyświetlana ani instalowana w tym buildzie."

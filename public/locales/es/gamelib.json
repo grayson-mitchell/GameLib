@@ -565,6 +565,35 @@
             "hostLabel": "Viendo actualmente {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Comprobar de nuevo",
+            "openSettings": "Abrir Ajustes del Sistema",
+            "reason": "CrossOver modifica archivos dentro de paquetes de apps al preparar una botella de juego, y macOS pide el permiso «App Management» para ello. Sin él, la instalación de juegos de Windows se detiene a medias con una notificación de macOS.",
+            "relaunch": "Reiniciar GameLib",
+            "relaunchNote": "El permiso se aplica cuando GameLib se reinicia.",
+            "status": {
+                "checking": "Comprobando…",
+                "denied": "El acceso a «App Management» aún no está permitido.",
+                "granted": "El acceso a «App Management» está permitido.",
+                "unknown": "GameLib no pudo determinar si el acceso a «App Management» está permitido."
+            },
+            "title": "Permitir «App Management»",
+            "unknownHelp": "Abre Ajustes del Sistema > Privacidad y seguridad > «App Management» y asegúrate de que GameLib esté activado."
+        },
+        "crossover": {
+            "body": "Los juegos de Windows funcionan en macOS mediante CrossOver, un software de pago de CodeWeavers. Si juegas a juegos de Windows, apoya a CodeWeavers comprando CrossOver.",
+            "buy": "Obtener CrossOver",
+            "missing": "No se encontró CrossOver en este Mac. Instálalo desde codeweavers.com antes de instalar juegos de Windows.",
+            "title": "Juegos de Windows en macOS"
+        },
+        "getStarted": "Empezar",
+        "stores": {
+            "body": "Abre Administrar cuentas e inicia sesión en las tiendas que uses (Epic Games, GOG, Amazon Games y Steam) para que tus bibliotecas aparezcan aquí.",
+            "title": "Inicia sesión en tus tiendas"
+        },
+        "title": "Te damos la bienvenida a GameLib"
+    },
     "winetricks": {
         "unavailable": "La gestión de componentes de Winetricks no está disponible en esta compilación",
         "unavailableDetail": "El soporte de Winetricks se ha diferido a una versión futura (D-03, Fase 34.6) y no se puede listar ni instalar desde esta compilación."

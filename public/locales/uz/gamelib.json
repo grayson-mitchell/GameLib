@@ -558,6 +558,35 @@
             "hostLabel": "Hozir {{host}} ko'rilmoqda"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Qayta tekshirish",
+            "openSettings": "Tizim sozlamalarini ochish",
+            "reason": "CrossOver o'yin idishini tayyorlashda ilova paketlari ichidagi fayllarni o'zgartiradi va macOS buning uchun “App Management” ruxsatini so'raydi. Busiz Windows o'yinlarini o'rnatish macOS bildirishnomasi bilan yarim yo'lda to'xtaydi.",
+            "relaunch": "GameLib'ni qayta ishga tushirish",
+            "relaunchNote": "Ruxsat GameLib qayta ishga tushirilgandan keyin kuchga kiradi.",
+            "status": {
+                "checking": "Tekshirilmoqda…",
+                "denied": "“App Management” ga kirishga hali ruxsat berilmagan.",
+                "granted": "“App Management” ga kirishga ruxsat berilgan.",
+                "unknown": "GameLib “App Management” ga kirishga ruxsat berilganini aniqlay olmadi."
+            },
+            "title": "“App Management” ruxsatini bering",
+            "unknownHelp": "Tizim sozlamalari > Maxfiylik va xavfsizlik > “App Management” bo'limini oching va GameLib yoqilganini tekshiring."
+        },
+        "crossover": {
+            "body": "Windows o'yinlari macOS'da CodeWeavers kompaniyasining pullik dasturi CrossOver orqali ishlaydi. Windows o'yinlarini o'ynasangiz, CrossOver'ni sotib olib, CodeWeavers'ni qo'llab-quvvatlang.",
+            "buy": "CrossOver'ni olish",
+            "missing": "Bu Mac'da CrossOver topilmadi. Windows o'yinlarini o'rnatishdan oldin uni codeweavers.com saytidan o'rnating.",
+            "title": "macOS'da Windows o'yinlari"
+        },
+        "getStarted": "Boshlash",
+        "stores": {
+            "body": "Hisoblarni boshqarish bo'limini oching va foydalanadigan do'konlaringizga (Epic Games, GOG, Amazon Games va Steam) kiring — kutubxonalaringiz shu yerda ko'rinadi.",
+            "title": "Do'konlaringizga kiring"
+        },
+        "title": "GameLib'ga xush kelibsiz"
+    },
     "winetricks": {
         "unavailable": "Winetricks komponentlarini boshqarish ushbu qurilmada mavjud emas",
         "unavailableDetail": "Winetricks qo'llab-quvvatlashi keyingi versiyaga qoldirilgan (D-03, 34.6-bosqich) va ushbu qurilmadan ro'yxatga olinishi yoki o'rnatilishi mumkin emas."

@@ -565,6 +565,35 @@
             "hostLabel": "מציג כרגע את {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "בדיקה חוזרת",
+            "openSettings": "פתיחת הגדרות המערכת",
+            "reason": "CrossOver משנה קבצים בתוך חבילות של אפליקציות כשהוא מכין בקבוק משחק, ו-macOS מבקש לשם כך את ההרשאה “App Management”. בלעדיה התקנת משחקי Windows נעצרת באמצע עם הודעה של macOS.",
+            "relaunch": "הפעלת GameLib מחדש",
+            "relaunchNote": "ההרשאה נכנסת לתוקף לאחר שהפעלת GameLib מחדש.",
+            "status": {
+                "checking": "בודק…",
+                "denied": "הגישה ל-“App Management” עדיין לא מותרת.",
+                "granted": "הגישה ל-“App Management” מותרת.",
+                "unknown": "GameLib לא הצליח לקבוע אם הגישה ל-“App Management” מותרת."
+            },
+            "title": "אפשרו את “App Management”",
+            "unknownHelp": "פתחו הגדרות המערכת > פרטיות ואבטחה > “App Management” וודאו ש-GameLib מופעל."
+        },
+        "crossover": {
+            "body": "משחקי Windows פועלים ב-macOS באמצעות CrossOver, תוכנה בתשלום של CodeWeavers. אם אתם משחקים במשחקי Windows, תמכו ב-CodeWeavers ורכשו את CrossOver.",
+            "buy": "קבלת CrossOver",
+            "missing": "CrossOver לא נמצא ב-Mac הזה. התקינו אותו מ-codeweavers.com לפני התקנת משחקי Windows.",
+            "title": "משחקי Windows ב-macOS"
+        },
+        "getStarted": "בואו נתחיל",
+        "stores": {
+            "body": "פתחו את ״ניהול חשבונות״ והתחברו לחנויות שבהן אתם משתמשים (Epic Games‏, GOG‏, Amazon Games ו-Steam) כדי שהספריות שלכם יופיעו כאן.",
+            "title": "התחברו לחנויות שלכם"
+        },
+        "title": "ברוכים הבאים ל-GameLib"
+    },
     "winetricks": {
         "unavailable": "ניהול רכיבי Winetricks אינו זמין בגרסה זו",
         "unavailableDetail": "תמיכה ב-Winetricks נדחתה לגרסה עתידית (D-03, Phase 34.6) ולא ניתן להציגה או להתקינה בגרסה זו."

@@ -565,6 +565,35 @@
             "hostLabel": "Trenutno pregledavate {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Provjeri ponovno",
+            "openSettings": "Otvori Postavke sustava",
+            "reason": "CrossOver mijenja datoteke unutar paketa aplikacija dok priprema bocu za igru, a macOS za to traži dopuštenje „App Management“. Bez njega se instalacija Windows igara zaustavlja na pola puta uz macOS obavijest.",
+            "relaunch": "Ponovno pokreni GameLib",
+            "relaunchNote": "Dopuštenje stupa na snagu nakon ponovnog pokretanja GameLiba.",
+            "status": {
+                "checking": "Provjera…",
+                "denied": "Pristup „App Management“ još nije dopušten.",
+                "granted": "Pristup „App Management“ je dopušten.",
+                "unknown": "GameLib nije mogao utvrditi je li pristup „App Management“ dopušten."
+            },
+            "title": "Dopusti „App Management“",
+            "unknownHelp": "Otvorite Postavke sustava > Privatnost i sigurnost > „App Management“ i provjerite je li GameLib uključen."
+        },
+        "crossover": {
+            "body": "Windows igre rade na macOS-u putem CrossOvera, plaćenog softvera tvrtke CodeWeavers. Ako igrate Windows igre, podržite CodeWeavers kupnjom CrossOvera.",
+            "buy": "Nabavi CrossOver",
+            "missing": "CrossOver nije pronađen na ovom Macu. Instalirajte ga s codeweavers.com prije instalacije Windows igara.",
+            "title": "Windows igre na macOS-u"
+        },
+        "getStarted": "Započni",
+        "stores": {
+            "body": "Otvorite Upravljanje računima i prijavite se u trgovine koje koristite (Epic Games, GOG, Amazon Games i Steam) kako bi se vaše biblioteke prikazale ovdje.",
+            "title": "Prijavite se u svoje trgovine"
+        },
+        "title": "Dobro došli u GameLib"
+    },
     "winetricks": {
         "unavailable": "Upravljanje Winetricks komponentama nije dostupno u ovoj inačici",
         "unavailableDetail": "Podrška za Winetricks odgođena je za buduće izdanje (D-03, faza 34.6) i ne može se popisati ni instalirati u ovoj inačici."

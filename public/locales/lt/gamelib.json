@@ -572,6 +572,35 @@
             "hostLabel": "Šiuo metu peržiūrima {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Patikrinti dar kartą",
+            "openSettings": "Atidaryti Sistemos nustatymus",
+            "reason": "Ruošdamas žaidimo butelį, CrossOver keičia failus programų paketuose, o macOS tam reikalauja leidimo „App Management“. Be jo Windows žaidimų diegimas sustoja per vidurį su macOS pranešimu.",
+            "relaunch": "Iš naujo paleisti GameLib",
+            "relaunchNote": "Leidimas įsigalioja iš naujo paleidus GameLib.",
+            "status": {
+                "checking": "Tikrinama…",
+                "denied": "Prieiga „App Management“ dar neleidžiama.",
+                "granted": "Prieiga „App Management“ leidžiama.",
+                "unknown": "GameLib nepavyko nustatyti, ar prieiga „App Management“ leidžiama."
+            },
+            "title": "Leisti „App Management“",
+            "unknownHelp": "Atidarykite Sistemos nustatymai > Privatumas ir sauga > „App Management“ ir įsitikinkite, kad GameLib įjungtas."
+        },
+        "crossover": {
+            "body": "Windows žaidimai sistemoje macOS veikia per CrossOver – mokamą CodeWeavers programinę įrangą. Jei žaidžiate Windows žaidimus, paremkite CodeWeavers nusipirkdami CrossOver.",
+            "buy": "Gauti CrossOver",
+            "missing": "CrossOver šiame Mac nerastas. Įdiekite jį iš codeweavers.com prieš diegdami Windows žaidimus.",
+            "title": "Windows žaidimai sistemoje macOS"
+        },
+        "getStarted": "Pradėti",
+        "stores": {
+            "body": "Atidarykite Tvarkyti paskyras ir prisijunkite prie naudojamų parduotuvių (Epic Games, GOG, Amazon Games ir Steam), kad čia atsirastų jūsų bibliotekos.",
+            "title": "Prisijunkite prie savo parduotuvių"
+        },
+        "title": "Sveiki atvykę į GameLib"
+    },
     "winetricks": {
         "unavailable": "Winetricks komponentų valdymas šioje versijoje negalimas",
         "unavailableDetail": "Winetricks palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti rodomas ar diegiamas."

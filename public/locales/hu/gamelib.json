@@ -558,6 +558,35 @@
             "hostLabel": "Jelenleg megtekintve: {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Ellenőrzés újra",
+            "openSettings": "Rendszerbeállítások megnyitása",
+            "reason": "A CrossOver játékpalack előkészítésekor alkalmazáscsomagokon belüli fájlokat módosít, és a macOS ehhez az „App Management” engedélyt kéri. Enélkül a Windows-játékok telepítése félúton megáll egy macOS-értesítéssel.",
+            "relaunch": "GameLib újraindítása",
+            "relaunchNote": "Az engedély a GameLib újraindítása után lép érvénybe.",
+            "status": {
+                "checking": "Ellenőrzés…",
+                "denied": "Az „App Management” hozzáférés még nincs engedélyezve.",
+                "granted": "Az „App Management” hozzáférés engedélyezett.",
+                "unknown": "A GameLib nem tudta megállapítani, hogy az „App Management” hozzáférés engedélyezett-e."
+            },
+            "title": "Az „App Management” engedélyezése",
+            "unknownHelp": "Nyisd meg a Rendszerbeállítások > Adatvédelem és biztonság > „App Management” részt, és ellenőrizd, hogy a GameLib be van kapcsolva."
+        },
+        "crossover": {
+            "body": "A Windows-játékok macOS-en a CrossOveren keresztül futnak, amely a CodeWeavers fizetős szoftvere. Ha Windows-játékokkal játszol, támogasd a CodeWeaverst a CrossOver megvásárlásával.",
+            "buy": "CrossOver beszerzése",
+            "missing": "A CrossOver nem található ezen a Mac gépen. Telepítsd a codeweavers.com oldalról, mielőtt Windows-játékokat telepítesz.",
+            "title": "Windows-játékok macOS-en"
+        },
+        "getStarted": "Kezdés",
+        "stores": {
+            "body": "Nyisd meg a Fiókok kezelése részt, és jelentkezz be a használt áruházakba (Epic Games, GOG, Amazon Games és Steam), hogy a könyvtáraid itt megjelenjenek.",
+            "title": "Jelentkezz be az áruházaidba"
+        },
+        "title": "Üdvözöl a GameLib"
+    },
     "winetricks": {
         "unavailable": "A Winetricks komponenskezelés nem érhető el ebben a build-ben",
         "unavailableDetail": "A Winetricks támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a build-ben nem listázható és nem telepíthető."

@@ -558,6 +558,35 @@
             "hostLabel": "Hazırda {{host}} baxılır"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Yenidən yoxla",
+            "openSettings": "Sistem Ayarlarını aç",
+            "reason": "CrossOver oyun butulkasını hazırlayarkən tətbiq paketlərinin içindəki faylları dəyişir və macOS bunun üçün “App Management” icazəsini tələb edir. Bu icazə olmadan Windows oyunlarının quraşdırılması yarıda macOS bildirişi ilə dayanır.",
+            "relaunch": "GameLib-i yenidən başlat",
+            "relaunchNote": "İcazə GameLib yenidən başladıldıqdan sonra qüvvəyə minir.",
+            "status": {
+                "checking": "Yoxlanılır…",
+                "denied": "“App Management” girişinə hələ icazə verilməyib.",
+                "granted": "“App Management” girişinə icazə verilib.",
+                "unknown": "GameLib “App Management” girişinə icazə verilib-verilmədiyini müəyyən edə bilmədi."
+            },
+            "title": "“App Management” icazəsi verin",
+            "unknownHelp": "Sistem Ayarları > Məxfilik və Təhlükəsizlik > “App Management” bölməsini açın və GameLib-in aktiv olduğunu yoxlayın."
+        },
+        "crossover": {
+            "body": "Windows oyunları macOS-da CodeWeavers şirkətinin ödənişli proqramı olan CrossOver vasitəsilə işləyir. Windows oyunları oynayırsınızsa, CrossOver alaraq CodeWeavers-ə dəstək olun.",
+            "buy": "CrossOver əldə et",
+            "missing": "Bu Mac-də CrossOver tapılmadı. Windows oyunlarını quraşdırmazdan əvvəl onu codeweavers.com saytından quraşdırın.",
+            "title": "macOS-da Windows oyunları"
+        },
+        "getStarted": "Başla",
+        "stores": {
+            "body": "Hesabları idarə et bölməsini açın və istifadə etdiyiniz mağazalara (Epic Games, GOG, Amazon Games və Steam) daxil olun ki, kitabxanalarınız burada görünsün.",
+            "title": "Mağazalarınıza daxil olun"
+        },
+        "title": "GameLib-ə xoş gəlmisiniz"
+    },
     "winetricks": {
         "unavailable": "Winetricks komponent idarəetməsi bu versiyada mövcud deyil",
         "unavailableDetail": "Winetricks dəstəyi gələcək buraxılış üçün təxirə salınıb (D-03, Faza 34.6) və bu versiyadan siyahıya alına və ya quraşdırıla bilməz."

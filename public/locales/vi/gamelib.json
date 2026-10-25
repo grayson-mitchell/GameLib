@@ -558,6 +558,35 @@
             "hostLabel": "Đang xem {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Kiểm tra lại",
+            "openSettings": "Mở Cài đặt hệ thống",
+            "reason": "CrossOver thay đổi các tệp bên trong gói ứng dụng khi chuẩn bị một chai game, và macOS yêu cầu quyền “App Management” cho việc đó. Nếu thiếu quyền này, việc cài game Windows sẽ dừng giữa chừng kèm thông báo của macOS.",
+            "relaunch": "Khởi động lại GameLib",
+            "relaunchNote": "Quyền có hiệu lực sau khi GameLib khởi động lại.",
+            "status": {
+                "checking": "Đang kiểm tra…",
+                "denied": "Quyền truy cập “App Management” chưa được cho phép.",
+                "granted": "Quyền truy cập “App Management” đã được cho phép.",
+                "unknown": "GameLib không xác định được quyền truy cập “App Management” có được cho phép hay không."
+            },
+            "title": "Cho phép “App Management”",
+            "unknownHelp": "Mở Cài đặt hệ thống > Quyền riêng tư & Bảo mật > “App Management” và đảm bảo GameLib đã được bật."
+        },
+        "crossover": {
+            "body": "Game Windows chạy trên macOS thông qua CrossOver, phần mềm trả phí của CodeWeavers. Nếu bạn chơi game Windows, hãy ủng hộ CodeWeavers bằng cách mua CrossOver.",
+            "buy": "Tải CrossOver",
+            "missing": "Không tìm thấy CrossOver trên máy Mac này. Hãy cài đặt từ codeweavers.com trước khi cài game Windows.",
+            "title": "Game Windows trên macOS"
+        },
+        "getStarted": "Bắt đầu",
+        "stores": {
+            "body": "Mở Quản lý tài khoản và đăng nhập vào các cửa hàng bạn dùng (Epic Games, GOG, Amazon Games và Steam) để thư viện của bạn hiển thị tại đây.",
+            "title": "Đăng nhập vào các cửa hàng của bạn"
+        },
+        "title": "Chào mừng bạn đến với GameLib"
+    },
     "winetricks": {
         "unavailable": "Quản lý thành phần Winetricks không khả dụng trên bản dựng này",
         "unavailableDetail": "Hỗ trợ Winetricks được hoãn lại cho bản phát hành trong tương lai (D-03, Phase 34.6) và không thể liệt kê hoặc cài đặt từ bản dựng này."

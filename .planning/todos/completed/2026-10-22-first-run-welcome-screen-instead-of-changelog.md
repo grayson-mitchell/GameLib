@@ -33,3 +33,7 @@ Notes:
 - Related: `2026-10-22-no-crossover-notice-falsely-promises-gamelib-will-set-it-up.md`. The
   install dialog currently claims GameLib sets CrossOver up itself, and the welcome text must not
   repeat that claim.
+
+## Closed 2026-10-26 (quick 261026-b9r)
+
+Shipped: `WelcomeModal` replaces the changelog on the first ever launch only. First run means no `gamelib_welcome_seen` marker, no stored `last_version` and no stored `last_changelog`, decided at module load in `HeroicVersion` before the version effect overwrites `last_version`. Upgrades keep the changelog and "Hide changelog on startup" is unchanged. Dismissing writes the marker and marks the current version's changelog seen. The welcome covers logging into stores, the CrossOver / CodeWeavers support note (it never claims GameLib sets CrossOver up), and the macOS App Management step (see the closed App Management todo). The probe, channels and the exact-URL Rust allowance shipped with it.

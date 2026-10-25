@@ -579,6 +579,35 @@
             "hostLabel": "Ag féachaint ar {{host}} faoi láthair"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Seiceáil arís",
+            "openSettings": "Oscail Socruithe an Chórais",
+            "reason": "Athraíonn CrossOver comhaid taobh istigh de phacáistí aipeanna nuair a ullmhaíonn sé buidéal cluiche, agus iarrann macOS an cead “App Management” chuige sin. Gan é, stopann suiteáil cluichí Windows i lár báire le fógra macOS.",
+            "relaunch": "Atosaigh GameLib",
+            "relaunchNote": "Tagann an cead i bhfeidhm tar éis GameLib a atosú.",
+            "status": {
+                "checking": "Ag seiceáil…",
+                "denied": "Níl rochtain “App Management” ceadaithe fós.",
+                "granted": "Tá rochtain “App Management” ceadaithe.",
+                "unknown": "Níorbh fhéidir le GameLib a chinneadh an bhfuil rochtain “App Management” ceadaithe."
+            },
+            "title": "Ceadaigh “App Management”",
+            "unknownHelp": "Oscail Socruithe an Chórais > Príobháideacht & Slándáil > “App Management” agus cinntigh go bhfuil GameLib casta air."
+        },
+        "crossover": {
+            "body": "Ritheann cluichí Windows ar macOS trí CrossOver, bogearraí íoctha ó CodeWeavers. Má imrímíonn tú cluichí Windows, tacaigh le CodeWeavers trí CrossOver a cheannach.",
+            "buy": "Faigh CrossOver",
+            "missing": "Níor aimsíodh CrossOver ar an Mac seo. Suiteáil é ó codeweavers.com sula suiteálfaidh tú cluichí Windows.",
+            "title": "Cluichí Windows ar macOS"
+        },
+        "getStarted": "Tosaigh",
+        "stores": {
+            "body": "Oscail Bainistigh cuntais agus logáil isteach ar na stórais a úsáideann tú (Epic Games, GOG, Amazon Games agus Steam) ionas go mbeidh do leabharlanna le feiceáil anseo.",
+            "title": "Logáil isteach ar do stórais"
+        },
+        "title": "Fáilte go GameLib"
+    },
     "winetricks": {
         "unavailable": "Níl bainistíocht comhpháirteanna Winetricks ar fáil sa tógáil seo",
         "unavailableDetail": "Cuirtear tacaíocht Winetricks siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a liostú ná a shuiteáil ón tógáil seo."

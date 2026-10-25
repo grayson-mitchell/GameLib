@@ -555,6 +555,35 @@
             "hostLabel": "Praegu vaatad {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Kontrolli uuesti",
+            "openSettings": "Ava Süsteemisätted",
+            "reason": "CrossOver muudab mängupudeli ettevalmistamisel rakenduste pakettide sees olevaid faile ja macOS nõuab selleks luba „App Management“. Ilma selleta jääb Windowsi mängude installimine poole peale kinni ja kuvatakse macOS-i teade.",
+            "relaunch": "Taaskäivita GameLib",
+            "relaunchNote": "Luba jõustub pärast GameLibi taaskäivitamist.",
+            "status": {
+                "checking": "Kontrollin…",
+                "denied": "Juurdepääs „App Management“ pole veel lubatud.",
+                "granted": "Juurdepääs „App Management“ on lubatud.",
+                "unknown": "GameLib ei suutnud kindlaks teha, kas juurdepääs „App Management“ on lubatud."
+            },
+            "title": "Luba „App Management“",
+            "unknownHelp": "Ava Süsteemisätted > Privaatsus ja turvalisus > „App Management“ ning veendu, et GameLib on sisse lülitatud."
+        },
+        "crossover": {
+            "body": "Windowsi mängud töötavad macOS-is CrossOveri kaudu, mis on CodeWeavers'i tasuline tarkvara. Kui mängid Windowsi mänge, toeta palun CodeWeaversit, ostes CrossOveri.",
+            "buy": "Hangi CrossOver",
+            "missing": "CrossOveri ei leitud sellest Macist. Installi see saidilt codeweavers.com enne Windowsi mängude installimist.",
+            "title": "Windowsi mängud macOS-is"
+        },
+        "getStarted": "Alusta",
+        "stores": {
+            "body": "Ava Halda kontosid ja logi sisse poodidesse, mida kasutad (Epic Games, GOG, Amazon Games ja Steam), et sinu teegid siin kuvataks.",
+            "title": "Logi oma poodidesse sisse"
+        },
+        "title": "Tere tulemast GameLibi"
+    },
     "winetricks": {
         "unavailable": "Winetricks komponentide haldamine pole selles versioonis saadaval",
         "unavailableDetail": "Winetricks tugi on lükatud edasi järgmisesse väljalaskesse (D-03, faas 34.6) ja seda ei saa selles versioonis loetleda ega paigaldada."

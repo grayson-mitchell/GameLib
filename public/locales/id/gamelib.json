@@ -558,6 +558,35 @@
             "hostLabel": "Sedang melihat {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Periksa lagi",
+            "openSettings": "Buka Pengaturan Sistem",
+            "reason": "CrossOver mengubah file di dalam paket aplikasi saat menyiapkan botol game, dan macOS meminta izin “App Management” untuk itu. Tanpa izin ini, instalasi game Windows berhenti di tengah jalan disertai notifikasi macOS.",
+            "relaunch": "Mulai ulang GameLib",
+            "relaunchNote": "Izin berlaku setelah GameLib dimulai ulang.",
+            "status": {
+                "checking": "Memeriksa…",
+                "denied": "Akses “App Management” belum diizinkan.",
+                "granted": "Akses “App Management” diizinkan.",
+                "unknown": "GameLib tidak dapat memastikan apakah akses “App Management” diizinkan."
+            },
+            "title": "Izinkan “App Management”",
+            "unknownHelp": "Buka Pengaturan Sistem > Privasi & Keamanan > “App Management” dan pastikan GameLib diaktifkan."
+        },
+        "crossover": {
+            "body": "Game Windows berjalan di macOS melalui CrossOver, perangkat lunak berbayar dari CodeWeavers. Jika Anda memainkan game Windows, mohon dukung CodeWeavers dengan membeli CrossOver.",
+            "buy": "Dapatkan CrossOver",
+            "missing": "CrossOver tidak ditemukan di Mac ini. Instal dari codeweavers.com sebelum menginstal game Windows.",
+            "title": "Game Windows di macOS"
+        },
+        "getStarted": "Mulai",
+        "stores": {
+            "body": "Buka Kelola Akun dan masuk ke toko yang Anda gunakan (Epic Games, GOG, Amazon Games, dan Steam) agar pustaka Anda muncul di sini.",
+            "title": "Masuk ke toko Anda"
+        },
+        "title": "Selamat datang di GameLib"
+    },
     "winetricks": {
         "unavailable": "Manajemen komponen Winetricks tidak tersedia pada build ini",
         "unavailableDetail": "Dukungan Winetricks ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat ditampilkan atau dipasang dari build ini."

@@ -558,6 +558,35 @@
             "hostLabel": "Visar för närvarande {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Kontrollera igen",
+            "openSettings": "Öppna Systeminställningar",
+            "reason": "CrossOver ändrar filer inuti apppaket när det förbereder en spelflaska, och macOS ber om behörigheten “App Management” för det. Utan den avbryts installationen av Windows-spel halvvägs med ett macOS-meddelande.",
+            "relaunch": "Starta om GameLib",
+            "relaunchNote": "Behörigheten börjar gälla efter att GameLib har startats om.",
+            "status": {
+                "checking": "Kontrollerar…",
+                "denied": "Åtkomst via “App Management” är inte tillåten än.",
+                "granted": "Åtkomst via “App Management” är tillåten.",
+                "unknown": "GameLib kunde inte avgöra om åtkomst via “App Management” är tillåten."
+            },
+            "title": "Tillåt “App Management”",
+            "unknownHelp": "Öppna Systeminställningar > Integritet och säkerhet > “App Management” och kontrollera att GameLib är påslaget."
+        },
+        "crossover": {
+            "body": "Windows-spel körs på macOS via CrossOver, betalprogramvara från CodeWeavers. Om du spelar Windows-spel, stöd CodeWeavers genom att köpa CrossOver.",
+            "buy": "Skaffa CrossOver",
+            "missing": "CrossOver hittades inte på den här Macen. Installera det från codeweavers.com innan du installerar Windows-spel.",
+            "title": "Windows-spel på macOS"
+        },
+        "getStarted": "Kom igång",
+        "stores": {
+            "body": "Öppna Hantera konton och logga in i de butiker du använder (Epic Games, GOG, Amazon Games och Steam) så att dina bibliotek visas här.",
+            "title": "Logga in i dina butiker"
+        },
+        "title": "Välkommen till GameLib"
+    },
     "winetricks": {
         "unavailable": "Hantering av Winetricks-komponenter är inte tillgänglig i denna version",
         "unavailableDetail": "Stöd för Winetricks skjuts upp till en framtida version (D-03, fas 34.6) och kan inte listas eller installeras från denna version."

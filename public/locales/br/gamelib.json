@@ -579,6 +579,35 @@
             "hostLabel": "O sellet ouzh {{host}} evit ar mare"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Gwiriañ en-dro",
+            "openSettings": "Digeriñ Arventennoù ar reizhiad",
+            "reason": "CrossOver a cheñch restroù e-barzh pakadoù an arloadoù p'emañ o prientiñ ur voutailh c'hoari, ha macOS a c'houlenn an aotre “App Management” evit se. Hep an aotre-se e chom staliadur ar c'hoarioù Windows a-hanter-hent gant ur c'hemennadenn macOS.",
+            "relaunch": "Adloc'hañ GameLib",
+            "relaunchNote": "An aotre a zeu da dalvezout goude adloc'hañ GameLib.",
+            "status": {
+                "checking": "O wiriañ…",
+                "denied": "An moned “App Management” n'eo ket aotreet c'hoazh.",
+                "granted": "An moned “App Management” zo aotreet.",
+                "unknown": "N'eo ket bet gouest GameLib da anavezout hag-eñ eo aotreet an moned “App Management”."
+            },
+            "title": "Aotreañ “App Management”",
+            "unknownHelp": "Digorit Arventennoù ar reizhiad > Buhez prevez ha surentez > “App Management” ha gwiriit ez eo enaouet GameLib."
+        },
+        "crossover": {
+            "body": "Ar c'hoarioù Windows a laka da dreiñ war macOS dre CrossOver, ur meziant da baeañ gant CodeWeavers. M'hoc'h eus c'hoant da c'hoari gant c'hoarioù Windows, skoazellit CodeWeavers en ur brenañ CrossOver.",
+            "buy": "Kaout CrossOver",
+            "missing": "N'eo ket bet kavet CrossOver war ar Mac-mañ. Staliit anezhañ adalek codeweavers.com a-raok staliañ c'hoarioù Windows.",
+            "title": "C'hoarioù Windows war macOS"
+        },
+        "getStarted": "Kregiñ",
+        "stores": {
+            "body": "Digorit Merañ ar c'hontoù ha kevreit ouzh ar stalioù a implijit (Epic Games, GOG, Amazon Games ha Steam) evit ma teuio ho levraouegoù war wel amañ.",
+            "title": "Kevreit ouzh ho stal"
+        },
+        "title": "Donemat e GameLib"
+    },
     "winetricks": {
         "unavailable": "N'eo ket hegerz merañ parzhioù Winetricks war ar savadur-mañ",
         "unavailableDetail": "Dilezet eo skor Winetricks evit un embannadur da zont (D-03, Fazenn 34.6) ha ne c'hall ket bezañ rollet pe staliet diwar ar savadur-mañ."

@@ -558,6 +558,35 @@
             "hostLabel": "ამჟამად ნახულობთ {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "ხელახლა შემოწმება",
+            "openSettings": "სისტემის პარამეტრების გახსნა",
+            "reason": "თამაშის ბოთლის მომზადებისას CrossOver ცვლის ფაილებს აპლიკაციის პაკეტებში და macOS ამისთვის „App Management“-ის ნებართვას ითხოვს. მის გარეშე Windows-ის თამაშების ინსტალაცია შუაში ჩერდება macOS-ის შეტყობინებით.",
+            "relaunch": "GameLib-ის გადატვირთვა",
+            "relaunchNote": "ნებართვა ძალაში შედის GameLib-ის გადატვირთვის შემდეგ.",
+            "status": {
+                "checking": "მოწმდება…",
+                "denied": "„App Management“-ზე წვდომა ჯერ არ არის დაშვებული.",
+                "granted": "„App Management“-ზე წვდომა დაშვებულია.",
+                "unknown": "GameLib-მა ვერ დაადგინა, დაშვებულია თუ არა „App Management“-ზე წვდომა."
+            },
+            "title": "დაუშვით „App Management“",
+            "unknownHelp": "გახსენით სისტემის პარამეტრები > კონფიდენციალურობა და უსაფრთხოება > „App Management“ და დარწმუნდით, რომ GameLib ჩართულია."
+        },
+        "crossover": {
+            "body": "Windows-ის თამაშები macOS-ზე CrossOver-ით მუშაობს — CodeWeavers-ის ფასიანი პროგრამით. თუ Windows-ის თამაშებს თამაშობთ, გთხოვთ, შეიძინეთ CrossOver და დაუჭირეთ მხარი CodeWeavers-ს.",
+            "buy": "CrossOver-ის მიღება",
+            "missing": "CrossOver ამ Mac-ზე ვერ მოიძებნა. დააინსტალირეთ ის codeweavers.com-იდან, სანამ Windows-ის თამაშებს დააინსტალირებთ.",
+            "title": "Windows-ის თამაშები macOS-ზე"
+        },
+        "getStarted": "დაწყება",
+        "stores": {
+            "body": "გახსენით „ანგარიშების მართვა“ და შედით მაღაზიებში, რომლებსაც იყენებთ (Epic Games, GOG, Amazon Games და Steam), რათა თქვენი ბიბლიოთეკები აქ გამოჩნდეს.",
+            "title": "შედით თქვენს მაღაზიებში"
+        },
+        "title": "კეთილი იყოს თქვენი მობრძანება GameLib-ში"
+    },
     "winetricks": {
         "unavailable": "Winetricks კომპონენტების მართვა ამ ვერსიაზე მიუწვდომელია",
         "unavailableDetail": "Winetricks-ის მხარდაჭერა გადადებულია მომავალ გამოშვებამდე (D-03, ფაზა 34.6) და ამ ვერსიიდან მისი ჩამონათვალის ნახვა ან დაყენება შეუძლებელია."

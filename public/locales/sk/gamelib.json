@@ -572,6 +572,35 @@
             "hostLabel": "Práve si prezeráte {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Skontrolovať znova",
+            "openSettings": "Otvoriť Nastavenia systému",
+            "reason": "CrossOver pri príprave hernej fľaše mení súbory vo vnútri balíkov aplikácií a macOS na to vyžaduje oprávnenie „App Management“. Bez neho sa inštalácia hier pre Windows zastaví v polovici s oznámením macOS.",
+            "relaunch": "Reštartovať GameLib",
+            "relaunchNote": "Oprávnenie sa prejaví po reštarte GameLib.",
+            "status": {
+                "checking": "Kontroluje sa…",
+                "denied": "Prístup „App Management“ zatiaľ nie je povolený.",
+                "granted": "Prístup „App Management“ je povolený.",
+                "unknown": "GameLib nedokázal zistiť, či je prístup „App Management“ povolený."
+            },
+            "title": "Povoliť „App Management“",
+            "unknownHelp": "Otvorte Nastavenia systému > Súkromie a bezpečnosť > „App Management“ a overte, že je GameLib zapnutý."
+        },
+        "crossover": {
+            "body": "Hry pre Windows bežia na macOS prostredníctvom CrossOver, plateného softvéru od CodeWeavers. Ak hráte hry pre Windows, podporte prosím CodeWeavers zakúpením CrossOver.",
+            "buy": "Získať CrossOver",
+            "missing": "CrossOver sa na tomto Mac nenašiel. Pred inštaláciou hier pre Windows ho nainštalujte z codeweavers.com.",
+            "title": "Hry pre Windows na macOS"
+        },
+        "getStarted": "Začať",
+        "stores": {
+            "body": "Otvorte Spravovať účty a prihláste sa do obchodov, ktoré používate (Epic Games, GOG, Amazon Games a Steam), aby sa tu zobrazili vaše knižnice.",
+            "title": "Prihláste sa do svojich obchodov"
+        },
+        "title": "Vitajte v GameLib"
+    },
     "winetricks": {
         "unavailable": "Správa komponentov Winetricks nie je v tomto builde dostupná",
         "unavailableDetail": "Podpora pre Winetricks je odložená na budúce vydanie (D-03, fáza 34.6) a v tomto builde ju nie je možné zobraziť ani nainštalovať."

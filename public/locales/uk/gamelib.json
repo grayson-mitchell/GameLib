@@ -572,6 +572,35 @@
             "hostLabel": "Зараз переглядається {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Перевірити знову",
+            "openSettings": "Відкрити Системні параметри",
+            "reason": "Під час підготовки ігрового контейнера CrossOver змінює файли всередині пакетів програм, і для цього macOS запитує дозвіл «App Management». Без нього встановлення ігор для Windows зупиняється на півдорозі із сповіщенням macOS.",
+            "relaunch": "Перезапустити GameLib",
+            "relaunchNote": "Дозвіл набуде чинності після перезапуску GameLib.",
+            "status": {
+                "checking": "Перевірка…",
+                "denied": "Доступ «App Management» ще не дозволено.",
+                "granted": "Доступ «App Management» дозволено.",
+                "unknown": "GameLib не зміг визначити, чи дозволено доступ «App Management»."
+            },
+            "title": "Дозволити «App Management»",
+            "unknownHelp": "Відкрийте Системні параметри > Конфіденційність і безпека > «App Management» і переконайтеся, що GameLib увімкнено."
+        },
+        "crossover": {
+            "body": "Ігри для Windows працюють на macOS через CrossOver — платне програмне забезпечення від CodeWeavers. Якщо ви граєте в ігри для Windows, підтримайте CodeWeavers і придбайте CrossOver.",
+            "buy": "Отримати CrossOver",
+            "missing": "CrossOver не знайдено на цьому Mac. Установіть його з codeweavers.com, перш ніж встановлювати ігри для Windows.",
+            "title": "Ігри для Windows на macOS"
+        },
+        "getStarted": "Почати",
+        "stores": {
+            "body": "Відкрийте «Керування обліковими записами» й увійдіть у магазини, якими ви користуєтеся (Epic Games, GOG, Amazon Games і Steam), щоб ваші бібліотеки з’явилися тут.",
+            "title": "Увійдіть у свої магазини"
+        },
+        "title": "Ласкаво просимо до GameLib"
+    },
     "winetricks": {
         "unavailable": "Керування компонентами Winetricks недоступне у цій збірці",
         "unavailableDetail": "Підтримка Winetricks відкладена до майбутнього випуску (D-03, Фаза 34.6) і не може бути показана або встановлена з цієї збірки."

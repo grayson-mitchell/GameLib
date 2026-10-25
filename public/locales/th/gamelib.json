@@ -558,6 +558,35 @@
             "hostLabel": "กำลังดู {{host}} อยู่"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "ตรวจสอบอีกครั้ง",
+            "openSettings": "เปิดการตั้งค่าระบบ",
+            "reason": "CrossOver จะแก้ไขไฟล์ภายในแพ็กเกจแอปเมื่อเตรียมขวดเกม และ macOS จะขอสิทธิ์ “App Management” สำหรับสิ่งนี้ หากไม่มีสิทธิ์ การติดตั้งเกม Windows จะหยุดค้างกลางคันพร้อมการแจ้งเตือนจาก macOS",
+            "relaunch": "รีสตาร์ท GameLib",
+            "relaunchNote": "สิทธิ์จะมีผลหลังจากรีสตาร์ท GameLib",
+            "status": {
+                "checking": "กำลังตรวจสอบ…",
+                "denied": "ยังไม่อนุญาตการเข้าถึง “App Management”",
+                "granted": "อนุญาตการเข้าถึง “App Management” แล้ว",
+                "unknown": "GameLib ไม่สามารถระบุได้ว่าอนุญาตการเข้าถึง “App Management” หรือไม่"
+            },
+            "title": "อนุญาต “App Management”",
+            "unknownHelp": "เปิด การตั้งค่าระบบ > ความเป็นส่วนตัวและความปลอดภัย > “App Management” แล้วตรวจสอบว่าเปิด GameLib อยู่"
+        },
+        "crossover": {
+            "body": "เกม Windows ทำงานบน macOS ผ่าน CrossOver ซึ่งเป็นซอฟต์แวร์แบบเสียเงินจาก CodeWeavers หากคุณเล่นเกม Windows โปรดสนับสนุน CodeWeavers ด้วยการซื้อ CrossOver",
+            "buy": "รับ CrossOver",
+            "missing": "ไม่พบ CrossOver บน Mac เครื่องนี้ ติดตั้งจาก codeweavers.com ก่อนติดตั้งเกม Windows",
+            "title": "เกม Windows บน macOS"
+        },
+        "getStarted": "เริ่มต้นใช้งาน",
+        "stores": {
+            "body": "เปิด “จัดการบัญชี” แล้วเข้าสู่ระบบร้านค้าที่คุณใช้ (Epic Games, GOG, Amazon Games และ Steam) เพื่อให้คลังเกมของคุณแสดงที่นี่",
+            "title": "เข้าสู่ระบบร้านค้าของคุณ"
+        },
+        "title": "ยินดีต้อนรับสู่ GameLib"
+    },
     "winetricks": {
         "unavailable": "การจัดการคอมโพเนนต์ Winetricks ไม่พร้อมใช้งานในบิลด์นี้",
         "unavailableDetail": "การรองรับ Winetricks ถูกเลื่อนไปเป็นรุ่นถัดไป (D-03, Phase 34.6) และไม่สามารถแสดงรายการหรือติดตั้งได้จากบิลด์นี้"

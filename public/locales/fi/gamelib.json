@@ -558,6 +558,35 @@
             "hostLabel": "Katselet nyt kohdetta {{host}}"
         }
     },
+    "welcome": {
+        "appManagement": {
+            "checkAgain": "Tarkista uudelleen",
+            "openSettings": "Avaa Järjestelmäasetukset",
+            "reason": "CrossOver muuttaa sovelluspakettien sisällä olevia tiedostoja valmistellessaan pelipulloa, ja macOS pyytää siihen “App Management” -käyttöoikeutta. Ilman sitä Windows-pelien asennus pysähtyy kesken macOS-ilmoituksen kera.",
+            "relaunch": "Käynnistä GameLib uudelleen",
+            "relaunchNote": "Käyttöoikeus tulee voimaan, kun GameLib on käynnistetty uudelleen.",
+            "status": {
+                "checking": "Tarkistetaan…",
+                "denied": "“App Management” -käyttöä ei ole vielä sallittu.",
+                "granted": "“App Management” -käyttö on sallittu.",
+                "unknown": "GameLib ei pystynyt selvittämään, onko “App Management” -käyttö sallittu."
+            },
+            "title": "Salli “App Management”",
+            "unknownHelp": "Avaa Järjestelmäasetukset > Tietosuoja ja turvallisuus > “App Management” ja varmista, että GameLib on päällä."
+        },
+        "crossover": {
+            "body": "Windows-pelit toimivat macOS:llä CrossOverin kautta, joka on CodeWeaversin maksullinen ohjelma. Jos pelaat Windows-pelejä, tue CodeWeaversia ostamalla CrossOver.",
+            "buy": "Hanki CrossOver",
+            "missing": "CrossOveria ei löytynyt tältä Macilta. Asenna se osoitteesta codeweavers.com ennen Windows-pelien asentamista.",
+            "title": "Windows-pelit macOS:llä"
+        },
+        "getStarted": "Aloita",
+        "stores": {
+            "body": "Avaa Hallitse tilejä ja kirjaudu käyttämiisi kauppoihin (Epic Games, GOG, Amazon Games ja Steam), jotta kirjastosi näkyvät täällä.",
+            "title": "Kirjaudu kauppoihisi"
+        },
+        "title": "Tervetuloa GameLibiin"
+    },
     "winetricks": {
         "unavailable": "Winetricks-komponenttien hallinta ei ole käytettävissä tässä versiossa",
         "unavailableDetail": "Winetricks-tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi luetella tai asentaa tästä versiosta."
