@@ -46,7 +46,16 @@ export type ImportTableResult = {
 // `DLL Name: steam_api.dll` / `DLL Name: steam_api64.dll` (either row
 // layout's heading looks the same). Captures the dll name so the x64
 // variant can be told apart from x86.
-const STEAM_API_HEADING = /DLL Name:\s*(steam_api(64)?\.dll)\s*$/i
+//
+// The `DLL Name:` prefix is matched case-SENSITIVELY on purpose: objdump prints
+// the import-table heading as `DLL Name:` but the EXPORT table's own name as
+// `DLL name:` (lowercase n). Matching the export line as an import heading made
+// a PE whose export name is another shipped dll look like it imports it
+// (debug uw-284100-no-iface-pins: CSteamworks64.dll's export name is
+// "CSteamworks.dll", so the closure walk followed the x86 sibling and reported
+// conflicting steam_api / steam_api64 headings).
+const STEAM_API_HEADING =
+  /DLL Name:\s*((?:[sS][tT][eE][aA][mM]_[aA][pP][iI])(?:64)?\.[dD][lL][lL])\s*$/
 
 // Any other imported DLL's own heading -- ends the steam_api(64)?.dll
 // section when encountered while inside it.
@@ -137,7 +146,8 @@ export function parseImportedDllNames(objdumpOutput: string): string[] {
   const seen = new Set<string>()
   const names: string[] = []
   for (const line of objdumpOutput.split('\n')) {
-    const m = line.match(/DLL Name:\s*(\S+)\s*$/i)
+    // Case-sensitive: the export table's `DLL name:` line is not an import.
+    const m = line.match(/DLL Name:\s*(\S+)\s*$/)
     if (!m) continue
     const key = m[1].toLowerCase()
     if (seen.has(key)) continue

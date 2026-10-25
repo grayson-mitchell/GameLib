@@ -474,6 +474,48 @@ describe('importScan', () => {
       expect(r3).toMatchObject({ status: 'ok', arch: 'none' })
     })
 
+    it('does not follow an export-table `DLL name:` as an import (debug uw-284100-no-iface-pins)', async () => {
+      // Real objdump shape for Unclaimed World's CSteamworks64.dll (x64): its
+      // IMPORT table names steam_api64.dll, and its EXPORT table's own name
+      // (lowercase `DLL name:`) is "CSteamworks.dll" -- the x86 sibling.
+      mk('CSteamworks64.dll', 'CSteamworks.dll')
+      const csteamworks64 = `
+The Import Tables:
+  lookup 00016d58 time 00000000 fwd 00000000 name 00017176 addr 00014218
+
+    DLL Name: steam_api64.dll
+    Hint/Ord  Name
+         686  Steam_GetHSteamUserCurrent
+           4  SteamAPI_GetSteamInstallPath
+
+  lookup 00016b40 time 00000000 fwd 00000000 name 000171ac addr 00014000
+
+    DLL Name: KERNEL32.dll
+    Hint/Ord  Name
+         520  GetLastError
+
+Export Table:
+ DLL name: CSteamworks.dll
+ Ordinal base: 1
+`
+      const csteamworks86 = X86_STEAM_API_DLL_IMPORTS
+      answer({
+        'CSteamworks64.dll': csteamworks64,
+        'CSteamworks.dll': csteamworks86
+      })
+      const r = await scanSteamApiImports(
+        '284100',
+        join(dir, 'CSteamworks64.dll')
+      )
+      expect(r).toMatchObject({
+        status: 'ok',
+        arch: 'x64',
+        dll: 'steam_api64.dll'
+      })
+      // The x86 sibling named only by the export table is never spawned.
+      expect(spawnedTargets()).toEqual([join(dir, 'CSteamworks64.dll')])
+    })
+
     it('never spawns objdump for path-like, missing, or system names', async () => {
       mk('a.exe')
       const exe = `
