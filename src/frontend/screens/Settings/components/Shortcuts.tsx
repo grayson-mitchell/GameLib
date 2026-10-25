@@ -11,7 +11,6 @@ const Shortcuts = () => {
   const { platform } = useContext(ContextProvider)
   const isWin = platform === 'win32'
   const isLinux = platform === 'linux'
-  const supportsDesktopShortcut = isWin || isLinux
 
   const [addDesktopShortcuts, setAddDesktopShortcuts] = useSetting(
     'addDesktopShortcuts',
@@ -43,17 +42,15 @@ const Shortcuts = () => {
 
   return (
     <>
-      {supportsDesktopShortcut && (
-        <ToggleSwitch
-          htmlId="shortcutsToDesktop"
-          value={addDesktopShortcuts}
-          handleChange={() => setAddDesktopShortcuts(!addDesktopShortcuts)}
-          title={t(
-            'setting.adddesktopshortcuts',
-            'Add desktop shortcuts automatically'
-          )}
-        />
-      )}
+      <ToggleSwitch
+        htmlId="shortcutsToDesktop"
+        value={addDesktopShortcuts}
+        handleChange={() => setAddDesktopShortcuts(!addDesktopShortcuts)}
+        title={t(
+          'setting.adddesktopshortcuts',
+          'Add desktop shortcuts automatically'
+        )}
+      />
 
       <ToggleSwitch
         htmlId="shortcutsToMenu"
