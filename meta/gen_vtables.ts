@@ -1169,12 +1169,23 @@ function emitStubBody(
 
 // 51-15: Win64 unknown-interface-version fallback -- a real pointer to a
 // do-nothing vtable, so a game probing for an interface this bridge does
-// not serve gets a safely-callable null object (reported as stubbed, never
-// a crash) rather than a NULL deref. Win64 is caller-cleans (unlike i386
-// __thiscall, which is callee-cleans and therefore needs an arity-correct
-// stub per slot, see emitStubBody's dummy-param mechanism above) -- ONE
-// generic zero-returning function can safely serve every slot regardless
-// of the real interface's arity.
+// not serve gets a callable null object (reported as stubbed) rather than a
+// NULL deref. Win64 is caller-cleans (unlike i386 __thiscall, which is
+// callee-cleans and therefore needs an arity-correct stub per slot, see
+// emitStubBody's dummy-param mechanism above) -- so ONE generic
+// zero-returning function is arity-safe for every slot.
+//
+// 51-REVIEW WR-03: arity-safe is NOT crash-free. MSVC x64 returns a
+// user-defined type from a member function through a hidden pointer (RDX)
+// and expects RAX to hold that same pointer on return. This function returns
+// 0 in RAX for every slot, so a caller of an sret slot on an unserved
+// interface (e.g. ISteamController::GetDigitalActionData /
+// GetAnalogActionData) reads through address 0 and crashes. Since 51-20
+// (CR-03) the fallback is reached only via runtime interface lookup
+// (SteamInternal_CreateInterface / ISteamClient::GetISteamXxx), never a bare
+// accessor, which narrows but does not close this. A correct fix needs
+// per-family null objects whose sret slots zero-fill and return their second
+// argument, generated from the Proton inventory; it is not built yet.
 export const X64_NULL_OBJECT_SLOTS = 256
 
 /** Generator-stable family grouping key for ISteamClient (51-15) -- the
