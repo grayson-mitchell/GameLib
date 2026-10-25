@@ -20,6 +20,12 @@
  * dependency surface small and its unit tests cheap. Do not restore the
  * stronger claim without re-checking that chain.
  *
+ * quick 261025-mfz: `readKnownFixesLayered` adds three trust layers for the
+ * Steam bridge: local (`fixes/local/`), then bundled (`public/fixes/`, shipped
+ * in the app), then remote (`fixes/`). The first layer with a parsed object
+ * wins whole-file. Keys in TRUSTED_ONLY_KNOWN_FIX_KEYS are stripped from the
+ * remote layer (decision 6). `readKnownFixes` is unchanged for other stores.
+ *
  * MUST NOT import `electron` (or anything that transitively reaches it) --
  * including `backend/ipc` -- the Node sidecar imports this module directly.
  */
@@ -30,19 +36,21 @@ import { readFileSync } from 'fs'
 
 import { KnowFixesInfo, Runner } from 'common/types'
 import { storeMap } from 'common/utils'
-import { fixesPath } from './constants/paths'
+import { bundledFixesPath, fixesPath, localFixesPath } from './constants/paths'
 import { logWarning } from './logger'
 
-export function readKnownFixes(
+function readFixesFileWithin(
+  dir: string,
   appName: string,
-  runner: Runner
+  runner: Runner,
+  layerLabel?: string
 ): KnowFixesInfo | null {
-  const fixPath = resolve(fixesPath, `${appName}-${storeMap[runner]}.json`)
+  const fixPath = resolve(dir, `${appName}-${storeMap[runner]}.json`)
 
   // WR-06 (34.2-REVIEW.md round 1): `appName` arrives as a free string from the
   // renderer via the `getKnownFixes` channel. `join`/`resolve` NORMALISE `..`
   // segments rather than rejecting them, so a traversing appName escaped
-  // `fixesPath` and made this an arbitrary-file read primitive -- whatever it
+  // the directory and made this an arbitrary-file read primitive -- whatever it
   // landed on was `readFileSync`'d and `JSON.parse`'d.
   //
   // Same containment idiom as `sidecar/fileStore.ts:121-133`, and the same
@@ -53,7 +61,7 @@ export function readKnownFixes(
   // Returns null rather than throwing, unlike fileStore: every failure mode of
   // this function (absent file, malformed JSON) already yields null and callers
   // depend on that. The `logWarning` keeps it loud rather than silent.
-  const relativeToFixes = relative(resolve(fixesPath), fixPath)
+  const relativeToFixes = relative(resolve(dir), fixPath)
   if (
     relativeToFixes.startsWith('..') ||
     isAbsolute(relativeToFixes) ||
@@ -76,7 +84,58 @@ export function readKnownFixes(
   } catch (error) {
     // if we fail to download the json file, it can be malformed causing
     // JSON.parse to throw an exception
-    logWarning(`Known fixes could not be applied, ignoring.\n${error}`)
+    logWarning(
+      `Known fixes could not be applied${layerLabel ? ` (${layerLabel} layer)` : ''}, ignoring.\n${error}`
+    )
     return null
   }
+}
+
+export function readKnownFixes(
+  appName: string,
+  runner: Runner
+): KnowFixesInfo | null {
+  return readFixesFileWithin(fixesPath, appName, runner)
+}
+
+// Keys honoured only from bundled or local sources. dllOverrides, overlays and
+// shimFeatures join this list when they land (decision 6).
+export const TRUSTED_ONLY_KNOWN_FIX_KEYS = ['registry'] as const
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function readKnownFixesLayered(
+  appName: string,
+  runner: Runner
+): KnowFixesInfo | null {
+  const layers: [string, string][] = [
+    [localFixesPath, 'local'],
+    [bundledFixesPath, 'bundled'],
+    [fixesPath, 'remote']
+  ]
+  for (const [dir, label] of layers) {
+    const parsed: unknown = readFixesFileWithin(dir, appName, runner, label)
+    if (parsed === null) continue
+    if (!isPlainObject(parsed)) {
+      logWarning(
+        `Known fixes for '${appName}' (${label} layer) is not an object, ignoring.`
+      )
+      continue
+    }
+    if (label !== 'remote') return parsed as unknown as KnowFixesInfo
+
+    const copy: Record<string, unknown> = { ...parsed }
+    for (const key of TRUSTED_ONLY_KNOWN_FIX_KEYS) {
+      if (key in copy) {
+        delete copy[key]
+        logWarning(
+          `Known fixes for '${appName}': ignoring '${key}' from the remote layer, it is honoured only from bundled or local sources.`
+        )
+      }
+    }
+    return copy as unknown as KnowFixesInfo
+  }
+  return null
 }

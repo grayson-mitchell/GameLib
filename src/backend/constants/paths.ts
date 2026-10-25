@@ -82,6 +82,13 @@ export const publicDir = resolve(
   app.isPackaged || process.env.CI === 'e2e' ? 'build' : 'public'
 )
 
+// Curated, in-repo known-fixes layer (decision 6): `public/fixes/` in dev,
+// `build/fixes` packaged (shipped by the src-tauri/tauri.conf.json resource
+// entry). Trusted to carry keys the remote layer may not.
+export const bundledFixesPath = fixAsarPath(join(publicDir, 'fixes'))
+// Operator-owned overrides; replace the bundled profile whole-file.
+export const localFixesPath = join(fixesPath, 'local')
+
 export const fakeEpicExePath = fixAsarPath(
   join(publicDir, 'bin', 'x64', 'win32', 'EpicGamesLauncher.exe')
 )

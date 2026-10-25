@@ -1109,8 +1109,26 @@ export type InstallInfo =
   | ZoomInstalledInfo
   | ZoomInstallInfo
 
+export type KnownFixRegistryView = 32 | 64
+
+export interface KnownFixRegistryEntry {
+  key: string
+  name: string
+  type: 'REG_DWORD' | 'REG_SZ'
+  value: number | string
+  views?: KnownFixRegistryView[]
+}
+
 export interface KnowFixesInfo {
   title: string
+  /**
+   * Registry values to set in the Steam bridge bottle. Honoured only from the
+   * bundled or local known-fixes sources (decision 6), never the remote layer.
+   * `views` defaults to both 32 and 64. Applied by the Steam bridge only today.
+   */
+  registry?: KnownFixRegistryEntry[]
+  /** Link to the evidence for the fix (decision 3). */
+  evidence?: string
   notes?: Record<string, string>
   winetricks?: string[]
   runInPrefix?: string[]
