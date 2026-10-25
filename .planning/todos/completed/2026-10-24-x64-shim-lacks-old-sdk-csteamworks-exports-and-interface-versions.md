@@ -88,3 +88,33 @@ larger lever.
 ## Evidence (2026-10-25, phase 53 live run, 53-UAT item 11)
 
 Step 3 (AnyCPU arch, D-53-10, amended to also honour 32BITPREFERRED) shipped in 53-02/53-05. Steps 1, 2, 4, 5 remain. Live confirmation: Unclaimed World 284100 still crashes in Wine with `unimplemented function steam_api64.dll.SteamAPI_InitSafe called in 64-bit code`, backtrace ntdll+0x68870 then csteamworks64+0x17da; no HELLO. Still pending.
+
+## Closed 2026-10-25 (quick 261025-t7i)
+
+- **Step 1, exports: DONE for x64 (`99eaac2f3`).** The real gap on the then-current shim was 6, not
+  12; 53-04 had already added the breakpad, minidump and install-path no-ops. Added
+  `SteamAPI_InitSafe`, which reports init code 2 once and never calls `SteamAPI_Init`, plus
+  `SteamGameServer_InitSafe`, `Steam_RunCallbacks`, `Steam_RegisterInterfaceFuncs`,
+  `Steam_GetHSteamUserCurrent`, and `g_pSteamClientGameServer` as a NULL data export. Disassembly
+  confirmed CSteamworks64 dereferences that pointer only on game-server paths.
+  `pnpm check-csteamworks64-exports` gates 29/29.
+- **Step 2, versions: DONE, but this todo's 14-version list was the wrong one.** That list came from
+  the x86 CSteamworks.dll, around SDK 1.30. The x64 wrapper that actually loads is Steamworks.NET
+  7.0.0 (SDK 1.34), and it requests 22 versions. Ten were added from Proton's inventory at the pinned
+  SHA: User018, Utils007, Apps007, RemoteStorage012, UGC007, HTTP002, Screenshots002, HTMLSurface_003,
+  Inventory_V001 and Video_V001. A test pins their slots.
+- **Step 3: shipped earlier, in 53-02/53-05.**
+- **Step 4: measured as one installed title.**
+- **Step 5, restore: DONE by hand.** The Mac Steam console's `download_depot` fetched the Windows
+  depot, and the next placement created `.gamelib-orig`. The other bottles with no backup are tracked
+  in `2026-10-25-bridge-shims-placed-without-gamelib-orig-backup.md`.
+- **Also found and fixed live: `4d26c70d1`** (debug `uw-284100-no-iface-pins`). `importParse.ts`
+  matched objdump's export-table `DLL name:` line as an import. This affected any importer PE whose
+  export name differs from its file name. The census diff showed no other row changed.
+- **Live result, 22:00:** HELLO, `GINIT fn=SteamAPI_InitSafe ok=1`, 22 `iface.` pins, and
+  `CALL SteamUtils007.GetAppID`. Steamworks.NET init no longer fails. Recorded as working but
+  **unverified** under the unchanged 53-11 rule, which needs 2 or more game calls including an
+  identity call; the operator chose to keep the rule.
+- **Deferred:** x86 (17 exports, SteamClient015, VR_*) under D-53-09.
+- **The game still exits** on a Media Foundation error opening its main-menu WMV. That is not a
+  Steam problem; see `2026-10-25-unclaimed-world-mainmenu-wmv-fails-in-wine-media-foundation.md`.
