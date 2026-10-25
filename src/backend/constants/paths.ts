@@ -83,8 +83,10 @@ export const publicDir = resolve(
 )
 
 // Curated, in-repo known-fixes layer (decision 6): `public/fixes/` in dev,
-// `build/fixes` packaged (shipped by the src-tauri/tauri.conf.json resource
-// entry). Trusted to carry keys the remote layer may not.
+// `build/fixes` packaged. The src-tauri/tauri.conf.json resource entry ships it
+// straight from `public/fixes/`, not the Vite build output: `tauri dev` never
+// runs a Vite build, and its build script fails on a missing resource path.
+// Trusted to carry keys the remote layer may not.
 export const bundledFixesPath = fixAsarPath(join(publicDir, 'fixes'))
 // Operator-owned overrides; replace the bundled profile whole-file.
 export const localFixesPath = join(fixesPath, 'local')

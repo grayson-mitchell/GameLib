@@ -55,7 +55,7 @@
     "externalBin": ["binaries/gamelib-sidecar"],
     "resources": {
       "../build/locales/": "build/locales",
-      "../build/fixes/": "build/fixes",
+      "../public/fixes/": "build/fixes",
       "../build/changelog.json": "build/changelog.json",
       "../build/webviewPreload.js": "build/webviewPreload.js",
       "../build/icon.png": "build/icon.png"
