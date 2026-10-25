@@ -23,11 +23,22 @@ import {
   rm,
   rmdir,
   chmod,
+  readFile,
+  writeFile,
   type FileHandle
 } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative, dirname, isAbsolute, join, basename } from 'path'
+import {
+  STEAM_COMMON_REDIST_APP_ID,
+  INSTALLSCRIPT_FLAG,
+  classifySharedRedist,
+  declaredSharedRedistDepotIds,
+  parseInstallScript,
+  type InstallScriptEntry,
+  type SharedRedistKind
+} from './bridge/sharedRedists'
 import { getFileSize, sendProgressUpdate } from 'backend/utils'
 import { SteamUser } from './user'
 import {
@@ -1021,6 +1032,373 @@ export async function prescreenBridgeDepots(
     LogPrefix.Steam
   )
   return result
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Quick 261025-rkj: Steamworks Common Redistributables (app 228980) for the
+// bridge first-launch step.
+//
+// A game's appinfo declares shared depots with `depotfromapp: 228980`;
+// depot/select.ts skips those (ownership gate + SharedDepots rule), so they
+// never reach a bridge bottle. This entry point builds the descriptors
+// directly from the game's appinfo, fetches key + manifest under the OWNER app
+// 228980 (a free-download app), and downloads each depot into ONE shared cache.
+// It deliberately does NOT use selectDepots / buildDepotPlan /
+// downloadSteamDepots / finalizeToSteam: no ACF is wanted for 228980.
+
+/** One downloaded shared redist depot, ready for the bottle runner. */
+export interface SharedRedistDepot {
+  depotId: string
+  gid: string
+  kind: SharedRedistKind
+  /** `<Family> <Version>` from the installscript path, else `depot <id>`. */
+  label: string
+  /** Host path of the `Steamworks Shared` install dir holding `_CommonRedist`. */
+  installDirHost: string
+  entries: InstallScriptEntry[]
+}
+
+export interface DownloadSharedRedistOpts {
+  /** `<dir>/common/Steamworks Shared/...` is written under this directory. */
+  cacheSteamappsDir: string
+  /** Trusted-profile opt-ins; widens the policy for depots the game declares only. */
+  optInDepotIds: readonly string[]
+  signal?: AbortSignal
+  /** Called with the component label before a depot's full download starts. */
+  onComponent?: (label: string) => void
+  /** Test seam: defaults to {@link downloadDepotFiles}. */
+  downloadFiles?: typeof downloadDepotFiles
+}
+
+export interface SharedRedistDownloadResult {
+  status: 'offline' | 'none' | 'ok'
+  /** Depots downloaded and classified runnable (declared order). */
+  depots: SharedRedistDepot[]
+  /** Declared ids that could not be evaluated or downloaded: retry next launch. */
+  failed: string[]
+  /** Policy skips (kind 'other' and not opted in, or kind not establishable). */
+  skipped: string[]
+}
+
+const SHARED_REDIST_INDEX_FILE = 'gamelib-shared-redist-index.json'
+const SHARED_REDIST_DEFAULT_INSTALLDIR = 'Steamworks Shared'
+
+/** In-process single-flight so two concurrent launches never write the same files. */
+const sharedRedistInFlight = new Map<string, Promise<boolean>>()
+
+function sharedRedistSingleFlight(
+  key: string,
+  run: () => Promise<boolean>
+): Promise<boolean> {
+  const existing = sharedRedistInFlight.get(key)
+  if (existing) return existing
+  const p = run().finally(() => {
+    sharedRedistInFlight.delete(key)
+  })
+  sharedRedistInFlight.set(key, p)
+  return p
+}
+
+async function readSharedRedistIndex(
+  cacheSteamappsDir: string
+): Promise<Record<string, string>> {
+  try {
+    const raw: unknown = JSON.parse(
+      await readFile(join(cacheSteamappsDir, SHARED_REDIST_INDEX_FILE), 'utf8')
+    )
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+    const out: Record<string, string> = {}
+    for (const [k, v] of Object.entries(raw)) {
+      if (typeof v === 'string') out[k] = v
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+async function writeSharedRedistIndex(
+  cacheSteamappsDir: string,
+  index: Record<string, string>
+): Promise<void> {
+  await mkdir(cacheSteamappsDir, { recursive: true })
+  await writeFile(
+    join(cacheSteamappsDir, SHARED_REDIST_INDEX_FILE),
+    JSON.stringify(index, null, 2)
+  )
+}
+
+function publicManifestGid(entry: unknown): string | undefined {
+  const manifests = (
+    entry as { manifests?: Record<string, unknown> } | undefined
+  )?.manifests
+  const m = manifests?.public
+  if (typeof m === 'string' && m) return m
+  const gid = (m as { gid?: unknown } | undefined)?.gid
+  if ((typeof gid === 'string' || typeof gid === 'number') && String(gid))
+    return String(gid)
+  return undefined
+}
+
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await stat(p)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Download the 228980 depots a game declares and classify each from its own installscript.
+ * Every declared depot lands in exactly one of `depots`, `failed` or `skipped`. Never fold a
+ * failure into `skipped`: the bottle runner settles its ledger when `failed` is empty, so a
+ * misfiled failure would stop retries permanently. A throw from the game or 228980 appinfo
+ * fetch propagates (the runner catches it and does not settle).
+ */
+export async function downloadSharedRedistDepots(
+  gameAppId: string,
+  opts: DownloadSharedRedistOpts
+): Promise<SharedRedistDownloadResult> {
+  assertNumericAppId(gameAppId)
+  const downloadFiles = opts.downloadFiles ?? downloadDepotFiles
+
+  if (!(await SteamUser.ensureConnected())) {
+    logInfo(
+      `shared redists: Steam client offline, skipping for ${gameAppId}`,
+      LogPrefix.Steam
+    )
+    return { status: 'offline', depots: [], failed: [], skipped: [] }
+  }
+
+  const gameInfo = await withPlanBuildRetry(
+    opts.signal,
+    (c) => fetchAppInfo(c, Number(gameAppId)),
+    `sharedRedist game appinfo ${gameAppId}`
+  )
+  const declared = declaredSharedRedistDepotIds(gameInfo)
+  if (declared.length === 0) {
+    return { status: 'none', depots: [], failed: [], skipped: [] }
+  }
+
+  const redistInfo = await withPlanBuildRetry(
+    opts.signal,
+    (c) => fetchAppInfo(c, Number(STEAM_COMMON_REDIST_APP_ID)),
+    'sharedRedist 228980 appinfo'
+  )
+  const installdir =
+    (redistInfo as { config?: { installdir?: string } }).config?.installdir ||
+    SHARED_REDIST_DEFAULT_INSTALLDIR
+  const installRoot = resolve(opts.cacheSteamappsDir, 'common', installdir)
+  const parser = await loadContentManifestParser()
+  const optIn = new Set(opts.optInDepotIds)
+
+  let hostInfo:
+    | {
+        hosts: string[]
+        weightedLoads: Map<string, number>
+        hostMeta: Map<string, ContentServerHostMeta>
+        cdnAuth: CdnAuthTokenCache
+      }
+    | undefined
+  const getHostInfo = async () => {
+    if (!hostInfo) {
+      const client = getDepotClient()
+      const { hosts, weightedLoads, hostMeta } = await getContentServerHosts(
+        client,
+        Number(STEAM_COMMON_REDIST_APP_ID)
+      )
+      hostInfo = {
+        hosts,
+        weightedLoads,
+        hostMeta,
+        cdnAuth: new CdnAuthTokenCache(
+          client,
+          Number(STEAM_COMMON_REDIST_APP_ID)
+        )
+      }
+    }
+    return hostInfo
+  }
+
+  const download = async (
+    entry: DepotPlanEntry,
+    files: DepotPlanFile[]
+  ): Promise<boolean> => {
+    const h = await getHostInfo()
+    const plan: DepotPlan = {
+      appId: STEAM_COMMON_REDIST_APP_ID,
+      depots: [{ ...entry, ownerAppId: STEAM_COMMON_REDIST_APP_ID, files }],
+      totalBytes: files.reduce((sum, f) => sum + Number(f.size), 0),
+      name: 'Steamworks Common Redistributables',
+      skippedDepots: []
+    }
+    const result = await downloadFiles(plan, {
+      targetSteamappsDir: opts.cacheSteamappsDir,
+      installdir,
+      hosts: h.hosts,
+      hostWeightedLoads: h.weightedLoads,
+      hostMeta: h.hostMeta,
+      cdnAuth: h.cdnAuth,
+      signal: opts.signal
+    })
+    return result.outcome === 'completed' && result.failures.length === 0
+  }
+
+  const depots: SharedRedistDepot[] = []
+  const failed: string[] = []
+  const skipped: string[] = []
+  const index = await readSharedRedistIndex(opts.cacheSteamappsDir)
+
+  for (const id of declared) {
+    try {
+      const gid = publicManifestGid(
+        (redistInfo.depots as Record<string, unknown> | undefined)?.[id]
+      )
+      if (!gid) {
+        logWarning(
+          `shared redists: 228980 appinfo has no public manifest for depot ${id}`,
+          LogPrefix.Steam
+        )
+        failed.push(id)
+        continue
+      }
+
+      const entry = await withPlanBuildRetry(
+        opts.signal,
+        (c) =>
+          fetchDepotPlanEntry(
+            c,
+            {
+              id,
+              manifest: gid,
+              size: 0,
+              ownerAppId: STEAM_COMMON_REDIST_APP_ID
+            },
+            parser
+          ),
+        `sharedRedist depot ${id}`
+      )
+
+      const scriptFiles = entry.files.filter(
+        (f) => ((f.flags ?? 0) & INSTALLSCRIPT_FLAG) !== 0
+      )
+      if (scriptFiles.length !== 1) {
+        logInfo(
+          `shared redists: skipping depot ${id}, ${scriptFiles.length} installscript file(s) in manifest`,
+          LogPrefix.Steam
+        )
+        skipped.push(id)
+        continue
+      }
+      const scriptFile = scriptFiles[0]
+      let scriptPath: string
+      try {
+        scriptPath = resolveContainedPath(installRoot, scriptFile.filename)
+      } catch (err) {
+        logWarning(
+          `shared redists: skipping depot ${id}, unsafe installscript path: ${String(err)}`,
+          LogPrefix.Steam
+        )
+        skipped.push(id)
+        continue
+      }
+
+      // Read the installscript, from the GID index when present. A cached script that no
+      // longer parses drops its index entry and is re-downloaded once before the depot is
+      // given up on.
+      let fromIndex = index[id] === gid && (await pathExists(scriptPath))
+      let entries: InstallScriptEntry[] | null = null
+      let scriptFailed = false
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (!fromIndex) {
+          const ok = await sharedRedistSingleFlight(`script:${id}`, () =>
+            download(entry, [scriptFile])
+          )
+          if (!ok) {
+            scriptFailed = true
+            break
+          }
+        }
+        entries = parseInstallScript(await readFile(scriptPath, 'utf8'))
+        if (entries === null && fromIndex) {
+          logWarning(
+            `shared redists: cached installscript for depot ${id} does not parse, re-downloading`,
+            LogPrefix.Steam
+          )
+          delete index[id]
+          await writeSharedRedistIndex(opts.cacheSteamappsDir, index)
+          fromIndex = false
+          continue
+        }
+        break
+      }
+      if (scriptFailed) {
+        logWarning(
+          `shared redists: installscript download failed for depot ${id}`,
+          LogPrefix.Steam
+        )
+        failed.push(id)
+        continue
+      }
+      if (entries === null) {
+        logInfo(
+          `shared redists: skipping depot ${id}, installscript did not parse`,
+          LogPrefix.Steam
+        )
+        skipped.push(id)
+        continue
+      }
+
+      const { kind, label } = classifySharedRedist(scriptFile.filename, entries)
+      if (kind === 'other' && !optIn.has(id)) {
+        logInfo(
+          `shared redists: skipping depot ${id} (${label ?? scriptFile.filename}), not VC++/DirectX and not opted in`,
+          LogPrefix.Steam
+        )
+        skipped.push(id)
+        continue
+      }
+      const displayLabel = label ?? `depot ${id}`
+
+      if (!fromIndex) {
+        opts.onComponent?.(displayLabel)
+        const ok = await sharedRedistSingleFlight(`full:${id}`, () =>
+          download(entry, entry.files)
+        )
+        if (!ok) {
+          logWarning(
+            `shared redists: download of depot ${id} (${displayLabel}) did not complete`,
+            LogPrefix.Steam
+          )
+          failed.push(id)
+          continue
+        }
+        // Re-read so concurrent runs do not clobber each other's entries.
+        const latest = await readSharedRedistIndex(opts.cacheSteamappsDir)
+        latest[id] = gid
+        index[id] = gid
+        await writeSharedRedistIndex(opts.cacheSteamappsDir, latest)
+      }
+
+      depots.push({
+        depotId: id,
+        gid,
+        kind,
+        label: displayLabel,
+        installDirHost: installRoot,
+        entries
+      })
+    } catch (err) {
+      logWarning(
+        `shared redists: depot ${id} could not be evaluated, will retry next launch: ${String(err)}`,
+        LogPrefix.Steam
+      )
+      failed.push(id)
+    }
+  }
+
+  return { status: 'ok', depots, failed, skipped }
 }
 
 // ─────────────────────────────────────────────────────────────────────────

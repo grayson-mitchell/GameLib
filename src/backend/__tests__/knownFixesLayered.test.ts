@@ -147,6 +147,29 @@ describe('readKnownFixesLayered', () => {
     }
   })
 
+  it('strips steamSharedRedists from the remote layer with a warning', () => {
+    put(fixesPath, '1', { title: 'r', steamSharedRedists: ['229007'] })
+    const result = readKnownFixesLayered('1', 'steam')
+    expect(result).toEqual({ title: 'r' })
+    expect(result).not.toHaveProperty('steamSharedRedists')
+    expect(mockedLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('steamSharedRedists')
+    )
+  })
+
+  it('keeps steamSharedRedists from the bundled and local layers', () => {
+    put(bundledFixesPath, '1', { title: 'b', steamSharedRedists: ['229007'] })
+    expect(readKnownFixesLayered('1', 'steam')).toEqual({
+      title: 'b',
+      steamSharedRedists: ['229007']
+    })
+    put(localFixesPath, '1', { title: 'l', steamSharedRedists: ['229004'] })
+    expect(readKnownFixesLayered('1', 'steam')).toEqual({
+      title: 'l',
+      steamSharedRedists: ['229004']
+    })
+  })
+
   it('readKnownFixes still returns registry untouched from fixesPath', () => {
     put(fixesPath, '1', { title: 'r', registry: REG })
     expect(readKnownFixes('1', 'steam')).toEqual({ title: 'r', registry: REG })

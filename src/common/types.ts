@@ -1127,6 +1127,12 @@ export interface KnowFixesInfo {
    * `views` defaults to both 32 and 64. Applied by the Steam bridge only today.
    */
   registry?: KnownFixRegistryEntry[]
+  /**
+   * 228980 depot ids this title opts into beyond the automatic VC++/DirectX set.
+   * Honoured only from bundled/local sources and only for depots the game itself
+   * declares (quick 261025-rkj).
+   */
+  steamSharedRedists?: string[]
   /** Link to the evidence for the fix (decision 3). */
   evidence?: string
   notes?: Record<string, string>
