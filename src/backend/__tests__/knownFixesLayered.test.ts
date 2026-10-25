@@ -1,8 +1,10 @@
 /**
- * quick 261025-mfz: readKnownFixesLayered -- local > bundled > remote, with
- * trusted-only keys (`registry`) stripped from the remote layer (decision 6).
- * All three layer directories resolve under tmp in jest; os.homedir is
- * redirected as in knownFixes.test.ts.
+ * quick 261025-vnf: the two-tier known-fixes readers (decisions 1 and 6).
+ * Tier 1 `readKnownFixes` (`<id>-<store>.json`): local > bundled > remote,
+ * allow-listed at every layer. Tier 2 `readKnownFixProfile`
+ * (`<id>-<store>.profile.json`): local > bundled only, never remote.
+ * All layer directories resolve under tmp in jest; os.homedir is redirected as
+ * in knownFixes.test.ts.
  */
 
 import { mkdirSync, rmSync, writeFileSync } from 'fs'
@@ -41,7 +43,12 @@ jest.mock('../logger', () => ({
   logWarning: jest.fn()
 }))
 
-import { readKnownFixes, readKnownFixesLayered } from '../knownFixes'
+import {
+  filterTier1KnownFixes,
+  readKnownFixes,
+  readKnownFixProfile,
+  TIER1_KNOWN_FIX_KEYS
+} from '../knownFixes'
 import { bundledFixesPath, fixesPath, localFixesPath } from '../constants/paths'
 import { logWarning as mockedLogWarning } from '../logger'
 
@@ -54,10 +61,16 @@ const REG = [
   }
 ]
 
-function put(dir: string, app: string, content: unknown, raw = false) {
+function put(
+  dir: string,
+  app: string,
+  content: unknown,
+  suffix = '.json',
+  raw = false
+) {
   mkdirSync(dir, { recursive: true })
   writeFileSync(
-    join(dir, `${app}-steam.json`),
+    join(dir, `${app}-steam${suffix}`),
     raw ? (content as string) : JSON.stringify(content)
   )
 }
@@ -68,7 +81,13 @@ function clean() {
   rmSync(bundledFixesPath, { recursive: true, force: true })
 }
 
-describe('readKnownFixesLayered', () => {
+const LAYERS = [
+  ['local', () => localFixesPath],
+  ['bundled', () => bundledFixesPath],
+  ['remote', () => fixesPath]
+] as const
+
+describe('readKnownFixes (tier 1)', () => {
   beforeEach(() => {
     clean()
     jest.clearAllMocks()
@@ -76,60 +95,99 @@ describe('readKnownFixesLayered', () => {
   afterAll(clean)
 
   it('returns null when no layer has a file', () => {
-    expect(readKnownFixesLayered('1', 'steam')).toBeNull()
+    expect(readKnownFixes('1', 'steam')).toBeNull()
   })
 
-  it('returns the bundled object with registry intact', () => {
-    put(bundledFixesPath, '1', { title: 'b', registry: REG })
-    expect(readKnownFixesLayered('1', 'steam')).toEqual({
+  it('returns the bundled object', () => {
+    put(bundledFixesPath, '1', { title: 'b', winetricks: ['x'] })
+    expect(readKnownFixes('1', 'steam')).toEqual({
       title: 'b',
-      registry: REG
+      winetricks: ['x']
     })
   })
 
-  it('local wins over bundled as a whole file', () => {
-    put(bundledFixesPath, '1', { title: 'b', winetricks: ['x'], registry: REG })
+  it('local wins over bundled as a whole file (no per-key merge)', () => {
+    put(bundledFixesPath, '1', { title: 'b', winetricks: ['x'] })
     put(localFixesPath, '1', { title: 'l' })
-    expect(readKnownFixesLayered('1', 'steam')).toEqual({ title: 'l' })
+    expect(readKnownFixes('1', 'steam')).toEqual({ title: 'l' })
+  })
+
+  it('bundled wins over remote', () => {
+    put(fixesPath, '1', { title: 'r' })
+    put(bundledFixesPath, '1', { title: 'b' })
+    expect(readKnownFixes('1', 'steam')).toEqual({ title: 'b' })
+  })
+
+  it('falls back to remote when local and bundled are absent', () => {
+    put(fixesPath, '1', { title: 'r' })
+    expect(readKnownFixes('1', 'steam')).toEqual({ title: 'r' })
   })
 
   it('malformed local warns and falls through to bundled', () => {
     put(bundledFixesPath, '1', { title: 'b' })
-    put(localFixesPath, '1', '{nope', true)
-    expect(readKnownFixesLayered('1', 'steam')).toEqual({ title: 'b' })
+    put(localFixesPath, '1', '{nope', '.json', true)
+    expect(readKnownFixes('1', 'steam')).toEqual({ title: 'b' })
     expect(mockedLogWarning).toHaveBeenCalled()
   })
 
-  it('non-object JSON is treated as malformed', () => {
+  it('non-object JSON is treated as malformed and falls through', () => {
     put(bundledFixesPath, '1', { title: 'b' })
     put(localFixesPath, '1', [1, 2])
-    expect(readKnownFixesLayered('1', 'steam')).toEqual({ title: 'b' })
-  })
-
-  it('strips registry from the remote layer with a warning', () => {
-    put(fixesPath, '1', { title: 'r', winetricks: ['v'], registry: REG })
-    const result = readKnownFixesLayered('1', 'steam')
-    expect(result).toEqual({ title: 'r', winetricks: ['v'] })
-    expect(result).not.toHaveProperty('registry')
+    expect(readKnownFixes('1', 'steam')).toEqual({ title: 'b' })
     expect(mockedLogWarning).toHaveBeenCalledWith(
-      expect.stringContaining('registry')
+      expect.stringContaining('not an object')
     )
   })
 
-  it('local wins when bundled is absent and remote is present', () => {
-    put(fixesPath, '1', { title: 'r' })
-    put(localFixesPath, '1', { title: 'l', registry: REG })
-    expect(readKnownFixesLayered('1', 'steam')).toEqual({
-      title: 'l',
-      registry: REG
-    })
+  it('returns every tier-1 key unchanged and drops the rest from a remote file', () => {
+    const tier1 = {
+      title: 't',
+      envVariables: { A: '1' },
+      winetricks: ['v'],
+      runInPrefix: ['setup.exe'],
+      notes: { a: 'b' },
+      wikiLink: 'https://example.test',
+      launchNotice: 'hello'
+    }
+    put(fixesPath, '1', { ...tier1, registry: REG, foo: 1 })
+    const result = readKnownFixes('1', 'steam')
+    expect(result).toEqual(tier1)
+    expect(result).not.toHaveProperty('registry')
+    expect(result).not.toHaveProperty('foo')
   })
 
-  it.each([
-    ['local', () => localFixesPath],
-    ['bundled', () => bundledFixesPath],
-    ['remote', () => fixesPath]
-  ])('rejects a traversing appName in the %s layer', (_n, dir) => {
+  it.each(LAYERS)(
+    'drops tier-2 keys from the %s layer with a warning naming the .profile.json',
+    (label, dir) => {
+      put(dir(), '1', {
+        title: 't',
+        registry: REG,
+        steamSharedRedists: ['229007']
+      })
+      const result = readKnownFixes('1', 'steam')
+      expect(result).toEqual({ title: 't' })
+      expect(mockedLogWarning).toHaveBeenCalledWith(
+        expect.stringMatching(
+          new RegExp(
+            `registry.*${label}.*1-<store>\\.profile\\.json|${label}.*registry.*1-<store>\\.profile\\.json`
+          )
+        )
+      )
+      expect(mockedLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('steamSharedRedists')
+      )
+    }
+  )
+
+  it('drops an unknown non-tier-2 key with a warning naming the layer', () => {
+    put(localFixesPath, '1', { title: 't', foo: 1 })
+    expect(readKnownFixes('1', 'steam')).toEqual({ title: 't' })
+    expect(mockedLogWarning).toHaveBeenCalledWith(
+      expect.stringMatching(/foo.*local|local.*foo/)
+    )
+  })
+
+  it.each(LAYERS)('rejects a traversing appName in the %s layer', (_n, dir) => {
     // Plant a file at the traversal target so reading it would be visible.
     const target = join(dir(), '..', '..', 'etc')
     mkdirSync(target, { recursive: true })
@@ -138,7 +196,7 @@ describe('readKnownFixesLayered', () => {
       JSON.stringify({ title: 'evil' })
     )
     try {
-      expect(readKnownFixesLayered('../../etc/x', 'steam')).toBeNull()
+      expect(readKnownFixes('../../etc/x', 'steam')).toBeNull()
       expect(mockedLogWarning).toHaveBeenCalledWith(
         expect.stringContaining('outside')
       )
@@ -146,32 +204,151 @@ describe('readKnownFixesLayered', () => {
       rmSync(target, { recursive: true, force: true })
     }
   })
+})
 
-  it('strips steamSharedRedists from the remote layer with a warning', () => {
-    put(fixesPath, '1', { title: 'r', steamSharedRedists: ['229007'] })
-    const result = readKnownFixesLayered('1', 'steam')
-    expect(result).toEqual({ title: 'r' })
-    expect(result).not.toHaveProperty('steamSharedRedists')
+describe('filterTier1KnownFixes', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('matches the reader output for a plain object', () => {
+    expect(
+      filterTier1KnownFixes('1', 'remote', {
+        title: 't',
+        envVariables: { A: '1' },
+        registry: REG
+      })
+    ).toEqual({ title: 't', envVariables: { A: '1' } })
+  })
+
+  it.each([[null], [[1]], [3], ['x']])('returns null for %p', (value) => {
+    expect(filterTier1KnownFixes('1', 'remote', value)).toBeNull()
+  })
+
+  it('exposes the allow-list without any tier-2 key', () => {
+    expect(TIER1_KNOWN_FIX_KEYS).toContain('launchNotice')
+    expect(TIER1_KNOWN_FIX_KEYS).not.toContain('registry' as never)
+    expect(TIER1_KNOWN_FIX_KEYS).not.toContain('steamSharedRedists' as never)
+  })
+})
+
+describe('readKnownFixProfile (tier 2)', () => {
+  beforeEach(() => {
+    clean()
+    jest.clearAllMocks()
+  })
+  afterAll(clean)
+
+  it('returns null when no layer has a profile', () => {
+    expect(readKnownFixProfile('1', 'steam')).toBeNull()
+  })
+
+  it('local wins over bundled', () => {
+    put(bundledFixesPath, '1', { title: 'b', registry: REG }, '.profile.json')
+    put(localFixesPath, '1', { title: 'l' }, '.profile.json')
+    expect(readKnownFixProfile('1', 'steam')).toEqual({ title: 'l' })
+  })
+
+  it('never reads a .profile.json that sits only in the remote directory', () => {
+    put(fixesPath, '1', { title: 'r', registry: REG }, '.profile.json')
+    expect(readKnownFixProfile('1', 'steam')).toBeNull()
+  })
+
+  it('returns title, notes, evidence, registry and steamSharedRedists unchanged', () => {
+    const profile = {
+      title: 't',
+      notes: { a: 'b' },
+      evidence: 'todo.md',
+      registry: REG,
+      steamSharedRedists: ['229007']
+    }
+    put(bundledFixesPath, '1', profile, '.profile.json')
+    expect(readKnownFixProfile('1', 'steam')).toEqual(profile)
+  })
+
+  it('drops tier-1 functional keys with a warning naming the tier-1 file', () => {
+    put(
+      localFixesPath,
+      '1',
+      {
+        title: 't',
+        envVariables: { A: '1' },
+        winetricks: ['v'],
+        runInPrefix: ['s.exe'],
+        wikiLink: 'x',
+        launchNotice: 'n',
+        registry: REG
+      },
+      '.profile.json'
+    )
+    const result = readKnownFixProfile('1', 'steam')
+    expect(result).toEqual({ title: 't', registry: REG })
+    for (const key of [
+      'envVariables',
+      'winetricks',
+      'runInPrefix',
+      'wikiLink',
+      'launchNotice'
+    ]) {
+      expect(mockedLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining(key)
+      )
+    }
     expect(mockedLogWarning).toHaveBeenCalledWith(
-      expect.stringContaining('steamSharedRedists')
+      expect.stringContaining('1-<store>.json')
     )
   })
 
-  it('keeps steamSharedRedists from the bundled and local layers', () => {
-    put(bundledFixesPath, '1', { title: 'b', steamSharedRedists: ['229007'] })
-    expect(readKnownFixesLayered('1', 'steam')).toEqual({
-      title: 'b',
-      steamSharedRedists: ['229007']
-    })
-    put(localFixesPath, '1', { title: 'l', steamSharedRedists: ['229004'] })
-    expect(readKnownFixesLayered('1', 'steam')).toEqual({
-      title: 'l',
-      steamSharedRedists: ['229004']
-    })
+  it('drops an unknown key with a warning', () => {
+    put(localFixesPath, '1', { title: 't', foo: 1 }, '.profile.json')
+    expect(readKnownFixProfile('1', 'steam')).toEqual({ title: 't' })
+    expect(mockedLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('foo')
+    )
   })
 
-  it('readKnownFixes still returns registry untouched from fixesPath', () => {
-    put(fixesPath, '1', { title: 'r', registry: REG })
-    expect(readKnownFixes('1', 'steam')).toEqual({ title: 'r', registry: REG })
+  it('is store-agnostic: gog and legendary (epic) resolve their own filenames', () => {
+    mkdirSync(bundledFixesPath, { recursive: true })
+    writeFileSync(
+      join(bundledFixesPath, 'x-gog.profile.json'),
+      JSON.stringify({ title: 'g' })
+    )
+    writeFileSync(
+      join(bundledFixesPath, 'x-epic.profile.json'),
+      JSON.stringify({ title: 'e' })
+    )
+    expect(readKnownFixProfile('x', 'gog')).toEqual({ title: 'g' })
+    expect(readKnownFixProfile('x', 'legendary')).toEqual({ title: 'e' })
+  })
+
+  it('rejects a traversing appName', () => {
+    expect(readKnownFixProfile('../../etc/x', 'steam')).toBeNull()
+    expect(mockedLogWarning).toHaveBeenCalledWith(
+      expect.stringContaining('outside')
+    )
+  })
+})
+
+describe('tier independence', () => {
+  beforeEach(() => {
+    clean()
+    jest.clearAllMocks()
+  })
+  afterAll(clean)
+
+  it('takes tier 1 from remote and tier 2 from bundled in the same launch', () => {
+    put(fixesPath, '1', { title: 'remote', envVariables: { A: '1' } })
+    put(
+      bundledFixesPath,
+      '1',
+      { title: 'profile', registry: REG },
+      '.profile.json'
+    )
+    expect(readKnownFixes('1', 'steam')).toEqual({
+      title: 'remote',
+      envVariables: { A: '1' }
+    })
+    expect(readKnownFixProfile('1', 'steam')).toEqual({
+      title: 'profile',
+      registry: REG
+    })
   })
 })

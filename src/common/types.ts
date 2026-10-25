@@ -1126,27 +1126,44 @@ interface KnownFixRegistryEntry {
   views?: KnownFixRegistryView[]
 }
 
+/**
+ * Tier 1 known fix: `<appName>-<store>.json`. Heroic-format keys plus
+ * `launchNotice`. May come from the local, bundled or remote layer, and is
+ * filtered through an allow-list at every layer (quick 261025-vnf).
+ */
 export interface KnowFixesInfo {
   title: string
-  /**
-   * Registry values to set in the Steam bridge bottle. Honoured only from the
-   * bundled or local known-fixes sources (decision 6), never the remote layer.
-   * `views` defaults to both 32 and 64. Applied by the Steam bridge only today.
-   */
-  registry?: KnownFixRegistryEntry[]
-  /**
-   * 228980 depot ids this title opts into beyond the automatic VC++/DirectX set.
-   * Honoured only from bundled/local sources and only for depots the game itself
-   * declares (quick 261025-rkj).
-   */
-  steamSharedRedists?: string[]
-  /** Link to the evidence for the fix (decision 3). */
-  evidence?: string
   notes?: Record<string, string>
   winetricks?: string[]
   runInPrefix?: string[]
   envVariables?: Record<string, string>
   wikiLink?: string
+  /** UI text only. Nothing renders it yet. */
+  launchNotice?: string
+}
+
+/**
+ * Tier 2 known fix profile: `<appName>-<store>.profile.json`. Read only from
+ * the local and bundled layers, never the remote download directory
+ * (decisions 1 and 6, quick 261025-vnf).
+ */
+export interface KnownFixProfile {
+  title?: string
+  /** Link to the evidence for the fix (decision 3). */
+  evidence?: string
+  notes?: Record<string, string>
+  /**
+   * Registry values to set in the Steam bridge bottle. Read only from
+   * `<appName>-<store>.profile.json` (local/bundled). `views` defaults to both
+   * 32 and 64. Applied by the Steam bridge only today.
+   */
+  registry?: KnownFixRegistryEntry[]
+  /**
+   * 228980 depot ids this title opts into beyond the automatic VC++/DirectX
+   * set. Read only from `<appName>-<store>.profile.json` (local/bundled) and
+   * only for depots the game itself declares (quick 261025-rkj).
+   */
+  steamSharedRedists?: string[]
 }
 
 export interface UploadedLogData {

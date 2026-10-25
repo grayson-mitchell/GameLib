@@ -34,12 +34,29 @@ jest.mock('os', () => {
 // ── backend/logger mock — mirrors appshellModules.test.ts's own reasoning:
 // `heroicLogWriter` is unset until bootstrap's init() runs, so calling the
 // real logWarning() here would throw on the unset writer rather than no-op.
+// Under jest app.getAppPath() resolves to the repo root, so the real
+// bundledFixesPath is the repo's own public/fixes. `readKnownFixes` now reads the
+// bundled layer, so redirect it to a tmp dir (quick 261025-vnf) so tests can
+// never read or delete shipped files.
+jest.mock('../constants/paths', () => {
+  const actual = jest.requireActual('../constants/paths')
+  const path = jest.requireActual('path')
+  const os = jest.requireActual('os')
+  return {
+    ...actual,
+    bundledFixesPath: path.join(
+      os.tmpdir(),
+      `gamelib-bundled-fixes-test-${process.pid}-plain`
+    )
+  }
+})
+
 jest.mock('../logger', () => ({
   logWarning: jest.fn()
 }))
 
 import { readKnownFixes } from '../knownFixes'
-import { fixesPath } from '../constants/paths'
+import { bundledFixesPath, fixesPath } from '../constants/paths'
 import { logWarning as mockedLogWarning } from '../logger'
 
 describe('readKnownFixes', () => {
@@ -49,6 +66,7 @@ describe('readKnownFixes', () => {
 
   afterAll(() => {
     rmSync(fixesPath, { recursive: true, force: true })
+    rmSync(bundledFixesPath, { recursive: true, force: true })
   })
 
   it('REQ-34.2-05 returns null when no fix file exists for the appName/runner pair', () => {
@@ -73,7 +91,7 @@ describe('readKnownFixes', () => {
     expect(result).toBeNull()
     expect(mockedLogWarning).toHaveBeenCalledTimes(1)
     expect(mockedLogWarning).toHaveBeenCalledWith(
-      expect.stringContaining('Known fixes could not be applied, ignoring.')
+      expect.stringContaining('Known fixes could not be applied')
     )
   })
 

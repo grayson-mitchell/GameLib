@@ -20,11 +20,14 @@
  * dependency surface small and its unit tests cheap. Do not restore the
  * stronger claim without re-checking that chain.
  *
- * quick 261025-mfz: `readKnownFixesLayered` adds three trust layers for the
- * Steam bridge: local (`fixes/local/`), then bundled (`public/fixes/`, shipped
- * in the app), then remote (`fixes/`). The first layer with a parsed object
- * wins whole-file. Keys in TRUSTED_ONLY_KNOWN_FIX_KEYS are stripped from the
- * remote layer (decision 6). `readKnownFixes` is unchanged for other stores.
+ * quick 261025-mfz / 261025-vnf: two tiers, each with its own reader and its
+ * own layer resolution (decisions 1 and 6).
+ * - Tier 1, `readKnownFixes`: `<id>-<store>.json`, Heroic-format keys plus
+ *   `launchNotice`. local (`fixes/local/`) > bundled (`public/fixes/`) > remote
+ *   (`fixes/`), first parsed object wins whole-file. Every layer is filtered
+ *   through the TIER1_KNOWN_FIX_KEYS allow-list.
+ * - Tier 2, `readKnownFixProfile`: `<id>-<store>.profile.json`. local >
+ *   bundled only; the remote directory is never read.
  *
  * MUST NOT import `electron` (or anything that transitively reaches it) --
  * including `backend/ipc` -- the Node sidecar imports this module directly.
@@ -34,18 +37,54 @@ import { isAbsolute, relative, resolve } from 'path'
 import { existsSync } from 'graceful-fs'
 import { readFileSync } from 'fs'
 
-import { KnowFixesInfo, Runner } from 'common/types'
+import { KnowFixesInfo, KnownFixProfile, Runner } from 'common/types'
 import { storeMap } from 'common/utils'
 import { bundledFixesPath, fixesPath, localFixesPath } from './constants/paths'
 import { logWarning } from './logger'
+
+const TIER1_FILE_SUFFIX = '.json'
+const TIER2_FILE_SUFFIX = '.profile.json'
+
+/**
+ * Keys a tier-1 file may carry, at any layer. An allow-list, so a newly added
+ * tier-2 key cannot reach the remote layer by being forgotten.
+ * `dllOverrides`, `overlays`, `shimFeatures` and `platforms` belong in
+ * TIER2_PROFILE_KEYS when implemented and must never be added here.
+ */
+export const TIER1_KNOWN_FIX_KEYS = [
+  'title',
+  'notes',
+  'winetricks',
+  'runInPrefix',
+  'envVariables',
+  'wikiLink',
+  'launchNotice'
+] as const
+
+// `dllOverrides`, `overlays`, `shimFeatures`, `platforms` join this list when
+// implemented. `title` and `notes` are descriptive and allowed in both tiers.
+const TIER2_PROFILE_KEYS = [
+  'title',
+  'notes',
+  'evidence',
+  'registry',
+  'steamSharedRedists'
+] as const
+
+const DESCRIPTIVE_KEYS: readonly string[] = ['title', 'notes']
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
 function readFixesFileWithin(
   dir: string,
   appName: string,
   runner: Runner,
+  suffix: string,
   layerLabel?: string
-): KnowFixesInfo | null {
-  const fixPath = resolve(dir, `${appName}-${storeMap[runner]}.json`)
+): unknown {
+  const fixPath = resolve(dir, `${appName}-${storeMap[runner]}${suffix}`)
 
   // WR-06 (34.2-REVIEW.md round 1): `appName` arrives as a free string from the
   // renderer via the `getKnownFixes` channel. `join`/`resolve` NORMALISE `..`
@@ -76,11 +115,7 @@ function readFixesFileWithin(
   if (!existsSync(fixPath)) return null
 
   try {
-    const fixesContent = JSON.parse(
-      readFileSync(fixPath).toString()
-    ) as KnowFixesInfo
-
-    return fixesContent
+    return JSON.parse(readFileSync(fixPath).toString()) as unknown
   } catch (error) {
     // if we fail to download the json file, it can be malformed causing
     // JSON.parse to throw an exception
@@ -91,23 +126,73 @@ function readFixesFileWithin(
   }
 }
 
-export function readKnownFixes(
+/**
+ * Pure (apart from warnings) tier-1 validator: copies only allow-listed keys.
+ * Returns null for a non-plain-object. The remote fetcher applies this to
+ * downloaded files.
+ */
+export function filterTier1KnownFixes(
   appName: string,
-  runner: Runner
+  layerLabel: string,
+  parsed: unknown
 ): KnowFixesInfo | null {
-  return readFixesFileWithin(fixesPath, appName, runner)
+  if (!isPlainObject(parsed)) {
+    logWarning(
+      `Known fixes for '${appName}' (${layerLabel} layer) is not an object, ignoring.`
+    )
+    return null
+  }
+  const allowed: readonly string[] = TIER1_KNOWN_FIX_KEYS
+  const tier2: readonly string[] = TIER2_PROFILE_KEYS
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(parsed)) {
+    if (allowed.includes(key)) {
+      out[key] = value
+    } else if (tier2.includes(key) && !DESCRIPTIVE_KEYS.includes(key)) {
+      logWarning(
+        `Known fixes for '${appName}' (${layerLabel} layer): '${key}' is a tier-2 key that belongs in '${appName}-<store>.profile.json', ignoring it here.`
+      )
+    } else {
+      logWarning(
+        `Known fixes for '${appName}' (${layerLabel} layer): '${key}' is not a tier-1 key, ignoring it.`
+      )
+    }
+  }
+  return out as unknown as KnowFixesInfo
 }
 
-// Keys honoured only from bundled or local sources. dllOverrides, overlays and
-// shimFeatures join this list when they land (decision 6). `steamSharedRedists`
-// (quick 261025-rkj) opts a title into non-VC++/DirectX shared redist depots.
-const TRUSTED_ONLY_KNOWN_FIX_KEYS = ['registry', 'steamSharedRedists'] as const
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+function filterTier2Profile(
+  appName: string,
+  layerLabel: string,
+  parsed: unknown
+): KnownFixProfile | null {
+  if (!isPlainObject(parsed)) {
+    logWarning(
+      `Known fix profile for '${appName}' (${layerLabel} layer) is not an object, ignoring.`
+    )
+    return null
+  }
+  const allowed: readonly string[] = TIER2_PROFILE_KEYS
+  const tier1: readonly string[] = TIER1_KNOWN_FIX_KEYS
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(parsed)) {
+    if (allowed.includes(key)) {
+      out[key] = value
+    } else if (tier1.includes(key)) {
+      logWarning(
+        `Known fix profile for '${appName}' (${layerLabel} layer): '${key}' is a tier-1 key that belongs in '${appName}-<store>.json', ignoring it here.`
+      )
+    } else {
+      logWarning(
+        `Known fix profile for '${appName}' (${layerLabel} layer): '${key}' is not a tier-2 key, ignoring it.`
+      )
+    }
+  }
+  return out as unknown as KnownFixProfile
 }
 
-export function readKnownFixesLayered(
+/** Tier 1: `<appName>-<store>.json`, local > bundled > remote, allow-listed. */
+export function readKnownFixes(
   appName: string,
   runner: Runner
 ): KnowFixesInfo | null {
@@ -117,26 +202,43 @@ export function readKnownFixesLayered(
     [fixesPath, 'remote']
   ]
   for (const [dir, label] of layers) {
-    const parsed: unknown = readFixesFileWithin(dir, appName, runner, label)
+    const parsed = readFixesFileWithin(
+      dir,
+      appName,
+      runner,
+      TIER1_FILE_SUFFIX,
+      label
+    )
     if (parsed === null) continue
-    if (!isPlainObject(parsed)) {
-      logWarning(
-        `Known fixes for '${appName}' (${label} layer) is not an object, ignoring.`
-      )
-      continue
-    }
-    if (label !== 'remote') return parsed as unknown as KnowFixesInfo
+    const filtered = filterTier1KnownFixes(appName, label, parsed)
+    if (filtered !== null) return filtered
+  }
+  return null
+}
 
-    const copy: Record<string, unknown> = { ...parsed }
-    for (const key of TRUSTED_ONLY_KNOWN_FIX_KEYS) {
-      if (key in copy) {
-        delete copy[key]
-        logWarning(
-          `Known fixes for '${appName}': ignoring '${key}' from the remote layer, it is honoured only from bundled or local sources.`
-        )
-      }
-    }
-    return copy as unknown as KnowFixesInfo
+/**
+ * Tier 2: `<appName>-<store>.profile.json`, local > bundled ONLY. The remote
+ * `fixesPath` directory is deliberately absent from the layer list.
+ */
+export function readKnownFixProfile(
+  appName: string,
+  runner: Runner
+): KnownFixProfile | null {
+  const layers: [string, string][] = [
+    [localFixesPath, 'local'],
+    [bundledFixesPath, 'bundled']
+  ]
+  for (const [dir, label] of layers) {
+    const parsed = readFixesFileWithin(
+      dir,
+      appName,
+      runner,
+      TIER2_FILE_SUFFIX,
+      label
+    )
+    if (parsed === null) continue
+    const filtered = filterTier2Profile(appName, label, parsed)
+    if (filtered !== null) return filtered
   }
   return null
 }
