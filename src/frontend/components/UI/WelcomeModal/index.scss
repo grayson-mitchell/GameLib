@@ -1,0 +1,56 @@
+.welcomeModal {
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
+    max-width: 560px;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--neutral-03);
+    border-radius: 10px;
+    background: var(--neutral-05);
+    color: var(--brand-text-01);
+
+    h3 {
+      margin: 0;
+      color: var(--brand-primary);
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .button {
+      align-self: flex-start;
+      border-radius: 6px;
+    }
+  }
+
+  &__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .button {
+      border-radius: 6px;
+    }
+  }
+
+  &__status {
+    margin: 0;
+    font-weight: 700;
+
+    &--granted {
+      color: var(--success);
+    }
+
+    &--denied {
+      color: var(--danger);
+    }
+  }
+}

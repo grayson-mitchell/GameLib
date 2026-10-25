@@ -2,6 +2,11 @@ import React, { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { ChangelogModal } from '../../../ChangelogModal'
+import { WelcomeModal } from '../../../WelcomeModal'
+import {
+  WELCOME_SEEN_KEY,
+  isFirstRun
+} from '../../../WelcomeModal/welcomeState'
 import './index.scss'
 
 /**
@@ -17,6 +22,11 @@ import './index.scss'
  * `nav-version` step. The tour's launcher is a `SettingsPanel` row (D-01)
  * -- not a help icon restored here, which D-01 explicitly rejected as a
  * second, easy-to-miss entry point.
+ *
+ * Quick 261026-b9r: on the FIRST EVER launch (no welcome marker, no stored
+ * `last_version`, no stored `last_changelog`) the first-run WelcomeModal is
+ * shown instead of the changelog. The decision is made at module load, before
+ * the version effect overwrites `last_version`. Upgrades are unchanged.
  */
 
 type Release = {
@@ -31,17 +41,27 @@ type Release = {
 
 const storage = window.localStorage
 const lastVersion = storage.getItem('last_version')?.replaceAll('"', '')
+const firstRun = isFirstRun({
+  welcomeSeen: storage.getItem(WELCOME_SEEN_KEY),
+  lastVersion,
+  lastChangelog: storage.getItem('last_changelog')
+})
 
 export default React.memo(function HeroicVersion() {
   const { t } = useTranslation()
   const [heroicVersion, setHeroicVersion] = useState('')
   const [newReleases, setNewReleases] = useState<Release[]>()
   const [showChangelogModal, setShowChangelogModal] = useState(true)
+  const [showWelcome, setShowWelcome] = useState(firstRun)
   const [showChangelogModalOnClick, setShowChangelogModalOnClick] =
     useState(false)
 
-  const { hideChangelogsOnStartup, lastChangelogShown, setLastChangelogShown } =
-    useContext(ContextProvider)
+  const {
+    hideChangelogsOnStartup,
+    lastChangelogShown,
+    setLastChangelogShown,
+    platform
+  } = useContext(ContextProvider)
 
   useEffect(() => {
     void window.api.getHeroicVersion().then((version) => {
@@ -75,7 +95,19 @@ export default React.memo(function HeroicVersion() {
 
   return (
     <div className="heroicVersionContainer" data-tour="nav-version">
+      {showWelcome && (
+        <WelcomeModal
+          platform={platform}
+          onClose={() => {
+            storage.setItem(WELCOME_SEEN_KEY, '1')
+            setShowWelcome(false)
+            setShowChangelogModal(false)
+            setLastChangelogShown(heroicVersion)
+          }}
+        />
+      )}
       {((showChangelogModal &&
+        !showWelcome &&
         !hideChangelogsOnStartup &&
         heroicVersion !== lastChangelogShown) ||
         showChangelogModalOnClick) && (

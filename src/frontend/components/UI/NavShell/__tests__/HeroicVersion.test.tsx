@@ -27,7 +27,15 @@ jest.mock('../../ChangelogModal', () => ({
   })
 }))
 
+jest.mock('../../WelcomeModal', () => ({
+  WelcomeModal: (props: Record<string, unknown>) => ({
+    type: 'mock-welcome-modal',
+    props
+  })
+}))
+
 type MockContextValue = {
+  platform: string
   hideChangelogsOnStartup: boolean
   lastChangelogShown: string
   setLastChangelogShown: jest.Mock
@@ -37,6 +45,7 @@ function makeContextValue(
   overrides: Partial<MockContextValue> = {}
 ): MockContextValue {
   return {
+    platform: 'darwin',
     hideChangelogsOnStartup: true,
     lastChangelogShown: '',
     setLastChangelogShown: jest.fn(),
@@ -118,17 +127,23 @@ const mockApi = {
   clearCache: jest.fn(),
   openExternalUrl: jest.fn()
 }
+let storageData: Record<string, string> = {}
+// Plain functions, not jest.fn(): the project's jest config resets mock
+// implementations between tests, which would silently empty the storage.
 const mockLocalStorage: Storage = {
-  getItem: jest.fn().mockReturnValue(null),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-  key: jest.fn(),
+  getItem: (key: string) => storageData[key] ?? null,
+  setItem: (key: string, value: string) => {
+    storageData[key] = value
+  },
+  removeItem: () => undefined,
+  clear: () => undefined,
+  key: () => null,
   length: 0
 }
-// `HeroicVersion/index.tsx:32-33` reads `window.localStorage` at MODULE
-// LOAD time -- `window` must exist with a `localStorage` before the import
-// below runs.
+// `HeroicVersion/index.tsx` reads `window.localStorage` at MODULE LOAD time
+// (and decides first-run there) -- `window` must exist with a `localStorage`
+// before the component is required, and each scenario re-requires the module
+// inside `jest.isolateModules` with `storageData` set first.
 ;(
   globalThis as unknown as {
     window: { localStorage: Storage; api: typeof mockApi }
@@ -137,10 +152,6 @@ const mockLocalStorage: Storage = {
   localStorage: mockLocalStorage,
   api: mockApi
 }
-
-// Imported after the mocks and window setup above (textual order -- this
-// project's ts-jest setup does not hoist jest.mock like babel-jest).
-import HeroicVersion from '../components/HeroicVersion'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
 type AnyElement = ReactElement<AnyProps> & { props: AnyProps }
@@ -167,24 +178,46 @@ function collectElements(
   return out
 }
 
+// Elements are not rendered, so the mocked components appear as their function
+// type; identify them by function name.
+function typeName(e: AnyElement): string {
+  return typeof e.type === 'function' ? e.type.name : String(e.type)
+}
+
 type HookHarness = {
   __beginRender: () => void
   __resetMount: () => void
 }
 
-function harness(): HookHarness {
-  return jest.requireMock('react') as unknown as HookHarness
+type Loaded = { render: () => AnyElement; harness: HookHarness }
+
+// Re-requires the component (and the react mock, so the hooks harness is the
+// one the component bound to) with `storageData` seeded. The `.type` unwrap:
+// see file header docstring.
+function load(seed: Record<string, string>): Loaded {
+  storageData = { ...seed }
+  let loaded: Loaded | undefined
+  jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('../components/HeroicVersion') as {
+      default: { type: () => AnyElement }
+    }
+    loaded = {
+      render: mod.default.type,
+      harness: jest.requireMock('react') as unknown as HookHarness
+    }
+  })
+  return loaded as Loaded
 }
 
-// The `.type` unwrap -- see file header docstring.
-const HeroicVersionRender = (
-  HeroicVersion as unknown as { type: () => AnyElement }
-).type
+// An existing install: `last_version` already stored.
+const EXISTING_INSTALL = { last_version: '"v0.9.0"' }
 
-function mount(): AnyElement {
-  harness().__resetMount()
-  harness().__beginRender()
-  return HeroicVersionRender()
+function mount(seed: Record<string, string> = EXISTING_INSTALL): AnyElement {
+  const { render, harness } = load(seed)
+  harness.__resetMount()
+  harness.__beginRender()
+  return render()
 }
 
 beforeEach(() => {
@@ -215,5 +248,50 @@ describe('HeroicVersion', () => {
       (el) => el.props?.['data-tour'] !== undefined
     )
     expect(tagged).toHaveLength(1)
+  })
+
+  it('first run renders the WelcomeModal and NOT the changelog, even with the changelog enabled', () => {
+    contextValue = makeContextValue({ hideChangelogsOnStartup: false })
+    const root = mount({})
+
+    const types = collectElements(root.props.children).map(typeName)
+    expect(types).toContain('WelcomeModal')
+    expect(types).not.toContain('ChangelogModal')
+  })
+
+  it('an existing install (stored last_version) still gets the changelog and no welcome', () => {
+    // heroicVersion is '' on first render, so a distinct lastChangelogShown is
+    // needed for the startup changelog branch to be open.
+    contextValue = makeContextValue({
+      hideChangelogsOnStartup: false,
+      lastChangelogShown: 'v0.8.0'
+    })
+    const root = mount(EXISTING_INSTALL)
+
+    const types = collectElements(root.props.children).map(typeName)
+    expect(types).toContain('ChangelogModal')
+    expect(types).not.toContain('WelcomeModal')
+  })
+
+  it('a stored welcome marker suppresses the welcome', () => {
+    const root = mount({ gamelib_welcome_seen: '1' })
+
+    const types = collectElements(root.props.children).map(typeName)
+    expect(types).not.toContain('WelcomeModal')
+  })
+
+  it('closing the welcome persists the marker and marks the changelog seen', () => {
+    const setLastChangelogShown = jest.fn()
+    contextValue = makeContextValue({ setLastChangelogShown })
+    const root = mount({})
+
+    const welcome = collectElements(root.props.children).find(
+      (e) => typeName(e) === 'WelcomeModal'
+    )
+    expect(welcome).toBeDefined()
+    ;(welcome?.props.onClose as () => void)()
+
+    expect(storageData.gamelib_welcome_seen).toBe('1')
+    expect(setLastChangelogShown).toHaveBeenCalledTimes(1)
   })
 })
