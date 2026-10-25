@@ -55,6 +55,9 @@ jest.mock('graceful-fs', () => ({
 }))
 
 import { existsSync } from 'graceful-fs'
+import { mkdirSync, rmSync, symlinkSync } from 'fs'
+import { dirname, join } from 'path'
+import { homedir } from 'os'
 import { getGame } from '../../utils'
 import { shortcutFiles } from '../shortcuts/shortcuts'
 import { addShortcuts } from '../shortcuts/shortcuts'
@@ -215,5 +218,41 @@ describe('261026-clh: shortcutsExists on darwin', () => {
     await expect(
       Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
     ).resolves.toBe(true)
+  })
+
+  it('261026-ctm resolves true for a dangling Desktop link with no Applications bundle', async () => {
+    mockedGetGame.mockReturnValue(
+      makeStubGame({ title: '261026-ctm Dangling' } as GameInfo)
+    )
+    mockedExistsSync.mockReturnValue(false)
+    const [desktopApp] = shortcutFiles('261026-ctm Dangling')
+    if (!desktopApp || !desktopApp.startsWith(homedir())) {
+      throw new Error(`refusing to write outside the containment home`)
+    }
+    mkdirSync(dirname(desktopApp), { recursive: true })
+    symlinkSync(
+      join(homedir(), 'Applications', 'gone-261026-ctm.app'),
+      desktopApp
+    )
+    try {
+      const handler = getRegisteredHandler('shortcutsExists')
+      await expect(
+        Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
+      ).resolves.toBe(true)
+    } finally {
+      rmSync(desktopApp, { force: true })
+    }
+  })
+
+  it('261026-ctm resolves false when neither path exists nor is a link', async () => {
+    mockedGetGame.mockReturnValue(
+      makeStubGame({ title: '261026-ctm Nothing Here' } as GameInfo)
+    )
+    mockedExistsSync.mockReturnValue(false)
+
+    const handler = getRegisteredHandler('shortcutsExists')
+    await expect(
+      Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
+    ).resolves.toBe(false)
   })
 })
