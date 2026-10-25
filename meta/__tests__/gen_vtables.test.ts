@@ -24,6 +24,9 @@ import {
   toVersionedAccessorSuffix,
   validateManifest,
   FLAT_EXPORTS_SUPERSET,
+  generateCallbackRegistryC,
+  CALLBACK_DRAIN_RESP_MAX_BYTES,
+  CALLBACK_RELAY_TABLE,
   GAMESERVER_FLAT_STUBS,
   MODERN_LOOKUP_FLAT_EXPORTS,
   STRING_RETURN_BUF_BYTES,
@@ -31,6 +34,10 @@ import {
   X64_NULL_OBJECT_SLOTS,
   type InterfaceManifestV2
 } from '../gen_vtables'
+import {
+  MSVC_CCALLBACKBASE_OFFSETS,
+  MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG
+} from '../msvcCallbackLayout'
 import { CONTROL_SLOT } from '../../src/backend/storeManagers/steam/bridge/protocol'
 import { BARE_ACCESSOR_FAMILY } from '../../src/backend/storeManagers/steam/bridge/interfaceVersions'
 import {
@@ -3048,5 +3055,44 @@ describe('quick 261025-t7i: x64-only legacy CSteamworks64 exports', () => {
       (pre.match(/^#if/gm) ?? []).length - (pre.match(/^#endif/gm) ?? []).length
     expect(depth).toBeGreaterThan(0)
     expect(pre.slice(pre.lastIndexOf('#if'))).toContain('__x86_64__')
+  })
+})
+
+describe('callback registry (P55-3) source pins', () => {
+  const src = generateCallbackRegistryC()
+  const header = readFileSync(
+    join(__dirname, '../../native/steam-bridge/helper/gamelib_cbqueue.h'),
+    'utf8'
+  )
+
+  it('interpolates the measured MSVC slot and offsets', () => {
+    expect(src).toContain(
+      `#define GL_CB_VSLOT_RUN_1ARG ${MSVC_CCALLBACKBASE_VSLOT_RUN_1ARG}`
+    )
+    const { x86, x64 } = MSVC_CCALLBACKBASE_OFFSETS
+    expect(src).toContain(`#define GL_CB_FLAGS_OFF ${x86.flags}`)
+    expect(src).toContain(`#define GL_CB_ICALLBACK_OFF ${x86.iCallback}`)
+    expect(src).toContain(`#define GL_CB_FLAGS_OFF ${x64.flags}`)
+    expect(src).toContain(`#define GL_CB_ICALLBACK_OFF ${x64.iCallback}`)
+  })
+
+  it('pins capacity and throttle constants', () => {
+    expect(src).toContain('GL_CB_REGISTRY_CAPACITY 512')
+    expect(src).toContain('GL_CB_DRAIN_MIN_INTERVAL_MS 30')
+  })
+
+  it('is transport- and lock-agnostic', () => {
+    expect(src).not.toContain('bridge_transact')
+    expect(src).not.toContain('g_bridge_lock')
+    expect(src).not.toContain('#include')
+  })
+
+  it('mirrors the helper queue sizes and allowlist row', () => {
+    const max = Number(/#define GL_CBQ_MAX_PARAM_BYTES (\d+)/.exec(header)![1])
+    const id = Number(
+      /#define GL_CBQ_ID_GET_TICKET_FOR_WEB_API_RESPONSE (\d+)/.exec(header)![1]
+    )
+    expect(CALLBACK_DRAIN_RESP_MAX_BYTES).toBe(12 + max)
+    expect(CALLBACK_RELAY_TABLE).toEqual([{ id, size: max }])
   })
 })
