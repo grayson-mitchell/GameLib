@@ -13,6 +13,13 @@
 import { EventEmitter } from 'events'
 
 const mockSpawn = jest.fn()
+const mockAddNonSteamGame = jest.fn()
+const defaultSettings = {
+  addDesktopShortcuts: true,
+  addStartMenuShortcuts: true,
+  addSteamShortcuts: false
+}
+let mockSettings: typeof defaultSettings = { ...defaultSettings }
 
 jest.mock('child_process', () => ({
   ...jest.requireActual('child_process'),
@@ -25,13 +32,13 @@ jest.mock('child_process', () => ({
 jest.mock('backend/config', () => ({
   GlobalConfig: {
     get: () => ({
-      getSettings: () => ({
-        addDesktopShortcuts: true,
-        addStartMenuShortcuts: true,
-        addSteamShortcuts: false
-      })
+      getSettings: () => mockSettings
     })
   }
+}))
+
+jest.mock('../nonesteamgame/nonesteamgame', () => ({
+  addNonSteamGame: (...args: unknown[]) => mockAddNonSteamGame(...args)
 }))
 
 jest.mock('backend/shortcuts/utils', () => ({
@@ -47,7 +54,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { dirname } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
 import type { GameInfo } from 'common/types'
@@ -108,6 +115,7 @@ let originalPlatform: string
 
 afterEach(() => {
   overrideProcessPlatform(originalPlatform)
+  mockSettings = { ...defaultSettings }
 })
 
 describe('addShortcuts on linux', () => {
@@ -167,5 +175,107 @@ describe('addShortcuts on win32', () => {
       return options.env.GAMELIB_LNK_PATH
     })
     expect(written.sort()).toEqual([desktopFile, menuFile].sort())
+  })
+})
+
+describe('Steam game (261026-c7r)', () => {
+  const steamUrl = 'gamelib://launch?appName=230070&runner=steam'
+  const steamGameInfo = {
+    runner: 'steam',
+    app_name: '230070',
+    art_cover: '',
+    art_square: '',
+    install: { is_dlc: false },
+    is_installed: true,
+    title: 'Steam Shortcut Test',
+    canRunOffline: true
+  } as unknown as GameInfo
+  const steamGame = { getGameInfo: () => steamGameInfo } as unknown as Game
+
+  it('linux: both .desktop files Exec the steam gamelib:// URL', async () => {
+    originalPlatform = overrideProcessPlatform('linux')
+    const [desktopFile, menuFile] = shortcutFiles(steamGameInfo.title)
+    mkdirSync(dirname(desktopFile), { recursive: true })
+    mkdirSync(dirname(menuFile), { recursive: true })
+
+    await addShortcuts(steamGame, true)
+
+    for (const file of [desktopFile, menuFile]) {
+      expect(readFileSync(file, 'utf8')).toContain(`Exec=xdg-open ${steamUrl}`)
+    }
+  })
+
+  it('win32: both .lnk writes carry the steam gamelib:// URL', async () => {
+    originalPlatform = overrideProcessPlatform('win32')
+    fakePowerShell(0)
+    const [desktopFile, menuFile] = shortcutFiles(steamGameInfo.title)
+
+    await addShortcuts(steamGame, true)
+
+    expect(mockSpawn).toHaveBeenCalledTimes(2)
+    const envs = mockSpawn.mock.calls.map(([, , options]) => options.env)
+    expect(envs.map((env) => env.GAMELIB_LNK_PATH).sort()).toEqual(
+      [desktopFile, menuFile].sort()
+    )
+    for (const env of envs) {
+      expect(env.GAMELIB_LNK_ARGS).toContain(steamUrl)
+    }
+  })
+
+  describe('darwin', () => {
+    let savedShellExe: string | undefined
+    beforeEach(() => {
+      originalPlatform = overrideProcessPlatform('darwin')
+      savedShellExe = process.env.GAMELIB_SHELL_EXE
+      process.env.GAMELIB_SHELL_EXE = '/fake/GameLib.app/Contents/MacOS/GameLib'
+    })
+    afterEach(() => {
+      if (savedShellExe === undefined) delete process.env.GAMELIB_SHELL_EXE
+      else process.env.GAMELIB_SHELL_EXE = savedShellExe
+      rmSync(shortcutFiles(steamGameInfo.title)[1], {
+        recursive: true,
+        force: true
+      })
+    })
+
+    it('writes run.sh with the quoted steam URL and an iconless plist', async () => {
+      const app = shortcutFiles(steamGameInfo.title)[1]
+
+      await addShortcuts(steamGame, true)
+
+      const runSh = readFileSync(`${app}/Contents/MacOS/run.sh`, 'utf8')
+      expect(runSh).toContain(`--no-gui '${steamUrl}'`)
+      expect(runSh).toContain('"/fake/GameLib.app/Contents/MacOS/GameLib"')
+      const plist = readFileSync(`${app}/Contents/Info.plist`, 'utf8')
+      expect(plist).not.toContain('CFBundleIconFile')
+    })
+  })
+
+  describe('addSteamShortcuts guard', () => {
+    beforeEach(() => {
+      originalPlatform = overrideProcessPlatform('linux')
+      mockSettings = { ...defaultSettings, addSteamShortcuts: true }
+      mockAddNonSteamGame.mockClear()
+    })
+
+    it('does not register a Steam game as a non-Steam game', async () => {
+      const [desktopFile, menuFile] = shortcutFiles(steamGameInfo.title)
+      mkdirSync(dirname(desktopFile), { recursive: true })
+      mkdirSync(dirname(menuFile), { recursive: true })
+
+      await addShortcuts(steamGame, true)
+
+      expect(mockAddNonSteamGame).not.toHaveBeenCalled()
+    })
+
+    it('still registers a legendary game', async () => {
+      const [desktopFile, menuFile] = shortcutFiles(gameInfo.title)
+      mkdirSync(dirname(desktopFile), { recursive: true })
+      mkdirSync(dirname(menuFile), { recursive: true })
+
+      await addShortcuts(game, true)
+
+      expect(mockAddNonSteamGame).toHaveBeenCalledWith(game)
+    })
   })
 })

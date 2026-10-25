@@ -14,6 +14,7 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
 import { sendFrontendMessage } from '../../../ipc'
+import * as shortcutsModule from '../../../shortcuts/shortcuts/shortcuts'
 import { steamMetadataStore, steamLibraryStore } from '../electronStores'
 import SteamGame, {
   parseSteamStorageRequirement,
@@ -125,6 +126,13 @@ jest.mock('backend/logger', () => ({
 
 // ── axios mock — controls store appdetails API responses ─────────────────────
 jest.mock('axios')
+// steam/games.ts now imports the shared shortcuts module, whose import graph pulls fs-extra,
+// which cannot load under this file's graceful-fs mock (quick 261026-c7r).
+jest.mock('../../../shortcuts/shortcuts/shortcuts', () => ({
+  addShortcuts: jest.fn(),
+  removeShortcuts: jest.fn(),
+  shortcutFiles: jest.fn()
+}))
 
 // ── IPC mock — sendFrontendMessage ───────────────────────────────────────────
 jest.mock('../../../ipc', () => ({
@@ -9779,5 +9787,37 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     )
     expect(notify).not.toHaveBeenCalled()
     expect(setBridgeIdentityFallbackSpy).toHaveBeenCalledWith(APP_ID, false)
+  })
+})
+
+describe('SteamGame shortcuts delegate to the shared module (261026-c7r)', () => {
+  it('addShortcuts calls the shared addShortcuts with (this, fromMenu)', async () => {
+    const spy = shortcutsModule.addShortcuts as jest.Mock
+    spy.mockResolvedValue(undefined)
+    const game = new SteamGame(APP_ID)
+
+    await game.addShortcuts(true)
+
+    expect(spy).toHaveBeenCalledWith(game, true)
+  })
+
+  it('removeShortcuts calls the shared removeShortcuts with (this)', async () => {
+    const spy = shortcutsModule.removeShortcuts as jest.Mock
+    spy.mockResolvedValue(undefined)
+    const game = new SteamGame(APP_ID)
+
+    await game.removeShortcuts()
+
+    expect(spy).toHaveBeenCalledWith(game)
+  })
+
+  it('propagates a rejection from the shared addShortcuts', async () => {
+    ;(shortcutsModule.addShortcuts as jest.Mock).mockRejectedValue(
+      new Error('Could not write shortcuts: boom')
+    )
+
+    await expect(new SteamGame(APP_ID).addShortcuts(true)).rejects.toThrow(
+      'boom'
+    )
   })
 })

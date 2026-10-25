@@ -40,7 +40,8 @@ async function addShortcuts(game: Game, fromMenu?: boolean) {
   const { addDesktopShortcuts, addStartMenuShortcuts, addSteamShortcuts } =
     GlobalConfig.get().getSettings()
 
-  if (addSteamShortcuts) {
+  // A Steam game is already in Steam (the "Add to Steam" menu item is hidden for it too).
+  if (addSteamShortcuts && runner !== 'steam') {
     addNonSteamGame(game)
   }
 

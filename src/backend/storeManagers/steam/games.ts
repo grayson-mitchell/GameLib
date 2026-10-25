@@ -31,6 +31,10 @@ import {
 } from 'backend/utils/aborthandler/aborthandler'
 import { sendFrontendMessage } from '../../ipc'
 import {
+  addShortcuts as addShortcutsUtil,
+  removeShortcuts as removeShortcutsUtil
+} from '../../shortcuts/shortcuts/shortcuts'
+import {
   steamMetadataStore,
   steamLibraryStore,
   type SteamBridgeVerdict
@@ -2565,18 +2569,19 @@ export default class SteamGame implements Game {
     }
   }
 
-  async addShortcuts(_fromMenu?: boolean): Promise<void> {
-    logWarning(
-      `SteamGame.addShortcuts not implemented until Phase 2 (appId: ${this.appId})`,
-      LogPrefix.Steam
-    )
+  /**
+   * Writes the per-OS shortcut through the shared shortcuts module. The target is
+   * `gamelib://launch?appName={appId}&runner=steam`; protocol.ts hands that to
+   * dispatchSteamLaunch, so a shortcut launch takes the same bridge/bottle/native route as the
+   * Play button. It deliberately does not open `steam://rungameid` directly, which would skip
+   * that routing.
+   */
+  async addShortcuts(fromMenu?: boolean): Promise<void> {
+    return addShortcutsUtil(this, fromMenu)
   }
 
   async removeShortcuts(): Promise<void> {
-    logWarning(
-      `SteamGame.removeShortcuts not implemented until Phase 2 (appId: ${this.appId})`,
-      LogPrefix.Steam
-    )
+    return removeShortcutsUtil(this)
   }
 
   /**
