@@ -71,13 +71,14 @@ export const removePrefix = async (appName: string, runner: Runner) => {
   rmSync(winePrefix, { recursive: true })
 }
 
-const removeFixFile = (appName: string, runner: Runner) => {
-  // quick 261024-tny: before storeMap.steam was set, the steam path resolved
-  // `<appId>-undefined.json`, so a Steam uninstall never deleted a fixes file.
-  // Steam fixes are hand-placed or GameLib-sourced and never re-downloaded at
-  // install (D1), so deleting them would destroy the only copy.
-  if (runner === 'steam') return
-  const fixFilePath = join(fixesPath, `${appName}-${storeMap[runner]}.json`)
+export const removeFixFile = (appName: string, runner: Runner) => {
+  // The downloaded tier-1 copy is re-fetched at install from GameLib's repo for
+  // every store (quick 261026-avw), so deleting it is safe. Local
+  // (`fixes/local/`) and bundled files live elsewhere and are never touched;
+  // `.profile.json` is never downloaded and is not deleted.
+  const store = storeMap[runner]
+  if (!store) return
+  const fixFilePath = join(fixesPath, `${appName}-${store}.json`)
   if (existsSync(fixFilePath)) {
     rmSync(fixFilePath)
   }

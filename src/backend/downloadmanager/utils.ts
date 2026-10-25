@@ -1,9 +1,5 @@
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
-import {
-  downloadFile,
-  isEpicServiceOffline,
-  sendGameStatusUpdate
-} from '../utils'
+import { isEpicServiceOffline, sendGameStatusUpdate } from '../utils'
 import {
   callAbortController,
   hasAbortController
@@ -14,10 +10,9 @@ import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { isOnline } from '../online_monitor'
 import pathModule from 'path'
-import { existsSync, mkdirSync, rmSync } from 'graceful-fs'
-import { storeMap } from 'common/utils'
+import { existsSync, rmSync } from 'graceful-fs'
+import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
 import { gogdlConfigPath } from 'backend/storeManagers/gog/constants'
-import { fixesPath } from 'backend/constants/paths'
 import { isTimeoutError } from 'backend/storeManagers/steam/withTimeout'
 import {
   withStallTimeout,
@@ -503,19 +498,15 @@ async function updateQueueElement(params: InstallParams): Promise<{
   }
 }
 
-async function downloadFixesFor(appName: string, runner: Runner) {
-  // D1 (quick 261024-tny): Steam fixes come only from bundled or local GameLib
-  // sources and never from Heroic's feed (decision 6 of
-  // .planning/notes/per-game-compat-fixes-architecture.md). GameLib's own
-  // fixes repo is tracked in the pending todo
-  // 2026-10-24-gamelib-own-known-fixes-repo-for-steam-and-complex-fixes.md.
-  if (runner === 'steam') return
-  const url = `https://raw.githubusercontent.com/Heroic-Games-Launcher/known-fixes/main/${storeMap[runner]}/${appName}-${storeMap[runner]}.json`
-  const dest = pathModule.join(fixesPath, `${appName}-${storeMap[runner]}.json`)
-  if (!existsSync(fixesPath)) {
-    mkdirSync(fixesPath, { recursive: true })
-  }
-  downloadFile({ url, dest, ignoreFailure: true })
+// quick 261026-avw (decision 6): every store fetches GameLib's known-fixes repo
+// first; the fetcher owns the Heroic fallback and never rejects.
+function downloadFixesFor(appName: string, runner: Runner) {
+  fetchRemoteKnownFixes(appName, runner).catch((error) =>
+    logWarning(
+      `Known fixes fetch failed for ${appName}: ${error}`,
+      LogPrefix.Backend
+    )
+  )
 }
 
 export { installQueueElement, updateQueueElement }

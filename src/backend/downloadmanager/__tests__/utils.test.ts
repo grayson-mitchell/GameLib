@@ -109,10 +109,15 @@ jest.mock('backend/constants/paths', () => ({
   fixesPath: '/mock/fixes'
 }))
 
+jest.mock('backend/knownFixesFetcher', () => ({
+  fetchRemoteKnownFixes: jest.fn().mockResolvedValue(undefined)
+}))
+
 import { installQueueElement, resolveGameTitle } from '../utils'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { isOnline } from '../../online_monitor'
 import { existsSync } from 'graceful-fs'
+import { fetchRemoteKnownFixes } from 'backend/knownFixesFetcher'
 import { showDialogBoxModalAuto } from '../../dialog/dialog'
 import { logWarning, logError, LogPrefix } from 'backend/logger'
 import {
@@ -185,6 +190,10 @@ function emitAdvance(
 // including the very first one -- re-apply it here rather than duplicating
 // this block into every describe's own beforeEach.
 beforeEach(() => {
+  // resetMocks:true also wipes the fetcher mock's resolved value; the real
+  // fetcher always returns a promise.
+  ;(fetchRemoteKnownFixes as jest.Mock).mockResolvedValue(undefined)
+
   mockT.mockImplementation(
     (_key: string, fallback = '', options?: Record<string, string | number>) =>
       options
@@ -991,7 +1000,7 @@ describe('installQueueElement — REQ-37-04: no spurious abort-controller-miss E
   })
 })
 
-describe('installQueueElement — quick 261024-tny D1: Steam never pulls Heroic known-fixes', () => {
+describe('installQueueElement — quick 261026-avw: every store fetches known fixes via the GameLib-first fetcher', () => {
   beforeEach(() => {
     getGameInfoMock.mockReturnValue({ title: 'Test Game' })
     stopMock.mockResolvedValue(undefined)
@@ -1010,9 +1019,13 @@ describe('installQueueElement — quick 261024-tny D1: Steam never pulls Heroic 
     ;(existsSync as jest.Mock).mockReturnValue(true)
   })
 
-  it('a Steam install never calls downloadFile with a known-fixes URL', async () => {
+  it('a Steam install calls the fetcher and never downloadFile for known fixes', async () => {
     await installQueueElement(makeParams())
 
+    expect(fetchRemoteKnownFixes).toHaveBeenCalledWith(
+      expect.any(String),
+      'steam'
+    )
     expect(downloadFile).not.toHaveBeenCalledWith(
       expect.objectContaining({
         url: expect.stringContaining('known-fixes')
@@ -1020,7 +1033,7 @@ describe('installQueueElement — quick 261024-tny D1: Steam never pulls Heroic 
     )
   })
 
-  it('anti-vacuity: a GOG install DOES fetch from the known-fixes feed', async () => {
+  it('a GOG install calls the fetcher with the gog runner', async () => {
     await installQueueElement(
       makeParams({
         appName: '1207658930',
@@ -1029,12 +1042,19 @@ describe('installQueueElement — quick 261024-tny D1: Steam never pulls Heroic 
       })
     )
 
-    expect(downloadFile).toHaveBeenCalledWith(
+    expect(fetchRemoteKnownFixes).toHaveBeenCalledWith('1207658930', 'gog')
+    expect(downloadFile).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        url: expect.stringContaining(
-          'Heroic-Games-Launcher/known-fixes/main/gog/1207658930'
-        )
+        url: expect.stringContaining('known-fixes')
       })
     )
+  })
+
+  it('a rejecting fetcher never fails the install', async () => {
+    ;(fetchRemoteKnownFixes as jest.Mock).mockRejectedValue(new Error('boom'))
+
+    const result = await installQueueElement(makeParams())
+
+    expect(result.status).toBe('done')
   })
 })
