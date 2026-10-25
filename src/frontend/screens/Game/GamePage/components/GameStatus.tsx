@@ -9,7 +9,7 @@ import {
 } from 'frontend/state/BottleLaunchWaiting'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { LinearProgress } from '@mui/material'
+import { CircularProgress, LinearProgress } from '@mui/material'
 
 interface Props {
   gameInfo: GameInfo
@@ -78,10 +78,19 @@ const GameStatus = ({ gameInfo, progress, handleUpdate, hasUpdate }: Props) => {
       return t('status.gameNotAvailable', 'Game not available')
     }
 
+    // quick 261026-e1c: a first-launch redist install can take minutes, so
+    // the line carries a spinner to show the step is still working.
     if (is.installingRedist) {
-      return t('status.redist', 'Installing Redistributables ({{redist}})', {
-        redist: statusContext || ''
-      })
+      return (
+        <span
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          <CircularProgress size={14} color="inherit" />
+          {t('status.redist', 'Installing Redistributables ({{redist}})', {
+            redist: statusContext || ''
+          })}
+        </span>
+      )
     }
 
     if (is.uninstalling) {

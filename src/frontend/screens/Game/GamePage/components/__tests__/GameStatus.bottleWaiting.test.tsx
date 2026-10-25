@@ -33,7 +33,10 @@ jest.mock('frontend/state/BottleLaunchWaiting', () => ({
 }))
 
 jest.mock('react-router-dom', () => ({ Link: 'a' }))
-jest.mock('@mui/material', () => ({ LinearProgress: 'progress' }))
+jest.mock('@mui/material', () => ({
+  LinearProgress: 'progress',
+  CircularProgress: 'spinner'
+}))
 jest.mock('frontend/helpers', () => ({ getProgress: () => 0 }))
 jest.mock('../../../GameContext', () => ({ __esModule: true, default: {} }))
 
