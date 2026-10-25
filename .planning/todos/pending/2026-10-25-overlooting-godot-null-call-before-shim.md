@@ -25,3 +25,7 @@ ready: live-gate
 ## 53-19 evidence
 
 2026-10-25: measured in the real bottle (see `53-19-NVAPI.md`). Baseline reproduced the rip=0 fault. A per-exe registry override `HKCU\Software\Wine\AppDefaults\Overlooting.exe\DllOverrides` `nvapi64=""` clears it: nvapi64 fails to load, Godot skips its NvAPI block, and godot.log advances into GodotSteam init. The bottle was restored byte-for-byte. Shipped as a per-appId applier in `bottleDllOverrides.ts`; stays open until the 53-20 live re-run shows HELLO.
+
+## 53-20 evidence (2026-10-25)
+
+The null-call crash is gone on the 53-19 build: the `nvapi64` per-exe override applied (user.reg `"nvapi64"=""`), no `page fault on read access to 0x0`, godot.log advances past the driver lines, and the operator reached the menu. The bridge saw HELLO and one game call, `SteamUser023.GetSteamID`; the census reads `unverified (1 game call; needs 2 incl. identity)`. Not closed, because the row is not verified (53-UAT item 36). Open question for the next round: godot.log prints `Usernam: ` empty after `Steam is running!` and no GetPersonaName CALL was traced.

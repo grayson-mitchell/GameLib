@@ -16,3 +16,7 @@ identity, census `verified`), and gamelib.log records no error for it, so the di
 missing fact. Next step: relaunch, capture the dialog text and the Wine stderr for the bottle
 `GameLibSteamBridge-1603180`, and check whether it is a missing Windows runtime component (see
 `2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md`).
+
+## 53-20 evidence (2026-10-25)
+
+Reproduced in the 53-20 session: operator `1603180 - reached menu (with error messages)`. HELLO plus five distinct CALLs incl. identity, census verified; gamelib.log records no error; the bottle has no Unity Player.log; the dialog text was again not captured. Still needs the text and the Wine stderr.

@@ -75,3 +75,7 @@ Left open: Manor Lords 1363080 passes (HELLO, 7 CALLs, no 0x0 crash). Abiotic Fa
 ## 53-16 evidence (2026-10-25)
 
 Manor Lords (1363080) and Abiotic Factor (427410) now verify live (53-UAT.md items 25, 26: HELLO, game-originated CALLs, no NOVER). Ranch Simulator (1119730, item 24) still never sends HELLO (game exits 3 s after launch; pre-HELLO fault, see 53-15-DIAGNOSIS.md), so this todo stays open.
+
+## 53-20 evidence (2026-10-25)
+
+Not closed. 1363080 and 427410 scored pass (UE init marker, identity CALLs), but 1119730 Ranch Simulator had no HELLO (process gone after 3s, SteamStub class), so the all-three condition is not met (53-UAT items 42-44). No NOVER or flat-lookup line appeared in the session.

@@ -63,3 +63,7 @@ What this changes in the work list above:
   installs, but it would not have found this case: 284100 declares nothing.
 - The measurement note's "blocked before Steam init" no longer holds for 284100 with the marker in
   place: it reaches Steam init and fails on the shim.
+
+## 53-20 evidence (2026-10-25)
+
+Operator, 284100 in the 53-20 session: "error on startup ... serious problem" (dialog text not captured). Logs: x86 `UnclaimedWorld.exe`, helper INIT ok, both shims placed (290304 and 497664), process alive 51s, no window raised, no HELLO. The WMP Active Setup marker is present in the bottle's system.reg in both views (lines 66715, 77788), so the Windows Media Player dialog is not explained by a missing marker; the failure is unidentified. Next step: relaunch once, capture the dialog text and the Wine stderr. Note the census Arch column prints x64 for this title but the launch exe is PE32.

@@ -156,9 +156,9 @@ not improvised during the run.
 
 ## Summary
 
-total: 31
-pass: 15
-issue: 16
+total: 49
+pass: 23
+issue: 26
 pending: 0
 skipped: 0
 blocked: 0
@@ -393,75 +393,79 @@ Operator and census results go in Task 3; items below start pending.
 
 ### 36. Overlooting 3410180 (Godot, nvapi64 override)
 expected: the bottle's DllOverrides shows `nvapi64` set by 53-19 (per-exe, Overlooting.exe); no `page fault on read access to 0x0` and godot.log advances past the driver lines; launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (HELLO, 1 game call; census `unverified (1 game call; needs 2 incl. identity)`). Operator: `3410180 - reached menu`. The NvAPI crash is gone: 53-19's override applied (`reg add ...\\Overlooting.exe\\DllOverrides /v nvapi64 /t REG_SZ /d  /f` logged 14:02:46; bottle user.reg line 723 `"nvapi64"=""`), no `page fault on read access to 0x0` anywhere in gamelib.log, and godot.log advances past the driver lines (`OpenGL API 4.1 Metal ... Using Device: Apple`, then the script's own `ERROR: Steam is running!` and `Usernam: `). Shim 497664 = built dll. HELLO 14:03:00, then one CALL, `SteamUser023.GetSteamID` (an identity call), no NOVER, no `flat lookup` line in the session. Process gone after 11s of play (the operator quit). The rule needs 2 distinct game-originated CALLs; there is 1, so it stays unverified and in the denominator. Next-lever input for a further round: CALL list = [SteamUser023.GetSteamID]; NOVER versions = none this session; whether the persisted scan-miss versions (STEAMUGC_INTERFACE_VERSION021, STEAMREMOTEPLAY_INTERFACE_VERSION003, STEAMTIMELINE_INTERFACE_V004) were requested: no evidence either way, the session logged no NOVER or flat-lookup line; godot.log shows `Usernam: ` with an empty name after `Steam is running!`, while no SteamFriends GetPersonaName CALL was traced, so the name lookup either went through an untraced path or returned empty (unproven).
 
 ### 37. Rogue Waters 1691190 (Unity)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: pass (census verified). Operator: `1691190 - reached menu`. HELLO 14:03:53; 5 distinct CALLs (SteamUtils010.GetAppID, SteamUser021.GetSteamID identity, STEAMAPPS_INTERFACE_VERSION008.GetCurrentGameLanguage / BIsDlcInstalled, STEAMUSERSTATS_INTERFACE_VERSION012.StoreStats); no NOVER; shim 497664. Unity, census Evidence `verified`.
 
 ### 38. Vampire's Fall 1167950 (Unity)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: pass (census verified). Operator: `1167950 - reached menu `. HELLO 14:04:50; CALL SteamFriends017.GetPersonaName (identity); Unity Player.log clean per the census; no NOVER; shim 497664.
 
 ### 39. Planet Crafter 1284190 (Unity)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (census `verified`, but the operator reports a regression, so the row is scored issue on the experience). Operator: `1284190 - menu disappered (3 times, note have seen this once before, but just quit game and tried again did not repeat 3 times in a row)`. Bridge evidence: four launches (14:05:53, 14:07:31, 14:08:00, 14:08:24), each HELLO plus one CALL STEAMAPPS_INTERFACE_VERSION008.BIsDlcInstalled, no NOVER, shim 497664; the census still reads verified. Every stop in gamelib.log is an operator `SteamGame.stop` (14:07:25, 14:07:55, 14:08:20, 14:08:41); the bottleProcessMonitor logged no crash exit. Concrete lead: the two retained Unity logs (Player-prev.log = launch 3, Player.log = launch 4) each end in an exception thrown by the game's own `SpaceCraft.SteamRichPresence.JoinFriend ()` -> `SavedDataHandler.ParseConnectionString`: launch 3 `FormatException: Input string was not in a correct format`, launch 4 `ArgumentOutOfRangeException: Length cannot be less than zero ... String.Substring`. In the shim, `ISteamFriends::GetFriendRichPresence` and `ISteamApps::GetLaunchQueryParam` are both stubs that return an empty string (steam_api_shim.c slots 43 and 21). That an empty rich-presence/connect value feeds the exception is a hypothesis, not proven; the link to the vanishing menu is also unproven. Launches 1-2 logs were overwritten, so only launches 3 and 4 carry the exception. Todo created: 2026-10-25-planet-crafter-joinfriend-exception-menu-disappears.md.
 
 ### 40. Hell Clock 1782460 (Unity)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: pass (census verified). Operator: `1782460 - reached menu`. HELLO 14:10:04; CALL STEAMAPPS_INTERFACE_VERSION008.BIsDlcInstalled; engine evidence per the census (Unity Player.log clean); no NOVER; shim 497664.
 
 ### 41. Mining Mechs 1603180 (engine per census class)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (census verified; the operator saw error messages). Operator: `1603180 - reached menu (with error messages)`. HELLO 14:11:41; 5 distinct CALLs incl. identity (SteamUser023.BLoggedOn / GetSteamID, SteamFriends017.GetPersonaName, STEAMAPPS_INTERFACE_VERSION008.GetCurrentGameLanguage / BIsSubscribedApp); no NOVER; shim 497664. gamelib.log records no error for it, there is no Unity Player.log in its bottle, and the dialog text was not typed by the operator, so the cause is not identified. This is the same symptom as the existing todo 2026-10-25-mining-mechs-win32-error-dialogs-on-launch.md (53-16 item 22); evidence appended there. The bridge criterion is met, so the row stays verified in the census.
 
 ### 42. Ranch Simulator 1119730 (Unreal Engine, SteamStub)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (census `unverified (no HELLO)`; SteamStub, Phase 52). Operator: `1119730 - failed to launch`. The helper reached INIT and the shim (497664) was placed at Ranch_Simulator/Binaries/Win64, but the Shipping process was gone after 3s of play (14:12:35 to 14:12:38) with no HELLO and no CALL, and raiseWineGameWindow found no process. Consistent with the SteamStub `.bind` wrapper failing before the shim is loaded; the logs do not show the wrapper's own message, so the exact failure is inferred from the class, not observed. Not reachable in this phase, stays in the denominator, not rerouted to bottled Steam.
 
 ### 43. Manor Lords 1363080 (Unreal Engine)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: pass (census verified). Operator: `1363080 - reached menu`. HELLO 14:13:39; 5 distinct CALLs incl. SteamUser023.GetSteamID; UE current Saved log marker per the census; no NOVER; shim 497664.
 
 ### 44. Abiotic Factor 427410 (Unreal Engine)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: pass (census verified) with a separate defect. Operator: `427410 - hung at load screen`. HELLO 14:14:26; CALLs incl. SteamUser023.GetSteamID, SteamFriends017.GetPersonaName, BLoggedOn, GetAuthSessionTicket (last CALL 14:14:42); UE init marker verified by the census; no NOVER; shim 497664. The load-screen hang follows the auth ticket exactly as the open todo 2026-10-25-abiotic-factor-loading-hang-after-auth-ticket.md describes; no new cause found, todo unchanged.
 
 ### 45. Colony Ship 648410 (Unreal Engine)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: pass (census verified). Operator: `648410 - reached menu`. HELLO 14:16:27; CALLs SteamUtils010.GetAppID and SteamUser023.BLoggedOn (identity); UE init marker verified by the census; no NOVER; shim 497664.
 
 ### 46. Raft 648800 (Unity, SteamStub DRM)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (census `unverified (no game log found)`; SteamStub DRM). Operator: `648800 - DRM message / error`. HELLO 14:17:08 for the appid but no CALL; no Player.log found; process gone after 29s. The DRM message is the SteamStub class (Phase 52) and the census agrees. Known-bad class never counts as verified; not rerouted. (Only DRM may justify bottled Steam, and the goal is to remove that path, so no proposal is made.)
 
 ### 47. Avernum 6 206060 (x86)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (census `unverified (no game-originated call)`; unverifiable by construction). Operator: `206060 - reached menu`. HELLO 14:17:51; zero CALLs; x86 shim 290304 = built dll. Avernum 6.exe imports only `SteamAPI_Init` and `SteamAPI_Shutdown` from steam_api.dll (import block quoted in the Ceiling section above), writes no game log, so no game-originated call and no engine log can exist; D-53-13 cannot be met. The operator saw the menu, which does not count. Stays in the denominator.
 
 ### 48. Age of Decadence 230070 (engine per census class)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: pass (census verified). Operator: `230070 - reached menu`. HELLO 14:18:41; CALLs SteamUtils008.GetAppID and SteamUser019.BLoggedOn (identity); census verified; no NOVER; shim 497664.
 
 ### 49. ELEX 411300 (known-bad)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (known-bad; census `unverified (1 game call; needs 2 incl. identity)`). Operator: `411300 - hung at load screen`. HELLO 14:19:23, one CALL STEAMAPPS_INTERFACE_VERSION008.BIsSubscribedApp, then nothing; shim coverage miss logged at 14:19:21 (STEAMHTMLSURFACE_INTERFACE_VERSION_003, STEAMHTTP_INTERFACE_VERSION002, STEAMINVENTORY...). Known-bad is never verified; the title is not rerouted.
 
 ### 50. Grim Dawn 219990 (SteamStub DRM)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (census `unverified (no game-originated call)`; SteamStub DRM). Operator: `219990 - DRM message / error`. HELLO 14:20:58, no CALL; process gone after 32s. SteamStub class (Phase 52); not rerouted.
 
 ### 51. Unclaimed World 284100 (MonoGame, old SDK)
 expected: launch through the title's GameLibSteamBridge bottle; bottle shim size equals the built dll size for its arch (497664 for x64); HELLO for the appid; the engine rule for its census class (Unity: clean current Player.log; UE: current Saved log marker or CALLs; Godot/GameMaker: CALLs; or at least 2 distinct game-originated CALLs incl. identity); no NOVER init failure; no reroute to bottled Steam; In-Game never counts
-result: pending
+result: issue (census `unverified (no HELLO)`). Operator: `284100 - error on startup  ... serious problem`. Evidence: UnclaimedWorld.exe is a PE32 (x86) .NET exe that reaches Steam through CSteamworks.dll (x86) / CSteamworks64.dll; both shims were placed (steam_api.dll 290304, steam_api64.dll 497664, matching the built dlls), the helper reached INIT, the game process lived 51s (no window raised) and there was never a HELLO. The WMP Active Setup marker the hand test found necessary is present in the bottle's system.reg in both registry views (lines 66715 and 77788), so the missing-Windows-Media-Player dialog is not explained by a missing marker. The dialog text was not captured and no Wine stderr exists for this launch, so the exact error is not identified from the logs. Candidates, not proven: the old-SDK CSteamworks export gap (todo 2026-10-24-x64-shim-lacks-old-sdk-csteamworks-exports-and-interface-versions.md) or the runtime-components defect (todo 2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need.md). Side finding: the census Arch column prints x64 for this title but the launch exe is PE32. Evidence appended to the runtime-components todo.
 
 ### 52. Trace lines (53-20)
 expected: every distinct CALL method and every NOVER version (`flat lookup ver=<v> served=no`) from this session's gamelib.log is listed
-result: pending
+result: pass (informational listing). Distinct CALL methods this session (gamelib.log, 14:00-14:22): SteamUser023.GetSteamID, SteamUser023.BLoggedOn, SteamUser023.GetAuthSessionTicket, SteamUser021.GetSteamID, SteamUser019.BLoggedOn, SteamUtils010.GetAppID, SteamUtils008.GetAppID, SteamFriends017.GetPersonaName, STEAMAPPS_INTERFACE_VERSION008.{GetCurrentGameLanguage,BIsDlcInstalled,BIsSubscribedApp,BIsSubscribed}, STEAMUSERSTATS_INTERFACE_VERSION012.{StoreStats,GetAchievementAndUnlockTime,GetAchievementDisplayAttribute}. NOVER versions (`flat lookup ver=<v> served=no`): none. No `flat lookup`, `served=no` or NOVER line appears anywhere in the session's gamelib.log.
 
 ### 53. Census majority (53-20)
 expected: `pnpm bridge-census` run after the session prints `V of 18 Steamworks-using rows verified (majority: yes)` with V >= 10; the majority line is quoted verbatim with every non-verified row's Evidence reason
-result: pending
+result: issue - done-when NOT met (9 of 18). Verbatim from `pnpm bridge-census` run after the session:
+
+`9 of 18 Steamworks-using rows verified (majority: no)`
+
+V = 9, N = 18. Verified appids: 1167950, 1284190, 1363080, 1603180, 1691190, 1782460, 230070, 427410, 648410. Non-verified rows and their Evidence reasons: 200510 XCOM (unverified, no per-game bridge bottle; known-bad, drm-wrapped); 206020 Avernum 4 (unverified, no per-game bridge bottle); 1119730 Ranch Simulator (unverified, no HELLO); 206060 Avernum 6 (unverified, no game-originated call); 219990 Grim Dawn (unverified, no game-originated call); 284100 Unclaimed World (unverified, no HELLO); 3410180 Overlooting (unverified, 1 game call; needs 2 incl. identity); 411300 ELEX (unverified, 1 game call; needs 2 incl. identity; known-bad); 648800 Raft (unverified, no game log found).
 
 ### Recorded at launch (53-20)
 
@@ -473,4 +477,35 @@ result: pending
 
 ## Operator outcomes (53-20)
 
-Pending: the 16 operator lines are recorded here verbatim once the session is run.
+Recorded verbatim, as typed (including typos and spacing):
+
+```
+3410180 - reached menu
+1691190 - reached menu
+1167950 - reached menu 
+1284190 - menu disappered (3 times, note have seen this once before, but just quit game and tried again did not repeat 3 times in a row)
+1782460 - reached menu
+1603180 - reached menu (with error messages)
+1119730 - failed to launch
+1363080 - reached menu
+427410 - hung at load screen
+648410 - reached menu
+648800 - DRM message / error
+206060 - reached menu
+230070 - reached menu
+411300 - hung at load screen
+219990 - DRM message / error
+284100 - error on startup  ... serious problem
+```
+
+The operator supplied all 16 lines without typing a literal "done"; the session is treated as complete. These are what the operator saw; the items above are scored from the logs and the census, and "reached menu" alone never makes a row verified.
+
+### Done-when (53-20)
+
+Not met: 9 of 18 Steamworks-using rows verified, `majority: no`, against a bar of 10.
+
+Delta against 53-16 (9 of 18): no row changed status. The same nine verified rows (1167950, 1284190, 1363080, 1603180, 1691190, 1782460, 230070, 427410, 648410) stayed verified, so there is no regression among them in the census. Overlooting 3410180 moved from a crash at a null call (rip=0, the NvAPI path) to running: the 53-19 `nvapi64` override applied, the game reached its menu with the engine log past the driver lines, and the bridge saw HELLO and one identity call (SteamUser023.GetSteamID). It did not verify because the unchanged rule needs 2 distinct game-originated CALLs and there is 1. Overlooting stays in the denominator as a held-back row, class: bridge reached, evidence short by one call.
+
+Not reachable in this phase: Avernum 6 206060 (imports only SteamAPI_Init/SteamAPI_Shutdown, no game log) and Avernum 4 206020 (same, plus no bottle); Ranch Simulator 1119730, Raft 648800 and Grim Dawn 219990 (SteamStub, Phase 52); ELEX 411300 and XCOM 200510 (known-bad); Unclaimed World 284100 (no HELLO, startup error unidentified). Nothing was rerouted to bottled Steam and the criterion was not relaxed.
+
+Next lever, per the pre-stated rule, input for a further gap round: the 3410180 CALL list is [SteamUser023.GetSteamID]; no NOVER versions were seen; whether the persisted scan-miss versions (STEAMUGC_INTERFACE_VERSION021, STEAMREMOTEPLAY_INTERFACE_VERSION003, STEAMTIMELINE_INTERFACE_V004) were requested cannot be told from this session (no NOVER or flat-lookup line at all); godot.log shows `Steam is running!` then `Usernam: ` (empty name) with no SteamFriends GetPersonaName CALL traced. Candidate fix per D-53-06/D-53-03: find which call GodotSteam makes for the name after the identity call and forward or constant-answer it if a served interface's stubbed slot is what stops it, or add the missing manifest version slot by slot. Neither is done here.
