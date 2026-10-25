@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 53
 Plan: 20 of 20
 Status: Milestone complete
-Last activity: 2026-10-25 - Completed quick task 261025-mfz: Steam bridge registry known-fixes key + 284100 WMP profile
+Last activity: 2026-10-25 - Completed quick task 261025-rd0: XCOM 200510 cross-depot collision live gate PASS + two follow-up todos
 
 Progress: [██████████] 100%
 
@@ -362,6 +362,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261025-kon | Phase 53 review warnings fixed: WR-02 DLL override succeeds only on `code === 0` (missing/null/nonzero logs a warning with stderr); WR-01 `emitHiddenFallback` throws at generation for zero-param dropped class/float/double/void returns. IN-01 stale comment fixed (comment-only shim diff); one new log-secret-gate exemption. | 2026-10-25 | 06bbd6955 | code-verified | [261025-kon-fix-phase-53-review-warnings-wr-02-then-](./quick/261025-kon-fix-phase-53-review-warnings-wr-02-then-/) |
 | 261025-l4f | Phase 51 closed: 51-VERIFICATION amended in place to passed 7/7 (the "most" gap, D-51-15, closed by Phase 53: 10 of 18 verified running, majority); 51-UAT complete; ROADMAP 51-30 ticked, 30/30; STATE closure line. Also fixed `Plan: Not started` → `Plan: 20 of 20` so the SDK field-anchor gate passes. | 2026-10-25 | 557cdcfdd | Done | [261025-l4f-close-out-phase-51-gap-closed-by-phase-5](./quick/261025-l4f-close-out-phase-51-gap-closed-by-phase-5/) |
 | 261025-mfz | Steam known-fixes gain a trusted-only `registry` key: `readKnownFixesLayered` reads `fixes/local/` > bundled `public/fixes/` (shipped via `build/fixes` Tauri resource) > remote, stripping `registry` from the remote copy; `applySteamBridgeKnownFixes` validates entries (HKLM/HKCU, bounded values) and runs `reg add /f` per view (/reg:32, /reg:64) first, `wait:false` + unref'd 15 s timeout. Bundled `284100-steam.json` sets the WMP Active Setup marker. Runtime-components todo updated (53-20 dialog = Wine crash on `SteamAPI_InitSafe`); stays pending for appinfo redist + Play-button status. No ledger/reversal (decision 5 deferred). | 2026-10-25 | 1001d05a7, b891dee11, 01c8efa7d, ad0e64438 | unit-tested (steam tree + knownFixes suites 2501/2501, codecheck clean, planning-gates 12/12, prettier clean); not live-checked (284100 still blocked by the shim `SteamAPI_InitSafe` crash) | [261025-mfz-steam-bridge-known-fixes-registry-key-wi](./quick/261025-mfz-steam-bridge-known-fixes-registry-key-wi/) |
+| 261025-rd0 | Live-gated the cross-depot collision fix on a fresh XCOM 200510 GameLib-direct install (bottled route) — PASS: 75 collisions RESOLVED to depot 200522 by appinfo order (the 11 size-differing `XEW/` files included), live PICS order matches local `appinfo.vdf`, finished `StateFlags 4`, on-disk sizes match the winner. Todo stays pending for item 2 (second collided title). Filed pause-logs-fail-close and depot-200511 empty-CDN-token / ~18% chunk-timeout todos. Docs only. | 2026-10-25 | 26d1e2bd5, 78af14ddb | live-gated (operator install, packaged debug bundle at 2a72ccc6e); planning-gates 12/12; prettier N/A (paths ignored) | [261025-rd0-record-xcom-200510-cross-depot-collision](./quick/261025-rd0-record-xcom-200510-cross-depot-collision/) |
 
 ## Deferred Items
 
