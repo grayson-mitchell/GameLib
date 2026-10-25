@@ -148,6 +148,13 @@ static int g_iface_cfg_count = 0;
 static SOCKET g_bridge_sock = INVALID_SOCKET;
 static uint32_t g_next_request_id = 1;
 
+// Serializes every bridge round trip and every touch of g_bridge_sock. One
+// shared socket with unguarded send/recv would let two threads interleave
+// frames or consume each other's response, leaving the loser blocked in recv
+// for good. UE titles call Steam from more than one thread. Not recursive:
+// nothing that holds it may call bridge_transact again.
+static SRWLOCK g_bridge_lock = SRWLOCK_INIT;
+
 // 0 until load_bridge_port_once() resolves a valid port out of
 // gamelib_bridge.cfg -- bridge_ensure_connected() refuses to connect while
 // it is 0 (D-51-01: fail closed, never a fixed-port fallback).
@@ -334,9 +341,9 @@ static int bridge_transact_once(uint16_t ordinal, uint16_t slot,
  * on an otherwise-healthy link usually just means "reconnect and resend",
  * not a real protocol error.
  */
-static int bridge_transact(uint16_t ordinal, uint16_t slot,
-                            const uint8_t *argBuf, uint32_t argLen,
-                            uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
+static int bridge_transact_locked(uint16_t ordinal, uint16_t slot,
+                                   const uint8_t *argBuf, uint32_t argLen,
+                                   uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
   int transportFailed = 0;
   int ok = bridge_transact_once(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut, &transportFailed);
   if (ok || !transportFailed) return ok;
@@ -346,6 +353,15 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
     g_bridge_sock = INVALID_SOCKET;
   }
   return bridge_transact_once(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut, &transportFailed);
+}
+
+static int bridge_transact(uint16_t ordinal, uint16_t slot,
+                            const uint8_t *argBuf, uint32_t argLen,
+                            uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
+  AcquireSRWLockExclusive(&g_bridge_lock);
+  int ok = bridge_transact_locked(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut);
+  ReleaseSRWLockExclusive(&g_bridge_lock);
+  return ok;
 }
 
 /* D-53-15: HELLO handshake, shared by SteamAPI_Init and
@@ -22393,11 +22409,13 @@ int SteamAPI_Init(void) {
 }
 int SteamAPI_InitFlat(char *pErrMsg) { (void)pErrMsg; return 0; }
 void SteamAPI_Shutdown(void) {
+  AcquireSRWLockExclusive(&g_bridge_lock);
   if (g_bridge_sock != INVALID_SOCKET) {
     closesocket(g_bridge_sock);
     g_bridge_sock = INVALID_SOCKET;
     WSACleanup();
   }
+  ReleaseSRWLockExclusive(&g_bridge_lock);
 }
 int SteamAPI_RestartAppIfNecessary(uint32_t unOwnAppID) { (void)unOwnAppID; return 0; }
 int SteamAPI_IsSteamRunning(void) { return 1; }
