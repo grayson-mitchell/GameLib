@@ -110,7 +110,9 @@ export const CONTROL_SLOT = {
   reportVersion: 4,
   // D-53-15 (quick 261025-kax): the shim reports the game's own SteamAPI_Init
   // result ({u32 fn, i32 ret}); the helper logs `GINIT`.
-  reportInit: 5
+  reportInit: 5,
+  // Phase 55: the shim's SteamAPI_RunCallbacks drains queued Steam callbacks (callback 168 today) from the helper; reply [u32 count][i32 iCallback][u32 cub][bytes].
+  drainCallbacks: 6
 } as const
 
 // Not exported (this and DecodedRequest, DecodedResponse below): verified to have no

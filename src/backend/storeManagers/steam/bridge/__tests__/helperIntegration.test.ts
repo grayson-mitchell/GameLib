@@ -905,7 +905,7 @@ describeDarwinOnly(
       const handler = src.slice(start, end)
       expect(handler).not.toContain('usleep')
       expect(handler).not.toContain('RunCB(')
-      const cbqCalls = [...src.matchAll(/logts\("CBQ",[^;]*;/g)]
+      const cbqCalls = [...src.matchAll(/logts(?:_f)?\("CBQ",[^;]*;/g)]
       expect(cbqCalls.length).toBeGreaterThan(0)
       for (const call of cbqCalls) {
         const fmt = /"[^"]*"/g

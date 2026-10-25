@@ -103,6 +103,8 @@
  */
 
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -123,6 +125,9 @@
 // steam_api_shim.c is generated from -- resolved via buildSteamBridgeShims.ts's
 // `-I native/steam-bridge/generated` compile flag.
 #include "bridge_dispatch.h"
+// Phase 55: bounded allowlisted callback ring. A quoted include resolves
+// beside this file, so no extra -I flag is needed.
+#include "gamelib_cbqueue.h"
 
 // === Frame constants (MUST match src/backend/storeManagers/steam/bridge/protocol.ts) ===
 
@@ -156,6 +161,8 @@
 // emitted ONLY from this wire handler, so this helper's own in-process
 // SteamAPI_InitFlat (logged as INIT) can never produce one.
 #define CONTROL_SLOT_REPORT_INIT 5
+// Phase 55: the shim drains queued Steam callbacks (only 168 today) from RunCallbacks; pull-only, one message per round trip.
+#define CONTROL_SLOT_DRAIN_CALLBACKS 6
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -183,6 +190,24 @@ typedef void        (*RunCallbacks_t)(void);
 
 static InitFlat_t     InitFlat;
 static RunCallbacks_t RunCB;
+
+// Phase 55: Steamworks manual-dispatch flat API. Once ManualDispatch_Init has
+// run, SteamAPI_RunCallbacks must never be called (SDK contract).
+typedef void    (*MDInit_t)(void);
+typedef void    (*MDRunFrame_t)(int32_t);
+typedef bool    (*MDGetNext_t)(int32_t, gl_CallbackMsg_t *);
+typedef void    (*MDFreeLast_t)(int32_t);
+typedef int32_t (*GetHSteamPipe_t)(void);
+
+static MDInit_t        g_md_init;
+static MDRunFrame_t    g_md_run_frame;
+static MDGetNext_t     g_md_get_next;
+static MDFreeLast_t    g_md_free_last;
+static GetHSteamPipe_t g_get_hsteampipe;
+static int             g_manual_dispatch = 0;
+static int32_t         g_hpipe = 0;
+static gl_cbq_ring     g_cbq;
+static unsigned        g_cbq_logged = 0;
 
 // Phase 52: NULL-tolerant -- a Steam build without this export degrades
 // CREATE_INTERFACE to STATUS_ERR, never FATAL (T-52-10).
@@ -280,9 +305,18 @@ static void ensure_steam_appid_file(const char *appId) {
 /* Pumps a few Steamworks callback ticks before reading identity-bearing
  * accessors -- mirrors spike 005b's `whoami()` warm-up (RunCallbacks +
  * short sleep) so freshly-resolved account state has a chance to settle. */
+static void gl_manual_pump_into_ring(void);
+
 static void pump_callbacks(void) {
+  // RunCB is never called once ManualDispatch_Init ran (SDK contract,
+  // RESEARCH Pitfall 6); the manual pump feeds the ring so a 168 arriving
+  // during WHOAMI's warm-up is queued, not swallowed.
   for (int i = 0; i < 3; i++) {
-    RunCB();
+    if (g_manual_dispatch) {
+      gl_manual_pump_into_ring();
+    } else {
+      RunCB();
+    }
     usleep(50 * 1000);
   }
 }
@@ -320,6 +354,15 @@ static int load_steam_api(void) {
   // init_steam_api_once() below once InitFlat succeeds -- NULL-tolerant by
   // design (T-51-23: a missing symbol there degrades that one dispatch
   // case to STATUS_ERR, never this whole helper).
+  g_md_init        = (MDInit_t)dlsym(g_dylib_handle, "SteamAPI_ManualDispatch_Init");
+  g_md_run_frame   = (MDRunFrame_t)dlsym(g_dylib_handle, "SteamAPI_ManualDispatch_RunFrame");
+  g_md_get_next    = (MDGetNext_t)dlsym(g_dylib_handle, "SteamAPI_ManualDispatch_GetNextCallback");
+  g_md_free_last   = (MDFreeLast_t)dlsym(g_dylib_handle, "SteamAPI_ManualDispatch_FreeLastCallback");
+  g_get_hsteampipe = (GetHSteamPipe_t)dlsym(g_dylib_handle, "SteamAPI_GetHSteamPipe");
+  if (!g_md_init || !g_md_run_frame || !g_md_get_next || !g_md_free_last || !g_get_hsteampipe) {
+    logts("WARN", "manual dispatch exports missing -- DRAIN answers count 0");
+  }
+
   if (!InitFlat || !RunCB) {
     logts("FATAL", "dlsym failed -- libsteam_api.dylib is present but missing an expected export");
     return 0;
@@ -355,6 +398,12 @@ static void init_steam_api_once(const char *appId) {
   // STATUS_ERR, never this whole helper.
   if (g_inited) {
     bridge_dispatch_init(g_dylib_handle);
+    if (g_md_init && g_md_run_frame && g_md_get_next && g_md_free_last && g_get_hsteampipe) {
+      g_md_init();
+      g_hpipe = g_get_hsteampipe();
+      g_manual_dispatch = (g_hpipe != 0);
+    }
+    logts("INIT", g_manual_dispatch ? "manual dispatch ready" : "manual dispatch unavailable");
   }
   if (!g_inited) {
     char msg[1200];
@@ -369,6 +418,47 @@ static void init_steam_api_once(const char *appId) {
     char msg[64];
     snprintf(msg, sizeof msg, "SteamAPI ready (single InitFlat call, real appid=%s)", appId);
     logts("INIT", msg);
+  }
+}
+
+// printf-style logts for the CBQ category: the format string is a literal at
+// every call site so integer-only logging is auditable (T-55-08).
+static void logts_f(const char *cat, const char *fmt, ...) {
+  char msg[160];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(msg, sizeof msg, fmt, ap);
+  va_end(ap);
+  logts(cat, msg);
+}
+
+/* Runs one manual-dispatch frame and moves allowlisted callbacks into the
+ * ring. Bounded to GL_CBQ_PUMP_MAX_MSGS messages. FreeLastCallback is ALWAYS
+ * called after a true GetNextCallback (SDK contract). Never logs or copies
+ * callback bytes anywhere but the ring. */
+static void gl_manual_pump_into_ring(void) {
+  if (!g_manual_dispatch) return;
+  g_md_run_frame(g_hpipe);
+  for (int i = 0; i < GL_CBQ_PUMP_MAX_MSGS; i++) {
+    gl_CallbackMsg_t msg;
+    memset(&msg, 0, sizeof msg);
+    if (!g_md_get_next(g_hpipe, &msg)) break;
+    int allowed = gl_cbq_allowed_size(msg.m_iCallback) != 0;
+    int queued = gl_cbq_offer(&g_cbq, msg.m_iCallback, msg.m_pubParam, msg.m_cubParam);
+    if (g_cbq_logged < 32) {
+      if (queued) {
+        int32_t eresult = 0;
+        memcpy(&eresult, msg.m_pubParam + 4, 4);
+        g_cbq_logged++;
+        logts_f("CBQ", "queued iCallback=%d result=%d cub=%d",
+                (int)msg.m_iCallback, (int)eresult, (int)msg.m_cubParam);
+      } else if (allowed) {
+        g_cbq_logged++;
+        logts_f("CBQ", "dropped iCallback=%d cub=%d",
+                (int)msg.m_iCallback, (int)msg.m_cubParam);
+      }
+    }
+    g_md_free_last(g_hpipe);
   }
 }
 
@@ -599,6 +689,32 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
                k_init_names[code], (int)ret, ok, g_inited ? 1 : 0);
       logts("GINIT", imsg);
       send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
+    if (slot == CONTROL_SLOT_DRAIN_CALLBACKS) {
+      // Phase 55: answerable pre-init like HEALTH. Never sleeps (the shim
+      // blocks in recv with no timeout while holding g_bridge_lock) and never
+      // logs bytes. At most one queued message per round trip.
+      if (argLen != 0) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint8_t out[GL_CBQ_DRAIN_RESP_MAX_BYTES];
+      uint32_t n;
+      if (g_inited && g_manual_dispatch) {
+        gl_manual_pump_into_ring();
+        n = gl_cbq_pop_encode(&g_cbq, out, sizeof out);
+      } else {
+        uint32_t zero = 0;
+        memcpy(out, &zero, 4);
+        n = 4;
+      }
+      if (n == 0) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+      } else {
+        send_response(fd, requestId, STATUS_OK, out, n);
+      }
+      gl_cbq_secure_zero(out, sizeof out);
       return;
     }
     send_response(fd, requestId, STATUS_ERR, NULL, 0); // unknown control slot
