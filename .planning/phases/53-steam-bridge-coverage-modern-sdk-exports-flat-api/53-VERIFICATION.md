@@ -14,7 +14,7 @@ overrides:
     accepted_by: "user (Grayson Mitchell)"
     accepted_at: "2026-10-25T15:20:00+13:00"
 re_verification:
-  previous_status: gaps_found
+  previous_status: "gaps_found"
   previous_score: "9 of 18 verified (1/4 roadmap truths)"
   gaps_closed:
     - "Done-when majority: now 10 of 18 (majority: yes), re-run in this verification"

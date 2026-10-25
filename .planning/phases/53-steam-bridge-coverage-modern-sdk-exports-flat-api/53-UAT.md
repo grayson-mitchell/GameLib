@@ -210,11 +210,11 @@ result: pass — operator verbatim: "rogue waters runs". Player.log `Steam API i
 
 ### 16. Overlooting 3410180 diagnosis (53-15)
 expected: the rip=0 fault has a named cause and a shim-involved answer; the operator re-run says whether it still crashes
-result: blocked — operator verbatim: "other two do not [run], think they have not changed". Cause: Godot 4.4 calls an unchecked NULL NvAPI pointer (`callq *%r15` at 0x1400607ee, return 0x1400607f1) because CrossOver's builtin nvapi64.dll cannot load its nvapi.dll backend (c0000135). Reproduces with the shim removed, so the shim is not involved. Bottle runtime gap, not bridge. Disposition: todo — 2026-10-25-overlooting-godot-null-call-before-shim.md. Scanner side fix 0a933329a (PE sections sized by VirtualSize).
+result: issue — deferred by user 2026-10-25 (53-VERIFICATION override); originally blocked: operator verbatim: "other two do not [run], think they have not changed". Cause: Godot 4.4 calls an unchecked NULL NvAPI pointer (`callq *%r15` at 0x1400607ee, return 0x1400607f1) because CrossOver's builtin nvapi64.dll cannot load its nvapi.dll backend (c0000135). Reproduces with the shim removed, so the shim is not involved. Bottle runtime gap, not bridge. Disposition: todo — 2026-10-25-overlooting-godot-null-call-before-shim.md. Scanner side fix 0a933329a (PE sections sized by VirtualSize).
 
 ### 17. Ranch Simulator 1119730 diagnosis (53-15)
 expected: the exit code 0x35 before HELLO has a named cause and a shim-involved answer; the operator re-run says whether it launches
-result: blocked — operator verbatim: "other two do not [run], think they have not changed". Cause: SteamStub `.bind` section (0x39248 bytes) self-terminates the Shipping exe with exit 53 before steam_api64.dll loads; identical with the original dll, so the shim is not involved. Phase 52 scope, not rerouted to bottled Steam. Disposition: todo — appended to 2026-10-24-steamstub-launch-check-static-re-decision.md.
+result: issue — deferred by user 2026-10-25 (53-VERIFICATION override); originally blocked: operator verbatim: "other two do not [run], think they have not changed". Cause: SteamStub `.bind` section (0x39248 bytes) self-terminates the Shipping exe with exit 53 before steam_api64.dll loads; identical with the original dll, so the shim is not involved. Phase 52 scope, not rerouted to bottled Steam. Disposition: todo — appended to 2026-10-24-steamstub-launch-check-static-re-decision.md.
 
 ## Gap closure re-run
 
