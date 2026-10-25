@@ -72,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 ## Current Position
 
 Phase: 53
-Plan: Not started
+Plan: 20 of 20
 Status: Milestone complete
 Last activity: 2026-10-25
 
@@ -360,6 +360,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | fast | Closed Win64 core-interfaces todo (ELEX 411300) as wiring-done: 51-26 wiring live-verified in 51-UAT item 15; reaching a menu is NOT verified under the strict criterion; no 51-29 title got as far as the Win64 core interfaces; playable-level coverage carries to the 51-30 follow-up phase | 2026-10-24 | (this commit) | | — |
 | 261025-kax | D-53-15: the shim reports the game's own `SteamAPI_Init` over CONTROL slot 5 (helper logs `GINIT`), and the census verifies init-only import rows on HELLO + `GINIT ok=1 session=1`. Avernum 6 206060 live-verified; census `10 of 18 Steamworks-using rows verified (majority: yes)`. | 2026-10-25 | 93177fdd3 | live-verified | [261025-kax-avernum-6-init-only-bridge-verification-](./quick/261025-kax-avernum-6-init-only-bridge-verification-/) |
 | 261025-kon | Phase 53 review warnings fixed: WR-02 DLL override succeeds only on `code === 0` (missing/null/nonzero logs a warning with stderr); WR-01 `emitHiddenFallback` throws at generation for zero-param dropped class/float/double/void returns. IN-01 stale comment fixed (comment-only shim diff); one new log-secret-gate exemption. | 2026-10-25 | 06bbd6955 | code-verified | [261025-kon-fix-phase-53-review-warnings-wr-02-then-](./quick/261025-kon-fix-phase-53-review-warnings-wr-02-then-/) |
+| 261025-l4f | Phase 51 closed: 51-VERIFICATION amended in place to passed 7/7 (the "most" gap, D-51-15, closed by Phase 53: 10 of 18 verified running, majority); 51-UAT complete; ROADMAP 51-30 ticked, 30/30; STATE closure line. Also fixed `Plan: Not started` → `Plan: 20 of 20` so the SDK field-anchor gate passes. | 2026-10-25 | 557cdcfdd | Done | [261025-l4f-close-out-phase-51-gap-closed-by-phase-5](./quick/261025-l4f-close-out-phase-51-gap-closed-by-phase-5/) |
 
 ## Deferred Items
 
