@@ -28,6 +28,7 @@ import type {
   MoveGameArgs,
   RecentGame,
   Release,
+  AppManagementStatus,
   Runner,
   RunnerCommandStub,
   RuntimeName,
@@ -114,6 +115,8 @@ interface SyncIPCFunctions {
   clearCache: (showDialog?: boolean, fromVersionChange?: boolean) => void
   clearAchievementCache: (appName: string) => void
   resetHeroic: () => void
+  openAppManagementSettings: () => void
+  relaunchApp: () => void
   createNewWindow: (url: string) => void
   logoutGOG: () => void
   logError: (message: unknown) => void
@@ -217,6 +220,7 @@ interface AsyncIPCFunctions {
   updateAll: () => Promise<({ status: 'done' | 'error' | 'abort' } | null)[]>
   getMaxCpus: () => number
   getHeroicVersion: () => string
+  getAppManagementStatus: () => Promise<AppManagementStatus>
   getLegendaryVersion: () => Promise<string>
   getGogdlVersion: () => Promise<string>
   getCometVersion: () => Promise<string>

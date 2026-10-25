@@ -2,15 +2,17 @@
  * Curated app-shell channel registration (Phase 34.1 Plan 04,
  * D-03/D-08/D-09/D-13, REQ-34.1-05/REQ-34.1-09/REQ-34.1-12).
  *
- * Registers the 20 sidecar-routed app-shell channels (8 invoke + 12 send) onto electronStub's
+ * Registers the 24 sidecar-routed app-shell channels (10 invoke + 14 send) onto electronStub's
  * `ipcMain` recorder, importing the REAL `backend/appshell/*` functions
  * extracted by Plan 34.1-02 unchanged (mirrors `installFlowRegistration.ts`'s
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   invoke (9, `ipcMain.handle`):
+ *   invoke (10, `ipcMain.handle`):
  *     - `getCustomThemes`/`getThemeCSS`/`getCustomCSS`/`getLoginBackground`
  *       -> `appshell/themes.ts`
+ *     - `getAppManagementStatus` (quick 261026-b9r) -> `appshell/appManagement.ts`
+ *       create-and-unlink probe inside the CrossOver bundle (macOS only)
  *     - `getHeroicVersion` -> `electronStub`'s `app.getVersion()` — Electron
  *       parity is the BARE `app.getVersion()` (`main.ts:754`), not the
  *       decorated `utils/systeminfo/heroicVersion.ts` form; do not "improve"
@@ -30,7 +32,10 @@
  *       pre-existing install's `games.recent` is full of entries that do not
  *       carry one, and stranding those is worse than a probe
  *
- *   send (10, `ipcMain.on`):
+ *   send (14, `ipcMain.on`):
+ *     - `openAppManagementSettings` (quick 261026-b9r) -> opens ONLY the
+ *       fixed Privacy_AppBundles URL (no renderer-supplied URL); `relaunchApp`
+ *       -> `app.relaunch()` then `app.quit()`, the same pair `resetHeroic` uses
  *     - `changeLanguage` -> `appshell/language.ts` (`main.ts:526-528`)
  *     - `notify` -> `backend/dialog/dialog`'s `notify()` (`main.ts:538`),
  *       reaching `electronStub.Notification` -> the existing
@@ -157,8 +162,8 @@
 
 import i18next from 'i18next'
 
-import { ipcMain, app, powerSaveBlocker } from '../platform'
-import { isSnap, isCLINoGui } from '../constants/environment'
+import { ipcMain, app, shell, powerSaveBlocker } from '../platform'
+import { isSnap, isCLINoGui, isMac } from '../constants/environment'
 import { heroicGithubURL, customThemesWikiLink } from '../constants/urls'
 import {
   getCustomThemes,
@@ -171,6 +176,10 @@ import {
   getCurrentChangelogEntry
 } from '../appshell/releases'
 import { changeLanguage } from '../appshell/language'
+import {
+  getAppManagementStatus,
+  APP_MANAGEMENT_SETTINGS_URL
+} from '../appshell/appManagement'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { handleExit, openUrlOrFile, detectVCRedist } from '../utils'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
@@ -249,7 +258,7 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 21 app-shell channels (9 invoke + 12 send). Called once from
+ * Registers the 24 app-shell channels (10 invoke + 14 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
@@ -262,7 +271,7 @@ function syncTrayIcon(): void {
 export function registerAppShellFlows(
   options: { skipInitialTraySync?: boolean } = {}
 ): void {
-  // ── invoke (9) ────────────────────────────────────────────────────────
+  // ── invoke (10) ────────────────────────────────────────────────────────
   // Was 8 under the original Phase 34.1 D-01 set; `getLoginBackground` is a
   // later addition (user-selectable Manage Accounts background artwork).
 
@@ -280,6 +289,9 @@ export function registerAppShellFlows(
   // decorate with the versionNames form from heroicVersion.ts.
   ipcMain.handle('getHeroicVersion', async () => app.getVersion())
 
+  // Quick 261026-b9r: the probe only runs when invoked (never at boot).
+  ipcMain.handle('getAppManagementStatus', async () => getAppManagementStatus())
+
   ipcMain.handle('getLatestReleases', async () => getLatestReleasesForStartup())
 
   ipcMain.handle('getCurrentChangelog', async () => getCurrentChangelogEntry())
@@ -294,7 +306,7 @@ export function registerAppShellFlows(
     return ''
   })
 
-  // ── send (10) ─────────────────────────────────────────────────────────
+  // ── send (14) ─────────────────────────────────────────────────────────
 
   ipcMain.on('changeLanguage', (_event: unknown, ...args: unknown[]) => {
     changeLanguage(args[0] as string).catch((error) =>
@@ -315,6 +327,29 @@ export function registerAppShellFlows(
     // landed in the sidecar, before handleExit() can block on the pending-operations confirm.
     logSendHandlerReached('quit')
     handleExit().catch((error) => logSendFailure('quit', error))
+  })
+
+  // Quick 261026-b9r (T-b9r-02): takes NO argument; only the constant is ever opened.
+  ipcMain.on('openAppManagementSettings', () => {
+    if (!isMac) return
+    try {
+      void Promise.resolve(
+        shell.openExternal(APP_MANAGEMENT_SETTINGS_URL)
+      ).catch((error) => logSendFailure('openAppManagementSettings', error))
+    } catch (error) {
+      logSendFailure('openAppManagementSettings', error)
+    }
+  })
+
+  // Quick 261026-b9r: electronStub owns the relaunch-vs-quit ordering race
+  // (platform/index.ts), so use the same pair resetHeroic does.
+  ipcMain.on('relaunchApp', () => {
+    try {
+      app.relaunch()
+      app.quit()
+    } catch (error) {
+      logSendFailure('relaunchApp', error)
+    }
   })
 
   ipcMain.on('openReleases', () => {

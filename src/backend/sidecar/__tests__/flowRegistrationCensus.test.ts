@@ -60,7 +60,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // Quick 260902-wbd (2026-09-02): invoke 8 -> 9 -- `getLoginBackground`, the
   // Manage Accounts background picker's IPC read, backed by `appshell/themes.ts`.
   // Send count unchanged.
-  'appShellFlowRegistration.ts': { invoke: 9, send: 12 },
+  //
+  // Quick 261026-b9r (2026-10-26): invoke 9 -> 10 (getAppManagementStatus), send 12 -> 14
+  // (openAppManagementSettings, relaunchApp).
+  'appShellFlowRegistration.ts': { invoke: 10, send: 14 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },

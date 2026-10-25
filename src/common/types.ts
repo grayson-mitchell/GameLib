@@ -94,6 +94,12 @@ interface About {
   shortDescription: string
 }
 
+export type AppManagementStatus =
+  | 'granted'
+  | 'denied'
+  | 'unknown'
+  | 'not-needed'
+
 export type Release = {
   type: 'stable' | 'beta'
   html_url: string

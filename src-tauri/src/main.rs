@@ -2214,6 +2214,13 @@ where
 /// this command has.
 const OPEN_EXTERNAL_ALLOWED_SCHEMES: &[&str] = &["https", "http", "mailto", "tel", "steam"];
 
+/// Exact URLs allowed in addition to the scheme list (quick 261026-b9r, T-b9r-01). The macOS
+/// App Management deep link is allowed byte-for-byte and case-sensitively; the
+/// `x-apple.systempreferences` scheme is deliberately NOT in `OPEN_EXTERNAL_ALLOWED_SCHEMES`,
+/// because that would let a forged sidecar frame or renderer call open any System Settings pane.
+const OPEN_EXTERNAL_ALLOWED_EXACT_URLS: &[&str] =
+    &["x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles"];
+
 /// Pure scheme-validation half of `open_external` (CR-01), extracted so it can be proven by
 /// `#[cfg(test)] mod tests` without constructing an `AppHandle`. Splits on the FIRST `:` only
 /// and lowercases ASCII-wise before comparing, so `STEAM://…` and `Steam://…` are accepted
@@ -2221,6 +2228,9 @@ const OPEN_EXTERNAL_ALLOWED_SCHEMES: &[&str] = &["https", "http", "mailto", "tel
 /// never the URL (T-28-04) -- because the URL is renderer-controlled and this string can reach
 /// a log a user attaches to a public bug report.
 fn open_external_scheme_check(url: &str) -> Result<(), String> {
+    if OPEN_EXTERNAL_ALLOWED_EXACT_URLS.contains(&url) {
+        return Ok(());
+    }
     let scheme = url
         .split_once(':')
         .map(|(s, _)| s.to_ascii_lowercase())
@@ -13884,6 +13894,25 @@ mod tests {
     #[test]
     fn open_external_scheme_check_accepts_steam_rungameid() {
         assert_eq!(open_external_scheme_check("steam://rungameid/440"), Ok(()));
+    }
+
+    #[test]
+    fn open_external_scheme_check_accepts_only_the_exact_app_management_url() {
+        assert_eq!(
+            open_external_scheme_check(
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles"
+            ),
+            Ok(())
+        );
+        assert!(open_external_scheme_check(
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
+        )
+        .is_err());
+        assert!(open_external_scheme_check("x-apple.systempreferences:").is_err());
+        assert!(open_external_scheme_check(
+            "X-APPLE.SYSTEMPREFERENCES:com.apple.preference.security?Privacy_AppBundles&x"
+        )
+        .is_err());
     }
 
     #[test]
