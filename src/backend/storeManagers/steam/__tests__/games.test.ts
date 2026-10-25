@@ -2876,6 +2876,44 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     )
   })
 
+  it('51-REVIEW WR-01: with the scan auto-cleared, the top-level retained interfaceVersions pool is threaded as persistedInterfaceVersions', async () => {
+    const RETAINED_APP_ID = '555561'
+    library.set(
+      RETAINED_APP_ID,
+      makeEntry({ title: 'Has A Retained Version Pool' })
+    )
+    ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
+      platformsCaptured: true,
+      is_mac_native: false,
+      bridge: {
+        interfaceVersions: { SteamUser: 'SteamUser023' }
+      }
+    })
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(placeShimForGame as jest.Mock).mockResolvedValue({
+      status: 'already-placed',
+      shimPath: RESOLVED_EXE_PATH
+    })
+
+    const game = new SteamGame(RETAINED_APP_ID)
+    await game.launch({} as any)
+
+    expect(placeShimForGame).toHaveBeenCalledWith(
+      RETAINED_APP_ID,
+      RESOLVED_EXE_PATH,
+      expect.objectContaining({
+        persistedInterfaceVersions: { SteamUser: 'SteamUser023' }
+      })
+    )
+    // 'already-placed' carries no fresh verdict, so the cfg's iface lines
+    // must come from the retained pool too.
+    expect(writeBridgeConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interfaceVersions: { SteamUser: 'SteamUser023' }
+      })
+    )
+  })
+
   it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId skips the bridge (finding #3 bypass)', async () => {
     // A dedicated appId, never reused elsewhere in this file, so this
     // test's bridgeFailedThisSession mutation cannot leak into other tests.

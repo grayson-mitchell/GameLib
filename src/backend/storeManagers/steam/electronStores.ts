@@ -267,6 +267,14 @@ export interface SteamBridgeVerdict {
    * the exe that must survive that. Absent means not detected or never
    * checked; `writeBridgeDrmVerdict(appId, undefined)` removes the key. */
   drm?: 'ceg'
+  /** 51-REVIEW WR-01: the cleared scan's own `interfaceVersions` pool,
+   * retained by `clearBridgeScanVerdict`. For a target that already carries
+   * an older GameLib shim, the persisted pool is the only version source
+   * left (`placeShimForGame`'s header), so dropping it with `scan` would turn
+   * every bare-accessor family into `<family>@unknown-version` on the next
+   * launch. `launchBridgeGame` falls back to this when `scan` is absent.
+   * Kept at the top level for the same reason as `drm`. */
+  interfaceVersions?: Record<string, string>
 }
 
 // The `import type { SteamBottleConfig }` and its `export type { ... }`

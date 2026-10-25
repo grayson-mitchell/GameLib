@@ -2879,7 +2879,16 @@ export default class SteamGame implements Game {
     // -- per placeShimForGame's own header, this is the ONLY source left for
     // an already-shimmed target (an older GameLib shim has no "original"
     // dll version strings left to read).
-    const persistedScan = readBridgeVerdict(this.appId)?.scan
+    // 51-REVIEW WR-01: once an auto-clear has removed `scan`, the pool
+    // `clearBridgeScanVerdict` retained at the top level is the fallback
+    // (also used when the current scan's own pool is empty).
+    const persistedVerdict = readBridgeVerdict(this.appId)
+    const persistedScan = persistedVerdict?.scan
+    const scanPool = persistedScan?.interfaceVersions
+    const persistedInterfaceVersions =
+      scanPool && Object.keys(scanPool).length > 0
+        ? scanPool
+        : (persistedVerdict?.interfaceVersions ?? scanPool)
     const shimResult = await placeShimForGame(this.appId, exePath, {
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
       gameInstallRoot:
@@ -2887,9 +2896,7 @@ export default class SteamGame implements Game {
           exePath,
           bridgeBottleSettings.wineCrossoverBottle
         ) ?? undefined,
-      ...(persistedScan?.interfaceVersions
-        ? { persistedInterfaceVersions: persistedScan.interfaceVersions }
-        : {})
+      ...(persistedInterfaceVersions ? { persistedInterfaceVersions } : {})
     })
 
     if (
@@ -3038,9 +3045,10 @@ export default class SteamGame implements Game {
     // the cfg -- the FRESH verdict's own pool when this call just (re)placed
     // or no-op-confirmed one ('placed' only has a verdict; 'already-placed'
     // has none, so the previously-persisted scan's pool is reused since the
-    // shim itself did not change).
+    // shim itself did not change; 51-REVIEW WR-01: or the pool retained when
+    // that scan was auto-cleared).
     const interfaceVersionsForConfig =
-      shimResult.verdict?.interfaceVersions ?? persistedScan?.interfaceVersions
+      shimResult.verdict?.interfaceVersions ?? persistedInterfaceVersions
     // quick 261023-ue0: the shim reads the cfg beside ITS OWN module, so
     // hand writeBridgeConfig every shim path (rewritten on every launch,
     // including 'already-placed').

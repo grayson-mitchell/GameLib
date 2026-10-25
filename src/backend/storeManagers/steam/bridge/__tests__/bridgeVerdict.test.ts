@@ -204,6 +204,28 @@ describe('clearBridgeScanVerdict', () => {
     expect(verdict?.userRoute).toBe('bridge')
   })
 
+  it('51-REVIEW WR-01: retains the cleared scan interfaceVersions pool at the top level, and it survives a read', () => {
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+
+    clearBridgeScanVerdict(APP_ID)
+
+    const verdict = readBridgeVerdict(APP_ID)
+    expect(verdict?.scan).toBeUndefined()
+    expect(verdict?.interfaceVersions).toEqual({ SteamUtils: 'SteamUtils005' })
+  })
+
+  it('51-REVIEW WR-01: an empty cleared pool does not overwrite a previously retained one', () => {
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict())
+    clearBridgeScanVerdict(APP_ID)
+    writeBridgeScanVerdict(APP_ID, makeScanVerdict({ interfaceVersions: {} }))
+
+    clearBridgeScanVerdict(APP_ID)
+
+    expect(readBridgeVerdict(APP_ID)?.interfaceVersions).toEqual({
+      SteamUtils: 'SteamUtils005'
+    })
+  })
+
   it('is a no-op when no entry exists at all', () => {
     clearBridgeScanVerdict(APP_ID)
 

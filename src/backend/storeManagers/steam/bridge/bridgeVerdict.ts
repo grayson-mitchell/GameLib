@@ -66,7 +66,10 @@ const bridgeVerdictSchema = z.object({
   identityFallback: z.boolean().optional(),
   // Quick 261024-br4: without this key the non-strict object strips `drm`
   // on read and a detected CEG would be silently forgotten.
-  drm: z.enum(['ceg']).optional()
+  drm: z.enum(['ceg']).optional(),
+  // 51-REVIEW WR-01: same Pitfall-2 reasoning -- the version pool retained
+  // by clearBridgeScanVerdict would otherwise be stripped on read.
+  interfaceVersions: z.record(z.string(), z.string()).optional()
 })
 
 /**
@@ -163,6 +166,12 @@ export function writeBridgeScanVerdict(
  * the user's own `userRoute` override, survives untouched. A no-op (never
  * fabricates an entry) when there is nothing to clear, mirroring
  * `clearForcedWindowsViaBottle`'s early-return precedent (games.ts).
+ *
+ * 51-REVIEW WR-01: the cleared scan's non-empty `interfaceVersions` pool is
+ * retained as the top-level `bridge.interfaceVersions`. For an
+ * already-shimmed target it is the only version source left, and losing it
+ * would leave the title a permanent `@unknown-version` miss. An empty pool
+ * leaves any previously retained one in place.
  */
 export function clearBridgeScanVerdict(appId: string): void {
   if (rejectNonNumeric('clearBridgeScanVerdict', appId)) return
@@ -170,10 +179,14 @@ export function clearBridgeScanVerdict(appId: string): void {
   const existing = steamMetadataStore.get(appId)
   if (!existing?.bridge?.scan) return
 
-  const { scan: _scan, ...restBridge } = existing.bridge
+  const { scan, ...restBridge } = existing.bridge
+  const retained =
+    Object.keys(scan.interfaceVersions ?? {}).length > 0
+      ? { interfaceVersions: scan.interfaceVersions }
+      : {}
   steamMetadataStore.set(appId, {
     ...existing,
-    bridge: restBridge
+    bridge: { ...restBridge, ...retained }
   })
 }
 
