@@ -730,10 +730,9 @@ static uint32_t THISCALL vt_SteamUser023_GetAuthSessionTicket(void *self, void *
   }
   uint32_t ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
-  if (pcbTicket != NULL && retlen >= respOff + 4) {
-    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
-    *pcbTicket = outVal;
-  }
+  uint32_t copied_pTicket = 0;
+  uint32_t lenVal_pcbTicket = 0;
+  if (retlen >= respOff + 4) memcpy(&lenVal_pcbTicket, retbuf + respOff, 4);
   respOff += 4;
   if (retlen >= respOff + 4) {
     uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
@@ -742,9 +741,11 @@ static uint32_t THISCALL vt_SteamUser023_GetAuthSessionTicket(void *self, void *
     if (copyLen > cap_pTicket) copyLen = cap_pTicket; // never write past the caller's own capacity (53-14, T-53-56)
     if (pTicket != NULL && retlen >= respOff + copyLen) {
       memcpy(pTicket, retbuf + respOff, copyLen);
+      copied_pTicket = copyLen;
     }
     respOff += declLen;
   }
+  if (pcbTicket != NULL) *pcbTicket = (lenVal_pcbTicket < copied_pTicket) ? lenVal_pcbTicket : copied_pTicket;
   return ret;
 }
 
@@ -11526,10 +11527,9 @@ static uint32_t THISCALL vt_SteamUser021_GetAuthSessionTicket(void *self, void *
   }
   uint32_t ret; memcpy(&ret, retbuf, 4);
   uint32_t respOff = 4;
-  if (pcbTicket != NULL && retlen >= respOff + 4) {
-    uint32_t outVal; memcpy(&outVal, retbuf + respOff, 4);
-    *pcbTicket = outVal;
-  }
+  uint32_t copied_pTicket = 0;
+  uint32_t lenVal_pcbTicket = 0;
+  if (retlen >= respOff + 4) memcpy(&lenVal_pcbTicket, retbuf + respOff, 4);
   respOff += 4;
   if (retlen >= respOff + 4) {
     uint32_t declLen; memcpy(&declLen, retbuf + respOff, 4); respOff += 4;
@@ -11538,9 +11538,11 @@ static uint32_t THISCALL vt_SteamUser021_GetAuthSessionTicket(void *self, void *
     if (copyLen > cap_pTicket) copyLen = cap_pTicket; // never write past the caller's own capacity (53-14, T-53-56)
     if (pTicket != NULL && retlen >= respOff + copyLen) {
       memcpy(pTicket, retbuf + respOff, copyLen);
+      copied_pTicket = copyLen;
     }
     respOff += declLen;
   }
+  if (pcbTicket != NULL) *pcbTicket = (lenVal_pcbTicket < copied_pTicket) ? lenVal_pcbTicket : copied_pTicket;
   return ret;
 }
 

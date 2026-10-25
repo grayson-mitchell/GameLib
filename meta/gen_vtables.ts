@@ -1535,10 +1535,27 @@ function emitVtableStub(
     (p) => `    if (${p.name} != NULL) *${p.name} = 0;`
   )
   const decodeLines: string[] = [`  uint32_t respOff = ${retWidth};`]
+  // 53-17 WR-02: an out-value that is some out-buffer's lenParam is stored only
+  // after the buffer decode, as min(declared, bytes actually copied).
+  const lenOwner = new Map<string, string>()
+  for (const p of outBufferParams) {
+    if (p.lenParam !== undefined) lenOwner.set(p.lenParam, p.name)
+  }
+  for (const p of outBufferParams) {
+    decodeLines.push(`  uint32_t copied_${p.name} = 0;`)
+  }
   for (const p of outValueParams) {
     const valueType = p.valueType ?? 'int32'
     const width = valueTypeWidth(valueType)
     const ct = valueTypeCType(valueType)
+    if (lenOwner.has(p.name)) {
+      decodeLines.push(
+        `  ${ct} lenVal_${p.name} = 0;`,
+        `  if (retlen >= respOff + ${width}) memcpy(&lenVal_${p.name}, retbuf + respOff, ${width});`,
+        `  respOff += ${width};`
+      )
+      continue
+    }
     decodeLines.push(
       `  if (${p.name} != NULL && retlen >= respOff + ${width}) {`,
       `    ${ct} outVal; memcpy(&outVal, retbuf + respOff, ${width});`,
@@ -1555,12 +1572,27 @@ function emitVtableStub(
       `    uint32_t copyLen = declLen;`,
       `    if (copyLen > WIRE_OUT_BUFFER_MAX_BYTES) copyLen = WIRE_OUT_BUFFER_MAX_BYTES;`,
       `    if (copyLen > cap_${p.name}) copyLen = cap_${p.name}; // never write past the caller's own capacity (53-14, T-53-56)`,
+      ...(nulTerminate
+        ? [
+            `    if (copyLen >= cap_${p.name}) copyLen = cap_${p.name} ? cap_${p.name} - 1 : 0; // room for the NUL (53-17 WR-03)`
+          ]
+        : []),
       `    if (${p.name} != NULL && retlen >= respOff + copyLen) {`,
       `      memcpy(${p.name}, retbuf + respOff, copyLen);`,
-      ...(nulTerminate ? [`      ${p.name}[copyLen] = '\\0';`] : []),
+      `      copied_${p.name} = copyLen;`,
+      ...(nulTerminate
+        ? [`      if (cap_${p.name} > 0) ${p.name}[copyLen] = '\\0';`]
+        : []),
       `    }`,
       `    respOff += declLen;`,
       `  }`
+    )
+  }
+  for (const p of outValueParams) {
+    const owner = lenOwner.get(p.name)
+    if (owner === undefined) continue
+    decodeLines.push(
+      `  if (${p.name} != NULL) *${p.name} = (lenVal_${p.name} < copied_${owner}) ? lenVal_${p.name} : copied_${owner};`
     )
   }
 
@@ -2994,7 +3026,8 @@ function emitDispatchCase(
         `      memcpy(&${capName}, arg + ${offsetExpr}, 4);`,
         `      if (${capName} > BD_WIRE_OUT_BUFFER_MAX_BYTES) ${capName} = BD_WIRE_OUT_BUFFER_MAX_BYTES;`,
         `      if (respCap < ${fixed}) { *respLen = 0; return 1; }`,
-        `      if (${capName} > respCap - ${fixed}) ${capName} = (uint32_t)(respCap - ${fixed}); // response must fit the scratch`
+        `      if (${capName} > respCap - ${fixed}) ${capName} = (uint32_t)(respCap - ${fixed}); // response must fit the scratch`,
+        `      memset(${bufName}, 0, ${capName}); // no earlier call's bytes cross into the game (53-17 WR-04)`
       )
       callArgs.push(bufName)
       offsetExpr = `(${offsetExpr} + 4)`

@@ -1967,6 +1967,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
       if (cap_pTicket > BD_WIRE_OUT_BUFFER_MAX_BYTES) cap_pTicket = BD_WIRE_OUT_BUFFER_MAX_BYTES;
       if (respCap < 12) { *respLen = 0; return 1; }
       if (cap_pTicket > respCap - 12) cap_pTicket = (uint32_t)(respCap - 12); // response must fit the scratch
+      memset(g_bd_flat_SteamUser023_GetAuthSessionTicket_pTicket_buf, 0, cap_pTicket); // no earlier call's bytes cross into the game (53-17 WR-04)
       if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       int32_t arg_cbMaxTicket; memcpy(&arg_cbMaxTicket, arg + (0u + 4), 4);
       uint32_t arg_pcbTicket = 0;
@@ -6100,6 +6101,7 @@ uint8_t bridge_dispatch(uint16_t ordinal, uint16_t slot, const uint8_t *arg, uin
       if (cap_pTicket > BD_WIRE_OUT_BUFFER_MAX_BYTES) cap_pTicket = BD_WIRE_OUT_BUFFER_MAX_BYTES;
       if (respCap < 12) { *respLen = 0; return 1; }
       if (cap_pTicket > respCap - 12) cap_pTicket = (uint32_t)(respCap - 12); // response must fit the scratch
+      memset(g_bd_flat_SteamUser021_GetAuthSessionTicket_pTicket_buf, 0, cap_pTicket); // no earlier call's bytes cross into the game (53-17 WR-04)
       if (argLen < (0u + 4) + 4) { *respLen = 0; return 1; } // argLen shorter than this method's fixed part -- T-51-23
       int32_t arg_cbMaxTicket; memcpy(&arg_cbMaxTicket, arg + (0u + 4), 4);
       uint32_t arg_pcbTicket = 0;

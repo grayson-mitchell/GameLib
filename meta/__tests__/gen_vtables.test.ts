@@ -2747,3 +2747,59 @@ describe('53-17 CR-01: hidden-pointer flat fallback never writes through a shim 
     expect(out.indexOf('memset(ret, 0, 16)')).toBeGreaterThan(iGuard)
   })
 })
+
+describe('53-17 out-buffer hygiene (WR-02 / WR-03 / WR-04)', () => {
+  const real = loadAllManifests()
+  const stubOf = (c: string, fn: string): string => {
+    const m = c.match(
+      new RegExp(`${fn}\\(void \\*self[^{]*\\) \\{[\\s\\S]*?\\n\\}`)
+    )
+    expect(m).not.toBeNull()
+    return m![0]
+  }
+
+  it('53-17 WR-02: *pcbTicket is stored after the buffer decode as min(declared, copied)', () => {
+    const body = stubOf(
+      generateShimC(real),
+      'vt_SteamUser023_GetAuthSessionTicket'
+    )
+    expect(body).not.toContain('*pcbTicket = outVal;')
+    const iCopy = body.indexOf('memcpy(pTicket, retbuf + respOff, copyLen);')
+    const iStore = body.indexOf(
+      '*pcbTicket = (lenVal_pcbTicket < copied_pTicket) ? lenVal_pcbTicket : copied_pTicket;'
+    )
+    expect(iCopy).toBeGreaterThan(-1)
+    expect(iStore).toBeGreaterThan(iCopy)
+    expect(body).toContain('uint32_t copied_pTicket = 0;')
+  })
+
+  it('53-17 WR-03: a char* out-buffer keeps its NUL inside capacity and skips it at capacity 0', () => {
+    const body = stubOf(
+      generateShimC([abiExercise]),
+      'vt_AbiExercise001_GetDirTest_TESTONLY'
+    )
+    expect(body).toContain(
+      'if (copyLen >= cap_pchDir) copyLen = cap_pchDir ? cap_pchDir - 1 : 0;'
+    )
+    expect(body).toContain("if (cap_pchDir > 0) pchDir[copyLen] = '\\0';")
+  })
+
+  it('53-17 WR-04: the helper zeroes the out-buffer scratch before the native call', () => {
+    const h = generateDispatchHeader(real)
+    const m = h.match(/memset\((\w+_buf), 0, (cap_\w+)\);/)
+    expect(m).not.toBeNull()
+    const at = h.indexOf(m![0])
+    // the native call receiving the buffer comes after the memset
+    const call = h.indexOf(`, ${m![1]}, arg_`, at)
+    expect(call).toBeGreaterThan(at)
+  })
+
+  it('53-17: a plain out-value (not a lenParam) keeps the immediate decode-and-store', () => {
+    const body = stubOf(
+      generateShimC([abiExercise]),
+      'vt_AbiExercise001_GetStatTest_TESTONLY'
+    )
+    expect(body).toContain('*pValue = outVal;')
+    expect(body).not.toContain('lenVal_pValue')
+  })
+})
