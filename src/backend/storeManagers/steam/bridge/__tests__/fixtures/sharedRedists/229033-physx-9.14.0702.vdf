@@ -1,0 +1,17 @@
+"installscript"
+{
+	"Run Process"
+	{
+		"9.14.0702"
+		{
+			"hasrunkey"		"HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\PhysX"
+			"process 1"		"msiexec"
+			"command 1"		"/i \"%INSTALLDIR%\\_CommonRedist\\PhysX\\9.14.0702\\PhysX-9.14.0702-SystemSoftware.msi\" /quiet /norestart"
+			"nocleanup"		"1"
+		}
+	}
+}
+"kvsignatures"
+{
+	"installscript"		"1976b6759556f29dabcd4a95c711fbd0031d1d1cf71827c9c4412bb6df749cb6ba08b1265fa31edae6d9d142bea79c1d1e945dbad6ad04b280f8833f92ea456a4840f07de1e15c071824701e211556e294c3d1ec2a865081a2823417cf3fb4bb60c8cb4e5d239338e1221371f5dfff5dd14015aad98f589613f6bb918ea36d63"
+}

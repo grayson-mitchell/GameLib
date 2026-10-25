@@ -1,0 +1,26 @@
+"InstallScript"
+{
+	"Run Process"
+	{
+		"x86 Update 3 14.0.24215.0"
+		{
+			"HasRunKey"		"HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2015"
+			"process 1"		"%INSTALLDIR%\\_CommonRedist\\vcredist\\2015\\Microsoft Visual C++ 2015 x86.cmd"
+			"NoCleanUp"		"1"
+		}
+		"x64 Update 3 14.0.24215.0"
+		{
+			"HasRunKey"		"HKEY_LOCAL_MACHINE\\Software\\Valve\\Steam\\Apps\\CommonRedist\\vcredist\\2015"
+			"process 1"		"%INSTALLDIR%\\_CommonRedist\\vcredist\\2015\\Microsoft Visual C++ 2015 x64.cmd"
+			"NoCleanUp"		"1"
+			"Requirement_OS"
+			{
+				"Is64BitWindows"		"1"
+			}
+		}
+	}
+}
+"kvsignatures"
+{
+	"InstallScript"		"09081c2a06417052e43ba9e5a7ed0b7c216a66a50ac0935fc026e402b8d5b727efa2743369982a6e851926742a852d6aa8eb5bf955f6a0bcb86fa6649cf51d8c9dbf955ff50f1eafc4df7d9a30b9525ad1f849806f1a5f7b44ac7588dfcc47170322b3a709b53e53784e930f09dc1baa2cf44de3e68b1d24cee1586ea3195a0d"
+}
