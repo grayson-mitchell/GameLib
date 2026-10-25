@@ -1,4 +1,3 @@
-import { existsSync } from 'graceful-fs'
 import { addHandler } from 'backend/ipc'
 import i18next from 'i18next'
 import {
@@ -6,7 +5,7 @@ import {
   isAddedToSteam,
   removeNonSteamGame
 } from './nonesteamgame/nonesteamgame'
-import { shortcutFiles } from './shortcuts/shortcuts'
+import { shortcutFiles, shortcutPathPresent } from './shortcuts/shortcuts'
 import { notify } from 'backend/dialog/dialog'
 import { isMac } from 'backend/constants/environment'
 import { getGame } from '../utils'
@@ -37,7 +36,11 @@ function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
 
   const [desktopFile, menuFile] = shortcutFiles(title)
 
-  return existsSync(desktopFile ?? '') || existsSync(menuFile ?? '')
+  // 261026-ctm: a dangling Desktop link counts as present so Remove stays offered.
+  return (
+    shortcutPathPresent(desktopFile ?? '') ||
+    shortcutPathPresent(menuFile ?? '')
+  )
 }
 
 addHandler('addShortcut', async (event, appName, runner, fromMenu) => {

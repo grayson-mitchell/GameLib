@@ -81,11 +81,13 @@
  * reach.
  */
 
-import { existsSync } from 'graceful-fs'
 import i18next, { t } from 'i18next'
 import { ipcMain } from '../platform'
 import { getGame, handleExit } from '../utils'
-import { shortcutFiles } from '../shortcuts/shortcuts/shortcuts'
+import {
+  shortcutFiles,
+  shortcutPathPresent
+} from '../shortcuts/shortcuts/shortcuts'
 import {
   addNonSteamGame,
   removeNonSteamGame,
@@ -134,7 +136,11 @@ function shortcutsExistOnDisk(appName: string, runner: Runner): boolean {
 
   const [desktopFile, menuFile] = shortcutFiles(title)
 
-  return existsSync(desktopFile ?? '') || existsSync(menuFile ?? '')
+  // 261026-ctm: a dangling Desktop link counts as present so Remove stays offered.
+  return (
+    shortcutPathPresent(desktopFile ?? '') ||
+    shortcutPathPresent(menuFile ?? '')
+  )
 }
 
 /**
