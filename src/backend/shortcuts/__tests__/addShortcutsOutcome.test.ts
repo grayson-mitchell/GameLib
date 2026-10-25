@@ -54,7 +54,16 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync
+} from 'fs'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { addShortcuts, shortcutFiles } from '../shortcuts/shortcuts'
@@ -280,7 +289,7 @@ describe('Steam game (261026-c7r)', () => {
   })
 })
 
-describe('addShortcuts on darwin (261026-clh)', () => {
+describe('addShortcuts on darwin (261026-clh, 261026-ctm)', () => {
   const url = 'gamelib://launch?appName=outcome-test-app&runner=legendary'
   let savedShellExe: string | undefined
   beforeEach(() => {
@@ -319,33 +328,60 @@ describe('addShortcuts on darwin (261026-clh)', () => {
     expect(existsSync(desktopApp)).toBe(false)
   })
 
-  it('menu add with the Desktop toggle on writes both, with the same URL', async () => {
-    mockSettings = {
-      ...defaultSettings,
-      addDesktopShortcuts: true,
-      addStartMenuShortcuts: false
-    }
+  const desktopOn = {
+    ...defaultSettings,
+    addDesktopShortcuts: true,
+    addStartMenuShortcuts: false
+  }
+
+  it('261026-ctm menu add with the Desktop toggle on writes one bundle and a Desktop symlink to it', async () => {
+    mockSettings = desktopOn
     const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
 
     await addShortcuts(game, true)
 
-    for (const app of [desktopApp, menuApp]) {
-      expect(readFileSync(runSh(app), 'utf8')).toContain(`'${url}'`)
-    }
+    expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(desktopApp)).toBe(menuApp)
+    expect(readFileSync(runSh(menuApp), 'utf8')).toContain(`'${url}'`)
+    expect(readFileSync(runSh(desktopApp), 'utf8')).toContain(`'${url}'`)
   })
 
-  it('install add with only the Desktop toggle on writes the Desktop copy only', async () => {
-    mockSettings = {
-      ...defaultSettings,
-      addDesktopShortcuts: true,
-      addStartMenuShortcuts: false
-    }
+  it('261026-ctm install add with only the Desktop toggle on writes the Applications bundle and links it', async () => {
+    mockSettings = desktopOn
     const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
 
     await addShortcuts(game)
 
-    expect(existsSync(runSh(desktopApp))).toBe(true)
-    expect(existsSync(menuApp)).toBe(false)
+    expect(existsSync(runSh(menuApp))).toBe(true)
+    expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(desktopApp)).toBe(menuApp)
+  })
+
+  it('261026-ctm a legacy real Desktop bundle is replaced by the link', async () => {
+    mockSettings = desktopOn
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    mkdirSync(join(desktopApp, 'Contents', 'MacOS'), { recursive: true })
+    writeFileSync(runSh(desktopApp), '')
+
+    await addShortcuts(game, true)
+
+    expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(desktopApp)).toBe(menuApp)
+  })
+
+  it('261026-ctm a dangling Desktop link is replaced by a link to the bundle', async () => {
+    mockSettings = desktopOn
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    mkdirSync(dirname(desktopApp), { recursive: true })
+    symlinkSync(
+      join(homedir(), 'Applications', 'gone-261026-ctm.app'),
+      desktopApp
+    )
+
+    await addShortcuts(game, true)
+
+    expect(lstatSync(desktopApp).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(desktopApp)).toBe(menuApp)
   })
 
   it('install add with both toggles off writes nothing and resolves', async () => {
@@ -362,7 +398,7 @@ describe('addShortcuts on darwin (261026-clh)', () => {
     expect(existsSync(menuApp)).toBe(false)
   })
 
-  it('a failed Desktop write rejects naming the path, and the Applications copy is still written', async () => {
+  it('a failed Desktop link rejects naming the path, and the Applications bundle is still written', async () => {
     mockSettings = {
       ...defaultSettings,
       addDesktopShortcuts: true,
@@ -378,6 +414,22 @@ describe('addShortcuts on darwin (261026-clh)', () => {
       expect(existsSync(runSh(menuApp))).toBe(true)
     } finally {
       rmSync(desktopDir, { force: true })
+    }
+  })
+
+  it('261026-ctm a failed Applications write rejects naming both paths and creates no link', async () => {
+    mockSettings = desktopOn
+    const [desktopApp, menuApp] = shortcutFiles(gameInfo.title)
+    const appsDir = dirname(menuApp)
+    rmSync(appsDir, { recursive: true, force: true })
+    writeFileSync(appsDir, '')
+    try {
+      const rejection = addShortcuts(game, true)
+      await expect(rejection).rejects.toThrow(menuApp)
+      await expect(rejection).rejects.toThrow(desktopApp)
+      expect(() => lstatSync(desktopApp)).toThrow(/ENOENT/)
+    } finally {
+      rmSync(appsDir, { force: true })
     }
   })
 })

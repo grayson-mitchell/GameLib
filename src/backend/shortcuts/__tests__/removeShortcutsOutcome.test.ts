@@ -60,7 +60,14 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Backend: 'Backend' }
 }))
 
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync
+} from 'fs'
 import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { logError } from 'backend/logger'
@@ -204,6 +211,55 @@ describe('removeShortcuts on darwin (261012-ca6)', () => {
 
     expect(existsSync(desktopFile)).toBe(false)
     expect(existsSync(menuFile)).toBe(false)
+    expect(mockLogError).not.toHaveBeenCalled()
+  })
+
+  it('261026-ctm removing the Desktop link does not follow it', async () => {
+    const title = '261026-ctm Remove Link Game'
+    const [desktopFile, menuFile] = containedPaths(title)
+    mkdirSync(join(menuFile, 'Contents', 'MacOS'), { recursive: true })
+    writeFileSync(join(menuFile, 'Contents', 'MacOS', 'run.sh'), '')
+    mkdirSync(dirname(desktopFile), { recursive: true })
+    symlinkSync(menuFile, desktopFile)
+
+    await removeShortcuts(gameFor(title))
+
+    expect(() => lstatSync(desktopFile)).toThrow(/ENOENT/)
+    expect(existsSync(menuFile)).toBe(false)
+    expect(mockLogError).not.toHaveBeenCalled()
+  })
+
+  it('261026-ctm a link whose target lies elsewhere leaves that target intact', async () => {
+    const title = '261026-ctm Remove Link Elsewhere Game'
+    const [desktopFile] = containedPaths(title)
+    const other = join(homedir(), 'Applications', '261026-ctm Other.app')
+    const otherRun = join(other, 'Contents', 'MacOS', 'run.sh')
+    mkdirSync(join(other, 'Contents', 'MacOS'), { recursive: true })
+    writeFileSync(otherRun, '')
+    mkdirSync(dirname(desktopFile), { recursive: true })
+    symlinkSync(other, desktopFile)
+    try {
+      await removeShortcuts(gameFor(title))
+
+      expect(() => lstatSync(desktopFile)).toThrow(/ENOENT/)
+      expect(existsSync(otherRun)).toBe(true)
+    } finally {
+      rmSync(other, { recursive: true, force: true })
+    }
+  })
+
+  it('261026-ctm a dangling Desktop link is removed and nothing is logged', async () => {
+    const title = '261026-ctm Remove Dangling Game'
+    const [desktopFile] = containedPaths(title)
+    mkdirSync(dirname(desktopFile), { recursive: true })
+    symlinkSync(
+      join(homedir(), 'Applications', 'gone-261026-ctm.app'),
+      desktopFile
+    )
+
+    await removeShortcuts(gameFor(title))
+
+    expect(() => lstatSync(desktopFile)).toThrow(/ENOENT/)
     expect(mockLogError).not.toHaveBeenCalled()
   })
 })
