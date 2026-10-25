@@ -901,6 +901,52 @@ function findGameCalls(appid: string, appLogTexts: string[]): string[] {
   return [...found]
 }
 
+/** D-53-15: the init/shutdown family. A title whose judged steam_api import set
+ * is made up of only these names has no interface call to observe, so a
+ * successful game-originated init is the only evidence it can give. */
+const INIT_SHUTDOWN_FAMILY: ReadonlySet<string> = new Set([
+  'SteamAPI_Init',
+  'SteamAPI_InitSafe',
+  'SteamAPI_InitFlat',
+  'SteamInternal_SteamAPI_Init',
+  'SteamAPI_Shutdown'
+])
+
+/** D-53-15: true only when `symbols` is non-empty and every entry is in the
+ * init/shutdown family. Any other symbol (an interface accessor, RunCallbacks,
+ * a `<dll>@runtime-loaded` marker, ...) makes it false. Pure. */
+export function isInitOnlyImportSet(symbols: string[]): boolean {
+  return symbols.length > 0 && symbols.every((s) => INIT_SHUTDOWN_FAMILY.has(s))
+}
+
+/** D-53-15: the game's own init report for `appid` (a `GINIT` line the helper
+ * writes only from the shim's REPORT_INIT frame), scanned after the first HELLO
+ * and anchored at payload start so a GINIT-looking string inside a FWD/NOVER
+ * payload never matches. The helper's own `INIT` category is never read.
+ * Returns the first success (ok=1 AND session=1), else the first matching
+ * non-success line, else null. */
+function findGameInit(
+  appid: string,
+  appLogTexts: string[]
+): { fn: string; success: boolean } | null {
+  const hello = helloRegex(appid)
+  const ginit =
+    /^\[[^\]]*\]\s+GINIT\s+fn=(SteamAPI_Init|SteamInternal_SteamAPI_Init|SteamAPI_InitSafe|SteamAPI_InitFlat)\s+ret=(-?\d+)\s+ok=([01])\s+session=([01])\s*$/
+  let failure: { fn: string; success: boolean } | null = null
+  for (const text of appLogTexts) {
+    const payloads = attributeHelperLines(appid, text)
+    const h = payloads.findIndex((l) => hello.test(l))
+    if (h < 0) continue
+    for (const l of payloads.slice(h + 1)) {
+      const m = ginit.exec(l)
+      if (!m) continue
+      if (m[3] === '1' && m[4] === '1') return { fn: m[1], success: true }
+      failure ??= { fn: m[1], success: false }
+    }
+  }
+  return failure
+}
+
 /** First `NOVER` flat-lookup version attributed to `appid` (the sanitised
  * version token only, T-53-46), or null. */
 function findNover(appid: string, appLogTexts: string[]): string | null {
@@ -928,18 +974,33 @@ function findNover(appid: string, appLogTexts: string[]): string | null {
  * (ELEX 411300) is unverified, and CALL-only evidence plus a NOVER reads
  * unverified. Helper-originated lines (HELLO, FWD) never count, and Mac Steam
  * In-Game status is deliberately NOT an input.
+ *
+ * D-53-15: with `initOnlyImports` (judged import set is init/shutdown only)
+ * the verdict is HELLO + an anchored `GINIT ... ok=1 session=1` line, nothing
+ * else. The helper's own `INIT` line and In-Game status are never inputs.
  */
 export function classifyBridgeEvidence(input: {
   appid: string
   appLogTexts: string[]
   gameLogTexts: string[]
   engine?: CensusEngine
+  /** D-53-15: the row's judged steam_api import set is init/shutdown only. */
+  initOnlyImports?: boolean
 }): BridgeEvidence {
   if (!/^\d+$/.test(input.appid)) {
     return { status: 'unverified', detail: 'no HELLO' }
   }
   if (!input.appLogTexts.some((t) => hasHello(input.appid, t))) {
     return { status: 'unverified', detail: 'no HELLO' }
+  }
+  if (input.initOnlyImports === true) {
+    // D-53-15: strict -- an init-only row never falls through to the engine
+    // logic. HELLO + a GINIT success (ok=1, live session) verifies it; a failed
+    // or missing init line does not.
+    const g = findGameInit(input.appid, input.appLogTexts)
+    if (g === null) return { status: 'unverified', detail: 'no game init line' }
+    if (!g.success) return { status: 'unverified', detail: 'game init failed' }
+    return { status: 'verified', detail: `game init ${g.fn}` }
   }
   const engine = input.engine ?? 'unity'
   const nover = findNover(input.appid, input.appLogTexts)
@@ -1528,7 +1589,8 @@ interface AppLogFile {
 function collectEvidence(
   entry: ManifestEntry,
   appLogFiles: AppLogFile[],
-  engine: CensusEngine
+  engine: CensusEngine,
+  initOnlyImports = false
 ): BridgeEvidence {
   if (entry.bottleName !== `GameLibSteamBridge-${entry.appid}`) {
     return { status: 'unverified', detail: 'no per-game bridge bottle' }
@@ -1538,6 +1600,7 @@ function collectEvidence(
     appid: entry.appid,
     appLogTexts: segment === null ? [] : [segment],
     engine,
+    initOnlyImports,
     gameLogTexts: readTexts(
       engineLogPaths(engine, join(BOTTLES_DIR, entry.bottleName))
     )
@@ -1783,7 +1846,6 @@ async function classifyInstalledTitle(
     ...topLevel,
     ...exePaths.map((p) => basename(p))
   ])
-  const evidence = collectEvidence(entry, appLogTexts, engine)
 
   // Census-only stand-in choice (the census has no launch config): an Unreal
   // install launches its root-level bootstrap stub, not the Shipping exe the
@@ -1802,7 +1864,7 @@ async function classifyInstalledTitle(
       installdir: entry.installdir,
       knownBadReason,
       playVerified,
-      evidence,
+      evidence: collectEvidence(entry, appLogTexts, engine, false),
       exe: null
     })
   }
@@ -1945,15 +2007,19 @@ async function classifyInstalledTitle(
       : runtimeLoadedDll
         ? RUNTIME_DLL_ARCH[runtimeLoadedDll]
         : 'none'
+  const judged = [
+    ...symbols,
+    ...(importerEvidence?.symbols ?? []),
+    ...(managed?.kind === 'mono' ? managed.symbols : [])
+  ]
   judgedSymbols.push({
     appid: entry.appid,
     arch: judgedArch,
-    symbols: [
-      ...symbols,
-      ...(importerEvidence?.symbols ?? []),
-      ...(managed?.kind === 'mono' ? managed.symbols : [])
-    ]
+    symbols: judged
   })
+  // D-53-15: unscanned IL2CPP Steam usage is never assumed init-only.
+  const initOnly = isInitOnlyImportSet(judged) && managed?.kind !== 'il2cpp'
+  const evidence = collectEvidence(entry, appLogTexts, engine, initOnly)
 
   return classifyCensusTitle({
     appid: entry.appid,

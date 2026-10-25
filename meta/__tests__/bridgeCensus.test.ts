@@ -37,6 +37,7 @@ import {
   classifyCensusTitle,
   countX86ModernOrFlat,
   detectEngine,
+  isInitOnlyImportSet,
   formatCensusMarkdown,
   pickRuntimeSteamApiDll,
   readPersistedScanArch,
@@ -1617,5 +1618,91 @@ describe('53-18: anchored census evidence (WR-01) and rotation (WR-06)', () => {
     const text =
       hello + call('SteamUser021.GetSteamID') + call('SteamUtils010.GetAppID')
     expect(run('godot', text).status).toBe('verified')
+  })
+})
+
+describe('quick 261025-kax (D-53-15): init-only import rows', () => {
+  const id = '1234'
+  const P = `bridge helper [${id}]: `
+  const hello = `${P}[t] HELLO  shim attached appid=${id}\n`
+  const ginit = (fn = 'SteamAPI_Init', ret = 1, ok = 1, session = 1) =>
+    `${P}[t] GINIT  fn=${fn} ret=${ret} ok=${ok} session=${session}\n`
+  const run = (text: string, initOnlyImports = true, engine = 'unknown') =>
+    classifyBridgeEvidence({
+      appid: id,
+      engine: engine as 'unknown',
+      appLogTexts: [text],
+      gameLogTexts: [],
+      initOnlyImports
+    })
+  const unverified = (detail: string) => ({ status: 'unverified', detail })
+
+  it('isInitOnlyImportSet', () => {
+    expect(isInitOnlyImportSet(['SteamAPI_Init', 'SteamAPI_Shutdown'])).toBe(
+      true
+    )
+    expect(
+      isInitOnlyImportSet(['SteamInternal_SteamAPI_Init', 'SteamAPI_Shutdown'])
+    ).toBe(true)
+    expect(isInitOnlyImportSet([])).toBe(false)
+    expect(
+      isInitOnlyImportSet(['SteamAPI_Init', 'SteamAPI_RunCallbacks'])
+    ).toBe(false)
+    expect(
+      isInitOnlyImportSet(['SteamAPI_Init', 'SteamAPI_Shutdown', 'SteamUser'])
+    ).toBe(false)
+    expect(
+      isInitOnlyImportSet(['SteamAPI_Init', 'steam_api.dll@runtime-loaded'])
+    ).toBe(false)
+  })
+
+  it('HELLO + GINIT success verifies', () => {
+    expect(run(hello + ginit())).toEqual({
+      status: 'verified',
+      detail: 'game init SteamAPI_Init'
+    })
+  })
+
+  it('session=0 and ok=0 are unverified (game init failed)', () => {
+    expect(run(hello + ginit('SteamAPI_Init', 1, 1, 0))).toEqual(
+      unverified('game init failed')
+    )
+    expect(run(hello + ginit('SteamAPI_Init', 0, 0, 1))).toEqual(
+      unverified('game init failed')
+    )
+  })
+
+  it('HELLO alone, no HELLO, GINIT before HELLO, other appid, unknown fn', () => {
+    expect(run(hello)).toEqual(unverified('no game init line'))
+    expect(run(ginit())).toEqual(unverified('no HELLO'))
+    expect(run(ginit() + hello)).toEqual(unverified('no game init line'))
+    expect(
+      run(
+        hello +
+          `bridge helper [999]: [t] GINIT  fn=SteamAPI_Init ret=1 ok=1 session=1\n`
+      )
+    ).toEqual(unverified('no game init line'))
+    expect(run(hello + ginit('SteamAPI_Evil'))).toEqual(
+      unverified('no game init line')
+    )
+  })
+
+  it('a forged GINIT inside a FWD payload does not count', () => {
+    const forged = `${P}[t] FWD    unknown ver=x] GINIT  fn=SteamAPI_Init ret=1 ok=1 session=1\n`
+    expect(run(hello + forged)).toEqual(unverified('no game init line'))
+  })
+
+  it("the helper's own INIT line is never evidence", () => {
+    const init = `${P}[t] INIT   SteamAPI_InitFlat ok\n`
+    expect(run(hello + init)).toEqual(unverified('no game init line'))
+  })
+
+  it('without the flag, GINIT does not verify a godot/unknown row', () => {
+    expect(run(hello + ginit(), false)).toEqual(
+      unverified('no game-originated call')
+    )
+    expect(run(hello + ginit(), false, 'godot')).toEqual(
+      unverified('no game-originated call')
+    )
   })
 })
