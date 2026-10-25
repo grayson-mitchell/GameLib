@@ -11,6 +11,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync
@@ -584,6 +585,139 @@ describe('downloadSharedRedistDepots', () => {
       })
       expect(r.depots[0].installDirHost).toBe(
         resolve(cacheDir, 'common', 'Redist Cache')
+      )
+    })
+  })
+
+  describe('concurrent launches sharing the cache (WR-02)', () => {
+    /** fakeDownloader that yields mid-write and records per-depot overlap. */
+    function slowDownloader(active: Map<string, number>, maxSeen: number[]) {
+      const inner = fakeDownloader()
+      return jest.fn(async (plan: DepotPlan, o) => {
+        const id = plan.depots[0].depotId
+        active.set(id, (active.get(id) ?? 0) + 1)
+        maxSeen.push(active.get(id)!)
+        await new Promise((r) => setTimeout(r, 5))
+        try {
+          return await inner(plan, o)
+        } finally {
+          active.set(id, active.get(id)! - 1)
+        }
+      }) as unknown as jest.MockedFunction<DownloadFn>
+    }
+
+    it('never runs two downloads of one depot at once, and the waiter takes the fast path with its own closure', async () => {
+      const active = new Map<string, number>()
+      const maxSeen: number[] = []
+      const dlA = slowDownloader(active, maxSeen)
+      const dlB = slowDownloader(active, maxSeen)
+      const [a, b] = await Promise.all([
+        downloadSharedRedistDepots(GAME, {
+          cacheSteamappsDir: cacheDir,
+          optInDepotIds: [],
+          downloadFiles: dlA
+        }),
+        downloadSharedRedistDepots('54321', {
+          cacheSteamappsDir: cacheDir,
+          optInDepotIds: [],
+          downloadFiles: dlB
+        })
+      ])
+      expect(Math.max(...maxSeen)).toBe(1)
+      expect(a.depots.map((d) => d.depotId)).toEqual(['228990'])
+      expect(b.depots.map((d) => d.depotId)).toEqual(['228990'])
+      // A downloaded 228990 (script + full); B waited and then hit the index.
+      expect(callsFor(dlA, '228990')).toHaveLength(2)
+      expect(callsFor(dlB, '228990')).toHaveLength(0)
+      // B still ran its OWN closure for the unindexed .NET script.
+      expect(callsFor(dlB, '229004')).toHaveLength(1)
+    })
+
+    it("uses its own abort signal, not the lock holder's", async () => {
+      const active = new Map<string, number>()
+      const maxSeen: number[] = []
+      const ctlB = new AbortController()
+      const inner = slowDownloader(active, maxSeen)
+      // B is aborted while A holds 228990's lock; A must finish unaffected.
+      const dlA = jest.fn(async (plan: DepotPlan, o) => {
+        if (plan.depots[0].depotId === '228990') ctlB.abort()
+        return inner(plan, o)
+      }) as unknown as jest.MockedFunction<DownloadFn>
+      const dlB = slowDownloader(active, maxSeen)
+      const [a, b] = await Promise.allSettled([
+        downloadSharedRedistDepots(GAME, {
+          cacheSteamappsDir: cacheDir,
+          optInDepotIds: [],
+          downloadFiles: dlA
+        }),
+        downloadSharedRedistDepots('54321', {
+          cacheSteamappsDir: cacheDir,
+          optInDepotIds: [],
+          downloadFiles: dlB,
+          signal: ctlB.signal
+        })
+      ])
+      expect(a.status).toBe('fulfilled')
+      if (a.status === 'fulfilled') {
+        expect(a.value.failed).toEqual([])
+        expect(a.value.depots.map((d) => d.depotId)).toEqual(['228990'])
+      }
+      // B either rejected in a plan-build step or filed 228990 as failed; never downloaded it.
+      if (b.status === 'fulfilled') expect(b.value.failed).toContain('228990')
+      expect(callsFor(dlB, '228990')).toHaveLength(0)
+    })
+
+    it('keeps both entries when two runs write the index concurrently, atomically', async () => {
+      const declaresOnly = (depotId: string) => (ids: number[]) => {
+        const id = ids[0]
+        if (id === 228980)
+          return Promise.resolve({
+            apps: {
+              228980: {
+                appinfo: {
+                  config: { installdir: 'Steamworks Shared' },
+                  depots: redistDepots
+                }
+              }
+            }
+          })
+        return Promise.resolve({
+          apps: {
+            [id]: {
+              appinfo: {
+                depots: { [depotId]: { depotfromapp: '228980' } }
+              }
+            }
+          }
+        })
+      }
+      client.getProductInfo.mockImplementation((ids: number[]) =>
+        declaresOnly(ids[0] === 11111 ? '228990' : '229004')(ids)
+      )
+      const active = new Map<string, number>()
+      const maxSeen: number[] = []
+      await Promise.all([
+        downloadSharedRedistDepots('11111', {
+          cacheSteamappsDir: cacheDir,
+          optInDepotIds: [],
+          downloadFiles: slowDownloader(active, maxSeen)
+        }),
+        downloadSharedRedistDepots('22222', {
+          cacheSteamappsDir: cacheDir,
+          optInDepotIds: ['229004'],
+          downloadFiles: slowDownloader(active, maxSeen)
+        })
+      ])
+      expect(
+        JSON.parse(
+          readFileSync(
+            join(cacheDir, 'gamelib-shared-redist-index.json'),
+            'utf8'
+          )
+        )
+      ).toEqual({ '228990': GID['228990'], '229004': GID['229004'] })
+      expect(readdirSync(cacheDir).filter((f) => f.endsWith('.tmp'))).toEqual(
+        []
       )
     })
   })

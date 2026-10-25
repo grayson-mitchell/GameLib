@@ -25,6 +25,7 @@ import {
   chmod,
   readFile,
   writeFile,
+  rename,
   type FileHandle
 } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
@@ -1085,20 +1086,34 @@ export interface SharedRedistDownloadResult {
 const SHARED_REDIST_INDEX_FILE = 'gamelib-shared-redist-index.json'
 const SHARED_REDIST_DEFAULT_INSTALLDIR = 'Steamworks Shared'
 
-/** In-process single-flight so two concurrent launches never write the same files. */
-const sharedRedistInFlight = new Map<string, Promise<boolean>>()
+/**
+ * In-process FIFO lock per key (WR-02). Unlike a single-flight join, every waiter runs its OWN
+ * closure once the holder releases, so it uses its own `signal` and `downloadFiles` and re-reads
+ * the index, instead of inheriting another launch's. Keys: `depot:<cache>|<id>` around a
+ * depot's whole script-then-full sequence (its two downloads write the same files), and
+ * `index:<cache>` around every index read-modify-write. The depot lock may take the index lock;
+ * never the reverse, so they cannot deadlock.
+ */
+const sharedRedistLocks = new Map<string, Promise<void>>()
 
-function sharedRedistSingleFlight(
+async function withSharedRedistLock<T>(
   key: string,
-  run: () => Promise<boolean>
-): Promise<boolean> {
-  const existing = sharedRedistInFlight.get(key)
-  if (existing) return existing
-  const p = run().finally(() => {
-    sharedRedistInFlight.delete(key)
+  fn: () => Promise<T>
+): Promise<T> {
+  const prev = sharedRedistLocks.get(key) ?? Promise.resolve()
+  let release!: () => void
+  const mine = new Promise<void>((r) => {
+    release = r
   })
-  sharedRedistInFlight.set(key, p)
-  return p
+  const tail = prev.then(() => mine)
+  sharedRedistLocks.set(key, tail)
+  await prev
+  try {
+    return await fn()
+  } finally {
+    release()
+    if (sharedRedistLocks.get(key) === tail) sharedRedistLocks.delete(key)
+  }
 }
 
 async function readSharedRedistIndex(
@@ -1119,14 +1134,33 @@ async function readSharedRedistIndex(
   }
 }
 
-async function writeSharedRedistIndex(
+let sharedRedistTmpSeq = 0
+
+/**
+ * Read-modify-write the shared cache index under the index lock, always from a fresh read, and
+ * write it atomically: a unique temp file renamed over the index, so a crash never leaves torn
+ * JSON and a concurrent writer never loses another run's entry (WR-02, IN-04).
+ */
+async function updateSharedRedistIndex(
   cacheSteamappsDir: string,
-  index: Record<string, string>
+  mutate: (index: Record<string, string>) => void
 ): Promise<void> {
-  await mkdir(cacheSteamappsDir, { recursive: true })
-  await writeFile(
-    join(cacheSteamappsDir, SHARED_REDIST_INDEX_FILE),
-    JSON.stringify(index, null, 2)
+  await withSharedRedistLock(
+    `index:${resolve(cacheSteamappsDir)}`,
+    async () => {
+      const index = await readSharedRedistIndex(cacheSteamappsDir)
+      mutate(index)
+      await mkdir(cacheSteamappsDir, { recursive: true })
+      const target = join(cacheSteamappsDir, SHARED_REDIST_INDEX_FILE)
+      const tmp = `${target}.${process.pid}.${++sharedRedistTmpSeq}.tmp`
+      try {
+        await writeFile(tmp, JSON.stringify(index, null, 2))
+        await rename(tmp, target)
+      } catch (err) {
+        await rm(tmp, { force: true }).catch(() => undefined)
+        throw err
+      }
+    }
   )
 }
 
@@ -1287,7 +1321,7 @@ export async function downloadSharedRedistDepots(
   const depots: SharedRedistDepot[] = []
   const failed: string[] = []
   const skipped: string[] = []
-  const index = await readSharedRedistIndex(opts.cacheSteamappsDir)
+  const cacheKey = resolve(opts.cacheSteamappsDir)
 
   for (const id of declared) {
     try {
@@ -1343,91 +1377,113 @@ export async function downloadSharedRedistDepots(
         continue
       }
 
-      // Read the installscript, from the GID index when present. A cached script that no
-      // longer parses drops its index entry and is re-downloaded once before the depot is
-      // given up on.
-      let fromIndex = index[id] === gid && (await pathExists(scriptPath))
-      let entries: InstallScriptEntry[] | null = null
-      let scriptFailed = false
-      for (let attempt = 0; attempt < 2; attempt++) {
-        if (!fromIndex) {
-          const ok = await sharedRedistSingleFlight(`script:${id}`, () =>
-            download(entry, [scriptFile])
-          )
-          if (!ok) {
-            scriptFailed = true
+      // Everything that reads or writes this depot's cached files runs under one per-depot lock
+      // (WR-02), so a concurrent launch waits, then re-reads the index and takes the fast path.
+      const outcome = await withSharedRedistLock(
+        `depot:${cacheKey}|${id}`,
+        async (): Promise<
+          | { kind: 'failed' }
+          | { kind: 'skipped' }
+          | { kind: 'ok'; depot: SharedRedistDepot }
+        > => {
+          if (opts.signal?.aborted) {
+            logInfo(
+              `shared redists: aborted before depot ${id}`,
+              LogPrefix.Steam
+            )
+            return { kind: 'failed' }
+          }
+
+          // Read the installscript, from the GID index when present. A cached script that no
+          // longer parses drops its index entry and is re-downloaded once before the depot is
+          // given up on.
+          const indexed = (await readSharedRedistIndex(opts.cacheSteamappsDir))[
+            id
+          ]
+          let fromIndex = indexed === gid && (await pathExists(scriptPath))
+          let entries: InstallScriptEntry[] | null = null
+          let scriptFailed = false
+          for (let attempt = 0; attempt < 2; attempt++) {
+            if (!fromIndex) {
+              const ok = await download(entry, [scriptFile])
+              if (!ok) {
+                scriptFailed = true
+                break
+              }
+            }
+            entries = parseInstallScript(await readFile(scriptPath, 'utf8'))
+            if (entries === null && fromIndex) {
+              logWarning(
+                `shared redists: cached installscript for depot ${id} does not parse, re-downloading`,
+                LogPrefix.Steam
+              )
+              await updateSharedRedistIndex(opts.cacheSteamappsDir, (i) => {
+                delete i[id]
+              })
+              fromIndex = false
+              continue
+            }
             break
           }
-        }
-        entries = parseInstallScript(await readFile(scriptPath, 'utf8'))
-        if (entries === null && fromIndex) {
-          logWarning(
-            `shared redists: cached installscript for depot ${id} does not parse, re-downloading`,
-            LogPrefix.Steam
+          if (scriptFailed) {
+            logWarning(
+              `shared redists: installscript download failed for depot ${id}`,
+              LogPrefix.Steam
+            )
+            return { kind: 'failed' }
+          }
+          if (entries === null) {
+            logInfo(
+              `shared redists: skipping depot ${id}, installscript did not parse`,
+              LogPrefix.Steam
+            )
+            return { kind: 'skipped' }
+          }
+
+          const { kind, label } = classifySharedRedist(
+            scriptFile.filename,
+            entries
           )
-          delete index[id]
-          await writeSharedRedistIndex(opts.cacheSteamappsDir, index)
-          fromIndex = false
-          continue
+          if (kind === 'other' && !optIn.has(id)) {
+            logInfo(
+              `shared redists: skipping depot ${id} (${label ?? scriptFile.filename}), not VC++/DirectX and not opted in`,
+              LogPrefix.Steam
+            )
+            return { kind: 'skipped' }
+          }
+          const displayLabel = label ?? `depot ${id}`
+
+          if (!fromIndex) {
+            opts.onComponent?.(displayLabel)
+            const ok = await download(entry, entry.files)
+            if (!ok) {
+              logWarning(
+                `shared redists: download of depot ${id} (${displayLabel}) did not complete`,
+                LogPrefix.Steam
+              )
+              return { kind: 'failed' }
+            }
+            await updateSharedRedistIndex(opts.cacheSteamappsDir, (i) => {
+              i[id] = gid
+            })
+          }
+
+          return {
+            kind: 'ok',
+            depot: {
+              depotId: id,
+              gid,
+              kind,
+              label: displayLabel,
+              installDirHost: installRoot,
+              entries
+            }
+          }
         }
-        break
-      }
-      if (scriptFailed) {
-        logWarning(
-          `shared redists: installscript download failed for depot ${id}`,
-          LogPrefix.Steam
-        )
-        failed.push(id)
-        continue
-      }
-      if (entries === null) {
-        logInfo(
-          `shared redists: skipping depot ${id}, installscript did not parse`,
-          LogPrefix.Steam
-        )
-        skipped.push(id)
-        continue
-      }
-
-      const { kind, label } = classifySharedRedist(scriptFile.filename, entries)
-      if (kind === 'other' && !optIn.has(id)) {
-        logInfo(
-          `shared redists: skipping depot ${id} (${label ?? scriptFile.filename}), not VC++/DirectX and not opted in`,
-          LogPrefix.Steam
-        )
-        skipped.push(id)
-        continue
-      }
-      const displayLabel = label ?? `depot ${id}`
-
-      if (!fromIndex) {
-        opts.onComponent?.(displayLabel)
-        const ok = await sharedRedistSingleFlight(`full:${id}`, () =>
-          download(entry, entry.files)
-        )
-        if (!ok) {
-          logWarning(
-            `shared redists: download of depot ${id} (${displayLabel}) did not complete`,
-            LogPrefix.Steam
-          )
-          failed.push(id)
-          continue
-        }
-        // Re-read so concurrent runs do not clobber each other's entries.
-        const latest = await readSharedRedistIndex(opts.cacheSteamappsDir)
-        latest[id] = gid
-        index[id] = gid
-        await writeSharedRedistIndex(opts.cacheSteamappsDir, latest)
-      }
-
-      depots.push({
-        depotId: id,
-        gid,
-        kind,
-        label: displayLabel,
-        installDirHost: installRoot,
-        entries
-      })
+      )
+      if (outcome.kind === 'ok') depots.push(outcome.depot)
+      else if (outcome.kind === 'skipped') skipped.push(id)
+      else failed.push(id)
     } catch (err) {
       logWarning(
         `shared redists: depot ${id} could not be evaluated, will retry next launch: ${String(err)}`,
