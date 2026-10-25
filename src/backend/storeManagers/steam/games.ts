@@ -3159,6 +3159,8 @@ export default class SteamGame implements Game {
       const { startBottleProcessMonitor } =
         await import('./bottleProcessMonitor')
       const { applySteamBridgeKnownFixes } = await import('./bridgeKnownFixes')
+      const { applyBridgeBottleDllOverrides } =
+        await import('./bridge/bottleDllOverrides')
 
       // Phase 51 Plan 01 Task 2 (D-51-01): the helper's lifetime is tied to
       // THIS game's own process lifetime, never to the whole app session —
@@ -3185,7 +3187,7 @@ export default class SteamGame implements Game {
       // The applier never rejects by contract; the .catch is belt-and-braces so
       // a fix problem can never reach the outer catch, whose
       // reportLaunchFailure would mark the bridge failed for the session.
-      const launchSettings = await applySteamBridgeKnownFixes(
+      const fixedSettings = await applySteamBridgeKnownFixes(
         this.appId,
         bridgeBottleSettings,
         installRoot
@@ -3195,6 +3197,20 @@ export default class SteamGame implements Game {
           LogPrefix.Steam
         )
         return bridgeBottleSettings
+      })
+
+      // 53-19 (D-53-06): measured per-title DLL override in this appId's own
+      // bridge bottle (Overlooting nvapi64). Never rejects; .catch is
+      // belt-and-braces for the same reason as above.
+      const launchSettings = await applyBridgeBottleDllOverrides(
+        this.appId,
+        fixedSettings
+      ).catch((error: unknown) => {
+        logWarning(
+          `SteamGame: DLL override application failed for appId ${this.appId}: ${String(error)}`,
+          LogPrefix.Steam
+        )
+        return fixedSettings
       })
 
       let handle: ReturnType<typeof startBottleProcessMonitor> = null
