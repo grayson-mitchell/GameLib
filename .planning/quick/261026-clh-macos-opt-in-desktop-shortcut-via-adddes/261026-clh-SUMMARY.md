@@ -26,8 +26,10 @@ On macOS the existing `addDesktopShortcuts` setting now writes a second `<title>
 ## Deviations
 None.
 
-## Pending operator gate
+## Operator gate (passed, via 261026-ctm)
 Live Mac check: restart `pnpm tauri:dev` (check sidecar.js mtime), toggle "Add desktop shortcuts automatically" on in Settings > Shortcuts, Add shortcut on a game: `.app` on both ~/Desktop and ~/Applications; Remove: both gone; toggle off then Add: Applications only.
+
+**Result 2026-10-26: PASS (operator).** Live on the Mac with Avernum 6: Add shortcut created `~/Applications/Avernum 6.app` and, with the Desktop toggle on, a `~/Desktop` link; macOS Apps lists the game once; the menu item flipped; launch and Remove worked.
 
 ## Open follow-up
 The macOS success toast wording still says "...Applications folder" and does not mention the Desktop copy. Toast strings were deliberately not touched.

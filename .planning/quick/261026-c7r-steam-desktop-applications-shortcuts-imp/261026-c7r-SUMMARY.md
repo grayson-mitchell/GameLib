@@ -23,8 +23,10 @@ SteamGame.addShortcuts/removeShortcuts now delegate to the shared `shortcuts.ts`
 - [Rule 3] The plan said not to add a top-level `jest.mock` of the shortcuts module to `games.test.ts`. That was not workable. `steam/games.ts` now imports the shortcuts module, whose import graph (fs-extra, online_monitor) fails to load under several steam suites' mocks. I added a factory mock of `shortcuts/shortcuts/shortcuts` to `games.test.ts`, `library.test.ts`, `removeCopies.test.ts` and `steamStartupKeyringDeferral.test.ts`. The delegation tests live in `games.test.ts` and use that mock.
 - I briefly ran `git stash` / `git stash pop` once while checking for a pre-existing failure. Nothing was lost (the stash list held only that entry and it was popped and dropped), but this was a slip against project git rules.
 
-## Operator gate (pending, not done)
+## Operator gate (passed)
 Live Mac check: restart `pnpm tauri:dev` (sidecar is not rebuilt, check the sidecar.js mtime). On an installed Steam game (230070 or 206020), Add shortcut should create `~/Applications/<Title>.app` and the item should flip to Remove shortcuts. Double-clicking the `.app` should launch via the Play route. Remove shortcuts should delete the `.app` and flip the item back.
+
+**Result 2026-10-26: PASS (operator).** Live on the Mac with Avernum 6: Add shortcut created `~/Applications/Avernum 6.app` and, with the Desktop toggle on, a `~/Desktop` link; macOS Apps lists the game once; the menu item flipped; launch and Remove worked.
 
 ## Known gaps
 - A Steam uninstall does not remove the shortcut, and Steam install does not create one (F-2, recorded in the todo).

@@ -1,7 +1,7 @@
 ---
 phase: quick-261026-ctm
 plan: 01
-status: complete-pending-live-gate
+status: complete
 completed: 2026-10-26
 commits: [5db284586, 17c29b80f, 19cd124ba, cbd905373]
 ---
@@ -49,12 +49,14 @@ the game once.
 None in behavior. `shortcutPathPresent` was exported in the Task 1 commit (not Task 2) so the
 unused function would not trip typecheck between commits.
 
-## Pending operator gate (live Mac)
+## Operator gate (live Mac, passed)
 
 Restart `pnpm tauri:dev` (check sidecar.js mtime), Add shortcut on Avernum 6 with the Desktop
 toggle on. Expect: `~/Desktop/Avernum 6.app` becomes a Finder link (arrow badge) replacing the
 existing real bundle; macOS Apps shows Avernum 6 once; Remove deletes both. Not run by the
 executor (the user's dev session was left alone).
+
+**Result 2026-10-26: PASS (operator).** Live on the Mac with Avernum 6: Add shortcut created `~/Applications/Avernum 6.app` and, with the Desktop toggle on, a `~/Desktop` link; macOS Apps lists the game once; the menu item flipped; launch and Remove worked.
 
 ## Open follow-up
 
