@@ -190,6 +190,29 @@ describe('protocol -- CONTROL_SLOT.reportVersion (53-06, D-53-07)', () => {
   })
 })
 
+describe('protocol -- CONTROL_SLOT.drainCallbacks (Phase 55)', () => {
+  it('is 6 and equals the shim and helper #define values', () => {
+    expect(CONTROL_SLOT.drainCallbacks).toBe(6)
+    const root = join(__dirname, '..', '..', '..', '..', '..', '..')
+    const shim = readFileSync(
+      join(root, 'native/steam-bridge/generated/steam_api_shim.c'),
+      'utf-8'
+    )
+    const helper = readFileSync(
+      join(root, 'native/steam-bridge/helper/bridge_helper.c'),
+      'utf-8'
+    )
+    const shimValue = /#define BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS (\d+)/.exec(
+      shim
+    )
+    const helperValue = /#define CONTROL_SLOT_DRAIN_CALLBACKS (\d+)/.exec(
+      helper
+    )
+    expect(Number(shimValue![1])).toBe(CONTROL_SLOT.drainCallbacks)
+    expect(Number(helperValue![1])).toBe(CONTROL_SLOT.drainCallbacks)
+  })
+})
+
 describe('protocol -- CONTROL HEALTH/WHOAMI round-trip (review finding #7)', () => {
   it('encodeControl(HEALTH) produces a request frame on CONTROL_ORDINAL/health slot', () => {
     const frame = encodeControl(1, 'health')

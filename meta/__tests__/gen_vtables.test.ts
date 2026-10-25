@@ -3096,3 +3096,72 @@ describe('callback registry (P55-3) source pins', () => {
     expect(CALLBACK_RELAY_TABLE).toEqual([{ id, size: max }])
   })
 })
+
+describe('callback delivery wiring (P55-6)', () => {
+  const c = generateShimC(loadAllManifests())
+  const bodyOf = (sig: string): string => {
+    const start = c.indexOf(sig)
+    expect(start).toBeGreaterThan(-1)
+    return c.slice(start, c.indexOf('\n}', start) + 2)
+  }
+
+  it('defines drain slot 6 equal to CONTROL_SLOT.drainCallbacks', () => {
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS 6')
+    expect(CONTROL_SLOT.drainCallbacks).toBe(6)
+  })
+
+  it('transport drain is bridge_transact on slot 6 and returns it directly', () => {
+    const b = bodyOf('static int gl_cb_transport_drain(')
+    expect(b).toContain(
+      'return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS, NULL, 0,'
+    )
+  })
+
+  it('embeds the registry exactly once, after bridge_transact', () => {
+    const reg = generateCallbackRegistryC()
+    expect(c.split(reg).length - 1).toBe(1)
+    expect(c.indexOf(reg)).toBeGreaterThan(
+      c.indexOf('static int bridge_transact(')
+    )
+  })
+
+  it('uses a registry lock distinct from g_bridge_lock', () => {
+    expect(c).toContain('static SRWLOCK g_cb_registry_lock = SRWLOCK_INIT;')
+    expect(c).toContain(
+      '#define GL_CB_LOCK() AcquireSRWLockExclusive(&g_cb_registry_lock)'
+    )
+    expect(c).toContain(
+      '#define GL_CB_UNLOCK() ReleaseSRWLockExclusive(&g_cb_registry_lock)'
+    )
+  })
+
+  it('flat exports drive the registry', () => {
+    expect(c).toContain(
+      'void SteamAPI_RunCallbacks(void) { gl_cb_run_callbacks(); }'
+    )
+    expect(c).toContain('gl_cb_register(pCallback, iCallback);')
+    expect(c).toContain('gl_cb_unregister(pCallback);')
+  })
+
+  it('Shutdown clears the registry only after releasing g_bridge_lock', () => {
+    const b = bodyOf('void SteamAPI_Shutdown(void) {')
+    const rel = b.indexOf('ReleaseSRWLockExclusive(&g_bridge_lock);')
+    const clr = b.indexOf('gl_cb_clear_all();')
+    expect(rel).toBeGreaterThan(-1)
+    expect(clr).toBeGreaterThan(rel)
+  })
+
+  it('leaves out-of-scope surfaces unchanged', () => {
+    expect(c).toContain(
+      'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }'
+    )
+    expect(c).toContain(
+      'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }'
+    )
+    expect(c).toContain('void Steam_RunCallbacks(void) { }')
+    expect(c).toContain('void SteamGameServer_RunCallbacks(void) { }')
+    expect(c).toContain(
+      'int SteamAPI_ManualDispatch_GetNextCallback(void) { return 0; }'
+    )
+  })
+})
