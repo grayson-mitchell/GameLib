@@ -807,9 +807,9 @@ const FLAT_EXPORT_BODIES: Record<
     'int SteamAPI_Init(void) {\n' +
     '  const char *volatile gamelib_marker_keepalive = g_gamelib_shim_marker;\n' +
     '  (void)gamelib_marker_keepalive;\n' +
-    '  uint8_t retbuf[1]; uint32_t retlen = 0;\n' +
-    '  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, retbuf, sizeof(retbuf), &retlen)) return 0;\n' +
-    '  return 1;\n' +
+    '  int ok = gamelib_bridge_hello();\n' +
+    '  if (ok) gamelib_report_init(GAMELIB_INIT_FN_STEAMAPI_INIT, 1);\n' +
+    '  return ok;\n' +
     '}',
   SteamAPI_InitFlat:
     'int SteamAPI_InitFlat(char *pErrMsg) { (void)pErrMsg; return 0; }',
@@ -897,11 +897,13 @@ const MODERN_LOOKUP_FLAT_EXPORT_BODIES: Record<
   // quick 261024-i94. SDK: int SteamInternal_SteamAPI_Init(const char
   // *pszInternalCheckInterfaceVersions, SteamErrMsg *pOutErrMsg) returning
   // ESteamAPIInitResult (0 = k_ESteamAPIInitResult_OK, 2 = NoSteamClient).
-  // SteamErrMsg is char[1024]. Reuses SteamAPI_Init's HELLO + marker keepalive.
+  // SteamErrMsg is char[1024]. D-53-15: says HELLO through the shared helper
+  // (NOT SteamAPI_Init(), so there is exactly one report) and reports code 1.
   SteamInternal_SteamAPI_Init:
     'int SteamInternal_SteamAPI_Init(const char *pszInternalCheckInterfaceVersions, char *pOutErrMsg) {\n' +
     '  (void)pszInternalCheckInterfaceVersions;\n' +
-    '  if (SteamAPI_Init()) {\n' +
+    '  if (gamelib_bridge_hello()) {\n' +
+    '    gamelib_report_init(GAMELIB_INIT_FN_STEAMINTERNAL_INIT, 0);\n' +
     '    g_gamelib_context_counter++;\n' +
     '    if (pOutErrMsg != NULL) pOutErrMsg[0] = 0;\n' +
     '    return 0;\n' +
@@ -2258,6 +2260,12 @@ export function generateShimC(
 // helper which unserved interface version a game asked for (the helper handler
 // lands in 53-06; an unhandled slot is a harmless error response).
 #define BRIDGE_CONTROL_SLOT_REPORT_VERSION 4
+// D-53-15 (quick 261025-kax): the game's own SteamAPI_Init /
+// SteamInternal_SteamAPI_Init tells the helper how it went ({u32 fn, i32 ret});
+// the helper logs a GINIT line, the only evidence an init-only title can give.
+#define BRIDGE_CONTROL_SLOT_REPORT_INIT 5
+#define GAMELIB_INIT_FN_STEAMAPI_INIT 0
+#define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1
 
 // CR-01: byte capacity of each string-returning stub's shim-owned static
 // return buffer -- emitted directly from the generator's
@@ -2517,6 +2525,27 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
     g_bridge_sock = INVALID_SOCKET;
   }
   return bridge_transact_once(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut, &transportFailed);
+}
+
+/* D-53-15: HELLO handshake, shared by SteamAPI_Init and
+ * SteamInternal_SteamAPI_Init. Returns 1 on success, 0 on transport failure. */
+static int gamelib_bridge_hello(void) {
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  if (!bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_HELLO, NULL, 0, retbuf, sizeof(retbuf), &retlen)) return 0;
+  return 1;
+}
+
+/* D-53-15: fire-and-forget report of the game's own init result. Bounded at 8
+ * per process, result ignored. Unguarded: the x86 shim needs it too. */
+static int g_gamelib_init_reports = 0;
+static void gamelib_report_init(uint32_t fn, int32_t ret) {
+  uint8_t req[8];
+  uint8_t retbuf[1]; uint32_t retlen = 0;
+  if (g_gamelib_init_reports >= 8) return;
+  g_gamelib_init_reports++;
+  memcpy(req, &fn, 4);
+  memcpy(req + 4, &ret, 4);
+  (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_INIT, req, 8, retbuf, sizeof(retbuf), &retlen);
 }
 
 typedef void *vfn;

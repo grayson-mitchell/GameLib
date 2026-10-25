@@ -1710,9 +1710,10 @@ describe('gen_vtables', () => {
       for (const n of FIVE) expect(block).toContain(n + '(')
     })
 
-    it('SteamInternal_SteamAPI_Init calls SteamAPI_Init, returns 0 on ok and 2 on failure', () => {
+    it('SteamInternal_SteamAPI_Init uses the HELLO helper (no double report), returns 0 on ok and 2 on failure', () => {
       const b = body('SteamInternal_SteamAPI_Init')
-      expect(b).toContain('SteamAPI_Init()')
+      expect(b).toContain('gamelib_bridge_hello()')
+      expect(b).not.toContain('SteamAPI_Init()')
       expect(b).toContain('return 0;')
       expect(b).toContain('return 2;')
     })
@@ -2801,5 +2802,68 @@ describe('53-17 out-buffer hygiene (WR-02 / WR-03 / WR-04)', () => {
     )
     expect(body).toContain('*pValue = outVal;')
     expect(body).not.toContain('lenVal_pValue')
+  })
+})
+
+describe('quick 261025-kax (D-53-15): game init is reported over CONTROL slot 5', () => {
+  const c = generateShimC(loadAllManifests())
+  const fnBody = (name: string): string => {
+    const start = c.indexOf(`\n${name}(`)
+    const from = c.lastIndexOf('\n', start - 1)
+    const end = c.indexOf('\n}\n', start)
+    return c.slice(from, end)
+  }
+
+  it('defines slot 5 and the two fn codes', () => {
+    expect(c).toContain('#define BRIDGE_CONTROL_SLOT_REPORT_INIT 5')
+    expect(c).toContain('#define GAMELIB_INIT_FN_STEAMAPI_INIT 0')
+    expect(c).toContain('#define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1')
+    expect(CONTROL_SLOT.reportInit).toBe(5)
+  })
+
+  it('emits gamelib_bridge_hello and gamelib_report_init unguarded, before the flat-exports header', () => {
+    const hdr = c.indexOf('// === Flat SteamAPI_* exports')
+    const hello = c.indexOf('static int gamelib_bridge_hello(void)')
+    const report = c.indexOf('static void gamelib_report_init(')
+    expect(hello).toBeGreaterThan(-1)
+    expect(report).toBeGreaterThan(-1)
+    expect(hello).toBeLessThan(hdr)
+    expect(report).toBeLessThan(hdr)
+    // not inside any #if block at that point
+    for (const idx of [hello, report]) {
+      const pre = c.slice(0, idx)
+      const opens = (pre.match(/^#if/gm) ?? []).length
+      const closes = (pre.match(/^#endif/gm) ?? []).length
+      expect(opens).toBe(closes)
+    }
+  })
+
+  it('caps shim reports at 8 per process', () => {
+    const i = c.indexOf('static void gamelib_report_init(')
+    const b = c.slice(i, c.indexOf('\n}\n', i))
+    expect(b).toMatch(/>= 8/)
+    expect(b).toContain('BRIDGE_CONTROL_SLOT_REPORT_INIT')
+  })
+
+  it('SteamAPI_Init keeps the marker keepalive, says hello, reports only on success', () => {
+    const b = fnBody('int SteamAPI_Init')
+    expect(b).toContain('g_gamelib_shim_marker')
+    expect(b).toContain('gamelib_bridge_hello()')
+    expect(b).toMatch(
+      /if \(ok\) gamelib_report_init\(GAMELIB_INIT_FN_STEAMAPI_INIT/
+    )
+  })
+
+  it('SteamInternal_SteamAPI_Init reports code 1 with ret 0 on success only', () => {
+    const b = fnBody('int SteamInternal_SteamAPI_Init')
+    expect(b).toContain('gamelib_bridge_hello()')
+    expect(b).toContain('GAMELIB_INIT_FN_STEAMINTERNAL_INIT, 0')
+    expect(b).not.toContain('SteamAPI_Init()')
+  })
+
+  it('SteamAPI_InitFlat is unchanged and does not report', () => {
+    expect(c).toContain(
+      'int SteamAPI_InitFlat(char *pErrMsg) { (void)pErrMsg; return 0; }'
+    )
   })
 })

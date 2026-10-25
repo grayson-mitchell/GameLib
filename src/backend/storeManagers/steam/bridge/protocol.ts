@@ -107,7 +107,10 @@ export const CONTROL_SLOT = {
   createInterface: 3,
   // D-53-07 (53-04 shim side, 53-06 helper side): the shim reports a flat
   // API version it could not serve; the helper logs `NOVER`.
-  reportVersion: 4
+  reportVersion: 4,
+  // D-53-15 (quick 261025-kax): the shim reports the game's own SteamAPI_Init
+  // result ({u32 fn, i32 ret}); the helper logs `GINIT`.
+  reportInit: 5
 } as const
 
 // Not exported (this and DecodedRequest, DecodedResponse below): verified to have no

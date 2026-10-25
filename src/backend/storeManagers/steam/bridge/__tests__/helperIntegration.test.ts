@@ -693,6 +693,128 @@ describeDarwinOnly(
       }
     }, 15000)
 
+    // quick 261025-kax (D-53-15, T-kax-01/03/04): CONTROL REPORT_INIT logs a
+    // GINIT line for the game's own SteamAPI_Init, answers pre-init, rejects
+    // malformed frames without logging, caps at 8, never logs CALL or INIT.
+    test('REPORT_INIT logs GINIT, rejects malformed frames, caps at 8, never logs CALL or INIT', async () => {
+      const stageDir = mkdtempSync(join(profile.root, 'report-init-'))
+      const child = spawn(
+        compiledHelperPath,
+        ['--appid', '480', '--port', '0'],
+        {
+          cwd: stageDir,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: profile.childEnv()
+        }
+      )
+      let stderr = ''
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+      const initFrame = (requestId: number, fn: number, ret: number) => {
+        const b = Buffer.alloc(8)
+        b.writeUInt32LE(fn, 0)
+        b.writeInt32LE(ret, 4)
+        return encodeRequest(
+          requestId,
+          CONTROL_ORDINAL,
+          CONTROL_SLOT.reportInit,
+          b
+        )
+      }
+      try {
+        const port = await new Promise<number>((resolvePromise, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error(`no LISTEN line -- stderr: ${stderr}`)),
+            5000
+          )
+          const poll = setInterval(() => {
+            const m = /LISTEN 127\.0\.0\.1:(\d+)/.exec(stderr)
+            if (m) {
+              clearInterval(poll)
+              clearTimeout(timeout)
+              resolvePromise(Number(m[1]))
+            }
+          }, 25)
+        })
+        const socket = new Socket()
+        await new Promise<void>((res, rej) => {
+          socket.once('error', rej)
+          socket.connect(port, '127.0.0.1', () => res())
+        })
+        // The helper's own startup init logs INIT; only frames sent from here
+        // on must add none.
+        const afterStartup = stderr.length
+        try {
+          expect(
+            (await sendFrameOnSocket(socket, initFrame(1, 0, 1))).status
+          ).toBe(STATUS_OK)
+          expect(
+            (await sendFrameOnSocket(socket, initFrame(2, 1, 0))).status
+          ).toBe(STATUS_OK)
+          expect(
+            (await sendFrameOnSocket(socket, initFrame(3, 1, 2))).status
+          ).toBe(STATUS_OK)
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr).toMatch(
+            /GINIT {2}fn=SteamAPI_Init ret=1 ok=1 session=0\n/
+          )
+          expect(stderr).toMatch(
+            /GINIT {2}fn=SteamInternal_SteamAPI_Init ret=0 ok=1 session=0\n/
+          )
+          expect(stderr).toMatch(
+            /GINIT {2}fn=SteamInternal_SteamAPI_Init ret=2 ok=0 session=0\n/
+          )
+
+          const before = stderr.length
+          expect(
+            (await sendFrameOnSocket(socket, initFrame(4, 4, 1))).status
+          ).toBe(STATUS_ERR)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                encodeRequest(
+                  5,
+                  CONTROL_ORDINAL,
+                  CONTROL_SLOT.reportInit,
+                  Buffer.from([1, 2, 3, 4])
+                )
+              )
+            ).status
+          ).toBe(STATUS_ERR)
+          expect(
+            (
+              await sendFrameOnSocket(
+                socket,
+                encodeRequest(
+                  6,
+                  CONTROL_ORDINAL,
+                  CONTROL_SLOT.reportInit,
+                  Buffer.alloc(0)
+                )
+              )
+            ).status
+          ).toBe(STATUS_ERR)
+          await new Promise((r) => setTimeout(r, 100))
+          expect(stderr.slice(before)).not.toMatch(/GINIT/)
+
+          for (let i = 0; i < 12; i++) {
+            const res = await sendFrameOnSocket(socket, initFrame(10 + i, 0, 1))
+            expect(res.status).toBe(STATUS_OK)
+          }
+        } finally {
+          socket.destroy()
+        }
+        await new Promise((r) => setTimeout(r, 100))
+        expect(stderr.match(/GINIT {2}fn=/g)).toHaveLength(8)
+        expect(stderr).not.toMatch(/CALL/)
+        expect(stderr.slice(afterStartup)).not.toMatch(/ INIT /)
+      } finally {
+        child.kill()
+      }
+    }, 15000)
+
     // 53-13 WR-04: source pin -- the CALL trace sits after bridge_dispatch and
     // is guarded by STATUS_OK, so a failed call is never trace evidence.
     test('source pin: CALL is logged after bridge_dispatch, guarded by STATUS_OK', () => {

@@ -73,6 +73,12 @@
  *     read out of gamelib_bridge.cfg". Logged once per connection, not once
  *     per request.
  *
+ *   - REPORT_INIT (slot 5, D-53-15): argBlob is {u32 fn, i32 ret}, the GAME's
+ *     own SteamAPI_Init result as reported by the shim. Answered pre-init;
+ *     logged as `GINIT` (fn name from a closed table, ints only, max 8).
+ *     GINIT is written only from this wire handler: this helper's own
+ *     in-process InitFlat logs under `INIT`, so it can never emit GINIT.
+ *
  *   - CREATE_INTERFACE (slot 3, Phase 52 / ROADMAP Scope 1): argBlob is a
  *     4-byte LE length + interface-version bytes (e.g. "SteamClient017").
  *     Asks the genuine native client (SteamInternal_CreateInterface)
@@ -145,6 +151,11 @@
 #define CONTROL_SLOT_CREATE_INTERFACE 3
 // D-53-07 (53-04): the shim reports a flat-API version it could not serve.
 #define CONTROL_SLOT_REPORT_VERSION 4
+// D-53-15 (quick 261025-kax): the shim reports the GAME's own SteamAPI_Init
+// result as {u32 fn, i32 ret}; logged under the GINIT category. GINIT is
+// emitted ONLY from this wire handler, so this helper's own in-process
+// SteamAPI_InitFlat (logged as INIT) can never produce one.
+#define CONTROL_SLOT_REPORT_INIT 5
 
 #define STATUS_OK 0
 #define STATUS_ERR 1
@@ -427,6 +438,8 @@ static uint8_t g_call_seen[BD_CALL_COUNT > 0 ? BD_CALL_COUNT : 1];
 
 // 53-13 WR-06: helper-side cap; the shim's 16-report cap (T-53-25) is not a trust boundary.
 static unsigned g_nover_logged = 0;
+// D-53-15 (T-kax-04): cap on GINIT lines per process.
+static unsigned g_ginit_logged = 0;
 
 // T-52-09: bound to 128 chars and replace non-printable bytes so a
 // game-controlled version string cannot inject log lines.
@@ -552,6 +565,39 @@ static void dispatch_and_respond(int fd, uint32_t requestId, uint16_t ordinal, u
       char vmsg[192];
       snprintf(vmsg, sizeof vmsg, "flat lookup ver=%s served=no", vsafe);
       logts("NOVER", vmsg);
+      send_response(fd, requestId, STATUS_OK, NULL, 0);
+      return;
+    }
+    if (slot == CONTROL_SLOT_REPORT_INIT) {
+      // D-53-15: answerable pre-init (like HELLO). T-kax-01: bounds-check before
+      // the copy, closed code table, only table strings and %d reach the log.
+      static const char *const k_init_names[4] = {
+          "SteamAPI_Init", "SteamInternal_SteamAPI_Init", "SteamAPI_InitSafe",
+          "SteamAPI_InitFlat"};
+      if (argBlob == NULL || argLen < 8) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      uint32_t code;
+      int32_t ret;
+      memcpy(&code, argBlob, 4);
+      memcpy(&ret, argBlob + 4, 4);
+      if (code >= 4) {
+        send_response(fd, requestId, STATUS_ERR, NULL, 0);
+        return;
+      }
+      if (g_ginit_logged >= 8) {
+        send_response(fd, requestId, STATUS_OK, NULL, 0);
+        return;
+      }
+      g_ginit_logged++;
+      // Codes 0/2 are bool APIs (ok = nonzero); 1/3 return ESteamAPIInitResult
+      // (ok = 0).
+      int ok = (code == 0 || code == 2) ? (ret != 0) : (ret == 0);
+      char imsg[160];
+      snprintf(imsg, sizeof imsg, "fn=%s ret=%d ok=%d session=%d",
+               k_init_names[code], (int)ret, ok, g_inited ? 1 : 0);
+      logts("GINIT", imsg);
       send_response(fd, requestId, STATUS_OK, NULL, 0);
       return;
     }
