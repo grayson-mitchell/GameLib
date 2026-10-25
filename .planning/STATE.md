@@ -4,7 +4,7 @@ milestone: v0.8
 milestone_name: Tauri Shell
 status: executing
 stopped_at: Completed 53-04-PLAN.md
-last_updated: "2026-10-25T23:10:14.292Z"
+last_updated: "2026-10-25T23:39:34.720Z"
 last_activity: 2026-10-25
 progress:
   total_phases: 5
@@ -216,6 +216,7 @@ Entries for phases before 44 live in STATE-HISTORY.md § Roadmap Evolution archi
 
 - Phase 44 added 2026-09-15: **In-app Winetricks browse UI replacing the search-only panel**. Motivated by operator feedback the same day: the winetricks zenity GUI's categorised checklist is markedly better than our own panel. The architectural call was to rebuild that shape IN-APP rather than lean harder on zenity -- zenity is already a declared-but-optional dependency the code warns about (`src/backend/tools/index.ts:779`, "zenity not installed! Winetricks might fail to install some packages or even open"), so adopting it as the primary UI would promote a soft dependency to a hard one and discard all ten app themes. Rendering work only: the data layer landed in `quick-260915-ajd` (`listAvailable()` now returns `{verb, title, category, cached}` across 567 verbs, up from 370 verb-only strings) and `quick-260915-ajd-fu` made the filter match title as well as verb. Cost of NOT using zenity, measured rather than assumed: only 8 verbs require manual download and cannot be installed unattended (`3dmark03`, `3dmark06`, `fontxplorer`, `foobar2000`, `stalker_pripyat_bench`, `ubisoftconnect`, `unigine_heaven`, `utorrent`) -- all benchmarks and apps, NOT ONE a DLL or font, so none of the `vcrun*`/`dotnet*`/`d3dx9*`/`corefonts` fixes anyone actually opens this panel for. Those 8 route to the retained zenity button. Scope fence carried from measured history: the list region must NOT unmount on install -- that remount is the cause of the dead-button defect fixed in 35-25 (`366e719bb`).
 - Phase 46 added 2026-09-22: **Windows single-instance guard and gamelib:// deep-link registration**. Promoted from todo `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md` now that the operator has a working Windows 11 build machine (Developer Mode on, pre-push hook green via quick 260922-ok3). It is the unblock for quick 260922-nx4, which suppressed install-time `gamelib://` registration on Windows because there was no guard. The installer-level evidence (0 vs 6 `Classes\gamelib` lines) is in that SUMMARY.
+- Phase 54 edited: edited fields: title, goal, success_criteria — re-scoped to no authenticated logon at launch/browse/Play; Web API library path dropped (blocked for SteamClient tokens); go-offline trick and platform-routed installs are follow-up
 
 ### Decisions
 
