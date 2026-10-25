@@ -27,6 +27,14 @@
         }
       }
     },
+    "GetAuthTicketForWebApi": {
+      "helperFlat": "SteamAPI_ISteamUser_GetAuthTicketForWebApi",
+      "params": {
+        "pchIdentity": {
+          "kind": "in-string"
+        }
+      }
+    },
     "CancelAuthTicket": {
       "helperFlat": "SteamAPI_ISteamUser_CancelAuthTicket"
     }

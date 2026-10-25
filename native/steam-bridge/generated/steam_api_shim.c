@@ -108,7 +108,7 @@ Response blob (per method):
 // BRIDGE_DISPATCH_TABLE_HASH in the generated bridge_dispatch.h to catch the
 // shim and the helper's dispatch table drifting apart -- never a silent
 // mismatch between the two generated artifacts.
-#define BRIDGE_SHIM_TABLE_HASH "5505719d7a6f"
+#define BRIDGE_SHIM_TABLE_HASH "e05aec2c174d"
 
 // 51-06 Task 2: bounded storage for every `iface.<Family>=<Version>`
 // pair `gamelib_bridge.cfg` carries -- the backend
@@ -793,10 +793,27 @@ static uint32_t THISCALL vt_SteamUser023_GetAuthSessionTicket(void *self, void *
   return ret;
 }
 
-// slot 14: GetAuthTicketForWebApi(const char* pchIdentity) -> uint32 | __thiscall ret 4 (STUB)
-static uint32_t THISCALL vt_SteamUser023_GetAuthTicketForWebApi(void *self, uint32_t dummy0) {
+// slot 14: GetAuthTicketForWebApi(const char* pchIdentity) -> uint32 | __thiscall ret 4
+static uint32_t THISCALL vt_SteamUser023_GetAuthTicketForWebApi(void *self, const char * pchIdentity) {
   (void)self;
-  return 0;
+  uint8_t argbuf[4100];
+  uint32_t argOff = 0;
+  {
+    uint32_t strLen;
+    if (pchIdentity == NULL) {
+      strLen = 0xFFFFFFFFu;
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+    } else {
+      size_t rawLen = strlen(pchIdentity);
+      strLen = (uint32_t)(rawLen > WIRE_IN_STRING_MAX_BYTES ? WIRE_IN_STRING_MAX_BYTES : rawLen);
+      memcpy(argbuf + argOff, &strLen, 4); argOff += 4;
+      memcpy(argbuf + argOff, pchIdentity, strLen); argOff += strLen;
+    }
+  }
+  uint8_t retbuf[4]; uint32_t retlen = 0;
+  if (!bridge_transact(1, 14, argbuf, argOff, retbuf, sizeof(retbuf), &retlen) || retlen < 4) return 0;
+  uint32_t ret; memcpy(&ret, retbuf, 4);
+  return ret;
 }
 
 // slot 15: BeginAuthSession(const void* pAuthTicket, int32 cbAuthTicket, CSteamID steamID) -> uint32 | __thiscall ret 16 (STUB)

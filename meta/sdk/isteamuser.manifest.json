@@ -298,9 +298,12 @@
       "params": [
         {
           "name": "pchIdentity",
-          "type": "const char*"
+          "type": "const char*",
+          "kind": "in-string"
         }
-      ]
+      ],
+      "mode": "wire",
+      "helperFlat": "SteamAPI_ISteamUser_GetAuthTicketForWebApi"
     },
     {
       "slot": 15,
