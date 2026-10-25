@@ -3266,6 +3266,9 @@ export default class SteamGame implements Game {
       // a HasRunKey and suppress a component; before the monitor because its
       // 'launching' supersedes 'redist'. Never rejects by contract; the .catch is
       // belt-and-braces so nothing reaches the outer catch (markBridgeFailedThisSession).
+      // No signal is passed: the bridge launch has no abort signal, and stop() has no
+      // handle on this step (bridgeLaunchBottles is recorded after it). The helper accepts
+      // one (WR-06) for when a launch-scoped AbortController exists.
       await installSteamBridgeSharedRedists(
         this.appId,
         bridgeBottleSettings

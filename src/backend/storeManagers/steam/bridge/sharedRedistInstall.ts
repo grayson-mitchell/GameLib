@@ -244,13 +244,19 @@ async function runBounded(
   }
 }
 
+/**
+ * `signal` (WR-06) aborts the depot download and stops the loop before the next entry; an
+ * installer already running is not killed (T-rkj-09). An aborted run never settles. A call that
+ * joins an in-flight run for the same appId shares that run, and with it the first caller's signal.
+ */
 export function installSteamBridgeSharedRedists(
   appId: string,
-  bottleSettings: GameSettings
+  bottleSettings: GameSettings,
+  signal?: AbortSignal
 ): Promise<void> {
   const existing = inFlight.get(appId)
   if (existing) return existing
-  const p = run(appId, bottleSettings)
+  const p = run(appId, bottleSettings, signal)
     .catch((error: unknown) => {
       logWarning(
         `Steam ${appId}: shared redist step failed, launching anyway: ${String(error)}`,
@@ -298,7 +304,11 @@ function recordFailure(
   return record
 }
 
-async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
+async function run(
+  appId: string,
+  bottleSettings: GameSettings,
+  signal: AbortSignal | undefined
+): Promise<void> {
   const bottleDir = getBottleDir(bottleSettings.wineCrossoverBottle)
   const ledgerPath = join(bottleDir, LEDGER_FILE)
   const ledger = await readLedger(ledgerPath, appId)
@@ -328,6 +338,7 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
   const result = await downloadSharedRedistDepots(appId, {
     cacheSteamappsDir: join(steamSupportPath, 'sharedRedist', 'steamapps'),
     optInDepotIds: optIn,
+    signal,
     onComponent: (label) =>
       sendGameStatusUpdate({
         appName: appId,
@@ -352,6 +363,14 @@ async function run(appId: string, bottleSettings: GameSettings): Promise<void> {
     const installDirWin = toBottleWindowsPath(depot.installDirHost)
     for (const entry of depot.entries) {
       if (stop) break
+      if (signal?.aborted) {
+        logInfo(
+          `Steam ${appId}: shared redist step aborted, no further redists this launch`,
+          LogPrefix.Steam
+        )
+        stop = true
+        break
+      }
       if (!entryAppliesToBottle(entry)) continue
       const key = sharedRedistLedgerKey(entry.hasRunKey, entry.name)
       if (ledger.done[key]) continue

@@ -532,6 +532,33 @@ describe('installSteamBridgeSharedRedists', () => {
     })
   })
 
+  describe('cancellation (WR-06)', () => {
+    it('passes the signal to the download', async () => {
+      const ctl = new AbortController()
+      mockedDownload.mockResolvedValue(ok([]))
+      await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)
+      expect(mockedDownload).toHaveBeenCalledWith(
+        APP,
+        expect.objectContaining({ signal: ctl.signal })
+      )
+    })
+
+    it('stops before the next entry once aborted, and does not settle', async () => {
+      const ctl = new AbortController()
+      mockedDownload.mockResolvedValue(ok([vc2010(), dx()]))
+      defaultWine((p) => {
+        if (p[0].endsWith('vcredist_x86.exe')) ctl.abort()
+        return undefined
+      })
+      await installSteamBridgeSharedRedists(APP, SETTINGS, ctl.signal)
+      expect(installerCalls().map((p) => p[0].split('\\').pop())).toEqual([
+        'vcredist_x86.exe'
+      ])
+      expect(Object.keys(ledger().done)).toHaveLength(1)
+      expect(ledger().settled).toBeUndefined()
+    })
+  })
+
   describe('sidecar exit contract (WR-01)', () => {
     const fakeChild = () => {
       const pipe = () => ({ unref: jest.fn() })
