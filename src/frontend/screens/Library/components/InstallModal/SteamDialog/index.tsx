@@ -61,7 +61,11 @@ import {
 } from 'frontend/state/InstallGameModal'
 import { AvailablePlatforms } from '..'
 import type { SteamSectionGatingVerdict } from '../steamSectionGating'
-import { resolveBridgeRouteLine } from '../steamBridgeRouteLine'
+import {
+  resolveBridgeRouteLine,
+  resolveForceBottleDisplayed,
+  resolveForceBottleWrite
+} from '../steamBridgeRouteLine'
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
 import {
   SteamDialogLibraryOption,
@@ -159,6 +163,29 @@ interface DiskSpaceInfo {
   validFlatpakPath: boolean
 }
 
+/**
+ * 51-REVIEW WR-11: persists the install dialog's force-bottled toggle and
+ * returns a failure description, or `undefined` once the backend recorded it.
+ * The handler reports failure as a resolved `{ ok: false }`, never a
+ * rejection, so both shapes count as failure. Kept out of `proceedInstall` so
+ * that handler's own two guards (persist, then dispatch) stay the only `try`
+ * blocks in it, which `steamDialogSource.test.ts`'s B-WR-04 gate relies on.
+ */
+async function persistForceBottleRoute(
+  appName: string,
+  userRoute: 'bottle' | null
+): Promise<string | undefined> {
+  try {
+    const result = await window.api.setSteamBridgeUserRoute({
+      appId: appName,
+      userRoute
+    })
+    return result?.ok ? undefined : (result?.error ?? 'route-not-recorded')
+  } catch (routeError) {
+    return String(routeError)
+  }
+}
+
 export default function SteamDialog({
   appName,
   gameInfo,
@@ -232,32 +259,30 @@ export default function SteamDialog({
 
   const bridgeLine = resolveBridgeRouteLine(bridgeVerdict, gating.wineSection)
 
-  // D-51-10: persist the user's choice, then re-probe the SAME channel so
-  // the line (and the checkbox itself) reflects the just-written verdict --
-  // never flip local state optimistically, which could drift from what the
-  // backend actually persisted.
+  // D-51-10 / 51-REVIEW WR-11: the toggle only records the user's flip
+  // locally. `proceedInstall` persists it (via `resolveForceBottleWrite`)
+  // right before the install dispatch, and checks the result. Writing on
+  // every flip left a cancelled dialog's choice persisted, and unchecking
+  // wrote `null`, deleting a stored 'bridge' override. `null` = untouched.
+  const [forceBottlePending, setForceBottlePending] = useState<boolean | null>(
+    null
+  )
+  const [routeWriteError, setRouteWriteError] = useState<string>()
+
+  useEffect(() => {
+    setForceBottlePending(null)
+    setRouteWriteError(undefined)
+  }, [appName])
+
+  const forceBottleDisplayed = resolveForceBottleDisplayed(
+    bridgeLine,
+    forceBottlePending
+  )
+
   const handleForceBottleToggle = useCallback(() => {
-    const nextChecked = !bridgeLine.forceBottleChecked
-    void (async () => {
-      try {
-        await window.api.setSteamBridgeUserRoute({
-          appId: appName,
-          userRoute: nextChecked ? 'bottle' : null
-        })
-      } catch (err) {
-        window.api.logError(
-          `SteamDialog: setSteamBridgeUserRoute failed (${String(err)})`
-        )
-      }
-      try {
-        const verdict = await window.api.getSteamBridgeRoute(appName)
-        setBridgeVerdict(verdict)
-      } catch {
-        // Leave the previous verdict rather than wedging the toggle on a
-        // transient re-probe failure.
-      }
-    })()
-  }, [appName, bridgeLine.forceBottleChecked])
+    setForceBottlePending(!forceBottleDisplayed)
+    setRouteWriteError(undefined)
+  }, [forceBottleDisplayed])
 
   // D-24: `undefined` on a deliberate "Install with options..." click;
   // populated only when `startSteamQuickInstall` degraded into this dialog
@@ -432,6 +457,24 @@ export default function SteamDialog({
       )
     }
 
+    // 51-REVIEW WR-11: persist the force-bottled toggle now, with the Install
+    // action, and refuse to install when it was not recorded. The handler
+    // reports failure as a resolved `{ ok: false }`, never a rejection, so
+    // both shapes are checked. The dialog is still open here (backdropClick
+    // has not run), so the error is shown inline and the latch released.
+    const routeWrite = resolveForceBottleWrite(bridgeLine, forceBottlePending)
+    if (routeWrite !== 'unchanged') {
+      const routeFailure = await persistForceBottleRoute(appName, routeWrite)
+      if (routeFailure !== undefined) {
+        window.api.logError(
+          `SteamDialog: setSteamBridgeUserRoute failed (${routeFailure}) for appName "${appName}" -- install not started`
+        )
+        setRouteWriteError(routeFailure)
+        setSubmitting(false)
+        return
+      }
+    }
+
     try {
       const destination = resolveSteamInstallPath(
         selectedPath,
@@ -484,7 +527,9 @@ export default function SteamDialog({
     steamLibraries,
     gating,
     backdropClick,
-    submitting
+    submitting,
+    bridgeLine,
+    forceBottlePending
   ])
 
   // Quick 261024-ho4: a CrossOver rating below 4 of 5 asks before the install
@@ -653,9 +698,17 @@ export default function SteamDialog({
                       'gamelib:steam.bridge.forceBottle.help',
                       'Installs into the shared bottled Steam client. Changing this later means reinstalling the game.'
                     )}
-                    value={bridgeLine.forceBottleChecked}
+                    value={forceBottleDisplayed}
                     handleChange={() => handleForceBottleToggle()}
                   />
+                )}
+                {routeWriteError && (
+                  <p className="error">
+                    {tGamelib('gamelib:steam.bridge.routeNotice.error', {
+                      defaultValue: 'Starting the install failed: {{error}}',
+                      error: routeWriteError
+                    })}
+                  </p>
                 )}
               </div>
             )}

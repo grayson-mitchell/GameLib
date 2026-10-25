@@ -2,7 +2,11 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 import type { SteamBridgeRouteVerdict } from 'common/types/steam'
-import { resolveBridgeRouteLine } from '../steamBridgeRouteLine'
+import {
+  resolveBridgeRouteLine,
+  resolveForceBottleDisplayed,
+  resolveForceBottleWrite
+} from '../steamBridgeRouteLine'
 
 /**
  * Phase 51, Plan 16 (D-51-09/D-51-10) -- the install dialog's wine-section
@@ -149,5 +153,51 @@ describe('resolveBridgeRouteLine', () => {
     if (importStartLines.length === 1) {
       expect(source).toMatch(/^import[^;]*common\/types\/steam/m)
     }
+  })
+})
+
+// 51-REVIEW WR-11: the toggle's flip is held locally and only persisted with
+// the Install action -- a cancelled dialog writes nothing, and a stored
+// 'bridge' override is never clobbered by an unchecked toggle.
+describe('resolveForceBottleWrite / resolveForceBottleDisplayed (WR-11)', () => {
+  const lineFor = (userRoute: SteamBridgeRouteVerdict['userRoute']) =>
+    resolveBridgeRouteLine(
+      makeVerdict({ reason: 'pending-scan', userRoute }),
+      true
+    )
+
+  it('untouched toggle (pending null) writes nothing and displays the persisted value', () => {
+    expect(resolveForceBottleWrite(lineFor('bottle'), null)).toBe('unchanged')
+    expect(resolveForceBottleDisplayed(lineFor('bottle'), null)).toBe(true)
+    expect(resolveForceBottleDisplayed(lineFor(null), null)).toBe(false)
+  })
+
+  it("checking from no override writes 'bottle'", () => {
+    expect(resolveForceBottleWrite(lineFor(null), true)).toBe('bottle')
+  })
+
+  it("unchecking a stored 'bottle' writes null", () => {
+    expect(resolveForceBottleWrite(lineFor('bottle'), false)).toBeNull()
+  })
+
+  it('flipping and flipping back writes nothing', () => {
+    expect(resolveForceBottleWrite(lineFor(null), false)).toBe('unchanged')
+    expect(resolveForceBottleWrite(lineFor('bottle'), true)).toBe('unchanged')
+  })
+
+  it("a stored 'bridge' override displays unchecked and is never overwritten unless the user checks the box", () => {
+    expect(resolveForceBottleDisplayed(lineFor('bridge'), null)).toBe(false)
+    expect(resolveForceBottleWrite(lineFor('bridge'), null)).toBe('unchanged')
+    expect(resolveForceBottleWrite(lineFor('bridge'), false)).toBe('unchanged')
+    expect(resolveForceBottleWrite(lineFor('bridge'), true)).toBe('bottle')
+  })
+
+  it('a hidden toggle (known-bad) never writes, even with a stale pending flip', () => {
+    const hidden = resolveBridgeRouteLine(
+      makeVerdict({ reason: 'known-bad', knownBadReason: 'does-not-run' }),
+      true
+    )
+    expect(hidden.showForceBottleToggle).toBe(false)
+    expect(resolveForceBottleWrite(hidden, true)).toBe('unchanged')
   })
 })

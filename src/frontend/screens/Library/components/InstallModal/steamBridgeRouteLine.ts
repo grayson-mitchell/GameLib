@@ -112,3 +112,44 @@ export function resolveBridgeRouteLine(
     forceBottleChecked
   }
 }
+
+/**
+ * 51-REVIEW WR-11: the force-bottled toggle no longer writes `userRoute` the
+ * moment it is flipped. Flipping it then cancelling the dialog used to leave
+ * the game permanently forced to the bottle, and unchecking always wrote
+ * `null`, deleting a prior `'bridge'` override. The dialog now holds the
+ * user's flip locally (`pendingChecked`, `null` = untouched) and sends it with
+ * the Install action. These two functions are the only place that pending
+ * state is interpreted (rule (e) above).
+ */
+export function resolveForceBottleDisplayed(
+  line: Pick<SteamBridgeRouteLine, 'forceBottleChecked'>,
+  pendingChecked: boolean | null
+): boolean {
+  return pendingChecked ?? line.forceBottleChecked
+}
+
+/**
+ * What the Install action must persist for the toggle: `'unchanged'` when the
+ * user never flipped it, flipped it back, or the toggle is not shown, so a
+ * stored `'bridge'` override is never touched. Otherwise `'bottle'` (checked)
+ * or `null` (unchecked a stored `'bottle'`). `null` is only reachable when the
+ * persisted value was `'bottle'`, because `forceBottleChecked` is
+ * `userRoute === 'bottle'`.
+ */
+export function resolveForceBottleWrite(
+  line: Pick<
+    SteamBridgeRouteLine,
+    'forceBottleChecked' | 'showForceBottleToggle'
+  >,
+  pendingChecked: boolean | null
+): 'bottle' | null | 'unchanged' {
+  if (
+    !line.showForceBottleToggle ||
+    pendingChecked === null ||
+    pendingChecked === line.forceBottleChecked
+  ) {
+    return 'unchanged'
+  }
+  return pendingChecked ? 'bottle' : null
+}

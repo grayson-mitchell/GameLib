@@ -116,7 +116,11 @@ const SteamBridgeRouteNotice = () => {
         return
       }
 
-      await window.api.setSteamBridgeUserRoute(
+      // 51-REVIEW WR-11: the handler reports failure as a resolved
+      // `{ ok: false }`, never a rejection. Installing anyway, with the
+      // route or acknowledgement unrecorded, led straight back to this same
+      // notice -- so surface the error and do not install.
+      const routeResult = await window.api.setSteamBridgeUserRoute(
         choice === 'acknowledge'
           ? {
               appId: appName,
@@ -127,6 +131,15 @@ const SteamBridgeRouteNotice = () => {
             ? { appId: appName, userRoute: null, acknowledgeReason: reason }
             : { appId: appName, userRoute: 'bridge' }
       )
+      if (!routeResult?.ok) {
+        setError(
+          t('steam.bridge.routeNotice.error', {
+            defaultValue: 'Starting the install failed: {{error}}',
+            error: routeResult?.error ?? 'route-not-recorded'
+          })
+        )
+        return
+      }
       await installSteamGame(appName, info)
       close()
     } catch (err) {
