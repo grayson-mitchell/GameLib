@@ -101,7 +101,7 @@ Item 2 is satisfied by a second collided title where the candidate rules disagre
   `selectAllDepots`, `withAppInfoOrderCapture` and `decryptFilename`. Manifests only, English,
   windows for every game plus macos for Mac-native ones. 385 games, 0 fatal; 11 games had some depot
   fetch errors (503 / AccessDenied / Blocked / one timeout). For exact-name, same-owner, ranked
-  real-file collisions it computed each candidate rule's winner. Fourteen titles have collisions
+  real-file collisions it computed each candidate rule's winner. Thirteen titles (fourteen title/OS pairs; XCOM 2 on both) have collisions
   where appinfo order disagrees with both lowest-id and later-gid: Darkwood, Pillars of Eternity
   (mac), Once Human, XCOM 2, Borderlands 2, Rogue Empire, ASKA, ARK, Mass Effect, The Witcher EE,
   Oblivion GOTY, Amnesia (mac), Book of Unwritten Tales (mac). XCOM 200510's 11 files were
