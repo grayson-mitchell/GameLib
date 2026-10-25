@@ -30,7 +30,7 @@ import { parseInstallScript, classifySharedRedist } from '../sharedRedists'
 import type { SharedRedistDepot, SharedRedistDownloadResult } from '../../depot'
 import { runWineCommand } from 'backend/launcher'
 import { downloadSharedRedistDepots } from '../../depot'
-import { readKnownFixesLayered } from 'backend/knownFixes'
+import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning } from 'backend/logger'
 import { getBottleDir } from '../../bottle'
@@ -44,7 +44,7 @@ jest.mock('backend/logger', () => ({
 jest.mock('backend/launcher', () => ({ runWineCommand: jest.fn() }))
 jest.mock('../../depot', () => ({ downloadSharedRedistDepots: jest.fn() }))
 jest.mock('backend/utils', () => ({ sendGameStatusUpdate: jest.fn() }))
-jest.mock('backend/knownFixes', () => ({ readKnownFixesLayered: jest.fn() }))
+jest.mock('backend/knownFixes', () => ({ readKnownFixProfile: jest.fn() }))
 jest.mock('../../bottle', () => ({ getBottleDir: jest.fn() }))
 // IN-05: a per-test mkdtemp dir, assigned in beforeEach before anything reads it.
 let mockSupportDir = ''
@@ -56,7 +56,7 @@ jest.mock('../../constants', () => ({
 
 const mockedRun = runWineCommand as jest.Mock
 const mockedDownload = downloadSharedRedistDepots as jest.Mock
-const mockedFixes = readKnownFixesLayered as jest.Mock
+const mockedFixes = readKnownFixProfile as jest.Mock
 const mockedStatus = sendGameStatusUpdate as jest.Mock
 const mockedWarn = logWarning as jest.Mock
 const mockedBottleDir = getBottleDir as jest.Mock

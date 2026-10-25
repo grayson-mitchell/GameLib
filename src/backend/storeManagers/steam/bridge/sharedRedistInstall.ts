@@ -44,7 +44,7 @@ import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises'
 import type { ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 import type { GameSettings } from 'common/types'
-import { readKnownFixesLayered } from 'backend/knownFixes'
+import { readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { getBottleDir } from '../bottle'
@@ -339,7 +339,7 @@ async function run(
   const ledgerPath = join(bottleDir, LEDGER_FILE)
   const ledger = await readLedger(ledgerPath, appId)
   const optIn = normaliseSharedRedistOptIn(
-    readKnownFixesLayered(appId, 'steam')?.steamSharedRedists
+    readKnownFixProfile(appId, 'steam')?.steamSharedRedists
   ).sort()
 
   if (

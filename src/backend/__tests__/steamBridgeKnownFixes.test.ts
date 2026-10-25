@@ -87,17 +87,20 @@ function writeFixes(content: object) {
   )
 }
 
-function writeIn(dir: string, content: object) {
+function writeIn(dir: string, content: object, suffix = '.json') {
   mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, `${APP_ID}-steam.json`), JSON.stringify(content))
+  writeFileSync(join(dir, `${APP_ID}-steam${suffix}`), JSON.stringify(content))
 }
-const writeLocal = (c: object) => writeIn(localFixesPath, c)
-const writeBundled = (c: object) => writeIn(bundledFixesPath, c)
+// Tier 2 (`.profile.json`) writers: registry lives here.
+const writeLocal = (c: object) => writeIn(localFixesPath, c, '.profile.json')
+const writeBundled = (c: object) =>
+  writeIn(bundledFixesPath, c, '.profile.json')
 
 beforeEach(() => {
   jest.clearAllMocks()
   mkdirSync(fixesPath, { recursive: true })
   rmSync(join(fixesPath, `${APP_ID}-steam.json`), { force: true })
+  rmSync(join(fixesPath, `${APP_ID}-steam.profile.json`), { force: true })
   rmSync(localFixesPath, { recursive: true, force: true })
   rmSync(bundledFixesPath, { recursive: true, force: true })
   mockWinetricksInstall.mockResolvedValue('installed')
@@ -322,13 +325,37 @@ describe('registry fixes application', () => {
     )
   })
 
-  it('ignores registry from the remote layer', async () => {
-    writeFixes({ title: 't', registry: [WMP] })
+  it('ignores a .profile.json that sits only in the remote directory', async () => {
+    writeIn(fixesPath, { title: 't', registry: [WMP] }, '.profile.json')
     await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
     expect(mockRunWineCommand).not.toHaveBeenCalled()
-    expect(mockLogWarning).toHaveBeenCalledWith(
-      expect.stringContaining('registry')
-    )
+  })
+
+  it.each([
+    ['remote', () => fixesPath],
+    ['bundled', () => bundledFixesPath],
+    ['local', () => localFixesPath]
+  ])(
+    'ignores registry placed in a tier-1 .json (%s) and warns',
+    async (_n, dir) => {
+      writeIn(dir(), { title: 't', registry: [WMP] })
+      await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+      expect(mockRunWineCommand).not.toHaveBeenCalled()
+      expect(mockLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('registry')
+      )
+    }
+  )
+
+  it('applies remote tier-1 envVariables and the bundled tier-2 registry in the same launch', async () => {
+    writeFixes({ title: 't', envVariables: { A: '1' } })
+    writeBundled({ title: 'p', registry: [WMP] })
+    const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
+    expect(mockRunWineCommand).toHaveBeenCalledTimes(2)
+    expect(result.enviromentOptions).toEqual([
+      { key: 'USER', value: 'x' },
+      { key: 'A', value: '1' }
+    ])
   })
 
   it('local overrides bundled', async () => {
@@ -357,11 +384,8 @@ describe('registry fixes application', () => {
       ['rejection', () => mockRunWineCommand.mockRejectedValue(new Error('x'))]
     ]
     it.each(arms)('%s', async (_n, arm) => {
-      writeBundled({
-        title: 't',
-        registry: [WMP],
-        envVariables: { A: 'b' }
-      })
+      writeBundled({ title: 't', registry: [WMP] })
+      writeFixes({ title: 't', envVariables: { A: 'b' } })
       arm()
       const result = await applySteamBridgeKnownFixes(APP_ID, BRIDGE, ROOT)
       expect(mockLogWarning).toHaveBeenCalledWith(
@@ -476,7 +500,7 @@ describe('bundled 284100 profile', () => {
           '..',
           'public',
           'fixes',
-          '284100-steam.json'
+          '284100-steam.profile.json'
         ),
         'utf8'
       )
@@ -488,5 +512,18 @@ describe('bundled 284100 profile', () => {
     expect(parsed.evidence).toContain(
       '2026-10-24-bridge-bottles-lack-windows-runtime-components-games-need'
     )
+    expect(
+      fs.existsSync(
+        path.join(
+          __dirname,
+          '..',
+          '..',
+          '..',
+          'public',
+          'fixes',
+          '284100-steam.json'
+        )
+      )
+    ).toBe(false)
   })
 })

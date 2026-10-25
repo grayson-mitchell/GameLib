@@ -2,8 +2,9 @@
  * Steam bridge launch known-fixes applier (quick 261024-tny).
  *
  * The Steam-side counterpart of launcher.ts `installFixes` plus
- * `getKnownFixesEnvVariables`: it reads `fixes/<appId>-steam.json` and applies
- * its winetricks verbs, runInPrefix entries and envVariables to the per-app
+ * `getKnownFixesEnvVariables`: it reads the tier-1 file `<appId>-steam.json`
+ * (local/bundled/remote, allow-listed; quick 261025-vnf) and applies its
+ * winetricks verbs, runInPrefix entries and envVariables to the per-app
  * bridge bottle `GameLibSteamBridge-<appId>`.
  *
  * Why `installFixes` cannot be reused for Steam: `Winetricks.install` resolves
@@ -12,10 +13,11 @@
  * DXVK work the bridge deliberately skips.
  *
  * `registry` (quick 261025-mfz): `reg add /f` values for the bottle, in both
- * registry views unless the entry narrows `views`. Honoured only from the
- * bundled (`public/fixes/`) and local (`fixes/local/`) sources, never the
- * remote layer (decision 6 of per-game-compat-fixes-architecture.md); the
- * layering lives in `readKnownFixesLayered`. The applied-fix ledger and
+ * registry views unless the entry narrows `views`. Comes from the tier-2 file
+ * `<appId>-steam.profile.json`, honoured only from the bundled
+ * (`public/fixes/`) and local (`fixes/local/`) sources, never the remote layer
+ * (decision 6 of per-game-compat-fixes-architecture.md); the layering lives in
+ * `readKnownFixProfile`. The applied-fix ledger and
  * reversal (decision 5) are deferred, like D2: turning a profile off does not
  * remove a value already written.
  *
@@ -28,7 +30,7 @@
 
 import { isAbsolute, relative, resolve } from 'node:path'
 import type { GameSettings, KnownFixRegistryView } from 'common/types'
-import { readKnownFixesLayered } from 'backend/knownFixes'
+import { readKnownFixes, readKnownFixProfile } from 'backend/knownFixes'
 import { sendGameStatusUpdate } from 'backend/utils'
 import { logWarning, LogPrefix } from 'backend/logger'
 import { getBottleDir } from './bottle'
@@ -180,19 +182,20 @@ export async function applySteamBridgeKnownFixes(
   bridgeBottleSettings: GameSettings,
   installRoot: string | undefined
 ): Promise<GameSettings> {
-  const fixes = readKnownFixesLayered(appId, 'steam')
-  if (!fixes) return bridgeBottleSettings
+  const fixes = readKnownFixes(appId, 'steam')
+  const profile = readKnownFixProfile(appId, 'steam')
+  if (!fixes && !profile) return bridgeBottleSettings
 
   try {
     // Lazy, mirroring games.ts's lazy launcher import: avoids the cycle.
     const { Winetricks } = await import('backend/tools')
     const { runWineCommand } = await import('backend/launcher')
 
-    if (fixes.registry !== undefined) {
+    if (profile?.registry !== undefined) {
       // First, so later fix steps see the marker. wait: false follows
       // steamClientSetup.ts: reg.exe's exit code proves the write and
       // `wineserver --wait` can block forever.
-      for (const fix of validateRegistryFixes(appId, fixes.registry)) {
+      for (const fix of validateRegistryFixes(appId, profile.registry)) {
         for (const view of fix.views) {
           const where = `${fix.key} ${fix.name} (/reg:${view})`
           let timer: NodeJS.Timeout | undefined
@@ -234,7 +237,7 @@ export async function applySteamBridgeKnownFixes(
       }
     }
 
-    if (fixes.winetricks) {
+    if (fixes?.winetricks) {
       sendGameStatusUpdate({
         appName: appId,
         runner: 'steam',
@@ -278,7 +281,7 @@ export async function applySteamBridgeKnownFixes(
       }
     }
 
-    if (fixes.runInPrefix) {
+    if (fixes?.runInPrefix) {
       if (installRoot === undefined) {
         logWarning(
           `Steam ${appId}: skipping runInPrefix fixes, install root unknown`,
@@ -327,7 +330,7 @@ export async function applySteamBridgeKnownFixes(
       }
     }
 
-    const entries = Object.entries(fixes.envVariables ?? {})
+    const entries = Object.entries(fixes?.envVariables ?? {})
     if (entries.length > 0) {
       // enviromentOptions is the channel runWineCommand already applies via
       // setupEnvVars. Appending puts fix vars after the user's own, matching
