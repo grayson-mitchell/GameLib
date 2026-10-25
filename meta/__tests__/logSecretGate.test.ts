@@ -412,10 +412,13 @@ describe('logSecretGate', () => {
     // 13th added 2026-10-12: `wine --version` stdout in tools/index.ts's
     // winetricks banner probe. A version string, not an auth command, and the
     // raw value is what a parser fix for an unrecognised wine build needs.
-    it('carries exactly 13 exemptions — adding a 14th must be a conscious act', () => {
+    // 14th added 2026-10-25 (quick-261025-kon): stderr of the fixed `reg add`
+    // DllOverrides write in steam/bridge/bottleDllOverrides.ts, logged
+    // (truncated) so a non-applied override is distinguishable in the log.
+    it('carries exactly 14 exemptions — adding a 15th must be a conscious act', () => {
       const report = auditReport()
 
-      expect(report.exemptions).toHaveLength(13)
+      expect(report.exemptions).toHaveLength(14)
     })
 
     it('pins WHICH files hold them, so a silent swap at the same count still fails', () => {
@@ -427,6 +430,7 @@ describe('logSecretGate', () => {
         'src/backend/storeManagers/gog/games.ts',
         'src/backend/storeManagers/legendary/library.ts',
         'src/backend/storeManagers/steam/bottle.ts',
+        'src/backend/storeManagers/steam/bridge/bottleDllOverrides.ts',
         'src/backend/storeManagers/zoom/games.ts',
         'src/backend/tools/index.ts',
         'src/backend/utils.ts'

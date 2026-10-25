@@ -71,6 +71,7 @@ export async function applyBridgeBottleDllOverrides(
         // Only a strict code === 0 is success: runWineCommand resolves with no
         // code on "Invalid wine" and code null when killed by a signal.
         if (result?.code !== 0) {
+          // log-secret-gate-exempt: stderr of a fixed `reg add` DllOverrides write, no auth data
           logWarning(
             `Steam ${appId}: DLL override ${dll} did not confirm success (code=${String(result?.code)}, stderr=${(result?.stderr ?? '').slice(0, 200)})`,
             LogPrefix.Steam
