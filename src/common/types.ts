@@ -801,6 +801,13 @@ export type WineCommandArgs = {
   startFolder?: string
   skipPrefixCheckIKnowWhatImDoing?: boolean
   ignoreLogging?: boolean
+  /**
+   * Opt-in: called once with the spawned wine child, synchronously after `spawn`. Lets a caller
+   * that races the child against its own deadline `unref()` the child and its stdio so a hung
+   * child cannot hold the sidecar's event loop open past stdin EOF (quick 261025-rkj WR-01).
+   * Omitted by every other caller, whose behaviour is unchanged.
+   */
+  onSpawn?: (child: ChildProcess) => void
 }
 
 export interface SaveSyncArgs {

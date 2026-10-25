@@ -24,10 +24,14 @@
  *
  * Never rejects: a timeout, non-success exit, offline client, CM error or any throw logs a
  * warning, marks nothing done and lets the game launch. Sidecar exit contract: every timer is
- * unref'd and cleared, and the work only runs inside a user-initiated launch, never at boot.
+ * unref'd and cleared; every wine child is unref'd together with its stdin/stdout/stderr pipes
+ * the moment it spawns (runWineCommand's opt-in `onSpawn`), so neither an installer still
+ * running nor one abandoned after its timeout holds the event loop past stdin EOF; and the work
+ * only runs inside a user-initiated launch, never at boot.
  */
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import type { ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 import type { GameSettings } from 'common/types'
 import { readKnownFixesLayered } from 'backend/knownFixes'
@@ -136,9 +140,22 @@ async function writeLedger(
 }
 
 /**
+ * Drop the event-loop references a wine child holds: the process handle and its three stdio
+ * pipes (WR-01). `unref()` stops none of them working (output is still read and `close` still
+ * fires while stdin keeps the sidecar alive); it only stops them keeping the process alive.
+ * Optional calls: a pipe is null when stdio is not 'pipe', and test fakes need not implement it.
+ */
+export function unrefWineChild(child: ChildProcess): void {
+  child.unref?.()
+  for (const pipe of [child.stdin, child.stdout, child.stderr]) {
+    ;(pipe as { unref?: () => void } | null | undefined)?.unref?.()
+  }
+}
+
+/**
  * Run `commandParts` in the bottle with wait:false, raced against an unref'd timer. A timed-out
  * child cannot be killed through runWineCommand, so the caller only logs it. wait:true is never
- * used: `wineserver --wait` can block forever.
+ * used: `wineserver --wait` can block forever. The child and its pipes are unref'd at spawn.
  */
 async function runBounded(
   runWineCommand: typeof import('backend/launcher').runWineCommand,
@@ -157,7 +174,8 @@ async function runBounded(
       gameSettings,
       wait: false,
       protonVerb: 'run',
-      skipPrefixCheckIKnowWhatImDoing: true
+      skipPrefixCheckIKnowWhatImDoing: true,
+      onSpawn: unrefWineChild
     })
     // A child that outlives its timeout may reject later; nothing is awaiting it by then.
     wine.catch(() => undefined)

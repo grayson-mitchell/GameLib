@@ -1460,7 +1460,8 @@ async function runWineCommand({
   options,
   startFolder,
   skipPrefixCheckIKnowWhatImDoing = false,
-  ignoreLogging = false
+  ignoreLogging = false,
+  onSpawn
 }: WineCommandArgs): Promise<{
   stderr: string
   stdout: string
@@ -1542,6 +1543,7 @@ async function runWineCommand({
       env: env_vars,
       cwd: startFolder
     })
+    onSpawn?.(child)
     child.stdout.setEncoding('utf-8')
     child.stderr.setEncoding('utf-8')
 

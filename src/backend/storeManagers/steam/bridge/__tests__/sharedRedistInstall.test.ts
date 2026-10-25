@@ -15,9 +15,11 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 
 import type { GameSettings } from 'common/types'
+import type { ChildProcess } from 'child_process'
 import {
   installSteamBridgeSharedRedists,
-  REDIST_PROCESS_TIMEOUT_MS
+  REDIST_PROCESS_TIMEOUT_MS,
+  unrefWineChild
 } from '../sharedRedistInstall'
 import { parseInstallScript, classifySharedRedist } from '../sharedRedists'
 import type { SharedRedistDepot, SharedRedistDownloadResult } from '../../depot'
@@ -370,6 +372,62 @@ describe('installSteamBridgeSharedRedists', () => {
     expect(installerCalls()[0][2]).toContain(
       'Microsoft .NET Framework 4.5.2.cmd'
     )
+  })
+
+  describe('sidecar exit contract (WR-01)', () => {
+    const fakeChild = () => {
+      const pipe = () => ({ unref: jest.fn() })
+      return {
+        unref: jest.fn(),
+        stdin: pipe(),
+        stdout: pipe(),
+        stderr: pipe()
+      }
+    }
+
+    it('unrefWineChild unrefs the process handle and all three pipes', () => {
+      const c = fakeChild()
+      unrefWineChild(c as unknown as ChildProcess)
+      for (const h of [c, c.stdin, c.stdout, c.stderr])
+        expect(h.unref).toHaveBeenCalledTimes(1)
+    })
+
+    it('tolerates null pipes and handles without unref', () => {
+      expect(() =>
+        unrefWineChild({
+          stdin: null,
+          stdout: {},
+          stderr: null
+        } as unknown as ChildProcess)
+      ).not.toThrow()
+    })
+
+    it('passes onSpawn to every wine call and unrefs each spawned child', async () => {
+      mockedDownload.mockResolvedValue(ok([dx()]))
+      const children: ReturnType<typeof fakeChild>[] = []
+      mockedRun.mockImplementation(
+        async ({
+          commandParts,
+          onSpawn
+        }: {
+          commandParts: string[]
+          onSpawn?: (c: ChildProcess) => void
+        }) => {
+          const c = fakeChild()
+          children.push(c)
+          onSpawn?.(c as unknown as ChildProcess)
+          if (commandParts[1] === 'query')
+            return { code: 1, stdout: '', stderr: '' }
+          return { code: 0, stdout: '', stderr: '' }
+        }
+      )
+      await installSteamBridgeSharedRedists(APP, SETTINGS)
+      // reg query, DXSETUP, reg add
+      expect(children).toHaveLength(3)
+      for (const c of children)
+        for (const h of [c, c.stdin, c.stdout, c.stderr])
+          expect(h.unref).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('installer timeout', () => {
