@@ -123,6 +123,17 @@ Out of scope, unchanged: SteamStub forwarder / Grim Dawn main menu (Phase 52, de
   inside the full 51-29 re-run sample. "Majority" is counted over **all Steamworks-using rows**.
   Titles held back by out-of-phase defects (Grim Dawn SteamStub, bottle runtime components) **stay
   in the denominator** and are reported with their class, never dropped.
+- **D-53-15:** **Init-only titles count a shim-logged init success.** Added 2026-10-25 after the
+  53-20 re-run, for Avernum 6 206060. Its exe imports only `SteamAPI_Init` and `SteamAPI_Shutdown`
+  from `steam_api.dll`, so it never makes the game-originated call D-53-13 asks for and has no
+  engine log. The shim (x86 and x64) logs the return value of the game's own `SteamAPI_Init`
+  (and `SteamAPI_InitSafe` / `SteamAPI_InitFlat` where served) as a trace line in gamelib.log.
+  The census counts **HELLO + a logged init success from the game process** as evidence, but
+  **only** for rows whose PE import table from steam_api names nothing beyond the init/shutdown
+  family. The census reads that from the shared runtime scan (D-53-12). Any title that imports
+  more must still meet D-53-13. A failed or missing init line is unverified. Helper-originated
+  init never counts, and In-Game never counts. The user chose this over dropping 206060 from the
+  denominator, which would have given 9 of 17, still not a majority.
 
 ### Claude's Discretion
 - Flat export calling mechanics on x64 (direct call through `self->vtbl[slot]`), generator

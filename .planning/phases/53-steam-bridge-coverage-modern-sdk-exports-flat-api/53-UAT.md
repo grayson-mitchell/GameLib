@@ -196,7 +196,7 @@ Each entry feeds `/gsd-plan-phase 53 --gaps`. Nothing was patched during the run
 - truth: SteamStub DRM titles (Raft 648800, Grim Dawn 219990) start (item 11). status: failed. evidence: steamstub-forwarded:launch-check-unsatisfiable, FWD CreateInterface only, "Application load error" / "application failed". fix: stays DRM-limited; counted in the denominator, no reroute to bottled Steam.
 - truth: ELEX 411300 loads (item 11). status: failed. evidence: census class known-bad (does-not-run), shim coverage miss SteamGameServer012, hang at load after BIsSubscribedApp. fix: add SteamGameServer012 coverage and re-test; census counts it verified on a single CALL.
 - truth: Unclaimed World 284100 reaches HELLO (item 11). status: failed. evidence: `unimplemented function steam_api64.dll.SteamAPI_InitSafe`. fix: old-SDK todo steps 1, 2, 4, 5 (export SteamAPI_InitSafe and the other 11 missing CSteamworks exports; interface versions).
-- truth: Avernum 6 206060 has a game-originated call (item 11). status: unverified. evidence: HELLO only, operator full pass. fix: x86 shim call tracing or accept as unverifiable.
+- truth: Avernum 6 206060 has a game-originated call (item 11). status: unverified. evidence: HELLO only, operator full pass; 53-20 shows the exe imports only `SteamAPI_Init` and `SteamAPI_Shutdown` from steam_api.dll. fix (user decision 2026-10-25, D-53-15): the shim logs the game's own `SteamAPI_Init` result, and the census counts HELLO + a logged init success for init-only rows.
 
 ## Gap re-test (53-14)
 
