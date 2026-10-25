@@ -40,7 +40,7 @@
  * only runs inside a user-initiated launch, never at boot.
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises'
 import type { ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 import type { GameSettings } from 'common/types'
@@ -199,13 +199,23 @@ async function readLedger(path: string, appId: string): Promise<Ledger> {
   return emptyLedger()
 }
 
+let ledgerTmpSeq = 0
+
+/** Write to a unique temp file and rename it over the ledger, so a crash never tears it (IN-04). */
 async function writeLedger(
   path: string,
   dir: string,
   ledger: Ledger
 ): Promise<void> {
   await mkdir(dir, { recursive: true })
-  await writeFile(path, JSON.stringify(ledger, null, 2))
+  const tmp = `${path}.${process.pid}.${++ledgerTmpSeq}.tmp`
+  try {
+    await writeFile(tmp, JSON.stringify(ledger, null, 2))
+    await rename(tmp, path)
+  } catch (err) {
+    await rm(tmp, { force: true }).catch(() => undefined)
+    throw err
+  }
 }
 
 /**

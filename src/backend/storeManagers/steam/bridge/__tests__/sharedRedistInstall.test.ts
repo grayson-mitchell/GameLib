@@ -6,6 +6,7 @@
  */
 import {
   mkdtempSync,
+  readdirSync,
   readFileSync,
   existsSync,
   rmSync,
@@ -219,6 +220,13 @@ describe('installSteamBridgeSharedRedists', () => {
     expect(mockedStatus).not.toHaveBeenCalled()
     expect(Object.keys(ledger().done)).toHaveLength(1)
     expect(ledger().settled).toBeDefined()
+  })
+
+  it('writes the ledger atomically, leaving no temp file behind (IN-04)', async () => {
+    mockedDownload.mockResolvedValue(ok([dx(), vc2010()]))
+    await installSteamBridgeSharedRedists(APP, SETTINGS)
+    expect(ledger().settled).toBeDefined()
+    expect(readdirSync(bottleDir)).toEqual(['gamelib-shared-redists.json'])
   })
 
   it('settled ledger with equal opt-in makes no download and no wine call', async () => {
