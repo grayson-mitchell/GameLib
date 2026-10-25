@@ -1,5 +1,5 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Unclaimed World (284100) bridge launch after quick 261025-t7i: HELLO and GINIT ok, but Steamworks.NET init fails because gamelib_bridge.cfg has no iface.* pins"
 created: 2026-10-25
 updated: 2026-10-25
@@ -54,7 +54,7 @@ updated: 2026-10-25
 
 ## Current Focus
 
-next_action: operator relaunch (restore both .gamelib-orig first), confirm iface.* lines
+next_action: none -- verified live 2026-10-25 22:00 (22 iface pins, CALL SteamUtils007.GetAppID, no SteamAPI_Init failure)
 
 ## Evidence
 
