@@ -17,12 +17,21 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
 
 ## Decisions
 
-1. **Extend Heroic's existing known-fixes format.** Do not start a separate format.
-   - Same files: `fixes/<appName>-<store>.json`, read by `readKnownFixes()` in
-     `src/backend/knownFixes.ts`.
-   - Same type: `KnowFixesInfo` gains new **optional** keys, so existing files stay valid.
-   - Same launch hook: `prepareWineLaunch()` → `installFixes()` (winetricks, `runInPrefix`) plus
-     `getKnownFixesEnvVariables()`.
+1. **Two tiers, two files** (revised 2026-10-25, quick 261025-thk; this used to read "extend
+   Heroic's format, do not start a separate format").
+   - **Tier 1, simple fixes:** Heroic's known-fixes format, **unchanged**:
+     `fixes/<appName>-<store>.json` with `envVariables`, `winetricks`, `runInPrefix`, `notes`,
+     `wikiLink`, plus `launchNotice` (UI text only). Same launch hook as Heroic:
+     `prepareWineLaunch()` → `installFixes()` plus `getKnownFixesEnvVariables()`. A file written
+     for Heroic's feed stays valid here, and the reverse.
+   - **Tier 2, complex profiles:** a **separate** file, `<appName>-<store>.profile.json`, carrying
+     the new keys in decision 3 (`registry`, `dllOverrides`, `overlays`, `shimFeatures`,
+     `steamSharedRedists`, `platforms`, `evidence`). Separate files make the trust boundary
+     visible on disk instead of a per-key list inside one file.
+   - **Both tiers apply to every store's games**, not just Steam. The macOS fixes these carry
+     (CrossOver/Wine behaviour, overlays, registry) are about the runtime, not the storefront.
+   - The two tiers resolve their layers independently (decision 6), so a game can take its
+     simple fixes from remote and its complex profile from bundled at the same time.
 2. **The prefix is where some fixes are applied, never where they are stored.** A bottle is opaque
    binary state: not diffable, reviewable or shareable, lost on rebuild, and mixed with the game's
    own state. Many fixes can't live there anyway (see the table below). The manifest is the source
@@ -36,7 +45,7 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
    | `dllOverrides` | shorthand for `AppDefaults\<exe>\DllOverrides`. **CrossOver's `wine` wrapper drops `WINEDLLOVERRIDES`**, so env-var overrides silently do nothing | 031 |
    | `overlays` | sha-pinned components placed beside the exe (e.g. Mesa 26.2.4 x86 `opengl32.dll` + `libgallium_wgl.dll`); add-only, recorded, removable | 031 |
    | `shimFeatures` | generic, data-parameterised capabilities in the steam_api shim, passed through the per-app `gamelib_bridge.cfg`, e.g. `"wgl.hideExtensions": ["WGL_ARB_create_context*"]` | 033 |
-   | `launchNotice` | UI text, e.g. "first screen freezes ~25s while loading (x87 code under Rosetta)" | 033 |
+   | `launchNotice` | UI text, e.g. "first screen freezes ~25s while loading (x87 code under Rosetta)". **Tier 1** (decision 1); the rest of this table is tier 2 | 033 |
    | `platforms` | scoping per OS, runtime version range (`crossover>=26.3`), and an exe sha guard | 030 |
    | `evidence` | link to the spike or debug artifact that justifies the profile | — |
 
@@ -47,17 +56,25 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
 5. **Apply idempotently and reversibly.** Each building block records what it changed in an
    applied-fix ledger kept with the prefix, so turning a profile off or changing it restores the
    previous state.
-6. **Layers and trust: curated only, plus local overrides, for now.**
-   - **Bundled:** curated profiles in-repo, reviewed, each linking to its evidence.
-   - **Local override:** `GameLib/fixes/local/<appName>-<store>.json`. It wins over the others and
-     is used for debugging.
-   - **Remote (Heroic's known-fixes feed, still downloaded for Epic/GOG/Amazon by
-     `downloadFixesFor()`):** stays limited to the fields it uses today. **The new keys
-     (`registry`, `dllOverrides`, `overlays`, `shimFeatures`) are honoured only from bundled or
-     local sources and ignored from remote ones.** Nothing fetched can drop DLLs or change what
-     code runs.
-   - A community or remote feed for the new keys is deferred. It would need signed, sha-pinned
-     components from a source we control.
+6. **Layers and trust, per tier** (revised 2026-10-25, quick 261025-thk). Each tier resolves
+   local → bundled → remote on its own; the first layer with a file wins for that tier.
+   - **Local override:** `GameLib/fixes/local/`. Wins, used for debugging. Uninstall never
+     touches it.
+   - **Bundled:** `public/fixes/`, shipped inside the signed app release, reviewed in a PR, each
+     tier-2 profile linking to its evidence.
+   - **Remote, tier 1 only:** GameLib's own known-fixes repo, covering **every store**, in Heroic's
+     layout (`<store>/<appName>-<store>.json`). GameLib's repo is tried first; Heroic's feed is the
+     fallback for the stores it covers (Epic/GOG/Amazon). A remote file is filtered through an
+     **allow-list** of the tier-1 keys; anything else is dropped with a warning. (An allow-list,
+     not a block-list: a new tier-2 key cannot reach the remote path by being forgotten.)
+   - **Tier 2 is local and bundled only.** It is never fetched. A remote tier-2 feed is
+     **deferred**; if it is ever built it needs signed, sha-pinned components from a source we
+     control (e.g. an ed25519-signed manifest whose key is pinned in the app). Until then, shipping
+     a profile means shipping a release.
+   - **Tier 1 is not "safe", it is "trust the repo's mergers".** `runInPrefix` runs an executable
+     from the install directory and winetricks verbs download and run installers. That is the same
+     trust Heroic users already extend to Heroic's feed, and it is acceptable for a repo GameLib
+     controls. What tier 1 cannot do is set registry values, drop DLLs or change the shim.
 7. **Diagnostic launch mode** is the debugging companion to local overrides. It turns on what
    spikes 030–033 built by hand:
    - `CX_DEBUGMSG`/`CX_LOG` channels (CrossOver ignores `WINEDEBUG`)

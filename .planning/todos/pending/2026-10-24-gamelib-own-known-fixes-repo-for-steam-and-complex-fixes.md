@@ -1,7 +1,7 @@
 ---
 created: 2026-10-24
-title: "GameLib's own known-fixes repo for Steam profiles and the complex fix keys"
-source: quick 261024-tny, D1
+title: "GameLib's own known-fixes repo (tier 1, every store) and its fetcher"
+source: quick 261024-tny, D1; scope revised by quick 261025-thk
 area: steam-launch
 files:
   - src/backend/downloadmanager/utils.ts
@@ -12,23 +12,31 @@ platform: any
 ready: human
 ---
 
-GameLib needs its own known-fixes repo, both for Steam profiles and for the complex keys
-(registry, dllOverrides, overlays, shimFeatures).
+GameLib needs its own known-fixes repo for **tier-1 (simple) fixes for every store**. The design
+is settled in decisions 1 and 6 of `.planning/notes/per-game-compat-fixes-architecture.md`
+(revised 2026-10-25):
 
-`downloadFixesFor` now skips `steam` on purpose (quick 261024-tny). Until this repo exists, Steam
-fixes come only from a hand-placed `fixes/<appId>-steam.json`.
+- Heroic's format and layout, unchanged: `<store>/<appName>-<store>.json`.
+- Covers every store, because the macOS fixes it carries apply to Epic/GOG/Amazon games too.
+- Remote carries **tier 1 only**. Tier-2 profiles (`registry`, `dllOverrides`, `overlays`,
+  `shimFeatures`, `steamSharedRedists`, …) are local and bundled only; a remote tier-2 feed is
+  deferred. There is no signing model to decide for this todo.
 
-Decision 6 of `.planning/notes/per-game-compat-fixes-architecture.md` applies: the new keys are
-honoured only from bundled or local sources, and any remote feed needs signed, sha-pinned
-components from a source GameLib controls.
+`downloadFixesFor` skips `steam` today on purpose (quick 261024-tny). It fetches only Heroic's feed
+for the other stores.
 
-Ready is `human` because the operator must create the repo and decide its trust and signing model.
+Ready is `human` because the operator must create the repo (name, org, who can merge). Everything
+after that is code.
 
-Done-when: the repo exists with a documented layout, `downloadFixesFor` (or a GameLib-specific
-fetcher) pulls Steam profiles from it, and its trust rule is enforced in code.
+Depends on `2026-10-25-two-tier-known-fixes-split.md` (the loader split and the tier-1 allow-list),
+which is `ready: code` and can land first.
 
-When the fetcher lands, also revisit `removeFixFile` in `src/backend/utils/uninstaller.ts`. It
-skips `steam` today only because a Steam fixes file has no other copy. Once profiles are
-re-downloaded at install, deleting the downloaded copy on uninstall is safe again, as for the other
-stores. Hand-placed debugging profiles should then live in `fixes/local/` (decision 6), which
-uninstall never touches.
+Done-when:
+
+- The repo exists, with a README documenting the layout and the tier-1 key list.
+- `downloadFixesFor` fetches every store from GameLib's repo first, falling back to Heroic's feed
+  for epic/gog/amazon when GameLib's has no file. Steam is no longer skipped.
+- `removeFixFile` in `src/backend/utils/uninstaller.ts` deletes the downloaded tier-1 copy for
+  Steam too, as for the other stores: it is re-downloaded at install. It skips Steam today only
+  because a Steam fixes file had no other copy. Local (`fixes/local/`) and bundled files are never
+  touched.
