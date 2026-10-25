@@ -5389,6 +5389,66 @@ describe('SteamGame.install() — Phase 24 Plan 08 bridge routing (R4/BLOCKER-1/
     expect(tellBottledSteamToInstall).not.toHaveBeenCalled()
   })
 
+  // 51-REVIEW WR-08: install() must route by LOCATION when partial bits of an
+  // interrupted native download already live in the GameLibSteam bottle --
+  // not start a second download into a fresh bridge bottle.
+  describe('51-REVIEW WR-08: an interrupted GameLibSteam download keeps the bottled path', () => {
+    function setBreadcrumb(targetSteamappsDir: string): void {
+      const entry = makeEntry({ title: 'Avernum 4' })
+      library.set(APP_ID, {
+        ...entry,
+        install: {
+          ...entry.install,
+          steamResumeTargetSteamappsDir: targetSteamappsDir,
+          steamResumeInstalldir: 'Avernum 4'
+        }
+      })
+    }
+
+    beforeEach(() => {
+      ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(false)
+      ;(bridgeAllowlist.knownBadReason as jest.Mock).mockReturnValue(null)
+      ;(isBridgeBottleReady as jest.Mock).mockReturnValue(true)
+      ;(isBottleReady as jest.Mock).mockReturnValue(false)
+      ;(getSteamBottleSettings as jest.Mock).mockReturnValue({
+        wineCrossoverBottle: 'GameLibSteam'
+      })
+      ;(sendFrontendMessage as jest.Mock).mockClear()
+      ;(placeShimForGame as jest.Mock).mockClear()
+      ;(downloadSteamDepots as jest.Mock).mockClear()
+    })
+
+    it('breadcrumb pointing at the GameLibSteam bottle: no bridge install, the bottled path runs instead', async () => {
+      setBreadcrumb('/mock/bottle/steamapps')
+
+      const game = new SteamGame(APP_ID)
+      const result = await game.install({} as any)
+
+      expect(provisionBridgeBottle).not.toHaveBeenCalled()
+      expect(downloadSteamDepots).not.toHaveBeenCalled()
+      expect(placeShimForGame).not.toHaveBeenCalled()
+      // The bottled path's own not-ready deferral proves which branch ran.
+      expect(sendFrontendMessage).toHaveBeenCalledWith(
+        'steamBottleSetupRequired',
+        { appName: APP_ID }
+      )
+      expect(result).toEqual({ status: 'done', deferredToSetup: true })
+    })
+
+    it('breadcrumb pointing at the bridge bottle (an interrupted BRIDGE download) still routes to the bridge', async () => {
+      setBreadcrumb(BRIDGE_STEAMAPPS_DIR)
+
+      const game = new SteamGame(APP_ID)
+      await game.install({} as any)
+
+      expect(sendFrontendMessage).not.toHaveBeenCalledWith(
+        'steamBottleSetupRequired',
+        expect.anything()
+      )
+      expect(placeShimForGame).toHaveBeenCalled()
+    })
+  })
+
   // ── D-51-06 (Plan 17): the cheap pre-install screen, run ONLY when
   // route.route === 'bridge' && route.reason === 'pending-scan' && no
   // steamApi is stored yet. ────────────────────────────────────────────────

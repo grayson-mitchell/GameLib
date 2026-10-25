@@ -1204,6 +1204,27 @@ export default class SteamGame implements Game {
       // way -- nothing is installed and no ACF poller starts on this path.
       let bridgeRoute = this.bridgeRoute()
 
+      // 51-REVIEW WR-08: launch() and uninstall() route by LOCATION, but the
+      // widened pending-scan default routes every non-seed bottle-eligible
+      // title to the bridge by ELIGIBILITY. A title whose partial bits
+      // already live in the Phase 17 GameLibSteam bottle (the native-download
+      // breadcrumb of an interrupted pre-upgrade install that the resume
+      // pass above just ran against) would otherwise be downloaded a second
+      // time into a fresh bridge bottle, orphaning the first copy. Keep the
+      // bottled path for it. The user's own "Try the bridge anyway" choice is
+      // the one exception: an explicit choice is honoured.
+      if (
+        bridgeRoute.route === 'bridge' &&
+        bridgeRoute.reason !== 'user-forced-bridge' &&
+        this.hasBottledSteamCopy()
+      ) {
+        logInfo(
+          `SteamGame: appId ${this.appId} already has bits in the GameLibSteam bottle -- keeping the bottled install path instead of starting a second download into a bridge bottle (51-REVIEW WR-08)`,
+          LogPrefix.Steam
+        )
+        bridgeRoute = { ...bridgeRoute, route: 'bottle', noticeRequired: false }
+      }
+
       // D-51-06 (Plan 17): the cheap pre-install screen ROADMAP sub-decision
       // 2 left open -- measured by research as NOT free (a second, separate
       // buildDepotPlan call), so it only runs for a title that would
@@ -1483,6 +1504,28 @@ export default class SteamGame implements Game {
    * (StateFlags 1026 -> 4) is reflected in the UI exactly like the legacy
    * tellBottledSteamToInstall path.
    */
+  /**
+   * 51-REVIEW WR-08: true when an interrupted native download for this appId
+   * targeted the Phase 17 GameLibSteam bottle -- the install-start breadcrumb
+   * (`markSteamNativeInstallStarted`, written before the download await and
+   * cleared only on success) points at that bottle's steamapps dir. The
+   * breadcrumb, not an ACF, is the signal: a hard kill runs no JS, so an
+   * interrupted download leaves no `appmanifest_*.acf` at all. A COMPLETE
+   * GameLibSteam install never reaches install() (it is already installed),
+   * so the breadcrumb covers the resume case the review names.
+   */
+  private hasBottledSteamCopy(): boolean {
+    const breadcrumb = library.get(this.appId)?.install
+      ?.steamResumeTargetSteamappsDir
+    if (typeof breadcrumb !== 'string' || breadcrumb === '') {
+      return false
+    }
+    const steamappsDir = getBottleSteamappsDir(
+      getSteamBottleSettings().wineCrossoverBottle
+    )
+    return resolve(breadcrumb) === resolve(steamappsDir)
+  }
+
   private async installBottleNative(args: InstallArgs): Promise<InstallResult> {
     const targetSteamappsDir = getBottleSteamappsDir(
       getSteamBottleSettings().wineCrossoverBottle
