@@ -28,3 +28,17 @@ Hypothesis from 53-UAT item 9 (the failed ticket causes the hang) is REFUTED: th
 3. A non-Steam fault (shader compile, Wine graphics) at the loading screen: no Steam CALL arrives after the ticket, so nothing in the bridge log localizes it. Capture a wine +err trace.
 
 Do not reroute to bottled Steam on this evidence; no DRM is involved.
+
+## Root cause (debug: abiotic-factor-loading-hang, 2026-10-26)
+
+Candidate 1 was close: the missing callback is 168, not 163. The game never registers 163. At init it registers
+callback 168 (`GetTicketForWebApiResponse_t`). After the forwarded `GetAuthSessionTicket` it calls
+`ISteamUser::GetAuthTicketForWebApi`, which is a shim stub returning handle 0. The shim also has no callback delivery
+(`RunCallbacks` / `RegisterCallback` are no-ops), so 168 can never arrive. UE's EOSPlus login (GetLinkedAccountAuthToken,
+TokenType WebAPI) never gets a web-API ticket, never starts the EOS Connect user login, and retries every ~10 s. The
+menu shows "Loading" indefinitely. Evidence: `.planning/debug/abiotic-factor-loading-hang.md` (shim call trace +
+verbose EOS log).
+
+Fix is planned as a phase: forward `GetAuthTicketForWebApi`, have the helper queue 168 from its own callback pump,
+and have the shim's `RunCallbacks` drain and dispatch it to registered `CCallbackBase` objects. The diagnostic
+stub/callback-registration trace is saved as `.planning/debug/abiotic-factor-loading-hang.trace.patch` for reuse.

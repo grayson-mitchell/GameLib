@@ -1,0 +1,202 @@
+diff --git a/meta/gen_vtables.ts b/meta/gen_vtables.ts
+index 4808e4984..972d935dd 100644
+--- a/meta/gen_vtables.ts
++++ b/meta/gen_vtables.ts
+@@ -852,22 +852,25 @@ const FLAT_EXPORT_BODIES: Record<
+     'int SteamAPI_InitFlat(char *pErrMsg) { (void)pErrMsg; return 0; }',
+   SteamAPI_Shutdown:
+     'void SteamAPI_Shutdown(void) {\n' +
++    '  AcquireSRWLockExclusive(&g_bridge_lock);\n' +
+     '  if (g_bridge_sock != INVALID_SOCKET) {\n' +
+     '    closesocket(g_bridge_sock);\n' +
+     '    g_bridge_sock = INVALID_SOCKET;\n' +
+     '    WSACleanup();\n' +
+     '  }\n' +
++    '  ReleaseSRWLockExclusive(&g_bridge_lock);\n' +
+     '}',
+   SteamAPI_RestartAppIfNecessary:
+     'int SteamAPI_RestartAppIfNecessary(uint32_t unOwnAppID) { (void)unOwnAppID; return 0; }',
+   SteamAPI_IsSteamRunning: 'int SteamAPI_IsSteamRunning(void) { return 1; }',
+-  SteamAPI_RunCallbacks: 'void SteamAPI_RunCallbacks(void) { }',
++  SteamAPI_RunCallbacks:
++    'void SteamAPI_RunCallbacks(void) { BRIDGE_TRACE_ONCE("RunCallbacks"); }',
+   SteamAPI_RegisterCallback:
+-    'void SteamAPI_RegisterCallback(void *pCallback, int iCallback) { (void)pCallback; (void)iCallback; }',
++    'void SteamAPI_RegisterCallback(void *pCallback, int iCallback) { (void)pCallback; bridge_trace_local("RegisterCallback", (long)iCallback); }',
+   SteamAPI_UnregisterCallback:
+     'void SteamAPI_UnregisterCallback(void *pCallback) { (void)pCallback; }',
+   SteamAPI_RegisterCallResult:
+-    'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }',
++    'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; bridge_trace_local("RegisterCallResult", (long)hAPICall); }',
+   SteamAPI_UnregisterCallResult:
+     'void SteamAPI_UnregisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }'
+ }
+@@ -1140,6 +1143,36 @@ function emitStubBody(
+   funcName: string,
+   sret: boolean,
+   stringReturn: boolean
++): string {
++  return withLocalTrace(
++    emitStubBodyUntraced(
++      manifest,
++      method,
++      header,
++      funcName,
++      sret,
++      stringReturn
++    ),
++    funcName
++  )
++}
++
++// Adds the shim's once-per-function local-call trace (bridge_trace_local)
++// right after a stub or fallback body's `(void)self;` line.
++function withLocalTrace(body: string, funcName: string): string {
++  return body.replace(
++    '  (void)self;\n',
++    `  (void)self;\n  BRIDGE_TRACE_ONCE("${funcName}");\n`
++  )
++}
++
++function emitStubBodyUntraced(
++  manifest: InterfaceManifest,
++  method: MethodSignature,
++  header: string,
++  funcName: string,
++  sret: boolean,
++  stringReturn: boolean
+ ): string {
+   const sretParam = sret ? 'void *sretOut' : ''
+   const dummyBytes = method.stackBytes - (sret ? 4 : 0)
+@@ -1456,20 +1489,22 @@ function emitVtableStub(
+           : '0'
+         : String(method.helperFallback)
+     if (method.returnKind === 'void') {
+-      return (
++      return withLocalTrace(
+         header +
+-        `static void THISCALL ${funcName}(${signatureParams}) {\n` +
+-        `  (void)self;\n` +
+-        `}\n`
++          `static void THISCALL ${funcName}(${signatureParams}) {\n` +
++          `  (void)self;\n` +
++          `}\n`,
++        funcName
+       )
+     }
+     const returnType = cType(method.returns)
+-    return (
++    return withLocalTrace(
+       header +
+-      `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
+-      `  (void)self;\n` +
+-      `  return ${fallbackLiteral};\n` +
+-      `}\n`
++        `static ${returnType} THISCALL ${funcName}(${signatureParams}) {\n` +
++        `  (void)self;\n` +
++        `  return ${fallbackLiteral};\n` +
++        `}\n`,
++      funcName
+     )
+   }
+ 
+@@ -2403,6 +2438,24 @@ static int g_iface_cfg_count = 0;
+ static SOCKET g_bridge_sock = INVALID_SOCKET;
+ static uint32_t g_next_request_id = 1;
+ 
++// Serializes every bridge round trip and every touch of g_bridge_sock. UE
++// titles call Steam from more than one thread (game thread plus the online
++// async task thread), and one shared socket with unguarded send/recv lets two
++// calls interleave frames or consume each other's response, leaving the loser
++// blocked in recv for good (debug: abiotic-factor-loading-hang). Not
++// recursive: nothing that holds it may call bridge_transact again.
++static SRWLOCK g_bridge_lock = SRWLOCK_INIT;
++
++// Diagnostic trace of bridge calls, one line per call, written beside this DLL
++// and truncated at the first call of each process. Capped so a title that
++// polls Steam every frame cannot grow it without bound. Records the calling
++// thread and whether it had to wait on g_bridge_lock -- the evidence that
++// concurrent callers exist. Written only while g_bridge_lock is held.
++#define BRIDGE_TRACE_FILENAME "gamelib_bridge_trace.log"
++#define BRIDGE_TRACE_MAX_LINES 512
++static char g_bridge_trace_path[MAX_PATH];
++static int g_bridge_trace_lines = 0;
++
+ // 0 until load_bridge_port_once() resolves a valid port out of
+ // gamelib_bridge.cfg -- bridge_ensure_connected() refuses to connect while
+ // it is 0 (D-51-01: fail closed, never a fixed-port fallback).
+@@ -2502,6 +2555,10 @@ static void load_bridge_port_once(void) {
+   char *lastSlash = strrchr(cfgPath, '\\\\');
+   char *fileNameStart = lastSlash ? lastSlash + 1 : cfgPath;
+   size_t prefixLen = (size_t)(fileNameStart - cfgPath);
++  if (prefixLen + strlen(BRIDGE_TRACE_FILENAME) < sizeof(g_bridge_trace_path)) {
++    memcpy(g_bridge_trace_path, cfgPath, prefixLen);
++    strcpy(g_bridge_trace_path + prefixLen, BRIDGE_TRACE_FILENAME);
++  }
+   if (prefixLen + strlen(BRIDGE_CONFIG_FILENAME) >= sizeof(cfgPath)) {
+     return;
+   }
+@@ -2589,9 +2646,9 @@ static int bridge_transact_once(uint16_t ordinal, uint16_t slot,
+  * on an otherwise-healthy link usually just means "reconnect and resend",
+  * not a real protocol error.
+  */
+-static int bridge_transact(uint16_t ordinal, uint16_t slot,
+-                            const uint8_t *argBuf, uint32_t argLen,
+-                            uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
++static int bridge_transact_locked(uint16_t ordinal, uint16_t slot,
++                                   const uint8_t *argBuf, uint32_t argLen,
++                                   uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
+   int transportFailed = 0;
+   int ok = bridge_transact_once(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut, &transportFailed);
+   if (ok || !transportFailed) return ok;
+@@ -2603,6 +2660,50 @@ static int bridge_transact(uint16_t ordinal, uint16_t slot,
+   return bridge_transact_once(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut, &transportFailed);
+ }
+ 
++/* Appends one trace line. Caller holds g_bridge_lock. */
++static void bridge_trace_call(uint16_t ordinal, uint16_t slot, int contended, int ok) {
++  if (g_bridge_trace_path[0] == 0 || g_bridge_trace_lines >= BRIDGE_TRACE_MAX_LINES) return;
++  FILE *f = fopen(g_bridge_trace_path, g_bridge_trace_lines == 0 ? "wb" : "ab");
++  if (!f) return;
++  g_bridge_trace_lines++;
++  fprintf(f, "t=%lu tid=%lu ord=%u slot=%u contended=%d ok=%d\\n",
++          (unsigned long)GetTickCount(), (unsigned long)GetCurrentThreadId(),
++          (unsigned)ordinal, (unsigned)slot, contended, ok);
++  fclose(f);
++}
++
++/* Records a call the shim answers locally (a stub, a shim-side fallback, a
++ * callback registration), which never reaches bridge_transact. Takes
++ * g_bridge_lock itself, so it must not be called while holding it. */
++static void bridge_trace_local(const char *what, long arg) {
++  AcquireSRWLockExclusive(&g_bridge_lock);
++  if (g_bridge_trace_path[0] != 0 && g_bridge_trace_lines < BRIDGE_TRACE_MAX_LINES) {
++    FILE *f = fopen(g_bridge_trace_path, g_bridge_trace_lines == 0 ? "wb" : "ab");
++    if (f) {
++      g_bridge_trace_lines++;
++      fprintf(f, "t=%lu tid=%lu local=%s arg=%ld\\n",
++              (unsigned long)GetTickCount(), (unsigned long)GetCurrentThreadId(), what, arg);
++      fclose(f);
++    }
++  }
++  ReleaseSRWLockExclusive(&g_bridge_lock);
++}
++
++/* First call per function only, so a stub polled every frame costs one line. */
++#define BRIDGE_TRACE_ONCE(what) \\
++  do { static int traced_; if (!traced_) { traced_ = 1; bridge_trace_local((what), 0); } } while (0)
++
++static int bridge_transact(uint16_t ordinal, uint16_t slot,
++                            const uint8_t *argBuf, uint32_t argLen,
++                            uint8_t *retBuf, uint32_t retBufCap, uint32_t *retLenOut) {
++  int contended = !TryAcquireSRWLockExclusive(&g_bridge_lock);
++  if (contended) AcquireSRWLockExclusive(&g_bridge_lock);
++  int ok = bridge_transact_locked(ordinal, slot, argBuf, argLen, retBuf, retBufCap, retLenOut);
++  bridge_trace_call(ordinal, slot, contended, ok);
++  ReleaseSRWLockExclusive(&g_bridge_lock);
++  return ok;
++}
++
+ /* D-53-15: HELLO handshake, shared by SteamAPI_Init and
+  * SteamInternal_SteamAPI_Init. Returns 1 on success, 0 on transport failure. */
+ static int gamelib_bridge_hello(void) {
