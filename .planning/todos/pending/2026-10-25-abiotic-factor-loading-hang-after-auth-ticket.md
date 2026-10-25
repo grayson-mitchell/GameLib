@@ -42,3 +42,7 @@ verbose EOS log).
 Fix is planned as a phase: forward `GetAuthTicketForWebApi`, have the helper queue 168 from its own callback pump,
 and have the shim's `RunCallbacks` drain and dispatch it to registered `CCallbackBase` objects. The diagnostic
 stub/callback-registration trace is saved as `.planning/debug/abiotic-factor-loading-hang.trace.patch` for reuse.
+
+## Evidence (55-07 live gate run 1, 2026-10-26)
+
+Forward, CBQ `queued iCallback=168 result=1 cub=2572`, and the game-side `GetTicketForWebApiResponse Received code 1` all observed; one `Obtained steam authticket` (no retry loop); operator reached the main menu "pretty instant". Only the strict item 4 literal is undecided. See 55-UAT.md and 55-LIVE-GATE.md `## Run 1 verdict`. Left pending until item 4 is decided.

@@ -555,7 +555,7 @@ Plans:
 **Goal:** A bridged game that asks for a web-API auth ticket gets one. `ISteamUser::GetAuthTicketForWebApi(pchIdentity)` is forwarded to real Mac Steam through the helper. The helper captures `GetTicketForWebApiResponse_t` (callback 168) from its own callback pump and queues it. The shim records `SteamAPI_RegisterCallback` registrations, and `SteamAPI_RunCallbacks` drains queued callbacks over a new CONTROL slot and dispatches them to the registered `CCallbackBase` objects. The MSVC vtable slot of `Run(void*)` is measured on x64 and x86, never assumed. Root cause and evidence: `.planning/debug/abiotic-factor-loading-hang.md`. Reusable diagnostic trace: `.planning/debug/abiotic-factor-loading-hang.trace.patch`. Done when (live gate): Abiotic Factor (427410) reaches an interactive main menu and the game log shows an EOS Connect user login.
 **Requirements**: TBD
 **Depends on:** Phase 53
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 
@@ -579,4 +579,4 @@ Plans:
 
 **Wave 5** *(blocked on 55-06)*
 
-- [ ] 55-07-PLAN.md — run the live gate (operator checkpoint), score UAT, pin the EOS login literal (P55-LIVE)
+- [x] 55-07-PLAN.md — run the live gate (operator checkpoint), score UAT, pin the EOS login literal (P55-LIVE)
