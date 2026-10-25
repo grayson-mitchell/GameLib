@@ -1099,15 +1099,17 @@ const FLAT_EXPORT_BODIES: Record<
     '    WSACleanup();\n' +
     '  }\n' +
     '  ReleaseSRWLockExclusive(&g_bridge_lock);\n' +
+    '  gl_cb_clear_all();\n' +
     '}',
   SteamAPI_RestartAppIfNecessary:
     'int SteamAPI_RestartAppIfNecessary(uint32_t unOwnAppID) { (void)unOwnAppID; return 0; }',
   SteamAPI_IsSteamRunning: 'int SteamAPI_IsSteamRunning(void) { return 1; }',
-  SteamAPI_RunCallbacks: 'void SteamAPI_RunCallbacks(void) { }',
+  SteamAPI_RunCallbacks:
+    'void SteamAPI_RunCallbacks(void) { gl_cb_run_callbacks(); }',
   SteamAPI_RegisterCallback:
-    'void SteamAPI_RegisterCallback(void *pCallback, int iCallback) { (void)pCallback; (void)iCallback; }',
+    'void SteamAPI_RegisterCallback(void *pCallback, int iCallback) { gl_cb_register(pCallback, iCallback); }',
   SteamAPI_UnregisterCallback:
-    'void SteamAPI_UnregisterCallback(void *pCallback) { (void)pCallback; }',
+    'void SteamAPI_UnregisterCallback(void *pCallback) { gl_cb_unregister(pCallback); }',
   SteamAPI_RegisterCallResult:
     'void SteamAPI_RegisterCallResult(void *pCallback, uint64_t hAPICall) { (void)pCallback; (void)hAPICall; }',
   SteamAPI_UnregisterCallResult:
@@ -2581,6 +2583,8 @@ export function generateShimC(
 // SteamInternal_SteamAPI_Init tells the helper how it went ({u32 fn, i32 ret});
 // the helper logs a GINIT line, the only evidence an init-only title can give.
 #define BRIDGE_CONTROL_SLOT_REPORT_INIT 5
+// Phase 55: SteamAPI_RunCallbacks drains queued Steam callbacks (168 only) from the helper; an old helper answers STATUS_ERR, which bridge_transact reports as 0 and the registry treats as empty.
+#define BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS 6
 #define GAMELIB_INIT_FN_STEAMAPI_INIT 0
 #define GAMELIB_INIT_FN_STEAMINTERNAL_INIT 1
 #define GAMELIB_INIT_FN_STEAMAPI_INITSAFE 2
@@ -2881,6 +2885,18 @@ static void gamelib_report_init(uint32_t fn, int32_t ret) {
   memcpy(req + 4, &ret, 4);
   (void)bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_REPORT_INIT, req, 8, retbuf, sizeof(retbuf), &retlen);
 }
+
+/* Phase 55: callback registry embedder. Lock rule: g_cb_registry_lock is never
+ * held across bridge_transact or a game Run call, and g_bridge_lock is never
+ * held while calling into the registry (SteamAPI_Shutdown clears after release). */
+static SRWLOCK g_cb_registry_lock = SRWLOCK_INIT;
+#define GL_CB_LOCK() AcquireSRWLockExclusive(&g_cb_registry_lock)
+#define GL_CB_UNLOCK() ReleaseSRWLockExclusive(&g_cb_registry_lock)
+static uint32_t gl_cb_now_ms(void) { return (uint32_t)GetTickCount(); }
+static int gl_cb_transport_drain(uint8_t *buf, uint32_t cap, uint32_t *lenOut) {
+  return bridge_transact(BRIDGE_CONTROL_ORDINAL, BRIDGE_CONTROL_SLOT_DRAIN_CALLBACKS, NULL, 0, buf, cap, lenOut);
+}
+${generateCallbackRegistryC()}
 
 typedef void *vfn;
 
