@@ -5,7 +5,7 @@ Tier-1 per-game fixes for [GameLib](https://github.com/grayson-mitchell/GameLib)
 GameLib fetches this repo first when a game is installed. For Epic, GOG and Amazon, if no file
 exists here GameLib falls back to
 [Heroic-Games-Launcher/known-fixes](https://github.com/Heroic-Games-Launcher/known-fixes). For
-Steam and Zoom only this repo is consulted. A file here fully replaces Heroic's for that game
+Steam only this repo is consulted. A file here fully replaces Heroic's for that game
 (whole file, no merge). Local and bundled fixes inside the app take precedence over anything
 fetched from here.
 
@@ -29,7 +29,6 @@ https://raw.githubusercontent.com/grayson-mitchell/known-fixes/main/<store>/<app
 | `gog`     | the GOG product id              |
 | `amazon`  | the Nile id                     |
 | `steam`   | the Steam appId, e.g. `284100`  |
-| `zoom`    | the Zoom id                     |
 
 ## Allowed keys
 
