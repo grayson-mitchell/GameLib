@@ -533,3 +533,13 @@ Plans:
 **Gap wave 2** *(blocked on 53-17, 53-18, 53-19)*
 
 - [x] 53-20-PLAN.md — rebuild, desk gate, full live re-run (Overlooting first), honest census re-measure of the done-when (operator checkpoint)
+
+### Phase 54: Steam library without an authenticated CM session at launch
+
+**Goal:** Launching GameLib no longer signs the user's Mac Steam Friends list out. Debug session `friends-signout-steam-user` (2026-10-25) showed that any authenticated steam-user CM logon for the account does this, and no logon setting avoids it (`chat_mode` 0, a distinct `logonID`, `setPersona` Online and Invisible all still flip; skipping the logon does not). So the launch path must stop logging on: the owned-games list moves to the Web API (`IPlayerService/GetOwnedGames` with an access token from the stored refresh token, as Playnite does), public PICS reads (platform capture, game page, install location, bridge launch target) move to an anonymous CM session, and an authenticated session is opened only for depot installs and closed after. Reopens the frozen `.planning/research/STEAM-STACK.md` decision, which must be updated with the reason. Source todo: `2026-10-24-friends-sign-out-steam-user-logon.md`.
+**Requirements**: TBD
+**Depends on:** Phase 53
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 54 to break down)
