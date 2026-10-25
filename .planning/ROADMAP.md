@@ -543,3 +543,13 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 54 to break down)
+
+### Phase 55: Steam bridge callback delivery for the web-API auth ticket
+
+**Goal:** A bridged game that asks for a web-API auth ticket gets one. `ISteamUser::GetAuthTicketForWebApi(pchIdentity)` is forwarded to real Mac Steam through the helper. The helper captures `GetTicketForWebApiResponse_t` (callback 168) from its own callback pump and queues it. The shim records `SteamAPI_RegisterCallback` registrations, and `SteamAPI_RunCallbacks` drains queued callbacks over a new CONTROL slot and dispatches them to the registered `CCallbackBase` objects. The MSVC vtable slot of `Run(void*)` is measured on x64 and x86, never assumed. Root cause and evidence: `.planning/debug/abiotic-factor-loading-hang.md`. Reusable diagnostic trace: `.planning/debug/abiotic-factor-loading-hang.trace.patch`. Done when (live gate): Abiotic Factor (427410) reaches an interactive main menu and the game log shows an EOS Connect user login.
+**Requirements**: TBD
+**Depends on:** Phase 53
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 55 to break down)
