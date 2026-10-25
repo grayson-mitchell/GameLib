@@ -549,7 +549,28 @@ Plans:
 **Goal:** A bridged game that asks for a web-API auth ticket gets one. `ISteamUser::GetAuthTicketForWebApi(pchIdentity)` is forwarded to real Mac Steam through the helper. The helper captures `GetTicketForWebApiResponse_t` (callback 168) from its own callback pump and queues it. The shim records `SteamAPI_RegisterCallback` registrations, and `SteamAPI_RunCallbacks` drains queued callbacks over a new CONTROL slot and dispatches them to the registered `CCallbackBase` objects. The MSVC vtable slot of `Run(void*)` is measured on x64 and x86, never assumed. Root cause and evidence: `.planning/debug/abiotic-factor-loading-hang.md`. Reusable diagnostic trace: `.planning/debug/abiotic-factor-loading-hang.trace.patch`. Done when (live gate): Abiotic Factor (427410) reaches an interactive main menu and the game log shows an EOS Connect user login.
 **Requirements**: TBD
 **Depends on:** Phase 53
-**Plans:** 0 plans
+**Plans:** 7 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 55 to break down)
+
+**Wave 1**
+
+- [ ] 55-01-PLAN.md — forward GetAuthTicketForWebApi (SteamUser023 slot 14, in-string identity) via manifest + wire-policy; regenerate (P55-1, P55-8)
+- [ ] 55-02-PLAN.md — measure MSVC CCallbackBase layout with pinned zig (Run(void*) slot, flag/iCallback offsets x64+x86) as constants + test (P55-2)
+- [ ] 55-03-PLAN.md — helper manual dispatch, bounded allowlist ring for callback 168, CONTROL slot 6 DRAIN, protocol.ts constant (P55-4, P55-5, P55-6)
+
+**Wave 2** *(blocked on 55-01, 55-02, 55-03)*
+
+- [ ] 55-04-PLAN.md — generated shim callback registry + out-of-lock dispatcher, host-harness proven (P55-3)
+
+**Wave 3** *(blocked on 55-04)*
+
+- [ ] 55-05-PLAN.md — wire registry into shim exports, drain slot triple pin, PE build gates, idempotence, full suite (P55-3, P55-4, P55-6, P55-7, P55-8)
+
+**Wave 4** *(blocked on 55-03, 55-05)*
+
+- [ ] 55-06-PLAN.md — author the Abiotic Factor 427410 live-gate contract + Structural Reachability Review + pending UAT; x86 deferral todo (P55-LIVE)
+
+**Wave 5** *(blocked on 55-06)*
+
+- [ ] 55-07-PLAN.md — run the live gate (operator checkpoint), score UAT, pin the EOS login literal (P55-LIVE)
