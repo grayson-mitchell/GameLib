@@ -44,7 +44,7 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
    | `registry` | prefix registry, scoped to `AppDefaults\<exe>` where possible | 031 |
    | `dllOverrides` | shorthand for `AppDefaults\<exe>\DllOverrides`. **CrossOver's `wine` wrapper drops `WINEDLLOVERRIDES`**, so env-var overrides silently do nothing | 031 |
    | `overlays` | sha-pinned components placed beside the exe (e.g. Mesa 26.2.4 x86 `opengl32.dll` + `libgallium_wgl.dll`); add-only, recorded, removable | 031 |
-   | `shimFeatures` | generic, data-parameterised capabilities in the steam_api shim, passed through the per-app `gamelib_bridge.cfg`, e.g. `"wgl.hideExtensions": ["WGL_ARB_create_context*"]` | 033 |
+   | `shimFeatures` | generic, data-parameterised capabilities in the steam_api shim, e.g. `"wgl.hideExtensions": ["WGL_ARB_create_context*"]`. **Implemented** (spike 034, quick 261026-ng9). Transport: `fix.<feature>=<value>` lines in the per-app `gamelib_bridge.cfg` written by `writeBridgeConfig`, read by `native/steam-bridge/shim/shim_features.c` at `DLL_PROCESS_ATTACH`. Tier 2 only (bundled/local), never remote | 033, 034 |
    | `launchNotice` | UI text, e.g. "first screen freezes ~25s while loading (x87 code under Rosetta)". **Tier 1** (decision 1); the rest of this table is tier 2 | 033 |
    | `platforms` | scoping per OS, runtime version range (`crossover>=26.3`), and an exe sha guard | 030 |
    | `evidence` | link to the spike or debug artifact that justifies the profile | — |
@@ -88,7 +88,7 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
 
 | Finding | Building block |
 |---|---|
-| GL 3.3-compat request; hide `WGL_ARB_create_context` | `shimFeatures.wgl.hideExtensions` (033, proven on the unmodified exe) |
+| GL 3.3-compat request; hide `WGL_ARB_create_context` | `shimFeatures.wgl.hideExtensions`: implemented, bundled (`public/fixes/63000-steam.profile.json`; spike 034, quick 261026-ng9) |
 | Alternative: Mesa softpipe gives a real 3.3 compat context | `overlays` (Mesa x86) + `dllOverrides {opengl32: native}` + `envVariables {GALLIUM_DRIVER: softpipe}` (031) |
 | ~24s splash freeze is x87 code under Rosetta | `launchNotice`. Not fixable by any building block (033) |
 | `DisabledExtensions` registry, `CX_FWD_COMPAT_GL_CTX` | Proven useless for this case; listed so they aren't retried (030) |
@@ -107,11 +107,16 @@ UI. Building each one into the app per game would turn GameLib into a pile of be
 - How overlays are distributed: download on demand from pinned upstream URLs with a sha check
   (preferred, keeps the app small), or a GameLib-hosted mirror.
 - Ledger format and location (inside the bottle vs GameLib's own config dir).
-- Whether `shimFeatures` belong in `gamelib_bridge.cfg`'s existing `key=value` grammar or in a
-  separate section.
+- ~~Whether `shimFeatures` belong in `gamelib_bridge.cfg`'s existing `key=value` grammar or in a
+  separate section.~~ Decided (quick 261026-ng9): the existing grammar, with a `fix.` key prefix.
 - How the diagnostic mode reaches the user: a per-game settings toggle vs a launch-menu item.
 
 ## Next
 
 Spike 034 (registered in `.planning/spikes/MANIFEST.md`) prototypes the schema end-to-end with
 Hoard, using two alternative profiles from one local override file.
+
+Update (quick 261026-ng9): spike 034 ran option (a) only (data-only `shimFeatures`) and is
+productionised. Option (b) (`overlays`, `dllOverrides`, ledger) remains open, as does the
+packaged-build retest of Hoard with the bundled profile, which must pass before Hoard's
+does-not-run entry in `bridge-allowlist.json` is lifted.

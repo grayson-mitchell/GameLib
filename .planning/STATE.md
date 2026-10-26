@@ -74,7 +74,7 @@ See: .planning/PROJECT.md (updated 2026-10-16)
 Phase: 55
 Plan: 7 of 7 — Phase 55 complete; the milestone is complete, so the next phase is an operator choice
 Status: Milestone complete
-Last activity: 2026-10-26 - Completed quick task 261026-mhg: revise bridge shim withhold rule for non-core interface gaps
+Last activity: 2026-10-26 - Completed quick task 261026-ng9: productionise spike 034 (shimFeatures known-fix profiles; Hoard profile bundled)
 
 Progress: [██████████] 100%
 
@@ -392,6 +392,7 @@ Rows before the newest 20 live in [quick/COMPLETED-INDEX.md](./quick/COMPLETED-I
 | 261026-kyv | WR-04 shim socket lock was already fixed in 082ff80db (static `SRWLOCK g_bridge_lock` around connect + transact + retry); 4 gen_vtables tests now pin it (lock order in `bridge_transact`, transport fns reachable only via the locked path, `g_bridge_sock` uses lock-held), each mutation-proven. Todo narrowed to its live multi-threaded Wine gate, severity minor. | 2026-10-26 | e88486bf4 | code-verified (233/233); live gate PASS (Abiotic: 2 bridge threads, 6 lock waits, 0 failures/mismatches, clean Shutdown); todo closed | [261026-kyv-pin-the-shim-bridge-srwlock-with-a-regre](./quick/261026-kyv-pin-the-shim-bridge-srwlock-with-a-regre/) |
 | 261026-lif | Restore missing `.gamelib-orig` bridge originals: filtered depot fetch (`downloadSelectedDepotFiles`) + `restoreBridgeSteamApiOriginals`, original fingerprints in the verdict with rescan on a new/changed backup (incl. already-placed), real `SteamGame.repair()` + Steam "Verify and Repair" menu item. Live backfill: all 11 bottles backed up. | 2026-10-26 | 39692c70a | live backfill done (11/11 backed up); fresh scans withhold 4 titles, ELEX regressed (follow-up: withhold rule); todo closed | [261026-lif-restore-missing-gamelib-orig-bridge-orig](./quick/261026-lif-restore-missing-gamelib-orig-bridge-orig/) |
 | 261026-mhg | Bridge shim withhold rule revised: `classifyUnservableInterfaceVersions` splits version gaps into blocking (SteamClient/User/Friends/Utils/Apps/UserStats, or NULL-answered) and non-core (null-object-answered); withhold only on a delay-import miss or a blocking gap, in both static and runtime-loaded branches. Fixes the 261026-lif ELEX regression. | 2026-10-26 | c300f9904 | live: ELEX, Mining Mechs, Overlooting, Age of Decadence placed + HELLO + launched fine; Grim Dawn placed + forwarder + HELLO but fails on the known SteamStub launch check | [261026-mhg-revise-bridge-shim-withhold-rule-for-non](./quick/261026-mhg-revise-bridge-shim-withhold-rule-for-non/) |
+| 261026-ng9 | Spike 034 productionised: tier-2 `shimFeatures` (`wgl.hideExtensions`) → `gamelib_bridge.cfg` `fix.` lines via `steamShimFeatureCfgLines`/`writeBridgeConfig`; hand-written `native/steam-bridge/shim/shim_features.c` (the shim's only DllMain, IAT hook only when a pattern parses, `OutputDebugStringA` logging) compiled into both x86 and x64 shims; Hoard profile bundled at `public/fixes/63000-steam.profile.json`. Allowlist untouched. | 2026-10-26 | 9b9f2b5ef | built + tested (both DLLs carry the feature, 0 UBSan strings); packaged-build Hoard retest pending before lifting its `does-not-run` entry | [261026-ng9-productionise-spike-034-shimfeatures-kno](./quick/261026-ng9-productionise-spike-034-shimfeatures-kno/) |
 
 ## Deferred Items
 
