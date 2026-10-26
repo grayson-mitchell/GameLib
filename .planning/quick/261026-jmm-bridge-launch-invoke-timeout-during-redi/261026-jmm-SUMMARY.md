@@ -20,8 +20,8 @@ Added `"launch"` to `LONG_RUNNING_CHANNELS` in `src-tauri/src/main.rs`. The entr
 - jest Library: 1166 passed
 - pnpm planning-gates: 11/12. The failing gate is the STATE.md field-anchor check ("Plan: Not started" does not match `<N> of <M>`). This predates the task and is unrelated to the files changed.
 
-## Residual
-The live done-when (continuous Play-button state, no unhandled rejection on a redist-installing first launch) is NOT verified. It needs a live relaunch.
+## Live gate
+**Live gate: pass — 2026-10-26.** Manor Lords (1363080), operator-driven `tauri dev` restarted after the fix (shell binary built 14:12:00 after the `main.rs` edit, shell pid 84859 started 14:15:10). Redist state reset: ledger moved to `gamelib-shared-redists.json.bak`, `HKLM\Software\Valve\Steam\Apps\CommonRedist` deleted with `reg delete /reg:32` (`system.reg` count 0 once wineserver flushed). Launched from the Library card at 14:18:20: vcredist 2022 x86/x64 installed 14:18:38-14:19:05, DirectX Jun2010 at 14:19:41, game started 14:19:43 (about 83 s from click), HELLO and GINIT ok=1 at 14:19:44. `gamelib.log` carries no `unhandled-rejection`; `gamelib-shell.log` carries no `invoke abandoned (timeout)` or `(dropped)` line for `channel=launch` under pid 84859 (earlier shell pids show five such pairs, including the 10-25 Manor Lords run). The operator reports the Library card showed `Installing Redistributables` and stayed steady until the game started. The ledger was rewritten and settled.
 
 ## Deviations
 None.
