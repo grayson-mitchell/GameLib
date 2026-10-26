@@ -21,8 +21,9 @@
  * + bounded array schemas, parsed once at module load. Unlike the
  * 1000+-entry CrossOver index, `seed` is small and developer-curated
  * (`.min(1)`, not `.min(1000)`); `knownBad` holds only
- * evidence-backed entries (XCOM 200510, Hoard 63000, ELEX 411300 so far)
- * and may legitimately be empty, so it has no `.min()` floor. A
+ * evidence-backed entries (XCOM 200510 and ELEX 411300 so far; Hoard 63000
+ * was lifted by quick 261026-ous once its bundled known-fix profile made it
+ * run) and may legitimately be empty, so it has no `.min()` floor. A
  * malformed entry (missing `appId`, wrong `version`, a `knownBad.reason`
  * outside the closed taxonomy, etc.) throws AT LOAD, fail-loud, rather than
  * silently dropping (T-24-05 mitigation). This is a deliberate posture: the

@@ -166,14 +166,14 @@ describe('classifyCensusTitle', () => {
     expect(row.detail).toBe('drm-wrapped')
   })
 
-  it('a does-not-run title (Hoard 63000) still classifies "known-bad" in the census', () => {
+  it('a does-not-run title (ELEX 411300) still classifies "known-bad" in the census', () => {
     const row = classifyCensusTitle({
-      appid: '63000',
-      name: 'Hoard',
-      installdir: 'Hoard',
+      appid: '411300',
+      name: 'ELEX',
+      installdir: 'ELEX',
       knownBadReason: 'does-not-run',
       exe: {
-        arch: 'x86',
+        arch: 'x64',
         symbols: ['SteamUser'],
         dllVersions: ['SteamUser023'],
         exeVersions: []
@@ -461,9 +461,9 @@ describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
 
   it('a detected CEG beats a bundled does-not-run reason', () => {
     const row = classifyCensusTitle({
-      appid: '63000',
-      name: 'Hoard',
-      installdir: 'Hoard',
+      appid: '411300',
+      name: 'ELEX',
+      installdir: 'ELEX',
       knownBadReason: 'does-not-run',
       steamDrm: { cegMarkers: ['STEAM_GUIDD'], hasBindSection: false },
       exe: coveredExe
@@ -506,9 +506,9 @@ describe('quick 261024-br4: detected Steam CEG / SteamStub .bind', () => {
 
   it('a known-bad row never gains the .bind suffix', () => {
     const row = classifyCensusTitle({
-      appid: '63000',
-      name: 'Hoard',
-      installdir: 'Hoard',
+      appid: '411300',
+      name: 'ELEX',
+      installdir: 'ELEX',
       knownBadReason: 'does-not-run',
       steamDrm: { cegMarkers: [], hasBindSection: true },
       exe: coveredExe

@@ -33,12 +33,6 @@
       "note": "51-UAT item 5 (2026-10-22): scan clean and the shim loads, but XComGame.exe reads PE resources STEAM_SPLIT_GUID/STEAM_GUIDD/STEAM_MINSTANCE, writes XComGame.exe.<pid>.STEAMSTART, idles ~30s and exits without ever calling SteamAPI_Init -- Steam CEG waiting for a Windows Steam client a bridge bottle cannot provide. Inferred from a CrossOver --cx-log trace; CEG diagnosis CONFIRMED by 51-UAT item 17 (2026-10-23): under the bottled Windows Steam client XCOM: Enemy Within reaches its main menu, so CEG needs a Windows Steam client. The base Enemy Unknown build then crashes after its shell starts loading, a Wine-level crash CrossOver rates 3 stars; reason stays drm-wrapped because the bridge cannot satisfy CEG."
     },
     {
-      "appId": "63000",
-      "title": "HOARD",
-      "reason": "does-not-run",
-      "note": "51-UAT item 4 (2026-10-22, packaged debug bundle, fresh Mac): the bridge half passed (per-game bottle GameLibSteamBridge-63000, LISTEN/INIT/HELLO for appid 63000, stubbed-interface notice shown) but Reuben.exe shows a crash dialog before reaching single-player. The operator confirms this is the same crash Hoard has always had under CrossOver, before the bridge existed: a Wine-level incompatibility, not a bridge defect. Part B (USER/FRIENDS dispatch) never observed. Retiring Hoard as the D-51-14 acceptance anchor is an operator decision recorded by 51-28."
-    },
-    {
       "appId": "411300",
       "title": "ELEX",
       "reason": "does-not-run",

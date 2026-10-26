@@ -161,7 +161,7 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(() => bridgeAllowlistSchema.parse(JSON.parse(raw))).not.toThrow()
   })
 
-  test('the bundled bridge-allowlist.json is version 2 with XCOM as its evidence-backed knownBad entries (51-19, 51-27)', () => {
+  test('the bundled bridge-allowlist.json is version 2 with XCOM and ELEX as its evidence-backed knownBad entries (51-19, 51-27)', () => {
     const raw = readFileSync(
       join(__dirname, '..', 'bridge-allowlist.json'),
       'utf-8'
@@ -171,27 +171,26 @@ describe('bridgeAllowlist (loaded from the bundled bridge-allowlist.json)', () =
     expect(parsed.version).toBe(2)
     expect(parsed.knownBad.map((e: { appId: string }) => e.appId)).toEqual([
       '200510',
-      '63000',
       '411300'
     ])
     expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
   })
 
-  test('the real bundle: 63000 and 411300 are does-not-run, 200510 is drm-wrapped (D-51-08 amendment)', () => {
-    expect(bridgeAllowlist.knownBadReason('63000')).toBe('does-not-run')
+  test('the real bundle: 411300 is does-not-run, 200510 is drm-wrapped (D-51-08 amendment)', () => {
     expect(bridgeAllowlist.knownBadReason('411300')).toBe('does-not-run')
     expect(bridgeAllowlist.knownBadReason('200510')).toBe('drm-wrapped')
   })
 
-  test('HOARD (63000) is known-bad as does-not-run, citing 51-UAT item 4', () => {
-    expect(bridgeAllowlist.knownBadReason(HOARD_APP_ID)).toBe('does-not-run')
+  // Evidence: 261026-ng9 SUMMARY "Live retest: packaged debug build" (2026-10-26):
+  // reached the menu, ran 97 s, `GINIT ... ok=1`.
+  test('HOARD (63000) is no longer known-bad: its bundled known-fix profile makes it run (quick 261026-ng9 packaged retest)', () => {
+    expect(bridgeAllowlist.knownBadReason(HOARD_APP_ID)).toBeNull()
     const parsed = JSON.parse(
       readFileSync(join(__dirname, '..', 'bridge-allowlist.json'), 'utf-8')
     )
-    const hoard = parsed.knownBad.find(
-      (e: { appId: string }) => e.appId === HOARD_APP_ID
-    )
-    expect(hoard.note).toMatch(/51-UAT item 4/)
+    expect(
+      parsed.knownBad.some((e: { appId: string }) => e.appId === HOARD_APP_ID)
+    ).toBe(false)
   })
 
   test('ELEX (411300) is known-bad as does-not-run, citing 51-UAT item 15, and is not in seed', () => {
