@@ -3178,3 +3178,33 @@ describe('callback delivery wiring (P55-6)', () => {
     )
   })
 })
+
+describe('55 WR-02: bridge_transact_once malformed and oversized responses', () => {
+  const c = generateShimC(loadAllManifests())
+  const start = c.indexOf('static int bridge_transact_once(')
+  expect(start).toBeGreaterThan(-1)
+  const body = c.slice(start, c.indexOf('\n}\n', start) + 3)
+
+  it('a frame shorter than request_id+status sets transportFailed before respLen is subtracted', () => {
+    const guard = body.search(
+      /if \(respLen < 5\) \{ \*transportFailed = 1; return 0; \}/
+    )
+    const subtraction = body.indexOf('respLen - 5')
+    expect(guard).toBeGreaterThan(-1)
+    expect(subtraction).toBeGreaterThan(-1)
+    expect(guard).toBeLessThan(subtraction)
+  })
+
+  it('an oversized response drops the connection without flagging transportFailed (no resend of a non-idempotent request)', () => {
+    const open = body.indexOf('if (retLen > retBufCap) {')
+    expect(open).toBeGreaterThan(-1)
+    const branch = body.slice(open, body.indexOf('\n  }\n', open) + 5)
+    expect(branch).toContain('closesocket(g_bridge_sock);')
+    expect(branch).toContain('g_bridge_sock = INVALID_SOCKET;')
+    expect(branch).toContain('return 0;')
+    expect(branch).not.toMatch(/\*transportFailed\s*=\s*1/)
+    expect(branch.indexOf('closesocket')).toBeLessThan(
+      branch.indexOf('return 0;')
+    )
+  })
+})
