@@ -24,7 +24,7 @@
  * tmp-then-rename (atomic replace, never a partially-written file visible
  * to a concurrently-reading shim).
  */
-import { renameSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
 import { logError, logWarning, LogPrefix } from 'backend/logger'
@@ -42,6 +42,9 @@ const NUMERIC_APP_ID = /^\d+$/
  */
 export const BRIDGE_CONFIG_FILENAME = 'gamelib_bridge.cfg'
 
+// WR-03: the per-helper-spawn launch secret (64 lowercase hex chars).
+const BRIDGE_SECRET_PATTERN = /^[0-9a-f]{64}$/
+
 const MIN_EPHEMERAL_PORT = 1024
 const MAX_PORT = 65535
 
@@ -51,6 +54,10 @@ interface WriteBridgeConfigArgs {
   bottleName: string
   appId: string
   port: number
+  /** WR-03: the launch secret of the SAME helper entry whose `port` is
+   * given (from `ensureBridgeHelperReady`'s result). Written as a
+   * `secret=` line so the shim can authenticate its HELLO. */
+  secret: string
   /** Optional `Family=Version` pins (e.g. `{ SteamUser: '023' }`) -- future
    * interfaces may want the shim to know which version it is speaking to,
    * without hardcoding it into the generated source. Omitted entirely when
@@ -91,6 +98,14 @@ function isContainedWithin(
  * the shim-side parser (`meta/gen_vtables.ts`'s generated loader) is a
  * tiny fixed-format C reader, not a general parser.
  *
+ * WR-03: a `secret=<64 hex>` line follows `appid=`, and every copy is written
+ * mode 0600 (tmp written 0600, chmod'd in case a stale tmp pre-existed, then
+ * renamed over the target, so the final inode is 0600). Threat model: other OS
+ * users / processes that cannot read this user's files; a same-user attacker
+ * can read this file and the stored refresh token and is out of scope. The
+ * secret comes from the same `ensureBridgeHelperReady` result as the port
+ * (the exact helper entry that was probed) and is never logged.
+ *
  * Every input is guarded before any path/write operation:
  *  1. `appId` must be numeric (T-51-03 lineage).
  *  2. `port` must be an integer in the ephemeral/registered range
@@ -122,6 +137,7 @@ export function writeBridgeConfig(
     bottleName,
     appId,
     port,
+    secret,
     interfaceVersions,
     shimPaths,
     fixLines
@@ -141,6 +157,15 @@ export function writeBridgeConfig(
       LogPrefix.Steam
     )
     return { status: 'error', error: `Invalid port: ${port}` }
+  }
+
+  if (typeof secret !== 'string' || !BRIDGE_SECRET_PATTERN.test(secret)) {
+    // Never echo the value -- length only.
+    logWarning(
+      `writeBridgeConfig: rejected invalid launch secret (length ${typeof secret === 'string' ? secret.length : 'n/a'}) for appId ${appId} -- not writing a config (WR-03)`,
+      LogPrefix.Steam
+    )
+    return { status: 'error', error: 'Invalid bridge launch secret' }
   }
 
   const sanitizedBottleName = sanitizeBottleName(bottleName)
@@ -184,7 +209,7 @@ export function writeBridgeConfig(
     if (!targetDirs.includes(shimDir)) targetDirs.push(shimDir)
   }
 
-  const lines = [`port=${port}`, `appid=${appId}`]
+  const lines = [`port=${port}`, `appid=${appId}`, `secret=${secret}`]
   if (interfaceVersions) {
     for (const [family, version] of Object.entries(interfaceVersions)) {
       lines.push(`iface.${family}=${version}`)
@@ -207,7 +232,9 @@ export function writeBridgeConfig(
     const configPath = join(dir, BRIDGE_CONFIG_FILENAME)
     const tmpPath = `${configPath}.tmp`
     try {
-      writeFileSync(tmpPath, content, 'utf-8')
+      writeFileSync(tmpPath, content, { encoding: 'utf-8', mode: 0o600 })
+      // A stale pre-existing .tmp keeps its old mode through writeFileSync.
+      chmodSync(tmpPath, 0o600)
       renameSync(tmpPath, configPath)
     } catch (error) {
       try {

@@ -510,6 +510,9 @@ const flushAsync = () => new Promise<void>((resolve) => setImmediate(resolve))
 
 // ── Describe block ────────────────────────────────────────────────────────────
 
+// WR-03: the helper's per-launch secret as ensureBridgeHelperReady returns it.
+const BRIDGE_TEST_SECRET = 'ab'.repeat(32)
+
 describe('SteamGame.getGameInfo lazy metadata', () => {
   beforeEach(() => {
     library.clear()
@@ -1751,7 +1754,8 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
     ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
       status: 'ready',
       ready: true,
-      port: 55123
+      port: 55123,
+      secret: BRIDGE_TEST_SECRET
     })
     ;(writeBridgeConfig as jest.Mock).mockReset().mockReturnValue({
       status: 'written',
@@ -2010,6 +2014,7 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       bottleName: 'GameLibSteamBridge',
       appId: APP_ID,
       port: 55123,
+      secret: BRIDGE_TEST_SECRET,
       shimPaths: [RESOLVED_EXE_PATH]
     })
     // quick/261016-u1w (D-B threading): getBridgeBottleSettings is now
@@ -3164,6 +3169,26 @@ describe('SteamGame.launch() — Phase 24 Plan 08 bridge routing (R4/R6/R7/findi
       RESOLVED_EXE_PATH,
       expect.objectContaining({ persistedOriginalFingerprints: scanFps })
     )
+  })
+
+  it('WR-03: helper ready:true but no secret -> game is NOT launched and no cfg is written (fail closed)', async () => {
+    const NOSECRET_APP_ID = '777777'
+    library.set(NOSECRET_APP_ID, makeEntry({ title: 'No Secret Game' }))
+    ;(bridgeAllowlist.has as jest.Mock).mockReturnValue(true)
+    ;(isBottleReady as jest.Mock).mockReturnValue(true)
+    ;(resolveBridgeLaunchExe as jest.Mock).mockResolvedValue(RESOLVED_EXE_PATH)
+    ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
+      status: 'ready',
+      ready: true,
+      port: 55123
+    })
+
+    const game = new SteamGame(NOSECRET_APP_ID)
+    const result = await game.launch({} as any)
+
+    expect(result).toBe(false)
+    expect(writeBridgeConfig).not.toHaveBeenCalled()
+    expect(runWineCommand).not.toHaveBeenCalled()
   })
 
   it('R7 forced failure: ensureBridgeHelperReady not-ready — game is NOT launched, markBridgeFailedThisSession applied, steamBridgeSetupRequired fired, and a subsequent launch() for the SAME appId skips the bridge (finding #3 bypass)', async () => {
@@ -9859,7 +9884,8 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
       status: 'fallback-identity',
       ready: true,
-      port: 55123
+      port: 55123,
+      secret: BRIDGE_TEST_SECRET
     })
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,
@@ -9897,7 +9923,8 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
       status: 'ready',
       ready: true,
-      port: 55123
+      port: 55123,
+      secret: BRIDGE_TEST_SECRET
     })
     const { logInfo } = jest.requireMock('backend/logger')
     const stubbedScan = {
@@ -9952,7 +9979,8 @@ describe('maybeNotifyBridgeLimited() — the one-time limited-features notice pl
     ;(ensureBridgeHelperReady as jest.Mock).mockResolvedValue({
       status: 'ready',
       ready: true,
-      port: 55123
+      port: 55123,
+      secret: BRIDGE_TEST_SECRET
     })
     ;(steamMetadataStore.get as jest.Mock).mockReturnValue({
       platformsCaptured: true,

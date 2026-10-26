@@ -18,13 +18,16 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync
+  rmSync,
+  statSync,
+  writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { writeBridgeConfig, BRIDGE_CONFIG_FILENAME } from '../bridgeConfig'
 import { getBottleDir } from '../../bottle'
+import { logError, logWarning } from 'backend/logger'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -58,6 +61,7 @@ const mockedGetBottleDir = getBottleDir as jest.Mock
 
 const APP_ID = '206060'
 const PORT = 55123
+const SECRET = 'ab'.repeat(32)
 
 describe('bridgeConfig.ts -- writeBridgeConfig', () => {
   let root: string
@@ -83,14 +87,15 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
-      port: PORT
+      port: PORT,
+      secret: SECRET
     })
 
     const expectedPath = join(gameDir, BRIDGE_CONFIG_FILENAME)
     expect(result).toEqual({ status: 'written', path: expectedPath })
     expect(existsSync(expectedPath)).toBe(true)
     expect(readFileSync(expectedPath, 'utf-8')).toBe(
-      `port=${PORT}\nappid=${APP_ID}\n`
+      `port=${PORT}\nappid=${APP_ID}\nsecret=${SECRET}\n`
     )
     // No stray .tmp file left behind on success.
     expect(existsSync(`${expectedPath}.tmp`)).toBe(false)
@@ -102,13 +107,14 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
       port: PORT,
+      secret: SECRET,
       interfaceVersions: { SteamUser: '023', SteamFriends: '018' }
     })
 
     expect(result.status).toBe('written')
     const content = readFileSync(join(gameDir, BRIDGE_CONFIG_FILENAME), 'utf-8')
     expect(content).toBe(
-      `port=${PORT}\nappid=${APP_ID}\niface.SteamUser=023\niface.SteamFriends=018\n`
+      `port=${PORT}\nappid=${APP_ID}\nsecret=${SECRET}\niface.SteamUser=023\niface.SteamFriends=018\n`
     )
   })
 
@@ -120,7 +126,8 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       exePath: outsidePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
-      port: PORT
+      port: PORT,
+      secret: SECRET
     })
 
     expect(result.status).toBe('error')
@@ -134,7 +141,8 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: 'not-numeric',
-      port: PORT
+      port: PORT,
+      secret: SECRET
     })
 
     expect(result).toEqual({
@@ -150,7 +158,8 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
-      port: 54
+      port: 54,
+      secret: SECRET
     })
 
     expect(result).toEqual({ status: 'error', error: 'Invalid port: 54' })
@@ -162,7 +171,8 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
-      port: 70000
+      port: 70000,
+      secret: SECRET
     })
 
     expect(result.status).toBe('error')
@@ -174,7 +184,8 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       exePath: gameExePath,
       bottleName: '../escape',
       appId: APP_ID,
-      port: PORT
+      port: PORT,
+      secret: SECRET
     })
 
     expect(result.status).toBe('error')
@@ -199,6 +210,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
         bottleName: BOTTLE,
         appId: APP_ID,
         port: PORT,
+        secret: SECRET,
         shimPaths: [join(pluginsDir, 'steam_api64.dll')]
       })
 
@@ -209,7 +221,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
         path: exeCfg,
         extraPaths: [shimCfg]
       })
-      const expected = `port=${PORT}\nappid=${APP_ID}\n`
+      const expected = `port=${PORT}\nappid=${APP_ID}\nsecret=${SECRET}\n`
       expect(readFileSync(exeCfg, 'utf-8')).toBe(expected)
       expect(readFileSync(shimCfg, 'utf-8')).toBe(expected)
       expect(existsSync(`${exeCfg}.tmp`)).toBe(false)
@@ -222,6 +234,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
         bottleName: BOTTLE,
         appId: APP_ID,
         port: PORT,
+        secret: SECRET,
         shimPaths: [join(gameDir, 'steam_api.dll')]
       })
 
@@ -241,6 +254,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
         bottleName: BOTTLE,
         appId: APP_ID,
         port: PORT,
+        secret: SECRET,
         shimPaths: [join(sub, 'steam_api.dll'), join(sub, 'steam_api64.dll')]
       })
 
@@ -259,6 +273,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
         bottleName: BOTTLE,
         appId: APP_ID,
         port: PORT,
+        secret: SECRET,
         shimPaths: [join(root, 'outside', 'steam_api64.dll')]
       })
 
@@ -278,6 +293,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
         bottleName: BOTTLE,
         appId: APP_ID,
         port: PORT,
+        secret: SECRET,
         shimPaths: [join(missing, 'steam_api64.dll')]
       })
 
@@ -291,7 +307,8 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       exePath: gameExePath,
       bottleName: 'GameLibSteamBridge-206060',
       appId: 'not-numeric',
-      port: PORT
+      port: PORT,
+      secret: SECRET
     })
 
     expect(existsSync(join(gameDir, `${BRIDGE_CONFIG_FILENAME}.tmp`))).toBe(
@@ -306,6 +323,7 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
       bottleName: 'GameLibSteamBridge-206060',
       appId: APP_ID,
       port: PORT,
+      secret: SECRET,
       fixLines: [
         'fix.wgl.hideExtensions=WGL_ARB_create_context*',
         'port=1',
@@ -314,7 +332,95 @@ describe('bridgeConfig.ts -- writeBridgeConfig', () => {
     })
     expect(result.status).toBe('written')
     expect(readFileSync(join(gameDir, BRIDGE_CONFIG_FILENAME), 'utf-8')).toBe(
-      `port=${PORT}\nappid=${APP_ID}\nfix.wgl.hideExtensions=WGL_ARB_create_context*\n`
+      `port=${PORT}\nappid=${APP_ID}\nsecret=${SECRET}\nfix.wgl.hideExtensions=WGL_ARB_create_context*\n`
     )
+  })
+
+  // WR-03: the launch secret rides in the cfg, mode 0600, in every copy.
+  describe('WR-03 secret= line and 0600 mode', () => {
+    const BOTTLE = 'GameLibSteamBridge-206060'
+    const posix = process.platform !== 'win32'
+
+    test('secret= follows appid= in every copy (exe dir + shim dir), each 0600', () => {
+      const unityDir = join(gameDir, 'Game_Data', 'Plugins', 'x86_64')
+      mkdirSync(unityDir, { recursive: true })
+      const result = writeBridgeConfig({
+        exePath: gameExePath,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        secret: SECRET,
+        shimPaths: [join(unityDir, 'steam_api64.dll')]
+      })
+      expect(result.status).toBe('written')
+      const paths = [
+        join(gameDir, BRIDGE_CONFIG_FILENAME),
+        join(unityDir, BRIDGE_CONFIG_FILENAME)
+      ]
+      for (const p of paths) {
+        const lines = readFileSync(p, 'utf-8').split('\n')
+        expect(lines[1]).toBe(`appid=${APP_ID}`)
+        expect(lines[2]).toBe(`secret=${SECRET}`)
+        if (posix) expect(statSync(p).mode & 0o777).toBe(0o600)
+      }
+    })
+
+    test('a pre-existing 0644 .tmp does not leak its mode into the result', () => {
+      if (!posix) return
+      const target = join(gameDir, BRIDGE_CONFIG_FILENAME)
+      writeFileSync(`${target}.tmp`, 'stale', { mode: 0o644 })
+      const result = writeBridgeConfig({
+        exePath: gameExePath,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        secret: SECRET
+      })
+      expect(result.status).toBe('written')
+      expect(statSync(target).mode & 0o777).toBe(0o600)
+    })
+
+    test.each([
+      ['missing', undefined],
+      ['short', 'ab'.repeat(31)],
+      ['uppercase', 'AB'.repeat(32)],
+      ['non-hex', 'zz'.repeat(32)]
+    ])(
+      'a %s secret is rejected, nothing written, value never logged',
+      (_n, bad) => {
+        const result = writeBridgeConfig({
+          exePath: gameExePath,
+          bottleName: BOTTLE,
+          appId: APP_ID,
+          port: PORT,
+          secret: bad as unknown as string
+        })
+        expect(result.status).toBe('error')
+        expect(existsSync(join(gameDir, BRIDGE_CONFIG_FILENAME))).toBe(false)
+        expect(existsSync(join(gameDir, `${BRIDGE_CONFIG_FILENAME}.tmp`))).toBe(
+          false
+        )
+        const logged = JSON.stringify([
+          ...(logWarning as jest.Mock).mock.calls,
+          ...(logError as jest.Mock).mock.calls
+        ])
+        if (typeof bad === 'string') expect(logged).not.toContain(bad)
+      }
+    )
+
+    test('a valid secret is never passed to the logger', () => {
+      writeBridgeConfig({
+        exePath: gameExePath,
+        bottleName: BOTTLE,
+        appId: APP_ID,
+        port: PORT,
+        secret: SECRET
+      })
+      const logged = JSON.stringify([
+        ...(logWarning as jest.Mock).mock.calls,
+        ...(logError as jest.Mock).mock.calls
+      ])
+      expect(logged).not.toContain(SECRET)
+    })
   })
 })

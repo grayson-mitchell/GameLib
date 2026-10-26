@@ -2,7 +2,10 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
+  BRIDGE_SECRET_ENV,
+  BRIDGE_SECRET_HEX_LEN,
   CONTROL_ORDINAL,
+  HELLO_ROLE_PROBE,
   CONTROL_SLOT,
   FrameTooLargeError,
   FrameTruncatedError,
@@ -13,6 +16,7 @@ import {
   decodeRequest,
   decodeResponse,
   encodeControl,
+  encodeHello,
   encodeRequest,
   encodeResponse
 } from '../protocol'
@@ -299,5 +303,38 @@ describe('meta/sdk manifest ordinals (51-10 pin -- every ordinal unique, in-rang
     for (const m of manifests) {
       expect(m.ordinal).not.toBe(CONTROL_ORDINAL)
     }
+  })
+})
+
+describe('encodeHello (WR-03)', () => {
+  const SECRET = 'ab'.repeat(32)
+
+  it('carries the 64 ASCII hex secret bytes as the arg blob on CONTROL slot 2', () => {
+    const req = decodeRequest(encodeHello(7, SECRET))
+    expect(req.requestId).toBe(7)
+    expect(req.ordinal).toBe(CONTROL_ORDINAL)
+    expect(req.slot).toBe(CONTROL_SLOT.hello)
+    expect(req.argBlob).toHaveLength(BRIDGE_SECRET_HEX_LEN)
+    expect(req.argBlob.toString('ascii')).toBe(SECRET)
+  })
+
+  it('appends the single role byte when given', () => {
+    const req = decodeRequest(encodeHello(7, SECRET, HELLO_ROLE_PROBE))
+    expect(req.argBlob).toHaveLength(BRIDGE_SECRET_HEX_LEN + 1)
+    expect(req.argBlob[BRIDGE_SECRET_HEX_LEN]).toBe(0x01)
+  })
+
+  it.each([
+    ['short', 'ab'.repeat(31)],
+    ['uppercase', 'AB'.repeat(32)],
+    ['non-hex', 'zz'.repeat(32)],
+    ['empty', '']
+  ])('throws on a %s secret', (_n, bad) => {
+    expect(() => encodeHello(1, bad)).toThrow(RangeError)
+  })
+
+  it('exposes the env var name and hex length', () => {
+    expect(BRIDGE_SECRET_ENV).toBe('GAMELIB_BRIDGE_SECRET')
+    expect(BRIDGE_SECRET_HEX_LEN).toBe(64)
   })
 })

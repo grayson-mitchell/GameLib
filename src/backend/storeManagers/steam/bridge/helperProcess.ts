@@ -42,6 +42,7 @@
  */
 
 import { spawn, ChildProcess } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { Socket } from 'node:net'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -54,7 +55,10 @@ import {
 import { sendFrontendMessage } from 'backend/ipc'
 import { registerLongLivedChild } from 'backend/longLivedChildren'
 import {
+  BRIDGE_SECRET_ENV,
+  HELLO_ROLE_PROBE,
   encodeControl,
+  encodeHello,
   decodeResponse,
   STATUS_OK,
   FrameTooLargeError
@@ -125,6 +129,9 @@ interface EnsureBridgeHelperReadyResult {
    * present on every outcome except the up-front invalid-appId rejection
    * and a helper that never reported a LISTEN line at all. */
   port?: number
+  /** WR-03: the launch secret of the exact helper entry that was probed
+   * (same entry as `port`). Present on 'ready' / 'fallback-identity'. */
+  secret?: string
   error?: string
 }
 
@@ -148,6 +155,10 @@ interface BridgeHelperEntry {
    * SAME appId key either way -- `stopBridgeHelper`/`onStopped` tear it
    * down identically regardless of which kind it is. */
   identityOnly: boolean
+  /** WR-03: per-spawn launch secret (64 lowercase hex). Handed to the helper
+   * via env only (never argv) and to the shim via gamelib_bridge.cfg. Never
+   * logged. */
+  secret: string
 }
 
 // D-51-01: per-appId registry -- replaces the Phase 24 module-scoped
@@ -237,12 +248,14 @@ function sleep(ms: number): Promise<void> {
  * subdirectory so its `steam_appid.txt` (always "480") never collides with
  * a full-mode helper's for the same appId. Argv-form spawn (T-24-06) of the
  * fixed, packaged, arch-aware `steamBridgeHelperPath` (or the test
- * override) ONLY -- never an attacker-supplied binary path. No `env` option
- * is ever passed: the helper must inherit the REAL ambient environment (it
- * needs the real $HOME to find Steam's own dylib) -- this is a production
- * spawn, not an isolated child, and the project's fakeHomeIsolation gate
- * (`src/backend/__tests__/fakeHomeIsolation.test.ts`) pins that this file
- * never hand-rolls a home/config/state env block.
+ * override) ONLY -- never an attacker-supplied binary path. The base env is
+ * still the REAL ambient environment (the helper needs the real $HOME to
+ * find Steam's own dylib; or the createFakeHomeProfile override in tests)
+ * and exactly one var is added: the per-spawn WR-03 launch secret
+ * (`GAMELIB_BRIDGE_SECRET`, env only -- argv would be visible in `ps`).
+ * That is not a hand-rolled home/config/state env block, which the
+ * fakeHomeIsolation gate
+ * (`src/backend/__tests__/fakeHomeIsolation.test.ts`) still forbids.
  */
 function ensureHelperSpawned(
   appId: string,
@@ -285,16 +298,20 @@ function ensureHelperSpawned(
     LogPrefix.Steam
   )
 
+  // WR-03: one fresh 256-bit secret per helper spawn.
+  const secret = randomBytes(32).toString('hex')
+
   const child = spawn(helperPath, args, {
     cwd: stateDir,
     stdio: ['ignore', 'pipe', 'pipe'],
-    // Unset (null) on every production path -- inherits the real ambient
-    // environment, unchanged. Only a test calling
-    // __setBridgeHelperSpawnEnvForTests() with createFakeHomeProfile()'s
-    // own env ever populates this; never a hand-rolled literal.
-    ...(bridgeHelperSpawnEnvOverride
-      ? { env: bridgeHelperSpawnEnvOverride }
-      : {})
+    // Base env: the real ambient process.env on every production path (only a
+    // test calling __setBridgeHelperSpawnEnvForTests() with
+    // createFakeHomeProfile()'s own env ever overrides it; never a
+    // hand-rolled literal). The ONLY addition is the launch secret.
+    env: {
+      ...(bridgeHelperSpawnEnvOverride ?? process.env),
+      [BRIDGE_SECRET_ENV]: secret
+    }
   })
 
   // 51-REVIEW WR-06 (sidecar exit contract): the sidecar exits by event-loop
@@ -450,7 +467,8 @@ function ensureHelperSpawned(
     initOutcome: null,
     initReady,
     unregister,
-    identityOnly
+    identityOnly,
+    secret
   }
   helpers.set(appId, entry)
   return entry
@@ -458,6 +476,8 @@ function ensureHelperSpawned(
 
 interface ProbeResult {
   healthOk: boolean
+  /** WR-03: HELLO-with-secret was accepted (only meaningful once healthOk). */
+  authOk: boolean
   whoamiOk: boolean
 }
 
@@ -470,13 +490,17 @@ interface ProbeResult {
  * accepts the connection) resolves `{ healthOk: false, whoamiOk: false }`
  * instead of hanging (D-06).
  */
-function probeHealthAndWhoami(port: number): Promise<ProbeResult> {
+function probeHealthAndWhoami(
+  port: number,
+  secret: string
+): Promise<ProbeResult> {
   return new Promise((resolve) => {
     const socket = new Socket()
     let settled = false
-    let stage: 'health' | 'whoami' = 'health'
+    let stage: 'health' | 'hello' | 'whoami' = 'health'
     let received = Buffer.alloc(0)
     let healthOk = false
+    let authOk = false
 
     const finish = (result: ProbeResult) => {
       if (settled) return
@@ -487,12 +511,12 @@ function probeHealthAndWhoami(port: number): Promise<ProbeResult> {
     }
 
     const timeout = setTimeout(
-      () => finish({ healthOk, whoamiOk: false }),
+      () => finish({ healthOk, authOk, whoamiOk: false }),
       PROBE_TIMEOUT_MS
     )
     timeout.unref?.()
 
-    socket.once('error', () => finish({ healthOk, whoamiOk: false }))
+    socket.once('error', () => finish({ healthOk, authOk, whoamiOk: false }))
 
     socket.connect(port, BRIDGE_HELPER_HOST, () => {
       socket.write(encodeControl(PROBE_REQUEST_ID, 'health'))
@@ -506,14 +530,14 @@ function probeHealthAndWhoami(port: number): Promise<ProbeResult> {
         decoded = decodeResponse(received)
       } catch (error) {
         if (error instanceof FrameTooLargeError) {
-          finish({ healthOk, whoamiOk: false })
+          finish({ healthOk, authOk, whoamiOk: false })
         }
         // Truncated -- wait for more data, up to PROBE_TIMEOUT_MS.
         return
       }
 
       if (decoded.requestId !== PROBE_REQUEST_ID) {
-        finish({ healthOk, whoamiOk: false })
+        finish({ healthOk, authOk, whoamiOk: false })
         return
       }
 
@@ -522,7 +546,20 @@ function probeHealthAndWhoami(port: number): Promise<ProbeResult> {
       if (stage === 'health') {
         healthOk = decoded.status === STATUS_OK
         if (!healthOk) {
-          finish({ healthOk: false, whoamiOk: false })
+          finish({ healthOk: false, authOk: false, whoamiOk: false })
+          return
+        }
+        stage = 'hello'
+        // WR-03: WHOAMI is auth-only -- authenticate first. The probe role
+        // byte keeps the helper from logging `shim attached`.
+        socket.write(encodeHello(PROBE_REQUEST_ID, secret, HELLO_ROLE_PROBE))
+        return
+      }
+
+      if (stage === 'hello') {
+        authOk = decoded.status === STATUS_OK
+        if (!authOk) {
+          finish({ healthOk: true, authOk: false, whoamiOk: false })
           return
         }
         stage = 'whoami'
@@ -531,7 +568,11 @@ function probeHealthAndWhoami(port: number): Promise<ProbeResult> {
       }
 
       // stage === 'whoami'
-      finish({ healthOk: true, whoamiOk: decoded.status === STATUS_OK })
+      finish({
+        healthOk: true,
+        authOk: true,
+        whoamiOk: decoded.status === STATUS_OK
+      })
     })
   })
 }
@@ -616,10 +657,23 @@ async function probeHelperReadiness(
   for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
     await sleep(POLL_INTERVAL_MS)
 
-    const { healthOk, whoamiOk } = await probeHealthAndWhoami(port)
+    const { healthOk, authOk, whoamiOk } = await probeHealthAndWhoami(
+      port,
+      entry.secret
+    )
 
     if (!healthOk) {
       continue
+    }
+
+    if (!authOk) {
+      // An auth bug must not masquerade as 'not-inited' (that would trigger
+      // the 480 fallback). Never log the secret.
+      logWarning(
+        `bridge helper [${entry.appId}] rejected the readiness probe's HELLO (launch-secret authentication failed) (WR-03)`,
+        LogPrefix.Steam
+      )
+      return { outcome: 'unreachable', port }
     }
 
     if (whoamiOk) {
@@ -703,8 +757,13 @@ export async function ensureBridgeHelperReady(
 
   if (probe.outcome === 'ready') {
     return entry.identityOnly
-      ? { status: 'fallback-identity', ready: true, port: probe.port }
-      : { status: 'ready', ready: true, port: probe.port }
+      ? {
+          status: 'fallback-identity',
+          ready: true,
+          port: probe.port,
+          secret: entry.secret
+        }
+      : { status: 'ready', ready: true, port: probe.port, secret: entry.secret }
   }
 
   // probe.outcome === 'not-inited' from here on.
@@ -752,7 +811,8 @@ export async function ensureBridgeHelperReady(
     return {
       status: 'fallback-identity',
       ready: true,
-      port: fallbackProbe.port
+      port: fallbackProbe.port,
+      secret: fallbackEntry.secret
     }
   }
 

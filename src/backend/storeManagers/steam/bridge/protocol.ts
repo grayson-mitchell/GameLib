@@ -47,6 +47,19 @@
  *     `SteamAPI_InitFlat` succeeded against the live signed-in Mac Steam --
  *     proves "init succeeded against a live session". Answers
  *     status=err/not-inited otherwise.
+ *
+ * Authentication (Phase 55 WR-03): the helper's loopback listener is
+ * reachable by any local user, and its callback ring can hold a Steam web-API
+ * auth ticket. The backend generates a per-helper-spawn secret (256 random
+ * bits, 64 lowercase-hex chars) handed to the helper via env and to the shim
+ * via `gamelib_bridge.cfg`. HELLO (slot 2) carries it in the arg blob; the
+ * helper marks a connection authenticated only on a constant-time match.
+ * HEALTH and HELLO are the only slots served unauthenticated; WHOAMI,
+ * CREATE_INTERFACE, REPORT_VERSION, REPORT_INIT, DRAIN and every interface
+ * ordinal require an authenticated connection (refused with STATUS_ERR).
+ * Threat model: other OS users and processes that cannot read this user's
+ * files are in scope. A same-user attacker can read the cfg and the stored
+ * Steam refresh token and is explicitly out of scope.
  */
 
 // ── Frame field widths (all fields little-endian) ──────────────────────────
@@ -114,6 +127,21 @@ export const CONTROL_SLOT = {
   // Phase 55: the shim's SteamAPI_RunCallbacks drains queued Steam callbacks (callback 168 today) from the helper; reply [u32 count][i32 iCallback][u32 cub][bytes].
   drainCallbacks: 6
 } as const
+
+/** Env var carrying the per-spawn secret backend -> helper (never argv). */
+export const BRIDGE_SECRET_ENV = 'GAMELIB_BRIDGE_SECRET'
+
+/** Secret length in ASCII hex chars (32 random bytes). Matches the
+ * `#define BRIDGE_SECRET_HEX_LEN` in bridge_helper.c and the generated shim. */
+export const BRIDGE_SECRET_HEX_LEN = 64
+
+/** Optional single trailing role byte on HELLO: the backend readiness probe.
+ * It authenticates the connection but suppresses the helper's
+ * `HELLO  shim attached` log line (that line is evidence a real shim
+ * attached; the launcher's own probe must not manufacture it). */
+export const HELLO_ROLE_PROBE = 0x01
+
+const SECRET_HEX = /^[0-9a-f]{64}$/
 
 // Not exported (this and DecodedRequest, DecodedResponse below): verified to have no
 // importer anywhere -- not in any tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune
@@ -322,4 +350,28 @@ export function encodeControl(
     CONTROL_SLOT[slot],
     Buffer.alloc(0)
   )
+}
+
+/**
+ * Builds the CONTROL HELLO request (slot 2) carrying the launch secret: the
+ * arg blob is the 64 ASCII hex bytes, optionally followed by ONE role byte
+ * (`HELLO_ROLE_PROBE`). Throws on a secret that is not exactly 64 lowercase
+ * hex chars.
+ */
+export function encodeHello(
+  requestId: number,
+  secretHex: string,
+  role?: number
+): Buffer {
+  if (!SECRET_HEX.test(secretHex)) {
+    throw new RangeError(
+      `secret must be exactly ${BRIDGE_SECRET_HEX_LEN} lowercase hex chars`
+    )
+  }
+  const secretBytes = Buffer.from(secretHex, 'ascii')
+  const blob =
+    role === undefined
+      ? secretBytes
+      : Buffer.concat([secretBytes, Buffer.from([role])])
+  return encodeRequest(requestId, CONTROL_ORDINAL, CONTROL_SLOT.hello, blob)
 }

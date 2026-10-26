@@ -31,12 +31,20 @@ import {
   steamBridgeHelperPath,
   steamBridgeHelperStateDir
 } from 'backend/constants/paths'
-import { encodeResponse, STATUS_OK, STATUS_ERR } from '../protocol'
+import {
+  encodeResponse,
+  decodeRequest,
+  BRIDGE_SECRET_ENV,
+  HELLO_ROLE_PROBE,
+  STATUS_OK,
+  STATUS_ERR
+} from '../protocol'
 import {
   ensureBridgeHelperReady,
   stopBridgeHelper,
   shutdownAllBridgeHelpers,
   __setBridgeHelperPathForTests,
+  __setBridgeHelperSpawnEnvForTests,
   __resetBridgeHelperStateForTests
 } from '../helperProcess'
 import {
@@ -175,11 +183,14 @@ async function waitForSpawnCallCount(count: number): Promise<void> {
 class FakeSocket extends EventEmitter {
   destroy = jest.fn()
   write = jest.fn((_data: Buffer) => {
-    // First write is always the HEALTH request, second (if it happens) is
-    // WHOAMI -- mirrors helperProcess.ts's own single-connection sequencing.
-    const isFirstWrite = this.writeCount === 0
+    // Writes are answered in order: HEALTH, HELLO (WR-03), WHOAMI --
+    // mirrors helperProcess.ts's own single-connection sequencing.
+    const responseBuf = [
+      this.healthResponse,
+      this.helloResponse,
+      this.whoamiResponse
+    ][this.writeCount]
     this.writeCount += 1
-    const responseBuf = isFirstWrite ? this.healthResponse : this.whoamiResponse
     if (responseBuf) {
       process.nextTick(() => this.emit('data', responseBuf))
     }
@@ -189,7 +200,8 @@ class FakeSocket extends EventEmitter {
 
   constructor(
     private healthResponse?: Buffer,
-    private whoamiResponse?: Buffer
+    private whoamiResponse?: Buffer,
+    private helloResponse: Buffer | undefined = helloOkFrame
   ) {
     super()
   }
@@ -200,6 +212,8 @@ class FakeSocket extends EventEmitter {
 }
 
 const healthOkFrame = encodeResponse(PROBE_REQUEST_ID, STATUS_OK)
+const helloOkFrame = encodeResponse(PROBE_REQUEST_ID, STATUS_OK)
+const helloErrFrame = encodeResponse(PROBE_REQUEST_ID, STATUS_ERR)
 const healthErrFrame = encodeResponse(PROBE_REQUEST_ID, STATUS_ERR)
 const whoamiOkFrame = encodeResponse(
   PROBE_REQUEST_ID,
@@ -252,12 +266,31 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(optionsA.cwd).toBe(join(steamBridgeHelperStateDir, APP_ID_A))
     expect(optionsB.cwd).toBe(join(steamBridgeHelperStateDir, APP_ID_B))
     expect(optionsA.cwd).not.toBe(optionsB.cwd)
-    // T-24-06/fakeHomeIsolation: never a hand-rolled env literal.
-    expect(optionsA.env).toBeUndefined()
-    expect(optionsB.env).toBeUndefined()
+    // WR-03: env = base env + exactly the launch secret; argv never has it.
+    const secretA = optionsA.env[BRIDGE_SECRET_ENV]
+    const secretB = optionsB.env[BRIDGE_SECRET_ENV]
+    expect(secretA).toMatch(/^[0-9a-f]{64}$/)
+    expect(secretB).toMatch(/^[0-9a-f]{64}$/)
+    expect(secretA).not.toBe(secretB)
+    expect(argsA.some((a: string) => a.includes(secretA))).toBe(false)
+    expect(argsB.some((a: string) => a.includes(secretB))).toBe(false)
+    expect({ ...optionsA.env, [BRIDGE_SECRET_ENV]: undefined }).toEqual({
+      ...process.env,
+      [BRIDGE_SECRET_ENV]: undefined
+    })
 
-    expect(resultA).toEqual({ status: 'ready', ready: true, port: 55001 })
-    expect(resultB).toEqual({ status: 'ready', ready: true, port: 55002 })
+    expect(resultA).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55001,
+      secret: secretA
+    })
+    expect(resultB).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55002,
+      secret: secretB
+    })
   })
 
   test('D-51-03: a second call for the SAME appId while its child is live does not spawn again', async () => {
@@ -274,7 +307,12 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     const second = await ensureBridgeHelperReady(APP_ID_A)
 
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
-    expect(second).toEqual({ status: 'ready', ready: true, port: 55001 })
+    expect(second).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55001,
+      secret: mockedSpawn.mock.calls[0][2].env[BRIDGE_SECRET_ENV]
+    })
   })
 
   test('a LISTEN line whose appid differs from the spawned appId is ignored -- call ends unreachable', async () => {
@@ -317,9 +355,79 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     emitListenLine(child, 55001, APP_ID_A)
     const result = await pending
 
-    expect(result).toEqual({ status: 'ready', ready: true, port: 55001 })
+    expect(result).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55001,
+      secret: expect.stringMatching(/^[0-9a-f]{64}$/)
+    })
     expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
   })
+
+  test('WR-03: with the test env override, the override survives and only the secret is added', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    __setBridgeHelperSpawnEnvForTests({ HOME: '/fake/home' })
+    try {
+      const pending = ensureBridgeHelperReady(APP_ID_A)
+      emitListenLine(child, 55001, APP_ID_A)
+      await pending
+    } finally {
+      __setBridgeHelperSpawnEnvForTests(null)
+    }
+    const env = mockedSpawn.mock.calls[0][2].env
+    expect(Object.keys(env).sort()).toEqual(['HOME', BRIDGE_SECRET_ENV].sort())
+    expect(env.HOME).toBe('/fake/home')
+  })
+
+  test('WR-03: probe sends HEALTH, HELLO(secret + probe role), WHOAMI in order', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    const sockets: FakeSocket[] = []
+    MockedSocket.mockImplementation(() => {
+      const sock = new FakeSocket(healthOkFrame, whoamiOkFrame)
+      sockets.push(sock)
+      return sock
+    })
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    const result = await pending
+
+    const secret = mockedSpawn.mock.calls[0][2].env[BRIDGE_SECRET_ENV]
+    expect(result.secret).toBe(secret)
+    const writes = sockets[0].write.mock.calls.map(([b]) => decodeRequest(b))
+    expect(writes.map((w) => w.slot)).toEqual([0, 2, 1])
+    const hello = writes[1].argBlob
+    expect(hello).toHaveLength(65)
+    expect(hello.subarray(0, 64).toString('ascii')).toBe(secret)
+    expect(hello[64]).toBe(HELLO_ROLE_PROBE)
+  })
+
+  test('WR-03: HELLO answered STATUS_ERR -> unreachable (no 480 fallback), warning omits the secret', async () => {
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame, helloErrFrame)
+    )
+
+    const pending = ensureBridgeHelperReady(APP_ID_A)
+    emitListenLine(child, 55001, APP_ID_A)
+    const result = await pending
+
+    expect(result.status).toBe('unreachable')
+    expect(result.ready).toBe(false)
+    expect(mockedSpawn).toHaveBeenCalledTimes(1)
+    const secret = mockedSpawn.mock.calls[0][2].env[BRIDGE_SECRET_ENV]
+    const warned = (logWarning as jest.Mock).mock.calls
+      .map((c) => String(c[0]))
+      .join('\n')
+    expect(warned).toContain('launch-secret authentication failed')
+    expect(warned).not.toContain(secret)
+  }, 10000)
 
   // ── 51-REVIEW WR-02: the backend waits for the helper's READY line ────────
 
@@ -340,7 +448,12 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     emitReadyLine(child, APP_ID_A)
     const result = await pending
 
-    expect(result).toEqual({ status: 'ready', ready: true, port: 55001 })
+    expect(result).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55001,
+      secret: expect.stringMatching(/^[0-9a-f]{64}$/)
+    })
   }, 10000)
 
   test('WR-02: exit before READY -> unreachable promptly', async () => {
@@ -390,7 +503,12 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     const start = Date.now()
     const second = await ensureBridgeHelperReady(APP_ID_A)
 
-    expect(second).toEqual({ status: 'ready', ready: true, port: 55001 })
+    expect(second).toEqual({
+      status: 'ready',
+      ready: true,
+      port: 55001,
+      secret: expect.stringMatching(/^[0-9a-f]{64}$/)
+    })
     expect(Date.now() - start).toBeLessThan(1000)
     expect(mockedSpawn).toHaveBeenCalledTimes(1)
   })
@@ -447,10 +565,17 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
 
     const result = await pending
 
+    // WR-03: the fallback is a new spawn with its OWN secret, and the result
+    // carries the fallback's (the one whose port is returned).
+    const fullSecret = mockedSpawn.mock.calls[0][2].env[BRIDGE_SECRET_ENV]
+    const fallbackSecret = mockedSpawn.mock.calls[1][2].env[BRIDGE_SECRET_ENV]
+    expect(fallbackSecret).toMatch(/^[0-9a-f]{64}$/)
+    expect(fallbackSecret).not.toBe(fullSecret)
     expect(result).toEqual({
       status: 'fallback-identity',
       ready: true,
-      port: 55002
+      port: 55002,
+      secret: fallbackSecret
     })
     expect(mockedSendFrontendMessage).not.toHaveBeenCalled()
 
@@ -553,7 +678,8 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(await first).toEqual({
       status: 'fallback-identity',
       ready: true,
-      port: 55002
+      port: 55002,
+      secret: expect.stringMatching(/^[0-9a-f]{64}$/)
     })
 
     // A SECOND call for the same appId -- the live identity-only entry is
@@ -566,7 +692,8 @@ describe('helperProcess.ts (D-51-01 per-appId registry)', () => {
     expect(second).toEqual({
       status: 'fallback-identity',
       ready: true,
-      port: 55002
+      port: 55002,
+      secret: mockedSpawn.mock.calls[1][2].env[BRIDGE_SECRET_ENV]
     })
   })
 

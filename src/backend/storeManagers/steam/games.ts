@@ -3095,7 +3095,11 @@ export default class SteamGame implements Game {
     }
 
     const helperReady = await ensureBridgeHelperReady(this.appId)
-    if (!helperReady.ready || helperReady.port === undefined) {
+    if (
+      !helperReady.ready ||
+      helperReady.port === undefined ||
+      helperReady.secret === undefined
+    ) {
       logWarning(
         `SteamGame: bridge helper not ready for appId ${this.appId} (status=${helperReady.status}) — not launching (no no-identity launch, D-05/D-06)`,
         LogPrefix.Steam
@@ -3143,6 +3147,8 @@ export default class SteamGame implements Game {
       bottleName: bridgeBottleSettings.wineCrossoverBottle,
       appId: this.appId,
       port: helperReady.port,
+      // WR-03: the secret of the exact helper entry whose port this is.
+      secret: helperReady.secret,
       shimPaths,
       fixLines: steamShimFeatureCfgLines(this.appId),
       ...(interfaceVersionsForConfig
