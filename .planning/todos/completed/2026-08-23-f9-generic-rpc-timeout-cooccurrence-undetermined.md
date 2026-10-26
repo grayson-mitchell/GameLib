@@ -2,7 +2,9 @@
 created: 2026-08-23
 title: "F-9 — a generic RPC timeout fired live; co-occurrence with a cookie op is UNDETERMINED"
 source: 34.4.1 gap cycle 3, plan 34 (from D-29-06 / F-9, open since gate run 2)
-status: "PARKED 2026-09-07 — SPLIT INTO TWO QUESTIONS. Question 1 (did id=1575 co-occur with a cookie operation?) is CLOSED AS PERMANENTLY UNANSWERABLE and its answer is recorded as UNDETERMINED, FOREVER — closed is NOT answered, and it is NOT rounded to no. Question 2 (does this timeout shape co-occur with a cookie operation as a class?) stays OPEN and is PARKED. See the two dated sections below; the PARKED one carries a runnable unpark condition."
+status: "RETIRED 2026-10-27 (quick task 261027-cwy) — Q2 unpark trigger fired (27 matches) but every recurrence is channel=launch, already fixed by 261026-jmm, and no cookie-leg timeout appears in any retained log; Q1 (id=1575) remains UNDETERMINED, never rounded to no."
+resolved: 2026-10-27
+resolved_by: quick-261027-cwy
 severity: minor
 platform: any
 ready: blocked
@@ -440,3 +442,35 @@ mistake — a diagnostic read out of the wrong source and mistaken for evidence 
 
 **Nothing about Q1 or Q2 changes. Q1 stays closed as UNDETERMINED, never "no." Q2 stays PARKED
 with its unpark condition unchanged. No box checked, `closes_todo: false`.**
+
+---
+
+## RETIRED 2026-10-27 (quick task 261027-cwy)
+
+Retired by operator decision. Q1 is not answered by this; it stays UNDETERMINED.
+
+- **Unpark trigger fired.** `grep -c 'invoke abandoned\|unknown/timed-out' ~/Library/Logs/GameLib/gamelib-shell.log`
+  returned **27** on a 1397-line file.
+- **Coverage gap.** The earliest retained line is epoch 1792651220 = 2026-10-22 19:40 NZDT. The log has
+  rotated or been truncated since the 2026-09-07 baseline (537 lines, count 0), so
+  **2026-09-07 to 2026-10-22 is UNOBSERVED**, not clean.
+- **Attribution.** All 27 matches are `channel=launch`, across pids 20824/58139/13798/98083/5294. None is
+  a cookie channel. Examples:
+
+  ```
+  1792653908 pid=20824 response for unknown/timed-out id=8169 channel=launch (dropped)
+  1792962084 pid=5294 invoke abandoned (timeout): id=2809 channel=launch
+  ```
+
+  This is the bridge-launch timeout during the first launch's redist install, fixed by quick task
+  `261026-jmm` (`launch` added to `LONG_RUNNING_CHANNELS`, `src-tauri/src/main.rs:1552`). See
+  `.planning/todos/completed/2026-10-25-bridge-launch-invoke-times-out-during-first-launch-redist-install.md`.
+- **Cookie leg (the other file).** `grep 'rustInvoke timed out.*humble_login_cookies'` returned 0 in each
+  of the 7 `~/Library/Logs/GameLib/gamelib.log*` files, and there were 0 `rustInvoke timed out` lines of
+  any kind. Two legs, two files, both checked.
+- **Same class is not the same case.** The launch recurrences are NOT evidence about id=1575. Q1 stays
+  UNDETERMINED, forever, and is not rounded to no.
+- **Why retiring is safe.** The passive channel-named logging (260905-omc; 260907-j8n / `6fb96c76a`)
+  stays in place, so a future cookie-channel timeout identifies itself from a single log line. File it as
+  a fresh todo; do not reopen this one. Windows caveat: the shell log does not exist on Windows, so that
+  platform stays uncovered.
