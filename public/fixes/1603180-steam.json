@@ -1,0 +1,9 @@
+{
+  "title": "Mining Mechs",
+  "notes": {
+    "graphics-backend": "GameMaker's D3D11 runner probes MSAA support with CheckMultisampleQualityLevels. Under CrossOver's D3DMetal backend four of those calls return E_INVALIDARG (0x80070057), and the runner shows each as a 'Win32 function failed' dialog before it continues. DXVK and DXMT both return a valid result and the game starts without a dialog (measured 2026-10-26, see .planning/todos/pending/2026-10-25-mining-mechs-win32-error-dialogs-on-launch.md)."
+  },
+  "envVariables": {
+    "CX_GRAPHICS_BACKEND": "dxvk"
+  }
+}
