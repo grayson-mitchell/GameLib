@@ -27,3 +27,19 @@ None. Docs-only: the architecture note was left uncommitted per instructions.
 - Option (b): overlays / dllOverrides / ledger.
 
 ## Self-Check: PASSED
+
+## Live retest: packaged debug build (2026-10-26, operator)
+
+Built with `pnpm tauri:dev:packaged`. The final updater-signing step failed (no `TAURI_SIGNING_PRIVATE_KEY`), but that runs after the `.app` is built, so it doesn't matter for this test. The bundle carried `Resources/build/fixes/63000-steam.profile.json` and both shims with the `fix.wgl.hideExtensions=` key and 0 UBSan strings. The sidecar carried the `shimFeatures` code. `fixes/local/` was empty.
+
+The operator uninstalled Hoard, reinstalled it from the packaged app, and launched it. Their report: **"ran fine, reached menu"**. No crash dialog.
+
+Evidence:
+- `Reuben.exe` is `54be4b8c…`, the original.
+- The placed shim is `02256cf5…`, the bundled `steam_api.dll`.
+- The spike-era `gamelib_shimfix.log` is gone, and the redists were reinstalled, so it was a fresh bottle.
+- The cfg ends with `fix.wgl.hideExtensions=WGL_ARB_create_context*`.
+- `HELLO shim attached appid=63000`, then `GINIT fn=SteamAPI_Init ret=1 ok=1`.
+- The game ran 97 s and ended normally.
+
+The bundled profile alone makes Hoard run. Lifting the `does-not-run` knownBad entry is now unblocked.
