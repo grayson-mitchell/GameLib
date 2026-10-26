@@ -21,7 +21,7 @@ source:
   - 51-17-SUMMARY.md
   - 51-18-SUMMARY.md
 started: 2026-10-21T12:30:34Z
-updated: 2026-10-26T07:29:24Z
+updated: 2026-10-26T07:33:12Z
 ---
 
 ## Preconditions
@@ -46,7 +46,7 @@ legacy-bottle launch-time-miss evidence.
 
 ## Current Test
 
-[testing paused — 2 items outstanding]
+[testing paused — 1 items outstanding]
 
 ## Tests
 
@@ -214,7 +214,7 @@ result: pass — 2026-10-26, packaged debug bundle, T = Legends of Eisenwald (24
 
 ### 23. Review-fix WR-09 — launch follows the bottle that holds the manifest, not an empty per-game bottle (Avernum 6, 206060)
 expected: Setup (staged: this Mac has no legacy shared `GameLibSteamBridge` bottle, which the review's state needs): quit GameLib; in `~/Library/Application Support/CrossOver/Bottles` make an APFS clone of `GameLibSteamBridge-206060` named `GameLibSteamBridge` (`cp -cR GameLibSteamBridge-206060 GameLibSteamBridge`), then move `appmanifest_206060.acf` out of `GameLibSteamBridge-206060/drive_c/Program Files (x86)/Steam/steamapps/` to a safe place. The per-game bottle is now ready (its `cxbottle.conf` is present) but holds no manifest, while the legacy shared bottle holds the appId. A bridge reinstall whose download failed after inline provisioning leaves this state. Start GameLib and Play Avernum 6. Pass: the game launches from the legacy bottle. Its launch's `placeShimForGame:` lines name paths under `Bottles/GameLibSteamBridge/drive_c/`, not `GameLibSteamBridge-206060`; `HELLO shim attached appid=206060` is logged; and Avernum 6 reaches its menu. Fail (the review's WR-09): decision and execution disagree and the launch targets the empty per-game bottle, shown by `SteamGame: could not resolve a Windows launch executable for appId 206060 — not launching a bare/undefined path` or any launch path under `GameLibSteamBridge-206060`, with the game marked bridge-failed. Do not Uninstall in this state: the review's wrong-bottle uninstall half destroys data, and is desk-covered only, by the two WR-09 resolver tests in bottle.test.ts. If the clone does not come up as a bottle (the launch fails for a CrossOver reason, not a resolver one), record `blocked` with the reason. Afterwards quit GameLib, move the cloned `GameLibSteamBridge` bottle to the Trash, and put `appmanifest_206060.acf` back.
-result: pending
+result: pass — 2026-10-26, packaged debug bundle, staged as written. `GameLibSteamBridge` was an APFS clone (`cp -cR`) of `GameLibSteamBridge-206060`; `appmanifest_206060.acf` was moved out of the per-game bottle, leaving it provisioned (`cxbottle.conf` present) with no manifest. Operator: Avernum 6 reached its menu. gamelib.log 20:31:35-36: `placeShimForGame: overwrote steam_api.dll for appId 206060 at "…/Bottles/GameLibSteamBridge/drive_c/…/Avernum 6/steam_api.dll"` and `SteamGame: launching appId 206060 via the Steam bridge (…/Bottles/GameLibSteamBridge/drive_c/…/Avernum 6/Avernum 6.exe, helper port=60535, cfg copies=1)`, so the decision and the execution both used the legacy bottle that holds the manifest. `HELLO shim attached appid=206060` and `GINIT fn=SteamAPI_Init ret=1 ok=1 session=1` (20:31:37); game started, window raised, and stopped after 8s with the helper terminated. No `could not resolve a Windows launch executable` line, and no path under `GameLibSteamBridge-206060`. Uninstall was not exercised; the wrong-bottle uninstall half stays desk-covered (bottle.test.ts). Afterwards the clone was moved to the Trash, the manifest put back, and 206060's steam_metadata entry restored to its pre-run value; the launch had rescanned inside the clone with an identical clean x86 verdict. The log is archived in the session scratchpad.
 
 ### 24. Review-fix WR-11 — the force-bottled toggle persists only on Install, and a failed route write blocks the install
 expected: Use a small owned Windows-only title U that is not installed and not knownBad, whose Install dialog shows the route line "Native Steam bridge" and the "Use the Windows Steam client instead" toggle. Watch `U.bridge.userRoute` in `~/Library/Application Support/gamelib/store_cache/steam_metadata.json`; read it, and edit it only where an arm says so, with GameLib quit. (a) Pending only: tick the toggle. It shows ticked, the route line still reads "Native Steam bridge", and `userRoute` is unchanged. This is the behaviour change: the route line no longer re-probes when the toggle flips, and only the toggle shows the pending choice. (b) Cancel writes nothing: press Cancel and reopen. The toggle is unticked and `userRoute` is still unchanged. Under the review's WR-11, cancelling left the game permanently forced to the bottle. (c) Install persists, then dispatches: tick and press Install. `userRoute` becomes `"bottle"` and the download goes into the GameLibSteam bottle, with no `GameLibSteamBridge-<U>` bottle and no `[Timing] prescreenBridgeDepots: appId <U>` line; item 22's setup can start from here. (d) A stored `'bridge'` override survives: on a second such title V, with GameLib quit, set `V.bridge.userRoute` to `"bridge"`, restart, open V's Install dialog, tick then untick the toggle, press Install, then cancel that download. `userRoute` still reads `"bridge"`; under the review, unticking wrote `null` and deleted it. (e) A failed write blocks the install: the backend returns `{ ok: false }` only for invalid payloads the UI never sends, so force it from the packaged debug build's webview devtools console with `window.api.setSteamBridgeUserRoute = async () => ({ ok: false, error: 'uat-forced' })`. Then flip U's toggle and press Install. The dialog shows "Starting the install failed: uat-forced" inline, no download starts, Install can be pressed again, and gamelib.log has `SteamDialog: setSteamBridgeUserRoute failed (uat-forced) for appName "<U>" -- install not started`. Game-page route notice, with the same override still in place: it needs a not-installed knownBad title, and all three (200510, 411300, 63000) are installed here, so uninstall retired Hoard (63000, knownBad does-not-run) if the operator agrees. Press Install on Hoard's game page, then "Use bottled Steam" in the notice. The notice shows "Starting the install failed: uat-forced" and no install starts; under the review it installed anyway and looped back to the same notice. Restart GameLib to drop the override and repeat: the install starts, and `63000.bridge.noticeAcknowledgedFor` records the notice's reason. If the console assignment does not take, record (e) as not producible from the UI and uncovered: no test renders the `{ ok: false }` branch, since steamBridgeRouteLine.test.ts covers only `resolveForceBottleDisplayed` and `resolveForceBottleWrite`.
@@ -223,9 +223,9 @@ result: pending
 ## Summary
 
 total: 24
-passed: 13
+passed: 14
 issues: 6
-pending: 2
+pending: 1
 skipped: 2
 blocked: 1
 
