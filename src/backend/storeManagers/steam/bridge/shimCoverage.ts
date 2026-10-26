@@ -553,6 +553,21 @@ export function evaluateShimCoverage(
   )
 }
 
+/** Shared null-object eligibility (x64 runtime lookup, not a bare accessor). */
+function isNullObjectEligible(
+  arch: 'x86' | 'x64',
+  symbols: string[],
+  family: string
+): boolean {
+  const reachedBare = symbols.some((s) => BARE_ACCESSOR_FAMILY[s] === family)
+  return (
+    arch === 'x64' &&
+    SHIM_X64_NULL_OBJECT_FALLBACK &&
+    usesRuntimeInterfaceLookup(symbols) &&
+    !reachedBare
+  )
+}
+
 /**
  * quick 261024-j4l: required interface versions the shim cannot truthfully
  * serve. Used by shimGenerate's withhold guard (only with importer evidence).
@@ -571,6 +586,10 @@ export function evaluateShimCoverage(
  * version of that family at all: that is the designed D-51-13 answer ELEX
  * relies on (SteamHTTP, SteamUGC, ...). Output is in input entry order,
  * de-duplicated.
+ *
+ * Quick 261026-mhg: this is the RAW gap list. Callers decide what to do with
+ * it through classifyUnservableInterfaceVersions: skew in a non-core family is
+ * placed (placed-miss), not withheld.
  */
 export function findUnservableInterfaceVersions(input: {
   arch: 'x86' | 'x64'
@@ -586,14 +605,11 @@ export function findUnservableInterfaceVersions(input: {
     input.requiredInterfaceVersions
   )) {
     if (served.has(version)) continue
-    const reachedBare = input.symbols.some(
-      (s) => BARE_ACCESSOR_FAMILY[s] === family
+    const nullObjectEligible = isNullObjectEligible(
+      input.arch,
+      input.symbols,
+      family
     )
-    const nullObjectEligible =
-      input.arch === 'x64' &&
-      SHIM_X64_NULL_OBJECT_FALLBACK &&
-      usesRuntimeInterfaceLookup(input.symbols) &&
-      !reachedBare
     if (nullObjectEligible) {
       let familyServed = false
       for (const entry of served.values()) {
@@ -607,6 +623,55 @@ export function findUnservableInterfaceVersions(input: {
     if (!out.includes(version)) out.push(version)
   }
   return out
+}
+
+/**
+ * Families whose interfaces a game needs at startup (identity, app/ownership,
+ * stats, utils). These are exactly the families the served maps mark
+ * `mode: 'wire'`. A null object here makes the game quit or fault.
+ */
+export const CORE_STARTUP_FAMILIES: ReadonlySet<string> = new Set([
+  'SteamClient',
+  'SteamUser',
+  'SteamFriends',
+  'SteamUtils',
+  'SteamApps',
+  'SteamUserStats'
+])
+
+/**
+ * Quick 261026-mhg (operator option a, 2026-10-26): splits the raw
+ * unservable list into gaps that BLOCK placement and gaps that are merely
+ * non-core. A gap is blocking when its family is a core startup family OR the
+ * shim would answer it with NULL (x86, no runtime lookup, bare accessor): a
+ * NULL fails context init. Everything else is answered by the x64 null object,
+ * which ELEX and Age of Decadence ran on; callers place the shim and still
+ * name those gaps in the verdict. An unknown family counts as non-core.
+ * Output lists keep entry order, de-duplicated.
+ */
+export function classifyUnservableInterfaceVersions(input: {
+  arch: 'x86' | 'x64'
+  symbols: string[]
+  requiredInterfaceVersions: Record<string, string>
+}): { blocking: string[]; nonCore: string[] } {
+  const unservable = new Set(findUnservableInterfaceVersions(input))
+  const blocking: string[] = []
+  const nonCore: string[] = []
+  for (const [family, version] of Object.entries(
+    input.requiredInterfaceVersions
+  )) {
+    if (!unservable.has(version)) continue
+    const isBlocking =
+      CORE_STARTUP_FAMILIES.has(family) ||
+      !isNullObjectEligible(input.arch, input.symbols, family)
+    const list = isBlocking ? blocking : nonCore
+    if (
+      !list.includes(version) &&
+      !(isBlocking ? false : blocking.includes(version))
+    )
+      list.push(version)
+  }
+  return { blocking, nonCore }
 }
 
 /**

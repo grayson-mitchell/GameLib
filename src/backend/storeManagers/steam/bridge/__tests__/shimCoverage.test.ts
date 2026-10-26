@@ -32,6 +32,8 @@ import {
   evaluateShimCoverage,
   evaluateShimCoverageWith,
   findUnservableInterfaceVersions,
+  classifyUnservableInterfaceVersions,
+  CORE_STARTUP_FAMILIES,
   isScanVerdictNowCovered
 } from '../shimCoverage'
 import {
@@ -1275,5 +1277,115 @@ describe('quick 261025-t7i: SDK 1.34 versions for CSteamworks64 (Unclaimed World
     ]) {
       expect(SHIM64_EXPORTED_SYMBOLS).toContain(n)
     }
+  })
+})
+
+describe('quick 261026-mhg: classifyUnservableInterfaceVersions', () => {
+  const RUNTIME = ['SteamInternal_FindOrCreateUserInterface']
+
+  it('a core family skew is blocking', () => {
+    expect(
+      classifyUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: RUNTIME,
+        requiredInterfaceVersions: { SteamFriends: 'SteamFriends016' }
+      })
+    ).toEqual({ blocking: ['SteamFriends016'], nonCore: [] })
+  })
+
+  it('half-served non-core families (ELEX-2026 shape) are nonCore, in entry order', () => {
+    expect(
+      classifyUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: RUNTIME,
+        requiredInterfaceVersions: {
+          SteamController: 'SteamController003',
+          SteamUGC: 'STEAMUGC_INTERFACE_VERSION008'
+        }
+      })
+    ).toEqual({
+      blocking: [],
+      nonCore: ['SteamController003', 'STEAMUGC_INTERFACE_VERSION008']
+    })
+  })
+
+  it('Overlooting shape: RemotePlay003 + Timeline004 + UGC021 are all nonCore', () => {
+    const required = {
+      SteamRemotePlay: 'STEAMREMOTEPLAY_INTERFACE_VERSION003',
+      SteamTimeline: 'STEAMTIMELINE_INTERFACE_V004',
+      SteamUGC: 'STEAMUGC_INTERFACE_VERSION021'
+    }
+    const r = classifyUnservableInterfaceVersions({
+      arch: 'x64',
+      symbols: RUNTIME,
+      requiredInterfaceVersions: required
+    })
+    expect(r.blocking).toEqual([])
+    expect(r.nonCore).toEqual(Object.values(required))
+  })
+
+  it('a non-core gap answered NULL is blocking (bare accessor, x86)', () => {
+    const required = { SteamUGC: 'STEAMUGC_INTERFACE_VERSION008' }
+    expect(
+      classifyUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: [...RUNTIME, 'SteamUGC'],
+        requiredInterfaceVersions: required
+      })
+    ).toEqual({ blocking: ['STEAMUGC_INTERFACE_VERSION008'], nonCore: [] })
+    expect(
+      classifyUnservableInterfaceVersions({
+        arch: 'x86',
+        symbols: RUNTIME,
+        requiredInterfaceVersions: required
+      })
+    ).toEqual({ blocking: ['STEAMUGC_INTERFACE_VERSION008'], nonCore: [] })
+  })
+
+  it('mixed core + non-core splits, and the union matches findUnservableInterfaceVersions', () => {
+    const input = {
+      arch: 'x64' as const,
+      symbols: RUNTIME,
+      requiredInterfaceVersions: {
+        SteamController: 'SteamController003',
+        SteamFriends: 'SteamFriends016',
+        SteamUser: 'SteamUser020',
+        SteamUGC: 'STEAMUGC_INTERFACE_VERSION008',
+        SteamHTTP: 'STEAMHTTP_INTERFACE_VERSION003'
+      }
+    }
+    const r = classifyUnservableInterfaceVersions(input)
+    expect(r.blocking).toContain('SteamFriends016')
+    expect(r.nonCore).toEqual(
+      expect.arrayContaining([
+        'SteamController003',
+        'STEAMUGC_INTERFACE_VERSION008'
+      ])
+    )
+    expect(r.nonCore).not.toContain('SteamFriends016')
+    expect(new Set([...r.blocking, ...r.nonCore])).toEqual(
+      new Set(findUnservableInterfaceVersions(input))
+    )
+  })
+
+  it('served versions appear in neither list', () => {
+    expect(
+      classifyUnservableInterfaceVersions({
+        arch: 'x64',
+        symbols: RUNTIME,
+        requiredInterfaceVersions: { SteamUser: 'SteamUser023' }
+      })
+    ).toEqual({ blocking: [], nonCore: [] })
+  })
+
+  it('CORE_STARTUP_FAMILIES is the six wired families', () => {
+    expect([...CORE_STARTUP_FAMILIES].sort()).toEqual([
+      'SteamApps',
+      'SteamClient',
+      'SteamFriends',
+      'SteamUser',
+      'SteamUserStats',
+      'SteamUtils'
+    ])
   })
 })
